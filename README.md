@@ -11,9 +11,8 @@
 \Apps
 |- Data
 |- Docs
+|- Frontend
 |- Functions
-|- Frontend - App
-|- Frontend - Editor
 ```
 - **Data** - Contains all the data dump of files in JSON and XML format.
 - **Docs** - Docusorus based documentation.
