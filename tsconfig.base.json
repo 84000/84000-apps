@@ -14,7 +14,10 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@apps/design-system": ["libs/design-system/src/index.ts"],
+      "@apps/design-system/server": ["libs/design-system/src/server.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
