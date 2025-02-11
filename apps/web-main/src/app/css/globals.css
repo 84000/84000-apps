@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 @import './layouts/container.css';
 @import './layouts/sidebar.css';
 @import './layouts/horizontal.css';
@@ -24,7 +22,6 @@
     @apply max-w-[1200px];
   }
 
-
   .landingpage .container {
     @apply max-w-[1320px];
   }
@@ -42,13 +39,12 @@
   }
 
   .card-title {
-    @apply text-lg font-semibold text-dark dark:text-white mb-1
+    @apply text-lg font-semibold text-dark dark:text-white mb-1;
   }
 
   .card-subtitle {
-    @apply text-15 text-bodytext
+    @apply text-15 text-bodytext;
   }
-
 
   /*heading text color*/
   h1,
@@ -65,7 +61,7 @@
   }
 
   .bg-hover {
-    @apply hover:bg-lighthover hover:dark:bg-darkmuted
+    @apply hover:bg-lighthover hover:dark:bg-darkmuted;
   }
 
   .form-control input {
@@ -109,11 +105,11 @@
   }
 
   .form-control-validation input {
-    @apply rounded-md
+    @apply rounded-md;
   }
 
   .form-rounded-md input {
-    @apply rounded-md
+    @apply rounded-md;
   }
 
   .input-center input {
@@ -121,11 +117,11 @@
   }
 
   .elipse {
-    @apply w-[18px] h-[10px]
+    @apply w-[18px] h-[10px];
   }
 
   input::placeholder {
-    @apply text-bodytext
+    @apply text-bodytext;
   }
 
   .select-option select {
@@ -137,7 +133,7 @@
   }
 
   .checkbox {
-    @apply h-[18px] w-[18px] border border-border dark:border-darkborder bg-transparent focus:ring-0 focus:ring-offset-0
+    @apply h-[18px] w-[18px] border border-border dark:border-darkborder bg-transparent focus:ring-0 focus:ring-offset-0;
   }
 
   .text-primary-ld {
@@ -154,7 +150,7 @@
   }
 
   .btn-circle-hover {
-    @apply h-9 w-9 flex justify-center items-center !rounded-full hover:bg-lightprimary hover:text-primary cursor-pointer bg-transparent
+    @apply h-9 w-9 flex justify-center items-center !rounded-full hover:bg-lightprimary hover:text-primary cursor-pointer bg-transparent;
   }
 
   .text-ld {
@@ -166,69 +162,69 @@
   }
 
   .sorting button {
-    @apply bg-transparent text-dark dark:text-white p-0
+    @apply bg-transparent text-dark dark:text-white p-0;
   }
 
   .sorting button:hover {
-    @apply bg-transparent
+    @apply bg-transparent;
   }
 
   .sorting button span {
-    @apply p-0
+    @apply p-0;
   }
 
   .sorting ul li {
-    @apply px-4 py-2
+    @apply px-4 py-2;
   }
 
   .sorting ul li button:hover {
-    @apply hover:text-primary
+    @apply hover:text-primary;
   }
 
   /* Button Hover Color Set */
   button.bg-primary {
-    @apply hover:bg-primaryemphasis
+    @apply hover:bg-primaryemphasis;
   }
 
   button.bg-secondary {
-    @apply hover:bg-secondaryemphasis
+    @apply hover:bg-secondaryemphasis;
   }
 
   button.bg-info {
-    @apply hover:bg-infoemphasis
+    @apply hover:bg-infoemphasis;
   }
 
   button.bg-error {
-    @apply hover:bg-erroremphasis
+    @apply hover:bg-erroremphasis;
   }
 
   button.bg-success {
-    @apply hover:bg-successemphasis
+    @apply hover:bg-successemphasis;
   }
 
   button.bg-warning {
-    @apply hover:bg-warningemphasis
+    @apply hover:bg-warningemphasis;
   }
 
   /* Headlessui */
   .ui-button {
-    @apply flex items-stretch justify-between text-center py-2.5 px-5 text-white text-center font-medium rounded-md
+    @apply flex items-stretch justify-between text-center py-2.5 px-5 text-white font-medium rounded-md;
   }
 
   .ui-button-small {
-    @apply flex items-stretch justify-between text-center py-2 px-6 text-white text-center font-medium rounded-md
+    @apply flex items-stretch justify-between text-center py-2 px-6 text-white font-medium rounded-md;
   }
 
   .ui-dropdown {
-    @apply text-ld w-full !max-w-56 bg-white dark:bg-dark shadow-md dark:shadow-dark-md text-start rounded-sm py-3
+    @apply text-ld w-full !max-w-56 bg-white dark:bg-dark shadow-md dark:shadow-dark-md text-start rounded-sm py-3;
   }
 
   .ui-dropdown-item {
-    @apply flex w-full gap-3 cursor-pointer items-center justify-start px-4 py-2 text-sm text-ld hover:text-primary bg-hover focus:bg-hover focus:outline-none
+    @apply flex w-full gap-3 cursor-pointer items-center justify-start px-4 py-2 text-sm text-ld hover:text-primary bg-hover focus:bg-hover focus:outline-none;
   }
 
   .ui-dropdown-animation {
-    @apply origin-top-right transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0
+    @apply origin-top-right transition duration-100 ease-out [--anchor-gap:var(--spacing-1)] focus:outline-none data-[closed]:scale-95 data-[closed]:opacity-0;
   }
 
   .ui-form-control {
@@ -240,25 +236,12 @@
   }
 
   .ui-checkbox {
-    @apply h-[18px] w-[18px] border border-border dark:border-darkborder bg-white dark:bg-transparent data-[checked]:bg-primary dark:data-[checked]:bg-primary rounded cursor-pointer focus:ring-0 focus:ring-offset-0 outline-none
+    @apply h-[18px] w-[18px] border border-border dark:border-darkborder bg-white dark:bg-transparent data-[checked]:bg-primary dark:data-[checked]:bg-primary rounded cursor-pointer focus:ring-0 focus:ring-offset-0 outline-none;
   }
-
-
-
-
 }
 
 @layer base {
   :root {
-
-    --radius: 0.5rem
-
-
-
-
+    --radius: 0.5rem;
   }
-
-
-
-
 }

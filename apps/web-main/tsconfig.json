@@ -30,8 +30,7 @@
     "../../app/web-main/.next/types/**/*.ts",
     "../../dist/app/web-main/.next/types/**/*.ts",
     "next-env.d.ts",
-    ".next/types/**/*.ts",
-    "postcss.config.mjs"
+    ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules", "jest.config.ts", "**/*.spec.ts", "**/*.test.ts"]
 }

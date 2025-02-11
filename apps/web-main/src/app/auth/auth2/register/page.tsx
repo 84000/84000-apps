@@ -22,7 +22,7 @@ const BoxedRegister = () => {
                 <div className="md:py-14 py-8 lg:px-6">
                   <Logo />
                   <h3 className="md:text-34 text-2xl md:my-8 my-5">
-                    Let's get you signed up
+                    {"Let's get you signed up"}
                   </h3>
                   <BoxedSocialButtons title="Or sign up with email" />
                   <BoxedAuthRegister />
