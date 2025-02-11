@@ -1,15 +1,16 @@
-"use client"
-import FullLogo from "@/app/(DashboardLayout)/layout/shared/logo/FullLogo";
-import React from "react";
-import Link from "next/link";
-import AuthRegister from "../authforms/AuthRegister";
+'use client';
+import FullLogo from '../../(DashboardLayout)/layout/shared/logo/FullLogo';
+import React from 'react';
+import Link from 'next/link';
+import AuthRegister from '../authforms/AuthRegister';
 
 const gradientStyle = {
-  background: "linear-gradient(45deg, rgb(238, 119, 82,0.2), rgb(231, 60, 126,0.2), rgb(35, 166, 213,0.2), rgb(35, 213, 171,0.2))",
-  backgroundSize: "400% 400%",
-  animation: "gradient 15s ease infinite",
-  height: "100vh",
-  overflow: "hidden",
+  background:
+    'linear-gradient(45deg, rgb(238, 119, 82,0.2), rgb(231, 60, 126,0.2), rgb(35, 166, 213,0.2), rgb(35, 213, 171,0.2))',
+  backgroundSize: '400% 400%',
+  animation: 'gradient 15s ease infinite',
+  height: '100vh',
+  overflow: 'hidden',
 };
 
 const BoxedRegister = () => {
@@ -27,7 +28,10 @@ const BoxedRegister = () => {
             <AuthRegister />
             <div className="flex gap-2 text-base text-ld font-medium mt-6 items-center justify-center">
               <p>Already have an Account?</p>
-              <Link href="/auth/login" className="text-primary text-sm font-medium">
+              <Link
+                href="/auth/login"
+                className="text-primary text-sm font-medium"
+              >
                 Sign in
               </Link>
             </div>
