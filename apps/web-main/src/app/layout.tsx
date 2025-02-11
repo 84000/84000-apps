@@ -1,15 +1,17 @@
-import React from 'react';
-import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
-import 'simplebar-react/dist/simplebar.min.css';
-import { Flowbite, ThemeModeScript } from 'flowbite-react';
-import { theme } from '@design-system';
-import './css/globals.css';
-
-const manrope = Manrope({ subsets: ['latin'] });
+import React from "react";
+import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
+import "./css/globals.css";
+import { Flowbite, ThemeModeScript } from "flowbite-react";
+import customTheme from "@/utils/theme/custom-theme";
+import { CustomizerContextProvider } from "@/app/context/CustomizerContext";
+import "../utils/i18n";
+import NextTopLoader from 'nextjs-toploader';
+import { Toaster } from "@/app/components/shadcn-ui/Default-Ui/toaster"
+const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'MatDash-Nextjs-Free',
+  title: "Matdash - Nextjs",
 };
 
 export default function RootLayout({
@@ -20,11 +22,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon.png" type="image/svg+xml" />
         <ThemeModeScript />
       </head>
       <body className={`${manrope.className}`}>
-        <Flowbite theme={{ theme: theme }}>{children}</Flowbite>
+        <Flowbite theme={{ theme: customTheme }}>
+        <NextTopLoader color="var(--color-primary)" />
+          <CustomizerContextProvider>{children}</CustomizerContextProvider>
+        </Flowbite>
+        <Toaster />
       </body>
     </html>
   );

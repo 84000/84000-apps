@@ -5,7 +5,7 @@ import React from "react";
 const AuthRegister = () => {
   return (
     <>
-      <form>
+      <form className="mt-6">
         <div className="mb-4">
           <div className="mb-2 block">
             <Label htmlFor="name" value="Name" />
@@ -14,7 +14,7 @@ const AuthRegister = () => {
             id="name"
             type="text"
             sizing="md"
-            className="form-control form-rounded-xl"
+            className="form-control"
           />
         </div>
         <div className="mb-4">
@@ -25,7 +25,7 @@ const AuthRegister = () => {
             id="emadd"
             type="text"
             sizing="md"
-            className="form-control form-rounded-xl"
+            className="form-control"
           />
         </div>
         <div className="mb-6">
@@ -36,10 +36,10 @@ const AuthRegister = () => {
             id="userpwd"
             type="password"
             sizing="md"
-            className="form-control form-rounded-xl"
+            className="form-control"
           />
         </div> 
-        <Button color={'primary'} className="w-full">Sign Up</Button> 
+        <Button color={'primary'} className="rounded-md  w-full">Sign Up</Button> 
         
       </form>
     </>
