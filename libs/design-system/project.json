@@ -4,6 +4,19 @@
   "sourceRoot": "libs/design-system/src",
   "projectType": "library",
   "tags": [],
-  "// targets": "to see all targets run: nx show project design-system --web",
-  "targets": {}
+  "targets": {
+    "build-storybook": {
+      "executor": "@nx/storybook:build",
+      "outputs": ["{options.outputDir}"],
+      "options": {
+        "outputDir": "libs/design-system/dist/storybook",
+        "configDir": "libs/design-system/.storybook"
+      },
+      "configurations": {
+        "ci": {
+          "quiet": true
+        }
+      }
+    }
+  }
 }
