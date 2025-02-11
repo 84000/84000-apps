@@ -4,7 +4,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 import { Link } from '@tiptap/extension-link';
 import { Image } from '@tiptap/extension-image';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
-import lowlight from 'lowlight'; // Syntax highlighting for code block
+import * as lowlight from 'lowlight'; // Syntax highlighting for code block
 // import { Button, Icon } from 'react-feather'; // Optional, for icons in toolbar
 import { Underline } from '@tiptap/extension-underline';
 import { OrderedList } from '@tiptap/extension-ordered-list';
