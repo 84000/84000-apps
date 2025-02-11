@@ -84,6 +84,5 @@
       "dependsOn": ["^build"]
     }
   },
-  "useLegacyCache": true,
   "neverConnectToCloud": true
 }
