@@ -9,8 +9,7 @@ import { CustomizerContext } from '../../../../context/CustomizerContext';
 import SimpleBar from 'simplebar-react';
 
 const MobileSidebar = () => {
-  const { selectedIconId, setSelectedIconId } =
-    useContext(CustomizerContext) || {};
+  const { selectedIconId } = useContext(CustomizerContext) || {};
   const selectedContent = SidebarContent.find(
     (data) => data.id === selectedIconId
   );

@@ -1,18 +1,15 @@
 'use client';
 import React, { useState, useEffect, useContext } from 'react';
 import { Navbar } from 'flowbite-react';
-import Search from './Search';
 import { Icon } from '@iconify/react';
-import AppLinks from './AppLinks';
-import Notifications from './Notifications';
 import Profile from './Profile';
 import { CustomizerContext } from '../../../../context/CustomizerContext';
 import { Language } from './Language';
-import FullLogo from '../../shared/logo/FullLogo';
 import MobileHeaderItems from './MobileHeaderItems';
 import { Drawer } from 'flowbite-react';
 import MobileSidebar from '../sidebar/MobileSidebar';
 import HorizontalMenu from '../../horizontal/header/HorizontalMenu';
+import { MainLogo } from '@design-system';
 
 interface HeaderPropsType {
   layoutType: string;
@@ -37,8 +34,7 @@ const Header = ({ layoutType }: HeaderPropsType) => {
     };
   }, []);
 
-  const { setIsCollapse, isCollapse, isLayout, activeMode, setActiveMode } =
-    useContext(CustomizerContext);
+  const { isLayout } = useContext(CustomizerContext);
 
   const [mobileMenu, setMobileMenu] = useState('');
 
@@ -48,12 +44,6 @@ const Header = ({ layoutType }: HeaderPropsType) => {
     } else {
       setMobileMenu('active');
     }
-  };
-
-  const toggleMode = () => {
-    setActiveMode((prevMode: string) =>
-      prevMode === 'light' ? 'dark' : 'light'
-    );
   };
 
   // mobile-sidebar
@@ -84,57 +74,20 @@ const Header = ({ layoutType }: HeaderPropsType) => {
             <div className="flex gap-3 items-center relative">
               {layoutType == 'horizontal' ? (
                 <div className="me-3">
-                  <FullLogo />
+                  <MainLogo />
                 </div>
               ) : null}
-
-              {/* App Link Dropwown   */}
-
-              <Search />
-              <AppLinks />
             </div>
           </Navbar.Collapse>
 
           {/* mobile-logo */}
           <div className="block xl:hidden">
-            <FullLogo />
+            <MainLogo />
           </div>
 
           <Navbar.Collapse className="xl:block hidden">
             <div className="flex gap-3 items-center">
-              {/* Search   */}
-
-              {/* Theme Toggle */}
-
-              {/* Light Mode Button */}
-              {activeMode === 'light' ? (
-                <div
-                  className="h-10 w-10 hover:text-primary hover:bg-lightprimary dark:hover:bg-darkminisidebar  dark:hover:text-primary focus:ring-0 rounded-full flex justify-center items-center cursor-pointer text-darklink  dark:text-white"
-                  onClick={toggleMode}
-                >
-                  <span className="flex items-center">
-                    <Icon icon="solar:moon-line-duotone" width="20" />
-                  </span>
-                </div>
-              ) : (
-                // Dark Mode Button
-                <div
-                  className="h-10 w-10 hover:text-primary hover:bg-lightprimary dark:hover:bg-darkminisidebar  dark:hover:text-primary focus:ring-0 rounded-full flex justify-center items-center cursor-pointer text-darklink  dark:text-white"
-                  onClick={toggleMode}
-                >
-                  <span className="flex items-center">
-                    <Icon icon="solar:sun-bold-duotone" width="20" />
-                  </span>
-                </div>
-              )}
-
-              {/* Notification Dropdown */}
-              <Notifications />
-
-              {/* Language Dropdown*/}
               <Language />
-
-              {/* Profile Dropdown */}
               <Profile />
             </div>
           </Navbar.Collapse>

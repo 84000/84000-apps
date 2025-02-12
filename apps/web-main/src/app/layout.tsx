@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
-import './css/globals.css';
+import '@design-system-css';
 import { Flowbite, ThemeModeScript } from 'flowbite-react';
 import customTheme from '../utils/theme/custom-theme';
 import { CustomizerContextProvider } from './context/CustomizerContext';

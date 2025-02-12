@@ -1,13 +1,13 @@
 import { Meta, StoryObj } from '@storybook/react';
 
-import { FullLogo } from './MainLogo';
+import { MainLogo } from './MainLogo';
 
-const meta: Meta<typeof FullLogo> = {
-  component: FullLogo,
+const meta: Meta<typeof MainLogo> = {
+  component: MainLogo,
   title: 'Core/MainLogo',
 };
 export default meta;
-type Story = StoryObj<typeof FullLogo>;
+type Story = StoryObj<typeof MainLogo>;
 
 export const Primary: Story = {
   args: {},

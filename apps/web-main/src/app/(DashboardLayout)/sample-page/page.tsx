@@ -7,9 +7,9 @@ const page = () => {
       <CardBox>
         <h5 className="card-title">Sample page 2</h5>
         <p>
-          Lorem Ipsum is simply dummy text of the printing and typesetting
+          {`Lorem Ipsum is simply dummy text of the printing and typesetting
           industry. Lorem Ipsum has been the industry's standard dummy text ever
-          since the 1500s
+          since the 1500s`}
         </p>
       </CardBox>
     </>

@@ -1,5 +1,5 @@
 'use-client';
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
 import { Icon } from '@iconify/react';
 import Miniicons from './MiniSidebar';
 import SimpleBar from 'simplebar-react';

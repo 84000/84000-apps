@@ -1,12 +1,11 @@
-"use client";
-import { Icon } from "@iconify/react";
-import Image from "next/image";
-import React, { useState } from "react";
-import * as AppsData from "./Data";
-import Link from "next/link";
-import { Drawer } from "flowbite-react";
-import SimpleBar from "simplebar-react";
-import MegamenuImg from "/public/images/backgrounds/mega-dd-bg.jpg";
+'use client';
+import { Icon } from '@iconify/react';
+import React, { useState } from 'react';
+import * as AppsData from './Data';
+import Link from 'next/link';
+import { Drawer } from 'flowbite-react';
+import SimpleBar from 'simplebar-react';
+
 const AppLinks = () => {
   const [isOpen, setIsOpen] = useState(false);
   const handleClose = () => setIsOpen(false);
@@ -25,22 +24,19 @@ const AppLinks = () => {
           <Icon icon="solar:widget-3-line-duotone" height={20} />
         </span>
 
-        <div className="sm:w-[860px] w-screen dropdown  invisible  group-hover:visible absolute z-[10]">
+        <div className="sm:w-[560px] w-screen dropdown  invisible  group-hover:visible absolute z-[10]">
           <Drawer
             open={isOpen}
             onClose={handleClose}
             position="right"
-            className="xl:relative xl:transform-none xl:h-auto xl:bg-transparent xl:z-[0] xl:w-[860px] w-64"
+            className="xl:relative xl:transform-none xl:h-auto xl:bg-transparent xl:z-[0] xl:w-[560px] w-64"
           >
             <SimpleBar className="md:h-auto h-[calc(100vh_-_50px)]">
               <div className="grid grid-cols-12 w-full">
-                <div className="xl:col-span-8 col-span-12 flex items-stretch p-6">
+                <div className="col-span-12 flex items-stretch p-6">
                   <div className="grid grid-cols-12 gap-3 w-full">
                     {AppsData.appsLink.map((links, index) => (
-                      <div
-                        className="col-span-12 xl:col-span-6 "
-                        key={index}
-                      >
+                      <div className="col-span-6 " key={index}>
                         <Link
                           href={links.href}
                           className="flex gap-3 hover:text-primary group relative items-center"
@@ -66,13 +62,6 @@ const AppLinks = () => {
                       </div>
                     ))}
                   </div>
-                </div>
-                <div className="xl:col-span-4 col-span-12  flex items-strech h-[300px] lg:block hidden">
-                  <Image
-                    src={MegamenuImg}
-                    alt="image"
-                    className="h-full w-full"
-                  />
                 </div>
               </div>
             </SimpleBar>

@@ -1,9 +1,8 @@
-"use client";
-import React, { useContext } from "react";
-import Sidebar from "./layout/vertical/sidebar/Sidebar";
-import Header from "./layout/vertical/header/Header";
-import { Customizer } from "./layout/shared/customizer/Customizer";
-import { CustomizerContext } from "../context/CustomizerContext";
+'use client';
+import React, { useContext } from 'react';
+import Sidebar from './layout/vertical/sidebar/Sidebar';
+import Header from './layout/vertical/header/Header';
+import { CustomizerContext } from '../context/CustomizerContext';
 export default function Layout({
   children,
 }: Readonly<{
@@ -15,10 +14,10 @@ export default function Layout({
       <div className="page-wrapper flex w-full  ">
         {/* Header/sidebar */}
 
-        {activeLayout == "vertical" ? <Sidebar /> : null}
+        {activeLayout == 'vertical' ? <Sidebar /> : null}
         <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
           {/* Top Header  */}
-          {activeLayout == "horizontal" ? (
+          {activeLayout == 'horizontal' ? (
             <Header layoutType="horizontal" />
           ) : (
             <Header layoutType="vertical" />
@@ -26,21 +25,20 @@ export default function Layout({
 
           <div
             className={`bg-lightgray dark:bg-dark  h-full ${
-              activeLayout != "horizontal" ? "rounded-bb" : "rounded-none"
+              activeLayout != 'horizontal' ? 'rounded-bb' : 'rounded-none'
             } `}
           >
             {/* Body Content  */}
             <div
               className={` ${
-                isLayout == "full"
-                  ? "w-full py-30 md:px-30 px-5"
-                  : "container mx-auto  py-30"
-              } ${activeLayout == "horizontal" ? "xl:mt-3" : ""}
+                isLayout == 'full'
+                  ? 'w-full py-30 md:px-30 px-5'
+                  : 'container mx-auto  py-30'
+              } ${activeLayout == 'horizontal' ? 'xl:mt-3' : ''}
               `}
             >
               {children}
             </div>
-            <Customizer />
           </div>
         </div>
       </div>

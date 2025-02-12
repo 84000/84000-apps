@@ -1,13 +1,13 @@
 'use client';
 import React, { useContext, useEffect } from 'react';
-import { Drawer, Sidebar } from 'flowbite-react';
+import { Sidebar } from 'flowbite-react';
 import { IconSidebar } from './IconSidebar';
 import SidebarContent from './Sidebaritems';
 import NavItems from './NavItems';
 import NavCollapse from './NavCollapse';
 import { CustomizerContext } from '../../../../context/CustomizerContext';
 import SimpleBar from 'simplebar-react';
-import FullLogo from '../../../layout/shared/logo/FullLogo';
+import { MainLogo } from '@design-system';
 import { usePathname } from 'next/navigation';
 
 const SidebarLayout = () => {
@@ -57,7 +57,7 @@ const SidebarLayout = () => {
           aria-label="Sidebar with multi-level dropdown example"
         >
           <div className="px-6 py-4 flex items-center sidebarlogo">
-            <FullLogo />
+            <MainLogo />
           </div>
           <SimpleBar className="h-[calc(100vh_-_85px)]">
             <Sidebar.Items className="pe-4 rtl:pe-0 rtl:ps-4 px-5 mt-2">
