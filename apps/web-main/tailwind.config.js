@@ -1,5 +1,6 @@
-const { createGlobPatternsForDependencies } = require('@nx/react/tailwind');
-const { join } = require('path');
+import { join } from 'path';
+import { createGlobPatternsForDependencies } from '@nx/react/tailwind';
+
 const sharedConfig = require('../../tailwind.base.config.js');
 
 module.exports = {
@@ -9,8 +10,7 @@ module.exports = {
       __dirname,
       '{src,pages,components,app}/**/*!(*.stories|*.spec).{ts,tsx,html}'
     ),
+    join(__dirname, '../../node_modules/flowbite-react/dist/esm/**/*.mjs'),
     ...createGlobPatternsForDependencies(__dirname),
-    ...sharedConfig.content,
-    'apps/web-main/**/*.{ts,tsx,html}', // Specific paths for web-main
   ],
 };

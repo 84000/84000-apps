@@ -2,8 +2,8 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import '@design-system-css';
+import { theme } from '@design-system';
 import { Flowbite, ThemeModeScript } from 'flowbite-react';
-import customTheme from '../utils/theme/custom-theme';
 import { CustomizerContextProvider } from './context/CustomizerContext';
 import '../utils/i18n';
 
@@ -25,7 +25,7 @@ export default function RootLayout({
         <ThemeModeScript />
       </head>
       <body className={`${manrope.className}`}>
-        <Flowbite theme={{ theme: customTheme }}>
+        <Flowbite theme={{ theme }}>
           <CustomizerContextProvider>{children}</CustomizerContextProvider>
         </Flowbite>
       </body>

@@ -1,9 +1,4 @@
-const { join } = require('path');
-
 module.exports = {
-  content: [
-    join(__dirname, 'node_modules/flowbite/**/*.js'), // Adjust path for monorepo
-  ],
   theme: {
     extend: {
       boxShadow: {
