@@ -1,37 +1,40 @@
-const { createGlobPatternsForDependencies } = require('@nx/react/tailwind');
 const { join } = require('path');
-const flowbite = require('flowbite/plugin');
 
 module.exports = {
   content: [
-    join(
-      __dirname,
-      '{src,pages,components,app,libs}/**/*!(*.stories|*.spec).{ts,tsx,html}'
-    ),
     join(__dirname, 'node_modules/flowbite/**/*.js'), // Adjust path for monorepo
-    ...createGlobPatternsForDependencies(__dirname),
   ],
   theme: {
     extend: {
       boxShadow: {
-        md: '0px 2px 4px -1px rgba(175, 182, 201, 0.2)',
+        md: '0px 2px 4px -1px rgba(175, 182, 201, 0.2);',
         lg: '0 1rem 3rem rgba(0, 0, 0, 0.175)',
         'dark-md':
           'rgba(145, 158, 171, 0.3) 0px 0px 2px 0px, rgba(145, 158, 171, 0.02) 0px 12px 24px -4px',
-        sm: '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)',
+        sm: '0 6px 24.2px -10px rgba(41, 52, 61, .22)',
         'btn-shadow': 'box-shadow: rgba(0, 0, 0, .05) 0 9px 17.5px',
-        active: '0px 17px 20px -8px rgba(77,91,236,0.231372549)',
+        tw: 'rgba(175, 182, 201, 0.2) 0px 2px 4px -1px',
+        btnshdw: '0 17px 20px -8px rgba(77, 91, 236, .231372549)',
       },
       borderRadius: {
-        sm: '7px',
-        md: '9px',
-        lg: '24px',
+        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 2px)',
+        lg: 'var(--radius)',
         tw: '12px',
-        page: '20px',
+        bb: '20px',
       },
       container: {
         center: true,
-        padding: '30px',
+        padding: '20px',
+      },
+      letterSpacing: {
+        tightest: '-.075em',
+        tighter: '-.05em',
+        tight: '-.025em',
+        normal: '0',
+        wide: '.025em',
+        wider: '.05em',
+        widest: '1.5px',
       },
       gap: {
         30: '30px',
@@ -41,6 +44,14 @@ module.exports = {
       },
       margin: {
         30: '30px',
+      },
+      fontSize: {
+        15: '15px',
+        13: '13px',
+        22: '22px',
+        28: '28px',
+        34: '34px',
+        40: '40px',
       },
       colors: {
         cyan: {
@@ -64,11 +75,24 @@ module.exports = {
         bordergray: 'var(--color-bordergray)',
         lightgray: 'var( --color-lightgray)',
         muted: 'var(--color-muted)',
+        lighthover: 'var(--color-lighthover)',
+        surface: 'var(--color-surface-ld)',
+        sky: 'var(--color-sky)',
+        bodytext: 'var(--color-bodytext)',
         dark: 'var(--color-dark)',
         link: 'var(--color-link)',
         darklink: 'var(--color-darklink)',
+        darkborder: 'var(--color-darkborder)',
+        darkgray: 'var(--color-darkgray)',
+        primaryemphasis: 'var(--color-primary-emphasis)',
+        secondaryemphasis: 'var(--color-secondary-emphasis)',
+        warningemphasis: 'var(--color-warning-emphasis)',
+        erroremphasis: 'var(--color-error-emphasis)',
+        successemphasis: 'var(--color-success-emphasis)',
+        infoemphasis: 'var(--color-info-emphasis)',
+        darkmuted: 'var( --color-darkmuted)',
       },
     },
   },
-  plugins: [flowbite],
+  plugins: [require('flowbite/plugin'), require('tailwindcss-animate')],
 };
