@@ -1,18 +1,10 @@
 import { Meta, StoryObj } from '@storybook/react';
 
-import { FlowbiteTheme } from '../FlowbiteTheme';
 import { IconSidebar } from './IconSidebar';
 
 const meta: Meta<typeof IconSidebar> = {
   component: IconSidebar,
   title: 'Sidebar/IconSidebar',
-  decorators: [
-    (Story) => (
-      <FlowbiteTheme>
-        <Story />
-      </FlowbiteTheme>
-    ),
-  ],
 };
 
 export type Story = StoryObj<typeof IconSidebar>;
