@@ -19,78 +19,126 @@ export interface MenuItem {
   url?: any;
 }
 
+import { uniqueId } from "lodash";
+
 const SidebarContent: MenuItem[] = [
+  
+
   {
-    heading: 'HOME',
-    children: [
+    id: 1,
+    name: "Pages",
+    items: [
       {
-        name: 'Dashboard',
-        icon: 'solar:widget-add-line-duotone',
-        id: 1,
-        url: '/',
+        heading: "Pages",
+        children: [
+          {
+            name: "Sample Page 1",
+            icon: "solar:home-angle-outline",
+            id: uniqueId(),
+            url: "/",
+          },
+          {
+            name: "Sample Page 2",
+            icon: "solar:settings-minimalistic-line-duotone",
+            id: uniqueId(),
+            url: "/sample-page",
+          }
+         
+        ],
       },
     ],
   },
   {
-    heading: 'UTILITIES',
-    children: [
+    id: 2,
+    name: "Menu",
+    items: [
       {
-        name: 'Typography',
-        icon: 'solar:text-circle-outline',
-        id: 2,
-        url: '/ui/typography',
+        heading: "Multi level",
+        children: [
+          {
+            name: "Menu Level",
+            icon: "solar:widget-add-line-duotone",
+            id: uniqueId(),
+            children: [
+              {
+                id: uniqueId(),
+                name: "Level 1",
+                url: "",
+              },
+              {
+                id: uniqueId(),
+                name: "Level 1.1",
+                icon: "fad:armrecording",
+                url: "",
+                children: [
+                  {
+                    id: uniqueId(),
+                    name: "Level 2",
+                    url: "",
+                  },
+                  {
+                    id: uniqueId(),
+                    name: "Level 2.1",
+                    icon: "fad:armrecording",
+                    url: "",
+                    children: [
+                      {
+                        id: uniqueId(),
+                        name: "Level 3",
+                        url: "",
+                      },
+                      {
+                        id: uniqueId(),
+                        name: "Level 3.1",
+                        url: "",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       },
       {
-        name: 'Table',
-        icon: 'solar:bedside-table-3-linear',
-        id: 3,
-        url: '/ui/table',
-      },
-      {
-        name: 'Form',
-        icon: 'solar:password-minimalistic-outline',
-        id: 4,
-        url: '/ui/form',
-      },
-      {
-        name: 'Shadow',
-        icon: 'solar:airbuds-case-charge-outline',
-        id: 5,
-        url: '/ui/shadow',
-      },
-    ],
-  },
-  {
-    heading: 'AUTH',
-    children: [
-      {
-        name: 'Login',
-        icon: 'solar:login-2-linear',
-        id: 6,
-        url: '/auth/login',
-      },
-      {
-        name: 'Register',
-        icon: 'solar:shield-user-outline',
-        id: 7,
-        url: '/auth/register',
-      },
-    ],
-  },
-  {
-    heading: 'EXTRA',
-    children: [
-      {
-        name: 'Icons',
-        icon: 'solar:smile-circle-outline',
-        id: 8,
-        url: '/icons/solar',
-      },
-      {
-        name: 'Sample Page',
-        icon: 'solar:notes-minimalistic-outline',
-        id: 9,
-        url: '/sample-page',
+        heading: "More Options",
+        children: [
+          {
+            id: uniqueId(),
+            url: "/sample-page",
+            name: "Applications",
+            icon: "solar:check-circle-bold",
+            color: "text-primary",
+          },
+          {
+            id: uniqueId(),
+            url: "",
+            name: "Form Options",
+            icon: "solar:check-circle-bold",
+            color: "text-secondary",
+          },
+          {
+            id: uniqueId(),
+            url: "",
+            name: "Table Variations",
+            icon: "solar:check-circle-bold",
+            color: "text-info",
+          },
+          {
+            id: uniqueId(),
+            url: "",
+            name: "Charts Selection",
+            icon: "solar:check-circle-bold",
+            color: "text-warning",
+          },
+          {
+            id: uniqueId(),
+            url: "",
+            name: "Widgets",
+            icon: "solar:check-circle-bold",
+            color: "text-success",
+          },
+        ],
       },
     ],
   },

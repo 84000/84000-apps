@@ -1,14 +1,19 @@
-import React from "react";
+import CardBox from '../../components/shared/CardBox';
+import React from 'react';
 
-const samplepage = () => {
+const page = () => {
   return (
     <>
-      <div className="rounded-xl dark:shadow-dark-md shadow-md bg-white dark:bg-darkgray p-6 relative w-full break-words">
-        <h5 className="card-title mb-3">Sample Page</h5>
-        <p className="card-subtitle">This is a sample page</p>
-      </div>
+      <CardBox>
+        <h5 className="card-title">Sample page 2</h5>
+        <p>
+          {`Lorem Ipsum is simply dummy text of the printing and typesetting
+          industry. Lorem Ipsum has been the industry's standard dummy text ever
+          since the 1500s`}
+        </p>
+      </CardBox>
     </>
   );
 };
 
-export default samplepage;
+export default page;

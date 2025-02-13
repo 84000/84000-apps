@@ -1,0 +1,75 @@
+:root {
+  --color-primary: #004976;
+  --color-primary-rgb: 0, 73, 118;
+  --color-primary-light: #dddbff;
+  --color-primary-lightest: #f1f2fe;
+
+  --color-secondary: #16cdc7;
+  --color-secondary-rgb: 22, 205, 199;
+  --color-secondary-light: #a6f7f5;
+  --color-secondary-lightest: #ecfdfd;
+
+  --color-tertiary: #ff6692;
+  --color-tertiary-rgb: 255, 102, 146;
+  --color-tertiary-light: #ffccdb;
+  --color-tertiary-lightest: #ffe5ed;
+
+  --color-action-success: #36c76c;
+  --color-action-success-rgb: 54, 199, 108;
+  --color-action-success-light: #ebfaf0;
+
+  --color-action-warning: #ffd648;
+  --color-action-warning-rgb: 255, 214, 72;
+  --color-action-warning-light: #fff9e5;
+
+  --color-action-danger: #ff6692;
+  --color-action-danger-rgb: 255, 102, 46;
+  --color-action-danger-light: #ffe5ed;
+
+  --color-text: #29343d;
+  --color-text-light: #526b7a;
+  --color-text-lightest: #98a4ae;
+
+  --color-white: #fff;
+  --color-dark: #0a2540;
+  --color-light: #f6f7f9;
+  --color-gray: #e0e6eb;
+  --color-lightgray: #f4f7fb;
+  --color-sky: #0a2540;
+
+  --color-border: var(--color-gray);
+  --color-surface-white: var(--color-white);
+  --color-surface-dark: var(--color-dark);
+  --color-surface-light: var(--color-light);
+  --color-background-light: var(--color-lightgray);
+
+  --color-info: var(--color-secondary);
+  --color-success: var(--color-action-success);
+  --color-warning: var(--color-action-warning);
+  --color-error: var(--color-action-danger);
+  --color-lightsuccess: var(--color-action-success-light);
+  --color-lighterror: var(--color-action-danger-light);
+  --color-lightinfo: var(--color-secondary-light);
+  --color-lightwarning: var(--color-action-warning-light);
+  --color-bordergray: var(--color-border);
+  --color-darkborder: var(--color-dark);
+  --color-link: var(--color-primary);
+  --color-muted: var(--color-text-light);
+  --color-darkmuted: var(--color-lightgray);
+  --color-darklink: var(--color-text-light);
+  --color-lighthover: var(--color-primary-light);
+  --color-darkgray: var(--color-text-light);
+  --color-error-emphasis: var(--color-error);
+  --color-warning-emphasis: var(--color-warning);
+  --color-success-emphasis: var(--color-success);
+  --color-info-emphasis: var(--color-secondary);
+  --color-surface-ld: var(--color-surface-lightest);
+  --color-bodytext: var(--color-text);
+  --color-warning-rgb: var(--color-action-warning-rgb);
+  --color-error-rgb: var(--color-action-danger-rgb);
+  --color-success-rgb: var(--color-action-success-rgb);
+  --color-primary-emphasis: var(--color-primary-light);
+  --color-secondary-emphasis: var(--color-secondary-light);
+  --color-lightprimary: var(--color-primary-light);
+  --color-lightsecondary: var(--color-secondary-light);
+}

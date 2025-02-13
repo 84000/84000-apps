@@ -1,24 +1,41 @@
-"use client";
-import React from "react";
-import Sidebar from "./layout/vertical/sidebar/Sidebar";
-import Header from "./layout/vertical/header/Header";
-
+'use client';
+import React, { useContext } from 'react';
+import Sidebar from './layout/vertical/sidebar/Sidebar';
+import Header from './layout/vertical/header/Header';
+import { CustomizerContext } from '../context/CustomizerContext';
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { activeLayout, isLayout } = useContext(CustomizerContext);
   return (
-    <div className="flex w-full min-h-screen">
-      <div className="page-wrapper flex w-full">
+    <div className="flex w-full min-h-screen dark:bg-darkgray">
+      <div className="page-wrapper flex w-full  ">
         {/* Header/sidebar */}
-        <Sidebar />
-        <div className="body-wrapper w-full bg-white dark:bg-dark">
-          <Header />
-          {/* Body Content  */}
-          <div className="bg-lightgray mr-3 rounded-page min-h-[90vh]">
+
+        {activeLayout == 'vertical' ? <Sidebar /> : null}
+        <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
+          {/* Top Header  */}
+          {activeLayout == 'horizontal' ? (
+            <Header layoutType="horizontal" />
+          ) : (
+            <Header layoutType="vertical" />
+          )}
+
+          <div
+            className={`bg-lightgray dark:bg-dark  h-full ${
+              activeLayout != 'horizontal' ? 'rounded-bb' : 'rounded-none'
+            } `}
+          >
+            {/* Body Content  */}
             <div
-              className={`container mx-auto  py-30`}
+              className={` ${
+                isLayout == 'full'
+                  ? 'w-full py-30 md:px-30 px-5'
+                  : 'container mx-auto  py-30'
+              } ${activeLayout == 'horizontal' ? 'xl:mt-3' : ''}
+              `}
             >
               {children}
             </div>
