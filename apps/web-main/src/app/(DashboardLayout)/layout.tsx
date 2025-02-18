@@ -1,14 +1,24 @@
 'use client';
 import React, { useContext } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from './layout/vertical/sidebar/Sidebar';
 import Header from './layout/vertical/header/Header';
 import { CustomizerContext } from '../context/CustomizerContext';
+import { useSession } from '../context/SessionContext';
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const { activeLayout, isLayout } = useContext(CustomizerContext);
+  const { user } = useSession();
+  const router = useRouter();
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
   return (
     <div className="flex w-full min-h-screen dark:bg-darkgray">
       <div className="page-wrapper flex w-full  ">
