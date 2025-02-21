@@ -2,28 +2,27 @@
 
 import SocialLogin from '../../../components/ui/SocialLogin';
 import { useSession } from '../../context/SessionContext';
-import RightPart from '../../../components/ui/RightPart';
+import CardBox from '../../components/shared/CardBox';
+import { MainLogo } from '@design-system';
 
 export const LoginPage = () => {
   const { loginWithGoogle } = useSession();
   return (
     <>
-      <div className="relative overflow-hidden h-screen">
-        <div className="grid grid-cols-12 gap-3 h-screen bg-white dark:bg-darkgray">
-          <div className="xl:col-span-4 lg:col-span-6 col-span-12 sm:px-12 px-4">
-            <div className="flex h-screen items-center px-3 lg:justify-start justify-center">
-              <div className="max-w-md w-full mx-auto">
-                <h3 className="text-2xl font-bold my-3 mt-5">
-                  Sign In to Continue
-                </h3>
-                <SocialLogin loginWithGoogle={loginWithGoogle} />
-                <div className="h-40" />
+      <div className="relative min-h-screen flex flex-col justify-center bg-cover bg-center bg-primary">
+        <div className="flex h-full justify-center items-center px-4">
+          <CardBox className="sm:max-w-sm w-full border-none p-0">
+            <div className="py-8 px-6">
+              <div className="flex justify-center items-center py-8">
+                <MainLogo />
               </div>
+              <h3 className="text-2xl font-bold my-3 mt-5">
+                Sign In to Continue
+              </h3>
+              <SocialLogin loginWithGoogle={loginWithGoogle} />
+              <div className="h-8" />
             </div>
-          </div>
-          <div className="xl:col-span-8 lg:col-span-6 col-span-12 bg-[#0A2540] dark:bg-dark lg:block hidden relative overflow-hidden">
-            <RightPart />
-          </div>
+          </CardBox>
         </div>
       </div>
     </>
