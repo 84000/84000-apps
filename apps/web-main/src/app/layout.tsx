@@ -11,7 +11,7 @@ import { SessionProvider } from './context/SessionContext';
 const manrope = Manrope({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Matdash - Nextjs',
+  title: "84000 Scholar's Room",
 };
 
 export default function RootLayout({

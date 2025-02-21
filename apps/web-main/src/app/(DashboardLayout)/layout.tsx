@@ -1,21 +1,36 @@
 'use client';
-import React, { useContext } from 'react';
+
+import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from './layout/vertical/sidebar/Sidebar';
 import Header from './layout/vertical/header/Header';
 import { CustomizerContext } from '../context/CustomizerContext';
-import { useSession } from '../context/SessionContext';
+import { ScholarUser, useSession } from '../context/SessionContext';
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const { activeLayout, isLayout } = useContext(CustomizerContext);
-  const { user } = useSession();
+  const { getUser } = useSession();
   const router = useRouter();
 
+  const [user, setUser] = useState<ScholarUser | null>();
+
+  useEffect(() => {
+    (async () => {
+      const user = await getUser();
+      setUser(user);
+
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+    })();
+  }, [router, getUser]);
+
   if (!user) {
-    router.push('/login');
+    // TODO: loading skeleton
     return null;
   }
 
