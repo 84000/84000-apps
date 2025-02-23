@@ -19,126 +19,77 @@ export interface MenuItem {
   url?: any;
 }
 
-import { uniqueId } from "lodash";
+import { uniqueId } from 'lodash';
 
 const SidebarContent: MenuItem[] = [
-  
-
   {
-    id: 1,
-    name: "Pages",
-    items: [
+    heading: 'Dashboards',
+    children: [
       {
-        heading: "Pages",
+        name: 'Dashboard1',
+        icon: 'solar:atom-line-duotone',
+        id: uniqueId(),
+        url: '/',
+      },
+      {
+        name: 'Dashboard2',
+        icon: 'solar:chart-line-duotone',
+        id: uniqueId(),
+        url: '/dashboards/dashboard2',
+      },
+      {
+        name: 'Dashboard3',
+        icon: 'solar:screencast-2-line-duotone',
+        id: uniqueId(),
+        url: '/dashboards/dashboard3',
+      },
+      {
+        name: 'Front Pages',
+        id: uniqueId(),
+        icon: 'solar:home-angle-linear',
         children: [
           {
-            name: "Sample Page 1",
-            icon: "solar:home-angle-outline",
+            name: 'Homepage',
             id: uniqueId(),
-            url: "/",
+            url: '/frontend-pages/homepage',
           },
           {
-            name: "Sample Page 2",
-            icon: "solar:settings-minimalistic-line-duotone",
+            name: 'About Us',
             id: uniqueId(),
-            url: "/sample-page",
-          }
-         
-        ],
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Menu",
-    items: [
-      {
-        heading: "Multi level",
-        children: [
+            url: '/frontend-pages/aboutus',
+          },
           {
-            name: "Menu Level",
-            icon: "solar:widget-add-line-duotone",
+            name: 'Blog',
             id: uniqueId(),
-            children: [
-              {
-                id: uniqueId(),
-                name: "Level 1",
-                url: "",
-              },
-              {
-                id: uniqueId(),
-                name: "Level 1.1",
-                icon: "fad:armrecording",
-                url: "",
-                children: [
-                  {
-                    id: uniqueId(),
-                    name: "Level 2",
-                    url: "",
-                  },
-                  {
-                    id: uniqueId(),
-                    name: "Level 2.1",
-                    icon: "fad:armrecording",
-                    url: "",
-                    children: [
-                      {
-                        id: uniqueId(),
-                        name: "Level 3",
-                        url: "",
-                      },
-                      {
-                        id: uniqueId(),
-                        name: "Level 3.1",
-                        url: "",
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
+            url: '/frontend-pages/blog',
+          },
+          {
+            name: 'Blog Details',
+            id: uniqueId(),
+            url: '/frontend-pages/blog/detail/streaming-video-way-before-it-was-cool-go-dark-tomorrow',
+          },
+          {
+            name: 'Contact Us',
+            id: uniqueId(),
+            url: '/frontend-pages/contact',
+          },
+          {
+            name: 'Portfolio',
+            id: uniqueId(),
+            url: '/frontend-pages/portfolio',
+          },
+          {
+            name: 'Pricing',
+            id: uniqueId(),
+            url: '/frontend-pages/pricing',
           },
         ],
       },
       {
-        heading: "More Options",
-        children: [
-          {
-            id: uniqueId(),
-            url: "/sample-page",
-            name: "Applications",
-            icon: "solar:check-circle-bold",
-            color: "text-primary",
-          },
-          {
-            id: uniqueId(),
-            url: "",
-            name: "Form Options",
-            icon: "solar:check-circle-bold",
-            color: "text-secondary",
-          },
-          {
-            id: uniqueId(),
-            url: "",
-            name: "Table Variations",
-            icon: "solar:check-circle-bold",
-            color: "text-info",
-          },
-          {
-            id: uniqueId(),
-            url: "",
-            name: "Charts Selection",
-            icon: "solar:check-circle-bold",
-            color: "text-warning",
-          },
-          {
-            id: uniqueId(),
-            url: "",
-            name: "Widgets",
-            icon: "solar:check-circle-bold",
-            color: "text-success",
-          },
-        ],
+        name: 'Landingpage',
+        icon: 'solar:bill-list-line-duotone',
+        id: uniqueId(),
+        url: '/landingpage',
       },
     ],
   },

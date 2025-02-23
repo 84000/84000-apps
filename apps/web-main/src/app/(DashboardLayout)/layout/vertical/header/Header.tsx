@@ -8,7 +8,6 @@ import { Language } from './Language';
 import MobileHeaderItems from './MobileHeaderItems';
 import { Drawer } from 'flowbite-react';
 import MobileSidebar from '../sidebar/MobileSidebar';
-import HorizontalMenu from '../../horizontal/header/HorizontalMenu';
 import { MainLogo } from '@design-system';
 import { ScholarUser } from '../../../../context/SessionContext';
 
@@ -37,7 +36,7 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
     };
   }, []);
 
-  const { isLayout } = useContext(CustomizerContext);
+  const { isLayout, isCollapse, setIsCollapse } = useContext(CustomizerContext);
 
   const [mobileMenu, setMobileMenu] = useState('');
 
@@ -80,6 +79,19 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
                   <MainLogo />
                 </div>
               ) : null}
+
+              <span
+                onClick={() => {
+                  if (isCollapse === 'full-sidebar') {
+                    setIsCollapse('mini-sidebar');
+                  } else {
+                    setIsCollapse('full-sidebar');
+                  }
+                }}
+                className="h-10 w-10 hover:text-primary hover:bg-lightprimary rounded-full flex justify-center items-center cursor-pointer text-darklink  dark:text-white"
+              >
+                <Icon icon="solar:hamburger-menu-line-duotone" height={21} />
+              </span>
             </div>
           </Navbar.Collapse>
 
@@ -107,17 +119,6 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
         >
           <MobileHeaderItems user={user} handleLogout={handleLogout} />
         </div>
-
-        {/* Horizontal Menu  */}
-        {layoutType == 'horizontal' ? (
-          <div className="xl:border-t xl:border-ld">
-            <div
-              className={`${isLayout == 'full' ? 'w-full px-6' : 'container'}`}
-            >
-              <HorizontalMenu />
-            </div>
-          </div>
-        ) : null}
       </header>
 
       {/* Mobile Sidebar */}
