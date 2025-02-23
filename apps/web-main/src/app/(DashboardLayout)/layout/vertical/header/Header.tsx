@@ -10,12 +10,15 @@ import { Drawer } from 'flowbite-react';
 import MobileSidebar from '../sidebar/MobileSidebar';
 import HorizontalMenu from '../../horizontal/header/HorizontalMenu';
 import { MainLogo } from '@design-system';
+import { ScholarUser } from '../../../../context/SessionContext';
 
 interface HeaderPropsType {
   layoutType: string;
+  user: ScholarUser;
+  handleLogout: () => void;
 }
 
-const Header = ({ layoutType }: HeaderPropsType) => {
+const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
   const [isSticky, setIsSticky] = useState(false);
 
   useEffect(() => {
@@ -88,7 +91,7 @@ const Header = ({ layoutType }: HeaderPropsType) => {
           <Navbar.Collapse className="xl:block hidden">
             <div className="flex gap-3 items-center">
               <Language />
-              <Profile />
+              <Profile user={user} handleLogout={handleLogout} />
             </div>
           </Navbar.Collapse>
           {/* Mobile Toggle Icon */}
@@ -102,7 +105,7 @@ const Header = ({ layoutType }: HeaderPropsType) => {
         <div
           className={`w-full  xl:hidden block mobile-header-menu ${mobileMenu}`}
         >
-          <MobileHeaderItems />
+          <MobileHeaderItems user={user} handleLogout={handleLogout} />
         </div>
 
         {/* Horizontal Menu  */}

@@ -75,25 +75,4 @@ const appsLink: appsLinkType[] = [
   },
 ];
 
-//  Profile Data
-interface ProfileType {
-  title: string;
-  url: string;
-}
-
-const profileDD: ProfileType[] = [
-  {
-    title: 'My Profile',
-    url: '/apps/user-profile/profile',
-  },
-  {
-    title: 'Account Settings',
-    url: '/theme-pages/account-settings',
-  },
-  {
-    title: 'Sign Out',
-    url: '/auth/auth2/login',
-  },
-];
-
-export { appsLink, profileDD };
+export { appsLink };

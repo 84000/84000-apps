@@ -1,14 +1,47 @@
 'use client';
-import React, { useContext } from 'react';
+
+import React, { useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from './layout/vertical/sidebar/Sidebar';
 import Header from './layout/vertical/header/Header';
 import { CustomizerContext } from '../context/CustomizerContext';
+import { ScholarUser, useSession } from '../context/SessionContext';
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const { activeLayout, isLayout } = useContext(CustomizerContext);
+  const { getUser, logout } = useSession();
+  const router = useRouter();
+
+  const [user, setUser] = useState<ScholarUser | null>();
+
+  useEffect(() => {
+    (async () => {
+      const user = await getUser();
+      setUser(user);
+
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
+    })();
+  }, [router, getUser]);
+
+  const handleLogout = () => {
+    (async () => {
+      logout();
+      setUser(null);
+      router.replace('/login');
+    })();
+  };
+
+  if (!user) {
+    // TODO: loading skeleton
+    return null;
+  }
+
   return (
     <div className="flex w-full min-h-screen dark:bg-darkgray">
       <div className="page-wrapper flex w-full  ">
@@ -17,11 +50,11 @@ export default function Layout({
         {activeLayout == 'vertical' ? <Sidebar /> : null}
         <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
           {/* Top Header  */}
-          {activeLayout == 'horizontal' ? (
-            <Header layoutType="horizontal" />
-          ) : (
-            <Header layoutType="vertical" />
-          )}
+          <Header
+            layoutType={activeLayout}
+            user={user}
+            handleLogout={handleLogout}
+          />
 
           <div
             className={`bg-lightgray dark:bg-dark  h-full ${

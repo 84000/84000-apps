@@ -6,11 +6,12 @@ import { theme } from '@design-system';
 import { Flowbite, ThemeModeScript } from 'flowbite-react';
 import { CustomizerContextProvider } from './context/CustomizerContext';
 import '../utils/i18n';
+import { SessionProvider } from './context/SessionContext';
 
 const manrope = Manrope({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Matdash - Nextjs',
+  title: "84000 Scholar's Room",
 };
 
 export default function RootLayout({
@@ -26,7 +27,9 @@ export default function RootLayout({
       </head>
       <body className={`${manrope.className}`}>
         <Flowbite theme={{ theme }}>
-          <CustomizerContextProvider>{children}</CustomizerContextProvider>
+          <CustomizerContextProvider>
+            <SessionProvider>{children}</SessionProvider>
+          </CustomizerContextProvider>
         </Flowbite>
       </body>
     </html>

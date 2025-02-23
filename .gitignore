@@ -1,4 +1,6 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
+.env*.local
+.ent
 
 # compiled output
 dist
@@ -43,6 +45,7 @@ Thumbs.db
 
 # Next.js
 .next
+.vercel
 out
 
 storybook-static
