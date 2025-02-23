@@ -45,7 +45,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     const redirectTo =
       process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
       `${window.location.origin}/auth/callback`;
-    console.log(redirectTo);
+
     loginWithGoogleCall({ client, redirectTo });
   }, [client]);
 
