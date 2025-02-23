@@ -2,8 +2,15 @@
 import Profile from './Profile';
 import { Language } from './Language';
 import { Navbar } from 'flowbite-react';
+import { ScholarUser } from '../../../../context/SessionContext';
 
-const MobileHeaderItems = () => {
+const MobileHeaderItems = ({
+  user,
+  handleLogout,
+}: {
+  user: ScholarUser;
+  handleLogout: () => void;
+}) => {
   return (
     <Navbar
       fluid
@@ -12,7 +19,7 @@ const MobileHeaderItems = () => {
       <div className="xl:hidden block w-full">
         <div className="flex gap-3 justify-center items-center">
           <Language />
-          <Profile />
+          <Profile user={user} handleLogout={handleLogout} />
         </div>
       </div>
     </Navbar>

@@ -12,7 +12,7 @@ export default function Layout({
   children: React.ReactNode;
 }>) {
   const { activeLayout, isLayout } = useContext(CustomizerContext);
-  const { getUser } = useSession();
+  const { getUser, logout } = useSession();
   const router = useRouter();
 
   const [user, setUser] = useState<ScholarUser | null>();
@@ -29,6 +29,14 @@ export default function Layout({
     })();
   }, [router, getUser]);
 
+  const handleLogout = () => {
+    (async () => {
+      logout();
+      setUser(null);
+      router.replace('/login');
+    })();
+  };
+
   if (!user) {
     // TODO: loading skeleton
     return null;
@@ -42,11 +50,11 @@ export default function Layout({
         {activeLayout == 'vertical' ? <Sidebar /> : null}
         <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
           {/* Top Header  */}
-          {activeLayout == 'horizontal' ? (
-            <Header layoutType="horizontal" />
-          ) : (
-            <Header layoutType="vertical" />
-          )}
+          <Header
+            layoutType={activeLayout}
+            user={user}
+            handleLogout={handleLogout}
+          />
 
           <div
             className={`bg-lightgray dark:bg-dark  h-full ${

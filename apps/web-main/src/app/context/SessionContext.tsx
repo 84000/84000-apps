@@ -5,6 +5,7 @@ import { createClient } from '../../utils/supabase/client';
 import {
   getUser as getUserCall,
   loginWithGoogle as loginWithGoogleCall,
+  logout as logoutCall,
 } from '../../utils/supabase/actions';
 
 export type ScholarUser = {
@@ -18,12 +19,16 @@ export type ScholarUser = {
 interface SessionContextState {
   getUser: () => Promise<ScholarUser | null>;
   loginWithGoogle: () => void;
+  logout: () => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextState>({
   getUser: async () => null,
   loginWithGoogle: () => {
     new Error('loginWithGoogle is not implemented');
+  },
+  logout: async () => {
+    new Error('logout is not implemented');
   },
 });
 
@@ -37,11 +42,19 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [client]);
 
   const loginWithGoogle = useCallback(() => {
-    loginWithGoogleCall({ client });
+    const redirectTo =
+      process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
+      `${window.location.origin}/auth/callback`;
+    console.log(redirectTo);
+    loginWithGoogleCall({ client, redirectTo });
+  }, [client]);
+
+  const logout = useCallback(async () => {
+    await logoutCall({ client });
   }, [client]);
 
   return (
-    <SessionContext.Provider value={{ getUser, loginWithGoogle }}>
+    <SessionContext.Provider value={{ getUser, loginWithGoogle, logout }}>
       {children}
     </SessionContext.Provider>
   );
