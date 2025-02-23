@@ -5,7 +5,7 @@ import { useSession } from '../../context/SessionContext';
 import CardBox from '../../components/shared/CardBox';
 import { MainLogo } from '@design-system';
 
-export const LoginPage = () => {
+const LoginPage = () => {
   const { loginWithGoogle } = useSession();
   return (
     <>
