@@ -1,11 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import Logo from '../svg/logo.svg';
+import Logo from '../svg/mini-logo.svg';
 import Link from 'next/link';
 
-export const MainLogo = ({
-  width = 166, // defined in svg
+export const MiniLogo = ({
+  width = 100, // defined in svg
   height = 100, // defined in svg
 }: {
   width?: number | undefined;
@@ -15,7 +15,7 @@ export const MainLogo = ({
     <Link href={'/'}>
       <Image
         src={Logo}
-        alt="logo"
+        alt="mini logo"
         className="block"
         width={width}
         height={height}
@@ -24,4 +24,4 @@ export const MainLogo = ({
   );
 };
 
-export default MainLogo;
+export default MiniLogo;

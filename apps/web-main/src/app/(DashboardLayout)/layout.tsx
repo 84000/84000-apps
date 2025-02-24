@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from './layout/vertical/sidebar/Sidebar';
 import Header from './layout/vertical/header/Header';
-import { CustomizerContext } from '../context/CustomizerContext';
 import { ScholarUser, useSession } from '../context/SessionContext';
 export default function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { activeLayout, isLayout } = useContext(CustomizerContext);
   const { getUser, logout } = useSession();
   const router = useRouter();
 
@@ -47,31 +45,14 @@ export default function Layout({
       <div className="page-wrapper flex w-full  ">
         {/* Header/sidebar */}
 
-        {activeLayout == 'vertical' ? <Sidebar /> : null}
+        <Sidebar />
         <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
           {/* Top Header  */}
-          <Header
-            layoutType={activeLayout}
-            user={user}
-            handleLogout={handleLogout}
-          />
+          <Header user={user} handleLogout={handleLogout} />
 
-          <div
-            className={`bg-lightgray dark:bg-dark  h-full ${
-              activeLayout != 'horizontal' ? 'rounded-bb' : 'rounded-none'
-            } `}
-          >
+          <div className={`bg-lightgray dark:bg-dark h-full rounded-bb`}>
             {/* Body Content  */}
-            <div
-              className={` ${
-                isLayout == 'full'
-                  ? 'w-full py-30 md:px-30 px-5'
-                  : 'container mx-auto  py-30'
-              } ${activeLayout == 'horizontal' ? 'xl:mt-3' : ''}
-              `}
-            >
-              {children}
-            </div>
+            <div className={'w-full py-30 xl:px-30 px-5'}>{children}</div>
           </div>
         </div>
       </div>

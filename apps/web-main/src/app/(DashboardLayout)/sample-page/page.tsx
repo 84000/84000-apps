@@ -1,17 +1,19 @@
-import CardBox from '../../components/shared/CardBox';
+import { Card, CardContent, CardTitle } from '@design-system';
 import React from 'react';
 
 const page = () => {
   return (
     <>
-      <CardBox>
-        <h5 className="card-title">Sample page 2</h5>
-        <p>
-          {`Lorem Ipsum is simply dummy text of the printing and typesetting
+      <Card>
+        <CardTitle>Sample page 2</CardTitle>
+        <CardContent>
+          <p>
+            {`Lorem Ipsum is simply dummy text of the printing and typesetting
           industry. Lorem Ipsum has been the industry's standard dummy text ever
           since the 1500s`}
-        </p>
-      </CardBox>
+          </p>
+        </CardContent>
+      </Card>
     </>
   );
 };

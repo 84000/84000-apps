@@ -1,24 +1,22 @@
 'use client';
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from 'flowbite-react';
 import { Icon } from '@iconify/react';
 import Profile from './Profile';
-import { CustomizerContext } from '../../../../context/CustomizerContext';
+import { useUIState } from '../../../../context/InterfaceContext';
 import { Language } from './Language';
 import MobileHeaderItems from './MobileHeaderItems';
 import { Drawer } from 'flowbite-react';
 import MobileSidebar from '../sidebar/MobileSidebar';
-import HorizontalMenu from '../../horizontal/header/HorizontalMenu';
 import { MainLogo } from '@design-system';
 import { ScholarUser } from '../../../../context/SessionContext';
 
 interface HeaderPropsType {
-  layoutType: string;
   user: ScholarUser;
   handleLogout: () => void;
 }
 
-const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
+const Header = ({ user, handleLogout }: HeaderPropsType) => {
   const [isSticky, setIsSticky] = useState(false);
 
   useEffect(() => {
@@ -37,7 +35,7 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
     };
   }, []);
 
-  const { isLayout } = useContext(CustomizerContext);
+  const { isCollapse, setIsCollapse } = useUIState();
 
   const [mobileMenu, setMobileMenu] = useState('');
 
@@ -61,9 +59,9 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
       >
         <Navbar
           fluid
-          className={`rounded-none bg-transparent dark:bg-transparent py-4 sm:px-[15px] px-2 ${
-            layoutType == 'horizontal' ? 'container mx-auto !px-6' : ''
-          }  ${isLayout == 'full' ? '!max-w-full ' : ''}`}
+          className={
+            'rounded-none bg-transparent dark:bg-transparent py-4 sm:px-[15px] px-2'
+          }
         >
           {/* Mobile Toggle Icon */}
           <span
@@ -72,20 +70,15 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
           >
             <Icon icon="solar:hamburger-menu-line-duotone" height={21} />
           </span>
+
           {/* Toggle Icon   */}
           <Navbar.Collapse className="xl:block ">
-            <div className="flex gap-3 items-center relative">
-              {layoutType == 'horizontal' ? (
-                <div className="me-3">
-                  <MainLogo />
-                </div>
-              ) : null}
-            </div>
+            <div className="flex gap-3 items-center relative"></div>
           </Navbar.Collapse>
 
           {/* mobile-logo */}
           <div className="block xl:hidden">
-            <MainLogo />
+            <MainLogo width={80} height={40} />
           </div>
 
           <Navbar.Collapse className="xl:block hidden">
@@ -107,17 +100,6 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
         >
           <MobileHeaderItems user={user} handleLogout={handleLogout} />
         </div>
-
-        {/* Horizontal Menu  */}
-        {layoutType == 'horizontal' ? (
-          <div className="xl:border-t xl:border-ld">
-            <div
-              className={`${isLayout == 'full' ? 'w-full px-6' : 'container'}`}
-            >
-              <HorizontalMenu />
-            </div>
-          </div>
-        ) : null}
       </header>
 
       {/* Mobile Sidebar */}
