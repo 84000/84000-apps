@@ -4,7 +4,7 @@ import { Manrope } from 'next/font/google';
 import '@design-system-css';
 import { theme } from '@design-system';
 import { Flowbite, ThemeModeScript } from 'flowbite-react';
-import { CustomizerContextProvider } from './context/CustomizerContext';
+import { InterfaceContextProvider } from './context/InterfaceContext';
 import '../utils/i18n';
 import { SessionProvider } from './context/SessionContext';
 
@@ -27,9 +27,9 @@ export default function RootLayout({
       </head>
       <body className={`${manrope.className}`}>
         <Flowbite theme={{ theme }}>
-          <CustomizerContextProvider>
+          <InterfaceContextProvider>
             <SessionProvider>{children}</SessionProvider>
-          </CustomizerContextProvider>
+          </InterfaceContextProvider>
         </Flowbite>
       </body>
     </html>

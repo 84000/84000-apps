@@ -9,7 +9,7 @@ import React, {
 import config from './config';
 
 // Define the shape of the context state
-interface CustomizerContextState {
+interface InterfaceContextState {
   activeMode: string;
   setActiveMode: (mode: string) => void;
   isCollapse: string;
@@ -19,7 +19,7 @@ interface CustomizerContextState {
 }
 
 // Create the context with an initial value
-export const CustomizerContext = createContext<CustomizerContextState>({
+export const InterfaceContext = createContext<InterfaceContextState>({
   activeMode: config.activeMode,
   isCollapse: config.isCollapse,
   isLanguage: config.isLanguage,
@@ -35,11 +35,11 @@ export const CustomizerContext = createContext<CustomizerContextState>({
 });
 
 // Define the type for the children prop
-interface CustomizerContextProps {
+interface InterfaceContextProps {
   children: ReactNode;
 }
 // Create the provider component
-export const CustomizerContextProvider: React.FC<CustomizerContextProps> = ({
+export const InterfaceContextProvider: React.FC<InterfaceContextProps> = ({
   children,
 }) => {
   const [activeMode, setActiveMode] = useState<string>(config.activeMode);
@@ -53,7 +53,7 @@ export const CustomizerContextProvider: React.FC<CustomizerContextProps> = ({
   }, [activeMode, isCollapse]);
 
   return (
-    <CustomizerContext.Provider
+    <InterfaceContext.Provider
       value={{
         activeMode,
         setActiveMode,
@@ -64,8 +64,8 @@ export const CustomizerContextProvider: React.FC<CustomizerContextProps> = ({
       }}
     >
       {children}
-    </CustomizerContext.Provider>
+    </InterfaceContext.Provider>
   );
 };
 
-export const useUIState = () => useContext(CustomizerContext);
+export const useUIState = () => useContext(InterfaceContext);

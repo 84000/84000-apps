@@ -7,7 +7,7 @@ import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { useUIState } from '../../../../../context/CustomizerContext';
+import { useUIState } from '../../../../../context/InterfaceContext';
 
 interface NavItemsProps {
   item: ChildItem;

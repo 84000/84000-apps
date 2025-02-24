@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUIState } from '../../../../context/CustomizerContext';
+import { useUIState } from '../../../../context/InterfaceContext';
 import Image from 'next/image';
 import { Dropdown } from 'flowbite-react';
 

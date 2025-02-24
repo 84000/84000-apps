@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from 'flowbite-react';
 import { Icon } from '@iconify/react';
 import Profile from './Profile';
-import { useUIState } from '../../../../context/CustomizerContext';
+import { useUIState } from '../../../../context/InterfaceContext';
 import { Language } from './Language';
 import MobileHeaderItems from './MobileHeaderItems';
 import { Drawer } from 'flowbite-react';
