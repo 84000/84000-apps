@@ -15,19 +15,23 @@ export default function Layout({
   const { getUser, logout } = useSession();
   const router = useRouter();
 
-  const [user, setUser] = useState<ScholarUser | null>();
+  const [user, setUser] = useState<ScholarUser | null>({
+    id: 'uuid',
+    email: 'fake@email.com',
+    name: 'Fake User',
+  });
 
-  useEffect(() => {
-    (async () => {
-      const user = await getUser();
-      setUser(user);
-
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
-    })();
-  }, [router, getUser]);
+  // useEffect(() => {
+  //   (async () => {
+  //     const user = await getUser();
+  //     setUser(user);
+  //
+  //     if (!user) {
+  //       router.replace('/login');
+  //       return;
+  //     }
+  //   })();
+  // }, [router, getUser]);
 
   const handleLogout = () => {
     (async () => {

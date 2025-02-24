@@ -2,8 +2,7 @@
 
 import SocialLogin from '../../../components/ui/SocialLogin';
 import { useSession } from '../../context/SessionContext';
-import CardBox from '../../components/shared/CardBox';
-import { MainLogo } from '@design-system';
+import { Card, CardTitle, MainLogo } from '@design-system';
 
 const LoginPage = () => {
   const { loginWithGoogle } = useSession();
@@ -16,18 +15,14 @@ const LoginPage = () => {
         className={`relative min-h-screen flex flex-col justify-center bg-cover bg-center ${bgImage}`}
       >
         <div className="flex h-full justify-center items-center sm:pr-[50%] px-4">
-          <CardBox className="sm:max-w-sm w-full border-none p-0">
-            <div className="py-8 px-6">
-              <div className="flex justify-center items-center py-8">
-                <MainLogo />
-              </div>
-              <h3 className="text-2xl font-bold my-3 mt-5">
-                Sign In to Continue
-              </h3>
-              <SocialLogin loginWithGoogle={loginWithGoogle} />
-              <div className="h-8" />
+          <Card className="sm:max-w-sm w-full">
+            <div className="flex justify-center items-center py-8">
+              <MainLogo />
             </div>
-          </CardBox>
+            <CardTitle className="text-2xl">Sign In to Continue</CardTitle>
+            <SocialLogin loginWithGoogle={loginWithGoogle} />
+            <div className="h-8" />
+          </Card>
         </div>
       </div>
     </>
