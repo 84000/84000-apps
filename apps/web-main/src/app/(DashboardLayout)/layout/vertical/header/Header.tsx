@@ -74,12 +74,6 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
           {/* Toggle Icon   */}
           <Navbar.Collapse className="xl:block ">
             <div className="flex gap-3 items-center relative">
-              {layoutType == 'horizontal' ? (
-                <div className="me-3">
-                  <MainLogo />
-                </div>
-              ) : null}
-
               <span
                 onClick={() => {
                   if (isCollapse === 'full-sidebar') {
@@ -97,7 +91,7 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
 
           {/* mobile-logo */}
           <div className="block xl:hidden">
-            <MainLogo />
+            <MainLogo width={80} height={40} />
           </div>
 
           <Navbar.Collapse className="xl:block hidden">

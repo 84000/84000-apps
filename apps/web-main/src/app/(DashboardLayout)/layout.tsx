@@ -47,7 +47,7 @@ export default function Layout({
       <div className="page-wrapper flex w-full  ">
         {/* Header/sidebar */}
 
-        {activeLayout == 'vertical' ? <Sidebar /> : null}
+        <Sidebar />
         <div className="page-wrapper-sub flex flex-col w-full dark:bg-darkgray">
           {/* Top Header  */}
           <Header
@@ -65,7 +65,7 @@ export default function Layout({
             <div
               className={` ${
                 isLayout == 'full'
-                  ? 'w-full py-30 md:px-30 px-5'
+                  ? 'w-full py-30 xl:px-30 px-5'
                   : 'container mx-auto  py-30'
               } ${activeLayout == 'horizontal' ? 'xl:mt-3' : ''}
               `}

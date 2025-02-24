@@ -6,7 +6,7 @@ import NavItems from './NavItems';
 import NavCollapse from './NavCollapse';
 import SimpleBar from 'simplebar-react';
 import { Icon } from '@iconify/react';
-import { MainLogo } from '@design-system';
+import { MiniLogo } from '@design-system';
 
 const SidebarLayout = () => {
   return (
@@ -17,8 +17,8 @@ const SidebarLayout = () => {
             className="fixed menu-sidebar  bg-white dark:bg-darkgray rtl:pe-4"
             aria-label="Sidebar with multi-level dropdown example"
           >
-            <div className="px-6 py-4 flex items-center brand-logo">
-              <MainLogo />
+            <div className="px-4 py-4 brand-logo">
+              <MiniLogo width={50} height={50} />
             </div>
             <SimpleBar className="h-[calc(100vh_-_85px)]">
               <Sidebar.Items className="rtl:pe-0 rtl:ps-3 px-4 mt-2">
