@@ -23,73 +23,19 @@ import { uniqueId } from 'lodash';
 
 const SidebarContent: MenuItem[] = [
   {
-    heading: 'Dashboards',
+    heading: 'Tools',
     children: [
       {
-        name: 'Dashboard1',
+        name: 'Dashboard',
         icon: 'solar:atom-line-duotone',
-        id: uniqueId(),
+        id: 1,
         url: '/',
       },
       {
-        name: 'Dashboard2',
+        name: 'Sample Page 2',
         icon: 'solar:chart-line-duotone',
-        id: uniqueId(),
-        url: '/dashboards/dashboard2',
-      },
-      {
-        name: 'Dashboard3',
-        icon: 'solar:screencast-2-line-duotone',
-        id: uniqueId(),
-        url: '/dashboards/dashboard3',
-      },
-      {
-        name: 'Front Pages',
-        id: uniqueId(),
-        icon: 'solar:home-angle-linear',
-        children: [
-          {
-            name: 'Homepage',
-            id: uniqueId(),
-            url: '/frontend-pages/homepage',
-          },
-          {
-            name: 'About Us',
-            id: uniqueId(),
-            url: '/frontend-pages/aboutus',
-          },
-          {
-            name: 'Blog',
-            id: uniqueId(),
-            url: '/frontend-pages/blog',
-          },
-          {
-            name: 'Blog Details',
-            id: uniqueId(),
-            url: '/frontend-pages/blog/detail/streaming-video-way-before-it-was-cool-go-dark-tomorrow',
-          },
-          {
-            name: 'Contact Us',
-            id: uniqueId(),
-            url: '/frontend-pages/contact',
-          },
-          {
-            name: 'Portfolio',
-            id: uniqueId(),
-            url: '/frontend-pages/portfolio',
-          },
-          {
-            name: 'Pricing',
-            id: uniqueId(),
-            url: '/frontend-pages/pricing',
-          },
-        ],
-      },
-      {
-        name: 'Landingpage',
-        icon: 'solar:bill-list-line-duotone',
-        id: uniqueId(),
-        url: '/landingpage',
+        id: 2,
+        url: '/sample-page',
       },
     ],
   },

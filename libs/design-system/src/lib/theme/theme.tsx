@@ -585,7 +585,7 @@ export const theme = {
       inner: 'bg-white dark:bg-transparent rounded-none',
     },
     item: {
-      base: 'flex items-center justify-center rounded-lg px-4 py-3 mb-1 gap-3 text-[15px] leading-[normal] font-normal text-link  hover:text-primary dark:text-white  dark:hover:text-primary',
+      base: 'flex items-center justify-center rounded-lg px-4 py-3 mb-1 gap-3 text-[15px] leading-[normal] font-normal text-link hover:bg-lightgray hover:text-primary dark:text-white  dark:hover:text-primary',
       content: {
         base: 'flex-1 whitespace-nowrap px-0',
       },
@@ -595,7 +595,7 @@ export const theme = {
 
     collapse: {
       button:
-        'group flex gap-3 items-center  rounded-lg px-4 py-3 mb-1 text-[15px] leading-[normal] font-normal text-link  hover:text-primary dark:text-white w-full dark:hover:text-primary',
+        'group flex gap-3 items-center rounded-lg px-4 py-3 mb-1 text-[15px] leading-[normal] font-normal text-link  hover:bg-lightgray hover:text-primary dark:text-white w-full dark:hover:text-primary',
       icon: {
         base: 'h-6 w-6 text-link text-base',
       },

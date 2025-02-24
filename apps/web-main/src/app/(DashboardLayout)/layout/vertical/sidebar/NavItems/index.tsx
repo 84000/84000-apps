@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React from 'react';
 import { ChildItem } from '../Sidebaritems';
 import { Sidebar } from 'flowbite-react';
 import { Icon } from '@iconify/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import { CustomizerContext } from '../../../../../context/CustomizerContext';
+import { useUIState } from '../../../../../context/CustomizerContext';
 
 interface NavItemsProps {
   item: ChildItem;
@@ -15,9 +15,9 @@ interface NavItemsProps {
 const NavItems: React.FC<NavItemsProps> = ({ item }) => {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const { setIsMobileSidebar } = useContext(CustomizerContext);
-  const handleMobileSidebar = () => {
-    setIsMobileSidebar(false);
+  const { setIsCollapse } = useUIState();
+  const handleCollapseSidebar = () => {
+    setIsCollapse('mini-sidebar');
   };
   return (
     <>
@@ -31,7 +31,7 @@ const NavItems: React.FC<NavItemsProps> = ({ item }) => {
         } `}
       >
         <span
-          onClick={handleMobileSidebar}
+          onClick={handleCollapseSidebar}
           className="flex gap-3 align-center items-center truncate"
         >
           {item.icon ? (

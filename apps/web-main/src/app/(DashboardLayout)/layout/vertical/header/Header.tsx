@@ -1,9 +1,9 @@
 'use client';
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from 'flowbite-react';
 import { Icon } from '@iconify/react';
 import Profile from './Profile';
-import { CustomizerContext } from '../../../../context/CustomizerContext';
+import { useUIState } from '../../../../context/CustomizerContext';
 import { Language } from './Language';
 import MobileHeaderItems from './MobileHeaderItems';
 import { Drawer } from 'flowbite-react';
@@ -12,12 +12,11 @@ import { MainLogo } from '@design-system';
 import { ScholarUser } from '../../../../context/SessionContext';
 
 interface HeaderPropsType {
-  layoutType: string;
   user: ScholarUser;
   handleLogout: () => void;
 }
 
-const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
+const Header = ({ user, handleLogout }: HeaderPropsType) => {
   const [isSticky, setIsSticky] = useState(false);
 
   useEffect(() => {
@@ -36,7 +35,7 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
     };
   }, []);
 
-  const { isLayout, isCollapse, setIsCollapse } = useContext(CustomizerContext);
+  const { isCollapse, setIsCollapse } = useUIState();
 
   const [mobileMenu, setMobileMenu] = useState('');
 
@@ -60,9 +59,9 @@ const Header = ({ layoutType, user, handleLogout }: HeaderPropsType) => {
       >
         <Navbar
           fluid
-          className={`rounded-none bg-transparent dark:bg-transparent py-4 sm:px-[15px] px-2 ${
-            layoutType == 'horizontal' ? 'container mx-auto !px-6' : ''
-          }  ${isLayout == 'full' ? '!max-w-full ' : ''}`}
+          className={
+            'rounded-none bg-transparent dark:bg-transparent py-4 sm:px-[15px] px-2'
+          }
         >
           {/* Mobile Toggle Icon */}
           <span

@@ -1,9 +1,9 @@
 'use client';
-import React, { useContext, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CustomizerContext } from '../../../../context/CustomizerContext';
+import { useUIState } from '../../../../context/CustomizerContext';
 import Image from 'next/image';
-import { Button, Dropdown } from 'flowbite-react';
+import { Dropdown } from 'flowbite-react';
 
 const Languages = [
   {
@@ -32,13 +32,13 @@ const Languages = [
 export const Language = () => {
   const { i18n } = useTranslation();
 
-  const { isLanguage, setIsLanguage } = useContext(CustomizerContext);
+  const { isLanguage, setIsLanguage } = useUIState();
   const currentLang =
     Languages.find((_lang) => _lang.value === isLanguage) || Languages[1];
 
   useEffect(() => {
     i18n.changeLanguage(isLanguage);
-  }, [isLanguage]);
+  }, [isLanguage, i18n]);
 
   return (
     <>
