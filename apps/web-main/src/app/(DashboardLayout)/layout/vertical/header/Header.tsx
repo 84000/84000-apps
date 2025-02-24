@@ -70,22 +70,10 @@ const Header = ({ user, handleLogout }: HeaderPropsType) => {
           >
             <Icon icon="solar:hamburger-menu-line-duotone" height={21} />
           </span>
+
           {/* Toggle Icon   */}
           <Navbar.Collapse className="xl:block ">
-            <div className="flex gap-3 items-center relative">
-              <span
-                onClick={() => {
-                  if (isCollapse === 'full-sidebar') {
-                    setIsCollapse('mini-sidebar');
-                  } else {
-                    setIsCollapse('full-sidebar');
-                  }
-                }}
-                className="h-10 w-10 hover:text-primary hover:bg-lightprimary rounded-full flex justify-center items-center cursor-pointer text-darklink  dark:text-white"
-              >
-                <Icon icon="solar:hamburger-menu-line-duotone" height={21} />
-              </span>
-            </div>
+            <div className="flex gap-3 items-center relative"></div>
           </Navbar.Collapse>
 
           {/* mobile-logo */}
