@@ -29,6 +29,10 @@ export type EndNoteXmlIdContent = {
   endNoteXmlId: string;
 };
 
+export type GlossaryXmlIdContent = {
+  glossaryXmlId: string;
+};
+
 export type PassageXmlIdContent = {
   passageXmlId: string;
 };
@@ -56,27 +60,27 @@ export type DistinctAnnotation = AnnotationBase & {
 
 export type EndNoteAnnotation = AnnotationBase & {
   type: 'end-note';
-  content: [EndNoteXmlIdContent];
+  content: [EndNoteXmlIdContent] | [];
 };
 
 export type ForeignAnnotation = AnnotationBase & {
   type: 'foreign';
-  content: [TranslationLanguageContent];
+  content: [TranslationLanguageContent] | [];
 };
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
   type: 'glossary-instance';
-  content: [PassageXmlIdContent];
+  content: [GlossaryXmlIdContent] | [];
 };
 
 export type InlineTitleAnnotation = AnnotationBase & {
   type: 'inline-title';
-  content: [TranslationLanguageContent];
+  content: [TranslationLanguageContent] | [];
 };
 
 export type InternalLinkAnnotation = AnnotationBase & {
   type: 'internal-link';
-  content: [LinkContent];
+  content: [LinkContent] | [];
 };
 
 export type LeadingSpaceAnnotation = AnnotationBase & {
@@ -91,7 +95,7 @@ export type LineAnnotation = AnnotationBase & {
 
 export type LinkAnnotation = AnnotationBase & {
   type: 'link';
-  content: [LinkContent, TitleContent];
+  content: [LinkContent, TitleContent] | [];
 };
 
 export type LineGroupAnnotation = AnnotationBase & {
@@ -106,7 +110,7 @@ export type ParagraphAnnotation = AnnotationBase & {
 
 export type QuotedAnnotation = AnnotationBase & {
   type: 'quoted';
-  content: [QuotedXmlIdContent];
+  content: [QuotedXmlIdContent] | [];
 };
 
 export type SmallCapsAnnotation = AnnotationBase & {
@@ -170,33 +174,43 @@ const dtoToAnnotationMap: Record<
     } as DistinctAnnotation;
   },
   'end-note': (dto: AnnotationDTO): EndNoteAnnotation => {
+    const endNoteXmlId = dto.content[0]?.endNote_xmlId;
+    const content = endNoteXmlId ? [{ endNoteXmlId }] : [];
     return {
       ...dto,
-      content: [{ endNoteXmlId: dto.content[0].endNote_xmlId }],
+      content,
     } as EndNoteAnnotation;
   },
   foreign: (dto: AnnotationDTO): ForeignAnnotation => {
+    const language = dto.content[0]?.lang;
+    const content = language ? [{ language }] : [];
     return {
       ...dto,
-      content: [{ language: dto.content[0].lang }],
+      content,
     } as ForeignAnnotation;
   },
   'glossary-instance': (dto: AnnotationDTO): GlossaryInstanceAnnotation => {
+    const glossaryXmlId = dto.content[0]?.glossary_xmlId;
+    const content = glossaryXmlId ? [{ glossaryXmlId }] : [];
     return {
       ...dto,
-      content: [{ passageXmlId: dto.content[0].glossary_xmlId }],
+      content,
     } as GlossaryInstanceAnnotation;
   },
   'inline-title': (dto: AnnotationDTO): InlineTitleAnnotation => {
+    const language = dto.content[0]?.lang;
+    const content = language ? [{ language }] : [];
     return {
       ...dto,
-      content: [{ language: dto.content[0].lang }],
+      content,
     } as InlineTitleAnnotation;
   },
   'internal-link': (dto: AnnotationDTO): InternalLinkAnnotation => {
+    const href = dto.content[0]?.href;
+    const content = href ? [{ href }] : [];
     return {
       ...dto,
-      content: [{ href: dto.content[0].href }],
+      content,
     } as InternalLinkAnnotation;
   },
   'leading-space': (dto: AnnotationDTO): LeadingSpaceAnnotation => {
@@ -212,9 +226,12 @@ const dtoToAnnotationMap: Record<
     } as LineAnnotation;
   },
   link: (dto: AnnotationDTO): LinkAnnotation => {
+    const href = dto.content[0]?.href;
+    const title = dto.content[1]?.title;
+    const content = href && title ? [{ href }, { title }] : [];
     return {
       ...dto,
-      content: [{ href: dto.content[0].href }, { title: dto.content[1].title }],
+      content,
     } as LinkAnnotation;
   },
   'line-group': (dto: AnnotationDTO): LineGroupAnnotation => {
@@ -230,9 +247,11 @@ const dtoToAnnotationMap: Record<
     } as ParagraphAnnotation;
   },
   quoted: (dto: AnnotationDTO): QuotedAnnotation => {
+    const quotedXmlId = dto.content[0]?.quoted_xmlId;
+    const content = quotedXmlId ? [{ quotedXmlId }] : [];
     return {
       ...dto,
-      content: [{ quotedXmlId: dto.content[0].quoted_xmlId }],
+      content,
     } as QuotedAnnotation;
   },
   'small-caps': (dto: AnnotationDTO): SmallCapsAnnotation => {

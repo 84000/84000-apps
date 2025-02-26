@@ -18,14 +18,14 @@ export type EndNotesDTO = PassageDTO[];
 
 export type BackMatterDTO = {
   glossary: GlossaryDTO;
-  endNotes: EndNotesDTO;
+  'end-notes': EndNotesDTO;
   bibliography: BibliographyDTO;
 };
 
 export const backMatterFromDTO = (dto: BackMatterDTO): BackMatter => {
   return {
     glossary: glossaryFromDTO(dto.glossary),
-    endNotes: dto.endNotes.map(passageFromDTO),
+    endNotes: dto['end-notes'].map(passageFromDTO),
     bibliography: bibliographyFromDTO(dto.bibliography),
   };
 };

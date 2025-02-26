@@ -27,7 +27,7 @@ export type TranslationDTO = {
 
 export const translationFromDTO = (dto: TranslationDTO): Translation => {
   return {
-    body: dto.body.map((p) => passageFromDTO(p)),
+    body: dto.body?.map((p) => passageFromDTO(p)),
     backMatter: backMatterFromDTO(dto.backMatter),
     frontMatter: frontMatterFromDTO(dto.frontMatter),
     passageAnnotations: annotationsFromDTO(dto.passageAnnotations),
