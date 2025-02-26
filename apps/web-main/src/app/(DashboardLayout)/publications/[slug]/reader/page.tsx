@@ -6,8 +6,6 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
   const publication = await getPublicationBySlug(slug);
 
-  console.log(publication?.frontMatter);
-
   return (
     <>
       <Card>

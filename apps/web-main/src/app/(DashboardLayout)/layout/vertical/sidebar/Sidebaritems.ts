@@ -1,7 +1,9 @@
+import { IconifyIcon } from '@iconify/react';
+
 export interface ChildItem {
   id?: number | string;
   name?: string;
-  icon?: string;
+  icon: string | IconifyIcon;
   children?: ChildItem[];
   item?: unknown;
   url?: string;
@@ -11,7 +13,7 @@ export interface ChildItem {
 export interface MenuItem {
   heading?: string;
   name?: string;
-  icon?: string;
+  icon?: string | IconifyIcon;
   id?: number;
   to?: string;
   items?: MenuItem[];
