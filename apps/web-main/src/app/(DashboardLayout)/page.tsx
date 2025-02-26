@@ -5,7 +5,7 @@ const page = () => {
   return (
     <>
       <Card>
-        <CardTitle>Sample page 1</CardTitle>
+        <CardTitle>{"Scholar's Room Dashboard"}</CardTitle>
         <CardContent>
           <p>
             {`Lorem Ipsum is simply dummy text of the printing and typesetting

@@ -1,41 +1,47 @@
+import { IconifyIcon } from '@iconify/react';
+
 export interface ChildItem {
   id?: number | string;
   name?: string;
-  icon?: any;
+  icon: string | IconifyIcon;
   children?: ChildItem[];
-  item?: any;
-  url?: any;
+  item?: unknown;
+  url?: string;
   color?: string;
 }
 
 export interface MenuItem {
   heading?: string;
   name?: string;
-  icon?: any;
+  icon?: string | IconifyIcon;
   id?: number;
   to?: string;
   items?: MenuItem[];
   children?: ChildItem[];
-  url?: any;
+  url?: string;
 }
-
-import { uniqueId } from 'lodash';
 
 const SidebarContent: MenuItem[] = [
   {
-    heading: 'Tools',
+    heading: 'Publications',
     children: [
       {
-        name: 'Dashboard',
-        icon: 'solar:atom-line-duotone',
+        name: 'Project Management',
+        icon: 'solar:chart-square-outline',
         id: 1,
-        url: '/',
+        url: '/project',
       },
       {
-        name: 'Sample Page 2',
-        icon: 'solar:chart-line-duotone',
+        name: 'Reader',
+        icon: 'solar:notebook-minimalistic-outline',
         id: 2,
-        url: '/sample-page',
+        url: '/publications/toh251/reader',
+      },
+      {
+        name: 'Editor',
+        icon: 'solar:pen-new-square-outline',
+        id: 3,
+        url: '/publications/toh251/editor',
       },
     ],
   },
