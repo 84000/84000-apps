@@ -18,11 +18,11 @@ export const getPublicationBySlug = async (slug: string) => {
   let json;
 
   try {
-    json = await res.json();
+    json = await res.clone().json();
   } catch (e) {
     console.error(`Failed to parse JSON for ${slug}`, e);
     // TODO:: remove this when data has been sanitized
-    const text = await res.text();
+    const text = await res.clone().text();
     const escaped = text
       .replace(/(".*?)(\t)(.*?")/g, '$1\\t$3')
       .replace(/(".*?)(\n)(.*?")/g, '$1\\n$3')
