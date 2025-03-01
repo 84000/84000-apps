@@ -1,10 +1,10 @@
 import { join } from 'path';
 import { createGlobPatternsForDependencies } from '@nx/react/tailwind';
 
-// const sharedConfig = require('../../tailwind.base.config.js');
+const sharedConfig = require('../../tailwind.base.config.js');
 
 module.exports = {
-  // ...sharedConfig,
+  ...sharedConfig,
   content: [
     join(
       __dirname,
