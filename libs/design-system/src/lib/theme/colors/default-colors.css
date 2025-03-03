@@ -1,3 +1,5 @@
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --color-primary: #004976;
   --color-primary-rgb: 0, 73, 118;
@@ -38,6 +40,7 @@
   --color-sky: #0a2540;
 
   --color-border: var(--color-gray);
+  --color-background: var(--color-light);
   --color-surface-white: var(--color-white);
   --color-surface-dark: var(--color-dark);
   --color-surface-light: var(--color-light);
@@ -72,4 +75,44 @@
   --color-secondary-emphasis: var(--color-secondary-light);
   --color-lightprimary: var(--color-primary-light);
   --color-lightsecondary: var(--color-secondary-light);
+}
+
+.dark {
+  --color-primary: #004976;
+  --color-primary-rgb: 0, 73, 118;
+  --color-primary-light: #dddbff;
+  --color-primary-lightest: #f1f2fe;
+
+  --color-secondary: #16cdc7;
+  --color-secondary-rgb: 22, 205, 199;
+  --color-secondary-light: #a6f7f5;
+  --color-secondary-lightest: #ecfdfd;
+
+  --color-tertiary: #ff6692;
+  --color-tertiary-rgb: 255, 102, 146;
+  --color-tertiary-light: #ffccdb;
+  --color-tertiary-lightest: #ffe5ed;
+
+  --color-action-success: #36c76c;
+  --color-action-success-rgb: 54, 199, 108;
+  --color-action-success-light: #ebfaf0;
+
+  --color-action-warning: #ffd648;
+  --color-action-warning-rgb: 255, 214, 72;
+  --color-action-warning-light: #fff9e5;
+
+  --color-action-danger: #ff6692;
+  --color-action-danger-rgb: 255, 102, 46;
+  --color-action-danger-light: #ffe5ed;
+
+  --color-text: #29343d;
+  --color-text-light: #526b7a;
+  --color-text-lightest: #98a4ae;
+
+  --color-white: #fff;
+  --color-dark: #0a2540;
+  --color-light: #f6f7f9;
+  --color-gray: #e0e6eb;
+  --color-lightgray: #f4f7fb;
+  --color-sky: #0a2540;
 }
