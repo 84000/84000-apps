@@ -77,13 +77,13 @@
   --color-lightprimary: var(--color-primary-light);
   --color-lightsecondary: var(--color-secondary-light);
 
-  --sidebar-background: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-background: var(--color-background);
+  --sidebar-foreground: var(--color-bodytext);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-primary-light);
+  --sidebar-accent: var(--color-secondary);
+  --sidebar-accent-foreground: var(--color-secondary-light);
+  --sidebar-border: var(--color-border);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
@@ -129,12 +129,12 @@
 
   --color-background: var(--color-black);
 
-  --sidebar-background: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 0 0% 98%;
-  --sidebar-primary-foreground: 240 5.9% 10%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-background: var(--color-background);
+  --sidebar-foreground: var(--color-bodytext);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-primary-light);
+  --sidebar-accent: var(--color-secondary);
+  --sidebar-accent-foreground: var(--color-secondary-light);
+  --sidebar-border: var(--color-border);
   --sidebar-ring: 217.2 91.2% 59.8%;
 }

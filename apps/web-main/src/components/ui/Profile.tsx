@@ -38,21 +38,23 @@ const Profile = ({
           sideOffset={4}
         >
           <DropdownMenuLabel className="p-0 font-normal">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatar} />
-              <AvatarFallback>
-                <UserIcon />
-              </AvatarFallback>
-            </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
+            <div className="flex space-x-2 p-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.avatar} />
+                <AvatarFallback>
+                  <UserIcon />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col text-left text-sm leading-tight">
+                <span className="truncate font-semibold">{user.name}</span>
+                <span className="truncate text-xs">{user.email}</span>
+              </div>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem>
-              <Button variant={'ghost'} onClick={handleLogout}>
+              <Button className="p-0" variant={'ghost'} onClick={handleLogout}>
                 Sign Out
               </Button>
             </DropdownMenuItem>

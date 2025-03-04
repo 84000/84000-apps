@@ -49,9 +49,9 @@ export default function Layout({
         <div className="flex flex-1">
           <AppSidebar />
           <SidebarInset>
-            <div className={`bg-lightgray dark:bg-dark h-full rounded-bb`}>
+            <div className={`bg-lightgray dark:bg-dark h-full`}>
               {/* Body Content  */}
-              <div className={'w-full py-30 xl:px-30 px-5'}>{children}</div>
+              <div className={'w-full py-4 px-4'}>{children}</div>
             </div>
           </SidebarInset>
         </div>

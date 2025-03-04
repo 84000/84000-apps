@@ -64,6 +64,9 @@ module.exports = {
           border: 'var(--sidebar-border)',
           ring: 'var(--sidebar-ring)',
         },
+        popover: {
+          DEFAULT: 'var(--color-background)',
+        },
         background: 'var(--color-background)',
         primary: 'var(--color-primary)',
         'primary-foreground': 'var(--color-primary-lightest)',
