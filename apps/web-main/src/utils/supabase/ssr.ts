@@ -13,13 +13,13 @@ export const createClient = () => {
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll();
+      getAll: async () => {
+        return (await cookieStore).getAll();
       },
-      setAll(cookiesToSet) {
+      setAll: async (cookiesToSet) => {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+          cookiesToSet.forEach(async ({ name, value, options }) =>
+            (await cookieStore).set(name, value, options),
           );
         } catch {
           // The `setAll` method was called from a Server Component.

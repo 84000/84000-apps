@@ -13,7 +13,9 @@ const Error = () => {
       <div className="h-screen flex items-center justify-center bg-white dark:bg-darkgray">
         <div className="text-center max-w-lg mx-auto">
           <Image
-            src={'/public/images/backgrounds/errorimg.svg'}
+            width={500}
+            height={500}
+            src={'/images/backgrounds/errorimg.svg'}
             alt="error"
             className="mb-4"
           />
