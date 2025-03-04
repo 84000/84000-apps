@@ -2,14 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@import './layouts/container.css';
-@import './layouts/sidebar.css';
-@import './layouts/horizontal.css';
-@import './layouts/header.css';
 @import './colors/default-colors.css';
 @import './colors/dark.css';
-@import './override/reboot.css';
-@import './layouts/rtl.css';
 
 @layer components {
   .container {
