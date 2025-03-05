@@ -2,8 +2,6 @@ import React from 'react';
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import '@design-system-css';
-import { theme } from '@design-system';
-import { Flowbite, ThemeModeScript } from 'flowbite-react';
 import { InterfaceContextProvider } from './context/InterfaceContext';
 import '../utils/i18n';
 import { SessionProvider } from './context/SessionContext';
@@ -23,14 +21,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.png" type="image/svg+xml" />
-        <ThemeModeScript />
       </head>
       <body className={`${manrope.className}`}>
-        <Flowbite theme={{ theme }}>
-          <InterfaceContextProvider>
-            <SessionProvider>{children}</SessionProvider>
-          </InterfaceContextProvider>
-        </Flowbite>
+        <InterfaceContextProvider>
+          <SessionProvider>{children}</SessionProvider>
+        </InterfaceContextProvider>
       </body>
     </html>
   );
