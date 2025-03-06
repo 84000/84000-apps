@@ -19,7 +19,7 @@ const Error = () => {
             alt="error"
             className="mb-4"
           />
-          <h1 className="text-dark dark:text-white text-4xl mb-6">Opps!!!</h1>
+          <h1 className="text-dark dark:text-white text-4xl mb-6">Oops!!!</h1>
           <h6 className="text-xl text-dark dark:text-white">
             This page you are looking for could not be found.
           </h6>

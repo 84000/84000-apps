@@ -1,5 +1,4 @@
 // Use this file to export React client components (e.g. those with 'use client' directive) or other non-server utilities
-export * from './lib/theme/theme';
 export * from './lib/Avatar/Avatar';
 export * from './lib/Button/Button';
 export * from './lib/Card/Card';
