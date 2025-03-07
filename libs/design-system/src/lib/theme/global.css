@@ -1,38 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+@import 'tailwindcss';
 @import './colors/default-colors.css';
 
 @layer components {
-  body {
-    @apply text-sm overflow-x-hidden text-bodytext;
-  }
-
   .card-title {
-    @apply text-lg font-semibold text-dark dark:text-white mb-1;
+    margin-bottom: calc(var(--spacing) * 1);
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-bodytext);
   }
-
   .card-subtitle {
-    @apply text-15 text-bodytext;
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+    color: var(--color-bodytext);
   }
-
-  /*heading text color*/
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    @apply text-dark dark:text-white font-semibold;
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-bodytext);
   }
-
   .bg-hover {
-    @apply hover:bg-lighthover hover:dark:bg-darkmuted;
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-primary-lightest);
+      }
+    }
   }
-
   input::placeholder {
-    @apply text-bodytext;
+    color: var(--color-bodytext);
   }
 }
 
@@ -40,4 +41,8 @@
   :root {
     --radius: 0.5rem;
   }
+}
+@property --tw-font-weight {
+  syntax: '*';
+  inherits: false;
 }
