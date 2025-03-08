@@ -1,111 +1,141 @@
-:root {
-  --color-primary: 0, 73, 118;
-  --color-primary-light: 221, 219, 255;
-  --color-primary-lightest: 241, 242, 254;
+@theme {
+  --primary: 0, 73, 118;
+  --primary-light: 221, 219, 255;
+  --primary-lightest: 241, 242, 254;
 
-  --color-secondary: 22, 205, 199;
-  --color-secondary-light: 166, 247, 245;
-  --color-secondary-lightest: 236, 253, 253;
+  --secondary: 22, 205, 199;
+  --secondary-light: 166, 247, 245;
+  --secondary-lightest: 236, 253, 253;
 
-  --color-tertiary: 255, 102, 146;
-  --color-tertiary-light: 255, 204, 219;
-  --color-tertiary-lightest: 255, 229, 237;
+  --tertiary: 255, 102, 146;
+  --tertiary-light: 255, 204, 219;
+  --tertiary-lightest: 255, 229, 237;
 
-  --color-success: 54, 199, 108;
-  --color-success-light: 235, 250, 240;
+  --success: 54, 199, 108;
+  --success-light: 235, 250, 240;
 
-  --color-warning: 255, 214, 72;
-  --color-warning-light: 255, 249, 229;
+  --warning: 255, 214, 72;
+  --warning-light: 255, 249, 229;
 
-  --color-danger: 255, 102, 46;
-  --color-danger-light: 255, 229, 237;
+  --error: 255, 102, 46;
+  --error-light: 255, 229, 237;
 
-  --color-text: 41, 52, 61;
-  --color-text-light: 82, 107, 122;
-  --color-text-lightest: 243, 244, 246;
+  --text: 41, 52, 61;
+  --text-light: 82, 107, 122;
+  --text-lightest: 243, 244, 246;
 
-  --color-surface-dark: 17, 24, 39;
-  --color-surface-light: 243, 244, 246;
-  --color-surface-lightest: 255, 255, 255;
+  --surface-dark: 17, 24, 39;
+  --surface-light: 243, 244, 246;
+  --surface-lightest: 255, 255, 255;
 
-  --color-black: 0, 0, 0;
-  --color-white: 255, 255, 255;
-  --color-gray: 219, 219, 219;
-  --color-lightgray: 243, 244, 246;
+  --black: 0, 0, 0;
+  --white: 255, 255, 255;
+  --gray: 219, 219, 219;
+  --lightgray: 243, 244, 246;
 
-  --color-background: var(--color-white);
-  --color-border: var(--color-gray);
-  --color-background-light: var(--color-lightgray);
+  --background: var(--white);
 
-  --color-error: var(--color-danger);
-  --color-darkborder: var(--color-dark);
-  --color-link: var(--color-primary);
-  --color-darkgray: var(--color-gray);
-  --color-bodytext: var(--color-text);
-
-  --sidebar-background: var(--color-background);
-  --sidebar-foreground: var(--color-bodytext);
-  --sidebar-primary: var(--color-primary);
-  --sidebar-primary-foreground: var(--color-primary-light);
-  --sidebar-accent: var(--color-secondary);
-  --sidebar-accent-foreground: var(--color-secondary-light);
-  --sidebar-border: var(--color-border);
-  --sidebar-ring: var(--color-border);
+  --color-background: rgba(var(--background));
+  --color-background-light: rgba(var(--lightgray));
+  --color-bodytext: rgba(var(--text));
+  --color-border: rgba(var(--gray));
+  --color-dark: rgba(var(--darkgray));
+  --color-darkborder: rgba(var(--dark));
+  --color-darkgray: rgba(var(--gray));
+  --color-destructive: rgba(var(--error));
+  --color-destructive-foreground: rgba(var(--text-lightest));
+  --color-error: rgba(var(--error));
+  --color-input: rgba(var(--gray));
+  --color-gray: rgba(var(--gray));
+  --color-lightgray: rgba(var(--lightgray));
+  --color-link: rgba(var(--primary));
+  --color-popover: rgba(var(--background));
+  --color-primary: rgba(var(--primary));
+  --color-primary-foreground: rgba(var(--text-lightest));
+  --color-secondary: rgba(var(--secondary));
+  --color-secondary-foreground: rgba(var(--text-lightest));
+  --color-sidebar: rgba(var(--background));
+  --color-sidebar-accent: rgba(var(--secondary));
+  --color-sidebar-accent-foreground: rgba(var(--text-lightest));
+  --color-sidebar-border: rgba(var(--gray));
+  --color-sidebar-background: rgba(var(--background));
+  --color-sidebar-foreground: rgba(var(--text));
+  --color-sidebar-primary: rgba(var(--primary));
+  --color-sidebar-primary-foreground: rgba(var(--text-lightest));
+  --color-sidebar-ring: rgba(var(--gray));
+  --color-success: rgba(var(--success));
+  --color-surface: rgba(var(--surface-lightest));
+  --color-warning: rgba(var(--warning));
 }
 
 @media (prefers-color-scheme: dark) {
   .dark {
-    --color-primary: 0, 73, 118;
-    --color-primary-light: 221, 219, 255;
-    --color-primary-lightest: 241, 242, 254;
+    --primary: 0, 73, 118;
+    --primary-light: 221, 219, 255;
+    --primary-lightest: 241, 242, 254;
 
-    --color-secondary: 22, 205, 199;
-    --color-secondary-light: 166, 247, 245;
-    --color-secondary-lightest: 236, 253, 253;
+    --secondary: 22, 205, 199;
+    --secondary-light: 166, 247, 245;
+    --secondary-lightest: 236, 253, 253;
 
-    --color-tertiary: 255, 102, 146;
-    --color-tertiary-light: 255, 204, 219;
-    --color-tertiary-lightest: 255, 229, 237;
+    --tertiary: 255, 102, 146;
+    --tertiary-light: 255, 204, 219;
+    --tertiary-lightest: 255, 229, 237;
 
-    --color-success: 54, 199, 108;
-    --color-success-light: 235, 250, 240;
+    --success: 54, 199, 108;
+    --success-light: 235, 250, 240;
 
-    --color-warning: 255, 214, 72;
-    --color-warning-light: 255, 249, 229;
+    --warning: 255, 214, 72;
+    --warning-light: 255, 249, 229;
 
-    --color-danger: 255, 102, 46;
-    --color-danger-light: 255, 229, 237;
+    --error: 255, 102, 46;
+    --error-light: 255, 229, 237;
 
-    --color-text: 243, 244, 246;
-    --color-text-light: 82, 107, 122;
-    --color-text-lightest: 41, 52, 61;
+    --text: 243, 244, 246;
+    --text-light: 82, 107, 122;
+    --text-lightest: 41, 52, 61;
 
-    --color-surface-dark: 243, 244, 246;
-    --color-surface-light: 17, 24, 39;
-    --color-surface-lightest: 0, 0, 0;
+    --surface-dark: 243, 244, 246;
+    --surface-light: 17, 24, 39;
+    --surface-lightest: 0, 0, 0;
 
-    --color-black: 0, 0, 0;
-    --color-white: 255, 255, 255;
-    --color-gray: 219, 219, 219;
-    --color-lightgray: 243, 244, 246;
+    --black: 0, 0, 0;
+    --white: 255, 255, 255;
+    --gray: 219, 219, 219;
+    --lightgray: 243, 244, 246;
 
-    --color-background: var(--color-black);
-    --color-border: var(--color-gray);
-    --color-background-light: var(--color-lightgray);
+    --background: var(--black);
 
-    --color-error: var(--color-danger);
-    --color-darkborder: var(--color-dark);
-    --color-link: var(--color-primary);
-    --color-darkgray: var(--color-gray);
-    --color-bodytext: var(--color-text);
-
-    --sidebar-background: var(--color-background);
-    --sidebar-foreground: var(--color-bodytext);
-    --sidebar-primary: var(--color-primary);
-    --sidebar-primary-foreground: var(--color-primary-light);
-    --sidebar-accent: var(--color-secondary);
-    --sidebar-accent-foreground: var(--color-secondary-light);
-    --sidebar-border: var(--color-border);
-    --sidebar-ring: var(--color-border);
+    --color-background: rgba(var(--black));
+    --color-background-light: rgba(var(--lightgray));
+    --color-bodytext: rgba(var(--text));
+    --color-border: rgba(var(--lightgray));
+    --color-dark: rgba(var(--gray));
+    --color-darkborder: rgba(var(--gray));
+    --color-darkgray: rgba(var(--gray));
+    --color-destructive: rgba(var(--error));
+    --color-destructive-foreground: rgba(var(--text-lightest));
+    --color-error: rgba(var(--error));
+    --color-input: rgba(var(--gray));
+    --color-gray: rgba(var(--gray));
+    --color-lightgray: rgba(var(--lightgray));
+    --color-link: rgba(var(--primary));
+    --color-popover: rgba(var(--background));
+    --color-primary: rgba(var(--primary));
+    --color-primary-foreground: rgba(var(--text-lightest));
+    --color-secondary: rgba(var(--secondary));
+    --color-secondary-foreground: rgba(var(--text-lightest));
+    --color-sidebar: rgba(var(--background));
+    --color-sidebar-accent: rgba(var(--secondary));
+    --color-sidebar-accent-foreground: rgba(var(--text-lightest));
+    --color-sidebar-background: rgba(var(--background));
+    --color-sidebar-border: rgba(var(--lightgray));
+    --color-sidebar-foreground: rgba(var(--text));
+    --color-sidebar-primary: rgba(var(--primary));
+    --color-sidebar-primary-foreground: rgba(var(--text-lightest));
+    --color-sidebar-ring: rgba(var(--lightgray));
+    --color-success: rgba(var(--success));
+    --color-surface: rgba(var(--surface-lightest));
+    --color-warning: rgba(var(--warning));
   }
 }
