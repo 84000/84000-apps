@@ -43,7 +43,7 @@ export default function Layout({
   }
 
   return (
-    <div className="[--header-height:calc(theme(spacing.14))]">
+    <div className="(--header-height:calc(theme(spacing.14)))">
       <SidebarProvider className="flex flex-col">
         <AppHeader user={user} handleLogout={handleLogout} />
         <div className="flex flex-1">

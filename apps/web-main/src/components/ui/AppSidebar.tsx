@@ -16,7 +16,7 @@ import { BookOpenIcon, ChartGanttIcon, NotebookPenIcon } from 'lucide-react';
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar
-      className="top-[--header-height] !h-[calc(100svh-var(--header-height))]"
+      className="top-(--header-height) !h-[calc(100svh-(--header-height))]"
       collapsible="icon"
       {...props}
     >
