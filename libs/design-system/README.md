@@ -1,6 +1,8 @@
-# design-system
+# The 84000 Design System
 
-This library was generated with [Nx](https://nx.dev).
+This library contains shared components for 84000 applications. It also contains
+a Storybook for exploring and prototyping components. To run Storybook locally,
+run `npx nx storybook design-system`.
 
 ## Running unit tests
 
