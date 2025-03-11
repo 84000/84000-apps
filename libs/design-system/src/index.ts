@@ -8,6 +8,7 @@ export * from './lib/Card/CardHeader';
 export * from './lib/Card/CardFooter';
 export * from './lib/Card/CardTitle';
 export * from './lib/Dropdown/Dropdown';
+export * from './lib/Editor/BlockEditor';
 export * from './lib/Header/Header';
 export * from './lib/Input/Input';
 export * from './lib/MainLogo/MainLogo';
