@@ -1,34 +1,21 @@
 'use client';
 
-import { EditorContent } from '@tiptap/react';
+import { Content, EditorContent } from '@tiptap/react';
 import { useBlockEditor } from './hooks/useBlockEditor';
+import { useExtensions } from './hooks/useExtensions';
 
-export const BlockEditor = () => {
+export const BlockEditor = ({
+  content,
+  isEditable = true,
+}: {
+  content: Content;
+  isEditable?: boolean;
+}) => {
+  const { extensions } = useExtensions();
   const { editor } = useBlockEditor({
-    content: {
-      type: 'doc',
-      content: [
-        {
-          type: 'heading',
-          attrs: { level: 1 },
-          content: [
-            {
-              type: 'text',
-              text: 'A heading',
-            },
-          ],
-        },
-        {
-          type: 'paragraph',
-          content: [
-            {
-              type: 'text',
-              text: 'A line of text',
-            },
-          ],
-        },
-      ],
-    },
+    extensions,
+    content,
+    isEditable,
   });
   return (
     <div className="flex h-full">

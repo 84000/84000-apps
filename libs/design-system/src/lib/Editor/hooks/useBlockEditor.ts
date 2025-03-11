@@ -1,24 +1,31 @@
-import { Content, Editor, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-
+import { Content, Editor, Extensions, useEditor } from '@tiptap/react';
 declare global {
   interface Window {
     editor: Editor | null;
   }
 }
 
-export const useBlockEditor = ({ content }: { content: Content }) => {
+export const useBlockEditor = ({
+  content,
+  extensions = [],
+  isEditable = true,
+}: {
+  content: Content;
+  extensions?: Extensions;
+  isEditable?: boolean;
+}) => {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions,
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
     autofocus: true,
+    editable: isEditable,
     editorProps: {
       attributes: {
         autocomplete: 'off',
         autocorrect: 'off',
         autocapitalize: 'off',
-        class: 'min-h-full',
+        class: 'min-h-full focus:outline-none',
       },
     },
     onCreate: (ctx) => {
