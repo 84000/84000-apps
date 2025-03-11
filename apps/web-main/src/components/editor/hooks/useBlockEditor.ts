@@ -1,7 +1,7 @@
 import { Content, useEditor, useEditorState } from '@tiptap/react';
 import type { AnyExtension, Editor, EditorOptions } from '@tiptap/core';
 
-import { ExtensionKit } from '@/extensions/extension-kit';
+import { ExtensionKit } from '../extensions/extension-kit';
 
 declare global {
   interface Window {
@@ -42,7 +42,7 @@ export const useBlockEditor = ({
 
   const users = useEditorState({
     editor,
-    selector: (ctx) => {
+    selector: (_ctx) => {
       // nothing to do yet
     },
   });
