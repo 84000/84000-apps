@@ -9,8 +9,5 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@tiptap/extension-document": "^2.11.5"
-  }
+  "type": "commonjs"
 }
