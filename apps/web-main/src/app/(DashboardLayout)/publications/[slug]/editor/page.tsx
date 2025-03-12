@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@design-system';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
+export const revalidate = 60;
+export const dynamicParams = true;
+
 const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
   const client = createBrowserClient();
