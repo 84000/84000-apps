@@ -1,10 +1,20 @@
-import { getPublicationBySlug, getPublicationSlugs } from '@data-access';
+import {
+  createBrowserClient,
+  getTranslationByUuid,
+  getTranslationUuids,
+} from '@data-access';
 import { Card, CardContent, CardHeader, CardTitle } from '@design-system';
+import { notFound } from 'next/navigation';
 import React from 'react';
 
 const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
-  const publication = await getPublicationBySlug(slug);
+  const client = createBrowserClient();
+  const publication = await getTranslationByUuid({ client, uuid: slug });
+
+  if (!publication) {
+    return notFound();
+  }
 
   return (
     <>
@@ -71,8 +81,9 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
 };
 
 export const generateStaticParams = async () => {
-  const slugs = await getPublicationSlugs();
-  return slugs.map((slug) => ({ slug }));
+  const client = createBrowserClient();
+  const uuids = await getTranslationUuids({ client });
+  return uuids.map((slug) => ({ slug }));
 };
 
 export default page;

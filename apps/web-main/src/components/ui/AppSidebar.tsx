@@ -34,7 +34,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <a href="/publications/toh251/reader">
+                <a href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/reader">
                   <BookOpenIcon />
                   <span>Reader</span>
                 </a>
@@ -42,7 +42,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <a href="/publications/toh251/editor">
+                <a href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/editor">
                   <NotebookPenIcon />
                   <span>Editor</span>
                 </a>
