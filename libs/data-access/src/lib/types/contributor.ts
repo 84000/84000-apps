@@ -27,6 +27,6 @@ export const contributorFromDTO = (dto: ContributorDTO): Contributor => {
   };
 };
 
-export const contributorsFromDTO = (dto: ContributorsDTO): Contributors => {
-  return dto.map(contributorFromDTO);
+export const contributorsFromDTO = (dto?: ContributorsDTO): Contributors => {
+  return dto?.map(contributorFromDTO) || [];
 };

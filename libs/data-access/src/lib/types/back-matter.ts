@@ -25,7 +25,7 @@ export type BackMatterDTO = {
 export const backMatterFromDTO = (dto: BackMatterDTO): BackMatter => {
   return {
     glossary: glossaryFromDTO(dto.glossary),
-    endNotes: dto['end-notes'].map(passageFromDTO),
+    endNotes: dto['end-notes']?.map(passageFromDTO) || [],
     bibliography: bibliographyFromDTO(dto.bibliography),
   };
 };

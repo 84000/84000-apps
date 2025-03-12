@@ -40,8 +40,8 @@ export const glossaryNameFromDTO = (dto: GlossaryNameDTO): GlossaryName => {
   };
 };
 
-export const glossaryNamesFromDTO = (dto: GlossaryNamesDTO): GlossaryNames => {
-  return dto.map(glossaryNameFromDTO);
+export const glossaryNamesFromDTO = (dto?: GlossaryNamesDTO): GlossaryNames => {
+  return dto?.map(glossaryNameFromDTO) || [];
 };
 
 export const glossaryItemFromDTO = (dto: GlossaryItemDTO): GlossaryItem => {
@@ -52,6 +52,6 @@ export const glossaryItemFromDTO = (dto: GlossaryItemDTO): GlossaryItem => {
     nameUuid: dto.name_uuid,
   };
 };
-export const glossaryFromDTO = (dto: GlossaryDTO): Glossary => {
-  return dto.map(glossaryItemFromDTO);
+export const glossaryFromDTO = (dto?: GlossaryDTO): Glossary => {
+  return dto?.map(glossaryItemFromDTO) || [];
 };

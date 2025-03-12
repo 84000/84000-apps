@@ -24,6 +24,6 @@ export const titleFromDTO = (dto: TitleDTO): Title => {
   };
 };
 
-export const titlesFromDTO = (dto: TitlesDTO): Titles => {
-  return dto.map(titleFromDTO);
+export const titlesFromDTO = (dto?: TitlesDTO): Titles => {
+  return dto?.map(titleFromDTO) || [];
 };
