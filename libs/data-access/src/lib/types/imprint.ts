@@ -40,6 +40,6 @@ export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
   };
 };
 
-export const imprintsFromDTO = (dto: ImprintsDTO): Imprints => {
-  return dto.map(imprintFromDTO);
+export const imprintsFromDTO = (dto?: ImprintsDTO): Imprints => {
+  return dto?.map(imprintFromDTO) || [];
 };

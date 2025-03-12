@@ -280,6 +280,6 @@ export const annotationFromDTO = (dto: AnnotationDTO): Annotation => {
   return annotation;
 };
 
-export const annotationsFromDTO = (dto: AnnotationsDTO): Annotations => {
-  return dto.map(annotationFromDTO);
+export const annotationsFromDTO = (dto?: AnnotationsDTO): Annotations => {
+  return dto?.map(annotationFromDTO) || [];
 };

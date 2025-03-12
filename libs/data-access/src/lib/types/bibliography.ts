@@ -19,7 +19,7 @@ export type BibliographyItemDTO = {
 export type BibliographyDTO = BibliographyItemDTO[];
 
 export const bibliographyItemFromDTO = (
-  dto: BibliographyItemDTO
+  dto: BibliographyItemDTO,
 ): BibliographyItem => {
   return {
     content: dto.content,
@@ -30,6 +30,6 @@ export const bibliographyItemFromDTO = (
   };
 };
 
-export const bibliographyFromDTO = (dto: BibliographyDTO): Bibliography => {
-  return dto.map(bibliographyItemFromDTO);
+export const bibliographyFromDTO = (dto?: BibliographyDTO): Bibliography => {
+  return dto?.map(bibliographyItemFromDTO) || [];
 };
