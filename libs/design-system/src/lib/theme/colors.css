@@ -49,6 +49,7 @@
   --color-gray: rgba(var(--gray));
   --color-lightgray: rgba(var(--lightgray));
   --color-link: rgba(var(--primary));
+  --color-muted: rgba(var(--lightgray));
   --color-popover: rgba(var(--background));
   --color-primary: rgba(var(--primary));
   --color-primary-foreground: rgba(var(--text-lightest));
@@ -120,6 +121,7 @@
     --color-gray: rgba(var(--gray));
     --color-lightgray: rgba(var(--lightgray));
     --color-link: rgba(var(--primary));
+    --color-muted: rgba(var(--lightgray));
     --color-popover: rgba(var(--background));
     --color-primary: rgba(var(--primary));
     --color-primary-foreground: rgba(var(--text-lightest));

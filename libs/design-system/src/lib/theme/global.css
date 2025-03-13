@@ -1,5 +1,6 @@
 @import 'tailwindcss';
-@import './colors/default-colors.css';
+@import './colors.css';
+@import './typography.css';
 
 @layer components {
   .card-title {
@@ -10,21 +11,13 @@
     font-weight: var(--font-weight-semibold);
     color: var(--color-bodytext);
   }
+
   .card-subtitle {
     font-size: var(--text-lg);
     line-height: var(--tw-leading, var(--text-lg--line-height));
     color: var(--color-bodytext);
   }
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    --tw-font-weight: var(--font-weight-semibold);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-bodytext);
-  }
+
   .bg-hover {
     &:hover {
       @media (hover: hover) {
@@ -32,6 +25,7 @@
       }
     }
   }
+
   input::placeholder {
     color: var(--color-bodytext);
   }
@@ -41,8 +35,4 @@
   :root {
     --radius: 0.5rem;
   }
-}
-@property --tw-font-weight {
-  syntax: '*';
-  inherits: false;
 }
