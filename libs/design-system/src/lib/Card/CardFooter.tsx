@@ -1,15 +1,14 @@
-import { HTMLAttributes, forwardRef } from 'react';
 import { cn } from '@lib-utils';
 
-export const CardFooter = forwardRef<
-  HTMLDivElement,
-  HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex items-center pt-2', className)}
-    {...props}
-  />
-));
-
-CardFooter.displayName = 'CardFooter';
+export function CardFooter({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="card-footer"
+      className={cn('flex items-center p-6 pt-0', className)}
+      {...props}
+    />
+  );
+}
