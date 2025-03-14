@@ -17,3 +17,4 @@ export * from './lib/Sheet/Sheet';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Tooltip/Tooltip';
+export * from './lib/Typography/Typography';

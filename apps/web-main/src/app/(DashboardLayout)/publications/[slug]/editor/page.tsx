@@ -3,7 +3,18 @@ import {
   getTranslationByUuid,
   getTranslationUuids,
 } from '@data-access';
-import { Card, CardContent, CardHeader, CardTitle } from '@design-system';
+import {
+  Blockquote,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  H1,
+  H2,
+  H3,
+  H4,
+  P,
+} from '@design-system';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
@@ -22,59 +33,47 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   return (
     <>
       <Card>
-        <CardTitle>{publication?.frontMatter.toh}</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            <H1>{publication?.frontMatter.toh}</H1>
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          <CardHeader className="pt-4 pb-2">Titles</CardHeader>
+          <H2>Titles</H2>
           {publication?.frontMatter.titles.map((title, index) => (
-            <div key={index} className="py-2">
-              <h2>
-                {title.title} ({title.language})
-              </h2>
-            </div>
+            <H4 key={index}>
+              {title.title} ({title.language})
+            </H4>
           ))}
-          <CardHeader className="pt-4 pb-2">Imprint</CardHeader>
+          <H2>Imprint</H2>
           {publication?.frontMatter.imprint.map((imprint, index) => (
-            <div key={index} className="py-2">
-              <h2>{imprint.englishTranslator}</h2>
-            </div>
+            <H3 key={index}>{imprint.englishTranslator}</H3>
           ))}
-          <CardHeader className="pt-4 pb-2">Introductions</CardHeader>
+          <H2>Introductions</H2>
           {publication?.frontMatter.introductions.map((introduction, index) => (
-            <div key={index} className="py-2">
-              <h2>{introduction.content}</h2>
-            </div>
+            <P key={index}>{introduction.content}</P>
           ))}
-          <CardHeader className="pt-4 pb-2">Body</CardHeader>
+          <H2>Body</H2>
           {publication?.body.map((body, index) => (
-            <div key={index} className="py-2">
-              <h2>{body.content}</h2>
-            </div>
+            <P key={index}>{body.content}</P>
           ))}
-          <CardHeader className="pt-4 pb-2">Notes</CardHeader>
+          <H2>Notes</H2>
           {publication?.backMatter.endNotes?.map((note, index) => (
-            <div key={index} className="py-2">
-              <h2>{note.content}</h2>
-            </div>
+            <P key={index}>{note.content}</P>
           ))}
-          <CardHeader className="pt-4 pb-2">Bibliography</CardHeader>
+          <H2>Bibliography</H2>
           {publication?.backMatter.bibliography?.map((bibliography, index) => (
-            <div key={index} className="py-2">
-              <h2>
-                {bibliography.title} {bibliography.publisher}
-              </h2>
-            </div>
+            <Blockquote key={index}>
+              {bibliography.title} {bibliography.publisher}
+            </Blockquote>
           ))}
-          <CardHeader className="pt-4 pb-2">Glossary</CardHeader>
+          <H2>Glossary</H2>
           {publication?.backMatter.glossary?.map((glossary, index) => (
-            <div key={index} className="py-2">
+            <div key={index}>
               {glossary.names.map((name, index2) => (
-                <div key={`${index}-${index2}`} className="py-2">
-                  <h2>{name.content}</h2>
-                </div>
+                <H4 key={`${index}-${index2}`}>{name.content}</H4>
               ))}
-              {glossary.definition && (
-                <p className={`py-2`}>{glossary.definition}</p>
-              )}
+              {glossary.definition && <P>{glossary.definition}</P>}
             </div>
           ))}
         </CardContent>
