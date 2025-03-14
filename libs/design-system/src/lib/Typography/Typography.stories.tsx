@@ -1,5 +1,28 @@
 import { Meta, StoryObj } from '@storybook/react';
 
+import {
+  A,
+  Blockquote,
+  Code,
+  H1,
+  H2,
+  H3,
+  H4,
+  Lead,
+  LgText,
+  Li,
+  MutedText,
+  P,
+  SmText,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  Ul,
+} from './Typography';
+
 const meta: Meta = {
   title: 'Core/Typography',
 };
@@ -8,90 +31,54 @@ type Story = StoryObj;
 
 export const Primary: Story = {
   render: () => (
-    <div>
-      <h1>The Joke Tax Chronicles (h1)</h1>
-      <p>
-        Once upon a time, in a far-off land, there was a very lazy king who
-        spent all day lounging on his throne. One day, his advisors came to him
-        with a problem: the kingdom was running out of money.
-      </p>
-      <h2>The King's Plan (h2)</h2>
-      <p>
-        The king thought long and hard, and finally came up with{' '}
-        <a href="#">a brilliant plan</a>: he would tax the jokes in the kingdom.
-      </p>
-      <blockquote>
-        "After all," he said, "everyone enjoys a good joke, so it's only fair
-        that they should pay for the privilege."
-      </blockquote>
-      <h3>The Joke Tax (h3)</h3>
-      <p>
-        The king's subjects were not amused. They grumbled and complained, but
-        the king was firm:
-      </p>
-      <ul className="my-6 ml-6 list-disc [&>li]:mt-2">
-        <li>1st level of puns: 5 gold coins</li>
-        <li>2nd level of jokes: 10 gold coins</li>
-        <li>3rd level of one-liners : 20 gold coins</li>
-      </ul>
-      <p>
-        As a result, people stopped telling jokes, and the kingdom fell into a
-        gloom. But there was one person who refused to let the king's
-        foolishness get him down: a court jester named Jokester.
-      </p>
-      <h3>Jokester's Revolt (h3)</h3>
-      <p>
-        Jokester began sneaking into the castle in the middle of the night and
-        leaving jokes all over the place: under the king's pillow, in his soup,
-        even in the royal toilet. The king was furious, but he couldn't seem to
-        stop Jokester.
-      </p>
-      <p>
-        And then, one day, the people of the kingdom discovered that the jokes
-        left by Jokester were so funny that they couldn't help but laugh. And
-        once they started laughing, they couldn't stop.
-      </p>
-      <h4>The People's Rebellion (h4)</h4>
-      <p>
-        The people of the kingdom, feeling uplifted by the laughter, started to
-        tell jokes and puns again, and soon the entire kingdom was in on the
-        joke.
-      </p>
+    <div className="flex flex-col gap-2">
+      <H1>The quick brown fox jumps over the lazy dog (H1)</H1>
+      <H2>The quick brown fox jumps over the lazy dog (H2)</H2>
+      <H3>The quick brown fox jumps over the lazy dog (H3)</H3>
+      <H4>The quick brown fox jumps over the lazy dog (H4)</H4>
+      <P>The quick brown fox jumps over the lazy dog (P)</P>
+      <A href="#">The quick brown fox jumps over the lazy dog (A)</A>
+      <Blockquote>
+        The quick brown fox jumps over the lazy dog (Blockquote)
+      </Blockquote>
+      <Ul>
+        <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
+        <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
+      </Ul>
       <div className="my-6 w-full overflow-y-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>King's Treasury</th>
-              <th>People's happiness</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Empty</td>
-              <td>Overflowing</td>
-            </tr>
-            <tr>
-              <td>Modest</td>
-              <td>Satisfied</td>
-            </tr>
-            <tr>
-              <td>Full</td>
-              <td>Ecstatic</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p>
-        The king, seeing how much happier his subjects were, realized the error
-        of his ways and repealed the joke tax. Jokester was declared a hero, and
-        the kingdom lived happily ever after.
-      </p>
-      <p>
-        The moral of the story is: never underestimate the power of a good laugh
-        and always be careful of bad ideas.
-      </p>
-      <div className="my-6 w-full overflow-y-auto">
-        Some inline code: <code>@radix-ui/react-alert-dialog</code>
+        <Table>
+          <Thead>
+            <Tr>
+              <Th>The quick brown fox (Th)</Th>
+              <Th>jumps over the lazy dog (Th)</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            <Tr>
+              <Td>The quick brown fox (Td)</Td>
+              <Td>jumps over the lazy dog (Td)</Td>
+            </Tr>
+            <Tr>
+              <Td>The quick brown fox (Td)</Td>
+              <Td>jumps over the lazy dog (Td)</Td>
+            </Tr>
+            <Tr>
+              <Td>The quick brown fox (Td)</Td>
+              <Td>jumps over the lazy dog (Td)</Td>
+            </Tr>
+          </Tbody>
+        </Table>
+        <div>
+          <Code>
+            {'if (the) { quick brown fox jumps over the lazy dog; } (Code)'}
+          </Code>
+        </div>
+        <Lead>The quick brown fox jumps over the lazy dog (Lead)</Lead>
+        <LgText>The quick brown fox jumps over the lazy dog (LgText)</LgText>
+        <SmText>The quick brown fox jumps over the lazy dog (SmText)</SmText>
+        <MutedText>
+          The quick brown fox jumps over the lazy dog (MutedText)
+        </MutedText>
       </div>
     </div>
   ),
