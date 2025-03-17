@@ -4,16 +4,14 @@ import {
   getTranslationUuids,
 } from '@data-access';
 import {
-  Blockquote,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  H1,
-  H2,
   H3,
   H4,
   P,
+  Title,
 } from '@design-system';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -35,46 +33,25 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
       <Card>
         <CardHeader>
           <CardTitle>
-            <H1>{publication?.frontMatter.toh}</H1>
+            {publication?.frontMatter.titles.map((title, index) => (
+              <Title key={index} uuid={title.uuid} language={title.language}>
+                {title.title}
+              </Title>
+            ))}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <H2>Titles</H2>
-          {publication?.frontMatter.titles.map((title, index) => (
-            <H4 key={index}>
-              {title.title} ({title.language})
-            </H4>
-          ))}
-          <H2>Imprint</H2>
+          <H3>Imprint</H3>
           {publication?.frontMatter.imprint.map((imprint, index) => (
-            <H3 key={index}>{imprint.englishTranslator}</H3>
+            <H4 key={index}>{imprint.englishTranslator}</H4>
           ))}
-          <H2>Introductions</H2>
+          <H3>Introductions</H3>
           {publication?.frontMatter.introductions.map((introduction, index) => (
             <P key={index}>{introduction.content}</P>
           ))}
-          <H2>Body</H2>
+          <H3>Body</H3>
           {publication?.body.map((body, index) => (
             <P key={index}>{body.content}</P>
-          ))}
-          <H2>Notes</H2>
-          {publication?.backMatter.endNotes?.map((note, index) => (
-            <P key={index}>{note.content}</P>
-          ))}
-          <H2>Bibliography</H2>
-          {publication?.backMatter.bibliography?.map((bibliography, index) => (
-            <Blockquote key={index}>
-              {bibliography.title} {bibliography.publisher}
-            </Blockquote>
-          ))}
-          <H2>Glossary</H2>
-          {publication?.backMatter.glossary?.map((glossary, index) => (
-            <div key={index}>
-              {glossary.names.map((name, index2) => (
-                <H4 key={`${index}-${index2}`}>{name.content}</H4>
-              ))}
-              {glossary.definition && <P>{glossary.definition}</P>}
-            </div>
           ))}
         </CardContent>
       </Card>
