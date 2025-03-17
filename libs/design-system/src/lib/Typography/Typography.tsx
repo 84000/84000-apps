@@ -8,7 +8,7 @@ export function H1({
   return (
     <h1
       className={cn(
-        'mt-12 scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl',
+        'mt-8 scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl',
         className,
       )}
       {...props}
@@ -26,7 +26,7 @@ export function H2({
   return (
     <h2
       className={cn(
-        'mt-10 scroll-m-20 border-b border-b-border pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0',
+        'mt-8 scroll-m-20 pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0',
         className,
       )}
       {...props}
@@ -39,11 +39,11 @@ export function H3({
   children,
   className,
   ...props
-}: React.ComponentProps<'h3'>) {
+}: React.ComponentProps<'h4'>) {
   return (
     <h3
       className={cn(
-        'mt-8 scroll-m-20 text-2xl font-semibold tracking-tight',
+        'mt-6 scroll-m-20 text-2xl font-semibold tracking-tight',
         className,
       )}
       {...props}
@@ -61,7 +61,7 @@ export function H4({
   return (
     <h4
       className={cn(
-        'mt-6 scroll-m-20 text-xl font-semibold tracking-tight',
+        'mt-4 scroll-m-20 text-xl font-semibold tracking-tight',
         className,
       )}
       {...props}
