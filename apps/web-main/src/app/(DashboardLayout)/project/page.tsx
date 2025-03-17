@@ -1,11 +1,15 @@
-import { Card, CardContent, CardTitle } from '@design-system';
+import { Card, CardContent, CardHeader, CardTitle, H2 } from '@design-system';
 import React from 'react';
 
 const page = () => {
   return (
     <>
       <Card>
-        <CardTitle>Project Management</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            <H2>{'Project Management'}</H2>
+          </CardTitle>
+        </CardHeader>
         <CardContent>
           <p>
             {`Lorem Ipsum is simply dummy text of the printing and typesetting

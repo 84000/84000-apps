@@ -1,10 +1,14 @@
 import { cn } from '@lib-utils';
-import { HTMLAttributes, forwardRef } from 'react';
 
-export const CardTitle = forwardRef<
-  HTMLDivElement,
-  HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('card-title', className)} {...props} />
-));
-CardTitle.displayName = 'CardTitle';
+export function CardTitle({
+  className,
+  ...props
+}: React.ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot="card-title"
+      className={cn('font-semibold leading-none tracking-tight', className)}
+      {...props}
+    />
+  );
+}

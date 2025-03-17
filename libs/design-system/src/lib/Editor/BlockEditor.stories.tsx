@@ -15,6 +15,15 @@ const content = {
       ],
     },
     {
+      type: 'translationTitle',
+      content: [
+        {
+          type: 'text',
+          text: 'A Translation Title',
+        },
+      ],
+    },
+    {
       type: 'paragraph',
       content: [
         {
