@@ -18,4 +18,5 @@ export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Tooltip/Tooltip';
 export * from './lib/Translation/Title';
+export * from './lib/Translation/Titles';
 export * from './lib/Typography/Typography';
