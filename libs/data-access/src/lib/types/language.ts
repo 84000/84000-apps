@@ -1,1 +1,2 @@
-export type TranslationLanguage = 'en' | 'bo' | 'Sa-Ltn' | 'Bo-Ltn';
+export const LANGUAGES = ['bo', 'en', 'Bo-Ltn', 'Sa-Ltn'] as const;
+export type TranslationLanguage = (typeof LANGUAGES)[number];

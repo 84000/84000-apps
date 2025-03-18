@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { TranslationLanguage } from '@data-access';
-import { H2, H3, H4 } from '../Typography/Typography';
+import { H2, H3, H4 } from '../../Typography/Typography';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@lib-utils';
 
