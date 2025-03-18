@@ -1,5 +1,5 @@
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
-import { Title } from '../../../Translation/Title';
+import { Title } from '../../../Translation';
 
 export default () => {
   return (

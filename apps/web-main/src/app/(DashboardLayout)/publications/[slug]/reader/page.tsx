@@ -11,7 +11,7 @@ import {
   H3,
   H4,
   P,
-  Title,
+  Titles,
 } from '@design-system';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -33,11 +33,7 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
       <Card>
         <CardHeader>
           <CardTitle>
-            {publication?.frontMatter.titles.map((title, index) => (
-              <Title key={index} uuid={title.uuid} language={title.language}>
-                {title.title}
-              </Title>
-            ))}
+            <Titles titles={publication.frontMatter.titles} />
           </CardTitle>
         </CardHeader>
         <CardContent>
