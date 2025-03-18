@@ -1,17 +1,28 @@
-import { Card, CardContent, CardTitle } from '@design-system';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  H2,
+  P,
+} from '@design-system';
 import React from 'react';
 
 const page = () => {
   return (
     <>
       <Card>
-        <CardTitle>{"Scholar's Room Dashboard"}</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            <H2>{"Scholar's Room Dashboard"}</H2>
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          <p>
+          <P>
             {`Lorem Ipsum is simply dummy text of the printing and typesetting
           industry. Lorem Ipsum has been the industry's standard dummy text ever
           since the 1500s`}
-          </p>
+          </P>
         </CardContent>
       </Card>
     </>

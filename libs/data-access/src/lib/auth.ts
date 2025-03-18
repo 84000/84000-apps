@@ -1,6 +1,6 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import { DataClient } from './types';
 
-export const getUser = async ({ client }: { client: SupabaseClient }) => {
+export const getUser = async ({ client }: { client: DataClient }) => {
   const { data, error } = await client.auth.getUser();
   if (error) {
     console.info(`Failed to get user data: ${error}`);
@@ -26,7 +26,7 @@ export const loginWithGoogle = async ({
   client,
   redirectTo = undefined,
 }: {
-  client: SupabaseClient;
+  client: DataClient;
   redirectTo: string | undefined;
 }) => {
   await client.auth.signInWithOAuth({
@@ -42,6 +42,6 @@ export const loginWithGoogle = async ({
   });
 };
 
-export const logout = async ({ client }: { client: SupabaseClient }) => {
+export const logout = async ({ client }: { client: DataClient }) => {
   await client.auth.signOut();
 };

@@ -1,68 +1,57 @@
-import { getPublicationBySlug, getPublicationSlugs } from '@data-access';
-import { Card, CardContent, CardHeader, CardTitle } from '@design-system';
+import {
+  createBrowserClient,
+  getTranslationByUuid,
+  getTranslationUuids,
+} from '@data-access';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  H3,
+  H4,
+  P,
+  Title,
+} from '@design-system';
+import { notFound } from 'next/navigation';
 import React from 'react';
+
+export const revalidate = 60;
+export const dynamicParams = true;
 
 const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
-  const publication = await getPublicationBySlug(slug);
+  const client = createBrowserClient();
+  const publication = await getTranslationByUuid({ client, uuid: slug });
+
+  if (!publication) {
+    return notFound();
+  }
 
   return (
     <>
       <Card>
-        <CardTitle>{publication?.frontMatter.toh}</CardTitle>
+        <CardHeader>
+          <CardTitle>
+            {publication?.frontMatter.titles.map((title, index) => (
+              <Title key={index} uuid={title.uuid} language={title.language}>
+                {title.title}
+              </Title>
+            ))}
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          <CardHeader className="pt-4 pb-2">Titles</CardHeader>
-          {publication?.frontMatter.titles.map((title, index) => (
-            <div key={index} className="py-2">
-              <h2>
-                {title.title} ({title.language})
-              </h2>
-            </div>
-          ))}
-          <CardHeader className="pt-4 pb-2">Imprint</CardHeader>
+          <H3>Imprint</H3>
           {publication?.frontMatter.imprint.map((imprint, index) => (
-            <div key={index} className="py-2">
-              <h2>{imprint.englishTranslator}</h2>
-            </div>
+            <H4 key={index}>{imprint.englishTranslator}</H4>
           ))}
-          <CardHeader className="pt-4 pb-2">Introductions</CardHeader>
+          <H3>Introductions</H3>
           {publication?.frontMatter.introductions.map((introduction, index) => (
-            <div key={index} className="py-2">
-              <h2>{introduction.content}</h2>
-            </div>
+            <P key={index}>{introduction.content}</P>
           ))}
-          <CardHeader className="pt-4 pb-2">Body</CardHeader>
+          <H3>Body</H3>
           {publication?.body.map((body, index) => (
-            <div key={index} className="py-2">
-              <h2>{body.content}</h2>
-            </div>
-          ))}
-          <CardHeader className="pt-4 pb-2">Notes</CardHeader>
-          {publication?.backMatter.endNotes?.map((note, index) => (
-            <div key={index} className="py-2">
-              <h2>{note.content}</h2>
-            </div>
-          ))}
-          <CardHeader className="pt-4 pb-2">Bibliography</CardHeader>
-          {publication?.backMatter.bibliography?.map((bibliography, index) => (
-            <div key={index} className="py-2">
-              <h2>
-                {bibliography.title} {bibliography.publisher}
-              </h2>
-            </div>
-          ))}
-          <CardHeader className="pt-4 pb-2">Glossary</CardHeader>
-          {publication?.backMatter.glossary?.map((glossary, index) => (
-            <div key={index} className="py-2">
-              {glossary.names.map((name, index2) => (
-                <div key={`${index}-${index2}`} className="py-2">
-                  <h2>{name.content}</h2>
-                </div>
-              ))}
-              {glossary.definition && (
-                <p className={`py-2`}>{glossary.definition}</p>
-              )}
-            </div>
+            <P key={index}>{body.content}</P>
           ))}
         </CardContent>
       </Card>
@@ -71,7 +60,8 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
 };
 
 export const generateStaticParams = async () => {
-  const slugs = await getPublicationSlugs();
+  const client = createBrowserClient();
+  const slugs = await getTranslationUuids({ client });
   return slugs.map((slug) => ({ slug }));
 };
 

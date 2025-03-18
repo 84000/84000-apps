@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import '@design-system-css';
 import { InterfaceContextProvider } from './context/InterfaceContext';
-import '../utils/i18n';
 import { SessionProvider } from './context/SessionContext';
 
 const manrope = Manrope({ subsets: ['latin'] });

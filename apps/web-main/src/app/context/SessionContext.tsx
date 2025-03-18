@@ -1,12 +1,12 @@
 'use client';
 
 import React, { createContext, useCallback, useContext } from 'react';
-import { createClient } from '../../utils/supabase/client';
 import {
+  createBrowserClient,
   getUser as getUserCall,
   loginWithGoogle as loginWithGoogleCall,
   logout as logoutCall,
-} from '../../utils/supabase/actions';
+} from '@data-access';
 
 export type ScholarUser = {
   id: string;
@@ -35,7 +35,7 @@ export const SessionContext = createContext<SessionContextState>({
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const client = createClient();
+  const client = createBrowserClient();
 
   const getUser = useCallback(async (): Promise<ScholarUser | null> => {
     return getUserCall({ client });

@@ -1,42 +1,59 @@
-import { TranslationDTO, translationFromDTO } from './types';
+import { DataClient, TranslationDTO, translationFromDTO } from './types';
 
-export const getPublicationSlugs = async () => {
-  // TODO: get from API, when available
-  return ['toh251'];
+export const getTranslationUuids = async ({
+  client,
+}: {
+  client: DataClient;
+}) => {
+  const { data } = await client.from('translation_json').select('uuid');
+  return data?.map(({ uuid }) => uuid) || [];
 };
 
-export const getPublicationBySlug = async (slug: string) => {
-  // TODO: get from API, when available
-  if (slug !== 'toh251') {
+export const getTranslationByUuid = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data } = await client
+    .from('translation_json')
+    .select('translation')
+    .eq('uuid', uuid)
+    .single();
+
+  if (!data?.translation) {
     return null;
   }
 
-  const res = await fetch(
-    'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/translations/toh251.json'
-  );
+  return translationFromDTO(data.translation as TranslationDTO);
+};
 
-  let json;
+export const getTranslationSlugs = async ({
+  client,
+}: {
+  client: DataClient;
+}) => {
+  const { data } = await client.from('translation_json').select('toh');
+  return data?.map(({ toh }: { toh: string }) => toh) || [];
+};
 
-  try {
-    json = await res.clone().json();
-  } catch (e) {
-    console.error(`Failed to parse JSON for ${slug}`, e);
-    // TODO:: remove this when data has been sanitized
-    const text = await res.clone().text();
-    const escaped = text
-      .replace(/(".*?)(\t)(.*?")/g, '$1\\t$3')
-      .replace(/(".*?)(\n)(.*?")/g, '$1\\n$3')
-      .replace(/(".*?)(\r\f\b)(.*?")/g, '$1$3');
+export const getTranslationBySlug = async ({
+  client,
+  slug,
+}: {
+  client: DataClient;
+  slug: string;
+}) => {
+  const { data } = await client
+    .from('translation_json')
+    .select('translation')
+    .eq('toh', slug)
+    .single();
 
-    json = JSON.parse(escaped);
-  }
-  const dto = json as TranslationDTO;
-
-  if (!dto) {
+  if (!data?.translation) {
     return null;
   }
 
-  const translation = translationFromDTO(dto);
-
-  return translation;
+  return translationFromDTO(data.translation as TranslationDTO);
 };
