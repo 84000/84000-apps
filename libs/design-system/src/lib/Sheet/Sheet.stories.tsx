@@ -25,7 +25,7 @@ function SheetStory({ direction }: { direction: SheetSide }) {
           <SheetTitle>Sheet Title</SheetTitle>
           <SheetDescription>Sheet Description</SheetDescription>
         </SheetHeader>
-        <div className="grid gap-4 py-4">
+        <div className="px-4">
           <h1>Hello.</h1>
         </div>
         <SheetFooter>
