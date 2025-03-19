@@ -1,12 +1,12 @@
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
-import { H3 } from '../../../Typography/Typography';
+import { TranslationHeader } from '../../../Translation/Passage/Passage';
 
 export default () => {
   return (
     <NodeViewWrapper className="passage-translation-header">
-      <H3>
+      <TranslationHeader>
         <NodeViewContent className="passage-translation-header-content" />
-      </H3>
+      </TranslationHeader>
     </NodeViewWrapper>
   );
 };
