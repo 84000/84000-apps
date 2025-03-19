@@ -3,9 +3,9 @@ import { Title } from '../../../Translation';
 
 export default () => {
   return (
-    <NodeViewWrapper className="heading">
+    <NodeViewWrapper className="translation-title">
       <Title>
-        <NodeViewContent className="heading-content" />
+        <NodeViewContent className="translation-title-content" />
       </Title>
     </NodeViewWrapper>
   );

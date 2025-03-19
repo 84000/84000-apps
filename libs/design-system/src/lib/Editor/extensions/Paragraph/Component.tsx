@@ -3,9 +3,9 @@ import { P } from '../../../Typography/Typography';
 
 export default ({ node }: NodeViewProps) => {
   return (
-    <NodeViewWrapper className="heading">
+    <NodeViewWrapper className="paragraph">
       <P>
-        <NodeViewContent className="heading-content" />
+        <NodeViewContent className="paragraph-content" />
       </P>
     </NodeViewWrapper>
   );
