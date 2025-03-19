@@ -43,15 +43,17 @@ export default function Layout({
   }
 
   return (
-    <div className="(--header-height:calc(theme(spacing.14)))">
+    <div className="[--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
         <AppHeader user={user} handleLogout={handleLogout} />
         <div className="flex flex-1">
           <AppSidebar />
           <SidebarInset>
-            <div className={`bg-lightgray dark:bg-dark h-full`}>
+            <div
+              className={`flex flex-1 flex-col bg-lightgray dark:bg-dark h-full`}
+            >
               {/* Body Content  */}
-              <div className={'w-full py-4 px-4'}>{children}</div>
+              <div className={'w-full p-4'}>{children}</div>
             </div>
           </SidebarInset>
         </div>
