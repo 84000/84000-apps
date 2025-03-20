@@ -14,6 +14,7 @@ export * from './lib/Input/Input';
 export * from './lib/MainLogo/MainLogo';
 export * from './lib/MiniLogo/MiniLogo';
 export * from './lib/Sheet/Sheet';
+export * from './lib/Separator/Separator';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Tooltip/Tooltip';

@@ -8,13 +8,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  H3,
-  H4,
-  P,
+  Separator,
   Titles,
+  passageComponentForType,
 } from '@design-system';
 import { notFound } from 'next/navigation';
-import React from 'react';
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -37,18 +35,17 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <H3>Imprint</H3>
-          {publication?.frontMatter.imprint.map((imprint, index) => (
-            <H4 key={index}>{imprint.englishTranslator}</H4>
-          ))}
-          <H3>Introductions</H3>
-          {publication?.frontMatter.introductions.map((introduction, index) => (
-            <P key={index}>{introduction.content}</P>
-          ))}
-          <H3>Body</H3>
-          {publication?.body.map((body, index) => (
-            <P key={index}>{body.content}</P>
-          ))}
+          {publication?.frontMatter.introductions.map(
+            ({ type, content }, index) => {
+              const Component = passageComponentForType[type];
+              return <Component key={index}>{content}</Component>;
+            },
+          )}
+          <Separator className="my-8" />
+          {publication?.body.map(({ type, content }, index) => {
+            const Component = passageComponentForType[type];
+            return <Component key={index}>{content}</Component>;
+          })}
         </CardContent>
       </Card>
     </>
