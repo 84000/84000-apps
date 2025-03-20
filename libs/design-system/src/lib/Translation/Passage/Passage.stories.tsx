@@ -1,12 +1,22 @@
 import { Meta, StoryObj } from '@storybook/react';
 
-import { TranslationPassage, TranslationHeader } from './Passage';
+import { passageComponentForType } from './Passage';
+import { BodyItemType } from '@data-access';
 
-const Passages = ({ header, passage }: { header: string; passage: string }) => {
+const Passages = ({ passage }: { passage: string }) => {
+  const keys = Object.keys(passageComponentForType).filter(
+    (key) => key !== 'unknown',
+  );
   return (
     <>
-      <TranslationHeader>{header}</TranslationHeader>
-      <TranslationPassage>{passage}</TranslationPassage>
+      {keys.map((key) => {
+        const Component = passageComponentForType[key as BodyItemType];
+        return (
+          <Component key={key}>
+            {key}: {passage}
+          </Component>
+        );
+      })}
     </>
   );
 };
@@ -15,19 +25,15 @@ const meta: Meta<typeof Passages> = {
   title: 'Translation/Body/Passages',
   component: Passages,
   args: {
-    header: 'Header Content',
     passage: 'A sentence of translation passage content.',
   },
   argTypes: {
-    header: {
-      control: 'text',
-    },
     passage: {
       control: 'text',
     },
   },
 };
 
-export const Passage: StoryObj<typeof TranslationPassage> = {};
+export const Default: StoryObj<typeof Passages> = {};
 
 export default meta;
