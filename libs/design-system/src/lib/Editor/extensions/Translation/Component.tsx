@@ -5,7 +5,7 @@ export default (_props: NodeViewProps) => {
   return (
     <NodeViewWrapper className="passage-translation">
       <TranslationPassage className="pt-4">
-        <NodeViewContent className="passage-translation-content" />
+        <NodeViewContent className="passage-translation-content" as={'span'} />
       </TranslationPassage>
     </NodeViewWrapper>
   );

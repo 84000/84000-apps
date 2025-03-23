@@ -9,12 +9,23 @@ import TranslationHeader from '../extensions/TranslationHeader/TranslationHeader
 import { SlashCommand } from '../extensions/SlashCommand/SlashCommand';
 import { getSuggestion } from '../extensions/SlashCommand/Suggestions';
 import { cn } from '@lib-utils';
+import Link from '@tiptap/extension-link';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 
 export const useExtensions = () => {
   return {
     extensions: [
       Document,
       Heading,
+      Link.configure({
+        HTMLAttributes: {
+          class: cn(
+            '!text-foreground underline underline-offset-[3px] transition-colors cursor-pointer',
+          ),
+        },
+        openOnClick: false,
+      }),
       Paragraph,
       Placeholder.configure({
         placeholder: 'Type / for commands...',
@@ -29,9 +40,13 @@ export const useExtensions = () => {
         heading: false,
         paragraph: false,
       }),
+      TextAlign.configure({
+        types: ['heading', 'paragraph', 'translation', 'summary'],
+      }),
       Translation,
       TranslationHeader,
       TranslationTitle,
+      Underline,
     ],
   };
 };

@@ -5,7 +5,7 @@ export default ({ node }: NodeViewProps) => {
   return (
     <NodeViewWrapper className="paragraph">
       <P>
-        <NodeViewContent className="paragraph-content" />
+        <NodeViewContent className="paragraph-content" as={'span'} />
       </P>
     </NodeViewWrapper>
   );
