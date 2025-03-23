@@ -1,0 +1,18 @@
+.tiptap {
+  .is-editor-empty:where(
+      .node-paragraph,
+      .node-tanslation
+    ):first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .is-empty:where(.node-paragraph, .node-translation)::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+}
