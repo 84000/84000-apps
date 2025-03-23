@@ -16,3 +16,7 @@
     pointer-events: none;
   }
 }
+
+.tippy-box {
+  max-width: none !important;
+}

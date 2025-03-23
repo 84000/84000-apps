@@ -17,7 +17,6 @@ interface SelectorResult {
   isUnderline: boolean;
   isStrike: boolean;
   isCode: boolean;
-  isMath: boolean;
 }
 
 const items = [
@@ -67,7 +66,6 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
       isUnderline: instance.editor.isActive('underline'),
       isStrike: instance.editor.isActive('strike'),
       isCode: instance.editor.isActive('code'),
-      isMath: instance.editor.isActive('math'),
     }),
   });
 
@@ -79,7 +77,6 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
             key={i}
             variant="ghost"
             size="icon"
-            disabled={editorState.isMath}
             className="rounded-none flex-shrink-0"
             onClick={() => {
               item.onClick(editor);
