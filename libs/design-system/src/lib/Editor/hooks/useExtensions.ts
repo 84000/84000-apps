@@ -9,11 +9,15 @@ import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import { StarterKit } from '../extensions/StarterKit';
+import { DragHandle } from '../extensions/DragHandle/DragHandle';
 
 export const useExtensions = () => {
   return {
     extensions: [
       Document,
+      DragHandle.configure({
+        draghandleWidth: 25,
+      }),
       Heading,
       Link.configure({
         HTMLAttributes: {
