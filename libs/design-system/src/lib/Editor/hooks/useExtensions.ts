@@ -1,4 +1,3 @@
-import StarterKit from '@tiptap/starter-kit';
 import { Document } from '../extensions/Document';
 import Heading from '../extensions/Heading/Heading';
 import Paragraph from '../extensions/Paragraph/Paragraph';
@@ -9,6 +8,7 @@ import { cn } from '@lib-utils';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import { StarterKit } from '../extensions/StarterKit';
 
 export const useExtensions = () => {
   return {
@@ -32,11 +32,7 @@ export const useExtensions = () => {
       SlashCommand.configure({
         suggestion: getSuggestion(),
       }),
-      StarterKit.configure({
-        document: false,
-        heading: false,
-        paragraph: false,
-      }),
+      StarterKit,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
