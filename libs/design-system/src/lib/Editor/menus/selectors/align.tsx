@@ -38,8 +38,9 @@ const items = [
   {
     title: 'Right',
     icon: AlignRightIcon,
-    onClick: (editor: Editor) =>
-      editor.chain().focus().setTextAlign('right').run(),
+    onClick: (editor: Editor) => {
+      editor.chain().focus().setTextAlign('right').run();
+    },
     isActive: (state: SelectorResult) => state.isRight,
   },
 ];
@@ -55,7 +56,7 @@ export const TextAlignSelector = ({ editor }: { editor: Editor }) => {
   });
 
   const activeItem =
-    items.find((item) => item.isActive(editorState)) ?? items[0]!;
+    items.find((item) => item.isActive(editorState)) ?? items[0];
 
   return (
     <Popover>

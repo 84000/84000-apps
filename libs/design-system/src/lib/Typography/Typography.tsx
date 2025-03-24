@@ -1,22 +1,22 @@
 import { cn } from '@lib-utils';
 
+export const H1_STYLE =
+  'mt-8 scroll-m-20 pb-2 text-4xl font-extrabold tracking-tight lg:text-5xl';
+
 export function H1({
   children,
   className,
   ...props
 }: React.ComponentProps<'h1'>) {
   return (
-    <h1
-      className={cn(
-        'mt-8 scroll-m-20 pb-2 text-4xl font-extrabold tracking-tight lg:text-5xl',
-        className,
-      )}
-      {...props}
-    >
+    <h1 className={cn(H1_STYLE, className)} {...props}>
       {children}
     </h1>
   );
 }
+
+export const H2_STYLE =
+  'mt-8 scroll-m-20 pb-2 text-3xl font-semibold tracking-tight lg:text-4xl';
 
 export function H2({
   children,
@@ -24,34 +24,29 @@ export function H2({
   ...props
 }: React.ComponentProps<'h2'>) {
   return (
-    <h2
-      className={cn(
-        'mt-8 scroll-m-20 pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0',
-        className,
-      )}
-      {...props}
-    >
+    <h2 className={cn(H2_STYLE, className)} {...props}>
       {children}
     </h2>
   );
 }
+
+export const H3_STYLE =
+  'mt-6 scroll-m-20 pb-2 text-2xl font-semibold tracking-tight lg:text-3xl';
+
 export function H3({
   children,
   className,
   ...props
 }: React.ComponentProps<'h3'>) {
   return (
-    <h3
-      className={cn(
-        'mt-6 scroll-m-20 pb-2 text-2xl font-semibold tracking-tight',
-        className,
-      )}
-      {...props}
-    >
+    <h3 className={cn(H3_STYLE, className)} {...props}>
       {children}
     </h3>
   );
 }
+
+export const H4_STYLE =
+  'mt-4 scroll-m-20 pb-1 text-xl font-semibold tracking-tight lg:text-2xl';
 
 export function H4({
   children,
@@ -59,27 +54,21 @@ export function H4({
   ...props
 }: React.ComponentProps<'h4'>) {
   return (
-    <h4
-      className={cn(
-        'mt-4 scroll-m-20 pb-1 text-xl font-semibold tracking-tight',
-        className,
-      )}
-      {...props}
-    >
+    <h4 className={cn(H4_STYLE, className)} {...props}>
       {children}
     </h4>
   );
 }
+
+export const P_STYLE = 'leading-7 [&:not(:first-child)]:mt-6';
+
 export function P({
   children,
   className,
   ...props
 }: React.ComponentProps<'p'>) {
   return (
-    <p
-      className={cn('leading-7 [&:not(:first-child)]:mt-6', className)}
-      {...props}
-    >
+    <p className={cn(P_STYLE, className)} {...props}>
       {children}
     </p>
   );

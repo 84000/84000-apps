@@ -1,5 +1,7 @@
 import {
-  HeadingIcon,
+  Heading1Icon,
+  Heading2Icon,
+  Heading3Icon,
   LetterTextIcon,
   ListIcon,
   ListOrderedIcon,
@@ -31,21 +33,49 @@ const baseList: CommandSuggestionItem[] = [
         .chain()
         .focus()
         .deleteRange(range)
-        .toggleNode('translation', 'translation')
+        .toggleNode('paragraph', 'paragraph')
         .run();
     },
   },
   {
-    title: 'Header',
-    description: 'Basic header',
-    keywords: ['heading', 'h'],
-    icon: HeadingIcon,
+    title: 'Heading 1',
+    description: 'Big section heading.',
+    keywords: ['title', 'big', 'large', 'heading'],
+    icon: Heading1Icon,
     command: ({ editor, range }) => {
       editor
         .chain()
         .focus()
         .deleteRange(range)
-        .setNode('translationHeader')
+        .setNode('heading', { level: 1 })
+        .run();
+    },
+  },
+  {
+    title: 'Heading 2',
+    description: 'Medium section heading.',
+    keywords: ['subtitle', 'medium', 'heading'],
+    icon: Heading2Icon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setNode('heading', { level: 2 })
+        .run();
+    },
+  },
+  {
+    title: 'Heading 3',
+    description: 'Small section heading.',
+    keywords: ['subtitle', 'small', 'heading'],
+    icon: Heading3Icon,
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setNode('heading', { level: 3 })
         .run();
     },
   },
@@ -134,7 +164,7 @@ export const getSuggestion = (): SuggestionType => {
           return component.ref?.onKeyDown(props) ?? false;
         },
 
-        onEnd() {
+        onExit() {
           component.destroy();
           popup[0].destroy();
         },

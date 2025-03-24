@@ -1,15 +1,12 @@
 .tiptap {
-  .is-editor-empty:where(
-      .node-paragraph,
-      .node-tanslation
-    ):first-child::before {
+  .is-editor-empty:where(p, h1, h2, h3, h4, h5, h6):first-child::before {
     content: attr(data-placeholder);
     float: left;
     height: 0;
     pointer-events: none;
   }
 
-  .is-empty:where(.node-paragraph, .node-translation)::before {
+  .is-empty:where(p, h1, h2, h3, h4, h5, h6)::before {
     content: attr(data-placeholder);
     float: left;
     height: 0;

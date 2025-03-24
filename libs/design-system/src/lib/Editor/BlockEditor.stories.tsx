@@ -6,7 +6,8 @@ const content = {
   content: [
     {
       sort: 136,
-      type: 'translationHeader',
+      attrs: { level: 1 },
+      type: 'heading',
       uuid: '54a251d8-e074-4516-973b-b353bfe385ed',
       xmlId: 'UT22084-066-009-section-1',
       content: [
@@ -19,7 +20,7 @@ const content = {
     },
     {
       sort: 141,
-      type: 'translation',
+      type: 'paragraph',
       uuid: '31a821e6-9a69-4950-a32d-52645ef0fbe5',
       xmlId: 'UT22084-066-009-26',
       content: [
@@ -32,7 +33,7 @@ const content = {
     },
     {
       sort: 146,
-      type: 'translation',
+      type: 'paragraph',
       uuid: '09d19c19-a9da-450b-be90-c517f106469b',
       xmlId: 'UT22084-066-009-226',
       content: [
@@ -45,7 +46,7 @@ const content = {
     },
     {
       sort: 151,
-      type: 'translation',
+      type: 'paragraph',
       uuid: 'e2876129-3034-4bbe-a4fb-3049e38909ec',
       xmlId: 'UT22084-066-009-30',
       content: [

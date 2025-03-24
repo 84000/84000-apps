@@ -9,7 +9,9 @@ import { useEditorState } from '@tiptap/react';
 import {
   CheckIcon,
   ChevronDownIcon,
-  Heading,
+  Heading1,
+  Heading2,
+  Heading3,
   LetterTextIcon,
   List,
   ListOrdered,
@@ -19,7 +21,9 @@ import {
 
 interface SelectorResult {
   isParagraph: boolean;
-  isHeading: boolean;
+  isHeading1: boolean;
+  isHeading2: boolean;
+  isHeading3: boolean;
   isBulletList: boolean;
   isOrderedList: boolean;
   isBlockquote: boolean;
@@ -37,20 +41,30 @@ const items: MenuItem[] = [
     name: 'Text',
     icon: LetterTextIcon,
     onClick: (editor) =>
-      editor.chain().focus().toggleNode('translation', 'translation').run(),
+      editor.chain().focus().toggleNode('paragraph', 'paragraph').run(),
     isActive: (state) =>
       state.isParagraph && !state.isBulletList && !state.isOrderedList,
   },
   {
-    name: 'Heading',
-    icon: Heading,
+    name: 'Heading 1',
+    icon: Heading1,
     onClick: (editor) =>
-      editor
-        .chain()
-        .focus()
-        .toggleNode('translationHeader', 'translationHeader')
-        .run(),
-    isActive: (state) => state.isHeading,
+      editor.chain().focus().toggleHeading({ level: 1 }).run(),
+    isActive: (state) => state.isHeading1,
+  },
+  {
+    name: 'Heading 2',
+    icon: Heading2,
+    onClick: (editor) =>
+      editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    isActive: (state) => state.isHeading2,
+  },
+  {
+    name: 'Heading 3',
+    icon: Heading3,
+    onClick: (editor) =>
+      editor.chain().focus().toggleHeading({ level: 3 }).run(),
+    isActive: (state) => state.isHeading3,
   },
   {
     name: 'Bullet List',
@@ -82,14 +96,10 @@ export const NodeSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState<SelectorResult>({
     editor,
     selector: (instance) => ({
-      isParagraph:
-        instance.editor.isActive('paragraph') ||
-        instance.editor.isActive('translation') ||
-        instance.editor.isActive('summary') ||
-        instance.editor.isActive('text'),
-      isHeading:
-        instance.editor.isActive('heading') ||
-        instance.editor.isActive('translationHeader'),
+      isParagraph: instance.editor.isActive('paragraph'),
+      isHeading1: instance.editor.isActive('heading', { level: 1 }),
+      isHeading2: instance.editor.isActive('heading', { level: 2 }),
+      isHeading3: instance.editor.isActive('heading', { level: 3 }),
       isBulletList: instance.editor.isActive('bulletList'),
       isOrderedList: instance.editor.isActive('orderedList'),
       isBlockquote: instance.editor.isActive('blockquote'),

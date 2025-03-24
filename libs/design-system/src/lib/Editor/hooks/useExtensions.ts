@@ -3,9 +3,6 @@ import { Document } from '../extensions/Document';
 import Heading from '../extensions/Heading/Heading';
 import Paragraph from '../extensions/Paragraph/Paragraph';
 import Placeholder from '@tiptap/extension-placeholder';
-import TranslationTitle from '../extensions/TranslationTitle/TranslationTitle';
-import Translation from '../extensions/Translation/Translation';
-import TranslationHeader from '../extensions/TranslationHeader/TranslationHeader';
 import { SlashCommand } from '../extensions/SlashCommand/SlashCommand';
 import { getSuggestion } from '../extensions/SlashCommand/Suggestions';
 import { cn } from '@lib-utils';
@@ -41,11 +38,8 @@ export const useExtensions = () => {
         paragraph: false,
       }),
       TextAlign.configure({
-        types: ['heading', 'paragraph', 'translation', 'summary'],
+        types: ['heading', 'paragraph'],
       }),
-      Translation,
-      TranslationHeader,
-      TranslationTitle,
       Underline,
     ],
   };

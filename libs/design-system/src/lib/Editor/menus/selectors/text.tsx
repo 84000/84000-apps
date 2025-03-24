@@ -3,7 +3,6 @@ import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
   BoldIcon,
-  CodeIcon,
   ItalicIcon,
   StrikethroughIcon,
   UnderlineIcon,
@@ -16,7 +15,6 @@ interface SelectorResult {
   isItalic: boolean;
   isUnderline: boolean;
   isStrike: boolean;
-  isCode: boolean;
 }
 
 const items = [
@@ -48,13 +46,6 @@ const items = [
     },
     isActive: (state: SelectorResult) => state.isStrike,
   },
-  {
-    icon: CodeIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleCode().run();
-    },
-    isActive: (state: SelectorResult) => state.isCode,
-  },
 ];
 
 export const TextButtons = ({ editor }: { editor: Editor }) => {
@@ -65,7 +56,6 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
       isItalic: instance.editor.isActive('italic'),
       isUnderline: instance.editor.isActive('underline'),
       isStrike: instance.editor.isActive('strike'),
-      isCode: instance.editor.isActive('code'),
     }),
   });
 
