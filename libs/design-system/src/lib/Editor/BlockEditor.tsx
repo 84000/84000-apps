@@ -3,6 +3,7 @@
 import { Content, EditorContent } from '@tiptap/react';
 import { useBlockEditor } from './hooks/useBlockEditor';
 import { useExtensions } from './hooks/useExtensions';
+import { MainBubbleMenu } from './menus/MainBubbleMenu';
 
 export const BlockEditor = ({
   content,
@@ -21,6 +22,7 @@ export const BlockEditor = ({
     <div className="flex h-full">
       <div className="relative flex flex-col flex-1 h-full overflow-hidden">
         <EditorContent className="flex-1 overflow-y-auto" editor={editor} />
+        <MainBubbleMenu editor={editor} />
       </div>
     </div>
   );

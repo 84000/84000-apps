@@ -1,85 +1,69 @@
 import { cn } from '@lib-utils';
 
+export const H1_STYLE =
+  'mt-8 scroll-m-20 pb-2 text-4xl font-extrabold tracking-tight lg:text-5xl';
 export function H1({
   children,
   className,
   ...props
 }: React.ComponentProps<'h1'>) {
   return (
-    <h1
-      className={cn(
-        'mt-8 scroll-m-20 pb-2 text-4xl font-extrabold tracking-tight lg:text-5xl',
-        className,
-      )}
-      {...props}
-    >
+    <h1 className={cn(H1_STYLE, className)} {...props}>
       {children}
     </h1>
   );
 }
 
+export const H2_STYLE =
+  'mt-8 scroll-m-20 pb-2 text-3xl font-semibold tracking-tight lg:text-4xl';
 export function H2({
   children,
   className,
   ...props
 }: React.ComponentProps<'h2'>) {
   return (
-    <h2
-      className={cn(
-        'mt-8 scroll-m-20 pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0',
-        className,
-      )}
-      {...props}
-    >
+    <h2 className={cn(H2_STYLE, className)} {...props}>
       {children}
     </h2>
   );
 }
+
+export const H3_STYLE =
+  'mt-6 scroll-m-20 pb-2 text-2xl font-semibold tracking-tight lg:text-3xl';
 export function H3({
   children,
   className,
   ...props
 }: React.ComponentProps<'h3'>) {
   return (
-    <h3
-      className={cn(
-        'mt-6 scroll-m-20 pb-2 text-2xl font-semibold tracking-tight',
-        className,
-      )}
-      {...props}
-    >
+    <h3 className={cn(H3_STYLE, className)} {...props}>
       {children}
     </h3>
   );
 }
 
+export const H4_STYLE =
+  'mt-4 scroll-m-20 pb-1 text-xl font-semibold tracking-tight lg:text-2xl';
 export function H4({
   children,
   className,
   ...props
 }: React.ComponentProps<'h4'>) {
   return (
-    <h4
-      className={cn(
-        'mt-4 scroll-m-20 pb-1 text-xl font-semibold tracking-tight',
-        className,
-      )}
-      {...props}
-    >
+    <h4 className={cn(H4_STYLE, className)} {...props}>
       {children}
     </h4>
   );
 }
+
+export const P_STYLE = 'leading-7 [&:not(:first-child)]:mt-6';
 export function P({
   children,
   className,
   ...props
 }: React.ComponentProps<'p'>) {
   return (
-    <p
-      className={cn('leading-7 [&:not(:first-child)]:mt-6', className)}
-      {...props}
-    >
+    <p className={cn(P_STYLE, className)} {...props}>
       {children}
     </p>
   );
@@ -154,46 +138,54 @@ export function A({
   );
 }
 
+export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6 italic';
 export function Blockquote({
   children,
   className,
   ...props
 }: React.ComponentProps<'blockquote'>) {
   return (
-    <blockquote
-      className={cn('mt-6 border-l-2 border-l-border pl-6 italic', className)}
-      {...props}
-    >
+    <blockquote className={cn(BLOCKQUOTE_STYLE, className)} {...props}>
       {children}
     </blockquote>
   );
 }
 
+export const CODE_STYLE =
+  'relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold';
 export function Code({
   children,
   className,
   ...props
 }: React.ComponentProps<'code'>) {
   return (
-    <code
-      className={cn(
-        'relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold',
-        className,
-      )}
-      {...props}
-    >
+    <code className={cn(CODE_STYLE, className)} {...props}>
       {children}
     </code>
   );
 }
 
+export const OL_STYLE = 'my-6 ml-6 list-decimal [&>li]:mt-2';
+export function Ol({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'ol'>) {
+  return (
+    <ul className={cn(OL_STYLE, className)} {...props}>
+      {children}
+    </ul>
+  );
+}
+
+export const UL_STYLE = 'my-6 ml-6 list-disc [&>li]:mt-2';
 export function Ul({
   children,
   className,
   ...props
 }: React.ComponentProps<'ul'>) {
   return (
-    <ul className={cn('my-6 ml-6 list-disc [&>li]:mt-2', className)} {...props}>
+    <ul className={cn(UL_STYLE, className)} {...props}>
       {children}
     </ul>
   );
