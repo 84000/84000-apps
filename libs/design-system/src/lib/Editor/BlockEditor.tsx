@@ -5,6 +5,8 @@ import { useBlockEditor } from './hooks/useBlockEditor';
 import { useExtensions } from './hooks/useExtensions';
 import { MainBubbleMenu } from './menus/MainBubbleMenu';
 
+export type BlockEditorContent = Content;
+
 export const BlockEditor = ({
   content,
   isEditable = true,
@@ -20,7 +22,7 @@ export const BlockEditor = ({
   });
   return (
     <div className="flex h-full">
-      <div className="relative flex flex-col flex-1 h-full overflow-hidden">
+      <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1 overflow-y-auto" editor={editor} />
         <MainBubbleMenu editor={editor} />
       </div>
