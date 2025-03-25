@@ -2,7 +2,6 @@
 
 import { MenuIcon } from 'lucide-react';
 import { Button } from '../Button/Button';
-import { Separator } from '../Separator/Separator';
 import MiniLogo from '../MiniLogo/MiniLogo';
 
 export function Header({
