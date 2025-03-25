@@ -12,7 +12,7 @@ export function Header({
   toggleSidebar: () => void;
 }) {
   return (
-    <header className="flex sticky fixed top-0 z-50 w-full items-center border-b border-border bg-background">
+    <header className="flex sticky top-0 z-50 w-full items-center border-b border-border bg-background">
       <div className="flex h-(--header-height) w-full items-center gap-2 pl-2 pr-4">
         <div className="h-12 w-8 px-0 py-2">
           <MiniLogo />
