@@ -8,10 +8,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Separator,
-  Titles,
-  passageComponentForType,
+  Title,
 } from '@design-system';
+import { TranslationBodyEditor } from '../../../../../components/ui/TranslationBodyEditor';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 60;
@@ -31,21 +30,14 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
       <Card>
         <CardHeader>
           <CardTitle>
-            <Titles titles={publication.frontMatter.titles} />
+            <Title language={'en'}>
+              {publication.frontMatter.titles.find((t) => t.language === 'en')
+                ?.title || 'Untitled'}
+            </Title>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {publication?.frontMatter.introductions.map(
-            ({ type, content }, index) => {
-              const Component = passageComponentForType[type];
-              return <Component key={index}>{content}</Component>;
-            },
-          )}
-          <Separator className="my-8" />
-          {publication?.body.map(({ type, content }, index) => {
-            const Component = passageComponentForType[type];
-            return <Component key={index}>{content}</Component>;
-          })}
+          <TranslationBodyEditor translation={publication} />
         </CardContent>
       </Card>
     </>
