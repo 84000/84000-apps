@@ -45,7 +45,9 @@ export default function Layout({
   return (
     <div className="[--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
-        <AppHeader user={user} handleLogout={handleLogout} />
+        <div className="fixed w-full z-100">
+          <AppHeader user={user} handleLogout={handleLogout} />
+        </div>
         <div className="flex flex-1 pt-(--header-height)">
           <AppSidebar />
           <SidebarInset>
