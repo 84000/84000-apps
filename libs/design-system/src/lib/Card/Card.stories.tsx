@@ -10,12 +10,13 @@ import { CardTitle } from './CardTitle';
 const meta: Meta<typeof Card> = {
   component: Card,
   title: 'Core/Card',
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof Card>;
 
 export const Primary: Story = {
-  render: () => {
+  render: (_props) => {
     return (
       <Card className="w-[350px]">
         <CardHeader>

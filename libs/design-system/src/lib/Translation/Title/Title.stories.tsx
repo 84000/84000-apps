@@ -4,6 +4,7 @@ import { Title } from './Title';
 const meta: Meta<typeof Title> = {
   title: 'Translation/Front Matter/Title',
   component: Title,
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof Title>;

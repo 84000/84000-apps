@@ -11,8 +11,21 @@ import {
   BreadcrumbSeparator,
 } from '../Breadcrumb/Breadcrumb';
 
-export function BreadcrumbStory() {
-  return (
+const meta: Meta<typeof Breadcrumb> = {
+  title: 'Core/Breadcrumb',
+  component: Breadcrumb,
+  tags: ['autodocs'],
+};
+
+export type Story = StoryObj<typeof Breadcrumb>;
+
+export const Default: Story = {
+  argTypes: {
+    separator: {
+      control: false,
+    },
+  },
+  render: (_props) => (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
@@ -36,16 +49,7 @@ export function BreadcrumbStory() {
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
-  );
-}
-
-const meta: Meta<typeof BreadcrumbStory> = {
-  title: 'Core/Breadcrumb',
-  component: BreadcrumbStory,
+  ),
 };
-
-type Story = StoryObj<typeof BreadcrumbStory>;
-
-export const Default: Story = {};
 
 export default meta;

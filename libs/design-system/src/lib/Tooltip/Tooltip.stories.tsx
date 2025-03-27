@@ -7,8 +7,16 @@ import {
 } from './Tooltip';
 import { Button } from '../Button/Button';
 
-export function TooltipStory() {
-  return (
+const meta: Meta<typeof Tooltip> = {
+  title: 'Core/Tooltip',
+  component: Tooltip,
+  tags: ['autodocs'],
+};
+
+export type Story = StoryObj<typeof Tooltip>;
+
+export const Default: Story = {
+  render: (_props) => (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -19,16 +27,7 @@ export function TooltipStory() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
-}
-
-const meta: Meta<typeof TooltipStory> = {
-  title: 'Core/Tooltip',
-  component: TooltipStory,
+  ),
 };
-
-export type Story = StoryObj<typeof TooltipStory>;
-
-export const Default: Story = {};
 
 export default meta;

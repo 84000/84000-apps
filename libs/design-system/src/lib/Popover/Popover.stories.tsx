@@ -6,11 +6,12 @@ import { TitleForm } from '../Translation/Title/TitleForm';
 const meta: Meta<typeof Popover> = {
   title: 'Core/Popover',
   component: Popover,
+  tags: ['autodocs'],
 };
 type Story = StoryObj<typeof Popover>;
 
 export const Primary: Story = {
-  render: () => (
+  render: (_props) => (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline">Open popover</Button>

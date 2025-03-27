@@ -12,10 +12,29 @@ import {
   SheetTrigger,
 } from './Sheet';
 
-type SheetSide = 'top' | 'right' | 'bottom' | 'left';
+const meta: Meta<typeof Sheet> = {
+  title: 'Layout/Sheet',
+  component: Sheet,
+  tags: ['autodocs'],
+};
 
-function SheetStory({ direction }: { direction: SheetSide }) {
-  return (
+type StoryProps = {
+  direction: 'top' | 'right' | 'bottom' | 'left';
+};
+
+export type Story = StoryObj<StoryProps>;
+
+export const Default: Story = {
+  argTypes: {
+    direction: {
+      options: ['top', 'right', 'bottom', 'left'],
+      control: { type: 'radio' },
+    },
+  },
+  args: {
+    direction: 'left',
+  },
+  render: ({ direction }) => (
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="outline">Open from the {direction}</Button>
@@ -35,26 +54,7 @@ function SheetStory({ direction }: { direction: SheetSide }) {
         </SheetFooter>
       </SheetContent>
     </Sheet>
-  );
-}
-
-const meta: Meta<typeof SheetStory> = {
-  title: 'Layout/Sheet',
-  component: SheetStory,
-};
-
-export type Story = StoryObj<typeof SheetStory>;
-
-export const Default: Story = {
-  argTypes: {
-    direction: {
-      options: ['top', 'right', 'bottom', 'left'],
-      control: { type: 'radio' },
-    },
-  },
-  args: {
-    direction: 'left',
-  },
+  ),
 };
 
 export default meta;
