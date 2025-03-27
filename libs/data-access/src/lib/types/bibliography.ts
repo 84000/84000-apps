@@ -1,5 +1,5 @@
 export type BibliographyItem = {
-  content?: string;
+  content?: string | null;
   title: string;
   uuid: string;
   year: string;
@@ -9,7 +9,7 @@ export type BibliographyItem = {
 export type Bibliography = BibliographyItem[];
 
 export type BibliographyItemDTO = {
-  content?: string;
+  content?: string | null;
   title: string;
   uuid: string;
   year: string;
