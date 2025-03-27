@@ -28,7 +28,13 @@ export type FrontMatterDTO = {
 
 export const frontMatterFromDTO = (dto: FrontMatterDTO): FrontMatter => {
   return {
-    toc: dto.toc?.map(passageFromDTO) || [],
+    toc:
+      dto.toc?.map(
+        (p): Passage => ({
+          ...passageFromDTO(p),
+          type: 'toc',
+        }),
+      ) || [],
     toh: dto.toh,
     titles: titlesFromDTO(dto.titles),
     imprint: imprintsFromDTO(dto.imprint),
