@@ -8,6 +8,7 @@ export * from './glossary';
 export * from './imprint';
 export * from './language';
 export * from './passage';
+export * from './project';
 export * from './semver';
 export * from './title';
 export * from './translation';
