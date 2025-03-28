@@ -203,7 +203,7 @@ export function Li({
   );
 }
 
-export function Table({
+export function HtmlTable({
   children,
   className,
   ...props

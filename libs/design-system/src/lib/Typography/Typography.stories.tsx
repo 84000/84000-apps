@@ -14,7 +14,7 @@ import {
   MutedText,
   P,
   SmText,
-  Table,
+  HtmlTable,
   Tbody,
   Td,
   Th,
@@ -47,7 +47,7 @@ export const Primary: Story = {
         <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
       </Ul>
       <div className="my-6 w-full overflow-y-auto">
-        <Table>
+        <HtmlTable>
           <Thead>
             <Tr>
               <Th>The quick brown fox (Th)</Th>
@@ -68,7 +68,7 @@ export const Primary: Story = {
               <Td>jumps over the lazy dog (Td)</Td>
             </Tr>
           </Tbody>
-        </Table>
+        </HtmlTable>
         <div>
           <Code>
             {'if (the) { quick brown fox jumps over the lazy dog; } (Code)'}
