@@ -16,6 +16,11 @@ import {
 } from '@tanstack/react-table';
 import {
   Button,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  Input,
   Label,
   Select,
   SelectContent,
@@ -35,6 +40,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
@@ -87,11 +93,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const columns: ColumnDef<Project>[] = [
     {
       accessorKey: 'toh',
-      header: ({ column }) => (
-        <div className="text-right">
-          <SortableHeader column={column} name="Toh" />
-        </div>
-      ),
+      header: ({ column }) => <SortableHeader column={column} name="Toh" />,
       cell: ({ row }) => <div className="text-right">{row.original.toh}</div>,
     },
     {
@@ -157,10 +159,46 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   });
 
   return (
-    <div className="relative flex flex-col gap-4 overflow-auto">
+    <div className="w-full flex flex-col gap-4 overflow-auto">
+      <div className="flex items-center py-4">
+        <Input
+          placeholder="Filter projects..."
+          value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
+          onChange={(event) =>
+            table.getColumn('title')?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader className="bg-muted sticky top-0 z-10">
+          <TableHeader className="bg-muted sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
