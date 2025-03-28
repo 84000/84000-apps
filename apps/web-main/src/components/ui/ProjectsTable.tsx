@@ -1,5 +1,6 @@
 'use client';
 import {
+  Column,
   ColumnDef,
   ColumnFiltersState,
   SortingState,
@@ -31,18 +32,53 @@ import {
 import { Project } from '@data-access';
 import { useState } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
 } from 'lucide-react';
 
+const SortIcon = ({ isSorted }: { isSorted: false | 'asc' | 'desc' }) => {
+  switch (isSorted) {
+    case false:
+      return <ArrowUpDown className="text-muted-foreground" />;
+    case 'asc':
+      return <ArrowUp />;
+    case 'desc':
+      return <ArrowDown />;
+  }
+};
+
+const SortableHeader = ({
+  column,
+  name,
+}: {
+  column: Column<Project, unknown>;
+  name: string;
+}) => {
+  const isSorted = column.getIsSorted();
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    >
+      {name}
+      <SortIcon isSorted={isSorted} />
+    </Button>
+  );
+};
+
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
-  const [data, setData] = useState(projects);
+  const [data] = useState(projects);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: 'pages', desc: true },
+  ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
@@ -51,33 +87,47 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const columns: ColumnDef<Project>[] = [
     {
       accessorKey: 'toh',
-      header: 'Toh',
-      cell: ({ row }) => row.original.toh,
+      header: ({ column }) => (
+        <div className="text-right">
+          <SortableHeader column={column} name="Toh" />
+        </div>
+      ),
+      cell: ({ row }) => <div className="text-right">{row.original.toh}</div>,
     },
     {
       accessorKey: 'title',
-      header: 'Work Title',
+      header: ({ column }) => (
+        <SortableHeader column={column} name="Work Title" />
+      ),
       cell: ({ row }) => row.original.title,
     },
     {
       accessorKey: 'translator',
-      header: 'Translator or Group',
+      header: ({ column }) => (
+        <SortableHeader column={column} name="Translator or Group" />
+      ),
       cell: ({ row }) => row.original.translator,
     },
     {
       accessorKey: 'stage',
-      header: 'Stage',
-      cell: ({ row }) => row.original.stage,
+      header: ({ column }) => <SortableHeader column={column} name="Stage" />,
+      cell: ({ row }) => <div className="text-right">{row.original.stage}</div>,
     },
     {
       accessorKey: 'pages',
-      header: 'Pages',
-      cell: ({ row }) => row.original.pages,
+      header: ({ column }) => <SortableHeader column={column} name="Pages" />,
+      cell: ({ row }) => <div className="text-right">{row.original.pages}</div>,
     },
     {
       accessorKey: 'stageDate',
-      header: 'Date',
-      cell: ({ row }) => row.original.stageDate.toLocaleDateString(),
+      header: ({ column }) => (
+        <SortableHeader column={column} name="Last Updated" />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right">
+          {row.original.stageDate.toLocaleDateString()}
+        </div>
+      ),
     },
   ];
 
@@ -114,7 +164,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="p-4">
+                  <TableHead key={header.id} className="py-4">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -132,7 +182,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
                 {table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="p-4">
+                      <TableCell key={cell.id} className="py-4">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
