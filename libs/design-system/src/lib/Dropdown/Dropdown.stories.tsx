@@ -12,12 +12,13 @@ import {
 const meta: Meta<typeof DropdownMenu> = {
   title: 'Core/Dropdown',
   component: DropdownMenu,
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof DropdownMenu>;
 
 export const Default: Story = {
-  render: () => (
+  render: (_props) => (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <Button variant="outline">Open</Button>

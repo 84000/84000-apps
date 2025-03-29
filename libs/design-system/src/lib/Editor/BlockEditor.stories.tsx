@@ -63,6 +63,7 @@ const content = {
 const meta: Meta<typeof BlockEditor> = {
   component: BlockEditor,
   title: 'Editor/BlockEditor',
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof BlockEditor>;

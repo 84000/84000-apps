@@ -4,6 +4,7 @@ import { Label } from './Label';
 const meta: Meta<typeof Label> = {
   title: 'Core/Label',
   component: Label,
+  tags: ['autodocs'],
 };
 
 export type Story = StoryObj<typeof Label>;

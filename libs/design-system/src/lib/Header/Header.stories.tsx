@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../Avatar/Avatar';
 const meta: Meta<typeof Header> = {
   title: 'Layout/Header',
   component: Header,
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof Header>;

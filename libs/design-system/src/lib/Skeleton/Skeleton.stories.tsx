@@ -2,8 +2,16 @@ import { Meta, StoryObj } from '@storybook/react';
 
 import { Skeleton } from './Skeleton';
 
-export function SkeletonCard() {
-  return (
+const meta: Meta<typeof Skeleton> = {
+  title: 'Core/Skeleton',
+  component: Skeleton,
+  tags: ['autodocs'],
+};
+
+type Story = StoryObj<typeof Skeleton>;
+
+export const Default: Story = {
+  render: (_props) => (
     <div className="flex flex-col space-y-3">
       <Skeleton className="h-[125px] w-[250px] rounded-xl" />
       <div className="space-y-2">
@@ -11,16 +19,7 @@ export function SkeletonCard() {
         <Skeleton className="h-4 w-[200px]" />
       </div>
     </div>
-  );
-}
-
-const meta: Meta<typeof SkeletonCard> = {
-  title: 'Core/Skeleton',
-  component: SkeletonCard,
+  ),
 };
-
-export type Story = StoryObj<typeof SkeletonCard>;
-
-export const Default: Story = {};
 
 export default meta;

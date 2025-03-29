@@ -1,24 +1,23 @@
+import { createBrowserClient, getProjects } from '@data-access';
 import { Card, CardContent, CardHeader, CardTitle, H2 } from '@design-system';
+import { ProjectsTable } from '../../../components/ui/ProjectsTable';
 import React from 'react';
 
-const page = () => {
+const page = async () => {
+  const client = createBrowserClient();
+  const { projects } = await getProjects({ client });
+
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <H2>{'Project Management'}</H2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>
-            {`Lorem Ipsum is simply dummy text of the printing and typesetting
-          industry. Lorem Ipsum has been the industry's standard dummy text ever
-          since the 1500s`}
-          </p>
-        </CardContent>
-      </Card>
-    </>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <H2>{'Projects'}</H2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ProjectsTable projects={projects} />
+      </CardContent>
+    </Card>
   );
 };
 

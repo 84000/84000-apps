@@ -14,7 +14,7 @@ import {
   MutedText,
   P,
   SmText,
-  Table,
+  HtmlTable,
   Tbody,
   Td,
   Th,
@@ -25,12 +25,13 @@ import {
 
 const meta: Meta = {
   title: 'Core/Typography',
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj;
 
 export const Primary: Story = {
-  render: () => (
+  render: (_props) => (
     <div className="flex flex-col gap-2">
       <H1>The quick brown fox jumps over the lazy dog (H1)</H1>
       <H2>The quick brown fox jumps over the lazy dog (H2)</H2>
@@ -46,7 +47,7 @@ export const Primary: Story = {
         <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
       </Ul>
       <div className="my-6 w-full overflow-y-auto">
-        <Table>
+        <HtmlTable>
           <Thead>
             <Tr>
               <Th>The quick brown fox (Th)</Th>
@@ -67,7 +68,7 @@ export const Primary: Story = {
               <Td>jumps over the lazy dog (Td)</Td>
             </Tr>
           </Tbody>
-        </Table>
+        </HtmlTable>
         <div>
           <Code>
             {'if (the) { quick brown fox jumps over the lazy dog; } (Code)'}

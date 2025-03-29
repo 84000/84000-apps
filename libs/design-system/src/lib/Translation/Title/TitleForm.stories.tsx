@@ -4,6 +4,7 @@ import { TitleForm } from './TitleForm';
 const meta: Meta<typeof TitleForm> = {
   title: 'Translation/Front Matter/TitleForm',
   component: TitleForm,
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof TitleForm>;

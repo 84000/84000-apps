@@ -5,6 +5,7 @@ import { Input } from './Input';
 const meta: Meta<typeof Input> = {
   component: Input,
   title: 'Controls/Input',
+  tags: ['autodocs'],
 };
 
 type Story = StoryObj<typeof Input>;
