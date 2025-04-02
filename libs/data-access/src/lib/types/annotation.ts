@@ -1,6 +1,6 @@
 import { TranslationLanguage } from './language';
 
-export type AnnotationType =
+export type AnnotationDTOType =
   | 'distinct'
   | 'end-note'
   | 'foreign'
@@ -16,6 +16,25 @@ export type AnnotationType =
   | 'paragraph'
   | 'quoted'
   | 'small-caps'
+  | 'trailer'
+  | 'unknown';
+
+export type AnnotationType =
+  | 'distinct'
+  | 'endNote'
+  | 'foreign'
+  | 'glossary'
+  | 'heading'
+  | 'inlineTitle'
+  | 'internalLink'
+  | 'leadingSpace'
+  | 'line'
+  | 'lineGroup'
+  | 'lineBreak'
+  | 'link'
+  | 'paragraph'
+  | 'quoted'
+  | 'smallCaps'
   | 'trailer'
   | 'unknown';
 
@@ -56,6 +75,10 @@ export type LinkContent = {
   href: string;
 };
 
+export type TextContent = {
+  text: string;
+};
+
 export type TitleContent = {
   title: string;
 };
@@ -66,7 +89,7 @@ export type DistinctAnnotation = AnnotationBase & {
 };
 
 export type EndNoteAnnotation = AnnotationBase & {
-  type: 'end-note';
+  type: 'endNote';
   content: [EndNoteXmlIdContent] | [];
 };
 
@@ -76,7 +99,7 @@ export type ForeignAnnotation = AnnotationBase & {
 };
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
-  type: 'glossary-instance';
+  type: 'glossary';
   content: [GlossaryXmlIdContent] | [];
 };
 
@@ -86,17 +109,17 @@ export type HeadingAnnotation = AnnotationBase & {
 };
 
 export type InlineTitleAnnotation = AnnotationBase & {
-  type: 'inline-title';
+  type: 'inlineTitle';
   content: [TranslationLanguageContent] | [];
 };
 
 export type InternalLinkAnnotation = AnnotationBase & {
-  type: 'internal-link';
+  type: 'internalLink';
   content: [LinkContent] | [];
 };
 
 export type LeadingSpaceAnnotation = AnnotationBase & {
-  type: 'leading-space';
+  type: 'leadingSpace';
   content: [];
 };
 
@@ -106,7 +129,7 @@ export type LineAnnotation = AnnotationBase & {
 };
 
 export type LineBreakAnnotation = AnnotationBase & {
-  type: 'line-break';
+  type: 'lineBreak';
   content: [];
 };
 
@@ -116,7 +139,7 @@ export type LinkAnnotation = AnnotationBase & {
 };
 
 export type LineGroupAnnotation = AnnotationBase & {
-  type: 'line-group';
+  type: 'lineGroup';
   content: [];
 };
 
@@ -131,7 +154,7 @@ export type QuotedAnnotation = AnnotationBase & {
 };
 
 export type SmallCapsAnnotation = AnnotationBase & {
-  type: 'small-caps';
+  type: 'smallCaps';
   content: [];
 };
 
@@ -201,7 +224,7 @@ const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
 };
 
 const dtoToAnnotationMap: Record<
-  AnnotationType,
+  AnnotationDTOType,
   (dto: AnnotationDTO) => Annotation
 > = {
   distinct: (dto: AnnotationDTO): DistinctAnnotation => {
@@ -251,8 +274,7 @@ const dtoToAnnotationMap: Record<
     } as InlineTitleAnnotation;
   },
   'internal-link': (dto: AnnotationDTO): InternalLinkAnnotation => {
-    const href = dto.content[0]?.href;
-    const content = href ? [{ href }] : [];
+    const content = dto.content ?? [];
     return {
       ...baseAnnotationFromDTO(dto),
       content,

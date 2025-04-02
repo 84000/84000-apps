@@ -7,6 +7,8 @@ import {
 } from './front-matter';
 import { Passage, PassageDTO, passageFromDTO } from './passage';
 
+export type TranslationNodeClass = 'translation' | 'annotation';
+
 export type Body = Passage[];
 
 export type Translation = {

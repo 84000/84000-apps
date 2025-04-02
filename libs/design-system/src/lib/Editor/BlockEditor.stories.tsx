@@ -32,11 +32,6 @@ const content = {
         {
           type: 'text',
           text: 'Homage to all the buddhas and bodhisattvas!',
-          marks: [
-            {
-              type: 'bold',
-            },
-          ],
         },
       ],
     },
