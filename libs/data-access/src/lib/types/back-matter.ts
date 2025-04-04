@@ -1,3 +1,4 @@
+import { Annotations } from './annotation';
 import {
   Bibliography,
   BibliographyDTO,
@@ -22,10 +23,14 @@ export type BackMatterDTO = {
   bibliography: BibliographyDTO;
 };
 
-export const backMatterFromDTO = (dto: BackMatterDTO): BackMatter => {
+export const backMatterFromDTO = (
+  dto: BackMatterDTO,
+  annotations: Annotations,
+): BackMatter => {
   return {
     glossary: glossaryFromDTO(dto.glossary),
-    endNotes: dto['end-notes']?.map(passageFromDTO) || [],
+    endNotes:
+      dto['end-notes']?.map((en) => passageFromDTO(en, annotations)) || [],
     bibliography: bibliographyFromDTO(dto.bibliography),
   };
 };

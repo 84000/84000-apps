@@ -1,3 +1,5 @@
+import { Annotations } from './annotation';
+
 export type BodyItemType =
   | 'acknowledgment'
   | 'acknowledgmentHeader'
@@ -11,6 +13,7 @@ export type BodyItemType =
   | 'unknown';
 
 export type Passage = {
+  annotations: Annotations;
   content: string;
   sort: number;
   type: BodyItemType;
@@ -28,7 +31,10 @@ export type PassageDTO = {
   xmlId?: string;
 };
 
-export const passageFromDTO = (dto: PassageDTO): Passage => {
+export const passageFromDTO = (
+  dto: PassageDTO,
+  annotations: Annotations = [],
+): Passage => {
   return {
     content: dto.content,
     sort: dto.sort,
@@ -36,5 +42,6 @@ export const passageFromDTO = (dto: PassageDTO): Passage => {
     uuid: dto.uuid,
     workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
+    annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
   };
 };

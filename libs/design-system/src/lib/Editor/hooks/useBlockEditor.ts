@@ -34,6 +34,9 @@ export const useBlockEditor = ({
         ctx.editor.commands.focus('start', { scrollIntoView: true });
       }
     },
+    onUpdate: (ctx) => {
+      console.log(ctx.editor.getJSON());
+    },
   });
 
   return { editor };

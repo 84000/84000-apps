@@ -1,3 +1,4 @@
+import { Annotations } from './annotation';
 import { Imprints, ImprintsDTO, imprintsFromDTO } from './imprint';
 import { Passage, PassageDTO, passageFromDTO } from './passage';
 import { Titles, TitlesDTO, titlesFromDTO } from './title';
@@ -26,7 +27,10 @@ export type FrontMatterDTO = {
   introductions: IntroductionsDTO;
 };
 
-export const frontMatterFromDTO = (dto: FrontMatterDTO): FrontMatter => {
+export const frontMatterFromDTO = (
+  dto: FrontMatterDTO,
+  annotations: Annotations,
+): FrontMatter => {
   return {
     toc:
       dto.toc?.map(
@@ -38,6 +42,8 @@ export const frontMatterFromDTO = (dto: FrontMatterDTO): FrontMatter => {
     toh: dto.toh,
     titles: titlesFromDTO(dto.titles),
     imprint: imprintsFromDTO(dto.imprint),
-    introductions: dto.introductions?.map(passageFromDTO) || [],
+    introductions:
+      dto.introductions?.map((intro) => passageFromDTO(intro, annotations)) ||
+      [],
   };
 };

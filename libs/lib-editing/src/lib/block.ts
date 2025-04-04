@@ -1,5 +1,5 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
-import { Annotations, Passage, Translation } from '@data-access';
+import { Passage, Translation } from '@data-access';
 import { annotateBlock } from './annotation';
 
 const TEMPLATES_FOR_BLOCK_TYPE: {
@@ -47,10 +47,7 @@ export const bodyBlocksFromTranslation = (translation: Translation) => {
       return;
     }
 
-    const anotations = translation.passageAnnotations.filter(
-      (a) => a.passageUuid === passage.uuid,
-    );
-    const block = blockFromPassage(passage, anotations);
+    const block = blockFromPassage(passage);
 
     if (!block) {
       console.warn('unknown block type');
@@ -64,14 +61,11 @@ export const bodyBlocksFromTranslation = (translation: Translation) => {
   return blocks;
 };
 
-export const blockFromPassage = (
-  item: Passage,
-  annotations: Annotations = [],
-): BlockEditorContentItem => {
+export const blockFromPassage = (item: Passage): BlockEditorContentItem => {
   const template =
     TEMPLATES_FOR_BLOCK_TYPE[item.type] ||
     TEMPLATES_FOR_BLOCK_TYPE['translation'];
   const block = template(item);
 
-  return annotateBlock(block, annotations);
+  return annotateBlock(block, item.annotations);
 };
