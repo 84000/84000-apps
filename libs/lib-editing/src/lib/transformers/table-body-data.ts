@@ -1,5 +1,3 @@
-import { Transformer } from './transformer';
+import { pass } from './transformer';
 
-export const tableBodyData: Transformer = ({ block }) => {
-  return block;
-};
+export const tableBodyData = pass;

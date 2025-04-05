@@ -1,5 +1,3 @@
-import { Transformer } from './transformer';
+import { italic } from './italic';
 
-export const distinct: Transformer = ({ block }) => {
-  return block;
-};
+export const distinct = italic;

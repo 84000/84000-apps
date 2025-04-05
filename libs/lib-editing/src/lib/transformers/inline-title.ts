@@ -1,5 +1,3 @@
-import { Transformer } from './transformer';
+import { italic } from './italic';
 
-export const inlineTitle: Transformer = ({ block }) => {
-  return block;
-};
+export const inlineTitle = italic;

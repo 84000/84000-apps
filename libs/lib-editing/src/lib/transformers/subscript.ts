@@ -1,5 +1,3 @@
-import { Transformer } from './transformer';
+import { pass } from './transformer';
 
-export const subscript: Transformer = ({ block }) => {
-  return block;
-};
+export const subscript = pass;

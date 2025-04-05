@@ -150,7 +150,7 @@ export type UnknownAnnotation = AnnotationBase & {
 };
 
 export type AnnotationDTOContentKey =
-  | 'endNote_xmlId'
+  | 'endnote_xmlId'
   | 'glossary_xmlId'
   | 'href'
   | 'lang'
@@ -248,8 +248,8 @@ const dtoToAnnotationMap: Record<
       if (content['link-text']) {
         endNote.linkText = content['link-text'] as string;
       }
-      if (content.endNote_xmlId) {
-        endNote.endNoteUuid = content.endNote_xmlId as string;
+      if (content.endnote_xmlId) {
+        endNote.endNoteUuid = content.endnote_xmlId as string;
       }
     });
 

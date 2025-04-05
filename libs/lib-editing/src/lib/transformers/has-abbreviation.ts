@@ -1,5 +1,3 @@
-import { Transformer } from './transformer';
+import { pass } from './transformer';
 
-export const hasAbbreviation: Transformer = ({ block }) => {
-  return block;
-};
+export const hasAbbreviation = pass;

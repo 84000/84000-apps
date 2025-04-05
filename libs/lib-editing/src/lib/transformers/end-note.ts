@@ -10,7 +10,9 @@ export const endNote: Transformer = ({ block, annotation }) => {
     marks: [
       {
         type: 'link',
-        href: (annotation as EndNoteAnnotation).endNoteUuid,
+        attrs: {
+          href: (annotation as EndNoteAnnotation).endNoteUuid || '#',
+        },
       },
     ],
   });
