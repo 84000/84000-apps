@@ -10,6 +10,7 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import { StarterKit } from '../extensions/StarterKit';
 import { DragHandle } from '../extensions/DragHandle/DragHandle';
+import { TranslationMetadata } from '../extensions/TranslationMetadata';
 
 export const useExtensions = () => {
   return {
@@ -37,6 +38,7 @@ export const useExtensions = () => {
         suggestion: getSuggestion(),
       }),
       StarterKit,
+      TranslationMetadata,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),

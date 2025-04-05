@@ -1,4 +1,4 @@
-import { Annotations, AnnotationsDTO, annotationsFromDTO } from './annotation';
+import { AnnotationsDTO, annotationsFromDTO } from './annotation';
 import { BackMatter, BackMatterDTO, backMatterFromDTO } from './back-matter';
 import {
   FrontMatter,
@@ -7,13 +7,14 @@ import {
 } from './front-matter';
 import { Passage, PassageDTO, passageFromDTO } from './passage';
 
+export type TranslationNodeClass = 'translation' | 'annotation';
+
 export type Body = Passage[];
 
 export type Translation = {
   body: Body;
   backMatter: BackMatter;
   frontMatter: FrontMatter;
-  passageAnnotations: Annotations;
 };
 
 export type BodyDTO = PassageDTO[];
@@ -26,10 +27,12 @@ export type TranslationDTO = {
 };
 
 export const translationFromDTO = (dto: TranslationDTO): Translation => {
+  const annotations = annotationsFromDTO(dto.passageAnnotations).sort((a, b) =>
+    a.uuid < b.uuid ? -1 : 1,
+  );
   return {
-    body: dto.body?.map((p) => passageFromDTO(p)),
-    backMatter: backMatterFromDTO(dto.backMatter),
-    frontMatter: frontMatterFromDTO(dto.frontMatter),
-    passageAnnotations: annotationsFromDTO(dto.passageAnnotations),
+    body: dto.body?.map((p) => passageFromDTO(p, annotations)),
+    backMatter: backMatterFromDTO(dto.backMatter, annotations),
+    frontMatter: frontMatterFromDTO(dto.frontMatter, annotations),
   };
 };

@@ -1,15 +1,15 @@
 export type GlossaryItem = {
   authorityUuid: string;
-  definition: string;
+  definition?: string | null;
   names: GlossaryNames;
-  nameUuid: string;
+  nameUuid?: string;
 };
 
 export type Glossary = GlossaryItem[];
 
 export type GlossaryName = {
   content: string;
-  definition: string;
+  definition?: string | null;
   nameUuid: string;
 };
 
@@ -17,7 +17,7 @@ export type GlossaryNames = GlossaryName[];
 
 export type GlossaryItemDTO = {
   authority_uuid: string;
-  definition: string;
+  definition?: string | null;
   names: GlossaryNamesDTO;
   name_uuid: string;
 };
@@ -26,7 +26,7 @@ export type GlossaryDTO = GlossaryItemDTO[];
 
 export type GlossaryNameDTO = {
   content: string;
-  definition: string;
+  definition?: string | null;
   name_uuid: string;
 };
 

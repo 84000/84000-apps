@@ -1,17 +1,28 @@
 'use client';
 
-import { Content, EditorContent } from '@tiptap/react';
+import { EditorContent, JSONContent } from '@tiptap/react';
 import { useBlockEditor } from './hooks/useBlockEditor';
 import { useExtensions } from './hooks/useExtensions';
 import { MainBubbleMenu } from './menus/MainBubbleMenu';
 
-export type BlockEditorContent = Content;
+export type BlockEditorContentItem = JSONContent & {
+  attrs?: {
+    uuid?: string | null;
+    class?: string | null;
+    type?: string | null;
+    sort?: number | null;
+  };
+};
+
+export type BlockEditorContent =
+  | BlockEditorContentItem[]
+  | BlockEditorContentItem;
 
 export const BlockEditor = ({
   content,
   isEditable = true,
 }: {
-  content: Content;
+  content: BlockEditorContent;
   isEditable?: boolean;
 }) => {
   const { extensions } = useExtensions();
