@@ -11,10 +11,12 @@ import TextAlign from '@tiptap/extension-text-align';
 import { StarterKit } from '../extensions/StarterKit';
 import { DragHandle } from '../extensions/DragHandle/DragHandle';
 import { TranslationMetadata } from '../extensions/TranslationMetadata';
+import { Blockquote } from '../../Typography/Typography';
 
 export const useExtensions = () => {
   return {
     extensions: [
+      Blockquote,
       Document,
       DragHandle.configure({
         draghandleWidth: 25,

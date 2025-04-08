@@ -4,7 +4,8 @@ import { Transformer } from './transformer';
 export const endNote: Transformer = ({ block, annotation }) => {
   const content = block.content || [];
   content.push({
-    // TODO: figure out index
+    // TODO: figure out index, likely by creating a custom mark type instead
+    // of appending text.
     type: 'text',
     text: '*',
     marks: [

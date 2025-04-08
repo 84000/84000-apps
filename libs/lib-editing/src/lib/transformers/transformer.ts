@@ -62,6 +62,11 @@ export const scan = ({
     annotationLen -= textToTransform.length;
 
     if (!textToTransform) {
+      newContent.push(
+        transform({
+          ...item,
+        }),
+      );
       return;
     }
 
