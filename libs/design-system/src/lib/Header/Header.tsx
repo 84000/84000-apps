@@ -9,7 +9,7 @@ export function Header({
   toggleSidebar,
 }: {
   children: React.ReactNode;
-  toggleSidebar: () => void;
+  toggleSidebar?: () => void | undefined;
 }) {
   return (
     <header className="flex sticky top-0 z-50 w-full items-center border-b border-border bg-background">
@@ -17,14 +17,16 @@ export function Header({
         <div className="h-12 w-8 px-0 py-2">
           <MiniLogo />
         </div>
-        <Button
-          className="size-8"
-          variant="ghost"
-          size="icon"
-          onClick={toggleSidebar}
-        >
-          <MenuIcon />
-        </Button>
+        {toggleSidebar && (
+          <Button
+            className="size-8"
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+          >
+            <MenuIcon />
+          </Button>
+        )}
         {children}
       </div>
     </header>
