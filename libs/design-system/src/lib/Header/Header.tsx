@@ -3,6 +3,7 @@
 import { MenuIcon } from 'lucide-react';
 import { Button } from '../Button/Button';
 import MiniLogo from '../MiniLogo/MiniLogo';
+import MainLogo from '../MainLogo/MainLogo';
 
 export function Header({
   children,
@@ -13,9 +14,9 @@ export function Header({
 }) {
   return (
     <header className="flex sticky top-0 z-50 w-full items-center border-b border-border bg-background">
-      <div className="flex h-(--header-height) w-full items-center gap-2 pl-2 pr-4">
-        <div className="h-12 w-8 px-0 py-2">
-          <MiniLogo />
+      <div className="flex h-(--header-height) w-full items-center gap-2 px-4">
+        <div className="flex flex-col justify-center h-12">
+          <MainLogo width={60} />
         </div>
         {toggleSidebar && (
           <Button

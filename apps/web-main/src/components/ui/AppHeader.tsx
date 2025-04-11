@@ -14,7 +14,7 @@ export const AppHeader = ({
 }) => {
   return (
     <Header>
-      <div className="flex justify-between w-full gap-2">
+      <div className="flex justify-between w-full gap-4">
         <div className="flex-grow"></div>
         <AppNavigationMenu />
         <Profile user={user} handleLogout={handleLogout} />

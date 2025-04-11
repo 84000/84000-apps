@@ -3,15 +3,7 @@ import {
   getTranslationByUuid,
   getTranslationUuids,
 } from '@data-access';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Separator,
-  Titles,
-  passageComponentForType,
-} from '@design-system';
+import { Titles, passageComponentForType } from '@design-system';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 60;
@@ -27,28 +19,21 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <Titles titles={publication.frontMatter.titles} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {publication?.frontMatter.introductions.map(
-            ({ type, content }, index) => {
-              const Component = passageComponentForType[type];
-              return <Component key={index}>{content}</Component>;
-            },
-          )}
-          <Separator className="my-8" />
-          {publication?.body.map(({ type, content }, index) => {
+    <div className="flex justify-center">
+      <div className="lg:max-w-3/5 sm:max-w-4/5 w-full">
+        <Titles titles={publication.frontMatter.titles} />
+        {publication?.frontMatter.introductions.map(
+          ({ type, content }, index) => {
             const Component = passageComponentForType[type];
             return <Component key={index}>{content}</Component>;
-          })}
-        </CardContent>
-      </Card>
-    </>
+          },
+        )}
+        {publication?.body.map(({ type, content }, index) => {
+          const Component = passageComponentForType[type];
+          return <Component key={index}>{content}</Component>;
+        })}
+      </div>
+    </div>
   );
 };
 

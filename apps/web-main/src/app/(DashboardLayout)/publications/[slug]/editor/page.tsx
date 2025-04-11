@@ -3,13 +3,7 @@ import {
   getTranslationByUuid,
   getTranslationUuids,
 } from '@data-access';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Title,
-} from '@design-system';
+import { Title } from '@design-system';
 import { TranslationBodyEditor } from '../../../../../components/ui/TranslationBodyEditor';
 import { notFound } from 'next/navigation';
 
@@ -26,21 +20,15 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <Title language={'en'}>
-              {publication.frontMatter.titles.find((t) => t.language === 'en')
-                ?.title || 'Untitled'}
-            </Title>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TranslationBodyEditor translation={publication} />
-        </CardContent>
-      </Card>
-    </>
+    <div className="flex justify-center">
+      <div className="lg:max-w-3/5 sm:max-w-4/5 w-full">
+        <Title language={'en'}>
+          {publication.frontMatter.titles.find((t) => t.language === 'en')
+            ?.title || 'Untitled'}
+        </Title>
+        <TranslationBodyEditor translation={publication} />
+      </div>
+    </div>
   );
 };
 
