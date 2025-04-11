@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScholarUser, useSession } from '../context/SessionContext';
-import { SidebarInset, SidebarProvider } from '@design-system';
-import { AppSidebar } from '../../components/ui/AppSidebar';
 import { AppHeader } from '../../components/ui/AppHeader';
 import { AppContent } from '../../components/ui/AppContent';
 export default function Layout({
@@ -45,14 +43,12 @@ export default function Layout({
 
   return (
     <div className="[--header-height:calc(--spacing(14))]">
-      <SidebarProvider className="flex flex-col">
-        <div className="fixed w-full z-50">
-          <AppHeader user={user} handleLogout={handleLogout} />
-        </div>
-        <div className="flex flex-1 pt-(--header-height)">
-          <AppContent>{children}</AppContent>
-        </div>
-      </SidebarProvider>
+      <div className="fixed w-full z-50">
+        <AppHeader user={user} handleLogout={handleLogout} />
+      </div>
+      <div className="flex flex-1 pt-(--header-height)">
+        <AppContent>{children}</AppContent>
+      </div>
     </div>
   );
 }
