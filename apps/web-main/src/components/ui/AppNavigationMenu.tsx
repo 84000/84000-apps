@@ -5,22 +5,20 @@ import {
   Button,
 } from '@design-system';
 import { ComponentProps } from 'react';
-import { cn } from '@lib-utils';
-import { BookOpen, ChartPieIcon, Edit, LayoutGrid, Search } from 'lucide-react';
+import { BookOpen, ChartPieIcon, Edit, Grip, Search } from 'lucide-react';
 
-function ListItem({ className, children, ...props }: ComponentProps<'a'>) {
+function AppIcon({
+  title,
+  href,
+  children,
+}: { title: string } & ComponentProps<'a'>) {
   return (
-    <li>
-      <a
-        className={cn(
-          'aspect-1 p-3 block flex flex-row justify-center select-none rounded-md leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-          className,
-        )}
-        {...props}
-      >
+    <a href={href} className="size-full aspect-1">
+      <div className="flex flex-col items-center justify-center rounded-md gap-2 hover:bg-accent hover:text-accent-foreground p-4">
         {children}
-      </a>
-    </li>
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+    </a>
   );
 }
 
@@ -28,24 +26,30 @@ export const AppNavigationMenu = () => (
   <Popover>
     <PopoverTrigger>
       <Button variant="ghost" size="icon" className="size-6" asChild>
-        <LayoutGrid />
+        <Grip />
       </Button>
     </PopoverTrigger>
-    <PopoverContent className="p-0 md:w-[120px] w-[60px]">
-      <ul className="grid gap-2 p-2 md:grid-cols-2">
-        <ListItem href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/reader">
-          <BookOpen className="size-full text-foreground" />
-        </ListItem>
-        <ListItem href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/editor">
-          <Edit className="size-full text-foreground" />
-        </ListItem>
-        <ListItem href="/project">
-          <ChartPieIcon className="size-full text-foreground" />
-        </ListItem>
-        <ListItem>
-          <Search className="size-full text-foreground" />
-        </ListItem>
-      </ul>
+    <PopoverContent className="md:w-[220px] w-[100px] mx-5">
+      <div className="grid gap-2 md:grid-cols-2">
+        <AppIcon
+          title="Reader"
+          href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/reader"
+        >
+          <BookOpen />
+        </AppIcon>
+        <AppIcon
+          title="Editor"
+          href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/editor"
+        >
+          <Edit />
+        </AppIcon>
+        <AppIcon title="Search" href="#">
+          <Search />
+        </AppIcon>
+        <AppIcon title="Projects" href="/project">
+          <ChartPieIcon />
+        </AppIcon>
+      </div>
     </PopoverContent>
   </Popover>
 );

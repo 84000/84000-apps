@@ -20,15 +20,13 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <div className="flex justify-center">
-      <div className="lg:max-w-3/5 sm:max-w-4/5 w-full">
-        <Title language={'en'}>
-          {publication.frontMatter.titles.find((t) => t.language === 'en')
-            ?.title || 'Untitled'}
-        </Title>
-        <TranslationBodyEditor translation={publication} />
-      </div>
-    </div>
+    <>
+      <Title language={'en'}>
+        {publication.frontMatter.titles.find((t) => t.language === 'en')
+          ?.title || 'Untitled'}
+      </Title>
+      <TranslationBodyEditor translation={publication} />
+    </>
   );
 };
 

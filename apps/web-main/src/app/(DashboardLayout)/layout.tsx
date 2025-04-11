@@ -6,6 +6,7 @@ import { ScholarUser, useSession } from '../context/SessionContext';
 import { SidebarInset, SidebarProvider } from '@design-system';
 import { AppSidebar } from '../../components/ui/AppSidebar';
 import { AppHeader } from '../../components/ui/AppHeader';
+import { AppContent } from '../../components/ui/AppContent';
 export default function Layout({
   children,
 }: Readonly<{
@@ -49,14 +50,7 @@ export default function Layout({
           <AppHeader user={user} handleLogout={handleLogout} />
         </div>
         <div className="flex flex-1 pt-(--header-height)">
-          <SidebarInset>
-            <div
-              className={`flex flex-1 flex-col bg-lightgray dark:bg-dark h-full`}
-            >
-              {/* Body Content  */}
-              <div className={'w-full p-4'}>{children}</div>
-            </div>
-          </SidebarInset>
+          <AppContent>{children}</AppContent>
         </div>
       </SidebarProvider>
     </div>
