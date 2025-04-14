@@ -8,9 +8,11 @@ const page = async () => {
   const { projects } = await getProjects({ client });
 
   return (
-    <div className="w-full">
-      <H2>{'Projects'}</H2>
-      <ProjectsTable projects={projects} />
+    <div className="flex flex-row justify-center p-4 w-full">
+      <div className="sm:max-w-4/5 w-full">
+        <H2>{'Projects'}</H2>
+        <ProjectsTable projects={projects} />
+      </div>
     </div>
   );
 };
