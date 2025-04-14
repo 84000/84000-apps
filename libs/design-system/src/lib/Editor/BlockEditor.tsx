@@ -34,7 +34,7 @@ export const BlockEditor = ({
   return (
     <div className="flex h-full">
       <div className="relative flex flex-col flex-1 h-full">
-        <EditorContent className="flex-1 overflow-y-auto" editor={editor} />
+        <EditorContent className="flex-1" editor={editor} />
         <MainBubbleMenu editor={editor} />
       </div>
     </div>

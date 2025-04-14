@@ -3,9 +3,8 @@ import {
   getTranslationByUuid,
   getTranslationUuids,
 } from '@data-access';
-import { Title } from '@design-system';
-import { TranslationBodyEditor } from '../../../../../components/ui/TranslationBodyEditor';
 import { notFound } from 'next/navigation';
+import { EditorPage } from '../../../../../components/ui/EditorPage';
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -19,15 +18,7 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
     return notFound();
   }
 
-  return (
-    <>
-      <Title language={'en'}>
-        {publication.frontMatter.titles.find((t) => t.language === 'en')
-          ?.title || 'Untitled'}
-      </Title>
-      <TranslationBodyEditor translation={publication} />
-    </>
-  );
+  return <EditorPage publication={publication} />;
 };
 
 export const generateStaticParams = async () => {

@@ -19,19 +19,21 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <>
-      <Titles titles={publication.frontMatter.titles} />
-      {publication?.frontMatter.introductions.map(
-        ({ type, content }, index) => {
+    <div className="flex flex-row justify-center p-4 w-full">
+      <div className="xl:max-w-1/2 lg:max-w-2/3 sm:max-w-4/5 w-full">
+        <Titles titles={publication.frontMatter.titles} />
+        {publication?.frontMatter.introductions.map(
+          ({ type, content }, index) => {
+            const Component = passageComponentForType[type];
+            return <Component key={index}>{content}</Component>;
+          },
+        )}
+        {publication?.body.map(({ type, content }, index) => {
           const Component = passageComponentForType[type];
           return <Component key={index}>{content}</Component>;
-        },
-      )}
-      {publication?.body.map(({ type, content }, index) => {
-        const Component = passageComponentForType[type];
-        return <Component key={index}>{content}</Component>;
-      })}
-    </>
+        })}
+      </div>
+    </div>
   );
 };
 
