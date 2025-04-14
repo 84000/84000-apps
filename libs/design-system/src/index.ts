@@ -25,6 +25,7 @@ export * from './lib/Sheet/Sheet';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Table/Table';
+export * from './lib/ThreeColumns/ThreeColumns';
 export * from './lib/Tooltip/Tooltip';
 export * from './lib/Translation';
 export * from './lib/Typography/Typography';

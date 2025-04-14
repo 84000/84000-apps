@@ -3,7 +3,7 @@ import {
   getTranslationByUuid,
   getTranslationUuids,
 } from '@data-access';
-import { Title } from '@design-system';
+import { ThreeColumns, Title } from '@design-system';
 import { TranslationBodyEditor } from '../../../../../components/ui/TranslationBodyEditor';
 import { notFound } from 'next/navigation';
 
@@ -20,13 +20,13 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   }
 
   return (
-    <>
+    <ThreeColumns>
       <Title language={'en'}>
         {publication.frontMatter.titles.find((t) => t.language === 'en')
           ?.title || 'Untitled'}
       </Title>
       <TranslationBodyEditor translation={publication} />
-    </>
+    </ThreeColumns>
   );
 };
 
