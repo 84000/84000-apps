@@ -1,7 +1,7 @@
 'use client';
 
 import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
-import { ReactNode, useRef } from 'react';
+import { Children, ReactElement, ReactNode, useRef } from 'react';
 import { ImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
@@ -18,9 +18,33 @@ enum MinPanelSizes {
   MAIN_MIN = 30,
 }
 
+export const LeftPanel = ({ children }: { children: ReactNode }) => {
+  return <div className="left-panel">{children}</div>;
+};
+
+export const MainPanel = ({ children }: { children: ReactNode }) => {
+  return <div className="flex justify-center w-full">{children}</div>;
+};
+
+export const RightPanel = ({ children }: { children: ReactNode }) => {
+  return <div className="right-panel">{children}</div>;
+};
+
 export const ThreeColumns = ({ children }: { children: ReactNode }) => {
   const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
   const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
+
+  const leftPanelChildren = Children.toArray(children).filter(
+    (child) => (child as ReactElement)?.type === LeftPanel,
+  );
+
+  const mainPanelChildren = Children.toArray(children).filter(
+    (child) => (child as ReactElement)?.type === MainPanel,
+  );
+
+  const rightPanelChildren = Children.toArray(children).filter(
+    (child) => (child as ReactElement)?.type === RightPanel,
+  );
 
   const togglePanel = (panel?: ImperativePanelHandle | null) => {
     if (!panel) {
@@ -40,9 +64,7 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
         defaultSize={MinPanelSizes.SIDE_DEFAULT}
         minSize={MinPanelSizes.SIDE_MIN}
       >
-        <div className="text-center text-muted-foreground p-4">
-          Coming Soon...
-        </div>
+        {leftPanelChildren}
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel
@@ -68,9 +90,7 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
             <PanelRightIcon />
           </Button>
         </div>
-        <div className="flex justify-center w-full">
-          <div className="xl:w-4/5 w-full px-8">{children}</div>
-        </div>
+        {mainPanelChildren}
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel
@@ -81,9 +101,7 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
         defaultSize={MinPanelSizes.SIDE_DEFAULT}
         minSize={MinPanelSizes.SIDE_MIN}
       >
-        <div className="w-full text-center text-muted-foreground p-4">
-          Coming Soon...
-        </div>
+        {rightPanelChildren}
       </ResizablePanel>
     </ResizablePanelGroup>
   );
