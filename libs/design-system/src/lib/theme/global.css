@@ -37,6 +37,13 @@
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 240 5% 65%;
+
+    --success: 54, 199, 108;
+    --success-light: 235, 250, 240;
+    --warning: 255, 214, 72;
+    --warning-light: 255, 249, 229;
+    --error: 255, 102, 46;
+    --error-light: 255, 229, 237;
   }
 
   * {

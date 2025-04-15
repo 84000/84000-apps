@@ -1,7 +1,9 @@
 import { createBrowserClient, getProjects } from '@data-access';
 import { H2 } from '@design-system';
-import { ProjectsTable } from '../../../components/ui/ProjectsTable';
+import { ProjectsTable } from '../../../components/table/ProjectsTable';
 import React from 'react';
+
+export const revalidate = 60;
 
 const page = async () => {
   const client = createBrowserClient();

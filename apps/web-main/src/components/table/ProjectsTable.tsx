@@ -1,6 +1,6 @@
 'use client';
+
 import {
-  Column,
   ColumnDef,
   ColumnFiltersState,
   SortingState,
@@ -37,45 +37,15 @@ import {
 import { Project } from '@data-access';
 import { useState } from 'react';
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   ChevronDown,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
 } from 'lucide-react';
+import { SortableHeader } from './SortableHeader';
 
-const SortIcon = ({ isSorted }: { isSorted: false | 'asc' | 'desc' }) => {
-  switch (isSorted) {
-    case false:
-      return <ArrowUpDown className="text-muted-foreground" />;
-    case 'asc':
-      return <ArrowUp />;
-    case 'desc':
-      return <ArrowDown />;
-  }
-};
-
-const SortableHeader = ({
-  column,
-  name,
-}: {
-  column: Column<Project, unknown>;
-  name: string;
-}) => {
-  const isSorted = column.getIsSorted();
-  return (
-    <Button
-      variant="ghost"
-      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-    >
-      {name}
-      <SortIcon isSorted={isSorted} />
-    </Button>
-  );
-};
+const ProjectHeader = SortableHeader<Project>;
 
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const [data] = useState(projects);
@@ -93,37 +63,37 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const columns: ColumnDef<Project>[] = [
     {
       accessorKey: 'toh',
-      header: ({ column }) => <SortableHeader column={column} name="Toh" />,
+      header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
       cell: ({ row }) => <div className="text-right">{row.original.toh}</div>,
     },
     {
       accessorKey: 'title',
       header: ({ column }) => (
-        <SortableHeader column={column} name="Work Title" />
+        <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => row.original.title,
     },
     {
       accessorKey: 'translator',
       header: ({ column }) => (
-        <SortableHeader column={column} name="Translator or Group" />
+        <ProjectHeader column={column} name="Translator or Group" />
       ),
       cell: ({ row }) => row.original.translator,
     },
     {
       accessorKey: 'stage',
-      header: ({ column }) => <SortableHeader column={column} name="Stage" />,
+      header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
       cell: ({ row }) => <div className="text-right">{row.original.stage}</div>,
     },
     {
       accessorKey: 'pages',
-      header: ({ column }) => <SortableHeader column={column} name="Pages" />,
+      header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
       cell: ({ row }) => <div className="text-right">{row.original.pages}</div>,
     },
     {
       accessorKey: 'stageDate',
       header: ({ column }) => (
-        <SortableHeader column={column} name="Last Updated" />
+        <ProjectHeader column={column} name="Last Updated" />
       ),
       cell: ({ row }) => (
         <div className="text-right">
@@ -159,7 +129,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   });
 
   return (
-    <div className="w-full flex flex-col gap-4 overflow-auto">
+    <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
         <Input
           placeholder="Filter projects..."
