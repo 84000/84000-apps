@@ -18,7 +18,6 @@ export default function Layout({
   useEffect(() => {
     (async () => {
       const user = await getUser();
-      console.log(user);
       setUser(user);
 
       if (!user) {

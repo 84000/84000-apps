@@ -31,16 +31,10 @@ export const AppNavigationMenu = () => (
     </PopoverTrigger>
     <PopoverContent className="md:w-[220px] w-[100px] mx-5">
       <div className="grid gap-2 md:grid-cols-2">
-        <AppIcon
-          title="Reader"
-          href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/reader"
-        >
+        <AppIcon title="Reader" href="/publications/reader">
           <BookOpen />
         </AppIcon>
-        <AppIcon
-          title="Editor"
-          href="/publications/c55aa7e1-31d2-417a-b4d4-918524b3baca/editor"
-        >
+        <AppIcon title="Editor" href="/publications/editor">
           <Edit />
         </AppIcon>
         <AppIcon title="Search" href="#">

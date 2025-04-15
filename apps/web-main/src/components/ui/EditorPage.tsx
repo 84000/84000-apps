@@ -10,14 +10,7 @@ import {
 import { TranslationBodyEditor } from './TranslationBodyEditor';
 import { Translation } from '@data-access';
 
-export const revalidate = 60;
-export const dynamicParams = true;
-
-export const EditorPage = async ({
-  publication,
-}: {
-  publication: Translation;
-}) => {
+export const EditorPage = ({ publication }: { publication: Translation }) => {
   return (
     <ThreeColumns>
       <LeftPanel>
