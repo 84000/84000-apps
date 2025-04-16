@@ -1,22 +1,18 @@
 'use client';
 
-import { Translation } from '@data-access';
+import { Body } from '@data-access';
 import { BlockEditor } from '@design-system';
 import type { BlockEditorContent } from '@design-system';
-import { bodyBlocksFromTranslation } from '@lib-editing';
+import { blocksFromTranslationBody } from '@lib-editing';
 import { useEffect, useState } from 'react';
 
-export const TranslationBodyEditor = ({
-  translation,
-}: {
-  translation: Translation;
-}) => {
+export const TranslationBodyEditor = ({ body }: { body: Body }) => {
   const [content, setContent] = useState<BlockEditorContent>([]);
 
   useEffect(() => {
-    const blocks = bodyBlocksFromTranslation(translation);
+    const blocks = blocksFromTranslationBody(body);
     setContent(blocks);
-  }, [translation]);
+  }, [body]);
 
   return <BlockEditor content={content} />;
 };

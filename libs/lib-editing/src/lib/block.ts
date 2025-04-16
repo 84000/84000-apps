@@ -1,5 +1,5 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
-import { Passage, Translation } from '@data-access';
+import { Body, Passage, Translation } from '@data-access';
 import { annotateBlock } from './annotation';
 
 const TEMPLATES_FOR_BLOCK_TYPE: {
@@ -38,9 +38,9 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   }),
 };
 
-export const bodyBlocksFromTranslation = (translation: Translation) => {
+export const blocksFromTranslationBody = (body: Body) => {
   const blocks: BlockEditorContent = [];
-  translation.body.forEach((passage) => {
+  body.forEach((passage) => {
     if (!passage.content) {
       console.warn('passage has no content');
       console.warn(passage);

@@ -1,4 +1,4 @@
-import { Annotations } from './annotation';
+import { Annotations, AnnotationsDTO } from './annotation';
 
 export type BodyItemType =
   | 'acknowledgment'
@@ -29,6 +29,7 @@ export type PassageDTO = {
   uuid: string;
   work_uuid: string;
   xmlId?: string;
+  annotations?: AnnotationsDTO;
 };
 
 export const passageFromDTO = (

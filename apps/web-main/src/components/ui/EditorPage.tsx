@@ -9,35 +9,39 @@ import {
 } from '@design-system';
 import { TranslationBodyEditor } from './TranslationBodyEditor';
 import {
-  Translation,
+  Body,
   createBrowserClient,
-  getTranslationByUuid,
+  getTranslationBody,
+  getTranslationMetadataByUuid,
 } from '@data-access';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
 import { TranslationSkeleton } from './TranslationSkeleton';
 
 export const EditorPage = ({ uuid }: { uuid: string }) => {
-  const [translation, setTranslation] = useState<Translation>();
+  const [body, setBody] = useState<Body>();
+  const [title, setTitle] = useState('Untitled');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getTranslation = async () => {
       const client = createBrowserClient();
-      const translation = await getTranslationByUuid({ client, uuid });
+      const body = await getTranslationBody({ client, uuid });
+      const { title } = await getTranslationMetadataByUuid({ client, uuid });
 
       setLoading(false);
 
-      if (!translation) {
+      if (!body) {
         return;
       }
 
-      setTranslation(translation);
+      setTitle(title);
+      setBody(body);
     };
     getTranslation();
   }, [uuid]);
 
-  if (!translation && !loading) {
+  if (!body && !loading) {
     return notFound();
   }
 
@@ -50,13 +54,10 @@ export const EditorPage = ({ uuid }: { uuid: string }) => {
       </LeftPanel>
       <MainPanel>
         <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4">
-          {translation ? (
+          {body ? (
             <>
-              <Title language={'en'}>
-                {translation.frontMatter.titles.find((t) => t.language === 'en')
-                  ?.title || 'Untitled'}
-              </Title>
-              <TranslationBodyEditor translation={translation} />
+              <Title language={'en'}>{title}</Title>
+              <TranslationBodyEditor body={body} />
             </>
           ) : (
             <TranslationSkeleton />

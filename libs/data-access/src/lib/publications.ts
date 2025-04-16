@@ -1,4 +1,9 @@
-import { DataClient, TranslationDTO, translationFromDTO } from './types';
+import {
+  DataClient,
+  TranslationDTO,
+  translationBodyFromDTO,
+  translationFromDTO,
+} from './types';
 import { WorkDTO, workFromDTO } from './types/work';
 
 export const getTranslationUuids = async ({
@@ -32,6 +37,42 @@ export const getTranslationByUuid = async ({
   return translationFromDTO(data.translation as TranslationDTO);
 };
 
+export const getTranslationBody = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data } = await client
+    .from('passages')
+    .select(
+      `
+      uuid,
+      content,
+      xmlId,
+      work_uuid,
+      label,
+      sort,
+      parent,
+      type,
+      annotations:passage_annotations!passage_uuid (
+        uuid,
+        content,
+        type,
+        start,
+        end,
+        passage_uuid
+      )
+    `,
+    )
+    .eq('work_uuid', uuid)
+    .like('type', 'translation%')
+    .order('sort');
+
+  return translationBodyFromDTO(data || []);
+};
+
 export const getTranslationSlugs = async ({
   client,
 }: {
@@ -41,24 +82,30 @@ export const getTranslationSlugs = async ({
   return data?.map(({ toh }: { toh: string }) => toh) || [];
 };
 
-export const getTranslationBySlug = async ({
+export const getTranslationMetadataByUuid = async ({
   client,
-  slug,
+  uuid,
 }: {
   client: DataClient;
-  slug: string;
+  uuid: string;
 }) => {
   const { data } = await client
-    .from('translation_json')
-    .select('translation')
-    .eq('toh', slug)
+    .from('works')
+    .select(
+      `
+      uuid,
+      title,
+      toh,
+      publicationDate,
+      publicationVersion,
+      pages:source_pages,
+      restriction
+    `,
+    )
+    .eq('uuid', uuid)
     .single();
 
-  if (!data?.translation) {
-    return null;
-  }
-
-  return translationFromDTO(data.translation as TranslationDTO);
+  return workFromDTO(data as WorkDTO);
 };
 
 export const getTranslationsMetadata = async ({
@@ -68,7 +115,8 @@ export const getTranslationsMetadata = async ({
 }) => {
   // NOTE: currently we only fetch works "published" to translation_json, but
   // that may not be the right choice in the future.
-  const { data } = await client.from('translation_json').select(`
+  const { data } = await client.from('translation_json').select(
+    `
     work:works!work_uuid (
       uuid,
       title,
@@ -78,7 +126,8 @@ export const getTranslationsMetadata = async ({
       pages:source_pages,
       restriction
     )
-  `);
+  `,
+  );
 
   return (
     data?.map(({ work }: { work: unknown }) => workFromDTO(work as WorkDTO)) ||

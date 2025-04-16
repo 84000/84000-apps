@@ -57,38 +57,50 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 20,
   });
 
   const columns: ColumnDef<Project>[] = [
     {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
-      cell: ({ row }) => <div className="text-right">{row.original.toh}</div>,
+      cell: ({ row }) => (
+        <div className="xl:w-[80px] md:w-[60px] w-[40px] truncate">
+          {row.original.toh}
+        </div>
+      ),
     },
     {
       accessorKey: 'title',
       header: ({ column }) => (
         <ProjectHeader column={column} name="Work Title" />
       ),
-      cell: ({ row }) => row.original.title,
+      cell: ({ row }) => (
+        <div className="xl:w-[600px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+          {row.original.title}
+        </div>
+      ),
     },
     {
       accessorKey: 'translator',
       header: ({ column }) => (
-        <ProjectHeader column={column} name="Translator or Group" />
+        <ProjectHeader column={column} name="Translator" />
       ),
-      cell: ({ row }) => row.original.translator,
+      cell: ({ row }) => (
+        <div className="xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px] truncate">
+          {row.original.translator}
+        </div>
+      ),
     },
     {
       accessorKey: 'stage',
       header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
-      cell: ({ row }) => <div className="text-right">{row.original.stage}</div>,
+      cell: ({ row }) => <div className="w-[60px]">{row.original.stage}</div>,
     },
     {
       accessorKey: 'pages',
       header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
-      cell: ({ row }) => <div className="text-right">{row.original.pages}</div>,
+      cell: ({ row }) => <div className="w-[60px]">{row.original.pages}</div>,
     },
     {
       accessorKey: 'stageDate',
@@ -96,7 +108,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Last Updated" />
       ),
       cell: ({ row }) => (
-        <div className="text-right">
+        <div className="w-[100px]">
           {row.original.stageDate.toLocaleDateString()}
         </div>
       ),
@@ -235,7 +247,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
                   />
                 </SelectTrigger>
                 <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                  {[10, 20, 50, 100].map((pageSize) => (
                     <SelectItem key={pageSize} value={`${pageSize}`}>
                       {pageSize}
                     </SelectItem>
