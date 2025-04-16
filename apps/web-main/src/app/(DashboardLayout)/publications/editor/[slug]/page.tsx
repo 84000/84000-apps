@@ -1,9 +1,4 @@
-import {
-  createBrowserClient,
-  getTranslationByUuid,
-  getTranslationUuids,
-} from '@data-access';
-import { notFound } from 'next/navigation';
+import { createBrowserClient, getTranslationUuids } from '@data-access';
 import { EditorPage } from '../../../../../components/ui/EditorPage';
 
 export const revalidate = 60;
@@ -11,14 +6,8 @@ export const dynamicParams = true;
 
 const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
-  const client = createBrowserClient();
-  const publication = await getTranslationByUuid({ client, uuid: slug });
 
-  if (!publication) {
-    return notFound();
-  }
-
-  return <EditorPage publication={publication} />;
+  return <EditorPage uuid={slug} />;
 };
 
 export const generateStaticParams = async () => {
