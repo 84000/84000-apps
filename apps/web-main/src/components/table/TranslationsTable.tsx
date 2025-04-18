@@ -1,8 +1,8 @@
 'use client';
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
+  Table as TableType,
   VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -29,7 +29,7 @@ import {
   TableRow,
 } from '@design-system';
 import { Work } from '@data-access';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -41,25 +41,44 @@ import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
 import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
 
-const TranslationHeader = SortableHeader<Work>;
+type TableWork = {
+  uuid: string;
+  title: string;
+  toh: string;
+  publicationDate: string;
+  publicationVersion: string;
+  pages: number;
+  restriction: boolean;
+};
+
+const TranslationHeader = SortableHeader<TableWork>;
 
 export const TranslationsTable = ({ works }: { works: Work[] }) => {
-  const [data] = useState(works);
+  const [data, setData] = useState<TableWork[]>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'toh', desc: false },
   ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
 
   const router = useRouter();
   const pathname = usePathname();
 
-  const columns: ColumnDef<Work>[] = [
+  useEffect(() => {
+    const tableWorks: TableWork[] = works.map((w) => ({
+      ...w,
+      toh: w.toh.join(', '),
+      publicationDate: w.publicationDate.toLocaleDateString(),
+    }));
+    setData(tableWorks);
+  }, [works]);
+
+  const columns: ColumnDef<TableWork>[] = [
     {
       accessorKey: 'title',
       header: ({ column }) => (
@@ -70,7 +89,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     {
       accessorKey: 'toh',
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
-      cell: ({ row }) => <div>{row.original.toh.join(', ')}</div>,
+      cell: ({ row }) => <div>{row.original.toh}</div>,
     },
     {
       accessorKey: 'pages',
@@ -84,12 +103,10 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       header: ({ column }) => (
         <TranslationHeader column={column} name="Published" />
       ),
-      cell: ({ row }) => row.original.publicationDate.toLocaleDateString(),
+      cell: ({ row }) => row.original.publicationDate,
     },
     {
       accessorKey: 'publicationVersion',
-      size: 10,
-      maxSize: 10,
       header: ({ column }) => (
         <TranslationHeader column={column} name="Version" />
       ),
@@ -97,8 +114,6 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     },
     {
       accessorKey: 'restriction',
-      size: 10,
-      maxSize: 10,
       header: () => <></>,
       cell: ({ row }) => (
         <>
@@ -110,13 +125,13 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     },
   ];
 
-  const table = useReactTable({
+  const table: TableType<TableWork> = useReactTable({
     data,
     columns,
     state: {
       sorting,
       columnVisibility,
-      columnFilters,
+      globalFilter,
       rowSelection,
       pagination,
     },
@@ -124,7 +139,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
@@ -133,12 +148,13 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    globalFilterFn: 'auto',
   });
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <FuzzyGlobalFilter placeholder='Filter translations...' table={table} />
+        <FuzzyGlobalFilter table={table} placeholder="Filter translations..." />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
@@ -150,9 +166,9 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -195,7 +211,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       </div>
       <div className="flex items-center justify-between px-4">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-          Found {table.getFilteredRowModel().rows.length} project(s)
+          Found {table.getFilteredRowModel().rows.length} translation(s)
         </div>
         <div className="flex w-full items-center gap-8 lg:w-fit">
           <div className="flex w-full items-center gap-8 lg:w-fit">
