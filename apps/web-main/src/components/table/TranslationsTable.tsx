@@ -15,7 +15,6 @@ import {
 } from '@tanstack/react-table';
 import {
   Button,
-  Input,
   Label,
   Select,
   SelectContent,
@@ -40,6 +39,7 @@ import {
 } from 'lucide-react';
 import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
+import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
 
 const TranslationHeader = SortableHeader<Work>;
 
@@ -138,14 +138,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter projects..."
-          value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('title')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
+        <FuzzyGlobalFilter placeholder='Filter translations...' table={table} />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
@@ -157,9 +150,9 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
