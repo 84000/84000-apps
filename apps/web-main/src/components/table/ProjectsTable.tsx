@@ -29,7 +29,7 @@ import {
   TableRow,
 } from '@design-system';
 import { Project } from '@data-access';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -40,10 +40,20 @@ import { SortableHeader } from './SortableHeader';
 import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
 import { ColumnsDropdown } from './ColumnsDropdown';
 
-const ProjectHeader = SortableHeader<Project>;
+type TableProject = {
+  uuid: string;
+  toh: string;
+  title: string;
+  translator: string;
+  stage: string;
+  stageDate: string;
+  pages: number;
+};
+
+const ProjectHeader = SortableHeader<TableProject>;
 
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
-  const [data] = useState(projects);
+  const [data, setData] = useState<TableProject[]>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState('');
@@ -55,7 +65,16 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     pageSize: 10,
   });
 
-  const columns: ColumnDef<Project>[] = [
+  useEffect(() => {
+    setData(
+      projects.map((p) => ({
+        ...p,
+        stageDate: p.stageDate.toLocaleDateString(),
+      })),
+    );
+  }, [projects]);
+
+  const columns: ColumnDef<TableProject>[] = [
     {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
@@ -71,7 +90,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[600px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className="xl:w-[500px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
           {row.original.title}
         </div>
       ),
@@ -103,9 +122,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Last Updated" />
       ),
       cell: ({ row }) => (
-        <div className="w-[100px]">
-          {row.original.stageDate.toLocaleDateString()}
-        </div>
+        <div className="w-[100px]">{row.original.stageDate}</div>
       ),
     },
   ];
