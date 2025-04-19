@@ -2,7 +2,6 @@
 
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -16,11 +15,6 @@ import {
 } from '@tanstack/react-table';
 import {
   Button,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  Input,
   Label,
   Select,
   SelectContent,
@@ -35,32 +29,52 @@ import {
   TableRow,
 } from '@design-system';
 import { Project } from '@data-access';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  ChevronDown,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
 } from 'lucide-react';
 import { SortableHeader } from './SortableHeader';
+import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
+import { ColumnsDropdown } from './ColumnsDropdown';
 
-const ProjectHeader = SortableHeader<Project>;
+type TableProject = {
+  uuid: string;
+  toh: string;
+  title: string;
+  translator: string;
+  stage: string;
+  stageDate: string;
+  pages: number;
+};
+
+const ProjectHeader = SortableHeader<TableProject>;
 
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
-  const [data] = useState(projects);
+  const [data, setData] = useState<TableProject[]>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'pages', desc: true },
   ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
 
-  const columns: ColumnDef<Project>[] = [
+  useEffect(() => {
+    setData(
+      projects.map((p) => ({
+        ...p,
+        stageDate: p.stageDate.toLocaleDateString(),
+      })),
+    );
+  }, [projects]);
+
+  const columns: ColumnDef<TableProject>[] = [
     {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
@@ -76,7 +90,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[600px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className="xl:w-[500px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
           {row.original.title}
         </div>
       ),
@@ -108,9 +122,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Last Updated" />
       ),
       cell: ({ row }) => (
-        <div className="w-[100px]">
-          {row.original.stageDate.toLocaleDateString()}
-        </div>
+        <div className="w-[100px]">{row.original.stageDate}</div>
       ),
     },
   ];
@@ -121,7 +133,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     state: {
       sorting,
       columnVisibility,
-      columnFilters,
+      globalFilter,
       rowSelection,
       pagination,
     },
@@ -129,8 +141,8 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -138,45 +150,14 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    globalFilterFn: 'auto',
   });
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter projects..."
-          value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('title')?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column.toggleVisibility(!!value)
-                    }
-                  >
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <FuzzyGlobalFilter table={table} placeholder="Filter projects..." />
+        <ColumnsDropdown table={table} />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
