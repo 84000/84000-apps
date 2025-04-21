@@ -24,6 +24,7 @@ export * from './lib/Separator/Separator';
 export * from './lib/Sheet/Sheet';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
+export * from './lib/Slider/Slider';
 export * from './lib/Table/Table';
 export * from './lib/Tabs/Tabs';
 export * from './lib/ThreeColumns/ThreeColumns';
