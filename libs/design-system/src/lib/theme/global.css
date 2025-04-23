@@ -44,6 +44,12 @@
     --warning-light: 255, 249, 229;
     --error: 255, 102, 46;
     --error-light: 255, 229, 237;
+
+    --emerald: 173, 83%, 32%;
+    --ochre: 13, 80%, 40%;
+    --navy: 203, 100%, 23%;
+    --brick: 339, 82%, 35%;
+    --gray: 216, 12%, 84%;
   }
 
   * {
@@ -97,8 +103,12 @@
     --warning-light: 255, 249, 229;
     --error: 255, 102, 46;
     --error-light: 255, 229, 237;
-    --gray: 219, 219, 219;
-    --lightgray: 243, 244, 246;
+
+    --emerald: 173, 83%, 32%;
+    --ochre: 13, 80%, 40%;
+    --navy: 203, 100%, 23%;
+    --brick: 339, 82%, 35%;
+    --gray: 216, 12%, 84%;
   }
 }
 
@@ -140,13 +150,18 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --color-link: hsl(var(--primary));
-  --color-dark: rgba(var(--gray));
-  --color-darkborder: rgba(var(--gray));
-  --color-darkgray: rgba(var(--gray));
+  --color-dark: hsl(var(--gray));
+  --color-darkborder: hsl(var(--gray));
+  --color-darkgray: hsl(var(--gray));
   --color-error: rgba(var(--error));
-  --color-gray: rgba(var(--gray));
-  --color-lightgray: rgba(var(--lightgray));
+  --color-gray: hsl(var(--muted));
   --color-success: rgba(var(--success));
   --color-surface: hsl(var(--primary-foreground));
   --color-warning: rgba(var(--warning));
+  --color-lightgray: hsl(var(--muted));
+
+  --color-emerald: hsl(var(--emerald));
+  --color-ochre: hsl(var(--ochre));
+  --color-navy: hsl(var(--navy));
+  --color-brick: hsl(var(--brick));
 }

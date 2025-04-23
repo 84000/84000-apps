@@ -6,9 +6,9 @@ import {
   DropdownMenuTrigger,
 } from '@design-system';
 import { RowData, Table } from '@tanstack/react-table';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ListFilter } from 'lucide-react';
 
-export const ColumnsDropdown = <T extends RowData>({
+export const FilterStageDropdown = <T extends RowData>({
   table,
 }: {
   table: Table<T>;
@@ -16,8 +16,10 @@ export const ColumnsDropdown = <T extends RowData>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="ml-auto">
-          Columns <ChevronDown />
+        <Button variant="outline" className="ml-auto rounded-full">
+          <ListFilter />
+          Filter Stage
+          <ChevronDown />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

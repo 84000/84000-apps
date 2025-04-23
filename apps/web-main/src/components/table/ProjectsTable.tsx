@@ -21,20 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project } from '@data-access';
+import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from './SortableHeader';
 import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
-import { ColumnsDropdown } from './ColumnsDropdown';
+import { FilterStageDropdown } from './FilterStageDropdown';
 import { TablePagination } from './TablePagination';
+import { StageChip } from '../ui/StageChip';
 
 type TableProject = {
   uuid: string;
   toh: string;
   title: string;
   translator: string;
-  stage: string;
+  stage: ProjectStageLabel;
   stageDate: string;
+  stageObject: ProjectStage;
   pages: number;
 };
 
@@ -56,8 +58,14 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   useEffect(() => {
     setData(
       projects.map((p) => ({
-        ...p,
-        stageDate: p.stageDate.toLocaleDateString(),
+        uuid: p.uuid,
+        toh: p.toh,
+        title: p.title,
+        translator: p.translator,
+        stage: p.stage.label,
+        stageDate: p.stage.date.toLocaleDateString(),
+        stageObject: p.stage,
+        pages: p.pages,
       })),
     );
   }, [projects]);
@@ -67,7 +75,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className="xl:w-[80px] md:w-[60px] w-[40px] truncate">
+        <div className="xl:w-[100px] md:w-[60px] w-[40px] truncate">
           {row.original.toh}
         </div>
       ),
@@ -78,7 +86,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[500px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className="xl:w-[640px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
           {row.original.title}
         </div>
       ),
@@ -97,7 +105,11 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     {
       accessorKey: 'stage',
       header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
-      cell: ({ row }) => <div className="w-[60px]">{row.original.stage}</div>,
+      cell: ({ row }) => (
+        <div className="w-[60px]">
+          <StageChip stage={row.original.stageObject} />
+        </div>
+      ),
     },
     {
       accessorKey: 'pages',
@@ -144,16 +156,16 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <FuzzyGlobalFilter table={table} placeholder="Filter projects..." />
-        <ColumnsDropdown table={table} />
+        <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
+        <FilterStageDropdown table={table} />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader className="bg-muted sticky top-0">
+          <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="py-4">
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -165,7 +177,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
               <>
                 {table.getRowModel().rows.map((row) => (
