@@ -21,20 +21,22 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
+import { Project, ProjectStage } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from './SortableHeader';
 import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { TablePagination } from './TablePagination';
 import { StageChip } from '../ui/StageChip';
+import { removeDiacritics } from '@lib-utils';
 
 type TableProject = {
   uuid: string;
   toh: string;
   title: string;
+  plainTitle: string;
   translator: string;
-  stage: ProjectStageLabel;
+  stage: string;
   stageDate: string;
   stageObject: ProjectStage;
   pages: number;
@@ -45,7 +47,9 @@ const ProjectHeader = SortableHeader<TableProject>;
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const [data, setData] = useState<TableProject[]>([]);
   const [rowSelection, setRowSelection] = useState({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    plainTitle: false,
+  });
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'pages', desc: true },
@@ -61,6 +65,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         uuid: p.uuid,
         toh: p.toh,
         title: p.title,
+        plainTitle: removeDiacritics(p.title),
         translator: p.translator,
         stage: p.stage.label,
         stageDate: p.stage.date.toLocaleDateString(),
@@ -90,6 +95,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
           {row.original.title}
         </div>
       ),
+    },
+    {
+      accessorKey: 'plainTitle',
+      cell: ({ row }) => row.original.plainTitle,
     },
     {
       accessorKey: 'translator',
