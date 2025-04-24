@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project, ProjectStage } from '@data-access';
+import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from './SortableHeader';
 import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
@@ -113,6 +113,11 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     },
     {
       accessorKey: 'stage',
+      filterFn: (row, columnId, filter: ProjectStageLabel[]) => {
+        if (!filter.length) return true;
+        const value = row.getValue(columnId) as ProjectStageLabel;
+        return filter.includes(value);
+      },
       header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
       cell: ({ row }) => (
         <div className="w-[60px]">
