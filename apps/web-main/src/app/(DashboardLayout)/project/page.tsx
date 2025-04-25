@@ -1,6 +1,6 @@
 import { createBrowserClient, getProjects } from '@data-access';
 import { H2 } from '@design-system';
-import { ProjectsTable } from '../../../components/table/ProjectsTable';
+import { ProjectsTable } from '../../../components/project/ProjectsTable';
 import React from 'react';
 
 export const revalidate = 60;

@@ -1,8 +1,8 @@
 import {
   PROJECT_STAGE_LABELS,
-  ProjectStageLabel,
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
+  ProjectStageLabel,
 } from '@data-access';
 import {
   Button,

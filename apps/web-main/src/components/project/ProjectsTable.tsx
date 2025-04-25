@@ -1,7 +1,9 @@
 'use client';
 
+import { rankItem } from '@tanstack/match-sorter-utils';
 import {
   ColumnDef,
+  Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -23,10 +25,10 @@ import {
 } from '@design-system';
 import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
-import { SortableHeader } from './SortableHeader';
-import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
+import { SortableHeader } from '../table/SortableHeader';
+import { FuzzyGlobalFilter } from '../table/FuzzyGlobalFilter';
+import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
-import { TablePagination } from './TablePagination';
 import { StageChip } from '../ui/StageChip';
 import { removeDiacritics } from '@lib-utils';
 
@@ -87,6 +89,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     },
     {
       accessorKey: 'title',
+      enableGlobalFilter: false,
       header: ({ column }) => (
         <ProjectHeader column={column} name="Work Title" />
       ),
@@ -164,7 +167,21 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: 'auto',
+    globalFilterFn: (
+      row: Row<TableProject>,
+      columnId: string,
+      filterValue: string,
+      addMeta,
+    ) => {
+      const rawFilter = removeDiacritics(filterValue);
+      const rowValue = row.getValue(columnId);
+      const itemRank = rankItem(rowValue, rawFilter, {
+        keepDiacritics: false,
+      });
+      addMeta({ itemRank });
+      if (itemRank.passed) console.log(itemRank);
+      return itemRank.passed && itemRank.rank > 2;
+    },
   });
 
   return (
