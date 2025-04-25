@@ -1,7 +1,9 @@
 'use client';
 
+import { rankItem } from '@tanstack/match-sorter-utils';
 import {
   ColumnDef,
+  Row,
   SortingState,
   VisibilityState,
   flexRender,
@@ -21,20 +23,24 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project } from '@data-access';
+import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
-import { SortableHeader } from './SortableHeader';
-import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
-import { ColumnsDropdown } from './ColumnsDropdown';
-import { TablePagination } from './TablePagination';
+import { SortableHeader } from '../table/SortableHeader';
+import { FuzzyGlobalFilter } from '../table/FuzzyGlobalFilter';
+import { TablePagination } from '../table/TablePagination';
+import { FilterStageDropdown } from './FilterStageDropdown';
+import { StageChip } from '../ui/StageChip';
+import { removeDiacritics } from '@lib-utils';
 
 type TableProject = {
   uuid: string;
   toh: string;
   title: string;
+  plainTitle: string;
   translator: string;
   stage: string;
   stageDate: string;
+  stageObject: ProjectStage;
   pages: number;
 };
 
@@ -43,7 +49,9 @@ const ProjectHeader = SortableHeader<TableProject>;
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const [data, setData] = useState<TableProject[]>([]);
   const [rowSelection, setRowSelection] = useState({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    plainTitle: false,
+  });
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'pages', desc: true },
@@ -56,8 +64,15 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   useEffect(() => {
     setData(
       projects.map((p) => ({
-        ...p,
-        stageDate: p.stageDate.toLocaleDateString(),
+        uuid: p.uuid,
+        toh: p.toh,
+        title: p.title,
+        plainTitle: removeDiacritics(p.title),
+        translator: p.translator,
+        stage: p.stage.label,
+        stageDate: p.stage.date.toLocaleDateString(),
+        stageObject: p.stage,
+        pages: p.pages,
       })),
     );
   }, [projects]);
@@ -67,21 +82,26 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className="xl:w-[80px] md:w-[60px] w-[40px] truncate">
+        <div className="xl:w-[100px] md:w-[60px] w-[40px] truncate">
           {row.original.toh}
         </div>
       ),
     },
     {
       accessorKey: 'title',
+      enableGlobalFilter: false,
       header: ({ column }) => (
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[500px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className="xl:w-[640px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
           {row.original.title}
         </div>
       ),
+    },
+    {
+      accessorKey: 'plainTitle',
+      cell: ({ row }) => row.original.plainTitle,
     },
     {
       accessorKey: 'translator',
@@ -96,8 +116,17 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     },
     {
       accessorKey: 'stage',
+      filterFn: (row, columnId, filter: ProjectStageLabel[]) => {
+        if (!filter.length) return true;
+        const value = row.getValue(columnId) as ProjectStageLabel;
+        return filter.includes(value);
+      },
       header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
-      cell: ({ row }) => <div className="w-[60px]">{row.original.stage}</div>,
+      cell: ({ row }) => (
+        <div className="w-[60px]">
+          <StageChip stage={row.original.stageObject} />
+        </div>
+      ),
     },
     {
       accessorKey: 'pages',
@@ -138,22 +167,36 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: 'auto',
+    globalFilterFn: (
+      row: Row<TableProject>,
+      columnId: string,
+      filterValue: string,
+      addMeta,
+    ) => {
+      const rawFilter = removeDiacritics(filterValue);
+      const rowValue = row.getValue(columnId);
+      const itemRank = rankItem(rowValue, rawFilter, {
+        keepDiacritics: false,
+      });
+      addMeta({ itemRank });
+      if (itemRank.passed) console.log(itemRank);
+      return itemRank.passed && itemRank.rank > 2;
+    },
   });
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <FuzzyGlobalFilter table={table} placeholder="Filter projects..." />
-        <ColumnsDropdown table={table} />
+        <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
+        <FilterStageDropdown table={table} />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader className="bg-muted sticky top-0">
+          <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="py-4">
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -165,7 +208,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
               <>
                 {table.getRowModel().rows.map((row) => (
