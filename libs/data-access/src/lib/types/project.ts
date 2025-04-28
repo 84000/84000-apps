@@ -1,3 +1,5 @@
+import { SemVer } from './semver';
+
 export const PROJECT_STAGE_LABELS = [
   '1',
   '1.a',
@@ -58,7 +60,7 @@ export type ProjectStage = {
   color: string;
 };
 
-export type ProjectDTO = {
+export type ProjectViewDTO = {
   uuid: string;
   toh: string;
   title: string;
@@ -68,6 +70,22 @@ export type ProjectDTO = {
   pages: number;
 };
 
+export type ProjectTableDTO = {
+  uuid: string;
+  notes: string;
+  contractDate: string;
+  contractId: string;
+  work: {
+    uuid: string;
+    pages: number;
+    publicationDate: string;
+    publicationStatus: ProjectStageLabel;
+    publicationVersion: string;
+    title: string;
+    toh: string;
+  };
+};
+
 export type Project = {
   uuid: string;
   toh: string;
@@ -75,9 +93,73 @@ export type Project = {
   translator: string;
   stage: ProjectStage;
   pages: number;
+  notes?: string;
+  contractDate?: Date;
+  contractId?: string;
+  workUuid?: string;
+  version?: SemVer;
 };
 
-export function projectFromDTO(dto: ProjectDTO): Project {
+export type ProjectStageDetailsDTO = {
+  uuid: string;
+  stage: ProjectStageLabel;
+  stageDate: string;
+  targetDate: string;
+};
+
+export type ProjectStageDetails = ProjectStageDetailsDTO;
+
+export type ProjectAssetDTO = {
+  uuid: string;
+  projectUuid: string;
+  stageUuid?: string;
+  name: string;
+  url: string;
+  note?: string;
+};
+
+export type ProjectAsset = ProjectAssetDTO;
+
+export type ProjectContributorType =
+  | 'englishAdvisor'
+  | 'englishAssociateEditor'
+  | 'englishCopyEditor'
+  | 'englishDharmaMaster'
+  | 'englishFinalReviewer'
+  | 'englishMarkup'
+  | 'englishProjectEditor'
+  | 'englishProjectManager'
+  | 'englishProofReader'
+  | 'englishReviser'
+  | 'englishTranslator'
+  | 'englishTranslationSponsor'
+  | 'englishTranslationTeam'
+  | 'tibetanTranslator';
+
+export type ProjectContributorDTO = {
+  uuid: string;
+  projectUuid: string;
+  stageUuid?: string;
+  contributor: {
+    uuid: string;
+    name: string;
+  };
+  type: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type ProjectContributor = {
+  uuid: string;
+  projectUuid: string;
+  stageUuid?: string;
+  name: string;
+  type: ProjectContributorType;
+  startDate: string;
+  endDate: string;
+};
+
+export function projectFromViewDTO(dto: ProjectViewDTO): Project {
   return {
     uuid: dto.uuid,
     toh: dto.toh,
