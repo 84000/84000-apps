@@ -15,9 +15,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Tbody,
-  Th,
-  Thead,
 } from '@design-system';
 import {
   ArrowLeftIcon,
@@ -86,10 +83,12 @@ export const ProjectPage = ({
           <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
             <Table>
               <TableHeader className="sticky top-0 border-b">
-                <TableHead>Stage</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead className="w-16">{''}</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Stage</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead className="w-16">{''}</TableHead>
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {stages.map((stage) => (
@@ -131,11 +130,11 @@ export const ProjectPage = ({
             <div className="flex flex-row gap-8 pb-8">
               <div className="flex flex-col w-1/2 gap-2">
                 <span className="font-semibold">Main Translator</span>
-                <span>Main Translator...</span>
+                <span>{project.translator}</span>
               </div>
               <div className="flex flex-col w-1/2 gap-2">
                 <span className="font-semibold">Translation Group</span>
-                <span>Translation Group...</span>
+                <span>{project.translationGroup}</span>
               </div>
             </div>
             <div className="flex flex-row gap-8">
@@ -165,10 +164,12 @@ export const ProjectPage = ({
               <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
                 <Table>
                   <TableHeader className="sticky top-0 border-b">
-                    <TableHead>Name</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead className="w-16">{''}</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Name</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead className="w-16">{''}</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {contributors.map((contributor) => (
@@ -215,9 +216,11 @@ export const ProjectPage = ({
               <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
                 <Table>
                   <TableHeader className="sticky top-0 border-b">
-                    <TableHead>File Type</TableHead>
-                    <TableHead>File Name</TableHead>
-                    <TableHead className="w-16">{''}</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>File Type</TableHead>
+                      <TableHead>File Name</TableHead>
+                      <TableHead className="w-16">{''}</TableHead>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {assets.map((asset) => (

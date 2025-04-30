@@ -26,7 +26,7 @@ export const getProjects = async ({
   ascending?: boolean;
   minStage?: string;
 }) => {
-  const { data } = await client.from('materialized_projects_main').select('*');
+  const { data } = await client.rpc('get_projects');
 
   const dtos = (data as ProjectViewDTO[]) || [];
   const projects = dtos.map(projectFromViewDTO);

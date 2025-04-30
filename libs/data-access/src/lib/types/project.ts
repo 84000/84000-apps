@@ -84,6 +84,8 @@ export type ProjectTableDTO = {
   restriction: boolean;
   title: string;
   toh: string;
+  mainTranslator: string;
+  translationGroup: string;
 };
 
 export type Project = {
@@ -91,6 +93,7 @@ export type Project = {
   toh: string;
   title: string;
   translator?: string;
+  translationGroup?: string;
   stage: ProjectStage;
   pages: number;
   notes?: string;
@@ -181,5 +184,7 @@ export function projectFromTableDTO(dto: ProjectTableDTO): Project {
     contractId: dto.contractId,
     workUuid: dto.workUuid,
     version: dto.version as SemVer,
+    translator: dto.mainTranslator,
+    translationGroup: dto.translationGroup,
   };
 }
