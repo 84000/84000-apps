@@ -41,28 +41,7 @@ export const getProjectByUuid = async ({
   client: DataClient;
   uuid: string;
 }): Promise<Project> => {
-  const { data } = await client
-    .from('projects')
-    .select(
-      `
-      uuid,
-      notes,
-      contractDate:contract_date,
-      contractId:contract_id,
-      ...works(
-        workUuid:uuid,
-        pages:source_pages,
-        publicationDate,
-        version:publicationVersion,
-        stage:publicationStatus,
-        restriction,
-        title,
-        toh
-      )
-    `,
-    )
-    .eq('uuid', uuid)
-    .single();
+  const { data } = await client.rpc('get_project', { uuid_input: uuid });
 
   return projectFromTableDTO(data as ProjectTableDTO);
 };
@@ -74,17 +53,7 @@ export const getProjectStages = async ({
   client: DataClient;
   uuid: string;
 }): Promise<ProjectStageDetail[]> => {
-  const { data } = await client
-    .from('project_stages')
-    .select(
-      `
-        uuid,
-        stage,
-        stageDate:stage_date,
-        targetDate:target_date
-    `,
-    )
-    .eq('project_uuid', uuid);
+  const { data } = await client.rpc('get_project_stages', { uuid_input: uuid });
   return projectStageDetailsFromDTO(data as ProjectStageDetailsDTO[]);
 };
 
@@ -102,22 +71,10 @@ export const getProjectAssets = async ({
     return [];
   }
 
-  const uuid = stageUuid ? stageUuid : projectUuid;
-  const key = stageUuid ? 'stage_uuid' : 'project_uuid';
-
-  const { data } = await client
-    .from('project_assets')
-    .select(
-      `
-      uuid,
-      stageUuid:stage_uuid,
-      projectUuid:project_uuid,
-      note,
-      url:download_url,
-      filename
-    `,
-    )
-    .eq(key, uuid);
+  const { data } = await client.rpc('get_project_assets', {
+    project_uuid_input: projectUuid,
+    stage_uuid_input: stageUuid,
+  });
   return data || [];
 };
 
