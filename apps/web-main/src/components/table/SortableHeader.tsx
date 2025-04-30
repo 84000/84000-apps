@@ -17,7 +17,10 @@ export const SortableHeader = <T extends object>({
     <Button
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      className={cn('px-0 hover:bg-transparent', className)}
+      className={cn(
+        'px-0 hover:bg-transparent hover:cursor-pointer',
+        className,
+      )}
     >
       {name}
       <SortIcon isSorted={isSorted} />

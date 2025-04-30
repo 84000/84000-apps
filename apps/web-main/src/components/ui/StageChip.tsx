@@ -14,10 +14,7 @@ export const StageChip = ({ stage }: { stage: ProjectStage }) => {
       <TooltipTrigger asChild>
         <Badge className={triggerClassName}>{stageLabel}</Badge>
       </TooltipTrigger>
-      <TooltipContent
-        className="border-hidden shadow-none bg-transparent"
-        side="bottom"
-      >
+      <TooltipContent className="border-hidden shadow-none bg-transparent">
         <Badge className={badgeClassName}>
           {stageLabel}
           <span className="pl-1">{stage.description}</span>

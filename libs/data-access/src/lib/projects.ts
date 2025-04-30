@@ -1,5 +1,20 @@
-import { DataClient } from './types';
-import { ProjectViewDTO, projectFromViewDTO } from './types/project';
+import {
+  DataClient,
+  ProjectContributor,
+  ProjectContributorsDTO,
+  projectContributorsFromDTO,
+} from './types';
+import {
+  Project,
+  ProjectAsset,
+  ProjectStageDetail,
+  ProjectStageDetailsDTO,
+  ProjectTableDTO,
+  ProjectViewDTO,
+  projectFromTableDTO,
+  projectFromViewDTO,
+  projectStageDetailsFromDTO,
+} from './types/project';
 
 export const getProjects = async ({
   client,
@@ -25,7 +40,7 @@ export const getProjectByUuid = async ({
 }: {
   client: DataClient;
   uuid: string;
-}) => {
+}): Promise<Project> => {
   const { data } = await client
     .from('projects')
     .select(
@@ -34,8 +49,8 @@ export const getProjectByUuid = async ({
       notes,
       contractDate:contract_date,
       contractId:contract_id,
-      work:works(
-        uuid,
+      ...works(
+        workUuid:uuid,
         pages:source_pages,
         publicationDate,
         version:publicationVersion,
@@ -49,7 +64,7 @@ export const getProjectByUuid = async ({
     .eq('uuid', uuid)
     .single();
 
-  return data;
+  return projectFromTableDTO(data as ProjectTableDTO);
 };
 
 export const getProjectStages = async ({
@@ -58,7 +73,7 @@ export const getProjectStages = async ({
 }: {
   client: DataClient;
   uuid: string;
-}) => {
+}): Promise<ProjectStageDetail[]> => {
   const { data } = await client
     .from('project_stages')
     .select(
@@ -70,7 +85,7 @@ export const getProjectStages = async ({
     `,
     )
     .eq('project_uuid', uuid);
-  return data;
+  return projectStageDetailsFromDTO(data as ProjectStageDetailsDTO[]);
 };
 
 export const getProjectAssets = async ({
@@ -81,7 +96,7 @@ export const getProjectAssets = async ({
   client: DataClient;
   projectUuid?: string;
   stageUuid?: string;
-}) => {
+}): Promise<ProjectAsset[]> => {
   if (!projectUuid && !stageUuid) {
     console.error('One of projectUuid or stageUuid is required');
     return [];
@@ -103,7 +118,7 @@ export const getProjectAssets = async ({
     `,
     )
     .eq(key, uuid);
-  return data;
+  return data || [];
 };
 
 export const getProjectContributors = async ({
@@ -114,7 +129,7 @@ export const getProjectContributors = async ({
   client: DataClient;
   projectUuid?: string;
   stageUuid?: string;
-}) => {
+}): Promise<ProjectContributor[]> => {
   if (!projectUuid && !stageUuid) {
     console.error('One of projectUuid or stageUuid is required');
     return [];
@@ -130,15 +145,15 @@ export const getProjectContributors = async ({
       uuid,
       stageUuid:stage_uuid,
       projectUuid:project_uuid,
-      contributor:authorities!contributor_uuid(
-        uuid,
+      ...authorities!contributor_uuid(
+        contributorUuid:uuid,
         name:headword
       ),
       startDate:start_date,
       endDate:end_date,
-      type
+      role:type
     `,
     )
     .eq(key, uuid);
-  return data;
+  return projectContributorsFromDTO(data as ProjectContributorsDTO);
 };

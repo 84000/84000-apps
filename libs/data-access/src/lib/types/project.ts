@@ -57,6 +57,7 @@ export type ProjectStage = {
   label: ProjectStageLabel;
   description: string;
   date: Date;
+  targetDate?: Date;
   color: string;
 };
 
@@ -75,22 +76,21 @@ export type ProjectTableDTO = {
   notes: string;
   contractDate: string;
   contractId: string;
-  work: {
-    uuid: string;
-    pages: number;
-    publicationDate: string;
-    publicationStatus: ProjectStageLabel;
-    publicationVersion: string;
-    title: string;
-    toh: string;
-  };
+  workUuid: string;
+  pages: number;
+  publicationDate: string;
+  version: string;
+  stage: ProjectStageLabel;
+  restriction: boolean;
+  title: string;
+  toh: string;
 };
 
 export type Project = {
   uuid: string;
   toh: string;
   title: string;
-  translator: string;
+  translator?: string;
   stage: ProjectStage;
   pages: number;
   notes?: string;
@@ -104,60 +104,48 @@ export type ProjectStageDetailsDTO = {
   uuid: string;
   stage: ProjectStageLabel;
   stageDate: string;
-  targetDate: string;
+  targetDate?: string;
 };
 
-export type ProjectStageDetails = ProjectStageDetailsDTO;
+export type ProjectStageDetail = {
+  uuid: string;
+  stage: ProjectStage;
+  targetDate?: Date;
+};
+
+export type ProjectStageDetails = ProjectStageDetail[];
 
 export type ProjectAssetDTO = {
   uuid: string;
   projectUuid: string;
   stageUuid?: string;
-  name: string;
+  filename: string;
   url: string;
   note?: string;
 };
 
 export type ProjectAsset = ProjectAssetDTO;
 
-export type ProjectContributorType =
-  | 'englishAdvisor'
-  | 'englishAssociateEditor'
-  | 'englishCopyEditor'
-  | 'englishDharmaMaster'
-  | 'englishFinalReviewer'
-  | 'englishMarkup'
-  | 'englishProjectEditor'
-  | 'englishProjectManager'
-  | 'englishProofReader'
-  | 'englishReviser'
-  | 'englishTranslator'
-  | 'englishTranslationSponsor'
-  | 'englishTranslationTeam'
-  | 'tibetanTranslator';
-
-export type ProjectContributorDTO = {
-  uuid: string;
-  projectUuid: string;
-  stageUuid?: string;
-  contributor: {
-    uuid: string;
-    name: string;
+export function projectStageDetailFromDTO(
+  dto: ProjectStageDetailsDTO,
+): ProjectStageDetail {
+  return {
+    uuid: dto.uuid,
+    stage: {
+      label: dto.stage,
+      description: STAGE_DESCRIPTIONS[dto.stage] || '',
+      date: new Date(dto.stageDate),
+      targetDate: dto.targetDate ? new Date(dto.targetDate) : undefined,
+      color: STAGE_COLORS[dto.stage] || 'grey',
+    },
   };
-  type: string;
-  startDate: string;
-  endDate: string;
-};
+}
 
-export type ProjectContributor = {
-  uuid: string;
-  projectUuid: string;
-  stageUuid?: string;
-  name: string;
-  type: ProjectContributorType;
-  startDate: string;
-  endDate: string;
-};
+export function projectStageDetailsFromDTO(
+  dto?: ProjectStageDetailsDTO[],
+): ProjectStageDetails {
+  return dto?.map(projectStageDetailFromDTO) || [];
+}
 
 export function projectFromViewDTO(dto: ProjectViewDTO): Project {
   return {
@@ -172,5 +160,26 @@ export function projectFromViewDTO(dto: ProjectViewDTO): Project {
       color: STAGE_COLORS[dto.stage] || 'grey',
     },
     pages: dto.pages,
+  };
+}
+
+export function projectFromTableDTO(dto: ProjectTableDTO): Project {
+  const stage = dto.stage;
+  return {
+    uuid: dto.uuid,
+    toh: dto.toh,
+    title: dto.title,
+    stage: {
+      label: stage,
+      description: STAGE_DESCRIPTIONS[stage] || '',
+      date: new Date(dto.publicationDate),
+      color: STAGE_COLORS[stage] || 'grey',
+    },
+    pages: dto.pages,
+    notes: dto.notes,
+    contractDate: new Date(dto.contractDate),
+    contractId: dto.contractId,
+    workUuid: dto.workUuid,
+    version: dto.version as SemVer,
   };
 }
