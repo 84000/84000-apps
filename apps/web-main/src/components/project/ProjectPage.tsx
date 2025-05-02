@@ -80,7 +80,7 @@ export const ProjectPage = ({
               Set Next Stage
             </Button>
           </div>
-          <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
+          <div className="overflow-hidden rounded-lg border overflow-y-scroll">
             <Table>
               <TableHeader className="sticky top-0 border-b">
                 <TableRow className="hover:bg-transparent">
@@ -120,7 +120,7 @@ export const ProjectPage = ({
               {project.notes}
             </div>
           </div>
-          <div className="bg-muted/50 border rounded-lg p-4 flex-1">
+          <div className="bg-muted/50 border rounded-lg p-4">
             <div className="pb-4 flex flex-row justify-between">
               <span className="text-2xl font-semibold">Project Settings</span>
               <Button variant="outline" className="rounded-full">
@@ -161,7 +161,7 @@ export const ProjectPage = ({
                   Add Contributor
                 </Button>
               </div>
-              <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
+              <div className="overflow-hidden rounded-lg border overflow-y-scroll">
                 <Table>
                   <TableHeader className="sticky top-0 border-b">
                     <TableRow className="hover:bg-transparent">
@@ -213,7 +213,7 @@ export const ProjectPage = ({
                   Add Asset
                 </Button>
               </div>
-              <div className="overflow-hidden rounded-lg border flex-1 overflow-y-scroll">
+              <div className="overflow-hidden rounded-lg border overflow-y-scroll">
                 <Table>
                   <TableHeader className="sticky top-0 border-b">
                     <TableRow className="hover:bg-transparent">
