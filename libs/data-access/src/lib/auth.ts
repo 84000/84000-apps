@@ -1,13 +1,20 @@
+import { jwtDecode } from 'jwt-decode';
 import { DataClient } from './types';
 
+export type UserRole = 'user' | 'scholar' | 'editor' | 'admin';
+
 export const getUser = async ({ client }: { client: DataClient }) => {
-  const { data, error } = await client.auth.getUser();
-  if (error) {
-    console.info(`Failed to get user data: ${error}`);
+  const { data, error } = await client.auth.getSession();
+  if (error || !data?.session) {
+    console.info(`Failed to get session data: ${error}`);
     return null;
   }
 
-  const { id, email, user_metadata: metadata } = data.user;
+  const { user, access_token } = data.session;
+  const { user_role: role = 'user' } = jwtDecode(access_token) as {
+    user_role: UserRole;
+  };
+  const { id, email, user_metadata: metadata } = user;
   const { name, picture } = metadata;
   if (id && email) {
     return {
@@ -16,6 +23,7 @@ export const getUser = async ({ client }: { client: DataClient }) => {
       username: email,
       name,
       avatar: picture,
+      role,
     };
   }
 

@@ -1,3 +1,5 @@
+import { SemVer } from './semver';
+
 export const PROJECT_STAGE_LABELS = [
   '1',
   '1.a',
@@ -55,10 +57,11 @@ export type ProjectStage = {
   label: ProjectStageLabel;
   description: string;
   date: Date;
+  targetDate?: Date;
   color: string;
 };
 
-export type ProjectDTO = {
+export type ProjectViewDTO = {
   uuid: string;
   toh: string;
   title: string;
@@ -68,16 +71,86 @@ export type ProjectDTO = {
   pages: number;
 };
 
+export type ProjectTableDTO = {
+  uuid: string;
+  notes: string;
+  contractDate: string;
+  contractId: string;
+  workUuid: string;
+  pages: number;
+  publicationDate: string;
+  version: string;
+  stage: ProjectStageLabel;
+  restriction: boolean;
+  title: string;
+  toh: string;
+  mainTranslator: string;
+  translationGroup: string;
+};
+
 export type Project = {
   uuid: string;
   toh: string;
   title: string;
-  translator: string;
+  translator?: string;
+  translationGroup?: string;
   stage: ProjectStage;
   pages: number;
+  notes?: string;
+  contractDate?: Date;
+  contractId?: string;
+  workUuid?: string;
+  version?: SemVer;
 };
 
-export function projectFromDTO(dto: ProjectDTO): Project {
+export type ProjectStageDetailsDTO = {
+  uuid: string;
+  stage: ProjectStageLabel;
+  stageDate: string;
+  targetDate?: string;
+};
+
+export type ProjectStageDetail = {
+  uuid: string;
+  stage: ProjectStage;
+  targetDate?: Date;
+};
+
+export type ProjectStageDetails = ProjectStageDetail[];
+
+export type ProjectAssetDTO = {
+  uuid: string;
+  projectUuid: string;
+  stageUuid?: string;
+  filename: string;
+  url: string;
+  note?: string;
+};
+
+export type ProjectAsset = ProjectAssetDTO;
+
+export function projectStageDetailFromDTO(
+  dto: ProjectStageDetailsDTO,
+): ProjectStageDetail {
+  return {
+    uuid: dto.uuid,
+    stage: {
+      label: dto.stage,
+      description: STAGE_DESCRIPTIONS[dto.stage] || '',
+      date: new Date(dto.stageDate),
+      targetDate: dto.targetDate ? new Date(dto.targetDate) : undefined,
+      color: STAGE_COLORS[dto.stage] || 'grey',
+    },
+  };
+}
+
+export function projectStageDetailsFromDTO(
+  dto?: ProjectStageDetailsDTO[],
+): ProjectStageDetails {
+  return dto?.map(projectStageDetailFromDTO) || [];
+}
+
+export function projectFromViewDTO(dto: ProjectViewDTO): Project {
   return {
     uuid: dto.uuid,
     toh: dto.toh,
@@ -90,5 +163,28 @@ export function projectFromDTO(dto: ProjectDTO): Project {
       color: STAGE_COLORS[dto.stage] || 'grey',
     },
     pages: dto.pages,
+  };
+}
+
+export function projectFromTableDTO(dto: ProjectTableDTO): Project {
+  const stage = dto.stage;
+  return {
+    uuid: dto.uuid,
+    toh: dto.toh,
+    title: dto.title,
+    stage: {
+      label: stage,
+      description: STAGE_DESCRIPTIONS[stage] || '',
+      date: new Date(dto.publicationDate),
+      color: STAGE_COLORS[stage] || 'grey',
+    },
+    pages: dto.pages,
+    notes: dto.notes,
+    contractDate: new Date(dto.contractDate),
+    contractId: dto.contractId,
+    workUuid: dto.workUuid,
+    version: dto.version as SemVer,
+    translator: dto.mainTranslator,
+    translationGroup: dto.translationGroup,
   };
 }

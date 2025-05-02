@@ -31,6 +31,8 @@ import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { StageChip } from '../ui/StageChip';
 import { removeDiacritics } from '@lib-utils';
+import { usePathname, useRouter } from 'next/navigation';
+import { MoreHorizontalIcon } from 'lucide-react';
 
 type TableProject = {
   uuid: string;
@@ -61,6 +63,9 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     pageSize: 10,
   });
 
+  const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
     setData(
       projects.map((p) => ({
@@ -68,7 +73,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         toh: p.toh,
         title: p.title,
         plainTitle: removeDiacritics(p.title),
-        translator: p.translator,
+        translator: p.translator || '',
         stage: p.stage.label,
         stageDate: p.stage.date.toLocaleDateString(),
         stageObject: p.stage,
@@ -140,6 +145,20 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       ),
       cell: ({ row }) => (
         <div className="w-[100px]">{row.original.stageDate}</div>
+      ),
+    },
+    {
+      accessorKey: 'uuid',
+      header: '',
+      enableColumnFilter: false,
+      enableSorting: false,
+      cell: ({ row }) => (
+        <MoreHorizontalIcon
+          className="w-5 text-ochre"
+          onClick={() => {
+            router.push(`${pathname}/${row.original.uuid}`);
+          }}
+        />
       ),
     },
   ];
@@ -214,7 +233,13 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
                 {table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-4">
+                      <TableCell
+                        key={cell.id}
+                        className="py-4 hover:cursor-pointer"
+                        onClick={() =>
+                          router.push(`${pathname}/${row.original.uuid}`)
+                        }
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),

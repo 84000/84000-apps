@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext } from 'react';
 import {
+  UserRole,
   createBrowserClient,
   getUser as getUserCall,
   loginWithGoogle as loginWithGoogleCall,
@@ -14,6 +15,7 @@ export type ScholarUser = {
   name?: string | undefined;
   username?: string | undefined;
   avatar?: string | undefined;
+  role: UserRole;
 };
 
 interface SessionContextState {
