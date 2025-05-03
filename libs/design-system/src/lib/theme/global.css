@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    --radius: 0.5rem;
+
     --background: 0 0% 100%;
     --foreground: 240 6% 10%;
     --card: 0 0% 100%;
@@ -23,12 +25,12 @@
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 240 6% 10%;
-    --radius: 0.5rem;
     --chart-1: 173 58% 39%;
     --chart-2: 12 76% 61%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
     --sidebar-foreground: 240 5% 26%;
     --sidebar-background: 0 0% 100%;
     --sidebar-primary: 240 6% 10%;
@@ -39,11 +41,11 @@
     --sidebar-ring: 240 5% 65%;
 
     --success: 54, 199, 108;
-    --success-light: 235, 250, 240;
+    --success-foreground: 235, 250, 240;
     --warning: 255, 214, 72;
-    --warning-light: 255, 249, 229;
+    --warning-foreground: 255, 249, 229;
     --error: 255, 102, 46;
-    --error-light: 255, 229, 237;
+    --error-foreground: 255, 229, 237;
 
     --emerald: 173, 83%, 32%;
     --ochre: 13, 80%, 40%;
@@ -63,6 +65,8 @@
 
 @media (prefers-color-scheme: dark) {
   .dark {
+    --radius: 0.5rem;
+
     --background: 240 10% 4%;
     --foreground: 0 0% 98%;
     --card: 240 10% 4%;
@@ -82,7 +86,6 @@
     --border: 240 4% 16%;
     --input: 240 4% 16%;
     --ring: 240 5% 84%;
-    --radius: 0.5rem;
     --chart-1: 220 70% 50%;
     --chart-2: 340 75% 55%;
     --chart-3: 30 80% 55%;
@@ -98,11 +101,11 @@
     --sidebar-ring: 240 5% 84%;
 
     --success: 54, 199, 108;
-    --success-light: 235, 250, 240;
+    --success-foreground: 235, 250, 240;
     --warning: 255, 214, 72;
-    --warning-light: 255, 249, 229;
+    --warning-foreground: 255, 249, 229;
     --error: 255, 102, 46;
-    --error-light: 255, 229, 237;
+    --error-foreground: 255, 229, 237;
 
     --emerald: 173, 83%, 32%;
     --ochre: 13, 80%, 40%;
@@ -154,10 +157,13 @@
   --color-darkborder: hsl(var(--gray));
   --color-darkgray: hsl(var(--gray));
   --color-error: rgba(var(--error));
+  --color-error-foreground: rgba(var(--error-foreground));
   --color-gray: hsl(var(--muted));
   --color-success: rgba(var(--success));
+  --color-success-foreground: rgba(var(--success-foreground));
   --color-surface: hsl(var(--primary-foreground));
   --color-warning: rgba(var(--warning));
+  --color-warning-foreground: rgba(var(--warning-foreground));
   --color-lightgray: hsl(var(--muted));
 
   --color-emerald: hsl(var(--emerald));
