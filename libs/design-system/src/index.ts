@@ -9,6 +9,7 @@ export * from './lib/Card/CardDescription';
 export * from './lib/Card/CardHeader';
 export * from './lib/Card/CardFooter';
 export * from './lib/Card/CardTitle';
+export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
 export * from './lib/Editor/BlockEditor';
 export * from './lib/Header/Header';
