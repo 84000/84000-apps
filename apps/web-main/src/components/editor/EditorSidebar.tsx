@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,29 +18,21 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from '@design-system';
 import { LetterTextIcon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-
-export type EditorSidebarKey =
-  | 'title'
-  | 'summary'
-  | 'acknowledgements'
-  | 'introduction'
-  | 'body'
-  | 'end-notes'
-  | 'bibliography'
-  | 'glossary';
+import { EditorBuilderType } from './EditorBuilderType';
 
 interface EditorSidebarItem {
-  key: EditorSidebarKey;
+  key: EditorBuilderType;
   title: string;
 }
 
 const englishEditorItems: EditorSidebarItem[] = [
   {
-    key: 'title',
+    key: 'titles',
     title: 'Titles',
   },
   {
@@ -71,7 +65,7 @@ const englishEditorItems: EditorSidebarItem[] = [
   },
 ];
 
-const isActive = (key: EditorSidebarKey, active: EditorSidebarKey) =>
+const isActive = (key: EditorBuilderType, active: EditorBuilderType) =>
   key === active;
 
 export const EditorSidebar = ({
@@ -79,11 +73,11 @@ export const EditorSidebar = ({
   onClick,
 }: {
   children: React.ReactNode;
-  onClick?: (key: EditorSidebarKey) => void;
+  onClick?: (key: EditorBuilderType) => void;
 }) => {
-  const [active, setActive] = useState<EditorSidebarKey>('body');
+  const [active, setActive] = useState<EditorBuilderType>('body');
   const onSetActive = useCallback(
-    (key: EditorSidebarKey) => {
+    (key: EditorBuilderType) => {
       setActive(key);
       onClick?.(key);
     },
@@ -128,6 +122,7 @@ export const EditorSidebar = ({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarRail />
       </Sidebar>
       <SidebarTrigger className="sticky top-2 left-2 z-50" />
       <SidebarInset>{children}</SidebarInset>
