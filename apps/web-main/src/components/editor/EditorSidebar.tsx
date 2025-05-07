@@ -22,7 +22,7 @@ import {
   SidebarTrigger,
 } from '@design-system';
 import { LetterTextIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { EditorBuilderType } from './EditorBuilderType';
 
 interface EditorSidebarItem {
@@ -70,15 +70,15 @@ const isActive = (key: EditorBuilderType, active: EditorBuilderType) =>
 
 export const EditorSidebar = ({
   children,
+  active,
   onClick,
 }: {
   children: React.ReactNode;
+  active: EditorBuilderType;
   onClick?: (key: EditorBuilderType) => void;
 }) => {
-  const [active, setActive] = useState<EditorBuilderType>('body');
   const onSetActive = useCallback(
     (key: EditorBuilderType) => {
-      setActive(key);
       onClick?.(key);
     },
     [onClick],

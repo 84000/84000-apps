@@ -1,7 +1,5 @@
-import { TranslationSkeleton } from '../../../../../../components/ui/TranslationSkeleton';
+import { EndnoteBuilder } from '../../../../../../components/editor/EndnoteBuilder';
 
-const Page = () => {
-  return <TranslationSkeleton />;
-};
+const Page = EndnoteBuilder;
 
 export default Page;

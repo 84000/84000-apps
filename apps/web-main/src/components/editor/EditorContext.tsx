@@ -28,18 +28,35 @@ export const EditorContextProvider = ({
   uuid,
   children,
 }: EditorContextProps) => {
-  const [builder, setBuilder] = useState<EditorBuilderType>('body');
   const router = useRouter();
   const pathname = usePathname();
 
+  const pathEnd = pathname.split('/').pop();
+  const isUuidPath = pathEnd === uuid;
+  const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorBuilderType);
+
+  const [builder, setBuilder] = useState<EditorBuilderType>(initialBuilder);
+
+  const onBuilderChanged = (builder: EditorBuilderType) => {
+    setBuilder(builder);
+
+    const nextPath = `/publications/editor/${uuid}/${builder}`;
+
+    if (pathname === nextPath) {
+      return;
+    }
+
+    router.push(nextPath);
+  };
+
   useEffect(() => {
-    router.push(`/publications/editor/${uuid}/${builder}`);
-  }, [builder, router, uuid, pathname]);
+    onBuilderChanged(initialBuilder);
+  });
 
   return (
     <EditorContext.Provider value={{ builder, setBuilder, uuid }}>
-      <EditorSidebar onClick={setBuilder}>
-        <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 pb-(--header-height)">
+      <EditorSidebar active={builder} onClick={onBuilderChanged}>
+        <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
           {children}
         </div>
       </EditorSidebar>

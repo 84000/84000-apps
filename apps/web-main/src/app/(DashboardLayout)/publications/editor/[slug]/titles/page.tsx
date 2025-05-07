@@ -1,7 +1,5 @@
-import { TranslationSkeleton } from '../../../../../../components/ui/TranslationSkeleton';
+import { TitlesBuilder } from '../../../../../../components/editor/TitlesBuilder';
 
-const Page = () => {
-  return <TranslationSkeleton />;
-};
+const Page = TitlesBuilder;
 
 export default Page;

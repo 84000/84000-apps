@@ -1,7 +1,5 @@
-import { TranslationSkeleton } from '../../../../../../components/ui/TranslationSkeleton';
+import { AcknowledgementBuilder } from '../../../../../../components/editor/AcknowledgementsBuilder';
 
-const Page = () => {
-  return <TranslationSkeleton />;
-};
+const Page = AcknowledgementBuilder;
 
 export default Page;
