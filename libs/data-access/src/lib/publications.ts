@@ -1,6 +1,9 @@
 import {
+  BodyItemType,
   DataClient,
+  TitlesDTO,
   TranslationDTO,
+  titlesFromDTO,
   translationBodyFromDTO,
   translationFromDTO,
 } from './types';
@@ -37,6 +40,33 @@ export const getTranslationByUuid = async ({
   return translationFromDTO(data.translation as TranslationDTO);
 };
 
+export const getTranslationPassages = async ({
+  client,
+  uuid,
+  type,
+}: {
+  client: DataClient;
+  uuid: string;
+  type: BodyItemType;
+}) => {
+  const { data } = await client.rpc('get_passages_with_annotations', {
+    uuid_input: uuid,
+    passage_type_input: type,
+  });
+
+  return translationBodyFromDTO(data || []);
+};
+
+export const getTranslationAcknowledgements = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  return getTranslationPassages({ client, uuid, type: 'acknowledgment' });
+};
+
 export const getTranslationBody = async ({
   client,
   uuid,
@@ -44,33 +74,37 @@ export const getTranslationBody = async ({
   client: DataClient;
   uuid: string;
 }) => {
-  const { data } = await client
-    .from('passages')
-    .select(
-      `
-      uuid,
-      content,
-      xmlId,
-      work_uuid,
-      label,
-      sort,
-      parent,
-      type,
-      annotations:passage_annotations!passage_uuid (
-        uuid,
-        content,
-        type,
-        start,
-        end,
-        passage_uuid
-      )
-    `,
-    )
-    .eq('work_uuid', uuid)
-    .like('type', 'translation%')
-    .order('sort');
+  return getTranslationPassages({ client, uuid, type: 'translation' });
+};
 
-  return translationBodyFromDTO(data || []);
+export const getTranslationEndnotes = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  return getTranslationPassages({ client, uuid, type: 'end-note' });
+};
+
+export const getTranslationIntroduction = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  return getTranslationPassages({ client, uuid, type: 'introduction' });
+};
+
+export const getTranslationSummary = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  return getTranslationPassages({ client, uuid, type: 'summary' });
 };
 
 export const getTranslationSlugs = async ({
@@ -80,6 +114,22 @@ export const getTranslationSlugs = async ({
 }) => {
   const { data } = await client.from('translation_json').select('toh');
   return data?.map(({ toh }: { toh: string }) => toh) || [];
+};
+
+export const getTranslationTitles = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data } = await client.rpc('get_work_titles', {
+    work_uuid_input: uuid,
+  });
+
+  console.log(data);
+
+  return titlesFromDTO(data as TitlesDTO);
 };
 
 export const getTranslationMetadataByUuid = async ({

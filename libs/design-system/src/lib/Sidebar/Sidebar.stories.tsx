@@ -41,50 +41,67 @@ const items = [
   },
 ];
 
-function InnerSidebar() {
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-  );
-}
-
-function SidebarStory() {
-  return (
-    <SidebarProvider>
-      <InnerSidebar />
-      <main>
-        <SidebarTrigger />
-      </main>
-    </SidebarProvider>
-  );
-}
-
-const meta: Meta<typeof SidebarStory> = {
+const meta: Meta<typeof Sidebar> = {
   title: 'Layout/Sidebar',
-  component: SidebarStory,
+  component: Sidebar,
+  tags: ['autodocs'],
 };
 
-type Story = StoryObj<typeof SidebarStory>;
+type Story = StoryObj<typeof Sidebar>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  args: {
+    collapsible: 'icon',
+    variant: 'sidebar',
+    side: 'left',
+  },
+  argTypes: {
+    collapsible: {
+      control: 'radio',
+      options: ['icon', 'offcanvas', 'none'],
+      defaultValue: 'icon',
+    },
+    variant: {
+      control: 'radio',
+      options: ['sidebar', 'floating', 'inset'],
+      defaultValue: 'sidebar',
+    },
+    side: {
+      control: 'radio',
+      options: ['left', 'right'],
+      defaultValue: 'left',
+    },
+  },
+  render: ({ collapsible, variant, side }) => {
+    return (
+      <SidebarProvider>
+        <Sidebar collapsible={collapsible} variant={variant} side={side}>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Application</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <a href={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
+        <main>
+          <SidebarTrigger />
+        </main>
+      </SidebarProvider>
+    );
+  },
+};
 
 export default meta;

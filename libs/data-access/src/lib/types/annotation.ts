@@ -168,7 +168,8 @@ export type AnnotationDTO = {
   start: number;
   type: AnnotationDTOType;
   uuid: string;
-  passage_uuid: string;
+  passage_uuid?: string;
+  passageUuid?: string;
 };
 
 export type AnnotationsDTO = AnnotationDTO[];
@@ -208,12 +209,14 @@ export type Annotation =
 export type Annotations = Annotation[];
 
 const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
+  const passageUuid = dto.passage_uuid || dto.passageUuid || '';
+
   return {
     uuid: dto.uuid,
     start: dto.start,
     end: dto.end,
     type: annotationTypeFromDTO(dto.type),
-    passageUuid: dto.passage_uuid,
+    passageUuid,
   };
 };
 

@@ -1,13 +1,11 @@
 import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { EditorPage } from '../../../../../components/ui/EditorPage';
+import { EditorPage } from '../../../../../components/editor/EditorPage';
 
 export const revalidate = 60;
 export const dynamicParams = true;
 
-const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
-  const { slug } = await params;
-
-  return <EditorPage uuid={slug} />;
+const page = () => {
+  return <EditorPage />;
 };
 
 export const generateStaticParams = async () => {

@@ -24,7 +24,7 @@ import {
 } from './Typography';
 
 const meta: Meta = {
-  title: 'Core/Typography',
+  title: 'Theme/Typography',
   tags: ['autodocs'],
 };
 
