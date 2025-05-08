@@ -1,18 +1,18 @@
-import { Document } from '../extensions/Document';
-import Heading from '../extensions/Heading/Heading';
-import Paragraph from '../extensions/Paragraph/Paragraph';
+import { Document } from '../../extensions/Document';
+import Heading from '../../extensions/Heading/Heading';
+import Paragraph from '../../extensions/Paragraph/Paragraph';
 import Placeholder from '@tiptap/extension-placeholder';
-import { SlashCommand } from '../extensions/SlashCommand/SlashCommand';
-import { getSuggestion } from '../extensions/SlashCommand/Suggestions';
+import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
+import { getSuggestion } from '../../extensions/SlashCommand/Suggestions';
 import { cn } from '@lib-utils';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import { StarterKit } from '../extensions/StarterKit';
-import { DragHandle } from '../extensions/DragHandle/DragHandle';
-import { TranslationMetadata } from '../extensions/TranslationMetadata';
+import { StarterKit } from '../../extensions/StarterKit';
+import { DragHandle } from '../../extensions/DragHandle/DragHandle';
+import { TranslationMetadata } from '../../extensions/TranslationMetadata';
 
-export const useExtensions = () => {
+export const useDefaultExtensions = () => {
   return {
     extensions: [
       Document,
