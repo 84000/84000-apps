@@ -3,37 +3,38 @@ import {
   BoLtnTitleNode,
   BoTitleNode,
   EnTitleNode,
+  MainTitlesNode,
   SaLtnTitleNode,
 } from '../extensions/MainTitlesNode';
 import { TitlesDocument } from '../extensions/TitlesDocument';
-import { TohNode } from '../extensions/TohsNode';
 import Placeholder from '@tiptap/extension-placeholder';
 import { cn } from '@lib-utils';
+import { TitleMetadata } from '../extensions/TitleMetadata';
 
 const placeholders: Record<string, string> = {
-  toh: 'Tohoku Name',
-  enTitle: 'English Title',
-  boTitle: 'Tibetan Title',
-  boLtnTitle: 'Wiley Title',
-  saLtnTitle: 'Sanskrit Latin Title',
+  enTitle: 'English Title (required)',
+  boTitle: 'Tibetan Title (required)',
+  boLtnTitle: 'Wiley Title (required)',
+  saLtnTitle: 'Sanskrit Latin Title (optional)',
 };
 
 export const useTitleExtensions = () => {
   return {
     extensions: [
       TitlesDocument,
-      // TohsNode,
-      TohNode,
-      // MainTitlesNode,
+      MainTitlesNode,
       EnTitleNode,
       BoTitleNode,
       BoLtnTitleNode,
       SaLtnTitleNode,
       StarterKit,
+      TitleMetadata,
       Placeholder.configure({
         placeholder: ({ node }) => placeholders[node.type.name] || '',
         emptyEditorClass: cn('is-editor-empty text-gray-400'),
         emptyNodeClass: cn('is-empty text-gray-400'),
+        includeChildren: true,
+        showOnlyCurrent: false,
       }),
     ],
   };

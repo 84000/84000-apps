@@ -1,10 +1,20 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import TiptapHeading from '@tiptap/extension-heading';
-import { H1_STYLE, H3_STYLE } from '../../../Typography/Typography';
+import { H2_STYLE, H3_STYLE, H4_STYLE } from '../../../Typography/Typography';
+import { cn } from '@lib-utils';
+import { TITLE_VARIANT_STYLES } from '../../../Translation';
 
 export const MainTitlesNode = Node.create({
   name: 'mainTitles',
-  content: 'enTitle boTitle boLtnTitle saLtnTitle',
+  group: 'block',
+  content: 'boTitle enTitle boLtnTitle saLtnTitle',
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'div',
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      0,
+    ];
+  },
 });
 
 export const EnTitleNode = TiptapHeading.extend({
@@ -12,11 +22,11 @@ export const EnTitleNode = TiptapHeading.extend({
   renderHTML({ HTMLAttributes }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
-      class: H1_STYLE,
+      class: cn(H2_STYLE, TITLE_VARIANT_STYLES['en']),
     };
 
     return [
-      'h1',
+      'h2',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       0,
     ];
@@ -28,7 +38,7 @@ export const BoTitleNode = TiptapHeading.extend({
   renderHTML({ HTMLAttributes }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
-      class: H3_STYLE,
+      class: cn(H3_STYLE, TITLE_VARIANT_STYLES['bo']),
     };
 
     return [
@@ -44,11 +54,11 @@ export const BoLtnTitleNode = TiptapHeading.extend({
   renderHTML({ HTMLAttributes }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
-      class: H3_STYLE,
+      class: cn(H4_STYLE, TITLE_VARIANT_STYLES['Bo-Ltn']),
     };
 
     return [
-      'h3',
+      'h4',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       0,
     ];
@@ -60,11 +70,11 @@ export const SaLtnTitleNode = TiptapHeading.extend({
   renderHTML({ HTMLAttributes }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
-      class: H3_STYLE,
+      class: cn(H4_STYLE, TITLE_VARIANT_STYLES['Sa-Ltn']),
     };
 
     return [
-      'h3',
+      'h4',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       0,
     ];

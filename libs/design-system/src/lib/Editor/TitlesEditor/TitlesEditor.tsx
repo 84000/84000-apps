@@ -2,8 +2,8 @@
 
 import { EditorContent, JSONContent } from '@tiptap/react';
 import { useBlockEditor } from '../BlockEditor';
-import { MainBubbleMenu } from '../menus/MainBubbleMenu';
 import { useTitleExtensions } from './hooks/useTitleExtensions';
+import { EmptyBubbleMenu } from '../menus/EmptyBubbleMenu';
 
 export type TitlesEditorContentItem = JSONContent & {
   attrs?: {
@@ -35,7 +35,7 @@ export const TitlesEditor = ({
     <div className="flex h-full">
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
-        <MainBubbleMenu editor={editor} />
+        <EmptyBubbleMenu editor={editor} />
       </div>
     </div>
   );
