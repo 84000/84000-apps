@@ -38,6 +38,10 @@ export type EndNoteAnnotation = AnnotationBase & {
   endNoteUuid: string;
 };
 
+export type EndNoteLinkAnnotation = AnnotationBase & {
+  type: 'endNoteLink';
+};
+
 export type ForeignAnnotation = AnnotationBase & {
   type: 'foreign';
   language: TranslationLanguage;
@@ -180,6 +184,7 @@ export type Annotation =
   | DistinctAnnotation
   | EmphasisAnnotation
   | EndNoteAnnotation
+  | EndNoteLinkAnnotation
   | ForeignAnnotation
   | GlossaryInstanceAnnotation
   | HasAbbreviationAnnotation
@@ -257,6 +262,11 @@ const dtoToAnnotationMap: Record<
     });
 
     return endNote;
+  },
+  'end-note-link': (dto: AnnotationDTO): EndNoteLinkAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as EndNoteLinkAnnotation;
   },
   foreign: (dto: AnnotationDTO): ForeignAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);

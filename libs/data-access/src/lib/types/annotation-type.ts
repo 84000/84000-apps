@@ -3,6 +3,7 @@ export type AnnotationDTOType =
   | 'blockquote'
   | 'distinct'
   | 'end-note'
+  | 'end-note-link'
   | 'emphasis'
   | 'foreign'
   | 'glossary-instance'
@@ -36,6 +37,7 @@ export type AnnotationType =
   | 'distinct'
   | 'emphasis'
   | 'endNote'
+  | 'endNoteLink'
   | 'foreign'
   | 'glossary'
   | 'hasAbbreviation'
@@ -67,6 +69,7 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   blockquote: 'blockquote',
   distinct: 'distinct',
   'end-note': 'endNote',
+  'end-note-link': 'endNoteLink',
   emphasis: 'emphasis',
   foreign: 'foreign',
   'glossary-instance': 'glossary',

@@ -3,6 +3,7 @@ export * from './blockquote';
 export * from './distinct';
 export * from './emphasis';
 export * from './end-note';
+export * from './end-note-link';
 export * from './foreign';
 export * from './glossary';
 export * from './has-abbreviation';
