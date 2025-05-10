@@ -4,14 +4,16 @@ import { H2, H3, H4 } from '../../Typography/Typography';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@lib-utils';
 
+export const TITLE_VARIANT_STYLES = {
+  en: '',
+  bo: 'my-2',
+  'Sa-Ltn': 'my-1 italic font-light text-muted-foreground',
+  'Bo-Ltn': 'my-1 italic font-light text-muted-foreground',
+};
+
 const titleVariants = cva('', {
   variants: {
-    language: {
-      en: '',
-      bo: 'my-2',
-      'Sa-Ltn': 'my-1 italic font-light text-muted-foreground',
-      'Bo-Ltn': 'my-1 italic font-light text-muted-foreground',
-    },
+    language: TITLE_VARIANT_STYLES,
   },
   defaultVariants: { language: 'en' },
 });

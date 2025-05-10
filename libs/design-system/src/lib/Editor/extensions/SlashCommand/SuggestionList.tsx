@@ -1,3 +1,5 @@
+'use client';
+
 import { SlashCommandNodeAttributes, SuggestionItem } from './SlashCommand';
 import { cn } from '@lib-utils';
 import { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';

@@ -12,6 +12,7 @@ export * from './lib/Card/CardTitle';
 export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
 export * from './lib/Editor/BlockEditor';
+export * from './lib/Editor/TitlesEditor';
 export * from './lib/Header/Header';
 export * from './lib/Input/Input';
 export * from './lib/Label/Label';

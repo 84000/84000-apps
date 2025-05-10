@@ -1,5 +1,5 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
-import { Body, Passage, Translation } from '@data-access';
+import { Body, Passage } from '@data-access';
 import { annotateBlock } from './annotation';
 
 const TEMPLATES_FOR_BLOCK_TYPE: {

@@ -4,6 +4,7 @@ export type Title = {
   uuid: string;
   title: string;
   language: TranslationLanguage;
+  type?: string;
 };
 
 export type Titles = Title[];
@@ -12,6 +13,7 @@ export type TitleDTO = {
   uuid: string;
   title: string;
   language: TranslationLanguage;
+  type?: string;
 };
 
 export type TitlesDTO = TitleDTO[];
@@ -21,6 +23,7 @@ export const titleFromDTO = (dto: TitleDTO): Title => {
     uuid: dto.uuid,
     title: dto.title,
     language: dto.language,
+    type: dto.type,
   };
 };
 

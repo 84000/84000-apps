@@ -1,3 +1,5 @@
+'use client';
+
 import { Content, Editor, Extensions, useEditor } from '@tiptap/react';
 declare global {
   interface Window {
