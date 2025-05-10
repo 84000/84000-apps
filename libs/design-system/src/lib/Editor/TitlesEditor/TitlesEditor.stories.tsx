@@ -6,9 +6,6 @@ const content = {
   content: [
     {
       type: 'mainTitles',
-      attrs: {
-        uuid: 'mainTitles',
-      },
       content: [
         {
           attrs: {

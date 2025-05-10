@@ -1,50 +1,39 @@
 'use client';
 
-import {
-  Titles,
-  createBrowserClient,
-  getTranslationTitles,
-} from '@data-access';
+import { createBrowserClient, getTranslationTitles } from '@data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorContext';
 import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
-import { TitleForm } from '@design-system';
+import { BlockEditorContent, TitlesEditor } from '@design-system';
+import { titlesToDocument } from '@lib-editing';
 
 export const TitlesBuilder = () => {
-  const [body, setBody] = useState<Titles>();
+  const [content, setContent] = useState<BlockEditorContent>();
   const [loading, setLoading] = useState(true);
 
   const { uuid } = useEditorState();
 
   useEffect(() => {
-    const getTranslation = async () => {
+    const getTitles = async () => {
       const client = createBrowserClient();
-      const body = await getTranslationTitles({ client, uuid });
+      const titles = await getTranslationTitles({ client, uuid });
 
       setLoading(false);
 
-      if (!body) {
+      if (!titles) {
         return;
       }
 
-      setBody(body);
+      const doc = titlesToDocument(titles);
+      setContent(doc);
     };
-    getTranslation();
+    getTitles();
   }, [uuid]);
 
-  if (!body && !loading) {
+  if (!content && !loading) {
     return notFound();
   }
 
-  return body ? (
-    <TitleForm
-      titles={body}
-      onChange={(title) => {
-        console.log(title);
-      }}
-    />
-  ) : (
-    <TranslationSkeleton />
-  );
+  return content ? <TitlesEditor content={content} /> : <TranslationSkeleton />;
 };

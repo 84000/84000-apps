@@ -127,8 +127,6 @@ export const getTranslationTitles = async ({
     work_uuid_input: uuid,
   });
 
-  console.log(data);
-
   return titlesFromDTO(data as TitlesDTO);
 };
 

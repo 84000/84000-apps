@@ -1,3 +1,5 @@
+'use client';
+
 import StarterKit from '@tiptap/starter-kit';
 import {
   BoLtnTitleNode,

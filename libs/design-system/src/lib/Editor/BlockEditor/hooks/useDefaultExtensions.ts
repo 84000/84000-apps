@@ -1,3 +1,5 @@
+'use client';
+
 import { Document } from '../../extensions/Document';
 import Heading from '../../extensions/Heading/Heading';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
