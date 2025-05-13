@@ -6,13 +6,15 @@ import { H2, H4 } from '../Typography/Typography';
 export const PaletteColor = ({
   label,
   colors,
+  labelColor,
 }: {
   label: string;
+  labelColor?: string;
   colors: string[];
 }) => {
   return (
     <div className="flex flex-col gap-1">
-      <div className="font-medium">{label}</div>
+      <div className={cn('font-medium', labelColor)}>{label}</div>
       <div className="flex gap-2">
         {colors.map((c) => (
           <div className={cn('size-16 rounded border', c)} key={c} />
@@ -25,13 +27,15 @@ export const PaletteColor = ({
 export const SingleColor = ({
   color,
   label,
+  labelColor,
 }: {
   color: string;
   label: string;
+  labelColor?: string;
 }) => {
   return (
     <div className="flex flex-col gap-1">
-      <div className="font-medium">{label}</div>
+      <div className={cn('font-medium', labelColor)}>{label}</div>
       <div className="flex gap-2">
         <div className={cn('size-16 rounded border', color)} />
       </div>
@@ -47,6 +51,7 @@ export const Palette = () => {
         <div className="flex flex-wrap gap-4">
           <PaletteColor
             label="brick"
+            labelColor="text-brick"
             colors={[
               'bg-brick',
               'bg-brick/80',
@@ -57,6 +62,7 @@ export const Palette = () => {
           />
           <PaletteColor
             label="ochre"
+            labelColor="text-ochre"
             colors={[
               'bg-ochre',
               'bg-ochre/80',
@@ -67,6 +73,7 @@ export const Palette = () => {
           />
           <PaletteColor
             label="emerald"
+            labelColor="text-emerald"
             colors={[
               'bg-emerald',
               'bg-emerald/80',
@@ -77,6 +84,7 @@ export const Palette = () => {
           />
           <PaletteColor
             label="navy"
+            labelColor="text-navy"
             colors={[
               'bg-navy',
               'bg-navy/80',
@@ -87,6 +95,7 @@ export const Palette = () => {
           />
           <PaletteColor
             label="gray"
+            labelColor="text-gray"
             colors={[
               'bg-gray',
               'bg-gray/80',
