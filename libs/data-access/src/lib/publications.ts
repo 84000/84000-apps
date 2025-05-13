@@ -13,11 +13,9 @@ export const getTranslationUuids = async ({
   client,
 }: {
   client: DataClient;
-}) => {
-  const { data } = await client
-    .from('translation_json')
-    .select('uuid:work_uuid');
-  return data?.map(({ uuid }) => uuid) || [];
+}): Promise<string[]> => {
+  const { data } = await client.rpc('get_static_translation_uuids');
+  return data?.map(({ uuid }: { uuid: string }) => uuid) || [];
 };
 
 export const getTranslationByUuid = async ({

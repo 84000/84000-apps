@@ -98,6 +98,15 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   unknown: 'unknown',
 } as const;
 
+export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
+  'end-note-link',
+  'leading-space',
+  'paragraph',
+  'reference',
+  'span',
+  'unknown',
+];
+
 export const annotationTypeFromDTO = (
   type: AnnotationDTOType,
 ): AnnotationType => {

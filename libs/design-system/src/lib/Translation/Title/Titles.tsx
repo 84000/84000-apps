@@ -11,7 +11,11 @@ export const Titles = ({ titles }: { titles: TitlesData }) => {
   return (
     <div className="flex flex-col gap-0">
       {titles.map((title) => (
-        <Title key={title.uuid} uuid={title.uuid} language={title.language}>
+        <Title
+          key={`${title.uuid}-${title.language}`}
+          uuid={title.uuid}
+          language={title.language}
+        >
           {title.title}
         </Title>
       ))}

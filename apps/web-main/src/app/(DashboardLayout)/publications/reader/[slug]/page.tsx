@@ -23,14 +23,14 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
       <div className="xl:max-w-1/2 lg:max-w-2/3 sm:max-w-4/5 w-full">
         <Titles titles={publication.frontMatter.titles} />
         {publication?.frontMatter.introductions.map(
-          ({ type, content }, index) => {
+          ({ type, content, uuid }) => {
             const Component = passageComponentForType[type];
-            return <Component key={index}>{content}</Component>;
+            return <Component key={uuid}>{content}</Component>;
           },
         )}
-        {publication?.body.map(({ type, content }, index) => {
+        {publication?.body.map(({ type, content, uuid }) => {
           const Component = passageComponentForType[type];
-          return <Component key={index}>{content}</Component>;
+          return <Component key={uuid}>{content}</Component>;
         })}
       </div>
     </div>

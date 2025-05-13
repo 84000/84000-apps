@@ -1,4 +1,5 @@
 import {
+  ANNOTATIONS_TO_IGNORE,
   AnnotationDTOType,
   AnnotationType,
   annotationTypeFromDTO,
@@ -470,5 +471,7 @@ export const annotationFromDTO = (dto: AnnotationDTO): Annotation => {
 };
 
 export const annotationsFromDTO = (dto?: AnnotationsDTO): Annotations => {
-  return dto?.map(annotationFromDTO) || [];
+  const filtered =
+    dto?.filter((a) => !ANNOTATIONS_TO_IGNORE.includes(a.type)) || [];
+  return filtered.map(annotationFromDTO);
 };
