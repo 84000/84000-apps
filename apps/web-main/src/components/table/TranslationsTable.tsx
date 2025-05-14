@@ -1,6 +1,7 @@
 'use client';
 import {
   ColumnDef,
+  Row,
   SortingState,
   Table as TableType,
   VisibilityState,
@@ -26,8 +27,10 @@ import { useEffect, useState } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
-import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
+import { FuzzyGlobalFilter, fuzzyFilterFn } from './FuzzyGlobalFilter';
 import { TablePagination } from './TablePagination';
+import { removeDiacritics } from '@lib-utils';
+import { rankItem } from '@tanstack/match-sorter-utils';
 
 type TableWork = {
   uuid: string;
@@ -51,7 +54,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
   ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 12,
   });
 
   const router = useRouter();
@@ -72,43 +75,55 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       header: ({ column }) => (
         <TranslationHeader column={column} name="Work Title" />
       ),
-      cell: ({ row }) => row.original.title,
+      cell: ({ row }) => (
+        <div className="xl:w-[640px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+          {row.original.title}
+        </div>
+      ),
     },
     {
       accessorKey: 'toh',
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
-      cell: ({ row }) => <div>{row.original.toh}</div>,
+      cell: ({ row }) => (
+        <div className="xl:w-[100px] md:w-[60px] w-[40px] truncate">
+          {row.original.toh}
+        </div>
+      ),
     },
     {
       accessorKey: 'pages',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Pages" />
       ),
-      cell: ({ row }) => <div>{row.original.pages}</div>,
+      cell: ({ row }) => <div className="w-[60px]">{row.original.pages}</div>,
     },
     {
       accessorKey: 'publicationDate',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Published" />
       ),
-      cell: ({ row }) => row.original.publicationDate,
+      cell: ({ row }) => (
+        <div className="w-[80px]">{row.original.publicationDate}</div>
+      ),
     },
     {
       accessorKey: 'publicationVersion',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Version" />
       ),
-      cell: ({ row }) => row.original.publicationVersion,
+      cell: ({ row }) => (
+        <div className="w-[40px]">{row.original.publicationVersion}</div>
+      ),
     },
     {
       accessorKey: 'restriction',
       header: () => <></>,
       cell: ({ row }) => (
-        <>
+        <div className="w-5">
           {row.original.restriction ? (
             <TriangleAlertIcon className="text-warning" />
           ) : null}
-        </>
+        </div>
       ),
     },
   ];
@@ -136,21 +151,27 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: 'auto',
+    globalFilterFn: fuzzyFilterFn,
   });
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center py-4">
-        <FuzzyGlobalFilter table={table} placeholder="Filter translations..." />
+        <FuzzyGlobalFilter table={table} placeholder="Search translations..." />
+      </div>
+      <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
+        Total results:
+        <span className="px-1 text-emerald-500 font-semibold">
+          {table.getFilteredRowModel().rows.length} texts
+        </span>
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader className="bg-muted sticky top-0">
+          <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="py-4">
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -162,7 +183,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className="**:data-[slot=table-cell]:first:w-8">
+          <TableBody>
             {table.getRowModel().rows?.length ? (
               <>
                 {table.getRowModel().rows.map((row) => (

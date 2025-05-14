@@ -26,7 +26,7 @@ import {
 import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from '../table/SortableHeader';
-import { FuzzyGlobalFilter } from '../table/FuzzyGlobalFilter';
+import { FuzzyGlobalFilter, fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
 import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { StageChip } from '../ui/StageChip';
@@ -186,21 +186,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: (
-      row: Row<TableProject>,
-      columnId: string,
-      filterValue: string,
-      addMeta,
-    ) => {
-      const rawFilter = removeDiacritics(filterValue);
-      const rowValue = row.getValue(columnId);
-      const itemRank = rankItem(rowValue, rawFilter, {
-        keepDiacritics: false,
-      });
-      addMeta({ itemRank });
-      if (itemRank.passed) console.log(itemRank);
-      return itemRank.passed && itemRank.rank > 2;
-    },
+    globalFilterFn: fuzzyFilterFn,
   });
 
   return (
@@ -208,6 +194,12 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       <div className="flex items-center py-4">
         <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
         <FilterStageDropdown table={table} />
+      </div>
+      <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
+        Total results:
+        <span className="px-1 text-emerald-500 font-semibold">
+          {table.getFilteredRowModel().rows.length} projects
+        </span>
       </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
