@@ -60,7 +60,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   ]);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 12,
   });
 
   const router = useRouter();
@@ -235,7 +235,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className="py-4 hover:cursor-pointer"
+                        className="py-3 hover:cursor-pointer"
                         onClick={() =>
                           router.push(`${pathname}/${row.original.uuid}`)
                         }
@@ -262,7 +262,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
           </TableBody>
         </Table>
       </div>
-      <TablePagination table={table} itemName="project" />
+      <TablePagination table={table} />
     </div>
   );
 };
