@@ -197,7 +197,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           </TableBody>
         </Table>
       </div>
-      <TablePagination table={table} itemName="translation" />
+      <TablePagination table={table} />
     </div>
   );
 };
