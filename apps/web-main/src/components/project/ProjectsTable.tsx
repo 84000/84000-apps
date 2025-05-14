@@ -26,7 +26,7 @@ import {
 import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from '../table/SortableHeader';
-import { FuzzyGlobalFilter } from '../table/FuzzyGlobalFilter';
+import { FuzzyGlobalFilter, fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
 import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { StageChip } from '../ui/StageChip';
@@ -186,21 +186,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: (
-      row: Row<TableProject>,
-      columnId: string,
-      filterValue: string,
-      addMeta,
-    ) => {
-      const rawFilter = removeDiacritics(filterValue);
-      const rowValue = row.getValue(columnId);
-      const itemRank = rankItem(rowValue, rawFilter, {
-        keepDiacritics: false,
-      });
-      addMeta({ itemRank });
-      if (itemRank.passed) console.log(itemRank);
-      return itemRank.passed && itemRank.rank > 2;
-    },
+    globalFilterFn: fuzzyFilterFn,
   });
 
   return (

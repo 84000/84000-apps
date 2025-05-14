@@ -1,6 +1,7 @@
 'use client';
 import {
   ColumnDef,
+  Row,
   SortingState,
   Table as TableType,
   VisibilityState,
@@ -26,8 +27,10 @@ import { useEffect, useState } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
-import { FuzzyGlobalFilter } from './FuzzyGlobalFilter';
+import { FuzzyGlobalFilter, fuzzyFilterFn } from './FuzzyGlobalFilter';
 import { TablePagination } from './TablePagination';
+import { removeDiacritics } from '@lib-utils';
+import { rankItem } from '@tanstack/match-sorter-utils';
 
 type TableWork = {
   uuid: string;
@@ -148,7 +151,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: 'auto',
+    globalFilterFn: fuzzyFilterFn,
   });
 
   return (
