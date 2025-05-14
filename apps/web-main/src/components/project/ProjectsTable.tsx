@@ -209,6 +209,12 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
         <FilterStageDropdown table={table} />
       </div>
+      <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
+        Total results:
+        <span className="px-1 text-emerald-500 font-semibold">
+          {table.getFilteredRowModel().rows.length} projects
+        </span>
+      </div>
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader className="sticky top-0">
