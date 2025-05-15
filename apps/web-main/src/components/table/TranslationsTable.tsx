@@ -1,7 +1,6 @@
 'use client';
 import {
   ColumnDef,
-  Row,
   SortingState,
   Table as TableType,
   VisibilityState,
@@ -29,8 +28,16 @@ import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
 import { FuzzyGlobalFilter, fuzzyFilterFn } from './FuzzyGlobalFilter';
 import { TablePagination } from './TablePagination';
-import { removeDiacritics } from '@lib-utils';
-import { rankItem } from '@tanstack/match-sorter-utils';
+import { cn } from '@lib-utils';
+
+const CLASSNAME_FOR_COL: { [key: string]: string } = {
+  title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',
+  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
+  pages: 'w-[60px]',
+  publicationVersion: 'w-[40px]',
+  publicationDate: 'w-[80px]',
+  restriction: 'w-5',
+};
 
 type TableWork = {
   uuid: string;
@@ -76,7 +83,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         <TranslationHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[640px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className={cn(CLASSNAME_FOR_COL.title, 'truncate')}>
           {row.original.title}
         </div>
       ),
@@ -85,7 +92,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       accessorKey: 'toh',
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className="xl:w-[100px] md:w-[60px] w-[40px] truncate">
+        <div className={cn(CLASSNAME_FOR_COL.toh, 'truncate')}>
           {row.original.toh}
         </div>
       ),
@@ -95,7 +102,9 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       header: ({ column }) => (
         <TranslationHeader column={column} name="Pages" />
       ),
-      cell: ({ row }) => <div className="w-[60px]">{row.original.pages}</div>,
+      cell: ({ row }) => (
+        <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
+      ),
     },
     {
       accessorKey: 'publicationDate',
@@ -103,7 +112,9 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         <TranslationHeader column={column} name="Published" />
       ),
       cell: ({ row }) => (
-        <div className="w-[80px]">{row.original.publicationDate}</div>
+        <div className={CLASSNAME_FOR_COL.publicationDate}>
+          {row.original.publicationDate}
+        </div>
       ),
     },
     {
@@ -112,14 +123,16 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         <TranslationHeader column={column} name="Version" />
       ),
       cell: ({ row }) => (
-        <div className="w-[40px]">{row.original.publicationVersion}</div>
+        <div className={CLASSNAME_FOR_COL.publicationVersion}>
+          {row.original.publicationVersion}
+        </div>
       ),
     },
     {
       accessorKey: 'restriction',
       header: () => <></>,
       cell: ({ row }) => (
-        <div className="w-5">
+        <div className={CLASSNAME_FOR_COL.restriction}>
           {row.original.restriction ? (
             <TriangleAlertIcon className="text-warning" />
           ) : null}
@@ -171,7 +184,10 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    className={CLASSNAME_FOR_COL[header.id]}
+                    key={header.id}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -191,7 +207,10 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className="py-4 hover:cursor-pointer"
+                        className={cn(
+                          CLASSNAME_FOR_COL[cell.column.id],
+                          'py-4 hover:cursor-pointer',
+                        )}
                         onClick={() => {
                           router.push(`${pathname}/${row.original.uuid}`);
                         }}
