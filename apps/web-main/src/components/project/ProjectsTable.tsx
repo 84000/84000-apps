@@ -30,7 +30,7 @@ import { FuzzyGlobalFilter, fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
 import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { StageChip } from '../ui/StageChip';
-import { removeDiacritics } from '@lib-utils';
+import { cn, removeDiacritics } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { MoreHorizontalIcon } from 'lucide-react';
 
@@ -44,6 +44,16 @@ type TableProject = {
   stageDate: string;
   stageObject: ProjectStage;
   pages: number;
+};
+
+const CLASSNAME_FOR_COL: { [key: string]: string } = {
+  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
+  title: 'xl:w-[720px] lg:w-[580px] md:w-[320px] w-[112px]',
+  translator: 'xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px]',
+  stage: 'w-[60px]',
+  pages: 'w-[60px]',
+  stageDate: 'w-[100px]',
+  uuid: 'w-5',
 };
 
 const ProjectHeader = SortableHeader<TableProject>;
@@ -87,7 +97,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className="xl:w-[100px] md:w-[60px] w-[40px] truncate">
+        <div className={cn(CLASSNAME_FOR_COL.toh, 'truncate')}>
           {row.original.toh}
         </div>
       ),
@@ -99,7 +109,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[640px] lg:w-[300px] md:w-[200px] w-[100px] truncate">
+        <div className={cn(CLASSNAME_FOR_COL.title, 'truncate')}>
           {row.original.title}
         </div>
       ),
@@ -114,7 +124,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Translator" />
       ),
       cell: ({ row }) => (
-        <div className="xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px] truncate">
+        <div className={cn(CLASSNAME_FOR_COL.translator, 'truncate')}>
           {row.original.translator}
         </div>
       ),
@@ -128,7 +138,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       },
       header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
       cell: ({ row }) => (
-        <div className="w-[60px]">
+        <div className={CLASSNAME_FOR_COL.stage}>
           <StageChip stage={row.original.stageObject} />
         </div>
       ),
@@ -136,7 +146,9 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     {
       accessorKey: 'pages',
       header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
-      cell: ({ row }) => <div className="w-[60px]">{row.original.pages}</div>,
+      cell: ({ row }) => (
+        <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
+      ),
     },
     {
       accessorKey: 'stageDate',
@@ -144,7 +156,9 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Last Updated" />
       ),
       cell: ({ row }) => (
-        <div className="w-[100px]">{row.original.stageDate}</div>
+        <div className={CLASSNAME_FOR_COL.stageDate}>
+          {row.original.stageDate}
+        </div>
       ),
     },
     {
@@ -154,7 +168,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       enableSorting: false,
       cell: ({ row }) => (
         <MoreHorizontalIcon
-          className="w-5 text-ochre"
+          className={cn(CLASSNAME_FOR_COL.uuid, 'text-ochre')}
           onClick={() => {
             router.push(`${pathname}/${row.original.uuid}`);
           }}
@@ -207,7 +221,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    className={CLASSNAME_FOR_COL[header.id]}
+                    key={header.id}
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -227,7 +244,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        className="py-3 hover:cursor-pointer"
+                        className={cn(
+                          CLASSNAME_FOR_COL[cell.column.id] || '',
+                          'py-3 hover:cursor-pointer',
+                        )}
                         onClick={() =>
                           router.push(`${pathname}/${row.original.uuid}`)
                         }
