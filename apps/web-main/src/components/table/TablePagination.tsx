@@ -13,7 +13,7 @@ export const TablePagination = <T extends RowData>({
   table,
 }: TablePaginationProps<T>) => {
   const page = table.getState().pagination.pageIndex;
-  const totalItems = table.getFilteredRowModel().rows.length;
+  const totalPages = table.getPageCount();
 
   const pagesToShow = [];
   if (page > 0) {
@@ -22,11 +22,11 @@ export const TablePagination = <T extends RowData>({
 
   pagesToShow.push(page);
 
-  if (page + 1 < totalItems) {
+  if (page + 1 < totalPages) {
     pagesToShow.push(page + 1);
   }
 
-  if (pagesToShow.length < 3 && page + 2 < totalItems) {
+  if (pagesToShow.length < 3 && page + 2 < totalPages) {
     pagesToShow.push(page + 2);
   }
 
@@ -55,7 +55,7 @@ export const TablePagination = <T extends RowData>({
               {p + 1}
             </Button>
           ))}
-          {totalItems > 3 && page < totalItems - 2 && <PaginationEllipsis />}
+          {totalPages > 3 && page < totalPages - 2 && <PaginationEllipsis />}
           <Button
             variant="ghost"
             onClick={() => table.nextPage()}

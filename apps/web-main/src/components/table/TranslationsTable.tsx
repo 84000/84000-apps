@@ -29,6 +29,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { FuzzyGlobalFilter, fuzzyFilterFn } from './FuzzyGlobalFilter';
 import { TablePagination } from './TablePagination';
 import { cn } from '@lib-utils';
+import { TooltipCell } from '../ui/TooltipCell';
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',
@@ -83,18 +84,20 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         <TranslationHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className={cn(CLASSNAME_FOR_COL.title, 'truncate')}>
-          {row.original.title}
-        </div>
+        <TooltipCell
+          className={CLASSNAME_FOR_COL.title}
+          content={row.original.title}
+        />
       ),
     },
     {
       accessorKey: 'toh',
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className={cn(CLASSNAME_FOR_COL.toh, 'truncate')}>
-          {row.original.toh}
-        </div>
+        <TooltipCell
+          className={CLASSNAME_FOR_COL.toh}
+          content={row.original.toh}
+        />
       ),
     },
     {

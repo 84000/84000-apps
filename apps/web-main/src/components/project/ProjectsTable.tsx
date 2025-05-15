@@ -31,6 +31,7 @@ import { StageChip } from '../ui/StageChip';
 import { cn, removeDiacritics } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { MoreHorizontalIcon } from 'lucide-react';
+import { TooltipCell } from '../ui/TooltipCell';
 
 type TableProject = {
   uuid: string;
@@ -95,9 +96,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       accessorKey: 'toh',
       header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
       cell: ({ row }) => (
-        <div className={cn(CLASSNAME_FOR_COL.toh, 'truncate')}>
-          {row.original.toh}
-        </div>
+        <TooltipCell
+          className={CLASSNAME_FOR_COL.toh}
+          content={row.original.toh}
+        />
       ),
     },
     {
@@ -107,9 +109,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className={cn(CLASSNAME_FOR_COL.title, 'truncate')}>
-          {row.original.title}
-        </div>
+        <TooltipCell
+          className={CLASSNAME_FOR_COL.title}
+          content={row.original.title}
+        />
       ),
     },
     {
@@ -122,9 +125,10 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         <ProjectHeader column={column} name="Translator" />
       ),
       cell: ({ row }) => (
-        <div className={cn(CLASSNAME_FOR_COL.translator, 'truncate')}>
-          {row.original.translator}
-        </div>
+        <TooltipCell
+          className={CLASSNAME_FOR_COL.translator}
+          content={row.original.translator}
+        />
       ),
     },
     {
