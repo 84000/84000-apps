@@ -11,7 +11,7 @@ const page = async () => {
 
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
-      <div className="w-full">
+      <div className="w-full max-w-[1466px]">
         <H2>{'Translation Projects'}</H2>
         <ProjectsTable projects={projects} />
       </div>
