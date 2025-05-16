@@ -21,29 +21,19 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project, ProjectStage, ProjectStageLabel } from '@data-access';
+import { Project, ProjectStageLabel } from '@data-access';
 import { useEffect, useState } from 'react';
 import { SortableHeader } from '../table/SortableHeader';
 import { FuzzyGlobalFilter, fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
 import { TablePagination } from '../table/TablePagination';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { StageChip } from '../ui/StageChip';
-import { cn, removeDiacritics } from '@lib-utils';
+import { cn, parseToh, removeDiacritics } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { TooltipCell } from '../ui/TooltipCell';
-
-type TableProject = {
-  uuid: string;
-  toh: string;
-  title: string;
-  plainTitle: string;
-  translator: string;
-  stage: string;
-  stageDate: string;
-  stageObject: ProjectStage;
-  pages: number;
-};
+import { DownloadSheet, exportSheet } from './DownloadSheet';
+import { TableProject } from './TableProject';
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
@@ -79,7 +69,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     setData(
       projects.map((p) => ({
         uuid: p.uuid,
-        toh: p.toh,
+        toh: parseToh(p.toh),
         title: p.title,
         plainTitle: removeDiacritics(p.title),
         translator: p.translator || '',
@@ -155,7 +145,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
     {
       accessorKey: 'stageDate',
       header: ({ column }) => (
-        <ProjectHeader column={column} name="Last Updated" />
+        <ProjectHeader column={column} name="Stage Date" />
       ),
       cell: ({ row }) => (
         <div className={CLASSNAME_FOR_COL.stageDate}>
@@ -207,9 +197,15 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 gap-4">
         <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
         <FilterStageDropdown table={table} />
+        <DownloadSheet
+          onClick={() => {
+            const rows = table.getSortedRowModel().rows.map((r) => r.original);
+            exportSheet({ rows });
+          }}
+        />
       </div>
       <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
         Total results:
