@@ -32,6 +32,5 @@ export const fuzzyFilterFn = <T extends RowData>(
     keepDiacritics: false,
   });
   addMeta({ itemRank });
-  if (itemRank.passed) console.log(itemRank);
   return itemRank.passed && itemRank.rank > 2;
 };
