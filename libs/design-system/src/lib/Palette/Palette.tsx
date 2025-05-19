@@ -50,6 +50,17 @@ export const Palette = () => {
         <H2>Brand Colors</H2>
         <div className="flex flex-wrap gap-4">
           <PaletteColor
+            label="navy"
+            labelColor="text-navy"
+            colors={[
+              'bg-navy',
+              'bg-navy/80',
+              'bg-navy/60',
+              'bg-navy/40',
+              'bg-navy/20',
+            ]}
+          />
+          <PaletteColor
             label="brick"
             labelColor="text-brick"
             colors={[
@@ -83,14 +94,14 @@ export const Palette = () => {
             ]}
           />
           <PaletteColor
-            label="navy"
-            labelColor="text-navy"
+            label="slate"
+            labelColor="text-slate"
             colors={[
-              'bg-navy',
-              'bg-navy/80',
-              'bg-navy/60',
-              'bg-navy/40',
-              'bg-navy/20',
+              'bg-slate',
+              'bg-slate/80',
+              'bg-slate/60',
+              'bg-slate/40',
+              'bg-slate/20',
             ]}
           />
           <PaletteColor
