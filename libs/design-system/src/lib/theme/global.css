@@ -47,10 +47,11 @@
     --error: 255, 102, 46;
     --error-foreground: 255, 229, 237;
 
-    --emerald: 173, 83%, 32%;
-    --ochre: 13, 80%, 40%;
-    --navy: 203, 100%, 23%;
-    --brick: 339, 82%, 35%;
+    --emerald: 179, 79%, 32%;
+    --ochre: 36, 86%, 52%;
+    --navy: 204, 100%, 22%;
+    --brick: 346, 71%, 39%;
+    --slate: 205, 36%, 53%;
     --gray: 216, 12%, 84%;
   }
 
@@ -107,10 +108,11 @@
     --error: 255, 102, 46;
     --error-foreground: 255, 229, 237;
 
-    --emerald: 173, 83%, 32%;
-    --ochre: 13, 80%, 40%;
-    --navy: 203, 100%, 23%;
-    --brick: 339, 82%, 35%;
+    --emerald: 179, 79%, 32%;
+    --ochre: 36, 86%, 52%;
+    --navy: 204, 100%, 22%;
+    --brick: 346, 71%, 39%;
+    --slate: 205, 36%, 53%;
     --gray: 216, 12%, 84%;
   }
 }
@@ -170,4 +172,5 @@
   --color-ochre: hsl(var(--ochre));
   --color-navy: hsl(var(--navy));
   --color-brick: hsl(var(--brick));
+  --color-slate: hsl(var(--slate));
 }
