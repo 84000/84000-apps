@@ -3,14 +3,14 @@ import { TableProject } from './TableProject';
 import { FuzzyGlobalFilter } from '../table/FuzzyGlobalFilter';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { DownloadSheet, exportSheet } from './DownloadSheet';
-import { FilterCannonDropdown } from './FilterCannonDropdown';
+import { FilterCanonDropdown } from './FilterCanonDropdown';
 
 export const ProjectFilters = ({ table }: { table: Table<TableProject> }) => {
   return (
     <div className="flex items-center py-4 gap-4">
       <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
       <div className="flex-1" />
-      <FilterCannonDropdown table={table} />
+      <FilterCanonDropdown table={table} />
       <FilterStageDropdown table={table} />
       <DownloadSheet
         onClick={() => {

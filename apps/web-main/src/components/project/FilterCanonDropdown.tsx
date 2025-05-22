@@ -2,14 +2,14 @@ import { RowData, Table } from '@tanstack/react-table';
 import { FilterPopover } from './FilterPopover';
 import { ComponentPropsWithRef, useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
-import { CANNON_TYPES } from '@data-access';
+import { CANON_TYPES } from '@data-access';
 
-function CannonCheckboxItem({
-  cannon,
+function CanonCheckboxItem({
+  canon,
   checked,
   onCheckedChanged,
 }: ComponentPropsWithRef<'div'> & {
-  cannon: string;
+  canon: string;
   checked: boolean;
   onCheckedChanged: (checked: boolean) => void;
 }) {
@@ -22,47 +22,45 @@ function CannonCheckboxItem({
         {checked && <Check className="size-4" />}
       </span>
       <span>
-        <span className={'capitalize pr-1'}>{cannon}</span>
+        <span className={'capitalize pr-1'}>{canon}</span>
       </span>
     </div>
   );
 }
 
-export const FilterCannonDropdown = <T extends RowData>({
+export const FilterCanonDropdown = <T extends RowData>({
   table,
 }: {
   table: Table<T>;
 }) => {
   const [checked, setChecked] = useState<{ [key: string]: boolean }>(
-    CANNON_TYPES.reduce((acc, curr) => ({ ...acc, [curr]: false }), {}),
+    CANON_TYPES.reduce((acc, curr) => ({ ...acc, [curr]: false }), {}),
   );
 
-  const onCheckedChanged = useCallback((cannon: string, isChecked: boolean) => {
+  const onCheckedChanged = useCallback((canon: string, isChecked: boolean) => {
     setChecked((prev) => ({
       ...prev,
-      [cannon]: isChecked,
+      [canon]: isChecked,
     }));
   }, []);
 
   useEffect(() => {
     table
-      .getColumn('cannons')
+      .getColumn('canons')
       ?.setFilterValue(
-        Object.keys(checked).filter((cannon) => cannon && checked[cannon]),
+        Object.keys(checked).filter((canon) => canon && checked[canon]),
       );
   }, [table, checked]);
 
   return (
-    <FilterPopover className="px-0 w-[112px]" label="Cannon">
+    <FilterPopover className="px-0 w-[112px]" label="Canon">
       <>
-        {CANNON_TYPES.map((cannon) => (
-          <CannonCheckboxItem
-            key={cannon}
-            cannon={cannon}
-            checked={checked[cannon]}
-            onCheckedChanged={(isChecked) =>
-              onCheckedChanged(cannon, isChecked)
-            }
+        {CANON_TYPES.map((canon) => (
+          <CanonCheckboxItem
+            key={canon}
+            canon={canon}
+            checked={checked[canon]}
+            onCheckedChanged={(isChecked) => onCheckedChanged(canon, isChecked)}
           />
         ))}
       </>

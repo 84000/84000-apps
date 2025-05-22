@@ -60,7 +60,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         stageDate: p.stage.date.toLocaleDateString(),
         stageObject: p.stage,
         pages: p.pages,
-        cannons: p.cannons || '',
+        canons: p.canons || '',
       })),
     );
   }, [projects]);

@@ -10,5 +10,5 @@ export type TableProject = {
   stageDate: string;
   stageObject: ProjectStage;
   pages: number;
-  cannons: string;
+  canons: string;
 };
