@@ -1,5 +1,6 @@
 'use client';
 
+import { Doc } from 'yjs';
 import { EditorContent, JSONContent } from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from './hooks';
 import { MainBubbleMenu } from '../menus/MainBubbleMenu';
@@ -19,12 +20,14 @@ export type BlockEditorContent =
 
 export const BlockEditor = ({
   content,
+  doc,
   isEditable = true,
 }: {
   content: BlockEditorContent;
+  doc: Doc;
   isEditable?: boolean;
 }) => {
-  const { extensions } = useDefaultExtensions();
+  const { extensions } = useDefaultExtensions({ doc });
   const { editor } = useBlockEditor({
     extensions,
     content,

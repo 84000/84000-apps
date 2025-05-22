@@ -1,22 +1,25 @@
 'use client';
 
-import { Document } from '../../extensions/Document';
-import Heading from '../../extensions/Heading/Heading';
-import Paragraph from '../../extensions/Paragraph/Paragraph';
-import Placeholder from '@tiptap/extension-placeholder';
-import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
-import { getSuggestion } from '../../extensions/SlashCommand/Suggestions';
+import * as Y from 'yjs';
 import { cn } from '@lib-utils';
+import { Collaboration } from '@tiptap/extension-collaboration';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Document } from '../../extensions/Document';
+import Heading from '../../extensions/Heading/Heading';
+import Paragraph from '../../extensions/Paragraph/Paragraph';
+import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
+import { getSuggestion } from '../../extensions/SlashCommand/Suggestions';
 import { StarterKit } from '../../extensions/StarterKit';
 import { DragHandle } from '../../extensions/DragHandle/DragHandle';
 import { TranslationMetadata } from '../../extensions/TranslationMetadata';
 
-export const useDefaultExtensions = () => {
+export const useDefaultExtensions = ({ doc }: { doc: Y.Doc }) => {
   return {
     extensions: [
+      Collaboration.configure({ document: doc }),
       Document,
       DragHandle.configure({
         draghandleWidth: 25,
@@ -39,7 +42,9 @@ export const useDefaultExtensions = () => {
       SlashCommand.configure({
         suggestion: getSuggestion(),
       }),
-      StarterKit,
+      StarterKit.configure({
+        history: false,
+      }),
       TranslationMetadata,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
