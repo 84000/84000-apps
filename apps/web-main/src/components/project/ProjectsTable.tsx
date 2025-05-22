@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  ColumnDef,
   SortingState,
   VisibilityState,
   flexRender,
@@ -21,31 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Project, ProjectStageLabel } from '@data-access';
+import { Project } from '@data-access';
 import { useEffect, useState } from 'react';
-import { SortableHeader } from '../table/SortableHeader';
-import { FuzzyGlobalFilter, fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
+import { fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
 import { TablePagination } from '../table/TablePagination';
-import { FilterStageDropdown } from './FilterStageDropdown';
-import { StageChip } from '../ui/StageChip';
 import { cn, parseToh, removeDiacritics } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
-import { MoreHorizontalIcon } from 'lucide-react';
-import { TooltipCell } from '../ui/TooltipCell';
-import { DownloadSheet, exportSheet } from './DownloadSheet';
 import { TableProject } from './TableProject';
-
-const CLASSNAME_FOR_COL: { [key: string]: string } = {
-  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
-  title: 'xl:w-[720px] lg:w-[580px] md:w-[320px] w-[112px]',
-  translator: 'xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px]',
-  stage: 'w-[60px]',
-  pages: 'w-[60px]',
-  stageDate: 'w-[100px]',
-  uuid: 'w-5',
-};
-
-const ProjectHeader = SortableHeader<TableProject>;
+import { ProjectFilters } from './ProjectFilters';
+import { CLASSNAME_FOR_COL, PROJECT_COLUMNS } from './ProjectColumns';
 
 export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const [data, setData] = useState<TableProject[]>([]);
@@ -77,98 +60,12 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
         stageDate: p.stage.date.toLocaleDateString(),
         stageObject: p.stage,
         pages: p.pages,
+        cannons: p.cannons || '',
       })),
     );
   }, [projects]);
 
-  const columns: ColumnDef<TableProject>[] = [
-    {
-      accessorKey: 'toh',
-      header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.toh}
-          content={row.original.toh}
-        />
-      ),
-    },
-    {
-      accessorKey: 'title',
-      enableGlobalFilter: false,
-      header: ({ column }) => (
-        <ProjectHeader column={column} name="Work Title" />
-      ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.title}
-          content={row.original.title}
-        />
-      ),
-    },
-    {
-      accessorKey: 'plainTitle',
-      cell: ({ row }) => row.original.plainTitle,
-    },
-    {
-      accessorKey: 'translator',
-      header: ({ column }) => (
-        <ProjectHeader column={column} name="Translator" />
-      ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.translator}
-          content={row.original.translator}
-        />
-      ),
-    },
-    {
-      accessorKey: 'stage',
-      filterFn: (row, columnId, filter: ProjectStageLabel[]) => {
-        if (!filter.length) return true;
-        const value = row.getValue(columnId) as ProjectStageLabel;
-        return filter.includes(value);
-      },
-      header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
-      cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.stage}>
-          <StageChip stage={row.original.stageObject} />
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'pages',
-      header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
-      cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
-      ),
-    },
-    {
-      accessorKey: 'stageDate',
-      header: ({ column }) => (
-        <ProjectHeader column={column} name="Stage Date" />
-      ),
-      cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.stageDate}>
-          {row.original.stageDate}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'uuid',
-      header: '',
-      enableColumnFilter: false,
-      enableSorting: false,
-      cell: ({ row }) => (
-        <MoreHorizontalIcon
-          className={cn(CLASSNAME_FOR_COL.uuid, 'text-ochre')}
-          onClick={() => {
-            router.push(`${pathname}/${row.original.uuid}`);
-          }}
-        />
-      ),
-    },
-  ];
-
+  const columns = PROJECT_COLUMNS;
   const table = useReactTable({
     data,
     columns,
@@ -197,16 +94,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center py-4 gap-4">
-        <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
-        <FilterStageDropdown table={table} />
-        <DownloadSheet
-          onClick={() => {
-            const rows = table.getSortedRowModel().rows.map((r) => r.original);
-            exportSheet({ rows });
-          }}
-        />
-      </div>
+      <ProjectFilters table={table} />
       <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
         Total results:
         <span className="px-1 text-emerald-500 font-semibold">
@@ -238,7 +126,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
             {table.getRowModel().rows?.length ? (
               <>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow className="group" key={row.id}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}

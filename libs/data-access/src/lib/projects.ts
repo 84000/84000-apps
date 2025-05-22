@@ -16,16 +16,7 @@ import {
   projectStageDetailsFromDTO,
 } from './types/project';
 
-export const getProjects = async ({
-  client,
-}: {
-  client: DataClient;
-  page?: number;
-  pageSize?: number;
-  orderBy?: 'toh' | 'title' | 'translator' | 'stage' | 'stage_date' | 'pages';
-  ascending?: boolean;
-  minStage?: string;
-}) => {
+export const getProjects = async ({ client }: { client: DataClient }) => {
   const { data } = await client.rpc('get_projects');
 
   const dtos = (data as ProjectViewDTO[]) || [];
