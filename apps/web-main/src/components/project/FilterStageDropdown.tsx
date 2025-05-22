@@ -4,17 +4,12 @@ import {
   STAGE_DESCRIPTIONS,
   ProjectStageLabel,
 } from '@data-access';
-import {
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Separator,
-} from '@design-system';
+import { Separator } from '@design-system';
 import { cn } from '@lib-utils';
 import { RowData, Table } from '@tanstack/react-table';
-import { Check, ChevronDown, ListFilter } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { FilterPopover } from './FilterPopover';
 
 function StageCheckboxItem({
   className,
@@ -72,15 +67,8 @@ export const FilterStageDropdown = <T extends RowData>({
   }, [table, checked]);
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="ml-auto rounded-full">
-          <ListFilter />
-          Filter Stage
-          <ChevronDown />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="px-0 w-[310px]">
+    <FilterPopover className="px-0 w-[310px]" label="Stage">
+      <>
         {PROJECT_STAGE_LABELS.map((stage, index) => (
           <div key={stage}>
             <StageCheckboxItem
@@ -95,7 +83,7 @@ export const FilterStageDropdown = <T extends RowData>({
               )}
           </div>
         ))}
-      </PopoverContent>
-    </Popover>
+      </>
+    </FilterPopover>
   );
 };

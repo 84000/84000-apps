@@ -51,7 +51,11 @@ export const STAGE_COLORS: Record<ProjectStageLabel, string> = {
   '0': 'muted text-muted-foreground',
 };
 
+export const CANNON_TYPES = ['kangyur', 'tengyur'];
+
 export type ProjectStageLabel = (typeof PROJECT_STAGE_LABELS)[number];
+
+export type CannonType = (typeof CANNON_TYPES)[number];
 
 export type ProjectStage = {
   label: ProjectStageLabel;
@@ -69,6 +73,7 @@ export type ProjectViewDTO = {
   stage: ProjectStageLabel;
   stage_date: string;
   pages: number;
+  type?: string;
 };
 
 export type ProjectTableDTO = {
@@ -101,6 +106,7 @@ export type Project = {
   contractId?: string;
   workUuid?: string;
   version?: SemVer;
+  cannons?: string;
 };
 
 export type ProjectStageDetailsDTO = {
@@ -163,6 +169,7 @@ export function projectFromViewDTO(dto: ProjectViewDTO): Project {
       color: STAGE_COLORS[dto.stage] || 'grey',
     },
     pages: dto.pages,
+    cannons: dto.type,
   };
 }
 
