@@ -102,12 +102,12 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
     ),
   },
   {
-    accessorKey: 'cannons',
-    cell: ({ row }) => row.original.cannons,
+    accessorKey: 'canons',
+    cell: ({ row }) => row.original.canons,
     filterFn: (row, columnId, filter: string[]) => {
       if (!filter.length) return true;
       const value = row.getValue(columnId) as string;
-      return filter.every((cannon) => value.includes(cannon));
+      return filter.every((canon) => value.includes(canon));
     },
   },
 ];
