@@ -35,6 +35,7 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     plainTitle: false,
+    canons: false,
   });
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<SortingState>([
