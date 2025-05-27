@@ -19,7 +19,10 @@ export const FilterPopover = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="ml-auto rounded-full">
+        <Button
+          variant="outline"
+          className="ml-auto rounded-full sm:text-sm text-xs"
+        >
           <ListFilter />
           {label}
           <ChevronDown />

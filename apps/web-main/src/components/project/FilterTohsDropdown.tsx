@@ -5,20 +5,20 @@ import { Check } from 'lucide-react';
 import { TableProject } from './TableProject';
 import { MinMax } from './MinMax';
 
-const PAGE_RANGES = [
-  '1 to 2 pages',
-  '3 to 5 pages',
-  '6 to 10 pages',
-  '11 to 50 pages',
-  'Greater then 50 pages',
+const TOH_RANGES = [
+  '1 - 500',
+  '501 - 1000',
+  '1001 - 2000',
+  '2001 - 3000',
+  '3001 - 4569',
 ];
 
-const PAGE_VALUES: MinMax[] = [
-  { min: 1, max: 2 },
-  { min: 3, max: 5 },
-  { min: 6, max: 10 },
-  { min: 11, max: 50 },
-  { min: 51, max: Infinity },
+const TOH_VALUES: MinMax[] = [
+  { min: 1, max: 500 },
+  { min: 501, max: 1000 },
+  { min: 1001, max: 2000 },
+  { min: 2001, max: 3000 },
+  { min: 3001, max: 4569 },
 ];
 
 export const filterFn: FilterFn<TableProject> = (
@@ -30,17 +30,22 @@ export const filterFn: FilterFn<TableProject> = (
     return true;
   }
 
-  const pages = row.getValue(columnId) as number;
+  const tohs = row.getValue(columnId) as string;
+  const tohNumbers = tohs
+    ?.split(', ')
+    .map((toh) => Number.parseInt(toh.match(/\d{1,4}/)?.[0] || '0'));
   for (const { min, max } of filter) {
-    if (pages >= min && pages <= max) {
-      return true;
+    for (const toh of tohNumbers) {
+      if (toh >= min && toh <= max) {
+        return true;
+      }
     }
   }
 
   return false;
 };
 
-function PageRangeCheckboxItem({
+function TohRangeCheckboxItem({
   range,
   checked,
   onCheckedChanged,
@@ -64,13 +69,13 @@ function PageRangeCheckboxItem({
   );
 }
 
-export const FilterPagesDropdown = <T extends RowData>({
+export const FilterTohsDropdown = <T extends RowData>({
   table,
 }: {
   table: Table<T>;
 }) => {
   const [checked, setChecked] = useState<{ [key: string]: boolean }>(
-    PAGE_RANGES.reduce((acc, curr) => ({ ...acc, [curr]: false }), {}),
+    TOH_RANGES.reduce((acc, curr) => ({ ...acc, [curr]: false }), {}),
   );
 
   const onCheckedChanged = useCallback((range: string, isChecked: boolean) => {
@@ -83,17 +88,17 @@ export const FilterPagesDropdown = <T extends RowData>({
   useEffect(() => {
     const ranges = Object.keys(checked)
       .filter((range) => range && checked[range])
-      .map((key) => PAGE_RANGES.indexOf(key))
-      .map((index) => PAGE_VALUES[index]);
+      .map((key) => TOH_RANGES.indexOf(key))
+      .map((index) => TOH_VALUES[index]);
 
-    table.getColumn('pages')?.setFilterValue(ranges);
+    table.getColumn('toh')?.setFilterValue(ranges);
   }, [table, checked]);
 
   return (
-    <FilterPopover className="px-0 w-[210px]" label="Pages">
+    <FilterPopover className="px-0 w-[210px]" label="Toh">
       <>
-        {PAGE_RANGES.map((range) => (
-          <PageRangeCheckboxItem
+        {TOH_RANGES.map((range) => (
+          <TohRangeCheckboxItem
             key={range}
             range={range}
             checked={checked[range]}

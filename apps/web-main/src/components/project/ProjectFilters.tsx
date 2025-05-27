@@ -5,6 +5,7 @@ import { FilterStageDropdown } from './FilterStageDropdown';
 import { DownloadSheet, exportSheet } from './DownloadSheet';
 import { FilterCanonDropdown } from './FilterCanonDropdown';
 import { FilterPagesDropdown } from './FilterPagesDropdown';
+import { FilterTohsDropdown } from './FilterTohsDropdown';
 
 export const ProjectFilters = ({ table }: { table: Table<TableProject> }) => {
   return (
@@ -13,16 +14,21 @@ export const ProjectFilters = ({ table }: { table: Table<TableProject> }) => {
         <FuzzyGlobalFilter table={table} placeholder="Search projects..." />
         <div className="grow" />
       </div>
-      <div className="flex gap-4 overflow-auto">
+      <div className="flex md:gap-4 gap-1 overflow-auto">
         <FilterCanonDropdown table={table} />
         <FilterPagesDropdown table={table} />
+        <FilterTohsDropdown table={table} />
         <FilterStageDropdown table={table} />
-        <DownloadSheet
-          onClick={() => {
-            const rows = table.getSortedRowModel().rows.map((r) => r.original);
-            exportSheet({ rows });
-          }}
-        />
+        <div className="md:block hidden">
+          <DownloadSheet
+            onClick={() => {
+              const rows = table
+                .getSortedRowModel()
+                .rows.map((r) => r.original);
+              exportSheet({ rows });
+            }}
+          />
+        </div>
         <div className="grow lg:hidden" />
       </div>
     </div>

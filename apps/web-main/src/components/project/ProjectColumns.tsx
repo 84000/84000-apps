@@ -8,6 +8,7 @@ import { StageChip } from '../ui/StageChip';
 import { ProjectStageLabel } from '@data-access';
 import { filterFn as canonsFilterFn } from './FilterCanonDropdown';
 import { filterFn as pagesFilterFn } from './FilterPagesDropdown';
+import { filterFn as tohsFilterFn } from './FilterTohsDropdown';
 
 const ProjectHeader = SortableHeader<TableProject>;
 
@@ -24,6 +25,7 @@ export const CLASSNAME_FOR_COL: { [key: string]: string } = {
 export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
   {
     accessorKey: 'toh',
+    filterFn: tohsFilterFn,
     header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
     cell: ({ row }) => (
       <TooltipCell
@@ -73,11 +75,11 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
   },
   {
     accessorKey: 'pages',
+    filterFn: pagesFilterFn,
     header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
     cell: ({ row }) => (
       <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
     ),
-    filterFn: pagesFilterFn,
   },
   {
     accessorKey: 'stageDate',
@@ -106,7 +108,7 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
   },
   {
     accessorKey: 'canons',
-    cell: ({ row }) => row.original.canons,
     filterFn: canonsFilterFn,
+    cell: ({ row }) => row.original.canons,
   },
 ];
