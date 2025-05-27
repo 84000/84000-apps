@@ -1,11 +1,13 @@
 import { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@lib-utils';
+import { EyeIcon, MoreHorizontalIcon } from 'lucide-react';
 import { TableProject } from './TableProject';
 import { SortableHeader } from '../table/SortableHeader';
 import { TooltipCell } from '../ui/TooltipCell';
 import { StageChip } from '../ui/StageChip';
 import { ProjectStageLabel } from '@data-access';
-import { EyeIcon, MoreHorizontalIcon } from 'lucide-react';
-import { cn } from '@lib-utils';
+import { filterFn as canonsFilterFn } from './FilterCanonDropdown';
+import { filterFn as pagesFilterFn } from './FilterPagesDropdown';
 
 const ProjectHeader = SortableHeader<TableProject>;
 
@@ -75,6 +77,7 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
     cell: ({ row }) => (
       <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
     ),
+    filterFn: pagesFilterFn,
   },
   {
     accessorKey: 'stageDate',
@@ -104,10 +107,6 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
   {
     accessorKey: 'canons',
     cell: ({ row }) => row.original.canons,
-    filterFn: (row, columnId, filter: string[]) => {
-      if (!filter.length) return true;
-      const value = row.getValue(columnId) as string;
-      return filter.every((canon) => value.includes(canon));
-    },
+    filterFn: canonsFilterFn,
   },
 ];

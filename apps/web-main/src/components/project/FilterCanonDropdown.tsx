@@ -1,8 +1,22 @@
-import { RowData, Table } from '@tanstack/react-table';
+import { FilterFn, RowData, Table } from '@tanstack/react-table';
 import { FilterPopover } from './FilterPopover';
 import { ComponentPropsWithRef, useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { CANON_TYPES } from '@data-access';
+import { TableProject } from './TableProject';
+
+export const filterFn: FilterFn<TableProject> = (
+  row,
+  columnId,
+  filter: string[],
+) => {
+  if (!filter.length) {
+    return true;
+  }
+
+  const value = row.getValue(columnId) as string;
+  return filter.every((canon) => value.includes(canon));
+};
 
 function CanonCheckboxItem({
   canon,

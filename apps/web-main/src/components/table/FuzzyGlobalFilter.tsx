@@ -15,7 +15,7 @@ export const FuzzyGlobalFilter = <T extends RowData>({
       placeholder={placeholder}
       value={table.getState().globalFilter ?? ''}
       onChange={(event) => table.setGlobalFilter(event.target.value)}
-      className="max-w-sm"
+      className="min-w-sm md:max-w-md"
     />
   );
 };
