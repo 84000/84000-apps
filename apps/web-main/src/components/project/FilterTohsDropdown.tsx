@@ -3,11 +3,7 @@ import { FilterPopover } from './FilterPopover';
 import { ComponentPropsWithRef, useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { TableProject } from './TableProject';
-
-export type MinMax = {
-  min: number;
-  max: number;
-};
+import { MinMax } from './MinMax';
 
 const TOH_RANGES = [
   '1 - 500',
@@ -36,8 +32,8 @@ export const filterFn: FilterFn<TableProject> = (
 
   const tohs = row.getValue(columnId) as string;
   const tohNumbers = tohs
-    ?.split(',')
-    .map((toh) => Number.parseInt(toh.split(' ')[-1]));
+    ?.split(', ')
+    .map((toh) => Number.parseInt(toh.match(/\d{1,4}/)?.[0] || '0'));
   for (const { min, max } of filter) {
     for (const toh of tohNumbers) {
       if (toh >= min && toh <= max) {

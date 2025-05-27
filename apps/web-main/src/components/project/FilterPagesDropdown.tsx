@@ -3,11 +3,7 @@ import { FilterPopover } from './FilterPopover';
 import { ComponentPropsWithRef, useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { TableProject } from './TableProject';
-
-export type MinMax = {
-  min: number;
-  max: number;
-};
+import { MinMax } from './MinMax';
 
 const PAGE_RANGES = [
   '1 to 2 pages',
