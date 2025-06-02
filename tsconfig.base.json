@@ -18,8 +18,8 @@
       "@data-access": ["libs/data-access/src/index.ts"],
       "@design-system": ["libs/design-system/src/index.ts"],
       "@design-system-css": ["libs/design-system/src/lib/theme/global.css"],
-      "@lib-utils": ["libs/lib-utils/src/index.ts"],
-      "@lib-editing": ["libs/lib-editing/src/index.ts"]
+      "@lib-editing": ["libs/lib-editing/src/index.ts"],
+      "@lib-utils": ["libs/lib-utils/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
