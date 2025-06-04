@@ -1,30 +1,26 @@
 export type AnnotationDTOType =
   | 'abbreviation'
+  | 'audio'
   | 'blockquote'
-  | 'distinct'
-  | 'end-note'
   | 'end-note-link'
-  | 'emphasis'
-  | 'foreign'
   | 'glossary-instance'
   | 'has-abbreviation'
   | 'heading'
+  | 'image'
   | 'inline-title'
   | 'internal-link'
   | 'leading-space'
   | 'line'
   | 'line-group'
-  | 'line-break'
   | 'link'
   | 'list'
   | 'list-item'
   | 'mantra'
   | 'paragraph'
+  | 'quote'
   | 'quoted'
   | 'reference'
-  | 'small-caps'
   | 'span'
-  | 'sub'
   | 'table-body-data'
   | 'table-body-header'
   | 'table-body-row'
@@ -33,31 +29,27 @@ export type AnnotationDTOType =
 
 export type AnnotationType =
   | 'abbreviation'
+  | 'audio'
   | 'blockquote'
-  | 'distinct'
-  | 'emphasis'
-  | 'endNote'
   | 'endNoteLink'
-  | 'foreign'
   | 'glossary'
   | 'hasAbbreviation'
   | 'heading'
+  | 'image'
   | 'inlineTitle'
   | 'internalLink'
   | 'leadingSpace'
   | 'line'
   | 'lineGroup'
-  | 'lineBreak'
   | 'link'
   | 'list'
   | 'listItem'
   | 'mantra'
   | 'paragraph'
+  | 'quote'
   | 'quoted'
   | 'reference'
-  | 'smallCaps'
   | 'span'
-  | 'subscript'
   | 'tableBodyData'
   | 'tableBodyHeader'
   | 'tableBodyRow'
@@ -66,31 +58,27 @@ export type AnnotationType =
 
 const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   abbreviation: 'abbreviation',
+  audio: 'audio',
   blockquote: 'blockquote',
-  distinct: 'distinct',
-  'end-note': 'endNote',
   'end-note-link': 'endNoteLink',
-  emphasis: 'emphasis',
-  foreign: 'foreign',
   'glossary-instance': 'glossary',
   'has-abbreviation': 'hasAbbreviation',
   heading: 'heading',
+  image: 'image',
   'inline-title': 'inlineTitle',
   'internal-link': 'internalLink',
   'leading-space': 'leadingSpace',
   line: 'line',
   'line-group': 'lineGroup',
-  'line-break': 'lineBreak',
   link: 'link',
   list: 'list',
   'list-item': 'listItem',
   mantra: 'mantra',
   paragraph: 'paragraph',
+  quote: 'quote',
   quoted: 'quoted',
   reference: 'reference',
-  'small-caps': 'smallCaps',
   span: 'span',
-  sub: 'subscript',
   'table-body-data': 'tableBodyData',
   'table-body-header': 'tableBodyHeader',
   'table-body-row': 'tableBodyRow',
@@ -99,9 +87,10 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
 } as const;
 
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
-  'end-note-link',
+  'has-abbreviation',
   'leading-space',
   'paragraph',
+  'quoted',
   'reference',
   'span',
   'unknown',

@@ -1,3 +1,3 @@
 import { pass } from './transformer';
 
-export const lineBreak = pass;
+export const quote = pass;

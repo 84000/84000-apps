@@ -19,38 +19,24 @@ export type AbbreviationAnnotation = AnnotationBase & {
   text: string;
 };
 
+export type AudioAnnotation = AnnotationBase & {
+  type: 'audio';
+  src: string;
+  mediaType: string;
+};
+
 export type BlockquoteAnnotation = AnnotationBase & {
   type: 'blockquote';
   text: string;
-};
-
-export type DistinctAnnotation = AnnotationBase & {
-  type: 'distinct';
-};
-
-export type EmphasisAnnotation = AnnotationBase & {
-  type: 'emphasis';
-  text: string;
-};
-
-export type EndNoteAnnotation = AnnotationBase & {
-  type: 'endNote';
-  linkText: string;
-  endNoteUuid: string;
 };
 
 export type EndNoteLinkAnnotation = AnnotationBase & {
   type: 'endNoteLink';
 };
 
-export type ForeignAnnotation = AnnotationBase & {
-  type: 'foreign';
-  language: TranslationLanguage;
-};
-
 export type GlossaryInstanceAnnotation = AnnotationBase & {
   type: 'glossary';
-  glossaryUuid: string;
+  uuid: string;
 };
 
 export type HasAbbreviationAnnotation = AnnotationBase & {
@@ -62,6 +48,15 @@ export type HeadingAnnotation = AnnotationBase & {
   level: number;
 };
 
+export type LeadingSpaceAnnotation = AnnotationBase & {
+  type: 'leadingSpace';
+};
+
+export type ImageAnnotation = AnnotationBase & {
+  type: 'image';
+  src: string;
+};
+
 export type InlineTitleAnnotation = AnnotationBase & {
   type: 'inlineTitle';
   language: TranslationLanguage;
@@ -70,18 +65,12 @@ export type InlineTitleAnnotation = AnnotationBase & {
 export type InternalLinkAnnotation = AnnotationBase & {
   type: 'internalLink';
   href: string;
-};
-
-export type LeadingSpaceAnnotation = AnnotationBase & {
-  type: 'leadingSpace';
+  text?: string;
+  isPending: boolean;
 };
 
 export type LineAnnotation = AnnotationBase & {
   type: 'line';
-};
-
-export type LineBreakAnnotation = AnnotationBase & {
-  type: 'lineBreak';
 };
 
 export type LineGroupAnnotation = AnnotationBase & {
@@ -111,27 +100,22 @@ export type ParagraphAnnotation = AnnotationBase & {
   type: 'paragraph';
 };
 
-export type ReferenceAnnotation = AnnotationBase & {
-  type: 'reference';
+export type QuoteAnnotation = AnnotationBase & {
+  type: 'quote';
+  uuid?: string;
 };
 
 export type QuotedAnnotation = AnnotationBase & {
   type: 'quoted';
-  quotedUuid: string;
-  // TODO: determine type for quotedType
-  quotedType: string;
+  uuid?: string;
 };
 
-export type SmallCapsAnnotation = AnnotationBase & {
-  type: 'smallCaps';
+export type ReferenceAnnotation = AnnotationBase & {
+  type: 'reference';
 };
 
 export type SpanAnnotation = AnnotationBase & {
   type: 'span';
-};
-
-export type SubscriptAnnotation = AnnotationBase & {
-  type: 'subscript';
 };
 
 export type TableBodyDataAnnotation = AnnotationBase & {
@@ -155,15 +139,16 @@ export type UnknownAnnotation = AnnotationBase & {
 };
 
 export type AnnotationDTOContentKey =
-  | 'endnote_xmlId'
-  | 'glossary_xmlId'
   | 'href'
   | 'lang'
   | 'level'
   | 'link-text'
+  | 'link-type'
+  | 'media-type'
   | 'paragraph'
+  | 'src'
   | 'title'
-  | 'quoted_xmlId';
+  | 'uuid';
 
 export type AnnotationDTOContent = Record<AnnotationDTOContentKey, unknown>;
 
@@ -181,31 +166,27 @@ export type AnnotationsDTO = AnnotationDTO[];
 
 export type Annotation =
   | AbbreviationAnnotation
+  | AudioAnnotation
   | BlockquoteAnnotation
-  | DistinctAnnotation
-  | EmphasisAnnotation
-  | EndNoteAnnotation
   | EndNoteLinkAnnotation
-  | ForeignAnnotation
   | GlossaryInstanceAnnotation
   | HasAbbreviationAnnotation
   | HeadingAnnotation
+  | ImageAnnotation
   | InlineTitleAnnotation
   | InternalLinkAnnotation
   | LeadingSpaceAnnotation
   | LineAnnotation
-  | LineBreakAnnotation
-  | LinkAnnotation
   | LineGroupAnnotation
+  | LinkAnnotation
   | ListAnnotation
   | ListItemAnnotation
   | MantraAnnotation
   | ParagraphAnnotation
+  | QuoteAnnotation
   | QuotedAnnotation
   | ReferenceAnnotation
-  | SmallCapsAnnotation
   | SpanAnnotation
-  | SubscriptAnnotation
   | TableBodyDataAnnotation
   | TableBodyHeaderAnnotation
   | TableBodyRowAnnotation
@@ -235,58 +216,43 @@ const dtoToAnnotationMap: Record<
       ...baseAnnotationFromDTO(dto),
     } as AbbreviationAnnotation;
   },
+  audio: (dto: AnnotationDTO): AudioAnnotation => {
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const audio = baseAnnotation as AudioAnnotation;
+    dto.content.forEach((content) => {
+      if (content.src) {
+        audio.src = content.src as string;
+      }
+      if (content['media-type']) {
+        audio.mediaType = content['media-type'] as string;
+      }
+    });
+
+    return audio;
+  },
   blockquote: (dto: AnnotationDTO): QuotedAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
     } as QuotedAnnotation;
   },
-  distinct: (dto: AnnotationDTO): DistinctAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as DistinctAnnotation;
-  },
-  emphasis: (dto: AnnotationDTO): EmphasisAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as EmphasisAnnotation;
-  },
-  'end-note': (dto: AnnotationDTO): EndNoteAnnotation => {
+  'end-note-link': (dto: AnnotationDTO): EndNoteLinkAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);
-    const endNote = baseAnnotation as EndNoteAnnotation;
+    const endNote = baseAnnotation as EndNoteLinkAnnotation;
     dto.content.forEach((content) => {
-      if (content['link-text']) {
-        endNote.linkText = content['link-text'] as string;
-      }
-      if (content.endnote_xmlId) {
-        endNote.endNoteUuid = content.endnote_xmlId as string;
+      if (content.uuid) {
+        endNote.uuid = content.uuid as string;
       }
     });
 
     return endNote;
-  },
-  'end-note-link': (dto: AnnotationDTO): EndNoteLinkAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as EndNoteLinkAnnotation;
-  },
-  foreign: (dto: AnnotationDTO): ForeignAnnotation => {
-    const baseAnnotation = baseAnnotationFromDTO(dto);
-    const foreignAnnotation = baseAnnotation as ForeignAnnotation;
-    dto.content.forEach((content) => {
-      if (content.lang) {
-        foreignAnnotation.language = content.lang as TranslationLanguage;
-      }
-    });
-
-    return foreignAnnotation;
   },
   'glossary-instance': (dto: AnnotationDTO): GlossaryInstanceAnnotation => {
     const glossaryInstance = baseAnnotationFromDTO(
       dto,
     ) as GlossaryInstanceAnnotation;
     dto.content.forEach((content) => {
-      if (content.glossary_xmlId) {
-        glossaryInstance.glossaryUuid = content.glossary_xmlId as string;
+      if (content.uuid) {
+        glossaryInstance.uuid = content.uuid as string;
       }
     });
 
@@ -308,6 +274,17 @@ const dtoToAnnotationMap: Record<
 
     return heading;
   },
+  image: (dto: AnnotationDTO): ImageAnnotation => {
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const image = baseAnnotation as ImageAnnotation;
+    dto.content.forEach((content) => {
+      if (content.src) {
+        image.src = content.src as string;
+      }
+    });
+
+    return image;
+  },
   'inline-title': (dto: AnnotationDTO): InlineTitleAnnotation => {
     const inlineTitle = baseAnnotationFromDTO(dto) as InlineTitleAnnotation;
     dto.content.forEach((content) => {
@@ -324,11 +301,19 @@ const dtoToAnnotationMap: Record<
       if (content.href) {
         internalLink.href = content.href as string;
       }
+
+      if (content['link-text']) {
+        internalLink.text = content['link-text'] as string;
+      }
+
+      if (content['link-type']) {
+        internalLink.isPending = true;
+      }
     });
 
     return internalLink;
   },
-  'leading-space': (dto: AnnotationDTO): LeadingSpaceAnnotation => {
+  'leading-space': (dto: AnnotationDTO) => {
     return {
       ...baseAnnotationFromDTO(dto),
       content: [],
@@ -339,12 +324,6 @@ const dtoToAnnotationMap: Record<
       ...baseAnnotationFromDTO(dto),
       content: [],
     } as LineAnnotation;
-  },
-  'line-break': (dto: AnnotationDTO): LineBreakAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-      content: [],
-    } as LineBreakAnnotation;
   },
   'line-group': (dto: AnnotationDTO): LineGroupAnnotation => {
     return {
@@ -389,12 +368,21 @@ const dtoToAnnotationMap: Record<
       content: [],
     } as ParagraphAnnotation;
   },
+  quote: (dto: AnnotationDTO): QuoteAnnotation => {
+    const quotedAnnotation = baseAnnotationFromDTO(dto) as QuoteAnnotation;
+    dto.content.forEach((content) => {
+      if (content.uuid) {
+        quotedAnnotation.uuid = content.uuid as string;
+      }
+    });
+
+    return quotedAnnotation;
+  },
   quoted: (dto: AnnotationDTO): QuotedAnnotation => {
     const quotedAnnotation = baseAnnotationFromDTO(dto) as QuotedAnnotation;
     dto.content.forEach((content) => {
-      if (content.quoted_xmlId) {
-        quotedAnnotation.quotedType = 'passage';
-        quotedAnnotation.quotedUuid = content.quoted_xmlId as string;
+      if (content.uuid) {
+        quotedAnnotation.uuid = content.uuid as string;
       }
     });
 
@@ -406,23 +394,11 @@ const dtoToAnnotationMap: Record<
       content: [],
     } as ReferenceAnnotation;
   },
-  'small-caps': (dto: AnnotationDTO): SmallCapsAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-      content: [],
-    } as SmallCapsAnnotation;
-  },
   span: (dto: AnnotationDTO): SpanAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
       content: [],
     } as SpanAnnotation;
-  },
-  sub: (dto: AnnotationDTO): SubscriptAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-      content: [],
-    } as SubscriptAnnotation;
   },
   'table-body-data': (dto: AnnotationDTO): TableBodyDataAnnotation => {
     return {
