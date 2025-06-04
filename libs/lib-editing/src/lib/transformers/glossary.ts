@@ -13,8 +13,7 @@ export const glossary: Transformer = ({ block, annotation }) => {
           {
             type: 'link',
             attrs: {
-              href:
-                (annotation as GlossaryInstanceAnnotation).glossaryUuid || '#',
+              href: (annotation as GlossaryInstanceAnnotation).uuid || '#',
             },
           },
         ],
