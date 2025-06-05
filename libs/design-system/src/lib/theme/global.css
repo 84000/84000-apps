@@ -1,13 +1,14 @@
+@import (
+  'https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&display=swap'
+);
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './editor.css';
 
 @layer base {
   :root {
-    --radius: 0.5rem;
-
     --background: 0 0% 100%;
-    --foreground: 240 6% 10%;
+    --foreground: 240 10% 4%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 4%;
     --popover: 0 0% 100%;
@@ -20,19 +21,24 @@
     --muted-foreground: 240 4% 46%;
     --accent: 240 5% 96%;
     --accent-foreground: 240 6% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 86% 97%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 240 6% 10%;
+    --success: 142 76% 36%;
+    --success-hover: 142 72% 29%;
+    --success-foreground: 0 0% 98%;
+    --gray: 216, 12%, 84%;
     --chart-1: 173 58% 39%;
     --chart-2: 12 76% 61%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --gray: 216, 12%, 84%;
 
-    --sidebar-foreground: 240 5% 26%;
     --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 5% 26%;
     --sidebar-primary: 240 6% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 5% 96%;
@@ -40,19 +46,10 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 240 5% 65%;
 
-    --success: 54, 199, 108;
-    --success-foreground: 235, 250, 240;
     --warning: 255, 214, 72;
     --warning-foreground: 255, 249, 229;
-    --error: 255, 102, 46;
-    --error-foreground: 255, 229, 237;
-
-    --emerald: 179, 79%, 32%;
-    --ochre: 36, 86%, 52%;
-    --navy: 204, 100%, 22%;
-    --brick: 346, 71%, 39%;
-    --slate: 205, 36%, 53%;
-    --gray: 216, 12%, 84%;
+    --error: var(--destructive);
+    --error-foreground: var(--destructive-foreground);
   }
 
   * {
@@ -66,58 +63,60 @@
 
 @media (prefers-color-scheme: dark) {
   .dark {
-    --radius: 0.5rem;
-
     --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
+    --foreground: 0 0% 100%;
     --card: 240 10% 4%;
-    --card-foreground: 0 0% 98%;
+    --card-foreground: 0 0% 100%;
     --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 100%;
     --primary: 0 0% 98%;
     --primary-foreground: 240 6% 10%;
     --secondary: 240 4% 16%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
+    --muted: 240 6% 10%;
     --muted-foreground: 240 5% 65%;
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 86% 97%;
-    --border: 240 4% 16%;
+    --accent: 240 4% 10%;
+    --accent-foreground: 240 5% 96%;
+    --destructive: 0 0% 98%;
+    --destructive-foreground: 0 84% 60%;
+    --border: 240 6% 90%;
     --input: 240 4% 16%;
     --ring: 240 5% 84%;
+    --success: 142 76% 36%;
+    --success-hover: 142 72% 29%;
+    --success-foreground: 0 0% 98%;
     --chart-1: 220 70% 50%;
     --chart-2: 340 75% 55%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 160 60% 45%;
-    --sidebar-background: 240 6% 10%;
-    --sidebar-foreground: 240 5% 96%;
-    --sidebar-primary: 224 76% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4% 16%;
+    --gray: 216, 12%, 84%;
+
+    --sidebar-background: 240 5% 26%;
+    --sidebar-foreground: 0 0% 200%;
+
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 240 6% 10%;
+    --sidebar-accent: 240 6% 10%;
     --sidebar-accent-foreground: 240 5% 96%;
     --sidebar-border: 240 4% 16%;
     --sidebar-ring: 240 5% 84%;
 
-    --success: 54, 199, 108;
-    --success-foreground: 235, 250, 240;
     --warning: 255, 214, 72;
     --warning-foreground: 255, 249, 229;
-    --error: 255, 102, 46;
-    --error-foreground: 255, 229, 237;
-
-    --emerald: 179, 79%, 32%;
-    --ochre: 36, 86%, 52%;
-    --navy: 204, 100%, 22%;
-    --brick: 346, 71%, 39%;
-    --slate: 205, 36%, 53%;
-    --gray: 216, 12%, 84%;
+    --error: var(--destructive);
+    --error-foreground: var(--destructive-foreground);
   }
 }
 
 @theme {
+  --radius: 0.5rem;
+  --font-sans:
+    'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif:
+    'Roboto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-background: hsl(var(--background));
@@ -158,19 +157,83 @@
   --color-dark: hsl(var(--gray));
   --color-darkborder: hsl(var(--gray));
   --color-darkgray: hsl(var(--gray));
-  --color-error: rgba(var(--error));
-  --color-error-foreground: rgba(var(--error-foreground));
+  --color-error: hsl(var(--error));
+  --color-error-foreground: hsl(var(--error-foreground));
   --color-gray: hsl(var(--muted));
-  --color-success: rgba(var(--success));
-  --color-success-foreground: rgba(var(--success-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
   --color-surface: hsl(var(--primary-foreground));
   --color-warning: rgba(var(--warning));
   --color-warning-foreground: rgba(var(--warning-foreground));
   --color-lightgray: hsl(var(--muted));
 
-  --color-emerald: hsl(var(--emerald));
-  --color-ochre: hsl(var(--ochre));
-  --color-navy: hsl(var(--navy));
-  --color-brick: hsl(var(--brick));
-  --color-slate: hsl(var(--slate));
+  --color-navy: hsl(204, 100%, 22%);
+  --color-navy-25: hsl(213, 27%, 94%);
+  --color-navy-50: hsl(208, 28%, 87%);
+  --color-navy-100: hsl(209, 28%, 74%);
+  --color-navy-200: hsl(208, 27%, 62%);
+  --color-navy-300: hsl(209, 27%, 50%);
+  --color-navy-400: hsl(208, 45%, 37%);
+  --color-navy-500: hsl(204, 100%, 22%);
+  --color-navy-600: hsl(204, 100%, 20%);
+  --color-navy-700: hsl(205, 100%, 17%);
+  --color-navy-800: hsl(205, 100%, 15%);
+  --color-navy-900: hsl(206, 100%, 12%);
+  --color-navy-950: hsl(207, 100%, 10%);
+
+  --color-brick: hsl(346, 71%, 39%);
+  --color-brick-25: hsl(355, 57%, 95%);
+  --color-brick-50: hsl(355, 57%, 91%);
+  --color-brick-100: hsl(356, 54%, 82%);
+  --color-brick-200: hsl(356, 51%, 73%);
+  --color-brick-300: hsl(353, 48%, 62%);
+  --color-brick-400: hsl(352, 46%, 52%);
+  --color-brick-500: hsl(346, 71%, 39%);
+  --color-brick-600: hsl(346, 72%, 35%);
+  --color-brick-700: hsl(346, 74%, 30%);
+  --color-brick-800: hsl(345, 75%, 25%);
+  --color-brick-900: hsl(346, 78%, 21%);
+  --color-brick-950: hsl(346, 82%, 17%);
+
+  --color-ochre: hsl(36, 86%, 52%);
+  --color-ochre-25: hsl(32, 88%, 97%);
+  --color-ochre-50: hsl(30, 88%, 93%);
+  --color-ochre-100: hsl(31, 88%, 86%);
+  --color-ochre-200: hsl(32, 87%, 79%);
+  --color-ochre-300: hsl(32, 85%, 72%);
+  --color-ochre-400: hsl(33, 84%, 64%);
+  --color-ochre-500: hsl(36, 85%, 51%);
+  --color-ochre-600: hsl(33, 66%, 48%);
+  --color-ochre-700: hsl(32, 62%, 42%);
+  --color-ochre-800: hsl(31, 60%, 36%);
+  --color-ochre-900: hsl(31, 59%, 29%);
+  --color-ochre-950: hsl(36, 92%, 19%);
+
+  --color-emerald: hsl(179, 79%, 32%);
+  --color-emerald-25: hsl(173, 31%, 95%);
+  --color-emerald-50: hsl(176, 31%, 90%);
+  --color-emerald-100: hsl(176, 31%, 80%);
+  --color-emerald-200: hsl(178, 31%, 69%);
+  --color-emerald-300: hsl(177, 31%, 59%);
+  --color-emerald-400: hsl(179, 36%, 48%);
+  --color-emerald-500: hsl(179, 79%, 32%);
+  --color-emerald-600: hsl(179, 80%, 28%);
+  --color-emerald-700: hsl(179, 83%, 24%);
+  --color-emerald-800: hsl(179, 86%, 20%);
+  --color-emerald-900: hsl(179, 88%, 16%);
+  --color-emerald-950: hsl(180, 91%, 13%);
+
+  --color-slate: hsl(205, 36%, 53%);
+  --color-slate-25: hsl(210, 40%, 96%);
+  --color-slate-50: hsl(204, 37%, 92%);
+  --color-slate-100: hsl(206, 37%, 84%);
+  --color-slate-200: hsl(206, 37%, 76%);
+  --color-slate-300: hsl(205, 37%, 69%);
+  --color-slate-400: hsl(205, 37%, 61%);
+  --color-slate-500: hsl(205, 36%, 53%);
+  --color-slate-600: hsl(205, 32%, 46%);
+  --color-slate-700: hsl(205, 33%, 40%);
+  --color-slate-800: hsl(205, 34%, 34%);
+  --color-slate-900: hsl(205, 35%, 28%);
+  --color-slate-950: hsl(204, 36%, 22%);
 }
