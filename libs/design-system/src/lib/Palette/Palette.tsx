@@ -54,10 +54,18 @@ export const Palette = () => {
             labelColor="text-navy"
             colors={[
               'bg-navy',
-              'bg-navy/80',
-              'bg-navy/60',
-              'bg-navy/40',
-              'bg-navy/20',
+              'bg-navy-25',
+              'bg-navy-50',
+              'bg-navy-100',
+              'bg-navy-200',
+              'bg-navy-300',
+              'bg-navy-400',
+              'bg-navy-500',
+              'bg-navy-600',
+              'bg-navy-700',
+              'bg-navy-800',
+              'bg-navy-900',
+              'bg-navy-950',
             ]}
           />
           <PaletteColor
@@ -65,10 +73,18 @@ export const Palette = () => {
             labelColor="text-brick"
             colors={[
               'bg-brick',
-              'bg-brick/80',
-              'bg-brick/60',
-              'bg-brick/40',
-              'bg-brick/20',
+              'bg-brick-25',
+              'bg-brick-50',
+              'bg-brick-100',
+              'bg-brick-200',
+              'bg-brick-300',
+              'bg-brick-400',
+              'bg-brick-500',
+              'bg-brick-600',
+              'bg-brick-700',
+              'bg-brick-800',
+              'bg-brick-900',
+              'bg-brick-950',
             ]}
           />
           <PaletteColor
@@ -76,10 +92,18 @@ export const Palette = () => {
             labelColor="text-ochre"
             colors={[
               'bg-ochre',
-              'bg-ochre/80',
-              'bg-ochre/60',
-              'bg-ochre/40',
-              'bg-ochre/20',
+              'bg-ochre-25',
+              'bg-ochre-50',
+              'bg-ochre-100',
+              'bg-ochre-200',
+              'bg-ochre-300',
+              'bg-ochre-400',
+              'bg-ochre-500',
+              'bg-ochre-600',
+              'bg-ochre-700',
+              'bg-ochre-800',
+              'bg-ochre-900',
+              'bg-ochre-950',
             ]}
           />
           <PaletteColor
@@ -87,10 +111,18 @@ export const Palette = () => {
             labelColor="text-emerald"
             colors={[
               'bg-emerald',
-              'bg-emerald/80',
-              'bg-emerald/60',
-              'bg-emerald/40',
-              'bg-emerald/20',
+              'bg-emerald-25',
+              'bg-emerald-50',
+              'bg-emerald-100',
+              'bg-emerald-200',
+              'bg-emerald-300',
+              'bg-emerald-400',
+              'bg-emerald-500',
+              'bg-emerald-600',
+              'bg-emerald-700',
+              'bg-emerald-800',
+              'bg-emerald-900',
+              'bg-emerald-950',
             ]}
           />
           <PaletteColor
@@ -98,21 +130,18 @@ export const Palette = () => {
             labelColor="text-slate"
             colors={[
               'bg-slate',
-              'bg-slate/80',
-              'bg-slate/60',
-              'bg-slate/40',
-              'bg-slate/20',
-            ]}
-          />
-          <PaletteColor
-            label="gray"
-            labelColor="text-gray"
-            colors={[
-              'bg-gray',
-              'bg-gray/80',
-              'bg-gray/60',
-              'bg-gray/40',
-              'bg-gray/20',
+              'bg-slate-25',
+              'bg-slate-50',
+              'bg-slate-100',
+              'bg-slate-200',
+              'bg-slate-300',
+              'bg-slate-400',
+              'bg-slate-500',
+              'bg-slate-600',
+              'bg-slate-700',
+              'bg-slate-800',
+              'bg-slate-900',
+              'bg-slate-950',
             ]}
           />
         </div>
@@ -308,6 +337,16 @@ export const Palette = () => {
               'bg-input/60',
               'bg-input/40',
               'bg-input/20',
+            ]}
+          />
+          <PaletteColor
+            label="gray"
+            colors={[
+              'bg-gray',
+              'bg-gray/80',
+              'bg-gray/60',
+              'bg-gray/40',
+              'bg-gray/20',
             ]}
           />
         </div>

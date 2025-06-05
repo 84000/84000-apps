@@ -8,6 +8,8 @@ import {
   H2,
   H3,
   H4,
+  Headline,
+  Hero,
   Lead,
   LgText,
   Li,
@@ -19,6 +21,7 @@ import {
   Td,
   Th,
   Thead,
+  Section,
   Tr,
   Ul,
 } from './Typography';
@@ -33,8 +36,11 @@ type Story = StoryObj;
 export const Primary: Story = {
   render: (_props) => (
     <div className="flex flex-col gap-2">
-      <H1>The quick brown fox jumps over the lazy dog (H1)</H1>
-      <H2>The quick brown fox jumps over the lazy dog (H2)</H2>
+      <Hero>Hero Headline</Hero>
+      <Headline>Page Header (Headline)</Headline>
+      <Section>Section Title (Title)</Section>
+      <H1>Subsection Title (H1)</H1>
+      <H2>Feature Header (H2)</H2>
       <H3>The quick brown fox jumps over the lazy dog (H3)</H3>
       <H4>The quick brown fox jumps over the lazy dog (H4)</H4>
       <P>The quick brown fox jumps over the lazy dog (P)</P>
@@ -44,9 +50,8 @@ export const Primary: Story = {
       </Blockquote>
       <Ul>
         <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
-        <Li>The quick brown fox jumps over the lazy dog (Li)</Li>
       </Ul>
-      <div className="my-6 w-full overflow-y-auto">
+      <div className="pb-4 w-full overflow-y-auto">
         <HtmlTable>
           <Thead>
             <Tr>
@@ -69,18 +74,18 @@ export const Primary: Story = {
             </Tr>
           </Tbody>
         </HtmlTable>
-        <div>
-          <Code>
-            {'if (the) { quick brown fox jumps over the lazy dog; } (Code)'}
-          </Code>
-        </div>
-        <Lead>The quick brown fox jumps over the lazy dog (Lead)</Lead>
-        <LgText>The quick brown fox jumps over the lazy dog (LgText)</LgText>
-        <SmText>The quick brown fox jumps over the lazy dog (SmText)</SmText>
-        <MutedText>
-          The quick brown fox jumps over the lazy dog (MutedText)
-        </MutedText>
       </div>
+      <div>
+        <Code>
+          {'if (the) { quick brown fox jumps over the lazy dog; } (Code)'}
+        </Code>
+      </div>
+      <Lead>The quick brown fox jumps over the lazy dog (Lead)</Lead>
+      <LgText>The quick brown fox jumps over the lazy dog (LgText)</LgText>
+      <SmText>The quick brown fox jumps over the lazy dog (SmText)</SmText>
+      <MutedText>
+        The quick brown fox jumps over the lazy dog (MutedText)
+      </MutedText>
     </div>
   ),
 };
