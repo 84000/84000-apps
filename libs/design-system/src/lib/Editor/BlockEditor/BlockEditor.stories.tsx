@@ -85,6 +85,11 @@ export const Primary: Story = {
     isEditable: { control: 'boolean' },
     content: { control: 'object' },
   },
+  render: ({ isEditable, content }) => (
+    <div className="p-8">
+      <BlockEditor isEditable={isEditable} content={content} />
+    </div>
+  ),
 };
 
 export default meta;

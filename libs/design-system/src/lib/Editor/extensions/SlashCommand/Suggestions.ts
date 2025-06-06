@@ -22,101 +22,112 @@ type SuggestionType = Omit<
   'editor'
 >;
 
-const baseList: CommandSuggestionItem[] = [
-  {
-    title: 'Text',
-    description: 'Just start typing',
-    keywords: ['text', 'paragraph', 'p'],
-    icon: LetterTextIcon,
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .toggleNode('paragraph', 'paragraph')
-        .run();
-    },
+export const TextSuggestion: CommandSuggestionItem = {
+  title: 'Text',
+  description: 'Just start typing',
+  keywords: ['text', 'paragraph', 'p'],
+  icon: LetterTextIcon,
+  command: ({ editor, range }) => {
+    editor.chain().focus().toggleNode('paragraph', 'paragraph').run();
   },
-  {
-    title: 'Heading 1',
-    description: 'Big section heading.',
-    keywords: ['title', 'big', 'large', 'heading'],
-    icon: Heading1Icon,
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .setNode('heading', { level: 1 })
-        .run();
-    },
+};
+
+export const Heading1Suggestion: CommandSuggestionItem = {
+  title: 'Heading 1',
+  description: 'Big section heading.',
+  keywords: ['title', 'big', 'large', 'heading'],
+  icon: Heading1Icon,
+  command: ({ editor, range }) => {
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .setNode('heading', { level: 1 })
+      .run();
   },
-  {
-    title: 'Heading 2',
-    description: 'Medium section heading.',
-    keywords: ['subtitle', 'medium', 'heading'],
-    icon: Heading2Icon,
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .setNode('heading', { level: 2 })
-        .run();
-    },
+};
+
+export const Heading2Suggestion: CommandSuggestionItem = {
+  title: 'Heading 2',
+  description: 'Medium section heading.',
+  keywords: ['subtitle', 'medium', 'heading'],
+  icon: Heading2Icon,
+  command: ({ editor, range }) => {
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .setNode('heading', { level: 2 })
+      .run();
   },
-  {
-    title: 'Heading 3',
-    description: 'Small section heading.',
-    keywords: ['subtitle', 'small', 'heading'],
-    icon: Heading3Icon,
-    command: ({ editor, range }) => {
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .setNode('heading', { level: 3 })
-        .run();
-    },
+};
+
+export const Heading3Suggestion: CommandSuggestionItem = {
+  title: 'Heading 3',
+  description: 'Small section heading.',
+  keywords: ['subtitle', 'small', 'heading'],
+  icon: Heading3Icon,
+  command: ({ editor, range }) => {
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .setNode('heading', { level: 3 })
+      .run();
   },
-  {
-    title: 'Bullet List',
-    description: 'Create a simple bullet list.',
-    keywords: ['unordered', 'list', 'bullet'],
-    icon: ListIcon,
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleBulletList().run();
-    },
+};
+
+export const BulletListSuggestion: CommandSuggestionItem = {
+  title: 'Bullet List',
+  description: 'Create a simple bullet list.',
+  keywords: ['unordered', 'list', 'bullet'],
+  icon: ListIcon,
+  command: ({ editor, range }) => {
+    editor.chain().focus().deleteRange(range).toggleBulletList().run();
   },
-  {
-    title: 'Numbered List',
-    description: 'Create a list with numbering.',
-    keywords: ['ordered', 'list'],
-    icon: ListOrderedIcon,
-    command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).toggleOrderedList().run();
-    },
+};
+
+export const NumberListSuggestion: CommandSuggestionItem = {
+  title: 'Numbered List',
+  description: 'Create a list with numbering.',
+  keywords: ['ordered', 'list'],
+  icon: ListOrderedIcon,
+  command: ({ editor, range }) => {
+    editor.chain().focus().deleteRange(range).toggleOrderedList().run();
   },
-  {
-    title: 'Quote',
-    description: 'Capture a quote.',
-    keywords: ['blockquote'],
-    icon: TextQuoteIcon,
-    command: ({ editor, range }) =>
-      editor
-        .chain()
-        .focus()
-        .deleteRange(range)
-        .toggleNode('paragraph', 'paragraph')
-        .toggleBlockquote()
-        .run(),
-  },
+};
+
+export const QuoteSuggestion: CommandSuggestionItem = {
+  title: 'Quote',
+  description: 'Capture a quote.',
+  keywords: ['blockquote'],
+  icon: TextQuoteIcon,
+  command: ({ editor, range }) =>
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .toggleNode('paragraph', 'paragraph')
+      .toggleBlockquote()
+      .run(),
+};
+
+const defaultSuggestions: CommandSuggestionItem[] = [
+  TextSuggestion,
+  Heading1Suggestion,
+  Heading2Suggestion,
+  Heading3Suggestion,
+  BulletListSuggestion,
+  NumberListSuggestion,
+  QuoteSuggestion,
 ];
 
-export const getSuggestion = (): SuggestionType => {
+export const getSuggestion = (
+  suggestions: CommandSuggestionItem[] = defaultSuggestions,
+): SuggestionType => {
   return {
     items: ({ query }) => {
-      return baseList.filter((item: CommandSuggestionItem) => {
+      return suggestions.filter((item: CommandSuggestionItem) => {
         return item.keywords.some((kwd) => kwd.startsWith(query.toLowerCase()));
       });
     },
