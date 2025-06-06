@@ -6,7 +6,7 @@ import {
   UL_STYLE,
 } from '../../Typography/Typography';
 
-export const StarterKit = TiptapStarterKit.configure({
+export default TiptapStarterKit.configure({
   document: false,
   heading: false,
   paragraph: false,

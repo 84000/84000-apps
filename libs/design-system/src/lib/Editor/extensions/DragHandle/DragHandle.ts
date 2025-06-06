@@ -389,7 +389,7 @@ export const DragHandle = Extension.create({
 
   addOptions() {
     return {
-      dragHandleWidth: 20,
+      dragHandleWidth: 25,
       scrollTreshold: 100,
       excludedTags: [],
       customNodes: [],

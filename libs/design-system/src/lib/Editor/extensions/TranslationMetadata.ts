@@ -1,7 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 
-export const TranslationMetadata = Extension.create({
+export default Extension.create({
   name: 'translationMetadata',
   addGlobalAttributes() {
     const prohibitedNodes = ['text', 'doc'];
