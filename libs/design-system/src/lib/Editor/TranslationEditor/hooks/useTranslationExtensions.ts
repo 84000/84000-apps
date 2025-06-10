@@ -23,6 +23,8 @@ import TranslationDocument from '../extensions/TranslationDocument';
 import { PassageNode } from '../extensions/Passage';
 import { CommandSuggestionItem } from '../../extensions/SlashCommand/SuggestionList';
 import { TableOfContentsIcon } from 'lucide-react';
+import { LeadingSpace } from '../../extensions/LeadingSpace';
+import { Trailer } from '../../extensions/Trailer';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -56,14 +58,16 @@ export const useTranslationExtensions = () => {
     extensions: [
       TranslationDocument,
       Heading,
+      LeadingSpace,
       Link,
-      Paragraph,
+      Paragraph.configure({ HTMLAttributes: { class: 'leading-7' } }),
       PassageNode,
       Placeholder,
       SlashCommand.configure({
         suggestion: getSuggestion(suggestions),
       }),
       StarterKit,
+      Trailer,
       TranslationMetadata,
       TextAlign,
       Underline,

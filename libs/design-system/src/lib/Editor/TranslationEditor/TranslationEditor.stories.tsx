@@ -17,6 +17,7 @@ const content = {
         {
           attrs: {
             level: 1,
+            hasTrailer: true,
           },
           type: 'heading',
           content: [
@@ -40,6 +41,9 @@ const content = {
       content: [
         {
           type: 'paragraph',
+          attrs: {
+            hasTrailer: true,
+          },
           content: [
             {
               type: 'text',
@@ -61,6 +65,9 @@ const content = {
       content: [
         {
           type: 'paragraph',
+          attrs: {
+            hasLeadingSpace: true,
+          },
           content: [
             {
               type: 'text',
@@ -70,6 +77,9 @@ const content = {
         },
         {
           type: 'paragraph',
+          attrs: {
+            hasLeadingSpace: true,
+          },
           content: [
             {
               type: 'text',
