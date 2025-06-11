@@ -34,10 +34,11 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
         hasLeadingSpace:
           !!instance.editor.getAttributes('paragraph')['hasLeadingSpace'],
 
-        hasTrailer: !!instance.editor.getAttributes('paragraph')['hasTrailer'],
+        hasTrailer:
+          !!instance.editor.getAttributes('paragraph')['hasTrailer'] ||
+          !!instance.editor.getAttributes('lineGroup')['hasTrailer'] ||
+          !!instance.editor.getAttributes('heading')['hasTrailer'],
       };
-      console.log(atts);
-      console.log(editor.getAttributes('paragraph'));
       return atts;
     },
   });

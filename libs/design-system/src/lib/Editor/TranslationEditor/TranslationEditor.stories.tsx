@@ -86,6 +86,29 @@ const content = {
             },
           ],
         },
+        {
+          type: 'lineGroup',
+          content: [
+            {
+              type: 'line',
+              content: [
+                {
+                  type: 'text',
+                  text: 'kiṃcij jīrṇe tu pāṣāṇe khapattraṃ sakalaṃ graset.',
+                },
+              ],
+            },
+            {
+              type: 'line',
+              content: [
+                {
+                  type: 'text',
+                  text: 'āśīviṣaṃ ca bhūtāni sarvāṇi na viśeṣayet.',
+                },
+              ],
+            },
+          ],
+        },
       ],
     },
   ],

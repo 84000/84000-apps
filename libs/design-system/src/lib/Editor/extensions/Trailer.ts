@@ -29,7 +29,7 @@ export const Trailer = Extension.create<TrailerOptions>({
   name: 'trailer',
   addOptions() {
     return {
-      types: ['paragraph', 'heading'],
+      types: ['paragraph', 'heading', 'lineGroup'],
       defaultHasTrailer: false,
     };
   },
