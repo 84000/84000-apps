@@ -2,8 +2,8 @@
 
 import { EditorContent, JSONContent } from '@tiptap/react';
 import { useBlockEditor } from '../BlockEditor';
-import { MainBubbleMenu } from '../menus/MainBubbleMenu';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
+import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -35,7 +35,7 @@ export const TranslationEditor = ({
     <div className="flex h-full">
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
-        <MainBubbleMenu editor={editor} />
+        <TranslationBubbleMenu editor={editor} />
       </div>
     </div>
   );
