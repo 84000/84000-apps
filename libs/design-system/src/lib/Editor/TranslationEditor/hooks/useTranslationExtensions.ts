@@ -1,7 +1,15 @@
 'use client';
 
+import Underline from '@tiptap/extension-underline';
 import Heading from '../../extensions/Heading/Heading';
+import Image from '../../extensions/Image';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
+import {
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from '../../extensions/Table';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import {
   BulletListSuggestion,
@@ -13,7 +21,6 @@ import {
   TextSuggestion,
   getSuggestion,
 } from '../../extensions/SlashCommand/Suggestions';
-import Underline from '@tiptap/extension-underline';
 import Link from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
@@ -60,6 +67,7 @@ export const useTranslationExtensions = () => {
     extensions: [
       TranslationDocument,
       Heading,
+      Image,
       LeadingSpace,
       LineGroupNode,
       LineNode,
@@ -71,6 +79,10 @@ export const useTranslationExtensions = () => {
         suggestion: getSuggestion(suggestions),
       }),
       StarterKit,
+      Table,
+      TableCell,
+      TableHeader,
+      TableRow,
       Trailer,
       TranslationMetadata,
       TextAlign,
