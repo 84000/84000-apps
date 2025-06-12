@@ -10,6 +10,7 @@ export default TiptapStarterKit.configure({
   document: false,
   heading: false,
   paragraph: false,
+  italic: false,
   bulletList: {
     HTMLAttributes: {
       class: UL_STYLE,

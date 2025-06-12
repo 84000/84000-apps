@@ -2,7 +2,7 @@ import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react';
 import { ScrollArea, ScrollBar } from '../../../ScrollArea/ScrollArea';
 import { Separator } from '../../../Separator/Separator';
-import { TextButtons } from '../../menus/selectors';
+import { TextButtons } from './selectors/TextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { NodeSelector } from './selectors/NodeSelector';
 

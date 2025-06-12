@@ -34,6 +34,10 @@ import { LeadingSpace } from '../../extensions/LeadingSpace';
 import { Trailer } from '../../extensions/Trailer';
 import { LineGroupNode } from '../extensions/LineGroup/LineGroupNode';
 import { LineNode } from '../extensions/Line/LineNode';
+import { Subscript } from '../../extensions/Subscript';
+import { Superscript } from '../../extensions/Superscript';
+import { SmallCaps } from '../../extensions/SmallCaps';
+import { Italic } from '../../extensions/Italic';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -68,6 +72,7 @@ export const useTranslationExtensions = () => {
       TranslationDocument,
       Heading,
       Image,
+      Italic,
       LeadingSpace,
       LineGroupNode,
       LineNode,
@@ -78,7 +83,10 @@ export const useTranslationExtensions = () => {
       SlashCommand.configure({
         suggestion: getSuggestion(suggestions),
       }),
+      SmallCaps,
       StarterKit,
+      Subscript,
+      Superscript,
       Table,
       TableCell,
       TableHeader,
