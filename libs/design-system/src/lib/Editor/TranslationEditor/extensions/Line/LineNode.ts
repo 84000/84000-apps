@@ -3,13 +3,21 @@ import { mergeAttributes } from '@tiptap/core';
 
 export const LineNode = Node.create({
   name: 'line',
-  group: 'block',
-  content: 'inline*',
+
+  addOptions() {
+    return {
+      HTMLAttributes: {},
+    };
+  },
+
+  content: 'paragraph',
+
+  defining: true,
 
   parseHTML() {
     return [
       {
-        tag: 'line',
+        tag: 'li[type="line"]',
       },
     ];
   },
@@ -17,8 +25,17 @@ export const LineNode = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       'li',
-      mergeAttributes({ class: '-indent-8 pl-8' }, HTMLAttributes),
+      mergeAttributes(
+        { type: 'line', class: '-indent-8 pl-8' },
+        HTMLAttributes,
+      ),
       0,
     ];
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.commands.splitListItem(this.name),
+    };
   },
 });

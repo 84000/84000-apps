@@ -1,4 +1,4 @@
-import { Extension } from '@tiptap/core';
+import { Extension, mergeAttributes } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 
 export default Extension.create({
@@ -15,40 +15,50 @@ export default Extension.create({
         attributes: {
           uuid: {
             default: null,
-            parseHTML: (element) => element.getAttribute('data-uuid'),
+            parseHTML: (element) => element.getAttribute('uuid'),
             renderHTML: (attributes) => {
               if (!attributes.uuid) {
                 attributes.uuid = uuidv4();
               }
-              return { 'data-uuid': attributes.uuid };
+              return mergeAttributes(attributes, {
+                uuid: attributes.uuid,
+              });
             },
           },
           label: {
             default: null,
-            parseHTML: (element) => element.getAttribute('data-label'),
+            parseHTML: (element) => element.getAttribute('label'),
             renderHTML: (attributes) => {
-              return { 'data-label': attributes.label };
+              return mergeAttributes(attributes, {
+                label: attributes.label,
+              });
             },
           },
           class: {
             default: null,
-            parseHTML: (element) => element.getAttribute('data-class'),
+            parseHTML: (element) => element.getAttribute('class'),
             renderHTML: (attributes) => {
-              return { 'data-class': attributes.class };
+              return mergeAttributes(attributes, {
+                class: attributes.class,
+              });
             },
           },
           type: {
             default: null,
-            parseHTML: (element) => element.getAttribute('data-type'),
+            parseHTML: (element) => element.getAttribute('type'),
             renderHTML: (attributes) => {
-              return { 'data-type': attributes.type };
+              return mergeAttributes(attributes, {
+                type: attributes.type,
+              });
             },
           },
           sort: {
             default: 0,
-            parseHTML: (element) => element.getAttribute('data-sort'),
+            parseHTML: (element) => element.getAttribute('sort'),
             renderHTML: (attributes) => {
-              return { 'data-sort': attributes.sort };
+              return mergeAttributes(attributes, {
+                sort: attributes.sort,
+              });
             },
           },
         },

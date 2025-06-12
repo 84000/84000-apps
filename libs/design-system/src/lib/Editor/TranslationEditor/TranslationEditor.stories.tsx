@@ -93,8 +93,13 @@ const content = {
               type: 'line',
               content: [
                 {
-                  type: 'text',
-                  text: 'kiṃcij jīrṇe tu pāṣāṇe khapattraṃ sakalaṃ graset.',
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'kiṃcij jīrṇe tu pāṣāṇe khapattraṃ sakalaṃ graset.',
+                    },
+                  ],
                 },
               ],
             },
@@ -102,8 +107,13 @@ const content = {
               type: 'line',
               content: [
                 {
-                  type: 'text',
-                  text: 'āśīviṣaṃ ca bhūtāni sarvāṇi na viśeṣayet.',
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'āśīviṣaṃ ca bhūtāni sarvāṇi na viśeṣayet.',
+                    },
+                  ],
                 },
               ],
             },
