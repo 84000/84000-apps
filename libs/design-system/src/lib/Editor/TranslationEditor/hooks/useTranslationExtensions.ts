@@ -39,6 +39,7 @@ import { Superscript } from '../../extensions/Superscript';
 import { SmallCaps } from '../../extensions/SmallCaps';
 import { Italic } from '../../extensions/Italic';
 import { Indent } from '../../extensions/Indent';
+import { MantraMark } from '../extensions/Mantra/Mantra';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -79,6 +80,7 @@ export const useTranslationExtensions = () => {
       LineGroupNode,
       LineNode,
       Link,
+      MantraMark,
       Paragraph.configure({ HTMLAttributes: { class: 'leading-7' } }),
       PassageNode,
       Placeholder,

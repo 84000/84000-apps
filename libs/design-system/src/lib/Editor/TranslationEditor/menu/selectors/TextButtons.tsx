@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { LinkSelector } from './LinkSelector';
 import { Button } from '../../../../Button/Button';
+import { MantraSelector } from './MantraSelector';
 
 interface SelectorResult {
   isBold: boolean;
@@ -101,6 +102,7 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
           </Button>
         );
       })}
+      <MantraSelector editor={editor} />
       <LinkSelector editor={editor} />
     </>
   );
