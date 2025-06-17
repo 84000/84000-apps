@@ -2,9 +2,14 @@ import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { Button } from '../../../../Button/Button';
-import { ArrowDownToLineIcon, PilcrowRightIcon } from 'lucide-react';
+import {
+  ArrowDownToLineIcon,
+  IndentIcon,
+  PilcrowRightIcon,
+} from 'lucide-react';
 
 interface SelectorResult {
+  hasIndent: boolean;
   hasLeadingSpace: boolean;
   hasTrailer: boolean;
 }
@@ -24,6 +29,13 @@ const items = [
     },
     isActive: (state: { hasTrailer: boolean }) => state.hasTrailer,
   },
+  {
+    icon: IndentIcon,
+    onClick: (editor: Editor) => {
+      editor.chain().focus().toggleIndent().run();
+    },
+    isActive: (state: { hasIndent: boolean }) => state.hasIndent,
+  },
 ];
 
 export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
@@ -31,6 +43,7 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
     editor,
     selector: (instance) => {
       const atts = {
+        hasIndent: !!instance.editor.getAttributes('paragraph')['hasIndent'],
         hasLeadingSpace:
           !!instance.editor.getAttributes('paragraph')['hasLeadingSpace'],
 

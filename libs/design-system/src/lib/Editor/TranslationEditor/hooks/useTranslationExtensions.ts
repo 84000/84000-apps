@@ -38,6 +38,7 @@ import { Subscript } from '../../extensions/Subscript';
 import { Superscript } from '../../extensions/Superscript';
 import { SmallCaps } from '../../extensions/SmallCaps';
 import { Italic } from '../../extensions/Italic';
+import { Indent } from '../../extensions/Indent';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -72,6 +73,7 @@ export const useTranslationExtensions = () => {
       TranslationDocument,
       Heading,
       Image,
+      Indent,
       Italic,
       LeadingSpace,
       LineGroupNode,
