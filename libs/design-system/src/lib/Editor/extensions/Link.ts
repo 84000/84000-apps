@@ -4,8 +4,8 @@ import Link from '@tiptap/extension-link';
 export default Link.configure({
   HTMLAttributes: {
     class: cn(
-      '!text-foreground underline underline-offset-[3px] transition-colors cursor-pointer',
+      'text-slate underline decoration-slate underline-offset-[3px] transition-colors cursor-pointer',
     ),
   },
-  openOnClick: false,
+  openOnClick: true,
 });
