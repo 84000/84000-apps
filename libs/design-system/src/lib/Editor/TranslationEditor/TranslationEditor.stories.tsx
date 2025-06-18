@@ -40,6 +40,9 @@ const content = {
       content: [
         {
           type: 'paragraph',
+          attrs: {
+            hasTrailer: true,
+          },
           content: [
             {
               type: 'text',
@@ -61,6 +64,9 @@ const content = {
       content: [
         {
           type: 'paragraph',
+          attrs: {
+            hasLeadingSpace: true,
+          },
           content: [
             {
               type: 'text',
@@ -70,10 +76,46 @@ const content = {
         },
         {
           type: 'paragraph',
+          attrs: {
+            hasLeadingSpace: true,
+          },
           content: [
             {
               type: 'text',
               text: '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon four factors even at the cost of their lives. What are these four?',
+            },
+          ],
+        },
+        {
+          type: 'lineGroup',
+          content: [
+            {
+              type: 'line',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'kiṃcij jīrṇe tu pāṣāṇe khapattraṃ sakalaṃ graset.',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 'line',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'āśīviṣaṃ ca bhūtāni sarvāṇi na viśeṣayet.',
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },

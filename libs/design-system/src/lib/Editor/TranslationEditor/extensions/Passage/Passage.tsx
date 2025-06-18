@@ -9,7 +9,7 @@ export const Passage = ({ node, updateAttributes }: NodeViewProps) => {
   }
 
   return (
-    <NodeViewWrapper className="passage relative leading-7 mt-6 ml-6">
+    <NodeViewWrapper className="passage relative leading-7 ml-6">
       <label
         className="absolute -left-16 w-16 text-end text-slate hover:cursor-pointer"
         contentEditable={false}

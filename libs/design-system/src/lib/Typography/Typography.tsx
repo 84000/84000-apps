@@ -1,7 +1,7 @@
 import { cn } from '@lib-utils';
 
 export const HERO_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-2 text-8xl lg:text-9xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-8xl lg:text-9xl';
 export function Hero({
   children,
   className,
@@ -15,7 +15,7 @@ export function Hero({
 }
 
 export const HEADLINE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-2 text-7xl lg:text-8xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-7xl lg:text-8xl';
 export function Headline({
   children,
   className,
@@ -29,7 +29,7 @@ export function Headline({
 }
 
 export const TITLE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-2 text-6xl lg:text-7xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-6xl lg:text-7xl';
 export function Section({
   children,
   className,
@@ -42,7 +42,7 @@ export function Section({
   );
 }
 
-export const H1_STYLE = 'font-serif mt-8 scroll-m-20 pb-2 text-5xl lg:text-6xl';
+export const H1_STYLE = 'font-serif mt-8 scroll-m-20 pb-8 text-5xl lg:text-6xl';
 export function H1({
   children,
   className,
@@ -55,7 +55,7 @@ export function H1({
   );
 }
 
-export const H2_STYLE = 'font-serif mt-8 scroll-m-20 pb-2 text-4xl lg:text-5xl';
+export const H2_STYLE = 'font-serif mt-8 scroll-m-20 pb-6 text-4xl lg:text-5xl';
 export function H2({
   children,
   className,
@@ -68,7 +68,7 @@ export function H2({
   );
 }
 
-export const H3_STYLE = 'mt-6 scroll-m-20 pb-2 text-3xl lg:text-4xl';
+export const H3_STYLE = 'mt-6 scroll-m-20 pb-4 text-3xl lg:text-4xl';
 export function H3({
   children,
   className,
@@ -82,7 +82,7 @@ export function H3({
 }
 
 export const H4_STYLE =
-  'mt-4 scroll-m-20 pb-1 text-2xl font-semibold lg:text-3xl';
+  'mt-4 scroll-m-20 pb-2 text-2xl font-semibold lg:text-3xl';
 export function H4({
   children,
   className,
@@ -95,7 +95,7 @@ export function H4({
   );
 }
 
-export const P_STYLE = 'leading-6 [&:not(:first-child)]:mt-6';
+export const P_STYLE = 'leading-6';
 export function P({
   children,
   className,

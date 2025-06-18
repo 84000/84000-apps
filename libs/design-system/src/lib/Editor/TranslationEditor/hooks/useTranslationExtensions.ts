@@ -1,7 +1,15 @@
 'use client';
 
+import Underline from '@tiptap/extension-underline';
 import Heading from '../../extensions/Heading/Heading';
+import Image from '../../extensions/Image';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
+import {
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+} from '../../extensions/Table';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import {
   BulletListSuggestion,
@@ -13,7 +21,6 @@ import {
   TextSuggestion,
   getSuggestion,
 } from '../../extensions/SlashCommand/Suggestions';
-import Underline from '@tiptap/extension-underline';
 import Link from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
@@ -23,6 +30,16 @@ import TranslationDocument from '../extensions/TranslationDocument';
 import { PassageNode } from '../extensions/Passage';
 import { CommandSuggestionItem } from '../../extensions/SlashCommand/SuggestionList';
 import { TableOfContentsIcon } from 'lucide-react';
+import { LeadingSpace } from '../../extensions/LeadingSpace';
+import { Trailer } from '../../extensions/Trailer';
+import { LineGroupNode } from '../extensions/LineGroup/LineGroupNode';
+import { LineNode } from '../extensions/Line/LineNode';
+import { Subscript } from '../../extensions/Subscript';
+import { Superscript } from '../../extensions/Superscript';
+import { SmallCaps } from '../../extensions/SmallCaps';
+import { Italic } from '../../extensions/Italic';
+import { Indent } from '../../extensions/Indent';
+import { MantraMark } from '../extensions/Mantra/Mantra';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -56,14 +73,29 @@ export const useTranslationExtensions = () => {
     extensions: [
       TranslationDocument,
       Heading,
+      Image,
+      Indent,
+      Italic,
+      LeadingSpace,
+      LineGroupNode,
+      LineNode,
       Link,
-      Paragraph,
+      MantraMark,
+      Paragraph.configure({ HTMLAttributes: { class: 'leading-7' } }),
       PassageNode,
       Placeholder,
       SlashCommand.configure({
         suggestion: getSuggestion(suggestions),
       }),
+      SmallCaps,
       StarterKit,
+      Subscript,
+      Superscript,
+      Table,
+      TableCell,
+      TableHeader,
+      TableRow,
+      Trailer,
       TranslationMetadata,
       TextAlign,
       Underline,
