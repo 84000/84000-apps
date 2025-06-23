@@ -12,6 +12,7 @@ import {
 import { LinkSelector } from './LinkSelector';
 import { Button } from '../../../../Button/Button';
 import { MantraSelector } from './MantraSelector';
+import { EndNoteSelector } from './EndNoteSelector';
 
 interface SelectorResult {
   isBold: boolean;
@@ -104,6 +105,7 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
       })}
       <MantraSelector editor={editor} />
       <LinkSelector editor={editor} />
+      <EndNoteSelector editor={editor} />
     </>
   );
 };

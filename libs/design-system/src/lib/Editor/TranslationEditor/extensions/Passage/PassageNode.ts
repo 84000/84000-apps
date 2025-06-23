@@ -7,7 +7,7 @@ import { ResolvedPos } from '@tiptap/pm/model';
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     passage: {
-      refereshLabelsAfter: () => ReturnType;
+      refreshLabelsAfter: () => ReturnType;
       splitPassage: () => ReturnType;
     };
   }
@@ -54,7 +54,7 @@ export const PassageNode = Node.create({
   },
   addCommands() {
     return {
-      refereshLabelsAfter:
+      refreshLabelsAfter:
         () =>
         ({ state, dispatch }) => {
           if (!dispatch) {
