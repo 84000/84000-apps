@@ -27,6 +27,7 @@ export const EndNoteLinkNode = Node.create<EndNoteLinkOptions>({
     return {
       endNote: {
         default: undefined,
+        parseHTML: (element) => element.getAttribute('endNote'),
       },
     };
   },

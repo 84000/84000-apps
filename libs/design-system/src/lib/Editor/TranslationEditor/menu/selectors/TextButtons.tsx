@@ -11,8 +11,10 @@ import {
 } from 'lucide-react';
 import { LinkSelector } from './LinkSelector';
 import { Button } from '../../../../Button/Button';
+import { Separator } from '../../../../Separator/Separator';
 import { MantraSelector } from './MantraSelector';
 import { EndNoteSelector } from './EndNoteSelector';
+import { GlossarySelector } from './GlossarySelector';
 
 interface SelectorResult {
   isBold: boolean;
@@ -104,6 +106,8 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
         );
       })}
       <MantraSelector editor={editor} />
+      <Separator orientation="vertical" className="h-10" />
+      <GlossarySelector editor={editor} />
       <LinkSelector editor={editor} />
       <EndNoteSelector editor={editor} />
     </>
