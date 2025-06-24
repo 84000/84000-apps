@@ -1,5 +1,6 @@
 'use client';
 
+import Underline from '@tiptap/extension-underline';
 import Document from '../../extensions/Document';
 import Heading from '../../extensions/Heading/Heading';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
@@ -8,10 +9,10 @@ import { getSuggestion } from '../../extensions/SlashCommand/Suggestions';
 import Link from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
-import Underline from '@tiptap/extension-underline';
 import StarterKit from '../../extensions/StarterKit';
 import TranslationMetadata from '../../extensions/TranslationMetadata';
 import { DragHandle } from '../../extensions/DragHandle/DragHandle';
+import { Italic } from '../../extensions/Italic';
 
 export const useDefaultExtensions = () => {
   return {
@@ -19,6 +20,7 @@ export const useDefaultExtensions = () => {
       Document,
       DragHandle,
       Heading,
+      Italic,
       Link,
       Paragraph,
       Placeholder,
