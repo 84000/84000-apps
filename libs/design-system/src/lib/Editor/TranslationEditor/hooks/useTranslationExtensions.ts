@@ -40,6 +40,8 @@ import { SmallCaps } from '../../extensions/SmallCaps';
 import { Italic } from '../../extensions/Italic';
 import { Indent } from '../../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
+import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteNode';
+import { GlossaryInstanceMark } from '../extensions/GlossaryInstanceMark';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -53,7 +55,7 @@ const PassageSuggestion: CommandSuggestionItem = {
       .selectParentNode()
       .deleteCurrentNode()
       .splitPassage()
-      .refereshLabelsAfter()
+      .refreshLabelsAfter()
       .run();
   },
 };
@@ -72,6 +74,8 @@ export const useTranslationExtensions = () => {
   return {
     extensions: [
       TranslationDocument,
+      EndNoteLinkNode,
+      GlossaryInstanceMark,
       Heading,
       Image,
       Indent,
