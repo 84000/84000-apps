@@ -1,5 +1,8 @@
 import { cn } from '@lib-utils';
 
+export const LINK_STYLE =
+  'text-slate underline decoration-slate underline-offset-[3px] transition-colors cursor-pointer';
+
 export const HERO_STYLE =
   'font-serif mt-8 scroll-m-20 pb-8 text-8xl lg:text-9xl';
 export function Hero({

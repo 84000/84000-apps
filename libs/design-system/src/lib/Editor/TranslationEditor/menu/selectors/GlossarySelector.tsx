@@ -7,14 +7,14 @@ import {
 import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
-import { LinkIcon } from 'lucide-react';
+import { BookOpenTextIcon } from 'lucide-react';
 import { SelectorInputField } from '../../../menus/SelectorInputField';
 
-export const LinkSelector = ({ editor }: { editor: Editor }) => {
+export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
-      isActive: instance.editor.isActive('link'),
+      isActive: instance.editor.isActive('glossaryInstance'),
     }),
   });
 
@@ -24,9 +24,9 @@ export const LinkSelector = ({ editor }: { editor: Editor }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-none flex-shrink-0"
+          className="px-2 rounded-none flex-shrink-0"
         >
-          <LinkIcon
+          <BookOpenTextIcon
             className={cn(
               'size-4',
               editorState.isActive ? 'text-primary' : 'text-muted-foreground',
@@ -42,19 +42,19 @@ export const LinkSelector = ({ editor }: { editor: Editor }) => {
       >
         <SelectorInputField
           editor={editor}
-          type="link"
-          attr="href"
-          placeholder="Add link..."
+          type="glossaryInstance"
+          attr="authority"
+          placeholder="Add authority uuid..."
           onSubmit={(value) => {
             if (value) {
               editor
                 .chain()
                 .focus()
-                .extendMarkRange('link')
-                .setLink({ href: value })
+                .extendMarkRange('glossaryInstance')
+                .setGlossaryInstance(value)
                 .run();
             } else {
-              editor.chain().focus().unsetLink().run();
+              editor.chain().focus().unsetGlossaryInstance().run();
             }
           }}
         />

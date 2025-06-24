@@ -48,6 +48,12 @@ const content = {
               type: 'text',
               text: 'Homage to all the buddhas and bodhisattvas!',
             },
+            {
+              type: 'endNoteLink',
+              attrs: {
+                endNote: 'some-uuid-2',
+              },
+            },
           ],
         },
       ],
@@ -71,6 +77,18 @@ const content = {
             {
               type: 'text',
               text: 'Thus did I hear at one time. The Buddha was residing in Śrāvastī, in Jeta’s Grove, Anāthapiṇḍada’s park, together with a great community of monks, consisting of 1,250 monks, and a great assembly of bodhisattvas. At that time, the Blessed One addressed the monks:',
+            },
+            {
+              type: 'endNoteLink',
+              attrs: {
+                endNote: 'some-uuid',
+              },
+            },
+            {
+              type: 'endNoteLink',
+              attrs: {
+                endNote: 'some-uuid-2',
+              },
             },
           ],
         },
