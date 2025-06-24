@@ -1,41 +1,50 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
-import { Body, Passage } from '@data-access';
+import { Body, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './annotation';
 
+const passageTemplate = (passage: Passage) => ({
+  type: 'passage',
+  attrs: {
+    uuid: passage.uuid,
+    sort: passage.sort,
+    type: passage.type,
+    label: passage.label,
+    class: 'passage',
+  },
+  content: [
+    {
+      type: 'text',
+      text: passage.content,
+    },
+  ],
+});
+
 const TEMPLATES_FOR_BLOCK_TYPE: {
-  [key: string]: (passage: Passage) => BlockEditorContentItem;
+  [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
 } = {
-  translation: (passage: Passage) => ({
-    type: 'paragraph',
-    attrs: {
-      uuid: passage.uuid,
-      sort: passage.sort,
-      type: passage.type,
-      class: 'passage',
-    },
-    content: [
-      {
-        type: 'text',
-        text: passage.content,
-      },
-    ],
-  }),
-  translationHeader: (passage: Passage) => ({
-    type: 'heading',
-    attrs: {
-      level: 3,
-      uuid: passage.uuid,
-      sort: passage.sort,
-      type: passage.type,
-      class: 'passage',
-    },
-    content: [
-      {
-        type: 'text',
-        text: passage.content,
-      },
-    ],
-  }),
+  acknowledgment: passageTemplate,
+  acknowledgmentHeader: passageTemplate,
+  abbreviations: passageTemplate,
+  abbreviationHeader: passageTemplate,
+  appendix: passageTemplate,
+  appendixHeader: passageTemplate,
+  colophon: passageTemplate,
+  colophonHeader: passageTemplate,
+  endNotesHeader: passageTemplate,
+  'end-note': passageTemplate,
+  homage: passageTemplate,
+  homageHeader: passageTemplate,
+  introduction: passageTemplate,
+  introductionHeader: passageTemplate,
+  prelude: passageTemplate,
+  preludeHeader: passageTemplate,
+  prologue: passageTemplate,
+  prologueHeader: passageTemplate,
+  summary: passageTemplate,
+  summaryHeader: passageTemplate,
+  translation: passageTemplate,
+  translationHeader: passageTemplate,
+  unknown: passageTemplate,
 };
 
 export const blocksFromTranslationBody = (body: Body) => {

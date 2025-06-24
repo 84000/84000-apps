@@ -1,13 +1,26 @@
 import { Annotations, AnnotationsDTO } from './annotation';
 
 export type BodyItemType =
+  | 'abbreviations'
+  | 'abbreviationHeader'
   | 'acknowledgment'
   | 'acknowledgmentHeader'
+  | 'appendix'
+  | 'appendixHeader'
+  | 'colophon'
+  | 'colophonHeader'
   | 'endnote'
+  | 'endNotesHeader'
+  | 'homage'
+  | 'homageHeader'
   | 'introduction'
+  | 'introductionHeader'
+  | 'prelude'
+  | 'preludeHeader'
+  | 'prologue'
+  | 'prologueHeader'
   | 'summary'
   | 'summaryHeader'
-  | 'toc'
   | 'translation'
   | 'translationHeader'
   | 'unknown';
@@ -15,6 +28,7 @@ export type BodyItemType =
 export type Passage = {
   annotations: Annotations;
   content: string;
+  label: string;
   sort: number;
   type: BodyItemType;
   uuid: string;
@@ -24,6 +38,7 @@ export type Passage = {
 
 export type PassageDTO = {
   content: string;
+  label: string;
   sort: number;
   type: BodyItemType;
   uuid: string;
@@ -38,6 +53,7 @@ export const passageFromDTO = (
 ): Passage => {
   return {
     content: dto.content,
+    label: dto.label,
     sort: dto.sort,
     type: dto.type,
     uuid: dto.uuid,

@@ -2,11 +2,13 @@ export type AnnotationDTOType =
   | 'abbreviation'
   | 'audio'
   | 'blockquote'
+  | 'deprecated-internal-link'
   | 'end-note-link'
   | 'glossary-instance'
   | 'has-abbreviation'
   | 'heading'
   | 'image'
+  | 'indent'
   | 'inline-title'
   | 'internal-link'
   | 'leading-space'
@@ -31,11 +33,13 @@ export type AnnotationType =
   | 'abbreviation'
   | 'audio'
   | 'blockquote'
+  | 'deprecated'
   | 'endNoteLink'
   | 'glossary'
   | 'hasAbbreviation'
   | 'heading'
   | 'image'
+  | 'indent'
   | 'inlineTitle'
   | 'internalLink'
   | 'leadingSpace'
@@ -60,11 +64,13 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   abbreviation: 'abbreviation',
   audio: 'audio',
   blockquote: 'blockquote',
+  'deprecated-internal-link': 'deprecated',
   'end-note-link': 'endNoteLink',
   'glossary-instance': 'glossary',
   'has-abbreviation': 'hasAbbreviation',
   heading: 'heading',
   image: 'image',
+  indent: 'indent',
   'inline-title': 'inlineTitle',
   'internal-link': 'internalLink',
   'leading-space': 'leadingSpace',
@@ -87,14 +93,14 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
 } as const;
 
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
+  'deprecated-internal-link',
   'has-abbreviation',
-  'leading-space',
-  'paragraph',
   'quoted',
   'reference',
-  'span',
   'unknown',
 ];
+
+export type AnnotationsToIgnore = (typeof ANNOTATIONS_TO_IGNORE)[number];
 
 export const annotationTypeFromDTO = (
   type: AnnotationDTOType,

@@ -25,6 +25,10 @@ export type AudioAnnotation = AnnotationBase & {
   mediaType: string;
 };
 
+export type DeprecatedAnnotation = AnnotationBase & {
+  type: 'deprecated';
+};
+
 export type BlockquoteAnnotation = AnnotationBase & {
   type: 'blockquote';
   text: string;
@@ -48,13 +52,13 @@ export type HeadingAnnotation = AnnotationBase & {
   level: number;
 };
 
-export type LeadingSpaceAnnotation = AnnotationBase & {
-  type: 'leadingSpace';
-};
-
 export type ImageAnnotation = AnnotationBase & {
   type: 'image';
   src: string;
+};
+
+export type IndentAnnotation = AnnotationBase & {
+  type: 'indent';
 };
 
 export type InlineTitleAnnotation = AnnotationBase & {
@@ -67,6 +71,10 @@ export type InternalLinkAnnotation = AnnotationBase & {
   href: string;
   text?: string;
   isPending: boolean;
+};
+
+export type LeadingSpaceAnnotation = AnnotationBase & {
+  type: 'leadingSpace';
 };
 
 export type LineAnnotation = AnnotationBase & {
@@ -168,11 +176,13 @@ export type Annotation =
   | AbbreviationAnnotation
   | AudioAnnotation
   | BlockquoteAnnotation
+  | DeprecatedAnnotation
   | EndNoteLinkAnnotation
   | GlossaryInstanceAnnotation
   | HasAbbreviationAnnotation
   | HeadingAnnotation
   | ImageAnnotation
+  | IndentAnnotation
   | InlineTitleAnnotation
   | InternalLinkAnnotation
   | LeadingSpaceAnnotation
@@ -235,6 +245,11 @@ const dtoToAnnotationMap: Record<
       ...baseAnnotationFromDTO(dto),
     } as QuotedAnnotation;
   },
+  'deprecated-internal-link': (dto: AnnotationDTO): DeprecatedAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as DeprecatedAnnotation;
+  },
   'end-note-link': (dto: AnnotationDTO): EndNoteLinkAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);
     const endNote = baseAnnotation as EndNoteLinkAnnotation;
@@ -284,6 +299,11 @@ const dtoToAnnotationMap: Record<
     });
 
     return image;
+  },
+  indent: (dto: AnnotationDTO): IndentAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as IndentAnnotation;
   },
   'inline-title': (dto: AnnotationDTO): InlineTitleAnnotation => {
     const inlineTitle = baseAnnotationFromDTO(dto) as InlineTitleAnnotation;
