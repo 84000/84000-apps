@@ -10,7 +10,7 @@ export type BodyItemType =
   | 'colophon'
   | 'colophonHeader'
   | 'endnote'
-  | 'endNotesHeader'
+  | 'endnotesHeader'
   | 'homage'
   | 'homageHeader'
   | 'introduction'

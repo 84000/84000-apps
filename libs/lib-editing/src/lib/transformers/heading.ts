@@ -15,19 +15,21 @@ export const heading: Transformer = ({ block, annotation }) => {
   return scan({
     block,
     annotation,
-    transform: (item) => ({
-      ...item,
-      type: 'heading',
-      attrs: {
-        ...item.attrs,
-        level,
-      },
-      content: [
-        {
-          type: 'text',
-          text: item.text,
+    transform: (item) => [
+      {
+        ...item,
+        type: 'heading',
+        attrs: {
+          ...item.attrs,
+          level,
         },
-      ],
-    }),
+        content: [
+          {
+            type: 'text',
+            text: item.text,
+          },
+        ],
+      },
+    ],
   });
 };

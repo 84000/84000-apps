@@ -7,15 +7,17 @@ export const audio: Transformer = ({ block, annotation }) => {
     annotation,
     transform: (item) => {
       const audio = annotation as AudioAnnotation;
-      return {
-        ...item,
-        type: 'audio',
-        attrs: {
-          ...item.attrs,
-          src: audio.src,
-          mediaType: audio.mediaType,
+      return [
+        {
+          ...item,
+          type: 'audio',
+          attrs: {
+            ...item.attrs,
+            src: audio.src,
+            mediaType: audio.mediaType,
+          },
         },
-      };
+      ];
     },
   });
 };

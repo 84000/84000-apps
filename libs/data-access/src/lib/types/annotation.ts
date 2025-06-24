@@ -36,6 +36,7 @@ export type BlockquoteAnnotation = AnnotationBase & {
 
 export type EndNoteLinkAnnotation = AnnotationBase & {
   type: 'endNoteLink';
+  endNote: string;
 };
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
@@ -64,13 +65,6 @@ export type IndentAnnotation = AnnotationBase & {
 export type InlineTitleAnnotation = AnnotationBase & {
   type: 'inlineTitle';
   language: TranslationLanguage;
-};
-
-export type InternalLinkAnnotation = AnnotationBase & {
-  type: 'internalLink';
-  href: string;
-  text?: string;
-  isPending: boolean;
 };
 
 export type LeadingSpaceAnnotation = AnnotationBase & {
@@ -184,7 +178,6 @@ export type Annotation =
   | ImageAnnotation
   | IndentAnnotation
   | InlineTitleAnnotation
-  | InternalLinkAnnotation
   | LeadingSpaceAnnotation
   | LineAnnotation
   | LineGroupAnnotation
@@ -255,7 +248,7 @@ const dtoToAnnotationMap: Record<
     const endNote = baseAnnotation as EndNoteLinkAnnotation;
     dto.content.forEach((content) => {
       if (content.uuid) {
-        endNote.uuid = content.uuid as string;
+        endNote.endNote = content.uuid as string;
       }
     });
 
@@ -314,24 +307,6 @@ const dtoToAnnotationMap: Record<
     });
 
     return inlineTitle;
-  },
-  'internal-link': (dto: AnnotationDTO): InternalLinkAnnotation => {
-    const internalLink = baseAnnotationFromDTO(dto) as InternalLinkAnnotation;
-    dto.content.forEach((content) => {
-      if (content.href) {
-        internalLink.href = content.href as string;
-      }
-
-      if (content['link-text']) {
-        internalLink.text = content['link-text'] as string;
-      }
-
-      if (content['link-type']) {
-        internalLink.isPending = true;
-      }
-    });
-
-    return internalLink;
   },
   'leading-space': (dto: AnnotationDTO) => {
     return {

@@ -1,8 +1,8 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
 import { Body, BodyItemType, Passage } from '@data-access';
-import { annotateBlock } from './annotation';
+import { annotateBlock } from './transformers/annotate';
 
-const passageTemplate = (passage: Passage) => ({
+const headingTemplate = (passage: Passage) => ({
   type: 'passage',
   attrs: {
     uuid: passage.uuid,
@@ -13,8 +13,38 @@ const passageTemplate = (passage: Passage) => ({
   },
   content: [
     {
-      type: 'text',
-      text: passage.content,
+      type: 'heading',
+      attrs: {
+        level: 1,
+      },
+      content: [
+        {
+          type: 'text',
+          text: passage.content,
+        },
+      ],
+    },
+  ],
+});
+
+const paragraphTemplate = (passage: Passage) => ({
+  type: 'passage',
+  attrs: {
+    uuid: passage.uuid,
+    sort: passage.sort,
+    type: passage.type,
+    label: passage.label,
+    class: 'passage',
+  },
+  content: [
+    {
+      type: 'paragraph',
+      content: [
+        {
+          type: 'text',
+          text: passage.content,
+        },
+      ],
     },
   ],
 });
@@ -22,29 +52,29 @@ const passageTemplate = (passage: Passage) => ({
 const TEMPLATES_FOR_BLOCK_TYPE: {
   [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
 } = {
-  acknowledgment: passageTemplate,
-  acknowledgmentHeader: passageTemplate,
-  abbreviations: passageTemplate,
-  abbreviationHeader: passageTemplate,
-  appendix: passageTemplate,
-  appendixHeader: passageTemplate,
-  colophon: passageTemplate,
-  colophonHeader: passageTemplate,
-  endNotesHeader: passageTemplate,
-  'end-note': passageTemplate,
-  homage: passageTemplate,
-  homageHeader: passageTemplate,
-  introduction: passageTemplate,
-  introductionHeader: passageTemplate,
-  prelude: passageTemplate,
-  preludeHeader: passageTemplate,
-  prologue: passageTemplate,
-  prologueHeader: passageTemplate,
-  summary: passageTemplate,
-  summaryHeader: passageTemplate,
-  translation: passageTemplate,
-  translationHeader: passageTemplate,
-  unknown: passageTemplate,
+  acknowledgment: paragraphTemplate,
+  acknowledgmentHeader: paragraphTemplate,
+  abbreviations: paragraphTemplate,
+  abbreviationHeader: paragraphTemplate,
+  appendix: paragraphTemplate,
+  appendixHeader: paragraphTemplate,
+  colophon: paragraphTemplate,
+  colophonHeader: paragraphTemplate,
+  endnotesHeader: paragraphTemplate,
+  endnote: paragraphTemplate,
+  homage: paragraphTemplate,
+  homageHeader: paragraphTemplate,
+  introduction: paragraphTemplate,
+  introductionHeader: paragraphTemplate,
+  prelude: paragraphTemplate,
+  preludeHeader: paragraphTemplate,
+  prologue: paragraphTemplate,
+  prologueHeader: paragraphTemplate,
+  summary: paragraphTemplate,
+  summaryHeader: paragraphTemplate,
+  translation: paragraphTemplate,
+  translationHeader: headingTemplate,
+  unknown: paragraphTemplate,
 };
 
 export const blocksFromTranslationBody = (body: Body) => {
@@ -75,6 +105,8 @@ export const blockFromPassage = (item: Passage): BlockEditorContentItem => {
     TEMPLATES_FOR_BLOCK_TYPE[item.type] ||
     TEMPLATES_FOR_BLOCK_TYPE['translation'];
   const block = template(item);
+  const templateContent = block.content?.[0] || {};
 
-  return annotateBlock(block, item.annotations);
+  block.content = [annotateBlock(templateContent, item.annotations)];
+  return block;
 };

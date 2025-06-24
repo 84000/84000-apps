@@ -5,9 +5,11 @@ export const italic: Transformer = ({ block, annotation }) => {
   return scan({
     block,
     annotation,
-    transform: (item) => ({
-      ...item,
-      marks: [...(item.marks || []), { type: 'italic' }],
-    }),
+    transform: (item) => [
+      {
+        ...item,
+        marks: [...(item.marks || []), { type: 'italic' }],
+      },
+    ],
   });
 };

@@ -7,14 +7,16 @@ export const image: Transformer = ({ block, annotation }) => {
     annotation,
     transform: (item) => {
       const image = annotation as ImageAnnotation;
-      return {
-        ...item,
-        type: 'image',
-        attrs: {
-          ...item.attrs,
-          src: image.src,
+      return [
+        {
+          ...item,
+          type: 'image',
+          attrs: {
+            ...item.attrs,
+            src: image.src,
+          },
         },
-      };
+      ];
     },
   });
 };

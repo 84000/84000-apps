@@ -36,7 +36,7 @@ export const passageComponentForType: { [key in BodyItemType]: ElementType } = {
   acknowledgment: AcknowledgmentPassage,
   acknowledgmentHeader: AcknowledgmentHeader,
   endnote: P,
-  endNotesHeader: EndNotesHeader,
+  endnotesHeader: EndNotesHeader,
   homage: HomagePassage,
   homageHeader: HomageHeader,
   introduction: IntroductionPassage,

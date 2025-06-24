@@ -5,15 +5,17 @@ export const link: Transformer = ({ block, annotation }) => {
   return scan({
     block,
     annotation,
-    transform: (item) => ({
-      ...item,
-      marks: [
-        ...(item.marks || []),
-        {
-          type: 'link',
-          attrs: { href: (annotation as LinkAnnotation).href || '#' },
-        },
-      ],
-    }),
+    transform: (item) => [
+      {
+        ...item,
+        marks: [
+          ...(item.marks || []),
+          {
+            type: 'link',
+            attrs: { href: (annotation as LinkAnnotation).href || '#' },
+          },
+        ],
+      },
+    ],
   });
 };

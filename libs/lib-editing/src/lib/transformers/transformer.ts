@@ -5,6 +5,7 @@ import { JSONContent } from '@tiptap/react';
 export type TransformerProps = {
   block: BlockEditorContentItem;
   annotation: Annotation;
+  parent?: BlockEditorContentItem;
 };
 
 export type Transformer = (props: TransformerProps) => BlockEditorContentItem;
@@ -16,7 +17,7 @@ export const scan = ({
   annotation,
   transform,
 }: TransformerProps & {
-  transform: (item: JSONContent) => JSONContent;
+  transform: (item: JSONContent) => JSONContent[];
 }) => {
   // TODO: potentially handle nested/recursive content
   const currentContent = block.content || [];
@@ -40,7 +41,7 @@ export const scan = ({
 
     // if the current item is entirely within the annotation, transform it entirely
     if (currentCursor >= start && nextCursor <= end) {
-      newContent.push(transform(item));
+      newContent.push(...transform(item));
       annotationLen -= text.length;
       return;
     }
@@ -63,7 +64,7 @@ export const scan = ({
 
     if (!textToTransform) {
       newContent.push(
-        transform({
+        ...transform({
           ...item,
         }),
       );
@@ -78,7 +79,7 @@ export const scan = ({
     }
 
     newContent.push(
-      transform({
+      ...transform({
         ...item,
         text: textToTransform,
       }),

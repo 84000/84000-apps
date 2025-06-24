@@ -13,7 +13,6 @@ import {
   image,
   indent,
   inlineTitle,
-  internalLink,
   leadingSpace,
   lineGroup,
   line,
@@ -31,7 +30,7 @@ import {
   tableBodyRow,
   trailer,
   unknown,
-} from './transformers';
+} from '.';
 
 const TRANSFORMERS: Record<AnnotationType, Transformer> = {
   abbreviation,
@@ -45,7 +44,6 @@ const TRANSFORMERS: Record<AnnotationType, Transformer> = {
   indent,
   image,
   inlineTitle,
-  internalLink,
   leadingSpace,
   line,
   lineGroup,

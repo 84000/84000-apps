@@ -6,18 +6,20 @@ export const glossary: Transformer = ({ block, annotation }) => {
     block,
     annotation,
     transform: (item) => {
-      return {
-        ...item,
-        marks: [
-          ...(item.marks || []),
-          {
-            type: 'link',
-            attrs: {
-              href: (annotation as GlossaryInstanceAnnotation).uuid || '#',
+      return [
+        {
+          ...item,
+          marks: [
+            ...(item.marks || []),
+            {
+              type: 'link',
+              attrs: {
+                href: (annotation as GlossaryInstanceAnnotation).uuid || '#',
+              },
             },
-          },
-        ],
-      };
+          ],
+        },
+      ];
     },
   });
 };

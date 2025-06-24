@@ -9,7 +9,6 @@ export * from './heading';
 export * from './image';
 export * from './indent';
 export * from './inline-title';
-export * from './internal-link';
 export * from './leading-space';
 export * from './line-group';
 export * from './line';
