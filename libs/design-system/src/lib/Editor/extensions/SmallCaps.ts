@@ -53,7 +53,7 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
   parseHTML() {
     return [
       {
-        tag: 'sm[type="smal-caps"]',
+        tag: 'sm[type="small-caps"]',
       },
     ];
   },

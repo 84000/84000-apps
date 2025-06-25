@@ -2,10 +2,13 @@ import { Annotation } from '@data-access';
 import { BlockEditorContentItem } from '@design-system';
 import { JSONContent } from '@tiptap/react';
 
-export type TransformerProps = {
-  block: BlockEditorContentItem;
-  annotation: Annotation;
+export type BlockEditorContentWithParent = BlockEditorContentItem & {
   parent?: BlockEditorContentItem;
+};
+
+export type TransformerProps = {
+  block: BlockEditorContentWithParent;
+  annotation: Annotation;
 };
 
 export type Transformer = (props: TransformerProps) => BlockEditorContentItem;

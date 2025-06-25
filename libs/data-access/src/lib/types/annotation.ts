@@ -4,7 +4,7 @@ import {
   AnnotationType,
   annotationTypeFromDTO,
 } from './annotation-type';
-import { TranslationLanguage } from './language';
+import { ExtendedTranslationLanguage, TranslationLanguage } from './language';
 
 export type AnnotationBase = {
   end: number;
@@ -64,7 +64,7 @@ export type IndentAnnotation = AnnotationBase & {
 
 export type InlineTitleAnnotation = AnnotationBase & {
   type: 'inlineTitle';
-  language: TranslationLanguage;
+  lang: ExtendedTranslationLanguage;
 };
 
 export type InternalLinkAnnotation = AnnotationBase & {
@@ -127,6 +127,8 @@ export type ReferenceAnnotation = AnnotationBase & {
 
 export type SpanAnnotation = AnnotationBase & {
   type: 'span';
+  textStyle?: string;
+  lang?: ExtendedTranslationLanguage;
 };
 
 export type TableBodyDataAnnotation = AnnotationBase & {
@@ -159,6 +161,7 @@ export type AnnotationDTOContentKey =
   | 'media-type'
   | 'paragraph'
   | 'src'
+  | 'text-style'
   | 'type'
   | 'title'
   | 'uuid';
@@ -314,7 +317,7 @@ const dtoToAnnotationMap: Record<
     const inlineTitle = baseAnnotationFromDTO(dto) as InlineTitleAnnotation;
     dto.content.forEach((content) => {
       if (content.lang) {
-        inlineTitle.language = content.lang as TranslationLanguage;
+        inlineTitle.lang = content.lang as TranslationLanguage;
       }
     });
 
@@ -424,10 +427,17 @@ const dtoToAnnotationMap: Record<
     } as ReferenceAnnotation;
   },
   span: (dto: AnnotationDTO): SpanAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-      content: [],
-    } as SpanAnnotation;
+    const spanAnnotation = baseAnnotationFromDTO(dto) as SpanAnnotation;
+    dto.content.forEach((content) => {
+      if (content['text-style']) {
+        spanAnnotation.textStyle = content['text-style'] as string;
+      }
+
+      if (content.lang) {
+        spanAnnotation.lang = content.lang as ExtendedTranslationLanguage;
+      }
+    });
+    return spanAnnotation;
   },
   'table-body-data': (dto: AnnotationDTO): TableBodyDataAnnotation => {
     return {

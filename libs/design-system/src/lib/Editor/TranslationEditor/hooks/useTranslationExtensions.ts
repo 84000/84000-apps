@@ -85,7 +85,7 @@ export const useTranslationExtensions = () => {
       LineNode,
       Link,
       MantraMark,
-      Paragraph.configure({ HTMLAttributes: { class: 'leading-7' } }),
+      Paragraph,
       PassageNode,
       Placeholder,
       SlashCommand.configure({

@@ -1,77 +1,95 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
 import { Body, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
+import type { BlockEditorContentWithParent } from './transformers';
 
-const headingTemplate = (passage: Passage) => ({
-  type: 'passage',
-  attrs: {
-    uuid: passage.uuid,
-    sort: passage.sort,
-    type: passage.type,
-    label: passage.label,
-    class: 'passage',
-  },
-  content: [
-    {
-      type: 'heading',
-      attrs: {
-        level: 1,
-      },
-      content: [
-        {
-          type: 'text',
-          text: passage.content,
-        },
-      ],
+const passageTemplate = (passage: Passage): BlockEditorContentWithParent => {
+  const block: BlockEditorContentWithParent = {
+    type: 'passage',
+    attrs: {
+      uuid: passage.uuid,
+      sort: passage.sort,
+      type: passage.type,
+      label: passage.label,
+      class: 'passage',
     },
-  ],
+    content: [],
+  };
+
+  const template =
+    TEMPLATES_FOR_BLOCK_TYPE[passage.type] ||
+    TEMPLATES_FOR_BLOCK_TYPE['translation'];
+  block.content = [template(passage, block)];
+
+  return block;
+};
+
+const textTemplate = (
+  text: string,
+  parent: BlockEditorContentWithParent,
+): BlockEditorContentWithParent => ({
+  type: 'text',
+  text,
+  parent,
 });
 
-const paragraphTemplate = (passage: Passage) => ({
-  type: 'passage',
-  attrs: {
-    uuid: passage.uuid,
-    sort: passage.sort,
-    type: passage.type,
-    label: passage.label,
-    class: 'passage',
-  },
-  content: [
-    {
-      type: 'paragraph',
-      content: [
-        {
-          type: 'text',
-          text: passage.content,
-        },
-      ],
+const headingTemplate = (
+  passage: Passage,
+  parent: BlockEditorContentWithParent,
+): BlockEditorContentWithParent => {
+  const block: BlockEditorContentWithParent = {
+    type: 'heading',
+    attrs: {
+      level: 1,
     },
-  ],
-});
+    content: [],
+    parent,
+  };
+  block.content = [textTemplate(passage.content, block)];
+  return block;
+};
+
+const paragraphTemplate = (
+  passage: Passage,
+  parent: BlockEditorContentWithParent,
+): BlockEditorContentWithParent => {
+  const block: BlockEditorContentWithParent = {
+    type: 'paragraph',
+    content: [],
+    parent,
+  };
+
+  block.content = [textTemplate(passage.content, block)];
+
+  return block;
+};
 
 const TEMPLATES_FOR_BLOCK_TYPE: {
-  [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
+  [key in BodyItemType]: (
+    passage: Passage,
+    parent: BlockEditorContentWithParent,
+  ) => BlockEditorContentWithParent;
 } = {
   acknowledgment: paragraphTemplate,
-  acknowledgmentHeader: paragraphTemplate,
+  acknowledgmentHeader: headingTemplate,
   abbreviations: paragraphTemplate,
-  abbreviationHeader: paragraphTemplate,
+  abbreviationHeader: headingTemplate,
   appendix: paragraphTemplate,
-  appendixHeader: paragraphTemplate,
+  appendixHeader: headingTemplate,
   colophon: paragraphTemplate,
-  colophonHeader: paragraphTemplate,
-  endnotesHeader: paragraphTemplate,
+  colophonHeader: headingTemplate,
   endnote: paragraphTemplate,
+  endnotesHeader: headingTemplate,
   homage: paragraphTemplate,
-  homageHeader: paragraphTemplate,
+  homageHeader: headingTemplate,
   introduction: paragraphTemplate,
-  introductionHeader: paragraphTemplate,
+  introductionHeader: headingTemplate,
   prelude: paragraphTemplate,
-  preludeHeader: paragraphTemplate,
+  preludeHeader: headingTemplate,
   prologue: paragraphTemplate,
-  prologueHeader: paragraphTemplate,
+  prologueHeader: headingTemplate,
   summary: paragraphTemplate,
-  summaryHeader: paragraphTemplate,
+  summaryHeader: headingTemplate,
   translation: paragraphTemplate,
   translationHeader: headingTemplate,
   unknown: paragraphTemplate,
@@ -101,10 +119,7 @@ export const blocksFromTranslationBody = (body: Body) => {
 };
 
 export const blockFromPassage = (item: Passage): BlockEditorContentItem => {
-  const template =
-    TEMPLATES_FOR_BLOCK_TYPE[item.type] ||
-    TEMPLATES_FOR_BLOCK_TYPE['translation'];
-  const block = template(item);
+  const block = passageTemplate(item);
   const templateContent = block.content?.[0] || {};
 
   block.content = [annotateBlock(templateContent, item.annotations)];

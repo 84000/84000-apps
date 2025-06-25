@@ -1,7 +1,10 @@
-import { AnnotationType, Annotations } from '@data-access';
-import { BlockEditorContentItem } from '@design-system';
 import {
-  Transformer,
+  AnnotationType,
+  Annotations,
+  ExtendedTranslationLanguage,
+} from '@data-access';
+import type { BlockEditorContentWithParent, Transformer } from './transformer';
+import {
   audio,
   abbreviation,
   blockquote,
@@ -65,8 +68,15 @@ const TRANSFORMERS: Record<AnnotationType, Transformer> = {
   unknown,
 } as const;
 
+export const ITALIC_LANGUAGES: ExtendedTranslationLanguage[] = [
+  'en',
+  'Bo-Ltn',
+  'Pi-Ltn',
+  'Sa-Ltn',
+] as const;
+
 export const annotateBlock = (
-  block: BlockEditorContentItem,
+  block: BlockEditorContentWithParent,
   annotations: Annotations,
 ) => {
   let newBlock = block;
