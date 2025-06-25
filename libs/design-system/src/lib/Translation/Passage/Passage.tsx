@@ -14,7 +14,7 @@ export const TranslationHeader = H3;
 export const passageComponentForType: { [key in BodyItemType]: ElementType } = {
   acknowledgment: AcknowledgmentPassage,
   acknowledgmentHeader: AcknowledgmentHeader,
-  'end-note': P,
+  endnote: P,
   introduction: IntroductionPassage,
   summary: SummaryPassage,
   summaryHeader: SummaryHeader,

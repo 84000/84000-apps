@@ -3,7 +3,7 @@ import { Annotations, AnnotationsDTO } from './annotation';
 export type BodyItemType =
   | 'acknowledgment'
   | 'acknowledgmentHeader'
-  | 'end-note'
+  | 'endnote'
   | 'introduction'
   | 'summary'
   | 'summaryHeader'

@@ -82,7 +82,7 @@ export const getTranslationEndnotes = async ({
   client: DataClient;
   uuid: string;
 }) => {
-  return getTranslationPassages({ client, uuid, type: 'end-note' });
+  return getTranslationPassages({ client, uuid, type: 'endnote' });
 };
 
 export const getTranslationIntroduction = async ({
