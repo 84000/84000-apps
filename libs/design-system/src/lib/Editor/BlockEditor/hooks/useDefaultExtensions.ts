@@ -1,5 +1,6 @@
 'use client';
 
+import Image from '@tiptap/extension-image';
 import Underline from '@tiptap/extension-underline';
 import Document from '../../extensions/Document';
 import Heading from '../../extensions/Heading/Heading';
@@ -20,6 +21,7 @@ export const useDefaultExtensions = () => {
       Document,
       DragHandle,
       Heading,
+      Image,
       Italic,
       Link,
       Paragraph,
