@@ -90,6 +90,7 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   prologueHeader: headingTemplate,
   summary: paragraphTemplate,
   summaryHeader: headingTemplate,
+  toc: paragraphTemplate,
   translation: paragraphTemplate,
   translationHeader: headingTemplate,
   unknown: paragraphTemplate,

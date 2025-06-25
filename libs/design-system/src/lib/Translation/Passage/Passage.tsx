@@ -47,6 +47,7 @@ export const passageComponentForType: { [key in BodyItemType]: ElementType } = {
   prologueHeader: PrologueHeader,
   summary: SummaryPassage,
   summaryHeader: SummaryHeader,
+  toc: P,
   translation: TranslationPassage,
   translationHeader: TranslationHeader,
   unknown: UnknownPassage,

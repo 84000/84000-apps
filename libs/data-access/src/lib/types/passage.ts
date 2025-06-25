@@ -21,6 +21,7 @@ export type BodyItemType =
   | 'prologueHeader'
   | 'summary'
   | 'summaryHeader'
+  | 'toc'
   | 'translation'
   | 'translationHeader'
   | 'unknown';
