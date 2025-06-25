@@ -1,7 +1,7 @@
 import { GlossaryInstanceAnnotation } from '@data-access';
 import { Transformer, scan } from './transformer';
 
-export const glossary: Transformer = ({ block, annotation }) => {
+export const glossaryInstance: Transformer = ({ block, annotation }) => {
   return scan({
     block,
     annotation,
@@ -12,9 +12,10 @@ export const glossary: Transformer = ({ block, annotation }) => {
           marks: [
             ...(item.marks || []),
             {
-              type: 'link',
+              type: 'glossaryInstance',
               attrs: {
-                href: (annotation as GlossaryInstanceAnnotation).uuid || '#',
+                authority:
+                  (annotation as GlossaryInstanceAnnotation).uuid || '#',
               },
             },
           ],

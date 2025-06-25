@@ -15,8 +15,7 @@ export const endNoteLink: Transformer = ({ block, annotation }) => {
   return scan({
     block,
     annotation,
-    transform: (item) => [
-      item,
+    transform: () => [
       {
         type: 'endNoteLink',
         attrs: {

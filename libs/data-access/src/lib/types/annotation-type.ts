@@ -10,6 +10,7 @@ export type AnnotationDTOType =
   | 'image'
   | 'indent'
   | 'inline-title'
+  | 'internal-link'
   | 'leading-space'
   | 'line'
   | 'line-group'
@@ -34,12 +35,13 @@ export type AnnotationType =
   | 'blockquote'
   | 'deprecated'
   | 'endNoteLink'
-  | 'glossary'
+  | 'glossaryInstance'
   | 'hasAbbreviation'
   | 'heading'
   | 'image'
   | 'indent'
   | 'inlineTitle'
+  | 'internalLink'
   | 'leadingSpace'
   | 'line'
   | 'lineGroup'
@@ -64,12 +66,13 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   blockquote: 'blockquote',
   'deprecated-internal-link': 'deprecated',
   'end-note-link': 'endNoteLink',
-  'glossary-instance': 'glossary',
+  'glossary-instance': 'glossaryInstance',
   'has-abbreviation': 'hasAbbreviation',
   heading: 'heading',
   image: 'image',
   indent: 'indent',
   'inline-title': 'inlineTitle',
+  'internal-link': 'internalLink',
   'leading-space': 'leadingSpace',
   line: 'line',
   'line-group': 'lineGroup',

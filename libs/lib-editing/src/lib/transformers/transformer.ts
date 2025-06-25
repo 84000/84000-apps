@@ -62,15 +62,6 @@ export const scan = ({
 
     annotationLen -= textToTransform.length;
 
-    if (!textToTransform) {
-      newContent.push(
-        ...transform({
-          ...item,
-        }),
-      );
-      return;
-    }
-
     if (preText) {
       newContent.push({
         ...item,
@@ -82,6 +73,11 @@ export const scan = ({
       ...transform({
         ...item,
         text: textToTransform,
+      }).filter((item) => {
+        if (!item.text && item.type === 'text') {
+          return false;
+        }
+        return true;
       }),
     );
 
