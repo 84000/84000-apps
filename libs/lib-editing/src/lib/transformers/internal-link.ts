@@ -1,4 +1,4 @@
-import { LinkAnnotation } from '@data-access';
+import { InternalLinkAnnotation } from '@data-access';
 import { Transformer, scan } from './transformer';
 
 export const internalLink: Transformer = ({ block, annotation }) => {
@@ -12,7 +12,7 @@ export const internalLink: Transformer = ({ block, annotation }) => {
           ...(item.marks || []),
           {
             type: 'link',
-            attrs: { href: (annotation as LinkAnnotation).href || '#' },
+            attrs: { href: (annotation as InternalLinkAnnotation).href || '#' },
           },
         ],
       },
