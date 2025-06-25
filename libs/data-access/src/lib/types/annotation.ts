@@ -104,7 +104,7 @@ export type ListItemAnnotation = AnnotationBase & {
 
 export type MantraAnnotation = AnnotationBase & {
   type: 'mantra';
-  text: string;
+  lang: ExtendedTranslationLanguage;
 };
 
 export type ParagraphAnnotation = AnnotationBase & {
@@ -390,9 +390,13 @@ const dtoToAnnotationMap: Record<
     } as ListItemAnnotation;
   },
   mantra: (dto: AnnotationDTO): MantraAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as MantraAnnotation;
+    const mantraAnnotation = baseAnnotationFromDTO(dto) as MantraAnnotation;
+    dto.content.forEach((content) => {
+      if (content.lang) {
+        mantraAnnotation.lang = content.lang as ExtendedTranslationLanguage;
+      }
+    });
+    return mantraAnnotation;
   },
   paragraph: (dto: AnnotationDTO): ParagraphAnnotation => {
     return {

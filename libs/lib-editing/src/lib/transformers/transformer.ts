@@ -1,6 +1,5 @@
 import { Annotation } from '@data-access';
 import { BlockEditorContentItem } from '@design-system';
-import { JSONContent } from '@tiptap/react';
 
 export type BlockEditorContentWithParent = BlockEditorContentItem & {
   parent?: BlockEditorContentItem;
@@ -20,7 +19,9 @@ export const scan = ({
   annotation,
   transform,
 }: TransformerProps & {
-  transform: (item: JSONContent) => JSONContent[];
+  transform: (
+    item: BlockEditorContentWithParent,
+  ) => BlockEditorContentWithParent[];
 }) => {
   // TODO: potentially handle nested/recursive content
   const currentContent = block.content || [];

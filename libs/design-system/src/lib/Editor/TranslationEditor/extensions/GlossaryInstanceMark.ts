@@ -26,7 +26,10 @@ export const GlossaryInstanceMark = Mark.create<GlossaryInstanceOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: cn(LINK_STYLE, 'decoration-dotted'),
+        class: cn(
+          LINK_STYLE,
+          'text-primary hover:text-slate decoration-dotted',
+        ),
       },
     };
   },
