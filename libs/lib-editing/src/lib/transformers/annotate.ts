@@ -36,14 +36,14 @@ import {
   unknown,
 } from '.';
 
-const TRANSFORMERS: Record<AnnotationType, Transformer> = {
-  abbreviation,
-  audio,
+const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
+  // abbreviation,
+  // audio,
   blockquote,
   deprecated,
   endNoteLink,
   glossaryInstance,
-  hasAbbreviation,
+  // hasAbbreviation,
   heading,
   indent,
   image,
@@ -53,17 +53,17 @@ const TRANSFORMERS: Record<AnnotationType, Transformer> = {
   line,
   lineGroup,
   link,
-  list,
-  listItem,
+  // list,
+  // listItem,
   mantra,
   paragraph,
   quote,
   quoted,
   reference,
-  span,
-  tableBodyData,
-  tableBodyHeader,
-  tableBodyRow,
+  // span,
+  // tableBodyData,
+  // tableBodyHeader,
+  // tableBodyRow,
   trailer,
   unknown,
 } as const;
@@ -79,11 +79,27 @@ export const annotateBlock = (
   block: BlockEditorContentWithParent,
   annotations: Annotations,
 ) => {
-  let newBlock = block;
+  for (let i = 0; i < annotations.length; i++) {
+    const annotation = annotations[i];
 
-  annotations.forEach((annotation) => {
+    const childAnnotations: Annotations = [];
+    const end = annotation.end;
+
+    for (let j = i + 1; j < annotations.length; j++) {
+      const nextAnnotation = annotations[j];
+      if (nextAnnotation.start > end) {
+        break;
+      }
+
+      // TODO: nested annotations that extend beyond the current annotation will
+      // be truncated. If this is a problem, we need to handle it by appending
+      // a new annotation for the remainder.
+      nextAnnotation.end = Math.min(nextAnnotation.end, end);
+      childAnnotations.push(nextAnnotation);
+      i = j;
+    }
+
     const transformer = TRANSFORMERS[annotation.type] || TRANSFORMERS.unknown;
-    newBlock = transformer({ block: newBlock, annotation });
-  });
-  return newBlock;
+    transformer?.({ block, annotation, childAnnotations });
+  }
 };

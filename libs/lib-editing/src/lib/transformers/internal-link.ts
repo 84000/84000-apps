@@ -1,8 +1,15 @@
 import { InternalLinkAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
+import { annotateBlock } from './annotate';
 
-export const internalLink: Transformer = ({ block, annotation }) => {
-  return scan({
+export const internalLink: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
+  const { href = '#' } = annotation as InternalLinkAnnotation;
+  splitContent({
     block,
     annotation,
     transform: (item) => [
@@ -12,10 +19,12 @@ export const internalLink: Transformer = ({ block, annotation }) => {
           ...(item.marks || []),
           {
             type: 'link',
-            attrs: { href: (annotation as InternalLinkAnnotation).href || '#' },
+            attrs: { href },
           },
         ],
       },
     ],
   });
+
+  annotateBlock(block, childAnnotations);
 };

@@ -152,10 +152,10 @@ export type UnknownAnnotation = AnnotationBase & {
 };
 
 export type AnnotationDTOContentKey =
+  | 'heading-level'
   | 'href'
   | 'label'
   | 'lang'
-  | 'level'
   | 'link-text'
   | 'link-type'
   | 'media-type'
@@ -290,8 +290,11 @@ const dtoToAnnotationMap: Record<
   heading: (dto: AnnotationDTO): HeadingAnnotation => {
     const heading = baseAnnotationFromDTO(dto) as HeadingAnnotation;
     dto.content.forEach((content) => {
-      if (content.level) {
-        heading.level = content.level as number;
+      if (content['heading-level']) {
+        const headerStr = content['heading-level'] as string;
+        const levelStr = headerStr.replace('h', '');
+        const level = parseInt(levelStr, 10);
+        heading.level = level;
       }
     });
 

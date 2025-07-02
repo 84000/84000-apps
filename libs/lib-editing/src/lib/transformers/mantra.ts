@@ -1,5 +1,6 @@
 import { MantraAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
 
 export const mantra: Transformer = ({ block, annotation }) => {
@@ -13,7 +14,7 @@ export const mantra: Transformer = ({ block, annotation }) => {
     return block;
   }
 
-  return scan({
+  return splitContent({
     block,
     annotation,
     transform: (item) => [

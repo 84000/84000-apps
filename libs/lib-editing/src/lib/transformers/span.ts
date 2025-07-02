@@ -1,6 +1,6 @@
 import { ExtendedTranslationLanguage, SpanAnnotation } from '@data-access';
 import type { Transformer } from './transformer';
-import { scan } from './transformer';
+import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
@@ -32,7 +32,7 @@ export const span: Transformer = ({ block, annotation }) => {
     return block;
   }
 
-  return scan({
+  return splitContent({
     block,
     annotation,
     transform: (item) => {

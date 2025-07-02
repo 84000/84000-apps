@@ -1,8 +1,13 @@
 import { InlineTitleAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
-import { ITALIC_LANGUAGES } from './annotate';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
+import { ITALIC_LANGUAGES, annotateBlock } from './annotate';
 
-export const inlineTitle: Transformer = ({ block, annotation }) => {
+export const inlineTitle: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
   const { lang } = annotation as InlineTitleAnnotation;
   const markType = ITALIC_LANGUAGES.includes(
     lang as (typeof ITALIC_LANGUAGES)[number],
@@ -13,14 +18,21 @@ export const inlineTitle: Transformer = ({ block, annotation }) => {
     return block;
   }
 
-  return scan({
+  splitContent({
     block,
     annotation,
     transform: (item) => [
       {
         ...item,
-        marks: [...(item.marks || []), { type: 'italic' }],
+        marks: [
+          ...(item.marks || []),
+          {
+            type: 'italic',
+          },
+        ],
       },
     ],
   });
+
+  annotateBlock(block, childAnnotations);
 };

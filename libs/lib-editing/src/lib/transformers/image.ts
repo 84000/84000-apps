@@ -1,8 +1,9 @@
 import { ImageAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
 
 export const image: Transformer = ({ block, annotation }) => {
-  return scan({
+  return splitContent({
     block,
     annotation,
     transform: (item) => {

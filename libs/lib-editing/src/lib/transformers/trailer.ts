@@ -1,25 +1,23 @@
+import { annotateBlock } from './annotate';
 import { Transformer } from './transformer';
 
-export const trailer: Transformer = ({ block }) => {
-  if (block.type === 'paragraph') {
-    if (!block.attrs) {
-      block.attrs = {};
-    }
-    block.attrs.hasTrailer = true;
-    return block;
+export const trailer: Transformer = ({ block, childAnnotations = [] }) => {
+  let head = block;
+  while (head.type !== 'paragraph' && head.parent) {
+    head = head.parent;
   }
 
-  let parent = block.parent;
-  while (parent) {
-    if (parent.type === 'paragraph') {
-      if (!parent.attrs) {
-        parent.attrs = {};
-      }
-      parent.attrs.hasTrailer = true;
-      break;
-    }
-    parent = parent.parent;
+  if (head.type !== 'paragraph') {
+    console.warn(
+      'Trailer transformer expects to find a parent paragraph block.',
+    );
+    return;
   }
 
-  return block;
+  if (!head.attrs) {
+    head.attrs = {};
+  }
+  head.attrs.hasTrailer = true;
+
+  annotateBlock(block, childAnnotations);
 };

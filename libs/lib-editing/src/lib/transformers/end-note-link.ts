@@ -1,5 +1,6 @@
 import { EndNoteLinkAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
 
 export const endNoteLink: Transformer = ({ block, annotation }) => {
   const endNote = (annotation as EndNoteLinkAnnotation).endNote;
@@ -9,10 +10,10 @@ export const endNoteLink: Transformer = ({ block, annotation }) => {
       endNote,
     };
 
-    return block;
+    return;
   }
 
-  return scan({
+  splitContent({
     block,
     annotation,
     transform: () => [

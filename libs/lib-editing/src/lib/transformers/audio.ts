@@ -1,8 +1,9 @@
 import { AudioAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
 
 export const audio: Transformer = ({ block, annotation }) => {
-  return scan({
+  splitContent({
     block,
     annotation,
     transform: (item) => {

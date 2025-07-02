@@ -1,7 +1,13 @@
 import { HeadingAnnotation } from '@data-access';
-import { Transformer, scan } from './transformer';
+import { Transformer } from './transformer';
+import { splitContent } from './split-content';
+import { annotateBlock } from './annotate';
 
-export const heading: Transformer = ({ block, annotation }) => {
+export const heading: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
   const level = (annotation as HeadingAnnotation).level || 1;
   if (block.type === 'heading') {
     block.attrs = {
@@ -12,7 +18,7 @@ export const heading: Transformer = ({ block, annotation }) => {
     return block;
   }
 
-  return scan({
+  splitContent({
     block,
     annotation,
     transform: (item) => [
@@ -32,4 +38,6 @@ export const heading: Transformer = ({ block, annotation }) => {
       },
     ],
   });
+
+  annotateBlock(block, childAnnotations);
 };

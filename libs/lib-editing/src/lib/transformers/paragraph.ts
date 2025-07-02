@@ -1,27 +1,25 @@
-import { Transformer, scan } from './transformer';
+import { recurse } from './recurse';
+import { Transformer } from './transformer';
 
-export const paragraph: Transformer = ({ block, annotation }) => {
-  if (block.type === 'paragraph') {
-    return block;
+export const paragraph: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
+  if (block.type !== 'paragraph') {
+    console.warn(
+      'Paragraph transformer expects to operate on a block of type "paragraph".',
+    );
+    return;
   }
 
-  return scan({
+  recurse({
     block,
     annotation,
-    transform: (item) => [
-      {
-        ...item,
-        type: 'paragraph',
-        attrs: {
-          ...item.attrs,
-        },
-        content: [
-          {
-            type: 'text',
-            text: item.text,
-          },
-        ],
-      },
-    ],
+    childAnnotations,
+    transform: (item) => {
+      item.type = 'paragraph';
+      return [item];
+    },
   });
 };

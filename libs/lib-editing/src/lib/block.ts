@@ -1,7 +1,7 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
-import { Body, BodyItemType, Passage } from '@data-access';
+import { AnnotationType, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
-import type { BlockEditorContentWithParent } from './transformers';
+import { printBlock, type BlockEditorContentWithParent } from './transformers';
 
 const passageTemplate = (passage: Passage): BlockEditorContentWithParent => {
   const block: BlockEditorContentWithParent = {
@@ -11,7 +11,6 @@ const passageTemplate = (passage: Passage): BlockEditorContentWithParent => {
       sort: passage.sort,
       type: passage.type,
       label: passage.label,
-      class: 'passage',
     },
     content: [],
   };
@@ -41,6 +40,8 @@ const headingTemplate = (
     type: 'heading',
     attrs: {
       level: 1,
+      start: 0,
+      end: passage.content.length,
     },
     content: [],
     parent,
@@ -55,12 +56,15 @@ const paragraphTemplate = (
 ): BlockEditorContentWithParent => {
   const block: BlockEditorContentWithParent = {
     type: 'paragraph',
+    attrs: {
+      start: 0,
+      end: passage.content.length,
+    },
     content: [],
     parent,
   };
 
   block.content = [textTemplate(passage.content, block)];
-
   return block;
 };
 
@@ -96,9 +100,51 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   unknown: paragraphTemplate,
 };
 
-export const blocksFromTranslationBody = (body: Body) => {
+enum BlockPriority {
+  OuterBlock = 1,
+  Attribute = 2,
+  Block = 3,
+  Inline = 4,
+  Mark = 5,
+  Unknown = Number.MIN_SAFE_INTEGER,
+}
+
+const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
+  {
+    abbreviation: BlockPriority.Inline,
+    audio: BlockPriority.Inline,
+    blockquote: BlockPriority.OuterBlock,
+    deprecated: BlockPriority.Unknown,
+    endNoteLink: BlockPriority.Inline,
+    glossaryInstance: BlockPriority.Mark,
+    hasAbbreviation: BlockPriority.Inline,
+    heading: BlockPriority.OuterBlock,
+    indent: BlockPriority.Attribute,
+    image: BlockPriority.Inline,
+    inlineTitle: BlockPriority.Mark,
+    internalLink: BlockPriority.Mark,
+    leadingSpace: BlockPriority.Attribute,
+    line: BlockPriority.Block,
+    lineGroup: BlockPriority.OuterBlock,
+    link: BlockPriority.Mark,
+    list: BlockPriority.OuterBlock,
+    listItem: BlockPriority.Block,
+    mantra: BlockPriority.Inline,
+    paragraph: BlockPriority.OuterBlock,
+    quote: BlockPriority.Inline,
+    quoted: BlockPriority.Unknown,
+    reference: BlockPriority.Unknown,
+    span: BlockPriority.Mark,
+    tableBodyData: BlockPriority.Block,
+    tableBodyHeader: BlockPriority.OuterBlock,
+    tableBodyRow: BlockPriority.OuterBlock,
+    trailer: BlockPriority.Attribute,
+    unknown: BlockPriority.Unknown,
+  };
+
+export const blocksFromTranslationBody = (passages: Passage[]) => {
   const blocks: BlockEditorContent = [];
-  body.forEach((passage) => {
+  passages.forEach((passage) => {
     if (!passage.content) {
       console.warn('passage has no content');
       console.warn(passage);
@@ -119,10 +165,40 @@ export const blocksFromTranslationBody = (body: Body) => {
   return blocks;
 };
 
-export const blockFromPassage = (item: Passage): BlockEditorContentItem => {
-  const block = passageTemplate(item);
+export const blockFromPassage = (passage: Passage): BlockEditorContentItem => {
+  const block = passageTemplate(passage);
   const templateContent = block.content?.[0] || {};
 
-  block.content = [annotateBlock(templateContent, item.annotations)];
+  // Sort annotations by start position, then by end position in descending
+  // order to ensure that the longest annotations are processed first. If two
+  // annotations have the same start and end positions, sort by processing
+  // priority.
+  passage.annotations?.sort((a, b) => {
+    if (a.start !== b.start) {
+      return a.start - b.start;
+    }
+
+    if (a.end !== b.end) {
+      return b.end - a.end;
+    }
+
+    const aPriority =
+      PRIORITY_FOR_ANNOTAION_TYPE[a.type] || BlockPriority.Unknown;
+    const bPriority =
+      PRIORITY_FOR_ANNOTAION_TYPE[b.type] || BlockPriority.Unknown;
+    return aPriority - bPriority;
+  });
+
+  console.log('Incoming passage:');
+  console.log(JSON.stringify(passage, null, 2));
+
+  console.log('Annotating template block:');
+  printBlock(block);
+
+  annotateBlock(templateContent, passage.annotations);
+
+  console.log('Parsed editor block:');
+  printBlock(block);
+
   return block;
 };

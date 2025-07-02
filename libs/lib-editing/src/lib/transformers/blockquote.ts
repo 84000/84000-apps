@@ -1,28 +1,31 @@
-import { Transformer, scan } from './transformer';
+import { recurse } from './recurse';
+import { Transformer } from './transformer';
 
-export const blockquote: Transformer = ({ block, annotation }) => {
-  return scan({
+export const blockquote: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
+  recurse({
     block,
     annotation,
-    transform: (item) => [
-      {
-        ...item,
-        type: 'blockquote',
-        attrs: {
-          ...item.attrs,
-        },
-        content: [
-          {
-            type: 'paragraph',
-            content: [
-              {
-                type: 'text',
-                text: item.text,
-              },
-            ],
+    childAnnotations,
+    transform: (item) => {
+      return [
+        {
+          ...item,
+          type: 'blockquote',
+          attrs: {
+            ...item.attrs,
           },
-        ],
-      },
-    ],
+          content: [
+            {
+              type: item.type,
+              content: item.content || [],
+            },
+          ],
+        },
+      ];
+    },
   });
 };
