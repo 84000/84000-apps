@@ -94,23 +94,23 @@ export const splitContent: Transformer = ({
 
     // insert if we have text to transform or it the annotation has
     // length 0, meaning it an endnote or similar.
-    if (textToTransform.length || !annotationLen) {
-      const nextItem = {
-        ...item,
-        text: textToTransform,
-        attrs: {
-          ...item.attrs,
-          start: midTextStart,
-          end: midTextEnd,
-        },
-      };
-      transform?.({
-        root,
-        parent,
-        block: nextItem,
-        annotation,
-      });
+    const nextItem = {
+      ...item,
+      text: textToTransform,
+      attrs: {
+        ...item.attrs,
+        start: midTextStart,
+        end: midTextEnd,
+      },
+    };
+    transform?.({
+      root,
+      parent,
+      block: nextItem,
+      annotation,
+    });
 
+    if (nextItem.text || nextItem.type !== 'text') {
       newContent.push(nextItem);
     }
 
