@@ -1,3 +1,15 @@
-import { pass } from './transformer';
+import { recurse } from './recurse';
+import { Transformer } from './transformer';
 
-export const leadingSpace = pass;
+export const leadingSpace: Transformer = (ctx) => {
+  recurse({
+    ...ctx,
+    until: ['paragraph'],
+    transform: ({ block }) => {
+      block.attrs = {
+        ...block.attrs,
+        hasLeadingSpace: true,
+      };
+    },
+  });
+};

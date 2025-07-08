@@ -1,8 +1,13 @@
 import type { Transformer } from './transformer';
-import { scan } from './transformer';
+import { splitContent } from './split-content';
+import { annotateBlock } from './annotate';
 
-export const italic: Transformer = ({ block, annotation }) => {
-  return scan({
+export const italic: Transformer = ({
+  block,
+  annotation,
+  childAnnotations = [],
+}) => {
+  splitContent({
     block,
     annotation,
     transform: (item) => ({
@@ -10,4 +15,6 @@ export const italic: Transformer = ({ block, annotation }) => {
       marks: [...(item.marks || []), { type: 'italic' }],
     }),
   });
+
+  return annotateBlock(block, childAnnotations);
 };

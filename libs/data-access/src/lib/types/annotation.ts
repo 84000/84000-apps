@@ -4,7 +4,7 @@ import {
   AnnotationType,
   annotationTypeFromDTO,
 } from './annotation-type';
-import { TranslationLanguage } from './language';
+import { ExtendedTranslationLanguage, TranslationLanguage } from './language';
 
 export type AnnotationBase = {
   end: number;
@@ -25,6 +25,10 @@ export type AudioAnnotation = AnnotationBase & {
   mediaType: string;
 };
 
+export type DeprecatedAnnotation = AnnotationBase & {
+  type: 'deprecated';
+};
+
 export type BlockquoteAnnotation = AnnotationBase & {
   type: 'blockquote';
   text: string;
@@ -32,11 +36,12 @@ export type BlockquoteAnnotation = AnnotationBase & {
 
 export type EndNoteLinkAnnotation = AnnotationBase & {
   type: 'endNoteLink';
+  endNote: string;
 };
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
-  type: 'glossary';
-  uuid: string;
+  type: 'glossaryInstance';
+  authority: string;
 };
 
 export type HasAbbreviationAnnotation = AnnotationBase & {
@@ -48,25 +53,31 @@ export type HeadingAnnotation = AnnotationBase & {
   level: number;
 };
 
-export type LeadingSpaceAnnotation = AnnotationBase & {
-  type: 'leadingSpace';
-};
-
 export type ImageAnnotation = AnnotationBase & {
   type: 'image';
   src: string;
 };
 
+export type IndentAnnotation = AnnotationBase & {
+  type: 'indent';
+};
+
 export type InlineTitleAnnotation = AnnotationBase & {
   type: 'inlineTitle';
-  language: TranslationLanguage;
+  lang: ExtendedTranslationLanguage;
 };
 
 export type InternalLinkAnnotation = AnnotationBase & {
   type: 'internalLink';
-  href: string;
-  text?: string;
+  linkType: string;
+  href?: string;
+  label?: string;
+  uuid?: string;
   isPending: boolean;
+};
+
+export type LeadingSpaceAnnotation = AnnotationBase & {
+  type: 'leadingSpace';
 };
 
 export type LineAnnotation = AnnotationBase & {
@@ -93,7 +104,7 @@ export type ListItemAnnotation = AnnotationBase & {
 
 export type MantraAnnotation = AnnotationBase & {
   type: 'mantra';
-  text: string;
+  lang: ExtendedTranslationLanguage;
 };
 
 export type ParagraphAnnotation = AnnotationBase & {
@@ -116,6 +127,8 @@ export type ReferenceAnnotation = AnnotationBase & {
 
 export type SpanAnnotation = AnnotationBase & {
   type: 'span';
+  textStyle?: string;
+  lang?: ExtendedTranslationLanguage;
 };
 
 export type TableBodyDataAnnotation = AnnotationBase & {
@@ -139,14 +152,17 @@ export type UnknownAnnotation = AnnotationBase & {
 };
 
 export type AnnotationDTOContentKey =
+  | 'heading-level'
   | 'href'
+  | 'label'
   | 'lang'
-  | 'level'
   | 'link-text'
   | 'link-type'
   | 'media-type'
   | 'paragraph'
   | 'src'
+  | 'text-style'
+  | 'type'
   | 'title'
   | 'uuid';
 
@@ -168,11 +184,13 @@ export type Annotation =
   | AbbreviationAnnotation
   | AudioAnnotation
   | BlockquoteAnnotation
+  | DeprecatedAnnotation
   | EndNoteLinkAnnotation
   | GlossaryInstanceAnnotation
   | HasAbbreviationAnnotation
   | HeadingAnnotation
   | ImageAnnotation
+  | IndentAnnotation
   | InlineTitleAnnotation
   | InternalLinkAnnotation
   | LeadingSpaceAnnotation
@@ -235,12 +253,17 @@ const dtoToAnnotationMap: Record<
       ...baseAnnotationFromDTO(dto),
     } as QuotedAnnotation;
   },
+  'deprecated-internal-link': (dto: AnnotationDTO): DeprecatedAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as DeprecatedAnnotation;
+  },
   'end-note-link': (dto: AnnotationDTO): EndNoteLinkAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);
     const endNote = baseAnnotation as EndNoteLinkAnnotation;
     dto.content.forEach((content) => {
       if (content.uuid) {
-        endNote.uuid = content.uuid as string;
+        endNote.endNote = content.uuid as string;
       }
     });
 
@@ -252,7 +275,7 @@ const dtoToAnnotationMap: Record<
     ) as GlossaryInstanceAnnotation;
     dto.content.forEach((content) => {
       if (content.uuid) {
-        glossaryInstance.uuid = content.uuid as string;
+        glossaryInstance.authority = content.uuid as string;
       }
     });
 
@@ -267,8 +290,11 @@ const dtoToAnnotationMap: Record<
   heading: (dto: AnnotationDTO): HeadingAnnotation => {
     const heading = baseAnnotationFromDTO(dto) as HeadingAnnotation;
     dto.content.forEach((content) => {
-      if (content.level) {
-        heading.level = content.level as number;
+      if (content['heading-level']) {
+        const headerStr = content['heading-level'] as string;
+        const levelStr = headerStr.replace('h', '');
+        const level = parseInt(levelStr, 10);
+        heading.level = level;
       }
     });
 
@@ -285,11 +311,16 @@ const dtoToAnnotationMap: Record<
 
     return image;
   },
+  indent: (dto: AnnotationDTO): IndentAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as IndentAnnotation;
+  },
   'inline-title': (dto: AnnotationDTO): InlineTitleAnnotation => {
     const inlineTitle = baseAnnotationFromDTO(dto) as InlineTitleAnnotation;
     dto.content.forEach((content) => {
       if (content.lang) {
-        inlineTitle.language = content.lang as TranslationLanguage;
+        inlineTitle.lang = content.lang as TranslationLanguage;
       }
     });
 
@@ -302,12 +333,16 @@ const dtoToAnnotationMap: Record<
         internalLink.href = content.href as string;
       }
 
-      if (content['link-text']) {
-        internalLink.text = content['link-text'] as string;
-      }
-
       if (content['link-type']) {
         internalLink.isPending = true;
+      }
+
+      if (content['type']) {
+        internalLink.linkType = content['type'] as string;
+      }
+
+      if (content.label) {
+        internalLink.label = content.label as string;
       }
     });
 
@@ -358,9 +393,13 @@ const dtoToAnnotationMap: Record<
     } as ListItemAnnotation;
   },
   mantra: (dto: AnnotationDTO): MantraAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as MantraAnnotation;
+    const mantraAnnotation = baseAnnotationFromDTO(dto) as MantraAnnotation;
+    dto.content.forEach((content) => {
+      if (content.lang) {
+        mantraAnnotation.lang = content.lang as ExtendedTranslationLanguage;
+      }
+    });
+    return mantraAnnotation;
   },
   paragraph: (dto: AnnotationDTO): ParagraphAnnotation => {
     return {
@@ -395,10 +434,17 @@ const dtoToAnnotationMap: Record<
     } as ReferenceAnnotation;
   },
   span: (dto: AnnotationDTO): SpanAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-      content: [],
-    } as SpanAnnotation;
+    const spanAnnotation = baseAnnotationFromDTO(dto) as SpanAnnotation;
+    dto.content.forEach((content) => {
+      if (content['text-style']) {
+        spanAnnotation.textStyle = content['text-style'] as string;
+      }
+
+      if (content.lang) {
+        spanAnnotation.lang = content.lang as ExtendedTranslationLanguage;
+      }
+    });
+    return spanAnnotation;
   },
   'table-body-data': (dto: AnnotationDTO): TableBodyDataAnnotation => {
     return {

@@ -9,10 +9,8 @@ import { Passage, PassageDTO, passageFromDTO } from './passage';
 
 export type TranslationNodeClass = 'translation' | 'annotation';
 
-export type Body = Passage[];
-
 export type Translation = {
-  body: Body;
+  body: Passage[];
   backMatter: BackMatter;
   frontMatter: FrontMatter;
 };
@@ -37,7 +35,7 @@ export const translationFromDTO = (dto: TranslationDTO): Translation => {
   };
 };
 
-export const translationBodyFromDTO = (dto: BodyDTO): Body => {
+export const translationBodyFromDTO = (dto: BodyDTO): Passage[] => {
   return dto.map((p) =>
     passageFromDTO(p, annotationsFromDTO(p.annotations || [])),
   );

@@ -1,11 +1,17 @@
-import { LinkAnnotation } from '@data-access';
+import { GlossaryInstanceAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { recurse } from './recurse';
 
-export const link: Transformer = (ctx) => {
+export const glossaryInstance: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { uuid, href = '#' } = annotation as LinkAnnotation;
+  const { uuid, authority } = annotation as GlossaryInstanceAnnotation;
+
+  if (!authority) {
+    console.warn(`Glossary instance ${uuid} is missing authority UUID`);
+
+    return;
+  }
 
   recurse({
     ...ctx,
@@ -17,8 +23,11 @@ export const link: Transformer = (ctx) => {
           block.marks = [
             ...(block.marks || []),
             {
-              type: 'link',
-              attrs: { href, uuid },
+              type: 'glossaryInstance',
+              attrs: {
+                authority,
+                uuid,
+              },
             },
           ];
         },

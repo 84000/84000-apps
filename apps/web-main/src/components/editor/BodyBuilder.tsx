@@ -1,6 +1,6 @@
 'use client';
 
-import { Body, createBrowserClient, getTranslationBody } from '@data-access';
+import { Passage, createBrowserClient, getTranslationBody } from '@data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorContext';
 import { TranslationBodyEditor } from '../ui/TranslationBodyEditor';
@@ -8,7 +8,7 @@ import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
 
 export const BodyBuilder = () => {
-  const [body, setBody] = useState<Body>();
+  const [body, setBody] = useState<Passage[]>();
   const [loading, setLoading] = useState(true);
 
   const { uuid } = useEditorState();
