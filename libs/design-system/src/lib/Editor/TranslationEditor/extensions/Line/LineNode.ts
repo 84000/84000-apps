@@ -10,7 +10,7 @@ export const LineNode = Node.create({
     };
   },
 
-  content: 'paragraph',
+  content: 'text*',
 
   defining: true,
 

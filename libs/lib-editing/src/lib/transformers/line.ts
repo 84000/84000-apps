@@ -2,24 +2,26 @@ import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 
-export const line: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
+export const line: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { start, end, uuid } = annotation || {};
+
   return recurse({
-    block,
-    annotation,
-    childAnnotations,
-    transform: (child) =>
+    ...ctx,
+    until: ['line'],
+    transform: (ctx) => {
       splitBlock({
-        block: child,
-        annotation,
-        childAnnotations,
-        transform: (item) => {
-          item.type = 'line';
-          return item;
+        ...ctx,
+        transform: ({ block }) => {
+          block.type = 'line';
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+            uuid,
+          };
         },
-      }),
+      });
+    },
   });
 };

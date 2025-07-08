@@ -35,10 +35,7 @@ export const splitBlock: Transformer = ({
     return;
   }
 
-  console.log(`Found block at index ${blockIndex} in parent content`);
-
   const { start = 0, end = 0 } = annotation || {};
-  console.log(`Splitting block at start: ${start}, end: ${end}`);
   const currentContent = block.content || [];
   const prefixContent: typeof currentContent = [];
   const midContent: typeof currentContent = [];
@@ -48,18 +45,12 @@ export const splitBlock: Transformer = ({
     const itemStart = item.attrs?.start || 0;
     const itemEnd = item.attrs?.end || 0;
 
-    console.log(
-      `Processing content: start=${itemStart} end=${itemEnd} text="${item.text}"`,
-    );
-
     if (itemEnd < start) {
-      console.log('inserting as prefix content');
       prefixContent.push(item);
       return;
     }
 
     if (itemStart > end) {
-      console.log('inserting as suffix content');
       suffixContent.push(item);
       return;
     }
@@ -70,7 +61,6 @@ export const splitBlock: Transformer = ({
     const targetEnd = Math.min(targetStart + (end - start), itemText.length);
     const preText = itemText.slice(0, targetStart);
     if (preText) {
-      console.log(`preText: "${preText}"`);
       prefixContent.push({
         ...item,
         text: preText,
@@ -85,7 +75,6 @@ export const splitBlock: Transformer = ({
     const midText = itemText.slice(targetStart, targetEnd);
 
     if (midText) {
-      console.log(`midText: "${midText}"`);
       midContent.push({
         ...item,
         text: midText,
@@ -97,11 +86,10 @@ export const splitBlock: Transformer = ({
       });
     }
 
-    const postStart = Math.min(itemText.length, end - itemStart + 1);
+    const postStart = targetStart + midText.length + 1;
     const postText = itemText.slice(postStart);
 
     if (postText) {
-      console.log(`postText: "${postText}"`);
       suffixContent.push({
         ...item,
         text: postText,
@@ -160,21 +148,4 @@ export const splitBlock: Transformer = ({
   }
 
   parent.content.splice(blockIndex, 1, ...newBlocks);
-
-  // trim leading and trailing whitespace from text content in split blocks.
-  parent.content.forEach((item) => {
-    if (!item.content?.length) {
-      return;
-    }
-
-    const firstText = item.content[0]?.text || '';
-    if (firstText) {
-      item.content[0].text = firstText.trimStart();
-    }
-
-    const lastText = item.content[item.content.length - 1]?.text || '';
-    if (lastText) {
-      item.content[item.content.length - 1].text = lastText.trimEnd();
-    }
-  });
 };

@@ -2,33 +2,36 @@ import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 
-export const lineGroup: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
+export const lineGroup: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { start, end, uuid } = annotation || {};
+
   return recurse({
-    block,
-    annotation,
-    childAnnotations,
-    transform: (child) =>
+    ...ctx,
+    until: ['paragraph'],
+    transform: (ctx) =>
       splitBlock({
-        block: child,
-        annotation,
-        childAnnotations,
-        transform: (item) => ({
-          ...item,
-          type: 'lineGroup',
-          attrs: {
-            ...item.attrs,
-          },
-          content: [
+        ...ctx,
+        transform: ({ block }) => {
+          block.type = 'lineGroup';
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+            uuid,
+          };
+          block.content = [
             {
               type: 'line',
-              content: item.content || [],
+              content: block.content || [],
+              attrs: {
+                start,
+                end,
+                uuid,
+              },
             },
-          ],
-        }),
+          ];
+        },
       }),
   });
 };

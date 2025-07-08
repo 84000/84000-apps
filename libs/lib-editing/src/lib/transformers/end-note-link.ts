@@ -5,7 +5,7 @@ import { recurse } from './recurse';
 
 export const endNoteLink: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { endNote, uuid } = annotation as EndNoteLinkAnnotation;
+  const { endNote, uuid, start, end } = annotation as EndNoteLinkAnnotation;
 
   if (!endNote) {
     console.warn(`End note link ${uuid} is missing end note reference`);
@@ -20,10 +20,13 @@ export const endNoteLink: Transformer = (ctx) => {
         ...ctx,
         transform: ({ block }) => {
           block.type = 'endNoteLink';
+          block.marks = [];
           block.attrs = {
             ...block.attrs,
             endNote,
             uuid,
+            start,
+            end,
           };
         },
       });

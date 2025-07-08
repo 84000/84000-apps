@@ -2,6 +2,7 @@ import { ExtendedTranslationLanguage, SpanAnnotation } from '@data-access';
 import type { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
+import { recurse } from './recurse';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
   [key: string]: (lang?: ExtendedTranslationLanguage) => string | undefined;
@@ -21,43 +22,45 @@ const MARK_TYPE_FOR_SPAN_TYPE: {
   underline: () => 'underline',
 };
 
-export const span: Transformer = ({ block, annotation }) => {
-  const { textStyle, lang } = annotation as SpanAnnotation;
+export const span: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { textStyle, lang, uuid, start, end } = annotation as SpanAnnotation;
   if (!textStyle) {
-    return block;
+    return;
   }
 
   const markType = MARK_TYPE_FOR_SPAN_TYPE[textStyle]?.(lang);
   if (!markType) {
-    return block;
+    return;
   }
 
-  return splitContent({
-    block,
-    annotation,
-    transform: (item) => {
-      const attrs = item.attrs || {};
-      if (textStyle) {
-        attrs.textStyle = textStyle;
-      }
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) => {
+      splitContent({
+        ...ctx,
+        transform: ({ block }) => {
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+          };
 
-      if (lang) {
-        attrs.lang = lang;
-      }
-
-      return {
-        ...item,
-        marks: [
-          ...(item.marks || []),
-          {
-            type: markType,
-            attrs: {
-              ...item.attrs,
-              ...attrs,
+          block.marks = [
+            ...(block.marks || []),
+            {
+              type: markType,
+              attrs: {
+                ...block.attrs,
+                textStyle,
+                lang,
+                uuid,
+              },
             },
-          },
-        ],
-      };
+          ];
+        },
+      });
     },
   });
 };

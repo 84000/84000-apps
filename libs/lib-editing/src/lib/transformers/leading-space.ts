@@ -8,7 +8,7 @@ export const leadingSpace: Transformer = (ctx) => {
     transform: ({ block }) => {
       block.attrs = {
         ...block.attrs,
-        leadingSpace: true,
+        hasLeadingSpace: true,
       };
     },
   });

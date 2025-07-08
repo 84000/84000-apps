@@ -127,7 +127,5 @@ export const splitContent: Transformer = ({
     }
   });
 
-  console.log(start, end);
-  console.log(newContent);
   parent.content = newContent;
 };
