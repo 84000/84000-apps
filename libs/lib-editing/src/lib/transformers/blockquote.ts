@@ -13,7 +13,6 @@ export const blockquote: Transformer = (ctx) => {
       splitBlock({
         ...ctx,
         transform: ({ block }) => {
-          const originalType = block.type;
           block.type = 'blockquote';
           block.attrs = {
             ...block.attrs,
@@ -23,7 +22,7 @@ export const blockquote: Transformer = (ctx) => {
           };
           block.content = [
             {
-              type: originalType,
+              type: 'paragraph',
               content: block.content || [],
             },
           ];
