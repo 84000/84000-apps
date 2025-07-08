@@ -1,43 +1,29 @@
 import { HeadingAnnotation } from '@data-access';
+import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
-import { splitContent } from './split-content';
-import { annotateBlock } from './annotate';
+import { recurse } from './recurse';
 
-export const heading: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
+export const heading: Transformer = ({ root, parent, block, annotation }) => {
   const level = (annotation as HeadingAnnotation).level || 1;
-  if (block.type === 'heading') {
-    block.attrs = {
-      ...block.attrs,
-      level,
-    };
-
-    return block;
-  }
-
-  splitContent({
+  recurse({
+    until: ['heading'],
+    root,
+    parent,
     block,
     annotation,
-    transform: (item) => [
-      {
-        ...item,
-        type: 'heading',
-        attrs: {
-          ...item.attrs,
-          level,
+    transform: (ctx) =>
+      splitBlock({
+        ...ctx,
+        transform: ({ block: item }) => {
+          item.type = 'heading';
+          item.attrs = {
+            ...item.attrs,
+            level,
+            start: annotation?.start,
+            end: annotation?.end,
+            uuid: annotation.uuid,
+          };
         },
-        content: [
-          {
-            type: 'text',
-            text: item.text,
-          },
-        ],
-      },
-    ],
+      }),
   });
-
-  annotateBlock(block, childAnnotations);
 };

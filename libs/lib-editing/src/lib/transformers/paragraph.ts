@@ -1,25 +1,26 @@
-import { recurse } from './recurse';
+import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
+import { recurse } from './recurse';
 
-export const paragraph: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
-  if (block.type !== 'paragraph') {
-    console.warn(
-      'Paragraph transformer expects to operate on a block of type "paragraph".',
-    );
-    return;
-  }
+export const paragraph: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { start, end, uuid } = annotation || {};
 
   recurse({
-    block,
-    annotation,
-    childAnnotations,
-    transform: (item) => {
-      item.type = 'paragraph';
-      return [item];
-    },
+    ...ctx,
+    until: ['paragraph'],
+    transform: (ctx) =>
+      splitBlock({
+        ...ctx,
+        transform: ({ block }) => {
+          block.type = 'paragraph';
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+            uuid,
+          };
+        },
+      }),
   });
 };

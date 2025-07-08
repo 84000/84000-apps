@@ -1,10 +1,9 @@
 import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
 import { AnnotationType, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
-import { printBlock, type BlockEditorContentWithParent } from './transformers';
 
-const passageTemplate = (passage: Passage): BlockEditorContentWithParent => {
-  const block: BlockEditorContentWithParent = {
+const passageTemplate = (passage: Passage): BlockEditorContentItem => {
+  const block: BlockEditorContentItem = {
     type: 'passage',
     attrs: {
       uuid: passage.uuid,
@@ -18,61 +17,52 @@ const passageTemplate = (passage: Passage): BlockEditorContentWithParent => {
   const template =
     TEMPLATES_FOR_BLOCK_TYPE[passage.type] ||
     TEMPLATES_FOR_BLOCK_TYPE['translation'];
-  block.content = [template(passage, block)];
+  block.content = [template(passage)];
 
   return block;
 };
 
-const textTemplate = (
-  text: string,
-  parent: BlockEditorContentWithParent,
-): BlockEditorContentWithParent => ({
+const textTemplate = (text: string): BlockEditorContentItem => ({
   type: 'text',
   text,
-  parent,
+  attrs: {
+    start: 0,
+    end: text.length,
+  },
 });
 
-const headingTemplate = (
-  passage: Passage,
-  parent: BlockEditorContentWithParent,
-): BlockEditorContentWithParent => {
-  const block: BlockEditorContentWithParent = {
+const headingTemplate = (passage: Passage): BlockEditorContentItem => {
+  const block: BlockEditorContentItem = {
     type: 'heading',
     attrs: {
       level: 1,
       start: 0,
       end: passage.content.length,
+      uuid: passage.uuid,
     },
     content: [],
-    parent,
   };
-  block.content = [textTemplate(passage.content, block)];
+  block.content = [textTemplate(passage.content)];
   return block;
 };
 
-const paragraphTemplate = (
-  passage: Passage,
-  parent: BlockEditorContentWithParent,
-): BlockEditorContentWithParent => {
-  const block: BlockEditorContentWithParent = {
+const paragraphTemplate = (passage: Passage): BlockEditorContentItem => {
+  const block: BlockEditorContentItem = {
     type: 'paragraph',
     attrs: {
       start: 0,
       end: passage.content.length,
+      uuid: passage.uuid,
     },
     content: [],
-    parent,
   };
 
-  block.content = [textTemplate(passage.content, block)];
+  block.content = [textTemplate(passage.content)];
   return block;
 };
 
 const TEMPLATES_FOR_BLOCK_TYPE: {
-  [key in BodyItemType]: (
-    passage: Passage,
-    parent: BlockEditorContentWithParent,
-  ) => BlockEditorContentWithParent;
+  [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
 } = {
   acknowledgment: paragraphTemplate,
   acknowledgmentHeader: headingTemplate,
@@ -167,7 +157,6 @@ export const blocksFromTranslationBody = (passages: Passage[]) => {
 
 export const blockFromPassage = (passage: Passage): BlockEditorContentItem => {
   const block = passageTemplate(passage);
-  const templateContent = block.content?.[0] || {};
 
   // Sort annotations by start position, then by end position in descending
   // order to ensure that the longest annotations are processed first. If two
@@ -189,16 +178,7 @@ export const blockFromPassage = (passage: Passage): BlockEditorContentItem => {
     return aPriority - bPriority;
   });
 
-  console.log('Incoming passage:');
-  console.log(JSON.stringify(passage, null, 2));
-
-  console.log('Annotating template block:');
-  printBlock(block);
-
-  annotateBlock(templateContent, passage.annotations);
-
-  console.log('Parsed editor block:');
-  printBlock(block);
+  annotateBlock(block, passage.annotations);
 
   return block;
 };

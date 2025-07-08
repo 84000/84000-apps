@@ -1,31 +1,33 @@
 import { recurse } from './recurse';
+import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 
-export const blockquote: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
+export const blockquote: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { start, end, uuid } = annotation || {};
+
   recurse({
-    block,
-    annotation,
-    childAnnotations,
-    transform: (item) => {
-      return [
-        {
-          ...item,
-          type: 'blockquote',
-          attrs: {
-            ...item.attrs,
-          },
-          content: [
+    ...ctx,
+    until: ['paragraph'],
+    transform: (ctx) =>
+      splitBlock({
+        ...ctx,
+        transform: ({ block }) => {
+          const originalType = block.type;
+          block.type = 'blockquote';
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+            uuid,
+          };
+          block.content = [
             {
-              type: item.type,
-              content: item.content || [],
+              type: originalType,
+              content: block.content || [],
             },
-          ],
+          ];
         },
-      ];
-    },
+      }),
   });
 };

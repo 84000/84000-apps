@@ -1,29 +1,37 @@
-import { annotateBlock } from './annotate';
-import { sibling } from './sibling';
-import { splitBlock } from './split-block';
+import { AnnotationType } from '@data-access';
 import { Transformer } from './transformer';
 
 export const recurse: Transformer = ({
+  root,
+  parent,
   block,
   annotation,
-  childAnnotations = [],
+  until = [],
   transform,
 }) => {
-  sibling({
-    block,
-    annotation,
-    transform: (item) => {
-      splitBlock({
-        block: item,
-        annotation,
-        transform: (child) => {
-          const transformed = transform?.(child) || [child];
-          transformed.forEach((transformedItem) => {
-            annotateBlock(transformedItem, childAnnotations);
-          });
-          return transformed;
-        },
-      });
-    },
-  });
+  const type = block.type || 'unknown';
+  if (
+    block.attrs?.start <= annotation.start &&
+    block.attrs?.end >= annotation.end &&
+    (!until.length || until.includes(type as AnnotationType))
+  ) {
+    transform?.({
+      root,
+      parent,
+      block,
+      annotation,
+    });
+    return;
+  }
+
+  for (const child of block.content || []) {
+    recurse({
+      root,
+      until,
+      parent: block,
+      block: child,
+      annotation,
+      transform,
+    });
+  }
 };

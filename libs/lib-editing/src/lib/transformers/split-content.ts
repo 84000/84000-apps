@@ -1,18 +1,46 @@
+import { AnnotationType } from '@data-access';
+import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 
-export const splitContent: Transformer = ({ block, annotation, transform }) => {
-  const currentContent = block.content || [];
+export const splitContent: Transformer = ({
+  root,
+  parent,
+  block,
+  annotation,
+  transform,
+}) => {
+  if (!isInlineAnnotation(block.type as AnnotationType)) {
+    console.warn(
+      `splitContent: block type expects to find an inline annotation, but found: ${block.type}.`,
+    );
+    return;
+  }
+
+  if (!parent || !parent.content) {
+    console.warn(
+      'splitContent: transformer expects to find a parent block with content.',
+    );
+    return;
+  }
+
+  const currentContent = parent.content || [];
   const newContent: typeof currentContent = [];
 
   const { start, end } = annotation;
   let annotationLen = end - start;
-  let cursor = 0;
+  let cursor = parent.attrs?.start || 0;
 
   currentContent.forEach((item) => {
     const currentCursor = cursor;
     const nextCursor = cursor + (item.text?.length || 0);
     const text = item.text || '';
     cursor = nextCursor;
+
+    item.attrs = {
+      ...item.attrs,
+      start: currentCursor,
+      end: currentCursor + text.length,
+    };
 
     // do not transform if the current item doesn't overlap with the annotation
     if (nextCursor < start || currentCursor > end || !text) {
@@ -22,7 +50,13 @@ export const splitContent: Transformer = ({ block, annotation, transform }) => {
 
     // if the current item is entirely within the annotation, transform it entirely
     if (currentCursor >= start && nextCursor <= end) {
-      newContent.push(...(transform?.(item) || [item]));
+      transform?.({
+        root,
+        parent,
+        block: item,
+        annotation,
+      });
+      newContent.push(item);
       annotationLen -= text.length;
       return;
     }
@@ -47,29 +81,53 @@ export const splitContent: Transformer = ({ block, annotation, transform }) => {
       newContent.push({
         ...item,
         text: preText,
+        attrs: {
+          ...item.attrs,
+          start: currentCursor,
+          end: currentCursor + preText.length,
+        },
       });
     }
 
-    const nextItem = {
-      ...item,
-      text: textToTransform,
-    };
-    newContent.push(
-      ...(transform?.(nextItem) || [nextItem]).filter((item) => {
-        if (!item.text && item.type === 'text') {
-          return false;
-        }
-        return true;
-      }),
-    );
+    const midTextStart = currentCursor + preText.length;
+    const midTextEnd = midTextStart + textToTransform.length;
+
+    // insert if we have text to transform or it the annotation has
+    // length 0, meaning it an endnote or similar.
+    if (textToTransform.length || !annotationLen) {
+      const nextItem = {
+        ...item,
+        text: textToTransform,
+        attrs: {
+          ...item.attrs,
+          start: midTextStart,
+          end: midTextEnd,
+        },
+      };
+      transform?.({
+        root,
+        parent,
+        block: nextItem,
+        annotation,
+      });
+
+      newContent.push(nextItem);
+    }
 
     if (endText) {
       newContent.push({
         ...item,
         text: endText,
+        attrs: {
+          ...item.attrs,
+          start: midTextEnd,
+          end: midTextEnd + endText.length,
+        },
       });
     }
   });
 
-  block.content = newContent;
+  console.log(start, end);
+  console.log(newContent);
+  parent.content = newContent;
 };

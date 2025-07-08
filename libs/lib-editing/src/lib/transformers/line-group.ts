@@ -1,4 +1,5 @@
 import { recurse } from './recurse';
+import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 
 export const lineGroup: Transformer = ({
@@ -6,13 +7,16 @@ export const lineGroup: Transformer = ({
   annotation,
   childAnnotations = [],
 }) => {
-  recurse({
+  return recurse({
     block,
     annotation,
     childAnnotations,
-    transform: (item) => {
-      return [
-        {
+    transform: (child) =>
+      splitBlock({
+        block: child,
+        annotation,
+        childAnnotations,
+        transform: (item) => ({
           ...item,
           type: 'lineGroup',
           attrs: {
@@ -24,8 +28,7 @@ export const lineGroup: Transformer = ({
               content: item.content || [],
             },
           ],
-        },
-      ];
-    },
+        }),
+      }),
   });
 };

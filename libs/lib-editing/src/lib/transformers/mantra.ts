@@ -2,26 +2,30 @@ import { MantraAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
+import { recurse } from './recurse';
 
-export const mantra: Transformer = ({ block, annotation }) => {
+export const mantra: Transformer = (ctx) => {
+  const { annotation } = ctx;
+
   const { lang } = annotation as MantraAnnotation;
   if (!lang) {
-    return block;
+    return;
   }
 
   const markType = ITALIC_LANGUAGES.includes(lang) ? 'italic' : undefined;
   if (!markType) {
-    return block;
+    return;
   }
 
-  return splitContent({
-    block,
-    annotation,
-    transform: (item) => [
-      {
-        ...item,
-        marks: [...(item.marks || []), { type: 'italic' }],
-      },
-    ],
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) =>
+      splitContent({
+        ...ctx,
+        transform: ({ block: item }) => {
+          item.marks = [...(item.marks || []), { type: markType }];
+        },
+      }),
   });
 };

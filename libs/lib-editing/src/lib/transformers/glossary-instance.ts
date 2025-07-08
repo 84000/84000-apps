@@ -1,34 +1,36 @@
 import { GlossaryInstanceAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { annotateBlock } from './annotate';
+import { recurse } from './recurse';
 
-export const glossaryInstance: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
-  splitContent({
-    block,
-    annotation,
-    transform: (item) => {
-      return [
-        {
-          ...item,
-          marks: [
-            ...(item.marks || []),
+export const glossaryInstance: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { uuid, authority } = annotation as GlossaryInstanceAnnotation;
+
+  if (!authority) {
+    console.warn(`Glossary instance ${uuid} is missing authority UUID`);
+
+    return;
+  }
+
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) =>
+      splitContent({
+        ...ctx,
+        transform: ({ block }) => {
+          block.marks = [
+            ...(block.marks || []),
             {
               type: 'glossaryInstance',
               attrs: {
-                authority:
-                  (annotation as GlossaryInstanceAnnotation).uuid || '#',
+                authority,
+                uuid,
               },
             },
-          ],
+          ];
         },
-      ];
-    },
+      }),
   });
-
-  annotateBlock(block, childAnnotations);
 };

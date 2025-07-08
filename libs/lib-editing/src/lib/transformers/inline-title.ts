@@ -1,38 +1,31 @@
 import { InlineTitleAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { ITALIC_LANGUAGES, annotateBlock } from './annotate';
+import { ITALIC_LANGUAGES } from './annotate';
+import { recurse } from './recurse';
 
-export const inlineTitle: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
+export const inlineTitle: Transformer = (ctx) => {
+  const { annotation } = ctx;
+
   const { lang } = annotation as InlineTitleAnnotation;
-  const markType = ITALIC_LANGUAGES.includes(
-    lang as (typeof ITALIC_LANGUAGES)[number],
-  )
-    ? 'italic'
-    : undefined;
-  if (!markType) {
-    return block;
+  if (!lang) {
+    return;
   }
 
-  splitContent({
-    block,
-    annotation,
-    transform: (item) => [
-      {
-        ...item,
-        marks: [
-          ...(item.marks || []),
-          {
-            type: 'italic',
-          },
-        ],
-      },
-    ],
-  });
+  const markType = ITALIC_LANGUAGES.includes(lang) ? 'italic' : undefined;
+  if (!markType) {
+    return;
+  }
 
-  annotateBlock(block, childAnnotations);
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) =>
+      splitContent({
+        ...ctx,
+        transform: ({ block }) => {
+          block.marks = [...(block.marks || []), { type: markType }];
+        },
+      }),
+  });
 };

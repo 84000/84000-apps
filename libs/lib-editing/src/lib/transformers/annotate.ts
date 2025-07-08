@@ -3,7 +3,7 @@ import {
   Annotations,
   ExtendedTranslationLanguage,
 } from '@data-access';
-import type { BlockEditorContentWithParent, Transformer } from './transformer';
+import type { BlockEditorContentType, Transformer } from './transformer';
 import {
   audio,
   abbreviation,
@@ -35,6 +35,7 @@ import {
   trailer,
   unknown,
 } from '.';
+import type { BlockEditorContentItem } from '@design-system';
 
 const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
   // abbreviation,
@@ -46,12 +47,12 @@ const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
   // hasAbbreviation,
   heading,
   indent,
-  image,
+  // image,
   inlineTitle,
   internalLink,
   leadingSpace,
-  line,
-  lineGroup,
+  // line,
+  // lineGroup,
   link,
   // list,
   // listItem,
@@ -75,31 +76,51 @@ export const ITALIC_LANGUAGES: ExtendedTranslationLanguage[] = [
   'Sa-Ltn',
 ] as const;
 
+export const isAttributeAnnotation = (type: BlockEditorContentType) => {
+  return ['indent', 'leadingSpace', 'trailer'].includes(type);
+};
+
+export const isBlockAnnotation = (type: BlockEditorContentType) => {
+  return [
+    'blockquote',
+    'heading',
+    'line',
+    'lineGroup',
+    'list',
+    'listItem',
+    'paragraph',
+    'tableBodyData',
+    'tableBodyHeader',
+    'tableBodyRow',
+  ].includes(type);
+};
+
+export const isInlineAnnotation = (type: BlockEditorContentType) => {
+  return [
+    'abbreviation',
+    'audio',
+    'endNoteLink',
+    'glossaryInstance',
+    'hasAbbreviation',
+    'image',
+    'inlineTitle',
+    'internalLink',
+    'link',
+    'mantra',
+    'quote',
+    'quoted',
+    'reference',
+    'span',
+    'text',
+  ].includes(type);
+};
+
 export const annotateBlock = (
-  block: BlockEditorContentWithParent,
+  block: BlockEditorContentItem,
   annotations: Annotations,
 ) => {
-  for (let i = 0; i < annotations.length; i++) {
-    const annotation = annotations[i];
-
-    const childAnnotations: Annotations = [];
-    const end = annotation.end;
-
-    for (let j = i + 1; j < annotations.length; j++) {
-      const nextAnnotation = annotations[j];
-      if (nextAnnotation.start > end) {
-        break;
-      }
-
-      // TODO: nested annotations that extend beyond the current annotation will
-      // be truncated. If this is a problem, we need to handle it by appending
-      // a new annotation for the remainder.
-      nextAnnotation.end = Math.min(nextAnnotation.end, end);
-      childAnnotations.push(nextAnnotation);
-      i = j;
-    }
-
+  for (const annotation of annotations) {
     const transformer = TRANSFORMERS[annotation.type] || TRANSFORMERS.unknown;
-    transformer?.({ block, annotation, childAnnotations });
+    transformer?.({ root: block, block, annotation });
   }
 };

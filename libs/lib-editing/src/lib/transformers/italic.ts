@@ -10,13 +10,11 @@ export const italic: Transformer = ({
   splitContent({
     block,
     annotation,
-    transform: (item) => [
-      {
-        ...item,
-        marks: [...(item.marks || []), { type: 'italic' }],
-      },
-    ],
+    transform: (item) => ({
+      ...item,
+      marks: [...(item.marks || []), { type: 'italic' }],
+    }),
   });
 
-  annotateBlock(block, childAnnotations);
+  return annotateBlock(block, childAnnotations);
 };

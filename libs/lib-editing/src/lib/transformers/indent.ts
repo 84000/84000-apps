@@ -1,23 +1,15 @@
-import { annotateBlock } from './annotate';
+import { recurse } from './recurse';
 import { Transformer } from './transformer';
 
-export const indent: Transformer = ({ block, childAnnotations = [] }) => {
-  let head = block;
-  while (head.type !== 'paragraph' && head.parent) {
-    head = head.parent;
-  }
-
-  if (head.type !== 'paragraph') {
-    console.warn(
-      'Indent transformer expects to find a parent paragraph block.',
-    );
-    return;
-  }
-
-  if (!head.attrs) {
-    head.attrs = {};
-  }
-  head.attrs.hasIndent = true;
-
-  annotateBlock(block, childAnnotations);
+export const indent: Transformer = (ctx) => {
+  recurse({
+    ...ctx,
+    until: ['paragraph'],
+    transform: ({ block: item }) => {
+      item.attrs = {
+        ...item.attrs,
+        hasIndent: true,
+      };
+    },
+  });
 };

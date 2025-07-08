@@ -45,21 +45,19 @@ export const span: Transformer = ({ block, annotation }) => {
         attrs.lang = lang;
       }
 
-      return [
-        {
-          ...item,
-          marks: [
-            ...(item.marks || []),
-            {
-              type: markType,
-              attrs: {
-                ...item.attrs,
-                ...attrs,
-              },
+      return {
+        ...item,
+        marks: [
+          ...(item.marks || []),
+          {
+            type: markType,
+            attrs: {
+              ...item.attrs,
+              ...attrs,
             },
-          ],
-        },
-      ];
+          },
+        ],
+      };
     },
   });
 };

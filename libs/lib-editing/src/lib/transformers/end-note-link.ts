@@ -1,29 +1,32 @@
 import { EndNoteLinkAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
+import { recurse } from './recurse';
 
-export const endNoteLink: Transformer = ({ block, annotation }) => {
-  const endNote = (annotation as EndNoteLinkAnnotation).endNote;
-  if (block.type === 'endNoteLink') {
-    block.attrs = {
-      ...block.attrs,
-      endNote,
-    };
+export const endNoteLink: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { endNote, uuid } = annotation as EndNoteLinkAnnotation;
 
+  if (!endNote) {
+    console.warn(`End note link ${uuid} is missing end note reference`);
     return;
   }
 
-  splitContent({
-    block,
-    annotation,
-    transform: () => [
-      {
-        type: 'endNoteLink',
-        attrs: {
-          uuid: annotation.uuid,
-          endNote,
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) => {
+      splitContent({
+        ...ctx,
+        transform: ({ block }) => {
+          block.type = 'endNoteLink';
+          block.attrs = {
+            ...block.attrs,
+            endNote,
+            uuid,
+          };
         },
-      },
-    ],
+      });
+    },
   });
 };

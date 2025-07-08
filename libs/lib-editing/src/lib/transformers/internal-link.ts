@@ -1,30 +1,28 @@
 import { InternalLinkAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { annotateBlock } from './annotate';
+import { recurse } from './recurse';
 
-export const internalLink: Transformer = ({
-  block,
-  annotation,
-  childAnnotations = [],
-}) => {
-  const { href = '#' } = annotation as InternalLinkAnnotation;
-  splitContent({
-    block,
-    annotation,
-    transform: (item) => [
-      {
-        ...item,
-        marks: [
-          ...(item.marks || []),
-          {
-            type: 'link',
-            attrs: { href },
-          },
-        ],
-      },
-    ],
+// NOTE: over time, internal links become just regular links.
+export const internalLink: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { uuid, href = '#' } = annotation as InternalLinkAnnotation;
+
+  recurse({
+    ...ctx,
+    until: ['text'],
+    transform: (ctx) =>
+      splitContent({
+        ...ctx,
+        transform: ({ block }) => {
+          block.marks = [
+            ...(block.marks || []),
+            {
+              type: 'link',
+              attrs: { href, uuid },
+            },
+          ];
+        },
+      }),
   });
-
-  annotateBlock(block, childAnnotations);
 };

@@ -1,30 +1,22 @@
-import { Annotation, Annotations } from '@data-access';
+import { Annotation, AnnotationType } from '@data-access';
 import { BlockEditorContentItem } from '@design-system';
 
-export type BlockEditorContentWithParent = BlockEditorContentItem & {
-  parent?: BlockEditorContentWithParent;
-};
+export type BlockEditorContentType = AnnotationType | 'text';
 
-export type TransformerProps = {
-  block: BlockEditorContentWithParent;
+export type TransformationContext = {
+  root?: BlockEditorContentItem;
+  parent?: BlockEditorContentItem;
+  block: BlockEditorContentItem;
   annotation: Annotation;
-  childAnnotations?: Annotations;
-  transform?: (
-    item: BlockEditorContentWithParent,
-  ) => BlockEditorContentWithParent[];
+  until?: BlockEditorContentType[];
 };
 
-export type Transformer = (props: TransformerProps) => void;
+export type TransformationContextWithCallback = TransformationContext & {
+  transform?: (ctx: TransformationContext) => void;
+};
 
-export const pass = ({ block }: { block: BlockEditorContentWithParent }) =>
-  block;
+export type Transformer = (ctx: TransformationContextWithCallback) => void;
 
-export const printBlock = (block: BlockEditorContentWithParent) => {
-  console.log(
-    JSON.stringify(
-      block,
-      (key, value) => (key === 'parent' ? undefined : value),
-      2,
-    ),
-  );
+export const pass = () => {
+  // nothing to do
 };
