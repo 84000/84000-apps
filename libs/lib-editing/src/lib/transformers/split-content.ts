@@ -89,7 +89,7 @@ export const splitContent: Transformer = ({
       });
     }
 
-    const midTextStart = currentCursor + preText.length;
+    const midTextStart = currentCursor + preText.length + 1;
     const midTextEnd = midTextStart + textToTransform.length;
 
     // insert if we have text to transform or it the annotation has

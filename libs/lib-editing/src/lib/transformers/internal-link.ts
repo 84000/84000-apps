@@ -6,7 +6,15 @@ import { recurse } from './recurse';
 // NOTE: over time, internal links become just regular links.
 export const internalLink: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { uuid, href = '#' } = annotation as InternalLinkAnnotation;
+  const { uuid, href = '#', start, end } = annotation as InternalLinkAnnotation;
+
+  if (!(end - start)) {
+    // If the annotation has no length, we don't need to do anything.
+    console.warn(
+      `Skipping internal link transformation for annotation with no length: ${uuid}`,
+    );
+    return;
+  }
 
   recurse({
     ...ctx,
