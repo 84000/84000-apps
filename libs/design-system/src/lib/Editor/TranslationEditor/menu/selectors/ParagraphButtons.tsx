@@ -4,8 +4,8 @@ import { useEditorState } from '@tiptap/react';
 import { Button } from '../../../../Button/Button';
 import {
   ArrowDownToLineIcon,
+  ArrowUpToLineIcon,
   IndentIcon,
-  PilcrowRightIcon,
 } from 'lucide-react';
 
 interface SelectorResult {
@@ -16,7 +16,7 @@ interface SelectorResult {
 
 const items = [
   {
-    icon: PilcrowRightIcon,
+    icon: ArrowUpToLineIcon,
     onClick: (editor: Editor) => {
       editor.chain().focus().toggleLeadingSpace().run();
     },
