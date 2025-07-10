@@ -18,6 +18,14 @@
   max-width: none !important;
 }
 
+.conditional-indent {
+  text-indent: calc(var(--spacing) * 8);
+}
+
+.conditional-indent.no-indent {
+  text-indent: 0;
+}
+
 .drag-handle {
   position: fixed;
   opacity: 1;

@@ -29,7 +29,7 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
   name: 'leadingSpace',
   addOptions() {
     return {
-      types: ['paragraph'],
+      types: ['paragraph', 'heading', 'lineGroup'],
       defaultHasLeadingSpace: false,
     };
   },
@@ -40,12 +40,12 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
         attributes: {
           hasLeadingSpace: {
             default: this.options.defaultHasLeadingSpace,
-            parseHTML: (element) => element.className.includes('indent-8'),
+            parseHTML: (element) => element.className.includes('mt-6'),
             renderHTML: (attributes) => {
-              if (!attributes.hasLeadingSpace) {
-                return {};
+              if (attributes.hasLeadingSpace) {
+                return mergeAttributes(attributes, { class: 'mt-6 no-indent' });
               }
-              return mergeAttributes(attributes, { class: 'indent-8' });
+              return {};
             },
           },
         },

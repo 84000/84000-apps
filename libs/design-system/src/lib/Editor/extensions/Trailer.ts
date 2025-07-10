@@ -42,10 +42,11 @@ export const Trailer = Extension.create<TrailerOptions>({
             default: this.options.defaultHasTrailer,
             parseHTML: (element) => element.className.includes('pb-6'),
             renderHTML: (attributes) => {
-              if (!attributes.hasTrailer) {
-                return {};
+              if (attributes.hasTrailer) {
+                return mergeAttributes(attributes, { class: 'pb-6 no-indent' });
               }
-              return mergeAttributes(attributes, { class: 'pb-6' });
+
+              return {};
             },
           },
         },
