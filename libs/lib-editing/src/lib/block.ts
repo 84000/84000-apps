@@ -61,6 +61,21 @@ const paragraphTemplate = (passage: Passage): BlockEditorContentItem => {
   return block;
 };
 
+const endNoteTemplate = (passage: Passage): BlockEditorContentItem => {
+  const block: BlockEditorContentItem = {
+    type: 'endNote',
+    attrs: {
+      start: 0,
+      end: passage.content.length,
+      uuid: passage.uuid,
+    },
+    content: [],
+  };
+
+  block.content = [textTemplate(passage.content)];
+  return block;
+};
+
 const TEMPLATES_FOR_BLOCK_TYPE: {
   [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
 } = {
@@ -72,7 +87,7 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   appendixHeader: headingTemplate,
   colophon: paragraphTemplate,
   colophonHeader: headingTemplate,
-  endnote: paragraphTemplate,
+  endnote: endNoteTemplate,
   endnotesHeader: headingTemplate,
   homage: paragraphTemplate,
   homageHeader: headingTemplate,

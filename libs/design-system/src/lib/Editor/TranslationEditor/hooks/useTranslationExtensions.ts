@@ -40,8 +40,9 @@ import { SmallCaps } from '../../extensions/SmallCaps';
 import { Italic } from '../../extensions/Italic';
 import { Indent } from '../../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
-import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteNode';
+import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceMark } from '../extensions/GlossaryInstanceMark';
+import { EndNoteNode } from '../extensions/EndNote/EndNoteNode';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -75,6 +76,7 @@ export const useTranslationExtensions = () => {
     extensions: [
       TranslationDocument,
       EndNoteLinkNode,
+      EndNoteNode,
       GlossaryInstanceMark,
       Heading,
       Image,
