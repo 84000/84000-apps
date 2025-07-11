@@ -20,7 +20,7 @@ declare module '@tiptap/core' {
 export const EndNoteNode = Node.create({
   name: 'endNote',
 
-  priority: 1000,
+  priority: 100,
 
   addOptions() {
     return {
