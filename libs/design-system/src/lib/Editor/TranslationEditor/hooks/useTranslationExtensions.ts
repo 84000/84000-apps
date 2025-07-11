@@ -43,6 +43,12 @@ import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceMark } from '../extensions/GlossaryInstanceMark';
 import { EndNoteNode } from '../extensions/EndNote/EndNoteNode';
+import {
+  AbbreviationCell,
+  AbbreviationCommand,
+  AbbreviationSuggestion,
+  HasAbbreviationCell,
+} from '../../extensions/Abbreviation/Abbreviation';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -68,6 +74,7 @@ export const useTranslationExtensions = () => {
     Heading1Suggestion,
     Heading2Suggestion,
     Heading3Suggestion,
+    AbbreviationSuggestion,
     BulletListSuggestion,
     NumberListSuggestion,
     QuoteSuggestion,
@@ -75,6 +82,9 @@ export const useTranslationExtensions = () => {
   return {
     extensions: [
       TranslationDocument,
+      AbbreviationCell,
+      HasAbbreviationCell,
+      AbbreviationCommand,
       EndNoteLinkNode,
       EndNoteNode,
       GlossaryInstanceMark,

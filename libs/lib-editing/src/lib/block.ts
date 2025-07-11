@@ -76,12 +76,47 @@ const endNoteTemplate = (passage: Passage): BlockEditorContentItem => {
   return block;
 };
 
+const abbreviationTemplate = (passage: Passage): BlockEditorContentItem => {
+  const content = [textTemplate(passage.content)];
+  const block: BlockEditorContentItem = {
+    type: 'table',
+    attrs: {
+      start: 0,
+      end: passage.content.length,
+      uuid: passage.uuid,
+    },
+    content: [
+      {
+        type: 'tableRow',
+        attrs: {
+          start: 0,
+          end: passage.content.length,
+          uuid: passage.uuid,
+        },
+        content: [
+          {
+            type: 'abbreviation',
+            attrs: {
+              start: 0,
+              end: passage.content.length,
+              uuid: passage.uuid,
+            },
+            content,
+          },
+        ],
+      },
+    ],
+  };
+
+  return block;
+};
+
 const TEMPLATES_FOR_BLOCK_TYPE: {
   [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
 } = {
   acknowledgment: paragraphTemplate,
   acknowledgmentHeader: headingTemplate,
-  abbreviations: paragraphTemplate,
+  abbreviations: abbreviationTemplate,
   abbreviationHeader: headingTemplate,
   appendix: paragraphTemplate,
   appendixHeader: headingTemplate,

@@ -129,6 +129,69 @@ const content = {
         },
       ],
     },
+    {
+      attrs: {
+        uuid: 'b1c8f0d2-3c4e-4a5b-9d6f-7e8f9a0b1c2d',
+        class: 'passage',
+        type: 'abbreviationHeader',
+        sort: 150,
+        label: 'ab.',
+      },
+      type: 'passage',
+      content: [
+        {
+          type: 'heading',
+          attrs: {
+            level: 3,
+          },
+          content: [
+            {
+              type: 'text',
+              text: 'Abbreviations',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      attrs: {
+        uuid: 'b1c8f0d2-3c4e-4a5b-9d6f-7e8f9a0b1c2d',
+        class: 'passage',
+        type: 'abbreviation',
+        sort: 151,
+      },
+      type: 'passage',
+      content: [
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: [
+                {
+                  type: 'abbreviation',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'C',
+                    },
+                  ],
+                },
+                {
+                  type: 'hasAbbreviation',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'Choné Kangyur',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   ],
 };
 
