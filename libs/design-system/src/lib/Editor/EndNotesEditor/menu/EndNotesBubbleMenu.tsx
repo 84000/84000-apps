@@ -1,10 +1,11 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react';
-import { NodeSelector, TextAlignSelector, TextButtons } from './selectors';
-import { ScrollArea, ScrollBar } from '../../ScrollArea/ScrollArea';
-import { Separator } from '../../Separator/Separator';
+import { ScrollArea, ScrollBar } from '../../../ScrollArea/ScrollArea';
+import { Separator } from '../../../Separator/Separator';
+import { NodeSelector } from './selectors/NodeSelector';
+import { TextButtons } from './selectors/TextButtons';
 
-export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
+export const EndNotesBubbleMenu = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {
     return null;
   }
@@ -41,8 +42,6 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
           <NodeSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
           <TextButtons editor={editor} />
-          <Separator orientation="vertical" className="h-10" />
-          <TextAlignSelector editor={editor} />
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
