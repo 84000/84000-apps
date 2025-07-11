@@ -7,9 +7,9 @@ import {
 } from '@data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorContext';
-import { TranslationBodyEditor } from '../ui/TranslationBodyEditor';
 import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
+import { EndnoteBodyEditor } from '../ui/EndnoteBodyEditor';
 
 export const EndnoteBuilder = () => {
   const [body, setBody] = useState<Passage[]>();
@@ -37,5 +37,5 @@ export const EndnoteBuilder = () => {
     return notFound();
   }
 
-  return body ? <TranslationBodyEditor body={body} /> : <TranslationSkeleton />;
+  return body ? <EndnoteBodyEditor body={body} /> : <TranslationSkeleton />;
 };
