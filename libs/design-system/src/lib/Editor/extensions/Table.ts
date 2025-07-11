@@ -9,4 +9,6 @@ export const Table = TipTapTable.configure({
 
 export const TableCell = TipTapTableCell;
 export const TableHeader = TipTapTableHeader;
-export const TableRow = TipTapTableRow;
+export const TableRow = TipTapTableRow.extend({
+  content: '(tableCell | tableHeader | abbreviation | hasAbbreviation)*',
+});
