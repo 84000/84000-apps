@@ -55,14 +55,6 @@ const englishEditorItems: EditorSidebarItem[] = [
     key: 'end-notes',
     title: 'End Notes',
   },
-  {
-    key: 'bibliography',
-    title: 'Bibliography',
-  },
-  {
-    key: 'glossary',
-    title: 'Glossary',
-  },
 ];
 
 const isActive = (key: EditorBuilderType, active: EditorBuilderType) =>
