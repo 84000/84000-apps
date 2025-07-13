@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext } from 'react';
+import React, { createContext, useCallback, useContext, useState } from 'react';
 import {
   UserRole,
   createBrowserClient,
@@ -8,6 +8,7 @@ import {
   loginWithGoogle as loginWithGoogleCall,
   logout as logoutCall,
 } from '@data-access';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export type ScholarUser = {
   id: string;
@@ -20,12 +21,14 @@ export type ScholarUser = {
 
 interface SessionContextState {
   getUser: () => Promise<ScholarUser | null>;
+  apiClient: SupabaseClient | null;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
 }
 
 export const SessionContext = createContext<SessionContextState>({
   getUser: async () => null,
+  apiClient: null,
   loginWithGoogle: () => {
     new Error('loginWithGoogle is not implemented');
   },
@@ -37,26 +40,28 @@ export const SessionContext = createContext<SessionContextState>({
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const client = createBrowserClient();
+  const [apiClient] = useState(createBrowserClient());
 
   const getUser = useCallback(async (): Promise<ScholarUser | null> => {
-    return getUserCall({ client });
-  }, [client]);
+    return getUserCall({ client: apiClient });
+  }, [apiClient]);
 
   const loginWithGoogle = useCallback(() => {
     const redirectTo =
       process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
       `${window.location.origin}/auth/callback`;
 
-    loginWithGoogleCall({ client, redirectTo });
-  }, [client]);
+    loginWithGoogleCall({ client: apiClient, redirectTo });
+  }, [apiClient]);
 
   const logout = useCallback(async () => {
-    await logoutCall({ client });
-  }, [client]);
+    await logoutCall({ client: apiClient });
+  }, [apiClient]);
 
   return (
-    <SessionContext.Provider value={{ getUser, loginWithGoogle, logout }}>
+    <SessionContext.Provider
+      value={{ getUser, loginWithGoogle, logout, apiClient }}
+    >
       {children}
     </SessionContext.Provider>
   );

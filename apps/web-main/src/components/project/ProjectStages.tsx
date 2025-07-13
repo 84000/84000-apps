@@ -1,0 +1,86 @@
+import { Project, ProjectStageDetail, getProjectStages } from '@data-access';
+import {
+  Button,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@design-system';
+import { StageChip } from '../ui/StageChip';
+import { Placeholder } from './ProjectPage';
+import { MoreHorizontalIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSession } from '../../app/context/SessionContext';
+
+export const ProjectStages = ({ project }: { project?: Project | null }) => {
+  const { apiClient: client } = useSession();
+  const [stages, setStages] = useState<ProjectStageDetail[]>([]);
+
+  useEffect(() => {
+    if (!project || !client) {
+      return;
+    }
+    const fetchStages = async () => {
+      const stages = await getProjectStages({
+        client,
+        uuid: project.uuid,
+      });
+
+      stages.sort((a, b) => b.stage.date.getTime() - a.stage.date.getTime());
+      setStages(stages);
+    };
+
+    fetchStages();
+  }, [project, client]);
+  return (
+    <div className="lg:w-1/2 w-full lg:h-[600px] flex flex-col pb-8">
+      <div className="pb-4 flex flex-row justify-between">
+        <span className="text-2xl font-semibold">Project Stages</span>
+        <Button
+          variant="outline"
+          className="rounded-full"
+          disabled={!stages.length}
+        >
+          Set Next Stage
+        </Button>
+      </div>
+      {stages.length ? (
+        <div className="overflow-hidden rounded-lg border overflow-y-scroll">
+          <Table>
+            <TableHeader className="sticky top-0 border-b">
+              <TableRow className="hover:bg-transparent">
+                <TableHead>Stage</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Target</TableHead>
+                <TableHead className="w-16">{''}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {stages.map((stage) => (
+                <TableRow key={stage.uuid}>
+                  <TableCell>
+                    <StageChip stage={stage.stage} />
+                  </TableCell>
+                  <TableCell>{stage.stage.date.toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {stage.stage.targetDate?.toLocaleDateString() || (
+                      <Placeholder />
+                    )}
+                  </TableCell>
+                  <TableCell className="w-16">
+                    <MoreHorizontalIcon className="text-ochre" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <Skeleton className="w-full h-full" />
+      )}
+    </div>
+  );
+};
