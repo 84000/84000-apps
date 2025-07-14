@@ -1,7 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { DataClient } from './types';
-
-export type UserRole = 'user' | 'scholar' | 'editor' | 'admin';
+import { DataClient, UserRole } from './types';
 
 export const getUser = async ({ client }: { client: DataClient }) => {
   const { data, error } = await client.auth.getSession();
@@ -11,7 +9,7 @@ export const getUser = async ({ client }: { client: DataClient }) => {
   }
 
   const { user, access_token } = data.session;
-  const { user_role: role = 'user' } = jwtDecode(access_token) as {
+  const { user_role: role = 'reader' } = jwtDecode(access_token) as {
     user_role: UserRole;
   };
   const { id, email, user_metadata: metadata } = user;

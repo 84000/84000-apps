@@ -2,9 +2,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@data-access';
 
 const PUBLIC_ROUTES = ['/login', '/auth'];
+const RESTRICTED_ROUTES = ['/publications/editor', '/project'];
+
+type RestrictedRoute = (typeof RESTRICTED_ROUTES)[number];
+const RESTRICTED_ROUTE_ROLES: Record<RestrictedRoute, string[]> = {
+  '/publications/editor': ['admin', 'editor', 'translator'],
+  '/project': ['admin', 'editor', 'translator'],
+};
 
 export async function middleware(request: NextRequest) {
-  const { user, supabaseResponse } = await updateSession(request);
+  const { user, role, supabaseResponse } = await updateSession(request);
 
   const pathname = request.nextUrl.pathname;
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
@@ -18,8 +25,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // TODO: redirect on restricted routes
-
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
@@ -32,6 +37,24 @@ export async function middleware(request: NextRequest) {
   //    return myNewResponse
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
+
+  const isRestrictedRoute = RESTRICTED_ROUTES.some((route) =>
+    pathname.startsWith(route),
+  );
+  const hasRequiredRole =
+    RESTRICTED_ROUTE_ROLES[pathname as RestrictedRoute]?.includes(role);
+
+  if (isRestrictedRoute && !hasRequiredRole) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/not-found';
+    const redirect = NextResponse.redirect(url);
+    const cookies = supabaseResponse.cookies.getAll();
+    cookies.forEach((cookie) => {
+      redirect.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirect;
+  }
+
   return supabaseResponse;
 }
 
