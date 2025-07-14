@@ -38,11 +38,13 @@ export async function middleware(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  const isRestrictedRoute = RESTRICTED_ROUTES.some((route) =>
+  const restrictedRoute = RESTRICTED_ROUTES.find((route) =>
     pathname.startsWith(route),
   );
-  const hasRequiredRole =
-    RESTRICTED_ROUTE_ROLES[pathname as RestrictedRoute]?.includes(role);
+  const isRestrictedRoute = !!restrictedRoute;
+  const hasRequiredRole = isRestrictedRoute
+    ? RESTRICTED_ROUTE_ROLES[restrictedRoute]?.includes(role)
+    : true;
 
   if (isRestrictedRoute && !hasRequiredRole) {
     const url = request.nextUrl.clone();
