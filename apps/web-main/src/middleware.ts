@@ -25,18 +25,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isRestrictedRoute = RESTRICTED_ROUTES.some((route) =>
-    pathname.startsWith(route),
-  );
-  const hasRequiredRole =
-    RESTRICTED_ROUTE_ROLES[pathname as RestrictedRoute]?.includes(role);
-
-  if (isRestrictedRoute && !hasRequiredRole) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/not-found';
-    return NextResponse.redirect(url);
-  }
-
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
@@ -49,6 +37,24 @@ export async function middleware(request: NextRequest) {
   //    return myNewResponse
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
+
+  const isRestrictedRoute = RESTRICTED_ROUTES.some((route) =>
+    pathname.startsWith(route),
+  );
+  const hasRequiredRole =
+    RESTRICTED_ROUTE_ROLES[pathname as RestrictedRoute]?.includes(role);
+
+  if (isRestrictedRoute && !hasRequiredRole) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/not-found';
+    const redirect = NextResponse.redirect(url);
+    const cookies = supabaseResponse.cookies.getAll();
+    cookies.forEach((cookie) => {
+      redirect.cookies.set(cookie.name, cookie.value, cookie);
+    });
+    return redirect;
+  }
+
   return supabaseResponse;
 }
 
