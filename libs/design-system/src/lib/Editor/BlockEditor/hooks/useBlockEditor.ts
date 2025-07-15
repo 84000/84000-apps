@@ -1,6 +1,12 @@
 'use client';
 
-import { Content, Editor, Extensions, useEditor } from '@tiptap/react';
+import {
+  Content,
+  Editor,
+  Extensions,
+  UseEditorOptions,
+  useEditor,
+} from '@tiptap/react';
 declare global {
   interface Window {
     editor: Editor | null;
@@ -11,7 +17,9 @@ export const useBlockEditor = ({
   content,
   extensions = [],
   isEditable = true,
-}: {
+  onUpdate,
+  onCreate,
+}: UseEditorOptions & {
   content: Content;
   extensions?: Extensions;
   isEditable?: boolean;
@@ -35,10 +43,9 @@ export const useBlockEditor = ({
         ctx.editor.commands.setContent(content);
         ctx.editor.commands.focus('start', { scrollIntoView: true });
       }
+      onCreate?.(ctx);
     },
-    onUpdate: (ctx) => {
-      console.log(ctx.editor.getJSON());
-    },
+    onUpdate,
   });
 
   return { editor };

@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorContent, JSONContent } from '@tiptap/react';
+import { EditorContent, JSONContent, UseEditorOptions } from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from './hooks';
 import { MainBubbleMenu } from '../menus/MainBubbleMenu';
 
@@ -20,7 +20,9 @@ export type BlockEditorContent =
 export const BlockEditor = ({
   content,
   isEditable = true,
-}: {
+  onUpdate,
+  onCreate,
+}: UseEditorOptions & {
   content: BlockEditorContent;
   isEditable?: boolean;
 }) => {
@@ -29,6 +31,8 @@ export const BlockEditor = ({
     extensions,
     content,
     isEditable,
+    onCreate,
+    onUpdate,
   });
   return (
     <div className="flex h-full">
