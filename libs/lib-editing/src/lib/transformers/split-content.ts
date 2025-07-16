@@ -24,6 +24,7 @@ export const splitContent: Transformer = ({
     return;
   }
 
+  // Use annotation start and end as exclusive for normal, but support insertions (start === end).
   const annStartAbs = annotation.start;
   const annEndAbs = annotation.end;
 
@@ -33,7 +34,8 @@ export const splitContent: Transformer = ({
   for (const item of currentContent) {
     const { prefix, middle, suffix } = splitNode(item, annStartAbs, annEndAbs);
 
-    // Transform only the 'middle' segments (those inside the annotation)
+    // For insertion annotation, middle is a node with text: "" and start == end.
+    // Always pass middle segments (including empty text for insertions) to transform.
     for (const midItem of middle) {
       transform?.({
         root,
@@ -47,7 +49,7 @@ export const splitContent: Transformer = ({
     newContent.push(...suffix);
   }
 
-  // Sort by start offset to maintain order, as segments may be pushed in any order
+  // Sort by start offset to maintain order
   newContent.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
   parent.content = newContent;
 };

@@ -2,7 +2,7 @@ import type { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { recurse } from './recurse';
 
-export const italic: Transformer = (ctx) => {
+export const code: Transformer = (ctx) => {
   recurse({
     ...ctx,
     until: ['text'],
@@ -13,7 +13,7 @@ export const italic: Transformer = (ctx) => {
           block.marks = [
             ...(block.marks || []),
             {
-              type: 'italic',
+              type: 'code',
             },
           ];
         },

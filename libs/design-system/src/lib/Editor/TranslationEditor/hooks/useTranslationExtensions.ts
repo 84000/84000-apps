@@ -1,6 +1,7 @@
 'use client';
 
 import Underline from '@tiptap/extension-underline';
+import { Audio } from '../../extensions/Audio/Audio';
 import Heading from '../../extensions/Heading/Heading';
 import Image from '../../extensions/Image';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
@@ -83,6 +84,7 @@ export const useTranslationExtensions = () => {
   return {
     extensions: [
       TranslationDocument,
+      Audio,
       AbbreviationCell,
       HasAbbreviationCell,
       AbbreviationCommand,

@@ -36,6 +36,7 @@ export const splitBlock: Transformer = ({
     return;
   }
 
+  // Use annotation start and end as exclusive for normal, but support insertions (start === end).
   const annStart = annotation?.start ?? 0;
   const annEnd = annotation?.end ?? 0;
 
@@ -44,7 +45,6 @@ export const splitBlock: Transformer = ({
   const midContent: typeof currentContent = [];
   const suffixContent: typeof currentContent = [];
 
-  // Use shared helper to split each item
   for (const item of currentContent) {
     const { prefix, middle, suffix } = splitNode(item, annStart, annEnd);
     prefixContent.push(...prefix);
@@ -59,8 +59,8 @@ export const splitBlock: Transformer = ({
       content: prefixContent,
       attrs: {
         ...block.attrs,
-        start: prefixContent[0].attrs?.start || 0,
-        end: prefixContent[prefixContent.length - 1].attrs?.end || 0,
+        start: prefixContent[0].attrs?.start ?? 0,
+        end: prefixContent[prefixContent.length - 1].attrs?.end ?? 0,
       },
     });
   }
@@ -77,6 +77,8 @@ export const splitBlock: Transformer = ({
         uuid: annotation.uuid,
       },
     };
+    // For insertion annotation, middle is a node with text: "" and start == end.
+    // Let downstream handle rendering (e.g., endNoteLink).
     transform?.({
       root,
       parent,
@@ -92,12 +94,11 @@ export const splitBlock: Transformer = ({
       content: suffixContent,
       attrs: {
         ...block.attrs,
-        start: suffixContent[0].attrs?.start || 0,
-        end: suffixContent[suffixContent.length - 1].attrs?.end || 0,
+        start: suffixContent[0].attrs?.start ?? 0,
+        end: suffixContent[suffixContent.length - 1].attrs?.end ?? 0,
       },
     });
   }
 
-  // Replace the original block in parent.content with the new blocks
   parent.content.splice(blockIndex, 1, ...newBlocks);
 };
