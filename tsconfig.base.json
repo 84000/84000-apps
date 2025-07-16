@@ -16,6 +16,7 @@
     "baseUrl": ".",
     "paths": {
       "@data-access": ["libs/data-access/src/index.ts"],
+      "@data-access/ssr": ["libs/data-access/src/ssr.ts"],
       "@design-system": ["libs/design-system/src/index.ts"],
       "@design-system-css": ["libs/design-system/src/lib/theme/global.css"],
       "@lib-editing": ["libs/lib-editing/src/index.ts"],

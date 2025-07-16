@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { updateSession } from '@data-access';
+import { updateSession } from '@data-access/ssr';
 
 const PUBLIC_ROUTES = ['/login', '/auth'];
 const RESTRICTED_ROUTES = ['/publications/editor', '/project'];

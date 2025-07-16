@@ -1,17 +1,43 @@
 import { jwtDecode } from 'jwt-decode';
-import { DataClient, UserRole } from './types';
+import { DataClient, UserClaims, UserRole } from './types';
 
-export const getUser = async ({ client }: { client: DataClient }) => {
+export const getSession = async ({ client }: { client: DataClient }) => {
   const { data, error } = await client.auth.getSession();
   if (error || !data?.session) {
     console.info(`Failed to get session data: ${error}`);
     return null;
   }
 
-  const { user, access_token } = data.session;
-  const { user_role: role = 'reader' } = jwtDecode(access_token) as {
-    user_role: UserRole;
-  };
+  const { access_token } = data.session;
+  if (!access_token) {
+    return null;
+  }
+
+  try {
+    const decoded = jwtDecode(access_token);
+    const { user_role: role = 'reader' } = decoded as {
+      user_role: UserRole;
+    };
+    const claims: UserClaims = {
+      role,
+    };
+
+    return { claims, ...data.session };
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return null;
+  }
+};
+
+export const getUser = async ({ client }: { client: DataClient }) => {
+  const session = await getSession({ client });
+  if (!session) {
+    return null;
+  }
+
+  const { claims, user } = session;
+  const { role } = claims;
+
   const { id, email, user_metadata: metadata } = user;
   const { name, picture } = metadata;
   if (id && email) {
