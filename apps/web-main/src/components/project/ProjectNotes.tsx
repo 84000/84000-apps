@@ -1,37 +1,7 @@
 import { Project, UserRole } from '@data-access';
-import { Button, Skeleton } from '@design-system';
+import { SaveButton, Skeleton } from '@design-system';
 import { NotesEditor } from './NotesEditor';
 import { useEffect, useState } from 'react';
-import { Loader2Icon } from 'lucide-react';
-
-const SaveButton = ({
-  onClick,
-  disabled = false,
-}: {
-  onClick: () => Promise<void>;
-  disabled?: boolean;
-}) => {
-  const [isSaving, setIsSaving] = useState(false);
-  return (
-    <Button
-      variant="outline"
-      className="rounded-full"
-      disabled={disabled || isSaving}
-      onClick={async () => {
-        setIsSaving(true);
-        try {
-          await onClick();
-        } catch (error) {
-          console.error('Failed to save:', error);
-        } finally {
-          setIsSaving(false);
-        }
-      }}
-    >
-      {isSaving ? <Loader2Icon className="animate-spin" /> : 'Save'}
-    </Button>
-  );
-};
 
 export const ProjectNotes = ({
   project,

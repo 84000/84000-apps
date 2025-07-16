@@ -20,6 +20,7 @@ export * from './lib/MiniLogo/MiniLogo';
 export * from './lib/NavigationMenu/NavigationMenu';
 export * from './lib/Popover/Popover';
 export * from './lib/Resizable/Resizable';
+export * from './lib/SaveButton/SaveButton';
 export * from './lib/ScrollArea/ScrollArea';
 export * from './lib/Select/Select';
 export * from './lib/Separator/Separator';
