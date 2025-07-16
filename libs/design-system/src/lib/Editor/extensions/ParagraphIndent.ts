@@ -43,7 +43,6 @@ export const ParagraphIndent = Extension.create<ParagraphIndentOptions>({
             parseHTML: (element) =>
               element.className.includes('conditional-indent'),
             renderHTML: (attributes) => {
-              console.log('renderHTML attributes', attributes);
               if (attributes.hasParagraphIndent) {
                 return mergeAttributes(attributes, {
                   class: 'conditional-indent',

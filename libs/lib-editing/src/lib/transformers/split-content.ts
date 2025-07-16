@@ -1,6 +1,7 @@
 import { AnnotationType } from '@data-access';
 import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
+import { splitNode } from './split-node';
 
 export const splitContent: Transformer = ({
   root,
@@ -23,109 +24,30 @@ export const splitContent: Transformer = ({
     return;
   }
 
+  const annStartAbs = annotation.start;
+  const annEndAbs = annotation.end;
+
   const currentContent = parent.content || [];
-  const newContent: typeof currentContent = [];
+  const newContent = [];
 
-  const { start, end } = annotation;
-  let annotationLen = end - start;
-  let cursor = parent.attrs?.start || 0;
+  for (const item of currentContent) {
+    const { prefix, middle, suffix } = splitNode(item, annStartAbs, annEndAbs);
 
-  currentContent.forEach((item) => {
-    const currentCursor = cursor;
-    const nextCursor = cursor + (item.text?.length || 0);
-    const text = item.text || '';
-    cursor = nextCursor;
-
-    item.attrs = {
-      ...item.attrs,
-      start: currentCursor,
-      end: currentCursor + text.length,
-    };
-
-    // do not transform if the current item doesn't overlap with the annotation
-    if (nextCursor < start || currentCursor > end || !text) {
-      newContent.push(item);
-      return;
-    }
-
-    // if the current item is entirely within the annotation, transform it entirely
-    if (currentCursor >= start && nextCursor <= end) {
+    // Transform only the 'middle' segments (those inside the annotation)
+    for (const midItem of middle) {
       transform?.({
         root,
         parent,
-        block: item,
+        block: midItem,
         annotation,
       });
-      newContent.push(item);
-      annotationLen -= text.length;
-      return;
+      newContent.push(midItem);
     }
+    newContent.push(...prefix);
+    newContent.push(...suffix);
+  }
 
-    // otherwise the current item partially overlaps with the annotation, so
-    // split it into up to three parts: before the annotation, the annotation,
-    // and after the annotation
-    const length = text.length;
-    const preTextLen = Math.max(start - currentCursor, 0);
-    const midTextLen = Math.min(length - preTextLen, annotationLen);
-
-    const startIdx = preTextLen;
-    const endIdx = startIdx + midTextLen;
-
-    const preText = text.slice(0, startIdx);
-    const textToTransform = text.slice(startIdx, endIdx);
-    const endText = text.slice(endIdx);
-
-    annotationLen -= textToTransform.length;
-
-    if (preText) {
-      newContent.push({
-        ...item,
-        text: preText,
-        attrs: {
-          ...item.attrs,
-          start: currentCursor,
-          end: currentCursor + preText.length,
-        },
-      });
-    }
-
-    const midTextStart = currentCursor + preText.length + 1;
-    const midTextEnd = midTextStart + textToTransform.length;
-
-    // insert if we have text to transform or it the annotation has
-    // length 0, meaning it an endnote or similar.
-    const nextItem = {
-      ...item,
-      text: textToTransform,
-      attrs: {
-        ...item.attrs,
-        start: midTextStart,
-        end: midTextEnd,
-      },
-    };
-    transform?.({
-      root,
-      parent,
-      block: nextItem,
-      annotation,
-    });
-
-    if (nextItem.text || nextItem.type !== 'text') {
-      newContent.push(nextItem);
-    }
-
-    if (endText) {
-      newContent.push({
-        ...item,
-        text: endText,
-        attrs: {
-          ...item.attrs,
-          start: midTextEnd,
-          end: midTextEnd + endText.length,
-        },
-      });
-    }
-  });
-
+  // Sort by start offset to maintain order, as segments may be pushed in any order
+  newContent.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
   parent.content = newContent;
 };
