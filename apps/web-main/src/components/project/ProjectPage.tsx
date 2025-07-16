@@ -1,6 +1,6 @@
 'use client';
 
-import { Project, getProjectByUuid } from '@data-access';
+import { Project, UserRole, getProjectByUuid } from '@data-access';
 import { Button, H2, Skeleton } from '@design-system';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -25,8 +25,9 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
   const pathname = usePathname();
   const backPath = pathname.split('/').slice(0, -1).join('/');
 
-  const { apiClient: client } = useSession();
+  const { apiClient: client, getUser } = useSession();
   const [project, setProject] = useState<Project | null>(null);
+  const [role, setRole] = useState<UserRole>('reader');
 
   useEffect(() => {
     if (!client) {
@@ -39,6 +40,15 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
 
     fetchProject();
   }, [uuid, client]);
+
+  useEffect(() => {
+    (async () => {
+      const user = await getUser();
+      if (user?.role) {
+        setRole(user.role);
+      }
+    })();
+  });
 
   return (
     <div className="w-full">
@@ -70,7 +80,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
       <div className="pt-8 pb-4 lg:flex flex-row gap-8">
         <ProjectStages project={project} />
         <div className="lg:w-1/2 w-full flex flex-col gap-8 pb-8">
-          <ProjectNotes project={project} />
+          <ProjectNotes project={project} role={role} />
           <ProjectSettings project={project} />
         </div>
       </div>

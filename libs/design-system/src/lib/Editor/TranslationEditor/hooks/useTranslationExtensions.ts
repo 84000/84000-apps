@@ -49,6 +49,7 @@ import {
   AbbreviationSuggestion,
   HasAbbreviationCell,
 } from '../../extensions/Abbreviation/Abbreviation';
+import { ParagraphIndent } from '../../extensions/ParagraphIndent';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -98,6 +99,7 @@ export const useTranslationExtensions = () => {
       Link,
       MantraMark,
       Paragraph,
+      ParagraphIndent,
       PassageNode,
       Placeholder,
       SlashCommand.configure({

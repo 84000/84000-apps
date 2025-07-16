@@ -15,7 +15,16 @@ export const createServerClient = ({
     throw new Error('Missing Supabase credentials');
   }
 
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+  const client = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     cookies,
   });
+
+  // NOTE: we suppress the warning about getSession being called. But is is
+  // import not to rely on this method for authorization. Rather, it is
+  // convenient for early exists in server components.
+  //
+  // @ts-expect-error - suppressGetSessionWarning is protected
+  client.auth.suppressGetSessionWarning = true;
+
+  return client;
 };
