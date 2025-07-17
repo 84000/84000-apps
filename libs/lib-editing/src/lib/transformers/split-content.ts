@@ -2,6 +2,7 @@ import { AnnotationType } from '@data-access';
 import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
+import { BlockEditorContentItem } from '@design-system';
 
 export const splitContent: Transformer = ({
   root,
@@ -24,7 +25,7 @@ export const splitContent: Transformer = ({
     return;
   }
 
-  // Use annotation start and end as exclusive for normal, but support insertions (start === end).
+  // Inclusive annotation bounds
   const annStartAbs = annotation.start;
   const annEndAbs = annotation.end;
 
@@ -34,8 +35,8 @@ export const splitContent: Transformer = ({
   for (const item of currentContent) {
     const { prefix, middle, suffix } = splitNode(item, annStartAbs, annEndAbs);
 
-    // For insertion annotation, middle is a node with text: "" and start == end.
-    // Always pass middle segments (including empty text for insertions) to transform.
+    newContent.push(...prefix);
+    // Only transform the middle segments
     for (const midItem of middle) {
       transform?.({
         root,
@@ -45,11 +46,23 @@ export const splitContent: Transformer = ({
       });
       newContent.push(midItem);
     }
-    newContent.push(...prefix);
     newContent.push(...suffix);
   }
 
-  // Sort by start offset to maintain order
+  if (annStartAbs === annEndAbs && annStartAbs === block.attrs?.end) {
+    const newBlock: BlockEditorContentItem = {
+      type: annotation.type,
+      attrs: {
+        ...block.attrs,
+        start: annStartAbs,
+        end: annEndAbs,
+      },
+    };
+    transform?.({ root, parent, block: newBlock, annotation });
+    newContent.push(newBlock);
+  }
+
+  // Sort by inclusive start offset
   newContent.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
   parent.content = newContent;
 };

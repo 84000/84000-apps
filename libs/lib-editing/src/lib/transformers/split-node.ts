@@ -18,31 +18,45 @@ export function splitNode(
   rangeEnd: number,
 ): SplitBlock {
   const itemStart = item.attrs?.start ?? 0;
-  const itemEnd = item.attrs?.end ?? itemStart + (item.text?.length ?? 0);
+  const text = item.text ?? '';
+  // Inclusive end: the last character is at itemEnd - 1, so itemEnd should be itemStart + text.length - 1
+  const itemEnd =
+    typeof item.text === 'string'
+      ? itemStart + text.length - 1
+      : (item.attrs?.end ?? itemStart);
 
-  // If this node does not have a .text property (like a block/paragraph), treat as atomic
+  // Non-text blocks: treat atomically
   if (typeof item.text !== 'string') {
-    // If the whole item is before or after the range, put it in prefix or suffix
-    if (itemEnd <= rangeStart) {
+    if (itemEnd < rangeStart) {
       return { prefix: [item], middle: [], suffix: [] };
     }
-    if (itemStart >= rangeEnd) {
+    if (itemStart > rangeEnd) {
       return { prefix: [], middle: [], suffix: [item] };
     }
-    // If it overlaps, treat the whole node as "middle"
     return { prefix: [], middle: [item], suffix: [] };
   }
 
-  // If .text is present, split as before, but skip empty segments
-  const text = item.text;
-  const splits: SplitBlock = { prefix: [], middle: [], suffix: [] };
+  // Entirely before
+  if (itemEnd < rangeStart) {
+    return { prefix: [item], middle: [], suffix: [] };
+  }
+  // Entirely after
+  if (itemStart > rangeEnd) {
+    return { prefix: [], middle: [], suffix: [item] };
+  }
 
+  // Compute indices for slicing (inclusive)
+  // preLen: up to (rangeStart - itemStart)
+  // midLen: from (rangeStart - itemStart) to (rangeEnd - itemStart + 1)
+  // postLen: after (rangeEnd - itemStart + 1)
   const preLen = Math.max(rangeStart - itemStart, 0);
   const midLen = Math.max(
-    Math.min(itemEnd, rangeEnd) - Math.max(itemStart, rangeStart),
+    Math.min(itemEnd, rangeEnd) - Math.max(itemStart, rangeStart) + 1,
     0,
   );
-  const postLen = Math.max(itemEnd - Math.min(itemEnd, rangeEnd), 0);
+  const postStartIdx = preLen + midLen;
+
+  const splits: SplitBlock = { prefix: [], middle: [], suffix: [] };
 
   if (preLen > 0) {
     const preText = text.slice(0, preLen);
@@ -58,6 +72,7 @@ export function splitNode(
       });
     }
   }
+
   if (midLen > 0) {
     const midText = text.slice(preLen, preLen + midLen);
     if (midText) {
@@ -72,16 +87,17 @@ export function splitNode(
       });
     }
   }
-  if (postLen > 0) {
-    const postText = text.slice(preLen + midLen);
+
+  if (postStartIdx < text.length) {
+    const postText = text.slice(postStartIdx);
     if (postText) {
       splits.suffix.push({
         ...item,
         text: postText,
         attrs: {
           ...item.attrs,
-          start: itemEnd - postText.length,
-          end: itemEnd,
+          start: itemStart + postStartIdx,
+          end: itemStart + text.length,
         },
       });
     }

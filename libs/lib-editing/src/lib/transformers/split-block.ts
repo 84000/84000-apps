@@ -36,7 +36,7 @@ export const splitBlock: Transformer = ({
     return;
   }
 
-  // Use annotation start and end as exclusive for normal, but support insertions (start === end).
+  // Inclusive annotation bounds
   const annStart = annotation?.start ?? 0;
   const annEnd = annotation?.end ?? 0;
 
@@ -77,8 +77,6 @@ export const splitBlock: Transformer = ({
         uuid: annotation.uuid,
       },
     };
-    // For insertion annotation, middle is a node with text: "" and start == end.
-    // Let downstream handle rendering (e.g., endNoteLink).
     transform?.({
       root,
       parent,
