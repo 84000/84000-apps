@@ -8,11 +8,13 @@ export const blockquote: Transformer = (ctx) => {
 
   recurse({
     ...ctx,
-    until: ['paragraph'],
-    transform: (ctx) =>
+    until: ['paragraph', 'lineGroup'],
+    transform: (ctx) => {
+      const origType = ctx.block?.type || 'paragraph';
       splitBlock({
         ...ctx,
-        transform: ({ block }) => {
+        transform: (ctx) => {
+          const { block } = ctx;
           block.type = 'blockquote';
           block.attrs = {
             ...block.attrs,
@@ -22,11 +24,18 @@ export const blockquote: Transformer = (ctx) => {
           };
           block.content = [
             {
-              type: 'paragraph',
+              type: origType,
+              attrs: {
+                ...block.attrs,
+                start,
+                end,
+                uuid,
+              },
               content: block.content || [],
             },
           ];
         },
-      }),
+      });
+    },
   });
 };

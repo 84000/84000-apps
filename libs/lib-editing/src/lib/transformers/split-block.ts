@@ -40,6 +40,13 @@ export const splitBlock: Transformer = ({
   const annStart = annotation?.start ?? 0;
   const annEnd = annotation?.end ?? 0;
 
+  if (annStart === annEnd) {
+    console.warn(
+      'splitBlock transformer expects to find an annotation with non-zero length.',
+    );
+    return;
+  }
+
   const currentContent = block.content || [];
   const prefixContent: typeof currentContent = [];
   const midContent: typeof currentContent = [];

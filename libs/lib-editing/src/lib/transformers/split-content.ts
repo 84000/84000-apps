@@ -28,7 +28,6 @@ export const splitContent: Transformer = ({
   // Inclusive annotation bounds
   const annStartAbs = annotation.start;
   const annEndAbs = annotation.end;
-
   const currentContent = parent.content || [];
   const newContent = [];
 

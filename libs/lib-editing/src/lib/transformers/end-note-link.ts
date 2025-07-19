@@ -1,6 +1,6 @@
 import { EndNoteLinkAnnotation } from '@data-access';
 import { Transformer } from './transformer';
-import { splitContent } from './split-content';
+import { splitAndInsert } from './split-insert';
 import { recurse } from './recurse';
 
 export const endNoteLink: Transformer = (ctx) => {
@@ -16,7 +16,7 @@ export const endNoteLink: Transformer = (ctx) => {
     ...ctx,
     until: ['text'],
     transform: (ctx) => {
-      splitContent({
+      splitAndInsert({
         ...ctx,
         transform: ({ block }) => {
           block.type = 'endNoteLink';

@@ -45,7 +45,10 @@ export const Audio = Node.create<AudioOptions>({
   renderHTML({ HTMLAttributes }) {
     return [
       'audio',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        controls: true,
+        class: 'w-full max-w-xl my-4',
+      }),
     ];
   },
 

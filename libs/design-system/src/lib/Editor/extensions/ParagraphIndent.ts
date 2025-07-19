@@ -30,7 +30,7 @@ export const ParagraphIndent = Extension.create<ParagraphIndentOptions>({
   addOptions() {
     return {
       types: ['paragraph'],
-      defaultHasParagraphIndent: true,
+      defaultHasParagraphIndent: false,
     };
   },
   addGlobalAttributes() {
