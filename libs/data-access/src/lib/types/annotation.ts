@@ -25,13 +25,17 @@ export type AudioAnnotation = AnnotationBase & {
   mediaType: string;
 };
 
-export type DeprecatedAnnotation = AnnotationBase & {
-  type: 'deprecated';
-};
-
 export type BlockquoteAnnotation = AnnotationBase & {
   type: 'blockquote';
   text: string;
+};
+
+export type CodeAnnotation = AnnotationBase & {
+  type: 'code';
+};
+
+export type DeprecatedAnnotation = AnnotationBase & {
+  type: 'deprecated';
 };
 
 export type EndNoteLinkAnnotation = AnnotationBase & {
@@ -184,6 +188,7 @@ export type Annotation =
   | AbbreviationAnnotation
   | AudioAnnotation
   | BlockquoteAnnotation
+  | CodeAnnotation
   | DeprecatedAnnotation
   | EndNoteLinkAnnotation
   | GlossaryInstanceAnnotation
@@ -252,6 +257,11 @@ const dtoToAnnotationMap: Record<
     return {
       ...baseAnnotationFromDTO(dto),
     } as QuotedAnnotation;
+  },
+  code: (dto: AnnotationDTO): CodeAnnotation => {
+    return {
+      ...baseAnnotationFromDTO(dto),
+    } as CodeAnnotation;
   },
   'deprecated-internal-link': (dto: AnnotationDTO): DeprecatedAnnotation => {
     return {

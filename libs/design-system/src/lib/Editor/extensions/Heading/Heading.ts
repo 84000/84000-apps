@@ -6,6 +6,7 @@ import {
   H2_STYLE,
   H3_STYLE,
   H4_STYLE,
+  H5_STYLE,
 } from '../../../Typography/Typography';
 
 const classForLevel: Record<Level, string> = {
@@ -13,8 +14,8 @@ const classForLevel: Record<Level, string> = {
   2: H2_STYLE,
   3: H3_STYLE,
   4: H4_STYLE,
-  5: H4_STYLE,
-  6: H4_STYLE,
+  5: H5_STYLE,
+  6: H5_STYLE,
 };
 
 export const Heading = TiptapHeading.extend({

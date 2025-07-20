@@ -6,7 +6,7 @@ import { recurse } from './recurse';
 export const heading: Transformer = ({ root, parent, block, annotation }) => {
   const level = (annotation as HeadingAnnotation).level || 1;
   recurse({
-    until: ['heading'],
+    until: ['heading', 'paragraph'],
     root,
     parent,
     block,

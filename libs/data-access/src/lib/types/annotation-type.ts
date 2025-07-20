@@ -2,6 +2,7 @@ export type AnnotationDTOType =
   | 'abbreviation'
   | 'audio'
   | 'blockquote'
+  | 'code'
   | 'deprecated-internal-link'
   | 'end-note-link'
   | 'glossary-instance'
@@ -33,6 +34,7 @@ export type AnnotationType =
   | 'abbreviation'
   | 'audio'
   | 'blockquote'
+  | 'code'
   | 'deprecated'
   | 'endNoteLink'
   | 'glossaryInstance'
@@ -64,6 +66,7 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   abbreviation: 'abbreviation',
   audio: 'audio',
   blockquote: 'blockquote',
+  code: 'code',
   'deprecated-internal-link': 'deprecated',
   'end-note-link': 'endNoteLink',
   'glossary-instance': 'glossaryInstance',

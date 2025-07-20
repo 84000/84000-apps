@@ -1,5 +1,6 @@
 import { AnnotationType } from '@data-access';
 import { isBlockAnnotation } from './annotate';
+import { splitNode } from './split-node';
 import { Transformer } from './transformer';
 import { BlockEditorContentItem } from '@design-system';
 
@@ -35,72 +36,28 @@ export const splitBlock: Transformer = ({
     return;
   }
 
-  const { start = 0, end = 0 } = annotation || {};
+  // Inclusive annotation bounds
+  const annStart = annotation?.start ?? 0;
+  const annEnd = annotation?.end ?? 0;
+
+  if (annStart === annEnd) {
+    console.warn(
+      'splitBlock transformer expects to find an annotation with non-zero length.',
+    );
+    return;
+  }
+
   const currentContent = block.content || [];
   const prefixContent: typeof currentContent = [];
   const midContent: typeof currentContent = [];
   const suffixContent: typeof currentContent = [];
 
-  currentContent.forEach((item) => {
-    const itemStart = item.attrs?.start || 0;
-    const itemEnd = item.attrs?.end || 0;
-
-    if (itemEnd < start) {
-      prefixContent.push(item);
-      return;
-    }
-
-    if (itemStart > end) {
-      suffixContent.push(item);
-      return;
-    }
-
-    const itemText = item.text || '';
-
-    const targetStart = Math.max(start - itemStart, 0);
-    const targetEnd = Math.min(targetStart + (end - start), itemText.length);
-    const preText = itemText.slice(0, targetStart);
-    if (preText) {
-      prefixContent.push({
-        ...item,
-        text: preText,
-        attrs: {
-          ...item.attrs,
-          start: itemStart,
-          end: itemStart + preText.length,
-        },
-      });
-    }
-
-    const midText = itemText.slice(targetStart, targetEnd);
-
-    if (midText) {
-      midContent.push({
-        ...item,
-        text: midText,
-        attrs: {
-          ...item.attrs,
-          start: targetStart,
-          end: targetStart + midText.length,
-        },
-      });
-    }
-
-    const postStart = targetStart + midText.length + 1;
-    const postText = itemText.slice(postStart);
-
-    if (postText) {
-      suffixContent.push({
-        ...item,
-        text: postText,
-        attrs: {
-          ...item.attrs,
-          start: postStart,
-          end: postStart + postText.length,
-        },
-      });
-    }
-  });
+  for (const item of currentContent) {
+    const { prefix, middle, suffix } = splitNode(item, annStart, annEnd);
+    prefixContent.push(...prefix);
+    midContent.push(...middle);
+    suffixContent.push(...suffix);
+  }
 
   const newBlocks: BlockEditorContentItem[] = [];
   if (prefixContent.length) {
@@ -109,8 +66,8 @@ export const splitBlock: Transformer = ({
       content: prefixContent,
       attrs: {
         ...block.attrs,
-        start: prefixContent[0].attrs?.start || 0,
-        end: prefixContent[prefixContent.length - 1].attrs?.end || 0,
+        start: prefixContent[0].attrs?.start ?? 0,
+        end: prefixContent[prefixContent.length - 1].attrs?.end ?? 0,
       },
     });
   }
@@ -122,15 +79,16 @@ export const splitBlock: Transformer = ({
       content: midContent,
       attrs: {
         ...block.attrs,
-        start: midContent[0].attrs?.start || 0,
-        end: midContent[midContent.length - 1].attrs?.end || 0,
+        start: midContent[0].attrs?.start ?? annStart,
+        end: midContent[midContent.length - 1].attrs?.end ?? annEnd,
+        uuid: annotation.uuid,
       },
     };
     transform?.({
+      root,
+      parent,
       block: newBlock,
       annotation,
-      parent,
-      root,
     });
     newBlocks.push(newBlock);
   }
@@ -141,8 +99,8 @@ export const splitBlock: Transformer = ({
       content: suffixContent,
       attrs: {
         ...block.attrs,
-        start: suffixContent[0].attrs?.start || 0,
-        end: suffixContent[suffixContent.length - 1].attrs?.end || 0,
+        start: suffixContent[0].attrs?.start ?? 0,
+        end: suffixContent[suffixContent.length - 1].attrs?.end ?? 0,
       },
     });
   }

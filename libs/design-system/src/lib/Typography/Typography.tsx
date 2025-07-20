@@ -98,6 +98,19 @@ export function H4({
   );
 }
 
+export const H5_STYLE = 'mt-2 scroll-m-20 pb-1 font-semibold lg:text-lg';
+export function H5({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'h5'>) {
+  return (
+    <h5 className={cn(H5_STYLE, className)} {...props}>
+      {children}
+    </h5>
+  );
+}
+
 export const P_STYLE = 'leading-6';
 export function P({
   children,

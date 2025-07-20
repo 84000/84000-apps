@@ -1,7 +1,7 @@
 import { ImageAnnotation } from '@data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
-import { splitBlock } from './split-block';
+import { splitAndInsert } from './split-insert';
 
 export const image: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -10,7 +10,7 @@ export const image: Transformer = (ctx) => {
     ...ctx,
     until: ['paragraph'],
     transform: (ctx) => {
-      splitBlock({
+      splitAndInsert({
         ...ctx,
         transform: ({ block }) => {
           block.type = 'image';
