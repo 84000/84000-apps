@@ -175,6 +175,9 @@ export function projectFromViewDTO(dto: ProjectViewDTO): Project {
 
 export function projectFromTableDTO(dto: ProjectTableDTO): Project {
   const stage = dto.stage;
+  const contractDate = dto.contractDate
+    ? new Date(dto.contractDate)
+    : undefined;
   return {
     uuid: dto.uuid,
     toh: dto.toh,
@@ -187,8 +190,8 @@ export function projectFromTableDTO(dto: ProjectTableDTO): Project {
     },
     pages: dto.pages,
     notes: dto.notes,
-    contractDate: new Date(dto.contractDate),
     contractId: dto.contractId,
+    contractDate,
     workUuid: dto.workUuid,
     version: dto.version as SemVer,
     translator: dto.mainTranslator,
