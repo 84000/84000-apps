@@ -2,7 +2,7 @@
 
 import { Project, UserRole, getProjectByUuid } from '@data-access';
 import { Button, H3, Skeleton } from '@design-system';
-import { ArrowLeftIcon, Settings } from 'lucide-react';
+import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSession } from '../../app/context/SessionContext';
@@ -11,7 +11,7 @@ import { ProjectNotes } from './ProjectNotes';
 import { ProjectContributors } from './ProjectContributors';
 import { ProjectAssets } from './ProjectAssets';
 import { parseToh } from '@lib-utils';
-import { ProjectSettings } from './ProjectInfo';
+import { ProjectSettings } from './ProjectSettings';
 
 export type ProjectPageProps = {
   uuid: string;
@@ -74,7 +74,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
             </div>
             <span className="truncate">{project.title}</span>
             <span className="flex-1 " />
-            <ProjectSettings project={project} />
+            <ProjectSettings project={project} role={role} />
           </H3>
         ) : (
           <Skeleton className="w-2/3 h-14 my-2" />
