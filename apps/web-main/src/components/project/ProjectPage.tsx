@@ -4,7 +4,7 @@ import { Project, UserRole, getProjectByUuid } from '@data-access';
 import { Button, H3, Skeleton } from '@design-system';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from '../../app/context/SessionContext';
 import { ProjectStages } from './ProjectStages';
 import { ProjectNotes } from './ProjectNotes';
@@ -30,26 +30,25 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
   const [project, setProject] = useState<Project | null>(null);
   const [role, setRole] = useState<UserRole>('reader');
 
-  useEffect(() => {
-    if (!client) {
+  const fetchProject = useCallback(async () => {
+    if (!client || !uuid) {
       return;
     }
-    const fetchProject = async () => {
-      const data = await getProjectByUuid({ client, uuid });
-      setProject(data);
-    };
-
-    fetchProject();
+    const data = await getProjectByUuid({ client, uuid });
+    setProject(data);
   }, [uuid, client]);
 
+  const getCurrentUser = useCallback(async () => {
+    const user = await getUser();
+    if (user?.role) {
+      setRole(user.role);
+    }
+  }, [getUser]);
+
   useEffect(() => {
-    (async () => {
-      const user = await getUser();
-      if (user?.role) {
-        setRole(user.role);
-      }
-    })();
-  });
+    getCurrentUser();
+    fetchProject();
+  }, [fetchProject, getCurrentUser]);
 
   return (
     <div className="w-full">
@@ -66,15 +65,21 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
       <div>
         {project ? (
           <H3 className="flex flex-row mt-0 font-semibold">
-            <span className="capitalize text-gray-400">
-              {parseToh(project.toh)}
-            </span>
+            <span className="truncate">{project.title}</span>
             <div className="flex flex-col justify-center">
               <span className="px-4 text-brick text-2xl">-</span>
             </div>
-            <span className="truncate">{project.title}</span>
+            <span className="capitalize text-nowrap text-gray-400 pe-2">
+              {parseToh(project.toh)}
+            </span>
             <span className="flex-1 " />
-            <ProjectSettings project={project} role={role} />
+            <ProjectSettings
+              project={project}
+              role={role}
+              onSave={() => {
+                fetchProject();
+              }}
+            />
           </H3>
         ) : (
           <Skeleton className="w-2/3 h-14 my-2" />

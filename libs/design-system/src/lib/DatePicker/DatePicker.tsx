@@ -1,12 +1,12 @@
 'use client';
 
-import * as React from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
 import { Button } from '../Button/Button';
 import { Calendar } from '../Calendar/Calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../Popover/Popover';
 import { cn } from '@lib-utils';
+import { useEffect, useState } from 'react';
 
 const YEAR_RANGE = 10;
 
@@ -24,8 +24,14 @@ export function DatePicker({
   const thisMonth = today.getMonth();
   const thisDate = today.getDate();
 
-  const [open, setOpen] = React.useState(false);
-  const [nextDate, setDate] = React.useState<Date | undefined>(date);
+  const [open, setOpen] = useState(false);
+  const [nextDate, setDate] = useState<Date | undefined>(date);
+
+  useEffect(() => {
+    if (date) {
+      setDate(date);
+    }
+  }, [date]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

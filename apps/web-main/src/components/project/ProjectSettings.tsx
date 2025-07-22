@@ -9,12 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Input,
   SaveButton,
   Skeleton,
 } from '@design-system';
 import { SettingsIcon } from 'lucide-react';
 import { Placeholder } from './ProjectPage';
-import { ReactNode } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 
 const DetailInput = ({
   value,
@@ -54,18 +55,85 @@ const DetailOrSkeleton = ({
 export const ProjectSettings = ({
   project,
   role,
+  onSave,
 }: {
   project: Project | null;
   role: UserRole;
+  onSave?: () => void;
 }) => {
   const canEdit = role === 'admin';
+  const [contractId, setContractId] = useState(project?.contractId || '');
+  const [contractDate, setContractDate] = useState(
+    project?.contractDate || null,
+  );
+  const [canSave, setCanSave] = useState(false);
+
+  const saveSettings = useCallback(async () => {
+    if (!contractId || !contractDate || !project?.uuid) {
+      console.error('Project ID, contract ID, and contract date are required');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/project/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uuid: project.uuid,
+          contractId: contractId,
+          contractDate: contractDate?.toISOString(),
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save project settings');
+      }
+
+      console.log('Project settings saved successfully');
+    } catch (error) {
+      console.error('Error saving project settings:', error);
+    }
+
+    onSave?.();
+  }, [project?.uuid, onSave, contractDate, contractId]);
+
+  useEffect(() => {
+    setCanSave(
+      (contractId !== project?.contractId ||
+        contractDate?.toISOString().split('T')[0] !==
+          project?.contractDate?.toISOString().split('T')[0]) &&
+        canEdit,
+    );
+  }, [
+    contractId,
+    contractDate,
+    project?.contractId,
+    project?.contractDate,
+    canEdit,
+  ]);
+
+  useEffect(() => {
+    // convert contractDate to UTC date
+    const contractDate = project?.contractDate;
+    if (!contractDate) {
+      setContractDate(null);
+      return;
+    }
+
+    const txDiff = contractDate.getTimezoneOffset() * 60000;
+    const utcDate = new Date(contractDate.getTime() + txDiff);
+    setContractDate(utcDate);
+  }, [project?.contractDate]);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full [&_svg]:size-full"
+          className="rounded-full [&_svg]:size-8"
         >
           <SettingsIcon className="p-1" />
         </Button>
@@ -79,10 +147,10 @@ export const ProjectSettings = ({
         <div className="py-4 flex flex-row gap-8">
           <DetailOrSkeleton parent={project} label="Grant Agreement Number">
             <DetailInput value={project?.contractId} canEdit={canEdit}>
-              <input
+              <Input
                 type="text"
-                value={project?.contractId || ''}
-                onChange={(e) => console.log(e)}
+                value={contractId}
+                onChange={(e) => setContractId(e.target.value)}
                 className="border rounded p-2"
                 placeholder="<none>"
               />
@@ -95,16 +163,16 @@ export const ProjectSettings = ({
             >
               <DatePicker
                 className="w-full"
-                date={project?.contractDate}
+                date={contractDate || undefined}
                 onSelect={(date) => {
-                  console.log(date);
+                  setContractDate(date || null);
                 }}
               />
             </DetailInput>
           </DetailOrSkeleton>
         </div>
         <DialogFooter>
-          <SaveButton onClick={async () => console.log('save')} />
+          <SaveButton disabled={!canSave} onClick={saveSettings} />
           <DialogClose asChild>
             <Button className="rounded-full" variant="outline">
               Close
