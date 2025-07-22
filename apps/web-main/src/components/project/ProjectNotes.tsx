@@ -48,9 +48,9 @@ export const ProjectNotes = ({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="basis-1/2 lg:h-[600px] flex flex-col pb-8">
       <div className="pb-4 flex flex-row justify-between">
-        <span className="text-md font-semibold">Notes</span>
+        <span className="text-xl my-auto font-semibold">Notes</span>
         {isEditable && (
           <SaveButton
             disabled={!isDirty}
@@ -64,24 +64,20 @@ export const ProjectNotes = ({
         )}
       </div>
       {project ? (
-        <>
-          <div className="bg-muted/50 border rounded-lg p-4 text-sm/7 h-[250px] overflow-y-scroll">
-            <NotesEditor
-              notes={notes}
-              isEditable={isEditable}
-              isDirty={(dirty) => {
-                setIsDirty(dirty);
-              }}
-              onChange={(newContent) => {
-                setNextNotes(newContent);
-              }}
-            />
-          </div>
-        </>
+        <div className="border rounded-2xl shadow-md p-4 text-sm/7 h-full overflow-y-scroll">
+          <NotesEditor
+            notes={notes}
+            isEditable={isEditable}
+            isDirty={(dirty) => {
+              setIsDirty(dirty);
+            }}
+            onChange={(newContent) => {
+              setNextNotes(newContent);
+            }}
+          />
+        </div>
       ) : (
-        <>
-          <Skeleton className="w-full h-[250px]" />
-        </>
+        <Skeleton className="w-full h-[250px]" />
       )}
     </div>
   );

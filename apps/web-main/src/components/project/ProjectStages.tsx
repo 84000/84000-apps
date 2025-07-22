@@ -36,9 +36,9 @@ export const ProjectStages = ({ project }: { project?: Project | null }) => {
     fetchStages();
   }, [project, client]);
   return (
-    <div className="lg:w-1/2 w-full lg:h-[600px] flex flex-col pb-8">
+    <div className="basis-1/2 lg:h-[600px] flex flex-col pb-8">
       <div className="pb-4 flex flex-row justify-between">
-        <span className="text-2xl font-semibold">Project Stages</span>
+        <span className="text-xl my-auto font-semibold">Stages</span>
         <Button
           variant="outline"
           className="rounded-full"
@@ -48,7 +48,7 @@ export const ProjectStages = ({ project }: { project?: Project | null }) => {
         </Button>
       </div>
       {stages.length ? (
-        <div className="overflow-hidden rounded-lg border overflow-y-scroll">
+        <div className="overflow-hidden rounded-2xl shadow-md border overflow-y-scroll">
           <Table>
             <TableHeader className="sticky top-0 border-b">
               <TableRow className="hover:bg-transparent">

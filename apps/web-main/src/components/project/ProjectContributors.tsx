@@ -43,7 +43,7 @@ export const ProjectContributors = ({
   }, [project, client]);
 
   return (
-    <div className="lg:w-1/2 w-full flex flex-col px-4 lg:pb-0 pb-8">
+    <div className="lg:w-1/2 w-full flex flex-col pe-4 lg:pb-0 pb-8">
       <div className="pb-4 flex flex-row justify-between">
         <span className="text-xl font-semibold">Contributors</span>
         <Button
@@ -55,7 +55,7 @@ export const ProjectContributors = ({
         </Button>
       </div>
       {contributors.length ? (
-        <div className="overflow-hidden rounded-lg border overflow-y-scroll">
+        <div className="overflow-hidden rounded-2xl shadow-md border overflow-y-scroll">
           <Table>
             <TableHeader className="sticky top-0 border-b">
               <TableRow className="hover:bg-transparent">

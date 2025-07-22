@@ -28,6 +28,7 @@ export const SaveButton = ({
         try {
           await onClick();
         } catch (error) {
+          // TODO: handle error properly, e.g., show a toast notification
           console.error('Failed to save:', error);
         } finally {
           setIsSaving(false);
