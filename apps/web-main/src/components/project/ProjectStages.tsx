@@ -48,7 +48,7 @@ export const ProjectStages = ({ project }: { project?: Project | null }) => {
         </Button>
       </div>
       {stages.length ? (
-        <div className="overflow-hidden rounded-lg border overflow-y-scroll">
+        <div className="overflow-hidden rounded-2xl shadow-md border overflow-y-scroll">
           <Table>
             <TableHeader className="sticky top-0 border-b">
               <TableRow className="hover:bg-transparent">

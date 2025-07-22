@@ -64,7 +64,7 @@ export const ProjectNotes = ({
         )}
       </div>
       {project ? (
-        <div className="bg-muted/50 border rounded-lg p-4 text-sm/7 h-full overflow-y-scroll">
+        <div className="border rounded-2xl shadow-md p-4 text-sm/7 h-full overflow-y-scroll">
           <NotesEditor
             notes={notes}
             isEditable={isEditable}

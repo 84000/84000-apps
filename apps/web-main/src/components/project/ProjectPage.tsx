@@ -1,7 +1,7 @@
 'use client';
 
 import { Project, UserRole, getProjectByUuid } from '@data-access';
-import { Button, H3, Skeleton } from '@design-system';
+import { Button, H3, Separator, Skeleton } from '@design-system';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -62,7 +62,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
           Back to Projects
         </Button>
       </div>
-      <div>
+      <div className="pb-4">
         {project ? (
           <H3 className="flex flex-row mt-0 font-semibold">
             <span className="truncate">{project.title}</span>
@@ -84,6 +84,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
         ) : (
           <Skeleton className="w-2/3 h-14 my-2" />
         )}
+        <Separator />
       </div>
       <div className="pt-6 pb-4 lg:flex flex-row gap-8">
         <ProjectStages project={project} />
@@ -93,11 +94,9 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
       </div>
       <div>
         <div className="text-2xl font-semibold pb-6">All Stages</div>
-        <div className="bg-muted/50 border rounded-lg p-2">
-          <div className="py-4 lg:flex flex-row gap-2">
-            <ProjectContributors project={project} />
-            <ProjectAssets project={project} />
-          </div>
+        <div className="py-4 lg:flex flex-row gap-2">
+          <ProjectContributors project={project} />
+          <ProjectAssets project={project} />
         </div>
       </div>
     </div>

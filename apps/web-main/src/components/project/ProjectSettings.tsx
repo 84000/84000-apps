@@ -130,12 +130,9 @@ export const ProjectSettings = ({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full [&_svg]:size-8"
-        >
-          <SettingsIcon className="p-1" />
+        <Button variant="outline" className="rounded-full">
+          <SettingsIcon className="text-brick" />
+          Settings
         </Button>
       </DialogTrigger>
       <DialogContent>
