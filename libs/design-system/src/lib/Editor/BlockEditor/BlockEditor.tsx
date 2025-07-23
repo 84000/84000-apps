@@ -1,6 +1,11 @@
 'use client';
 
-import { EditorContent, JSONContent, UseEditorOptions } from '@tiptap/react';
+import {
+  Content,
+  EditorContent,
+  JSONContent,
+  UseEditorOptions,
+} from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from './hooks';
 import { MainBubbleMenu } from '../menus/MainBubbleMenu';
 
@@ -15,7 +20,8 @@ export type BlockEditorContentItem = JSONContent & {
 
 export type BlockEditorContent =
   | BlockEditorContentItem[]
-  | BlockEditorContentItem;
+  | BlockEditorContentItem
+  | Content;
 
 export const BlockEditor = ({
   content,

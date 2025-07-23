@@ -1,4 +1,5 @@
 import { cn } from '@lib-utils';
+import NextLink, { LinkProps } from 'next/link';
 
 export const LINK_STYLE =
   'text-slate underline decoration-slate underline-offset-[3px] transition-colors cursor-pointer';
@@ -184,13 +185,7 @@ export function A({
   ...props
 }: React.ComponentProps<'a'>) {
   return (
-    <a
-      className={cn(
-        'font-medium text-primary underline underline-offset-4',
-        className,
-      )}
-      {...props}
-    >
+    <a className={cn(LINK_STYLE, className)} {...props}>
       {children}
     </a>
   );
