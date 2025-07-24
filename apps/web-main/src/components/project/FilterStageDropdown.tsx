@@ -4,12 +4,10 @@ import {
   STAGE_DESCRIPTIONS,
   ProjectStageLabel,
 } from '@data-access';
-import { Separator } from '@design-system';
+import { FilterDropdown, Separator } from '@design-system';
 import { cn } from '@lib-utils';
 import { RowData, Table } from '@tanstack/react-table';
 import { Check } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { FilterPopover } from './FilterPopover';
 
 function StageCheckboxItem({
   className,
@@ -48,42 +46,29 @@ export const FilterStageDropdown = <T extends RowData>({
 }: {
   table: Table<T>;
 }) => {
-  const [checked, setChecked] = useState<{ [key: string]: boolean }>(
-    PROJECT_STAGE_LABELS.reduce((acc, curr) => ({ ...acc, [curr]: false }), {}),
-  );
-  const onCheckedChanged = useCallback((stage: string, isChecked: boolean) => {
-    setChecked((prev) => ({
-      ...prev,
-      [stage]: isChecked,
-    }));
-  }, []);
-
-  useEffect(() => {
-    table
-      .getColumn('stage')
-      ?.setFilterValue(
-        Object.keys(checked).filter((stage) => stage && checked[stage]),
-      );
-  }, [table, checked]);
-
   return (
-    <FilterPopover className="px-0 w-[310px]" label="Stage">
-      <>
-        {PROJECT_STAGE_LABELS.map((stage, index) => (
-          <div key={stage}>
-            <StageCheckboxItem
-              stage={stage}
-              className="py-2 pr-4"
-              checked={!!checked[stage]}
-              onCheckedChanged={(checked) => onCheckedChanged(stage, checked)}
-            />
-            {index < PROJECT_STAGE_LABELS.length - 2 &&
-              stage.charAt(0) !== PROJECT_STAGE_LABELS[index + 1].charAt(0) && (
-                <Separator className="my-1" />
-              )}
-          </div>
-        ))}
-      </>
-    </FilterPopover>
+    <FilterDropdown
+      table={table}
+      placeholder="Stage"
+      column="stage"
+      options={PROJECT_STAGE_LABELS}
+      className="w-[310px]"
+      renderCheckbox={(stage, checked, onCheckChanged, index) => (
+        <>
+          <StageCheckboxItem
+            stage={stage}
+            className="py-2 pr-4"
+            checked={checked}
+            onCheckedChanged={(isChecked) => {
+              onCheckChanged(stage, isChecked);
+            }}
+          />
+          {index < PROJECT_STAGE_LABELS.length - 2 &&
+            stage.charAt(0) !== PROJECT_STAGE_LABELS[index + 1].charAt(0) && (
+              <Separator className="my-1" />
+            )}
+        </>
+      )}
+    />
   );
 };

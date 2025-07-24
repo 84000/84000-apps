@@ -2,13 +2,11 @@ import { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@lib-utils';
 import { EyeIcon, MoreHorizontalIcon } from 'lucide-react';
 import { TableProject } from './TableProject';
-import { SortableHeader } from '../table/SortableHeader';
-import { TooltipCell } from '../ui/TooltipCell';
-import { StageChip } from '../ui/StageChip';
 import { ProjectStageLabel } from '@data-access';
 import { filterFn as canonsFilterFn } from './FilterCanonDropdown';
 import { filterFn as pagesFilterFn } from './FilterPagesDropdown';
 import { filterFn as tohsFilterFn } from './FilterTohsDropdown';
+import { SortableHeader, StageChip, TooltipCell } from '@design-system';
 
 const ProjectHeader = SortableHeader<TableProject>;
 
@@ -69,7 +67,7 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
     header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
     cell: ({ row }) => (
       <div className={CLASSNAME_FOR_COL.stage}>
-        <StageChip stage={row.original.stageObject} />
+        <StageChip stage={row.original.stageObject.label} />
       </div>
     ),
   },

@@ -1,11 +1,11 @@
 'use client';
 
-import { EditorContent, JSONContent } from '@tiptap/react';
-import { useBlockEditor } from '../BlockEditor';
+import { EditorContent } from '@tiptap/react';
+import { BlockEditorContent, useBlockEditor } from '../BlockEditor';
 import { useTitleExtensions } from './hooks/useTitleExtensions';
 import { EmptyBubbleMenu } from '../menus/EmptyBubbleMenu';
 
-export type TitlesEditorContentItem = JSONContent & {
+export type TitlesEditorContentItem = BlockEditorContent & {
   attrs?: {
     uuid?: string | null;
     class?: string | null;

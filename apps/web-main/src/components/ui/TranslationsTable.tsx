@@ -14,22 +14,23 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import {
+  FuzzyGlobalFilter,
+  fuzzyFilterFn,
+  SortableHeader,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
+  TablePagination,
   TableRow,
+  TooltipCell,
 } from '@design-system';
 import { Work } from '@data-access';
 import { useEffect, useState } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
-import { SortableHeader } from './SortableHeader';
 import { usePathname, useRouter } from 'next/navigation';
-import { FuzzyGlobalFilter, fuzzyFilterFn } from './FuzzyGlobalFilter';
-import { TablePagination } from './TablePagination';
 import { cn } from '@lib-utils';
-import { TooltipCell } from '../ui/TooltipCell';
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',

@@ -13,17 +13,17 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import {
+  fuzzyFilterFn,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
+  TablePagination,
   TableRow,
 } from '@design-system';
 import { Project } from '@data-access';
 import { useEffect, useState } from 'react';
-import { fuzzyFilterFn } from '../table/FuzzyGlobalFilter';
-import { TablePagination } from '../table/TablePagination';
 import { cn, parseToh, removeDiacritics } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { TableProject } from './TableProject';

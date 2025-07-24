@@ -2,6 +2,7 @@ import { Project, ProjectStageDetail, getProjectStages } from '@data-access';
 import {
   Button,
   Skeleton,
+  StageChip,
   Table,
   TableBody,
   TableCell,
@@ -9,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { StageChip } from '../ui/StageChip';
 import { Placeholder } from './ProjectPage';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -62,7 +62,7 @@ export const ProjectStages = ({ project }: { project?: Project | null }) => {
               {stages.map((stage) => (
                 <TableRow key={stage.uuid}>
                   <TableCell>
-                    <StageChip stage={stage.stage} />
+                    <StageChip stage={stage.stage.label} />
                   </TableCell>
                   <TableCell>{stage.stage.date.toLocaleDateString()}</TableCell>
                   <TableCell>

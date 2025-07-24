@@ -1,7 +1,7 @@
-import { Button } from '@design-system';
 import { Column } from '@tanstack/react-table';
 import { SortIcon } from './SortIcon';
 import { cn } from '@lib-utils';
+import { Button } from '../Button/Button';
 
 export const SortableHeader = <T extends object>({
   column,
