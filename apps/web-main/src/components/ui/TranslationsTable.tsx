@@ -1,36 +1,16 @@
 'use client';
+import { Cell } from '@tanstack/react-table';
 import {
-  ColumnDef,
-  SortingState,
-  Table as TableType,
-  VisibilityState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import {
-  FuzzyGlobalFilter,
-  fuzzyFilterFn,
   SortableHeader,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TablePagination,
-  TableRow,
   TooltipCell,
+  DataTableColumn,
+  DataTable,
+  FuzzyGlobalFilter,
 } from '@design-system';
 import { Work } from '@data-access';
 import { useEffect, useState } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { cn } from '@lib-utils';
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',
@@ -38,7 +18,7 @@ const CLASSNAME_FOR_COL: { [key: string]: string } = {
   pages: 'w-[60px]',
   publicationVersion: 'w-[40px]',
   publicationDate: 'w-[80px]',
-  restriction: 'w-5',
+  restriction: 'w-5 h-6',
 };
 
 type TableWork = {
@@ -55,19 +35,12 @@ const TranslationHeader = SortableHeader<TableWork>;
 
 export const TranslationsTable = ({ works }: { works: Work[] }) => {
   const [data, setData] = useState<TableWork[]>([]);
-  const [rowSelection, setRowSelection] = useState({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'toh', desc: false },
-  ]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 12,
-  });
 
   const router = useRouter();
   const pathname = usePathname();
+  const onCellClick = (cell: Cell<TableWork, unknown>) => {
+    router.push(`${pathname}/${cell.row.original.uuid}`);
+  };
 
   useEffect(() => {
     const tableWorks: TableWork[] = works.map((w) => ({
@@ -78,8 +51,9 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     setData(tableWorks);
   }, [works]);
 
-  const columns: ColumnDef<TableWork>[] = [
+  const columns: DataTableColumn<TableWork>[] = [
     {
+      id: 'title',
       accessorKey: 'title',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Work Title" />
@@ -90,8 +64,11 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           content={row.original.title}
         />
       ),
+      className: CLASSNAME_FOR_COL.title,
+      onCellClick,
     },
     {
+      id: 'toh',
       accessorKey: 'toh',
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
       cell: ({ row }) => (
@@ -100,8 +77,11 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           content={row.original.toh}
         />
       ),
+      className: CLASSNAME_FOR_COL.toh,
+      onCellClick,
     },
     {
+      id: 'pages',
       accessorKey: 'pages',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Pages" />
@@ -109,8 +89,11 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       cell: ({ row }) => (
         <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
       ),
+      className: CLASSNAME_FOR_COL.pages,
+      onCellClick,
     },
     {
+      id: 'publicationDate',
       accessorKey: 'publicationDate',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Published" />
@@ -120,8 +103,11 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           {row.original.publicationDate}
         </div>
       ),
+      className: CLASSNAME_FOR_COL.publicationDate,
+      onCellClick,
     },
     {
+      id: 'publicationVersion',
       accessorKey: 'publicationVersion',
       header: ({ column }) => (
         <TranslationHeader column={column} name="Version" />
@@ -131,8 +117,11 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           {row.original.publicationVersion}
         </div>
       ),
+      className: CLASSNAME_FOR_COL.publicationVersion,
+      onCellClick,
     },
     {
+      id: 'restriction',
       accessorKey: 'restriction',
       header: () => <></>,
       cell: ({ row }) => (
@@ -142,106 +131,24 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           ) : null}
         </div>
       ),
+      className: CLASSNAME_FOR_COL.restriction,
+      onCellClick,
     },
   ];
 
-  const table: TableType<TableWork> = useReactTable({
-    data,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-      globalFilter,
-      rowSelection,
-      pagination,
-    },
-    getRowId: (row) => row.uuid,
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    globalFilterFn: fuzzyFilterFn,
-  });
-
   return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex items-center py-4">
-        <FuzzyGlobalFilter table={table} placeholder="Search translations..." />
-      </div>
-      <div className="rounded-lg border px-4 py-3 bg-muted/50 text-sm">
-        Total results:
-        <span className="px-1 text-emerald-500 font-semibold">
-          {table.getFilteredRowModel().rows.length} texts
-        </span>
-      </div>
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader className="sticky top-0">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    className={CLASSNAME_FOR_COL[header.id]}
-                    key={header.id}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              <>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          CLASSNAME_FOR_COL[cell.column.id],
-                          'py-4 hover:cursor-pointer',
-                        )}
-                        onClick={() => {
-                          router.push(`${pathname}/${row.original.uuid}`);
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </>
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <TablePagination table={table} />
-    </div>
+    <DataTable
+      name="translations"
+      columns={columns}
+      data={data}
+      filters={(table) => (
+        <div className="flex items-center py-4">
+          <FuzzyGlobalFilter
+            table={table}
+            placeholder="Search translations..."
+          />
+        </div>
+      )}
+    />
   );
 };
