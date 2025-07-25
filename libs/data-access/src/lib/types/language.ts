@@ -23,7 +23,7 @@ export const LANGUAGE_MAP: Record<
 > = {
   bo: 'tibetan',
   en: 'english',
-  'Bo-Ltn': 'wylie',
+  'Bo-Ltn': 'tibetan',
   'Sa-Ltn': 'sanskrit',
   zh: 'chinese',
   ja: 'japanese',

@@ -2,9 +2,10 @@
 
 import { GlossaryPageItem } from '@data-access';
 import { GlossaryEntryEditor } from './GlossaryEditor';
-import { GlossaryVariants } from './GlossaryVariants';
-import { GlossaryRelatedTerms } from './GlossaryRelatedTerms';
 import { GlossaryHeading } from './GlossaryHeading';
+import { GlossaryInstancesTable } from './GlossaryInstancesTable';
+import { GlossaryRelatedTerms } from './GlossaryRelatedTerms';
+import { GlossaryVariants } from './GlossaryVariants';
 
 export const GlossaryDetailPage = ({
   detail,
@@ -12,10 +13,11 @@ export const GlossaryDetailPage = ({
   detail: GlossaryPageItem;
 }) => {
   return (
-    <div className="w-full">
+    <div className="w-full pb-8">
       <GlossaryHeading detail={detail} />
       <GlossaryEntryEditor detail={detail} />
       <GlossaryVariants detail={detail} />
+      <GlossaryInstancesTable detail={detail} />
       <GlossaryRelatedTerms detail={detail} />
     </div>
   );
