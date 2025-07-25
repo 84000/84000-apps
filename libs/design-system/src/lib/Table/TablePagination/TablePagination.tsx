@@ -1,9 +1,12 @@
 'use client';
 
-import { Button } from '@design-system';
 import { RowData, Table } from '@tanstack/react-table';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { PaginationEllipsis } from './PaginationEllipsis';
+import { Button } from '../../Button/Button';
+import { PaginationEllipsis } from '../PaginationEllipsis/PaginationEllipsis';
+
+const PAGINATION_THRESH = 3;
+const PAGINATION_REMAINDER_THRESH = PAGINATION_THRESH - 1;
 
 interface TablePaginationProps<T extends RowData> {
   table: Table<T>;
@@ -26,8 +29,11 @@ export const TablePagination = <T extends RowData>({
     pagesToShow.push(page + 1);
   }
 
-  if (pagesToShow.length < 3 && page + 2 < totalPages) {
-    pagesToShow.push(page + 2);
+  if (
+    pagesToShow.length < PAGINATION_THRESH &&
+    page + PAGINATION_REMAINDER_THRESH < totalPages
+  ) {
+    pagesToShow.push(page + PAGINATION_REMAINDER_THRESH);
   }
 
   return (
@@ -55,7 +61,10 @@ export const TablePagination = <T extends RowData>({
               {p + 1}
             </Button>
           ))}
-          {totalPages > 3 && page < totalPages - 2 && <PaginationEllipsis />}
+          {totalPages > PAGINATION_THRESH &&
+            page < totalPages - PAGINATION_REMAINDER_THRESH && (
+              <PaginationEllipsis />
+            )}
           <Button
             variant="ghost"
             onClick={() => table.nextPage()}

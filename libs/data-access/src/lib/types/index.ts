@@ -6,6 +6,7 @@ export * from './client';
 export * from './contributor';
 export * from './front-matter';
 export * from './glossary';
+export * from './glossary-page';
 export * from './imprint';
 export * from './language';
 export * from './passage';

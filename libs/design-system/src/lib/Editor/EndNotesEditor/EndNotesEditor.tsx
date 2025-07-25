@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorContent, JSONContent } from '@tiptap/react';
+import { Content, EditorContent } from '@tiptap/react';
 import { useBlockEditor } from '../BlockEditor';
 import { useEndNotesExtensions } from './hooks/useEndNotesExtensions';
 import { EndNotesBubbleMenu } from './menu/EndNotesBubbleMenu';
@@ -9,7 +9,7 @@ export const EndNotesEditor = ({
   content,
   isEditable = true,
 }: {
-  content: JSONContent;
+  content: Content;
   isEditable?: boolean;
 }) => {
   const { extensions } = useEndNotesExtensions();

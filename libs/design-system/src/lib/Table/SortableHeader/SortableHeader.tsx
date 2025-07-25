@@ -1,9 +1,10 @@
-import { Button } from '@design-system';
 import { Column } from '@tanstack/react-table';
-import { SortIcon } from './SortIcon';
+import { SortIcon } from '../SortIcon/SortIcon';
 import { cn } from '@lib-utils';
+import { Button } from '../../Button/Button';
+import { DataTableRow } from '../hooks';
 
-export const SortableHeader = <T extends object>({
+export const SortableHeader = <T extends DataTableRow>({
   column,
   name,
   className,

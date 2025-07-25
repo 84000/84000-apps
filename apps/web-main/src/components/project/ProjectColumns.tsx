@@ -1,14 +1,18 @@
-import { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@lib-utils';
 import { EyeIcon, MoreHorizontalIcon } from 'lucide-react';
 import { TableProject } from './TableProject';
-import { SortableHeader } from '../table/SortableHeader';
-import { TooltipCell } from '../ui/TooltipCell';
-import { StageChip } from '../ui/StageChip';
 import { ProjectStageLabel } from '@data-access';
 import { filterFn as canonsFilterFn } from './FilterCanonDropdown';
 import { filterFn as pagesFilterFn } from './FilterPagesDropdown';
 import { filterFn as tohsFilterFn } from './FilterTohsDropdown';
+import {
+  DataTableColumn,
+  SortableHeader,
+  StageChip,
+  TooltipCell,
+} from '@design-system';
+import { usePathname, useRouter } from 'next/navigation';
+import { Cell } from '@tanstack/react-table';
 
 const ProjectHeader = SortableHeader<TableProject>;
 
@@ -22,8 +26,9 @@ export const CLASSNAME_FOR_COL: { [key: string]: string } = {
   uuid: 'w-5',
 };
 
-export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
+export const PROJECT_COLUMNS: DataTableColumn<TableProject>[] = [
   {
+    id: 'toh',
     accessorKey: 'toh',
     filterFn: tohsFilterFn,
     header: ({ column }) => <ProjectHeader column={column} name="Toh" />,
@@ -33,8 +38,10 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
         content={row.original.toh}
       />
     ),
+    className: CLASSNAME_FOR_COL.toh,
   },
   {
+    id: 'title',
     accessorKey: 'title',
     enableGlobalFilter: false,
     header: ({ column }) => <ProjectHeader column={column} name="Work Title" />,
@@ -44,12 +51,14 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
         content={row.original.title}
       />
     ),
+    className: CLASSNAME_FOR_COL.title,
   },
   {
     accessorKey: 'plainTitle',
     cell: ({ row }) => row.original.plainTitle,
   },
   {
+    id: 'translator',
     accessorKey: 'translator',
     header: ({ column }) => <ProjectHeader column={column} name="Translator" />,
     cell: ({ row }) => (
@@ -58,8 +67,10 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
         content={row.original.translator}
       />
     ),
+    className: CLASSNAME_FOR_COL.translator,
   },
   {
+    id: 'stage',
     accessorKey: 'stage',
     filterFn: (row, columnId, filter: ProjectStageLabel[]) => {
       if (!filter.length) return true;
@@ -69,19 +80,23 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
     header: ({ column }) => <ProjectHeader column={column} name="Stage" />,
     cell: ({ row }) => (
       <div className={CLASSNAME_FOR_COL.stage}>
-        <StageChip stage={row.original.stageObject} />
+        <StageChip stage={row.original.stageObject.label} />
       </div>
     ),
+    className: CLASSNAME_FOR_COL.stage,
   },
   {
+    id: 'pages',
     accessorKey: 'pages',
     filterFn: pagesFilterFn,
     header: ({ column }) => <ProjectHeader column={column} name="Pages" />,
     cell: ({ row }) => (
       <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
     ),
+    className: CLASSNAME_FOR_COL.pages,
   },
   {
+    id: 'stageDate',
     accessorKey: 'stageDate',
     header: ({ column }) => <ProjectHeader column={column} name="Stage Date" />,
     cell: ({ row }) => (
@@ -89,8 +104,10 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
         {row.original.stageDate}
       </div>
     ),
+    className: CLASSNAME_FOR_COL.stageDate,
   },
   {
+    id: 'uuid',
     accessorKey: 'uuid',
     header: '',
     enableColumnFilter: false,
@@ -105,6 +122,7 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
         />
       </div>
     ),
+    className: CLASSNAME_FOR_COL.uuid,
   },
   {
     accessorKey: 'canons',
@@ -112,3 +130,16 @@ export const PROJECT_COLUMNS: ColumnDef<TableProject>[] = [
     cell: ({ row }) => row.original.canons,
   },
 ];
+
+export const useProjectColumns = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const columns = PROJECT_COLUMNS.map((col) => ({
+    ...col,
+    onCellClick: (cell: Cell<TableProject, unknown>) => {
+      router.push(`${pathname}/${cell.row.original.uuid}`);
+    },
+  }));
+
+  return { columns };
+};
