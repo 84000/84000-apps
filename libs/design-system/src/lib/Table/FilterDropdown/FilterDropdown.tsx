@@ -1,6 +1,6 @@
 'use client';
 
-import { RowData, Table } from '@tanstack/react-table';
+import { Table } from '@tanstack/react-table';
 import {
   ComponentPropsWithRef,
   ReactNode,
@@ -9,8 +9,9 @@ import {
   useState,
 } from 'react';
 import { Check } from 'lucide-react';
-import { FilterPopover } from './FilterPopover';
+import { FilterPopover } from '../FilterPopover/FilterPopover';
 import { cn } from '@lib-utils';
+import { DataTableRow } from '../hooks';
 
 export const FilterCheckboxItem = ({
   label,
@@ -36,7 +37,7 @@ export const FilterCheckboxItem = ({
   );
 };
 
-export const FilterDropdown = <T extends RowData>({
+export const FilterDropdown = <T extends DataTableRow>({
   placeholder,
   column,
   options,

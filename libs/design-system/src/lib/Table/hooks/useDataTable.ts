@@ -3,6 +3,7 @@
 import {
   Cell,
   ColumnDef,
+  PaginationState,
   RowData,
   SortingState,
   VisibilityState,
@@ -15,7 +16,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useState } from 'react';
-import { fuzzyFilterFn } from '../FuzzyGlobalFilter';
+import { fuzzyFilterFn } from '../FuzzyGlobalFilter/FuzzyGlobalFilter';
 
 export type DataTableRow = RowData & { uuid: string };
 export type DataTableColumn<T extends DataTableRow> = ColumnDef<T> & {
@@ -26,23 +27,24 @@ export type DataTableColumn<T extends DataTableRow> = ColumnDef<T> & {
 export const useDataTable = <T extends DataTableRow>({
   data,
   columns,
+  visibility: visibilityInput = {},
+  sorting: sortingInput = [],
+  pagination: paginationInput = { pageIndex: 0, pageSize: 12 },
+  globalFilter: globalFilterInput = '',
 }: {
   data: T[];
   columns: DataTableColumn<T>[];
+  visibility?: VisibilityState;
+  sorting?: SortingState;
+  pagination?: PaginationState;
+  globalFilter?: string;
 }) => {
   const [rowSelection, setRowSelection] = useState({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-    plainTitle: false,
-    canons: false,
-  });
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: 'pages', desc: true },
-  ]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 12,
-  });
+  const [columnVisibility, setColumnVisibility] =
+    useState<VisibilityState>(visibilityInput);
+  const [globalFilter, setGlobalFilter] = useState(globalFilterInput);
+  const [sorting, setSorting] = useState<SortingState>(sortingInput);
+  const [pagination, setPagination] = useState(paginationInput);
 
   const table = useReactTable({
     data,

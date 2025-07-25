@@ -1,4 +1,4 @@
-import { FilterFn, RowData, Table } from '@tanstack/react-table';
+import { FilterFn, Table } from '@tanstack/react-table';
 import { FilterDropdown } from '@design-system';
 import { CANON_TYPES } from '@data-access';
 import { TableProject } from './TableProject';
@@ -16,10 +16,10 @@ export const filterFn: FilterFn<TableProject> = (
   return filter.every((canon) => value.includes(canon));
 };
 
-export const FilterCanonDropdown = <T extends RowData>({
+export const FilterCanonDropdown = ({
   table,
 }: {
-  table: Table<T>;
+  table: Table<TableProject>;
 }) => {
   return (
     <FilterDropdown

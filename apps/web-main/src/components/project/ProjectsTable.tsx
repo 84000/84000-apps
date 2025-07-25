@@ -35,6 +35,11 @@ export const ProjectsTable = ({ projects }: { projects: Project[] }) => {
       name="projects"
       data={data}
       columns={columns}
+      visibility={{
+        plainTitle: false,
+        canons: false,
+      }}
+      sorting={[{ id: 'pages', desc: true }]}
       filters={(table) => <ProjectFilters table={table} />}
     />
   );

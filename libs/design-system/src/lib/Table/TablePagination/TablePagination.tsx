@@ -2,8 +2,8 @@
 
 import { RowData, Table } from '@tanstack/react-table';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { Button } from '../Button/Button';
-import { PaginationEllipsis } from './PaginationEllipsis';
+import { Button } from '../../Button/Button';
+import { PaginationEllipsis } from '../PaginationEllipsis/PaginationEllipsis';
 
 const PAGINATION_THRESH = 3;
 const PAGINATION_REMAINDER_THRESH = PAGINATION_THRESH - 1;

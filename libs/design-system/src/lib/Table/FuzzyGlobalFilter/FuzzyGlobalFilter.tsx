@@ -1,7 +1,7 @@
 import { removeDiacritics } from '@lib-utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { FilterMeta, Row, RowData, Table } from '@tanstack/react-table';
-import { Input } from '../Input/Input';
+import { Input } from '../../Input/Input';
 
 export const FuzzyGlobalFilter = <T extends RowData>({
   table,

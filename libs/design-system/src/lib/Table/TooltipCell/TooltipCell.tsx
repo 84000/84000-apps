@@ -1,4 +1,4 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '../Tooltip/Tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../Tooltip/Tooltip';
 
 export const TooltipCell = ({
   className: classNamse,

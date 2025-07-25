@@ -1,4 +1,4 @@
-import { FilterFn, RowData, Table } from '@tanstack/react-table';
+import { FilterFn, Table } from '@tanstack/react-table';
 import { FilterDropdown } from '@design-system';
 import { useCallback } from 'react';
 import { TableProject } from './TableProject';
@@ -44,10 +44,10 @@ export const filterFn: FilterFn<TableProject> = (
   return false;
 };
 
-export const FilterTohsDropdown = <T extends RowData>({
+export const FilterTohsDropdown = ({
   table,
 }: {
-  table: Table<T>;
+  table: Table<TableProject>;
 }) => {
   const getCheckedValues = useCallback((options: string[]) => {
     return options

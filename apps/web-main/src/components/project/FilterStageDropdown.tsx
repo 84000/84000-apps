@@ -6,8 +6,9 @@ import {
 } from '@data-access';
 import { FilterDropdown, Separator } from '@design-system';
 import { cn } from '@lib-utils';
-import { RowData, Table } from '@tanstack/react-table';
+import { Table } from '@tanstack/react-table';
 import { Check } from 'lucide-react';
+import { TableProject } from './TableProject';
 
 function StageCheckboxItem({
   className,
@@ -41,10 +42,10 @@ function StageCheckboxItem({
   );
 }
 
-export const FilterStageDropdown = <T extends RowData>({
+export const FilterStageDropdown = ({
   table,
 }: {
-  table: Table<T>;
+  table: Table<TableProject>;
 }) => {
   return (
     <FilterDropdown

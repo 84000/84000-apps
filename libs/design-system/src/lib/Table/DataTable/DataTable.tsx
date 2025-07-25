@@ -3,33 +3,42 @@
 import {
   Cell,
   Table as HeadlessTable,
+  PaginationState,
+  SortingState,
+  VisibilityState,
   flexRender,
 } from '@tanstack/react-table';
+import { ReactElement, useEffect, useState } from 'react';
+import { cn } from '@lib-utils';
+import { DataTableColumn, DataTableRow, useDataTable } from '../hooks';
+import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
 import {
-  DataTableColumn,
-  DataTableRow,
-  FilterResultsBanner,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TablePagination,
   TableRow,
-  useDataTable,
-} from './';
-import { ReactElement, useEffect, useState } from 'react';
-import { cn } from '@lib-utils';
+} from '../Table';
+import { TablePagination } from '../TablePagination/TablePagination';
 
 export const DataTable = <T extends DataTableRow>({
   name,
   data,
   columns,
+  visibility,
+  sorting,
+  pagination,
+  globalFilter,
   filters,
 }: {
   name: string;
   data: T[];
   columns: DataTableColumn<T>[];
+  visibility?: VisibilityState;
+  sorting?: SortingState;
+  pagination?: PaginationState;
+  globalFilter?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
 }) => {
   const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
@@ -58,6 +67,10 @@ export const DataTable = <T extends DataTableRow>({
   const { table } = useDataTable({
     data,
     columns,
+    visibility,
+    sorting,
+    pagination,
+    globalFilter,
   });
 
   return (
