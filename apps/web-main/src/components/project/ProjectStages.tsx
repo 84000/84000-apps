@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
-import { Placeholder } from './ProjectPage';
+import { Placeholder } from '../ui/Placeholder';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSession } from '../../app/context/SessionContext';

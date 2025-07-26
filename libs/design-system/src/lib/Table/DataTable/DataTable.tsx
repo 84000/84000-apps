@@ -77,7 +77,7 @@ export const DataTable = <T extends DataTableRow>({
     <div className="w-full flex flex-col gap-4">
       {filters && filters(table)}
       <FilterResultsBanner table={table} name={name} />
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-2xl border shadow-md">
         <Table>
           <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (

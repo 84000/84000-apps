@@ -17,10 +17,6 @@ export type ProjectPageProps = {
   uuid: string;
 };
 
-export const Placeholder = () => (
-  <span className="text-muted-foreground">{'<none>'}</span>
-);
-
 export const ProjectPage = ({ uuid }: ProjectPageProps) => {
   const router = useRouter();
   const pathname = usePathname();

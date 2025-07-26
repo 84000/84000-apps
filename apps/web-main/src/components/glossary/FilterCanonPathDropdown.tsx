@@ -1,19 +1,8 @@
-import { FilterFn, Table } from '@tanstack/react-table';
-import { FilterDropdown } from '@design-system';
+import { Table } from '@tanstack/react-table';
+import { FilterDropdown, defaultFilterFn } from '@design-system';
 import { GlossaryInstanceRow } from './GlossaryInstancesTable';
 
-export const filterFn: FilterFn<GlossaryInstanceRow> = (
-  row,
-  columnId,
-  filter: string[],
-) => {
-  if (!filter.length) {
-    return true;
-  }
-
-  const value = row.getValue(columnId) as string;
-  return filter.some((canon) => value.includes(canon));
-};
+export const filterFn = defaultFilterFn<GlossaryInstanceRow>;
 
 export const FilterCanonPathDropdown = ({
   options,

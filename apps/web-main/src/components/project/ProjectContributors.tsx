@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@design-system';
 import { ArrowRightIcon } from 'lucide-react';
-import { Placeholder } from './ProjectPage';
+import { Placeholder } from '../ui/Placeholder';
 import { camelCaseToHuman } from '@lib-utils';
 import { useEffect, useState } from 'react';
 import { useSession } from '../../app/context/SessionContext';
