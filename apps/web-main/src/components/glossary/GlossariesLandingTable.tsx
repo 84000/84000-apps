@@ -35,8 +35,8 @@ export const GlossariesLandingTable = ({
   languages,
 }: {
   terms: GlossaryLandingItem[];
-  types?: string[];
-  languages?: string[];
+  types: string[];
+  languages: string[];
 }) => {
   const router = useRouter();
   const pathname = usePathname();

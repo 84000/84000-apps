@@ -9,9 +9,14 @@ export const GlossariesPage = ({ terms }: { terms: GlossaryLandingItem[] }) => {
     definition: term.definition.replace(/<[^>]+>/g, ''),
   }));
 
-  // TODO: derive from terms data
-  const types = ['Term', 'Place', 'Person'];
-  const languages = ['english', 'tibetan', 'sanskrit'];
+  // extract types and languages from the terms data
+  const types = Array.from(new Set(rows.map((term) => term.type))).filter(
+    Boolean,
+  );
+  const languages = Array.from(
+    new Set(rows.flatMap((term) => term.language)),
+  ).filter(Boolean);
+
   return (
     <div className="flex flex-row justify-center p-4 w-full">
       <div className="w-full max-w-[1466px]">
