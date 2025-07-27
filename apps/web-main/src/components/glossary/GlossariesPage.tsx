@@ -20,7 +20,7 @@ export const GlossariesPage = ({ terms }: { terms: GlossaryLandingItem[] }) => {
   return (
     <div className="flex flex-row justify-center p-4 w-full">
       <div className="w-full max-w-[1466px]">
-        <H2>{'Glossaries'}</H2>
+        <H2 className="text-navy-500">{'Glossaries'}</H2>
         <GlossariesLandingTable
           terms={rows}
           types={types}

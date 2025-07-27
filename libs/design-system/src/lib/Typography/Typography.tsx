@@ -59,7 +59,7 @@ export function H1({
   );
 }
 
-export const H2_STYLE = 'font-serif mt-8 scroll-m-20 pb-6 text-4xl lg:text-5xl';
+export const H2_STYLE = 'mt-8 scroll-m-20 pb-6 text-4xl lg:text-5xl';
 export function H2({
   children,
   className,
