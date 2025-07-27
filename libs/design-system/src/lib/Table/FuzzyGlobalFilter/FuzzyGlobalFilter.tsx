@@ -1,14 +1,16 @@
 import { removeDiacritics } from '@lib-utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { FilterMeta, Row, RowData, Table } from '@tanstack/react-table';
-import { Input } from '../../Input/Input';
+import { DebounceLevel, Input } from '../../Input/Input';
 
 export const FuzzyGlobalFilter = <T extends RowData>({
   table,
   placeholder,
+  delay = DebounceLevel.NONE,
 }: {
   table: Table<T>;
   placeholder: string;
+  delay?: DebounceLevel;
 }) => {
   return (
     <Input
@@ -16,6 +18,7 @@ export const FuzzyGlobalFilter = <T extends RowData>({
       value={table.getState().globalFilter ?? ''}
       onChange={(event) => table.setGlobalFilter(event.target.value)}
       className="min-w-sm md:max-w-md"
+      delay={delay}
     />
   );
 };
