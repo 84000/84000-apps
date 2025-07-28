@@ -1,4 +1,8 @@
 import { TohokuCatalogEntry } from './front-matter';
+import {
+  ExtendedTranslationLanguage,
+  displayLanguageForTranslationLanguage,
+} from './language';
 
 export type GlossaryPageLanguage =
   | 'english'
@@ -6,6 +10,15 @@ export type GlossaryPageLanguage =
   | 'sanskrit'
   | 'pali'
   | 'chinese';
+
+export type GlossaryLandingItem = {
+  uuid: string;
+  headword: string;
+  type: string;
+  language: string;
+  nameVariants: string;
+  definition: string;
+};
 
 export type LanguageRecord = Record<GlossaryPageLanguage, string[]>;
 
@@ -35,6 +48,14 @@ export type GlossaryEntity = {
   sourceUuid: string;
   targetHeadword: string;
   targetUuid: string;
+};
+export type GlossaryLandingItemDTO = {
+  authority_uuid: string;
+  headword: string;
+  type: string;
+  headword_language?: ExtendedTranslationLanguage;
+  name_variants?: string;
+  definition?: string;
 };
 
 export type GlossaryDetailDTO = {
@@ -68,6 +89,28 @@ export type GlossaryInstanceDTO = {
   glossary_entry_definition?: string | null;
   glossary_entry_canon?: string | null;
   glossary_entry_creators?: string[] | null;
+};
+
+export const glossaryLandingItemFromDTO = (
+  dto?: GlossaryLandingItemDTO,
+): GlossaryLandingItem | null => {
+  if (!dto) {
+    return null;
+  }
+
+  const definition = dto.definition?.replace(/<[^>]*>/g, '').trim() || '';
+  const language = dto.headword_language
+    ? displayLanguageForTranslationLanguage(dto.headword_language)
+    : '';
+
+  return {
+    uuid: dto.authority_uuid,
+    headword: dto.headword,
+    type: dto.type.replace('Authority > ', ''),
+    language,
+    nameVariants: dto.name_variants || '',
+    definition,
+  };
 };
 
 export const glossaryDetailFromDTO = (

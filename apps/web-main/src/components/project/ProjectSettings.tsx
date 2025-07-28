@@ -14,7 +14,7 @@ import {
   Skeleton,
 } from '@design-system';
 import { SettingsIcon } from 'lucide-react';
-import { Placeholder } from './ProjectPage';
+import { Placeholder } from '../ui/Placeholder';
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 
 const DetailInput = ({
