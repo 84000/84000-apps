@@ -91,6 +91,14 @@ export const EditorContextProvider = ({
     }
   }, [uuid, builder, pathname, router, doc, fragments]);
 
+  useEffect(() => {
+    if (!dirtyUuids.length) {
+      return;
+    }
+
+    console.log('Dirty uuids:', dirtyUuids);
+  }, [dirtyUuids]);
+
   const getFragment = useCallback((): XmlFragment => {
     if (!builder) {
       throw new Error('Builder is not set');
@@ -120,8 +128,6 @@ export const EditorContextProvider = ({
         uuids.add(uuid);
       }
     });
-
-    console.log(uuids);
 
     setDirtyUuids((prev) => {
       return [...new Set([...prev, ...uuids])];
