@@ -4,9 +4,18 @@ import { Passage } from '@data-access';
 import { TranslationEditor } from '@design-system';
 import type { TranslationEditorContent } from '@design-system';
 import { blocksFromTranslationBody } from '@lib-editing';
+import type { XmlFragment } from 'yjs';
 import { useEffect, useState } from 'react';
 
-export const TranslationBodyEditor = ({ body }: { body: Passage[] }) => {
+export const TranslationBodyEditor = ({
+  body,
+  fragment,
+  onCreate,
+}: {
+  body: Passage[];
+  fragment: XmlFragment;
+  onCreate?: () => void;
+}) => {
   const [content, setContent] = useState<TranslationEditorContent>([]);
 
   useEffect(() => {
@@ -14,5 +23,11 @@ export const TranslationBodyEditor = ({ body }: { body: Passage[] }) => {
     setContent(blocks);
   }, [body]);
 
-  return <TranslationEditor content={content} />;
+  return (
+    <TranslationEditor
+      content={content}
+      fragment={fragment}
+      onCreate={onCreate}
+    />
+  );
 };

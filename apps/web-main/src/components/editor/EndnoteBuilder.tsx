@@ -10,12 +10,14 @@ import { useEditorState } from './EditorContext';
 import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
 import { EndnoteBodyEditor } from '../ui/EndnoteBodyEditor';
+import type { XmlFragment } from 'yjs';
 
 export const EndnoteBuilder = () => {
   const [body, setBody] = useState<Passage[]>();
   const [loading, setLoading] = useState(true);
+  const [fragment, setFragment] = useState<XmlFragment>();
 
-  const { uuid } = useEditorState();
+  const { uuid, getFragment } = useEditorState();
 
   useEffect(() => {
     const getTranslation = async () => {
@@ -28,14 +30,19 @@ export const EndnoteBuilder = () => {
         return;
       }
 
+      setFragment(getFragment());
       setBody(body);
     };
     getTranslation();
-  }, [uuid]);
+  }, [uuid, getFragment]);
 
   if (!body && !loading) {
     return notFound();
   }
 
-  return body ? <EndnoteBodyEditor body={body} /> : <TranslationSkeleton />;
+  return body && fragment ? (
+    <EndnoteBodyEditor body={body} fragment={fragment} />
+  ) : (
+    <TranslationSkeleton />
+  );
 };

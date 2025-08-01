@@ -1,10 +1,12 @@
 'use client';
 
+import type { XmlFragment } from 'yjs';
+import { Collaboration } from '@tiptap/extension-collaboration';
 import Underline from '@tiptap/extension-underline';
 import { EndNotesDocument } from '../extensions/EndNotesDocument';
 import { EndNotesPassage } from '../extensions/EndNotesPassage';
 import { EndNoteNode } from '../../TranslationEditor/extensions/EndNote/EndNoteNode';
-import StarterKit from '../../extensions/StarterKit';
+import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';
 import Heading from '../../extensions/Heading/Heading';
 import { Italic } from '../../extensions/Italic';
 import { GlossaryInstanceMark } from '../../TranslationEditor/extensions/GlossaryInstanceMark';
@@ -52,7 +54,11 @@ export const EndNoteSuggestion: CommandSuggestionItem = {
   },
 };
 
-export const useEndNotesExtensions = () => {
+export const useEndNotesExtensions = ({
+  fragment,
+}: {
+  fragment?: XmlFragment;
+}) => {
   const suggestions = [
     PassageSuggestion,
     EndNoteSuggestion,
@@ -61,24 +67,32 @@ export const useEndNotesExtensions = () => {
     Heading3Suggestion,
   ];
 
-  return {
-    extensions: [
-      EndNotesDocument,
-      EndNotesPassage,
-      EndNoteNode,
-      GlossaryInstanceMark,
-      Heading,
-      Italic,
-      Link,
-      Paragraph,
-      Placeholder,
-      SlashCommand.configure({ suggestion: getSuggestion(suggestions) }),
-      SmallCaps,
-      StarterKit,
-      Subscript,
-      Superscript,
-      TranslationMetadata,
-      Underline,
-    ],
-  };
+  const extensions = [
+    EndNotesDocument,
+    EndNotesPassage,
+    EndNoteNode,
+    GlossaryInstanceMark,
+    Heading,
+    Italic,
+    Link,
+    Paragraph,
+    Placeholder,
+    SlashCommand.configure({ suggestion: getSuggestion(suggestions) }),
+    SmallCaps,
+    Subscript,
+    Superscript,
+    TranslationMetadata,
+    Underline,
+  ];
+
+  if (fragment) {
+    extensions.push(
+      StarterKit.configure({ ...STARTER_KIT_CONFIG, history: false }),
+      Collaboration.configure({ fragment }),
+    );
+  } else {
+    extensions.push(StarterKit);
+  }
+
+  return { extensions };
 };

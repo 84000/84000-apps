@@ -1,6 +1,7 @@
 'use client';
 
 import { EditorContent, Content } from '@tiptap/react';
+import type { XmlFragment } from 'yjs';
 import { useBlockEditor } from '../BlockEditor';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
@@ -20,16 +21,21 @@ export type TranslationEditorContent =
 
 export const TranslationEditor = ({
   content,
+  fragment,
   isEditable = true,
+  onCreate,
 }: {
   content: TranslationEditorContent;
+  fragment?: XmlFragment;
   isEditable?: boolean;
+  onCreate?: () => void;
 }) => {
-  const { extensions } = useTranslationExtensions();
+  const { extensions } = useTranslationExtensions({ fragment });
   const { editor } = useBlockEditor({
     extensions,
     content,
     isEditable,
+    onCreate,
   });
   return (
     <div className="flex h-full">

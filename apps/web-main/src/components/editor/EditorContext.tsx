@@ -7,7 +7,7 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import { Doc, XmlFragment } from 'yjs';
+import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import { EditorBuilderType } from './EditorBuilderType';
 import { EditorSidebar } from './EditorSidebar';
 import { usePathname, useRouter } from 'next/navigation';
@@ -17,15 +17,21 @@ interface EditorContextState {
   uuid: string;
   builder: EditorBuilderType;
   dirtyUuids: string[];
+  getFragment: () => XmlFragment;
   setBuilder: (active: EditorBuilderType) => void;
   setDoc: (doc: Doc) => void;
   save: () => Promise<void>;
+  startObserving: () => void;
+  stopObserving: () => void;
 }
 
 export const EditorContext = createContext<EditorContextState>({
   uuid: '',
   builder: 'body',
   dirtyUuids: [],
+  getFragment: () => {
+    throw Error('Not implemented');
+  },
   setBuilder: () => {
     throw Error('Not implemented');
   },
@@ -33,6 +39,12 @@ export const EditorContext = createContext<EditorContextState>({
     throw Error('Not implemented');
   },
   save: async () => {
+    throw Error('Not implemented');
+  },
+  startObserving: () => {
+    throw Error('Not implemented');
+  },
+  stopObserving: () => {
     throw Error('Not implemented');
   },
 });
@@ -54,69 +66,98 @@ export const EditorContextProvider = ({
   const pathEnd = pathname.split('/').pop();
   const isUuidPath = pathEnd === uuid;
   const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorBuilderType);
-
   const [builder, setBuilder] = useState<EditorBuilderType>(initialBuilder);
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
+  const [fragments, setFragments] = useState<{
+    [builder: string]: XmlFragment;
+  }>({});
   const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
 
-  const onBuilderChanged = (builder: EditorBuilderType) => {
-    setBuilder(builder);
-
+  useEffect(() => {
     const nextPath = `/publications/editor/${uuid}/${builder}`;
 
-    if (pathname === nextPath) {
+    if (pathname === nextPath && fragments[builder]) {
       return;
     }
 
     router.push(nextPath);
-  };
+
+    if (!fragments[builder]) {
+      const fragment = doc.getXmlFragment(builder);
+      setFragments((prev) => ({
+        ...prev,
+        [builder]: fragment,
+      }));
+    }
+  }, [uuid, builder, pathname, router, doc, fragments]);
+
+  const getFragment = useCallback((): XmlFragment => {
+    if (!builder) {
+      throw new Error('Builder is not set');
+    }
+
+    return fragments[builder];
+  }, [fragments, builder]);
 
   const save = useCallback(async () => {
     console.log('Saving document state...');
   }, []);
 
-  useEffect(() => {
-    onBuilderChanged(initialBuilder);
-  });
-
-  useEffect(() => {
-    if (!doc) {
+  const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
+    if (!txn.local) {
       return;
     }
 
-    doc.getXmlElement('default').observeDeep((evt, txn) => {
-      if (!txn.local) {
-        return;
+    const uuids: Set<string> = new Set();
+    txn.changed.forEach((_change, key) => {
+      let node = key.parent as XmlElement;
+      while (node?.nodeName !== 'passage' && node?.parent) {
+        node = node.parent as XmlElement;
       }
-      const uuids: string[] = [];
-      evt.forEach((item) => {
-        const node: XmlFragment = (
-          item.target instanceof XmlFragment ? item.target : item.target.parent
-        )?.toDOM();
 
-        if (!node || !(node instanceof HTMLElement)) {
-          return;
-        }
-
-        const uuid = node.getAttribute('uuid');
-
-        if (uuid) {
-          console.log(item.changes);
-          uuids.push(uuid);
-        }
-      });
-
-      setDirtyUuids((prev) => {
-        return [...new Set([...prev, ...uuids])];
-      });
+      const uuid = node?.getAttribute?.('uuid');
+      if (uuid) {
+        uuids.add(uuid);
+      }
     });
-  }, [doc]);
+
+    console.log(uuids);
+
+    setDirtyUuids((prev) => {
+      return [...new Set([...prev, ...uuids])];
+    });
+  }, []);
+
+  const startObserving = useCallback(() => {
+    const fragment = getFragment();
+    if (fragment) {
+      fragment.observeDeep(observerFunction);
+    }
+  }, [getFragment, observerFunction]);
+
+  const stopObserving = useCallback(() => {
+    const fragment = getFragment();
+    if (fragment && observerFunction) {
+      fragment.unobserveDeep(observerFunction);
+    }
+  }, [getFragment, observerFunction]);
 
   return (
     <EditorContext.Provider
-      value={{ uuid, builder, doc, dirtyUuids, setDoc, setBuilder, save }}
+      value={{
+        uuid,
+        builder,
+        doc,
+        dirtyUuids,
+        getFragment,
+        setDoc,
+        setBuilder,
+        save,
+        startObserving,
+        stopObserving,
+      }}
     >
-      <EditorSidebar active={builder} onClick={onBuilderChanged}>
+      <EditorSidebar active={builder || 'body'} onClick={setBuilder}>
         <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
           {children}
         </div>
