@@ -1,5 +1,7 @@
 'use client';
 
+import type { XmlFragment } from 'yjs';
+import { Collaboration } from '@tiptap/extension-collaboration';
 import Underline from '@tiptap/extension-underline';
 import { Audio } from '../../extensions/Audio/Audio';
 import Heading from '../../extensions/Heading/Heading';
@@ -25,7 +27,7 @@ import {
 import Link from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
-import StarterKit from '../../extensions/StarterKit';
+import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';
 import TranslationMetadata from '../../extensions/TranslationMetadata';
 import TranslationDocument from '../extensions/TranslationDocument';
 import { PassageNode } from '../extensions/Passage';
@@ -69,7 +71,11 @@ const PassageSuggestion: CommandSuggestionItem = {
   },
 };
 
-export const useTranslationExtensions = () => {
+export const useTranslationExtensions = ({
+  fragment,
+}: {
+  fragment?: XmlFragment;
+}) => {
   const suggestions = [
     TextSuggestion,
     PassageSuggestion,
@@ -81,44 +87,54 @@ export const useTranslationExtensions = () => {
     NumberListSuggestion,
     QuoteSuggestion,
   ];
-  return {
-    extensions: [
-      TranslationDocument,
-      Audio,
-      AbbreviationCell,
-      HasAbbreviationCell,
-      AbbreviationCommand,
-      EndNoteLinkNode,
-      EndNoteNode,
-      GlossaryInstanceMark,
-      Heading,
-      Image,
-      Indent,
-      Italic,
-      LeadingSpace,
-      LineGroupNode,
-      LineNode,
-      Link,
-      MantraMark,
-      Paragraph,
-      ParagraphIndent,
-      PassageNode,
-      Placeholder,
-      SlashCommand.configure({
-        suggestion: getSuggestion(suggestions),
+  const extensions = [
+    TranslationDocument,
+    Audio,
+    AbbreviationCell,
+    HasAbbreviationCell,
+    AbbreviationCommand,
+    EndNoteLinkNode,
+    EndNoteNode,
+    GlossaryInstanceMark,
+    Heading,
+    Image,
+    Indent,
+    Italic,
+    LeadingSpace,
+    LineGroupNode,
+    LineNode,
+    Link,
+    MantraMark,
+    Paragraph,
+    ParagraphIndent,
+    PassageNode,
+    Placeholder,
+    SlashCommand.configure({
+      suggestion: getSuggestion(suggestions),
+    }),
+    SmallCaps,
+    Subscript,
+    Superscript,
+    Table,
+    TableCell,
+    TableHeader,
+    TableRow,
+    Trailer,
+    TranslationMetadata,
+    TextAlign,
+    Underline,
+  ];
+
+  if (fragment) {
+    extensions.push(
+      StarterKit.configure({ ...STARTER_KIT_CONFIG, history: false }),
+      Collaboration.configure({
+        fragment,
       }),
-      SmallCaps,
-      StarterKit,
-      Subscript,
-      Superscript,
-      Table,
-      TableCell,
-      TableHeader,
-      TableRow,
-      Trailer,
-      TranslationMetadata,
-      TextAlign,
-      Underline,
-    ],
-  };
+    );
+  } else {
+    extensions.push(StarterKit);
+  }
+
+  return { extensions };
 };

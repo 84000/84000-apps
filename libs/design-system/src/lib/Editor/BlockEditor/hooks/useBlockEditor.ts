@@ -17,8 +17,8 @@ export const useBlockEditor = ({
   content,
   extensions = [],
   isEditable = true,
-  onUpdate,
   onCreate,
+  ...rest
 }: UseEditorOptions & {
   content: Content;
   extensions?: Extensions;
@@ -45,7 +45,7 @@ export const useBlockEditor = ({
       }
       onCreate?.(ctx);
     },
-    onUpdate,
+    ...rest,
   });
 
   return { editor };

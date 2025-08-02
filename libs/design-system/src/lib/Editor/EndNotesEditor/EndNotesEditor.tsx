@@ -1,5 +1,6 @@
 'use client';
 
+import type { XmlFragment } from 'yjs';
 import { Content, EditorContent } from '@tiptap/react';
 import { useBlockEditor } from '../BlockEditor';
 import { useEndNotesExtensions } from './hooks/useEndNotesExtensions';
@@ -7,12 +8,14 @@ import { EndNotesBubbleMenu } from './menu/EndNotesBubbleMenu';
 
 export const EndNotesEditor = ({
   content,
+  fragment,
   isEditable = true,
 }: {
   content: Content;
+  fragment?: XmlFragment;
   isEditable?: boolean;
 }) => {
-  const { extensions } = useEndNotesExtensions();
+  const { extensions } = useEndNotesExtensions({ fragment });
   const { editor } = useBlockEditor({
     extensions,
     content,

@@ -1,4 +1,7 @@
-import { StarterKit as TiptapStarterKit } from '@tiptap/starter-kit';
+import {
+  StarterKitOptions,
+  StarterKit as TiptapStarterKit,
+} from '@tiptap/starter-kit';
 import {
   BLOCKQUOTE_STYLE,
   CODE_STYLE,
@@ -6,7 +9,7 @@ import {
   UL_STYLE,
 } from '../../Typography/Typography';
 
-export default TiptapStarterKit.configure({
+export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   document: false,
   heading: false,
   paragraph: false,
@@ -31,4 +34,8 @@ export default TiptapStarterKit.configure({
       class: BLOCKQUOTE_STYLE,
     },
   },
-});
+};
+
+export const StarterKit = TiptapStarterKit.configure(STARTER_KIT_CONFIG);
+
+export default StarterKit;
