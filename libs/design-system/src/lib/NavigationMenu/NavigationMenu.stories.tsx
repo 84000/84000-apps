@@ -7,7 +7,6 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from './NavigationMenu';
 import { ComponentProps } from 'react';
 import { cn } from '@lib-utils';
@@ -17,13 +16,7 @@ function ListItem({ className, children, ...props }: ComponentProps<'a'>) {
   return (
     <li>
       <NavigationMenuLink asChild>
-        <a
-          className={cn(
-            'aspect-1 p-3 block flex flex-row justify-center select-none rounded-md leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-            className,
-          )}
-          {...props}
-        >
+        <a className={cn('aspect-1 p-3 block', className)} {...props}>
           {children}
         </a>
       </NavigationMenuLink>
@@ -44,7 +37,7 @@ export const Default: Story = {
     <NavigationMenu>
       <NavigationMenuList>
         <NavigationMenuItem>
-          <NavigationMenuTrigger className={navigationMenuTriggerStyle()}>
+          <NavigationMenuTrigger>
             <LayoutGrid />
           </NavigationMenuTrigger>
           <NavigationMenuContent>
