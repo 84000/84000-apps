@@ -44,11 +44,15 @@ export const DesktopMenuItem = ({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className={cn('w-8xl mx-8 p-6 pb-4 rounded-xl shadow-md', border)}
+        align="end"
+        className={cn(
+          'w-full max-w-[1250px] mx-8 p-6 pb-4 rounded-xl shadow-md',
+          border,
+        )}
       >
         <div>
           <div className="flex gap-12 pb-3">
-            <div className="relative w-64 h-60">
+            <div className="hidden xl:flex relative w-64 h-60">
               <Image
                 src={item.hero.image}
                 alt={item.hero.header}
@@ -78,7 +82,7 @@ export const DesktopMenuItem = ({
                         key={`item-${index}`}
                       >
                         <div
-                          className="p-2 w-72 h-full hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
+                          className="p-2 xl:w-72 w-50 h-full hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
                           onClick={() => {
                             router.push(subItem.href);
                           }}
