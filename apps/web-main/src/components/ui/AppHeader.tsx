@@ -14,7 +14,7 @@ export const AppHeader = ({
 }) => {
   return (
     <Header>
-      <div className="pl-6 flex justify-between size-full">
+      <div className="flex justify-between size-full">
         <AppNavigationMenu />
         <div className="flex-grow"></div>
         <Profile user={user} handleLogout={handleLogout} />

@@ -185,19 +185,19 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
           {
             header: 'All Resources',
             body: 'Navigate resources in the 84000 Research Library for research',
-            href: '/research-library',
+            href: '/library',
             icon: ListIcon,
           },
           {
             header: 'Primary Resources',
             body: 'Tibetan, Sanskrit, Pali and Chinese resources',
-            href: '/research-library',
+            href: '/library',
             icon: LibraryIcon,
           },
           {
             header: 'Secondary Resources',
             body: 'Secondary resource description',
-            href: '/research-library',
+            href: '/library',
             icon: LayoutListIcon,
           },
         ],
@@ -208,19 +208,19 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
           {
             header: 'Dictionaries',
             body: 'A bibliographical repository of authoritative works',
-            href: '/research-library',
+            href: '/library',
             icon: ListIcon,
           },
           {
             header: 'Articles',
             body: 'A growing collection of academic papers relevant to researchers',
-            href: '/research-library',
+            href: '/library',
             icon: LibraryIcon,
           },
           {
             header: 'Dissertations',
             body: 'Explore our collection of audio, video, and interactive media',
-            href: '/research-library',
+            href: '/library',
             icon: LayoutListIcon,
           },
         ],
@@ -231,6 +231,7 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
     title: 'Workflows',
     color: 'emerald',
     href: '/project',
+    isAdmin: true,
     hero: {
       header: '84000 Workflows',
       body: 'Role-based workflows for the 84000 team for translation and publication ',

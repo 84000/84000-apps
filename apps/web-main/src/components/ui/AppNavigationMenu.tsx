@@ -4,14 +4,33 @@ import { cn } from '@lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { MENU_ITEMS } from './MenuItems';
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  MainLogo,
   Popover,
+  PopoverClose,
   PopoverContent,
   PopoverTrigger,
+  ScrollArea,
   Separator,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
 } from '@design-system';
 import Image from 'next/image';
-import { LucideProps } from 'lucide-react';
-import { ForwardRefExoticComponent, RefAttributes, useState } from 'react';
+import { LucideProps, MenuIcon } from 'lucide-react';
+import {
+  ForwardRefExoticComponent,
+  RefAttributes,
+  useEffect,
+  useState,
+} from 'react';
+import { useSession } from '../../app/context/SessionContext';
 
 type BrandColor = 'brick' | 'ochre' | 'slate' | 'navy' | 'emerald';
 const CLASSES_FOR_COLOR: Record<
@@ -96,7 +115,7 @@ export type NavigationMenuItemProps = {
   }[];
 };
 
-export const AppNavigationMenuItem = ({
+export const DesktopMenuItem = ({
   item,
 }: {
   item: NavigationMenuItemProps;
@@ -156,27 +175,33 @@ export const AppNavigationMenuItem = ({
                   </div>
                   <div className="flex gap-2">
                     {section.items.map((subItem, index) => (
-                      <div
+                      <PopoverClose
+                        className="text-start"
                         key={`item-${index}`}
-                        className="p-2 w-72 hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
-                        onClick={() => {
-                          router.push(subItem.href);
-                        }}
                       >
-                        <div className="flex gap-1">
-                          <div className="w-6 me-4">
-                            <subItem.icon className={cn('size-6 text-ochre')} />
-                          </div>
-                          <div className="flex flex-col">
-                            <div className={cn('text-sm pb-1', text)}>
-                              {subItem.header}
+                        <div
+                          className="p-2 w-72 h-full hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
+                          onClick={() => {
+                            router.push(subItem.href);
+                          }}
+                        >
+                          <div className="flex gap-1">
+                            <div className="w-6 me-4">
+                              <subItem.icon
+                                className={cn('size-6 text-ochre')}
+                              />
                             </div>
-                            <div className="text-xs text-muted-foreground leading-5">
-                              {subItem.body}
+                            <div className="flex flex-col">
+                              <div className={cn('text-sm pb-1', text)}>
+                                {subItem.header}
+                              </div>
+                              <div className="text-xs text-muted-foreground leading-5">
+                                {subItem.body}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </PopoverClose>
                     ))}
                   </div>
                 </div>
@@ -197,10 +222,113 @@ export const AppNavigationMenuItem = ({
   );
 };
 
-export const AppNavigationMenu = () => (
-  <>
-    {MENU_ITEMS.map((item) => (
-      <AppNavigationMenuItem key={item.title} item={item} />
+export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
+  const router = useRouter();
+
+  return (
+    <AccordionItem value={item.title} className="border-none">
+      <AccordionTrigger className="hover:no-underline">
+        {item.title}
+      </AccordionTrigger>
+      <AccordionContent>
+        <Accordion type="single" collapsible className="pl-2">
+          {item.sections.map((section, index) => (
+            <AccordionItem
+              key={`section-${index}`}
+              value={`${item.title}-section-${index}`}
+              className="border-none"
+            >
+              <AccordionTrigger className="font-light tracking-wide uppercase text-gray-400 text-sm hover:no-underline">
+                {section.header}
+              </AccordionTrigger>
+              <AccordionContent>
+                {section.items.map((subItem, index) => (
+                  <SheetClose
+                    className="w-full text-start"
+                    key={`subitem-${index}`}
+                    onClick={() => {
+                      router.push(subItem.href);
+                    }}
+                  >
+                    <div className="p-2 hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors">
+                      <div className="flex gap-1">
+                        <div className="w-6 me-4">
+                          <subItem.icon className={cn('size-6 text-ochre')} />
+                        </div>
+                        <div className="flex flex-col">
+                          <div className="text-sm pb-1">{subItem.header}</div>
+                          <div className="text-xs text-muted-foreground leading-5">
+                            {subItem.body}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </SheetClose>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </AccordionContent>
+    </AccordionItem>
+  );
+};
+
+export const DesktopMenu = ({
+  items,
+}: {
+  items: NavigationMenuItemProps[];
+}) => (
+  <div className="hidden md:flex ml-6">
+    {items.map((item) => (
+      <DesktopMenuItem key={item.title} item={item} />
     ))}
-  </>
+  </div>
 );
+
+export const MobileMenu = ({ items }: { items: NavigationMenuItemProps[] }) => {
+  return (
+    <div className="md:hidden">
+      <Sheet>
+        <SheetTrigger className="h-full">
+          <MenuIcon />
+        </SheetTrigger>
+        <SheetContent side="left">
+          <SheetHeader>
+            <SheetTitle className="hidden">Main Navigation</SheetTitle>
+            <MainLogo width={80} />
+          </SheetHeader>
+          <ScrollArea className="h-full overflow-y-auto">
+            <Accordion type="single" collapsible className="px-4">
+              {items.map((item) => (
+                <MobileMenuItem key={item.title} item={item} />
+              ))}
+            </Accordion>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+export const AppNavigationMenu = () => {
+  const [menuItems, setMenuItems] = useState<NavigationMenuItemProps[]>([]);
+  const { getUser } = useSession();
+
+  useEffect(() => {
+    (async () => {
+      const user = await getUser();
+      const isAdmin = user?.role == 'admin';
+      const filteredItems = MENU_ITEMS.filter(
+        (item) => !item.isAdmin || (item.isAdmin && isAdmin),
+      );
+      setMenuItems(filteredItems);
+    })();
+  }, [getUser]);
+  return (
+    <>
+      <DesktopMenu items={menuItems} />
+      <MobileMenu items={menuItems} />
+    </>
+  );
+};

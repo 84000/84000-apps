@@ -14,7 +14,7 @@ export function Header({
   return (
     <header className="flex sticky top-0 z-50 w-full items-center bg-background">
       <div className="flex h-(--header-height) w-full items-center gap-2 px-4">
-        <div className="flex flex-col justify-center h-12">
+        <div className="hidden md:flex flex-col justify-center h-12">
           <MainLogo width={112} />
         </div>
         {toggleSidebar && (
