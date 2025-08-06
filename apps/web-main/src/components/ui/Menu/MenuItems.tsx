@@ -11,7 +11,7 @@ import {
   LibraryIcon,
   ListIcon,
 } from 'lucide-react';
-import { NavigationMenuItemProps } from './AppNavigationMenu';
+import { NavigationMenuItemProps } from './types';
 
 export const MENU_ITEMS: NavigationMenuItemProps[] = [
   {

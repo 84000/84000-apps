@@ -3,7 +3,7 @@
 import { Header } from '@design-system';
 import Profile from './Profile';
 import { ScholarUser } from '../../app/context/SessionContext';
-import { AppNavigationMenu } from './AppNavigationMenu';
+import { AppNavigationMenu } from './Menu';
 
 export const AppHeader = ({
   user,
