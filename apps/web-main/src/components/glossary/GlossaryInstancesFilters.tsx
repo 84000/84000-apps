@@ -6,6 +6,7 @@ import { Table } from '@tanstack/react-table';
 import { GlossaryInstanceRow } from './GlossaryInstancesTable';
 import { useEffect, useState } from 'react';
 import { FilterCanonPathDropdown } from './FilterCanonPathDropdown';
+import { FilterTranslatorsDropdown } from './FilterTranslatorsDropdown';
 
 const MAX_CANON_DEPTH = 3;
 
@@ -16,6 +17,7 @@ export const GlossaryInstancesFilters = ({
   detail: GlossaryPageItem;
   table: Table<GlossaryInstanceRow>;
 }) => {
+  const [translators, setTranslators] = useState<string[]>([]);
   const [canons, setCanons] = useState<string[]>([]);
 
   useEffect(() => {
@@ -30,6 +32,11 @@ export const GlossaryInstancesFilters = ({
       })
       .filter((canon) => canon && canon.length > 0);
 
+    const uniqueTranslators = Array.from(
+      new Set(instances.map((instance) => instance.creators).flat()),
+    ).sort();
+    setTranslators(uniqueTranslators);
+
     const uniqueCanons = Array.from(new Set(trimmedCanons)).sort();
     setCanons(uniqueCanons);
   }, [detail.relatedInstances]);
@@ -43,6 +50,9 @@ export const GlossaryInstancesFilters = ({
       <div className="flex md:gap-4 gap-1 overflow-auto">
         {canons.length > 1 && (
           <FilterCanonPathDropdown table={table} options={canons} />
+        )}
+        {detail.relatedInstances.length > 1 && translators.length > 1 && (
+          <FilterTranslatorsDropdown table={table} options={translators} />
         )}
       </div>
     </div>
