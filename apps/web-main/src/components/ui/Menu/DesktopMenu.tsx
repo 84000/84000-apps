@@ -69,13 +69,13 @@ export const DesktopMenuItem = ({
                 </p>
               </div>
             </div>
-            <div className="flex flex-col gap-4 h-60">
+            <div className="flex flex-col gap-4">
               {item.sections.map((section, index) => (
                 <div key={`section-${index}`} className="h-1/2 w-full">
                   <div className="font-light tracking-wide uppercase text-gray-400 text-lg mb-2">
                     {section.header}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-4">
                     {section.items.map((subItem, index) => (
                       <PopoverClose
                         className="text-start"

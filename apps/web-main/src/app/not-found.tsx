@@ -1,6 +1,5 @@
-import Image from 'next/image';
 import React from 'react';
-import { Button } from '@design-system';
+import { Button, H2, H5, MiniLogo } from '@design-system';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 export const metadata: Metadata = {
@@ -11,18 +10,14 @@ const Error = () => {
   return (
     <>
       <div className="h-screen flex items-center justify-center bg-white dark:bg-darkgray">
-        <div className="text-center max-w-lg mx-auto">
-          <Image
-            width={500}
-            height={500}
-            src={'/images/backgrounds/errorimg.svg'}
-            alt="error"
-            className="mb-4"
-          />
-          <h1 className="text-dark dark:text-white text-4xl mb-6">Oops!!!</h1>
-          <h6 className="text-xl text-dark dark:text-white">
+        <div className="text-center mx-auto">
+          <div className="flex justify-center mb-6">
+            <MiniLogo width={100} height={100} />
+          </div>
+          <H2 className="text-slate mb-6">Oops!!!</H2>
+          <H5 className="text-slate">
             This page you are looking for could not be found.
-          </h6>
+          </H5>
           <Button variant={'link'} className="w-fit mt-6 mx-auto">
             <Link href="/">Go Back to Home</Link>
           </Button>
