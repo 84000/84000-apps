@@ -1,15 +1,14 @@
 import {
-  ArrowUpRightIcon,
   BookOpenIcon,
-  ChevronLastIcon,
   CloudUploadIcon,
-  EditIcon,
+  Edit3Icon,
   GalleryHorizontalEndIcon,
   GalleryVerticalIcon,
   HeartIcon,
   LayoutListIcon,
   LibraryIcon,
   ListIcon,
+  SquareGanttChartIcon,
 } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
 
@@ -231,7 +230,7 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
     title: 'Workflows',
     color: 'emerald',
     href: '/project',
-    isAdmin: true,
+    roles: ['admin', 'editor', 'translator'],
     hero: {
       header: '84000 Workflows',
       body: 'Role-based workflows for the 84000 team for translation and publication ',
@@ -240,48 +239,19 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
     },
     sections: [
       {
-        header: 'Project Management',
+        header: 'Internal Tools',
         items: [
           {
-            header: 'All Projects',
+            header: 'Project Management',
             body: 'Projects in the translation pipeline',
             href: '/project',
-            icon: ListIcon,
+            icon: SquareGanttChartIcon,
           },
           {
-            header: 'Last Edited Project',
-            body: 'Go to my last project',
-            href: '/project',
-            icon: ChevronLastIcon,
-          },
-          {
-            header: 'Quick Access',
-            body: 'The list of projects saved in my dashboard',
-            href: '/project',
-            icon: ArrowUpRightIcon,
-          },
-        ],
-      },
-      {
-        header: 'Translation Editor',
-        items: [
-          {
-            header: 'All Translations',
+            header: 'Translation Editor',
             body: 'Our pipeline of  translation for editing',
             href: '/publications/editor',
-            icon: ListIcon,
-          },
-          {
-            header: 'Last Edited Translation',
-            body: 'Go to my last edited translation',
-            href: '/publications/editor',
-            icon: EditIcon,
-          },
-          {
-            header: 'Quick Access',
-            body: 'The list of translations saved in my dashboard',
-            href: '/publications/editor',
-            icon: ArrowUpRightIcon,
+            icon: Edit3Icon,
           },
         ],
       },

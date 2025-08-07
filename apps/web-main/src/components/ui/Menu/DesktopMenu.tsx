@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@lib-utils';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   Popover,
   PopoverClose,
@@ -12,13 +12,13 @@ import {
 import Image from 'next/image';
 import { useState } from 'react';
 import { CLASSES_FOR_COLOR, NavigationMenuItemProps } from './types';
+import { MenuButton } from './MenuButton';
 
 export const DesktopMenuItem = ({
   item,
 }: {
   item: NavigationMenuItemProps;
 }) => {
-  const router = useRouter();
   const pathname = usePathname();
   const { active, open, inactive, text, separator, footer, border } =
     CLASSES_FOR_COLOR[item.color];
@@ -81,28 +81,7 @@ export const DesktopMenuItem = ({
                         className="text-start"
                         key={`item-${index}`}
                       >
-                        <div
-                          className="p-2 xl:w-72 w-50 h-full hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
-                          onClick={() => {
-                            router.push(subItem.href);
-                          }}
-                        >
-                          <div className="flex gap-1">
-                            <div className="w-6 me-4">
-                              <subItem.icon
-                                className={cn('size-6 text-ochre')}
-                              />
-                            </div>
-                            <div className="flex flex-col">
-                              <div className={cn('text-sm pb-1', text)}>
-                                {subItem.header}
-                              </div>
-                              <div className="text-xs text-muted-foreground leading-5">
-                                {subItem.body}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <MenuButton subItem={subItem} textStyle={text} />
                       </PopoverClose>
                     ))}
                   </div>
