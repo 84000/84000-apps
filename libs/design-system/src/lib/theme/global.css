@@ -55,7 +55,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-[url(/images/bg-main.webp)] text-foreground;
   }
 }
 
