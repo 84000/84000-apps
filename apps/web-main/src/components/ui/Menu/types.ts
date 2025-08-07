@@ -1,3 +1,4 @@
+import { UserRole } from '@data-access';
 import { LucideProps } from 'lucide-react';
 import { ForwardRefExoticComponent, RefAttributes } from 'react';
 
@@ -62,11 +63,20 @@ export const CLASSES_FOR_COLOR: Record<
   },
 };
 
+export type MenuSubItem = {
+  header: string;
+  body: string;
+  href: string;
+  icon: ForwardRefExoticComponent<
+    Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>
+  >;
+};
+
 export type NavigationMenuItemProps = {
   title: string;
   color: BrandColor;
   href: string;
-  isAdmin?: boolean;
+  roles?: UserRole[];
   hero: {
     header: string;
     body: string;
@@ -74,13 +84,6 @@ export type NavigationMenuItemProps = {
   };
   sections: {
     header: string;
-    items: {
-      header: string;
-      body: string;
-      href: string;
-      icon: ForwardRefExoticComponent<
-        Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>
-      >;
-    }[];
+    items: MenuSubItem[];
   }[];
 };

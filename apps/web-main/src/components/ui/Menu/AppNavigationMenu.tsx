@@ -4,8 +4,8 @@ import { MENU_ITEMS } from './MenuItems';
 import { useEffect, useState } from 'react';
 import { useSession } from '../../../app/context/SessionContext';
 import { NavigationMenuItemProps } from './types';
-import { MobileMenu } from './MobileMenu';
-import { DesktopMenu } from './DesktopMenu';
+import { SimpleDesktopMenu } from './SimpleDesktopMenu';
+import { SimpleMobileMenu } from './SimpleMobileMenu';
 
 export const AppNavigationMenu = () => {
   const [menuItems, setMenuItems] = useState<NavigationMenuItemProps[]>([]);
@@ -14,17 +14,17 @@ export const AppNavigationMenu = () => {
   useEffect(() => {
     (async () => {
       const user = await getUser();
-      const isAdmin = user?.role == 'admin';
+      const roloe = user?.role || 'reader';
       const filteredItems = MENU_ITEMS.filter(
-        (item) => !item.isAdmin || (item.isAdmin && isAdmin),
+        (item) => !item.roles?.length || (item.roles || []).includes(roloe),
       );
       setMenuItems(filteredItems);
     })();
   }, [getUser]);
   return (
     <>
-      <DesktopMenu items={menuItems} />
-      <MobileMenu items={menuItems} />
+      <SimpleDesktopMenu items={menuItems} />
+      <SimpleMobileMenu items={menuItems} />
     </>
   );
 };

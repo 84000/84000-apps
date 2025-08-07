@@ -1,7 +1,5 @@
 'use client';
 
-import { cn } from '@lib-utils';
-import { useRouter } from 'next/navigation';
 import {
   Accordion,
   AccordionContent,
@@ -18,10 +16,9 @@ import {
 } from '@design-system';
 import { MenuIcon } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
+import { MenuButton } from './MenuButton';
 
 export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
-  const router = useRouter();
-
   return (
     <AccordionItem value={item.title} className="border-none">
       <AccordionTrigger className="hover:no-underline">
@@ -43,23 +40,8 @@ export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
                   <SheetClose
                     className="w-full text-start"
                     key={`subitem-${index}`}
-                    onClick={() => {
-                      router.push(subItem.href);
-                    }}
                   >
-                    <div className="p-2 hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors">
-                      <div className="flex gap-1">
-                        <div className="w-6 me-4">
-                          <subItem.icon className={cn('size-6 text-ochre')} />
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="text-sm pb-1">{subItem.header}</div>
-                          <div className="text-xs text-muted-foreground leading-5">
-                            {subItem.body}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <MenuButton subItem={subItem} />
                   </SheetClose>
                 ))}
               </AccordionContent>
