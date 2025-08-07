@@ -23,8 +23,8 @@ const CLASSNAME_FOR_COL: { [key: string]: string } = {
   headword: 'xl:w-[240px] w-[120px] truncate',
   language: 'xl:w-[100px] w-[60px] truncate capitalize',
   type: 'w-[60px] ',
-  variants: 'xl:w-[200px] lg:w-[150px] md:w-[100px] w-[60px]',
-  definition: '2xl:w-[680px] lg:w-[580px] md:w-[320px] w-[112px]',
+  variants: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
+  definition: 'xl:w-[300px] lg:w-[250px] md:w-[100px] w-[60px]',
 };
 
 const filterFn = defaultFilterFn<GlossariesLandingRow>;
@@ -97,8 +97,8 @@ export const GlossariesLandingTable = ({
       ),
     },
     {
-      id: 'variants',
-      accessorKey: 'variants',
+      id: 'nameVariants',
+      accessorKey: 'nameVariants',
       className: CLASSNAME_FOR_COL.variants,
       onCellClick,
       header: ({ column }) => (
