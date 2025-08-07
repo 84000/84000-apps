@@ -21,10 +21,10 @@ const Profile = ({
   handleLogout: () => void;
 }) => {
   return (
-    <div className="relative">
+    <div className="relative h-full flex flex-col items-end justify-center">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Avatar className="h-8 w-8 my-1">
+          <Avatar className="size-10 my-1">
             <AvatarImage src={user?.avatar} />
             <AvatarFallback>
               <UserIcon />

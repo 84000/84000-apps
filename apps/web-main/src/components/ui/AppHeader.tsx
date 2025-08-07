@@ -3,7 +3,7 @@
 import { Header } from '@design-system';
 import Profile from './Profile';
 import { ScholarUser } from '../../app/context/SessionContext';
-import { AppNavigationMenu } from './AppNavigationMenu';
+import { AppNavigationMenu } from './Menu';
 
 export const AppHeader = ({
   user,
@@ -14,9 +14,9 @@ export const AppHeader = ({
 }) => {
   return (
     <Header>
-      <div className="flex justify-between w-full gap-4">
-        <div className="flex-grow"></div>
+      <div className="flex justify-between size-full">
         <AppNavigationMenu />
+        <div className="flex-grow"></div>
         <Profile user={user} handleLogout={handleLogout} />
       </div>
     </Header>

@@ -41,7 +41,7 @@ export default function Layout({
   }
 
   return (
-    <div className="[--header-height:calc(--spacing(14))]">
+    <div className="[--header-height:calc(--spacing(20))]">
       <div className="fixed w-full z-50">
         <AppHeader user={user} handleLogout={handleLogout} />
       </div>
