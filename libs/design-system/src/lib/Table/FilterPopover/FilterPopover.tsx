@@ -2,6 +2,7 @@ import { ChevronDown, ListFilter } from 'lucide-react';
 import { ReactElement } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../Popover/Popover';
 import { Button } from '../../Button/Button';
+import { cn } from '@lib-utils';
 
 export const FilterPopover = ({
   label,
@@ -24,7 +25,10 @@ export const FilterPopover = ({
           <ChevronDown />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={className} align="end">
+      <PopoverContent
+        className={cn('max-h-96 overflow-y-scroll', className)}
+        align="end"
+      >
         {children}
       </PopoverContent>
     </Popover>
