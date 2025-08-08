@@ -25,7 +25,7 @@ export const ProjectsPage = () => {
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
       <div className="w-full max-w-[1466px]">
-        <H2>{'Translation Projects'}</H2>
+        <H2 className="text-navy-500">{'Translation Projects'}</H2>
         {projects.length ? (
           <ProjectsTable projects={projects} />
         ) : (
