@@ -10,15 +10,15 @@ export const GlossariesPage = ({ terms }: { terms: GlossaryLandingItem[] }) => {
   }));
 
   // extract types and languages from the terms data
-  const types = Array.from(new Set(rows.map((term) => term.type))).filter(
-    Boolean,
+  const types = Array.from(
+    new Set(rows.map((term) => term.type.split(', ')).flat()),
   );
   const languages = Array.from(
     new Set(rows.flatMap((term) => term.language)),
   ).filter(Boolean);
 
   return (
-    <div className="flex flex-row justify-center p-4 w-full">
+    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
       <div className="w-full max-w-[1466px]">
         <H2 className="text-navy-500">{'Glossaries'}</H2>
         <GlossariesLandingTable

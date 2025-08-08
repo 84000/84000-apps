@@ -31,7 +31,7 @@ export const GlossariesLandingFilters = ({
         placeholder="Type"
         column="type"
         options={types}
-        className="w-[112px] truncate pe-8"
+        className="w-[128px] truncate pe-8"
       />
       <FilterDropdown
         table={table}

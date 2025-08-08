@@ -17,7 +17,7 @@ export const CLASSES_FOR_COLOR: Record<
   }
 > = {
   brick: {
-    active: 'text-brick border-brick border-b-4',
+    active: 'text-brick border-brick border-b-4 pt-0.5',
     open: 'text-brick border-brick border-b-2',
     inactive: 'hover:text-brick hover:border-brick',
     text: 'text-brick',
@@ -26,7 +26,7 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-brick-50',
   },
   ochre: {
-    active: 'text-ochre border-ochre border-b-4',
+    active: 'text-ochre border-ochre border-b-4 pt-0.5',
     open: 'text-ochre border-ochre border-b-2',
     inactive: 'hover:text-ochre hover:border-ochre',
     text: 'text-ochre',
@@ -35,7 +35,7 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-ochre-50',
   },
   slate: {
-    active: 'text-slate border-slate border-b-4',
+    active: 'text-slate border-slate border-b-4 pt-0.5',
     open: 'text-slate border-slate border-b-2',
     inactive: 'hover:text-slate hover:border-slate',
     text: 'text-slate',
@@ -44,7 +44,7 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-slate-50',
   },
   navy: {
-    active: 'text-navy border-navy border-b-4',
+    active: 'text-navy border-navy border-b-4 pt-0.5',
     open: 'text-navy border-navy border-b-2',
     inactive: 'hover:text-navy hover:border-navy',
     text: 'text-navy',
@@ -53,7 +53,7 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-navy-50',
   },
   emerald: {
-    active: 'text-emerald border-emerald border-b-4',
+    active: 'text-emerald border-emerald border-b-4 pt-0.5',
     open: 'text-emerald border-emerald border-b-2',
     inactive: 'hover:text-emerald hover:border-emerald',
     text: 'text-emerald',
