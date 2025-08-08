@@ -22,7 +22,7 @@ const GlossariesLandingHeader = SortableHeader<GlossariesLandingRow>;
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   headword: 'xl:w-[240px] w-[120px] truncate',
   language: 'xl:w-[100px] w-[60px] truncate capitalize',
-  type: 'w-[60px] ',
+  type: 'w-[80px] truncate capitalize',
   variants: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
   definition: 'xl:w-[300px] lg:w-[250px] md:w-[100px] w-[60px]',
 };

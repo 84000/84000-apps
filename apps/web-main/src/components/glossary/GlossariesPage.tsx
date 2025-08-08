@@ -10,8 +10,8 @@ export const GlossariesPage = ({ terms }: { terms: GlossaryLandingItem[] }) => {
   }));
 
   // extract types and languages from the terms data
-  const types = Array.from(new Set(rows.map((term) => term.type))).filter(
-    Boolean,
+  const types = Array.from(
+    new Set(rows.map((term) => term.type.split(', ')).flat()),
   );
   const languages = Array.from(
     new Set(rows.flatMap((term) => term.language)),
