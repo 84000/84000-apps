@@ -44,7 +44,10 @@ export const GlossaryInstancesFilters = ({
   return (
     <div className="flex lg:items-center lg:flex-row flex-col py-4 gap-4">
       <div className="grow flex">
-        <FuzzyGlobalFilter table={table} placeholder="Search instances..." />
+        <FuzzyGlobalFilter
+          table={table}
+          placeholder="Search glossary entries..."
+        />
         <div className="grow" />
       </div>
       <div className="flex md:gap-4 gap-1 overflow-auto">

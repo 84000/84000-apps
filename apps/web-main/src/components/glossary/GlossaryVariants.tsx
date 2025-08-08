@@ -1,5 +1,5 @@
 import { GlossaryPageItem } from '@data-access';
-import { H4, Li, Ul } from '@design-system';
+import { Li, Ul } from '@design-system';
 import { useEffect, useState } from 'react';
 
 export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
@@ -25,7 +25,7 @@ export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
     }
     if (detail.tibetan.length) {
       variants.push({
-        language: 'Wylie',
+        language: 'Tibetan',
         variant: detail.tibetan.join(', '),
         className: 'italic',
       });
@@ -53,18 +53,15 @@ export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
 
   return (
     <div>
-      <H4>Variants</H4>
-      <div>
-        <Ul>
-          {variants.map(({ language, variant, className }, index) => (
-            <Li key={index}>
-              <span className="font-semibold">{language}</span>
-              <span className="px-2 text-brick">→</span>
-              <span className={className}>{variant}</span>
-            </Li>
-          ))}
-        </Ul>
-      </div>
+      <Ul>
+        {variants.map(({ language, variant, className }, index) => (
+          <Li key={index}>
+            <span className="font-semibold">{language}</span>
+            <span className="px-2 text-brick">→</span>
+            <span className={className}>{variant}</span>
+          </Li>
+        ))}
+      </Ul>
     </div>
   );
 };

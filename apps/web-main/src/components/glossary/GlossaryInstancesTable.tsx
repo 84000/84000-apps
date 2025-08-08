@@ -182,9 +182,9 @@ export const GlossaryInstancesTable = ({
 
   return (
     <div>
-      <H4 className="py-8">Instances</H4>
+      <H4 className="py-8">Glossary Entries</H4>
       <DataTable
-        name="glossary instances"
+        name="glossary entries"
         columns={columns}
         data={rows}
         pagination={{

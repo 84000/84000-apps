@@ -36,7 +36,7 @@ export const GlossaryRelatedTerms = ({
 
   return (
     <div>
-      <H4 className="py-8">Related</H4>
+      <H4 className="pb-8">Related</H4>
       <div className="flex flex-wrap gap-2">
         {relatedEntityUuids.map((uuid) => (
           <Button
