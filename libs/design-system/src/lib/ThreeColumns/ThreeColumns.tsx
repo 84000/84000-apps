@@ -2,7 +2,7 @@
 
 import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
 import { Children, ReactElement, ReactNode, useRef } from 'react';
-import { ImperativePanelHandle } from 'react-resizable-panels';
+import type { ImperativePanelHandle as RRImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -17,6 +17,8 @@ enum MinPanelSizes {
   SIDE_MIN = 10,
   MAIN_MIN = 30,
 }
+
+export type ImperativePanelHandle = RRImperativePanelHandle;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
   return <div className="left-panel">{children}</div>;

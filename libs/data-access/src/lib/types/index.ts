@@ -2,6 +2,7 @@ export * from './annotation';
 export * from './annotation-type';
 export * from './back-matter';
 export * from './bibliography';
+export * from './canon';
 export * from './client';
 export * from './contributor';
 export * from './front-matter';
