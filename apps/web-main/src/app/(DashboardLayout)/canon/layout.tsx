@@ -2,6 +2,7 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  ScrollArea,
 } from '@design-system';
 import { ReactNode } from 'react';
 
@@ -19,9 +20,9 @@ const Layout = ({
         defaultSize={20}
         minSize={10}
         maxSize={40}
-        className="border-t border-t-sidebar-border bg-gray/20 overflow-auto"
+        className="border-t border-t-sidebar-border bg-gray/20"
       >
-        <div className="p-4">{sidebar}</div>
+        <ScrollArea className="h-full p-4">{sidebar}</ScrollArea>
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel id="main">

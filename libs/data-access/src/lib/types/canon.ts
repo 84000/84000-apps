@@ -1,4 +1,5 @@
 export type CanonNodeType =
+  | 'root'
   | 'canonicalSection'
   | 'nonCanonicalSection'
   | 'textGrouping';
@@ -23,12 +24,12 @@ export type CanonHead = {
 
 export type CanonNode = {
   uuid: string;
-  label: string;
-  xmlId: string;
+  label?: string;
+  xmlId?: string;
   parentXmlId?: string;
   parentUuid?: string;
   sort: number;
-  description: string;
+  description?: string;
   type: CanonNodeType;
   publicDescription?: string;
   articleUuid?: string;
