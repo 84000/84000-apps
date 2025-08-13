@@ -1,3 +1,6 @@
+import { TohokuCatalogEntry } from './front-matter';
+import { ExtendedTranslationLanguage } from './language';
+
 export type CanonNodeType =
   | 'root'
   | 'canonicalSection'
@@ -35,6 +38,50 @@ export type CanonNode = {
   articleUuid?: string;
   children?: CanonNode[];
   createdAt?: string;
+};
+
+export type CanonArticleDTO = {
+  uuid: string;
+  title: string;
+  body: string;
+  image?: string;
+  caption?: string;
+};
+
+export type CanonArticle = CanonArticleDTO;
+
+export type CanonArticleTitleDTO = {
+  title: string;
+  language: ExtendedTranslationLanguage;
+};
+
+export type CanonArticleTitle = CanonArticleTitleDTO;
+
+export type CanonDetailDTO = {
+  uuid: string;
+  label: string;
+  description: string;
+  type: CanonNodeType;
+  article?: CanonArticleDTO;
+  titles: CanonArticleTitleDTO[];
+};
+export type CanonDetail = CanonDetailDTO & {
+  article?: CanonArticle;
+  titles: CanonArticleTitle[];
+};
+
+export type CanonWorkDTO = {
+  uuid: string;
+  toh: TohokuCatalogEntry;
+  title: string;
+  published: boolean;
+  pages: number;
+};
+
+export type CanonWork = CanonWorkDTO;
+
+export type CanonWorksDTO = {
+  works: CanonWorkDTO[];
 };
 
 export const canonNodeFromDTO = (dto: CanonDTO): CanonNode => {
@@ -87,4 +134,12 @@ export const canonTreeFromDTOs = (dtos: CanonDTO[]): CanonHead => {
   return {
     children: tree,
   };
+};
+
+export const canonDetailFromDTO = (dto: CanonDetailDTO): CanonDetail => {
+  return dto as CanonDetail;
+};
+
+export const caononWorksFromDTO = (dto: CanonWorksDTO): CanonWork[] => {
+  return dto.works as CanonWork[];
 };

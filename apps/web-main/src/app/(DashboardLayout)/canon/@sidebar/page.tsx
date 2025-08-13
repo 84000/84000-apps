@@ -1,4 +1,5 @@
-import { Sidebar } from '@lib-canon/ssr';
-const Page = Sidebar;
+import { Sidebar } from '@lib-canon';
+
+const Page = async () => <Sidebar />;
 
 export default Page;

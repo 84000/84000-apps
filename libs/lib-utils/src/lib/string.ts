@@ -6,5 +6,13 @@ export const camelCaseToHuman = (str: string) => {
   return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
+export const toSlug = (str: string) =>
+  removeDiacritics(str)
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9\- ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase();
+
 export const parseToh = (toh: string) =>
   toh.replace(/,/g, ', ').replace(/toh/g, 'Toh ');

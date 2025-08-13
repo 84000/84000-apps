@@ -1,7 +1,7 @@
 import { PageLoading } from '@lib-canon';
 
-const page = async () => {
+const Loading = () => {
   return <PageLoading />;
 };
 
-export default page;
+export default Loading;

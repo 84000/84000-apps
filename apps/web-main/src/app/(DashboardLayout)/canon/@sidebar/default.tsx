@@ -1,4 +1,4 @@
-import { Sidebar } from '@lib-canon/ssr';
+import { Sidebar } from '@lib-canon';
 
 const Default = Sidebar;
 

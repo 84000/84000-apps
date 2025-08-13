@@ -1,1 +1,1 @@
-export * from './lib/sidebar/ssr';
+export * from './lib/page/ssr';

@@ -1,7 +1,6 @@
 'use client';
 
 import { CanonNode } from '@data-access';
-import { useRouter } from 'next/navigation';
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +8,7 @@ import {
   AccordionTrigger,
 } from '@design-system';
 import { cn } from '@lib-utils';
+import { useCanon } from '../context';
 
 export const CanonNavigator = ({
   node,
@@ -21,7 +21,7 @@ export const CanonNavigator = ({
   className?: string;
   depth?: number;
 }) => {
-  const router = useRouter();
+  const { setCurrent, isActive } = useCanon();
 
   const baseStyle =
     'w-full py-2 font-normal leading-6 text-primary/60 hover:no-underline hover:text-primary';
@@ -30,14 +30,6 @@ export const CanonNavigator = ({
   if (!node.children?.length) {
     return null;
   }
-
-  const onClickHandler = (label: string) => {
-    const newBreadcrumbs = [...breadcrumbs, label || ''];
-    const encoded = newBreadcrumbs
-      .map((crumb) => crumb.replace(/\s+/g, '-').toLowerCase())
-      .join('/');
-    router.push(`/${encoded}`);
-  };
 
   return (
     <Accordion type="single" collapsible className={cn(depthClass)}>
@@ -49,10 +41,15 @@ export const CanonNavigator = ({
             className="border-b-0"
           >
             <AccordionTrigger
-              className={cn(baseStyle, className)}
-              onClick={() => onClickHandler(child.label || '')}
+              className={cn(
+                baseStyle,
+                className,
+                isActive(child.uuid) ? 'text-primary' : '',
+              )}
             >
-              {child.label}
+              <div className="w-full" onClick={() => setCurrent(child.uuid)}>
+                {child.label}
+              </div>
             </AccordionTrigger>
             <AccordionContent className={cn(depthClass, 'py-0')}>
               <CanonNavigator
@@ -65,8 +62,11 @@ export const CanonNavigator = ({
         ) : (
           <div
             key={child.uuid}
-            className={cn(baseStyle)}
-            onClick={() => onClickHandler(child.label || '')}
+            className={cn(
+              baseStyle,
+              isActive(child.uuid) ? 'text-primary' : '',
+            )}
+            onClick={() => setCurrent(child.uuid)}
           >
             {child.label}
           </div>

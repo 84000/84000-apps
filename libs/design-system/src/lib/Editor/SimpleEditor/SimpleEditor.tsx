@@ -4,7 +4,7 @@ import { Content, EditorContent, UseEditorOptions } from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from '../BlockEditor/hooks';
 import { MainBubbleMenu } from '../menus/MainBubbleMenu';
 
-export const GlossaryEditor = ({
+export const SimpleEditor = ({
   content,
   isEditable,
   onUpdate,
@@ -29,4 +29,4 @@ export const GlossaryEditor = ({
   );
 };
 
-export default GlossaryEditor;
+export default SimpleEditor;

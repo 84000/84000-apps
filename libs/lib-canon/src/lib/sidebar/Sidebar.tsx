@@ -1,13 +1,11 @@
-import { CanonNode, createBrowserClient, getCanonTree } from '@data-access';
+'use client';
+
+import { CanonNode } from '@data-access';
 import { CanonNavigator } from './CanonNavigator';
+import { useCanon } from '../context';
 
-export const Sidebar = async () => {
-  const client = createBrowserClient();
-  const canon = await getCanonTree({ client });
-
-  if (!canon) {
-    return <div className="text-red-500">Failed to load canon tree.</div>;
-  }
+export const Sidebar = () => {
+  const { canon } = useCanon();
 
   const rootNode: CanonNode = {
     uuid: 'root',
@@ -18,9 +16,11 @@ export const Sidebar = async () => {
   };
 
   return (
-    <CanonNavigator
-      className="uppercase tracking-wide text-primary/50"
-      node={rootNode}
-    />
+    <div className="p-4">
+      <CanonNavigator
+        className="uppercase tracking-wide text-primary/50"
+        node={rootNode}
+      />
+    </div>
   );
 };
