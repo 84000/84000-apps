@@ -1,6 +1,9 @@
 import {
   createBrowserClient,
+  findNodeByUuid,
+  flattenCanonTree,
   getCanonSection,
+  getCanonTree,
   getCanonWorks,
 } from '@data-access';
 import { ArticlePage } from './ArticlePage';
@@ -17,8 +20,13 @@ export const CanonPage = async ({
   const { slug: uuid } = await params;
 
   const client = createBrowserClient();
+  const canon = await getCanonTree({ client });
+  const node = findNodeByUuid(canon?.children || [], uuid);
+  const nodes = node ? flattenCanonTree(node) : [node];
+  const uuids = nodes.map((n) => n?.uuid).filter(Boolean) as string[];
+
   const section = await getCanonSection({ client, uuid });
-  const works = await getCanonWorks({ client, uuid });
+  const works = await getCanonWorks({ client, uuids });
   const { tab } = await searchParams;
 
   if (!section) {
