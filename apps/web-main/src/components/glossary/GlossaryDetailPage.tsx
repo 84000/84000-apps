@@ -1,7 +1,7 @@
 'use client';
 
 import { GlossaryPageItem } from '@data-access';
-import { GlossaryEntryEditor } from './GlossaryEditor';
+import { GlossaryEditor } from './GlossaryEditor';
 import { GlossaryHeading } from './GlossaryHeading';
 import { GlossaryInstancesTable } from './GlossaryInstancesTable';
 import { GlossaryRelatedTerms } from './GlossaryRelatedTerms';
@@ -15,7 +15,7 @@ export const GlossaryDetailPage = ({
   return (
     <div className="w-full pb-8">
       <GlossaryHeading detail={detail} />
-      <GlossaryEntryEditor detail={detail} />
+      <GlossaryEditor detail={detail} />
       <GlossaryVariants detail={detail} />
       <GlossaryInstancesTable detail={detail} />
       <GlossaryRelatedTerms detail={detail} />

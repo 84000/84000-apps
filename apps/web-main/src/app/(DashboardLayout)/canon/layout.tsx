@@ -5,7 +5,7 @@ import {
   ResizablePanelGroup,
   ScrollArea,
 } from '@design-system';
-import { CanonProvider } from '@lib-canon';
+import { CanonProvider, Header } from '@lib-canon';
 import { notFound } from 'next/navigation';
 import { ReactNode } from 'react';
 
@@ -27,9 +27,7 @@ const Layout = async ({
     <CanonProvider canon={canon}>
       <div className="flex flex-col h-full w-full">
         <header className="sticky top-0 z-50 border-b-3 border-white">
-          <div className="flex items-center justify-between h-16 px-4 border-b-3 border-border">
-            <h1 className="text-xl font-semibold text-navy">Canon Navigator</h1>
-          </div>
+          <Header />
         </header>
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel
@@ -42,9 +40,7 @@ const Layout = async ({
             <ScrollArea className="h-full">{sidebar}</ScrollArea>
           </ResizablePanel>
           <ResizableHandle className="bg-transparent" />
-          <ResizablePanel id="main" className="bg-gray/50">
-            <ScrollArea className="h-full">{children}</ScrollArea>
-          </ResizablePanel>
+          <ResizablePanel id="main">{children}</ResizablePanel>
         </ResizablePanelGroup>
       </div>
     </CanonProvider>

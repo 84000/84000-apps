@@ -1,11 +1,11 @@
 'use client';
 
 import { GlossaryPageItem } from '@data-access';
-import { GlossaryEditor } from '@design-system';
+import { SimpleEditor } from '@design-system';
 import { EditorEvents } from '@tiptap/react';
 import { useCallback, useState } from 'react';
 
-export const GlossaryEntryEditor = ({
+export const GlossaryEditor = ({
   detail,
   isEditable = false,
 }: {
@@ -26,7 +26,7 @@ export const GlossaryEntryEditor = ({
 
   return (
     <div className="py-4">
-      <GlossaryEditor
+      <SimpleEditor
         content={content}
         isEditable={isEditable}
         onUpdate={onUpdate}

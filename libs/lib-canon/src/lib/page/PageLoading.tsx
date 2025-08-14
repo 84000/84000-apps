@@ -4,9 +4,15 @@ import { Skeleton } from '@design-system';
 
 export const PageLoading = () => {
   return (
-    <div className="flex flex-col gap-4 p-4">
-      <Skeleton className="h-8 w-1/2" />
-      <Skeleton className="h-64 w-full" />
+    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
+      <div className="w-5/6 max-w-[1080px]">
+        <div className="flex flex-col gap-8 py-8">
+          <Skeleton className="h-12 w-1/2" />
+          <Skeleton className="w-full aspect-2/1" />
+          <Skeleton className="h-12 w-full pt-32" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
     </div>
   );
 };

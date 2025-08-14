@@ -35,6 +35,8 @@ export * from './lib/StageChip/StageChip';
 export * from './lib/Table';
 export * from './lib/Tabs/Tabs';
 export * from './lib/ThreeColumns/ThreeColumns';
+export * from './lib/Toggle/Toggle';
+export * from './lib/ToggleGroup/ToggleGroup';
 export * from './lib/Tooltip/Tooltip';
 export * from './lib/Translation';
 export * from './lib/Typography/Typography';
