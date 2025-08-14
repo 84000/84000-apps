@@ -36,7 +36,7 @@ export const DesktopMenuItem = ({
         <button
           type="button"
           className={cn(
-            'hover:cursor-pointer border-b-2 px-3 border-transparent transition-colors',
+            'hover:cursor-pointer border-b-1 px-3 border-transparent transition-colors',
             isActive ? active : isOpen ? open : inactive,
           )}
         >
@@ -69,7 +69,7 @@ export const DesktopMenuItem = ({
     <button
       type="button"
       className={cn(
-        'hover:cursor-pointer border-b-2 px-3 border-transparent transition-colors',
+        'hover:cursor-pointer border-b-1 px-3 border-transparent transition-colors',
         isActive ? active : inactive,
       )}
       onClick={() => router.push(item.href)}

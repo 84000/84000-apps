@@ -24,7 +24,7 @@ export const CanonNavigator = ({
   const { setCurrent, isActive } = useCanon();
 
   const baseStyle =
-    'w-full py-2 font-normal leading-6 text-primary/60 hover:no-underline hover:text-primary';
+    'w-full py-2 font-normal leading-6 text-primary/60 hover:no-underline hover:text-primary hover:cursor-default';
   const depthClass = `pl-${depth * 2}`;
 
   if (!node.children?.length) {
@@ -32,7 +32,7 @@ export const CanonNavigator = ({
   }
 
   return (
-    <Accordion type="single" collapsible className={cn(depthClass)}>
+    <Accordion type="single" collapsible className={depthClass}>
       {node.children.map((child) => {
         return child.children?.length ? (
           <AccordionItem

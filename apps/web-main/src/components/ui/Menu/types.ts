@@ -17,8 +17,8 @@ export const CLASSES_FOR_COLOR: Record<
   }
 > = {
   brick: {
-    active: 'text-brick border-brick border-b-4 pt-0.5',
-    open: 'text-brick border-brick border-b-2',
+    active: 'text-brick border-brick border-b-2 pt-0.5',
+    open: 'text-brick border-brick border-b-1',
     inactive: 'hover:text-brick hover:border-brick',
     text: 'text-brick',
     separator: 'bg-brick-200',
@@ -26,8 +26,8 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-brick-50',
   },
   ochre: {
-    active: 'text-ochre border-ochre border-b-4 pt-0.5',
-    open: 'text-ochre border-ochre border-b-2',
+    active: 'text-ochre border-ochre border-b-2 pt-0.5',
+    open: 'text-ochre border-ochre border-b-1',
     inactive: 'hover:text-ochre hover:border-ochre',
     text: 'text-ochre',
     separator: 'bg-ochre-200',
@@ -35,8 +35,8 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-ochre-50',
   },
   slate: {
-    active: 'text-slate border-slate border-b-4 pt-0.5',
-    open: 'text-slate border-slate border-b-2',
+    active: 'text-slate border-slate border-b-2 pt-0.5',
+    open: 'text-slate border-slate border-b-1',
     inactive: 'hover:text-slate hover:border-slate',
     text: 'text-slate',
     separator: 'bg-slate-200',
@@ -44,8 +44,8 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-slate-50',
   },
   navy: {
-    active: 'text-navy border-navy border-b-4 pt-0.5',
-    open: 'text-navy border-navy border-b-2',
+    active: 'text-navy border-navy border-b-2 pt-0.5',
+    open: 'text-navy border-navy border-b-1',
     inactive: 'hover:text-navy hover:border-navy',
     text: 'text-navy',
     separator: 'bg-navy-200',
@@ -53,8 +53,8 @@ export const CLASSES_FOR_COLOR: Record<
     border: 'border-navy-50',
   },
   emerald: {
-    active: 'text-emerald border-emerald border-b-4 pt-0.5',
-    open: 'text-emerald border-emerald border-b-2',
+    active: 'text-emerald border-emerald border-b-2 pt-0.5',
+    open: 'text-emerald border-emerald border-b-1',
     inactive: 'hover:text-emerald hover:border-emerald',
     text: 'text-emerald',
     separator: 'bg-emerald-200',
