@@ -1,8 +1,18 @@
 'use client';
 
 import { Skeleton } from '@design-system';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export const PageLoading = () => {
+export const PageLoading = ({ redirectTo }: { redirectTo?: string }) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
+  }, [router, redirectTo]);
+
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
       <div className="w-5/6 max-w-[1080px]">

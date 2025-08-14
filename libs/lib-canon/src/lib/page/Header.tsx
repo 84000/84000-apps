@@ -24,8 +24,10 @@ export const Header = () => {
   }, [value, router, searchParams]);
 
   return (
-    <div className="flex items-center justify-between h-16 px-4 border-b-3 border-border">
+    <div className="flex items-center gap-4 h-16 px-4 border-b-3 border-border">
       <h1 className="text-xl font-semibold text-navy">Canon Navigator</h1>
+      <div className="flex-1" />
+      <div className="text-sm text-brick font-medium">Content Display:</div>
       <ToggleGroup
         variant="toggle"
         size="sm"

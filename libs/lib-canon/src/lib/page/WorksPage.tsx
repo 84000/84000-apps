@@ -6,7 +6,7 @@ import {
   DataTableColumn,
   DataTableRow,
   FuzzyGlobalFilter,
-  H3,
+  H2,
   SortableHeader,
   TooltipCell,
   defaultFilterFn,
@@ -35,7 +35,7 @@ export const WorksPage = ({
 }) => {
   const router = useRouter();
   const onCellClick = ({ row }: Cell<CanonWorkRow, unknown>) => {
-    router.push(`publications/reader/${row.getValue('uuid')}`);
+    router.push(`/publications/reader/${row.getValue('uuid')}`);
   };
 
   const coumns: DataTableColumn<CanonWork>[] = [
@@ -102,16 +102,16 @@ export const WorksPage = ({
 
   return (
     <>
-      <H3>{label}</H3>
+      <H2 className="text-navy">{label}</H2>
       <DataTable
-        name="works"
+        name="texts"
         data={works}
         columns={coumns}
         visibility={{ uuid: false }}
         sorting={[{ id: 'toh', desc: false }]}
         filters={(table) => (
           <div className="flex items-center py-4">
-            <FuzzyGlobalFilter table={table} placeholder="Search works..." />
+            <FuzzyGlobalFilter table={table} placeholder="Search texts..." />
           </div>
         )}
       />

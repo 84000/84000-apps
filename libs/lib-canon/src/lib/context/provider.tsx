@@ -2,7 +2,7 @@
 
 import { CanonHead, CanonNode } from '@data-access';
 import { toSlug } from '@lib-utils';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ReactElement,
   createContext,
@@ -45,12 +45,17 @@ export const CanonProvider = ({
   canon: CanonHead;
   children: ReactElement;
 }) => {
-  const initialUuid = canon.children[0]?.uuid || 'root';
+  const router = useRouter();
+  const pathname = usePathname();
+  const isRoot = pathname.endsWith('/canon');
+
+  const initialUuid = isRoot
+    ? canon.children[0]?.uuid || 'root'
+    : pathname.split('/').pop() || 'root';
+
   const [current, setCurrent] = useState(initialUuid);
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
   const [uuidPath, setUuidPath] = useState<string[]>([initialUuid]);
-
-  const router = useRouter();
 
   const encode = useCallback((str: string) => {
     return toSlug(str);
@@ -90,6 +95,7 @@ export const CanonProvider = ({
       return null;
     };
 
+    console.log('canon route has changed', current);
     traverse({
       uuid: '',
       label: '',
@@ -97,6 +103,7 @@ export const CanonProvider = ({
       sort: 0,
       children: canon?.children || [],
     });
+
     router.push(`/canon/${current}`);
   }, [current, encode, canon?.children, router]);
 
