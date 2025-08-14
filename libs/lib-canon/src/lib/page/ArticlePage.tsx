@@ -14,13 +14,15 @@ export const ArticlePage = ({ section }: { section: CanonDetail }) => {
         <div className="py-4 overflow-y-auto h-full">
           {article.image && (
             <div className="text-center mb-8">
-              <Image
-                height={514}
-                width={1080}
-                src={article.image}
-                alt={label}
-                className="mb-4 rounded-lg shadow-lg object-cover w-full aspect-2/1"
-              />
+              <div className="relative mb-4 w-full aspect-2/1">
+                <Image
+                  src={article.image}
+                  alt={label}
+                  fill={true}
+                  objectFit="cover"
+                  className="rounded-lg shadow-lg"
+                />
+              </div>
               {article.caption && (
                 <div className="text-sm text-muted-foreground italic mt-2">
                   {article.caption}

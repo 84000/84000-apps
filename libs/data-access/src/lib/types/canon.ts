@@ -70,11 +70,14 @@ export type CanonDetail = CanonDetailDTO & {
   titles: CanonArticleTitle[];
 };
 
+export type CanonWorkStatus = 'published' | 'in-progress' | 'not-started';
+
 export type CanonWorkDTO = {
   uuid: string;
   toh: TohokuCatalogEntry;
   title: string;
   published: boolean;
+  status: CanonWorkStatus;
   pages: number;
 };
 
