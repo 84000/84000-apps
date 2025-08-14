@@ -79,8 +79,8 @@ export const EditorSidebar = ({
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarContent className="pt-(--header-height)">
-          <SidebarGroup>
+        <SidebarContent className="bg-gray/20 b pt-(--header-height)">
+          <SidebarGroup className="border-t border-sidebar-border">
             <SidebarGroupLabel>Editors</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>

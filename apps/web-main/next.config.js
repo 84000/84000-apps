@@ -13,7 +13,11 @@ const nextConfig = {
     svgr: false,
   },
   images: {
-    domains: ['lh3.googleusercontent.com', 'ivwvvjgudwqwjbclvfjy.supabase.co'],
+    remotePatterns: [
+      { hostname: 'lh3.googleusercontent.com' },
+      { hostname: 'ivwvvjgudwqwjbclvfjy.supabase.co' },
+      { hostname: 'cdn.prod.website-files.com' },
+    ],
   },
 };
 
