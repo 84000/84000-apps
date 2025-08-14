@@ -3,7 +3,7 @@ import { CanonPage } from '@lib-canon/ssr';
 
 export const revalidate = 3600;
 
-export const getStaticParams = async () => {
+export const generateStaticParams = async () => {
   const client = createBrowserClient();
   const sections = await getCanonSections({ client });
   return sections.map((section) => ({
