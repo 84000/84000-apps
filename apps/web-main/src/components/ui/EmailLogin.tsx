@@ -13,8 +13,8 @@ type LoginAction = 'create' | 'login' | 'forgot-password';
 
 export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {
   const handleSubmit = (action: LoginAction) => {
-    // Handle form submission logic based on the action
-    console.log(`Form submitted for action: ${action}`);
+    // TODO: Handle login or signup action
+    console.log(`Email auth action: ${action}`);
   };
 
   return (
