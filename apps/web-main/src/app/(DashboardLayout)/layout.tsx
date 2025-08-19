@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScholarUser, useSession } from '../context/SessionContext';
+import { ScholarUser, useSession } from '@lib-user';
 import { AppHeader } from '../../components/ui/AppHeader';
 import { AppContent } from '../../components/ui/AppContent';
 export default function Layout({

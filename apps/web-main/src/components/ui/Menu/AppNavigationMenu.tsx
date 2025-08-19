@@ -1,8 +1,8 @@
 'use client';
 
-import { MENU_ITEMS } from './MenuItems';
 import { useEffect, useState } from 'react';
-import { useSession } from '../../../app/context/SessionContext';
+import { useSession } from '@lib-user';
+import { MENU_ITEMS } from './MenuItems';
 import { NavigationMenuItemProps } from './types';
 import { SimpleDesktopMenu } from './SimpleDesktopMenu';
 import { SimpleMobileMenu } from './SimpleMobileMenu';

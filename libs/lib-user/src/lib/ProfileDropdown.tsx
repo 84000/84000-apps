@@ -11,9 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@design-system';
-import { ScholarUser } from '../../app/context/SessionContext';
+import { ScholarUser } from './types';
 import { UserIcon } from 'lucide-react';
-const Profile = ({
+
+export const ProfileDropdown = ({
   user,
   handleLogout,
 }: {
@@ -64,5 +65,3 @@ const Profile = ({
     </div>
   );
 };
-
-export default Profile;

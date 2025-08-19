@@ -2,7 +2,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import '@design-system-css';
 import { InterfaceContextProvider } from './context/InterfaceContext';
-import { SessionProvider } from './context/SessionContext';
+import { SessionProvider } from '@lib-user';
 
 export const metadata: Metadata = {
   title: "84000 Scholar's Room",

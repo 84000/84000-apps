@@ -1,41 +1,25 @@
-'use client';
-
-import SocialLogin from '../../../components/ui/SocialLogin';
-import { useSession } from '../../context/SessionContext';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  H3,
-  MainLogo,
-} from '@design-system';
+import { cn } from '@lib-utils';
+import { Login } from '@lib-user';
 
 const LoginPage = () => {
-  const { loginWithGoogle } = useSession();
+  const bgImage = 'md:bg-[url(/images/backgrounds/bg-main.webp)]';
+  const rightBgImage = 'bg-[url(/images/backgrounds/bg-login.webp)]';
 
-  const bgImage =
-    'bg-[url(https://cdn.prod.website-files.com/661fb69072916f350216ad91/66bd96d7b11732fc3ba19751_Donate-p-2000.jpeg)]';
   return (
-    <>
-      <div
-        className={`relative min-h-screen flex flex-col justify-center bg-cover bg-center ${bgImage}`}
-      >
-        <div className="flex h-full justify-center items-center sm:pr-[50%] px-4">
-          <Card className="sm:max-w-sm w-full">
-            <CardHeader className="flex justify-center items-center pt-12">
-              <MainLogo />
-            </CardHeader>
-            <CardContent className="pb-8">
-              <CardTitle>
-                <H3>Sign In to Continue</H3>
-              </CardTitle>
-              <SocialLogin loginWithGoogle={loginWithGoogle} />
-            </CardContent>
-          </Card>
+    <div className={cn(bgImage, 'w-screen h-screen bg-cover bg-top')}>
+      <div className="m-auto w-full h-screen 3xl:p-16 max-w-screen-3xl">
+        <div className="grid md:grid-cols-2 w-full h-full 3xl:bg-background 3xl:rounded-lg 3xl:shadow-md overflow-hidden">
+          <div className="w-full">
+            <Login />
+          </div>
+          <div
+            className={cn(rightBgImage, 'bg-cover bg-center md:flex hidden')}
+          >
+            <div className="h-full w-full bg-radial from-transparent to-black/50 to-2/3" />
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
