@@ -1,6 +1,6 @@
-import { Project, ProjectAsset as Asset, getProjectAssets } from '@data-access';
-import { useSession } from '../../app/context/SessionContext';
 import { useEffect, useState } from 'react';
+import { Project, ProjectAsset as Asset, getProjectAssets } from '@data-access';
+import { useSession } from '@lib-user';
 import {
   Button,
   Skeleton,

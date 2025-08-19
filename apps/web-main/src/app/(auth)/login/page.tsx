@@ -1,5 +1,5 @@
 import { cn } from '@lib-utils';
-import Login from '../../../components/ui/Login';
+import { Login } from '@lib-user';
 
 const LoginPage = () => {
   const bgImage = 'md:bg-[url(/images/backgrounds/bg-main.webp)]';

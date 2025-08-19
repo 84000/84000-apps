@@ -10,10 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from '@design-system';
+import { useSession } from '@lib-user';
 import { Placeholder } from '../ui/Placeholder';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSession } from '../../app/context/SessionContext';
 
 export const ProjectStages = ({ project }: { project?: Project | null }) => {
   const { apiClient: client } = useSession();

@@ -2,7 +2,6 @@
 
 import React, { createContext, useCallback, useContext, useState } from 'react';
 import {
-  UserRole,
   createBrowserClient,
   getUser as getUserCall,
   loginWithApple as loginWithAppleCall,
@@ -10,15 +9,7 @@ import {
   logout as logoutCall,
 } from '@data-access';
 import { SupabaseClient } from '@supabase/supabase-js';
-
-export type ScholarUser = {
-  id: string;
-  email: string;
-  name?: string | undefined;
-  username?: string | undefined;
-  avatar?: string | undefined;
-  role: UserRole;
-};
+import { ScholarUser } from './types';
 
 interface SessionContextState {
   getUser: () => Promise<ScholarUser | null>;

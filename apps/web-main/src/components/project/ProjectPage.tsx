@@ -2,10 +2,10 @@
 
 import { Project, UserRole, getProjectByUuid } from '@data-access';
 import { Button, H3, Separator, Skeleton } from '@design-system';
+import { useSession } from '@lib-user';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { useSession } from '../../app/context/SessionContext';
 import { ProjectStages } from './ProjectStages';
 import { ProjectNotes } from './ProjectNotes';
 import { ProjectContributors } from './ProjectContributors';

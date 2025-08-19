@@ -1,7 +1,7 @@
 'use client';
-import React from 'react';
+
 import Image from 'next/image';
-import { useSession } from '../../app/context/SessionContext';
+import { useSession } from './SessionContext';
 import { cn } from '@lib-utils';
 
 const IS_APPLE_ENABLED = false;
@@ -40,5 +40,3 @@ export const SocialLogin = ({ className }: { className?: string }) => {
     </div>
   );
 };
-
-export default SocialLogin;

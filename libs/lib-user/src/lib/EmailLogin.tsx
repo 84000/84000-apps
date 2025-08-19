@@ -2,7 +2,7 @@
 
 import { Button, Input, Label } from '@design-system';
 import Link from 'next/link';
-import { LoginVariation } from './Login';
+import { LoginVariation } from './types';
 
 const BUTTON_TEXT = {
   create: 'Sign Up',

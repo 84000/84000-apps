@@ -1,8 +1,8 @@
 'use client';
 
 import { Header } from '@design-system';
-import Profile from './Profile';
-import { ScholarUser } from '../../app/context/SessionContext';
+import type { ScholarUser } from '@lib-user';
+import { ProfileDropdown } from '@lib-user';
 import { AppNavigationMenu } from './Menu';
 
 export const AppHeader = ({
@@ -17,7 +17,7 @@ export const AppHeader = ({
       <div className="flex justify-between size-full">
         <AppNavigationMenu />
         <div className="flex-grow"></div>
-        <Profile user={user} handleLogout={handleLogout} />
+        <ProfileDropdown user={user} handleLogout={handleLogout} />
       </div>
     </Header>
   );

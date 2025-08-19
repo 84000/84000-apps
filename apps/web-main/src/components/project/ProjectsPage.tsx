@@ -2,8 +2,8 @@
 
 import { Project, getProjects } from '@data-access';
 import { H2, Skeleton } from '@design-system';
+import { useSession } from '@lib-user';
 import { ProjectsTable } from './ProjectsTable';
-import { useSession } from '../../app/context/SessionContext';
 import { useEffect, useState } from 'react';
 
 export const ProjectsPage = () => {

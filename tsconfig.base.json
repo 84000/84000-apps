@@ -19,10 +19,11 @@
       "@data-access/ssr": ["libs/data-access/src/ssr.ts"],
       "@design-system": ["libs/design-system/src/index.ts"],
       "@design-system-css": ["libs/design-system/src/lib/theme/global.css"],
+      "@lib-canon": ["libs/lib-canon/src/index.ts"],
+      "@lib-canon/ssr": ["libs/lib-canon/src/ssr.ts"],
       "@lib-editing": ["libs/lib-editing/src/index.ts"],
       "@lib-utils": ["libs/lib-utils/src/index.ts"],
-      "@lib-canon": ["libs/lib-canon/src/index.ts"],
-      "@lib-canon/ssr": ["libs/lib-canon/src/ssr.ts"]
+      "@lib-user": ["libs/lib-user/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
