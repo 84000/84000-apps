@@ -74,6 +74,24 @@ export const loginWithGoogle = async ({
   });
 };
 
+export const loginWithApple = async ({
+  client,
+  redirectTo = undefined,
+}: {
+  client: DataClient;
+  redirectTo: string | undefined;
+}) => {
+  await client.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo,
+      queryParams: {
+        scope: 'email name',
+      },
+    },
+  });
+};
+
 export const logout = async ({ client }: { client: DataClient }) => {
   await client.auth.signOut();
 };

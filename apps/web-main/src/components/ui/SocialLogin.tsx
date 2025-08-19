@@ -1,27 +1,43 @@
 'use client';
 import React from 'react';
 import Image from 'next/image';
+import { useSession } from '../../app/context/SessionContext';
+import { cn } from '@lib-utils';
 
-export const SocialLogin: React.FC<{
-  loginWithGoogle: () => void;
-}> = ({ loginWithGoogle }) => {
+const IS_APPLE_ENABLED = false;
+
+export const SocialLogin = ({ className }: { className?: string }) => {
+  const { loginWithApple, loginWithGoogle } = useSession();
+
   return (
-    <>
-      <div className="flex justify-between gap-8 my-6 ">
+    <div className={cn('flex flex-col justify-between gap-2 my-6', className)}>
+      <div
+        onClick={loginWithGoogle}
+        className="px-4 py-2 border-border border flex gap-2 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
+      >
+        <Image
+          src={'/images/svgs/google-icon.svg'}
+          alt="google"
+          height={16}
+          width={16}
+        />{' '}
+        Sign in with Google
+      </div>
+      {IS_APPLE_ENABLED && (
         <div
-          onClick={loginWithGoogle}
-          className="px-4 py-2.5 border-border border dark:border-darkborder flex gap-2 items-enter w-full rounded-md text-center justify-center text-dark dark:text-white text-primary-ld cursor-pointer"
+          onClick={loginWithApple}
+          className="px-4 py-2 border-border border flex gap-2 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
         >
           <Image
-            src={'/images/svgs/google-icon.svg'}
+            src={'/images/svgs/apple-icon.svg'}
             alt="google"
-            height={18}
-            width={18}
+            height={16}
+            width={16}
           />{' '}
-          Google
+          Sign in with Apple
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 };
 

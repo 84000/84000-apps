@@ -5,6 +5,7 @@ import {
   UserRole,
   createBrowserClient,
   getUser as getUserCall,
+  loginWithApple as loginWithAppleCall,
   loginWithGoogle as loginWithGoogleCall,
   logout as logoutCall,
 } from '@data-access';
@@ -22,6 +23,7 @@ export type ScholarUser = {
 interface SessionContextState {
   getUser: () => Promise<ScholarUser | null>;
   apiClient: SupabaseClient | null;
+  loginWithApple?: () => void;
   loginWithGoogle: () => void;
   logout: () => Promise<void>;
 }
@@ -29,6 +31,9 @@ interface SessionContextState {
 export const SessionContext = createContext<SessionContextState>({
   getUser: async () => null,
   apiClient: null,
+  loginWithApple: () => {
+    new Error('loginWithApple is not implemented');
+  },
   loginWithGoogle: () => {
     new Error('loginWithGoogle is not implemented');
   },
@@ -46,6 +51,14 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     return getUserCall({ client: apiClient });
   }, [apiClient]);
 
+  const loginWithApple = useCallback(() => {
+    const redirectTo =
+      process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
+      `${window.location.origin}/auth/callback`;
+
+    loginWithAppleCall({ client: apiClient, redirectTo });
+  }, [apiClient]);
+
   const loginWithGoogle = useCallback(() => {
     const redirectTo =
       process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
@@ -60,7 +73,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <SessionContext.Provider
-      value={{ getUser, loginWithGoogle, logout, apiClient }}
+      value={{ getUser, loginWithApple, loginWithGoogle, logout, apiClient }}
     >
       {children}
     </SessionContext.Provider>

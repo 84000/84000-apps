@@ -109,6 +109,11 @@
 
 @theme {
   --radius: 0.5rem;
+  --text-tiny: 0.625rem;
+
+  --breakpoint-3xl: 112rem;
+  --breakpoint-4xl: 128rem;
+
   --font-sans:
     'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
