@@ -92,6 +92,70 @@ export const loginWithApple = async ({
   });
 };
 
+export const loginWithEmail = async ({
+  client,
+  email,
+  password,
+}: {
+  client: DataClient;
+  email: string;
+  password: string;
+}) => {
+  const { error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.error(`Failed to login with email: ${error.message}`);
+    throw error;
+  }
+};
+
 export const logout = async ({ client }: { client: DataClient }) => {
   await client.auth.signOut();
+};
+
+export const resetPassword = async ({
+  client,
+  email,
+  redirectTo = undefined,
+}: {
+  client: DataClient;
+  email: string;
+  redirectTo?: string;
+}) => {
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) {
+    console.error(`Failed to reset password: ${error.message}`);
+    throw error;
+  }
+};
+
+export const signUpWithEmail = async ({
+  client,
+  email,
+  password,
+  redirectTo = undefined,
+}: {
+  client: DataClient;
+  email: string;
+  password: string;
+  redirectTo?: string;
+}) => {
+  const { error } = await client.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: redirectTo,
+    },
+  });
+
+  if (error) {
+    console.error(`Failed to sign up with email: ${error.message}`);
+    throw error;
+  }
 };

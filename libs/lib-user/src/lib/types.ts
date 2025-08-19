@@ -10,3 +10,4 @@ export type ScholarUser = {
 };
 
 export type LoginVariation = 'create' | 'login';
+export type LoginAction = LoginVariation | 'forgot-password';

@@ -1,37 +1,56 @@
 'use client';
 
+import { useState } from 'react';
 import { Button, Input, Label } from '@design-system';
-import Link from 'next/link';
-import { LoginVariation } from './types';
+import { LoginAction, LoginVariation } from './types';
+import { useSession } from './SessionContext';
 
 const BUTTON_TEXT = {
   create: 'Sign Up',
   login: 'Log In',
 };
 
-type LoginAction = 'create' | 'login' | 'forgot-password';
-
 export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {
-  const handleSubmit = (action: LoginAction) => {
-    // TODO: Handle login or signup action
-    console.log(`Email auth action: ${action}`);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { signUpWithEmail, loginWithEmail, resetPassword } = useSession();
+
+  const handleSubmit = async (action: LoginAction) => {
+    switch (action) {
+      case 'create':
+        signUpWithEmail(email, password);
+
+        break;
+      case 'login':
+        loginWithEmail(email, password);
+        break;
+      case 'forgot-password':
+        resetPassword(email);
+        break;
+      default:
+        console.error('Unknown action:', action);
+    }
   };
 
   return (
-    <form className="w-full flex flex-col items-center pt-4">
+    <form className="w-full flex flex-col items-center pt-2">
       <Input
         type="email"
         placeholder="Email"
         className="w-full my-2"
         required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
       />
       <Input
         type="password"
         placeholder="Password"
         className="w-full my-2"
         required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
       />
-      <div className="w-full flex items-center justify-between my-2">
+      <div className="w-full flex items-center justify-between mb-2">
         <Label className="flex items-center gap-2 text-sm text-muted-foreground">
           <input
             type="checkbox"
@@ -41,11 +60,11 @@ export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {
           Keep me signed in
         </Label>
         <Button
-          asChild
+          onClick={() => handleSubmit('forgot-password')}
           variant="link"
           className="pe-0 font-light underline text-muted-foreground text-sm"
         >
-          <Link href="/auth/forgot-password">Forgot password?</Link>
+          Forgot password?
         </Button>
       </div>
       <div className="w-full p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">

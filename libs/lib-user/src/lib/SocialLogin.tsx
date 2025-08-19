@@ -10,7 +10,9 @@ export const SocialLogin = ({ className }: { className?: string }) => {
   const { loginWithApple, loginWithGoogle } = useSession();
 
   return (
-    <div className={cn('flex flex-col justify-between gap-2 my-6', className)}>
+    <div
+      className={cn('flex flex-col justify-between gap-2 mt-6 mb-4', className)}
+    >
       <div
         onClick={loginWithGoogle}
         className="px-4 py-2 border-border border flex gap-2 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
