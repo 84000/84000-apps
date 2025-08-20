@@ -1,3 +1,4 @@
-// Use this file to export React client components (e.g. those with 'use client' directive) or other non-server utilities
-
-export * from './lib/lib-glossary';
+export * from './lib/GlossariesLandingTable';
+export * from './lib/GlossaryEditor';
+export * from './lib/GlossaryInstancesTable';
+export * from './lib/types';

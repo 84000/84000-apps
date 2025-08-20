@@ -4,7 +4,6 @@ import { GlossaryPageItem } from '@data-access';
 import {
   DataTable,
   DataTableColumn,
-  DataTableRow,
   H4,
   SortableHeader,
   TooltipCell,
@@ -14,16 +13,7 @@ import { filterFn as translatorFilterFn } from './FilterTranslatorsDropdown';
 import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
-
-export type GlossaryInstanceRow = DataTableRow & {
-  uuid: string;
-  toh: string;
-  canon: string;
-  creators: string;
-  english: string;
-  sanskrit: string;
-  tibetan: string;
-};
+import { GlossaryInstanceRow } from './types';
 
 type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 
@@ -113,6 +103,10 @@ export const GlossaryInstancesTable = ({
       onCellClick,
     },
     {
+      id: 'definition',
+      accessorKey: 'definition',
+    },
+    {
       id: 'canon',
       accessorKey: 'canon',
       className: CLASS_NAME_FOR_COL.canon,
@@ -150,6 +144,7 @@ export const GlossaryInstancesTable = ({
     return {
       uuid: instance.workUuid,
       toh: instance.toh || '',
+      definition: instance.definition || '',
       canon: instance.canon || '',
       creators: instance.creators.join(', '),
       english: instance.english.join(', '),
@@ -171,6 +166,7 @@ export const GlossaryInstancesTable = ({
         }}
         visibility={{
           uuid: false,
+          definition: false,
         }}
         sorting={[{ id: 'toh', desc: false }]}
         filters={(table) => (

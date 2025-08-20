@@ -4,7 +4,6 @@ import { GlossaryLandingItem } from '@data-access';
 import {
   DataTable,
   DataTableColumn,
-  DataTableRow,
   SortableHeader,
   TooltipCell,
   defaultFilterFn,
@@ -12,8 +11,8 @@ import {
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
 import { GlossariesLandingFilters } from './GlossariesLandingFilters';
+import { GlossariesLandingRow } from './types';
 
-export type GlossariesLandingRow = DataTableRow & GlossaryLandingItem;
 export type GlossariesLandingColumn = DataTableColumn<GlossariesLandingRow>;
 
 const GlossariesLandingHeader = SortableHeader<GlossariesLandingRow>;
@@ -109,6 +108,10 @@ export const GlossariesLandingTable = ({
         />
       ),
     },
+    {
+      id: 'definition',
+      accessorKey: 'definition',
+    },
   ];
   const rows: GlossariesLandingRow[] = terms;
 
@@ -117,7 +120,7 @@ export const GlossariesLandingTable = ({
       name="terms"
       columns={columns}
       data={rows}
-      visibility={{ uuid: false }}
+      visibility={{ uuid: false, definition: false }}
       sorting={[{ id: 'headword', desc: false }]}
       filters={(table) => (
         <GlossariesLandingFilters
