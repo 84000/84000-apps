@@ -18,6 +18,7 @@ export type GlossaryLandingItem = {
   language: string;
   nameVariants: string;
   definition: string;
+  numGlossaryEntries: number;
 };
 
 export type LanguageRecord = Record<GlossaryPageLanguage, string[]>;
@@ -56,6 +57,7 @@ export type GlossaryLandingItemDTO = {
   headword_language?: ExtendedTranslationLanguage;
   name_variants?: string;
   definition?: string;
+  num_glossary_entries?: number;
 };
 
 export type GlossaryDetailDTO = {
@@ -110,6 +112,7 @@ export const glossaryLandingItemFromDTO = (
     language,
     nameVariants: dto.name_variants || '',
     definition,
+    numGlossaryEntries: dto.num_glossary_entries || 0,
   };
 };
 

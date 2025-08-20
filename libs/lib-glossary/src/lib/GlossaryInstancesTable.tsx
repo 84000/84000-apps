@@ -20,12 +20,12 @@ type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 const GlossaryInstanceHeader = SortableHeader<GlossaryInstanceRow>;
 
 const CLASS_NAME_FOR_COL = {
-  english: 'lg:w-[120px] w-[80px]',
-  tibetan: 'lg:w-[80px] w-[64px]',
-  sanskrit: 'lg:w-[80px] w-[64px]',
-  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
-  canon: 'xl:w-[200px] w-[112px] truncate',
-  creators: 'xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px]',
+  english: 'lg:w-[12rem] w-[6rem]',
+  tibetan: 'lg:w-[12rem] w-[6rem]',
+  sanskrit: 'lg:w-[12rem] w-[6rem]',
+  toh: 'xl:w-[8rem] md:w-[4rem] w-[3rem]',
+  canon: 'xl:w-[24rem] w-[16rem] truncate',
+  creators: 'xl:w-[16rem] lg:w-[12rem] md:w-[8rem] w-[4rem]',
 };
 
 export const GlossaryInstancesTable = ({
