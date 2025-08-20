@@ -3,10 +3,10 @@
 import { GlossaryPageItem } from '@data-access';
 import { FuzzyGlobalFilter } from '@design-system';
 import { Table } from '@tanstack/react-table';
-import { GlossaryInstanceRow } from './GlossaryInstancesTable';
 import { useEffect, useState } from 'react';
 import { FilterCanonPathDropdown } from './FilterCanonPathDropdown';
 import { FilterTranslatorsDropdown } from './FilterTranslatorsDropdown';
+import { GlossaryInstanceRow } from './types';
 
 const MAX_CANON_DEPTH = 3;
 
