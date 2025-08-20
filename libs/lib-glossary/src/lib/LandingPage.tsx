@@ -1,8 +1,11 @@
-import { GlossaryLandingItem } from '@data-access';
+import { createBrowserClient, getAllGlossaryTerms } from '@data-access';
 import { H2 } from '@design-system';
 import { GlossariesLandingTable } from './GlossariesLandingTable';
 
-export const GlossariesPage = ({ terms }: { terms: GlossaryLandingItem[] }) => {
+export const LandingPage = async () => {
+  const client = createBrowserClient();
+  const terms = await getAllGlossaryTerms({ client });
+
   // Clean up the definition field by removing HTML tags
   const rows = terms.map((term) => ({
     ...term,

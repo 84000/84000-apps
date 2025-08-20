@@ -11,7 +11,6 @@ import {
 } from '@design-system';
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
-import { Placeholder } from '../ui/Placeholder';
 import { GlossariesLandingFilters } from './GlossariesLandingFilters';
 
 export type GlossariesLandingRow = DataTableRow & GlossaryLandingItem;
@@ -24,7 +23,6 @@ const CLASSNAME_FOR_COL: { [key: string]: string } = {
   language: 'xl:w-[100px] w-[60px] truncate capitalize',
   type: 'w-[80px] truncate capitalize',
   variants: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
-  definition: 'xl:w-[300px] lg:w-[250px] md:w-[100px] w-[60px]',
 };
 
 const filterFn = defaultFilterFn<GlossariesLandingRow>;
@@ -110,24 +108,6 @@ export const GlossariesLandingTable = ({
           content={row.original.nameVariants}
         />
       ),
-    },
-    {
-      id: 'definition',
-      accessorKey: 'definition',
-      className: CLASSNAME_FOR_COL.definition,
-      onCellClick,
-      header: ({ column }) => (
-        <GlossariesLandingHeader column={column} name="Definition" />
-      ),
-      cell: ({ row }) =>
-        row.original.definition ? (
-          <TooltipCell
-            className={CLASSNAME_FOR_COL.definition}
-            content={row.original.definition || ''}
-          />
-        ) : (
-          <Placeholder />
-        ),
     },
   ];
   const rows: GlossariesLandingRow[] = terms;

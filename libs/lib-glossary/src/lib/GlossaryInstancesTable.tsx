@@ -14,12 +14,10 @@ import { filterFn as translatorFilterFn } from './FilterTranslatorsDropdown';
 import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
-import { Placeholder } from '../ui/Placeholder';
 
 export type GlossaryInstanceRow = DataTableRow & {
   uuid: string;
   toh: string;
-  definition: string;
   canon: string;
   creators: string;
   english: string;
@@ -36,7 +34,6 @@ const CLASS_NAME_FOR_COL = {
   tibetan: 'lg:w-[80px] w-[64px]',
   sanskrit: 'lg:w-[80px] w-[64px]',
   toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
-  definition: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
   canon: 'xl:w-[200px] w-[112px] truncate',
   creators: 'xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px]',
 };
@@ -116,24 +113,6 @@ export const GlossaryInstancesTable = ({
       onCellClick,
     },
     {
-      id: 'definition',
-      accessorKey: 'definition',
-      className: CLASS_NAME_FOR_COL.definition,
-      header: ({ column }) => (
-        <GlossaryInstanceHeader column={column} name="Definition" />
-      ),
-      cell: ({ row }) =>
-        row.original.definition ? (
-          <TooltipCell
-            className={CLASS_NAME_FOR_COL.definition}
-            content={row.original.definition || ''}
-          />
-        ) : (
-          <Placeholder />
-        ),
-      onCellClick,
-    },
-    {
       id: 'canon',
       accessorKey: 'canon',
       className: CLASS_NAME_FOR_COL.canon,
@@ -171,7 +150,6 @@ export const GlossaryInstancesTable = ({
     return {
       uuid: instance.workUuid,
       toh: instance.toh || '',
-      definition: instance.definition?.replace(/<[^>]*>/g, '') || '',
       canon: instance.canon || '',
       creators: instance.creators.join(', '),
       english: instance.english.join(', '),

@@ -1,3 +1,5 @@
+'use client';
+
 import { GlossaryPageItem } from '@data-access';
 import { Li, Ul } from '@design-system';
 import { useEffect, useState } from 'react';

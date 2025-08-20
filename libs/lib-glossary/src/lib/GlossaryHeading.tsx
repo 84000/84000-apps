@@ -1,3 +1,5 @@
+'use client';
+
 import { GlossaryPageItem } from '@data-access';
 import { Button, H1 } from '@design-system';
 import { ArrowLeftIcon } from 'lucide-react';
