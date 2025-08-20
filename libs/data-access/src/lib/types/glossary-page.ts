@@ -27,6 +27,7 @@ export type GlossaryDetailItem = LanguageRecord & {
   authorityUuid: string;
   headword: string;
   language: GlossaryPageLanguage;
+  classifications: string[];
   definition?: string;
   xmlId?: string;
 };
@@ -65,6 +66,7 @@ export type GlossaryDetailDTO = {
   xmlId?: string;
   headword: string;
   headword_language?: GlossaryPageLanguage | null;
+  classifications?: string[] | null;
   definition?: string | null;
   tibetan_names?: string[] | null;
   sanskrit_names?: string[] | null;
@@ -127,6 +129,7 @@ export const glossaryDetailFromDTO = (
     authorityUuid: dto.authority_uuid,
     headword: dto.headword,
     language: dto.headword_language as GlossaryPageLanguage,
+    classifications: dto.classifications || [],
     definition: dto.definition || undefined,
     xmlId: dto.xmlId,
     english: dto.english_names || [],

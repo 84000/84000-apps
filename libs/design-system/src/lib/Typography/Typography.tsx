@@ -1,5 +1,4 @@
 import { cn } from '@lib-utils';
-import NextLink, { LinkProps } from 'next/link';
 
 export const LINK_STYLE =
   'text-slate underline decoration-slate underline-offset-[3px] transition-colors cursor-pointer';
@@ -86,7 +85,7 @@ export function H3({
 }
 
 export const H4_STYLE =
-  'mt-4 scroll-m-20 pb-2 text-2xl font-semibold lg:text-3xl';
+  'mt-4 scroll-m-20 pb-2 text-2xl font-semibold lg:text-3xl text-navy';
 export function H4({
   children,
   className,

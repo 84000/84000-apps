@@ -1,12 +1,12 @@
 'use client';
 
 import { GlossaryPageItem } from '@data-access';
-import { Li, Ul } from '@design-system';
+import { H4, H5, Li, Ul } from '@design-system';
 import { useEffect, useState } from 'react';
 
 export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
   const [variants, setVariants] = useState<
-    { language: string; variant: string; className: string }[]
+    { language: string; variants: string[]; className: string }[]
   >([]);
 
   useEffect(() => {
@@ -14,35 +14,35 @@ export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
     if (detail.english.length) {
       variants.push({
         language: 'English',
-        variant: detail.english.join(', '),
-        className: '',
+        variants: detail.english,
+        className: 'capitalize',
       });
     }
     if (detail.sanskrit.length) {
       variants.push({
         language: 'Sanskrit',
-        variant: detail.sanskrit.join(', '),
+        variants: detail.sanskrit,
         className: 'italic',
       });
     }
     if (detail.tibetan.length) {
       variants.push({
         language: 'Tibetan',
-        variant: detail.tibetan.join(', '),
-        className: 'italic',
+        variants: detail.tibetan,
+        className: '',
       });
     }
     if (detail.chinese.length) {
       variants.push({
         language: 'Chinese',
-        variant: detail.chinese.join(', '),
+        variants: detail.chinese,
         className: '',
       });
     }
     if (detail.pali.length) {
       variants.push({
         language: 'Pali',
-        variant: detail.pali.join(', '),
+        variants: detail.pali,
         className: 'italic',
       });
     }
@@ -54,16 +54,20 @@ export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
   }
 
   return (
-    <div>
-      <Ul>
-        {variants.map(({ language, variant, className }, index) => (
-          <Li key={index}>
-            <span className="font-semibold">{language}</span>
-            <span className="px-2 text-brick">→</span>
-            <span className={className}>{variant}</span>
-          </Li>
-        ))}
-      </Ul>
-    </div>
+    <>
+      <H4 className="text-navy py-2">Name Variants</H4>
+      {variants.map(({ language, variants: names, className }, index) => (
+        <div key={index} className="py-0">
+          <H5 className="text-navy py-0">{language}</H5>
+          <Ul className="my-1 text-sm">
+            {names.map((name, idx) => (
+              <Li key={`${index}-${idx}`} className={className}>
+                {name}
+              </Li>
+            ))}
+          </Ul>
+        </div>
+      ))}
+    </>
   );
 };

@@ -155,7 +155,7 @@ export const GlossaryInstancesTable = ({
 
   return (
     <div>
-      <H4 className="py-8">Glossary Entries</H4>
+      <H4 className="pt-8">Glossary Entries</H4>
       <DataTable
         name="glossary entries"
         columns={columns}
