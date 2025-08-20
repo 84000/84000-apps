@@ -10,7 +10,7 @@ const EMAIL_AUTH_ENABLED = false;
 
 const HEADER = {
   create: 'Create an account',
-  login: 'Log In',
+  login: 'Sign In',
 };
 
 const WELCOME_LINES = {
