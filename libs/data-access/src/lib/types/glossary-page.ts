@@ -18,6 +18,7 @@ export type GlossaryLandingItem = {
   language: string;
   nameVariants: string;
   definition: string;
+  numGlossaryEntries: number;
 };
 
 export type LanguageRecord = Record<GlossaryPageLanguage, string[]>;
@@ -26,6 +27,7 @@ export type GlossaryDetailItem = LanguageRecord & {
   authorityUuid: string;
   headword: string;
   language: GlossaryPageLanguage;
+  classifications: string[];
   definition?: string;
   xmlId?: string;
 };
@@ -56,6 +58,7 @@ export type GlossaryLandingItemDTO = {
   headword_language?: ExtendedTranslationLanguage;
   name_variants?: string;
   definition?: string;
+  num_glossary_entries?: number;
 };
 
 export type GlossaryDetailDTO = {
@@ -63,6 +66,7 @@ export type GlossaryDetailDTO = {
   xmlId?: string;
   headword: string;
   headword_language?: GlossaryPageLanguage | null;
+  classifications?: string[] | null;
   definition?: string | null;
   tibetan_names?: string[] | null;
   sanskrit_names?: string[] | null;
@@ -110,6 +114,7 @@ export const glossaryLandingItemFromDTO = (
     language,
     nameVariants: dto.name_variants || '',
     definition,
+    numGlossaryEntries: dto.num_glossary_entries || 0,
   };
 };
 
@@ -124,6 +129,7 @@ export const glossaryDetailFromDTO = (
     authorityUuid: dto.authority_uuid,
     headword: dto.headword,
     language: dto.headword_language as GlossaryPageLanguage,
+    classifications: dto.classifications || [],
     definition: dto.definition || undefined,
     xmlId: dto.xmlId,
     english: dto.english_names || [],

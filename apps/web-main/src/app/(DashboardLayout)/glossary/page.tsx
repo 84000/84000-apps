@@ -1,13 +1,7 @@
-import { createBrowserClient, getAllGlossaryTerms } from '@data-access';
-import { GlossariesPage } from '../../../components/glossary/GlossariesPage';
+import { LandingPage } from '@lib-glossary/ssr';
 
 export const revalidate = 60;
 
-const page = async () => {
-  const client = createBrowserClient();
-  const terms = await getAllGlossaryTerms({ client });
+const Page = LandingPage;
 
-  return <GlossariesPage terms={terms} />;
-};
-
-export default page;
+export default Page;

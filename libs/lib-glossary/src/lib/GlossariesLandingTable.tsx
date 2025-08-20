@@ -4,27 +4,25 @@ import { GlossaryLandingItem } from '@data-access';
 import {
   DataTable,
   DataTableColumn,
-  DataTableRow,
   SortableHeader,
   TooltipCell,
   defaultFilterFn,
 } from '@design-system';
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
-import { Placeholder } from '../ui/Placeholder';
 import { GlossariesLandingFilters } from './GlossariesLandingFilters';
+import { GlossariesLandingRow } from './types';
 
-export type GlossariesLandingRow = DataTableRow & GlossaryLandingItem;
 export type GlossariesLandingColumn = DataTableColumn<GlossariesLandingRow>;
 
 const GlossariesLandingHeader = SortableHeader<GlossariesLandingRow>;
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
-  headword: 'xl:w-[240px] w-[120px] truncate',
-  language: 'xl:w-[100px] w-[60px] truncate capitalize',
-  type: 'w-[80px] truncate capitalize',
-  variants: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
-  definition: 'xl:w-[300px] lg:w-[250px] md:w-[100px] w-[60px]',
+  headword: 'xl:w-[16rem] w-[8rem] truncate',
+  language: 'w-[3rem] truncate capitalize',
+  type: 'w-[3rem] truncate capitalize',
+  variants: '2xl:w-[48rem] lg:w-[36rem] md:w-[18rem] w-[8rem]',
+  numGlossaryEntries: 'w-[3rem]',
 };
 
 const filterFn = defaultFilterFn<GlossariesLandingRow>;
@@ -112,22 +110,22 @@ export const GlossariesLandingTable = ({
       ),
     },
     {
-      id: 'definition',
-      accessorKey: 'definition',
-      className: CLASSNAME_FOR_COL.definition,
+      id: 'numGlossaryEntries',
+      accessorKey: 'numGlossaryEntries',
+      className: CLASSNAME_FOR_COL.numGlossaryEntries,
       onCellClick,
       header: ({ column }) => (
-        <GlossariesLandingHeader column={column} name="Definition" />
+        <GlossariesLandingHeader column={column} name="Entries" />
       ),
-      cell: ({ row }) =>
-        row.original.definition ? (
-          <TooltipCell
-            className={CLASSNAME_FOR_COL.definition}
-            content={row.original.definition || ''}
-          />
-        ) : (
-          <Placeholder />
-        ),
+      cell: ({ row }) => (
+        <span className={CLASSNAME_FOR_COL.numGlossaryEntries}>
+          {row.original.numGlossaryEntries.toString()}
+        </span>
+      ),
+    },
+    {
+      id: 'definition',
+      accessorKey: 'definition',
     },
   ];
   const rows: GlossariesLandingRow[] = terms;
@@ -137,7 +135,7 @@ export const GlossariesLandingTable = ({
       name="terms"
       columns={columns}
       data={rows}
-      visibility={{ uuid: false }}
+      visibility={{ uuid: false, definition: false }}
       sorting={[{ id: 'headword', desc: false }]}
       filters={(table) => (
         <GlossariesLandingFilters

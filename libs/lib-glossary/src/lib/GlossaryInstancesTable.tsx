@@ -4,7 +4,6 @@ import { GlossaryPageItem } from '@data-access';
 import {
   DataTable,
   DataTableColumn,
-  DataTableRow,
   H4,
   SortableHeader,
   TooltipCell,
@@ -14,31 +13,19 @@ import { filterFn as translatorFilterFn } from './FilterTranslatorsDropdown';
 import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
-import { Placeholder } from '../ui/Placeholder';
-
-export type GlossaryInstanceRow = DataTableRow & {
-  uuid: string;
-  toh: string;
-  definition: string;
-  canon: string;
-  creators: string;
-  english: string;
-  sanskrit: string;
-  tibetan: string;
-};
+import { GlossaryInstanceRow } from './types';
 
 type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 
 const GlossaryInstanceHeader = SortableHeader<GlossaryInstanceRow>;
 
 const CLASS_NAME_FOR_COL = {
-  english: 'lg:w-[120px] w-[80px]',
-  tibetan: 'lg:w-[80px] w-[64px]',
-  sanskrit: 'lg:w-[80px] w-[64px]',
-  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
-  definition: '2xl:w-[580px] lg:w-[480px] md:w-[320px] w-[112px]',
-  canon: 'xl:w-[200px] w-[112px] truncate',
-  creators: 'xl:w-[160px] lg:w-[120px] md:w-[100px] w-[60px]',
+  english: 'lg:w-[12rem] w-[6rem]',
+  tibetan: 'lg:w-[12rem] w-[6rem]',
+  sanskrit: 'lg:w-[12rem] w-[6rem]',
+  toh: 'xl:w-[8rem] md:w-[4rem] w-[3rem]',
+  canon: 'xl:w-[24rem] w-[16rem] truncate',
+  creators: 'xl:w-[16rem] lg:w-[12rem] md:w-[8rem] w-[4rem]',
 };
 
 export const GlossaryInstancesTable = ({
@@ -118,20 +105,6 @@ export const GlossaryInstancesTable = ({
     {
       id: 'definition',
       accessorKey: 'definition',
-      className: CLASS_NAME_FOR_COL.definition,
-      header: ({ column }) => (
-        <GlossaryInstanceHeader column={column} name="Definition" />
-      ),
-      cell: ({ row }) =>
-        row.original.definition ? (
-          <TooltipCell
-            className={CLASS_NAME_FOR_COL.definition}
-            content={row.original.definition || ''}
-          />
-        ) : (
-          <Placeholder />
-        ),
-      onCellClick,
     },
     {
       id: 'canon',
@@ -171,7 +144,7 @@ export const GlossaryInstancesTable = ({
     return {
       uuid: instance.workUuid,
       toh: instance.toh || '',
-      definition: instance.definition?.replace(/<[^>]*>/g, '') || '',
+      definition: instance.definition || '',
       canon: instance.canon || '',
       creators: instance.creators.join(', '),
       english: instance.english.join(', '),
@@ -182,7 +155,7 @@ export const GlossaryInstancesTable = ({
 
   return (
     <div>
-      <H4 className="py-8">Glossary Entries</H4>
+      <H4 className="pt-8">Glossary Entries</H4>
       <DataTable
         name="glossary entries"
         columns={columns}
@@ -193,6 +166,7 @@ export const GlossaryInstancesTable = ({
         }}
         visibility={{
           uuid: false,
+          definition: false,
         }}
         sorting={[{ id: 'toh', desc: false }]}
         filters={(table) => (

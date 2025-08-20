@@ -1,3 +1,5 @@
+'use client';
+
 import { GlossaryPageItem } from '@data-access';
 import { Button, H4 } from '@design-system';
 import Link from 'next/link';

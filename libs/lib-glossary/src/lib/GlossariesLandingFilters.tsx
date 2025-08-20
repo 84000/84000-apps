@@ -1,10 +1,10 @@
 import { Table } from '@tanstack/react-table';
-import { GlossariesLandingRow } from './GlossariesLandingTable';
 import {
   DebounceLevel,
   FilterDropdown,
   FuzzyGlobalFilter,
 } from '@design-system';
+import { GlossariesLandingRow } from './types';
 
 export const GlossariesLandingFilters = ({
   types,

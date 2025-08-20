@@ -7,7 +7,7 @@ import { useSession } from './SessionContext';
 
 const BUTTON_TEXT = {
   create: 'Sign Up',
-  login: 'Log In',
+  login: 'Sign In',
 };
 
 export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {

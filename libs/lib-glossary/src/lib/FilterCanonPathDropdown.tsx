@@ -1,10 +1,10 @@
 import { Table } from '@tanstack/react-table';
 import { FilterDropdown, defaultFilterFn } from '@design-system';
-import { GlossaryInstanceRow } from './GlossaryInstancesTable';
+import { GlossaryInstanceRow } from './types';
 
 export const filterFn = defaultFilterFn<GlossaryInstanceRow>;
 
-export const FilterTranslatorsDropdown = ({
+export const FilterCanonPathDropdown = ({
   options,
   table,
 }: {
@@ -14,8 +14,8 @@ export const FilterTranslatorsDropdown = ({
   return (
     <FilterDropdown
       table={table}
-      placeholder="Translator"
-      column="creators"
+      placeholder="Canon"
+      column="canon"
       options={options}
       className="w-full truncate pe-8"
     />
