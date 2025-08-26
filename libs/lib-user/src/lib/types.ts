@@ -7,6 +7,7 @@ export type ScholarUser = {
   username?: string | undefined;
   avatar?: string | undefined;
   role: UserRole;
+  subscriptions: string[];
 };
 
 export type LoginVariation = 'create' | 'login';

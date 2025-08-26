@@ -81,34 +81,32 @@ export const ProfileDropdown = ({
                 <AccordionContent className="ml-4 text-sm">
                   <DropdownMenuItem
                     className="hover:cursor-pointer"
-                    onClick={() => router.push('/profile/library/publications')}
+                    onClick={() => router.push('/profile/publications')}
                   >
                     Publications
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="hover:cursor-pointer"
-                    onClick={() => router.push('/profile/library/passages')}
+                    onClick={() => router.push('/profile/passages')}
                   >
                     Passages
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="hover:cursor-pointer"
-                    onClick={() => router.push('/profile/library/glossaries')}
+                    onClick={() => router.push('/profile/glossaries')}
                   >
                     Glossaries
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="hover:cursor-pointer"
-                    onClick={() =>
-                      router.push('/profile/library/bibliographies')
-                    }
+                    onClick={() => router.push('/profile/bibliographies')}
                   >
                     Bibliographies
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
                     className="hover:cursor-pointer"
-                    onClick={() => router.push('/profile/library/searches')}
+                    onClick={() => router.push('/profile/searches')}
                   >
                     Searches
                   </DropdownMenuItem>

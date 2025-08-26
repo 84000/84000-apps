@@ -19,9 +19,7 @@ export const SaveButton = ({
   const [isSaving, setIsSaving] = useState(false);
   return (
     <Button
-      variant="outline"
-      size="default"
-      className={cn('rounded-full w-18', className)}
+      className={cn('px-5', className)}
       disabled={disabled || isSaving}
       onClick={async () => {
         setIsSaving(true);
