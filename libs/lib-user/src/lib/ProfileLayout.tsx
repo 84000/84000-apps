@@ -2,22 +2,17 @@
 
 import { Button, H2, Label, ScrollArea } from '@design-system';
 import { ReactNode } from 'react';
-import {
-  LIBRARY_ITEMS,
-  ProfileProvider,
-  useProfileContext,
-} from './ProfileProvider';
+import { ProfileProvider, useProfile } from './ProfileProvider';
+import { LIBRARY_ITEMS } from '@data-access';
 
 const InnerProfileLayout = ({ children }: { children: ReactNode }) => {
-  const { activeMenu, onMenuChange } = useProfileContext();
+  const { activeMenu, pageTitle, onMenuChange } = useProfile();
 
   return (
     <div className="flex flex-col pt-0 pb-8 md:px-8 px-4 w-full">
-      <H2 className="text-navy-500 capitalize">
-        {activeMenu === 'profile' ? 'My Profile' : activeMenu}
-      </H2>
+      <H2 className="text-navy-500 capitalize">{pageTitle}</H2>
       <div className="flex flex-row gap-10">
-        <div className="rounded-lg shadow-sm bg-sidebar-background w-[20rem] hidden md:flex">
+        <div className="rounded-2xl shadow-md bg-sidebar-background w-[20rem] hidden md:flex">
           <div className="flex flex-col gap-4 w-full">
             <div className="flex flex-col gap-2 py-4 px-2">
               <Button
