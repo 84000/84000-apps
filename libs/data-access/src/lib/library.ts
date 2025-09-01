@@ -5,6 +5,40 @@ import {
   UserPassageItem,
 } from './types';
 
+export const updateUserProfile = async ({
+  client,
+  userId,
+  avatar,
+  name,
+  username,
+  subscriptions,
+}: {
+  client: DataClient;
+  userId: string;
+  subscriptions: string[];
+  avatar?: string;
+  name?: string;
+  username?: string;
+}): Promise<boolean> => {
+  const { error } = await client
+    .from('user_profiles')
+    .update({
+      avatar_url: avatar,
+      full_name: name,
+      username: username,
+      subscriptions,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('Error updating user subscriptions:', error);
+    return false;
+  }
+
+  return true;
+};
+
 export const getUserLibrary = async ({
   client,
   userId,

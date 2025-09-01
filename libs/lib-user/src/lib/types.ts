@@ -1,5 +1,9 @@
 import { UserRole } from '@data-access';
 
+export const SUBSCRIPTION_TYPES = ['news'] as const;
+
+export type SubscriptionType = (typeof SUBSCRIPTION_TYPES)[number];
+
 export type ScholarUser = {
   id: string;
   email: string;
@@ -7,7 +11,7 @@ export type ScholarUser = {
   username?: string | undefined;
   avatar?: string | undefined;
   role: UserRole;
-  subscriptions: string[];
+  subscriptions: SubscriptionType[];
 };
 
 export type LoginVariation = 'create' | 'login';

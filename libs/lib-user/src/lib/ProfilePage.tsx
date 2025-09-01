@@ -7,7 +7,7 @@ import { UserCard } from './UserCard';
 import { UserSubscriptionsCard } from './UserSubscriptionsCard';
 
 export const ProfilePage = () => {
-  const { user, setPageTitle } = useProfile();
+  const { setPageTitle } = useProfile();
 
   useEffect(() => {
     setPageTitle('My Profile');
@@ -15,9 +15,9 @@ export const ProfilePage = () => {
 
   return (
     <div className="flex flex-col w-full gap-8">
-      <UserCard user={user} />
-      <UserSubscriptionsCard user={user} />
-      <DeleteAccountCard user={user} />
+      <UserCard />
+      <UserSubscriptionsCard />
+      <DeleteAccountCard />
     </div>
   );
 };

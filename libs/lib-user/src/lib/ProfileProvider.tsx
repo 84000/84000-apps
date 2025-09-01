@@ -9,7 +9,7 @@ import {
   useEffect,
   useState,
 } from 'react';
-import { LibraryCache, ScholarUser } from './types';
+import { LibraryCache, ScholarUser, SubscriptionType } from './types';
 import { useSession } from './SessionContext';
 import {
   DataClient,
@@ -24,6 +24,7 @@ import {
   getUserPublications,
   getUserSearches,
   removeUserLibraryItem,
+  updateUserProfile,
 } from '@data-access';
 
 export const MENU_ITEMS = ['profile', ...LIBRARY_ITEMS] as const;
@@ -37,11 +38,18 @@ interface ProfileContextState {
   activeMenu: MenuItem;
   pageTitle: string;
   dataClient?: DataClient;
-  setPageTitle: (title: string) => void;
-  removeItem: (uuid: string) => Promise<boolean>;
-  refreshCache: (key: LibraryItemType) => Promise<void>;
-  updateCache: (key: LibraryItemType, items: unknown[]) => void;
   onMenuChange: (menu: MenuItem) => void;
+  refreshCache: (key: LibraryItemType) => Promise<void>;
+  refreshProfile: () => Promise<void>;
+  removeItem: (uuid: string) => Promise<boolean>;
+  saveProfile: (params: {
+    avatar?: string;
+    name?: string;
+    username?: string;
+    subscriptions: SubscriptionType[];
+  }) => Promise<boolean>;
+  setPageTitle: (title: string) => void;
+  updateCache: (key: LibraryItemType, items: unknown[]) => void;
 }
 
 export const ProfileContext = createContext<ProfileContextState>({
@@ -58,7 +66,13 @@ export const ProfileContext = createContext<ProfileContextState>({
   removeItem: async () => {
     throw new Error('useProfileContext must be used within a ProfileProvider');
   },
+  refreshProfile: async () => {
+    throw new Error('useProfileContext must be used within a ProfileProvider');
+  },
   refreshCache: async () => {
+    throw new Error('useProfileContext must be used within a ProfileProvider');
+  },
+  saveProfile: async () => {
     throw new Error('useProfileContext must be used within a ProfileProvider');
   },
   setPageTitle: () => {
@@ -211,12 +225,49 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     [dataClient, user, updateCache],
   );
 
-  useEffect(() => {
-    (async () => {
-      const user = await getUser();
-      setUser(user || undefined);
-    })();
+  const refreshProfile = useCallback(async () => {
+    const user = await getUser();
+    setUser(user || undefined);
   }, [getUser]);
+
+  const saveProfile = useCallback(
+    async ({
+      avatar,
+      name,
+      username,
+      subscriptions,
+    }: {
+      avatar?: string;
+      name?: string;
+      username?: string;
+      subscriptions: SubscriptionType[];
+    }) => {
+      if (!dataClient || !user) {
+        return false;
+      }
+
+      const success = await updateUserProfile({
+        client: dataClient,
+        userId: user.id,
+        ...user,
+        avatar,
+        name,
+        username,
+        subscriptions,
+      });
+
+      if (success) {
+        await refreshProfile();
+      }
+
+      return success;
+    },
+    [dataClient, user, refreshProfile],
+  );
+
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
 
   useEffect(() => {
     refreshCache();
@@ -239,7 +290,9 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         pageTitle,
         dataClient,
         removeItem,
+        refreshProfile,
         refreshCache,
+        saveProfile,
         setPageTitle,
         updateCache,
         onMenuChange,
