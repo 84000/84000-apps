@@ -190,7 +190,6 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
             client: dataClient,
             uuids,
           });
-          console.log(fetchedItems);
           break;
         case 'searches':
           fetchedItems = await getUserSearches({

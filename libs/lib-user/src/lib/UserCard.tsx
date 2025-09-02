@@ -106,7 +106,6 @@ export const UserCard = () => {
             accept="image/*"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              console.log('Selected file:', file);
               if (file) {
                 setAvatar(URL.createObjectURL(file));
                 setLocalFile(file);
