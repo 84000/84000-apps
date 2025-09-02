@@ -174,3 +174,13 @@ export const signUpWithEmail = async ({
     throw error;
   }
 };
+
+export const deleteAccount = async ({ client }: { client: DataClient }) => {
+  const { error } = await client.rpc('scholar_account_delete');
+  if (error) {
+    console.error(`Failed to delete account: ${error.message}`);
+    throw error;
+  }
+
+  await logout({ client });
+};

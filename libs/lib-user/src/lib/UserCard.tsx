@@ -20,7 +20,7 @@ import { UploadIcon, UserIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 } from 'uuid';
 import { useProfile } from './ProfileProvider';
-import { updateUserProfile } from '@data-access';
+import { updateUserProfile, uploadToStorage } from '@data-access';
 
 export const UserCard = () => {
   const { user, dataClient, refreshProfile } = useProfile();
@@ -44,19 +44,17 @@ export const UserCard = () => {
 
     const ext = localFile.name.split('.').pop();
     const filePath = `${user.id}-${v4()}.${ext}`;
+    const avatarUrl = await uploadToStorage({
+      client: dataClient,
+      bucket: 'avatars',
+      path: filePath,
+      file: localFile,
+    });
 
-    const { error: uploadError } = await dataClient.storage
-      .from('avatars')
-      .upload(filePath, localFile);
-
-    if (uploadError) {
-      console.error('Error uploading avatar:', uploadError);
+    if (!avatarUrl) {
       clearFile();
       return;
     }
-
-    const avatarUrl = dataClient.storage.from('avatars').getPublicUrl(filePath)
-      .data.publicUrl;
 
     await updateUserProfile({
       client: dataClient,

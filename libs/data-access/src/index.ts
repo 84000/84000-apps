@@ -6,4 +6,5 @@ export * from './lib/glossary';
 export * from './lib/library';
 export * from './lib/projects';
 export * from './lib/publications';
+export * from './lib/storage';
 export * from './lib/types';

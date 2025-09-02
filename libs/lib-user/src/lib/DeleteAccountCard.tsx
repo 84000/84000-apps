@@ -16,7 +16,7 @@ import {
 } from '@design-system';
 import { useProfile } from './ProfileProvider';
 import { useCallback, useState } from 'react';
-import { logout } from '@data-access';
+import { deleteAccount } from '@data-access';
 import { useRouter } from 'next/navigation';
 
 const DELETE_TITLE = 'Delete Account';
@@ -29,14 +29,13 @@ export const DeleteAccountCard = () => {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
-  const deleteAccount = useCallback(async () => {
+  const onDeleteAccount = useCallback(async () => {
     if (!user?.id || !dataClient) {
       return;
     }
 
+    await deleteAccount({ client: dataClient });
     setIsOpen(false);
-    // TODO: actully delete the user's account and data
-    logout({ client: dataClient });
     router.push('/');
   }, [user?.id, dataClient, router]);
 
@@ -75,7 +74,7 @@ export const DeleteAccountCard = () => {
                 <Button
                   variant="destructive"
                   className="rounded-full"
-                  onClick={deleteAccount}
+                  onClick={onDeleteAccount}
                 >
                   Delete
                 </Button>
