@@ -26,7 +26,7 @@ export const useBlockEditor = ({
 }) => {
   const editor = useEditor({
     extensions,
-    immediatelyRender: true,
+    immediatelyRender: false,
     shouldRerenderOnTransaction: false,
     autofocus: true,
     editable: isEditable,

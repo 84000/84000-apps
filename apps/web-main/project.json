@@ -1,7 +1,7 @@
 {
   "name": "web-main",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "app/web-main",
+  "sourceRoot": "apps/web-main",
   "projectType": "application",
   "tags": [],
   "// targets": "to see all targets run: nx show project web-main --web",
