@@ -30,6 +30,7 @@ export const DataTable = <T extends DataTableRow>({
   sorting,
   pagination,
   globalFilter,
+  className,
   filters,
 }: {
   name: string;
@@ -39,6 +40,7 @@ export const DataTable = <T extends DataTableRow>({
   sorting?: SortingState;
   pagination?: PaginationState;
   globalFilter?: string;
+  className?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
 }) => {
   const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
@@ -75,9 +77,18 @@ export const DataTable = <T extends DataTableRow>({
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {filters && filters(table)}
-      <FilterResultsBanner table={table} name={name} />
-      <div className="overflow-hidden rounded-2xl border shadow-md">
+      {filters && (
+        <>
+          {filters(table)}
+          <FilterResultsBanner table={table} name={name} />
+        </>
+      )}
+      <div
+        className={cn(
+          'overflow-hidden rounded-2xl border shadow-md',
+          className,
+        )}
+      >
         <Table>
           <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -127,7 +138,7 @@ export const DataTable = <T extends DataTableRow>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  No {name ? name : 'results'}.
                 </TableCell>
               </TableRow>
             )}

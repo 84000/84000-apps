@@ -9,7 +9,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        default:
+          'rounded-full bg-gradient-to-b from-brick-400 to-brick-800 text-secondary font-light hover:text-secondary hover:from-brick-800 hover:to-brick-400 transition-colors',
+        active: 'bg-sidebar-accent text-sidebar-accent-foreground font-bold',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
@@ -42,6 +44,19 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
+
+    if (!variant || variant === 'default') {
+      return (
+        <div className="p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
+          <Comp
+            className={cn(buttonVariants({ variant, size, className }))}
+            ref={ref}
+            {...props}
+          />
+        </div>
+      );
+    }
+
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

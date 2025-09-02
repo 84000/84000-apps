@@ -5,6 +5,10 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { Button } from '../../Button/Button';
 import { PaginationEllipsis } from '../PaginationEllipsis/PaginationEllipsis';
 
+// if there are fewer than MIN_PAGES, don't show pagination
+const MIN_PAGES = 2;
+
+// settings that control how many page buttons to show
 const PAGINATION_THRESH = 3;
 const PAGINATION_REMAINDER_THRESH = PAGINATION_THRESH - 1;
 
@@ -34,6 +38,10 @@ export const TablePagination = <T extends RowData>({
     page + PAGINATION_REMAINDER_THRESH < totalPages
   ) {
     pagesToShow.push(page + PAGINATION_REMAINDER_THRESH);
+  }
+
+  if (totalPages < MIN_PAGES) {
+    return null;
   }
 
   return (

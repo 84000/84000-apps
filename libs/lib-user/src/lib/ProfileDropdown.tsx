@@ -1,18 +1,23 @@
+'use client';
+
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
   Avatar,
   AvatarFallback,
   AvatarImage,
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@design-system';
 import { ScholarUser } from './types';
-import { UserIcon } from 'lucide-react';
+import { LogOutIcon, UserIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export const ProfileDropdown = ({
   user,
@@ -21,6 +26,8 @@ export const ProfileDropdown = ({
   user: ScholarUser;
   handleLogout: () => void;
 }) => {
+  const router = useRouter();
+
   return (
     <div className="relative h-full flex flex-col items-end justify-center">
       <DropdownMenu>
@@ -33,31 +40,87 @@ export const ProfileDropdown = ({
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+          className="w-[--radix-dropdown-menu-trigger-width] min-w-80 rounded-lg"
           side="bottom"
           align="end"
           sideOffset={4}
         >
-          <DropdownMenuLabel className="p-0 font-normal">
-            <div className="flex space-x-2 p-2">
-              <Avatar className="h-8 w-8">
+          <DropdownMenuLabel className="p-3">
+            <div className="flex gap-3">
+              <Avatar className="size-10">
                 <AvatarImage src={user?.avatar} />
                 <AvatarFallback>
                   <UserIcon />
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="flex flex-col justify-between">
+                <span className="truncate font-normal">{user.name}</span>
+                <span className="truncate font-normal text-muted-foreground">
+                  {user.email}
+                </span>
               </div>
             </div>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <Button className="p-0" variant={'ghost'} onClick={handleLogout}>
-                Sign Out
-              </Button>
+            <DropdownMenuItem
+              className="hover:cursor-pointer"
+              onClick={() => router.push('/profile')}
+            >
+              <span className="w-full p-1 text-left">My Profile</span>
+            </DropdownMenuItem>
+            <Accordion
+              defaultValue="library"
+              type="single"
+              collapsible
+              className="w-full p-1"
+            >
+              <AccordionItem value="library">
+                <AccordionTrigger className="w-full p-2 text-left hover:cursor-pointer hover:no-underline focus-visible:no-underline">
+                  My Library
+                </AccordionTrigger>
+                <AccordionContent className="ml-4 text-sm">
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => router.push('/profile/publications')}
+                  >
+                    Publications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => router.push('/profile/passages')}
+                  >
+                    Passages
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => router.push('/profile/glossaries')}
+                  >
+                    Glossaries
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => router.push('/profile/bibliographies')}
+                  >
+                    Bibliographies
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => router.push('/profile/searches')}
+                  >
+                    Searches
+                  </DropdownMenuItem>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            <DropdownMenuItem
+              className="hover:cursor-pointer"
+              onClick={handleLogout}
+            >
+              <div className="w-full p-1 flex justify-between">
+                <div>Sign Out</div>
+                <LogOutIcon className="size-5" />
+              </div>
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

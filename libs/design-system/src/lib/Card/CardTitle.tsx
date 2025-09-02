@@ -7,10 +7,7 @@ export function CardTitle({
   return (
     <div
       data-slot="card-title"
-      className={cn(
-        'text-2xl font-semibold leading-none tracking-tight',
-        className,
-      )}
+      className={cn('text-xl font-semibold leading-none', className)}
       {...props}
     />
   );

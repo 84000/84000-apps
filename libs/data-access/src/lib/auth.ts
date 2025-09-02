@@ -40,18 +40,33 @@ export const getUser = async ({ client }: { client: DataClient }) => {
 
   const { id, email, user_metadata: metadata } = user;
   const { name, picture } = metadata;
-  if (id && email) {
-    return {
-      id,
-      email,
-      username: email,
-      name,
-      avatar: picture,
-      role,
-    };
+
+  if (!id || !email) {
+    return null;
   }
 
-  return null;
+  const { error, data } = await client
+    .from('user_profiles')
+    .select('username, fullName:full_name, avatar:avatar_url, subscriptions')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.warn(`Failed to fetch user profile: ${error.message}`);
+  }
+
+  const { username, fullName, avatar, subscriptions } = data || {};
+  const subsArray = Array.isArray(subscriptions) ? subscriptions : [];
+
+  return {
+    id,
+    email,
+    username: username || email,
+    name: fullName || name,
+    avatar: avatar || picture,
+    role,
+    subscriptions: subsArray,
+  };
 };
 
 export const loginWithGoogle = async ({
@@ -158,4 +173,14 @@ export const signUpWithEmail = async ({
     console.error(`Failed to sign up with email: ${error.message}`);
     throw error;
   }
+};
+
+export const deleteAccount = async ({ client }: { client: DataClient }) => {
+  const { error } = await client.rpc('scholar_account_delete');
+  if (error) {
+    console.error(`Failed to delete account: ${error.message}`);
+    throw error;
+  }
+
+  await logout({ client });
 };

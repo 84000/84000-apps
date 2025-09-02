@@ -1,14 +1,15 @@
+import { cn } from '@lib-utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../Tooltip/Tooltip';
 
 export const TooltipCell = ({
-  className: classNamse,
+  className,
   content,
 }: {
-  className: string;
+  className?: string;
   content: string;
 }) => {
   return (
-    <div className={classNamse}>
+    <div className={cn('w-full', className)}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="truncate">{content}</div>

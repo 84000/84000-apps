@@ -11,8 +11,10 @@ import {
 
 export const getAllGlossaryTerms = async ({
   client,
+  uuids,
 }: {
   client: DataClient;
+  uuids?: string[];
 }): Promise<GlossaryLandingItem[]> => {
   const pageSize = 1000;
   let start = 0;
@@ -21,9 +23,13 @@ export const getAllGlossaryTerms = async ({
   const terms: GlossaryLandingItem[] = [];
 
   while (count === pageSize) {
-    const { data, error } = await client
-      .rpc('scholar_glossary_get_all')
-      .range(start, end);
+    let rpc = client.rpc('scholar_glossary_get_all');
+
+    if (uuids?.length) {
+      rpc = rpc.in('authority_uuid', uuids);
+    }
+
+    const { data, error } = await rpc.range(start, end);
 
     if (error) {
       console.error('Error fetching glossary terms:', error);

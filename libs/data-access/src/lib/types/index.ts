@@ -10,6 +10,7 @@ export * from './glossary';
 export * from './glossary-page';
 export * from './imprint';
 export * from './language';
+export * from './library';
 export * from './passage';
 export * from './project';
 export * from './semver';
