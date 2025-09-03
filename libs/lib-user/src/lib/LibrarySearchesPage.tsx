@@ -20,7 +20,7 @@ type RowType = DataTableRow & {
 const Header = SortableHeader<RowType>;
 
 const CLASS_NAME_FOR_COL: { [key: string]: string } = {
-  name: 'w-[20% max-w-[6rem] hover:cursor-default',
+  name: 'w-[20%] max-w-[6rem] hover:cursor-default',
   query: 'w-[70%] max-w-[8rem] hover:cursor-default',
   remove: 'w-[5%] max-w-[4rem]',
   open: 'w-[5%] max-w-[4rem]',

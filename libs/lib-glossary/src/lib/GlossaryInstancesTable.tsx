@@ -14,18 +14,19 @@ import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import { GlossaryInstanceRow } from './types';
+import { parseToh } from '@lib-utils';
 
 type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 
 const GlossaryInstanceHeader = SortableHeader<GlossaryInstanceRow>;
 
 const CLASS_NAME_FOR_COL = {
-  english: 'lg:w-[12rem] w-[6rem]',
-  tibetan: 'lg:w-[12rem] w-[6rem]',
-  sanskrit: 'lg:w-[12rem] w-[6rem]',
-  toh: 'xl:w-[8rem] md:w-[4rem] w-[3rem]',
-  canon: 'xl:w-[24rem] w-[16rem] truncate',
-  creators: 'xl:w-[16rem] lg:w-[12rem] md:w-[8rem] w-[4rem]',
+  english: 'w-[12%] max-w-[5rem]',
+  tibetan: 'w-[12%] max-w-[5rem]',
+  sanskrit: 'w-[12%] max-w-[5rem]',
+  toh: 'w-[12%] max-w-[3rem]',
+  canon: 'w-[40%] max-w-[5rem]',
+  creators: 'w-[12%] max-w-[6rem]',
 };
 
 export const GlossaryInstancesTable = ({
@@ -49,12 +50,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="English" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.english}
-          content={row.original.english}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.english} />,
       onCellClick,
     },
     {
@@ -64,12 +60,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="Tibetan" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.tibetan}
-          content={row.original.tibetan}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.tibetan} />,
       onCellClick,
     },
     {
@@ -79,12 +70,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="Sanskrit" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.sanskrit}
-          content={row.original.sanskrit}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.sanskrit} />,
       onCellClick,
     },
     {
@@ -94,12 +80,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="Toh" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.toh}
-          content={row.original.toh}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.toh} />,
       onCellClick,
     },
     {
@@ -114,12 +95,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="Canon" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.canon}
-          content={row.original.canon}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.canon} />,
       onCellClick,
     },
     {
@@ -130,12 +106,7 @@ export const GlossaryInstancesTable = ({
       header: ({ column }) => (
         <GlossaryInstanceHeader column={column} name="Creators" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASS_NAME_FOR_COL.creators}
-          content={row.original.creators}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.creators} />,
       onCellClick,
     },
   ];
@@ -143,7 +114,7 @@ export const GlossaryInstancesTable = ({
   const rows = detail.relatedInstances.map((instance) => {
     return {
       uuid: instance.workUuid,
-      toh: instance.toh || '',
+      toh: parseToh(instance.toh || ''),
       definition: instance.definition || '',
       canon: instance.canon || '',
       creators: instance.creators.join(', '),
