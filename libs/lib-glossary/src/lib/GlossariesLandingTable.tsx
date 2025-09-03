@@ -18,11 +18,12 @@ export type GlossariesLandingColumn = DataTableColumn<GlossariesLandingRow>;
 const GlossariesLandingHeader = SortableHeader<GlossariesLandingRow>;
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
-  headword: 'xl:w-[16rem] w-[8rem] truncate',
-  language: 'w-[3rem] truncate capitalize',
-  type: 'w-[3rem] truncate capitalize',
-  variants: '2xl:w-[48rem] lg:w-[36rem] md:w-[18rem] w-[8rem]',
-  numGlossaryEntries: 'w-[3rem]',
+  headword: 'w-[15%] max-w-[8rem] truncate',
+  language: 'w-[5%] max-w-[12rem] truncate capitalize',
+  type: 'w-[5%] max-w-[6rem] truncate capitalize',
+  variants: 'w-[18%] max-w-[10rem] truncate',
+  definition: 'w-[55%] max-w-[8rem] truncate',
+  numGlossaryEntries: 'w-[2%] max-w-[6rem]',
 };
 
 const filterFn = defaultFilterFn<GlossariesLandingRow>;
@@ -55,12 +56,7 @@ export const GlossariesLandingTable = ({
       header: ({ column }) => (
         <GlossariesLandingHeader column={column} name="Headword" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.headword}
-          content={row.original.headword}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.headword} />,
     },
     {
       id: 'language',
@@ -69,14 +65,9 @@ export const GlossariesLandingTable = ({
       onCellClick,
       filterFn,
       header: ({ column }) => (
-        <GlossariesLandingHeader column={column} name="Language" />
+        <GlossariesLandingHeader column={column} name="Headword Language" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.language}
-          content={row.original.language}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.language} />,
     },
     {
       id: 'type',
@@ -87,12 +78,7 @@ export const GlossariesLandingTable = ({
       header: ({ column }) => (
         <GlossariesLandingHeader column={column} name="Type" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.type}
-          content={row.original.type}
-        />
-      ),
+      cell: ({ row }) => <TooltipCell content={row.original.type} />,
     },
     {
       id: 'nameVariants',
@@ -100,14 +86,24 @@ export const GlossariesLandingTable = ({
       className: CLASSNAME_FOR_COL.variants,
       onCellClick,
       header: ({ column }) => (
-        <GlossariesLandingHeader column={column} name="Variants" />
+        <GlossariesLandingHeader column={column} name="Name Variants" />
       ),
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.variants}
-          content={row.original.nameVariants}
-        />
+      cell: ({ row }) => <TooltipCell content={row.original.nameVariants} />,
+    },
+    {
+      id: 'definition',
+      accessorKey: 'definition',
+      className: CLASSNAME_FOR_COL.definition,
+      onCellClick,
+      header: ({ column }) => (
+        <GlossariesLandingHeader column={column} name="Definition" />
       ),
+      cell: ({ row }) =>
+        row.original.definition ? (
+          <TooltipCell content={row.original.definition || ''} />
+        ) : (
+          ''
+        ),
     },
     {
       id: 'numGlossaryEntries',
@@ -123,10 +119,6 @@ export const GlossariesLandingTable = ({
         </span>
       ),
     },
-    {
-      id: 'definition',
-      accessorKey: 'definition',
-    },
   ];
   const rows: GlossariesLandingRow[] = terms;
 
@@ -135,7 +127,7 @@ export const GlossariesLandingTable = ({
       name="terms"
       columns={columns}
       data={rows}
-      visibility={{ uuid: false, definition: false }}
+      visibility={{ uuid: false }}
       sorting={[{ id: 'headword', desc: false }]}
       filters={(table) => (
         <GlossariesLandingFilters
