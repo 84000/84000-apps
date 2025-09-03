@@ -8,7 +8,7 @@ import {
 } from '@design-system';
 import { useEffect, useState } from 'react';
 import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
-import { SLUG_PATHS } from './constants';
+import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
 
 export const EditorPage = ({
   slug,
@@ -22,14 +22,14 @@ export const EditorPage = ({
 
   useEffect(() => {
     if (!slug || !format) {
-      setContent({});
+      setContent(EMPTY_DOCUMENT);
       setEditorType('block');
       return;
     }
 
     (async () => {
       const { type, content } = SLUG_PATHS[slug]?.[format] || {
-        content: {},
+        content: EMPTY_DOCUMENT,
         type: 'block',
       };
       setContent(content);
