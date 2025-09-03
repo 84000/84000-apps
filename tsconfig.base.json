@@ -22,11 +22,12 @@
       "@lib-canon": ["libs/lib-canon/src/index.ts"],
       "@lib-canon/ssr": ["libs/lib-canon/src/ssr.ts"],
       "@lib-editing": ["libs/lib-editing/src/index.ts"],
+      "@lib-editing/fixtures/*": ["libs/lib-editing/src/fixtures/*"],
+      "@lib-glossary": ["libs/lib-glossary/src/index.ts"],
+      "@lib-glossary/ssr": ["libs/lib-glossary/src/ssr.ts"],
       "@lib-user": ["libs/lib-user/src/index.ts"],
       "@lib-user/ssr": ["libs/lib-user/src/ssr.ts"],
-      "@lib-utils": ["libs/lib-utils/src/index.ts"],
-      "@lib-glossary": ["libs/lib-glossary/src/index.ts"],
-      "@lib-glossary/ssr": ["libs/lib-glossary/src/ssr.ts"]
+      "@lib-utils": ["libs/lib-utils/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
