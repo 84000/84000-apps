@@ -18,11 +18,11 @@ export type GlossariesLandingColumn = DataTableColumn<GlossariesLandingRow>;
 const GlossariesLandingHeader = SortableHeader<GlossariesLandingRow>;
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
-  headword: 'w-[15%] max-w-[8rem] truncate',
-  language: 'w-[5%] max-w-[12rem] truncate capitalize',
-  type: 'w-[5%] max-w-[6rem] truncate capitalize',
-  variants: 'w-[18%] max-w-[10rem] truncate',
-  definition: 'w-[55%] max-w-[8rem] truncate',
+  headword: 'w-[15%] max-w-[8rem]',
+  language: 'w-[5%] max-w-[12rem]',
+  type: 'w-[5%] max-w-[6rem]',
+  variants: 'w-[18%] max-w-[10rem]',
+  definition: 'w-[55%] max-w-[8rem]',
   numGlossaryEntries: 'w-[2%] max-w-[6rem]',
 };
 
@@ -67,7 +67,9 @@ export const GlossariesLandingTable = ({
       header: ({ column }) => (
         <GlossariesLandingHeader column={column} name="Headword Language" />
       ),
-      cell: ({ row }) => <TooltipCell content={row.original.language} />,
+      cell: ({ row }) => (
+        <TooltipCell className="capitalize" content={row.original.language} />
+      ),
     },
     {
       id: 'type',
@@ -78,7 +80,9 @@ export const GlossariesLandingTable = ({
       header: ({ column }) => (
         <GlossariesLandingHeader column={column} name="Type" />
       ),
-      cell: ({ row }) => <TooltipCell content={row.original.type} />,
+      cell: ({ row }) => (
+        <TooltipCell className="capitalize" content={row.original.type} />
+      ),
     },
     {
       id: 'nameVariants',
