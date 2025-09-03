@@ -1,3 +1,7 @@
+import { EditorType } from '../types';
+
+export const type: EditorType = 'translation';
+
 export const content = {
   type: 'translation',
   content: [

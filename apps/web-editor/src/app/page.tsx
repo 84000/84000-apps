@@ -1,10 +1,5 @@
-'use client';
+import { EditorPage } from '../components/EditorPage';
 
-import { TranslationEditor } from '@design-system';
-import { content } from '@lib-editing/fixtures/basic/json';
-
-const Page = () => {
-  return <TranslationEditor content={content} />;
-};
+const Page = EditorPage;
 
 export default Page;
