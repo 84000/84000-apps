@@ -39,7 +39,6 @@ export const EditorPage = ({
       if (format === 'passages') {
         const dtos = content as PassageDTO[];
         const passages = translationBodyFromDTO(dtos);
-        console.log(JSON.stringify(passages, null, 2));
         parsedContent = blocksFromTranslationBody(passages);
       }
 
