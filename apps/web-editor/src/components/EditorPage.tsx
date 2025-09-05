@@ -7,8 +7,10 @@ import {
   TranslationEditorContent,
 } from '@design-system';
 import { useEffect, useState } from 'react';
+import { blocksFromTranslationBody } from '@lib-editing';
 import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
 import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
+import { PassageDTO, translationBodyFromDTO } from '@data-access';
 
 export const EditorPage = ({
   slug,
@@ -32,7 +34,15 @@ export const EditorPage = ({
         content: EMPTY_DOCUMENT,
         type: 'block',
       };
-      setContent(content);
+
+      let parsedContent = content;
+      if (format === 'passages') {
+        const dtos = content as PassageDTO[];
+        const passages = translationBodyFromDTO(dtos);
+        parsedContent = blocksFromTranslationBody(passages);
+      }
+
+      setContent(parsedContent);
       setEditorType(type);
     })();
   }, [slug, format]);

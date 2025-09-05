@@ -52,9 +52,16 @@ export type HasAbbreviationAnnotation = AnnotationBase & {
   type: 'hasAbbreviation';
 };
 
+export type HeadingClass =
+  | 'section-label'
+  | 'section-title'
+  | 'supplementary'
+  | 'table-label';
+
 export type HeadingAnnotation = AnnotationBase & {
   type: 'heading';
   level: number;
+  class?: HeadingClass;
 };
 
 export type ImageAnnotation = AnnotationBase & {
@@ -156,21 +163,28 @@ export type UnknownAnnotation = AnnotationBase & {
 };
 
 export type AnnotationDTOContentKey =
+  | 'endnote_xmlId'
+  | 'glossary_xmlId'
   | 'heading-level'
+  | 'heading-type'
   | 'href'
   | 'label'
   | 'lang'
   | 'link-text'
+  | 'link-text-lookup'
   | 'link-type'
   | 'media-type'
   | 'paragraph'
+  | 'quote_xmlId'
   | 'src'
   | 'text-style'
   | 'type'
   | 'title'
   | 'uuid';
 
-export type AnnotationDTOContent = Record<AnnotationDTOContentKey, unknown>;
+export type AnnotationDTOContent = Partial<
+  Record<AnnotationDTOContentKey, unknown>
+>;
 
 export type AnnotationDTO = {
   content: AnnotationDTOContent[];
@@ -294,7 +308,6 @@ const dtoToAnnotationMap: Record<
   'has-abbreviation': (dto: AnnotationDTO): HasAbbreviationAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as HasAbbreviationAnnotation;
   },
   heading: (dto: AnnotationDTO): HeadingAnnotation => {
@@ -305,6 +318,10 @@ const dtoToAnnotationMap: Record<
         const levelStr = headerStr.replace('h', '');
         const level = parseInt(levelStr, 10);
         heading.level = level;
+      }
+
+      if (content['heading-type']) {
+        heading.class = content['heading-type'] as HeadingClass;
       }
     });
 
@@ -361,19 +378,16 @@ const dtoToAnnotationMap: Record<
   'leading-space': (dto: AnnotationDTO) => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as LeadingSpaceAnnotation;
   },
   line: (dto: AnnotationDTO): LineAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as LineAnnotation;
   },
   'line-group': (dto: AnnotationDTO): LineGroupAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as LineGroupAnnotation;
   },
   link: (dto: AnnotationDTO): LinkAnnotation => {
@@ -393,13 +407,11 @@ const dtoToAnnotationMap: Record<
   list: (dto: AnnotationDTO): ListAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as ListAnnotation;
   },
   'list-item': (dto: AnnotationDTO): ListItemAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as ListItemAnnotation;
   },
   mantra: (dto: AnnotationDTO): MantraAnnotation => {
@@ -414,7 +426,6 @@ const dtoToAnnotationMap: Record<
   paragraph: (dto: AnnotationDTO): ParagraphAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as ParagraphAnnotation;
   },
   quote: (dto: AnnotationDTO): QuoteAnnotation => {
@@ -440,7 +451,6 @@ const dtoToAnnotationMap: Record<
   reference: (dto: AnnotationDTO): ReferenceAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as ReferenceAnnotation;
   },
   span: (dto: AnnotationDTO): SpanAnnotation => {
@@ -459,31 +469,26 @@ const dtoToAnnotationMap: Record<
   'table-body-data': (dto: AnnotationDTO): TableBodyDataAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as TableBodyDataAnnotation;
   },
   'table-body-header': (dto: AnnotationDTO): TableBodyHeaderAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as TableBodyHeaderAnnotation;
   },
   'table-body-row': (dto: AnnotationDTO): TableBodyRowAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as TableBodyRowAnnotation;
   },
   trailer: (dto: AnnotationDTO): TrailerAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as TrailerAnnotation;
   },
   unknown: (dto: AnnotationDTO): UnknownAnnotation => {
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
     } as UnknownAnnotation;
   },
 };
@@ -495,7 +500,6 @@ export const annotationFromDTO = (dto: AnnotationDTO): Annotation => {
     console.warn(dto);
     return {
       ...baseAnnotationFromDTO(dto),
-      content: [],
       type: 'unknown',
     } as UnknownAnnotation;
   }

@@ -36,7 +36,6 @@ export const splitBlock: Transformer = ({
     return;
   }
 
-  // Inclusive annotation bounds
   const annStart = annotation?.start ?? 0;
   const annEnd = annotation?.end ?? 0;
 
