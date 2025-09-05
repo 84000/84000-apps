@@ -1,3 +1,4 @@
+import { removeHtmlTags } from '@lib-utils';
 import { TohokuCatalogEntry } from './front-matter';
 import {
   ExtendedTranslationLanguage,
@@ -102,7 +103,7 @@ export const glossaryLandingItemFromDTO = (
     return null;
   }
 
-  const definition = dto.definition?.replace(/<[^>]*>/g, '').trim() || '';
+  const definition = removeHtmlTags(dto.definition || '');
   const language = dto.headword_language
     ? displayLanguageForTranslationLanguage(dto.headword_language)
     : '';
