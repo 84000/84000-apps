@@ -19,10 +19,9 @@ export function splitNode(
 ): SplitBlock {
   const itemStart = item.attrs?.start ?? 0;
   const text = item.text ?? '';
-  // Inclusive end: the last character is at itemEnd - 1, so itemEnd should be itemStart + text.length - 1
   const itemEnd =
     typeof item.text === 'string'
-      ? itemStart + text.length - 1
+      ? itemStart + text.length
       : (item.attrs?.end ?? itemStart);
 
   // Non-text blocks: treat atomically
@@ -45,13 +44,9 @@ export function splitNode(
     return { prefix: [], middle: [], suffix: [item] };
   }
 
-  // Compute indices for slicing (inclusive)
-  // preLen: up to (rangeStart - itemStart)
-  // midLen: from (rangeStart - itemStart) to (rangeEnd - itemStart + 1)
-  // postLen: after (rangeEnd - itemStart + 1)
   const preLen = Math.max(rangeStart - itemStart, 0);
   const midLen = Math.max(
-    Math.min(itemEnd, rangeEnd) - Math.max(itemStart, rangeStart) + 1,
+    Math.min(itemEnd, rangeEnd) - Math.max(itemStart, rangeStart),
     0,
   );
   const postStartIdx = preLen + midLen;

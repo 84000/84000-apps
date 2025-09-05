@@ -25,7 +25,6 @@ export const splitContent: Transformer = ({
     return;
   }
 
-  // Inclusive annotation bounds
   const annStartAbs = annotation.start;
   const annEndAbs = annotation.end;
   const currentContent = parent.content || [];
@@ -61,7 +60,6 @@ export const splitContent: Transformer = ({
     newContent.push(newBlock);
   }
 
-  // Sort by inclusive start offset
   newContent.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
   parent.content = newContent;
 };
