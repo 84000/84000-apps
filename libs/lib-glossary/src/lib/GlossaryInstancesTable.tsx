@@ -14,7 +14,7 @@ import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import { GlossaryInstanceRow } from './types';
-import { parseToh } from '@lib-utils';
+import { parseToh, removeHtmlTags } from '@lib-utils';
 
 type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 
@@ -22,10 +22,11 @@ const GlossaryInstanceHeader = SortableHeader<GlossaryInstanceRow>;
 
 const CLASS_NAME_FOR_COL = {
   english: 'w-[12%] max-w-[5rem]',
-  tibetan: 'w-[12%] max-w-[5rem]',
-  sanskrit: 'w-[12%] max-w-[5rem]',
-  toh: 'w-[12%] max-w-[3rem]',
-  canon: 'w-[40%] max-w-[5rem]',
+  tibetan: 'w-[10%] max-w-[5rem]',
+  sanskrit: 'w-[10%] max-w-[5rem]',
+  toh: 'w-[8%] max-w-[3rem]',
+  canon: 'w-[24%] max-w-[5rem]',
+  definition: 'w-[24%] max-w-[6rem]',
   creators: 'w-[12%] max-w-[6rem]',
 };
 
@@ -86,6 +87,12 @@ export const GlossaryInstancesTable = ({
     {
       id: 'definition',
       accessorKey: 'definition',
+      className: CLASS_NAME_FOR_COL.definition,
+      header: ({ column }) => (
+        <GlossaryInstanceHeader column={column} name="Definition" />
+      ),
+      cell: ({ row }) => <TooltipCell content={row.original.definition} />,
+      onCellClick,
     },
     {
       id: 'canon',
@@ -115,7 +122,7 @@ export const GlossaryInstancesTable = ({
     return {
       uuid: instance.workUuid,
       toh: parseToh(instance.toh || ''),
-      definition: instance.definition || '',
+      definition: removeHtmlTags(instance.definition || ''),
       canon: instance.canon || '',
       creators: instance.creators.join(', '),
       english: instance.english.join(', '),
@@ -137,7 +144,6 @@ export const GlossaryInstancesTable = ({
         }}
         visibility={{
           uuid: false,
-          definition: false,
         }}
         sorting={[{ id: 'toh', desc: false }]}
         filters={(table) => (
