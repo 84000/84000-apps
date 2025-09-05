@@ -1,4 +1,4 @@
-export const SLUGS = ['basic'];
+export const SLUGS = ['basic', 'toh251'];
 export type Slug = (typeof SLUGS)[number];
 
 export const FORMATS = ['json', 'passages', 'html', 'text'] as const;
