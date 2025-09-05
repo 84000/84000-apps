@@ -43,9 +43,10 @@ export type PassageDTO = {
   sort: number;
   type: BodyItemType;
   uuid: string;
-  work_uuid: string;
+  workUuid: string;
   xmlId?: string;
-  annotations?: AnnotationsDTO;
+  parent?: string;
+  annotations?: AnnotationsDTO | null;
 };
 
 export const passageFromDTO = (
@@ -58,7 +59,7 @@ export const passageFromDTO = (
     sort: dto.sort,
     type: dto.type,
     uuid: dto.uuid,
-    workUuid: dto.work_uuid,
+    workUuid: dto.workUuid,
     xmlId: dto.xmlId,
     annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
   };
