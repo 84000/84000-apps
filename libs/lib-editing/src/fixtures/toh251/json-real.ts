@@ -1,14 +1,13 @@
 /*
  * NOTE: this is the actual output of parsing. A separate document represents
  * the ideal output. Some obervations:
- * - There are some off-by-one errors in the end positions of some blocks. These
- *   exclusive end positions. The input is inclusive. Explore making this
- *   consistent.
+ * - There are some off-by-one errors in the end positions of some blocks. The
+ *   input is inclusive with the exception that an annotation can go one past the
+ *   end of passage content. The output is exclusive but should be inclusive. It
+ *   can correct the exceptions noted above.
  * - Some endNoteLinks appear to be in the wrong place. It may also make sense
  *   handle them differently, since they don't have text.
  * - The uuids for leading spaces and trailers are not tracked.
- * - Lines in verse have trailing spaces that are represented as text blocks.
- *   These may need to be trimmed.
  */
 
 import { TranslationEditorContent } from '@design-system';
@@ -30,7 +29,6 @@ export const content: TranslationEditorContent = [
         type: 'heading',
         attrs: {
           level: 2,
-          class: 'section-title',
           start: 0,
           end: 15,
           uuid: 'c4229046-ec92-4d1e-8bd2-ac9e860d0b64',
@@ -85,7 +83,6 @@ export const content: TranslationEditorContent = [
       type: 'translation',
       label: '1.2',
     },
-    // TODO: keep track of leading space annotation uuid
     content: [
       {
         type: 'paragraph',
@@ -115,7 +112,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '55532312-84c3-4ab9-9220-58b7598c8440',
+                  authority: 'f2a07704-3c71-4f05-8e6a-5d326406fae2',
                   uuid: '48b09ede-46cf-419a-9ec8-64c4a610b456',
                 },
               },
@@ -140,7 +137,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '86c17e77-82a6-4b77-bd21-3f012d36f1f5',
+                  authority: '7fc58f66-5fbb-4973-8744-f6589f8aae97',
                   uuid: '4ebf55f0-fddd-45e6-a9af-09997c6f96f5',
                 },
               },
@@ -194,7 +191,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: '73776d26-6858-413b-9d62-5ffe18a59e4c',
                 },
               },
@@ -248,7 +245,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: '93fb08c3-dabb-45e3-b9d6-05d40fb8df92',
                 },
               },
@@ -273,7 +270,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '71c3e498-a282-46c2-a1b2-09bff483deac',
+                  authority: '445f17ca-164b-4c68-82a3-f9f3ee3595b6',
                   uuid: '7cb61bc2-cf3c-4b28-a026-56062c3febce',
                 },
               },
@@ -327,7 +324,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: '1e14fa7b-adde-4991-8b26-3f4ff17ac243',
                 },
               },
@@ -352,7 +349,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '9861c4ef-4f1e-4332-bb65-01b36e4285a7',
+                  authority: '4049f21f-fa6c-4180-80f5-0750c14162da',
                   uuid: 'b720b5d4-3213-4638-b192-eb8e8dca8299',
                 },
               },
@@ -406,7 +403,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: '9be0ece5-da55-4d6d-934f-26149e9241ac',
                 },
               },
@@ -431,7 +428,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '64a50fd8-0fd0-4a50-a5f8-c081ba5ef861',
+                  authority: '3268038f-cca4-471a-94b3-13c62c85b7ca',
                   uuid: '247d0cd6-8f48-4e3d-8c70-ab5ddf7f1382',
                 },
               },
@@ -456,7 +453,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'c0488d9a-13cf-4890-bb99-957a44404c94',
+                  authority: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
                   uuid: 'bc10971b-913a-4a6b-b0cb-888310563c90',
                 },
               },
@@ -470,7 +467,6 @@ export const content: TranslationEditorContent = [
               end: 136,
             },
           },
-          // TODO: consider handling end notes differently since they don't have text
           {
             type: 'endNoteLink',
             attrs: {
@@ -521,7 +517,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: '85247b59-0ae2-4dc2-8f1d-fc7d43d18e04',
                 },
               },
@@ -546,7 +542,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: '54ba640b-1d20-454d-bff4-14becefbc904',
+                  authority: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
                   uuid: '9f5020c2-2a3f-4faa-8d83-e953dfb0b255',
                 },
               },
@@ -560,7 +556,6 @@ export const content: TranslationEditorContent = [
               end: 140,
             },
           },
-          // BUG: this should be one earlier
           {
             type: 'endNoteLink',
             attrs: {
@@ -611,7 +606,7 @@ export const content: TranslationEditorContent = [
               {
                 type: 'glossaryInstance',
                 attrs: {
-                  authority: 'a6c40c30-43ed-4634-9b0a-1d707dbc463f',
+                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
                   uuid: 'f78b3d56-2441-426f-ae87-8285bb46c82a',
                 },
               },
@@ -687,10 +682,9 @@ export const content: TranslationEditorContent = [
                 },
               },
             ],
-            // BUG: end should be 57
             attrs: {
               start: 0,
-              end: 56,
+              end: 57,
               uuid: '181a3584-20b8-4d6e-a0e5-c0ea733dbae6',
             },
           },
@@ -706,15 +700,6 @@ export const content: TranslationEditorContent = [
                 },
               },
               {
-                type: 'text',
-                text: ';',
-                attrs: {
-                  start: 102,
-                  end: 103,
-                },
-              },
-              // BUG: should be one earlier
-              {
                 type: 'endNoteLink',
                 attrs: {
                   start: 102,
@@ -724,22 +709,18 @@ export const content: TranslationEditorContent = [
                 },
                 marks: [],
               },
-              // BUG: text blocks should not be empty. This appears to be a quirk
-              // of verse, where the passages have spaces between lines. They must
-              // trimmed.
               {
                 type: 'text',
-                text: ' ',
+                text: '; ',
                 attrs: {
-                  start: 103,
+                  start: 102,
                   end: 104,
                 },
               },
             ],
             attrs: {
               start: 57,
-              // BUG: should be 104
-              end: 103,
+              end: 104,
               uuid: 'ca6b3880-1040-4920-b1ce-e80aa7e7bcd7',
             },
           },
@@ -765,7 +746,7 @@ export const content: TranslationEditorContent = [
                   {
                     type: 'glossaryInstance',
                     attrs: {
-                      authority: '64a50fd8-0fd0-4a50-a5f8-c081ba5ef861',
+                      authority: '3268038f-cca4-471a-94b3-13c62c85b7ca',
                       uuid: '79f4938e-df3c-40c8-a618-fa188a124517',
                     },
                   },
@@ -790,7 +771,7 @@ export const content: TranslationEditorContent = [
                   {
                     type: 'glossaryInstance',
                     attrs: {
-                      authority: 'c0488d9a-13cf-4890-bb99-957a44404c94',
+                      authority: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
                       uuid: 'dd65abe5-d658-40d9-820d-d9c427e40f5e',
                     },
                   },
@@ -807,7 +788,7 @@ export const content: TranslationEditorContent = [
             ],
             attrs: {
               start: 104,
-              end: 161, // BUG: should be 162
+              end: 162,
               uuid: '196aa179-8cea-4525-8a41-19eb0781312f',
             },
           },
@@ -833,7 +814,7 @@ export const content: TranslationEditorContent = [
                   {
                     type: 'glossaryInstance',
                     attrs: {
-                      authority: '9861c4ef-4f1e-4332-bb65-01b36e4285a7',
+                      authority: '4049f21f-fa6c-4180-80f5-0750c14162da',
                       uuid: '83d1bcb5-15ed-492b-a401-d59e7a0c0ad3',
                     },
                   },
@@ -850,7 +831,7 @@ export const content: TranslationEditorContent = [
             ],
             attrs: {
               start: 162,
-              end: 201, // NOTE: this is correct since the last line doesn't have trailing space
+              end: 201,
               uuid: 'cf054120-9398-4855-8c62-3677041041d4',
             },
           },
@@ -889,7 +870,7 @@ export const content: TranslationEditorContent = [
             ],
             attrs: {
               start: 0,
-              end: 52,
+              end: 53,
               uuid: '9b820bc7-def0-484e-bdd8-088d19e37b48',
             },
           },
@@ -915,7 +896,7 @@ export const content: TranslationEditorContent = [
                   {
                     type: 'glossaryInstance',
                     attrs: {
-                      authority: '54ba640b-1d20-454d-bff4-14becefbc904',
+                      authority: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
                       uuid: 'cc951a6e-3334-4f23-8727-8d1b9807e186',
                     },
                   },
@@ -932,7 +913,7 @@ export const content: TranslationEditorContent = [
             ],
             attrs: {
               start: 53,
-              end: 94,
+              end: 95,
               uuid: 'd65f874d-9d51-42f3-aa8d-60a200f566fd',
             },
           },
@@ -950,7 +931,7 @@ export const content: TranslationEditorContent = [
             ],
             attrs: {
               start: 95,
-              end: 133,
+              end: 134,
               uuid: '7defb520-391b-488f-8821-ab35d7fac408',
             },
           },
@@ -1020,7 +1001,6 @@ export const content: TranslationEditorContent = [
           start: 0,
           end: 62,
           uuid: 'de103c91-0bb2-4f90-9d98-c84718baecc9',
-          // NOTE: harTrailer loses the trailer annotation uuid
           hasTrailer: true,
         },
         content: [
