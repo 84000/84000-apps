@@ -40,16 +40,19 @@ export const CollaborativeBuilder = ({
     }
 
     const getContent = async () => {
+      if (!loading) {
+        return;
+      }
+
       const client = createBrowserClient();
       const body = await fetchContent({ client, uuid });
-
-      setLoading(false);
 
       if (!body) {
         return;
       }
 
       setBody(body);
+      setLoading(false);
     };
 
     setFragment(getFragment());

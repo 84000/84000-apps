@@ -17,13 +17,11 @@ export const Passage = ({ node, editor, updateAttributes }: NodeViewProps) => {
       {editor.isEditable ? (
         <input
           className={cn(className, 'px-1 placeholder:text-slate-100')}
-          contentEditable={false}
           value={node.attrs.label || ''}
           onChange={updateLabel}
           onBlur={updateLabel}
           placeholder="x.x"
           type="text"
-          autoFocus
           spellCheck={false}
         />
       ) : (
