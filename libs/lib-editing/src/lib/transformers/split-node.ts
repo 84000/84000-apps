@@ -24,23 +24,11 @@ export function splitNode(
       ? itemStart + text.length
       : (item.attrs?.end ?? itemStart);
 
-  // Non-text blocks: treat atomically
-  if (typeof item.text !== 'string') {
-    if (itemEnd < rangeStart) {
-      return { prefix: [item], middle: [], suffix: [] };
-    }
-    if (itemStart > rangeEnd) {
-      return { prefix: [], middle: [], suffix: [item] };
-    }
-    return { prefix: [], middle: [item], suffix: [] };
-  }
-
-  // Entirely before
-  if (itemEnd < rangeStart) {
+  if (itemEnd <= rangeStart) {
     return { prefix: [item], middle: [], suffix: [] };
   }
-  // Entirely after
-  if (itemStart > rangeEnd) {
+
+  if (itemStart >= rangeEnd) {
     return { prefix: [], middle: [], suffix: [item] };
   }
 

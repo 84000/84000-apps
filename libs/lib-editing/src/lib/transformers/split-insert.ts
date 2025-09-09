@@ -2,6 +2,19 @@ import { Transformer } from './transformer';
 import { splitNode } from './split-node';
 import { BlockEditorContentItem } from '@design-system';
 
+export const sort = (nodes: BlockEditorContentItem[]) => {
+  return nodes.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
+};
+
+export const insert = (
+  node: BlockEditorContentItem,
+  nodes: BlockEditorContentItem[],
+) => {
+  // unshift to prioritize new block when sorting
+  nodes.unshift(node);
+  return sort(nodes);
+};
+
 export const splitAndInsert: Transformer = (ctx) => {
   const { root, parent, block, annotation, transform } = ctx;
   const { start, end } = annotation;
@@ -30,13 +43,8 @@ export const splitAndInsert: Transformer = (ctx) => {
   };
   transform?.({ root, parent, block: newBlock, annotation });
 
-  if (start === block.attrs?.start) {
-    parent.content.unshift(newBlock);
-    return;
-  }
-
-  if (start === block.attrs?.end) {
-    parent.content.push(newBlock);
+  if (start <= block.attrs?.start || start >= block.attrs?.end) {
+    parent.content = insert(newBlock, parent.content || []);
     return;
   }
 
@@ -63,6 +71,5 @@ export const splitAndInsert: Transformer = (ctx) => {
     newContent.push(...suffix);
   }
 
-  newContent.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
-  parent.content = newContent;
+  parent.content = sort(newContent);
 };
