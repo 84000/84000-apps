@@ -18,10 +18,11 @@ declare module '@tiptap/core' {
 export const EndNoteLinkNode = Node.create<EndNoteLinkOptions>({
   name: 'endNoteLink',
   group: 'inline',
+  content: '',
   inline: true,
-  atom: false, // Changed to false to make content selectable
+  atom: true,
   draggable: true,
-  selectable: true, // Explicitly make it selectable
+  selectable: true,
 
   addAttributes() {
     return {

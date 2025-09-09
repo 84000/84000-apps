@@ -1,5 +1,5 @@
 import { cn } from '@lib-utils';
-import { NodeViewContent, NodeViewProps, NodeViewWrapper } from '@tiptap/react';
+import { NodeViewProps, NodeViewWrapper } from '@tiptap/react';
 import { LINK_STYLE } from '../../../../Typography/Typography';
 import { useEffect, useState } from 'react';
 
@@ -27,8 +27,7 @@ export const EndNoteLink = ({ node, getPos, editor }: NodeViewProps) => {
     : 'cursor-pointer select-none';
 
   return (
-    <NodeViewWrapper as="sup">
-      <NodeViewContent as="span" />
+    <NodeViewWrapper as="sup" contentEditable={false}>
       <a
         href={`#${node.attrs.endNote}`}
         className={cn(LINK_STYLE, className, 'pl-0.5')}
