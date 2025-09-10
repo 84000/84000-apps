@@ -11,10 +11,14 @@ export const TranslationBodyEditor = ({
   body,
   fragment,
   onCreate,
+  fetchEndNote,
 }: {
   body: Passage[];
   fragment: XmlFragment;
   onCreate?: () => void;
+  fetchEndNote?: (
+    uuid: string,
+  ) => Promise<TranslationEditorContent | undefined>;
 }) => {
   const [content, setContent] = useState<TranslationEditorContent>([]);
 
@@ -28,6 +32,7 @@ export const TranslationBodyEditor = ({
       content={content}
       fragment={fragment}
       onCreate={onCreate}
+      fetchEndNote={fetchEndNote}
     />
   );
 };

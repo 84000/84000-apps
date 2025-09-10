@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import TranslationEditor, {
   TranslationEditorContent,
 } from '../../TranslationEditor';
+import { Skeleton } from '../../../../Skeleton/Skeleton';
 
 export const EndNoteCard = ({
   uuid,
@@ -32,10 +33,14 @@ export const EndNoteCard = ({
   }, [uuid, content, fetch]);
 
   if (!content) {
-    return <div className="p-4">Loading...</div>;
+    return <Skeleton className="p-2 h-20 w-full" />;
   }
 
-  return <TranslationEditor content={content} isEditable={false} />;
+  return (
+    <div className="p-2">
+      <TranslationEditor content={content} isEditable={false} />
+    </div>
+  );
 };
 
 export const EndNoteLink = ({
@@ -81,7 +86,7 @@ export const EndNoteLink = ({
             {label}
           </a>
         </HoverCardTrigger>
-        <HoverCardContent>
+        <HoverCardContent className="w-120 max-h-96 m-2 overflow-auto">
           <EndNoteCard uuid={node.attrs.endNote} fetch={fetch} />
         </HoverCardContent>
       </HoverCard>
