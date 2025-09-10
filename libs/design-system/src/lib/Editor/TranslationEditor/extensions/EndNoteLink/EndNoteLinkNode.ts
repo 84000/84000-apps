@@ -1,9 +1,11 @@
 import { Node } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { EndNoteLink } from './EndNoteLink';
+import { TranslationEditorContent } from '../../TranslationEditor';
 
 export interface EndNoteLinkOptions {
   HTMLAttributes: Record<string, unknown>;
+  fetch: (uuid: string) => Promise<TranslationEditorContent | undefined>;
 }
 
 declare module '@tiptap/core' {
@@ -36,6 +38,7 @@ export const EndNoteLinkNode = Node.create<EndNoteLinkOptions>({
   addOptions() {
     return {
       HTMLAttributes: {},
+      fetch: async () => undefined,
     };
   },
 

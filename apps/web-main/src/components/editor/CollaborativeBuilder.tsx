@@ -22,6 +22,7 @@ export const CollaborativeBuilder = ({
     uuid: string;
   }) => Promise<Passage[]>;
 }) => {
+  const client = createBrowserClient();
   const [body, setBody] = useState<Passage[]>();
   const [fragment, setFragment] = useState<XmlFragment>();
   const [isObserving, setIsObserving] = useState(false);
@@ -32,6 +33,7 @@ export const CollaborativeBuilder = ({
     builder: currentBuilder,
     startObserving,
     getFragment,
+    fetchEndNote,
   } = useEditorState();
 
   useEffect(() => {
@@ -44,7 +46,6 @@ export const CollaborativeBuilder = ({
         return;
       }
 
-      const client = createBrowserClient();
       const body = await fetchContent({ client, uuid });
 
       if (!body) {
@@ -57,7 +58,15 @@ export const CollaborativeBuilder = ({
 
     setFragment(getFragment());
     getContent();
-  }, [uuid, loading, currentBuilder, builder, getFragment, fetchContent]);
+  }, [
+    uuid,
+    loading,
+    currentBuilder,
+    client,
+    builder,
+    getFragment,
+    fetchContent,
+  ]);
 
   if (!body && !loading) {
     return notFound();
@@ -67,6 +76,7 @@ export const CollaborativeBuilder = ({
     <TranslationBodyEditor
       body={body}
       fragment={getFragment()}
+      fetchEndNote={fetchEndNote}
       onCreate={() => {
         if (!isObserving) {
           setIsObserving(true);

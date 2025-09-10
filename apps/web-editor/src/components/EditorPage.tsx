@@ -47,13 +47,36 @@ export const EditorPage = ({
     })();
   }, [slug, format]);
 
+  const fetchEndNote = async (uuid: string) => {
+    return [
+      {
+        type: 'passage',
+        attrs: { label: 'n.1', uuid },
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: `This is the content of endnote ${uuid}.`,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+  };
+
   if (!content) {
     return <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>;
   }
 
   switch (editorType) {
     case 'translation':
-      return <TranslationEditor content={content} />;
+      return (
+        <TranslationEditor content={content} fetchEndNote={fetchEndNote} />
+      );
+
     default:
       return <BlockEditor content={content} />;
   }

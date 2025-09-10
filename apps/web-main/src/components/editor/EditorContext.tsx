@@ -5,12 +5,16 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import { EditorBuilderType } from './EditorBuilderType';
 import { EditorSidebar } from './EditorSidebar';
 import { usePathname, useRouter } from 'next/navigation';
+import { TranslationEditorContent } from '@design-system';
+import { createBrowserClient, getPassage } from '@data-access';
+import { blockFromPassage } from '@lib-editing';
 
 interface EditorContextState {
   doc?: Doc;
@@ -18,6 +22,7 @@ interface EditorContextState {
   builder: EditorBuilderType;
   dirtyUuids: string[];
   getFragment: () => XmlFragment;
+  fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   setBuilder: (active: EditorBuilderType) => void;
   setDoc: (doc: Doc) => void;
   save: () => Promise<void>;
@@ -30,6 +35,9 @@ export const EditorContext = createContext<EditorContextState>({
   builder: 'body',
   dirtyUuids: [],
   getFragment: () => {
+    throw Error('Not implemented');
+  },
+  fetchEndNote: async (_uuid: string) => {
     throw Error('Not implemented');
   },
   setBuilder: () => {
@@ -62,6 +70,8 @@ export const EditorContextProvider = ({
 }: EditorContextProps) => {
   const router = useRouter();
   const pathname = usePathname();
+  const client = createBrowserClient();
+  const passageCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
 
   const pathEnd = pathname.split('/').pop();
   const isUuidPath = pathEnd === uuid;
@@ -106,6 +116,29 @@ export const EditorContextProvider = ({
 
     return fragments[builder];
   }, [fragments, builder]);
+
+  const fetchEndNote = useCallback(
+    async (uuid: string) => {
+      if (!passageCache.current) {
+        passageCache.current = {};
+      }
+
+      if (passageCache.current[uuid]) {
+        return passageCache.current[uuid];
+      }
+
+      const passage = await getPassage({ client, uuid });
+      if (!passage) {
+        return undefined;
+      }
+
+      const block = blockFromPassage(passage);
+      passageCache.current[uuid] = block;
+
+      return block;
+    },
+    [client, passageCache],
+  );
 
   const save = useCallback(async () => {
     console.log('Saving document state...');
@@ -156,6 +189,7 @@ export const EditorContextProvider = ({
         doc,
         dirtyUuids,
         getFragment,
+        fetchEndNote,
         setDoc,
         setBuilder,
         save,

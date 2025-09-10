@@ -53,6 +53,7 @@ import {
   HasAbbreviationCell,
 } from '../../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../../extensions/ParagraphIndent';
+import { TranslationEditorContent } from '../TranslationEditor';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -73,8 +74,12 @@ const PassageSuggestion: CommandSuggestionItem = {
 
 export const useTranslationExtensions = ({
   fragment,
+  fetchEndNote,
 }: {
   fragment?: XmlFragment;
+  fetchEndNote?: (
+    uuid: string,
+  ) => Promise<TranslationEditorContent | undefined>;
 }) => {
   const suggestions = [
     TextSuggestion,
@@ -93,7 +98,9 @@ export const useTranslationExtensions = ({
     AbbreviationCell,
     HasAbbreviationCell,
     AbbreviationCommand,
-    EndNoteLinkNode,
+    EndNoteLinkNode.configure({
+      fetch: fetchEndNote,
+    }),
     EndNoteNode,
     GlossaryInstanceMark,
     Heading,

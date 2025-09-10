@@ -24,13 +24,17 @@ export const TranslationEditor = ({
   fragment,
   isEditable = true,
   onCreate,
+  fetchEndNote,
 }: {
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
   onCreate?: () => void;
+  fetchEndNote?: (
+    uuid: string,
+  ) => Promise<TranslationEditorContent | undefined>;
 }) => {
-  const { extensions } = useTranslationExtensions({ fragment });
+  const { extensions } = useTranslationExtensions({ fragment, fetchEndNote });
   const { editor } = useBlockEditor({
     extensions,
     content,

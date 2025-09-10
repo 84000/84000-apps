@@ -4,6 +4,7 @@ export * from './lib/client-browser';
 export * from './lib/client-server';
 export * from './lib/glossary';
 export * from './lib/library';
+export * from './lib/passage';
 export * from './lib/projects';
 export * from './lib/publications';
 export * from './lib/storage';

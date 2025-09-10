@@ -22,6 +22,7 @@ export const SandboxHeader = () => {
     .flat();
 
   const [selectedItem, setSelectedItem] = useState<string>();
+  const [didSelect, setDidSelect] = useState(false);
 
   const { slug, format, setFormat, setSlug } = useSandbox();
   const router = useRouter();
@@ -31,8 +32,12 @@ export const SandboxHeader = () => {
     const path = slug && format ? `/${slug}/${format}` : '/';
 
     setSelectedItem(dropdownItem);
-    router.push(path);
-  }, [slug, format, router]);
+
+    if (didSelect) {
+      setDidSelect(false);
+      router.push(path);
+    }
+  }, [slug, format, router, didSelect]);
 
   const onHandleSelect = useCallback(
     (item: string, checked: boolean) => {
@@ -45,6 +50,7 @@ export const SandboxHeader = () => {
       const [newSlug, newFormat] = item.split(' - ');
       setSlug(newSlug as Slug);
       setFormat(newFormat as Format);
+      setDidSelect(true);
     },
     [setFormat, setSlug],
   );
