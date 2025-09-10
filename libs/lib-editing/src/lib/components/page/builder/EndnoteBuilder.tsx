@@ -10,7 +10,7 @@ import { useEditorState } from '../EditorProvider';
 import { TranslationSkeleton } from '../TranslationSkeleton';
 
 export const EndnoteBuilder = () => {
-  const [content, setContent] = useState<BlockEditorContent[]>();
+  const [content, setContent] = useState<BlockEditorContent>();
   const [loading, setLoading] = useState(true);
   const [fragment, setFragment] = useState<XmlFragment>();
 

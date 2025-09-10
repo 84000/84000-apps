@@ -1,4 +1,4 @@
-import { BlockEditorContentItem } from '@design-system';
+import type { BlockEditorContentItem } from '../components/editor';
 
 type SplitBlock = {
   prefix: BlockEditorContentItem[];

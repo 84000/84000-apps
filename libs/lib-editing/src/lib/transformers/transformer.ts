@@ -1,5 +1,5 @@
 import { Annotation, AnnotationType } from '@data-access';
-import { BlockEditorContentItem } from '@design-system';
+import { BlockEditorContentItem } from '../components/editor';
 
 export type BlockEditorContentType = AnnotationType | 'text';
 

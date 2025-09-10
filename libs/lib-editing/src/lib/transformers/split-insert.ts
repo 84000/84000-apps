@@ -1,6 +1,6 @@
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
-import { BlockEditorContentItem } from '@design-system';
+import type { BlockEditorContentItem } from '../components/editor';
 
 export const sort = (nodes: BlockEditorContentItem[]) => {
   return nodes.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));

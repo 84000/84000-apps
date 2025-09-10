@@ -2,7 +2,7 @@ import { AnnotationType } from '@data-access';
 import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
-import { BlockEditorContentItem } from '@design-system';
+import type { BlockEditorContentItem } from '../components/editor';
 
 export const splitContent: Transformer = ({
   root,

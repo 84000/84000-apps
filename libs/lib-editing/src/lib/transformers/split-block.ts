@@ -2,7 +2,7 @@ import { AnnotationType } from '@data-access';
 import { isBlockAnnotation } from './annotate';
 import { splitNode } from './split-node';
 import { Transformer } from './transformer';
-import { BlockEditorContentItem } from '@design-system';
+import { BlockEditorContentItem } from '../components/editor';
 
 export const splitBlock: Transformer = ({
   root,

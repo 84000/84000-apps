@@ -1,5 +1,5 @@
 import { Titles } from '@data-access';
-import { BlockEditorContent } from '@design-system';
+import { BlockEditorContent } from './components/editor';
 
 const TYPE_FOR_LANGUAGE = {
   bo: 'boTitle',

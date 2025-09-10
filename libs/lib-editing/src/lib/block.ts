@@ -1,6 +1,9 @@
-import { BlockEditorContent, BlockEditorContentItem } from '@design-system';
 import { AnnotationType, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
+import {
+  BlockEditorContent,
+  BlockEditorContentItem,
+} from './components/editor';
 
 const passageTemplate = (passage: Passage): BlockEditorContentItem => {
   const block: BlockEditorContentItem = {
