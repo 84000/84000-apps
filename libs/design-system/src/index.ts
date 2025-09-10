@@ -16,6 +16,7 @@ export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
 export * from './lib/Editor';
 export * from './lib/Header/Header';
+export * from './lib/HoverCard/HoverCard';
 export * from './lib/Input/Input';
 export * from './lib/Label/Label';
 export * from './lib/MainLogo/MainLogo';

@@ -1,10 +1,54 @@
 import { cn } from '@lib-utils';
 import { NodeViewProps, NodeViewWrapper } from '@tiptap/react';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '../../../../HoverCard/HoverCard';
 import { LINK_STYLE } from '../../../../Typography/Typography';
 import { useEffect, useState } from 'react';
+import TranslationEditor, {
+  TranslationEditorContent,
+} from '../../TranslationEditor';
 
-export const EndNoteLink = ({ node, getPos, editor }: NodeViewProps) => {
+export const EndNoteCard = ({
+  uuid,
+  fetch,
+}: {
+  uuid: string;
+  fetch?: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+}) => {
+  const [content, setContent] = useState<TranslationEditorContent>();
+
+  useEffect(() => {
+    if (!uuid || content) {
+      return;
+    }
+
+    (async () => {
+      const res = await fetch?.(uuid);
+      setContent(res);
+    })();
+  }, [uuid, content, fetch]);
+
+  if (!content) {
+    return <div className="p-4">Loading...</div>;
+  }
+
+  return <TranslationEditor content={content} isEditable={false} />;
+};
+
+export const EndNoteLink = ({
+  node,
+  getPos,
+  editor,
+  extension,
+}: NodeViewProps) => {
   const [label, setLabel] = useState(1);
+
+  const fetch = extension.options.fetch as (
+    uuid: string,
+  ) => Promise<TranslationEditorContent | undefined>;
 
   useEffect(() => {
     const pos = getPos();
@@ -28,12 +72,19 @@ export const EndNoteLink = ({ node, getPos, editor }: NodeViewProps) => {
 
   return (
     <NodeViewWrapper as="sup" contentEditable={false}>
-      <a
-        href={`#${node.attrs.endNote}`}
-        className={cn(LINK_STYLE, className, 'pl-0.5')}
-      >
-        {label}
-      </a>
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <a
+            href={`#${node.attrs.endNote}`}
+            className={cn(LINK_STYLE, className, 'pl-0.5')}
+          >
+            {label}
+          </a>
+        </HoverCardTrigger>
+        <HoverCardContent>
+          <EndNoteCard uuid={node.attrs.endNote} fetch={fetch} />
+        </HoverCardContent>
+      </HoverCard>
     </NodeViewWrapper>
   );
 };
