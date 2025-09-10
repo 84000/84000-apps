@@ -14,7 +14,6 @@ export * from './lib/DatePicker/DatePicker';
 export * from './lib/Dialog/Dialog';
 export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
-export * from './lib/Editor';
 export * from './lib/Header/Header';
 export * from './lib/HoverCard/HoverCard';
 export * from './lib/Input/Input';

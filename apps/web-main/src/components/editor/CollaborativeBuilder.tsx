@@ -1,13 +1,15 @@
 'use client';
 
 import { DataClient, Passage, createBrowserClient } from '@data-access';
+import type { EditorBuilderType } from '@lib-editing';
+import {
+  useEditorState,
+  TranslationSkeleton,
+  PassagesEditor,
+} from '@lib-editing';
 import { useEffect, useState } from 'react';
-import { useEditorState } from './EditorContext';
-import { TranslationBodyEditor } from '../ui/TranslationBodyEditor';
-import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
 import type { XmlFragment } from 'yjs';
-import { EditorBuilderType } from './EditorBuilderType';
 
 export const CollaborativeBuilder = ({
   builder,
@@ -73,8 +75,8 @@ export const CollaborativeBuilder = ({
   }
 
   return body && fragment ? (
-    <TranslationBodyEditor
-      body={body}
+    <PassagesEditor
+      passages={body}
       fragment={getFragment()}
       fetchEndNote={fetchEndNote}
       onCreate={() => {

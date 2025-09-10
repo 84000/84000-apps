@@ -1,11 +1,14 @@
 'use client';
 
 import { createBrowserClient, getTranslationTitles } from '@data-access';
+import {
+  useEditorState,
+  BlockEditorContent,
+  TitlesEditor,
+  TranslationSkeleton,
+} from '@lib-editing';
 import { useEffect, useState } from 'react';
-import { useEditorState } from './EditorContext';
-import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
-import { BlockEditorContent, TitlesEditor } from '@design-system';
 import { titlesToDocument } from '@lib-editing';
 
 export const TitlesBuilder = () => {

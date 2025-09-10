@@ -1,19 +1,19 @@
 'use client';
 
+import { createBrowserClient, getTranslationEndnotes } from '@data-access';
 import {
-  Passage,
-  createBrowserClient,
-  getTranslationEndnotes,
-} from '@data-access';
+  type BlockEditorContent,
+  useEditorState,
+  blocksFromTranslationBody,
+  EndNotesEditor,
+  TranslationSkeleton,
+} from '@lib-editing';
 import { useEffect, useState } from 'react';
-import { useEditorState } from './EditorContext';
-import { TranslationSkeleton } from '../ui/TranslationSkeleton';
 import { notFound } from 'next/navigation';
-import { EndnoteBodyEditor } from '../ui/EndnoteBodyEditor';
 import type { XmlFragment } from 'yjs';
 
 export const EndnoteBuilder = () => {
-  const [body, setBody] = useState<Passage[]>();
+  const [content, setContent] = useState<BlockEditorContent[]>();
   const [loading, setLoading] = useState(true);
   const [fragment, setFragment] = useState<XmlFragment>();
 
@@ -31,17 +31,19 @@ export const EndnoteBuilder = () => {
       }
 
       setFragment(getFragment());
-      setBody(body);
+
+      const content = blocksFromTranslationBody(body);
+      setContent(content);
     };
     getTranslation();
   }, [uuid, getFragment]);
 
-  if (!body && !loading) {
+  if (!content && !loading) {
     return notFound();
   }
 
-  return body && fragment ? (
-    <EndnoteBodyEditor body={body} fragment={fragment} />
+  return content && fragment ? (
+    <EndNotesEditor content={content} fragment={fragment} />
   ) : (
     <TranslationSkeleton />
   );

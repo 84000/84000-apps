@@ -23,7 +23,7 @@ import {
 } from '@design-system';
 import { LetterTextIcon } from 'lucide-react';
 import { useCallback } from 'react';
-import { EditorBuilderType } from './EditorBuilderType';
+import type { EditorBuilderType } from './types';
 
 interface EditorSidebarItem {
   key: EditorBuilderType;

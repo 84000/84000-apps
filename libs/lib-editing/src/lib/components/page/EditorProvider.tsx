@@ -9,10 +9,10 @@ import React, {
   useState,
 } from 'react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
-import { EditorBuilderType } from './EditorBuilderType';
-import { EditorSidebar } from './EditorSidebar';
 import { usePathname, useRouter } from 'next/navigation';
-import type { TranslationEditorContent } from '@lib-editing';
+import type { EditorBuilderType } from './types';
+import type { TranslationEditorContent } from '../editor/TranslationEditor';
+import { EditorSidebar } from './EditorSidebar';
 import { createBrowserClient, getPassage } from '@data-access';
 import { blockFromPassage } from '../../block';
 

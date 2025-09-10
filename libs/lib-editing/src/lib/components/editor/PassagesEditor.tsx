@@ -1,19 +1,21 @@
 'use client';
 
 import { Passage } from '@data-access';
-import { TranslationEditor } from '@design-system';
-import type { TranslationEditorContent } from '@design-system';
-import { blocksFromTranslationBody } from '@lib-editing';
 import type { XmlFragment } from 'yjs';
 import { useEffect, useState } from 'react';
+import {
+  TranslationEditor,
+  TranslationEditorContent,
+} from './TranslationEditor';
+import { blocksFromTranslationBody } from '../../block';
 
-export const TranslationBodyEditor = ({
-  body,
+export const PassagesEditor = ({
+  passages,
   fragment,
   onCreate,
   fetchEndNote,
 }: {
-  body: Passage[];
+  passages: Passage[];
   fragment: XmlFragment;
   onCreate?: () => void;
   fetchEndNote?: (
@@ -23,9 +25,9 @@ export const TranslationBodyEditor = ({
   const [content, setContent] = useState<TranslationEditorContent>([]);
 
   useEffect(() => {
-    const blocks = blocksFromTranslationBody(body);
+    const blocks = blocksFromTranslationBody(passages);
     setContent(blocks);
-  }, [body]);
+  }, [passages]);
 
   return (
     <TranslationEditor
