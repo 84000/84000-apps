@@ -1,4 +1,4 @@
-import { SummaryBuilder } from '../../../../../../components/editor/SummaryBuilder';
+import { SummaryBuilder } from '@lib-editing';
 
 const Page = SummaryBuilder;
 

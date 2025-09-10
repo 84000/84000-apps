@@ -1,5 +1,5 @@
 import { createBrowserClient, getTranslationsMetadata } from '@data-access';
-import { TranslationsTable } from '../../../../components/ui/TranslationsTable';
+import { TranslationsTable } from '@lib-editing';
 import React from 'react';
 import { H2 } from '@design-system';
 

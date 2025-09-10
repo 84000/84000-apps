@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { CanonDetail } from '@data-access';
-import { H2, SimpleEditor } from '@design-system';
+import { H2 } from '@design-system';
+import { SimpleEditor } from '@lib-editing';
 
 export const ArticlePage = ({ section }: { section: CanonDetail }) => {
   const { label, description, article } = section;

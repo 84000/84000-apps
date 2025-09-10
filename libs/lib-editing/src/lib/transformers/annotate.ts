@@ -36,7 +36,7 @@ import {
   trailer,
   unknown,
 } from '.';
-import type { BlockEditorContentItem } from '@design-system';
+import type { BlockEditorContentItem } from '../components/editor';
 
 const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
   abbreviation,

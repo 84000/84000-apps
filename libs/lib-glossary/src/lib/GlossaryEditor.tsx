@@ -1,7 +1,7 @@
 'use client';
 
 import { GlossaryPageItem } from '@data-access';
-import { SimpleEditor } from '@design-system';
+import { SimpleEditor } from '@lib-editing';
 import { EditorEvents } from '@tiptap/react';
 import { useCallback, useState } from 'react';
 

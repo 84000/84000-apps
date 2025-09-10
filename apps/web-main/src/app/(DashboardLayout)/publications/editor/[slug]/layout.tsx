@@ -1,4 +1,4 @@
-import { EditorContextProvider } from '../../../../../components/editor/EditorContext';
+import { EditorContextProvider } from '@lib-editing';
 
 const layout = async ({
   params,
