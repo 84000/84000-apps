@@ -1,15 +1,13 @@
 'use client';
 
 import { DataClient, Passage, createBrowserClient } from '@data-access';
-import type { EditorBuilderType } from '@lib-editing';
-import {
-  useEditorState,
-  TranslationSkeleton,
-  PassagesEditor,
-} from '@lib-editing';
+import type { EditorBuilderType } from '../types';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
 import type { XmlFragment } from 'yjs';
+import { useEditorState } from '../EditorProvider';
+import { PassagesEditor } from '../../editor';
+import { TranslationSkeleton } from '../TranslationSkeleton';
 
 export const CollaborativeBuilder = ({
   builder,

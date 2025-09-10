@@ -1,16 +1,13 @@
 'use client';
 
 import { createBrowserClient, getTranslationEndnotes } from '@data-access';
-import {
-  type BlockEditorContent,
-  useEditorState,
-  blocksFromTranslationBody,
-  EndNotesEditor,
-  TranslationSkeleton,
-} from '@lib-editing';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
 import type { XmlFragment } from 'yjs';
+import { EndNotesEditor, type BlockEditorContent } from '../../editor';
+import { blocksFromTranslationBody } from '../../../block';
+import { useEditorState } from '../EditorProvider';
+import { TranslationSkeleton } from '../TranslationSkeleton';
 
 export const EndnoteBuilder = () => {
   const [content, setContent] = useState<BlockEditorContent[]>();

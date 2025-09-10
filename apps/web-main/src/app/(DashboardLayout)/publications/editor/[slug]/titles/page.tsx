@@ -1,4 +1,4 @@
-import { TitlesBuilder } from '../../../../../../components/editor/TitlesBuilder';
+import { TitlesBuilder } from '@lib-editing';
 
 const Page = TitlesBuilder;
 

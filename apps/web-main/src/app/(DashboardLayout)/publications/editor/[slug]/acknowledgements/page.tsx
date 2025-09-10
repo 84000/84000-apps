@@ -1,4 +1,4 @@
-import { AcknowledgementBuilder } from '../../../../../../components/editor/AcknowledgementsBuilder';
+import { AcknowledgementBuilder } from '@lib-editing';
 
 const Page = AcknowledgementBuilder;
 

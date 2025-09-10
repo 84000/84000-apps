@@ -1,4 +1,4 @@
-import { EndnoteBuilder } from '../../../../../../components/editor/EndnoteBuilder';
+import { EndnoteBuilder } from '@lib-editing';
 
 const Page = EndnoteBuilder;
 

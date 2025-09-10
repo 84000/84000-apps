@@ -1,4 +1,4 @@
-import { IntroductionBuilder } from '../../../../../../components/editor/IntroductionBuilder';
+import { IntroductionBuilder } from '@lib-editing';
 
 const Page = IntroductionBuilder;
 

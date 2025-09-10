@@ -4,9 +4,10 @@ import {
   createBrowserClient,
   getTranslationMetadataByUuid,
 } from '@data-access';
-import { TranslationSkeleton, useEditorState } from '@lib-editing';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
+import { useEditorState } from './EditorProvider';
+import { TranslationSkeleton } from './TranslationSkeleton';
 
 export const EditorPage = () => {
   const [fetched, setFetched] = useState(false);

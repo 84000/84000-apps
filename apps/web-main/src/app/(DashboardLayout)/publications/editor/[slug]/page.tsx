@@ -1,5 +1,5 @@
 import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { EditorPage } from '../../../../../components/editor/EditorPage';
+import { EditorPage } from '@lib-editing';
 
 export const revalidate = 60;
 export const dynamicParams = true;

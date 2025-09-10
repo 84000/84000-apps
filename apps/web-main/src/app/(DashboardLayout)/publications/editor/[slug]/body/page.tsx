@@ -1,4 +1,4 @@
-import { BodyBuilder } from '../../../../../../components/editor/BodyBuilder';
+import { BodyBuilder } from '@lib-editing';
 
 const Page = BodyBuilder;
 
