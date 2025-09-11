@@ -45,7 +45,7 @@ export type EndNoteLinkAnnotation = AnnotationBase & {
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
   type: 'glossaryInstance';
-  authority: string;
+  glossary: string;
 };
 
 export type HasAbbreviationAnnotation = AnnotationBase & {
@@ -299,7 +299,7 @@ const dtoToAnnotationMap: Record<
     ) as GlossaryInstanceAnnotation;
     dto.content.forEach((content) => {
       if (content.uuid) {
-        glossaryInstance.authority = content.uuid as string;
+        glossaryInstance.glossary = content.uuid as string;
       }
     });
 

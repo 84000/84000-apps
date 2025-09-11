@@ -9,7 +9,7 @@ import { EndNoteNode } from '../../TranslationEditor/extensions/EndNote/EndNoteN
 import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';
 import Heading from '../../extensions/Heading/Heading';
 import { Italic } from '../../extensions/Italic';
-import { GlossaryInstanceMark } from '../../TranslationEditor/extensions/GlossaryInstanceMark';
+import { GlossaryInstanceNode } from '../../TranslationEditor/extensions/GlossaryInstance/GlossaryInstanceNode';
 import Link from '../../extensions/Link';
 import { SmallCaps } from '../../extensions/SmallCaps';
 import { Subscript } from '../../extensions/Subscript';
@@ -71,7 +71,7 @@ export const useEndNotesExtensions = ({
     EndNotesDocument,
     EndNotesPassage,
     EndNoteNode,
-    GlossaryInstanceMark,
+    GlossaryInstanceNode,
     Heading,
     Italic,
     Link,

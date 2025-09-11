@@ -56,7 +56,7 @@ export const EndNoteLink = ({
   ) => Promise<TranslationEditorContent | undefined>;
 
   useEffect(() => {
-    const pos = getPos();
+    const pos = getPos() || 0;
 
     let newLabel = 1;
     editor.state.doc.descendants((descendant, nodePos) => {

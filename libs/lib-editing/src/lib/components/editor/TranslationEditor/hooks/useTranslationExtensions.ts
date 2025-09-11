@@ -44,7 +44,7 @@ import { Italic } from '../../extensions/Italic';
 import { Indent } from '../../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
-import { GlossaryInstanceMark } from '../extensions/GlossaryInstanceMark';
+import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import { EndNoteNode } from '../extensions/EndNote/EndNoteNode';
 import {
   AbbreviationCell,
@@ -102,7 +102,7 @@ export const useTranslationExtensions = ({
       fetch: fetchEndNote,
     }),
     EndNoteNode,
-    GlossaryInstanceMark,
+    GlossaryInstanceNode,
     Heading,
     Image,
     Indent,
