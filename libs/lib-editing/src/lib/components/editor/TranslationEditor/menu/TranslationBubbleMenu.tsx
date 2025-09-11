@@ -1,6 +1,5 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { offset } from '@floating-ui/dom';
 import { ScrollArea, Separator, ScrollBar } from '@design-system';
 import { TextButtons } from './selectors/TextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
@@ -20,8 +19,7 @@ export const TranslationBubbleMenu = ({
       editor={editor}
       options={{
         placement: 'top',
-        offset: offset(6),
-        moveTransition: 'transform 0.15s ease-out',
+        offset: 6,
       }}
       shouldShow={({ editor, state }) => {
         const { selection } = state;

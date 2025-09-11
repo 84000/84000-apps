@@ -1,6 +1,5 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { offset } from '@floating-ui/dom';
 import { ScrollArea, ScrollBar } from '@design-system';
 
 export const EmptyBubbleMenu = ({ editor }: { editor: Editor | null }) => {
@@ -13,8 +12,7 @@ export const EmptyBubbleMenu = ({ editor }: { editor: Editor | null }) => {
       editor={editor}
       options={{
         placement: 'top',
-        offset: offset(6),
-        moveTransition: 'transform 0.15s ease-out',
+        offset: 6,
       }}
       shouldShow={({ editor, state }) => {
         const { selection } = state;
