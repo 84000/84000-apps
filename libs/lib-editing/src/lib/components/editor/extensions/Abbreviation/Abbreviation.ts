@@ -61,7 +61,7 @@ export const AbbreviationCell = TableCell.extend({
     return [{ tag: 'td[type=abbreviation]' }];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return [
       'td',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
@@ -81,7 +81,7 @@ export const HasAbbreviationCell = TableCell.extend({
     return [{ tag: 'td[type=hasAbbreviation]' }];
   },
 
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return [
       'td',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {

@@ -14,6 +14,8 @@ export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   heading: false,
   paragraph: false,
   italic: false,
+  link: false,
+  underline: false,
   bulletList: {
     HTMLAttributes: {
       class: UL_STYLE,

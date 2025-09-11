@@ -134,13 +134,20 @@ export const useTranslationExtensions = ({
 
   if (fragment) {
     extensions.push(
-      StarterKit.configure({ ...STARTER_KIT_CONFIG, history: false }),
-      Collaboration.configure({
-        fragment,
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+        undoRedo: false,
       }),
+      Collaboration.configure({ fragment }),
     );
   } else {
-    extensions.push(StarterKit);
+    extensions.push(
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+      }),
+    );
   }
 
   return { extensions };

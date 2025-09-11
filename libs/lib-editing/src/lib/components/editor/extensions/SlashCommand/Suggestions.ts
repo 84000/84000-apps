@@ -7,6 +7,7 @@ import {
   ListOrderedIcon,
   TextQuoteIcon,
 } from 'lucide-react';
+import tippy, { Instance } from 'tippy.js';
 import { SlashCommandNodeAttributes } from './SlashCommand';
 import SuggestionList, {
   CommandSuggestionItem,
@@ -26,7 +27,7 @@ export const TextSuggestion: CommandSuggestionItem = {
   description: 'Just start typing',
   keywords: ['text', 'paragraph', 'p'],
   icon: LetterTextIcon,
-  command: ({ editor, range }) => {
+  command: ({ editor }) => {
     editor.chain().focus().toggleNode('paragraph', 'paragraph').run();
   },
 };
