@@ -7,7 +7,6 @@ import {
   ListOrderedIcon,
   TextQuoteIcon,
 } from 'lucide-react';
-import tippy, { Instance } from 'tippy.js';
 import { SlashCommandNodeAttributes } from './SlashCommand';
 import SuggestionList, {
   CommandSuggestionItem,

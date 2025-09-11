@@ -1,5 +1,5 @@
 import { cn } from '@lib-utils';
-import Placeholder from '@tiptap/extension-placeholder';
+import { Placeholder } from '@tiptap/extensions';
 
 export default Placeholder.configure({
   placeholder: 'Type / for commands...',
