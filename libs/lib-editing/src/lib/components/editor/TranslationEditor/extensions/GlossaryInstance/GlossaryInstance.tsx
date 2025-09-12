@@ -9,8 +9,9 @@ import {
 import { useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
 import { removeHtmlTags } from '@lib-utils';
+import { usePathname } from 'next/navigation';
 
-export const GlossaryInsanceCard = ({
+export const GlossaryInstanceCard = ({
   uuid,
   fetch,
 }: {
@@ -63,26 +64,52 @@ export const GlossaryInsanceCard = ({
       {content.names.pali && <div className="italic">{content.names.pali}</div>}
       <Separator className="w-4 h-0.25 my-5 bg-primary/80" />
       {definition && <p>{definition}</p>}
+      <div className="text-sm text-muted-foreground mt-2">
+        <a
+          href={`/glossary/${content.authority}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          {'View full entry ›'}
+        </a>
+      </div>
     </div>
   );
 };
 
 export const GlossaryInstance = ({ node, extension }: NodeViewProps) => {
+  const [url, setUrl] = useState<string>('#');
+
+  const pathname = usePathname();
+
   const fetch = extension.options.fetch as (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
+
+  useEffect(() => {
+    if (!node.attrs.glossary) {
+      return;
+    }
+
+    const pathSegments = pathname.split('/');
+    pathSegments[pathSegments.length - 1] = `glossary#${node.attrs.glossary}`;
+    const newPath = pathSegments.join('/');
+
+    setUrl(newPath);
+  }, [node, pathname, setUrl]);
 
   return (
     <NodeViewWrapper as="span">
       <HoverCard>
         <HoverCardTrigger asChild>
-          <a {...extension.options.HTMLAttributes}>
+          <a href={url} {...extension.options.HTMLAttributes}>
             {/* @ts-expect-error: Nodeview content declares only `div` is acceptable when passed to `as`, but we need a `span` */}
             <NodeViewContent as="span" />
           </a>
         </HoverCardTrigger>
-        <HoverCardContent className="w-120 lg:w-4xl max-h-96 m-2 overflow-auto">
-          <GlossaryInsanceCard uuid={node.attrs.glossary} fetch={fetch} />
+        <HoverCardContent className="w-120 lg:w-4xl max-h-100 m-2 overflow-auto">
+          <GlossaryInstanceCard uuid={node.attrs.glossary} fetch={fetch} />
         </HoverCardContent>
       </HoverCard>
     </NodeViewWrapper>
