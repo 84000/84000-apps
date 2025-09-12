@@ -23,7 +23,7 @@ export const MainTitlesNode = Node.create({
 
 export const EnTitleNode = TiptapHeading.extend({
   name: 'enTitle',
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
       class: cn(H2_STYLE, TITLE_VARIANT_STYLES['en']),
@@ -39,7 +39,7 @@ export const EnTitleNode = TiptapHeading.extend({
 
 export const BoTitleNode = TiptapHeading.extend({
   name: 'boTitle',
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
       class: cn(H3_STYLE, TITLE_VARIANT_STYLES['bo']),
@@ -55,7 +55,7 @@ export const BoTitleNode = TiptapHeading.extend({
 
 export const BoLtnTitleNode = TiptapHeading.extend({
   name: 'boLtnTitle',
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
       class: cn(H4_STYLE, TITLE_VARIANT_STYLES['Bo-Ltn']),
@@ -71,7 +71,7 @@ export const BoLtnTitleNode = TiptapHeading.extend({
 
 export const SaLtnTitleNode = TiptapHeading.extend({
   name: 'saLtnTitle',
-  renderHTML({ HTMLAttributes }) {
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     this.options.HTMLAttributes = {
       ...this.options.HTMLAttributes,
       class: cn(H4_STYLE, TITLE_VARIANT_STYLES['Sa-Ltn']),

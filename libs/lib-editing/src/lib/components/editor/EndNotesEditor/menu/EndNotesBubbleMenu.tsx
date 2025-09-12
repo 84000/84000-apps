@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core';
-import { BubbleMenu } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, Separator, ScrollBar } from '@design-system';
 import { NodeSelector } from './selectors/NodeSelector';
 import { TextButtons } from './selectors/TextButtons';
@@ -12,10 +12,9 @@ export const EndNotesBubbleMenu = ({ editor }: { editor: Editor | null }) => {
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{
+      options={{
         placement: 'top',
-        hideOnClick: false,
-        moveTransition: 'transform 0.15s ease-out',
+        offset: 6,
       }}
       shouldShow={({ editor, state }) => {
         const { selection } = state;

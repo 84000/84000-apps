@@ -5,6 +5,7 @@ import type { XmlFragment } from 'yjs';
 import { useBlockEditor } from '../BlockEditor';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
+import { GlossaryTermInstance } from '@data-access';
 
 export type TranslationEditorContentItem = Content & {
   attrs?: {
@@ -25,6 +26,7 @@ export const TranslationEditor = ({
   isEditable = true,
   onCreate,
   fetchEndNote,
+  fetchGlossaryInstance,
 }: {
   content: TranslationEditorContent;
   fragment?: XmlFragment;
@@ -33,8 +35,15 @@ export const TranslationEditor = ({
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;
+  fetchGlossaryInstance?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
-  const { extensions } = useTranslationExtensions({ fragment, fetchEndNote });
+  const { extensions } = useTranslationExtensions({
+    fragment,
+    fetchEndNote,
+    fetchGlossaryInstance,
+  });
   const { editor } = useBlockEditor({
     extensions,
     content,

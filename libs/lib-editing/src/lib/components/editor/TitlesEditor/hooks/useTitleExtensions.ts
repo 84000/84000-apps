@@ -9,7 +9,7 @@ import {
   SaLtnTitleNode,
 } from '../extensions/MainTitlesNode';
 import { TitlesDocument } from '../extensions/TitlesDocument';
-import Placeholder from '@tiptap/extension-placeholder';
+import { Placeholder } from '@tiptap/extensions';
 import { cn } from '@lib-utils';
 import { TitleMetadata } from '../extensions/TitleMetadata';
 

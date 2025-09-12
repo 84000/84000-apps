@@ -44,7 +44,7 @@ import { Italic } from '../../extensions/Italic';
 import { Indent } from '../../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
-import { GlossaryInstanceMark } from '../extensions/GlossaryInstanceMark';
+import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import { EndNoteNode } from '../extensions/EndNote/EndNoteNode';
 import {
   AbbreviationCell,
@@ -54,6 +54,7 @@ import {
 } from '../../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../../extensions/ParagraphIndent';
 import { TranslationEditorContent } from '../TranslationEditor';
+import { GlossaryTermInstance } from '@data-access';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -75,11 +76,15 @@ const PassageSuggestion: CommandSuggestionItem = {
 export const useTranslationExtensions = ({
   fragment,
   fetchEndNote,
+  fetchGlossaryInstance,
 }: {
   fragment?: XmlFragment;
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;
+  fetchGlossaryInstance?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const suggestions = [
     TextSuggestion,
@@ -102,7 +107,9 @@ export const useTranslationExtensions = ({
       fetch: fetchEndNote,
     }),
     EndNoteNode,
-    GlossaryInstanceMark,
+    GlossaryInstanceNode.configure({
+      fetch: fetchGlossaryInstance,
+    }),
     Heading,
     Image,
     Indent,
@@ -134,13 +141,20 @@ export const useTranslationExtensions = ({
 
   if (fragment) {
     extensions.push(
-      StarterKit.configure({ ...STARTER_KIT_CONFIG, history: false }),
-      Collaboration.configure({
-        fragment,
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+        undoRedo: false,
       }),
+      Collaboration.configure({ fragment }),
     );
   } else {
-    extensions.push(StarterKit);
+    extensions.push(
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+      }),
+    );
   }
 
   return { extensions };

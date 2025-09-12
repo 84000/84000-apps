@@ -9,7 +9,7 @@ import { EndNoteNode } from '../../TranslationEditor/extensions/EndNote/EndNoteN
 import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';
 import Heading from '../../extensions/Heading/Heading';
 import { Italic } from '../../extensions/Italic';
-import { GlossaryInstanceMark } from '../../TranslationEditor/extensions/GlossaryInstanceMark';
+import { GlossaryInstanceNode } from '../../TranslationEditor/extensions/GlossaryInstance/GlossaryInstanceNode';
 import Link from '../../extensions/Link';
 import { SmallCaps } from '../../extensions/SmallCaps';
 import { Subscript } from '../../extensions/Subscript';
@@ -26,6 +26,7 @@ import {
 } from '../../extensions/SlashCommand/Suggestions';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import Placeholder from '../../extensions/Placeholder';
+import { GlossaryTermInstance } from '@data-access';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -56,8 +57,12 @@ export const EndNoteSuggestion: CommandSuggestionItem = {
 
 export const useEndNotesExtensions = ({
   fragment,
+  fetchGlossaryTerm,
 }: {
   fragment?: XmlFragment;
+  fetchGlossaryTerm?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const suggestions = [
     PassageSuggestion,
@@ -71,7 +76,9 @@ export const useEndNotesExtensions = ({
     EndNotesDocument,
     EndNotesPassage,
     EndNoteNode,
-    GlossaryInstanceMark,
+    GlossaryInstanceNode.configure({
+      fetch: fetchGlossaryTerm,
+    }),
     Heading,
     Italic,
     Link,
@@ -87,11 +94,20 @@ export const useEndNotesExtensions = ({
 
   if (fragment) {
     extensions.push(
-      StarterKit.configure({ ...STARTER_KIT_CONFIG, history: false }),
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+        undoRedo: false,
+      }),
       Collaboration.configure({ fragment }),
     );
   } else {
-    extensions.push(StarterKit);
+    extensions.push(
+      StarterKit.configure({
+        ...STARTER_KIT_CONFIG,
+        trailingNode: { notAfter: ['passage', 'paragraph'] },
+      }),
+    );
   }
 
   return { extensions };

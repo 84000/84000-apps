@@ -34,6 +34,7 @@ export const CollaborativeBuilder = ({
     startObserving,
     getFragment,
     fetchEndNote,
+    fetchGlossaryTerm,
   } = useEditorState();
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export const CollaborativeBuilder = ({
       passages={body}
       fragment={getFragment()}
       fetchEndNote={fetchEndNote}
+      fetchGlossaryInstance={fetchGlossaryTerm}
       onCreate={() => {
         if (!isObserving) {
           setIsObserving(true);
