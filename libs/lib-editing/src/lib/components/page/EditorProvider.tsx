@@ -13,7 +13,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { EditorBuilderType } from './types';
 import type { TranslationEditorContent } from '../editor/TranslationEditor';
 import { EditorSidebar } from './EditorSidebar';
-import { createBrowserClient, getPassage } from '@data-access';
+import {
+  GlossaryTermInstance,
+  createBrowserClient,
+  getGlossaryInstance,
+  getPassage,
+} from '@data-access';
 import { blockFromPassage } from '../../block';
 
 interface EditorContextState {
@@ -23,6 +28,9 @@ interface EditorContextState {
   dirtyUuids: string[];
   getFragment: () => XmlFragment;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetchGlossaryTerm: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
   setBuilder: (active: EditorBuilderType) => void;
   setDoc: (doc: Doc) => void;
   save: () => Promise<void>;
@@ -38,6 +46,9 @@ export const EditorContext = createContext<EditorContextState>({
     throw Error('Not implemented');
   },
   fetchEndNote: async (_uuid: string) => {
+    throw Error('Not implemented');
+  },
+  fetchGlossaryTerm: async (_uuid: string) => {
     throw Error('Not implemented');
   },
   setBuilder: () => {
@@ -72,6 +83,7 @@ export const EditorContextProvider = ({
   const pathname = usePathname();
   const client = createBrowserClient();
   const passageCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+  const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
 
   const pathEnd = pathname.split('/').pop();
   const isUuidPath = pathEnd === uuid;
@@ -140,6 +152,27 @@ export const EditorContextProvider = ({
     [client, passageCache],
   );
 
+  const fetchGlossaryTerm = useCallback(
+    async (uuid: string) => {
+      if (!glossaryCache.current) {
+        glossaryCache.current = {};
+      }
+
+      if (glossaryCache.current[uuid]) {
+        return glossaryCache.current[uuid];
+      }
+
+      const term = await getGlossaryInstance({ client, uuid });
+      if (!term) {
+        return undefined;
+      }
+
+      glossaryCache.current[uuid] = term;
+      return term;
+    },
+    [client],
+  );
+
   const save = useCallback(async () => {
     console.log('Saving document state...');
   }, []);
@@ -190,6 +223,7 @@ export const EditorContextProvider = ({
         dirtyUuids,
         getFragment,
         fetchEndNote,
+        fetchGlossaryTerm,
         setDoc,
         setBuilder,
         save,

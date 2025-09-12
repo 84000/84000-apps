@@ -26,6 +26,7 @@ import {
 } from '../../extensions/SlashCommand/Suggestions';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import Placeholder from '../../extensions/Placeholder';
+import { GlossaryTermInstance } from '@data-access';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -56,8 +57,12 @@ export const EndNoteSuggestion: CommandSuggestionItem = {
 
 export const useEndNotesExtensions = ({
   fragment,
+  fetchGlossaryTerm,
 }: {
   fragment?: XmlFragment;
+  fetchGlossaryTerm?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const suggestions = [
     PassageSuggestion,
@@ -71,7 +76,9 @@ export const useEndNotesExtensions = ({
     EndNotesDocument,
     EndNotesPassage,
     EndNoteNode,
-    GlossaryInstanceNode,
+    GlossaryInstanceNode.configure({
+      fetch: fetchGlossaryTerm,
+    }),
     Heading,
     Italic,
     Link,

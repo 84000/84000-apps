@@ -32,6 +32,34 @@ export type GlossaryNameDTO = {
 
 export type GlossaryNamesDTO = GlossaryNameDTO[];
 
+export type GlossaryTermInstance = {
+  uuid: string;
+  authority: string;
+  definition?: string | null;
+  names: {
+    chinese?: string;
+    english?: string;
+    pali?: string;
+    sanskrit?: string;
+    tibetan?: string;
+    wylie?: string;
+  };
+};
+
+export type GlossaryTermInstanceDTO = {
+  uuid: string;
+  authority_uuid: string;
+  definition?: string;
+  names: {
+    chinese?: string;
+    english?: string;
+    pali?: string;
+    sanskrit?: string;
+    tibetan?: string;
+    wylie?: string;
+  };
+};
+
 export const glossaryNameFromDTO = (dto: GlossaryNameDTO): GlossaryName => {
   return {
     content: dto.content,
@@ -54,4 +82,15 @@ export const glossaryItemFromDTO = (dto: GlossaryItemDTO): GlossaryItem => {
 };
 export const glossaryFromDTO = (dto?: GlossaryDTO): Glossary => {
   return dto?.map(glossaryItemFromDTO) || [];
+};
+
+export const glossaryTermInstanceFromDTO = (
+  dto: GlossaryTermInstanceDTO,
+): GlossaryTermInstance => {
+  return {
+    uuid: dto.uuid,
+    authority: dto.authority_uuid,
+    definition: dto.definition,
+    names: dto.names,
+  };
 };

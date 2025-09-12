@@ -22,7 +22,7 @@ export const EndNoteCard = ({
   const [content, setContent] = useState<TranslationEditorContent>();
 
   useEffect(() => {
-    if (!uuid || content) {
+    if (!uuid || content || !fetch) {
       return;
     }
 

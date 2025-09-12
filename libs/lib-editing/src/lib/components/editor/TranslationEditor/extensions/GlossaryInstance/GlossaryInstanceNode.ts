@@ -3,9 +3,11 @@ import { cn } from '@lib-utils';
 import { Node } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { GlossaryInstance } from './GlossaryInstance';
+import { GlossaryTermInstance } from '@data-access';
 
 export interface GlossaryInstanceOptions {
   HTMLAttributes: Record<string, unknown>;
+  fetch: (uuid: string) => Promise<GlossaryTermInstance | undefined>;
 }
 
 declare module '@tiptap/core' {

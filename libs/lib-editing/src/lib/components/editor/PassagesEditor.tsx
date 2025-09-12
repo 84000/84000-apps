@@ -1,6 +1,6 @@
 'use client';
 
-import { Passage } from '@data-access';
+import { GlossaryTermInstance, Passage } from '@data-access';
 import type { XmlFragment } from 'yjs';
 import { useEffect, useState } from 'react';
 import {
@@ -14,6 +14,7 @@ export const PassagesEditor = ({
   fragment,
   onCreate,
   fetchEndNote,
+  fetchGlossaryInstance,
 }: {
   passages: Passage[];
   fragment: XmlFragment;
@@ -21,6 +22,9 @@ export const PassagesEditor = ({
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;
+  fetchGlossaryInstance?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const [content, setContent] = useState<TranslationEditorContent>([]);
 
@@ -35,6 +39,7 @@ export const PassagesEditor = ({
       fragment={fragment}
       onCreate={onCreate}
       fetchEndNote={fetchEndNote}
+      fetchGlossaryInstance={fetchGlossaryInstance}
     />
   );
 };

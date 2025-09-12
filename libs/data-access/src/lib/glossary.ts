@@ -1,13 +1,15 @@
-import { DataClient } from './types';
 import {
+  DataClient,
   GlossaryDetailDTO,
   GlossaryEntityDTO,
   GlossaryInstanceDTO,
+  GlossaryTermInstanceDTO,
   GlossaryLandingItem,
   GlossaryLandingItemDTO,
+  glossaryTermInstanceFromDTO,
   glossaryLandingItemFromDTO,
   glossaryPageItemFromDTO,
-} from './types/glossary-page';
+} from './types';
 
 export const getAllGlossaryTerms = async ({
   client,
@@ -51,6 +53,25 @@ export const getAllGlossaryTerms = async ({
   }
 
   return terms;
+};
+
+export const getGlossaryInstance = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data, error } = await client.rpc('show_glossary_entry', {
+    v_glossary_uuid: uuid,
+  });
+
+  if (error) {
+    console.error(`Error fetching glossary instance: ${uuid} `, error);
+    return undefined;
+  }
+
+  return glossaryTermInstanceFromDTO(data as GlossaryTermInstanceDTO);
 };
 
 export const getGlossaryEntry = async ({

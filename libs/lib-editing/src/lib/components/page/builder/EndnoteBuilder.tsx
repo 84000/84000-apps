@@ -14,7 +14,7 @@ export const EndnoteBuilder = () => {
   const [loading, setLoading] = useState(true);
   const [fragment, setFragment] = useState<XmlFragment>();
 
-  const { uuid, getFragment } = useEditorState();
+  const { uuid, getFragment, fetchGlossaryTerm } = useEditorState();
 
   useEffect(() => {
     const getTranslation = async () => {
@@ -40,7 +40,11 @@ export const EndnoteBuilder = () => {
   }
 
   return content && fragment ? (
-    <EndNotesEditor content={content} fragment={fragment} />
+    <EndNotesEditor
+      content={content}
+      fragment={fragment}
+      fetchGlossaryTerm={fetchGlossaryTerm}
+    />
   ) : (
     <TranslationSkeleton />
   );
