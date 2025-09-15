@@ -32,7 +32,7 @@ export const TitlesEditor = ({
     isEditable,
   });
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
         <EmptyBubbleMenu editor={editor} />

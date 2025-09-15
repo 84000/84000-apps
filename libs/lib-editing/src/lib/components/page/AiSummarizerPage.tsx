@@ -12,11 +12,5 @@ export const AiSummarizerPage = () => {
   }
 
   const src = `${url}?uuid=${uuid}`;
-  return (
-    <iframe
-      src={src}
-      className="w-full h-[calc(100vh-var(--header-height))]"
-      title="AI Summarizer"
-    />
-  );
+  return <iframe src={src} className="flex-grow" title="AI Summarizer" />;
 };

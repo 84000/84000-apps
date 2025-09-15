@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import { usePathname, useRouter } from 'next/navigation';
-import type { EditorBuilderType } from './types';
+import type { EditorMenuItemType } from './types';
 import type { TranslationEditorContent } from '../editor/TranslationEditor';
 import { EditorSidebar } from './EditorSidebar';
 import {
@@ -24,14 +24,14 @@ import { blockFromPassage } from '../../block';
 interface EditorContextState {
   doc?: Doc;
   uuid: string;
-  builder: EditorBuilderType;
+  builder: EditorMenuItemType;
   dirtyUuids: string[];
   getFragment: () => XmlFragment;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   fetchGlossaryTerm: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
-  setBuilder: (active: EditorBuilderType) => void;
+  setBuilder: (active: EditorMenuItemType) => void;
   setDoc: (doc: Doc) => void;
   save: () => Promise<void>;
   startObserving: () => void;
@@ -87,8 +87,8 @@ export const EditorContextProvider = ({
 
   const pathEnd = pathname.split('/').pop();
   const isUuidPath = pathEnd === uuid;
-  const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorBuilderType);
-  const [builder, setBuilder] = useState<EditorBuilderType>(initialBuilder);
+  const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorMenuItemType);
+  const [builder, setBuilder] = useState<EditorMenuItemType>(initialBuilder);
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
   const [fragments, setFragments] = useState<{
     [builder: string]: XmlFragment;
@@ -232,9 +232,8 @@ export const EditorContextProvider = ({
       }}
     >
       <EditorSidebar active={builder || 'body'} onClick={setBuilder}>
-        <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
-          {children}
-        </div>
+        {children}
+        <div className="h-[var(--header-height)]" />
       </EditorSidebar>
     </EditorContext.Provider>
   );

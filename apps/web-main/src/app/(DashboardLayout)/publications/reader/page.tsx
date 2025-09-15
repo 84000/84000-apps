@@ -14,6 +14,7 @@ const page = async () => {
       <div className="w-full max-w-[1466px]">
         <H2 className="text-navy-500">{'The Reading Room'}</H2>
         <TranslationsTable works={works} />
+        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );

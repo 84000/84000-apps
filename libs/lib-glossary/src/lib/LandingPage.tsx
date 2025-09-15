@@ -23,6 +23,7 @@ export const LandingPage = async () => {
           types={types}
           languages={languages}
         />
+        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );
