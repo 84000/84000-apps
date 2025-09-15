@@ -21,12 +21,12 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from '@design-system';
-import { LetterTextIcon } from 'lucide-react';
-import { useCallback } from 'react';
-import type { EditorBuilderType } from './types';
+import { LetterTextIcon, SparklesIcon } from 'lucide-react';
+import { ReactNode, useCallback } from 'react';
+import type { EditorMenuItemType } from './types';
 
 interface EditorSidebarItem {
-  key: EditorBuilderType;
+  key: EditorMenuItemType;
   title: string;
 }
 
@@ -57,8 +57,60 @@ const englishEditorItems: EditorSidebarItem[] = [
   },
 ];
 
-const isActive = (key: EditorBuilderType, active: EditorBuilderType) =>
+const toolItems: EditorSidebarItem[] = [
+  {
+    key: 'summarizer',
+    title: 'Summarizer',
+  },
+];
+
+const isActive = (key: EditorMenuItemType, active: EditorMenuItemType) =>
   key === active;
+
+export const EditorSidebarMenu = ({
+  icon,
+  name,
+  items,
+  active,
+  onSetActive,
+}: {
+  icon: ReactNode;
+  name: string;
+  items: EditorSidebarItem[];
+  active: EditorMenuItemType;
+  onSetActive: (key: EditorMenuItemType) => void;
+}) => {
+  return (
+    <SidebarMenu>
+      <Collapsible defaultOpen className="group/collapsible">
+        <SidebarMenuItem>
+          <CollapsibleTrigger asChild>
+            <SidebarMenuButton>
+              {icon}
+              {name}
+              <CollapsibleIcon />
+            </SidebarMenuButton>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <SidebarMenuSub>
+              <SidebarMenuSubItem>
+                {items.map((item) => (
+                  <SidebarMenuSubButton
+                    key={item.key}
+                    onClick={() => onSetActive(item.key)}
+                    isActive={isActive(item.key, active)}
+                  >
+                    {item.title}
+                  </SidebarMenuSubButton>
+                ))}
+              </SidebarMenuSubItem>
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    </SidebarMenu>
+  );
+};
 
 export const EditorSidebar = ({
   children,
@@ -66,11 +118,11 @@ export const EditorSidebar = ({
   onClick,
 }: {
   children: React.ReactNode;
-  active: EditorBuilderType;
-  onClick?: (key: EditorBuilderType) => void;
+  active: EditorMenuItemType;
+  onClick?: (key: EditorMenuItemType) => void;
 }) => {
   const onSetActive = useCallback(
-    (key: EditorBuilderType) => {
+    (key: EditorMenuItemType) => {
       onClick?.(key);
     },
     [onClick],
@@ -83,34 +135,25 @@ export const EditorSidebar = ({
           <SidebarGroup className="border-t border-sidebar-border">
             <SidebarGroupLabel>Editors</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                <Collapsible defaultOpen className="group/collapsible">
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton>
-                        <LetterTextIcon />
-                        English Editor
-                        <CollapsibleIcon />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        <SidebarMenuSubItem>
-                          {englishEditorItems.map((item) => (
-                            <SidebarMenuSubButton
-                              key={item.key}
-                              onClick={() => onSetActive(item.key)}
-                              isActive={isActive(item.key, active)}
-                            >
-                              {item.title}
-                            </SidebarMenuSubButton>
-                          ))}
-                        </SidebarMenuSubItem>
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              </SidebarMenu>
+              <EditorSidebarMenu
+                icon={<LetterTextIcon />}
+                name="English Editor"
+                items={englishEditorItems}
+                active={active}
+                onSetActive={onSetActive}
+              />
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup>
+            <SidebarGroupLabel>Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <EditorSidebarMenu
+                icon={<SparklesIcon />}
+                name="AI Tools"
+                items={toolItems}
+                active={active}
+                onSetActive={onSetActive}
+              />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

@@ -1,3 +1,4 @@
+export * from './AiSummarizerPage';
 export * from './EditorPage';
 export * from './EditorProvider';
 export * from './EditorSidebar';
