@@ -1,8 +1,16 @@
+import { notFound } from 'next/navigation';
+
 const Page = () => {
+  const url = process.env.NEXT_PUBLIC_RESEARCH_LIBRARY_URL;
+  if (!url) {
+    return notFound();
+  }
+
   return (
     <iframe
-      src="https://84000-research-library.vercel.app/"
-      className="size-full"
+      src={url}
+      className="size-full pb-[var(--header-height)]"
+      title="84000 Research Library"
     />
   );
 };

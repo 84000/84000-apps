@@ -27,6 +27,7 @@ export const DetailPage = async ({
         <GlossaryVariants detail={detail} />
         <GlossaryInstancesTable detail={detail} />
         <GlossaryRelatedTerms detail={detail} />
+        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );

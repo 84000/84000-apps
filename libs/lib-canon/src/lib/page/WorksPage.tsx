@@ -134,6 +134,7 @@ export const WorksPage = ({
           </div>
         )}
       />
+      <div className="h-[var(--header-height)]" />
     </>
   );
 };

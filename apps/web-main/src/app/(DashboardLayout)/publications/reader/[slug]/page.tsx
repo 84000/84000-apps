@@ -32,6 +32,7 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
           const Component = passageComponentForType[type];
           return <Component key={uuid}>{content}</Component>;
         })}
+        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );
