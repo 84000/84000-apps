@@ -85,6 +85,7 @@ export const isAttributeAnnotation = (type: BlockEditorContentType) => {
 export const isBlockAnnotation = (type: BlockEditorContentType) => {
   return [
     'blockquote',
+    'endnote',
     'heading',
     'line',
     'lineGroup',

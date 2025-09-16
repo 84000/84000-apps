@@ -8,6 +8,7 @@ import {
   OL_STYLE,
   UL_STYLE,
 } from '@design-system';
+import { cn } from '@lib-utils';
 
 export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   document: false,
@@ -18,7 +19,7 @@ export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   underline: false,
   bulletList: {
     HTMLAttributes: {
-      class: UL_STYLE,
+      class: cn(UL_STYLE, 'list-none'),
     },
   },
   code: {
