@@ -6,6 +6,7 @@ import { useBlockEditor } from '../BlockEditor';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
 import { GlossaryTermInstance } from '@data-access';
+import { cn } from '@lib-utils';
 
 export type TranslationEditorContentItem = Content & {
   attrs?: {
@@ -24,6 +25,7 @@ export const TranslationEditor = ({
   content,
   fragment,
   isEditable = true,
+  className,
   onCreate,
   fetchEndNote,
   fetchGlossaryInstance,
@@ -31,6 +33,7 @@ export const TranslationEditor = ({
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
+  className?: string;
   onCreate?: () => void;
   fetchEndNote?: (
     uuid: string,
@@ -51,7 +54,7 @@ export const TranslationEditor = ({
     onCreate,
   });
   return (
-    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
+    <div className={cn('flex h-full', className)}>
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
         <TranslationBubbleMenu editor={editor} />

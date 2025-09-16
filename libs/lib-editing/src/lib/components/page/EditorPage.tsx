@@ -30,5 +30,7 @@ export const EditorPage = () => {
     return notFound();
   }
 
-  return <TranslationSkeleton />;
+  return (
+    <TranslationSkeleton className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)" />
+  );
 };
