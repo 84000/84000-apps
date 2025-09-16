@@ -4,6 +4,7 @@ import { EditorContent } from '@tiptap/react';
 import { BlockEditorContent, useBlockEditor } from '../BlockEditor';
 import { useTitleExtensions } from './hooks/useTitleExtensions';
 import { EmptyBubbleMenu } from '../menus/EmptyBubbleMenu';
+import { cn } from '@lib-utils';
 
 export type TitlesEditorContentItem = BlockEditorContent & {
   attrs?: {
@@ -20,9 +21,11 @@ export type TitlesEditorContent =
 
 export const TitlesEditor = ({
   content,
+  className,
   isEditable = true,
 }: {
   content: TitlesEditorContent;
+  className?: string;
   isEditable?: boolean;
 }) => {
   const { extensions } = useTitleExtensions();
@@ -32,7 +35,7 @@ export const TitlesEditor = ({
     isEditable,
   });
   return (
-    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
+    <div className={cn('flex h-full', className)}>
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
         <EmptyBubbleMenu editor={editor} />

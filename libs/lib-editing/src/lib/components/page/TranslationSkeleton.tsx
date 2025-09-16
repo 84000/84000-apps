@@ -1,8 +1,9 @@
 import { Skeleton } from '@design-system';
+import { cn } from '@lib-utils';
 
-export const TranslationSkeleton = () => {
+export const TranslationSkeleton = ({ className }: { className?: string }) => {
   return (
-    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
+    <div className={cn('flex h-full', className)}>
       <div className="flex flex-col gap-6 pt-8">
         <Skeleton className="h-12 mb-4" />
         <Skeleton className="h-20 w-1/2" />

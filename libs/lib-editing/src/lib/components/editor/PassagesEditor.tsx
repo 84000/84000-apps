@@ -12,12 +12,14 @@ import { blocksFromTranslationBody } from '../../block';
 export const PassagesEditor = ({
   passages,
   fragment,
+  className,
   onCreate,
   fetchEndNote,
   fetchGlossaryInstance,
 }: {
   passages: Passage[];
   fragment: XmlFragment;
+  className?: string;
   onCreate?: () => void;
   fetchEndNote?: (
     uuid: string,
@@ -36,6 +38,7 @@ export const PassagesEditor = ({
   return (
     <TranslationEditor
       content={content}
+      className={className}
       fragment={fragment}
       onCreate={onCreate}
       fetchEndNote={fetchEndNote}

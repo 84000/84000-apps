@@ -6,16 +6,19 @@ import { useBlockEditor } from '../BlockEditor';
 import { useEndNotesExtensions } from './hooks/useEndNotesExtensions';
 import { EndNotesBubbleMenu } from './menu/EndNotesBubbleMenu';
 import { GlossaryTermInstance } from '@data-access';
+import { cn } from '@lib-utils';
 
 export const EndNotesEditor = ({
   content,
   fragment,
+  className,
   fetchGlossaryTerm,
   isEditable = true,
 }: {
   content: Content;
   fragment?: XmlFragment;
   isEditable?: boolean;
+  className?: string;
   fetchGlossaryTerm?: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
@@ -28,7 +31,7 @@ export const EndNotesEditor = ({
   });
 
   return (
-    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)">
+    <div className={cn('flex h-full', className)}>
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
         <EndNotesBubbleMenu editor={editor} />

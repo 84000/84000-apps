@@ -9,6 +9,9 @@ import { blocksFromTranslationBody } from '../../../block';
 import { useEditorState } from '../EditorProvider';
 import { TranslationSkeleton } from '../TranslationSkeleton';
 
+const WRAPPER_CLASS =
+  'flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)';
+
 export const EndnoteBuilder = () => {
   const [content, setContent] = useState<BlockEditorContent>();
   const [loading, setLoading] = useState(true);
@@ -41,11 +44,12 @@ export const EndnoteBuilder = () => {
 
   return content && fragment ? (
     <EndNotesEditor
+      className={WRAPPER_CLASS}
       content={content}
       fragment={fragment}
       fetchGlossaryTerm={fetchGlossaryTerm}
     />
   ) : (
-    <TranslationSkeleton />
+    <TranslationSkeleton className={WRAPPER_CLASS} />
   );
 };
