@@ -14,6 +14,12 @@
   }
 }
 
+img.ProseMirror-separator {
+  display: inline !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
 .tippy-box {
   max-width: none !important;
 }
