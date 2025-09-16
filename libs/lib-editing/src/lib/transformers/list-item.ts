@@ -1,3 +1,37 @@
-import { pass } from './transformer';
+import { recurse } from './recurse';
+import { splitBlock } from './split-block';
+import { Transformer } from './transformer';
 
-export const listItem = pass;
+export const listItem: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { start, end, uuid } = annotation || {};
+
+  recurse({
+    ...ctx,
+    until: ['paragraph'],
+    transform: (ctx) =>
+      splitBlock({
+        ...ctx,
+        transform: ({ block }) => {
+          block.type = 'listItem';
+          block.attrs = {
+            ...block.attrs,
+            start,
+            end,
+            uuid,
+          };
+          block.content = [
+            {
+              type: 'paragraph',
+              content: block.content || [],
+              attrs: {
+                start,
+                end,
+                uuid,
+              },
+            },
+          ];
+        },
+      }),
+  });
+};

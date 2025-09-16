@@ -1,7 +1,7 @@
-import { Annotation, AnnotationType } from '@data-access';
+import { Annotation, AnnotationType, BodyItemType } from '@data-access';
 import { BlockEditorContentItem } from '../components/editor';
 
-export type BlockEditorContentType = AnnotationType | 'text';
+export type BlockEditorContentType = AnnotationType | BodyItemType | 'text';
 
 export type TransformationContext = {
   root?: BlockEditorContentItem;
