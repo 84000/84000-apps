@@ -45,7 +45,6 @@ import { Indent } from '../../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
-import { EndNoteNode } from '../extensions/EndNote/EndNoteNode';
 import {
   AbbreviationCell,
   AbbreviationCommand,
@@ -106,7 +105,6 @@ export const useTranslationExtensions = ({
     EndNoteLinkNode.configure({
       fetch: fetchEndNote,
     }),
-    EndNoteNode,
     GlossaryInstanceNode.configure({
       fetch: fetchGlossaryInstance,
     }),
