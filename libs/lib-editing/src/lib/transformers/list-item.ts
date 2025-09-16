@@ -8,12 +8,11 @@ export const listItem: Transformer = (ctx) => {
 
   recurse({
     ...ctx,
-    until: ['listItem'],
+    until: ['paragraph'],
     transform: (ctx) =>
       splitBlock({
         ...ctx,
         transform: ({ block }) => {
-          const content = block.content || [];
           block.type = 'listItem';
           block.attrs = {
             ...block.attrs,
@@ -24,7 +23,7 @@ export const listItem: Transformer = (ctx) => {
           block.content = [
             {
               type: 'paragraph',
-              content,
+              content: block.content || [],
               attrs: {
                 start,
                 end,

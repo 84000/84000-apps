@@ -22,7 +22,7 @@ export const list: Transformer = (ctx) => {
           };
           block.content = [
             {
-              type: 'listItem',
+              type: 'paragraph',
               content: block.content || [],
               attrs: {
                 start,
