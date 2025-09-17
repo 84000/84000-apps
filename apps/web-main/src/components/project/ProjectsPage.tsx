@@ -35,6 +35,7 @@ export const ProjectsPage = () => {
             <Skeleton className="w-full h-[500px] mt-6" />
           </>
         )}
+        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );
