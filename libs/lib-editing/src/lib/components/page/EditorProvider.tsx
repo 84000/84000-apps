@@ -90,28 +90,17 @@ export const EditorContextProvider = ({
   const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorMenuItemType);
   const [builder, setBuilder] = useState<EditorMenuItemType>(initialBuilder);
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
-  const [fragments, setFragments] = useState<{
-    [builder: string]: XmlFragment;
-  }>({});
   const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
 
   useEffect(() => {
     const nextPath = `/publications/editor/${uuid}/${builder}`;
 
-    if (pathname === nextPath && fragments[builder]) {
+    if (pathname === nextPath) {
       return;
     }
 
     router.push(nextPath);
-
-    if (!fragments[builder]) {
-      const fragment = doc.getXmlFragment(builder);
-      setFragments((prev) => ({
-        ...prev,
-        [builder]: fragment,
-      }));
-    }
-  }, [uuid, builder, pathname, router, doc, fragments]);
+  }, [uuid, builder, pathname, router]);
 
   useEffect(() => {
     if (!dirtyUuids.length) {
@@ -122,12 +111,8 @@ export const EditorContextProvider = ({
   }, [dirtyUuids]);
 
   const getFragment = useCallback((): XmlFragment => {
-    if (!builder) {
-      throw new Error('Builder is not set');
-    }
-
-    return fragments[builder];
-  }, [fragments, builder]);
+    return doc?.getXmlFragment(builder);
+  }, [builder, doc]);
 
   const fetchEndNote = useCallback(
     async (uuid: string) => {
@@ -214,6 +199,16 @@ export const EditorContextProvider = ({
     }
   }, [getFragment, observerFunction]);
 
+  const toNewBuilder = useCallback(
+    (builder: EditorMenuItemType) => {
+      stopObserving();
+      setDoc(new Doc());
+      setDirtyUuids([]);
+      setBuilder(builder);
+    },
+    [stopObserving],
+  );
+
   return (
     <EditorContext.Provider
       value={{
@@ -231,7 +226,7 @@ export const EditorContextProvider = ({
         stopObserving,
       }}
     >
-      <EditorSidebar active={builder || 'body'} onClick={setBuilder}>
+      <EditorSidebar active={builder || 'body'} onClick={toNewBuilder}>
         {children}
         <div className="h-[var(--header-height)]" />
       </EditorSidebar>
