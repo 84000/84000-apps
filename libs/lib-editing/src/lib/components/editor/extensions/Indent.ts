@@ -48,6 +48,19 @@ export const Indent = Extension.create<IndentOptions>({
               return mergeAttributes(attributes, { class: 'pl-8' });
             },
           },
+          indentUuid: {
+            default: undefined,
+            parseHTML: (element) =>
+              element.getAttribute('data-indent-uuid') || undefined,
+            renderHTML: (attributes) => {
+              if (!attributes.indentUuid) {
+                return {};
+              }
+              return {
+                'data-indent-uuid': attributes.indentUuid,
+              };
+            },
+          },
         },
       },
     ];
