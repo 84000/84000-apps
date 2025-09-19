@@ -11,20 +11,22 @@ const buttonVariants = cva(
       variant: {
         default:
           'rounded-full bg-gradient-to-b from-brick-400 to-brick-800 text-secondary font-light hover:text-secondary hover:from-brick-800 hover:to-brick-400 transition-colors',
-        active: 'bg-sidebar-accent text-sidebar-accent-foreground font-bold',
+        active:
+          'rounded-full bg-sidebar-accent text-sidebar-accent-foreground font-bold',
         destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+          'rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
-          'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+          'rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+          'rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'rounded-full hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8',
+        default: 'h-10 px-5 py-2',
+        xs: 'h-6 px-2.5',
+        sm: 'h-9 px-3',
+        lg: 'h-11 px-8',
         icon: 'size-10',
       },
     },
@@ -47,7 +49,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (!variant || variant === 'default') {
       return (
-        <div className="p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
+        <div className="size-fit p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
           <Comp
             className={cn(buttonVariants({ variant, size, className }))}
             ref={ref}
