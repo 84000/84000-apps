@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorContent, Content } from '@tiptap/react';
+import { EditorContent, Content, Editor } from '@tiptap/react';
 import type { XmlFragment } from 'yjs';
 import { useBlockEditor } from '../BlockEditor';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
@@ -34,7 +34,7 @@ export const TranslationEditor = ({
   fragment?: XmlFragment;
   isEditable?: boolean;
   className?: string;
-  onCreate?: () => void;
+  onCreate?: (params: { editor: Editor }) => void;
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;

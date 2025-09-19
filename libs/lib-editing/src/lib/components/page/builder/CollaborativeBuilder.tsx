@@ -34,6 +34,7 @@ export const CollaborativeBuilder = ({
   const {
     uuid,
     builder: currentBuilder,
+    setEditor,
     startObserving,
     getFragment,
     fetchEndNote,
@@ -83,7 +84,8 @@ export const CollaborativeBuilder = ({
       fragment={getFragment()}
       fetchEndNote={fetchEndNote}
       fetchGlossaryInstance={fetchGlossaryTerm}
-      onCreate={() => {
+      onCreate={({ editor }) => {
+        setEditor(editor);
         if (!isObserving) {
           setIsObserving(true);
           startObserving();
