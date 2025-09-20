@@ -25,6 +25,10 @@ import {
   underline,
 } from './span';
 import { link } from './link';
+import { line } from './line';
+import { lineGroup } from './line-group';
+import { listItem } from './list-item';
+import { list } from './list';
 
 export type AnnotationExportDTO = {
   uuid: string;
@@ -34,12 +38,16 @@ export type AnnotationExportDTO = {
 };
 
 const EXPORTERS: Partial<
-  Record<AnnotationType | SpanMarkType | 'text', Exporter<AnnotationExportDTO>>
+  Record<
+    AnnotationType | SpanMarkType | 'text' | 'ul',
+    Exporter<AnnotationExportDTO>
+  >
 > = {
   abbreviation,
   audio,
   bold,
   blockquote,
+  bulletList: list,
   code,
   endNoteLink,
   glossaryInstance,
@@ -51,11 +59,10 @@ const EXPORTERS: Partial<
   internalLink: link,
   italic,
   leadingSpace,
-  line: basicNode,
-  lineGroup: basicNode,
+  line,
+  lineGroup,
   link,
-  list: basicNode,
-  listItem: basicNode,
+  listItem,
   mantra: italic,
   paragraph,
   quote: basicMark,

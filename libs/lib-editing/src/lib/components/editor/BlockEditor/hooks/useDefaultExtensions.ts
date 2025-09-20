@@ -13,6 +13,7 @@ import StarterKit from '../../extensions/StarterKit';
 import { Italic } from '../../extensions/Italic';
 import { Underline } from '../../extensions/Underline';
 import { Bold } from '../../extensions/Bold';
+import { List } from '../../extensions/List';
 
 export const useDefaultExtensions = () => {
   return {
@@ -23,6 +24,7 @@ export const useDefaultExtensions = () => {
       Image,
       Italic,
       Link,
+      List,
       Paragraph,
       Placeholder,
       SlashCommand.configure({

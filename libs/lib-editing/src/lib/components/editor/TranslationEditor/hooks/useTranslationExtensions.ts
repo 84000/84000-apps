@@ -54,6 +54,7 @@ import { ParagraphIndent } from '../../extensions/ParagraphIndent';
 import { TranslationEditorContent } from '../TranslationEditor';
 import { GlossaryTermInstance } from '@data-access';
 import { Bold } from '../../extensions/Bold';
+import { List } from '../../extensions/List';
 import { Underline } from '../../extensions/Underline';
 
 const PassageSuggestion: CommandSuggestionItem = {
@@ -118,6 +119,7 @@ export const useTranslationExtensions = ({
     LineGroupNode,
     LineNode,
     Link,
+    List,
     MantraMark,
     Paragraph,
     ParagraphIndent,
