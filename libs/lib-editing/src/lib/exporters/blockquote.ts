@@ -1,18 +1,18 @@
 import { AnnotationExportDTO } from './annotation';
 import { Exporter } from './export';
 
-export const paragraph: Exporter<AnnotationExportDTO> = ({ node }) => {
-  const textContent = node.textContent || '';
+export const blockquote: Exporter<AnnotationExportDTO> = ({ node }) => {
+  const textContent = node.textContent;
   const uuid = node.attrs.uuid;
 
   if (!textContent) {
-    console.warn(`Paragraph ${uuid} is empty`);
+    console.warn(`Blockquote node ${uuid} is missing body text`);
     return undefined;
   }
 
   return {
-    type: 'paragraph',
     uuid,
+    type: 'blockquote',
     textContent,
   };
 };

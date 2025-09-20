@@ -57,6 +57,15 @@ export const AbbreviationCell = TableCell.extend({
   name: 'abbreviation',
   group: 'tableCell',
   content: 'inline*',
+
+  addAttributes() {
+    return {
+      abbreviation: {
+        default: null,
+      },
+    };
+  },
+
   parseHTML() {
     return [{ tag: 'td[type=abbreviation]' }];
   },

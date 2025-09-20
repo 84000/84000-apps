@@ -7,6 +7,24 @@ import { trailer } from './trailer';
 import { basicMark, basicNode } from './basic';
 import { paragraph } from './paragraph';
 import { glossaryInstance } from './glossary-instance';
+import { abbreviation } from './abbreviation';
+import { audio } from './audio';
+import { image } from './image';
+import { blockquote } from './blockquote';
+import { code } from './code';
+import { endNoteLink } from './end-note-link';
+import { hasAbbreviation } from './has-abbreviation';
+import { heading } from './heading';
+import { SpanMarkType } from '../types';
+import {
+  bold,
+  italic,
+  smallCaps,
+  subscript,
+  superscript,
+  underline,
+} from './span';
+import { link } from './link';
 
 export type AnnotationExportDTO = {
   uuid: string;
@@ -16,35 +34,40 @@ export type AnnotationExportDTO = {
 };
 
 const EXPORTERS: Partial<
-  Record<AnnotationType | 'text', Exporter<AnnotationExportDTO>>
+  Record<AnnotationType | SpanMarkType | 'text', Exporter<AnnotationExportDTO>>
 > = {
-  abbreviation: basicMark,
-  audio: basicNode,
-  blockquote: basicNode,
-  code: basicMark,
-  endNoteLink: basicNode,
+  abbreviation,
+  audio,
+  bold,
+  blockquote,
+  code,
+  endNoteLink,
   glossaryInstance,
-  hasAbbreviation: basicMark,
-  heading: basicNode,
-  image: basicNode,
+  hasAbbreviation,
+  heading,
+  image,
   indent,
-  inlineTitle: basicMark,
-  internalLink: basicMark,
+  inlineTitle: italic,
+  internalLink: link,
+  italic,
   leadingSpace,
   line: basicNode,
   lineGroup: basicNode,
-  link: basicMark,
+  link,
   list: basicNode,
   listItem: basicNode,
-  mantra: basicMark,
+  mantra: italic,
   paragraph,
   quote: basicMark,
-  reference: basicMark,
-  span: basicMark,
+  reference: link,
+  smallCaps,
+  subscript,
+  superscript,
   tableBodyData: basicNode,
   tableBodyHeader: basicNode,
   tableBodyRow: basicNode,
   trailer,
+  underline,
 
   // ignored types
   deprecated: undefined,

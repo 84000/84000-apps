@@ -16,7 +16,7 @@ export type AnnotationBase = {
 
 export type AbbreviationAnnotation = AnnotationBase & {
   type: 'abbreviation';
-  text: string;
+  abbreviation: string;
 };
 
 export type AudioAnnotation = AnnotationBase & {
@@ -50,6 +50,7 @@ export type GlossaryInstanceAnnotation = AnnotationBase & {
 
 export type HasAbbreviationAnnotation = AnnotationBase & {
   type: 'hasAbbreviation';
+  abbreviation: string;
 };
 
 export type HeadingClass =
@@ -249,9 +250,14 @@ const dtoToAnnotationMap: Record<
   (dto: AnnotationDTO) => Annotation
 > = {
   abbreviation: (dto: AnnotationDTO): AbbreviationAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as AbbreviationAnnotation;
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const abbreviation = baseAnnotation as AbbreviationAnnotation;
+    dto.content.forEach((content) => {
+      if (content.uuid) {
+        abbreviation.abbreviation = content.uuid as string;
+      }
+    });
+    return abbreviation;
   },
   audio: (dto: AnnotationDTO): AudioAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);
@@ -306,9 +312,14 @@ const dtoToAnnotationMap: Record<
     return glossaryInstance;
   },
   'has-abbreviation': (dto: AnnotationDTO): HasAbbreviationAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as HasAbbreviationAnnotation;
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const hasAbbreviation = baseAnnotation as HasAbbreviationAnnotation;
+    dto.content.forEach((content) => {
+      if (content.uuid) {
+        hasAbbreviation.abbreviation = content.uuid as string;
+      }
+    });
+    return hasAbbreviation;
   },
   heading: (dto: AnnotationDTO): HeadingAnnotation => {
     const heading = baseAnnotationFromDTO(dto) as HeadingAnnotation;

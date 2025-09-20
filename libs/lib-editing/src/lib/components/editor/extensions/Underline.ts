@@ -1,7 +1,7 @@
 import { mergeAttributes } from '@tiptap/react';
-import { Superscript as TipTapSuperscript } from '@tiptap/extension-superscript';
+import { Underline as TipTapUnderline } from '@tiptap/extension-underline';
 
-export const Superscript = TipTapSuperscript.extend({
+export const Underline = TipTapUnderline.extend({
   addAttributes() {
     return {
       ...this.parent?.(),

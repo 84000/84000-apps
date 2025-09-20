@@ -5,7 +5,7 @@ import { recurse } from './recurse';
 
 export const link: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { uuid, href = '#' } = annotation as LinkAnnotation;
+  const { uuid, href = '#', type } = annotation as LinkAnnotation;
 
   recurse({
     ...ctx,
@@ -18,7 +18,7 @@ export const link: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'link',
-              attrs: { href, uuid },
+              attrs: { href, uuid, type },
             },
           ];
         },

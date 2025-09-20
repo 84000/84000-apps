@@ -19,6 +19,22 @@ const classForLevel: Record<Level, string> = {
 };
 
 export const Heading = TiptapHeading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      class: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-class'),
+        renderHTML: (attributes) => {
+          if (!attributes.class) {
+            return {};
+          }
+          return { 'data-class': attributes.class };
+        },
+      },
+    };
+  },
+
   renderHTML({ node, HTMLAttributes }) {
     const nodeLevel = parseInt(node.attrs.level, 10) as Level;
     const hasLevel = this.options.levels.includes(nodeLevel);

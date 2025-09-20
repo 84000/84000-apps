@@ -39,7 +39,20 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
   addAttributes() {
     return {
       type: {
-        default: 'small-caps',
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-type'),
+        renderHTML(attributes) {
+          return mergeAttributes(attributes, { 'data-type': attributes.type });
+        },
+      },
+      textStyle: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-text-style'),
+        renderHTML(attributes) {
+          return mergeAttributes(attributes, {
+            'data-text-style': attributes.textStyle,
+          });
+        },
       },
     };
   },

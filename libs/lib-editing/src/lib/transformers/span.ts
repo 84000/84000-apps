@@ -1,11 +1,14 @@
 import { ExtendedTranslationLanguage, SpanAnnotation } from '@data-access';
 import type { Transformer } from './transformer';
+import { type SpanMarkType, MARK_TYPES } from '../types';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
 import { recurse } from './recurse';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
-  [key: string]: (lang?: ExtendedTranslationLanguage) => string | undefined;
+  [key: string]: (
+    lang?: ExtendedTranslationLanguage,
+  ) => SpanMarkType | undefined;
 } = {
   distinct: () => 'italic',
   emphasis: () => 'italic',
@@ -29,7 +32,9 @@ export const span: Transformer = (ctx) => {
     return;
   }
 
-  const markType = MARK_TYPE_FOR_SPAN_TYPE[textStyle]?.(lang);
+  const markType = MARK_TYPES.includes(textStyle)
+    ? textStyle
+    : MARK_TYPE_FOR_SPAN_TYPE[textStyle]?.(lang);
   if (!markType) {
     return;
   }
@@ -53,9 +58,10 @@ export const span: Transformer = (ctx) => {
               type: markType,
               attrs: {
                 ...block.attrs,
-                textStyle,
-                lang,
                 uuid,
+                type: 'span',
+                lang,
+                textStyle,
               },
             },
           ];

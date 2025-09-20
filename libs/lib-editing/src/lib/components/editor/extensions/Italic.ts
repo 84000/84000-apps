@@ -7,16 +7,25 @@ export const Italic = TiptapItalic.extend({
       ...this.parent?.(),
       type: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute('type'),
+        parseHTML: (element) => element.getAttribute('data-type'),
         renderHTML(attributes) {
-          return mergeAttributes(attributes, { type: attributes.type });
+          return mergeAttributes(attributes, { 'data-type': attributes.type });
         },
       },
-      language: {
+      lang: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute('language'),
+        parseHTML: (element) => element.getAttribute('data-lang'),
         renderHTML(attributes) {
-          return mergeAttributes(attributes, { type: attributes.language });
+          return mergeAttributes(attributes, { 'data-lang': attributes.lang });
+        },
+      },
+      textStyle: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-text-style'),
+        renderHTML(attributes) {
+          return mergeAttributes(attributes, {
+            'data-text-style': attributes.textStyle,
+          });
         },
       },
     };

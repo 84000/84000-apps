@@ -7,7 +7,7 @@ import { recurse } from './recurse';
 export const mantra: Transformer = (ctx) => {
   const { annotation } = ctx;
 
-  const { lang } = annotation as MantraAnnotation;
+  const { lang, uuid } = annotation as MantraAnnotation;
   if (!lang) {
     return;
   }
@@ -24,7 +24,10 @@ export const mantra: Transformer = (ctx) => {
       splitContent({
         ...ctx,
         transform: ({ block: item }) => {
-          item.marks = [...(item.marks || []), { type: markType }];
+          item.marks = [
+            ...(item.marks || []),
+            { type: markType, attrs: { uuid, lang, type: 'mantra' } },
+          ];
         },
       }),
   });
