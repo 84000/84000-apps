@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, ArrowUp, ExternalLink, FileText } from 'lucide-react';
+import { Send, ArrowUp, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import Link from 'next/link';
-import { Button, Card, Input, ScrollArea } from '@design-system';
+import { Button, Card, H1, H5, Input, ScrollArea } from '@design-system';
 import { config } from './config';
 import { orchestratePipelineStep } from './orchestrate';
 import { Typewriter } from 'react-simple-typewriter';
 import type { FlowResult, Message } from './types';
 
-export const Page = () => {
+export const ExplorePage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -215,41 +214,14 @@ export const Page = () => {
   const showInitialInterface = messages.length === 0 && !isLoading;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Link href="/" passHref>
-            <h1 className="text-2xl font-bold tracking-tight select-none">
-              <span className="text-black dark:text-white">Agent Kit</span>
-              <span className="text-red-600"> Reasoning</span>
-            </h1>
-          </Link>
-          <div className="flex gap-4">
-            <Link
-              href="https://lamatic.ai/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Docs
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-background h-[calc(100vh_-_var(--header-height))] text-foreground flex flex-col">
       {showInitialInterface && (
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="max-w-4xl w-full">
             <div className="flex flex-col items-center justify-center text-center">
               <div className="mb-12">
-                <h1 className="text-5xl font-normal mb-4 text-balance">
-                  Meet Lamatic Agentic Reasoning Mode
-                </h1>
-                <p className="text-xl text-muted-foreground">
-                  Ask detailed questions for better responses
-                </p>
+                <H1 className="text-navy">Welcome to Explore Mode</H1>
+                <H5 className="text-brick">Dive deep into 84000 resources</H5>
               </div>
 
               <div className="w-full max-w-2xl mb-8">
@@ -264,10 +236,11 @@ export const Page = () => {
                   <Button
                     type="submit"
                     size="sm"
-                    className="absolute right-2 top-2 h-10 w-10 rounded-full"
+                    variant="ghost"
+                    className="absolute right-2 top-2 size-10 rounded-full"
                     disabled={!input.trim() || isLoading}
                   >
-                    <ArrowUp className="h-4 w-4" />
+                    <ArrowUp />
                   </Button>
                 </form>
               </div>
@@ -292,9 +265,9 @@ export const Page = () => {
       )}
 
       {(messages.length > 0 || isLoading) && (
-        <div className="flex-1 flex flex-col">
+        <div className="h-full flex flex-col">
           {/* Scrollable Chat History - Middle Section */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-grow overflow-hidden">
             <ScrollArea ref={scrollAreaRef} className="h-full">
               <div className="max-w-7xl mx-auto px-6 py-6 space-y-8">
                 {messages.map((message, index) => {
@@ -522,9 +495,9 @@ export const Page = () => {
           </div>
 
           {/* Fixed Input Section - Bottom */}
-          <div className="flex-shrink-0 relative">
+          <footer>
             {/* Blur gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
+            <div className="absolute sticky bottom-0 inset-0 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
             <div className="relative border-t border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
               <div className="max-w-4xl mx-auto px-6 py-6 pb-8">
                 <form
@@ -541,7 +514,8 @@ export const Page = () => {
                   <Button
                     type="submit"
                     size="sm"
-                    className="absolute right-2 top-2 h-10 w-10 rounded-full bg-primary hover:bg-primary/90 transition-colors"
+                    variant="ghost"
+                    className="absolute right-2 top-2 size-10 rounded-full"
                     disabled={!input.trim() || isLoading}
                   >
                     <Send className="h-4 w-4" />
@@ -549,7 +523,7 @@ export const Page = () => {
                 </form>
               </div>
             </div>
-          </div>
+          </footer>
         </div>
       )}
     </div>
