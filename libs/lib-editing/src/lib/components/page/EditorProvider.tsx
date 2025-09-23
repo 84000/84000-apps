@@ -21,7 +21,7 @@ import {
   getPassage,
 } from '@data-access';
 import { blockFromPassage } from '../../block';
-import { EditorHeader } from './EditorHeader';
+// import { EditorHeader } from './EditorHeader';
 import { PassageExportDTO, passageFromNode } from '../../passage';
 
 interface EditorContextState {
@@ -260,7 +260,7 @@ export const EditorContextProvider = ({
       }}
     >
       <EditorSidebar active={builder || 'body'} onClick={toNewBuilder}>
-        <EditorHeader />
+        {/* <EditorHeader /> */}
         {children}
         <div className="h-[var(--header-height)]" />
       </EditorSidebar>
