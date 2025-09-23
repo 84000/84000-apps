@@ -97,8 +97,6 @@ export const parameterAnnotationFromNode = (
   const annotations: AnnotationExportDTO[] = [];
   const { node, start } = ctx;
 
-  console.log(node.attrs);
-
   const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
   keys.forEach((key) => {
     const annotType = PARAMETER_ANNOTATION_MAP[key];
