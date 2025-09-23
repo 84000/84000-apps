@@ -16,7 +16,7 @@ export type AnnotationBase = {
 
 export type AbbreviationAnnotation = AnnotationBase & {
   type: 'abbreviation';
-  text: string;
+  abbreviation: string;
 };
 
 export type AudioAnnotation = AnnotationBase & {
@@ -50,6 +50,7 @@ export type GlossaryInstanceAnnotation = AnnotationBase & {
 
 export type HasAbbreviationAnnotation = AnnotationBase & {
   type: 'hasAbbreviation';
+  abbreviation: string;
 };
 
 export type HeadingClass =
@@ -107,6 +108,9 @@ export type LinkAnnotation = AnnotationBase & {
 
 export type ListAnnotation = AnnotationBase & {
   type: 'list';
+  spacing?: string;
+  nesting?: number;
+  itemStyle?: string;
 };
 
 export type ListItemAnnotation = AnnotationBase & {
@@ -173,7 +177,10 @@ export type AnnotationDTOContentKey =
   | 'link-text'
   | 'link-text-lookup'
   | 'link-type'
+  | 'list-item-style'
+  | 'list-spacing'
   | 'media-type'
+  | 'nesting'
   | 'paragraph'
   | 'quote_xmlId'
   | 'src'
@@ -249,9 +256,14 @@ const dtoToAnnotationMap: Record<
   (dto: AnnotationDTO) => Annotation
 > = {
   abbreviation: (dto: AnnotationDTO): AbbreviationAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as AbbreviationAnnotation;
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const abbreviation = baseAnnotation as AbbreviationAnnotation;
+    dto.content.forEach((content) => {
+      if (content.uuid) {
+        abbreviation.abbreviation = content.uuid as string;
+      }
+    });
+    return abbreviation;
   },
   audio: (dto: AnnotationDTO): AudioAnnotation => {
     const baseAnnotation = baseAnnotationFromDTO(dto);
@@ -306,9 +318,14 @@ const dtoToAnnotationMap: Record<
     return glossaryInstance;
   },
   'has-abbreviation': (dto: AnnotationDTO): HasAbbreviationAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as HasAbbreviationAnnotation;
+    const baseAnnotation = baseAnnotationFromDTO(dto);
+    const hasAbbreviation = baseAnnotation as HasAbbreviationAnnotation;
+    dto.content.forEach((content) => {
+      if (content.uuid) {
+        hasAbbreviation.abbreviation = content.uuid as string;
+      }
+    });
+    return hasAbbreviation;
   },
   heading: (dto: AnnotationDTO): HeadingAnnotation => {
     const heading = baseAnnotationFromDTO(dto) as HeadingAnnotation;
@@ -405,9 +422,22 @@ const dtoToAnnotationMap: Record<
     return linkAnnotation;
   },
   list: (dto: AnnotationDTO): ListAnnotation => {
-    return {
-      ...baseAnnotationFromDTO(dto),
-    } as ListAnnotation;
+    const listAnnotation = baseAnnotationFromDTO(dto) as ListAnnotation;
+    dto.content.forEach((content) => {
+      if (content['list-spacing']) {
+        listAnnotation.spacing = content['list-spacing'] as string;
+      }
+
+      if (content['list-item-style']) {
+        listAnnotation.itemStyle = content['list-item-style'] as string;
+      }
+
+      if (content.nesting) {
+        listAnnotation.nesting = Number.parseInt(content.nesting as string);
+      }
+    });
+
+    return listAnnotation;
   },
   'list-item': (dto: AnnotationDTO): ListItemAnnotation => {
     return {

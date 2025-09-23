@@ -2,13 +2,7 @@ import {
   StarterKitOptions,
   StarterKit as TiptapStarterKit,
 } from '@tiptap/starter-kit';
-import {
-  BLOCKQUOTE_STYLE,
-  CODE_STYLE,
-  OL_STYLE,
-  UL_STYLE,
-} from '@design-system';
-import { cn } from '@lib-utils';
+import { BLOCKQUOTE_STYLE, CODE_STYLE, OL_STYLE } from '@design-system';
 
 export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   document: false,
@@ -17,11 +11,8 @@ export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   italic: false,
   link: false,
   underline: false,
-  bulletList: {
-    HTMLAttributes: {
-      class: cn(UL_STYLE, 'list-none'),
-    },
-  },
+  bold: false,
+  bulletList: false,
   code: {
     HTMLAttributes: {
       class: CODE_STYLE,

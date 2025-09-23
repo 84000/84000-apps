@@ -2,6 +2,8 @@ import { recurse } from './recurse';
 import { Transformer } from './transformer';
 
 export const trailer: Transformer = (ctx) => {
+  const trailerUuid = ctx.annotation.uuid;
+
   recurse({
     ...ctx,
     until: ['paragraph'],
@@ -9,6 +11,7 @@ export const trailer: Transformer = (ctx) => {
       item.attrs = {
         ...item.attrs,
         hasTrailer: true,
+        trailerUuid,
       };
     },
   });

@@ -1,16 +1,16 @@
 'use client';
 
 import { Loader2Icon } from 'lucide-react';
-import { Button } from '../Button/Button';
+import { Button, ButtonProps } from '../Button/Button';
 import { useState } from 'react';
-import { cn } from '@lib-utils';
 
 export const SaveButton = ({
   onClick,
   className,
   disabled = false,
   label = 'Save',
-}: {
+  ...props
+}: ButtonProps & {
   onClick: () => Promise<void>;
   disabled?: boolean;
   className?: string;
@@ -19,7 +19,7 @@ export const SaveButton = ({
   const [isSaving, setIsSaving] = useState(false);
   return (
     <Button
-      className={cn('px-5', className)}
+      className={className}
       disabled={disabled || isSaving}
       onClick={async () => {
         setIsSaving(true);
@@ -32,6 +32,7 @@ export const SaveButton = ({
           setIsSaving(false);
         }
       }}
+      {...props}
     >
       {isSaving ? <Loader2Icon className="animate-spin" /> : label}
     </Button>

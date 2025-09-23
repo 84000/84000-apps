@@ -4,7 +4,10 @@ import { Transformer } from './transformer';
 import { recurse } from './recurse';
 
 export const heading: Transformer = ({ root, parent, block, annotation }) => {
-  const level = (annotation as HeadingAnnotation).level || 1;
+  const heading = annotation as HeadingAnnotation;
+  const level = heading.level || 1;
+  const cls = heading.class;
+
   recurse({
     until: ['heading', 'paragraph'],
     root,
@@ -19,9 +22,7 @@ export const heading: Transformer = ({ root, parent, block, annotation }) => {
           item.attrs = {
             ...item.attrs,
             level,
-            start: annotation?.start,
-            end: annotation?.end,
-            uuid: annotation.uuid,
+            class: cls,
           };
         },
       }),

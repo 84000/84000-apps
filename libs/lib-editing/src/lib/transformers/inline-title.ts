@@ -7,7 +7,7 @@ import { recurse } from './recurse';
 export const inlineTitle: Transformer = (ctx) => {
   const { annotation } = ctx;
 
-  const { lang } = annotation as InlineTitleAnnotation;
+  const { lang, uuid } = annotation as InlineTitleAnnotation;
   if (!lang) {
     return;
   }
@@ -24,7 +24,10 @@ export const inlineTitle: Transformer = (ctx) => {
       splitContent({
         ...ctx,
         transform: ({ block }) => {
-          block.marks = [...(block.marks || []), { type: markType }];
+          block.marks = [
+            ...(block.marks || []),
+            { type: markType, attrs: { uuid, lang, type: 'inlineTitle' } },
+          ];
         },
       }),
   });

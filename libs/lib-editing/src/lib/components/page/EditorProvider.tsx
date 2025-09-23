@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import { usePathname, useRouter } from 'next/navigation';
 import type { EditorMenuItemType } from './types';
@@ -20,9 +21,12 @@ import {
   getPassage,
 } from '@data-access';
 import { blockFromPassage } from '../../block';
+// import { EditorHeader } from './EditorHeader';
+import { PassageExport, passageFromNode } from '../../passage';
 
 interface EditorContextState {
   doc?: Doc;
+  editor?: Editor;
   uuid: string;
   builder: EditorMenuItemType;
   dirtyUuids: string[];
@@ -33,6 +37,7 @@ interface EditorContextState {
   ) => Promise<GlossaryTermInstance | undefined>;
   setBuilder: (active: EditorMenuItemType) => void;
   setDoc: (doc: Doc) => void;
+  setEditor: (editor?: Editor) => void;
   save: () => Promise<void>;
   startObserving: () => void;
   stopObserving: () => void;
@@ -55,6 +60,9 @@ export const EditorContext = createContext<EditorContextState>({
     throw Error('Not implemented');
   },
   setDoc: () => {
+    throw Error('Not implemented');
+  },
+  setEditor: () => {
     throw Error('Not implemented');
   },
   save: async () => {
@@ -90,44 +98,12 @@ export const EditorContextProvider = ({
   const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorMenuItemType);
   const [builder, setBuilder] = useState<EditorMenuItemType>(initialBuilder);
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
-  const [fragments, setFragments] = useState<{
-    [builder: string]: XmlFragment;
-  }>({});
+  const [editor, setEditor] = useState<Editor>();
   const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
 
-  useEffect(() => {
-    const nextPath = `/publications/editor/${uuid}/${builder}`;
-
-    if (pathname === nextPath && fragments[builder]) {
-      return;
-    }
-
-    router.push(nextPath);
-
-    if (!fragments[builder]) {
-      const fragment = doc.getXmlFragment(builder);
-      setFragments((prev) => ({
-        ...prev,
-        [builder]: fragment,
-      }));
-    }
-  }, [uuid, builder, pathname, router, doc, fragments]);
-
-  useEffect(() => {
-    if (!dirtyUuids.length) {
-      return;
-    }
-
-    console.log('Dirty uuids:', dirtyUuids);
-  }, [dirtyUuids]);
-
   const getFragment = useCallback((): XmlFragment => {
-    if (!builder) {
-      throw new Error('Builder is not set');
-    }
-
-    return fragments[builder];
-  }, [fragments, builder]);
+    return doc?.getXmlFragment(builder);
+  }, [builder, doc]);
 
   const fetchEndNote = useCallback(
     async (uuid: string) => {
@@ -174,8 +150,29 @@ export const EditorContextProvider = ({
   );
 
   const save = useCallback(async () => {
-    console.log('Saving document state...');
-  }, []);
+    if (!editor) {
+      console.warn('No editor instance found, cannot save.');
+      return;
+    }
+
+    editor.commands.blur();
+    const passages: PassageExport[] = [];
+    dirtyUuids.forEach((uuid) => {
+      const node = editor.$node('passage', { uuid });
+      if (!node) {
+        console.warn(`No passage node found for uuid: ${uuid}`);
+        return;
+      }
+
+      passages.push(passageFromNode(node.node));
+    });
+    console.log(passages);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    console.log('Document state saved.');
+    editor.commands.focus();
+
+    setDirtyUuids([]);
+  }, [editor, dirtyUuids]);
 
   const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
     if (!txn.local) {
@@ -214,24 +211,56 @@ export const EditorContextProvider = ({
     }
   }, [getFragment, observerFunction]);
 
+  const toNewBuilder = useCallback(
+    (builder: EditorMenuItemType) => {
+      stopObserving();
+      setEditor(undefined);
+      setDoc(new Doc());
+      setDirtyUuids([]);
+      setBuilder(builder);
+    },
+    [stopObserving],
+  );
+
+  useEffect(() => {
+    const nextPath = `/publications/editor/${uuid}/${builder}`;
+
+    if (pathname === nextPath) {
+      return;
+    }
+
+    router.push(nextPath);
+  }, [uuid, builder, pathname, router]);
+
+  useEffect(() => {
+    if (!dirtyUuids.length) {
+      return;
+    }
+
+    console.log('Dirty uuids:', dirtyUuids);
+  }, [dirtyUuids, save]);
+
   return (
     <EditorContext.Provider
       value={{
         uuid,
         builder,
         doc,
+        editor,
         dirtyUuids,
         getFragment,
         fetchEndNote,
         fetchGlossaryTerm,
         setDoc,
+        setEditor,
         setBuilder,
         save,
         startObserving,
         stopObserving,
       }}
     >
-      <EditorSidebar active={builder || 'body'} onClick={setBuilder}>
+      <EditorSidebar active={builder || 'body'} onClick={toNewBuilder}>
+        {/* <EditorHeader /> */}
         {children}
         <div className="h-[var(--header-height)]" />
       </EditorSidebar>

@@ -49,6 +49,19 @@ export const Trailer = Extension.create<TrailerOptions>({
               return {};
             },
           },
+          trailerUuid: {
+            default: undefined,
+            parseHTML: (element) =>
+              element.getAttribute('data-trailer-uuid') || undefined,
+            renderHTML: (attributes) => {
+              if (!attributes.trailerUuid) {
+                return {};
+              }
+              return {
+                'data-trailer-uuid': attributes.trailerUuid,
+              };
+            },
+          },
         },
       },
     ];

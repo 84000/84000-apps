@@ -90,19 +90,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'Śrāvastī',
             attrs: {
               start: 56,
               end: 64,
+              uuid: '48b09ede-46cf-419a-9ec8-64c4a610b456',
+              glossary: 'f2a07704-3c71-4f05-8e6a-5d326406fae2',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: 'f2a07704-3c71-4f05-8e6a-5d326406fae2',
-                  uuid: '48b09ede-46cf-419a-9ec8-64c4a610b456',
-                },
+                type: 'text',
+                text: 'Śrāvastī',
               },
             ],
           },
@@ -115,19 +114,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'Jeta’s Grove, Anāthapiṇḍada’s park',
             attrs: {
               start: 69,
               end: 103,
+              uuid: '4ebf55f0-fddd-45e6-a9af-09997c6f96f5',
+              glossary: '7fc58f66-5fbb-4973-8744-f6589f8aae97',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '7fc58f66-5fbb-4973-8744-f6589f8aae97',
-                  uuid: '4ebf55f0-fddd-45e6-a9af-09997c6f96f5',
-                },
+                type: 'text',
+                text: 'Jeta’s Grove, Anāthapiṇḍada’s park',
               },
             ],
           },
@@ -169,19 +167,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: '73776d26-6858-413b-9d62-5ffe18a59e4c',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: '73776d26-6858-413b-9d62-5ffe18a59e4c',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -223,19 +220,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: '93fb08c3-dabb-45e3-b9d6-05d40fb8df92',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: '93fb08c3-dabb-45e3-b9d6-05d40fb8df92',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -248,19 +244,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'thought of awakening',
             attrs: {
               start: 85,
               end: 105,
+              uuid: '7cb61bc2-cf3c-4b28-a026-56062c3febce',
+              glossary: '445f17ca-164b-4c68-82a3-f9f3ee3595b6',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '445f17ca-164b-4c68-82a3-f9f3ee3595b6',
-                  uuid: '7cb61bc2-cf3c-4b28-a026-56062c3febce',
-                },
+                type: 'text',
+                text: 'thought of awakening',
               },
             ],
           },
@@ -302,19 +297,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: '1e14fa7b-adde-4991-8b26-3f4ff17ac243',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: '1e14fa7b-adde-4991-8b26-3f4ff17ac243',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -327,19 +321,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'spiritual friend',
             attrs: {
               start: 85,
               end: 101,
+              uuid: 'b720b5d4-3213-4638-b192-eb8e8dca8299',
+              glossary: '4049f21f-fa6c-4180-80f5-0750c14162da',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '4049f21f-fa6c-4180-80f5-0750c14162da',
-                  uuid: 'b720b5d4-3213-4638-b192-eb8e8dca8299',
-                },
+                type: 'text',
+                text: 'spiritual friend',
               },
             ],
           },
@@ -381,19 +374,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: '9be0ece5-da55-4d6d-934f-26149e9241ac',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: '9be0ece5-da55-4d6d-934f-26149e9241ac',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -406,19 +398,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'tolerance',
             attrs: {
               start: 81,
               end: 90,
+              uuid: '247d0cd6-8f48-4e3d-8c70-ab5ddf7f1382',
+              glossary: '3268038f-cca4-471a-94b3-13c62c85b7ca',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '3268038f-cca4-471a-94b3-13c62c85b7ca',
-                  uuid: '247d0cd6-8f48-4e3d-8c70-ab5ddf7f1382',
-                },
+                type: 'text',
+                text: 'tolerance',
               },
             ],
           },
@@ -431,19 +422,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'lenience',
             attrs: {
               start: 95,
               end: 103,
+              uuid: 'bc10971b-913a-4a6b-b0cb-888310563c90',
+              glossary: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
-                  uuid: 'bc10971b-913a-4a6b-b0cb-888310563c90',
-                },
+                type: 'text',
+                text: 'lenience',
               },
             ],
           },
@@ -495,19 +485,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: '85247b59-0ae2-4dc2-8f1d-fc7d43d18e04',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: '85247b59-0ae2-4dc2-8f1d-fc7d43d18e04',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -520,19 +509,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'dwelling in the wilderness',
             attrs: {
               start: 81,
               end: 107,
+              uuid: '9f5020c2-2a3f-4faa-8d83-e953dfb0b255',
+              glossary: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
-                  uuid: '9f5020c2-2a3f-4faa-8d83-e953dfb0b255',
-                },
+                type: 'text',
+                text: 'dwelling in the wilderness',
               },
             ],
           },
@@ -584,19 +572,18 @@ export const content: TranslationEditorContent = [
             },
           },
           {
-            type: 'text',
+            type: 'glossaryInstance',
             text: 'great beings',
             attrs: {
               start: 48,
               end: 60,
+              uuid: 'f78b3d56-2441-426f-ae87-8285bb46c82a',
+              glossary: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
             },
-            marks: [
+            content: [
               {
-                type: 'glossaryInstance',
-                attrs: {
-                  authority: '1e6586e7-e5dd-49ef-8d6c-b97b66c6aa34',
-                  uuid: 'f78b3d56-2441-426f-ae87-8285bb46c82a',
-                },
+                type: 'text',
+                text: 'great beings',
               },
             ],
           },
@@ -724,19 +711,18 @@ export const content: TranslationEditorContent = [
                 },
               },
               {
-                type: 'text',
+                type: 'glossaryInstance',
                 text: 'tolerance',
                 attrs: {
                   start: 138,
                   end: 147,
+                  uuid: '79f4938e-df3c-40c8-a618-fa188a124517',
+                  glossary: '3268038f-cca4-471a-94b3-13c62c85b7ca',
                 },
-                marks: [
+                content: [
                   {
-                    type: 'glossaryInstance',
-                    attrs: {
-                      authority: '3268038f-cca4-471a-94b3-13c62c85b7ca',
-                      uuid: '79f4938e-df3c-40c8-a618-fa188a124517',
-                    },
+                    type: 'text',
+                    text: 'tolerance',
                   },
                 ],
               },
@@ -749,19 +735,18 @@ export const content: TranslationEditorContent = [
                 },
               },
               {
-                type: 'text',
+                type: 'glossaryInstance',
                 text: 'lenience',
                 attrs: {
                   start: 152,
                   end: 160,
+                  uuid: 'dd65abe5-d658-40d9-820d-d9c427e40f5e',
+                  glossary: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
                 },
-                marks: [
+                content: [
                   {
-                    type: 'glossaryInstance',
-                    attrs: {
-                      authority: '4f7a6a56-6c00-43a0-b457-f3e741364a05',
-                      uuid: 'dd65abe5-d658-40d9-820d-d9c427e40f5e',
-                    },
+                    type: 'text',
+                    text: 'lenience',
                   },
                 ],
               },
@@ -792,19 +777,18 @@ export const content: TranslationEditorContent = [
                 },
               },
               {
-                type: 'text',
+                type: 'glossaryInstance',
                 text: 'spiritual friend',
                 attrs: {
                   start: 184,
                   end: 200,
+                  uuid: '83d1bcb5-15ed-492b-a401-d59e7a0c0ad3',
+                  glossary: '4049f21f-fa6c-4180-80f5-0750c14162da',
                 },
-                marks: [
+                content: [
                   {
-                    type: 'glossaryInstance',
-                    attrs: {
-                      authority: '4049f21f-fa6c-4180-80f5-0750c14162da',
-                      uuid: '83d1bcb5-15ed-492b-a401-d59e7a0c0ad3',
-                    },
+                    type: 'text',
+                    text: 'spiritual friend',
                   },
                 ],
               },
@@ -874,19 +858,18 @@ export const content: TranslationEditorContent = [
                 },
               },
               {
-                type: 'text',
+                type: 'glossaryInstance',
                 text: 'dwelling in the wilderness',
                 attrs: {
                   start: 67,
                   end: 93,
+                  uuid: 'cc951a6e-3334-4f23-8727-8d1b9807e186',
+                  glossary: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
                 },
-                marks: [
+                content: [
                   {
-                    type: 'glossaryInstance',
-                    attrs: {
-                      authority: 'c2d14c50-fccd-4438-bebc-6dfa4f77194e',
-                      uuid: 'cc951a6e-3334-4f23-8727-8d1b9807e186',
-                    },
+                    type: 'text',
+                    text: 'dwelling in the wilderness',
                   },
                 ],
               },

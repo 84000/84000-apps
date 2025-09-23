@@ -48,6 +48,19 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
               return {};
             },
           },
+          leadingSpaceUuid: {
+            default: undefined,
+            parseHTML: (element) =>
+              element.getAttribute('data-leading-space-uuid') || undefined,
+            renderHTML: (attributes) => {
+              if (!attributes.leadingSpaceUuid) {
+                return {};
+              }
+              return {
+                'data-leading-space-uuid': attributes.leadingSpaceUuid,
+              };
+            },
+          },
         },
       },
     ];

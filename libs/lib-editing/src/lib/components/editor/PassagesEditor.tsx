@@ -1,6 +1,7 @@
 'use client';
 
 import { GlossaryTermInstance, Passage } from '@data-access';
+import type { Editor } from '@tiptap/react';
 import type { XmlFragment } from 'yjs';
 import { useEffect, useState } from 'react';
 import {
@@ -20,7 +21,7 @@ export const PassagesEditor = ({
   passages: Passage[];
   fragment: XmlFragment;
   className?: string;
-  onCreate?: () => void;
+  onCreate?: (params: { editor: Editor }) => void;
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;

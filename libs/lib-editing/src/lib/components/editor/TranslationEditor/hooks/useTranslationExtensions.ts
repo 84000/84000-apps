@@ -2,7 +2,6 @@
 
 import type { XmlFragment } from 'yjs';
 import { Collaboration } from '@tiptap/extension-collaboration';
-import Underline from '@tiptap/extension-underline';
 import { Audio } from '../../extensions/Audio/Audio';
 import Heading from '../../extensions/Heading/Heading';
 import Image from '../../extensions/Image';
@@ -54,6 +53,9 @@ import {
 import { ParagraphIndent } from '../../extensions/ParagraphIndent';
 import { TranslationEditorContent } from '../TranslationEditor';
 import { GlossaryTermInstance } from '@data-access';
+import { Bold } from '../../extensions/Bold';
+import { List } from '../../extensions/List';
+import { Underline } from '../../extensions/Underline';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -102,6 +104,7 @@ export const useTranslationExtensions = ({
     AbbreviationCell,
     HasAbbreviationCell,
     AbbreviationCommand,
+    Bold,
     EndNoteLinkNode.configure({
       fetch: fetchEndNote,
     }),
@@ -116,6 +119,7 @@ export const useTranslationExtensions = ({
     LineGroupNode,
     LineNode,
     Link,
+    List,
     MantraMark,
     Paragraph,
     ParagraphIndent,

@@ -1,16 +1,20 @@
 'use client';
 
+import { H3 } from '@design-system';
+import { useEffect, useState } from 'react';
 import {
   BlockEditor,
-  H3,
+  blocksFromTranslationBody,
   TranslationEditor,
   TranslationEditorContent,
-} from '@design-system';
-import { useEffect, useState } from 'react';
-import { blocksFromTranslationBody } from '@lib-editing';
+} from '@lib-editing';
 import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
 import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
-import { PassageDTO, translationBodyFromDTO } from '@data-access';
+import {
+  GlossaryTermInstance,
+  PassageDTO,
+  translationBodyFromDTO,
+} from '@data-access';
 
 export const EditorPage = ({
   slug,
@@ -67,6 +71,23 @@ export const EditorPage = ({
     ];
   };
 
+  const fetchGlossaryInstance = async (
+    uuid: string,
+  ): Promise<GlossaryTermInstance> => {
+    return {
+      uuid,
+      authority: 'Sample Term',
+      definition: `This is a sample definition for the glossary term with UUID ${uuid}.`,
+      names: {
+        english: 'Sample Term',
+        chinese: '示例术语',
+        sanskrit: 'udāharaṇa paccaya',
+        tibetan: 'དམ་བཅོས་གྲུབ་པ།',
+        wylie: 'dam bcos grub pa',
+      },
+    };
+  };
+
   if (!content) {
     return <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>;
   }
@@ -74,7 +95,11 @@ export const EditorPage = ({
   switch (editorType) {
     case 'translation':
       return (
-        <TranslationEditor content={content} fetchEndNote={fetchEndNote} />
+        <TranslationEditor
+          content={content}
+          fetchEndNote={fetchEndNote}
+          fetchGlossaryInstance={fetchGlossaryInstance}
+        />
       );
 
     default:
