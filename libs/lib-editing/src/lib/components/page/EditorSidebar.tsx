@@ -29,23 +29,13 @@ import { BodyItemType } from '@data-access';
 interface EditorSidebarItem {
   key: EditorMenuItemType;
   title: string;
-  priority: number;
 }
 
-const DEFAULT_PRIORITY = Infinity;
-
-const ITEM_PRIORITIES: Partial<Record<EditorMenuItemType, number>> = {
-  summary: 1,
-  introduction: 2,
-  translation: 3,
-  endnote: 4,
-};
-
+// titles is not derived from passages, so we add it manually
 const ENGLISH_EDITOR_ITEMS: EditorSidebarItem[] = [
   {
     key: 'titles',
     title: 'titles',
-    priority: 0,
   },
 ];
 
@@ -53,12 +43,11 @@ const TOOL_ITEMS: EditorSidebarItem[] = [
   {
     key: 'summarizer',
     title: 'summarizer',
-    priority: 0,
   },
 ];
 
+// some editor keys need custom titles
 const EDITOR_KEY_TO_TITLE: Partial<Record<EditorMenuItemType, string>> = {
-  translation: 'body',
   endnote: 'end notes',
 };
 
@@ -78,8 +67,6 @@ export const EditorSidebarMenu = ({
   active: EditorMenuItemType;
   onSetActive: (key: EditorMenuItemType) => void;
 }) => {
-  items.sort((a, b) => a.priority - b.priority);
-
   return (
     <SidebarMenu>
       <Collapsible defaultOpen className="group/collapsible">
@@ -134,7 +121,6 @@ export const EditorSidebar = ({
   const builderItems = builders.map((builder) => ({
     key: builder,
     title: EDITOR_KEY_TO_TITLE[builder] || builder,
-    priority: ITEM_PRIORITIES[builder] || DEFAULT_PRIORITY,
   }));
 
   const editorItems = [...ENGLISH_EDITOR_ITEMS, ...builderItems];
