@@ -55,6 +55,28 @@ export const getTranslationPassages = async ({
   return translationBodyFromDTO(data || []);
 };
 
+export const getTranslationPassageTypes = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data, error } = await client.rpc(
+    'scholar_passages_get_types_by_work',
+    {
+      work_uuid_param: uuid,
+    },
+  );
+
+  if (error) {
+    console.error('Error fetching passage types:', error);
+    return [];
+  }
+
+  return data as BodyItemType[];
+};
+
 export const getTranslationAcknowledgements = async ({
   client,
   uuid,

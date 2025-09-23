@@ -15,6 +15,7 @@ import type { EditorMenuItemType } from './types';
 import type { TranslationEditorContent } from '../editor/TranslationEditor';
 import { EditorSidebar } from './EditorSidebar';
 import {
+  BodyItemType,
   GlossaryTermInstance,
   createBrowserClient,
   getGlossaryInstance,
@@ -45,7 +46,7 @@ interface EditorContextState {
 
 export const EditorContext = createContext<EditorContextState>({
   uuid: '',
-  builder: 'body',
+  builder: 'translation',
   dirtyUuids: [],
   getFragment: () => {
     throw Error('Not implemented');
@@ -78,12 +79,14 @@ export const EditorContext = createContext<EditorContextState>({
 
 interface EditorContextProps {
   uuid: string;
+  builders: BodyItemType[];
   doc?: Doc;
   children: React.ReactNode;
 }
 
 export const EditorContextProvider = ({
   uuid,
+  builders,
   doc: initialDoc,
   children,
 }: EditorContextProps) => {
@@ -95,7 +98,9 @@ export const EditorContextProvider = ({
 
   const pathEnd = pathname.split('/').pop();
   const isUuidPath = pathEnd === uuid;
-  const initialBuilder = isUuidPath ? 'body' : (pathEnd as EditorMenuItemType);
+  const initialBuilder = isUuidPath
+    ? 'translation'
+    : (pathEnd as EditorMenuItemType);
   const [builder, setBuilder] = useState<EditorMenuItemType>(initialBuilder);
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
   const [editor, setEditor] = useState<Editor>();
@@ -259,7 +264,11 @@ export const EditorContextProvider = ({
         stopObserving,
       }}
     >
-      <EditorSidebar active={builder || 'body'} onClick={toNewBuilder}>
+      <EditorSidebar
+        builders={builders}
+        active={builder || 'body'}
+        onClick={toNewBuilder}
+      >
         {/* <EditorHeader /> */}
         {children}
         <div className="h-[var(--header-height)]" />

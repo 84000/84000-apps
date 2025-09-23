@@ -1,13 +1,7 @@
-export type EditorBuilderType =
-  | 'titles'
-  | 'summary'
-  | 'acknowledgements'
-  | 'introduction'
-  | 'body'
-  | 'end-notes'
-  | 'bibliography'
-  | 'glossary';
+import { BodyItemType } from '@data-access';
 
-export type EditorToolsType = 'summarizer';
+export type EditorBuilderType = BodyItemType | 'titles';
+
+export type EditorToolsType = 'summarizer' | 'bibliography' | 'glossary';
 
 export type EditorMenuItemType = EditorBuilderType | EditorToolsType;
