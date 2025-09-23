@@ -30,7 +30,7 @@ import { listItem } from './list-item';
 import { list } from './list';
 import { findNodePosition, nodeNotFound } from './util';
 
-export type AnnotationExportDTO = {
+export type AnnotationExport = {
   uuid: string;
   type: AnnotationType;
   textContent: string;
@@ -42,7 +42,7 @@ export type AnnotationExportDTO = {
 const EXPORTERS: Partial<
   Record<
     AnnotationType | SpanMarkType | 'text' | 'ul',
-    Exporter<AnnotationExportDTO>
+    Exporter<AnnotationExport>
   >
 > = {
   abbreviation,
@@ -93,8 +93,8 @@ const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
 
 export const parameterAnnotationFromNode = (
   ctx: ExporterContext,
-): AnnotationExportDTO[] => {
-  const annotations: AnnotationExportDTO[] = [];
+): AnnotationExport[] => {
+  const annotations: AnnotationExport[] = [];
   const { node, start } = ctx;
 
   const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
@@ -121,9 +121,9 @@ export const parameterAnnotationFromNode = (
 
 export const markAnnotationFromNode = (
   ctx: ExporterContext,
-): AnnotationExportDTO[] => {
+): AnnotationExport[] => {
   const { node } = ctx;
-  const annotations: AnnotationExportDTO[] = [];
+  const annotations: AnnotationExport[] = [];
   node.marks.forEach((mark) => {
     const start = findNodePosition(ctx.root, mark.attrs.uuid, mark.type.name);
     if (start === undefined) {
@@ -140,7 +140,7 @@ export const markAnnotationFromNode = (
 
 export const annotationsFromNode = (
   ctx: ExporterContext,
-): AnnotationExportDTO[] => {
+): AnnotationExport[] => {
   const { node, root } = ctx;
   const annotations = [
     ...parameterAnnotationFromNode(ctx),

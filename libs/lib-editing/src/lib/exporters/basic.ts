@@ -1,8 +1,8 @@
 import { AnnotationType } from '@data-access';
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const basicNode: Exporter<AnnotationExportDTO> = ({
+export const basicNode: Exporter<AnnotationExport> = ({
   node,
   parent,
   start,
@@ -18,7 +18,7 @@ export const basicNode: Exporter<AnnotationExportDTO> = ({
   };
 };
 
-export const basicMark: Exporter<AnnotationExportDTO> = ({
+export const basicMark: Exporter<AnnotationExport> = ({
   node,
   mark,
   parent,

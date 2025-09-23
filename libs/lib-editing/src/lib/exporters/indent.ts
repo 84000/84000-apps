@@ -1,11 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const indent: Exporter<AnnotationExportDTO> = ({
-  node,
-  parent,
-  start,
-}) => {
+export const indent: Exporter<AnnotationExport> = ({ node, parent, start }) => {
   const textContent = node.textContent || parent.textContent || '';
   return {
     uuid: node.attrs.indentUuid,

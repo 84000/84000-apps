@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const glossaryInstance: Exporter<AnnotationExportDTO> = ({
+export const glossaryInstance: Exporter<AnnotationExport> = ({
   node,
   start,
 }) => {

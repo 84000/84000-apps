@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const endNoteLink: Exporter<AnnotationExportDTO> = ({ node, start }) => {
+export const endNoteLink: Exporter<AnnotationExport> = ({ node, start }) => {
   const textContent = node.textContent;
   const endNote = node.attrs.endNote;
   const uuid = node.attrs.uuid;

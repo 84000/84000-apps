@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const trailer: Exporter<AnnotationExportDTO> = ({
+export const trailer: Exporter<AnnotationExport> = ({
   node,
   parent,
   start,

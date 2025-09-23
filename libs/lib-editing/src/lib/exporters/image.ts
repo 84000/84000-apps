@@ -1,11 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const image: Exporter<AnnotationExportDTO> = ({
-  node,
-  parent,
-  start,
-}) => {
+export const image: Exporter<AnnotationExport> = ({ node, parent, start }) => {
   const textContent = node.textContent || parent.textContent || '';
   const src = node.attrs.src;
   const uuid = node.attrs.uuid;

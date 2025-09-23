@@ -22,7 +22,7 @@ import {
 } from '@data-access';
 import { blockFromPassage } from '../../block';
 // import { EditorHeader } from './EditorHeader';
-import { PassageExportDTO, passageFromNode } from '../../passage';
+import { PassageExport, passageFromNode } from '../../passage';
 
 interface EditorContextState {
   doc?: Doc;
@@ -156,7 +156,7 @@ export const EditorContextProvider = ({
     }
 
     editor.commands.blur();
-    const passages: PassageExportDTO[] = [];
+    const passages: PassageExport[] = [];
     dirtyUuids.forEach((uuid) => {
       const node = editor.$node('passage', { uuid });
       if (!node) {

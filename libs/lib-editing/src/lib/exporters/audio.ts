@@ -1,11 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const audio: Exporter<AnnotationExportDTO> = ({
-  node,
-  parent,
-  start,
-}) => {
+export const audio: Exporter<AnnotationExport> = ({ node, parent, start }) => {
   const textContent = node.textContent || parent.textContent || '';
   const uuid = node.attrs.uuid;
   const src = node.attrs.src;

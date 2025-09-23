@@ -1,6 +1,6 @@
 import { AnnotationType } from '@data-access';
 import { Exporter, ExporterContext } from './export';
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 
 export const LINK_TYPES: AnnotationType[] = [
   'internalLink',
@@ -8,7 +8,7 @@ export const LINK_TYPES: AnnotationType[] = [
   'reference',
 ];
 
-export const link: Exporter<AnnotationExportDTO> = ({
+export const link: Exporter<AnnotationExport> = ({
   mark,
   node,
   parent,

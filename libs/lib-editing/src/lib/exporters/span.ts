@@ -1,6 +1,6 @@
 import { AnnotationType } from '@data-access';
 import { Exporter, ExporterContext } from './export';
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 
 const ITALIC_TYPES: AnnotationType[] = ['inlineTitle', 'mantra', 'span'];
 
@@ -11,7 +11,7 @@ export const span = ({
   start,
   types,
 }: ExporterContext & { types: AnnotationType[] }):
-  | AnnotationExportDTO
+  | AnnotationExport
   | undefined => {
   const type = mark?.attrs.type;
   const uuid = mark?.attrs.uuid;
@@ -44,20 +44,20 @@ export const span = ({
   };
 };
 
-export const bold: Exporter<AnnotationExportDTO> = (ctx) =>
+export const bold: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ['span'] });
 
-export const italic: Exporter<AnnotationExportDTO> = (ctx) =>
+export const italic: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ITALIC_TYPES });
 
-export const smallCaps: Exporter<AnnotationExportDTO> = (ctx) =>
+export const smallCaps: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ['span'] });
 
-export const subscript: Exporter<AnnotationExportDTO> = (ctx) =>
+export const subscript: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ['span'] });
 
-export const superscript: Exporter<AnnotationExportDTO> = (ctx) =>
+export const superscript: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ['span'] });
 
-export const underline: Exporter<AnnotationExportDTO> = (ctx) =>
+export const underline: Exporter<AnnotationExport> = (ctx) =>
   span({ ...ctx, types: ['span'] });

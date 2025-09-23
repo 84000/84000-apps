@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const paragraph: Exporter<AnnotationExportDTO> = ({
+export const paragraph: Exporter<AnnotationExport> = ({
   node,
   parent,
   start,

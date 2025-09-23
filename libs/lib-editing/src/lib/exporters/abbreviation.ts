@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const abbreviation: Exporter<AnnotationExportDTO> = ({
+export const abbreviation: Exporter<AnnotationExport> = ({
   node,
   parent,
   start,

@@ -1,7 +1,7 @@
-import { AnnotationExportDTO } from './annotation';
+import { AnnotationExport } from './annotation';
 import { Exporter } from './export';
 
-export const leadingSpace: Exporter<AnnotationExportDTO> = ({
+export const leadingSpace: Exporter<AnnotationExport> = ({
   node,
   parent,
   start,

@@ -1,6 +1,6 @@
 import { Node } from '@tiptap/pm/model';
 import {
-  AnnotationExportDTO,
+  AnnotationExport,
   annotationsFromNode,
   markAnnotationFromNode,
   parameterAnnotationFromNode,
@@ -8,16 +8,16 @@ import {
 import { findNodePosition, nodeNotFound } from './exporters/util';
 import { ExporterContext } from './exporters/export';
 
-export type PassageExportDTO = {
+export type PassageExport = {
   uuid: string;
   sort: number;
   type: string;
   label?: string;
   content: string;
-  annotations: AnnotationExportDTO[];
+  annotations: AnnotationExport[];
 };
 
-export const passageFromNode = (node: Node): PassageExportDTO => {
+export const passageFromNode = (node: Node): PassageExport => {
   const uuid = node.attrs.uuid;
   const type = node.attrs.type;
 
@@ -36,7 +36,7 @@ export const passageFromNode = (node: Node): PassageExportDTO => {
     );
   });
 
-  const passage: PassageExportDTO = {
+  const passage: PassageExport = {
     uuid,
     type,
     sort: node.attrs.sort,
