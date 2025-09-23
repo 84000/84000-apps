@@ -1,6 +1,5 @@
 import { AnnotationType } from '@data-access';
-import type { Node } from '@tiptap/pm/model';
-import { Exporter } from './export';
+import { Exporter, ExporterContext } from './export';
 import { indent } from './indent';
 import { leadingSpace } from './leading-space';
 import { trailer } from './trailer';
@@ -29,12 +28,15 @@ import { line } from './line';
 import { lineGroup } from './line-group';
 import { listItem } from './list-item';
 import { list } from './list';
+import { findNodePosition, nodeNotFound } from './util';
 
 export type AnnotationExportDTO = {
   uuid: string;
   type: AnnotationType;
   textContent: string;
   attrs?: { [key: string]: unknown };
+  start: number;
+  end: number;
 };
 
 const EXPORTERS: Partial<
@@ -90,10 +92,12 @@ const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
 };
 
 export const parameterAnnotationFromNode = (
-  node: Node,
-  parent: Node,
+  ctx: ExporterContext,
 ): AnnotationExportDTO[] => {
   const annotations: AnnotationExportDTO[] = [];
+  const { node, start } = ctx;
+
+  console.log(node.attrs);
 
   const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
   keys.forEach((key) => {
@@ -108,7 +112,7 @@ export const parameterAnnotationFromNode = (
       console.warn(`No exporter for parameter annotation: ${key}`);
     }
 
-    const annotation = exporter?.({ node, parent });
+    const annotation = exporter?.({ ...ctx, start });
     if (annotation) {
       annotations.push(annotation);
     }
@@ -118,13 +122,17 @@ export const parameterAnnotationFromNode = (
 };
 
 export const markAnnotationFromNode = (
-  node: Node,
-  parent: Node,
+  ctx: ExporterContext,
 ): AnnotationExportDTO[] => {
+  const { node } = ctx;
   const annotations: AnnotationExportDTO[] = [];
   node.marks.forEach((mark) => {
+    const start = findNodePosition(ctx.root, mark.attrs.uuid, mark.type.name);
+    if (start === undefined) {
+      return nodeNotFound(mark);
+    }
     const type = mark.type.name as AnnotationType;
-    const annotation = EXPORTERS[type]?.({ node, mark, parent });
+    const annotation = EXPORTERS[type]?.({ ...ctx, mark, start });
     if (annotation) {
       annotations.push(annotation);
     }
@@ -133,18 +141,15 @@ export const markAnnotationFromNode = (
 };
 
 export const annotationsFromNode = (
-  node: Node,
-  parent: Node,
+  ctx: ExporterContext,
 ): AnnotationExportDTO[] => {
+  const { node, root } = ctx;
   const annotations = [
-    ...parameterAnnotationFromNode(node, parent),
-    ...markAnnotationFromNode(node, parent),
+    ...parameterAnnotationFromNode(ctx),
+    ...markAnnotationFromNode(ctx),
   ];
 
-  const blockAnnotation = EXPORTERS[node.type.name as AnnotationType]?.({
-    node,
-    parent,
-  });
+  const blockAnnotation = EXPORTERS[node.type.name as AnnotationType]?.(ctx);
 
   // NOTE: passages often have a root paragraph node that does not map to an
   // annotation. Ignore nodes without a uuid.
@@ -153,7 +158,18 @@ export const annotationsFromNode = (
   }
 
   node.content.forEach((child) => {
-    annotations.push(...annotationsFromNode(child, node));
+    const start = findNodePosition(root, child.attrs.uuid, child.type.name);
+    if (start === undefined) {
+      return nodeNotFound(child);
+    }
+    annotations.push(
+      ...annotationsFromNode({
+        ...ctx,
+        node: child,
+        parent: node,
+        start,
+      }),
+    );
   });
   return annotations;
 };

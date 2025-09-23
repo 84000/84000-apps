@@ -1,13 +1,14 @@
 import { AnnotationExportDTO } from './annotation';
 import { Exporter } from './export';
 
-export const endNoteLink: Exporter<AnnotationExportDTO> = ({ node }) => {
+export const endNoteLink: Exporter<AnnotationExportDTO> = ({ node, start }) => {
   const textContent = node.textContent;
   const endNote = node.attrs.endNote;
   const uuid = node.attrs.uuid;
 
-  if (!textContent || !endNote) {
+  if (!endNote) {
     console.warn(`Endnote link instance ${uuid} is incomplete`);
+    console.log(node.attrs);
     return undefined;
   }
 
@@ -15,6 +16,8 @@ export const endNoteLink: Exporter<AnnotationExportDTO> = ({ node }) => {
     uuid,
     type: 'endNoteLink',
     textContent,
+    start,
+    end: start,
     attrs: {
       endNote,
     },

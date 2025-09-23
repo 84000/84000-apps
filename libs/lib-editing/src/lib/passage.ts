@@ -5,6 +5,8 @@ import {
   markAnnotationFromNode,
   parameterAnnotationFromNode,
 } from './exporters';
+import { findNodePosition, nodeNotFound } from './exporters/util';
+import { ExporterContext } from './exporters/export';
 
 export type PassageExportDTO = {
   uuid: string;
@@ -16,20 +18,28 @@ export type PassageExportDTO = {
 };
 
 export const passageFromNode = (node: Node): PassageExportDTO => {
-  console.log(node);
+  const uuid = node.attrs.uuid;
+  const type = node.attrs.type;
 
+  const ctx: ExporterContext = { node, parent: node, root: node, start: 0 };
   const annotations = [
-    ...parameterAnnotationFromNode(node, node),
-    ...markAnnotationFromNode(node, node),
+    ...parameterAnnotationFromNode(ctx),
+    ...markAnnotationFromNode(ctx),
   ];
   node.content.forEach((child) => {
-    annotations.push(...annotationsFromNode(child, node));
+    const start = findNodePosition(node, child.attrs.uuid, child.type.name);
+    if (start === undefined) {
+      return nodeNotFound(child);
+    }
+    annotations.push(
+      ...annotationsFromNode({ node: child, parent: node, root: node, start }),
+    );
   });
 
   const passage: PassageExportDTO = {
-    uuid: node.attrs.uuid,
+    uuid,
+    type,
     sort: node.attrs.sort,
-    type: node.attrs.type,
     label: node.attrs.label,
     content: node.textContent,
     annotations,

@@ -150,7 +150,6 @@ export const EditorContextProvider = ({
   );
 
   const save = useCallback(async () => {
-    console.log('Saving document state...');
     if (!editor) {
       console.warn('No editor instance found, cannot save.');
       return;
@@ -170,6 +169,7 @@ export const EditorContextProvider = ({
     console.log(passages);
     await new Promise((resolve) => setTimeout(resolve, 2000));
     console.log('Document state saved.');
+    editor.commands.focus();
 
     setDirtyUuids([]);
   }, [editor, dirtyUuids]);
@@ -238,8 +238,6 @@ export const EditorContextProvider = ({
     }
 
     console.log('Dirty uuids:', dirtyUuids);
-    // TODO: remove save
-    save();
   }, [dirtyUuids, save]);
 
   return (

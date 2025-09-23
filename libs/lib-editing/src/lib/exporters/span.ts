@@ -8,6 +8,7 @@ export const span = ({
   mark,
   node,
   parent,
+  start,
   types,
 }: ExporterContext & { types: AnnotationType[] }):
   | AnnotationExportDTO
@@ -18,6 +19,7 @@ export const span = ({
 
   if (!types.includes(type as AnnotationType)) {
     console.warn(`Span mark ${uuid} has invalid type: ${type}`);
+    console.log({ node: node.attrs, mark: mark?.attrs });
     return undefined;
   }
 
@@ -33,6 +35,8 @@ export const span = ({
     uuid,
     type,
     textContent,
+    start,
+    end: start + textContent.length,
     attrs: {
       lang,
       textStyle,
@@ -40,32 +44,20 @@ export const span = ({
   };
 };
 
-export const bold: Exporter<AnnotationExportDTO> = ({ mark, node, parent }) =>
-  span({ mark, node, parent, types: ['span'] });
+export const bold: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ['span'] });
 
-export const italic: Exporter<AnnotationExportDTO> = ({ mark, node, parent }) =>
-  span({ mark, node, parent, types: ITALIC_TYPES });
+export const italic: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ITALIC_TYPES });
 
-export const smallCaps: Exporter<AnnotationExportDTO> = ({
-  mark,
-  node,
-  parent,
-}) => span({ mark, node, parent, types: ['span'] });
+export const smallCaps: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ['span'] });
 
-export const subscript: Exporter<AnnotationExportDTO> = ({
-  mark,
-  node,
-  parent,
-}) => span({ mark, node, parent, types: ['span'] });
+export const subscript: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ['span'] });
 
-export const superscript: Exporter<AnnotationExportDTO> = ({
-  mark,
-  node,
-  parent,
-}) => span({ mark, node, parent, types: ['span'] });
+export const superscript: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ['span'] });
 
-export const underline: Exporter<AnnotationExportDTO> = ({
-  mark,
-  node,
-  parent,
-}) => span({ mark, node, parent, types: ['span'] });
+export const underline: Exporter<AnnotationExportDTO> = (ctx) =>
+  span({ ...ctx, types: ['span'] });

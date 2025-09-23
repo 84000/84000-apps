@@ -1,7 +1,12 @@
 import { AnnotationExportDTO } from './annotation';
 import { Exporter } from './export';
 
-export const code: Exporter<AnnotationExportDTO> = ({ node, mark, parent }) => {
+export const code: Exporter<AnnotationExportDTO> = ({
+  node,
+  mark,
+  parent,
+  start,
+}) => {
   const textContent = node.textContent || parent.textContent || '';
   const uuid = mark?.attrs.uuid;
 
@@ -14,5 +19,7 @@ export const code: Exporter<AnnotationExportDTO> = ({ node, mark, parent }) => {
     uuid,
     type: 'code',
     textContent,
+    start,
+    end: start + textContent.length,
   };
 };

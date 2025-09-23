@@ -1,7 +1,7 @@
 import { AnnotationExportDTO } from './annotation';
 import { Exporter } from './export';
 
-export const heading: Exporter<AnnotationExportDTO> = ({ node }) => {
+export const heading: Exporter<AnnotationExportDTO> = ({ node, start }) => {
   const textContent = node.textContent;
   const uuid = node.attrs.uuid;
   const level = (node.attrs.level as number) || 1;
@@ -16,6 +16,8 @@ export const heading: Exporter<AnnotationExportDTO> = ({ node }) => {
     uuid,
     type: 'heading',
     textContent,
+    start,
+    end: start + textContent.length,
     attrs: {
       level,
       class: cls,

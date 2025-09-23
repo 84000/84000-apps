@@ -5,7 +5,7 @@ export const leadingSpace: Transformer = (ctx) => {
   const leadingSpaceUuid = ctx.annotation.uuid;
   recurse({
     ...ctx,
-    until: ['paragraph'],
+    until: ['paragraph', 'lineGroup', 'heading'],
     transform: ({ block }) => {
       block.attrs = {
         ...block.attrs,

@@ -12,6 +12,7 @@ export const link: Exporter<AnnotationExportDTO> = ({
   mark,
   node,
   parent,
+  start,
 }: ExporterContext) => {
   const type = mark?.attrs.type;
   const uuid = mark?.attrs.uuid;
@@ -37,6 +38,8 @@ export const link: Exporter<AnnotationExportDTO> = ({
     uuid,
     type,
     textContent,
+    start,
+    end: start + textContent.length,
     attrs: {
       href,
       passage,

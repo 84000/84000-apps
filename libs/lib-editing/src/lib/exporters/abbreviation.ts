@@ -4,6 +4,7 @@ import { Exporter } from './export';
 export const abbreviation: Exporter<AnnotationExportDTO> = ({
   node,
   parent,
+  start,
 }) => {
   const textContent = node.textContent || parent.textContent || '';
   const abbreviation = node.attrs.abbreviation;
@@ -18,6 +19,8 @@ export const abbreviation: Exporter<AnnotationExportDTO> = ({
     uuid,
     type: 'abbreviation',
     textContent,
+    start,
+    end: start + textContent.length,
     attrs: {
       abbreviation,
     },

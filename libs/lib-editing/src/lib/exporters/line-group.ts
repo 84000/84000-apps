@@ -1,7 +1,7 @@
 import { AnnotationExportDTO } from './annotation';
 import { Exporter } from './export';
 
-export const lineGroup: Exporter<AnnotationExportDTO> = ({ node }) => {
+export const lineGroup: Exporter<AnnotationExportDTO> = ({ node, start }) => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
 
@@ -14,5 +14,7 @@ export const lineGroup: Exporter<AnnotationExportDTO> = ({ node }) => {
     type: 'lineGroup',
     uuid,
     textContent,
+    start,
+    end: start + textContent.length,
   };
 };
