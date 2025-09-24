@@ -10,11 +10,6 @@ export const abbreviation: Exporter<AnnotationExport> = ({
   const abbreviation = node.attrs.abbreviation;
   const uuid = node.attrs.uuid;
 
-  if (!abbreviation) {
-    console.warn(`Abbreviation ${uuid} is incomplete`);
-    return undefined;
-  }
-
   return {
     uuid,
     type: 'abbreviation',

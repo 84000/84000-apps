@@ -65,37 +65,18 @@ const paragraphTemplate = (passage: Passage): BlockEditorContentItem => {
 };
 
 const abbreviationTemplate = (passage: Passage): BlockEditorContentItem => {
-  const content = [textTemplate(passage.content)];
   const block: BlockEditorContentItem = {
-    type: 'table',
+    type: 'paragraph',
     attrs: {
+      class: 'flex flex-row gap-2',
       start: 0,
       end: passage.content.length,
       uuid: passage.uuid,
     },
-    content: [
-      {
-        type: 'tableRow',
-        attrs: {
-          start: 0,
-          end: passage.content.length,
-          uuid: passage.uuid,
-        },
-        content: [
-          {
-            type: 'abbreviation',
-            attrs: {
-              start: 0,
-              end: passage.content.length,
-              uuid: passage.uuid,
-            },
-            content,
-          },
-        ],
-      },
-    ],
+    content: [],
   };
 
+  block.content = [textTemplate(passage.content)];
   return block;
 };
 
@@ -105,7 +86,7 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   acknowledgment: paragraphTemplate,
   acknowledgmentHeader: headingTemplate,
   abbreviations: abbreviationTemplate,
-  abbreviationHeader: headingTemplate,
+  abbreviationsHeader: headingTemplate,
   appendix: paragraphTemplate,
   appendixHeader: headingTemplate,
   colophon: paragraphTemplate,
@@ -122,7 +103,6 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   prologueHeader: headingTemplate,
   summary: paragraphTemplate,
   summaryHeader: headingTemplate,
-  toc: paragraphTemplate,
   translation: paragraphTemplate,
   translationHeader: headingTemplate,
   unknown: paragraphTemplate,

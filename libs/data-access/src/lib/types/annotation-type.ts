@@ -97,7 +97,6 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
 
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
   'deprecated-internal-link',
-  'has-abbreviation',
   'quoted',
   'reference',
   'unknown',

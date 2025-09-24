@@ -9,11 +9,6 @@ export const hasAbbreviation: Exporter<AnnotationExport> = ({
   const abbreviation = node.attrs.abbreviation;
   const uuid = node.attrs.uuid;
 
-  if (!abbreviation || !textContent) {
-    console.warn(`Has abbreviation node ${uuid} is incomplete`);
-    return undefined;
-  }
-
   return {
     uuid,
     type: 'hasAbbreviation',

@@ -45,10 +45,10 @@ import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import {
-  AbbreviationCell,
+  Abbreviation,
   AbbreviationCommand,
   AbbreviationSuggestion,
-  HasAbbreviationCell,
+  HasAbbreviation,
 } from '../../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../../extensions/ParagraphIndent';
 import { TranslationEditorContent } from '../TranslationEditor';
@@ -101,8 +101,8 @@ export const useTranslationExtensions = ({
   const extensions = [
     TranslationDocument,
     Audio,
-    AbbreviationCell,
-    HasAbbreviationCell,
+    Abbreviation,
+    HasAbbreviation,
     AbbreviationCommand,
     Bold,
     EndNoteLinkNode.configure({
