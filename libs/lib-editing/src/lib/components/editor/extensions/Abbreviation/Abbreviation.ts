@@ -1,8 +1,11 @@
-import { Extension } from '@tiptap/core';
+import { Extension, Node } from '@tiptap/core';
 import { mergeAttributes } from '@tiptap/react';
-import { TableCell } from '../Table';
 import { CommandSuggestionItem } from '../SlashCommand/SuggestionList';
 import { TableIcon } from 'lucide-react';
+
+export interface AbbreviationOptions {
+  HTMLAttributes: Record<string, unknown>;
+}
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -21,20 +24,15 @@ export const AbbreviationCommand = Extension.create({
         () =>
         ({ commands }) => {
           return commands.insertContent({
-            type: 'table',
+            type: 'paragraph',
             content: [
               {
-                type: 'tableRow',
-                content: [
-                  {
-                    type: 'abbreviation',
-                    content: [{ type: 'text', text: 'A' }],
-                  },
-                  {
-                    type: 'hasAbbreviation',
-                    content: [{ type: 'text', text: 'Abbreviation' }],
-                  },
-                ],
+                type: 'abbreviation',
+                content: [{ type: 'text', text: 'A' }],
+              },
+              {
+                type: 'hasAbbreviation',
+                content: [{ type: 'text', text: 'Abbreviation' }],
               },
             ],
           });
@@ -53,46 +51,76 @@ export const AbbreviationSuggestion: CommandSuggestionItem = {
   },
 };
 
-export const AbbreviationCell = TableCell.extend({
+export const Abbreviation = Node.create<AbbreviationOptions>({
   name: 'abbreviation',
-  group: 'tableCell',
+  group: 'inline',
   content: 'inline*',
+  inline: true,
 
   addAttributes() {
     return {
       abbreviation: {
-        default: null,
+        default: undefined,
+        parseHTML(element: HTMLElement) {
+          return element.getAttribute('abbreviation');
+        },
+      },
+    };
+  },
+
+  addOptions() {
+    return {
+      HTMLAttributes: {
+        class: 'italic min-w-8',
       },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'td[type=abbreviation]' }];
+    return [{ tag: 'span[type="abbreviation"]' }];
   },
 
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return [
-      'td',
+      'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         type: 'abbreviation',
-        class: 'italic',
       }),
       0,
     ];
   },
 });
 
-export const HasAbbreviationCell = TableCell.extend({
+export const HasAbbreviation = Node.create<AbbreviationOptions>({
   name: 'hasAbbreviation',
-  group: 'tableCell',
+  group: 'inline',
   content: 'inline*',
+  inline: true,
+
+  addAttributes() {
+    return {
+      abbreviation: {
+        default: undefined,
+        parseHTML(element: HTMLElement) {
+          return element.getAttribute('abbreviation');
+        },
+      },
+    };
+  },
+
+  addOptions() {
+    return {
+      HTMLAttributes: {},
+    };
+  },
+
   parseHTML() {
-    return [{ tag: 'td[type=hasAbbreviation]' }];
+    return [{ tag: 'span[type=hasAbbreviation]' }];
   },
 
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
     return [
-      'td',
+      'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         type: 'hasAbbreviation',
       }),

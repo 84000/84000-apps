@@ -13,7 +13,7 @@ export const splitBlock: Transformer = ({
 }) => {
   if (!isBlockAnnotation((block.type || 'unknown') as AnnotationType)) {
     console.warn(
-      `splitBlock transformer expects to find a block annotation, but found: ${block.attrs?.type}`,
+      `splitBlock transformer expects to find a block annotation, but found: ${block?.type}`,
     );
     return;
   }

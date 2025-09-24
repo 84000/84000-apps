@@ -1,22 +1,28 @@
+import { HasAbbreviationAnnotation } from '@data-access';
 import { recurse } from './recurse';
-import { splitBlock } from './split-block';
+import { splitContent } from './split-content';
 import { Transformer } from './transformer';
 
 export const hasAbbreviation: Transformer = (ctx) => {
+  const { annotation } = ctx;
+  const { abbreviation, uuid } = annotation as HasAbbreviationAnnotation;
+
   recurse({
-    until: ['abbreviation'],
+    until: ['text'],
     ...ctx,
     transform: (ctx) => {
-      splitBlock({
+      splitContent({
         ...ctx,
         transform: ({ block }) => {
           block.type = 'hasAbbreviation';
           block.attrs = {
             ...block.attrs,
-            start: ctx.annotation?.start,
-            end: ctx.annotation?.end,
-            uuid: ctx.annotation?.uuid,
+            abbreviation,
+            uuid,
           };
+          block.content = [
+            { type: 'text', text: block.text, marks: block.marks },
+          ];
         },
       });
     },
