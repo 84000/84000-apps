@@ -1,14 +1,18 @@
 'use client';
 
-import type { EditorBuilderType } from '@lib-editing';
 import { CollaborativeBuilder } from '@lib-editing';
 import type { BodyItemType, DataClient } from '@data-access';
-import { getTranslationPassages } from '@data-access';
-import { useParams } from 'next/navigation';
+import { getTranslationPassages, BODY_ITEM_TYPES } from '@data-access';
+import { notFound, useParams } from 'next/navigation';
 
 const Page = () => {
   const params = useParams();
-  const builder = params.builder as EditorBuilderType;
+  const builder = params.builder as BodyItemType;
+
+  if (!BODY_ITEM_TYPES.includes(builder)) {
+    return notFound();
+  }
+
   const fetchContent = async ({
     client,
     uuid,
@@ -16,8 +20,7 @@ const Page = () => {
     client: DataClient;
     uuid: string;
   }) => {
-    const type = builder as BodyItemType;
-    return await getTranslationPassages({ client, uuid, type });
+    return await getTranslationPassages({ client, uuid, type: builder });
   };
 
   return <CollaborativeBuilder builder={builder} fetchContent={fetchContent} />;
