@@ -24,45 +24,32 @@ import {
 import { LetterTextIcon, SparklesIcon } from 'lucide-react';
 import { ReactNode, useCallback } from 'react';
 import type { EditorMenuItemType } from './types';
+import { BodyItemType } from '@data-access';
 
 interface EditorSidebarItem {
   key: EditorMenuItemType;
   title: string;
 }
 
-const englishEditorItems: EditorSidebarItem[] = [
+// titles is not derived from passages, so we add it manually
+const ENGLISH_EDITOR_ITEMS: EditorSidebarItem[] = [
   {
     key: 'titles',
-    title: 'Titles',
-  },
-  {
-    key: 'summary',
-    title: 'Summary',
-  },
-  {
-    key: 'acknowledgements',
-    title: 'Acknowledgements',
-  },
-  {
-    key: 'introduction',
-    title: 'Introduction',
-  },
-  {
-    key: 'body',
-    title: 'Body',
-  },
-  {
-    key: 'end-notes',
-    title: 'End Notes',
+    title: 'titles',
   },
 ];
 
-const toolItems: EditorSidebarItem[] = [
+const TOOL_ITEMS: EditorSidebarItem[] = [
   {
     key: 'summarizer',
-    title: 'Summarizer',
+    title: 'summarizer',
   },
 ];
+
+// some editor keys need custom titles
+const EDITOR_KEY_TO_TITLE: Partial<Record<EditorMenuItemType, string>> = {
+  endnote: 'end notes',
+};
 
 const isActive = (key: EditorMenuItemType, active: EditorMenuItemType) =>
   key === active;
@@ -97,6 +84,7 @@ export const EditorSidebarMenu = ({
                 {items.map((item) => (
                   <SidebarMenuSubButton
                     key={item.key}
+                    className="capitalize"
                     onClick={() => onSetActive(item.key)}
                     isActive={isActive(item.key, active)}
                   >
@@ -114,10 +102,12 @@ export const EditorSidebarMenu = ({
 
 export const EditorSidebar = ({
   children,
+  builders,
   active,
   onClick,
 }: {
   children: React.ReactNode;
+  builders: BodyItemType[];
   active: EditorMenuItemType;
   onClick?: (key: EditorMenuItemType) => void;
 }) => {
@@ -127,6 +117,13 @@ export const EditorSidebar = ({
     },
     [onClick],
   );
+
+  const builderItems = builders.map((builder) => ({
+    key: builder,
+    title: EDITOR_KEY_TO_TITLE[builder] || builder,
+  }));
+
+  const editorItems = [...ENGLISH_EDITOR_ITEMS, ...builderItems];
 
   return (
     <SidebarProvider>
@@ -138,7 +135,7 @@ export const EditorSidebar = ({
               <EditorSidebarMenu
                 icon={<LetterTextIcon />}
                 name="English Editor"
-                items={englishEditorItems}
+                items={editorItems}
                 active={active}
                 onSetActive={onSetActive}
               />
@@ -150,7 +147,7 @@ export const EditorSidebar = ({
               <EditorSidebarMenu
                 icon={<SparklesIcon />}
                 name="AI Tools"
-                items={toolItems}
+                items={TOOL_ITEMS}
                 active={active}
                 onSetActive={onSetActive}
               />

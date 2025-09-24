@@ -1,30 +1,31 @@
 import { Annotations, AnnotationsDTO } from './annotation';
 
-export type BodyItemType =
-  | 'abbreviations'
-  | 'abbreviationHeader'
-  | 'acknowledgment'
-  | 'acknowledgmentHeader'
-  | 'appendix'
-  | 'appendixHeader'
-  | 'colophon'
-  | 'colophonHeader'
-  | 'endnote'
-  | 'endnotesHeader'
-  | 'homage'
-  | 'homageHeader'
-  | 'introduction'
-  | 'introductionHeader'
-  | 'prelude'
-  | 'preludeHeader'
-  | 'prologue'
-  | 'prologueHeader'
-  | 'summary'
-  | 'summaryHeader'
-  | 'toc'
-  | 'translation'
-  | 'translationHeader'
-  | 'unknown';
+export const BODY_ITEM_TYPES = [
+  'abbreviations',
+  'abbreviationsHeader',
+  'acknowledgment',
+  'acknowledgmentHeader',
+  'appendix',
+  'appendixHeader',
+  'colophon',
+  'colophonHeader',
+  'endnote',
+  'endnotesHeader',
+  'homage',
+  'homageHeader',
+  'introduction',
+  'introductionHeader',
+  'prelude',
+  'preludeHeader',
+  'prologue',
+  'prologueHeader',
+  'summary',
+  'summaryHeader',
+  'translation',
+  'translationHeader',
+];
+
+export type BodyItemType = (typeof BODY_ITEM_TYPES)[number] | 'unknown';
 
 export type Passage = {
   annotations: Annotations;

@@ -1,3 +1,4 @@
+import { createBrowserClient, getTranslationPassageTypes } from '@data-access';
 import { EditorContextProvider } from '@lib-editing';
 
 const layout = async ({
@@ -8,7 +9,18 @@ const layout = async ({
   children: React.ReactNode;
 }) => {
   const { slug } = await params;
-  return <EditorContextProvider uuid={slug}>{children}</EditorContextProvider>;
+
+  const client = createBrowserClient();
+  const builders = await getTranslationPassageTypes({
+    client,
+    uuid: slug,
+  });
+
+  return (
+    <EditorContextProvider uuid={slug} builders={builders}>
+      {children}
+    </EditorContextProvider>
+  );
 };
 
 export default layout;
