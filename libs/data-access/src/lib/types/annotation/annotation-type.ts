@@ -95,6 +95,90 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   unknown: 'unknown',
 } as const;
 
+export const annotationTypeFromDTO = (
+  type: AnnotationDTOType,
+): AnnotationType => {
+  return ANNOATION_TYPE_DTO_TO_TYPE[type] || 'unknown';
+};
+
+const ANNOATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> = {
+  abbreviation: 'abbreviation',
+  audio: 'audio',
+  blockquote: 'blockquote',
+  code: 'code',
+  deprecated: 'deprecated-internal-link',
+  endNoteLink: 'end-note-link',
+  glossaryInstance: 'glossary-instance',
+  hasAbbreviation: 'has-abbreviation',
+  heading: 'heading',
+  image: 'image',
+  indent: 'indent',
+  inlineTitle: 'inline-title',
+  internalLink: 'internal-link',
+  leadingSpace: 'leading-space',
+  line: 'line',
+  lineGroup: 'line-group',
+  link: 'link',
+  list: 'list',
+  listItem: 'list-item',
+  mantra: 'mantra',
+  paragraph: 'paragraph',
+  quote: 'quote',
+  quoted: 'quoted',
+  reference: 'reference',
+  span: 'span',
+  tableBodyData: 'table-body-data',
+  tableBodyHeader: 'table-body-header',
+  tableBodyRow: 'table-body-row',
+  trailer: 'trailer',
+  unknown: 'unknown',
+} as const;
+
+export type AnnotationDTOContentKey =
+  | 'endnote_xmlId'
+  | 'glossary_xmlId'
+  | 'heading-level'
+  | 'heading-type'
+  | 'href'
+  | 'label'
+  | 'lang'
+  | 'link-text'
+  | 'link-text-lookup'
+  | 'link-type'
+  | 'list-item-style'
+  | 'list-spacing'
+  | 'media-type'
+  | 'nesting'
+  | 'paragraph'
+  | 'quote_xmlId'
+  | 'src'
+  | 'text-style'
+  | 'type'
+  | 'title'
+  | 'uuid';
+
+export type AnnotationDTOContent = Partial<
+  Record<AnnotationDTOContentKey, unknown>
+>;
+
+export type AnnotationDTO = {
+  content: AnnotationDTOContent[];
+  end: number;
+  start: number;
+  type: AnnotationDTOType;
+  uuid: string;
+  passage_uuid?: string;
+  passageUuid?: string;
+};
+
+export type AnnotationsDTO = AnnotationDTO[];
+
+export const annotationTypeToDTO = (
+  type: AnnotationType,
+): AnnotationDTOType => {
+  return ANNOATION_TYPE_TO_DTO[type] || 'unknown';
+};
+
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
   'deprecated-internal-link',
   'quoted',
@@ -104,8 +188,10 @@ export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
 
 export type AnnotationsToIgnore = (typeof ANNOTATIONS_TO_IGNORE)[number];
 
-export const annotationTypeFromDTO = (
-  type: AnnotationDTOType,
-): AnnotationType => {
-  return ANNOATION_TYPE_DTO_TO_TYPE[type] || 'unknown';
+export type AnnotationBase = {
+  end: number;
+  start: number;
+  type: AnnotationType;
+  uuid: string;
+  passageUuid: string;
 };

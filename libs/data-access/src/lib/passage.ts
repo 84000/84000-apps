@@ -1,5 +1,7 @@
 import {
+  ANNOTATIONS_TO_IGNORE,
   DataClient,
+  Passage,
   PassageDTO,
   annotationsFromDTO,
   passageFromDTO,
@@ -25,4 +27,70 @@ export const getPassage = async ({
 
   const dto = data as PassageDTO;
   return passageFromDTO(dto, annotationsFromDTO(dto?.annotations || []));
+};
+
+export const savePassages = async ({
+  client,
+  passages,
+}: {
+  client: DataClient;
+  passages: Passage[];
+}) => {
+  /**
+   * 1. first, extract all annotations from savePassages
+   * 2. then, query the database for all current annotations for the savePassages
+   * 3. determine which annotations need to be deleted or upserted
+   * 4. upsert the passages
+   * 5. upsert the annotations
+   * 6. delete the annotations
+   */
+  const annotations = passages.flatMap((p) => p.annotations || []);
+
+  const { data: existingAnnotations } = await client
+    .from('passage_annotations')
+    .select(`uuid`)
+    .in(
+      'passage_uuid',
+      passages.map((p) => p.uuid),
+    )
+    .not('type', 'in', ANNOTATIONS_TO_IGNORE);
+
+  const annotationsToDelete = existingAnnotations?.filter(
+    (ea) => !annotations.find((a) => a.uuid === ea.uuid),
+  );
+
+  const { error: passageError } = await client
+    .from('passages')
+    .upsert(passages);
+
+  if (passageError) {
+    console.error('Error saving passages:', passageError);
+    throw passageError;
+  }
+
+  if (annotations.length > 0) {
+    const { error: annotationError } = await client
+      .from('annotations')
+      .upsert(annotations);
+
+    if (annotationError) {
+      console.error('Error saving annotations:', annotationError);
+      throw annotationError;
+    }
+  }
+
+  if (annotationsToDelete && annotationsToDelete.length > 0) {
+    const { error: deleteError } = await client
+      .from('annotations')
+      .delete()
+      .in(
+        'uuid',
+        annotationsToDelete.map((a) => a.uuid),
+      );
+
+    if (deleteError) {
+      console.error('Error deleting annotations:', deleteError);
+      throw deleteError;
+    }
+  }
 };

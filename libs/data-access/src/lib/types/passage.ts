@@ -38,7 +38,7 @@ export type Passage = {
   xmlId?: string;
 };
 
-export type PassageDTO = {
+export type PassageRowDTO = {
   content: string;
   label: string;
   sort: number;
@@ -47,6 +47,9 @@ export type PassageDTO = {
   workUuid: string;
   xmlId?: string;
   parent?: string;
+};
+
+export type PassageDTO = PassageRowDTO & {
   annotations?: AnnotationsDTO | null;
 };
 
