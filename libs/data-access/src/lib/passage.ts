@@ -5,6 +5,8 @@ import {
   PassageDTO,
   annotationsFromDTO,
   passageFromDTO,
+  passagesToDTO,
+  passagesToRowDTO,
 } from './types';
 
 export const getPassage = async ({
@@ -44,15 +46,15 @@ export const savePassages = async ({
    * 5. upsert the annotations
    * 6. delete the annotations
    */
-  const annotations = passages.flatMap((p) => p.annotations || []);
+  const dtos = passagesToDTO(passages);
+  const passageRowDtos = passagesToRowDTO(passages);
+  const passageUuids = passages.map((p) => p.uuid);
+  const annotations = dtos.flatMap((p) => p.annotations || []);
 
   const { data: existingAnnotations } = await client
     .from('passage_annotations')
     .select(`uuid`)
-    .in(
-      'passage_uuid',
-      passages.map((p) => p.uuid),
-    )
+    .in('passage_uuid', passageUuids)
     .not('type', 'in', ANNOTATIONS_TO_IGNORE);
 
   const annotationsToDelete = existingAnnotations?.filter(
@@ -61,7 +63,7 @@ export const savePassages = async ({
 
   const { error: passageError } = await client
     .from('passages')
-    .upsert(passages);
+    .upsert(passageRowDtos);
 
   if (passageError) {
     console.error('Error saving passages:', passageError);
@@ -70,7 +72,7 @@ export const savePassages = async ({
 
   if (annotations.length > 0) {
     const { error: annotationError } = await client
-      .from('annotations')
+      .from('passage_annotations')
       .upsert(annotations);
 
     if (annotationError) {
@@ -81,7 +83,7 @@ export const savePassages = async ({
 
   if (annotationsToDelete && annotationsToDelete.length > 0) {
     const { error: deleteError } = await client
-      .from('annotations')
+      .from('passage_annotations')
       .delete()
       .in(
         'uuid',

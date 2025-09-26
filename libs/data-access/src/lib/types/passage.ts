@@ -1,4 +1,9 @@
-import { Annotations, AnnotationsDTO } from './annotation';
+import {
+  Annotations,
+  AnnotationsDTO,
+  annotationsFromDTO,
+  annotationsToDTO,
+} from './annotation';
 
 export const BODY_ITEM_TYPES = [
   'abbreviations',
@@ -67,4 +72,37 @@ export const passageFromDTO = (
     xmlId: dto.xmlId,
     annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
   };
+};
+
+export const passagesFromDTO = (dto: PassageDTO[]): Passage[] => {
+  return dto.map((p) =>
+    passageFromDTO(p, annotationsFromDTO(p.annotations || [])),
+  );
+};
+
+export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
+  return {
+    content: passage.content,
+    label: passage.label,
+    sort: passage.sort,
+    type: passage.type,
+    uuid: passage.uuid,
+    workUuid: passage.workUuid,
+    xmlId: passage.xmlId,
+  };
+};
+
+export const passageToDTO = (passage: Passage): PassageDTO => {
+  return {
+    ...passageToRowDTO(passage),
+    annotations: annotationsToDTO(passage.annotations) || [],
+  };
+};
+
+export const passagesToDTO = (passages: Passage[]): PassageDTO[] => {
+  return passages.map(passageToDTO);
+};
+
+export const passagesToRowDTO = (passages: Passage[]): PassageRowDTO[] => {
+  return passages.map(passageToRowDTO);
 };

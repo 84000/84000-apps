@@ -157,33 +157,6 @@ export type UnknownAnnotation = AnnotationBase & {
   type: 'unknown';
 };
 
-export type AnnotationTransformer = (dto: AnnotationDTO) => Annotation;
-
-export const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
-  const passageUuid = dto.passage_uuid || dto.passageUuid || '';
-
-  return {
-    uuid: dto.uuid,
-    start: dto.start,
-    end: dto.end,
-    type: annotationTypeFromDTO(dto.type),
-    passageUuid,
-  };
-};
-
-export type AnnotationExporter = (annotation: Annotation) => AnnotationDTO;
-
-export const baseAnnotationToDto = (
-  annotation: AnnotationBase,
-): AnnotationDTO => ({
-  end: annotation.end,
-  start: annotation.start,
-  type: annotationTypeToDTO(annotation.type),
-  uuid: annotation.uuid,
-  passageUuid: annotation.passageUuid,
-  content: [],
-});
-
 export type Annotation =
   | AbbreviationAnnotation
   | AudioAnnotation
@@ -217,3 +190,30 @@ export type Annotation =
   | UnknownAnnotation;
 
 export type Annotations = Annotation[];
+
+export type AnnotationTransformer = (dto: AnnotationDTO) => Annotation;
+
+export const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
+  const passageUuid = dto.passage_uuid || dto.passageUuid || '';
+
+  return {
+    uuid: dto.uuid,
+    start: dto.start,
+    end: dto.end,
+    type: annotationTypeFromDTO(dto.type),
+    passageUuid,
+  };
+};
+
+export type AnnotationExporter = (annotation: Annotation) => AnnotationDTO;
+
+export const baseAnnotationToDto = (
+  annotation: AnnotationBase,
+): AnnotationDTO => ({
+  end: annotation.end,
+  start: annotation.start,
+  type: annotationTypeToDTO(annotation.type),
+  uuid: annotation.uuid,
+  passageUuid: annotation.passageUuid,
+  content: [],
+});

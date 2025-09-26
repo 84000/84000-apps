@@ -41,6 +41,7 @@ import { transformer as tableBodyData } from './table-body-data';
 import { transformer as tableBodyHeader } from './table-body-header';
 import { transformer as tableBodyRow } from './table-body-row';
 import { transformer as unknown } from './unknown';
+import { annotationToDtoMap } from './export';
 
 const dtoToAnnotationMap: Record<AnnotationDTOType, AnnotationTransformer> = {
   abbreviation,
@@ -92,4 +93,22 @@ export const annotationsFromDTO = (dto?: AnnotationsDTO): Annotations => {
   const filtered =
     dto?.filter((a) => !ANNOTATIONS_TO_IGNORE.includes(a.type)) || [];
   return filtered.map(annotationFromDTO);
+};
+
+export const annotationToDTO = (
+  annotation: Annotation,
+): AnnotationDTO | undefined => {
+  const dto = annotationToDtoMap[annotation.type]?.(annotation);
+  if (!dto) {
+    console.warn(`Unknown annotation type: ${annotation.type}`);
+    console.warn(annotation);
+    return;
+  }
+  return dto;
+};
+
+export const annotationsToDTO = (annotations: Annotations): AnnotationsDTO => {
+  return annotations
+    .map(annotationToDTO)
+    .filter((a): a is AnnotationDTO => a !== undefined);
 };
