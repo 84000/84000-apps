@@ -1,27 +1,25 @@
+import { Editor } from '@tiptap/react';
 import { Node } from '@tiptap/pm/model';
 import {
-  AnnotationExport,
-  annotationsFromNode,
+  annotationExportsFromNode,
   markAnnotationFromNode,
   parameterAnnotationFromNode,
 } from './exporters';
 import { findNodePosition, nodeNotFound } from './exporters/util';
 import { ExporterContext } from './exporters/export';
+import { Passage } from '@data-access';
 
-export type PassageExport = {
-  uuid: string;
-  sort: number;
-  type: string;
-  label?: string;
-  content: string;
-  annotations: AnnotationExport[];
-};
-
-export const passageFromNode = (node: Node): PassageExport => {
+export const passageFromNode = (node: Node, workUuid: string): Passage => {
   const uuid = node.attrs.uuid;
   const type = node.attrs.type;
 
-  const ctx: ExporterContext = { node, parent: node, root: node, start: 0 };
+  const ctx: ExporterContext = {
+    passageUuid: uuid,
+    node,
+    parent: node,
+    root: node,
+    start: 0,
+  };
   const annotations = [
     ...parameterAnnotationFromNode(ctx),
     ...markAnnotationFromNode(ctx),
@@ -32,17 +30,46 @@ export const passageFromNode = (node: Node): PassageExport => {
       return nodeNotFound(child);
     }
     annotations.push(
-      ...annotationsFromNode({ node: child, parent: node, root: node, start }),
+      ...annotationExportsFromNode({
+        passageUuid: uuid,
+        node: child,
+        parent: node,
+        root: node,
+        start,
+      }),
     );
   });
 
-  const passage: PassageExport = {
+  const passage: Passage = {
     uuid,
     type,
+    workUuid,
     sort: node.attrs.sort,
     label: node.attrs.label,
     content: node.textContent,
     annotations,
   };
   return passage;
+};
+
+export const passagesFromNodes = ({
+  uuids,
+  workUuid,
+  editor,
+}: {
+  uuids: string[];
+  workUuid: string;
+  editor: Editor;
+}): Passage[] => {
+  const passages: Passage[] = [];
+  uuids.forEach((uuid) => {
+    const node = editor.$node('passage', { uuid });
+    if (!node) {
+      console.warn(`No passage node found for uuid: ${uuid}`);
+      return;
+    }
+
+    passages.push(passageFromNode(node.node, workUuid));
+  });
+  return passages;
 };

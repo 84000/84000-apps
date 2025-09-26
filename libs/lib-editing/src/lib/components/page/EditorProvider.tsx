@@ -20,10 +20,11 @@ import {
   createBrowserClient,
   getGlossaryInstance,
   getPassage,
+  savePassages,
 } from '@data-access';
 import { blockFromPassage } from '../../block';
-// import { EditorHeader } from './EditorHeader';
-import { PassageExport, passageFromNode } from '../../passage';
+import { EditorHeader } from './EditorHeader';
+import { passagesFromNodes } from '../../passage';
 
 interface EditorContextState {
   doc?: Doc;
@@ -161,23 +162,17 @@ export const EditorContextProvider = ({
     }
 
     editor.commands.blur();
-    const passages: PassageExport[] = [];
-    dirtyUuids.forEach((uuid) => {
-      const node = editor.$node('passage', { uuid });
-      if (!node) {
-        console.warn(`No passage node found for uuid: ${uuid}`);
-        return;
-      }
-
-      passages.push(passageFromNode(node.node));
+    const passages = passagesFromNodes({
+      uuids: dirtyUuids,
+      workUuid: uuid,
+      editor,
     });
-    console.log(passages);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    savePassages({ client, passages });
     console.log('Document state saved.');
     editor.commands.focus();
 
     setDirtyUuids([]);
-  }, [editor, dirtyUuids]);
+  }, [editor, dirtyUuids, client, uuid]);
 
   const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
     if (!txn.local) {
@@ -269,7 +264,7 @@ export const EditorContextProvider = ({
         active={builder || 'body'}
         onClick={toNewBuilder}
       >
-        {/* <EditorHeader /> */}
+        <EditorHeader />
         {children}
         <div className="h-[var(--header-height)]" />
       </EditorSidebar>

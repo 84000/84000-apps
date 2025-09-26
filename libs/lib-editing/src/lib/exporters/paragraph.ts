@@ -1,11 +1,12 @@
-import { AnnotationExport } from './annotation';
+import { ParagraphAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const paragraph: Exporter<AnnotationExport> = ({
+export const paragraph: Exporter<ParagraphAnnotation> = ({
   node,
   parent,
   start,
-}) => {
+  passageUuid,
+}): ParagraphAnnotation | undefined => {
   const uuid = node.attrs.uuid;
   const parentUuid = parent?.attrs.uuid;
 
@@ -22,9 +23,9 @@ export const paragraph: Exporter<AnnotationExport> = ({
   }
 
   return {
-    type: 'paragraph',
     uuid,
-    textContent,
+    type: 'paragraph',
+    passageUuid,
     start,
     end: start + textContent.length,
   };

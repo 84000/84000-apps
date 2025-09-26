@@ -1,12 +1,13 @@
-import { AnnotationExport } from './annotation';
+import { CodeAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const code: Exporter<AnnotationExport> = ({
+export const code: Exporter<CodeAnnotation> = ({
   node,
   mark,
   parent,
   start,
-}) => {
+  passageUuid,
+}): CodeAnnotation | undefined => {
   const textContent = node.textContent || parent.textContent || '';
   const uuid = mark?.attrs.uuid;
 
@@ -18,7 +19,7 @@ export const code: Exporter<AnnotationExport> = ({
   return {
     uuid,
     type: 'code',
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
   };

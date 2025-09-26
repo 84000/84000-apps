@@ -1,7 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { BlockquoteAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const blockquote: Exporter<AnnotationExport> = ({ node, start }) => {
+export const blockquote: Exporter<BlockquoteAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): BlockquoteAnnotation | undefined => {
   const textContent = node.textContent;
   const uuid = node.attrs.uuid;
 
@@ -13,7 +17,7 @@ export const blockquote: Exporter<AnnotationExport> = ({ node, start }) => {
   return {
     uuid,
     type: 'blockquote',
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
   };

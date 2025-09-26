@@ -1,6 +1,7 @@
 import type { Node, Mark } from '@tiptap/pm/model';
 
 export type ExporterContext = {
+  passageUuid: string;
   node: Node;
   parent: Node;
   root: Node;

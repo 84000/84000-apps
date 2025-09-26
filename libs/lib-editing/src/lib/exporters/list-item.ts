@@ -1,7 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { ListItemAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const listItem: Exporter<AnnotationExport> = ({ node, start }) => {
+export const listItem: Exporter<ListItemAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): ListItemAnnotation | undefined => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
 
@@ -11,9 +15,9 @@ export const listItem: Exporter<AnnotationExport> = ({ node, start }) => {
   }
 
   return {
-    type: 'listItem',
     uuid,
-    textContent,
+    type: 'listItem',
+    passageUuid,
     start,
     end: start + textContent.length,
   };

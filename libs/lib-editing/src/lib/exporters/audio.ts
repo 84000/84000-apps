@@ -1,8 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { AudioAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const audio: Exporter<AnnotationExport> = ({ node, parent, start }) => {
-  const textContent = node.textContent || parent.textContent || '';
+export const audio: Exporter<AudioAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): AudioAnnotation | undefined => {
   const uuid = node.attrs.uuid;
   const src = node.attrs.src;
   const mediaType = node.attrs.mediaType || 'audio/mpeg';
@@ -14,13 +17,11 @@ export const audio: Exporter<AnnotationExport> = ({ node, parent, start }) => {
 
   return {
     uuid,
+    passageUuid,
     type: 'audio',
-    textContent,
     start,
     end: start,
-    attrs: {
-      src,
-      mediaType,
-    },
+    src,
+    mediaType,
   };
 };

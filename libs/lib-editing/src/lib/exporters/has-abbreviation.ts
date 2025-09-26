@@ -1,10 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { HasAbbreviationAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const hasAbbreviation: Exporter<AnnotationExport> = ({
+export const hasAbbreviation: Exporter<HasAbbreviationAnnotation> = ({
   node,
   start,
-}) => {
+  passageUuid,
+}): HasAbbreviationAnnotation => {
   const textContent = node.textContent;
   const abbreviation = node.attrs.abbreviation;
   const uuid = node.attrs.uuid;
@@ -12,11 +13,9 @@ export const hasAbbreviation: Exporter<AnnotationExport> = ({
   return {
     uuid,
     type: 'hasAbbreviation',
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
-    attrs: {
-      abbreviation,
-    },
+    abbreviation,
   };
 };

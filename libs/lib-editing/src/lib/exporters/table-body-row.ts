@@ -1,22 +1,22 @@
-import { LineAnnotation } from '@data-access';
+import { TableBodyRowAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const line: Exporter<LineAnnotation> = ({
+export const tableBodyRow: Exporter<TableBodyRowAnnotation> = ({
   node,
   start,
   passageUuid,
-}): LineAnnotation | undefined => {
+}): TableBodyRowAnnotation | undefined => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
 
   if (!textContent) {
-    console.warn(`Line ${uuid} is empty`);
+    console.warn(`List item ${uuid} is empty`);
     return undefined;
   }
 
   return {
     uuid,
-    type: 'line',
+    type: 'tableBodyRow',
     passageUuid,
     start,
     end: start + textContent.length,
