@@ -55,7 +55,7 @@ export const savePassages = async ({
     .from('passage_annotations')
     .select(`uuid`)
     .in('passage_uuid', passageUuids)
-    .not('type', 'in', ANNOTATIONS_TO_IGNORE);
+    .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
 
   const annotationsToDelete = existingAnnotations?.filter(
     (ea) => !annotations.find((a) => a.uuid === ea.uuid),
@@ -63,17 +63,17 @@ export const savePassages = async ({
 
   const { error: passageError } = await client
     .from('passages')
-    .upsert(passageRowDtos);
+    .upsert(passageRowDtos, { onConflict: 'uuid' });
 
   if (passageError) {
     console.error('Error saving passages:', passageError);
-    throw passageError;
+    return;
   }
 
   if (annotations.length > 0) {
     const { error: annotationError } = await client
       .from('passage_annotations')
-      .upsert(annotations);
+      .upsert(annotations, { onConflict: 'uuid' });
 
     if (annotationError) {
       console.error('Error saving annotations:', annotationError);

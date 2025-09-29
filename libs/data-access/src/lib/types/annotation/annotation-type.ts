@@ -168,7 +168,6 @@ export type AnnotationDTO = {
   type: AnnotationDTOType;
   uuid: string;
   passage_uuid?: string;
-  passageUuid?: string;
 };
 
 export type AnnotationsDTO = AnnotationDTO[];
