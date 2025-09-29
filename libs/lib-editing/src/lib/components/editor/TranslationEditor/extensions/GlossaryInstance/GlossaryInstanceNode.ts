@@ -28,6 +28,7 @@ export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
 
   addAttributes() {
     return {
+      ...this.parent?.(),
       glossary: {
         default: undefined,
         parseHTML(element) {

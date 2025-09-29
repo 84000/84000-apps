@@ -12,7 +12,7 @@ export const content: PassageDTO[] = [
     xmlId: 'UT22084-066-009-section-1',
     parent: 'UT22084-066-009-section-1',
     content: 'The Translation',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 15,
@@ -39,7 +39,7 @@ export const content: PassageDTO[] = [
     xmlId: 'UT22084-066-009-26',
     parent: 'UT22084-066-009-section-1',
     content: 'Homage to all the buddhas and bodhisattvas!',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: null,
   },
   {
@@ -51,7 +51,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       'Thus did I hear at one time. The Buddha was residing in Śrāvastī, in Jeta’s Grove, Anāthapiṇḍada’s park, together with a great community of monks, consisting of 1,250 monks, and a great assembly of bodhisattvas. At that time, the Blessed One addressed the monks:',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 0,
@@ -98,7 +98,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon four factors even at the cost of their lives. What are these four?',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 147,
@@ -154,7 +154,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon the thought of awakening even at the cost of their lives.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 60,
@@ -193,7 +193,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon the spiritual friend even at the cost of their lives.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 60,
@@ -232,7 +232,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon tolerance and lenience even at the cost of their lives.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 60,
@@ -297,7 +297,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon dwelling in the wilderness even at the cost of their lives.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 60,
@@ -349,7 +349,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon these four factors even at the cost of their lives.”',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 60,
@@ -375,7 +375,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       'The Blessed One spoke these words, and once the Sugata had spoken in this way, he, the Teacher, also said the following:',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: null,
   },
   {
@@ -387,7 +387,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“Let the wise conceive the thought of perfect awakening, And not cast aside the thought of omniscience; Let them maintain the strength of tolerance and lenience, And never forsake the spiritual friend.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 201,
@@ -492,7 +492,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       '“If the wise, like the king of beasts, abandon fear, Always remain dwelling in the wilderness, And constantly maintain these factors, They will conquer the māras and attain awakening.”',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 184,
@@ -558,7 +558,7 @@ export const content: PassageDTO[] = [
     parent: 'UT22084-066-009-section-1',
     content:
       'When the Blessed One had said this, the monks and bodhisattvas, together with the entire assembly, rejoiced and praised the words of the Blessed One.',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: null,
   },
   {
@@ -569,7 +569,7 @@ export const content: PassageDTO[] = [
     xmlId: 'UT22084-066-009-42',
     parent: 'UT22084-066-009-section-1',
     content: 'This concludes “The Noble Mahāyāna Sūtra on the Four Factors.”',
-    workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+    work_uuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
     annotations: [
       {
         end: 62,

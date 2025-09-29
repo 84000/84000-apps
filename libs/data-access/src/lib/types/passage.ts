@@ -41,6 +41,7 @@ export type Passage = {
   uuid: string;
   workUuid: string;
   xmlId?: string;
+  parent?: string;
 };
 
 export type PassageRowDTO = {
@@ -49,7 +50,7 @@ export type PassageRowDTO = {
   sort: number;
   type: BodyItemType;
   uuid: string;
-  workUuid: string;
+  work_uuid: string;
   xmlId?: string;
   parent?: string;
 };
@@ -68,8 +69,9 @@ export const passageFromDTO = (
     sort: dto.sort,
     type: dto.type,
     uuid: dto.uuid,
-    workUuid: dto.workUuid,
+    workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
+    parent: dto.parent,
     annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
   };
 };
@@ -81,15 +83,26 @@ export const passagesFromDTO = (dto: PassageDTO[]): Passage[] => {
 };
 
 export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
-  return {
+  const dto: PassageRowDTO = {
     content: passage.content,
     label: passage.label,
     sort: passage.sort,
     type: passage.type,
     uuid: passage.uuid,
-    workUuid: passage.workUuid,
-    xmlId: passage.xmlId,
+    work_uuid: passage.workUuid,
   };
+
+  // NOTE: only include xmlId and parent if they exist, otherwise an upsert
+  // will set them to null in the database.
+  if (passage.xmlId) {
+    dto.xmlId = passage.xmlId;
+  }
+
+  if (passage.parent) {
+    dto.parent = passage.parent;
+  }
+
+  return dto;
 };
 
 export const passageToDTO = (passage: Passage): PassageDTO => {

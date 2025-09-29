@@ -15,14 +15,11 @@ export default Extension.create({
         attributes: {
           uuid: {
             default: null,
-            parseHTML: (element) => element.getAttribute('uuid'),
+            parseHTML: (element) => element.getAttribute('uuid') || uuidv4(),
             renderHTML: (attributes) => {
-              if (!attributes.uuid) {
-                attributes.uuid = uuidv4();
-              }
-              return mergeAttributes(attributes, {
-                uuid: attributes.uuid,
-              });
+              return {
+                uuid: attributes.uuid || uuidv4(),
+              };
             },
           },
           label: {
@@ -64,5 +61,27 @@ export default Extension.create({
         },
       },
     ];
+  },
+  onTransaction({ transaction }) {
+    // if this transaction created a new paragraph, set the uuid to null so it gets a new one
+    transaction.steps.forEach((step) => {
+      if (!transaction.docChanged) {
+        return;
+      }
+      // @ts-expect-error step.slice is not typed
+      if (step.slice?.content) {
+        // @ts-expect-error step.jsonID is not typed
+        if (step.jsonID !== 'replace' || !step.slice?.content?.length === 2) {
+          return;
+        }
+        // @ts-expect-error step.slice is not typed
+        const first = step.slice.content.lastChild;
+        // @ts-expect-error step.slice is not typed
+        const last = step.slice.content.firstChild;
+        if (first?.attrs?.uuid && first?.attrs.uuid === last?.attrs?.uuid) {
+          first.attrs.uuid = uuidv4();
+        }
+      }
+    });
   },
 });

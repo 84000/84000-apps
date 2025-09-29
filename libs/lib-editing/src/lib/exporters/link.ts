@@ -25,7 +25,7 @@ export const link: Exporter<
   | LinkAnnotation
   | ReferenceAnnotation
   | undefined => {
-  const type = mark?.attrs.type;
+  const type = mark?.attrs.type || mark?.type.name;
   const uuid = mark?.attrs.uuid;
 
   if (!type || !LINK_TYPES.includes(type)) {
@@ -56,14 +56,6 @@ export const link: Exporter<
         type: 'internalLink',
       } as InternalLinkAnnotation;
     }
-    case 'link': {
-      const text = mark?.attrs.text;
-      return {
-        ...baseAnnotation,
-        type: 'link',
-        text,
-      } as LinkAnnotation;
-    }
     case 'reference':
       // TODO: implement optional fields
       // const passage = mark?.attrs.passage;
@@ -73,7 +65,13 @@ export const link: Exporter<
         ...baseAnnotation,
         type: 'reference',
       } as ReferenceAnnotation;
-    default:
-      return undefined;
+    case 'link': {
+      const text = mark?.attrs.text;
+      return {
+        ...baseAnnotation,
+        type: 'link',
+        text,
+      } as LinkAnnotation;
+    }
   }
 };

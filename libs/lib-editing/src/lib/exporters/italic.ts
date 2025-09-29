@@ -51,7 +51,7 @@ export const italic: Exporter<
         end,
         lang,
       } as MantraAnnotation;
-    case 'span':
+    default:
       return {
         uuid,
         type: 'span',
@@ -60,8 +60,5 @@ export const italic: Exporter<
         end,
         textStyle,
       } as SpanAnnotation;
-    default:
-      console.warn(`Italic mark with unsupported type: ${type}`);
-      return undefined;
   }
 };
