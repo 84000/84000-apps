@@ -1,5 +1,6 @@
 import { mergeAttributes } from '@tiptap/react';
 import { Subscript as TipTapSubscript } from '@tiptap/extension-subscript';
+import { v4 as uuidv4 } from 'uuid';
 
 export const Subscript = TipTapSubscript.extend({
   addAttributes() {
@@ -20,6 +21,22 @@ export const Subscript = TipTapSubscript.extend({
             'data-text-style': attributes.textStyle,
           });
         },
+      },
+    };
+  },
+  addCommands() {
+    const name = this.name;
+    return {
+      ...this.parent?.(),
+      setSubscript() {
+        return ({ commands }) => {
+          return commands.setMark(name, { uuid: uuidv4() });
+        };
+      },
+      toggleSubscript() {
+        return ({ commands }) => {
+          return commands.toggleMark(name, { uuid: uuidv4() });
+        };
       },
     };
   },

@@ -5,38 +5,21 @@ export default Extension.create({
   name: 'translationMetadata',
   addGlobalAttributes() {
     const prohibitedNodes = ['text', 'doc'];
+    const types = this.extensions
+      .filter((extension) => !prohibitedNodes.includes(extension.name))
+      .map((extension) => extension.name);
 
     return [
       {
         // Apply to all node types that the editor has registered
-        types: this.extensions
-          .map((extension) => extension.name)
-          .filter((name) => !prohibitedNodes.includes(name)),
+        types,
         attributes: {
           uuid: {
             default: null,
             parseHTML: (element) => element.getAttribute('uuid') || uuidv4(),
             renderHTML: (attributes) => {
-              return {
+              return mergeAttributes(attributes, {
                 uuid: attributes.uuid || uuidv4(),
-              };
-            },
-          },
-          label: {
-            default: null,
-            parseHTML: (element) => element.getAttribute('label'),
-            renderHTML: (attributes) => {
-              return mergeAttributes(attributes, {
-                label: attributes.label,
-              });
-            },
-          },
-          class: {
-            default: null,
-            parseHTML: (element) => element.getAttribute('class'),
-            renderHTML: (attributes) => {
-              return mergeAttributes(attributes, {
-                class: attributes.class,
               });
             },
           },
@@ -49,39 +32,8 @@ export default Extension.create({
               });
             },
           },
-          sort: {
-            default: 0,
-            parseHTML: (element) => element.getAttribute('sort'),
-            renderHTML: (attributes) => {
-              return mergeAttributes(attributes, {
-                sort: attributes.sort,
-              });
-            },
-          },
         },
       },
     ];
-  },
-  onTransaction({ transaction }) {
-    // if this transaction created a new paragraph, set the uuid to null so it gets a new one
-    transaction.steps.forEach((step) => {
-      if (!transaction.docChanged) {
-        return;
-      }
-      // @ts-expect-error step.slice is not typed
-      if (step.slice?.content) {
-        // @ts-expect-error step.jsonID is not typed
-        if (step.jsonID !== 'replace' || !step.slice?.content?.length === 2) {
-          return;
-        }
-        // @ts-expect-error step.slice is not typed
-        const first = step.slice.content.lastChild;
-        // @ts-expect-error step.slice is not typed
-        const last = step.slice.content.firstChild;
-        if (first?.attrs?.uuid && first?.attrs.uuid === last?.attrs?.uuid) {
-          first.attrs.uuid = uuidv4();
-        }
-      }
-    });
   },
 });

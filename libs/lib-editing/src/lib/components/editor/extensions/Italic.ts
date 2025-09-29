@@ -1,5 +1,6 @@
 import { Italic as TiptapItalic } from '@tiptap/extension-italic';
 import { mergeAttributes } from '@tiptap/react';
+import { v4 as uuidv4 } from 'uuid';
 
 export const Italic = TiptapItalic.extend({
   addAttributes() {
@@ -27,6 +28,22 @@ export const Italic = TiptapItalic.extend({
             'data-text-style': attributes.textStyle,
           });
         },
+      },
+    };
+  },
+  addCommands() {
+    const name = this.name;
+    return {
+      ...this.parent?.(),
+      setItalic() {
+        return ({ commands }) => {
+          return commands.setMark(name, { uuid: uuidv4() });
+        };
+      },
+      toggleItalic() {
+        return ({ commands }) => {
+          return commands.toggleMark(name, { uuid: uuidv4() });
+        };
       },
     };
   },

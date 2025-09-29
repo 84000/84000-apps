@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
 import { removeHtmlTags } from '@lib-utils';
 import { usePathname } from 'next/navigation';
+import { ensureNodeUuid } from '../../../util';
 
 export const GlossaryInstanceCard = ({
   uuid,
@@ -78,7 +79,13 @@ export const GlossaryInstanceCard = ({
   );
 };
 
-export const GlossaryInstance = ({ node, extension }: NodeViewProps) => {
+export const GlossaryInstance = ({
+  node,
+  extension,
+  editor,
+  getPos,
+  updateAttributes,
+}: NodeViewProps) => {
   const [url, setUrl] = useState<string>('#');
 
   const pathname = usePathname();
@@ -86,6 +93,10 @@ export const GlossaryInstance = ({ node, extension }: NodeViewProps) => {
   const fetch = extension.options.fetch as (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
+
+  useEffect(() => {
+    ensureNodeUuid({ node, editor, getPos, updateAttributes });
+  }, [node, editor, getPos, updateAttributes]);
 
   useEffect(() => {
     if (!node.attrs.glossary) {

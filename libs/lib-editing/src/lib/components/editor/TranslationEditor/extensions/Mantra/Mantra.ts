@@ -1,5 +1,6 @@
 import { TranslationLanguage } from '@data-access';
 import { Mark, mergeAttributes } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface MantraOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -62,6 +63,7 @@ export const MantraMark = Mark.create<MantraOptions>({
             .setMark(this.name)
             .updateAttributes(this.name, {
               lang,
+              uuid: uuidv4(),
             })
             .run();
         },

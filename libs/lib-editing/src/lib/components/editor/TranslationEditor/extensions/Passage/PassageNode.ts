@@ -46,6 +46,37 @@ export const PassageNode = Node.create({
       },
     ];
   },
+  addAttributes() {
+    return {
+      label: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('label'),
+        renderHTML: (attributes) => {
+          return mergeAttributes(attributes, {
+            label: attributes.label,
+          });
+        },
+      },
+      class: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('class'),
+        renderHTML: (attributes) => {
+          return mergeAttributes(attributes, {
+            class: attributes.class,
+          });
+        },
+      },
+      sort: {
+        default: 0,
+        parseHTML: (element) => element.getAttribute('sort'),
+        renderHTML: (attributes) => {
+          return mergeAttributes(attributes, {
+            sort: attributes.sort,
+          });
+        },
+      },
+    };
+  },
   renderHTML({ HTMLAttributes }) {
     return ['passage', mergeAttributes(HTMLAttributes), 0];
   },

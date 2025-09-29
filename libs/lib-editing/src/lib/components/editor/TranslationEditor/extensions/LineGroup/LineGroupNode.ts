@@ -1,5 +1,6 @@
 import { Node } from '@tiptap/core';
 import { mergeAttributes, wrappingInputRule } from '@tiptap/react';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface LineGroupOptions {
   iitemTypeName: string;
@@ -69,6 +70,9 @@ export const LineGroupNode = Node.create({
                 this.name,
                 this.options.itemTypeName,
                 this.options.keepMarks,
+                {
+                  uuid: uuidv4(),
+                },
               )
               .updateAttributes('line', this.editor.getAttributes('textStyle'))
               .run();
@@ -77,6 +81,9 @@ export const LineGroupNode = Node.create({
             this.name,
             this.options.itemTypeName,
             this.options.keepMarks,
+            {
+              uuid: uuidv4(),
+            },
           );
         },
     };

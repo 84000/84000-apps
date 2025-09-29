@@ -1,8 +1,10 @@
 import TiptapParagraph from '@tiptap/extension-paragraph';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { ParagraphView } from './ParagraphView';
 
-export const Paragraph = TiptapParagraph.configure({
-  HTMLAttributes: {
-    class: 'leading-7 mb-1 mt-2',
+export const Paragraph = TiptapParagraph.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ParagraphView);
   },
 });
 

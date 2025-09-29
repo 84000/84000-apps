@@ -1,5 +1,6 @@
 import { mergeAttributes } from '@tiptap/react';
 import { Underline as TipTapUnderline } from '@tiptap/extension-underline';
+import { v4 as uuidv4 } from 'uuid';
 
 export const Underline = TipTapUnderline.extend({
   addAttributes() {
@@ -20,6 +21,22 @@ export const Underline = TipTapUnderline.extend({
             'data-text-style': attributes.textStyle,
           });
         },
+      },
+    };
+  },
+  addCommands() {
+    const name = this.name;
+    return {
+      ...this.parent?.(),
+      setUnderline() {
+        return ({ commands }) => {
+          return commands.setMark(name, { uuid: uuidv4() });
+        };
+      },
+      toggleUnderline() {
+        return ({ commands }) => {
+          return commands.toggleMark(name, { uuid: uuidv4() });
+        };
       },
     };
   },
