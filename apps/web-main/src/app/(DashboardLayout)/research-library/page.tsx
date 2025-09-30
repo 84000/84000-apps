@@ -1,17 +1,13 @@
-import { notFound } from 'next/navigation';
+import { H1, Skeleton } from '@design-system';
 
 const Page = () => {
-  const url = process.env.NEXT_PUBLIC_RESEARCH_LIBRARY_URL;
-  if (!url) {
-    return notFound();
-  }
-
   return (
-    <iframe
-      src={url}
-      className="w-full h-[calc(100vh_-_var(--header-height))]"
-      title="84000 Research Library"
-    />
+    <div className="flex flex-row justify-center p-4 w-full">
+      <div className="xl:max-w-2/3 lg:max-w-3/4 sm:max-w-4/5 w-full">
+        <H1 className="text-navy">Research Library is coming soon...</H1>
+        <Skeleton className="w-full h-96" />
+      </div>
+    </div>
   );
 };
 

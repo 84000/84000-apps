@@ -84,7 +84,7 @@ export const SimpleDesktopMenu = ({
 }: {
   items: NavigationMenuItemProps[];
 }) => (
-  <div className="hidden md:flex ml-6">
+  <div className="hidden lg:flex ml-6">
     {items.map((item) => (
       <DesktopMenuItem key={item.title} item={item} />
     ))}
