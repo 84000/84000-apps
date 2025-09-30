@@ -237,7 +237,7 @@ export const EditorContextProvider = ({
       return;
     }
 
-    console.log('Dirty uuids:', dirtyUuids);
+    // TODO: when we are ready, debounce and save automatically
   }, [dirtyUuids, save]);
 
   return (
