@@ -1,11 +1,23 @@
-'use client'; // NextJS 13 requires this. Remove if you are using NextJS 12 or lower
+'use client';
+
 import { useEffect } from 'react';
 import Script from 'next/script';
 import { Button } from '@design-system';
+import { usePathname } from 'next/navigation';
+
+type FeaturebaseMessage = {
+  target: 'FeaturebaseWidget';
+  data: {
+    action: 'openFeedbackWidget';
+    setBoard?: string;
+  };
+};
 
 export const FeedbackButton = () => {
   const organization = process.env.NEXT_PUBLIC_FEATUREBASE_ORG;
   const defaultBoard = process.env.NEXT_PUBLIC_FEATUREBASE_BOARD;
+
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!organization) {
@@ -27,12 +39,11 @@ export const FeedbackButton = () => {
 
     win.Featurebase('initialize_feedback_widget', {
       organization,
-      defaultBoard,
       locale: 'en',
       theme: 'light',
       metadata: null,
     });
-  }, [organization, defaultBoard]);
+  }, [organization, defaultBoard, pathname]);
 
   return (
     <>
@@ -40,7 +51,20 @@ export const FeedbackButton = () => {
       <Button
         className="my-auto mx-2"
         variant="outline"
-        data-featurebase-feedback
+        onClick={() => {
+          const msg: FeaturebaseMessage = {
+            target: 'FeaturebaseWidget',
+            data: {
+              action: 'openFeedbackWidget',
+              setBoard: 'default',
+            },
+          };
+
+          if (pathname.includes('publications')) {
+            msg.data.setBoard = defaultBoard;
+          }
+          window.postMessage(msg);
+        }}
       >
         Feedback
       </Button>
