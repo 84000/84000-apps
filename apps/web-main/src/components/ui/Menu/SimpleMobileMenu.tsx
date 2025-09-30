@@ -86,7 +86,7 @@ export const SimpleMobileMenu = ({
   items: NavigationMenuItemProps[];
 }) => {
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <Sheet>
         <SheetTrigger className="h-full">
           <MenuIcon />

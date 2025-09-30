@@ -169,6 +169,65 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
     ],
   },
   {
+    title: 'Research Library',
+    color: 'navy',
+    href: '/research-library',
+    hero: {
+      header: '84000 Research Library',
+      body: 'A hub of scholarly resources for the research and study of Tibetan Canon',
+      image:
+        'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/assets/image/menu/research-library.webp',
+    },
+    sections: [
+      {
+        header: 'Resource Navigator',
+        items: [
+          {
+            header: 'All Resources',
+            body: 'Navigate resources in the 84000 Research Library for research',
+            href: '/library',
+            icon: ListIcon,
+          },
+          {
+            header: 'Primary Resources',
+            body: 'Tibetan, Sanskrit, Pali and Chinese resources',
+            href: '/library',
+            icon: LibraryIcon,
+          },
+          {
+            header: 'Secondary Resources',
+            body: 'Secondary resource description',
+            href: '/library',
+            icon: LayoutListIcon,
+          },
+        ],
+      },
+      {
+        header: 'Types',
+        items: [
+          {
+            header: 'Dictionaries',
+            body: 'A bibliographical repository of authoritative works',
+            href: '/library',
+            icon: ListIcon,
+          },
+          {
+            header: 'Articles',
+            body: 'A growing collection of academic papers relevant to researchers',
+            href: '/library',
+            icon: LibraryIcon,
+          },
+          {
+            header: 'Dissertations',
+            body: 'Explore our collection of audio, video, and interactive media',
+            href: '/library',
+            icon: LayoutListIcon,
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: 'Workflows',
     color: 'emerald',
     href: '/project',
@@ -203,8 +262,8 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
           },
           {
             header: 'Research Library',
-            body: 'A hub of scholarly resources for the research and study of Tibetan Canon',
-            href: '/research-library',
+            body: 'Uploading and managing research library resource',
+            href: '/research-library-internal',
             icon: LibraryIcon,
           },
         ],
