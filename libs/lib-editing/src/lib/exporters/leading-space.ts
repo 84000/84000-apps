@@ -1,16 +1,15 @@
-import { AnnotationExport } from './annotation';
+import { LeadingSpaceAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const leadingSpace: Exporter<AnnotationExport> = ({
+export const leadingSpace: Exporter<LeadingSpaceAnnotation> = ({
   node,
-  parent,
   start,
-}) => {
-  const textContent = node.textContent || parent.textContent || '';
+  passageUuid,
+}): LeadingSpaceAnnotation => {
   return {
     uuid: node.attrs.leadingSpaceUuid,
     type: 'leadingSpace',
-    textContent,
+    passageUuid,
     start,
     end: start,
   };

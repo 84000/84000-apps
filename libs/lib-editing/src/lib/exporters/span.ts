@@ -1,63 +1,44 @@
-import { AnnotationType } from '@data-access';
+import { ExtendedTranslationLanguage, SpanAnnotation } from '@data-access';
 import { Exporter, ExporterContext } from './export';
-import { AnnotationExport } from './annotation';
+import { SpanMarkType } from '../types';
 
-const ITALIC_TYPES: AnnotationType[] = ['inlineTitle', 'mantra', 'span'];
+const SPAN_TYPE_FOR_MARK_TYPE: {
+  [key in SpanMarkType]: string;
+} = {
+  bold: 'text-bold',
+  smallCaps: 'small-caps',
+  subscript: 'subscript',
+  superscript: 'superscript',
+  underline: 'underline',
+};
 
-export const span = ({
+export const span: Exporter<SpanAnnotation> = ({
   mark,
   node,
   parent,
   start,
-  types,
-}: ExporterContext & { types: AnnotationType[] }):
-  | AnnotationExport
-  | undefined => {
-  const type = mark?.attrs.type;
+  passageUuid,
+}: ExporterContext): SpanAnnotation | undefined => {
+  if (!mark) {
+    console.warn('Span exporter called without mark');
+    return undefined;
+  }
+
   const uuid = mark?.attrs.uuid;
-  const textStyle = mark?.attrs.textStyle;
 
-  if (!types.includes(type as AnnotationType)) {
-    console.warn(`Span mark ${uuid} has invalid type: ${type}`);
-    console.log({ node: node.attrs, mark: mark?.attrs });
-    return undefined;
-  }
-
-  const lang = mark?.attrs.lang;
   const textContent = node.textContent || parent.textContent || '';
-
-  if (!uuid || !textContent || !lang) {
-    console.warn(`Span annotation ${uuid} is incomplete`);
-    return undefined;
-  }
+  const end = start + textContent.length;
+  const markType = mark.type.name as SpanMarkType;
+  const lang = mark?.attrs.lang as ExtendedTranslationLanguage;
+  const textStyle = SPAN_TYPE_FOR_MARK_TYPE[markType] || mark.attrs.textStyle;
 
   return {
     uuid,
-    type,
-    textContent,
+    type: 'span',
+    passageUuid,
     start,
-    end: start + textContent.length,
-    attrs: {
-      lang,
-      textStyle,
-    },
-  };
+    end,
+    textStyle,
+    lang,
+  } as SpanAnnotation;
 };
-
-export const bold: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ['span'] });
-
-export const italic: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ITALIC_TYPES });
-
-export const smallCaps: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ['span'] });
-
-export const subscript: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ['span'] });
-
-export const superscript: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ['span'] });
-
-export const underline: Exporter<AnnotationExport> = (ctx) =>
-  span({ ...ctx, types: ['span'] });

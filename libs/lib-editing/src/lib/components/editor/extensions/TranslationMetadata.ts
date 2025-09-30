@@ -5,41 +5,21 @@ export default Extension.create({
   name: 'translationMetadata',
   addGlobalAttributes() {
     const prohibitedNodes = ['text', 'doc'];
+    const types = this.extensions
+      .filter((extension) => !prohibitedNodes.includes(extension.name))
+      .map((extension) => extension.name);
 
     return [
       {
         // Apply to all node types that the editor has registered
-        types: this.extensions
-          .map((extension) => extension.name)
-          .filter((name) => !prohibitedNodes.includes(name)),
+        types,
         attributes: {
           uuid: {
             default: null,
-            parseHTML: (element) => element.getAttribute('uuid'),
-            renderHTML: (attributes) => {
-              if (!attributes.uuid) {
-                attributes.uuid = uuidv4();
-              }
-              return mergeAttributes(attributes, {
-                uuid: attributes.uuid,
-              });
-            },
-          },
-          label: {
-            default: null,
-            parseHTML: (element) => element.getAttribute('label'),
+            parseHTML: (element) => element.getAttribute('uuid') || uuidv4(),
             renderHTML: (attributes) => {
               return mergeAttributes(attributes, {
-                label: attributes.label,
-              });
-            },
-          },
-          class: {
-            default: null,
-            parseHTML: (element) => element.getAttribute('class'),
-            renderHTML: (attributes) => {
-              return mergeAttributes(attributes, {
-                class: attributes.class,
+                uuid: attributes.uuid || uuidv4(),
               });
             },
           },
@@ -49,15 +29,6 @@ export default Extension.create({
             renderHTML: (attributes) => {
               return mergeAttributes(attributes, {
                 type: attributes.type,
-              });
-            },
-          },
-          sort: {
-            default: 0,
-            parseHTML: (element) => element.getAttribute('sort'),
-            renderHTML: (attributes) => {
-              return mergeAttributes(attributes, {
-                sort: attributes.sort,
               });
             },
           },

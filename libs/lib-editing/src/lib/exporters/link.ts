@@ -1,6 +1,10 @@
-import { AnnotationType } from '@data-access';
+import {
+  AnnotationType,
+  InternalLinkAnnotation,
+  LinkAnnotation,
+  ReferenceAnnotation,
+} from '@data-access';
 import { Exporter, ExporterContext } from './export';
-import { AnnotationExport } from './annotation';
 
 export const LINK_TYPES: AnnotationType[] = [
   'internalLink',
@@ -8,19 +12,21 @@ export const LINK_TYPES: AnnotationType[] = [
   'reference',
 ];
 
-export const link: Exporter<AnnotationExport> = ({
+export const link: Exporter<
+  LinkAnnotation | InternalLinkAnnotation | ReferenceAnnotation
+> = ({
   mark,
   node,
   parent,
   start,
-}: ExporterContext) => {
-  const type = mark?.attrs.type;
+  passageUuid,
+}: ExporterContext):
+  | InternalLinkAnnotation
+  | LinkAnnotation
+  | ReferenceAnnotation
+  | undefined => {
+  const type = mark?.attrs.type || mark?.type.name;
   const uuid = mark?.attrs.uuid;
-
-  // optional fields
-  const passage = mark?.attrs.passage;
-  const authority = mark?.attrs.authority;
-  const work = mark?.attrs.work;
 
   if (!type || !LINK_TYPES.includes(type)) {
     console.warn(`Link mark ${uuid} has invalid or missing type: ${type}`);
@@ -34,17 +40,38 @@ export const link: Exporter<AnnotationExport> = ({
     return undefined;
   }
 
-  return {
+  const baseAnnotation = {
     uuid,
     type,
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
-    attrs: {
-      href,
-      passage,
-      authority,
-      work,
-    },
+    href,
   };
+
+  switch (type) {
+    case 'internalLink': {
+      return {
+        ...baseAnnotation,
+        type: 'internalLink',
+      } as InternalLinkAnnotation;
+    }
+    case 'reference':
+      // TODO: implement optional fields
+      // const passage = mark?.attrs.passage;
+      // const authority = mark?.attrs.authority;
+      // const work = mark?.attrs.work;
+      return {
+        ...baseAnnotation,
+        type: 'reference',
+      } as ReferenceAnnotation;
+    case 'link': {
+      const text = mark?.attrs.text;
+      return {
+        ...baseAnnotation,
+        type: 'link',
+        text,
+      } as LinkAnnotation;
+    }
+  }
 };

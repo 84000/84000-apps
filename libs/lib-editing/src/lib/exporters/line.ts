@@ -1,7 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { LineAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const line: Exporter<AnnotationExport> = ({ node, start }) => {
+export const line: Exporter<LineAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): LineAnnotation | undefined => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
 
@@ -11,9 +15,9 @@ export const line: Exporter<AnnotationExport> = ({ node, start }) => {
   }
 
   return {
-    type: 'line',
     uuid,
-    textContent,
+    type: 'line',
+    passageUuid,
     start,
     end: start + textContent.length,
   };

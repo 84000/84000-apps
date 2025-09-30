@@ -11,14 +11,9 @@ export const EditorHeader = () => {
   }, [dirtyUuids]);
 
   return (
-    <div className="sticky top-0 px-4 flex justify-end h-12">
+    <div className="sticky top-0 px-4 flex justify-end h-10">
       {canSave && (
-        <SaveButton
-          size="xs"
-          className="my-auto"
-          onClick={save}
-          disabled={!dirtyUuids.length}
-        />
+        <SaveButton size="xs" onClick={save} disabled={!dirtyUuids.length} />
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { Extension, mergeAttributes } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IndentOptions {
   types: string[];
@@ -72,14 +73,21 @@ export const Indent = Extension.create<IndentOptions>({
         () =>
         ({ commands }) => {
           return this.options.types
-            .map((type) => commands.updateAttributes(type, { hasIndent: true }))
+            .map((type) =>
+              commands.updateAttributes(type, {
+                hasIndent: true,
+                indentUuid: uuidv4(),
+              }),
+            )
             .every((response) => response);
         },
       unsetIndent:
         () =>
         ({ commands }) => {
           return this.options.types
-            .map((type) => commands.resetAttributes(type, 'hasIndent'))
+            .map((type) =>
+              commands.resetAttributes(type, ['hasIndent', 'indentUuid']),
+            )
             .every((response) => response);
         },
       toggleIndent:

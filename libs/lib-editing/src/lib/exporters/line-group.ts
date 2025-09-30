@@ -1,7 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { LineGroupAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const lineGroup: Exporter<AnnotationExport> = ({ node, start }) => {
+export const lineGroup: Exporter<LineGroupAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): LineGroupAnnotation | undefined => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
 
@@ -11,9 +15,9 @@ export const lineGroup: Exporter<AnnotationExport> = ({ node, start }) => {
   }
 
   return {
-    type: 'lineGroup',
     uuid,
-    textContent,
+    type: 'lineGroup',
+    passageUuid,
     start,
     end: start + textContent.length,
   };

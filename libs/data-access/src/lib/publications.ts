@@ -3,11 +3,12 @@ import {
   DataClient,
   TitlesDTO,
   TranslationDTO,
+  WorkDTO,
   titlesFromDTO,
-  translationBodyFromDTO,
+  passagesFromDTO,
   translationFromDTO,
+  workFromDTO,
 } from './types';
-import { WorkDTO, workFromDTO } from './types/work';
 
 export const getTranslationUuids = async ({
   client,
@@ -52,7 +53,7 @@ export const getTranslationPassages = async ({
     passage_type_input: type,
   });
 
-  return translationBodyFromDTO(data || []);
+  return passagesFromDTO(data || []);
 };
 
 export const getTranslationPassageTypes = async ({

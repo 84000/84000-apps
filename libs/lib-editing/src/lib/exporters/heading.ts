@@ -1,7 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { HeadingAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const heading: Exporter<AnnotationExport> = ({ node, start }) => {
+export const heading: Exporter<HeadingAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): HeadingAnnotation | undefined => {
   const textContent = node.textContent;
   const uuid = node.attrs.uuid;
   const level = (node.attrs.level as number) || 1;
@@ -15,12 +19,10 @@ export const heading: Exporter<AnnotationExport> = ({ node, start }) => {
   return {
     uuid,
     type: 'heading',
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
-    attrs: {
-      level,
-      class: cls,
-    },
+    level,
+    class: cls,
   };
 };

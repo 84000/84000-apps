@@ -1,10 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { GlossaryInstanceAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const glossaryInstance: Exporter<AnnotationExport> = ({
+export const glossaryInstance: Exporter<GlossaryInstanceAnnotation> = ({
   node,
   start,
-}) => {
+  passageUuid,
+}): GlossaryInstanceAnnotation | undefined => {
   const textContent = node.textContent;
   const glossary = node.attrs.glossary;
   const uuid = node.attrs.uuid;
@@ -17,11 +18,9 @@ export const glossaryInstance: Exporter<AnnotationExport> = ({
   return {
     uuid,
     type: 'glossaryInstance',
-    textContent,
+    passageUuid,
     start,
     end: start + textContent.length,
-    attrs: {
-      glossary,
-    },
+    glossary,
   };
 };

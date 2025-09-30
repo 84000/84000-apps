@@ -1,5 +1,6 @@
 import { mergeAttributes } from '@tiptap/react';
 import { Superscript as TipTapSuperscript } from '@tiptap/extension-superscript';
+import { v4 as uuidv4 } from 'uuid';
 
 export const Superscript = TipTapSuperscript.extend({
   addAttributes() {
@@ -20,6 +21,22 @@ export const Superscript = TipTapSuperscript.extend({
             'data-text-style': attributes.textStyle,
           });
         },
+      },
+    };
+  },
+  addCommands() {
+    const name = this.name;
+    return {
+      ...this.parent?.(),
+      setSuperscript() {
+        return ({ commands }) => {
+          return commands.setMark(name, { uuid: uuidv4() });
+        };
+      },
+      toggleSuperscript() {
+        return ({ commands }) => {
+          return commands.toggleMark(name, { uuid: uuidv4() });
+        };
       },
     };
   },

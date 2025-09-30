@@ -1,53 +1,41 @@
-import { AnnotationType } from '@data-access';
+import { Annotation, AnnotationType } from '@data-access';
 import { Exporter, ExporterContext } from './export';
-import { indent } from './indent';
-import { leadingSpace } from './leading-space';
-import { trailer } from './trailer';
-import { basicMark, basicNode } from './basic';
-import { paragraph } from './paragraph';
-import { glossaryInstance } from './glossary-instance';
 import { abbreviation } from './abbreviation';
 import { audio } from './audio';
-import { image } from './image';
 import { blockquote } from './blockquote';
 import { code } from './code';
 import { endNoteLink } from './end-note-link';
+import { glossaryInstance } from './glossary-instance';
 import { hasAbbreviation } from './has-abbreviation';
 import { heading } from './heading';
-import { SpanMarkType } from '../types';
-import {
-  bold,
-  italic,
-  smallCaps,
-  subscript,
-  superscript,
-  underline,
-} from './span';
-import { link } from './link';
+import { image } from './image';
+import { indent } from './indent';
+import { italic } from './italic';
+import { leadingSpace } from './leading-space';
 import { line } from './line';
 import { lineGroup } from './line-group';
+import { link } from './link';
 import { listItem } from './list-item';
 import { list } from './list';
+import { paragraph } from './paragraph';
+import { quote } from './quote';
+import { span } from './span';
+import { trailer } from './trailer';
+import { tableBodyData } from './table-body-data';
+import { tableBodyHeader } from './table-body-header';
+import { tableBodyRow } from './table-body-row';
+import { SpanMarkType } from '../types';
 import { findNodePosition, nodeNotFound } from './util';
-
-export type AnnotationExport = {
-  uuid: string;
-  type: AnnotationType;
-  textContent: string;
-  attrs?: { [key: string]: unknown };
-  start: number;
-  end: number;
-};
 
 const EXPORTERS: Partial<
   Record<
-    AnnotationType | SpanMarkType | 'text' | 'ul',
-    Exporter<AnnotationExport>
+    AnnotationType | SpanMarkType | 'text' | 'bulletList',
+    Exporter<Annotation>
   >
 > = {
   abbreviation,
   audio,
-  bold,
+  bold: span,
   blockquote,
   bulletList: list,
   code,
@@ -67,16 +55,16 @@ const EXPORTERS: Partial<
   listItem,
   mantra: italic,
   paragraph,
-  quote: basicMark,
+  quote,
   reference: link,
-  smallCaps,
-  subscript,
-  superscript,
-  tableBodyData: basicNode,
-  tableBodyHeader: basicNode,
-  tableBodyRow: basicNode,
+  smallCaps: span,
+  subscript: span,
+  superscript: span,
+  tableBodyData,
+  tableBodyHeader,
+  tableBodyRow,
   trailer,
-  underline,
+  underline: span,
 
   // ignored types
   deprecated: undefined,
@@ -93,8 +81,8 @@ const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
 
 export const parameterAnnotationFromNode = (
   ctx: ExporterContext,
-): AnnotationExport[] => {
-  const annotations: AnnotationExport[] = [];
+): Annotation[] => {
+  const annotations: Annotation[] = [];
   const { node, start } = ctx;
 
   const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
@@ -119,11 +107,9 @@ export const parameterAnnotationFromNode = (
   return annotations;
 };
 
-export const markAnnotationFromNode = (
-  ctx: ExporterContext,
-): AnnotationExport[] => {
+export const markAnnotationFromNode = (ctx: ExporterContext): Annotation[] => {
   const { node } = ctx;
-  const annotations: AnnotationExport[] = [];
+  const annotations: Annotation[] = [];
   node.marks.forEach((mark) => {
     const start = findNodePosition(ctx.root, mark.attrs.uuid, mark.type.name);
     if (start === undefined) {
@@ -138,9 +124,9 @@ export const markAnnotationFromNode = (
   return annotations;
 };
 
-export const annotationsFromNode = (
+export const annotationExportsFromNode = (
   ctx: ExporterContext,
-): AnnotationExport[] => {
+): Annotation[] => {
   const { node, root } = ctx;
   const annotations = [
     ...parameterAnnotationFromNode(ctx),
@@ -161,7 +147,7 @@ export const annotationsFromNode = (
       return nodeNotFound(child);
     }
     annotations.push(
-      ...annotationsFromNode({
+      ...annotationExportsFromNode({
         ...ctx,
         node: child,
         parent: node,

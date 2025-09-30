@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import TranslationEditor, {
   TranslationEditorContent,
 } from '../../TranslationEditor';
+import { ensureNodeUuid } from '../../../util';
 
 export const EndNoteCard = ({
   uuid,
@@ -45,9 +46,10 @@ export const EndNoteCard = ({
 
 export const EndNoteLink = ({
   node,
-  getPos,
   editor,
   extension,
+  getPos,
+  updateAttributes,
 }: NodeViewProps) => {
   const [label, setLabel] = useState(1);
 
@@ -70,6 +72,10 @@ export const EndNoteLink = ({
     });
     setLabel(newLabel);
   }, [editor.state.doc, getPos, node.type.name]);
+
+  useEffect(() => {
+    ensureNodeUuid({ node, editor, getPos, updateAttributes });
+  }, [node, editor, getPos, updateAttributes]);
 
   const className = editor.isEditable
     ? 'cursor-pointer select-text'

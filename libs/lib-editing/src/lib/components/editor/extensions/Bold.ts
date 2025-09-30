@@ -1,5 +1,6 @@
 import { mergeAttributes } from '@tiptap/react';
 import { Bold as TipTapBold } from '@tiptap/extension-bold';
+import { v4 as uuidv4 } from 'uuid';
 
 export const Bold = TipTapBold.extend({
   addAttributes() {
@@ -20,6 +21,22 @@ export const Bold = TipTapBold.extend({
             'data-text-style': attributes.textStyle,
           });
         },
+      },
+    };
+  },
+  addCommands() {
+    const name = this.name;
+    return {
+      ...this.parent?.(),
+      setBold() {
+        return ({ commands }) => {
+          return commands.setMark(name, { uuid: uuidv4() });
+        };
+      },
+      toggleBold() {
+        return ({ commands }) => {
+          return commands.toggleMark(name, { uuid: uuidv4() });
+        };
       },
     };
   },

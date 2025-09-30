@@ -1,4 +1,5 @@
 import { Extension, mergeAttributes } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface TrailerOptions {
   types: string[];
@@ -74,7 +75,10 @@ export const Trailer = Extension.create<TrailerOptions>({
         ({ commands }) => {
           return this.options.types
             .map((type) =>
-              commands.updateAttributes(type, { hasTrailer: true }),
+              commands.updateAttributes(type, {
+                hasTrailer: true,
+                trailerUuid: uuidv4(),
+              }),
             )
             .every((response) => response);
         },
@@ -82,7 +86,9 @@ export const Trailer = Extension.create<TrailerOptions>({
         () =>
         ({ commands }) => {
           return this.options.types
-            .map((type) => commands.resetAttributes(type, 'hasTrailer'))
+            .map((type) =>
+              commands.resetAttributes(type, ['hasTrailer', 'trailerUuid']),
+            )
             .every((response) => response);
         },
       toggleTrailer:

@@ -1,4 +1,5 @@
 import { mergeAttributes, Node } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface AudioOptions {
   /**
@@ -60,6 +61,7 @@ export const Audio = Node.create<AudioOptions>({
           return commands.insertContent({
             type: this.name,
             attrs: options,
+            uuid: uuidv4(),
           });
         },
     };

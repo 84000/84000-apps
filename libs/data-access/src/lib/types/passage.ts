@@ -1,4 +1,9 @@
-import { Annotations, AnnotationsDTO } from './annotation';
+import {
+  Annotations,
+  AnnotationsDTO,
+  annotationsFromDTO,
+  annotationsToDTO,
+} from './annotation';
 
 export const BODY_ITEM_TYPES = [
   'abbreviations',
@@ -36,17 +41,21 @@ export type Passage = {
   uuid: string;
   workUuid: string;
   xmlId?: string;
+  parent?: string;
 };
 
-export type PassageDTO = {
+export type PassageRowDTO = {
   content: string;
   label: string;
   sort: number;
   type: BodyItemType;
   uuid: string;
-  workUuid: string;
+  work_uuid: string;
   xmlId?: string;
   parent?: string;
+};
+
+export type PassageDTO = PassageRowDTO & {
   annotations?: AnnotationsDTO | null;
 };
 
@@ -60,8 +69,53 @@ export const passageFromDTO = (
     sort: dto.sort,
     type: dto.type,
     uuid: dto.uuid,
-    workUuid: dto.workUuid,
+    workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
+    parent: dto.parent,
     annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
   };
+};
+
+export const passagesFromDTO = (dto: PassageDTO[]): Passage[] => {
+  return dto.map((p) =>
+    passageFromDTO(p, annotationsFromDTO(p.annotations || [])),
+  );
+};
+
+export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
+  const dto: PassageRowDTO = {
+    content: passage.content,
+    label: passage.label,
+    sort: passage.sort,
+    type: passage.type,
+    uuid: passage.uuid,
+    work_uuid: passage.workUuid,
+  };
+
+  // NOTE: only include xmlId and parent if they exist, otherwise an upsert
+  // will set them to null in the database.
+  if (passage.xmlId) {
+    dto.xmlId = passage.xmlId;
+  }
+
+  if (passage.parent) {
+    dto.parent = passage.parent;
+  }
+
+  return dto;
+};
+
+export const passageToDTO = (passage: Passage): PassageDTO => {
+  return {
+    ...passageToRowDTO(passage),
+    annotations: annotationsToDTO(passage.annotations) || [],
+  };
+};
+
+export const passagesToDTO = (passages: Passage[]): PassageDTO[] => {
+  return passages.map(passageToDTO);
+};
+
+export const passagesToRowDTO = (passages: Passage[]): PassageRowDTO[] => {
+  return passages.map(passageToRowDTO);
 };

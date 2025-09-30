@@ -1,4 +1,5 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface SmallCapsOptions {
   /**
@@ -86,12 +87,12 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
       setSmallCaps:
         () =>
         ({ commands }) => {
-          return commands.setMark(this.name);
+          return commands.setMark(this.name, { uuid: uuidv4() });
         },
       toggleSmallCaps:
         () =>
         ({ commands }) => {
-          return commands.toggleMark(this.name);
+          return commands.toggleMark(this.name, { uuid: uuidv4() });
         },
       unsetSmallCaps:
         () =>

@@ -1,8 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { EndNoteLinkAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const endNoteLink: Exporter<AnnotationExport> = ({ node, start }) => {
-  const textContent = node.textContent;
+export const endNoteLink: Exporter<EndNoteLinkAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): EndNoteLinkAnnotation | undefined => {
   const endNote = node.attrs.endNote;
   const uuid = node.attrs.uuid;
 
@@ -15,11 +18,9 @@ export const endNoteLink: Exporter<AnnotationExport> = ({ node, start }) => {
   return {
     uuid,
     type: 'endNoteLink',
-    textContent,
+    passageUuid,
     start,
     end: start,
-    attrs: {
-      endNote,
-    },
+    endNote,
   };
 };

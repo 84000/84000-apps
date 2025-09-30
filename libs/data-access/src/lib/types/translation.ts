@@ -34,9 +34,3 @@ export const translationFromDTO = (dto: TranslationDTO): Translation => {
     frontMatter: frontMatterFromDTO(dto.frontMatter, annotations),
   };
 };
-
-export const translationBodyFromDTO = (dto: BodyDTO): Passage[] => {
-  return dto.map((p) =>
-    passageFromDTO(p, annotationsFromDTO(p.annotations || [])),
-  );
-};

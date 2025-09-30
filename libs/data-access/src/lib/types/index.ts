@@ -1,5 +1,4 @@
 export * from './annotation';
-export * from './annotation-type';
 export * from './back-matter';
 export * from './bibliography';
 export * from './canon';

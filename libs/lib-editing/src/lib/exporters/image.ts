@@ -1,8 +1,11 @@
-import { AnnotationExport } from './annotation';
+import { ImageAnnotation } from '@data-access';
 import { Exporter } from './export';
 
-export const image: Exporter<AnnotationExport> = ({ node, parent, start }) => {
-  const textContent = node.textContent || parent.textContent || '';
+export const image: Exporter<ImageAnnotation> = ({
+  node,
+  start,
+  passageUuid,
+}): ImageAnnotation | undefined => {
   const src = node.attrs.src;
   const uuid = node.attrs.uuid;
 
@@ -14,11 +17,9 @@ export const image: Exporter<AnnotationExport> = ({ node, parent, start }) => {
   return {
     uuid,
     type: 'image',
-    textContent,
+    passageUuid,
     start,
     end: start,
-    attrs: {
-      src,
-    },
+    src,
   };
 };

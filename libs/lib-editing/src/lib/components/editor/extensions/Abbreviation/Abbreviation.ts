@@ -2,6 +2,7 @@ import { Extension, Node } from '@tiptap/core';
 import { mergeAttributes } from '@tiptap/react';
 import { CommandSuggestionItem } from '../SlashCommand/SuggestionList';
 import { TableIcon } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface AbbreviationOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -29,10 +30,12 @@ export const AbbreviationCommand = Extension.create({
               {
                 type: 'abbreviation',
                 content: [{ type: 'text', text: 'A' }],
+                attrs: { uuid: uuidv4() },
               },
               {
                 type: 'hasAbbreviation',
                 content: [{ type: 'text', text: 'Abbreviation' }],
+                attrs: { uuid: uuidv4() },
               },
             ],
           });
