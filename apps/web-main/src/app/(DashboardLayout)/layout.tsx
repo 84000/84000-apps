@@ -43,7 +43,7 @@ export default function Layout({
   return (
     <div className="[--header-height:calc(--spacing(20))]">
       <div className="fixed w-full z-50">
-        <AppHeader user={user} handleLogout={handleLogout} />
+        <AppHeader user={user} handleLogoutAction={handleLogout} />
       </div>
       <div className="flex flex-1 pt-(--header-height)">
         <AppContent>{children}</AppContent>

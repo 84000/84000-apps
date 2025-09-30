@@ -21,7 +21,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from '@design-system';
-import { LetterTextIcon, SparklesIcon } from 'lucide-react';
+import { LetterTextIcon, LibraryIcon } from 'lucide-react';
 import { ReactNode, useCallback } from 'react';
 import type { EditorMenuItemType } from './types';
 import { BodyItemType } from '@data-access';
@@ -41,8 +41,12 @@ const ENGLISH_EDITOR_ITEMS: EditorSidebarItem[] = [
 
 const TOOL_ITEMS: EditorSidebarItem[] = [
   {
-    key: 'summarizer',
-    title: 'summarizer',
+    key: 'glossary',
+    title: 'glossary',
+  },
+  {
+    key: 'bibliography',
+    title: 'bibliography',
   },
 ];
 
@@ -145,8 +149,8 @@ export const EditorSidebar = ({
             <SidebarGroupLabel>Tools</SidebarGroupLabel>
             <SidebarGroupContent>
               <EditorSidebarMenu
-                icon={<SparklesIcon />}
-                name="AI Tools"
+                icon={<LibraryIcon />}
+                name="Resources"
                 items={TOOL_ITEMS}
                 active={active}
                 onSetActive={onSetActive}

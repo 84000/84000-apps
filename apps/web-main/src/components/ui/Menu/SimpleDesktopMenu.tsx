@@ -49,7 +49,7 @@ export const DesktopMenuItem = ({
       <PopoverContent
         className={cn('mx-8 p-6 pb-4 rounded-xl shadow-md', border)}
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex gap-4">
           {item.sections.map((section, index) => (
             <div key={`section-${index}`}>
               {section.items.map((subItem, subIndex) => (

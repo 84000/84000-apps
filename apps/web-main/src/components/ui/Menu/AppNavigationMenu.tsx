@@ -14,9 +14,9 @@ export const AppNavigationMenu = () => {
   useEffect(() => {
     (async () => {
       const user = await getUser();
-      const roloe = user?.role || 'reader';
+      const role = user?.role || 'reader';
       const filteredItems = MENU_ITEMS.filter(
-        (item) => !item.roles?.length || (item.roles || []).includes(roloe),
+        (item) => !item.roles?.length || (item.roles || []).includes(role),
       );
       setMenuItems(filteredItems);
     })();
