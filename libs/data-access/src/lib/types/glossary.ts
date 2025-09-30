@@ -60,6 +60,11 @@ export type GlossaryTermInstanceDTO = {
   };
 };
 
+export type GlossaryTermInstancesDTO = {
+  work_uuid: string;
+  glossary_entries: GlossaryTermInstanceDTO[];
+};
+
 export const glossaryNameFromDTO = (dto: GlossaryNameDTO): GlossaryName => {
   return {
     content: dto.content,

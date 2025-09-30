@@ -4,10 +4,10 @@
 
 ### Linear
 
-<!-- A link to realted Linear issues. -->
+<!-- A link to related Linear issues. -->
 <!-- Remove if not applicable. -->
 
-- [ISSUE-ID](https://linear.app/your-project/issue/ISSUE-ID)
+- [DEV-ID](https://linear.app/84000/issue/DEV-ID)
 
 ### Screenshots
 

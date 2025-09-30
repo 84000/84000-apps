@@ -9,6 +9,7 @@ import {
   glossaryTermInstanceFromDTO,
   glossaryLandingItemFromDTO,
   glossaryPageItemFromDTO,
+  GlossaryTermInstancesDTO,
 } from './types';
 
 export const getAllGlossaryTerms = async ({
@@ -53,6 +54,28 @@ export const getAllGlossaryTerms = async ({
   }
 
   return terms;
+};
+
+export const getGlossaryInstances = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data, error } = await client.rpc('show_glossary_entries', {
+    v_work_uuid: uuid,
+  });
+  if (error) {
+    console.error(
+      `Error fetching glossary instances for work: ${uuid} `,
+      error,
+    );
+    return [];
+  }
+
+  const dto = data as GlossaryTermInstancesDTO;
+  return dto.glossary_entries.map(glossaryTermInstanceFromDTO);
 };
 
 export const getGlossaryInstance = async ({

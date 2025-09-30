@@ -261,7 +261,7 @@ export const EditorContextProvider = ({
     >
       <EditorSidebar
         builders={builders}
-        active={builder || 'body'}
+        active={builder || 'titles'}
         onClick={toNewBuilder}
       >
         <EditorHeader />

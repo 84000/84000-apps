@@ -9,8 +9,7 @@ import { useEditorState } from '../EditorProvider';
 import { PassagesEditor } from '../../editor';
 import { TranslationSkeleton } from '../TranslationSkeleton';
 
-const WRAPPER_CLASS =
-  'flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)';
+const WRAPPER_CLASS = 'flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4';
 
 export const CollaborativeBuilder = ({
   builder,
