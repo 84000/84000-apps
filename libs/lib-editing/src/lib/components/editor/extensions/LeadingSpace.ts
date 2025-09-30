@@ -1,4 +1,5 @@
 import { Extension, mergeAttributes } from '@tiptap/core';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface LeadingSpaceOptions {
   types: string[];
@@ -73,7 +74,10 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
         ({ commands }) => {
           return this.options.types
             .map((type) =>
-              commands.updateAttributes(type, { hasLeadingSpace: true }),
+              commands.updateAttributes(type, {
+                hasLeadingSpace: true,
+                leadingSpaceUuid: uuidv4(),
+              }),
             )
             .every((response) => response);
         },
@@ -81,7 +85,12 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
         () =>
         ({ commands }) => {
           return this.options.types
-            .map((type) => commands.resetAttributes(type, 'hasLeadingSpace'))
+            .map((type) =>
+              commands.resetAttributes(type, [
+                'hasLeadingSpace',
+                'leadingSpaceUuid',
+              ]),
+            )
             .every((response) => response);
         },
       toggleLeadingSpace:

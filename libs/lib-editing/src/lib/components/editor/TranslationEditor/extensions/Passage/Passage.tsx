@@ -1,14 +1,24 @@
 import { cn } from '@lib-utils';
-import type { ChangeEvent, FocusEvent } from 'react';
+import { useEffect, type ChangeEvent, type FocusEvent } from 'react';
 import type { NodeViewProps } from '@tiptap/react';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
+import { ensureNodeUuid } from '../../../util';
 
-export const Passage = ({ node, editor, updateAttributes }: NodeViewProps) => {
+export const Passage = ({
+  node,
+  editor,
+  getPos,
+  updateAttributes,
+}: NodeViewProps) => {
   const updateLabel = (
     event: ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement>,
   ) => {
     updateAttributes({ label: event.target.value });
   };
+
+  useEffect(() => {
+    ensureNodeUuid({ node, editor, getPos, updateAttributes });
+  }, [node, editor, getPos, updateAttributes]);
 
   const className =
     'absolute -left-16 w-16 text-end text-slate hover:cursor-pointer';

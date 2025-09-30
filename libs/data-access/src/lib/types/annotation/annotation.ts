@@ -194,7 +194,7 @@ export type Annotations = Annotation[];
 export type AnnotationTransformer = (dto: AnnotationDTO) => Annotation;
 
 export const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
-  const passageUuid = dto.passage_uuid || '';
+  const passageUuid = dto.passage_uuid || dto.passageUuid || '';
 
   return {
     uuid: dto.uuid,

@@ -39,12 +39,12 @@ export const savePassages = async ({
   passages: Passage[];
 }) => {
   /**
-   * 1. first, extract all annotations from savePassages
-   * 2. then, query the database for all current annotations for the savePassages
-   * 3. determine which annotations need to be deleted or upserted
-   * 4. upsert the passages
-   * 5. upsert the annotations
-   * 6. delete the annotations
+   * 1. Extract all annotations from savePassages
+   * 2. Query the database for all current annotations for the savePassages
+   * 3. Determine which annotations need to be deleted or upserted
+   * 4. Upsert the passages
+   * 5. Upsert the annotations
+   * 6. Delete the annotations that are no longer present
    */
   const dtos = passagesToDTO(passages);
   const passageRowDtos = passagesToRowDTO(passages);

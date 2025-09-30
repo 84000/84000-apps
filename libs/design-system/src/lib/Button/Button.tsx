@@ -49,7 +49,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     if (!variant || variant === 'default') {
       return (
-        <div className="size-fit p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
+        <div className="size-fit p-0.5 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
           <Comp
             className={cn(buttonVariants({ variant, size, className }))}
             ref={ref}
