@@ -9,7 +9,7 @@ const Page = () => {
   return (
     <iframe
       src={url}
-      className="size-full pb-[var(--header-height)]"
+      className="w-full h-[calc(100vh_-_var(--header-height))]"
       title="84000 Research Library"
     />
   );
