@@ -23,7 +23,7 @@ import {
 } from '@design-system';
 import { LetterTextIcon, LibraryIcon } from 'lucide-react';
 import { ReactNode, useCallback } from 'react';
-import type { EditorMenuItemType } from './types';
+import { EDITOR_KEY_TO_TITLE, type EditorMenuItemType } from './types';
 import { BodyItemType } from '@data-access';
 
 interface EditorSidebarItem {
@@ -49,11 +49,6 @@ const TOOL_ITEMS: EditorSidebarItem[] = [
     title: 'bibliography',
   },
 ];
-
-// some editor keys need custom titles
-const EDITOR_KEY_TO_TITLE: Partial<Record<EditorMenuItemType, string>> = {
-  endnote: 'end notes',
-};
 
 const isActive = (key: EditorMenuItemType, active: EditorMenuItemType) =>
   key === active;

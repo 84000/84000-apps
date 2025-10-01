@@ -78,56 +78,6 @@ export const getTranslationPassageTypes = async ({
   return data as BodyItemType[];
 };
 
-export const getTranslationAcknowledgements = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  return getTranslationPassages({ client, uuid, type: 'acknowledgment' });
-};
-
-export const getTranslationBody = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  return getTranslationPassages({ client, uuid, type: 'translation' });
-};
-
-export const getTranslationEndnotes = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  return getTranslationPassages({ client, uuid, type: 'endnote' });
-};
-
-export const getTranslationIntroduction = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  return getTranslationPassages({ client, uuid, type: 'introduction' });
-};
-
-export const getTranslationSummary = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  return getTranslationPassages({ client, uuid, type: 'summary' });
-};
-
 export const getTranslationSlugs = async ({
   client,
 }: {

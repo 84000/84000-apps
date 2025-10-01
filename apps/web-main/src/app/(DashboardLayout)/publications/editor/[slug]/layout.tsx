@@ -1,4 +1,8 @@
-import { createBrowserClient, getTranslationPassageTypes } from '@data-access';
+import {
+  createBrowserClient,
+  getTranslationMetadataByUuid,
+  getTranslationPassageTypes,
+} from '@data-access';
 import { EditorContextProvider } from '@lib-editing';
 
 const layout = async ({
@@ -15,9 +19,13 @@ const layout = async ({
     client,
     uuid: slug,
   });
+  const work = await getTranslationMetadataByUuid({
+    client,
+    uuid: slug,
+  });
 
   return (
-    <EditorContextProvider uuid={slug} builders={builders}>
+    <EditorContextProvider uuid={slug} work={work} builders={builders}>
       {children}
     </EditorContextProvider>
   );
