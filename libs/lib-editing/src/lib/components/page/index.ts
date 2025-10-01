@@ -2,6 +2,8 @@ export * from './AiSummarizerPage';
 export * from './EditorPage';
 export * from './EditorProvider';
 export * from './EditorSidebar';
+export * from './LabeledElement';
+export * from './TranslationBibliographyPage';
 export * from './TranslationGlossaryPage';
 export * from './TranslationSkeleton';
 export * from './TranslationTable';

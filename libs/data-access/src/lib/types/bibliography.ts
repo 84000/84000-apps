@@ -30,6 +30,54 @@ export const bibliographyItemFromDTO = (
   };
 };
 
+export type BibliographyEntryItemDTO = {
+  uuid: string;
+  bibl_html: string;
+};
+
+export type BibliographyEntryItem = {
+  uuid: string;
+  html: string;
+};
+
+export type BlibliographyEntryDTO = {
+  heading: string;
+  entries: BibliographyEntryItemDTO[];
+};
+
+export type BibliographyEntry = {
+  heading: string;
+  entries: BibliographyEntryItem[];
+};
+
+export type BibliographyEntriesDTO = BlibliographyEntryDTO[];
+
+export type BibliographyEntries = BibliographyEntry[];
+
+export const bibliographyEntryItemFromDTO = (
+  dto: BibliographyEntryItemDTO,
+): BibliographyEntryItem => {
+  return {
+    uuid: dto.uuid,
+    html: dto.bibl_html,
+  };
+};
+
+export const bibliographyEntryFromDTO = (
+  dto: BlibliographyEntryDTO,
+): BibliographyEntry => {
+  return {
+    heading: dto.heading,
+    entries: dto.entries?.map(bibliographyEntryItemFromDTO) || [],
+  };
+};
+
+export const bibliographyEntriesFromDTO = (
+  dtos: BibliographyEntriesDTO,
+): BibliographyEntries => {
+  return dtos?.map(bibliographyEntryFromDTO) || [];
+};
+
 export const bibliographyFromDTO = (dto?: BibliographyDTO): Bibliography => {
   return dto?.map(bibliographyItemFromDTO) || [];
 };
