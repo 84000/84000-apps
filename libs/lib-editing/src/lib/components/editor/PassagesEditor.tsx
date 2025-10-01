@@ -13,6 +13,7 @@ import { blocksFromTranslationBody } from '../../block';
 export const PassagesEditor = ({
   passages,
   fragment,
+  isEditable = true,
   className,
   onCreate,
   fetchEndNote,
@@ -20,6 +21,7 @@ export const PassagesEditor = ({
 }: {
   passages: Passage[];
   fragment: XmlFragment;
+  isEditable?: boolean;
   className?: string;
   onCreate?: (params: { editor: Editor }) => void;
   fetchEndNote?: (
@@ -39,6 +41,7 @@ export const PassagesEditor = ({
   return (
     <TranslationEditor
       content={content}
+      isEditable={isEditable}
       className={className}
       fragment={fragment}
       onCreate={onCreate}
