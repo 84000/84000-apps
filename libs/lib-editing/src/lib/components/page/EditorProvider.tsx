@@ -17,6 +17,7 @@ import { EditorSidebar } from './EditorSidebar';
 import {
   BodyItemType,
   GlossaryTermInstance,
+  Work,
   createBrowserClient,
   getGlossaryInstance,
   getPassage,
@@ -32,6 +33,7 @@ interface EditorContextState {
   uuid: string;
   builder: EditorMenuItemType;
   dirtyUuids: string[];
+  work: Work;
   getFragment: () => XmlFragment;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   fetchGlossaryTerm: (
@@ -47,6 +49,15 @@ interface EditorContextState {
 
 export const EditorContext = createContext<EditorContextState>({
   uuid: '',
+  work: {
+    uuid: '',
+    title: '',
+    pages: 0,
+    publicationDate: new Date(),
+    publicationVersion: '0.0.0',
+    restriction: false,
+    toh: [],
+  },
   builder: 'translation',
   dirtyUuids: [],
   getFragment: () => {
@@ -80,6 +91,7 @@ export const EditorContext = createContext<EditorContextState>({
 
 interface EditorContextProps {
   uuid: string;
+  work: Work;
   builders: BodyItemType[];
   doc?: Doc;
   children: React.ReactNode;
@@ -87,6 +99,7 @@ interface EditorContextProps {
 
 export const EditorContextProvider = ({
   uuid,
+  work,
   builders,
   doc: initialDoc,
   children,
@@ -244,6 +257,7 @@ export const EditorContextProvider = ({
     <EditorContext.Provider
       value={{
         uuid,
+        work,
         builder,
         doc,
         editor,
