@@ -1,4 +1,5 @@
 export * from './lib/auth';
+export * from './lib/bibliography';
 export * from './lib/canon';
 export * from './lib/client-browser';
 export * from './lib/client-server';

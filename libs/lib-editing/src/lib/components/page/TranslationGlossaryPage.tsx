@@ -5,39 +5,12 @@ import {
   getGlossaryInstances,
   GlossaryTermInstance,
 } from '@data-access';
-import { ReactNode, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorProvider';
 import { TranslationSkeleton } from './TranslationSkeleton';
 import { H2, Separator } from '@design-system';
 import { cn, removeHtmlTags, useScrollToHash } from '@lib-utils';
-import Link from 'next/link';
-
-export const LabeledElement = ({
-  label,
-  id = undefined,
-  className,
-  children,
-}: {
-  label?: string;
-  id?: string;
-  className?: string;
-  children: ReactNode;
-}) => {
-  return (
-    <div id={id} className="relative leading-7 ml-6">
-      <Link
-        href={`#${id}`}
-        className={cn(
-          'absolute -left-16 w-16 text-end text-slate hover:cursor-pointer',
-          className,
-        )}
-      >
-        {label || ''}
-      </Link>
-      <div className="pl-6">{children}</div>
-    </div>
-  );
-};
+import { LabeledElement } from './LabeledElement';
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -124,7 +97,7 @@ export const TranslationGlossaryPage = () => {
   }
 
   return (
-    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4">
+    <div className="flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 pb-16">
       <LabeledElement className="mt-8" id={'glossary'} label="g.">
         <H2>Glossary</H2>
       </LabeledElement>
