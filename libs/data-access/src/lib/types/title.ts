@@ -1,12 +1,12 @@
 import { ExtendedTranslationLanguage } from './language';
 
 export const TITLE_TYPES = [
-  'longTitle',
+  'toh',
   'mainTitle',
   'mainTitleOutsideCatalogueSection',
+  'longTitle',
   'otherTitle',
   'shortcode',
-  'toh',
 ] as const;
 
 export type TitleType = (typeof TITLE_TYPES)[number];
