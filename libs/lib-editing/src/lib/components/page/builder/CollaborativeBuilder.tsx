@@ -28,11 +28,13 @@ export const CollaborativeBuilder = ({
   const [body, setBody] = useState<Passage[]>();
   const [fragment, setFragment] = useState<XmlFragment>();
   const [isObserving, setIsObserving] = useState(false);
+  const [isEditable, setIsEditable] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const {
     uuid,
     builder: currentBuilder,
+    canEdit,
     setEditor,
     startObserving,
     getFragment,
@@ -53,9 +55,13 @@ export const CollaborativeBuilder = ({
       const body = await fetchContent({ client, uuid });
 
       if (!body) {
+        setLoading(false);
         return;
       }
 
+      const isEditable = await canEdit();
+
+      setIsEditable(isEditable);
       setBody(body);
       setLoading(false);
     };
@@ -68,6 +74,7 @@ export const CollaborativeBuilder = ({
     currentBuilder,
     client,
     builder,
+    canEdit,
     getFragment,
     fetchContent,
   ]);
@@ -81,6 +88,7 @@ export const CollaborativeBuilder = ({
       passages={body}
       className={WRAPPER_CLASS}
       fragment={getFragment()}
+      isEditable={isEditable}
       fetchEndNote={fetchEndNote}
       fetchGlossaryInstance={fetchGlossaryTerm}
       onCreate={({ editor }) => {

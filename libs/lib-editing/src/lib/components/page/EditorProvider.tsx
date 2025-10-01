@@ -21,6 +21,7 @@ import {
   createBrowserClient,
   getGlossaryInstance,
   getPassage,
+  hasPermission,
   savePassages,
 } from '@data-access';
 import { blockFromPassage } from '../../block';
@@ -34,6 +35,7 @@ interface EditorContextState {
   builder: EditorMenuItemType;
   dirtyUuids: string[];
   work: Work;
+  canEdit(): Promise<boolean>;
   getFragment: () => XmlFragment;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   fetchGlossaryTerm: (
@@ -60,6 +62,9 @@ export const EditorContext = createContext<EditorContextState>({
   },
   builder: 'translation',
   dirtyUuids: [],
+  canEdit: async () => {
+    throw Error('Not implemented');
+  },
   getFragment: () => {
     throw Error('Not implemented');
   },
@@ -235,6 +240,10 @@ export const EditorContextProvider = ({
     [stopObserving],
   );
 
+  const canEdit = useCallback(async () => {
+    return await hasPermission({ client, permission: 'editor.edit' });
+  }, [client]);
+
   useEffect(() => {
     const nextPath = `/publications/editor/${uuid}/${builder}`;
 
@@ -262,6 +271,7 @@ export const EditorContextProvider = ({
         doc,
         editor,
         dirtyUuids,
+        canEdit,
         getFragment,
         fetchEndNote,
         fetchGlossaryTerm,

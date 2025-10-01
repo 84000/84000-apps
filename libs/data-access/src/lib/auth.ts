@@ -1,5 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
-import { DataClient, UserClaims, UserRole } from './types';
+import { DataClient, UserClaims, UserPermission, UserRole } from './types';
 
 export const getSession = async ({ client }: { client: DataClient }) => {
   const { data, error } = await client.auth.getSession();
@@ -67,6 +67,23 @@ export const getUser = async ({ client }: { client: DataClient }) => {
     role,
     subscriptions: subsArray,
   };
+};
+
+export const hasPermission = async ({
+  client,
+  permission,
+}: {
+  client: DataClient;
+  permission: UserPermission;
+}) => {
+  const { data, error } = await client.rpc('authorize', {
+    requested_permission: permission,
+  });
+  if (error) {
+    console.error(`Failed to check permission: ${error.message}`);
+    return false;
+  }
+  return data as boolean;
 };
 
 export const loginWithGoogle = async ({

@@ -13,33 +13,39 @@ const WRAPPER_CLASS =
 
 export const TitlesBuilder = () => {
   const [content, setContent] = useState<BlockEditorContent>();
+  const [isEditable, setIsEditable] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { uuid } = useEditorState();
+  const { uuid, canEdit } = useEditorState();
 
   useEffect(() => {
     const getTitles = async () => {
-      const client = createBrowserClient();
-      const titles = await getTranslationTitles({ client, uuid });
-
-      setLoading(false);
-
-      if (!titles) {
+      if (!loading) {
         return;
       }
 
+      const client = createBrowserClient();
+      const titles = await getTranslationTitles({ client, uuid });
       const doc = titlesToDocument(titles);
+      const editable = await canEdit();
+
+      setIsEditable(editable);
       setContent(doc);
+      setLoading(false);
     };
     getTitles();
-  }, [uuid]);
+  }, [uuid, loading, canEdit]);
 
   if (!content && !loading) {
     return notFound();
   }
 
   return content ? (
-    <TitlesEditor className={WRAPPER_CLASS} content={content} />
+    <TitlesEditor
+      isEditable={isEditable}
+      className={WRAPPER_CLASS}
+      content={content}
+    />
   ) : (
     <TranslationSkeleton className={WRAPPER_CLASS} />
   );
