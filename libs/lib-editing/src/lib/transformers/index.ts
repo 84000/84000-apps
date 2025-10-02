@@ -23,6 +23,7 @@ export * from './quote';
 export * from './quoted';
 export * from './reference';
 export * from './span';
+export * from './table';
 export * from './table-body-data';
 export * from './table-body-header';
 export * from './table-body-row';

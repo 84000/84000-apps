@@ -21,6 +21,7 @@ import { paragraph } from './paragraph';
 import { quote } from './quote';
 import { span } from './span';
 import { trailer } from './trailer';
+import { table } from './table';
 import { tableBodyData } from './table-body-data';
 import { tableBodyHeader } from './table-body-header';
 import { tableBodyRow } from './table-body-row';
@@ -60,6 +61,7 @@ const EXPORTERS: Partial<
   smallCaps: span,
   subscript: span,
   superscript: span,
+  table,
   tableBodyData,
   tableBodyHeader,
   tableBodyRow,

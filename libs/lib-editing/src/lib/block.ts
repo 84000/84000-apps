@@ -144,6 +144,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     quoted: BlockPriority.Unknown,
     reference: BlockPriority.Unknown,
     span: BlockPriority.Mark,
+    table: BlockPriority.OuterBlock,
     tableBodyData: BlockPriority.Block,
     tableBodyHeader: BlockPriority.OuterBlock,
     tableBodyRow: BlockPriority.OuterBlock,
