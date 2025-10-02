@@ -28,7 +28,7 @@ export const italic: Exporter<
   const uuid = mark?.attrs.uuid;
   const type = mark?.attrs.type as AnnotationType;
   const textContent = node.textContent || parent.textContent || '';
-  const textStyle = mark?.attrs.textStyle as string | 'emphasis';
+  const textStyle = (mark?.attrs.textStyle as string) || 'emphasis';
   const lang = mark?.attrs.lang as ExtendedTranslationLanguage;
   const end = start + textContent.length;
 
