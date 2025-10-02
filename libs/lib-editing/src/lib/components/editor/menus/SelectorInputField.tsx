@@ -37,7 +37,7 @@ export const SelectorInputField = ({
       <Input
         ref={inputRef}
         placeholder={placeholder}
-        defaultValue={editorState.getValue}
+        value={editorState.getValue}
       />
       {editorState.isActive ? (
         <Button

@@ -1,4 +1,5 @@
 import type { BlockEditorContentItem } from '../components/editor';
+import { filterAttrs } from './util';
 
 type SplitBlock = {
   prefix: BlockEditorContentItem[];
@@ -40,6 +41,7 @@ export function splitNode(
   const postStartIdx = preLen + midLen;
 
   const splits: SplitBlock = { prefix: [], middle: [], suffix: [] };
+  const attrs = filterAttrs(item.attrs);
 
   if (preLen > 0) {
     const preText = text.slice(0, preLen);
@@ -48,7 +50,7 @@ export function splitNode(
         ...item,
         text: preText,
         attrs: {
-          ...item.attrs,
+          ...attrs,
           start: itemStart,
           end: itemStart + preText.length,
         },
@@ -63,7 +65,7 @@ export function splitNode(
         ...item,
         text: midText,
         attrs: {
-          ...item.attrs,
+          ...attrs,
           start: itemStart + preLen,
           end: itemStart + preLen + midText.length,
         },
@@ -78,7 +80,7 @@ export function splitNode(
         ...item,
         text: postText,
         attrs: {
-          ...item.attrs,
+          ...attrs,
           start: itemStart + postStartIdx,
           end: itemStart + text.length,
         },

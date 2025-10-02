@@ -1,7 +1,14 @@
 import { NodeViewProps } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 
-export const ensureNodeUuid = async ({
+/**
+ * Validates and updates the attributes of a Node.
+ * Specifically, it ensures that the node has a unique 'uuid' attribute.
+ * If the 'uuid' is missing or duplicates the previous node's 'uuid',
+ * a new UUID is generated and assigned. In the case of duplication, all
+ * global attributes are set to their default values.
+ */
+export const validateAttrs = async ({
   node,
   editor,
   getPos,
@@ -29,6 +36,40 @@ export const ensureNodeUuid = async ({
   }
 
   if (index > 0 && parent.child(index - 1).attrs.uuid === node.attrs.uuid) {
-    updateAttributes?.({ uuid: uuidv4() });
+    const attrs: { [attr: string]: unknown } = {
+      ...node.attrs,
+      uuid: uuidv4(),
+    };
+
+    // reset all global attributes to default values
+    if (attrs.leadingSpaceUuid) {
+      attrs.leadSpaceUuid = undefined;
+    }
+
+    if (attrs.hasLeadingSpace) {
+      attrs.hasLeadingSpace = false;
+    }
+
+    if (attrs.indentUuid) {
+      attrs.indentUuid = undefined;
+    }
+
+    if (attrs.hasIndent) {
+      attrs.hasIndent = false;
+    }
+
+    if (attrs.trailerUuid) {
+      attrs.trailingSpaceUuid = undefined;
+    }
+
+    if (attrs.hasTrailer) {
+      attrs.hasTrailingSpace = false;
+    }
+
+    if (attrs.hasParagraphIndent) {
+      attrs.hasParagraphIndent = false;
+    }
+
+    updateAttributes?.(attrs);
   }
 };
