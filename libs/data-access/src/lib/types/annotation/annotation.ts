@@ -137,6 +137,10 @@ export type SpanAnnotation = AnnotationBase & {
   lang?: ExtendedTranslationLanguage;
 };
 
+export type TableAnnotation = AnnotationBase & {
+  type: 'table';
+};
+
 export type TableBodyDataAnnotation = AnnotationBase & {
   type: 'tableBodyData';
 };
@@ -183,6 +187,7 @@ export type Annotation =
   | QuotedAnnotation
   | ReferenceAnnotation
   | SpanAnnotation
+  | TableAnnotation
   | TableBodyDataAnnotation
   | TableBodyHeaderAnnotation
   | TableBodyRowAnnotation

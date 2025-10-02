@@ -25,6 +25,7 @@ import { exporter as quote } from './quote';
 import { exporter as quoted } from './quoted';
 import { exporter as reference } from './reference';
 import { exporter as span } from './span';
+import { exporter as table } from './table';
 import { exporter as tableBodyData } from './table-body-data';
 import { exporter as tableBodyHeader } from './table-body-header';
 import { exporter as tableBodyRow } from './table-body-row';
@@ -57,6 +58,7 @@ export const annotationToDtoMap: Record<AnnotationType, AnnotationExporter> = {
   quoted,
   reference,
   span,
+  table,
   tableBodyData,
   tableBodyHeader,
   tableBodyRow,

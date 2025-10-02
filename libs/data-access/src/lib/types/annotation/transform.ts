@@ -37,6 +37,7 @@ import { transformer as quoted } from './quoted';
 import { transformer as reference } from './reference';
 import { transformer as span } from './span';
 import { transformer as trailer } from './trailer';
+import { transformer as table } from './table';
 import { transformer as tableBodyData } from './table-body-data';
 import { transformer as tableBodyHeader } from './table-body-header';
 import { transformer as tableBodyRow } from './table-body-row';
@@ -69,6 +70,7 @@ const dtoToAnnotationMap: Record<AnnotationDTOType, AnnotationTransformer> = {
   quoted,
   reference,
   span,
+  table,
   'table-body-data': tableBodyData,
   'table-body-header': tableBodyHeader,
   'table-body-row': tableBodyRow,

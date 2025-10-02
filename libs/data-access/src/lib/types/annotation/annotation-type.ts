@@ -24,6 +24,7 @@ export type AnnotationDTOType =
   | 'quoted'
   | 'reference'
   | 'span'
+  | 'table'
   | 'table-body-data'
   | 'table-body-header'
   | 'table-body-row'
@@ -56,6 +57,7 @@ export type AnnotationType =
   | 'quoted'
   | 'reference'
   | 'span'
+  | 'table'
   | 'tableBodyData'
   | 'tableBodyHeader'
   | 'tableBodyRow'
@@ -88,6 +90,7 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
   quoted: 'quoted',
   reference: 'reference',
   span: 'span',
+  table: 'table',
   'table-body-data': 'tableBodyData',
   'table-body-header': 'tableBodyHeader',
   'table-body-row': 'tableBodyRow',
@@ -127,6 +130,7 @@ const ANNOATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> = {
   quoted: 'quoted',
   reference: 'reference',
   span: 'span',
+  table: 'table',
   tableBodyData: 'table-body-data',
   tableBodyHeader: 'table-body-header',
   tableBodyRow: 'table-body-row',
