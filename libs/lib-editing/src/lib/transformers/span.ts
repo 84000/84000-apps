@@ -41,7 +41,7 @@ export const span: Transformer = (ctx) => {
 
   recurse({
     ...ctx,
-    until: ['text'],
+    until: ['text', 'glossaryInstance'],
     transform: (ctx) => {
       splitContent({
         ...ctx,

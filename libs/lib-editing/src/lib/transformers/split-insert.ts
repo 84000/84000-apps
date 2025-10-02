@@ -1,6 +1,7 @@
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
 import type { BlockEditorContentItem } from '../components/editor';
+import { filterAttrs } from './util';
 
 export const sort = (nodes: BlockEditorContentItem[]) => {
   return nodes.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
@@ -36,7 +37,7 @@ export const splitAndInsert: Transformer = (ctx) => {
   const newBlock: BlockEditorContentItem = {
     type: annotation.type,
     attrs: {
-      ...block.attrs,
+      ...filterAttrs(block.attrs),
       start,
       end,
     },

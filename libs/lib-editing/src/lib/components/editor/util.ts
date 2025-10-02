@@ -42,7 +42,7 @@ export const validateAttrs = async ({
     };
 
     // reset all global attributes to default values
-    if (attrs.leadSpaceUuid) {
+    if (attrs.leadingSpaceUuid) {
       attrs.leadSpaceUuid = undefined;
     }
 

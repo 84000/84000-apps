@@ -3,6 +3,7 @@ import { isBlockAnnotation } from './annotate';
 import { splitNode } from './split-node';
 import { Transformer } from './transformer';
 import { BlockEditorContentItem } from '../components/editor';
+import { filterAttrs } from './util';
 
 export const splitBlock: Transformer = ({
   root,
@@ -58,13 +59,14 @@ export const splitBlock: Transformer = ({
     suffixContent.push(...suffix);
   }
 
+  const attrs = filterAttrs(block.attrs);
   const newBlocks: BlockEditorContentItem[] = [];
   if (prefixContent.length) {
     newBlocks.push({
       ...block,
       content: prefixContent,
       attrs: {
-        ...block.attrs,
+        ...attrs,
         start: prefixContent[0].attrs?.start ?? 0,
         end: prefixContent[prefixContent.length - 1].attrs?.end ?? 0,
       },
@@ -77,7 +79,7 @@ export const splitBlock: Transformer = ({
       type: annotation.type,
       content: midContent,
       attrs: {
-        ...block.attrs,
+        ...attrs,
         start: midContent[0].attrs?.start ?? annStart,
         end: midContent[midContent.length - 1].attrs?.end ?? annEnd,
         uuid: annotation.uuid,
@@ -97,7 +99,7 @@ export const splitBlock: Transformer = ({
       ...block,
       content: suffixContent,
       attrs: {
-        ...block.attrs,
+        ...attrs,
         start: suffixContent[0].attrs?.start ?? 0,
         end: suffixContent[suffixContent.length - 1].attrs?.end ?? 0,
       },

@@ -3,6 +3,7 @@ import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
 import type { BlockEditorContentItem } from '../components/editor';
+import { filterAttrs } from './util';
 
 export const splitContent: Transformer = ({
   root,
@@ -29,6 +30,7 @@ export const splitContent: Transformer = ({
   const annEndAbs = annotation.end;
   const currentContent = parent.content || [];
   const newContent = [];
+  const attrs = filterAttrs(block.attrs);
 
   for (const item of currentContent) {
     const { prefix, middle, suffix } = splitNode(item, annStartAbs, annEndAbs);
@@ -47,11 +49,11 @@ export const splitContent: Transformer = ({
     newContent.push(...suffix);
   }
 
-  if (annStartAbs === annEndAbs && annStartAbs === block.attrs?.end) {
+  if (annStartAbs === annEndAbs && annStartAbs === attrs?.end) {
     const newBlock: BlockEditorContentItem = {
       type: annotation.type,
       attrs: {
-        ...block.attrs,
+        ...attrs,
         start: annStartAbs,
         end: annEndAbs,
       },
