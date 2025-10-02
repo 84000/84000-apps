@@ -1,6 +1,6 @@
 import { LINK_STYLE } from '@design-system';
 import { cn } from '@lib-utils';
-import { Node } from '@tiptap/core';
+import { JSONContent, Node } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { GlossaryInstance } from './GlossaryInstance';
 import { GlossaryTermInstance } from '@data-access';
@@ -83,15 +83,36 @@ export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
     return {
       setGlossaryInstance:
         (glossary) =>
-        ({ commands }) => {
-          const state = this.editor.state;
+        ({ commands, state }) => {
           const { from, to } = state.selection;
-          const text = state.doc.textBetween(from, to);
-          return commands.insertContent({
-            type: this.name,
-            attrs: { glossary },
-            content: text ? [{ type: 'text', text }] : [],
+          const slice = state.doc.slice(from, to);
+
+          // Extract content with marks preserved
+          const content: JSONContent[] = [];
+          slice.content.forEach((node) => {
+            if (node.isText) {
+              content.push({
+                type: 'text',
+                text: node.text,
+                marks: node.marks.map((mark) => ({
+                  type: mark.type.name,
+                  attrs: mark.attrs,
+                })),
+              });
+            } else if (node.isInline) {
+              // Handle other inline nodes if needed
+              content.push(node.toJSON());
+            }
           });
+
+          return commands.insertContentAt(
+            { from, to },
+            {
+              type: this.name,
+              attrs: { glossary },
+              content: content.length > 0 ? content : [],
+            },
+          );
         },
 
       unsetGlossaryInstance:
