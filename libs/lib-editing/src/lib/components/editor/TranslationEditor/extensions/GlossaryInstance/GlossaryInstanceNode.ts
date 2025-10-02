@@ -84,16 +84,39 @@ export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
       setGlossaryInstance:
         (glossary) =>
         ({ commands }) => {
+          const state = this.editor.state;
+          const { from, to } = state.selection;
+          const text = state.doc.textBetween(from, to);
           return commands.insertContent({
             type: this.name,
             attrs: { glossary },
+            content: text ? [{ type: 'text', text }] : [],
           });
         },
 
       unsetGlossaryInstance:
         () =>
-        ({ commands }) => {
-          return commands.deleteSelection();
+        ({ commands, state }) => {
+          const { from } = state.selection;
+          const $pos = state.doc.resolve(from);
+
+          // get the parent node or the node at this position
+          const node = $pos.parent;
+          const nodeStart = $pos.before();
+          const nodeEnd = $pos.after();
+
+          if (node.type.name !== this.name) {
+            return false;
+          }
+
+          const text = node.textContent;
+          const marks = node.marks;
+
+          return commands.insertContentAt(
+            { from: nodeStart, to: nodeEnd },
+            state.schema.text(text, marks),
+            { updateSelection: true },
+          );
         },
     };
   },

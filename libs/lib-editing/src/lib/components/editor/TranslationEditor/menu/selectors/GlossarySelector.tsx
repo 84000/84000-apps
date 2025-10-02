@@ -43,16 +43,11 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
         <SelectorInputField
           editor={editor}
           type="glossaryInstance"
-          attr="authority"
-          placeholder="Add authority uuid..."
+          attr="glossary"
+          placeholder="Add glossary uuid..."
           onSubmit={(value) => {
             if (value) {
-              editor
-                .chain()
-                .focus()
-                .extendMarkRange('glossaryInstance')
-                .setGlossaryInstance(value)
-                .run();
+              editor.chain().focus().setGlossaryInstance(value).run();
             } else {
               editor.chain().focus().unsetGlossaryInstance().run();
             }

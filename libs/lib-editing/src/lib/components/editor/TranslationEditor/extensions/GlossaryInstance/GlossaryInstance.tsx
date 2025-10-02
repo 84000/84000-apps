@@ -8,7 +8,7 @@ import {
 import { useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
 import { usePathname } from 'next/navigation';
-import { ensureNodeUuid } from '../../../util';
+import { validateAttrs } from '../../../util';
 import { GlossaryInstanceBody } from '../../../../page';
 import Link from 'next/link';
 
@@ -55,7 +55,7 @@ export const GlossaryInstance = ({
   ) => Promise<GlossaryTermInstance | undefined>;
 
   useEffect(() => {
-    ensureNodeUuid({ node, editor, getPos, updateAttributes });
+    validateAttrs({ node, editor, getPos, updateAttributes });
   }, [node, editor, getPos, updateAttributes]);
 
   useEffect(() => {
