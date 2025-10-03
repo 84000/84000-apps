@@ -1,8 +1,6 @@
 import { Editor } from '@tiptap/core';
-// @ts-expect-error: The docs say to import this but it throws an error.
 import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, Separator, ScrollBar } from '@design-system';
-import { EditorState } from 'prosemirror-state';
 import { TextButtons } from './selectors/TextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { NodeSelector } from './selectors/NodeSelector';
@@ -23,13 +21,7 @@ export const TranslationBubbleMenu = ({
         placement: 'top',
         offset: 6,
       }}
-      shouldShow={({
-        editor,
-        state,
-      }: {
-        editor: Editor;
-        state: EditorState;
-      }) => {
+      shouldShow={({ editor, state }) => {
         const { selection } = state;
         const { empty } = selection;
 
