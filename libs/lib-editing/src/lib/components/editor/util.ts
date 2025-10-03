@@ -78,7 +78,7 @@ export const validateAttrs = async ({
  * Finds the range of a given mark in the editor's document by its reference.
  * Returns an object with 'from' and 'to' positions if found, otherwise undefined.
  */
-export const findMarkByUuid = ({ editor, mark }: Partial<MarkViewProps>) => {
+export const findMarkRange = ({ editor, mark }: Partial<MarkViewProps>) => {
   if (!editor || !mark) {
     return undefined;
   }

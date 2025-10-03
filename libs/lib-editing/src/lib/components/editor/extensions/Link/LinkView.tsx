@@ -9,7 +9,7 @@ import { MarkViewContent, MarkViewProps } from '@tiptap/react';
 import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';
-import { findMarkByUuid } from '../../util';
+import { findMarkRange } from '../../util';
 import { HoverInputField } from '../HoverInputField';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
@@ -23,7 +23,7 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
     setIsEditing(false);
 
     setTimeout(() => {
-      const range = findMarkByUuid({ editor, mark });
+      const range = findMarkRange({ editor, mark });
       if (!range) {
         console.warn('Link mark not found in the document.');
         return;
