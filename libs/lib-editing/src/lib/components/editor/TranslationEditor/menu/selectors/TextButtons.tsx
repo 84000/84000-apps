@@ -27,43 +27,55 @@ interface SelectorResult {
 const items = [
   {
     icon: BoldIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleBold().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isBold
+        ? editor.chain().focus().unsetBold().run()
+        : editor.chain().focus().setBold().run();
     },
     isActive: (state: SelectorResult) => state.isBold,
   },
   {
     icon: ItalicIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleItalic().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isItalic
+        ? editor.chain().focus().unsetItalic().run()
+        : editor.chain().focus().setItalic().run();
     },
     isActive: (state: SelectorResult) => state.isItalic,
   },
   {
     icon: UnderlineIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleUnderline().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isUnderline
+        ? editor.chain().focus().unsetUnderline().run()
+        : editor.chain().focus().setUnderline().run();
     },
     isActive: (state: SelectorResult) => state.isUnderline,
   },
   {
     icon: SubscriptIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleSubscript().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isSubscript
+        ? editor.chain().focus().unsetSubscript().run()
+        : editor.chain().focus().setSubscript().run();
     },
     isActive: (state: SelectorResult) => state.isSubscript,
   },
   {
     icon: SuperscriptIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleSuperscript().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isSuperscript
+        ? editor.chain().focus().unsetSuperscript().run()
+        : editor.chain().focus().setSuperscript().run();
     },
     isActive: (state: SelectorResult) => state.isSuperscript,
   },
   {
     icon: CaseUpperIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleSmallCaps().run();
+    onClick: (editor: Editor, state: SelectorResult) => {
+      state.isSmallCaps
+        ? editor.chain().focus().unsetSmallCaps().run()
+        : editor.chain().focus().setSmallCaps().run();
     },
     isActive: (state: SelectorResult) => state.isSmallCaps,
   },
@@ -92,13 +104,16 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
             size="icon"
             className="rounded-none flex-shrink-0"
             onClick={() => {
-              item.onClick(editor);
+              item.onClick(editor, editorState);
             }}
           >
             <item.icon
-              className={cn('size-4', {
-                'text-primary': item.isActive(editorState),
-              })}
+              className={cn(
+                'size-4',
+                item.isActive(editorState)
+                  ? 'text-primary'
+                  : 'text-muted-foreground',
+              )}
               strokeWidth={2.5}
             />
           </Button>
