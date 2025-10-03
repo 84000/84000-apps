@@ -7,9 +7,12 @@ export default Link.extend({
     const name = this.name;
     return {
       ...this.parent?.(),
-      setLink() {
+      setLink(attributes) {
         return ({ commands }) => {
-          return commands.setMark(name, { uuid: uuidv4() });
+          return commands.setMark(name, {
+            ...attributes,
+            uuid: uuidv4(),
+          });
         };
       },
       toggleLink() {

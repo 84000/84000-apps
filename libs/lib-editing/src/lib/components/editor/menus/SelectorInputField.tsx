@@ -27,17 +27,17 @@ export const SelectorInputField = ({
   });
 
   return (
-    <form
-      className="flex space-x-1 items-center"
-      onSubmit={(evt) => {
-        evt.preventDefault();
-        onSubmit(inputRef.current?.value);
-      }}
-    >
+    <div className="flex space-x-1 items-center">
       <Input
         ref={inputRef}
         placeholder={placeholder}
         value={editorState.getValue}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onSubmit(inputRef.current?.value);
+          }
+        }}
       />
       {editorState.isActive ? (
         <Button
@@ -54,10 +54,14 @@ export const SelectorInputField = ({
           <Trash2Icon className="size-4 text-destructive" />
         </Button>
       ) : (
-        <Button size="icon" variant="ghost">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => onSubmit(inputRef.current?.value)}
+        >
           <CheckIcon className="size-4" />
         </Button>
       )}
-    </form>
+    </div>
   );
 };
