@@ -4,6 +4,8 @@ import * as React from 'react';
 
 import { cn } from '@lib-utils';
 
+export const TABLE_STYLE = 'w-full caption-bottom text-sm';
+
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
@@ -12,12 +14,14 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
     >
       <table
         data-slot="table"
-        className={cn('w-full caption-bottom text-sm', className)}
+        className={cn(TABLE_STYLE, className)}
         {...props}
       />
     </div>
   );
 }
+
+export const TABLE_HEADER_STYLE = '[&_tr]:border-b';
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
@@ -52,40 +56,40 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   );
 }
 
+export const TABLE_ROW_STYLE =
+  'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors';
+
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   return (
     <tr
       data-slot="table-row"
-      className={cn(
-        'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
-        className,
-      )}
+      className={cn(TABLE_ROW_STYLE, className)}
       {...props}
     />
   );
 }
+
+export const TABLE_HEAD_STYLE =
+  'text-muted-foreground h-12 px-4 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]';
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
       data-slot="table-head"
-      className={cn(
-        'text-muted-foreground h-12 px-4 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        className,
-      )}
+      className={cn(TABLE_HEAD_STYLE, className)}
       {...props}
     />
   );
 }
 
+export const TABLE_CELL_STYLE =
+  'p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]';
+
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   return (
     <td
       data-slot="table-cell"
-      className={cn(
-        'p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
-        className,
-      )}
+      className={cn(TABLE_CELL_STYLE, className)}
       {...props}
     />
   );

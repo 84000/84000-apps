@@ -6,12 +6,7 @@ import { Audio } from '../../extensions/Audio/Audio';
 import Heading from '../../extensions/Heading/Heading';
 import Image from '../../extensions/Image';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
-import {
-  Table,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from '../../extensions/Table';
+import { TableKit } from '../../extensions/Table';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import {
   BulletListSuggestion,
@@ -131,10 +126,7 @@ export const useTranslationExtensions = ({
     SmallCaps,
     Subscript,
     Superscript,
-    Table,
-    TableCell,
-    TableHeader,
-    TableRow,
+    TableKit,
     Trailer,
     TranslationMetadata,
     TextAlign,

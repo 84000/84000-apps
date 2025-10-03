@@ -30,7 +30,13 @@ import { findNodePosition, nodeNotFound } from './util';
 
 const EXPORTERS: Partial<
   Record<
-    AnnotationType | SpanMarkType | 'text' | 'bulletList',
+    | AnnotationType
+    | SpanMarkType
+    | 'text'
+    | 'bulletList'
+    | 'tableCell'
+    | 'tableHeader'
+    | 'tableRow',
     Exporter<Annotation>
   >
 > = {
@@ -62,9 +68,9 @@ const EXPORTERS: Partial<
   subscript: span,
   superscript: span,
   table,
-  tableBodyData,
-  tableBodyHeader,
-  tableBodyRow,
+  tableCell: tableBodyData,
+  tableHeader: tableBodyHeader,
+  tableRow: tableBodyRow,
   trailer,
   underline: span,
 
