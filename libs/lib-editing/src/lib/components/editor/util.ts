@@ -1,4 +1,4 @@
-import { NodeViewProps } from '@tiptap/react';
+import { MarkViewProps, NodeViewProps } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -72,4 +72,38 @@ export const validateAttrs = async ({
 
     updateAttributes?.(attrs);
   }
+};
+
+/**
+ * Finds the range of a given mark in the editor's document by its reference.
+ * Returns an object with 'from' and 'to' positions if found, otherwise undefined.
+ */
+export const findMarkRange = ({ editor, mark }: Partial<MarkViewProps>) => {
+  if (!editor || !mark) {
+    return undefined;
+  }
+
+  const { state } = editor;
+  const { doc, tr } = state;
+
+  let foundRange: { from: number; to: number } | undefined = undefined;
+
+  const thisMark = mark;
+  doc.descendants((node, pos) => {
+    let foundMark = false;
+    const from = tr.mapping.map(pos);
+    const to = from + node.nodeSize;
+
+    node.marks.forEach((m) => {
+      if (m === thisMark) {
+        foundMark = true;
+        foundRange = { from, to };
+        return;
+      }
+    });
+
+    return !foundMark;
+  });
+
+  return foundRange;
 };

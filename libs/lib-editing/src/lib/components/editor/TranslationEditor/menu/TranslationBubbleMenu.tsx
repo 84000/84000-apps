@@ -40,7 +40,7 @@ export const TranslationBubbleMenu = ({
         return true;
       }}
     >
-      <ScrollArea className="max-w-[90vw] rounded-md border bg-popover shadow-xl">
+      <ScrollArea className="max-w-[90vw] rounded-md border bg-popover shadow-xl z-10">
         <div className="flex">
           <NodeSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
