@@ -18,7 +18,7 @@ import {
   TextSuggestion,
   getSuggestion,
 } from '../../extensions/SlashCommand/Suggestions';
-import Link from '../../extensions/Link';
+import { Link } from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
 import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';

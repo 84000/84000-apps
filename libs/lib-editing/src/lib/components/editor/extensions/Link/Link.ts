@@ -1,8 +1,9 @@
-import { LINK_STYLE } from '@design-system';
-import Link from '@tiptap/extension-link';
+import { Link as TipTapLink } from '@tiptap/extension-link';
+import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
+import { LinkView } from './LinkView';
 
-export default Link.extend({
+export const Link = TipTapLink.extend({
   addCommands() {
     const name = this.name;
     return {
@@ -22,9 +23,9 @@ export default Link.extend({
       },
     };
   },
-}).configure({
-  HTMLAttributes: {
-    class: LINK_STYLE,
+  addMarkView() {
+    return ReactMarkViewRenderer(LinkView);
   },
+}).configure({
   openOnClick: true,
 });

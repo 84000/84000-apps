@@ -6,7 +6,7 @@ import Heading from '../../extensions/Heading/Heading';
 import Paragraph from '../../extensions/Paragraph/Paragraph';
 import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
 import { getSuggestion } from '../../extensions/SlashCommand/Suggestions';
-import Link from '../../extensions/Link';
+import { Link } from '../../extensions/Link';
 import Placeholder from '../../extensions/Placeholder';
 import TextAlign from '../../extensions/TextAlign';
 import StarterKit from '../../extensions/StarterKit';
