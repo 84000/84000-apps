@@ -6,24 +6,25 @@ import {
   getGlossaryInstance,
   GlossaryTermInstance,
   GlossaryTermInstances,
-  Passages,
   Titles,
   Work,
 } from '@data-access';
 import { createContext, useCallback, useContext, useRef } from 'react';
-import { TranslationEditorContent } from '../editor';
-import { blockFromPassage } from '../../block';
+import {
+  TranslationEditorContent,
+  TranslationEditorContentItem,
+} from '../editor';
 
 interface ReaderContextState {
   uuid: string;
   // front matter
   work: Work;
   titles: Titles;
-  summary: Passages;
+  summary: TranslationEditorContent;
   // main translation
-  body: Passages;
+  body: TranslationEditorContent;
   // back matter
-  endNotes: Passages;
+  endNotes: TranslationEditorContent;
   glossary: GlossaryTermInstances;
   bibliography: BibliographyEntries;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
@@ -61,9 +62,9 @@ interface ReaderContextProps {
   uuid: string;
   work: Work;
   titles: Titles;
-  summary: Passages;
-  body: Passages;
-  endNotes: Passages;
+  summary: TranslationEditorContent;
+  body: TranslationEditorContent;
+  endNotes: TranslationEditorContent;
   glossary: GlossaryTermInstances;
   bibliography: BibliographyEntries;
   children: React.ReactNode;
@@ -81,21 +82,13 @@ export const ReaderProvider = ({
   children,
 }: ReaderContextProps) => {
   const client = createBrowserClient();
-  const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>(
-    glossary.reduce(
-      (acc, term) => {
-        acc[term.uuid] = term;
-        return acc;
-      },
-      {} as { [uuid: string]: GlossaryTermInstance },
-    ),
-  );
+  const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
 
   const fetchEndNote = useCallback(
     async (uuid: string): Promise<TranslationEditorContent | undefined> => {
-      const note = endNotes.find((n) => n.uuid === uuid);
-      if (!note) return undefined;
-      return blockFromPassage(note);
+      return (endNotes as TranslationEditorContentItem[]).find(
+        (n) => n.attrs?.uuid === uuid,
+      );
     },
     [endNotes],
   );

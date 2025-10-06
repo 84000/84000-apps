@@ -8,8 +8,9 @@ import { Titles } from '@design-system';
 import { notFound } from 'next/navigation';
 import { ReaderProvider } from './ReaderProvider';
 import { TranslationReader } from './reader/TranslationReader';
+import { blocksFromTranslationBody } from '../../block';
 
-const FRONT_MATTER: BodyItemType[] = ['summary'];
+const FRONT_MATTER: BodyItemType[] = ['acknowledgment', 'summary'];
 const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnote'];
 
 export const ReaderPage = async ({
@@ -18,6 +19,9 @@ export const ReaderPage = async ({
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await params;
+
+  console.log('Rendering ReaderPage for slug:', slug);
+
   const client = createBrowserClient();
   const publication = await getTranslationByUuid({ client, uuid: slug });
 
@@ -35,10 +39,15 @@ export const ReaderPage = async ({
       !FRONT_MATTER.includes(key as BodyItemType) &&
       !BACK_MATTER.includes(key as BodyItemType),
   );
-  const body: Passages = bodyKeys
+  const bodyPassages: Passages = bodyKeys
     .map((key) => passages[key as BodyItemType] || [])
     .flat()
     .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+
+  console.log('parsing passages');
+  const summary = blocksFromTranslationBody(passages.summary || []);
+  const body = blocksFromTranslationBody(bodyPassages);
+  const endnotes = blocksFromTranslationBody(passages.endnote || []);
 
   // const frontMatter: Passages = FRONT_MATTER.map((type) => passages[type] || [])
   //   .flat()
@@ -47,6 +56,8 @@ export const ReaderPage = async ({
   // const backMatter: Passages = BACK_MATTER.map((type) => passages[type] || [])
   //   .flat()
   //   .sort((a, b) => (a.sort || 0) - (b.sort || 0));
+
+  console.log('Rendering ReaderPage');
 
   return (
     <div className="flex flex-row justify-center p-4 w-full">
@@ -58,9 +69,9 @@ export const ReaderPage = async ({
           uuid={slug}
           work={publication.metadata}
           titles={publication.titles}
-          summary={passages.summary || []}
+          summary={summary}
           body={body}
-          endNotes={passages.endnote || []}
+          endNotes={endnotes}
           glossary={publication.glossary || []}
           bibliography={publication.bibliography || []}
         >
