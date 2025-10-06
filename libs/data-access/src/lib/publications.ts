@@ -1,13 +1,15 @@
+import { getBibliographyEntries } from './bibliography';
+import { getGlossaryInstances } from './glossary';
 import {
   BodyItemType,
   DataClient,
   TitlesDTO,
-  TranslationDTO,
   WorkDTO,
   titlesFromDTO,
   passagesFromDTO,
-  translationFromDTO,
   workFromDTO,
+  Translation,
+  Passages,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -19,26 +21,6 @@ export const getTranslationUuids = async ({
   return data?.map(({ uuid }: { uuid: string }) => uuid) || [];
 };
 
-export const getTranslationByUuid = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  const { data } = await client
-    .from('translation_json')
-    .select('translation')
-    .eq('work_uuid', uuid)
-    .single();
-
-  if (!data?.translation) {
-    return null;
-  }
-
-  return translationFromDTO(data.translation as TranslationDTO);
-};
-
 export const getTranslationPassages = async ({
   client,
   uuid,
@@ -46,7 +28,7 @@ export const getTranslationPassages = async ({
 }: {
   client: DataClient;
   uuid: string;
-  type: BodyItemType;
+  type?: BodyItemType;
 }) => {
   const { data } = await client.rpc('get_passages_with_annotations', {
     uuid_input: uuid,
@@ -152,4 +134,47 @@ export const getTranslationsMetadata = async ({
     data?.map(({ work }: { work: unknown }) => workFromDTO(work as WorkDTO)) ||
     []
   );
+};
+
+export const getTranslationByUuid = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}): Promise<Translation> => {
+  const metadata = await getTranslationMetadataByUuid({ client, uuid });
+  const titles = await getTranslationTitles({ client, uuid });
+  const glossary = await getGlossaryInstances({ client, uuid });
+  const bibliography = await getBibliographyEntries({ client, uuid });
+  const passages = await getTranslationPassages({ client, uuid });
+
+  const passagesByType: Partial<Record<BodyItemType, Passages>> =
+    passages.reduce(
+      (acc, passage) => {
+        let type = passage.type as BodyItemType;
+        // endnotesHeader is a special case that does not follow the normal naming convention
+        if (type === 'endnotesHeader') {
+          type = 'endnote';
+        } else {
+          type = passage.type.replace('Header', '') as BodyItemType;
+        }
+
+        if (!acc[type]) {
+          acc[type] = [];
+        }
+
+        acc[type]?.push(passage);
+        return acc;
+      },
+      {} as Partial<Record<BodyItemType, Passages>>,
+    );
+
+  return {
+    metadata,
+    titles,
+    passages: passagesByType,
+    glossary,
+    bibliography,
+  };
 };

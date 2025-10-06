@@ -46,6 +46,8 @@ export type GlossaryTermInstance = {
   };
 };
 
+export type GlossaryTermInstances = GlossaryTermInstance[];
+
 export type GlossaryTermInstanceDTO = {
   uuid: string;
   authority_uuid: string;

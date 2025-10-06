@@ -20,7 +20,7 @@ export const PassagesEditor = ({
   fetchGlossaryInstance,
 }: {
   passages: Passage[];
-  fragment: XmlFragment;
+  fragment?: XmlFragment;
   isEditable?: boolean;
   className?: string;
   onCreate?: (params: { editor: Editor }) => void;

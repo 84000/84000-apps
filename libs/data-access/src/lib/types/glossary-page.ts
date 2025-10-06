@@ -1,5 +1,5 @@
 import { removeHtmlTags } from '@lib-utils';
-import { TohokuCatalogEntry } from './front-matter';
+import { TohokuCatalogEntry } from './toh';
 import {
   ExtendedTranslationLanguage,
   displayLanguageForTranslationLanguage,

@@ -36,7 +36,7 @@ export const titleFromDTO = (dto: TitleDTO): Title => {
     uuid: dto.uuid,
     title: dto.title,
     language: dto.language,
-    type: dto.type.replace('eft:', '') as TitleType,
+    type: (dto.type?.replace('eft:', '') as TitleType) || 'mainTitle',
   };
 };
 
