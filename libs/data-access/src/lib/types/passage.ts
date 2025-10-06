@@ -44,6 +44,8 @@ export type Passage = {
   parent?: string;
 };
 
+export type Passages = Passage[];
+
 export type PassageRowDTO = {
   content: string;
   label: string;

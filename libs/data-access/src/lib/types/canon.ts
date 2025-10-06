@@ -1,4 +1,4 @@
-import { TohokuCatalogEntry } from './front-matter';
+import { TohokuCatalogEntry } from './toh';
 import { ExtendedTranslationLanguage } from './language';
 
 export type CanonNodeType =

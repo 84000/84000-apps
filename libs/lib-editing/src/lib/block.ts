@@ -3,6 +3,7 @@ import { annotateBlock } from './transformers/annotate';
 import {
   BlockEditorContent,
   BlockEditorContentItem,
+  TranslationEditorContent,
 } from './components/editor';
 
 const passageTemplate = (passage: Passage): BlockEditorContentItem => {
@@ -152,7 +153,9 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     unknown: BlockPriority.Unknown,
   };
 
-export const blocksFromTranslationBody = (passages: Passage[]) => {
+export const blocksFromTranslationBody = (
+  passages: Passage[],
+): TranslationEditorContent => {
   const blocks: BlockEditorContent = [];
   passages.forEach((passage) => {
     if (!passage.content) {

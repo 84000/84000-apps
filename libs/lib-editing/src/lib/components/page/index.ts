@@ -3,6 +3,8 @@ export * from './EditorPage';
 export * from './EditorProvider';
 export * from './EditorSidebar';
 export * from './LabeledElement';
+export * from './ReaderPage';
+export * from './ReaderProvider';
 export * from './TranslationBibliographyPage';
 export * from './TranslationGlossaryPage';
 export * from './TranslationSkeleton';

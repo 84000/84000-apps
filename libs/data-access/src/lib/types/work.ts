@@ -1,4 +1,4 @@
-import { TohokuCatalogEntry } from './front-matter';
+import { TohokuCatalogEntry } from './toh';
 import { SemVer } from './semver';
 
 export type Work = {

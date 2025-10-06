@@ -1,6 +1,4 @@
-import { BodyItemType } from '@data-access';
 import { H3, P } from '../../Typography/Typography';
-import { ElementType } from 'react';
 
 export const AbbreviationHeader = H3;
 export const AbbreviationPassage = P;
@@ -25,30 +23,3 @@ export const SummaryPassage = P;
 export const TranslationHeader = H3;
 export const TranslationPassage = P;
 export const UnknownPassage = P;
-
-export const passageComponentForType: { [key in BodyItemType]: ElementType } = {
-  abbreviations: AbbreviationPassage,
-  abbreviationHeader: AbbreviationHeader,
-  appendix: AppendixPassage,
-  appendixHeader: AppendixHeader,
-  colophon: ColophonPassage,
-  colophonHeader: ColophonHeader,
-  acknowledgment: AcknowledgmentPassage,
-  acknowledgmentHeader: AcknowledgmentHeader,
-  endnote: P,
-  endnotesHeader: EndNotesHeader,
-  homage: HomagePassage,
-  homageHeader: HomageHeader,
-  introduction: IntroductionPassage,
-  introductionHeader: IntroductionHeader,
-  prelude: PreludePassage,
-  preludeHeader: PreludeHeader,
-  prologue: ProloguePassage,
-  prologueHeader: PrologueHeader,
-  summary: SummaryPassage,
-  summaryHeader: SummaryHeader,
-  toc: P,
-  translation: TranslationPassage,
-  translationHeader: TranslationHeader,
-  unknown: UnknownPassage,
-};
