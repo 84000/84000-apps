@@ -5,6 +5,7 @@ import { ArticlePage } from './ArticlePage';
 import { WorksPage } from './WorksPage';
 import { ScrollArea } from '@design-system';
 import { CanonDetail, CanonWork } from '@data-access';
+import { useEffect, useState } from 'react';
 
 export const InnerPage = ({
   section,
@@ -14,8 +15,15 @@ export const InnerPage = ({
   works: CanonWork[];
 }) => {
   const search = useSearchParams();
-  const tab = search.get('tab') || 'overview';
+  const [tab, setTab] = useState(search.get('tab') || 'overview');
   const scrollAreaClass = `h-full ${tab === 'overview' ? 'bg-gray-50' : 'bg-background'}`;
+
+  useEffect(() => {
+    const currentTab = search.get('tab');
+    if (currentTab) {
+      setTab(currentTab);
+    }
+  }, [search]);
 
   return (
     <ScrollArea className={scrollAreaClass}>
