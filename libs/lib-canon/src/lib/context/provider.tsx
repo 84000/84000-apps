@@ -12,12 +12,17 @@ import {
   useState,
 } from 'react';
 
+const TAB_OPTIONS = ['overview', 'texts'] as const;
+export type TabOption = (typeof TAB_OPTIONS)[number];
+
 export type CanonContextProps = {
   canon: CanonHead;
   current: string;
+  tab: TabOption;
   breadcrumbs: string[];
   uuidPath: string[];
   setCurrent: (current: string) => void;
+  setTab: (tab: TabOption) => void;
   encode: (str: string) => string;
   isActive: (uuid: string) => boolean;
 };
@@ -25,9 +30,13 @@ export type CanonContextProps = {
 export const CanonContext = createContext<CanonContextProps>({
   canon: { children: [] },
   current: 'root',
+  tab: 'overview',
   breadcrumbs: [],
   uuidPath: [],
   setCurrent: () => {
+    throw new Error('useCanonContext must be used within a CanonProvider');
+  },
+  setTab: () => {
     throw new Error('useCanonContext must be used within a CanonProvider');
   },
   encode: () => {
@@ -47,6 +56,7 @@ export const CanonProvider = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
+
   const isRoot = pathname.endsWith('/canon');
 
   const initialUuid = isRoot
@@ -54,6 +64,7 @@ export const CanonProvider = ({
     : pathname.split('/').pop() || 'root';
 
   const [current, setCurrent] = useState(initialUuid);
+  const [tab, setTab] = useState<TabOption>('overview');
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
   const [uuidPath, setUuidPath] = useState<string[]>([initialUuid]);
 
@@ -95,7 +106,6 @@ export const CanonProvider = ({
       return null;
     };
 
-    console.log('canon route has changed', current);
     traverse({
       uuid: '',
       label: '',
@@ -112,10 +122,12 @@ export const CanonProvider = ({
       value={{
         canon,
         current,
+        tab,
         breadcrumbs,
         uuidPath,
         isActive,
         setCurrent,
+        setTab,
         encode,
       }}
     >
