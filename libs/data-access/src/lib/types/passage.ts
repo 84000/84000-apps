@@ -89,13 +89,16 @@ export const passageFromDTO = (
     workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
     parent: dto.parent,
-    annotations: annotations.filter((a) => a.passageUuid === dto.uuid) || [],
+    annotations,
   };
 };
 
 export const passagesFromDTO = (dto: PassageDTO[]): Passage[] => {
   return dto.map((p) =>
-    passageFromDTO(p, annotationsFromDTO(p.annotations || [])),
+    passageFromDTO(
+      p,
+      annotationsFromDTO(p.annotations || [], p.content.length),
+    ),
   );
 };
 

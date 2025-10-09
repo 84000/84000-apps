@@ -32,6 +32,16 @@ export default Extension.create({
               });
             },
           },
+          invalid: {
+            default: null,
+            parseHTML: (element) =>
+              element.getAttribute('invalid') === 'true' ? true : false,
+            renderHTML: (attributes) => {
+              return mergeAttributes(attributes, {
+                invalid: attributes.invalid,
+              });
+            },
+          },
         },
       },
     ];

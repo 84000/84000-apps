@@ -290,7 +290,6 @@ export const EditorContextProvider = ({
       >
         <EditorHeader />
         {children}
-        <div className="h-[var(--header-height)]" />
       </EditorSidebar>
     </EditorContext.Provider>
   );

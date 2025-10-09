@@ -9,8 +9,6 @@ import { useEditorState } from '../EditorProvider';
 import { PassagesEditor } from '../../editor';
 import { TranslationSkeleton } from '../TranslationSkeleton';
 
-const WRAPPER_CLASS = 'flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4';
-
 export const CollaborativeBuilder = ({
   builder,
   fetchContent,
@@ -86,12 +84,12 @@ export const CollaborativeBuilder = ({
   return body && fragment ? (
     <PassagesEditor
       passages={body}
-      className={WRAPPER_CLASS}
       fragment={getFragment()}
       isEditable={isEditable}
       fetchEndNote={fetchEndNote}
       fetchGlossaryInstance={fetchGlossaryTerm}
       onCreate={({ editor }) => {
+        editor.commands.setDebug(true);
         setEditor(editor);
         if (!isObserving) {
           setIsObserving(true);
@@ -100,6 +98,6 @@ export const CollaborativeBuilder = ({
       }}
     />
   ) : (
-    <TranslationSkeleton className={WRAPPER_CLASS} />
+    <TranslationSkeleton />
   );
 };
