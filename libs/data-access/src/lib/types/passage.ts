@@ -32,6 +32,21 @@ export const BODY_ITEM_TYPES = [
 
 export type BodyItemType = (typeof BODY_ITEM_TYPES)[number] | 'unknown';
 
+export const FRONT_MATTER: BodyItemType[] = ['acknowledgment', 'summary'];
+export const FRONT_MATTER_FILTER = `(${FRONT_MATTER.join('|')})`;
+export const BODY_MATTER: BodyItemType[] = [
+  'introduction',
+  'prelude',
+  'prologue',
+  'translation',
+  'appendix',
+  'colophon',
+  'homage',
+];
+export const BODY_MATTER_FILTER = `(${BODY_MATTER.join('|')})`;
+export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnote'];
+export const BACK_MATTER_FILTER = `(${BACK_MATTER.join('|')})`;
+
 export type Passage = {
   annotations: Annotations;
   content: string;
