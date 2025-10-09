@@ -198,5 +198,5 @@ export type AnnotationBase = {
   type: AnnotationType;
   uuid: string;
   passageUuid: string;
-  validated: boolean;
+  validated?: boolean;
 };
