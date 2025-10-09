@@ -41,10 +41,5 @@ export const TranslationGlossaryPage = () => {
     return <TranslationSkeleton />;
   }
 
-  return (
-    <GlossaryTermList
-      content={content}
-      className="xl:px-32 lg:px-16 md:px-8 px-4 pb-16"
-    />
-  );
+  return <GlossaryTermList content={content} />;
 };

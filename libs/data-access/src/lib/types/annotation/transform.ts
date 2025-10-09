@@ -78,7 +78,10 @@ const dtoToAnnotationMap: Record<AnnotationDTOType, AnnotationTransformer> = {
   unknown,
 };
 
-export const annotationFromDTO = (dto: AnnotationDTO): Annotation => {
+export const annotationFromDTO = (
+  dto: AnnotationDTO,
+  passageLength: number,
+): Annotation => {
   const annotation = dtoToAnnotationMap[dto.type]?.(dto);
   if (!annotation) {
     console.warn(`Unknown annotation type: ${dto.type}`);
@@ -88,13 +91,32 @@ export const annotationFromDTO = (dto: AnnotationDTO): Annotation => {
       type: 'unknown',
     } as UnknownAnnotation;
   }
+
+  if (
+    annotation.start < 0 ||
+    annotation.start > passageLength ||
+    annotation.end < 0 ||
+    annotation.end > passageLength
+  ) {
+    annotation.validated = false;
+  }
+
+  if (!annotation.validated) {
+    console.warn(
+      `Invalid annotation range for annotation ${annotation.uuid} (${annotation.start}, ${annotation.end}) in passage of length ${passageLength}`,
+    );
+  }
+
   return annotation;
 };
 
-export const annotationsFromDTO = (dto?: AnnotationsDTO): Annotations => {
+export const annotationsFromDTO = (
+  dto?: AnnotationsDTO,
+  passageLength?: number,
+): Annotations => {
   const filtered =
     dto?.filter((a) => !ANNOTATIONS_TO_IGNORE.includes(a.type)) || [];
-  return filtered.map(annotationFromDTO);
+  return filtered.map((a) => annotationFromDTO(a, passageLength || 0));
 };
 
 export const annotationToDTO = (

@@ -51,6 +51,7 @@ import { GlossaryTermInstance } from '@data-access';
 import { Bold } from '../../extensions/Bold';
 import { List } from '../../extensions/List';
 import { Underline } from '../../extensions/Underline';
+import { GlobalConfig } from '../../extensions/GlobalConfig';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -103,6 +104,7 @@ export const useTranslationExtensions = ({
     EndNoteLinkNode.configure({
       fetch: fetchEndNote,
     }),
+    GlobalConfig,
     GlossaryInstanceNode.configure({
       fetch: fetchGlossaryInstance,
     }),

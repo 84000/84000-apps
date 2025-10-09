@@ -207,6 +207,7 @@ export const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
     end: dto.end,
     type: annotationTypeFromDTO(dto.type),
     passageUuid,
+    validated: true,
   };
 };
 

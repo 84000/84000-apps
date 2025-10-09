@@ -130,5 +130,11 @@ export const annotateBlock = (
   for (const annotation of annotations) {
     const transformer = TRANSFORMERS[annotation.type] || TRANSFORMERS.unknown;
     transformer?.({ root: block, block, annotation });
+    if (!annotation.validated) {
+      if (!block.attrs) {
+        block.attrs = {};
+      }
+      block.attrs.invalid = true;
+    }
   }
 };
