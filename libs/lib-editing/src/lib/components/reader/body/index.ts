@@ -1,1 +1,1 @@
-export * from './BodyReader';
+export * from './BodyPanel';

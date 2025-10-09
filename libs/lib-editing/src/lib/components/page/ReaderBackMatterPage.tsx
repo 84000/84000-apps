@@ -6,10 +6,7 @@ import {
   getBibliographyEntries,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
-import { BodyReader } from '../reader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
-import { GlossaryTermList } from './glossary';
-import { BibliographyList } from './bibliography';
+import { BackMatterPanel } from '../reader/back-matter';
 
 export const ReaderBackMatterPage = async ({
   params,
@@ -36,28 +33,11 @@ export const ReaderBackMatterPage = async ({
   const bibliography = await getBibliographyEntries({ client, uuid: slug });
 
   return (
-    <Tabs
-      defaultValue="endnotes"
-      className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
-    >
-      <TabsList className="sticky top-2 mx-auto z-10">
-        <TabsTrigger value="endnotes">Notes</TabsTrigger>
-        <TabsTrigger value="glossary">Glossary</TabsTrigger>
-        <TabsTrigger value="bibliography">Biblio</TabsTrigger>
-        <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
-      </TabsList>
-      <TabsContent value="endnotes">
-        <BodyReader content={endnotes} />
-      </TabsContent>
-      <TabsContent value="glossary">
-        <GlossaryTermList content={glossary} />
-      </TabsContent>
-      <TabsContent value="bibliography">
-        <BibliographyList content={bibliography} />
-      </TabsContent>
-      <TabsContent value="abbreviations">
-        <BodyReader content={abbreviations} />
-      </TabsContent>
-    </Tabs>
+    <BackMatterPanel
+      endnotes={endnotes}
+      glossary={glossary}
+      bibliography={bibliography}
+      abbreviations={abbreviations}
+    />
   );
 };

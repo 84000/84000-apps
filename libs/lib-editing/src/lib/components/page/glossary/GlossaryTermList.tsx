@@ -1,6 +1,6 @@
 import { H2, Separator } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
-import { GlossaryTermInstance } from '@data-access';
+import { GlossaryTermInstances } from '@data-access';
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
 import { cn } from '@lib-utils';
 
@@ -8,7 +8,7 @@ export const GlossaryTermList = ({
   content,
   className,
 }: {
-  content: GlossaryTermInstance[];
+  content: GlossaryTermInstances;
   className?: string;
 }) => {
   return (
