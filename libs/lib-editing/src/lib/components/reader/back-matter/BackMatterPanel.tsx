@@ -30,7 +30,7 @@ export const BackMatterPanel = ({
         <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
       </TabsList>
       <TabsContent value="endnotes">
-        <TranslationReader content={endnotes} />
+        <TranslationReader content={endnotes} className="block" />
       </TabsContent>
       <TabsContent value="glossary">
         <GlossaryTermList content={glossary} />
@@ -39,7 +39,7 @@ export const BackMatterPanel = ({
         <BibliographyList content={bibliography} />
       </TabsContent>
       <TabsContent value="abbreviations">
-        <TranslationReader content={abbreviations} />
+        <TranslationReader content={abbreviations} className="block" />
       </TabsContent>
     </Tabs>
   );
