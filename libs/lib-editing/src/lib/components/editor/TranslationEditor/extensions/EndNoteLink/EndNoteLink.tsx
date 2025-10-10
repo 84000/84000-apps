@@ -1,7 +1,6 @@
 import { cn } from '@lib-utils';
 import { NodeViewProps, NodeViewWrapper } from '@tiptap/react';
 import {
-  LINK_STYLE,
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
@@ -77,9 +76,7 @@ export const EndNoteLink = ({
     validateAttrs({ node, editor, getPos, updateAttributes });
   }, [node, editor, getPos, updateAttributes]);
 
-  const className = editor.isEditable
-    ? 'cursor-pointer select-text'
-    : 'cursor-pointer select-none';
+  const className = editor.isEditable ? 'select-text' : 'select-none';
 
   return (
     <NodeViewWrapper as="sup" contentEditable={false}>
@@ -87,7 +84,7 @@ export const EndNoteLink = ({
         <HoverCardTrigger asChild>
           <a
             href={`#${node.attrs.endNote}`}
-            className={cn(LINK_STYLE, className, 'pl-0.5')}
+            className={cn('end-note-link', className)}
           >
             {label}
           </a>

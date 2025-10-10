@@ -13,20 +13,20 @@ export const Passage = (props: NodeViewProps) => {
   };
 
   const className =
-    'absolute -left-16 w-16 text-end text-slate hover:cursor-pointer';
+    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
   const borderClassName =
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
       : '';
   return (
     <NodeWrapper
-      className={cn('passage relative leading-7 ml-6', borderClassName)}
-      innerClassName="content is-editable pl-6"
+      className={cn('relative ml-6', borderClassName)}
+      innerClassName="passage is-editable pl-6"
       {...props}
     >
       {editor.isEditable ? (
         <input
-          className={cn(className, 'px-1 placeholder:text-slate-100')}
+          className={cn(className, 'px-1 placeholder:text-brick-100')}
           value={node.attrs.label || ''}
           onChange={updateLabel}
           onBlur={updateLabel}

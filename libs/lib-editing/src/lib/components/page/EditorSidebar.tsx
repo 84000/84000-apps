@@ -156,7 +156,7 @@ export const EditorSidebar = ({
         <SidebarRail />
       </Sidebar>
       <SidebarTrigger className="sticky top-2 left-2 z-50" />
-      <SidebarInset className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]">
+      <SidebarInset className="px-8 pb-[var(--header-height)] w-full mx-auto mb-[var(--header-height)]">
         {children}
       </SidebarInset>
     </SidebarProvider>

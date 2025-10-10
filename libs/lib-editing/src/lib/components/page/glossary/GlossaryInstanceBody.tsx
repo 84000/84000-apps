@@ -1,7 +1,7 @@
 'use client';
 
 import { GlossaryTermInstance } from '@data-access';
-import { Separator } from '@design-system';
+import { Li, Separator, Ul } from '@design-system';
 import { cn, removeHtmlTags } from '@lib-utils';
 import { useEffect, useState } from 'react';
 
@@ -30,22 +30,26 @@ export const GlossaryInstanceBody = ({
           {instance.names.english}
         </div>
       )}
-      {instance.names.wylie && (
-        <div className="italic">{instance.names.wylie}</div>
-      )}
-      {instance.names.tibetan && (
-        <div className="text-lg">{instance.names.tibetan}</div>
-      )}
-      {instance.names.sanskrit && (
-        <div className="italic">{instance.names.sanskrit}</div>
-      )}
-      {instance.names.chinese && <div>{instance.names.chinese}</div>}
-      {instance.names.pali && (
-        <div className="italic">{instance.names.pali}</div>
-      )}
-      <Separator className="w-4 h-0.5 my-5 bg-slate/80" />
+      <Ul>
+        {instance.names.wylie && (
+          <Li className="italic">{instance.names.wylie}</Li>
+        )}
+        {instance.names.tibetan && (
+          <Li>
+            <span className="text-lg">{instance.names.tibetan}</span>
+          </Li>
+        )}
+        {instance.names.sanskrit && (
+          <Li className="italic">{instance.names.sanskrit}</Li>
+        )}
+        {instance.names.chinese && <div>{instance.names.chinese}</div>}
+        {instance.names.pali && (
+          <Li className="italic">{instance.names.pali}</Li>
+        )}
+      </Ul>
+      <div className="my-2" />
       {definition && <p>{definition}</p>}
-      <div className="text-sm text-mut mt-2">
+      <div className="text-sm text-mut my-2">
         <a
           href={`/glossary/${instance.authority}`}
           target="_blank"

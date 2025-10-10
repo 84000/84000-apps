@@ -16,17 +16,17 @@ export const LabeledElement = ({
   children: ReactNode;
 }) => {
   return (
-    <div id={id} className="relative leading-7 ml-6">
+    <div id={id} className="relative ml-6">
       <Link
         href={`#${id}`}
         className={cn(
-          'absolute -left-16 w-16 text-end text-slate hover:cursor-pointer',
+          'absolute labeled -left-16 w-16 text-end hover:cursor-pointer',
           className,
         )}
       >
         {label || ''}
       </Link>
-      <div className="pl-6">{children}</div>
+      <div className="passage pl-6">{children}</div>
     </div>
   );
 };

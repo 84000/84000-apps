@@ -1,7 +1,7 @@
 import { cn } from '@lib-utils';
 
 export const LINK_STYLE =
-  'text-slate underline decoration-slate underline-offset-[3px] transition-colors cursor-pointer';
+  'text-brick underline decoration-brick underline-offset-[3px] transition-colors cursor-pointer';
 
 export const HERO_STYLE =
   'font-serif mt-8 scroll-m-20 pb-8 text-8xl lg:text-9xl';
@@ -58,7 +58,8 @@ export function H1({
   );
 }
 
-export const H2_STYLE = 'mt-8 scroll-m-20 pb-6 text-4xl lg:text-5xl';
+export const H2_STYLE =
+  'font-sans text-navy mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4';
 export function H2({
   children,
   className,
@@ -71,7 +72,8 @@ export function H2({
   );
 }
 
-export const H3_STYLE = 'mt-6 scroll-m-20 pb-4 text-3xl lg:text-4xl';
+export const H3_STYLE =
+  'font-serif mt-4 scroll-m-20 pb-2 text-xl lg:text-2xl position-sidebar:text-lg position-sidebar:pb-1 position-sidebar:mt-2';
 export function H3({
   children,
   className,
@@ -84,8 +86,7 @@ export function H3({
   );
 }
 
-export const H4_STYLE =
-  'mt-4 scroll-m-20 pb-2 text-2xl font-semibold lg:text-3xl text-navy';
+export const H4_STYLE = 'font-serif mt-4 scroll-m-20 pb-2 text-lg lg:text-xl';
 export function H4({
   children,
   className,
@@ -98,7 +99,8 @@ export function H4({
   );
 }
 
-export const H5_STYLE = 'mt-2 scroll-m-20 pb-1 font-semibold lg:text-lg';
+export const H5_STYLE =
+  'font-serif mt-2 scroll-m-20 pb-1 font-semibold lg:text-lg';
 export function H5({
   children,
   className,
@@ -111,7 +113,7 @@ export function H5({
   );
 }
 
-export const P_STYLE = 'leading-6';
+export const P_STYLE = 'leading-7';
 export function P({
   children,
   className,
@@ -230,7 +232,7 @@ export function Ol({
   );
 }
 
-export const UL_STYLE = 'my-6 ml-6 list-disc [&>li]:mt-2';
+export const UL_STYLE = 'ml-4 list-disc';
 export function Ul({
   children,
   className,

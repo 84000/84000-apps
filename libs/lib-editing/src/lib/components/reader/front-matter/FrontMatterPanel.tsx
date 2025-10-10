@@ -11,10 +11,11 @@ export const FrontMatterPanel = ({
 }) => {
   return (
     <Tabs
+      data-position="sidebar"
       defaultValue="summary"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >
-      <TabsList className="sticky top-2 mx-auto z-10">
+      <TabsList className="sticky top-3 mx-auto z-10">
         <TabsTrigger value="toc">Navigation</TabsTrigger>
         <TabsTrigger value="summary">Summary</TabsTrigger>
         <TabsTrigger value="imprint">Imprint</TabsTrigger>

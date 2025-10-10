@@ -23,14 +23,14 @@ export const BodyPanel = ({
       defaultValue="translation"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >
-      <TabsList className="sticky top-2 mx-auto -mt-10 z-10">
+      <TabsList className="sticky top-3 mx-auto -mt-13 z-10">
         <TabsTrigger value="translation">Translation</TabsTrigger>
         <TabsTrigger value="source">Source</TabsTrigger>
         <TabsTrigger value="compare">Compare</TabsTrigger>
       </TabsList>
       <TabsContent value="translation">
         <div className="w-full">
-          <div className="ms-12">
+          <div className="ms-12 mt-8">
             <Titles titles={titles} />
           </div>
           <TranslationReader content={body} />

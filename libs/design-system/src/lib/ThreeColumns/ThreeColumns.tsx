@@ -32,7 +32,13 @@ export const RightPanel = ({ children }: { children: ReactNode }) => {
   return <div className="right-panel">{children}</div>;
 };
 
-export const ThreeColumns = ({ children }: { children: ReactNode }) => {
+export const ThreeColumns = ({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) => {
   const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
   const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
 
@@ -57,10 +63,11 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ResizablePanelGroup direction="horizontal">
+    <ResizablePanelGroup className={className} direction="horizontal">
       <ResizablePanel
         ref={leftPanelRef}
         style={{ overflow: 'auto' }}
+        className="bg-sidebar"
         collapsible
         collapsedSize={MinPanelSizes.COLLAPSED}
         defaultSize={MinPanelSizes.SIDE_DEFAULT}
@@ -74,7 +81,7 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
         defaultSize={MinPanelSizes.MAIN_DEFAULT}
         minSize={MinPanelSizes.MAIN_MIN}
       >
-        <div className="sticky top-0 pt-2 w-full flex justify-between">
+        <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
           <Button
             variant="link"
             size="icon"
@@ -98,6 +105,7 @@ export const ThreeColumns = ({ children }: { children: ReactNode }) => {
       <ResizablePanel
         ref={rightPanelRef}
         style={{ overflow: 'auto' }}
+        className="bg-sidebar"
         collapsible
         collapsedSize={MinPanelSizes.COLLAPSED}
         defaultSize={MinPanelSizes.SIDE_DEFAULT}

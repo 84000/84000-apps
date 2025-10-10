@@ -19,10 +19,11 @@ export const BackMatterPanel = ({
 }) => {
   return (
     <Tabs
+      data-position="sidebar"
       defaultValue="endnotes"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >
-      <TabsList className="sticky top-2 mx-auto z-10">
+      <TabsList className="sticky top-3 mx-auto z-10">
         <TabsTrigger value="endnotes">Notes</TabsTrigger>
         <TabsTrigger value="glossary">Glossary</TabsTrigger>
         <TabsTrigger value="bibliography">Biblio</TabsTrigger>
