@@ -32,17 +32,15 @@ export const Ornament = ({ className }: SVGProps<SVGElement>) => {
 
 export const FramedCard = ({
   children,
+  className,
 }: {
   children: ReactNode;
-  cornerSize?: number;
-  borderColor?: string;
+  className?: string;
 }) => {
-  const color = 'navy';
-
-  const borderColor = `border-${color}-50`;
-  const bgColor = `bg-${color}-25`;
-  const ornamentTint = `fill-${color}/25`;
-  const ornamentBgTint = `fill-${color}-25`;
+  const borderColor = `border-navy-50`;
+  const bgColor = `bg-navy-25/40`;
+  const ornamentTint = `fill-navy-50`;
+  const ornamentBgTint = `fill-white/75`;
 
   const cornerSize = 2;
   const size = `size-${cornerSize}`;
@@ -51,7 +49,12 @@ export const FramedCard = ({
   const border = `border border-5 ${borderColor} border-double`;
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-0">
+    <div
+      className={cn(
+        'grid grid-cols-[auto_minmax(0,1fr)_auto] gap-0',
+        className,
+      )}
+    >
       <div className={cn(size, 'relative')}>
         <div
           className={cn(
