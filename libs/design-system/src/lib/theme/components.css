@@ -1,0 +1,35 @@
+@custom-variant position-sidebar {
+  &:where([data-position='sidebar'] *) {
+    @slot;
+  }
+}
+
+@layer components {
+  .passage {
+    @apply font-serif leading-7;
+
+    @variant position-sidebar {
+      @apply leading-5 text-sm;
+    }
+  }
+
+  .labeled {
+    @apply font-sans font-semibold text-brick leading-7 text-sm;
+  }
+
+  .paragraph {
+    @apply mb-1 mt-2;
+
+    @variant position-sidebar {
+      @apply pt-1;
+    }
+  }
+
+  .glossary-instance {
+    @apply text-primary hover:text-brick underline decoration-brick decoration-dotted underline-offset-[3px] transition-colors cursor-pointer;
+  }
+
+  .end-note-link {
+    @apply text-brick cursor-pointer text-xs;
+  }
+}

@@ -1,4 +1,4 @@
-import { H2, Separator } from '@design-system';
+import { H2 } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
 import { GlossaryTermInstances } from '@data-access';
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
@@ -13,10 +13,14 @@ export const GlossaryTermList = ({
 }) => {
   return (
     <div className={cn('flex flex-col w-full', className)}>
-      <LabeledElement className="mt-8" id={'glossary'} label="g.">
+      <LabeledElement
+        className="position-sidebar:mt-3.5 mt-6"
+        id={'glossary'}
+        label="g."
+      >
         <H2>Glossary</H2>
       </LabeledElement>
-      <div className="mt-4 flex flex-col gap-8">
+      <div className="mt-3 flex flex-col gap-6">
         {content.length === 0 && (
           <div className="text-muted-foreground">No glossary terms found.</div>
         )}
@@ -27,9 +31,6 @@ export const GlossaryTermList = ({
             label={`g.${index + 1}`}
           >
             <GlossaryInstanceBody instance={instance} className="p-0" />
-            <div className="mt-8">
-              <Separator />
-            </div>
           </LabeledElement>
         ))}
       </div>

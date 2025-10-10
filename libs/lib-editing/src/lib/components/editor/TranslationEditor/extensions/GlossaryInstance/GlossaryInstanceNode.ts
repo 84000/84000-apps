@@ -1,5 +1,3 @@
-import { LINK_STYLE } from '@design-system';
-import { cn } from '@lib-utils';
 import { JSONContent, Node } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { GlossaryInstance } from './GlossaryInstance';
@@ -42,10 +40,7 @@ export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        className: cn(
-          LINK_STYLE,
-          'text-primary hover:text-slate decoration-dotted',
-        ),
+        className: 'glossary-instance',
       },
       fetch: async () => undefined,
     };
