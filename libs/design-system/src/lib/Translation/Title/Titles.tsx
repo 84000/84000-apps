@@ -8,7 +8,12 @@ import {
 } from '@data-access';
 import { TitlesCard } from './TitlesCard';
 import { parseToh } from '@lib-utils';
-import { Dialog, DialogContent } from '../../Dialog/Dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '../../Dialog/Dialog';
 import { useState } from 'react';
 import { TitleForm } from './TitleForm';
 import { LongTitles } from './LongTitles';
@@ -75,11 +80,15 @@ export const Titles = ({
       />
       <Dialog open={isMoreOpen} onOpenChange={setIsMoreOpen}>
         <DialogContent className="max-w-4xl" showCloseButton={false}>
+          <DialogTitle className="hidden">All Titles</DialogTitle>
+          <DialogDescription className="hidden">All Titles</DialogDescription>
           <LongTitles titles={titles} />
         </DialogContent>
       </Dialog>
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent showCloseButton={false}>
+        <DialogContent className="max-w-4xl" showCloseButton={false}>
+          <DialogTitle className="hidden">Edit Titles</DialogTitle>
+          <DialogDescription className="hidden">Edit Titles</DialogDescription>
           <TitleForm
             titles={titles}
             onChange={(title) => {

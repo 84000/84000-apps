@@ -21,8 +21,7 @@ export const ReaderBodyPage = async ({
     type: BODY_MATTER_FILTER,
   });
   const titles = await getTranslationTitles({ client, uuid: slug });
-  const mainTitles = titles.filter((t) => t.type === 'mainTitle');
   const body = blocksFromTranslationBody(passages);
 
-  return <BodyPanel titles={mainTitles} body={body} />;
+  return <BodyPanel titles={titles} body={body} />;
 };
