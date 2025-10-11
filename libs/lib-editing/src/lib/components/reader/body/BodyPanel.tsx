@@ -30,7 +30,7 @@ export const BodyPanel = ({
       </TabsList>
       <TabsContent value="translation">
         <div className="w-full">
-          <div className="ms-12 mt-8">
+          <div className="ms-12 mt-12 mb-8">
             <Titles titles={titles} />
           </div>
           <TranslationReader content={body} />

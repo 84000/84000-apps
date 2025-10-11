@@ -1,18 +1,20 @@
 'use client';
 
-import { createBrowserClient, getTranslationTitles } from '@data-access';
+import {
+  createBrowserClient,
+  getTranslationTitles,
+  Titles as TitlesData,
+} from '@data-access';
 import { useEffect, useState } from 'react';
 import { notFound } from 'next/navigation';
 import { useEditorState } from '../EditorProvider';
-import { titlesToDocument } from '../../../titles';
-import { type BlockEditorContent, TitlesEditor } from '../../editor';
 import { TranslationSkeleton } from '../TranslationSkeleton';
+import { Titles } from '@design-system';
 
-const WRAPPER_CLASS =
-  'flex flex-col w-full xl:px-32 lg:px-16 md:px-8 px-4 py-(--header-height)';
+const WRAPPER_CLASS = 'w-full py-16';
 
 export const TitlesBuilder = () => {
-  const [content, setContent] = useState<BlockEditorContent>();
+  const [content, setContent] = useState<TitlesData>();
   const [isEditable, setIsEditable] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -26,11 +28,10 @@ export const TitlesBuilder = () => {
 
       const client = createBrowserClient();
       const titles = await getTranslationTitles({ client, uuid });
-      const doc = titlesToDocument(titles);
       const editable = await canEdit();
 
       setIsEditable(editable);
-      setContent(doc);
+      setContent(titles);
       setLoading(false);
     };
     getTitles();
@@ -41,11 +42,9 @@ export const TitlesBuilder = () => {
   }
 
   return content ? (
-    <TitlesEditor
-      isEditable={isEditable}
-      className={WRAPPER_CLASS}
-      content={content}
-    />
+    <div className={WRAPPER_CLASS}>
+      <Titles titles={content} canEdit={isEditable} />
+    </div>
   ) : (
     <TranslationSkeleton className={WRAPPER_CLASS} />
   );

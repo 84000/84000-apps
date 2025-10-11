@@ -289,7 +289,7 @@ export const EditorContextProvider = ({
         onClick={toNewBuilder}
       >
         <EditorHeader />
-        <div className="max-w-6xl mx-auto">{children}</div>
+        <div className="max-w-6xl w-full mx-auto">{children}</div>
       </EditorSidebar>
     </EditorContext.Provider>
   );

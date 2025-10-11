@@ -1,18 +1,16 @@
 import { Meta, StoryObj } from '@storybook/nextjs';
-import { Titles } from './Titles';
+import { LongTitles } from './LongTitles';
 
-const meta: Meta<typeof Titles> = {
-  title: 'Translation/Front Matter/Titles',
-  component: Titles,
+const meta: Meta<typeof LongTitles> = {
+  title: 'Translation/Front Matter/LongTitles',
+  component: LongTitles,
   tags: ['autodocs'],
 };
 
-type Story = StoryObj<typeof Titles>;
+type Story = StoryObj<typeof LongTitles>;
 
 export const Primary: Story = {
   args: {
-    variant: 'english',
-    canEdit: true,
     titles: [
       {
         type: 'mainTitle',
@@ -84,11 +82,6 @@ export const Primary: Story = {
     ],
   },
   argTypes: {
-    variant: {
-      control: 'radio',
-      options: ['english', 'tibetan', 'comparison', 'other'],
-    },
-    canEdit: { control: 'boolean' },
     titles: { control: false },
   },
 };
