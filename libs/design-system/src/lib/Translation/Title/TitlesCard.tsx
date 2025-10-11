@@ -20,7 +20,7 @@ export const TitlesCard = ({
   onMore?(): void;
 }) => {
   return (
-    <FramedCard className="max-w-xl mx-auto">
+    <FramedCard className="max-w-xl w-full mx-auto">
       <div className="flex flex-col gap-3 py-6 px-2">
         <div className="min-h-10 pb-3 border-b border-navy-50 font-sans font-light text-xl text-navy-200 text-center line-clamp-1">
           {header}
@@ -29,34 +29,36 @@ export const TitlesCard = ({
           {main}
         </div>
         <div className="min-h-10 pt-3 border-t border-navy-50 flex justify-between gap-2">
-          <div className="w-1/3" />
-          <span className="w-1/3 font-sans font-extrabold text-xl text-ochre-500 text-center line-clamp-1">
+          {(canEdit || hasMore) && <div className="w-1/8" />}
+          <span className="flex-grow font-sans font-extrabold text-xl text-ochre-500 text-center line-clamp-1">
             {footer}
           </span>
-          <div className="w-1/3 flex gap-1 justify-end">
-            {canEdit && (
-              <Button
-                className="rounded-lg size-7 text-muted-foreground"
-                size="icon"
-                variant="outline"
-                aria-label="Edit titles"
-                onClick={onEdit}
-              >
-                <PencilIcon />
-              </Button>
-            )}
-            {hasMore && (
-              <Button
-                className="rounded-lg size-7 text-muted-foreground"
-                size="icon"
-                variant="outline"
-                aria-label="All titles"
-                onClick={onMore}
-              >
-                <PlusIcon />
-              </Button>
-            )}
-          </div>
+          {(canEdit || hasMore) && (
+            <div className="w-1/8 flex gap-1 justify-end">
+              {canEdit && (
+                <Button
+                  className="rounded-lg size-7 text-muted-foreground"
+                  size="icon"
+                  variant="outline"
+                  aria-label="Edit titles"
+                  onClick={onEdit}
+                >
+                  <PencilIcon />
+                </Button>
+              )}
+              {hasMore && (
+                <Button
+                  className="rounded-lg size-7 text-muted-foreground"
+                  size="icon"
+                  variant="outline"
+                  aria-label="All titles"
+                  onClick={onMore}
+                >
+                  <PlusIcon />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </FramedCard>

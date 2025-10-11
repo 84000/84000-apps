@@ -9,6 +9,8 @@ export const TITLE_TYPES = [
   'shortcode',
 ] as const;
 
+export const BO_TITLE_PREFIX = '༄༅།\u00a0\u00a0།' as const;
+
 export type TitleType = (typeof TITLE_TYPES)[number];
 
 export type TitleTypeDTO = `eft:${TitleType}`;
