@@ -1,7 +1,7 @@
 'use client';
 
 import { GlossaryPageItem } from '@data-access';
-import { SimpleEditor } from '@lib-editing';
+import { BlockEditor } from '@lib-editing';
 import { EditorEvents } from '@tiptap/react';
 import { useCallback, useState } from 'react';
 
@@ -26,7 +26,7 @@ export const GlossaryEditor = ({
 
   return (
     <div className="py-4">
-      <SimpleEditor
+      <BlockEditor
         content={content}
         isEditable={isEditable}
         onUpdate={onUpdate}

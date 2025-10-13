@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { CanonDetail } from '@data-access';
 import { H2 } from '@design-system';
-import { SimpleEditor } from '@lib-editing';
+import { BlockEditor } from '@lib-editing';
 
 export const ArticlePage = ({ section }: { section: CanonDetail }) => {
   const { label, description, article } = section;
@@ -31,7 +31,7 @@ export const ArticlePage = ({ section }: { section: CanonDetail }) => {
               )}
             </div>
           )}
-          <SimpleEditor content={article.body} isEditable={false} />
+          <BlockEditor content={article.body} isEditable={false} />
         </div>
       ) : (
         <div className="py-4">

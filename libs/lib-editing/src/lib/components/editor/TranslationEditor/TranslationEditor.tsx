@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorContent, Content, Editor } from '@tiptap/react';
+import { EditorContent, JSONContent, Editor } from '@tiptap/react';
 import type { XmlFragment } from 'yjs';
 import { useBlockEditor } from '../BlockEditor';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
@@ -8,7 +8,7 @@ import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
 import { GlossaryTermInstance } from '@data-access';
 import { cn } from '@lib-utils';
 
-export type TranslationEditorContentItem = Content & {
+export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
     uuid?: string | null;
     class?: string | null;

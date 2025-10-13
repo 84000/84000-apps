@@ -1,10 +1,10 @@
-import type { BlockEditorContentItem } from '../components/editor';
+import type { TranslationEditorContentItem } from '../components/editor';
 import { filterAttrs } from './util';
 
 type SplitBlock = {
-  prefix: BlockEditorContentItem[];
-  middle: BlockEditorContentItem[];
-  suffix: BlockEditorContentItem[];
+  prefix: TranslationEditorContentItem[];
+  middle: TranslationEditorContentItem[];
+  suffix: TranslationEditorContentItem[];
 };
 
 /**
@@ -14,7 +14,7 @@ type SplitBlock = {
  * All returned nodes have correct absolute start/end.
  */
 export function splitNode(
-  item: BlockEditorContentItem,
+  item: TranslationEditorContentItem,
   rangeStart: number,
   rangeEnd: number,
 ): SplitBlock {

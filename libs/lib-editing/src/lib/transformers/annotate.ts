@@ -3,7 +3,7 @@ import {
   Annotations,
   ExtendedTranslationLanguage,
 } from '@data-access';
-import type { BlockEditorContentType, Transformer } from './transformer';
+import type { TranslationEditorContentType, Transformer } from './transformer';
 import {
   audio,
   abbreviation,
@@ -37,7 +37,7 @@ import {
   trailer,
   unknown,
 } from '.';
-import type { BlockEditorContentItem } from '../components/editor';
+import type { TranslationEditorContentItem } from '../components/editor';
 
 const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
   abbreviation,
@@ -80,11 +80,11 @@ export const ITALIC_LANGUAGES: ExtendedTranslationLanguage[] = [
   'Sa-Ltn',
 ] as const;
 
-export const isAttributeAnnotation = (type: BlockEditorContentType) => {
+export const isAttributeAnnotation = (type: TranslationEditorContentType) => {
   return ['indent', 'leadingSpace', 'trailer'].includes(type);
 };
 
-export const isBlockAnnotation = (type: BlockEditorContentType) => {
+export const isBlockAnnotation = (type: TranslationEditorContentType) => {
   return [
     'blockquote',
     'endnote',
@@ -101,7 +101,7 @@ export const isBlockAnnotation = (type: BlockEditorContentType) => {
   ].includes(type);
 };
 
-export const isInlineAnnotation = (type: BlockEditorContentType) => {
+export const isInlineAnnotation = (type: TranslationEditorContentType) => {
   return [
     'abbreviation',
     'audio',
@@ -124,7 +124,7 @@ export const isInlineAnnotation = (type: BlockEditorContentType) => {
 };
 
 export const annotateBlock = (
-  block: BlockEditorContentItem,
+  block: TranslationEditorContentItem,
   annotations: Annotations,
 ) => {
   for (const annotation of annotations) {

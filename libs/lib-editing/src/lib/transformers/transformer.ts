@@ -1,14 +1,17 @@
 import { Annotation, AnnotationType, BodyItemType } from '@data-access';
-import { BlockEditorContentItem } from '../components/editor';
+import { TranslationEditorContentItem } from '../components/editor';
 
-export type BlockEditorContentType = AnnotationType | BodyItemType | 'text';
+export type TranslationEditorContentType =
+  | AnnotationType
+  | BodyItemType
+  | 'text';
 
 export type TransformationContext = {
-  root?: BlockEditorContentItem;
-  parent?: BlockEditorContentItem;
-  block: BlockEditorContentItem;
+  root?: TranslationEditorContentItem;
+  parent?: TranslationEditorContentItem;
+  block: TranslationEditorContentItem;
   annotation: Annotation;
-  until?: BlockEditorContentType[];
+  until?: TranslationEditorContentType[];
 };
 
 export type TransformationContextWithCallback = TransformationContext & {
