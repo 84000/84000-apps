@@ -7,14 +7,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@design-system';
-import { BookOpenTextIcon } from 'lucide-react';
-import { SelectorInputField } from '../../../menus/SelectorInputField';
+import { LinkIcon } from 'lucide-react';
+import { SelectorInputField } from '../SelectorInputField';
 
-export const GlossarySelector = ({ editor }: { editor: Editor }) => {
+export const LinkSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
-      isActive: instance.editor.isActive('glossaryInstance'),
+      isActive: instance.editor.isActive('link'),
     }),
   });
 
@@ -24,9 +24,9 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="px-2 rounded-none flex-shrink-0"
+          className="rounded-none flex-shrink-0"
         >
-          <BookOpenTextIcon
+          <LinkIcon
             className={cn(
               'size-4',
               editorState.isActive ? 'text-primary' : 'text-muted-foreground',
@@ -42,14 +42,19 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
       >
         <SelectorInputField
           editor={editor}
-          type="glossaryInstance"
-          attr="glossary"
-          placeholder="Add glossary uuid..."
+          type="link"
+          attr="href"
+          placeholder="Add link..."
           onSubmit={(value) => {
             if (value) {
-              editor.chain().focus().setGlossaryInstance(value).run();
+              editor
+                .chain()
+                .focus()
+                .extendMarkRange('link')
+                .setLink({ href: value })
+                .run();
             } else {
-              editor.chain().focus().unsetGlossaryInstance().run();
+              editor.chain().focus().extendMarkRange('link').unsetLink().run();
             }
           }}
         />

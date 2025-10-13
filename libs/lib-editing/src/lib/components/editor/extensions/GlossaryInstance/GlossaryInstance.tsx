@@ -8,8 +8,8 @@ import {
 import { useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
 import { usePathname } from 'next/navigation';
-import { validateAttrs } from '../../../util';
-import { GlossaryInstanceBody } from '../../../../page';
+import { validateAttrs } from '../../util';
+import { GlossaryInstanceBody } from '../../../page';
 import Link from 'next/link';
 
 export const GlossaryInstanceCard = ({

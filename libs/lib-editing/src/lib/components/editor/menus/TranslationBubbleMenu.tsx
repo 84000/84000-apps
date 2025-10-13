@@ -1,7 +1,7 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, Separator, ScrollBar } from '@design-system';
-import { TextButtons } from './selectors/TextButtons';
+import { TranslationTextButtons } from './selectors/TranslationTextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { NodeSelector } from './selectors/NodeSelector';
 
@@ -46,7 +46,7 @@ export const TranslationBubbleMenu = ({
           <Separator orientation="vertical" className="h-10" />
           <ParagraphButtons editor={editor} />
           <Separator orientation="vertical" className="h-10" />
-          <TextButtons editor={editor} />
+          <TranslationTextButtons editor={editor} />
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

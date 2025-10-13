@@ -7,14 +7,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@design-system';
-import { LinkIcon } from 'lucide-react';
-import { SelectorInputField } from '../../../menus/SelectorInputField';
+import { AsteriskIcon } from 'lucide-react';
+import { SelectorInputField } from '../SelectorInputField';
 
-export const LinkSelector = ({ editor }: { editor: Editor }) => {
+export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
-      isActive: instance.editor.isActive('link'),
+      isActive: instance.editor.isActive('endNoteLink'),
     }),
   });
 
@@ -26,7 +26,7 @@ export const LinkSelector = ({ editor }: { editor: Editor }) => {
           size="icon"
           className="rounded-none flex-shrink-0"
         >
-          <LinkIcon
+          <AsteriskIcon
             className={cn(
               'size-4',
               editorState.isActive ? 'text-primary' : 'text-muted-foreground',
@@ -42,19 +42,14 @@ export const LinkSelector = ({ editor }: { editor: Editor }) => {
       >
         <SelectorInputField
           editor={editor}
-          type="link"
-          attr="href"
-          placeholder="Add link..."
+          type="endNoteLink"
+          attr="endNote"
+          placeholder="Add end note uuid..."
           onSubmit={(value) => {
             if (value) {
-              editor
-                .chain()
-                .focus()
-                .extendMarkRange('link')
-                .setLink({ href: value })
-                .run();
+              editor.chain().focus().setEndNoteLink(value).run();
             } else {
-              editor.chain().focus().extendMarkRange('link').unsetLink().run();
+              editor.chain().focus().unsetEndNoteLink().run();
             }
           }}
         />

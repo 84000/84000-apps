@@ -7,14 +7,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@design-system';
-import { AsteriskIcon } from 'lucide-react';
-import { SelectorInputField } from '../../../menus/SelectorInputField';
+import { BookOpenTextIcon } from 'lucide-react';
+import { SelectorInputField } from '../SelectorInputField';
 
-export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
+export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
-      isActive: instance.editor.isActive('endNoteLink'),
+      isActive: instance.editor.isActive('glossaryInstance'),
     }),
   });
 
@@ -24,9 +24,9 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-none flex-shrink-0"
+          className="px-2 rounded-none flex-shrink-0"
         >
-          <AsteriskIcon
+          <BookOpenTextIcon
             className={cn(
               'size-4',
               editorState.isActive ? 'text-primary' : 'text-muted-foreground',
@@ -42,14 +42,14 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
       >
         <SelectorInputField
           editor={editor}
-          type="endNoteLink"
-          attr="endNote"
-          placeholder="Add end note uuid..."
+          type="glossaryInstance"
+          attr="glossary"
+          placeholder="Add glossary uuid..."
           onSubmit={(value) => {
             if (value) {
-              editor.chain().focus().setEndNoteLink(value).run();
+              editor.chain().focus().setGlossaryInstance(value).run();
             } else {
-              editor.chain().focus().unsetEndNoteLink().run();
+              editor.chain().focus().unsetGlossaryInstance().run();
             }
           }}
         />

@@ -1,7 +1,7 @@
 import { cn } from '@lib-utils';
 import type { ChangeEvent, FocusEvent } from 'react';
 import type { NodeViewProps } from '@tiptap/react';
-import { NodeWrapper } from '../../../extensions/NodeWrapper';
+import { NodeWrapper } from '../NodeWrapper';
 
 export const Passage = (props: NodeViewProps) => {
   const { node, editor, updateAttributes } = props;

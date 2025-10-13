@@ -2,9 +2,8 @@
 
 import { EditorContent, JSONContent, Editor } from '@tiptap/react';
 import type { XmlFragment } from 'yjs';
-import { useBlockEditor } from '../BlockEditor';
-import { useTranslationExtensions } from './hooks/useTranslationExtensions';
-import { TranslationBubbleMenu } from './menu/TranslationBubbleMenu';
+import { useBlockEditor, useTranslationExtensions } from './hooks';
+import { TranslationBubbleMenu } from './menus';
 import { GlossaryTermInstance } from '@data-access';
 import { cn } from '@lib-utils';
 

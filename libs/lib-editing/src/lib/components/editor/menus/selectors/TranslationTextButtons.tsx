@@ -81,7 +81,7 @@ const items = [
   },
 ];
 
-export const TextButtons = ({ editor }: { editor: Editor }) => {
+export const TranslationTextButtons = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState<SelectorResult>({
     editor,
     selector: (instance) => ({

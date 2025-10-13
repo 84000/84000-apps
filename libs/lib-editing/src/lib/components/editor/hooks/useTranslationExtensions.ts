@@ -2,12 +2,12 @@
 
 import type { XmlFragment } from 'yjs';
 import { Collaboration } from '@tiptap/extension-collaboration';
-import { Audio } from '../../extensions/Audio/Audio';
-import Heading from '../../extensions/Heading/Heading';
-import Image from '../../extensions/Image';
-import Paragraph from '../../extensions/Paragraph/Paragraph';
-import { TableKit } from '../../extensions/Table';
-import { SlashCommand } from '../../extensions/SlashCommand/SlashCommand';
+import { Audio } from '../extensions/Audio/Audio';
+import Heading from '../extensions/Heading/Heading';
+import Image from '../extensions/Image';
+import Paragraph from '../extensions/Paragraph/Paragraph';
+import { TableKit } from '../extensions/Table';
+import { SlashCommand } from '../extensions/SlashCommand/SlashCommand';
 import {
   BulletListSuggestion,
   Heading1Suggestion,
@@ -17,25 +17,25 @@ import {
   QuoteSuggestion,
   TextSuggestion,
   getSuggestion,
-} from '../../extensions/SlashCommand/Suggestions';
-import { Link } from '../../extensions/Link';
-import Placeholder from '../../extensions/Placeholder';
-import TextAlign from '../../extensions/TextAlign';
-import { STARTER_KIT_CONFIG, StarterKit } from '../../extensions/StarterKit';
-import TranslationMetadata from '../../extensions/TranslationMetadata';
+} from '../extensions/SlashCommand/Suggestions';
+import { Link } from '../extensions/Link';
+import Placeholder from '../extensions/Placeholder';
+import TextAlign from '../extensions/TextAlign';
+import { STARTER_KIT_CONFIG, StarterKit } from '../extensions/StarterKit';
+import TranslationMetadata from '../extensions/TranslationMetadata';
 import TranslationDocument from '../extensions/TranslationDocument';
 import { PassageNode } from '../extensions/Passage';
-import { CommandSuggestionItem } from '../../extensions/SlashCommand/SuggestionList';
+import { CommandSuggestionItem } from '../extensions/SlashCommand/SuggestionList';
 import { TableOfContentsIcon } from 'lucide-react';
-import { LeadingSpace } from '../../extensions/LeadingSpace';
-import { Trailer } from '../../extensions/Trailer';
+import { LeadingSpace } from '../extensions/LeadingSpace';
+import { Trailer } from '../extensions/Trailer';
 import { LineGroupNode } from '../extensions/LineGroup/LineGroupNode';
 import { LineNode } from '../extensions/Line/LineNode';
-import { Subscript } from '../../extensions/Subscript';
-import { Superscript } from '../../extensions/Superscript';
-import { SmallCaps } from '../../extensions/SmallCaps';
-import { Italic } from '../../extensions/Italic';
-import { Indent } from '../../extensions/Indent';
+import { Subscript } from '../extensions/Subscript';
+import { Superscript } from '../extensions/Superscript';
+import { SmallCaps } from '../extensions/SmallCaps';
+import { Italic } from '../extensions/Italic';
+import { Indent } from '../extensions/Indent';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
@@ -44,14 +44,14 @@ import {
   AbbreviationCommand,
   AbbreviationSuggestion,
   HasAbbreviation,
-} from '../../extensions/Abbreviation/Abbreviation';
-import { ParagraphIndent } from '../../extensions/ParagraphIndent';
+} from '../extensions/Abbreviation/Abbreviation';
+import { ParagraphIndent } from '../extensions/ParagraphIndent';
 import { TranslationEditorContent } from '../TranslationEditor';
 import { GlossaryTermInstance } from '@data-access';
-import { Bold } from '../../extensions/Bold';
-import { List } from '../../extensions/List';
-import { Underline } from '../../extensions/Underline';
-import { GlobalConfig } from '../../extensions/GlobalConfig';
+import { Bold } from '../extensions/Bold';
+import { List } from '../extensions/List';
+import { Underline } from '../extensions/Underline';
+import { GlobalConfig } from '../extensions/GlobalConfig';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',

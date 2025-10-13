@@ -2,7 +2,7 @@
 
 import { Content, EditorContent, UseEditorOptions } from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from './hooks';
-import { MainBubbleMenu } from '../menus/MainBubbleMenu';
+import { MainBubbleMenu } from './menus/MainBubbleMenu';
 
 export type BlockEditorContent = Content;
 

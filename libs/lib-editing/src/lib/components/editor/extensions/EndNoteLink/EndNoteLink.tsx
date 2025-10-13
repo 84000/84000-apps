@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import TranslationEditor, {
   TranslationEditorContent,
 } from '../../TranslationEditor';
-import { validateAttrs } from '../../../util';
+import { validateAttrs } from '../../util';
 
 export const EndNoteCard = ({
   uuid,
