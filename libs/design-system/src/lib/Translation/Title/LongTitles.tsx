@@ -36,7 +36,7 @@ export const LongTitles = ({ titles }: { titles: Titles }) => {
   const toh = parseToh(titles.find((t) => t.type === 'toh')?.title || '');
 
   return (
-    <div className="py-8 mx-auto max-w-2xl flex flex-col gap-4">
+    <div className="py-8 mx-auto max-w-2xl flex flex-col gap-4 w-full">
       <TitlesCard
         header={`${BO_TITLE_PREFIX}${mainBoTitle}`}
         main={mainEnTitle}
