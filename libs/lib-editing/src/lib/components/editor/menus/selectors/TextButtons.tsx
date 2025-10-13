@@ -8,7 +8,7 @@ import {
   StrikethroughIcon,
   UnderlineIcon,
 } from 'lucide-react';
-import { LinkSelector } from './link';
+import { LinkSelector } from './LinkSelector';
 
 interface SelectorResult {
   isBold: boolean;

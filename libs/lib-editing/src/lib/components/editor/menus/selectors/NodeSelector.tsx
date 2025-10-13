@@ -13,7 +13,8 @@ import {
   Heading2,
   Heading3,
   LetterTextIcon,
-  ListStartIcon,
+  List,
+  ListOrdered,
   LucideIcon,
   QuoteIcon,
 } from 'lucide-react';
@@ -23,7 +24,8 @@ interface SelectorResult {
   isHeading1: boolean;
   isHeading2: boolean;
   isHeading3: boolean;
-  isLineGroup: boolean;
+  isBulletList: boolean;
+  isOrderedList: boolean;
   isBlockquote: boolean;
 }
 
@@ -40,7 +42,8 @@ const items: MenuItem[] = [
     icon: LetterTextIcon,
     onClick: (editor) =>
       editor.chain().focus().toggleNode('paragraph', 'paragraph').run(),
-    isActive: (state) => state.isParagraph,
+    isActive: (state) =>
+      state.isParagraph && !state.isBulletList && !state.isOrderedList,
   },
   {
     name: 'Heading 1',
@@ -64,10 +67,16 @@ const items: MenuItem[] = [
     isActive: (state) => state.isHeading3,
   },
   {
-    name: 'Line Group',
-    icon: ListStartIcon,
-    onClick: (editor) => editor.chain().focus().toggleLineGroup().run(),
-    isActive: (state) => state.isLineGroup,
+    name: 'Bullet List',
+    icon: List,
+    onClick: (editor) => editor.chain().focus().toggleBulletList().run(),
+    isActive: (state) => state.isBulletList,
+  },
+  {
+    name: 'Numbered List',
+    icon: ListOrdered,
+    onClick: (editor) => editor.chain().focus().toggleOrderedList().run(),
+    isActive: (state) => state.isOrderedList,
   },
   {
     name: 'Quote',
@@ -91,7 +100,8 @@ export const NodeSelector = ({ editor }: { editor: Editor }) => {
       isHeading1: instance.editor.isActive('heading', { level: 1 }),
       isHeading2: instance.editor.isActive('heading', { level: 2 }),
       isHeading3: instance.editor.isActive('heading', { level: 3 }),
-      isLineGroup: instance.editor.isActive('lineGroup'),
+      isBulletList: instance.editor.isActive('bulletList'),
+      isOrderedList: instance.editor.isActive('orderedList'),
       isBlockquote: instance.editor.isActive('blockquote'),
     }),
   });

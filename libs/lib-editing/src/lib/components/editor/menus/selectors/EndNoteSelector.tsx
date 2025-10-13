@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from '@design-system';
 import { AsteriskIcon } from 'lucide-react';
-import { SelectorInputField } from '../SelectorInputField';
+import { SelectorInputField } from './SelectorInputField';
 
 export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({

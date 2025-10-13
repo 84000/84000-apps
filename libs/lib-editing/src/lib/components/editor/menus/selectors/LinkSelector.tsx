@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from '@design-system';
 import { LinkIcon } from 'lucide-react';
-import { SelectorInputField } from '../SelectorInputField';
+import { SelectorInputField } from './SelectorInputField';
 
 export const LinkSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({

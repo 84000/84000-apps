@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from '@design-system';
 import { BookOpenTextIcon } from 'lucide-react';
-import { SelectorInputField } from '../SelectorInputField';
+import { SelectorInputField } from './SelectorInputField';
 
 export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState({

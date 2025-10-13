@@ -13,8 +13,7 @@ import {
   Heading2,
   Heading3,
   LetterTextIcon,
-  List,
-  ListOrdered,
+  ListStartIcon,
   LucideIcon,
   QuoteIcon,
 } from 'lucide-react';
@@ -24,8 +23,7 @@ interface SelectorResult {
   isHeading1: boolean;
   isHeading2: boolean;
   isHeading3: boolean;
-  isBulletList: boolean;
-  isOrderedList: boolean;
+  isLineGroup: boolean;
   isBlockquote: boolean;
 }
 
@@ -42,8 +40,7 @@ const items: MenuItem[] = [
     icon: LetterTextIcon,
     onClick: (editor) =>
       editor.chain().focus().toggleNode('paragraph', 'paragraph').run(),
-    isActive: (state) =>
-      state.isParagraph && !state.isBulletList && !state.isOrderedList,
+    isActive: (state) => state.isParagraph,
   },
   {
     name: 'Heading 1',
@@ -67,16 +64,10 @@ const items: MenuItem[] = [
     isActive: (state) => state.isHeading3,
   },
   {
-    name: 'Bullet List',
-    icon: List,
-    onClick: (editor) => editor.chain().focus().toggleBulletList().run(),
-    isActive: (state) => state.isBulletList,
-  },
-  {
-    name: 'Numbered List',
-    icon: ListOrdered,
-    onClick: (editor) => editor.chain().focus().toggleOrderedList().run(),
-    isActive: (state) => state.isOrderedList,
+    name: 'Line Group',
+    icon: ListStartIcon,
+    onClick: (editor) => editor.chain().focus().toggleLineGroup().run(),
+    isActive: (state) => state.isLineGroup,
   },
   {
     name: 'Quote',
@@ -92,7 +83,7 @@ const items: MenuItem[] = [
   },
 ];
 
-export const NodeSelector = ({ editor }: { editor: Editor }) => {
+export const TranslationNodeSelector = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState<SelectorResult>({
     editor,
     selector: (instance) => ({
@@ -100,8 +91,7 @@ export const NodeSelector = ({ editor }: { editor: Editor }) => {
       isHeading1: instance.editor.isActive('heading', { level: 1 }),
       isHeading2: instance.editor.isActive('heading', { level: 2 }),
       isHeading3: instance.editor.isActive('heading', { level: 3 }),
-      isBulletList: instance.editor.isActive('bulletList'),
-      isOrderedList: instance.editor.isActive('orderedList'),
+      isLineGroup: instance.editor.isActive('lineGroup'),
       isBlockquote: instance.editor.isActive('blockquote'),
     }),
   });
