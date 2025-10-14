@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from '@lib-utils';
 import { NodeViewProps, NodeViewWrapper } from '@tiptap/react';
 import {
@@ -6,11 +8,12 @@ import {
   HoverCardTrigger,
   Skeleton,
 } from '@design-system';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import TranslationEditor, {
   TranslationEditorContent,
 } from '../../TranslationEditor';
 import { validateAttrs } from '../../util';
+import { useSearchParams } from 'next/navigation';
 
 export const EndNoteCard = ({
   uuid,
@@ -51,10 +54,20 @@ export const EndNoteLink = ({
   updateAttributes,
 }: NodeViewProps) => {
   const [label, setLabel] = useState(1);
+  const searchParams = useSearchParams();
 
   const fetch = extension.options.fetch as (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;
+
+  const onClick = useCallback(() => {
+    if (!node.attrs.endNote) {
+      return;
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('right', `open#endnotes#${node.attrs.endNote}`);
+    window.history.replaceState({}, '', `?${params.toString()}`);
+  }, [node, searchParams]);
 
   useEffect(() => {
     const pos = getPos() || 0;
@@ -81,13 +94,10 @@ export const EndNoteLink = ({
   return (
     <NodeViewWrapper as="sup" contentEditable={false}>
       <HoverCard>
-        <HoverCardTrigger asChild>
-          <a
-            href={`#${node.attrs.endNote}`}
-            className={cn('end-note-link', className)}
-          >
+        <HoverCardTrigger>
+          <span className={cn('end-note-link', className)} onClick={onClick}>
             {label}
-          </a>
+          </span>
         </HoverCardTrigger>
         <HoverCardContent className="w-120 max-h-96 m-2 overflow-auto">
           <EndNoteCard uuid={node.attrs.endNote} fetch={fetch} />

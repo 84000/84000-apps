@@ -1,34 +1,7 @@
-import {
-  createBrowserClient,
-  getTranslationMetadataByUuid,
-  getTranslationPassageTypes,
-} from '@data-access';
-import { EditorContextProvider } from '@lib-editing';
+'use client';
 
-const layout = async ({
-  params,
-  children,
-}: {
-  params: Promise<{ slug: string }>;
-  children: React.ReactNode;
-}) => {
-  const { slug } = await params;
+import { EditorLayout } from '@lib-editing';
 
-  const client = createBrowserClient();
-  const builders = await getTranslationPassageTypes({
-    client,
-    uuid: slug,
-  });
-  const work = await getTranslationMetadataByUuid({
-    client,
-    uuid: slug,
-  });
+const Layout = EditorLayout;
 
-  return (
-    <EditorContextProvider uuid={slug} work={work} builders={builders}>
-      {children}
-    </EditorContextProvider>
-  );
-};
-
-export default layout;
+export default Layout;

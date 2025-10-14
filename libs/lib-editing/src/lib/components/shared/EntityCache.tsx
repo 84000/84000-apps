@@ -32,7 +32,7 @@ export const ReaderCacheContext = createContext<ReaderCacheState>({
   },
 });
 
-export const ReaderCacheProvider = ({ children }: { children: ReactNode }) => {
+export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
   const client = createBrowserClient();
   const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
   const endnoteCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});

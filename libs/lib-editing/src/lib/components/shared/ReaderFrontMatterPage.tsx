@@ -4,7 +4,7 @@ import {
   getTranslationPassages,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
-import { FrontMatterPanel } from '../reader';
+import { ReaderFrontMatterPanel } from './ReaderFrontMatterPanel';
 
 export const ReaderFrontMatterPage = async ({
   params,
@@ -21,5 +21,5 @@ export const ReaderFrontMatterPage = async ({
   });
   const summary = blocksFromTranslationBody(passages);
 
-  return <FrontMatterPanel summary={summary} />;
+  return <ReaderFrontMatterPanel summary={summary} />;
 };

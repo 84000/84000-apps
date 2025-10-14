@@ -1,13 +1,18 @@
 'use client';
 
-import { TranslationReader } from '../TranslationReader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
-import { TranslationEditorContent } from '../../editor';
+import { TranslationEditorContent } from '../editor';
+import { TranslationRenderer } from './types';
+import { ReactElement } from 'react';
 
 export const FrontMatterPanel = ({
   summary,
+  renderTranslation,
 }: {
   summary: TranslationEditorContent;
+  renderTranslation: (
+    params: TranslationRenderer,
+  ) => ReactElement<TranslationRenderer>;
 }) => {
   return (
     <Tabs
@@ -22,7 +27,11 @@ export const FrontMatterPanel = ({
       </TabsList>
       <TabsContent value="toc">Table of Contents coming soon...</TabsContent>
       <TabsContent value="summary">
-        <TranslationReader content={summary} className="block" />
+        {renderTranslation({
+          content: summary,
+          className: 'block',
+          name: 'summary',
+        })}
       </TabsContent>
       <TabsContent value="imprint">Imprint coming soon...</TabsContent>
     </Tabs>

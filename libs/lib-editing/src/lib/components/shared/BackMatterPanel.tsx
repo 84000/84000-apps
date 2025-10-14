@@ -1,21 +1,25 @@
 'use client';
 
-import { TranslationReader } from '../TranslationReader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
-import { TranslationEditorContent } from '../../editor';
-import { BibliographyList, GlossaryTermList } from '../../page';
+import { TranslationEditorContent } from '../editor';
+import { BibliographyList, GlossaryTermList, TranslationRenderer } from '.';
 import { BibliographyEntries, GlossaryTermInstances } from '@data-access';
+import { ReactElement } from 'react';
 
 export const BackMatterPanel = ({
   endnotes,
   glossary,
   bibliography,
   abbreviations,
+  renderTranslation,
 }: {
   endnotes: TranslationEditorContent;
   glossary: GlossaryTermInstances;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
+  renderTranslation: (
+    params: TranslationRenderer,
+  ) => ReactElement<TranslationRenderer>;
 }) => {
   return (
     <Tabs
@@ -30,7 +34,11 @@ export const BackMatterPanel = ({
         <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
       </TabsList>
       <TabsContent value="endnotes">
-        <TranslationReader content={endnotes} className="block" />
+        {renderTranslation({
+          content: endnotes,
+          className: 'block',
+          name: 'endnotes',
+        })}
       </TabsContent>
       <TabsContent value="glossary">
         <GlossaryTermList content={glossary} />
@@ -39,7 +47,11 @@ export const BackMatterPanel = ({
         <BibliographyList content={bibliography} />
       </TabsContent>
       <TabsContent value="abbreviations">
-        <TranslationReader content={abbreviations} className="block" />
+        {renderTranslation({
+          content: abbreviations,
+          className: 'block',
+          name: 'abbreviations',
+        })}
       </TabsContent>
     </Tabs>
   );

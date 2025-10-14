@@ -4,8 +4,8 @@ import {
   getTranslationPassages,
   getTranslationTitles,
 } from '@data-access';
-import { BodyPanel } from '../reader';
 import { blocksFromTranslationBody } from '../../block';
+import { ReaderBodyPanel } from './ReaderBodyPanel';
 
 export const ReaderBodyPage = async ({
   params,
@@ -23,5 +23,5 @@ export const ReaderBodyPage = async ({
   const titles = await getTranslationTitles({ client, uuid: slug });
   const body = blocksFromTranslationBody(passages);
 
-  return <BodyPanel titles={titles} body={body} />;
+  return <ReaderBodyPanel titles={titles} body={body} />;
 };

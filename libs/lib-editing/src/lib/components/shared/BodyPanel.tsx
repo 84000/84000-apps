@@ -1,6 +1,5 @@
 'use client';
 
-import { TranslationReader } from '../TranslationReader';
 import {
   Tabs,
   TabsContent,
@@ -8,15 +7,21 @@ import {
   TabsTrigger,
   Titles,
 } from '@design-system';
-import { TranslationEditorContent } from '../../editor';
+import { TranslationEditorContent } from '../editor';
 import { Title } from '@data-access';
+import { TranslationRenderer } from './types';
+import { ReactElement } from 'react';
 
 export const BodyPanel = ({
   titles,
   body,
+  renderTranslation,
 }: {
   titles: Title[];
   body: TranslationEditorContent;
+  renderTranslation: (
+    params: TranslationRenderer,
+  ) => ReactElement<TranslationRenderer>;
 }) => {
   return (
     <Tabs
@@ -33,7 +38,11 @@ export const BodyPanel = ({
           <div className="ms-12 mt-12 mb-8">
             <Titles titles={titles} />
           </div>
-          <TranslationReader content={body} />
+          {renderTranslation({
+            content: body,
+            className: 'block',
+            name: 'translation',
+          })}
         </div>
       </TabsContent>
       <TabsContent value="source">Source text coming soon...</TabsContent>

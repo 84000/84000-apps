@@ -1,3 +1,3 @@
 export * from './BlockEditor';
-export * from './PassagesEditor';
+export * from './TranslationBuilder';
 export * from './TranslationEditor';

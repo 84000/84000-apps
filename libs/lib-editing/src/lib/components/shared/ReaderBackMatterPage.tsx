@@ -6,7 +6,7 @@ import {
   getBibliographyEntries,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
-import { BackMatterPanel } from '../reader/back-matter';
+import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
 
 export const ReaderBackMatterPage = async ({
   params,
@@ -33,11 +33,11 @@ export const ReaderBackMatterPage = async ({
   const bibliography = await getBibliographyEntries({ client, uuid: slug });
 
   return (
-    <BackMatterPanel
+    <ReaderBackMatterPanel
+      abbreviations={abbreviations}
+      bibliography={bibliography}
       endnotes={endnotes}
       glossary={glossary}
-      bibliography={bibliography}
-      abbreviations={abbreviations}
     />
   );
 };

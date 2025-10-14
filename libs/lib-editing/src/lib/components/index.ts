@@ -1,3 +1,3 @@
 export * from './editor';
-export * from './page';
+export * from './shared';
 export * from './reader';

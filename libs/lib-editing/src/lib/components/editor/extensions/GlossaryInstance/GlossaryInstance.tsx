@@ -5,12 +5,11 @@ import {
   HoverCardTrigger,
   Skeleton,
 } from '@design-system';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
-import { usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { validateAttrs } from '../../util';
-import { GlossaryInstanceBody } from '../../../page';
-import Link from 'next/link';
+import { GlossaryInstanceBody } from '../../../shared';
 
 export const GlossaryInstanceCard = ({
   uuid,
@@ -46,9 +45,7 @@ export const GlossaryInstance = ({
   getPos,
   updateAttributes,
 }: NodeViewProps) => {
-  const [url, setUrl] = useState<string>('#');
-
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const fetch = extension.options.fetch as (
     uuid: string,
@@ -58,26 +55,25 @@ export const GlossaryInstance = ({
     validateAttrs({ node, editor, getPos, updateAttributes });
   }, [node, editor, getPos, updateAttributes]);
 
-  useEffect(() => {
+  const onClick = useCallback(() => {
     if (!node.attrs.glossary) {
       return;
     }
 
-    const pathSegments = pathname.split('/');
-    pathSegments[pathSegments.length - 1] = `glossary#${node.attrs.glossary}`;
-    const newPath = pathSegments.join('/');
-
-    setUrl(newPath);
-  }, [node, pathname, setUrl]);
+    const query = new URLSearchParams(searchParams?.toString());
+    query.set('right', `open#glossary#${node.attrs.glossary}`);
+    window.history.pushState(null, '', `?${query.toString()}`);
+  }, [node, searchParams]);
 
   return (
     <NodeViewWrapper as="span">
       <HoverCard>
-        <HoverCardTrigger asChild>
-          <Link scroll={false} href={url} {...extension.options.HTMLAttributes}>
-            {/* @ts-expect-error: Nodeview content declares only `div` is acceptable when passed to `as`, but we need a `span` */}
-            <NodeViewContent as="span" />
-          </Link>
+        <HoverCardTrigger>
+          <NodeViewContent
+            as="span"
+            onClick={onClick}
+            {...extension.options.HTMLAttributes}
+          />
         </HoverCardTrigger>
         <HoverCardContent className="w-120 lg:w-4xl max-h-100 m-2 overflow-auto">
           <GlossaryInstanceCard uuid={node.attrs.glossary} fetch={fetch} />
