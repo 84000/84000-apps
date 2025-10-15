@@ -15,15 +15,16 @@ import {
 } from 'react';
 import { TranslationEditorContent } from '../editor';
 import { blockFromPassage } from '../../block';
+import { useScrollToHash } from '@lib-utils';
 
-interface ReaderCacheState {
+interface EntityCacheState {
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   fetchGlossaryTerm: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
 }
 
-export const ReaderCacheContext = createContext<ReaderCacheState>({
+export const EnitityCacheContext = createContext<EntityCacheState>({
   fetchEndNote: async () => {
     throw new Error('Not implemented');
   },
@@ -36,6 +37,8 @@ export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
   const client = createBrowserClient();
   const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
   const endnoteCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+
+  useScrollToHash({ isReady: true });
 
   const fetchEndNote = useCallback(
     async (uuid: string): Promise<TranslationEditorContent | undefined> => {
@@ -81,14 +84,14 @@ export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
   );
 
   return (
-    <ReaderCacheContext.Provider value={{ fetchEndNote, fetchGlossaryTerm }}>
+    <EnitityCacheContext.Provider value={{ fetchEndNote, fetchGlossaryTerm }}>
       {children}
-    </ReaderCacheContext.Provider>
+    </EnitityCacheContext.Provider>
   );
 };
 
 export const useReaderCache = () => {
-  const context = useContext(ReaderCacheContext);
+  const context = useContext(EnitityCacheContext);
   if (!context) {
     throw new Error('useReaderCache must be used within a ReaderCacheProvider');
   }

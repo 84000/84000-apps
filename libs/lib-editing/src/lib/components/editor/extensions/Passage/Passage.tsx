@@ -1,7 +1,8 @@
 import { cn } from '@lib-utils';
-import type { ChangeEvent, FocusEvent } from 'react';
+import { type ChangeEvent, type FocusEvent } from 'react';
 import type { NodeViewProps } from '@tiptap/react';
 import { NodeWrapper } from '../NodeWrapper';
+import Link from 'next/link';
 
 export const Passage = (props: NodeViewProps) => {
   const { node, editor, updateAttributes } = props;
@@ -26,6 +27,7 @@ export const Passage = (props: NodeViewProps) => {
     >
       {editor.isEditable ? (
         <input
+          id={`input-${node.attrs.uuid}`}
           className={cn(className, 'px-1 placeholder:text-brick-100')}
           value={node.attrs.label || ''}
           onChange={updateLabel}
@@ -35,9 +37,13 @@ export const Passage = (props: NodeViewProps) => {
           spellCheck={false}
         />
       ) : (
-        <div className={className} contentEditable={false}>
+        <Link
+          className={className}
+          contentEditable={false}
+          href={`#${node.attrs.uuid}`}
+        >
           {node.attrs.label || ''}
-        </div>
+        </Link>
       )}
     </NodeWrapper>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { GlossaryTermInstance } from '@data-access';
-import { Li, Separator, Ul } from '@design-system';
+import { Li, Ul } from '@design-system';
 import { cn, removeHtmlTags } from '@lib-utils';
 import { useEffect, useState } from 'react';
 
