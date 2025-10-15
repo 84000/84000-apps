@@ -7,12 +7,14 @@ import {
   getTranslationTitles,
   Title,
 } from '@data-access';
-import { BodyPanel } from './BodyPanel';
+import { BodyPanel } from '../shared/BodyPanel';
 import { blocksFromTranslationBody } from '../../block';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
-import { TranslationBuilder, TranslationEditorContent } from '../editor';
-import { TranslationSkeleton } from './TranslationSkeleton';
+import { TranslationBuilder, TranslationEditorContent } from '.';
+import { TranslationSkeleton } from '../shared/TranslationSkeleton';
+import { TitlesBuilder } from './TitlesBuilder';
+import { TranslationHeader } from '@design-system';
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
@@ -43,6 +45,8 @@ export const EditorBodyPage = () => {
     <BodyPanel
       titles={titles}
       body={body}
+      renderHeader={() => <TranslationHeader />}
+      renderTitles={({ titles }) => <TitlesBuilder titles={titles} />}
       renderTranslation={({ content, name, className }) => (
         <TranslationBuilder
           content={content}

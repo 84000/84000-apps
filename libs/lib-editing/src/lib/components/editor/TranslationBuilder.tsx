@@ -3,7 +3,7 @@
 import type { TranslationRenderer } from '../shared/types';
 import { useEffect, useState } from 'react';
 import type { XmlFragment } from 'yjs';
-import { useEditorState } from '../shared/EditorProvider';
+import { useEditorState } from './EditorProvider';
 import { TranslationEditor } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { useReaderCache } from '../shared/EntityCache';

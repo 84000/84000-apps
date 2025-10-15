@@ -1,4 +1,4 @@
-import { BodyItemType } from '@data-access';
+import { BodyItemType, Titles } from '@data-access';
 import { TranslationEditorContent } from '../editor';
 
 export type EditorBuilderType = BodyItemType | 'titles';
@@ -11,6 +11,10 @@ export interface TranslationRenderer {
   content: TranslationEditorContent;
   name: string;
   className?: string;
+}
+
+export interface TitlesRenderer {
+  titles: Titles;
 }
 
 // some editor keys need custom titles

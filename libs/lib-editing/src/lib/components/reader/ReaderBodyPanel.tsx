@@ -1,21 +1,23 @@
 'use client';
 
-import { Titles } from '@data-access';
-import { BodyPanel } from './BodyPanel';
+import { Titles as TitlesData } from '@data-access';
+import { BodyPanel } from '../shared/BodyPanel';
 import { TranslationEditorContent } from '../editor';
-import { TranslationReader } from '../reader';
+import { TranslationReader } from '.';
+import { Titles } from '@design-system';
 
 export const ReaderBodyPanel = ({
   titles,
   body,
 }: {
-  titles: Titles;
+  titles: TitlesData;
   body: TranslationEditorContent;
 }) => {
   return (
     <BodyPanel
       titles={titles}
       body={body}
+      renderTitles={({ titles }) => <Titles titles={titles} />}
       renderTranslation={({ content, name, className }) => (
         <TranslationReader
           content={content}

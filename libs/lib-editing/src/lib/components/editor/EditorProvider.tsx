@@ -18,7 +18,7 @@ import {
   savePassages,
 } from '@data-access';
 import { passagesFromNodes } from '../../passage';
-import { EntityCacheProvider } from './EntityCache';
+import { EntityCacheProvider } from '../shared/EntityCache';
 
 interface EditorContextState {
   doc?: Doc;

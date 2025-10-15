@@ -6,11 +6,11 @@ import {
   getTranslationPassages,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
-import { FrontMatterPanel } from './FrontMatterPanel';
+import { FrontMatterPanel } from '../shared/FrontMatterPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
-import { TranslationBuilder, TranslationEditorContent } from '../editor';
-import { TranslationSkeleton } from './TranslationSkeleton';
+import { TranslationBuilder, TranslationEditorContent } from '.';
+import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 
 export const EditorFrontMatterPage = () => {
   const { work } = useEditorState();

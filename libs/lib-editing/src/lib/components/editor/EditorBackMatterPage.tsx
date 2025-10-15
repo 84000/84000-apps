@@ -10,11 +10,11 @@ import {
   BibliographyEntries,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
-import { BackMatterPanel } from './BackMatterPanel';
+import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
 import { TranslationEditorContent } from '../editor';
-import { TranslationSkeleton } from './TranslationSkeleton';
+import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TranslationBuilder } from '../editor';
 
 export const EditorBackMatterPage = () => {

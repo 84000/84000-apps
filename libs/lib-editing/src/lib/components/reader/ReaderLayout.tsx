@@ -2,7 +2,7 @@
 
 import { LeftPanel, MainPanel, RightPanel, ThreeColumns } from '@design-system';
 import { ReactNode } from 'react';
-import { EntityCacheProvider } from './EntityCache';
+import { EntityCacheProvider } from '../shared/EntityCache';
 
 export const ReaderLayout = ({
   left,

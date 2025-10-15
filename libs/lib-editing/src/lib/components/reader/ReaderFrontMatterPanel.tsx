@@ -1,8 +1,8 @@
 'use client';
 
-import { FrontMatterPanel } from './FrontMatterPanel';
+import { FrontMatterPanel } from '../shared/FrontMatterPanel';
 import { TranslationEditorContent } from '../editor';
-import { TranslationReader } from '../reader';
+import { TranslationReader } from '.';
 
 export const ReaderFrontMatterPanel = ({
   summary,

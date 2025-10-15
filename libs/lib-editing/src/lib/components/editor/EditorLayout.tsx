@@ -8,7 +8,7 @@ import {
   getTranslationMetadataByUuid,
   Work,
 } from '@data-access';
-import { TranslationSkeleton } from './TranslationSkeleton';
+import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 
 export const EditorLayout = ({
   left,

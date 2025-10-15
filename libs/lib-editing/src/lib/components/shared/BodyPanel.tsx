@@ -1,24 +1,22 @@
 'use client';
 
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-  Titles,
-} from '@design-system';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { Title } from '@data-access';
-import { TranslationRenderer } from './types';
+import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement } from 'react';
 
 export const BodyPanel = ({
   titles,
   body,
+  renderHeader,
+  renderTitles,
   renderTranslation,
 }: {
   titles: Title[];
   body: TranslationEditorContent;
+  renderHeader?: () => ReactElement;
+  renderTitles: (params: TitlesRenderer) => ReactElement<TitlesRenderer>;
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
@@ -35,9 +33,8 @@ export const BodyPanel = ({
       </TabsList>
       <TabsContent value="translation">
         <div className="w-full">
-          <div className="ms-12 mt-12 mb-8">
-            <Titles titles={titles} />
-          </div>
+          {renderHeader?.()}
+          <div className="ms-12 mt-12 mb-8">{renderTitles({ titles })}</div>
           {renderTranslation({
             content: body,
             className: 'block',
