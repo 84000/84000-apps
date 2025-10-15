@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { TranslationBuilder, TranslationEditorContent } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
-import { TranslationHeader } from '@design-system';
+import { EditorHeader } from './EditorHeader';
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
@@ -45,7 +45,7 @@ export const EditorBodyPage = () => {
     <BodyPanel
       titles={titles}
       body={body}
-      renderHeader={() => <TranslationHeader />}
+      renderHeader={() => <EditorHeader />}
       renderTitles={({ titles }) => <TitlesBuilder titles={titles} />}
       renderTranslation={({ content, name, className }) => (
         <TranslationBuilder
