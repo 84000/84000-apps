@@ -2,7 +2,7 @@ import { AnnotationType } from '@data-access';
 import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
-import type { BlockEditorContentItem } from '../components/editor';
+import type { TranslationEditorContentItem } from '../components/editor';
 import { filterAttrs } from './util';
 
 export const splitContent: Transformer = ({
@@ -50,7 +50,7 @@ export const splitContent: Transformer = ({
   }
 
   if (annStartAbs === annEndAbs && annStartAbs === attrs?.end) {
-    const newBlock: BlockEditorContentItem = {
+    const newBlock: TranslationEditorContentItem = {
       type: annotation.type,
       attrs: {
         ...attrs,

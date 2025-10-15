@@ -1,15 +1,15 @@
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';
-import type { BlockEditorContentItem } from '../components/editor';
+import type { TranslationEditorContentItem } from '../components/editor';
 import { filterAttrs } from './util';
 
-export const sort = (nodes: BlockEditorContentItem[]) => {
+export const sort = (nodes: TranslationEditorContentItem[]) => {
   return nodes.sort((a, b) => (a.attrs?.start ?? 0) - (b.attrs?.start ?? 0));
 };
 
 export const insert = (
-  node: BlockEditorContentItem,
-  nodes: BlockEditorContentItem[],
+  node: TranslationEditorContentItem,
+  nodes: TranslationEditorContentItem[],
 ) => {
   // unshift to prioritize new block when sorting
   nodes.unshift(node);
@@ -34,7 +34,7 @@ export const splitAndInsert: Transformer = (ctx) => {
     return;
   }
 
-  const newBlock: BlockEditorContentItem = {
+  const newBlock: TranslationEditorContentItem = {
     type: annotation.type,
     attrs: {
       ...filterAttrs(block.attrs),

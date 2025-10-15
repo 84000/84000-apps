@@ -1,15 +1,13 @@
 'use client';
 
-import { TranslationEditor, TranslationEditorContent } from '../editor';
-import { useReaderCache } from './ReaderCache';
+import { TranslationEditor } from '../editor';
+import { TranslationRenderer } from '../shared';
+import { useReaderCache } from '../shared/EntityCache';
 
 export const TranslationReader = ({
   content,
   className,
-}: {
-  content: TranslationEditorContent;
-  className?: string;
-}) => {
+}: TranslationRenderer) => {
   const { fetchEndNote, fetchGlossaryTerm } = useReaderCache();
 
   return (

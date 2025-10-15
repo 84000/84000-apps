@@ -1,13 +1,12 @@
 import { AnnotationType, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
 import {
-  BlockEditorContent,
-  BlockEditorContentItem,
+  TranslationEditorContentItem,
   TranslationEditorContent,
 } from './components/editor';
 
-const passageTemplate = (passage: Passage): BlockEditorContentItem => {
-  const block: BlockEditorContentItem = {
+const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
+  const block: TranslationEditorContentItem = {
     type: 'passage',
     attrs: {
       uuid: passage.uuid,
@@ -26,7 +25,7 @@ const passageTemplate = (passage: Passage): BlockEditorContentItem => {
   return block;
 };
 
-const textTemplate = (text: string): BlockEditorContentItem => ({
+const textTemplate = (text: string): TranslationEditorContentItem => ({
   type: 'text',
   text,
   attrs: {
@@ -35,8 +34,8 @@ const textTemplate = (text: string): BlockEditorContentItem => ({
   },
 });
 
-const headingTemplate = (passage: Passage): BlockEditorContentItem => {
-  const block: BlockEditorContentItem = {
+const headingTemplate = (passage: Passage): TranslationEditorContentItem => {
+  const block: TranslationEditorContentItem = {
     type: 'heading',
     attrs: {
       level: 1,
@@ -50,8 +49,8 @@ const headingTemplate = (passage: Passage): BlockEditorContentItem => {
   return block;
 };
 
-const paragraphTemplate = (passage: Passage): BlockEditorContentItem => {
-  const block: BlockEditorContentItem = {
+const paragraphTemplate = (passage: Passage): TranslationEditorContentItem => {
+  const block: TranslationEditorContentItem = {
     type: 'paragraph',
     attrs: {
       start: 0,
@@ -65,8 +64,10 @@ const paragraphTemplate = (passage: Passage): BlockEditorContentItem => {
   return block;
 };
 
-const abbreviationTemplate = (passage: Passage): BlockEditorContentItem => {
-  const block: BlockEditorContentItem = {
+const abbreviationTemplate = (
+  passage: Passage,
+): TranslationEditorContentItem => {
+  const block: TranslationEditorContentItem = {
     type: 'paragraph',
     attrs: {
       class: 'flex flex-row gap-2',
@@ -82,7 +83,7 @@ const abbreviationTemplate = (passage: Passage): BlockEditorContentItem => {
 };
 
 const TEMPLATES_FOR_BLOCK_TYPE: {
-  [key in BodyItemType]: (passage: Passage) => BlockEditorContentItem;
+  [key in BodyItemType]: (passage: Passage) => TranslationEditorContentItem;
 } = {
   acknowledgment: paragraphTemplate,
   acknowledgmentHeader: headingTemplate,
@@ -156,7 +157,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
 export const blocksFromTranslationBody = (
   passages: Passage[],
 ): TranslationEditorContent => {
-  const blocks: BlockEditorContent = [];
+  const blocks: TranslationEditorContent = [];
   passages.forEach((passage) => {
     if (!passage.content) {
       console.warn('passage has no content');
@@ -178,7 +179,9 @@ export const blocksFromTranslationBody = (
   return blocks;
 };
 
-export const blockFromPassage = (passage: Passage): BlockEditorContentItem => {
+export const blockFromPassage = (
+  passage: Passage,
+): TranslationEditorContentItem => {
   const block = passageTemplate(passage);
 
   // Sort annotations by start position, then by end position in descending

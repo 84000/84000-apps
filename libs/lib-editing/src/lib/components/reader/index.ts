@@ -1,3 +1,5 @@
-export * from './body';
-export * from './front-matter';
+export * from './ReaderBackMatterPage';
+export * from './ReaderBodyPage';
+export * from './ReaderFrontMatterPage';
+export * from './ReaderLayout';
 export * from './TranslationReader';

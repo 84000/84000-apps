@@ -2,7 +2,7 @@ import { AnnotationType } from '@data-access';
 import { isBlockAnnotation } from './annotate';
 import { splitNode } from './split-node';
 import { Transformer } from './transformer';
-import { BlockEditorContentItem } from '../components/editor';
+import { TranslationEditorContentItem } from '../components/editor';
 import { filterAttrs } from './util';
 
 export const splitBlock: Transformer = ({
@@ -60,7 +60,7 @@ export const splitBlock: Transformer = ({
   }
 
   const attrs = filterAttrs(block.attrs);
-  const newBlocks: BlockEditorContentItem[] = [];
+  const newBlocks: TranslationEditorContentItem[] = [];
   if (prefixContent.length) {
     newBlocks.push({
       ...block,
@@ -74,7 +74,7 @@ export const splitBlock: Transformer = ({
   }
 
   if (midContent.length) {
-    const newBlock: BlockEditorContentItem = {
+    const newBlock: TranslationEditorContentItem = {
       ...block,
       type: annotation.type,
       content: midContent,
