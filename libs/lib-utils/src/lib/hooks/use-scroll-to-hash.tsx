@@ -11,7 +11,7 @@ import { DependencyList, useEffect } from 'react';
  */
 export const scrollToHash = ({
   delay = 0,
-  behavior = 'auto',
+  behavior = 'smooth',
   block = 'start',
 }: {
   delay?: number;

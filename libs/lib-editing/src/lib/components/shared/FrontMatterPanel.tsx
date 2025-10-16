@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
 import { ReactElement } from 'react';
+import { useReaderCache } from './EntityCache';
 
 export const FrontMatterPanel = ({
   summary,
@@ -14,8 +15,15 @@ export const FrontMatterPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
+  const { panels, updatePanel } = useReaderCache();
+
   return (
     <Tabs
+      value={panels.left.tab || 'toc'}
+      onValueChange={(tabName) => {
+        const tab = tabName as 'toc' | 'summary' | 'imprint';
+        updatePanel({ name: 'left', state: { open: true, tab } });
+      }}
       data-position="sidebar"
       defaultValue="summary"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"

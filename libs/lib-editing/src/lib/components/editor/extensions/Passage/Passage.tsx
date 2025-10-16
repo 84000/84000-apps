@@ -21,7 +21,7 @@ export const Passage = (props: NodeViewProps) => {
       : '';
   return (
     <NodeWrapper
-      className={cn('relative ml-6', borderClassName)}
+      className={cn('relative ml-6 scroll-m-20', borderClassName)}
       innerClassName="passage is-editable pl-6"
       {...props}
     >

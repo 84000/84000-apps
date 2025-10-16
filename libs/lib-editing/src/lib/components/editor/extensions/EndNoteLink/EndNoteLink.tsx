@@ -66,8 +66,11 @@ export const EndNoteLink = ({
     }
     const params = new URLSearchParams(searchParams.toString());
     params.set('right', `open:endnotes`);
-    window.location.hash = node.attrs.endNote;
-    window.history.pushState({}, '', `?${params.toString()}`);
+    window.history.pushState(
+      {},
+      '',
+      `?${params.toString()}#${node.attrs.endNote}`,
+    );
   }, [node, searchParams]);
 
   useEffect(() => {
