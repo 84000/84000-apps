@@ -5,7 +5,7 @@ import { TranslationEditorContent } from '../editor';
 import { Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement } from 'react';
-import { useReaderCache } from './EntityCache';
+import { useNavigation } from './NavigationProvider';
 
 export const BodyPanel = ({
   titles,
@@ -22,7 +22,7 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useReaderCache();
+  const { panels, updatePanel } = useNavigation();
 
   return (
     <Tabs

@@ -1,5 +1,5 @@
 export * from './AiSummarizerPage';
-export * from './EntityCache';
+export * from './NavigationProvider';
 export * from './LabeledElement';
 export * from './ThreeColumnRenderer';
 export * from './TranslationSkeleton';

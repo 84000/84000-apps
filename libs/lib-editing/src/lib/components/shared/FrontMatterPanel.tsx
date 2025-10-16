@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
 import { ReactElement } from 'react';
-import { useReaderCache } from './EntityCache';
+import { useNavigation } from './NavigationProvider';
 
 export const FrontMatterPanel = ({
   summary,
@@ -15,7 +15,7 @@ export const FrontMatterPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useReaderCache();
+  const { panels, updatePanel } = useNavigation();
 
   return (
     <Tabs

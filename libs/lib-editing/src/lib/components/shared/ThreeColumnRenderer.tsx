@@ -8,7 +8,7 @@ import {
   ThreeColumns,
 } from '@design-system';
 import { ReactNode, useCallback, useEffect, useRef } from 'react';
-import { useReaderCache } from './EntityCache';
+import { useNavigation } from './NavigationProvider';
 
 export const ThreeColumnRenderer = ({
   left,
@@ -21,7 +21,7 @@ export const ThreeColumnRenderer = ({
 }) => {
   const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
   const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
-  const { panels, updatePanel } = useReaderCache();
+  const { panels, updatePanel } = useNavigation();
 
   const onToggle = useCallback(
     (panel?: ImperativePanelHandle | null) => {

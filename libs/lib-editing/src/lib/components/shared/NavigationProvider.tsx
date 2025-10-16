@@ -27,7 +27,7 @@ import {
   TabName,
 } from './types';
 
-interface EntityCacheState {
+interface NavigationState {
   panels: PanelsState;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   createHashLink: (params: {
@@ -42,12 +42,13 @@ interface EntityCacheState {
 }
 
 const DEFAULT_PANELS: PanelsState = {
-  left: { open: true, tab: 'toc' },
+  // TODO: default to toc when available
+  left: { open: true, tab: 'summary' },
   right: { open: true, tab: 'endnotes' },
   main: { open: true, tab: 'translation' },
 };
 
-export const EnitityCacheContext = createContext<EntityCacheState>({
+export const NavigationContext = createContext<NavigationState>({
   panels: DEFAULT_PANELS,
   updatePanel: () => {
     throw new Error('Not implemented');
@@ -63,13 +64,12 @@ export const EnitityCacheContext = createContext<EntityCacheState>({
   },
 });
 
-export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
+export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const client = createBrowserClient();
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
   const endnoteCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
-  const [hash, setHash] = useState(window.location.hash);
 
   const fetchEndNote = useCallback(
     async (uuid: string): Promise<TranslationEditorContent | undefined> => {
@@ -154,8 +154,6 @@ export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
     return result;
   }, []);
 
-  const scroll = useCallback(scrollToHash, []);
-
   const createHashLink = useCallback(
     ({
       panel,
@@ -174,15 +172,25 @@ export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
+    if (!window.location.hash) {
+      return;
+    }
+
+    scrollToHash({
+      delay: 1000,
+    });
+  }, []);
+
+  useEffect(() => {
     const newPanels = parsePanelParams();
     setPanels(newPanels);
-    scroll({
+    scrollToHash({
       delay: 100,
     });
-  }, [hash, query, parsePanelParams, scroll]);
+  }, [query, parsePanelParams]);
 
   return (
-    <EnitityCacheContext.Provider
+    <NavigationContext.Provider
       value={{
         panels,
         updatePanel,
@@ -192,12 +200,12 @@ export const EntityCacheProvider = ({ children }: { children: ReactNode }) => {
       }}
     >
       {children}
-    </EnitityCacheContext.Provider>
+    </NavigationContext.Provider>
   );
 };
 
-export const useReaderCache = () => {
-  const context = useContext(EnitityCacheContext);
+export const useNavigation = () => {
+  const context = useContext(NavigationContext);
   if (!context) {
     throw new Error('useReaderCache must be used within a ReaderCacheProvider');
   }

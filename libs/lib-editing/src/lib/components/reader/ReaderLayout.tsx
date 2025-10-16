@@ -1,8 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { EntityCacheProvider } from '../shared/EntityCache';
-import { ThreeColumnRenderer } from '../shared/ThreeColumnRenderer';
+import { NavigationProvider, ThreeColumnRenderer } from '../shared';
 
 export const ReaderLayout = ({
   left,
@@ -14,8 +13,8 @@ export const ReaderLayout = ({
   right: ReactNode;
 }) => {
   return (
-    <EntityCacheProvider>
+    <NavigationProvider>
       <ThreeColumnRenderer left={left} main={main} right={right} />
-    </EntityCacheProvider>
+    </NavigationProvider>
   );
 };

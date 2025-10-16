@@ -5,7 +5,7 @@ import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
 import { BibliographyEntries, GlossaryTermInstances } from '@data-access';
 import { ReactElement } from 'react';
-import { useReaderCache } from './EntityCache';
+import { useNavigation } from './NavigationProvider';
 import { GlossaryTermList } from './glossary';
 import { BibliographyList } from './bibliography';
 
@@ -24,7 +24,7 @@ export const BackMatterPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useReaderCache();
+  const { panels, updatePanel } = useNavigation();
 
   return (
     <Tabs

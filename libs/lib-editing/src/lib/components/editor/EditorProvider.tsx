@@ -18,7 +18,7 @@ import {
   savePassages,
 } from '@data-access';
 import { passagesFromNodes } from '../../passage';
-import { EntityCacheProvider } from '../shared/EntityCache';
+import { NavigationProvider } from '../shared';
 
 interface EditorContextState {
   doc?: Doc;
@@ -203,7 +203,7 @@ export const EditorContextProvider = ({
         stopObserving,
       }}
     >
-      <EntityCacheProvider>{children}</EntityCacheProvider>
+      <NavigationProvider>{children}</NavigationProvider>
     </EditorContext.Provider>
   );
 };
