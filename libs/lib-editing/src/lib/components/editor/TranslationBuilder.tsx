@@ -4,9 +4,8 @@ import type { TranslationRenderer } from '../shared/types';
 import { useEffect, useState } from 'react';
 import type { XmlFragment } from 'yjs';
 import { useEditorState } from './EditorProvider';
-import { TranslationEditor } from '.';
-import { TranslationSkeleton } from '../shared/TranslationSkeleton';
-import { useReaderCache } from '../shared/EntityCache';
+import { TranslationEditor } from './TranslationEditor';
+import { TranslationSkeleton, useNavigation } from '../shared';
 
 export const TranslationBuilder = ({
   content,
@@ -19,7 +18,7 @@ export const TranslationBuilder = ({
 
   const { canEdit, setEditor, startObserving, getFragment } = useEditorState();
 
-  const { fetchEndNote, fetchGlossaryTerm } = useReaderCache();
+  const { fetchEndNote, fetchGlossaryTerm } = useNavigation();
 
   useEffect(() => {
     (async () => {

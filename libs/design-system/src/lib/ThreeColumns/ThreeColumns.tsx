@@ -1,7 +1,7 @@
 'use client';
 
 import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
-import { Children, ReactElement, ReactNode, useRef } from 'react';
+import { Children, ReactElement, ReactNode, RefObject, useRef } from 'react';
 import type { ImperativePanelHandle as RRImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
@@ -35,12 +35,21 @@ export const RightPanel = ({ children }: { children: ReactNode }) => {
 export const ThreeColumns = ({
   children,
   className,
+  leftPanel,
+  rightPanel,
+  onToggle,
 }: {
   children: ReactNode;
   className?: string;
+  leftPanel?: RefObject<ImperativePanelHandle | null>;
+  rightPanel?: RefObject<ImperativePanelHandle | null>;
+  onToggle?: (panel?: ImperativePanelHandle | null) => void;
 }) => {
-  const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
-  const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
+  const leftPanelInteral = useRef<ImperativePanelHandle | null>(null);
+  const rightPanelInternal = useRef<ImperativePanelHandle | null>(null);
+
+  const leftPanelRef = leftPanel || leftPanelInteral;
+  const rightPanelRef = rightPanel || rightPanelInternal;
 
   const leftPanelChildren = Children.toArray(children).filter(
     (child) => (child as ReactElement)?.type === LeftPanel,
@@ -56,6 +65,11 @@ export const ThreeColumns = ({
 
   const togglePanel = (panel?: ImperativePanelHandle | null) => {
     if (!panel) {
+      return;
+    }
+
+    if (onToggle) {
+      onToggle(panel);
       return;
     }
 

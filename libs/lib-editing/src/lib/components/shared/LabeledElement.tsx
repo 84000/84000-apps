@@ -16,7 +16,7 @@ export const LabeledElement = ({
   children: ReactNode;
 }) => {
   return (
-    <div id={id} className="relative ml-6">
+    <div id={id} className="relative ml-6 scroll-m-20">
       <Link
         href={`#${id}`}
         className={cn(

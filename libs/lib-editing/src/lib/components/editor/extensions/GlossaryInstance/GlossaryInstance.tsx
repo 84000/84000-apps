@@ -61,8 +61,12 @@ export const GlossaryInstance = ({
     }
 
     const query = new URLSearchParams(searchParams?.toString());
-    query.set('right', `open#glossary#${node.attrs.glossary}`);
-    window.history.pushState(null, '', `?${query.toString()}`);
+    query.set('right', 'open:glossary');
+    window.history.pushState(
+      {},
+      '',
+      `?${query.toString()}#${node.attrs.glossary}`,
+    );
   }, [node, searchParams]);
 
   return (

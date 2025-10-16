@@ -5,6 +5,7 @@ import { TranslationEditorContent } from '../editor';
 import { Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement } from 'react';
+import { useNavigation } from './NavigationProvider';
 
 export const BodyPanel = ({
   titles,
@@ -21,8 +22,16 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
+  const { panels, updatePanel } = useNavigation();
+
   return (
     <Tabs
+      value={panels.main.tab || 'translation'}
+      onValueChange={(tabName) => {
+        const tab = tabName as 'translation' | 'source' | 'compare';
+        updatePanel({ name: 'main', state: { open: true, tab } });
+      }}
+      data-position="main"
       defaultValue="translation"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >

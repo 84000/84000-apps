@@ -32,7 +32,7 @@ export const NodeWrapper = ({
   }, [node, editor, getPos, updateAttributes]);
 
   return (
-    <NodeViewWrapper as={wrapperAs} className={className}>
+    <NodeViewWrapper id={node.attrs.uuid} as={wrapperAs} className={className}>
       {children}
       {/* @ts-expect-error: NodeViewContent is only typed for div, but any element works */}
       <NodeViewContent as={contentAs} className={innerClassName} />

@@ -48,7 +48,15 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
     [updateAttributes],
   );
 
-  const Content = <MarkViewContent className={LINK_STYLE} />;
+  const Content = (
+    <MarkViewContent
+      className={LINK_STYLE}
+      as="a"
+      href={mark.attrs.href}
+      target="_blank"
+      rel="noreferrer"
+    />
+  );
 
   if (!editor.isEditable) {
     return Content;

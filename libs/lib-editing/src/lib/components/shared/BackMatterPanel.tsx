@@ -2,9 +2,12 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
-import { BibliographyList, GlossaryTermList, TranslationRenderer } from '.';
+import { TranslationRenderer } from './types';
 import { BibliographyEntries, GlossaryTermInstances } from '@data-access';
 import { ReactElement } from 'react';
+import { useNavigation } from './NavigationProvider';
+import { GlossaryTermList } from './glossary';
+import { BibliographyList } from './bibliography';
 
 export const BackMatterPanel = ({
   endnotes,
@@ -21,9 +24,20 @@ export const BackMatterPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
+  const { panels, updatePanel } = useNavigation();
+
   return (
     <Tabs
-      data-position="sidebar"
+      value={panels.right.tab || 'endnotes'}
+      onValueChange={(tabName) => {
+        const tab = tabName as
+          | 'endnotes'
+          | 'glossary'
+          | 'bibliography'
+          | 'abbreviations';
+        updatePanel({ name: 'right', state: { open: true, tab } });
+      }}
+      data-position="right-sidebar"
       defaultValue="endnotes"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >
