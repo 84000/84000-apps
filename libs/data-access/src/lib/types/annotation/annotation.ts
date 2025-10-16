@@ -75,7 +75,7 @@ export type InternalLinkAnnotation = AnnotationBase & {
   linkType: string;
   href?: string;
   label?: string;
-  uuid?: string;
+  entity?: string;
   isPending: boolean;
 };
 

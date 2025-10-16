@@ -7,19 +7,25 @@ import { recurse } from './recurse';
 export const internalLink: Transformer = (ctx) => {
   const { annotation } = ctx;
   const {
-    uuid,
+    entity,
     href = '#',
     start,
     end,
-    type,
+    linkType: type,
   } = annotation as InternalLinkAnnotation;
 
   if (!(end - start)) {
     // If the annotation has no length, we don't need to do anything.
     console.warn(
-      `Skipping internal link transformation for annotation with no length: ${uuid}`,
+      `Skipping internal link transformation for annotation with no length: ${entity}`,
     );
     return;
+  }
+
+  let path = href;
+
+  if (type && entity) {
+    path = `/entity/${type}/${entity}`;
   }
 
   recurse({
@@ -33,7 +39,7 @@ export const internalLink: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'link',
-              attrs: { href, uuid, type },
+              attrs: { href: path, entity, type },
             },
           ];
         },
