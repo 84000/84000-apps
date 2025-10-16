@@ -67,7 +67,7 @@ export type PassageRowDTO = {
   sort: number;
   type: BodyItemType;
   uuid: string;
-  work_uuid: string;
+  workUuid: string;
   xmlId?: string;
   parent?: string;
 };
@@ -86,7 +86,7 @@ export const passageFromDTO = (
     sort: dto.sort,
     type: dto.type,
     uuid: dto.uuid,
-    workUuid: dto.work_uuid,
+    workUuid: dto.workUuid,
     xmlId: dto.xmlId,
     parent: dto.parent,
     annotations,
@@ -109,7 +109,7 @@ export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
     sort: passage.sort,
     type: passage.type,
     uuid: passage.uuid,
-    work_uuid: passage.workUuid,
+    workUuid: passage.workUuid,
   };
 
   // NOTE: only include xmlId and parent if they exist, otherwise an upsert

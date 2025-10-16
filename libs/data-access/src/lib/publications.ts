@@ -109,6 +109,32 @@ export const getTranslationMetadataByUuid = async ({
   return workFromDTO(data as WorkDTO);
 };
 
+export const getTranslationMetadataByToh = async ({
+  client,
+  toh,
+}: {
+  client: DataClient;
+  toh: string;
+}) => {
+  const { data } = await client
+    .from('works')
+    .select(
+      `
+      uuid,
+      title,
+      toh,
+      publicationDate,
+      publicationVersion,
+      pages:source_pages,
+      restriction
+    `,
+    )
+    .eq('toh', toh)
+    .single();
+
+  return workFromDTO(data as WorkDTO);
+};
+
 export const getTranslationsMetadata = async ({
   client,
 }: {

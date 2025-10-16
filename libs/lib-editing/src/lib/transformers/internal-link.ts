@@ -22,7 +22,9 @@ export const internalLink: Transformer = (ctx) => {
     return;
   }
 
-  let path = href;
+  // NOTE: we use redirects to forward older urls. Hashes aren't passed to the
+  // api, so make an effort to convert them to query params.
+  let path = href.replace('#', '?xmlId=');
 
   if (type && entity) {
     path = `/entity/${type}/${entity}`;

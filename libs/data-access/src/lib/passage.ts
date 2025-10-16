@@ -31,6 +31,27 @@ export const getPassage = async ({
   return passageFromDTO(dto, annotationsFromDTO(dto?.annotations || []));
 };
 
+export const getPassageUuidByXmlId = async ({
+  client,
+  xmlId,
+}: {
+  client: DataClient;
+  xmlId: string;
+}) => {
+  const { data, error } = await client
+    .from('passages')
+    .select('uuid, workUuid:work_uuid')
+    .eq('xmlId', xmlId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching passage uuid for xmlId: ${xmlId}`, error);
+    return;
+  }
+
+  return data?.uuid;
+};
+
 export const savePassages = async ({
   client,
   passages,

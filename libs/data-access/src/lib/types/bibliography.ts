@@ -33,11 +33,13 @@ export const bibliographyItemFromDTO = (
 export type BibliographyEntryItemDTO = {
   uuid: string;
   bibl_html: string;
+  work_uuid?: string;
 };
 
 export type BibliographyEntryItem = {
   uuid: string;
   html: string;
+  workUuid?: string;
 };
 
 export type BlibliographyEntryDTO = {
@@ -60,6 +62,7 @@ export const bibliographyEntryItemFromDTO = (
   return {
     uuid: dto.uuid,
     html: dto.bibl_html,
+    workUuid: dto.work_uuid,
   };
 };
 
