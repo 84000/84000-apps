@@ -7,7 +7,6 @@ import {
 } from '@design-system';
 import { MarkViewContent, MarkViewProps } from '@tiptap/react';
 import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { findMarkRange } from '../../util';
 import { HoverInputField } from '../HoverInputField';
@@ -64,11 +63,7 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
 
   return (
     <HoverCard open={isOpen} onOpenChange={setIsOpen}>
-      <HoverCardTrigger asChild>
-        <Link href={mark.attrs.href} target="_blank" rel="noreferrer">
-          {Content}
-        </Link>
-      </HoverCardTrigger>
+      <HoverCardTrigger asChild>{Content}</HoverCardTrigger>
       <HoverCardContent
         align="start"
         className="flex justify-between gap-2 p-2 w-fit max-w-72"

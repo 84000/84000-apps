@@ -2,16 +2,19 @@ import { GlossaryInstanceAnnotation } from '@data-access';
 import { Exporter } from './export';
 
 export const glossaryInstance: Exporter<GlossaryInstanceAnnotation> = ({
+  mark,
   node,
   start,
   passageUuid,
 }): GlossaryInstanceAnnotation | undefined => {
   const textContent = node.textContent;
-  const glossary = node.attrs.glossary;
-  const uuid = node.attrs.uuid;
+  const glossary = mark?.attrs.glossary;
+  const uuid = mark?.attrs.uuid;
 
-  if (!textContent || !glossary) {
-    console.warn(`Glossary instance ${uuid} is incomplete`);
+  if (!textContent || !glossary || !uuid) {
+    console.warn(
+      `Glossary instance ${uuid} on pasage ${passageUuid} is incomplete`,
+    );
     return undefined;
   }
 
