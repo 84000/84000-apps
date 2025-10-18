@@ -3,9 +3,9 @@ import { notFound, redirect } from 'next/navigation';
 
 export async function GET(
   _request: Request,
-  { params }: { params: { type: string; slug: string } },
+  { params }: { params: Promise<{ type: string; slug: string }> },
 ) {
-  const { type, slug } = await Promise.resolve(params);
+  const { type, slug } = await params;
   const path = await lookupEntity(type, slug);
 
   if (!path) {
