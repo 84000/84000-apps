@@ -63,6 +63,7 @@ export const InternalLinkView = ({
   );
 
   if (!editor.isEditable) {
+    // TODO: support hover cards for various entity types
     return (
       <MarkViewContent
         className={LINK_STYLE}
