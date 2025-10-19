@@ -1,4 +1,4 @@
-import { MarkViewContent, MarkViewProps, NodeViewWrapper } from '@tiptap/react';
+import { MarkViewContent, MarkViewProps } from '@tiptap/react';
 import {
   HoverCard,
   HoverCardContent,

@@ -40,7 +40,7 @@ export const internalLink: Transformer = (ctx) => {
           block.marks = [
             ...(block.marks || []),
             {
-              type: 'link',
+              type: 'internalLink',
               attrs: { href: path, entity, type },
             },
           ];

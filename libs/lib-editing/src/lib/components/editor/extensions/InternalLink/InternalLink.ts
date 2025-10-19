@@ -1,6 +1,8 @@
 import { LINK_STYLE } from '@design-system';
 import { Mark, mergeAttributes } from '@tiptap/core';
+import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
+import { InternalLinkView } from './InternalLinkView';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -53,6 +55,9 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       0,
     ];
+  },
+  addMarkView() {
+    return ReactMarkViewRenderer(InternalLinkView);
   },
   addCommands() {
     return {
