@@ -54,6 +54,8 @@ export const link: Exporter<
       return {
         ...baseAnnotation,
         type: 'internalLink',
+        linkType: mark?.attrs.type,
+        entity: mark?.attrs.entity,
       } as InternalLinkAnnotation;
     }
     case 'reference':
