@@ -65,7 +65,6 @@ export const ThreeColumnRenderer = ({
         <MainPanel>{main}</MainPanel>
         <RightPanel>{right}</RightPanel>
       </ThreeColumns>
-      ;
     </>
   );
 };
