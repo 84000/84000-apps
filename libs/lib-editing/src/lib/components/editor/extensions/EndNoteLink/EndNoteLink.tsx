@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import TranslationEditor, {
   TranslationEditorContent,
+  TranslationEditorContentItem,
 } from '../../TranslationEditor';
 import { validateAttrs } from '../../util';
 import { useSearchParams } from 'next/navigation';
@@ -74,20 +75,15 @@ export const EndNoteLink = ({
   }, [node, searchParams]);
 
   useEffect(() => {
-    const pos = getPos() || 0;
-
-    let newLabel = 1;
-    editor.state.doc.descendants((descendant, nodePos) => {
-      if (nodePos >= pos) {
-        return false;
-      }
-
-      if (descendant.type.name === node.type.name) {
-        newLabel += 1;
-      }
-    });
-    setLabel(newLabel);
-  }, [editor.state.doc, getPos, node.type.name]);
+    (async () => {
+      const [item] =
+        ((await fetch?.(
+          node.attrs.endNote,
+        )) as TranslationEditorContentItem[]) || [];
+      const label = item?.attrs?.label;
+      setLabel(label?.split('.').pop() || '*');
+    })();
+  }, [node.attrs.endNote, fetch]);
 
   useEffect(() => {
     validateAttrs({ node, editor, getPos, updateAttributes });

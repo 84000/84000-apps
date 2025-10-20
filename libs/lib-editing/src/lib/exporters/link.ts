@@ -6,11 +6,7 @@ import {
 } from '@data-access';
 import { Exporter, ExporterContext } from './export';
 
-export const LINK_TYPES: AnnotationType[] = [
-  'internalLink',
-  'link',
-  'reference',
-];
+export const LINK_TYPES: AnnotationType[] = ['link', 'reference'];
 
 export const link: Exporter<
   LinkAnnotation | InternalLinkAnnotation | ReferenceAnnotation
@@ -50,14 +46,6 @@ export const link: Exporter<
   };
 
   switch (type) {
-    case 'internalLink': {
-      return {
-        ...baseAnnotation,
-        type: 'internalLink',
-        linkType: mark?.attrs.type,
-        entity: mark?.attrs.entity,
-      } as InternalLinkAnnotation;
-    }
     case 'reference':
       // TODO: implement optional fields
       // const passage = mark?.attrs.passage;

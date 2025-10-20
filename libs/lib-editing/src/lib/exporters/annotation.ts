@@ -10,6 +10,7 @@ import { hasAbbreviation } from './has-abbreviation';
 import { heading } from './heading';
 import { image } from './image';
 import { indent } from './indent';
+import { internalLink } from './internal-link';
 import { italic } from './italic';
 import { leadingSpace } from './leading-space';
 import { line } from './line';
@@ -53,7 +54,7 @@ const EXPORTERS: Partial<
   image,
   indent,
   inlineTitle: italic,
-  internalLink: link,
+  internalLink,
   italic,
   leadingSpace,
   line,
