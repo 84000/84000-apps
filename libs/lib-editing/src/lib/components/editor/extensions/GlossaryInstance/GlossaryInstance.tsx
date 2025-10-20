@@ -1,4 +1,4 @@
-import { NodeViewContent, NodeViewProps, NodeViewWrapper } from '@tiptap/react';
+import { MarkViewContent, MarkViewProps } from '@tiptap/react';
 import {
   HoverCard,
   HoverCardContent,
@@ -8,7 +8,6 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { GlossaryTermInstance } from '@data-access';
 import { useSearchParams } from 'next/navigation';
-import { validateAttrs } from '../../util';
 import { GlossaryInstanceBody } from '../../../shared';
 
 export const GlossaryInstanceCard = ({
@@ -38,25 +37,15 @@ export const GlossaryInstanceCard = ({
   return <GlossaryInstanceBody instance={content} />;
 };
 
-export const GlossaryInstance = ({
-  node,
-  extension,
-  editor,
-  getPos,
-  updateAttributes,
-}: NodeViewProps) => {
+export const GlossaryInstance = ({ mark, extension }: MarkViewProps) => {
   const searchParams = useSearchParams();
 
   const fetch = extension.options.fetch as (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
 
-  useEffect(() => {
-    validateAttrs({ node, editor, getPos, updateAttributes });
-  }, [node, editor, getPos, updateAttributes]);
-
   const onClick = useCallback(() => {
-    if (!node.attrs.glossary) {
+    if (!mark.attrs.glossary) {
       return;
     }
 
@@ -65,24 +54,22 @@ export const GlossaryInstance = ({
     window.history.pushState(
       {},
       '',
-      `?${query.toString()}#${node.attrs.glossary}`,
+      `?${query.toString()}#${mark.attrs.glossary}`,
     );
-  }, [node, searchParams]);
+  }, [mark, searchParams]);
 
   return (
-    <NodeViewWrapper as="span">
-      <HoverCard>
-        <HoverCardTrigger>
-          <NodeViewContent
-            as="span"
-            onClick={onClick}
-            {...extension.options.HTMLAttributes}
-          />
-        </HoverCardTrigger>
-        <HoverCardContent className="w-120 lg:w-4xl max-h-100 m-2 overflow-auto">
-          <GlossaryInstanceCard uuid={node.attrs.glossary} fetch={fetch} />
-        </HoverCardContent>
-      </HoverCard>
-    </NodeViewWrapper>
+    <HoverCard>
+      <HoverCardTrigger>
+        <MarkViewContent
+          as="span"
+          onClick={onClick}
+          {...extension.options.HTMLAttributes}
+        />
+      </HoverCardTrigger>
+      <HoverCardContent className="w-120 lg:w-4xl max-h-100 m-2 overflow-auto">
+        <GlossaryInstanceCard uuid={mark.attrs.glossary} fetch={fetch} />
+      </HoverCardContent>
+    </HoverCard>
   );
 };

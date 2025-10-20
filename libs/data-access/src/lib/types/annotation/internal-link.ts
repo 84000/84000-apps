@@ -27,13 +27,17 @@ export const transformer: AnnotationTransformer = (
     if (content.label) {
       internalLink.label = content.label as string;
     }
+
+    if (content.uuid) {
+      internalLink.entity = content.uuid as string;
+    }
   });
 
   return internalLink;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { linkType, href, label, isPending } =
+  const { entity, linkType, href, label, isPending } =
     annotation as InternalLinkAnnotation;
   const dto = baseAnnotationToDto(annotation);
   dto.content = [
@@ -51,6 +55,12 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   if (label) {
     dto.content.push({
       label,
+    });
+  }
+
+  if (entity) {
+    dto.content.push({
+      uuid: entity,
     });
   }
 

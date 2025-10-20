@@ -1,7 +1,8 @@
-import { JSONContent, Node } from '@tiptap/core';
-import { ReactNodeViewRenderer } from '@tiptap/react';
+import { Mark } from '@tiptap/core';
 import { GlossaryInstance } from './GlossaryInstance';
 import { GlossaryTermInstance } from '@data-access';
+import { ReactMarkViewRenderer } from '@tiptap/react';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface GlossaryInstanceOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -17,12 +18,8 @@ declare module '@tiptap/core' {
   }
 }
 
-export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
+export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
   name: 'glossaryInstance',
-  group: 'inline',
-  content: 'inline*',
-  inline: true,
-  atom: true,
 
   addAttributes() {
     return {
@@ -70,69 +67,31 @@ export const GlossaryInstanceNode = Node.create<GlossaryInstanceOptions>({
     ];
   },
 
-  addNodeView() {
-    return ReactNodeViewRenderer(GlossaryInstance);
+  addMarkView() {
+    return ReactMarkViewRenderer(GlossaryInstance);
   },
 
   addCommands() {
     return {
       setGlossaryInstance:
         (glossary) =>
-        ({ commands, state }) => {
-          const { from, to } = state.selection;
-          const slice = state.doc.slice(from, to);
-
-          // Extract content with marks preserved
-          const content: JSONContent[] = [];
-          slice.content.forEach((node) => {
-            if (node.isText) {
-              content.push({
-                type: 'text',
-                text: node.text,
-                marks: node.marks.map((mark) => ({
-                  type: mark.type.name,
-                  attrs: mark.attrs,
-                })),
-              });
-            } else if (node.isInline) {
-              // Handle other inline nodes if needed
-              content.push(node.toJSON());
-            }
-          });
-
-          return commands.insertContentAt(
-            { from, to },
-            {
-              type: this.name,
-              attrs: { glossary },
-              content: content.length > 0 ? content : [],
-            },
-          );
+        ({ chain }) => {
+          return chain()
+            .setMark(this.name)
+            .updateAttributes(this.name, {
+              glossary,
+              uuid: uuidv4(),
+            })
+            .run();
         },
 
       unsetGlossaryInstance:
         () =>
-        ({ commands, state }) => {
-          const { from } = state.selection;
-          const $pos = state.doc.resolve(from);
-
-          // get the parent node or the node at this position
-          const node = $pos.parent;
-          const nodeStart = $pos.before();
-          const nodeEnd = $pos.after();
-
-          if (node.type.name !== this.name) {
-            return false;
-          }
-
-          const text = node.textContent;
-          const marks = node.marks;
-
-          return commands.insertContentAt(
-            { from: nodeStart, to: nodeEnd },
-            state.schema.text(text, marks),
-            { updateSelection: true },
-          );
+        ({ chain }) => {
+          return chain()
+            .unsetMark(this.name)
+            .resetAttributes(this.name, 'glossary')
+            .run();
         },
     };
   },

@@ -1,10 +1,14 @@
 'use client';
 
 import {
+  BibliographyEntryItem,
   createBrowserClient,
+  getBibliographyEntry,
   getGlossaryInstance,
   getPassage,
+  getTranslationMetadataByUuid,
   GlossaryTermInstance,
+  Work,
 } from '@data-access';
 import {
   createContext,
@@ -35,10 +39,15 @@ interface NavigationState {
     tab: string;
     uuid: string;
   }) => string;
+  fetchBibliographyEntry: (
+    uuid: string,
+  ) => Promise<BibliographyEntryItem | undefined>;
   fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
   fetchGlossaryTerm: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
+  fetchPassage: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetchWork: (uuid: string) => Promise<Work | undefined>;
 }
 
 const DEFAULT_PANELS: PanelsState = {
@@ -56,10 +65,19 @@ export const NavigationContext = createContext<NavigationState>({
   createHashLink: () => {
     throw new Error('Not implemented');
   },
+  fetchBibliographyEntry: async () => {
+    throw new Error('Not implemented');
+  },
   fetchEndNote: async () => {
     throw new Error('Not implemented');
   },
   fetchGlossaryTerm: async () => {
+    throw new Error('Not implemented');
+  },
+  fetchPassage: async () => {
+    throw new Error('Not implemented');
+  },
+  fetchWork: async () => {
     throw new Error('Not implemented');
   },
 });
@@ -68,8 +86,34 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const client = createBrowserClient();
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
-  const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
+  const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
+    {},
+  );
   const endnoteCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+  const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
+  const passageCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+  const workCache = useRef<{ [uuid: string]: Work }>({});
+
+  const fetchBibliographyEntry = useCallback(
+    async (uuid: string): Promise<BibliographyEntryItem | undefined> => {
+      if (!bibliographyCache.current) {
+        bibliographyCache.current = {};
+      }
+
+      if (bibliographyCache.current[uuid]) {
+        return bibliographyCache.current[uuid];
+      }
+
+      const entry = await getBibliographyEntry({ client, uuid });
+      if (!entry) {
+        return undefined;
+      }
+
+      bibliographyCache.current[uuid] = entry;
+      return entry;
+    },
+    [client],
+  );
 
   const fetchEndNote = useCallback(
     async (uuid: string): Promise<TranslationEditorContent | undefined> => {
@@ -110,6 +154,49 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
       glossaryCache.current[uuid] = term;
       return term;
+    },
+    [client],
+  );
+
+  const fetchPassage = useCallback(
+    async (uuid: string): Promise<TranslationEditorContent | undefined> => {
+      if (!passageCache.current) {
+        passageCache.current = {};
+      }
+
+      if (passageCache.current[uuid]) {
+        return [passageCache.current[uuid]];
+      }
+
+      const passage = await getPassage({ client, uuid });
+      if (!passage) {
+        return undefined;
+      }
+
+      const block = blockFromPassage(passage);
+      passageCache.current[uuid] = block;
+      return [block];
+    },
+    [client],
+  );
+
+  const fetchWork = useCallback(
+    async (uuid: string): Promise<Work | undefined> => {
+      if (!workCache.current) {
+        workCache.current = {};
+      }
+
+      if (workCache.current[uuid]) {
+        return workCache.current[uuid];
+      }
+
+      const work = await getTranslationMetadataByUuid({ client, uuid });
+      if (!work) {
+        return undefined;
+      }
+
+      workCache.current[uuid] = work;
+      return work;
     },
     [client],
   );
@@ -195,8 +282,11 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         panels,
         updatePanel,
         createHashLink,
+        fetchBibliographyEntry,
         fetchEndNote,
         fetchGlossaryTerm,
+        fetchPassage,
+        fetchWork,
       }}
     >
       {children}

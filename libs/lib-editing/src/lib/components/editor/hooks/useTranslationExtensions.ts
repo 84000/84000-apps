@@ -36,6 +36,7 @@ import { Superscript } from '../extensions/Superscript';
 import { SmallCaps } from '../extensions/SmallCaps';
 import { Italic } from '../extensions/Italic';
 import { Indent } from '../extensions/Indent';
+import { InternalLink } from '../extensions/InternalLink';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
@@ -111,6 +112,7 @@ export const useTranslationExtensions = ({
     Heading,
     Image,
     Indent,
+    InternalLink,
     Italic,
     LeadingSpace,
     LineGroupNode,

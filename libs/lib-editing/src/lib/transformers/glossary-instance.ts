@@ -5,8 +5,7 @@ import { splitContent } from './split-content';
 
 export const glossaryInstance: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { uuid, glossary, start, end } =
-    annotation as GlossaryInstanceAnnotation;
+  const { uuid, glossary } = annotation as GlossaryInstanceAnnotation;
 
   if (!glossary) {
     console.warn(`Glossary instance ${uuid} is missing glossary UUID`);
@@ -22,16 +21,16 @@ export const glossaryInstance: Transformer = (ctx) => {
         ...ctx,
         transform: (ctx) => {
           const { block } = ctx;
-          const text = block.text;
-          block.type = 'glossaryInstance';
-          block.attrs = {
-            ...block.attrs,
-            start,
-            end,
-            uuid,
-            glossary,
-          };
-          block.content = [{ type: 'text', text, marks: block.marks }];
+          block.marks = [
+            ...(block.marks || []),
+            {
+              type: 'glossaryInstance',
+              attrs: {
+                glossary,
+                uuid,
+              },
+            },
+          ];
         },
       });
     },

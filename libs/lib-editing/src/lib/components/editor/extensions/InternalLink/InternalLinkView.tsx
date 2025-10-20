@@ -6,15 +6,25 @@ import {
   LINK_STYLE,
 } from '@design-system';
 import { MarkViewContent, MarkViewProps } from '@tiptap/react';
-import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import Link from 'next/link';
+import {
+  ChevronRightIcon,
+  FileSymlinkIcon,
+  GlobeIcon,
+  PencilIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { findMarkRange } from '../../util';
-import { HoverInputField } from '../HoverInputField';
+import Link from 'next/link';
+import { InternalLinkInput } from './InternalLinkInput';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
-export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
+export const InternalLinkView = ({
+  mark,
+  editor,
+  updateAttributes,
+}: MarkViewProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -36,19 +46,24 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
     }, EDITOR_UPDATE_DELAY_MS);
   }, [mark, editor]);
 
-  const updateLink = useCallback(
-    (href: string) => {
+  const updateValues = useCallback(
+    (type: string, entity: string) => {
       setIsOpen(false);
       setIsEditing(false);
 
       setTimeout(() => {
-        updateAttributes?.({ href });
+        updateAttributes?.({
+          type,
+          entity,
+          href: `/entity/${type}/${entity}`,
+        });
       }, EDITOR_UPDATE_DELAY_MS);
     },
     [updateAttributes],
   );
 
   if (!editor.isEditable) {
+    // TODO: support hover cards for various entity types
     return (
       <MarkViewContent
         className={LINK_STYLE}
@@ -74,17 +89,15 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
       </HoverCardTrigger>
       <HoverCardContent
         align="start"
-        className="flex justify-between gap-2 p-2 w-fit max-w-72"
+        className="flex justify-between gap-2 p-2 w-fit max-w-80"
       >
         {isEditing ? (
-          <HoverInputField
-            type="link"
-            attr="href"
-            valueRef={mark.attrs.href}
-            placeholder="Add link..."
-            onSubmit={(value) => {
-              if (value) {
-                updateLink(value);
+          <InternalLinkInput
+            type={mark.attrs.type}
+            uuid={mark.attrs.entity}
+            onSubmit={(type, uuid) => {
+              if (type && uuid) {
+                updateValues(type, uuid);
               } else {
                 deleteLink();
               }
@@ -93,9 +106,12 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
           />
         ) : (
           <>
-            <GlobeIcon className="text-muted-foreground my-auto size-4" />
+            <span className="text-muted-foreground text-sm my-auto">
+              {mark.attrs.type}
+            </span>
+            <ChevronRightIcon className="my-auto size-4" />
             <span className="truncate text-muted-foreground text-sm my-auto">
-              {mark.attrs.href}
+              {mark.attrs.entity}
             </span>
             <span className="flex-grow" />
             <Button

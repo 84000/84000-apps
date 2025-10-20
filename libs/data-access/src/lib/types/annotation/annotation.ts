@@ -75,8 +75,8 @@ export type InternalLinkAnnotation = AnnotationBase & {
   linkType: string;
   href?: string;
   label?: string;
-  uuid?: string;
-  isPending: boolean;
+  entity?: string;
+  isPending?: boolean;
 };
 
 export type LeadingSpaceAnnotation = AnnotationBase & {
