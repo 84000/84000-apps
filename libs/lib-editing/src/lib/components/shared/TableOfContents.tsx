@@ -108,7 +108,7 @@ export const TableOfContentsSection = ({
 };
 
 export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
-  const { toh, setToh } = useNavigation();
+  const { toh, imprint, setToh } = useNavigation();
   const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
     work.toh[0] || '',
   );
@@ -213,7 +213,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
           {parseToh(localToh || '')}
         </div>
       )}
-      <div className={baseStyle}>{work.section}</div>
+      <div className={baseStyle}>{imprint?.section || work.section}</div>
       <Separator className="my-4" />
       <div className="pb-2 text-sm uppercase text-slate">Front Matter</div>
       <TableOfContentsSection node={frontMatter} panel="left" />

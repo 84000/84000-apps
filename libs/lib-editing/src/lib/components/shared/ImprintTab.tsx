@@ -13,7 +13,7 @@ export const ImprintTab = ({ imprint }: { imprint?: Imprint }) => {
   return (
     <LabeledElement label="im.">
       <H2>Imprint</H2>
-      <div className="flex flex-col gap-4 text-center text-muted-foreground">
+      <div className="flex flex-col gap-5 text-center text-muted-foreground">
         {publishYear && <p>First published {publishYear}</p>}
         {version && <p>Current version v {version}</p>}
         {publisherStatement && <p>{publisherStatement}</p>}

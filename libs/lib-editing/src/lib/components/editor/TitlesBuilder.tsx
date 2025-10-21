@@ -1,6 +1,6 @@
 'use client';
 
-import { Titles as TitlesData, TohokuCatalogEntry } from '@data-access';
+import { Imprint, Titles as TitlesData } from '@data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorProvider';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
@@ -8,10 +8,10 @@ import { Titles } from '@design-system';
 
 export const TitlesBuilder = ({
   titles,
-  toh,
+  imprint,
 }: {
   titles: TitlesData;
-  toh?: TohokuCatalogEntry;
+  imprint?: Imprint;
 }) => {
   const [isEditable, setIsEditable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export const TitlesBuilder = ({
   }, [loading, canEdit]);
 
   return !loading ? (
-    <Titles titles={titles} toh={toh} canEdit={isEditable} />
+    <Titles titles={titles} imprint={imprint} canEdit={isEditable} />
   ) : (
     <TranslationSkeleton />
   );

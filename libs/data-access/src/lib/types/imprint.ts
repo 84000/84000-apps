@@ -5,6 +5,7 @@ import { SemVer } from './semver';
 export type Imprint = {
   uuid: string;
   toh: string;
+  section?: string;
   version?: SemVer;
   publishYear?: string;
   tibetanAuthors?: string;
@@ -23,6 +24,7 @@ export type Imprint = {
 export type ImprintDTO = {
   work_uuid: string;
   toh: string;
+  section?: string;
   version?: SemVer;
   publishYear?: string;
   tibetanAuthors?: string;
@@ -42,6 +44,7 @@ export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
   return {
     uuid: dto.work_uuid,
     toh: dto.toh,
+    section: dto.section,
     version: dto.version,
     publishYear: dto.publishYear,
     tibetanAuthors: dto.tibetanAuthors,
