@@ -10,6 +10,7 @@ import {
   workFromDTO,
   Translation,
   Passages,
+  tocFromDTO,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -100,7 +101,8 @@ export const getTranslationMetadataByUuid = async ({
       publicationDate,
       publicationVersion,
       pages:source_pages,
-      restriction
+      restriction,
+      breadcrumb
     `,
     )
     .eq('uuid', uuid)
@@ -126,7 +128,8 @@ export const getTranslationMetadataByToh = async ({
       publicationDate,
       publicationVersion,
       pages:source_pages,
-      restriction
+      restriction,
+      breadcrumb
     `,
     )
     .eq('toh', toh)
@@ -203,4 +206,18 @@ export const getTranslationByUuid = async ({
     glossary,
     bibliography,
   };
+};
+
+export const getTranslationToc = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}) => {
+  const { data } = await client.rpc('get_work_toc', {
+    work_uuid_input: uuid,
+  });
+
+  return tocFromDTO(data || []);
 };

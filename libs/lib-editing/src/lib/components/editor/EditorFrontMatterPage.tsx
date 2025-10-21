@@ -4,6 +4,8 @@ import {
   createBrowserClient,
   FRONT_MATTER_FILTER,
   getTranslationPassages,
+  getTranslationToc,
+  Toc,
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { FrontMatterPanel } from '../shared/FrontMatterPanel';
@@ -15,6 +17,7 @@ import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 export const EditorFrontMatterPage = () => {
   const { work } = useEditorState();
   const [summary, setSummary] = useState<TranslationEditorContent>();
+  const [toc, setToc] = useState<Toc>();
 
   useEffect(() => {
     (async () => {
@@ -26,16 +29,21 @@ export const EditorFrontMatterPage = () => {
       });
       const summary = blocksFromTranslationBody(passages);
       setSummary(summary);
+
+      const toc = await getTranslationToc({ client, uuid: work.uuid });
+      setToc(toc);
     })();
   }, [work.uuid]);
 
-  if (!summary) {
+  if (!summary || !toc) {
     return <TranslationSkeleton />;
   }
 
   return (
     <FrontMatterPanel
       summary={summary}
+      toc={toc}
+      work={work}
       renderTranslation={({ content, name, className }) => (
         <TranslationBuilder
           content={content}

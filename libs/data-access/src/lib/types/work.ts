@@ -9,6 +9,7 @@ export type Work = {
   publicationVersion: SemVer;
   pages: number;
   restriction: boolean;
+  section: string;
 };
 
 export type WorkDTO = {
@@ -19,6 +20,7 @@ export type WorkDTO = {
   publicationVersion: string;
   pages: number;
   restriction: boolean;
+  breadcrumb: string;
 };
 
 export function workFromDTO(dto: WorkDTO): Work {
@@ -30,5 +32,6 @@ export function workFromDTO(dto: WorkDTO): Work {
     publicationVersion: dto.publicationVersion as SemVer,
     pages: dto.pages,
     restriction: dto.restriction,
+    section: dto.breadcrumb.split('>')[1]?.trim() || '',
   };
 }
