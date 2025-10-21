@@ -226,9 +226,12 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
-  const parsePanelParams = useCallback((): PanelsState => {
+  const parsePanelParams = useCallback((): {
+    toh?: TohokuCatalogEntry;
+    panels: PanelsState;
+  } => {
     const params = new URLSearchParams(window.location.search);
-    const result: PanelsState = { ...DEFAULT_PANELS };
+    const panels: PanelsState = { ...DEFAULT_PANELS };
 
     for (const [key, value] of params.entries()) {
       const match = value.match(/^(open|closed)(?::(.+))?$/);
@@ -238,14 +241,16 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         if (!PANEL_NAMES.includes(panelKey)) {
           continue;
         }
-        result[panelKey] = {
+        panels[panelKey] = {
           open: state === 'open',
           tab: tab as TabName | undefined,
         };
       }
     }
 
-    return result;
+    const toh = (params.get('toh') as TohokuCatalogEntry) || undefined;
+
+    return { toh, panels };
   }, []);
 
   const createHashLink = useCallback(
@@ -288,8 +293,11 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   }, [toh]);
 
   useEffect(() => {
-    const newPanels = parsePanelParams();
+    const { panels: newPanels, toh: newToh } = parsePanelParams();
+
     setPanels(newPanels);
+    setToh(newToh);
+
     scrollToHash({
       delay: 100,
     });

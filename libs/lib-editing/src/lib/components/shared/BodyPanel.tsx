@@ -22,7 +22,7 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useNavigation();
+  const { panels, toh, updatePanel } = useNavigation();
 
   return (
     <Tabs
@@ -43,7 +43,9 @@ export const BodyPanel = ({
       <TabsContent value="translation">
         <div className="w-full">
           {renderHeader?.()}
-          <div className="ms-12 mt-12 mb-8">{renderTitles({ titles })}</div>
+          <div className="ms-12 mt-12 mb-8">
+            {renderTitles({ titles, toh })}
+          </div>
           {renderTranslation({
             content: body,
             className: 'block',
