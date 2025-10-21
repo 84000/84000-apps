@@ -13,7 +13,7 @@ export const getTranslationToc = async ({
 
   if (error) {
     console.error('Error fetching TOC:', error);
-    return [];
+    return undefined;
   }
 
   return tocFromDTO(data || []);

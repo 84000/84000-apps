@@ -11,7 +11,7 @@ export const ReaderFrontMatterPanel = ({
   work,
 }: {
   summary: TranslationEditorContent;
-  toc: Toc;
+  toc?: Toc;
   work: Work;
 }) => {
   return (

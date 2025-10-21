@@ -16,7 +16,7 @@ export const FrontMatterPanel = ({
   renderTranslation,
 }: {
   summary: TranslationEditorContent;
-  toc: Toc;
+  toc?: Toc;
   work: Work;
   renderTranslation: (
     params: TranslationRenderer,

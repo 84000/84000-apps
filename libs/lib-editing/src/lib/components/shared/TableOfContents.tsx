@@ -107,7 +107,7 @@ export const TableOfContentsSection = ({
   );
 };
 
-export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
+export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
   const { toh, imprint, setToh } = useNavigation();
   const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
     work.toh[0] || '',
@@ -134,7 +134,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
         section: 'imprint',
         children: [],
       },
-      ...toc.frontMatter,
+      ...(toc?.frontMatter || []),
     ],
   };
   const body: TocEntry = {
@@ -143,7 +143,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
     sort: 0,
     level: 0,
     section: 'introduction',
-    children: toc.body,
+    children: toc?.body || [],
   };
   const backMatter: TocEntry = {
     uuid: 'back-matter',
@@ -152,7 +152,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
     level: 0,
     section: 'endnotes',
     children: [
-      ...toc.backMatter,
+      ...(toc?.backMatter || []),
       {
         uuid: 'glossary',
         content: 'Glossary',
