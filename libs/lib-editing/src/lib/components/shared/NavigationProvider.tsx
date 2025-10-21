@@ -6,8 +6,10 @@ import {
   getBibliographyEntry,
   getGlossaryInstance,
   getPassage,
+  getTranslationImprint,
   getTranslationMetadataByUuid,
   GlossaryTermInstance,
+  Imprint,
   TohokuCatalogEntry,
   Work,
 } from '@data-access';
@@ -33,6 +35,8 @@ import {
 } from './types';
 
 interface NavigationState {
+  uuid: string;
+  imprint?: Imprint;
   panels: PanelsState;
   toh?: TohokuCatalogEntry;
   setToh: (toh: TohokuCatalogEntry) => void;
@@ -54,13 +58,13 @@ interface NavigationState {
 }
 
 const DEFAULT_PANELS: PanelsState = {
-  // TODO: default to toc when available
-  left: { open: true, tab: 'summary' },
+  left: { open: true, tab: 'toc' },
   right: { open: true, tab: 'endnotes' },
   main: { open: true, tab: 'translation' },
 };
 
 export const NavigationContext = createContext<NavigationState>({
+  uuid: '',
   panels: DEFAULT_PANELS,
   updatePanel: () => {
     throw new Error('Not implemented');
@@ -88,11 +92,18 @@ export const NavigationContext = createContext<NavigationState>({
   },
 });
 
-export const NavigationProvider = ({ children }: { children: ReactNode }) => {
+export const NavigationProvider = ({
+  uuid,
+  children,
+}: {
+  uuid: string;
+  children: ReactNode;
+}) => {
   const client = createBrowserClient();
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
-  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(undefined);
+  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
+  const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
   );
@@ -226,9 +237,12 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
-  const parsePanelParams = useCallback((): PanelsState => {
+  const parsePanelParams = useCallback((): {
+    toh?: TohokuCatalogEntry;
+    panels: PanelsState;
+  } => {
     const params = new URLSearchParams(window.location.search);
-    const result: PanelsState = { ...DEFAULT_PANELS };
+    const panels: PanelsState = { ...DEFAULT_PANELS };
 
     for (const [key, value] of params.entries()) {
       const match = value.match(/^(open|closed)(?::(.+))?$/);
@@ -238,14 +252,16 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         if (!PANEL_NAMES.includes(panelKey)) {
           continue;
         }
-        result[panelKey] = {
+        panels[panelKey] = {
           open: state === 'open',
           tab: tab as TabName | undefined,
         };
       }
     }
 
-    return result;
+    const toh = (params.get('toh') as TohokuCatalogEntry) || undefined;
+
+    return { toh, panels };
   }, []);
 
   const createHashLink = useCallback(
@@ -288,8 +304,27 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   }, [toh]);
 
   useEffect(() => {
-    const newPanels = parsePanelParams();
-    setPanels(newPanels);
+    if (!uuid || !toh) {
+      return;
+    }
+
+    (async () => {
+      const imprint = await getTranslationImprint({ client, uuid, toh });
+      setImprint(imprint);
+    })();
+  }, [uuid, toh, client]);
+
+  useEffect(() => {
+    const { panels: newPanels, toh: newToh } = parsePanelParams();
+
+    if (newPanels) {
+      setPanels(newPanels);
+    }
+
+    if (newToh) {
+      setToh(newToh);
+    }
+
     scrollToHash({
       delay: 100,
     });
@@ -298,6 +333,8 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   return (
     <NavigationContext.Provider
       value={{
+        uuid,
+        imprint,
         panels,
         toh,
         setToh,

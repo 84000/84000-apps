@@ -204,7 +204,7 @@ export const EditorContextProvider = ({
         stopObserving,
       }}
     >
-      <NavigationProvider>{children}</NavigationProvider>
+      <NavigationProvider uuid={work.uuid}>{children}</NavigationProvider>
     </EditorContext.Provider>
   );
 };

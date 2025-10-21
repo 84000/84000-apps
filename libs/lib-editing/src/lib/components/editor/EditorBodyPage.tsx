@@ -46,7 +46,9 @@ export const EditorBodyPage = () => {
       titles={titles}
       body={body}
       renderHeader={() => <EditorHeader />}
-      renderTitles={({ titles }) => <TitlesBuilder titles={titles} />}
+      renderTitles={({ titles, imprint }) => (
+        <TitlesBuilder titles={titles} imprint={imprint} />
+      )}
       renderTranslation={({ content, name, className }) => (
         <TranslationBuilder
           content={content}

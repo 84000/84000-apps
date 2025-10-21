@@ -17,7 +17,9 @@ export const ReaderBodyPanel = ({
     <BodyPanel
       titles={titles}
       body={body}
-      renderTitles={({ titles }) => <Titles titles={titles} />}
+      renderTitles={({ titles, imprint }) => (
+        <Titles titles={titles} imprint={imprint} />
+      )}
       renderTranslation={({ content, name, className }) => (
         <TranslationReader
           content={content}

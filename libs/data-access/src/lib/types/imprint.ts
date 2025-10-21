@@ -1,48 +1,62 @@
-import { Contributors, ContributorsDTO } from './contributor';
+import { TranslationLanguage } from './language';
 import { BACK_MATTER, BODY_MATTER, FRONT_MATTER } from './passage';
 import { SemVer } from './semver';
 
 export type Imprint = {
   uuid: string;
-  publisher: string;
-  description: string;
-  contributors: Contributors;
-  publicationDate: string;
-  englishTranslator: string;
-  publicationStatus: string;
-  publicationVersion: SemVer;
+  toh: string;
+  section?: string;
+  version?: SemVer;
+  publishYear?: string;
+  tibetanAuthors?: string;
+  sourceDescription?: string;
+  publisherStatement?: string;
+  tibetanTranslators?: string;
+  license: {
+    link?: string;
+    name?: string;
+    description?: string;
+  };
+  mainTitles?: Partial<{ [key in TranslationLanguage]: string }>;
+  longTitles?: Partial<{ [key in TranslationLanguage]: string }>;
 };
-
-export type Imprints = Imprint[];
 
 export type ImprintDTO = {
-  uuid: string;
-  publisher: string;
-  description: string;
-  contributors: ContributorsDTO;
-  publicationdate: string;
-  englishtranslator: string;
-  publicationstatus: string;
-  publicationversion: SemVer;
+  work_uuid: string;
+  toh: string;
+  section?: string;
+  version?: SemVer;
+  publishYear?: string;
+  tibetanAuthors?: string;
+  sourceDescription?: string;
+  publisherStatement?: string;
+  tibetanTranslators?: string;
+  license: {
+    link?: string;
+    name?: string;
+    description?: string;
+  };
+  mainTitles?: Partial<{ [key in TranslationLanguage]: string }>;
+  longTitles?: Partial<{ [key in TranslationLanguage]: string }>;
 };
-
-export type ImprintsDTO = ImprintDTO[];
 
 export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
   return {
-    uuid: dto.uuid,
-    publisher: dto.publisher,
-    description: dto.description,
-    contributors: dto.contributors,
-    publicationDate: dto.publicationdate,
-    englishTranslator: dto.englishtranslator,
-    publicationStatus: dto.publicationstatus,
-    publicationVersion: dto.publicationversion,
+    uuid: dto.work_uuid,
+    toh: dto.toh,
+    section: dto.section,
+    version: dto.version,
+    publishYear: dto.publishYear,
+    tibetanAuthors: dto.tibetanAuthors,
+    sourceDescription: dto.sourceDescription,
+    publisherStatement: dto.publisherStatement,
+    tibetanTranslators: dto.tibetanTranslators,
+    license: {
+      ...dto.license,
+    },
+    mainTitles: dto.mainTitles,
+    longTitles: dto.longTitles,
   };
-};
-
-export const imprintsFromDTO = (dto?: ImprintsDTO): Imprints => {
-  return dto?.map(imprintFromDTO) || [];
 };
 
 const ALL_SECTIONS = [...FRONT_MATTER, ...BODY_MATTER, ...BACK_MATTER];

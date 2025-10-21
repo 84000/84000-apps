@@ -1,42 +1,42 @@
-import {
-  BO_TITLE_PREFIX,
-  ExtendedTranslationLanguage,
-  Title,
-  Titles,
-} from '@data-access';
+import { BO_TITLE_PREFIX, Imprint, TranslationLanguage } from '@data-access';
 import { TitlesCard } from './TitlesCard';
-import { cn, parseToh } from '@lib-utils';
-
-const LANGUAGE_ORDER: ExtendedTranslationLanguage[] = [
-  'bo',
-  'Bo-Ltn',
-  'en',
-  'Sa-Ltn',
-  'Pi-Ltn',
-  'zh',
-  'ja',
-];
+import { cn } from '@lib-utils';
+import { Skeleton } from '../../Skeleton/Skeleton';
 
 const DOT = `·` as const;
 
-const sortLanguages = (a: Title, b: Title) =>
-  LANGUAGE_ORDER.indexOf(a.language) - LANGUAGE_ORDER.indexOf(b.language);
+const LongTitle = ({
+  title,
+  language,
+}: {
+  title: string;
+  language: TranslationLanguage;
+}) => {
+  const textStyle = ['Sa-Ltn', 'Bo-Ltn'].includes(language) ? 'italic' : '';
+  const textSize = ['bo'].includes(language)
+    ? 'text-lg font-semibold'
+    : 'text-sm';
+  return <div className={cn('py-1.5', textStyle, textSize)}>{title}</div>;
+};
 
-export const LongTitles = ({ titles }: { titles: Titles }) => {
-  const mainTitles = titles.filter((t) => t.type === 'mainTitle');
-  const mainBoTitle = mainTitles.find((t) => t.language === 'bo')?.title || '';
-  const mainEnTitle = mainTitles.find((t) => t.language === 'en')?.title || '';
-  const mainSaTitle =
-    mainTitles.find((t) => t.language === 'Sa-Ltn')?.title || '';
+export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
+  if (!imprint) {
+    return <Skeleton className="h-48 w-full" />;
+  }
 
-  const longTitles = titles
-    .filter((t) => t.type === 'longTitle')
-    .sort(sortLanguages);
+  const { mainTitles, longTitles, toh } = imprint;
 
-  const toh = parseToh(titles.find((t) => t.type === 'toh')?.title || '');
+  const mainBoTitle = mainTitles?.bo || '';
+  const mainEnTitle = mainTitles?.en || '';
+  const mainSaTitle = mainTitles?.['Sa-Ltn'] || '';
+  const mainBoLtnTitle = mainTitles?.['Bo-Ltn'] || '';
+
+  const longBoLtnTitle = longTitles?.['Bo-Ltn'] || mainBoLtnTitle;
+
+  const translators = imprint?.tibetanTranslators?.split(',') || [];
 
   return (
-    <div className="py-8 mx-auto max-w-2xl flex flex-col gap-4 w-full">
+    <div className="pt-8 pb-16 px-4 mx-auto max-w-2xl flex flex-col gap-1 w-full text-center text-sm font-serif">
       <TitlesCard
         header={`${BO_TITLE_PREFIX}${mainBoTitle}`}
         main={mainEnTitle}
@@ -45,21 +45,30 @@ export const LongTitles = ({ titles }: { titles: Titles }) => {
         hasMore={false}
       />
       <div className="h-8" />
-      {longTitles.map((t) => {
-        const textStyle = ['Sa-Ltn', 'Pi-Ltn'].includes(t.language)
-          ? 'italic'
-          : '';
-        const textSize = ['bo'].includes(t.language) ? 'text-lg' : 'text-sm';
-        return (
-          <div key={t.uuid} className="px-4">
-            <div className={cn('font-serif text-center', textStyle, textSize)}>
-              {t.title}
-            </div>
+      {longTitles?.bo && <LongTitle title={longTitles.bo} language="bo" />}
+      {longBoLtnTitle && <LongTitle title={longBoLtnTitle} language="Bo-Ltn" />}
+      {longTitles?.en && <LongTitle title={longTitles.en} language="en" />}
+      {longTitles?.['Sa-Ltn'] && (
+        <LongTitle title={longTitles['Sa-Ltn']} language="Sa-Ltn" />
+      )}
+      {toh && <div className="pt-8">{`${DOT} ${toh} ${DOT}`}</div>}
+      {imprint.sourceDescription && <div>{imprint.sourceDescription}</div>}
+      {translators.length && (
+        <>
+          <div className="pt-5 pb-1 uppercase text-xs">
+            Translated into Tibetan by
           </div>
-        );
-      })}
-      {toh && (
-        <div className="pt-8 px-4 font-serif text-center">{`${DOT} ${toh} ${DOT}`}</div>
+
+          <div className="flex gap-x-2 mx-auto flex-wrap justify-center">
+            <span>{DOT}</span>
+            {translators.map((translator) => (
+              <>
+                <span key={translator}>{translator.trim()}</span>
+                <span>{DOT}</span>
+              </>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

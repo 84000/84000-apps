@@ -2,12 +2,11 @@
 
 import {
   BO_TITLE_PREFIX,
+  Imprint,
   Titles as TitlesData,
   TitleType,
-  TohokuCatalogEntry,
 } from '@data-access';
 import { TitlesCard } from './TitlesCard';
-import { parseToh } from '@lib-utils';
 import {
   Dialog,
   DialogContent,
@@ -23,12 +22,12 @@ type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
 export const Titles = ({
   titles,
   variant = 'english',
-  toh,
+  imprint,
   canEdit = false,
 }: {
   titles: TitlesData;
+  imprint?: Imprint;
   variant?: TitlesVariant;
-  toh?: TohokuCatalogEntry;
   canEdit?: boolean;
 }) => {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -55,15 +54,18 @@ export const Titles = ({
     default:
       {
         const mainTitles = titlesByType['mainTitle'] || [];
-        header = mainTitles.find((t) => t.language === 'bo')?.title || '';
-        if (header) {
-          header = `${BO_TITLE_PREFIX}${header}`;
-        }
+        const boMain =
+          imprint?.section ||
+          mainTitles.find((t) => t.language === 'bo')?.title;
+        header = imprint?.section || `${BO_TITLE_PREFIX}${boMain || '...'}`;
         main =
+          imprint?.mainTitles?.en ||
           mainTitles.find((t) => t.language === 'en')?.title ||
           mainTitles[0]?.title ||
           '';
-        footer = toh ? parseToh(toh) : titlesByType['toh']?.[0]?.title || '';
+        footer = imprint?.toh
+          ? imprint.toh
+          : titlesByType['toh']?.[0]?.title || '';
       }
       break;
   }
@@ -75,6 +77,7 @@ export const Titles = ({
         main={main}
         footer={footer}
         canEdit={canEdit}
+        hasMore={!!imprint}
         onMore={() => setIsMoreOpen(true)}
         onEdit={() => setIsEditOpen(true)}
       />
@@ -82,7 +85,7 @@ export const Titles = ({
         <DialogContent className="max-w-4xl" showCloseButton={false}>
           <DialogTitle className="hidden">All Titles</DialogTitle>
           <DialogDescription className="hidden">All Titles</DialogDescription>
-          <LongTitles titles={titles} />
+          <LongTitles imprint={imprint} />
         </DialogContent>
       </Dialog>
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

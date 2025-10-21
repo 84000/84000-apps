@@ -32,6 +32,6 @@ export function workFromDTO(dto: WorkDTO): Work {
     publicationVersion: dto.publicationVersion as SemVer,
     pages: dto.pages,
     restriction: dto.restriction,
-    section: dto.breadcrumb?.split('>')[1]?.trim() || '',
+    section: dto.breadcrumb?.split('>').at(-2)?.trim() || '',
   };
 }

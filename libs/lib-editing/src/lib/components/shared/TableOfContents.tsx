@@ -107,17 +107,15 @@ export const TableOfContentsSection = ({
   );
 };
 
-export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
-  const { toh, setToh } = useNavigation();
-  const [localToh, setLocalToh] = useState<TohokuCatalogEntry>();
+export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
+  const { toh, imprint, setToh } = useNavigation();
+  const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
+    work.toh[0] || '',
+  );
 
   useEffect(() => {
     const currentToh = toh || work.toh[0] || '';
     setLocalToh(currentToh);
-
-    if (!toh) {
-      setToh(currentToh);
-    }
   }, [toh, work.toh, setToh]);
 
   const baseStyle = 'w-full py-2 font-normal leading-6 text-sm text-primary';
@@ -136,7 +134,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
         section: 'imprint',
         children: [],
       },
-      ...toc.frontMatter,
+      ...(toc?.frontMatter || []),
     ],
   };
   const body: TocEntry = {
@@ -145,7 +143,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
     sort: 0,
     level: 0,
     section: 'introduction',
-    children: toc.body,
+    children: toc?.body || [],
   };
   const backMatter: TocEntry = {
     uuid: 'back-matter',
@@ -154,7 +152,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
     level: 0,
     section: 'endnotes',
     children: [
-      ...toc.backMatter,
+      ...(toc?.backMatter || []),
       {
         uuid: 'glossary',
         content: 'Glossary',
@@ -215,7 +213,7 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
           {parseToh(localToh || '')}
         </div>
       )}
-      <div className={baseStyle}>{work.section}</div>
+      <div className={baseStyle}>{imprint?.section || work.section}</div>
       <Separator className="my-4" />
       <div className="pb-2 text-sm uppercase text-slate">Front Matter</div>
       <TableOfContentsSection node={frontMatter} panel="left" />

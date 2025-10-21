@@ -22,7 +22,7 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useNavigation();
+  const { panels, imprint, updatePanel } = useNavigation();
 
   return (
     <Tabs
@@ -33,7 +33,7 @@ export const BodyPanel = ({
       }}
       data-position="main"
       defaultValue="translation"
-      className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
+      className="px-8 pb-[var(--header-height)] max-w-5xl w-full mx-auto mb-[var(--header-height)]"
     >
       <TabsList className="sticky top-3 mx-auto -mt-13 z-10">
         <TabsTrigger value="translation">Translation</TabsTrigger>
@@ -43,7 +43,9 @@ export const BodyPanel = ({
       <TabsContent value="translation">
         <div className="w-full">
           {renderHeader?.()}
-          <div className="ms-12 mt-12 mb-8">{renderTitles({ titles })}</div>
+          <div className="ms-12 mt-12 mb-8">
+            {renderTitles({ titles, imprint })}
+          </div>
           {renderTranslation({
             content: body,
             className: 'block',

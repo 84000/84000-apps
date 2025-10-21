@@ -1,12 +1,18 @@
 'use client';
 
-import { Titles as TitlesData } from '@data-access';
+import { Imprint, Titles as TitlesData } from '@data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorProvider';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { Titles } from '@design-system';
 
-export const TitlesBuilder = ({ titles }: { titles: TitlesData }) => {
+export const TitlesBuilder = ({
+  titles,
+  imprint,
+}: {
+  titles: TitlesData;
+  imprint?: Imprint;
+}) => {
   const [isEditable, setIsEditable] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -27,7 +33,7 @@ export const TitlesBuilder = ({ titles }: { titles: TitlesData }) => {
   }, [loading, canEdit]);
 
   return !loading ? (
-    <Titles titles={titles} canEdit={isEditable} />
+    <Titles titles={titles} imprint={imprint} canEdit={isEditable} />
   ) : (
     <TranslationSkeleton />
   );
