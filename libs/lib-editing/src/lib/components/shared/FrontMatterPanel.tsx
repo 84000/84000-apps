@@ -3,10 +3,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
-import { ReactElement } from 'react';
+import { ReactElement, useEffect } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { Toc, Work } from '@data-access';
 import { TableOfContents } from './TableOfContents';
+import { ImprintTab } from './ImprintTab';
 
 export const FrontMatterPanel = ({
   summary,
@@ -21,7 +22,11 @@ export const FrontMatterPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, updatePanel } = useNavigation();
+  const { panels, imprint, toh, updatePanel, setToh } = useNavigation();
+  useEffect(() => {
+    const currentToh = toh || work.toh[0] || '';
+    setToh(currentToh);
+  }, [toh, work.toh, setToh]);
 
   return (
     <Tabs
@@ -31,8 +36,8 @@ export const FrontMatterPanel = ({
         updatePanel({ name: 'left', state: { open: true, tab } });
       }}
       data-position="sidebar"
-      defaultValue="summary"
-      className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
+      defaultValue="toc"
+      className="px-8 pb-[var(--header-height)] max-w-4xl w-full mx-auto mb-[var(--header-height)]"
     >
       <TabsList className="sticky top-3 mx-auto z-10">
         <TabsTrigger value="toc">Navigation</TabsTrigger>
@@ -49,7 +54,9 @@ export const FrontMatterPanel = ({
           name: 'summary',
         })}
       </TabsContent>
-      <TabsContent value="imprint">Imprint coming soon...</TabsContent>
+      <TabsContent value="imprint">
+        <ImprintTab imprint={imprint} />
+      </TabsContent>
     </Tabs>
   );
 };

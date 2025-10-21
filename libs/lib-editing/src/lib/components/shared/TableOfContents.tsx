@@ -109,15 +109,13 @@ export const TableOfContentsSection = ({
 
 export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
   const { toh, setToh } = useNavigation();
-  const [localToh, setLocalToh] = useState<TohokuCatalogEntry>();
+  const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
+    work.toh[0] || '',
+  );
 
   useEffect(() => {
     const currentToh = toh || work.toh[0] || '';
     setLocalToh(currentToh);
-
-    if (!toh) {
-      setToh(currentToh);
-    }
   }, [toh, work.toh, setToh]);
 
   const baseStyle = 'w-full py-2 font-normal leading-6 text-sm text-primary';

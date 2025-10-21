@@ -4,6 +4,7 @@ export * from './lib/canon';
 export * from './lib/client-browser';
 export * from './lib/client-server';
 export * from './lib/glossary';
+export * from './lib/imprint';
 export * from './lib/library';
 export * from './lib/passage';
 export * from './lib/projects';

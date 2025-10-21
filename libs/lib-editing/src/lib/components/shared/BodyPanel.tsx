@@ -33,7 +33,7 @@ export const BodyPanel = ({
       }}
       data-position="main"
       defaultValue="translation"
-      className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
+      className="px-8 pb-[var(--header-height)] max-w-5xl w-full mx-auto mb-[var(--header-height)]"
     >
       <TabsList className="sticky top-3 mx-auto -mt-13 z-10">
         <TabsTrigger value="translation">Translation</TabsTrigger>
