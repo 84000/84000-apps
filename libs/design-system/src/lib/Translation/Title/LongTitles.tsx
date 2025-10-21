@@ -29,6 +29,9 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
   const mainBoTitle = mainTitles?.bo || '';
   const mainEnTitle = mainTitles?.en || '';
   const mainSaTitle = mainTitles?.['Sa-Ltn'] || '';
+  const mainBoLtnTitle = mainTitles?.['Bo-Ltn'] || '';
+
+  const longBoLtnTitle = longTitles?.['Bo-Ltn'] || mainBoLtnTitle;
 
   const translators = imprint?.tibetanTranslators?.split(',') || [];
 
@@ -43,9 +46,7 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
       />
       <div className="h-8" />
       {longTitles?.bo && <LongTitle title={longTitles.bo} language="bo" />}
-      {longTitles?.['Bo-Ltn'] && (
-        <LongTitle title={longTitles['Bo-Ltn']} language="Bo-Ltn" />
-      )}
+      {longBoLtnTitle && <LongTitle title={longBoLtnTitle} language="Bo-Ltn" />}
       {longTitles?.en && <LongTitle title={longTitles.en} language="en" />}
       {longTitles?.['Sa-Ltn'] && (
         <LongTitle title={longTitles['Sa-Ltn']} language="Sa-Ltn" />
