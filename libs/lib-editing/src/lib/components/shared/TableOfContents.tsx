@@ -175,15 +175,16 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
   };
   return (
     <div>
-      <div className="pt-8 pb-2 flex text-navy font-semibold">
-        <MenuIcon className="me-4 size-6 my-auto bg-ochre-300 text-muted rounded-lg p-1" />
+      <div className="pt-8 gap-2.5 flex text-navy font-semibold">
+        <div className="size-5 my-auto bg-ochre-300 text-background rounded-md">
+          <MenuIcon className="size-full p-1" />
+        </div>
         Table of Contents
       </div>
       <Separator className="my-4" />
       <div className="pb-2 text-sm uppercase text-slate">Title</div>
       <div className={baseStyle}>{work.title}</div>
-      <div className={baseStyle}>{work.section}</div>
-      {work.toh.length > 0 ? (
+      {work.toh.length > 1 ? (
         <Select
           value={localToh}
           onValueChange={(value) => {
@@ -210,8 +211,11 @@ export const TableOfContents = ({ toc, work }: { toc: Toc; work: Work }) => {
           </SelectContent>
         </Select>
       ) : (
-        <div className={baseStyle}>{localToh}</div>
+        <div className={cn(baseStyle, 'font-semibold pt-3')}>
+          {parseToh(localToh || '')}
+        </div>
       )}
+      <div className={baseStyle}>{work.section}</div>
       <Separator className="my-4" />
       <div className="pb-2 text-sm uppercase text-slate">Front Matter</div>
       <TableOfContentsSection node={frontMatter} panel="left" />
