@@ -154,7 +154,8 @@ export const getTranslationsMetadata = async ({
       publicationDate,
       publicationVersion,
       pages:source_pages,
-      restriction
+      restriction,
+      breadcrumb
     )
   `,
   );

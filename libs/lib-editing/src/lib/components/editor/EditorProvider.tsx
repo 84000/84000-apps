@@ -38,6 +38,7 @@ export const EditorContext = createContext<EditorContextState>({
   work: {
     uuid: '',
     title: '',
+    section: '',
     pages: 0,
     publicationDate: new Date(),
     publicationVersion: '0.0.0',
