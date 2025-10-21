@@ -5,12 +5,18 @@ import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
 import { ReactElement } from 'react';
 import { useNavigation } from './NavigationProvider';
+import { Toc, Work } from '@data-access';
+import { TableOfContents } from './TableOfContents';
 
 export const FrontMatterPanel = ({
   summary,
+  toc,
+  work,
   renderTranslation,
 }: {
   summary: TranslationEditorContent;
+  toc: Toc;
+  work: Work;
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
@@ -33,7 +39,9 @@ export const FrontMatterPanel = ({
         <TabsTrigger value="summary">Summary</TabsTrigger>
         <TabsTrigger value="imprint">Imprint</TabsTrigger>
       </TabsList>
-      <TabsContent value="toc">Table of Contents coming soon...</TabsContent>
+      <TabsContent value="toc">
+        <TableOfContents toc={toc} work={work} />
+      </TabsContent>
       <TabsContent value="summary">
         {renderTranslation({
           content: summary,

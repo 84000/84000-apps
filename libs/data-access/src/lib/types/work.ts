@@ -9,6 +9,7 @@ export type Work = {
   publicationVersion: SemVer;
   pages: number;
   restriction: boolean;
+  section: string;
 };
 
 export type WorkDTO = {
@@ -19,16 +20,18 @@ export type WorkDTO = {
   publicationVersion: string;
   pages: number;
   restriction: boolean;
+  breadcrumb: string;
 };
 
 export function workFromDTO(dto: WorkDTO): Work {
   return {
     uuid: dto.uuid,
     title: dto.title,
-    toh: dto.toh.split(',') as TohokuCatalogEntry[],
+    toh: dto.toh?.split(',') as TohokuCatalogEntry[],
     publicationDate: new Date(dto.publicationDate),
     publicationVersion: dto.publicationVersion as SemVer,
     pages: dto.pages,
     restriction: dto.restriction,
+    section: dto.breadcrumb?.split('>')[1]?.trim() || '',
   };
 }

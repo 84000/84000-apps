@@ -8,6 +8,7 @@ import {
   getPassage,
   getTranslationMetadataByUuid,
   GlossaryTermInstance,
+  TohokuCatalogEntry,
   Work,
 } from '@data-access';
 import {
@@ -33,6 +34,8 @@ import {
 
 interface NavigationState {
   panels: PanelsState;
+  toh?: TohokuCatalogEntry;
+  setToh: (toh: TohokuCatalogEntry) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   createHashLink: (params: {
     panel: string;
@@ -62,6 +65,9 @@ export const NavigationContext = createContext<NavigationState>({
   updatePanel: () => {
     throw new Error('Not implemented');
   },
+  setToh: () => {
+    throw new Error('Not implemented');
+  },
   createHashLink: () => {
     throw new Error('Not implemented');
   },
@@ -86,6 +92,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const client = createBrowserClient();
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
+  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(undefined);
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
   );
@@ -269,6 +276,18 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!toh) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    params.set('toh', toh);
+
+    const newUrl = `?${params.toString()}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [toh]);
+
+  useEffect(() => {
     const newPanels = parsePanelParams();
     setPanels(newPanels);
     scrollToHash({
@@ -280,6 +299,8 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     <NavigationContext.Provider
       value={{
         panels,
+        toh,
+        setToh,
         updatePanel,
         createHashLink,
         fetchBibliographyEntry,

@@ -37,7 +37,7 @@ export const BackMatterPanel = ({
           | 'abbreviations';
         updatePanel({ name: 'right', state: { open: true, tab } });
       }}
-      data-position="right-sidebar"
+      data-position="sidebar"
       defaultValue="endnotes"
       className="px-8 pb-[var(--header-height)] max-w-6xl w-full mx-auto mb-[var(--header-height)]"
     >
