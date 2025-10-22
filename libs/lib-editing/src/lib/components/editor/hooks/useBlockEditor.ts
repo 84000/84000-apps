@@ -32,6 +32,7 @@ export const useBlockEditor = ({
     editable: isEditable,
     editorProps: {
       attributes: {
+        spellcheck: 'false',
         autocomplete: 'off',
         autocorrect: 'off',
         autocapitalize: 'off',
