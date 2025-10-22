@@ -15,6 +15,7 @@ const main = async () => {
       limit,
       type: 'glossary-instance',
       contentType: 'glossary_xmlId',
+      nullType: 'type',
     });
 
     if (error) {
@@ -54,9 +55,10 @@ const main = async () => {
       .select(
         `
       xmlId:glossary_xmlId::text,
-      authorityUuid:authority_uuid::text
+      uuid::uuid
     `,
       )
+      .eq('termType', 'translationMain')
       .in('glossary_xmlId', Object.keys(xmlIdToAnnotations));
 
     if (glError) {
@@ -64,13 +66,13 @@ const main = async () => {
       return;
     }
 
-    glData.forEach(({ xmlId, authorityUuid }) => {
+    glData.forEach(({ xmlId, uuid }) => {
       const annotations = xmlIdToAnnotations[xmlId];
       if (!annotations) {
         return;
       }
       annotations.forEach((annotationUuid) => {
-        annotationData[annotationUuid].targetUuid = authorityUuid;
+        annotationData[annotationUuid].targetUuid = uuid;
       });
     });
 
@@ -79,7 +81,7 @@ const main = async () => {
     for (const uuid of keys) {
       const {
         xmlId,
-        targetUuid: authorityUuid,
+        targetUuid: glossaryUuid,
         passageUuid: passage_uuid,
         createdAt: created_at,
         start,
@@ -88,7 +90,7 @@ const main = async () => {
         passageXmlId: passage_xmlId,
         type,
       } = annotationData[uuid];
-      if (!xmlId || !authorityUuid) {
+      if (!xmlId || !glossaryUuid) {
         continue;
       }
 
@@ -103,8 +105,9 @@ const main = async () => {
         passage_xmlId,
         content: [
           {
+            type: 'glossary',
             glossary_xmlId: xmlId,
-            uuid: authorityUuid,
+            uuid: glossaryUuid,
           },
         ],
       });

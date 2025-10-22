@@ -5,12 +5,16 @@ export const fetchPage = async ({
   type,
   contentType,
   contentIndex = 0,
+  nullType = 'uuid',
+  nullIndex = 0,
   limit,
 }: {
   supabase: SupabaseClient;
   type: string;
   contentType: string;
   contentIndex?: 0 | 1;
+  nullType?: string;
+  nullIndex?: 0 | 1;
   limit: number;
 }) => {
   return await supabase
@@ -29,6 +33,7 @@ export const fetchPage = async ({
       `,
     )
     .eq('type', type)
-    .is('content->0->>"uuid"', null)
+    .is(`content->${nullIndex}->>"${nullType}"`, null)
+    .not(`content->${contentIndex}->>"${contentType}"`, 'is', null)
     .limit(limit);
 };
