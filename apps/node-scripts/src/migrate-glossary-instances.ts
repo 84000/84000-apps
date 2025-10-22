@@ -15,6 +15,7 @@ const main = async () => {
       limit,
       type: 'glossary-instance',
       contentType: 'glossary_xmlId',
+      nullType: 'type',
     });
 
     if (error) {
