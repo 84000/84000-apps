@@ -1,8 +1,6 @@
 import {
-  Extension,
   MarkViewProps,
   mergeAttributes,
-  Node,
   NodeViewProps,
   NodeViewRendererProps,
 } from '@tiptap/react';
@@ -167,4 +165,36 @@ export const createNodeViewDom = ({
   });
 
   return { dom, updateAttributes };
+};
+
+/**
+ * Creates a MarkView DOM element for a given mark and extension.
+ * It sets up the element with merged attributes.
+ */
+export const createMarkViewDom = ({
+  mark,
+  extension,
+  HTMLAttributes,
+  element,
+  className,
+}: Partial<MarkViewProps> & {
+  element: HTMLElementType;
+  className?: string;
+}) => {
+  const dom = document.createElement(element);
+  const updateElementAttributes = createUpdateAttributes(dom);
+
+  const attributes = mergeAttributes(
+    mark?.attrs || {},
+    extension?.options.HTMLAttributes,
+    HTMLAttributes || {},
+    {
+      class: className,
+      type: extension?.name,
+    },
+  );
+
+  updateElementAttributes(attributes);
+
+  return { dom, updateAttributes: updateElementAttributes };
 };

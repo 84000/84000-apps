@@ -1,12 +1,9 @@
 import { Mark } from '@tiptap/core';
-import { GlossaryInstance } from './GlossaryInstance';
-import { GlossaryTermInstance } from '@data-access';
-import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
+import { createMarkViewDom } from '../../util';
 
 export interface GlossaryInstanceOptions {
   HTMLAttributes: Record<string, unknown>;
-  fetch: (uuid: string) => Promise<GlossaryTermInstance | undefined>;
 }
 
 declare module '@tiptap/core' {
@@ -39,7 +36,6 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       HTMLAttributes: {
         className: 'glossary-instance',
       },
-      fetch: async () => undefined,
     };
   },
 
@@ -68,7 +64,29 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
   },
 
   addMarkView() {
-    return ReactMarkViewRenderer(GlossaryInstance);
+    return (props) => {
+      const { dom } = createMarkViewDom({
+        ...props,
+        element: 'span',
+        className: 'glossary-instance',
+      });
+
+      dom.addEventListener('click', () => {
+        const { glossary } = props.mark.attrs;
+        if (!glossary) {
+          return;
+        }
+
+        const query = new URLSearchParams(window.location.search);
+        query.set('right', 'open:glossary');
+        window.history.pushState({}, '', `?${query.toString()}#${glossary}`);
+      });
+
+      return {
+        dom,
+        contentDOM: dom,
+      };
+    };
   },
 
   addCommands() {
