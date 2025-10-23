@@ -9,6 +9,7 @@ import { cn } from '@lib-utils';
 import { useRef } from 'react';
 import { useHover } from './hooks/useHoverCard';
 import { GlossaryInstance } from './extensions/GlossaryInstance/GlossaryInstance';
+import EndNoteLink from './extensions/EndNoteLink/EndNoteLink';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -46,9 +47,15 @@ export const TranslationEditor = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const { anchor, uuid } = useHover({
+  const { anchor: glossaryAnchor, uuid: glossaryUuid } = useHover({
     type: 'glossaryInstance',
     attribute: 'glossary',
+    editorRef,
+  });
+
+  const { anchor: endnoteAnchor, uuid: endnoteUuid } = useHover({
+    type: 'endNoteLink',
+    attribute: 'endNote',
     editorRef,
   });
 
@@ -72,11 +79,18 @@ export const TranslationEditor = ({
           <TranslationBubbleMenu editor={editor} />
         </div>
       </div>
-      {anchor && uuid && fetchGlossaryInstance && (
+      {glossaryAnchor && glossaryUuid && fetchGlossaryInstance && (
         <GlossaryInstance
-          anchor={anchor}
+          anchor={glossaryAnchor}
           fetch={fetchGlossaryInstance}
-          uuid={uuid}
+          uuid={glossaryUuid}
+        />
+      )}
+      {endnoteAnchor && endnoteUuid && fetchEndNote && (
+        <EndNoteLink
+          anchor={endnoteAnchor}
+          fetch={fetchEndNote}
+          uuid={endnoteUuid}
         />
       )}
     </>
