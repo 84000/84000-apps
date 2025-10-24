@@ -17,7 +17,8 @@ export const internalLink: Transformer = (ctx) => {
   if (!(end - start)) {
     // If the annotation has no length, we don't need to do anything.
     console.warn(
-      `Skipping internal link transformation for annotation with no length: ${entity}`,
+      `Skipping internal link transformation for annotation with no length`,
+      annotation,
     );
     return;
   }
