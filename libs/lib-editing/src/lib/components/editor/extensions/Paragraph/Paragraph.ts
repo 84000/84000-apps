@@ -1,10 +1,24 @@
 import TiptapParagraph from '@tiptap/extension-paragraph';
-import { ReactNodeViewRenderer } from '@tiptap/react';
-import { ParagraphView } from './ParagraphView';
+import { createNodeViewDom } from '../../util';
 
 export const Paragraph = TiptapParagraph.extend({
   addNodeView() {
-    return ReactNodeViewRenderer(ParagraphView);
+    return ({ node, extension, editor, getPos, HTMLAttributes }) => {
+      const { dom } = createNodeViewDom({
+        editor,
+        getPos,
+        node,
+        extension,
+        HTMLAttributes,
+        element: 'p',
+        className: 'paragraph',
+      });
+
+      return {
+        dom,
+        contentDOM: dom,
+      };
+    };
   },
 });
 

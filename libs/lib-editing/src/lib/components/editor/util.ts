@@ -1,4 +1,10 @@
-import { MarkViewProps, NodeViewProps } from '@tiptap/react';
+import {
+  MarkViewProps,
+  mergeAttributes,
+  NodeViewProps,
+  NodeViewRendererProps,
+} from '@tiptap/react';
+import { HTMLElementType } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -106,4 +112,89 @@ export const findMarkRange = ({ editor, mark }: Partial<MarkViewProps>) => {
   });
 
   return foundRange;
+};
+
+/**
+ * Creates a function to update the attributes of a given HTML element.
+ * The returned function takes an object of attributes and sets them on the element.
+ */
+export const createUpdateAttributes = (element: HTMLElement) => {
+  return (attrs: { [key: string]: unknown }) => {
+    Object.keys(attrs).forEach((key) => {
+      element.setAttribute(key, attrs[key] as string);
+    });
+  };
+};
+
+/**
+ * Creates a NodeView DOM element for a given node and extension.
+ * It sets up the element with merged attributes and validates them.
+ */
+export const createNodeViewDom = ({
+  editor,
+  getPos,
+  node,
+  extension,
+  HTMLAttributes,
+  element,
+  className,
+}: Partial<NodeViewRendererProps> & {
+  element: HTMLElementType;
+  className?: string;
+}) => {
+  const dom = document.createElement(element);
+  const updateAttributes = createUpdateAttributes(dom);
+
+  const attributes = mergeAttributes(
+    node?.attrs || {},
+    extension?.options.HTMLAttributes,
+    HTMLAttributes || {},
+    {
+      class: className,
+      type: extension?.name,
+    },
+  );
+
+  updateAttributes(attributes);
+
+  validateAttrs({
+    node,
+    editor,
+    getPos,
+    updateAttributes,
+  });
+
+  return { dom, updateAttributes };
+};
+
+/**
+ * Creates a MarkView DOM element for a given mark and extension.
+ * It sets up the element with merged attributes.
+ */
+export const createMarkViewDom = ({
+  mark,
+  extension,
+  HTMLAttributes,
+  element,
+  className,
+}: Partial<MarkViewProps> & {
+  element: HTMLElementType;
+  className?: string;
+}) => {
+  const dom = document.createElement(element);
+  const updateElementAttributes = createUpdateAttributes(dom);
+
+  const attributes = mergeAttributes(
+    mark?.attrs || {},
+    extension?.options.HTMLAttributes,
+    HTMLAttributes || {},
+    {
+      class: className,
+      type: extension?.name,
+    },
+  );
+
+  updateElementAttributes(attributes);
+
+  return { dom, updateAttributes: updateElementAttributes };
 };

@@ -35,3 +35,15 @@ export const jsonEqual = (a: unknown, b: unknown): boolean => {
     return false;
   }
 };
+
+export const isInBounds = (evt: MouseEvent, element: HTMLElement): boolean => {
+  const rect = element.getBoundingClientRect();
+  const { clientX, clientY } = evt;
+
+  return (
+    clientX >= rect.left &&
+    clientX <= rect.right &&
+    clientY >= rect.top &&
+    clientY <= rect.bottom
+  );
+};
