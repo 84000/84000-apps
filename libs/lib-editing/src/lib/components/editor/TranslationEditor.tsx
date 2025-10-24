@@ -47,13 +47,21 @@ export const TranslationEditor = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const { anchor: glossaryAnchor, uuid: glossaryUuid } = useHover({
+  const {
+    anchor: glossaryAnchor,
+    uuid: glossaryUuid,
+    setCard: setGlossaryCard,
+  } = useHover({
     type: 'glossaryInstance',
     attribute: 'glossary',
     editorRef,
   });
 
-  const { anchor: endnoteAnchor, uuid: endnoteUuid } = useHover({
+  const {
+    anchor: endnoteAnchor,
+    uuid: endnoteUuid,
+    setCard: setNoteCard,
+  } = useHover({
     type: 'endNoteLink',
     attribute: 'endNote',
     editorRef,
@@ -84,6 +92,7 @@ export const TranslationEditor = ({
           anchor={glossaryAnchor}
           fetch={fetchGlossaryInstance}
           uuid={glossaryUuid}
+          setCard={setGlossaryCard}
         />
       )}
       {endnoteAnchor && endnoteUuid && fetchEndNote && (
@@ -91,6 +100,7 @@ export const TranslationEditor = ({
           anchor={endnoteAnchor}
           fetch={fetchEndNote}
           uuid={endnoteUuid}
+          setCard={setNoteCard}
         />
       )}
     </>

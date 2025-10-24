@@ -10,11 +10,13 @@ import { TranslationHoverCard } from '../TranslationHoverCard';
 export const EndNoteLink = ({
   uuid,
   fetch,
+  setCard,
   anchor,
 }: {
   uuid: string;
   anchor: HTMLElement;
   fetch?: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  setCard: (card: HTMLElement | null) => void;
 }) => {
   const [content, setContent] = useState<TranslationEditorContent>();
 
@@ -32,6 +34,7 @@ export const EndNoteLink = ({
   return (
     <TranslationHoverCard
       anchor={anchor}
+      setCard={setCard}
       className="w-120 max-h-96 m-2 overflow-auto"
     >
       {content ? (

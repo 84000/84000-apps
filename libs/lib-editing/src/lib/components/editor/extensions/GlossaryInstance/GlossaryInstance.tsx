@@ -8,9 +8,11 @@ export const GlossaryInstance = ({
   uuid,
   fetch,
   anchor,
+  setCard,
 }: {
   uuid: string;
   anchor: HTMLElement;
+  setCard: (card: HTMLElement | null) => void;
   fetch?: (uuid: string) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const [content, setContent] = useState<GlossaryTermInstance>();
@@ -30,6 +32,7 @@ export const GlossaryInstance = ({
     <TranslationHoverCard
       className="w-120 lg:w-4xl max-h-100 m-2 overflow-auto"
       anchor={anchor}
+      setCard={setCard}
     >
       {content ? (
         <GlossaryInstanceBody instance={content} />
