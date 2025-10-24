@@ -13,7 +13,7 @@ export const GlossaryInstance = ({
   const [content, setContent] = useState<GlossaryTermInstance>();
 
   useEffect(() => {
-    if (!uuid || content || !fetch) {
+    if (!uuid || !fetch) {
       return;
     }
 
@@ -21,7 +21,7 @@ export const GlossaryInstance = ({
       const res = await fetch?.(uuid);
       setContent(res);
     })();
-  }, [uuid, content, fetch]);
+  }, [uuid, fetch]);
 
   return content ? (
     <GlossaryInstanceBody instance={content} />

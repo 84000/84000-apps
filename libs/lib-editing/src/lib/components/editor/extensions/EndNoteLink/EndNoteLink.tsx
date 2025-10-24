@@ -16,7 +16,7 @@ export const EndNoteLink = ({
   const [content, setContent] = useState<TranslationEditorContent>();
 
   useEffect(() => {
-    if (!uuid || content || !fetch) {
+    if (!uuid || !fetch) {
       return;
     }
 
@@ -24,7 +24,7 @@ export const EndNoteLink = ({
       const res = await fetch?.(uuid);
       setContent(res);
     })();
-  }, [uuid, content, fetch]);
+  }, [uuid, fetch]);
 
   return content ? (
     <div className="p-2">
