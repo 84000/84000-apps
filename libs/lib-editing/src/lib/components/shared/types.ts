@@ -18,12 +18,6 @@ export interface TitlesRenderer {
   imprint?: Imprint;
 }
 
-// some editor keys need custom titles
-export const EDITOR_KEY_TO_TITLE: Partial<Record<EditorMenuItemType, string>> =
-  {
-    endnote: 'end notes',
-  };
-
 export const PANEL_NAMES = ['left', 'right', 'main'] as const;
 export type PanelName = (typeof PANEL_NAMES)[number];
 export type TabName =

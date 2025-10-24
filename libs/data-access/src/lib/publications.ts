@@ -181,13 +181,7 @@ export const getTranslationByUuid = async ({
   const passagesByType: Partial<Record<BodyItemType, Passages>> =
     passages.reduce(
       (acc, passage) => {
-        let type = passage.type as BodyItemType;
-        // endnotesHeader is a special case that does not follow the normal naming convention
-        if (type === 'endnotesHeader') {
-          type = 'endnote';
-        } else {
-          type = passage.type.replace('Header', '') as BodyItemType;
-        }
+        const type = passage.type.replace('Header', '') as BodyItemType;
 
         if (!acc[type]) {
           acc[type] = [];
