@@ -87,7 +87,7 @@ export const isAttributeAnnotation = (type: TranslationEditorContentType) => {
 export const isBlockAnnotation = (type: TranslationEditorContentType) => {
   return [
     'blockquote',
-    'endnote',
+    'endnotes',
     'heading',
     'line',
     'lineGroup',

@@ -14,7 +14,7 @@ export const BODY_ITEM_TYPES = [
   'appendixHeader',
   'colophon',
   'colophonHeader',
-  'endnote',
+  'endnotes',
   'endnotesHeader',
   'homage',
   'homageHeader',
@@ -44,7 +44,7 @@ export const BODY_MATTER: BodyItemType[] = [
   'homage',
 ];
 export const BODY_MATTER_FILTER = `(${BODY_MATTER.join('|')})`;
-export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnote'];
+export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnotes'];
 export const BACK_MATTER_FILTER = `(${BACK_MATTER.join('|')})`;
 
 export type Passage = {

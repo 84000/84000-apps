@@ -93,7 +93,7 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
   appendixHeader: headingTemplate,
   colophon: paragraphTemplate,
   colophonHeader: headingTemplate,
-  endnote: paragraphTemplate,
+  endnotes: paragraphTemplate,
   endnotesHeader: headingTemplate,
   homage: paragraphTemplate,
   homageHeader: headingTemplate,

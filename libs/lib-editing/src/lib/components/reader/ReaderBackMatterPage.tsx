@@ -23,7 +23,7 @@ export const ReaderBackMatterPage = async ({
   });
 
   const endnotes = blocksFromTranslationBody(
-    passages.filter((p) => p.type.startsWith('endnote')),
+    passages.filter((p) => p.type.startsWith('endnotes')),
   );
   const abbreviations = blocksFromTranslationBody(
     passages.filter((p) => p.type.startsWith('abbreviation')),

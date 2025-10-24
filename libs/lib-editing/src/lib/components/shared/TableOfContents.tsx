@@ -25,7 +25,7 @@ const TAB_FOR_SECTION: Record<string, TabName> = {
   appendix: 'translation',
   bibliography: 'bibliography',
   colophon: 'translation',
-  endnote: 'endnotes',
+  endnotes: 'endnotes',
   glossary: 'glossary',
   homage: 'translation',
   imprint: 'imprint',

@@ -1,4 +1,4 @@
-import { TranslationEditorContent } from '@design-system';
+import { TranslationEditorContent } from '../../lib/components';
 import { EditorType } from '../types';
 
 export const type: EditorType = 'translation';
