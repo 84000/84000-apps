@@ -6,14 +6,12 @@ import { isInBounds } from '@lib-utils';
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 export const useHover = ({
-  type,
-  attribute,
+  typeMap,
   editorRef,
   openDelay = DEFAULT_HOVER_CARD_OPEN_DELAY,
   closeDelay = DEFAULT_HOVER_CARD_CLOSE_DELAY,
 }: {
-  type: string;
-  attribute: string;
+  typeMap: Record<string, string>;
   editorRef: RefObject<HTMLDivElement | null>;
   openDelay?: number;
   closeDelay?: number;
@@ -46,8 +44,11 @@ export const useHover = ({
         return;
       }
 
+      const types = Object.keys(typeMap)
+        .map((type) => `[type="${type}"]`)
+        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
-        `[type="${type}"]`,
+        types,
       );
 
       if (!target) {
@@ -59,10 +60,20 @@ export const useHover = ({
       }
 
       timeoutRef.current = setTimeout(() => {
-        const uuidAttr = target.getAttribute(attribute);
         const typeAttr = target.getAttribute('type');
+        if (!typeAttr) {
+          return;
+        }
 
-        setCardType(typeAttr || undefined);
+        const attribute = typeMap[typeAttr];
+
+        if (!attribute) {
+          return;
+        }
+
+        const uuidAttr = target.getAttribute(attribute);
+
+        setCardType(typeAttr);
         if (uuidAttr) {
           setIsHoveringAnchor(true);
           setAnchor(target);
@@ -72,8 +83,11 @@ export const useHover = ({
     };
 
     const handleMouseLeave = (event: MouseEvent) => {
+      const types = Object.keys(typeMap)
+        .map((type) => `[type="${type}"]`)
+        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
-        `[type="${type}"]`,
+        types,
       );
 
       if (!target) {
@@ -105,10 +119,9 @@ export const useHover = ({
     };
   }, [
     editorRef,
-    type,
+    typeMap,
     openDelay,
     closeDelay,
-    attribute,
     isHoveringAnchor,
     isHoveringCard,
     close,

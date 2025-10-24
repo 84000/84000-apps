@@ -10,6 +10,7 @@ import { useRef } from 'react';
 import { useHover } from './hooks/useHoverCard';
 import { GlossaryInstance } from './extensions/GlossaryInstance/GlossaryInstance';
 import EndNoteLink from './extensions/EndNoteLink/EndNoteLink';
+import { TranslationHoverCard } from './extensions/TranslationHoverCard';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -47,23 +48,11 @@ export const TranslationEditor = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
 
-  const {
-    anchor: glossaryAnchor,
-    uuid: glossaryUuid,
-    setCard: setGlossaryCard,
-  } = useHover({
-    type: 'glossaryInstance',
-    attribute: 'glossary',
-    editorRef,
-  });
-
-  const {
-    anchor: endnoteAnchor,
-    uuid: endnoteUuid,
-    setCard: setNoteCard,
-  } = useHover({
-    type: 'endNoteLink',
-    attribute: 'endNote',
+  const { anchor, uuid, cardType, setCard } = useHover({
+    typeMap: {
+      glossaryInstance: 'glossary',
+      endNoteLink: 'endNote',
+    },
     editorRef,
   });
 
@@ -79,6 +68,16 @@ export const TranslationEditor = ({
     onCreate,
   });
 
+  const renderCard = (uuid: string, type: string) => {
+    if (type === 'glossaryInstance' && fetchGlossaryInstance) {
+      return <GlossaryInstance uuid={uuid} fetch={fetchGlossaryInstance} />;
+    }
+    if (type === 'endNoteLink' && fetchEndNote) {
+      return <EndNoteLink uuid={uuid} fetch={fetchEndNote} />;
+    }
+    return null;
+  };
+
   return (
     <>
       <div ref={editorRef} className={cn('flex h-full', className)}>
@@ -87,21 +86,18 @@ export const TranslationEditor = ({
           <TranslationBubbleMenu editor={editor} />
         </div>
       </div>
-      {glossaryAnchor && glossaryUuid && fetchGlossaryInstance && (
-        <GlossaryInstance
-          anchor={glossaryAnchor}
-          fetch={fetchGlossaryInstance}
-          uuid={glossaryUuid}
-          setCard={setGlossaryCard}
-        />
-      )}
-      {endnoteAnchor && endnoteUuid && fetchEndNote && (
-        <EndNoteLink
-          anchor={endnoteAnchor}
-          fetch={fetchEndNote}
-          uuid={endnoteUuid}
-          setCard={setNoteCard}
-        />
+      {anchor && uuid && cardType && fetchGlossaryInstance && fetchEndNote && (
+        <TranslationHoverCard
+          className={cn(
+            cardType === 'endNoteLink' && 'w-120 max-h-96 m-2 overflow-auto',
+            cardType === 'glossaryInstance' &&
+              'w-120 lg:w-4xl max-h-100 m-2 overflow-auto',
+          )}
+          anchor={anchor}
+          setCard={setCard}
+        >
+          {renderCard(uuid, cardType)}
+        </TranslationHoverCard>
       )}
     </>
   );
