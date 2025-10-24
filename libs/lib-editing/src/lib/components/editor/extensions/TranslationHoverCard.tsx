@@ -4,16 +4,9 @@ import {
   offset,
   useFloating,
 } from '@floating-ui/react';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '@lib-utils';
-
-const CARD_OFFSET = 20;
-const PLACEMENT_TO_ORIGIN: Record<string, string> = {
-  top: 'origin-bottom',
-  bottom: 'origin-top',
-  left: 'origin-right',
-  right: 'origin-left',
-};
+import { DEFAULT_HOVER_CARD_SIDE_OFFSET } from '@design-system';
 
 export const TranslationHoverCard = ({
   anchor,
@@ -27,31 +20,25 @@ export const TranslationHoverCard = ({
   setCard: (card: HTMLElement | null) => void;
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [origin, setOrigin] = useState<string>('origin-top');
 
-  const { refs, floatingStyles, placement } = useFloating({
-    middleware: [offset(CARD_OFFSET), autoPlacement({ padding: CARD_OFFSET })],
+  const { refs, floatingStyles } = useFloating({
+    middleware: [offset(DEFAULT_HOVER_CARD_SIDE_OFFSET), autoPlacement()],
     whileElementsMounted: autoUpdate,
   });
+
+  const innerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     refs.setReference(anchor);
   }, [anchor, refs]);
 
   useEffect(() => {
-    setCard(refs.floating.current);
+    setCard(innerRef.current);
 
     return () => {
       setCard(null);
     };
-  }, [refs.floating, setCard]);
-
-  useEffect(() => {
-    const [primaryPlacement] = placement.split('-');
-    const origin = PLACEMENT_TO_ORIGIN[primaryPlacement];
-
-    setOrigin(origin || 'origin-top');
-  }, [placement]);
+  }, [innerRef, setCard]);
 
   useEffect(() => {
     if (!refs.floating.current) {
@@ -71,15 +58,19 @@ export const TranslationHoverCard = ({
     <div
       ref={refs.setFloating}
       style={{ ...floatingStyles, pointerEvents: 'auto', cursor: 'default' }}
-      className={cn(
-        'bg-popover text-popover-foreground rounded-md border p-4 shadow-md outline-hidden z-50 hover:cursor-default',
-        'transition-[opacity,scale] duration-150',
-        origin,
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
-        className,
-      )}
+      className="z-100 p-4"
     >
-      {children}
+      <div
+        ref={innerRef}
+        className={cn(
+          'bg-popover text-popover-foreground rounded-md border p-4 shadow-md outline-hidden hover:cursor-default',
+          'transition-[opacity,scale] duration-150 origin-center ease-out',
+          isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-99',
+          className,
+        )}
+      >
+        {children}
+      </div>
     </div>
   );
 };
