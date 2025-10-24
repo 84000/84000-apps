@@ -30,10 +30,15 @@ export const getTranslationPassages = async ({
   uuid: string;
   type?: BodyItemType;
 }) => {
-  const { data } = await client.rpc('get_passages_with_annotations', {
+  const { data, error } = await client.rpc('get_passages_with_annotations', {
     uuid_input: uuid,
     passage_type_input: type,
   });
+
+  if (error) {
+    console.error('Error fetching translation passages:', error);
+    return [];
+  }
 
   return passagesFromDTO(data || []);
 };
