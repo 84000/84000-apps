@@ -4,7 +4,6 @@ import { EditorContent, JSONContent, Editor } from '@tiptap/react';
 import type { XmlFragment } from 'yjs';
 import { useBlockEditor, useTranslationExtensions } from './hooks';
 import { TranslationBubbleMenu } from './menus';
-import { GlossaryTermInstance } from '@data-access';
 import { cn } from '@lib-utils';
 
 export type TranslationEditorContentItem = JSONContent & {
@@ -36,9 +35,6 @@ export const TranslationEditor = ({
   fetchEndNote?: (
     uuid: string,
   ) => Promise<TranslationEditorContent | undefined>;
-  fetchGlossaryInstance?: (
-    uuid: string,
-  ) => Promise<GlossaryTermInstance | undefined>;
 }) => {
   const { extensions } = useTranslationExtensions({
     fragment,

@@ -9,6 +9,7 @@ import {
   createContext,
   ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -92,15 +93,15 @@ export const HoverCardProvider = ({
     if (!editorEl) {
       return;
     }
+    const types = Object.keys(typeMap)
+      .map((type) => `[type="${type}"]`)
+      .join(', ');
 
     const handleMouseOver = (event: MouseEvent) => {
       if (isHoveringAnchor || isHoveringCard) {
         return;
       }
 
-      const types = Object.keys(typeMap)
-        .map((type) => `[type="${type}"]`)
-        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
         types,
       );
@@ -137,9 +138,6 @@ export const HoverCardProvider = ({
     };
 
     const handleMouseLeave = (event: MouseEvent) => {
-      const types = Object.keys(typeMap)
-        .map((type) => `[type="${type}"]`)
-        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
         types,
       );
@@ -187,16 +185,14 @@ export const HoverCardProvider = ({
         return;
       }
 
-      const inBounds = isInBounds(evt, card);
-      if (inBounds) {
+      const inCardBounds = isInBounds(evt, card);
+      const inAnchorBounds = anchor ? isInBounds(evt, anchor) : false;
+      if (inCardBounds) {
         evt.stopPropagation();
       }
-      setIsHoveringCard((prev) => {
-        if (prev !== inBounds) {
-          return inBounds;
-        }
-        return prev;
-      });
+
+      setIsHoveringAnchor(inAnchorBounds);
+      setIsHoveringCard(inCardBounds);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -290,4 +286,13 @@ export const HoverCardProvider = ({
       )}
     </HoverCardContext.Provider>
   );
+};
+
+export const useHoverCard = () => {
+  const context = useContext(HoverCardContext);
+  if (!context) {
+    throw new Error('useHoverCard must be used within a HoverCardProvider');
+  }
+
+  return context;
 };
