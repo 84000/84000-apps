@@ -33,6 +33,7 @@ import {
   PanelState,
   TabName,
 } from './types';
+import { HoverCardProvider } from './HoverCardProvider';
 
 interface NavigationState {
   uuid: string;
@@ -347,7 +348,12 @@ export const NavigationProvider = ({
         fetchWork,
       }}
     >
-      {children}
+      <HoverCardProvider
+        fetchEndNote={fetchEndNote}
+        fetchGlossaryInstance={fetchGlossaryTerm}
+      >
+        {children}
+      </HoverCardProvider>
     </NavigationContext.Provider>
   );
 };
