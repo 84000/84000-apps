@@ -7,7 +7,7 @@ export const TranslationReader = ({
   content,
   className,
 }: TranslationRenderer) => {
-  const { fetchEndNote, fetchGlossaryTerm } = useNavigation();
+  const { fetchEndNote } = useNavigation();
 
   return (
     <TranslationEditor
@@ -15,7 +15,6 @@ export const TranslationReader = ({
       className={className}
       isEditable={false}
       fetchEndNote={fetchEndNote}
-      fetchGlossaryInstance={fetchGlossaryTerm}
     />
   );
 };

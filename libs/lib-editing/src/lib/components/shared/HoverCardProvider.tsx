@@ -1,27 +1,82 @@
+'use client';
+
 import {
   DEFAULT_HOVER_CARD_CLOSE_DELAY,
   DEFAULT_HOVER_CARD_OPEN_DELAY,
 } from '@design-system';
-import { isInBounds } from '@lib-utils';
-import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { cn, isInBounds } from '@lib-utils';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import { TranslationHoverCard } from './TranslationHoverCard';
+import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/GlossaryInstance';
+import EndNoteLink from '../editor/extensions/EndNoteLink/EndNoteLink';
+import { TranslationEditorContent } from '../editor';
+import { GlossaryTermInstance } from '@data-access';
 
-export const useHover = ({
-  typeMap,
-  editorRef,
+const HOVER_CARD_TYPES = ['glossaryInstance', 'endNoteLink'] as const;
+
+export type HoverCardType = (typeof HOVER_CARD_TYPES)[number];
+
+const TYPE_ATTRIBUTE_MAP: Record<HoverCardType, string> = {
+  glossaryInstance: 'glossary',
+  endNoteLink: 'endNote',
+};
+
+export interface HoverCardState {
+  anchor: HTMLElement | null;
+  uuid?: string;
+  cardType?: HoverCardType;
+  setAnchor: (anchor: HTMLElement | null) => void;
+  setUuid: (uuid?: string) => void;
+  setCard: (card: HTMLElement | null) => void;
+}
+
+export const HoverCardContext = createContext<HoverCardState>({
+  anchor: null,
+  setAnchor: () => {
+    throw new Error('setAnchor function not implemented');
+  },
+  setCard: () => {
+    throw new Error('setCard function not implemented');
+  },
+  setUuid: () => {
+    throw new Error('setUuid function not implemented');
+  },
+});
+
+export const HoverCardProvider = ({
   openDelay = DEFAULT_HOVER_CARD_OPEN_DELAY,
   closeDelay = DEFAULT_HOVER_CARD_CLOSE_DELAY,
+  typeMap = TYPE_ATTRIBUTE_MAP,
+  fetchEndNote,
+  fetchGlossaryInstance,
+  children,
 }: {
-  typeMap: Record<string, string>;
-  editorRef: RefObject<HTMLDivElement | null>;
-  openDelay?: number;
   closeDelay?: number;
+  openDelay?: number;
+  typeMap?: Record<string, string>;
+  fetchEndNote?: (
+    uuid: string,
+  ) => Promise<TranslationEditorContent | undefined>;
+  fetchGlossaryInstance?: (
+    uuid: string,
+  ) => Promise<GlossaryTermInstance | undefined>;
+  children: ReactNode;
 }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [card, setCard] = useState<HTMLElement | null>(null);
   const [uuid, setUuid] = useState<string>();
-  const [cardType, setCardType] = useState<string>();
+  const [cardType, setCardType] = useState<HoverCardType>();
   const [isHoveringAnchor, setIsHoveringAnchor] = useState(false);
   const [isHoveringCard, setIsHoveringCard] = useState(false);
 
@@ -38,15 +93,15 @@ export const useHover = ({
     if (!editorEl) {
       return;
     }
+    const types = Object.keys(typeMap)
+      .map((type) => `[type="${type}"]`)
+      .join(', ');
 
     const handleMouseOver = (event: MouseEvent) => {
       if (isHoveringAnchor || isHoveringCard) {
         return;
       }
 
-      const types = Object.keys(typeMap)
-        .map((type) => `[type="${type}"]`)
-        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
         types,
       );
@@ -73,7 +128,7 @@ export const useHover = ({
 
         const uuidAttr = target.getAttribute(attribute);
 
-        setCardType(typeAttr);
+        setCardType(typeAttr as HoverCardType);
         if (uuidAttr) {
           setIsHoveringAnchor(true);
           setAnchor(target);
@@ -83,9 +138,6 @@ export const useHover = ({
     };
 
     const handleMouseLeave = (event: MouseEvent) => {
-      const types = Object.keys(typeMap)
-        .map((type) => `[type="${type}"]`)
-        .join(', ');
       const target = (event.target as HTMLDivElement).closest<HTMLElement>(
         types,
       );
@@ -133,16 +185,14 @@ export const useHover = ({
         return;
       }
 
-      const inBounds = isInBounds(evt, card);
-      if (inBounds) {
+      const inCardBounds = isInBounds(evt, card);
+      const inAnchorBounds = anchor ? isInBounds(evt, anchor) : false;
+      if (inCardBounds) {
         evt.stopPropagation();
       }
-      setIsHoveringCard((prev) => {
-        if (prev !== inBounds) {
-          return inBounds;
-        }
-        return prev;
-      });
+
+      setIsHoveringAnchor(inAnchorBounds);
+      setIsHoveringCard(inCardBounds);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -197,12 +247,52 @@ export const useHover = ({
     close();
   }, [isHoveringAnchor, isHoveringCard, closeDelay, close]);
 
-  return {
-    anchor,
-    uuid,
-    cardType,
-    setAnchor,
-    setCard,
-    setUuid,
+  const renderCard = (uuid: string, type: string) => {
+    if (type === 'glossaryInstance' && fetchGlossaryInstance) {
+      return <GlossaryInstance uuid={uuid} fetch={fetchGlossaryInstance} />;
+    }
+    if (type === 'endNoteLink' && fetchEndNote) {
+      return <EndNoteLink uuid={uuid} fetch={fetchEndNote} />;
+    }
+    return null;
   };
+
+  return (
+    <HoverCardContext.Provider
+      value={{
+        anchor,
+        uuid,
+        cardType,
+        setAnchor,
+        setCard,
+        setUuid,
+      }}
+    >
+      <div className="size-full" ref={editorRef}>
+        {children}
+      </div>
+      {anchor && uuid && cardType && fetchGlossaryInstance && fetchEndNote && (
+        <TranslationHoverCard
+          className={cn(
+            cardType === 'endNoteLink' && 'w-120 max-h-96 m-2 overflow-auto',
+            cardType === 'glossaryInstance' &&
+              'w-120 lg:w-4xl max-h-100 m-2 overflow-auto',
+          )}
+          anchor={anchor}
+          setCard={setCard}
+        >
+          {renderCard(uuid, cardType)}
+        </TranslationHoverCard>
+      )}
+    </HoverCardContext.Provider>
+  );
+};
+
+export const useHoverCard = () => {
+  const context = useContext(HoverCardContext);
+  if (!context) {
+    throw new Error('useHoverCard must be used within a HoverCardProvider');
+  }
+
+  return context;
 };
