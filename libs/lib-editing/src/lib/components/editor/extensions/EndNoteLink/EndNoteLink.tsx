@@ -2,18 +2,17 @@
 
 import { Skeleton } from '@design-system';
 import { useEffect, useState } from 'react';
-import TranslationEditor, {
-  TranslationEditorContent,
-} from '../../TranslationEditor';
+import { Passage } from '@data-access';
+import { LabeledElement } from '../../../shared';
 
 export const EndNoteLink = ({
   uuid,
   fetch,
 }: {
   uuid: string;
-  fetch?: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetch?: (uuid: string) => Promise<Passage | undefined>;
 }) => {
-  const [content, setContent] = useState<TranslationEditorContent>();
+  const [content, setContent] = useState<Passage>();
 
   useEffect(() => {
     if (!uuid || !fetch) {
@@ -28,7 +27,7 @@ export const EndNoteLink = ({
 
   return content ? (
     <div className="p-2">
-      <TranslationEditor content={content} isEditable={false} />
+      <LabeledElement label={content.label}>{content.content}</LabeledElement>
     </div>
   ) : (
     <Skeleton className="p-2 h-20 w-full" />

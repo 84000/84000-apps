@@ -48,18 +48,6 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
     [updateAttributes],
   );
 
-  if (!editor.isEditable) {
-    return (
-      <MarkViewContent
-        className={LINK_STYLE}
-        as="a"
-        href={mark.attrs.href}
-        target="_blank"
-        rel="noreferrer"
-      />
-    );
-  }
-
   return (
     <HoverCard open={isOpen} onOpenChange={setIsOpen}>
       <HoverCardTrigger asChild>

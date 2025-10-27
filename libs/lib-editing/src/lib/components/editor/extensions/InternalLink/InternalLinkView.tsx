@@ -6,13 +6,7 @@ import {
   LINK_STYLE,
 } from '@design-system';
 import { MarkViewContent, MarkViewProps } from '@tiptap/react';
-import {
-  ChevronRightIcon,
-  FileSymlinkIcon,
-  GlobeIcon,
-  PencilIcon,
-  Trash2Icon,
-} from 'lucide-react';
+import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { findMarkRange } from '../../util';
 import Link from 'next/link';
@@ -61,19 +55,6 @@ export const InternalLinkView = ({
     },
     [updateAttributes],
   );
-
-  if (!editor.isEditable) {
-    // TODO: support hover cards for various entity types
-    return (
-      <MarkViewContent
-        className={LINK_STYLE}
-        as="a"
-        href={mark.attrs.href}
-        target="_blank"
-        rel="noreferrer"
-      />
-    );
-  }
 
   return (
     <HoverCard open={isOpen} onOpenChange={setIsOpen}>

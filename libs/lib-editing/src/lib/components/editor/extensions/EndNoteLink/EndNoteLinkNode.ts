@@ -1,13 +1,10 @@
 import { Node } from '@tiptap/core';
 import { createNodeViewDom } from '../../util';
-import {
-  TranslationEditorContent,
-  TranslationEditorContentItem,
-} from '../../TranslationEditor';
+import { Passage } from '@data-access';
 
 export interface EndNoteLinkOptions {
   HTMLAttributes: Record<string, unknown>;
-  fetch: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetch: (uuid: string) => Promise<Passage | undefined>;
 }
 
 declare module '@tiptap/core' {
@@ -85,11 +82,8 @@ export const EndNoteLinkNode = Node.create<EndNoteLinkOptions>({
       dom.textContent = defaultLabel;
 
       (async () => {
-        const [item] =
-          ((await this.options.fetch(
-            endNote,
-          )) as TranslationEditorContentItem[]) || [];
-        const itemLabel = item?.attrs?.label?.split('.').pop() || defaultLabel;
+        const item = await this.options.fetch(endNote);
+        const itemLabel = item?.label.split('.').pop() || defaultLabel;
         dom.textContent = itemLabel;
       })();
 

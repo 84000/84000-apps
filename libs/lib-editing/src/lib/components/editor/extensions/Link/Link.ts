@@ -2,6 +2,8 @@ import { Link as TipTapLink } from '@tiptap/extension-link';
 import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 import { LinkView } from './LinkView';
+import { createMarkViewDom } from '../../util';
+import { LINK_STYLE } from '@design-system';
 
 export const Link = TipTapLink.extend({
   addCommands() {
@@ -24,6 +26,24 @@ export const Link = TipTapLink.extend({
     };
   },
   addMarkView() {
+    if (!this.editor.isEditable) {
+      return (props) => {
+        const { dom } = createMarkViewDom({
+          ...props,
+          element: 'a',
+          className: LINK_STYLE,
+        });
+
+        dom.setAttribute('href', props.mark.attrs.href);
+        dom.setAttribute('target', '_blank');
+        dom.setAttribute('rel', 'noreferrer');
+
+        return {
+          dom,
+          contentDOM: dom,
+        };
+      };
+    }
     return ReactMarkViewRenderer(LinkView);
   },
 }).configure({
