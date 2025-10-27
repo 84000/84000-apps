@@ -16,9 +16,8 @@ import {
 } from 'react';
 import { TranslationHoverCard } from './TranslationHoverCard';
 import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/GlossaryInstance';
-import EndNoteLink from '../editor/extensions/EndNoteLink/EndNoteLink';
-import { TranslationEditorContent } from '../editor';
-import { GlossaryTermInstance } from '@data-access';
+import { EndNoteLink } from '../editor/extensions/EndNoteLink/EndNoteLink';
+import { GlossaryTermInstance, Passage } from '@data-access';
 
 const HOVER_CARD_TYPES = ['glossaryInstance', 'endNoteLink'] as const;
 
@@ -62,9 +61,7 @@ export const HoverCardProvider = ({
   closeDelay?: number;
   openDelay?: number;
   typeMap?: Record<string, string>;
-  fetchEndNote?: (
-    uuid: string,
-  ) => Promise<TranslationEditorContent | undefined>;
+  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
   fetchGlossaryInstance?: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;

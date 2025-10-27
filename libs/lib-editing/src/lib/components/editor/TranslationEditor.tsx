@@ -5,6 +5,7 @@ import type { XmlFragment } from 'yjs';
 import { useBlockEditor, useTranslationExtensions } from './hooks';
 import { TranslationBubbleMenu } from './menus';
 import { cn } from '@lib-utils';
+import { Passage } from '@data-access';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -32,9 +33,7 @@ export const TranslationEditor = ({
   isEditable?: boolean;
   className?: string;
   onCreate?: (params: { editor: Editor }) => void;
-  fetchEndNote?: (
-    uuid: string,
-  ) => Promise<TranslationEditorContent | undefined>;
+  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
 }) => {
   const { extensions } = useTranslationExtensions({
     fragment,

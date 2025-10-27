@@ -10,6 +10,7 @@ import {
   getTranslationMetadataByUuid,
   GlossaryTermInstance,
   Imprint,
+  Passage,
   TohokuCatalogEntry,
   Work,
 } from '@data-access';
@@ -22,8 +23,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { TranslationEditorContent } from '../editor';
-import { blockFromPassage } from '../../block';
 import { scrollToHash } from '@lib-utils';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -50,11 +49,11 @@ interface NavigationState {
   fetchBibliographyEntry: (
     uuid: string,
   ) => Promise<BibliographyEntryItem | undefined>;
-  fetchEndNote: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetchEndNote: (uuid: string) => Promise<Passage | undefined>;
   fetchGlossaryTerm: (
     uuid: string,
   ) => Promise<GlossaryTermInstance | undefined>;
-  fetchPassage: (uuid: string) => Promise<TranslationEditorContent | undefined>;
+  fetchPassage: (uuid: string) => Promise<Passage | undefined>;
   fetchWork: (uuid: string) => Promise<Work | undefined>;
 }
 
@@ -108,9 +107,9 @@ export const NavigationProvider = ({
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
   );
-  const endnoteCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+  const endnoteCache = useRef<{ [uuid: string]: Passage }>({});
   const glossaryCache = useRef<{ [uuid: string]: GlossaryTermInstance }>({});
-  const passageCache = useRef<{ [uuid: string]: TranslationEditorContent }>({});
+  const passageCache = useRef<{ [uuid: string]: Passage }>({});
   const workCache = useRef<{ [uuid: string]: Work }>({});
 
   const fetchBibliographyEntry = useCallback(
@@ -135,13 +134,13 @@ export const NavigationProvider = ({
   );
 
   const fetchEndNote = useCallback(
-    async (uuid: string): Promise<TranslationEditorContent | undefined> => {
+    async (uuid: string): Promise<Passage | undefined> => {
       if (!endnoteCache.current) {
         endnoteCache.current = {};
       }
 
       if (endnoteCache.current[uuid]) {
-        return [endnoteCache.current[uuid]];
+        return endnoteCache.current[uuid];
       }
 
       const endnote = await getPassage({ client, uuid });
@@ -149,9 +148,8 @@ export const NavigationProvider = ({
         return undefined;
       }
 
-      const block = blockFromPassage(endnote);
-      endnoteCache.current[uuid] = block;
-      return [block];
+      endnoteCache.current[uuid] = endnote;
+      return endnote;
     },
     [client],
   );
@@ -178,13 +176,13 @@ export const NavigationProvider = ({
   );
 
   const fetchPassage = useCallback(
-    async (uuid: string): Promise<TranslationEditorContent | undefined> => {
+    async (uuid: string): Promise<Passage | undefined> => {
       if (!passageCache.current) {
         passageCache.current = {};
       }
 
       if (passageCache.current[uuid]) {
-        return [passageCache.current[uuid]];
+        return passageCache.current[uuid];
       }
 
       const passage = await getPassage({ client, uuid });
@@ -192,9 +190,8 @@ export const NavigationProvider = ({
         return undefined;
       }
 
-      const block = blockFromPassage(passage);
-      passageCache.current[uuid] = block;
-      return [block];
+      passageCache.current[uuid] = passage;
+      return passage;
     },
     [client],
   );

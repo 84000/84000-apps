@@ -47,11 +47,11 @@ import {
   HasAbbreviation,
 } from '../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../extensions/ParagraphIndent';
-import { TranslationEditorContent } from '../TranslationEditor';
 import { Bold } from '../extensions/Bold';
 import { List } from '../extensions/List';
 import { Underline } from '../extensions/Underline';
 import { GlobalConfig } from '../extensions/GlobalConfig';
+import { Passage } from '@data-access';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -75,9 +75,7 @@ export const useTranslationExtensions = ({
   fetchEndNote,
 }: {
   fragment?: XmlFragment;
-  fetchEndNote?: (
-    uuid: string,
-  ) => Promise<TranslationEditorContent | undefined>;
+  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
 }) => {
   const suggestions = [
     TextSuggestion,
