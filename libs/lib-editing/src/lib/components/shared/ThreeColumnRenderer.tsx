@@ -1,24 +1,10 @@
 'use client';
 
-import {
-  ImperativePanelHandle,
-  LeftPanel,
-  MainPanel,
-  RightPanel,
-  ThreeColumns,
-} from '@design-system';
+import { ImperativePanelHandle, ThreeColumns } from '@design-system';
 import { ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useNavigation } from './NavigationProvider';
 
-export const ThreeColumnRenderer = ({
-  left,
-  main,
-  right,
-}: {
-  left: ReactNode;
-  main: ReactNode;
-  right: ReactNode;
-}) => {
+export const ThreeColumnRenderer = ({ children }: { children: ReactNode }) => {
   const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
   const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
   const { panels, updatePanel } = useNavigation();
@@ -61,9 +47,7 @@ export const ThreeColumnRenderer = ({
         rightPanel={rightPanelRef}
         onToggle={onToggle}
       >
-        <LeftPanel>{left}</LeftPanel>
-        <MainPanel>{main}</MainPanel>
-        <RightPanel>{right}</RightPanel>
+        {children}
       </ThreeColumns>
     </>
   );

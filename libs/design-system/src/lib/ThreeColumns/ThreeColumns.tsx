@@ -32,6 +32,12 @@ export const RightPanel = ({ children }: { children: ReactNode }) => {
   return <div className="right-panel">{children}</div>;
 };
 
+export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
+  return (
+    <div className="sticky top-16 w-full flex justify-end z-10">{children}</div>
+  );
+};
+
 export const ThreeColumns = ({
   children,
   className,
@@ -61,6 +67,10 @@ export const ThreeColumns = ({
 
   const rightPanelChildren = Children.toArray(children).filter(
     (child) => (child as ReactElement)?.type === RightPanel,
+  );
+
+  const mainHeaderChildren = Children.toArray(children).filter(
+    (child) => (child as ReactElement)?.type === MainPanelHeader,
   );
 
   const togglePanel = (panel?: ImperativePanelHandle | null) => {
@@ -113,6 +123,7 @@ export const ThreeColumns = ({
             <PanelRightIcon />
           </Button>
         </div>
+        {mainHeaderChildren}
         {mainPanelChildren}
       </ResizablePanel>
       <ResizableHandle />

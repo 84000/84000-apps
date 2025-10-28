@@ -1,6 +1,7 @@
 'use client';
 
 import { SaveButton } from '@design-system';
+import { SearchButton } from '@lib-search';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
 
@@ -13,10 +14,11 @@ export const EditorHeader = () => {
   }, [dirtyUuids]);
 
   return (
-    <div className="sticky top-18 px-4 flex justify-end h-12 z-10">
+    <div className="px-4 py-3 flex justify-end h-12 z-10 gap-2">
       {canSave && (
         <SaveButton size="xs" onClick={save} disabled={!dirtyUuids.length} />
       )}
+      <SearchButton />
     </div>
   );
 };
