@@ -13,7 +13,8 @@ import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { search } from '../data';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { SearchResult } from '../types';
+import { SearchResults } from '../types';
+import { SearchResultCard } from './SearchResultCard';
 
 export const SearchButton = () => {
   const [workUuid, setWorkUuid] = useState<string>();
@@ -21,7 +22,7 @@ export const SearchButton = () => {
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<SearchResult>();
+  const [results, setResults] = useState<SearchResults>();
 
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,6 +52,11 @@ export const SearchButton = () => {
     const debounce = setTimeout(performSearch, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery, workUuid, toh]);
+
+  useEffect(() => {
+    setResults(undefined);
+    setSearchQuery('');
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -85,6 +91,7 @@ export const SearchButton = () => {
               </Button>
             </div>
             <Input
+              autoFocus
               placeholder="Type to search..."
               className="w-full text-primary px-4 py-6"
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -100,13 +107,17 @@ export const SearchButton = () => {
               </div>
               {results ? (
                 <div className="grow flex flex-col gap-2 py-4 overflow-y-auto min-h-0">
-                  {results.passages.map((result, index) => (
-                    <div
-                      className="p-4 text-primary rounded-md bg-background"
+                  {[
+                    ...results.passages,
+                    ...results.alignments,
+                    ...results.glossaries,
+                    ...results.bibliographies,
+                  ].map((result, index) => (
+                    <SearchResultCard
                       key={index}
-                    >
-                      {result.content}
-                    </div>
+                      match={result}
+                      query={searchQuery}
+                    />
                   ))}
                 </div>
               ) : (

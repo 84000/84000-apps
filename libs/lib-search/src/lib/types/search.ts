@@ -25,20 +25,31 @@ export type AlignmentSearchMatchDTO = {
 };
 
 export type SearchMatch = {
+  type: string;
   uuid: string;
   content: string;
 };
 
 export type PassageMatch = SearchMatch & {
-  type: string;
+  type: 'passage';
+  section: string;
   label: string;
 };
 
 export type AlignmentMatch = SearchMatch & {
+  type: 'alignment';
   label: string;
   source: string;
   volume: string;
   folio: string;
+};
+
+export type BibliographyMatch = SearchMatch & {
+  type: 'bibliography';
+};
+
+export type GlossaryMatch = SearchMatch & {
+  type: 'glossary';
 };
 
 export type SearchResultsDTO = {
@@ -48,7 +59,14 @@ export type SearchResultsDTO = {
   glossary_matches: GlossarySearchMatchDTO[];
 };
 
-export type SearchResult = {
+export type SearchResult =
+  | SearchMatch
+  | PassageMatch
+  | AlignmentMatch
+  | BibliographyMatch
+  | GlossaryMatch;
+
+export type SearchResults = {
   passages: PassageMatch[];
   alignments: AlignmentMatch[];
   bibliographies: SearchMatch[];
@@ -57,8 +75,9 @@ export type SearchResult = {
 
 export const bibliographyMatchFromDTO = (
   dto: BibliographySearchMatchDTO,
-): SearchMatch => {
+): BibliographyMatch => {
   return {
+    type: 'bibliography',
     uuid: dto.bibliography_uuid,
     content: dto.content,
   };
@@ -66,8 +85,9 @@ export const bibliographyMatchFromDTO = (
 
 export const glossaryMatchFromDTO = (
   dto: GlossarySearchMatchDTO,
-): SearchMatch => {
+): GlossaryMatch => {
   return {
+    type: 'glossary',
     uuid: dto.glossary_uuid,
     content: dto.content,
   };
@@ -77,8 +97,9 @@ export const passageMatchFromDTO = (
   dto: PassageSearchMatchDTO,
 ): PassageMatch => {
   return {
+    type: 'passage',
     uuid: dto.passage_uuid,
-    type: dto.type,
+    section: dto.type,
     label: dto.label,
     content: dto.content,
   };
@@ -88,6 +109,7 @@ export const alignmentMatchFromDTO = (
   dto: AlignmentSearchMatchDTO,
 ): AlignmentMatch => {
   return {
+    type: 'alignment',
     uuid: dto.passage_uuid,
     label: dto.english_label,
     content: dto.english,
@@ -97,7 +119,7 @@ export const alignmentMatchFromDTO = (
   };
 };
 
-export const searchResultsFromDTO = (dto: SearchResultsDTO): SearchResult => {
+export const searchResultsFromDTO = (dto: SearchResultsDTO): SearchResults => {
   return {
     passages: dto.passage_matches.map(passageMatchFromDTO),
     alignments: dto.alignment_matches.map(alignmentMatchFromDTO),
