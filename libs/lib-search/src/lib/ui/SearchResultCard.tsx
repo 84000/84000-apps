@@ -86,7 +86,7 @@ export const SearchResultCard = ({
   };
 
   return (
-    <div className="flex gap-4 p-6 font-serif text-sm text-primary rounded-md bg-background cursor-pointer border border-2 border-transparent hover:border-ochre transition-colors">
+    <div className="flex gap-4 p-6 font-serif text-sm text-primary rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-slate-300 transition-colors">
       <div className="w-25 flex-shrink-0 flex flex-col gap-2 text-right">
         <span className="text-navy capitalize">{passage.type}</span>
         {passage.section && (

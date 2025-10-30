@@ -9,7 +9,7 @@ export const SearchResultsList = ({
   results: SearchResult[];
 }) => {
   return (
-    <div className="h-full flex flex-col gap-2 pb-4 overflow-y-auto min-h-0">
+    <div className="h-full flex flex-col gap-3 pb-4 overflow-y-auto min-h-0">
       {results.map((result, index) => (
         <SearchResultCard key={index} match={result} query={query} />
       ))}

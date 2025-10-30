@@ -8,19 +8,16 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
-  ScrollArea,
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@design-system';
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { search } from '../data';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { RESULTS_ENTITIES, SearchResults } from '../types';
-import { SearchResultCard } from './SearchResultCard';
 import { SearchResultsList } from './SearchResultsList';
+import { SearchResultTabs } from './SearchResultTab';
 
 export const SearchButton = () => {
   const [workUuid, setWorkUuid] = useState<string>();
@@ -124,21 +121,7 @@ export const SearchButton = () => {
                   defaultValue="passages"
                   className="flex flex-col grow min-h-0 pt-2"
                 >
-                  <TabsList className="flex-shrink-0">
-                    {RESULTS_ENTITIES.map(
-                      (tab) =>
-                        results[tab].length > 0 && (
-                          <TabsTrigger key={tab} value={tab}>
-                            <span className="capitalize text-navy me-2">
-                              {tab}
-                            </span>
-                            <span className="text-ochre">
-                              ({results[tab].length})
-                            </span>
-                          </TabsTrigger>
-                        ),
-                    )}
-                  </TabsList>
+                  <SearchResultTabs results={results} />
                   {RESULTS_ENTITIES.map(
                     (tab) =>
                       results[tab].length > 0 && (
