@@ -126,7 +126,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     blockquote: BlockPriority.OuterBlock,
     code: BlockPriority.Inline,
     deprecated: BlockPriority.Unknown,
-    endNoteLink: BlockPriority.Inline,
+    endNoteLink: BlockPriority.Mark,
     glossaryInstance: BlockPriority.Mark,
     hasAbbreviation: BlockPriority.Inline,
     heading: BlockPriority.OuterBlock,

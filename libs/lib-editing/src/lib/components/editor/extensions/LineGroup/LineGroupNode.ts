@@ -51,10 +51,7 @@ export const LineGroupNode = Node.create({
   renderHTML({ HTMLAttributes }) {
     return [
       'ul',
-      mergeAttributes(
-        { type: 'line-group', class: '[&:not(:first-child)]:mt-6' },
-        HTMLAttributes,
-      ),
+      mergeAttributes({ type: 'line-group', class: 'my-4' }, HTMLAttributes),
       0,
     ];
   },

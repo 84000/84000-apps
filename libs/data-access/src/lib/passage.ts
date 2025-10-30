@@ -28,7 +28,10 @@ export const getPassage = async ({
   }
 
   const dto = data as PassageDTO;
-  return passageFromDTO(dto, annotationsFromDTO(dto?.annotations || []));
+  return passageFromDTO(
+    dto,
+    annotationsFromDTO(dto?.annotations || [], dto?.content.length || 0),
+  );
 };
 
 export const getPassageUuidByXmlId = async ({
