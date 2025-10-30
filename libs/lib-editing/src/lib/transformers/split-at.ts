@@ -15,7 +15,7 @@ export const insert = (
   return sort(nodes);
 };
 
-export const splitAt: Transformer = (ctx) => {
+export const splitContentAt: Transformer = (ctx) => {
   const { root, parent, annotation, transform } = ctx;
   const { start, end } = annotation;
 
@@ -33,8 +33,7 @@ export const splitAt: Transformer = (ctx) => {
     return;
   }
 
-  // transform?.({ root, parent, block: newBlock, annotation });
-
+  const annotationEnd = annotation.end;
   const currentContent = parent.content || [];
   const newContent = [];
 
@@ -44,9 +43,9 @@ export const splitAt: Transformer = (ctx) => {
     const lastPrefix = prefix.at(-1);
     const firstSuffix = suffix[0];
 
-    if (lastPrefix) {
+    if (annotationEnd === lastPrefix?.attrs?.end) {
       transform?.({ root, parent, block: lastPrefix, annotation });
-    } else if (firstSuffix) {
+    } else if (annotationEnd === firstSuffix?.attrs?.end) {
       transform?.({ root, parent, block: firstSuffix, annotation });
     } else {
       console.warn('splitAt: no content to transform for annotation', {
