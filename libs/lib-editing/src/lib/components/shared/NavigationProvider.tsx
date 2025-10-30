@@ -228,8 +228,9 @@ export const NavigationProvider = ({
       const params = new URLSearchParams(window.location.search);
       const openness = state.open ? 'open' : 'closed';
       params.set(name, `${openness}${tab ? `:${tab}` : ''}`);
+      const hash = state.hash ? `#${state.hash}` : window.location.hash;
 
-      const newUrl = `?${params.toString()}${window.location.hash}`;
+      const newUrl = `?${params.toString()}${hash}`;
       window.history.replaceState(null, '', newUrl);
     },
     [],

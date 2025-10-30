@@ -35,6 +35,7 @@ export type TabName =
 export type PanelState = {
   open: boolean;
   tab?: TabName;
+  hash?: string;
 };
 
 export type PanelsState = {

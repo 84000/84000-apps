@@ -14,30 +14,29 @@ import {
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { search } from '../data';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { RESULTS_ENTITIES, SearchResults } from '../types';
+import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
 
-export const SearchButton = () => {
-  const [workUuid, setWorkUuid] = useState<string>();
-  const [toh, setToh] = useState<string>();
+export const SearchButton = ({
+  workUuid,
+  toh,
+  onResultSelected,
+}: {
+  workUuid?: string;
+  toh?: string;
+  onResultSelected: (result: SearchResult) => void;
+}) => {
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
 
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const uuidFromPath = pathname.split('/').at(-1);
-    setWorkUuid(uuidFromPath || '');
-
-    const tohParam = searchParams.get('toh') || '';
-    setToh(tohParam);
-  }, [pathname, searchParams]);
+  const onCardClick = (result: SearchResult) => {
+    setOpen(false);
+    onResultSelected(result);
+  };
 
   useEffect(() => {
     const performSearch = async () => {
@@ -74,8 +73,8 @@ export const SearchButton = () => {
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="xs"
-          className="text-brick hover:text-brick-800 py-3.5"
+          size="sm"
+          className="bg-background shadow-md shadow-black/2 text-brick hover:text-brick-800 py-3.5"
         >
           <SearchIcon className="size-6" />
           <span className="hidden lg:flex">Search text</span>
@@ -133,6 +132,7 @@ export const SearchButton = () => {
                           <SearchResultsList
                             query={searchQuery}
                             results={results[tab]}
+                            onCardClick={onCardClick}
                           />
                         </TabsContent>
                       ),

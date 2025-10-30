@@ -56,9 +56,11 @@ export const GlossaryResult = ({
 export const SearchResultCard = ({
   match,
   query,
+  onClick,
 }: {
   match: SearchResult;
   query: string;
+  onClick: () => void;
 }) => {
   // cast as passage but treat properties as optional
   const passage = match as PassageMatch;
@@ -86,7 +88,10 @@ export const SearchResultCard = ({
   };
 
   return (
-    <div className="flex gap-4 p-6 font-serif text-sm text-primary rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-slate-300 transition-colors">
+    <div
+      onClick={onClick}
+      className="flex gap-4 p-6 font-serif text-sm text-primary rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-slate-300 transition-colors"
+    >
       <div className="w-25 flex-shrink-0 flex flex-col gap-2 text-right">
         <span className="text-navy capitalize">{passage.type}</span>
         {passage.section && (
