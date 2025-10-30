@@ -8,6 +8,13 @@ import {
   Work,
 } from '@data-access';
 import { ThreeColumnRenderer, TranslationSkeleton } from '../shared';
+import {
+  LeftPanel,
+  MainPanel,
+  MainPanelHeader,
+  RightPanel,
+} from '@design-system';
+import { EditorHeader } from './EditorHeader';
 
 export const EditorLayout = ({
   left,
@@ -40,7 +47,14 @@ export const EditorLayout = ({
 
   return (
     <EditorContextProvider work={work}>
-      <ThreeColumnRenderer left={left} main={main} right={right} />
+      <ThreeColumnRenderer>
+        <LeftPanel>{left}</LeftPanel>
+        <MainPanelHeader>
+          <EditorHeader />
+        </MainPanelHeader>
+        <MainPanel>{main}</MainPanel>
+        <RightPanel>{right}</RightPanel>
+      </ThreeColumnRenderer>
     </EditorContextProvider>
   );
 };
