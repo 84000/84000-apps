@@ -1,3 +1,12 @@
+export const RESULTS_ENTITIES = [
+  'passages',
+  'alignments',
+  'bibliographies',
+  'glossaries',
+] as const;
+
+export type ResultsEntity = (typeof RESULTS_ENTITIES)[number];
+
 export type BibliographySearchMatchDTO = {
   bibliography_uuid: string;
   content: string;
@@ -10,7 +19,7 @@ export type GlossarySearchMatchDTO = {
 
 export type PassageSearchMatchDTO = {
   passage_uuid: string;
-  type: string;
+  type: ResultsEntity;
   label: string;
   content: string;
 };
@@ -38,6 +47,7 @@ export type PassageMatch = SearchMatch & {
 
 export type AlignmentMatch = SearchMatch & {
   type: 'alignment';
+  section: 'translation';
   label: string;
   source: string;
   volume: string;
@@ -110,6 +120,7 @@ export const alignmentMatchFromDTO = (
 ): AlignmentMatch => {
   return {
     type: 'alignment',
+    section: 'translation',
     uuid: dto.passage_uuid,
     label: dto.english_label,
     content: dto.english,

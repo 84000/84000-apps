@@ -86,14 +86,14 @@ export const SearchResultCard = ({
   };
 
   return (
-    <div className="flex gap-4 p-6 font-serif text-sm text-primary rounded-md bg-background cursor-pointer border border-2 border-transparent hover:border-emerald transition-colors">
+    <div className="flex gap-4 p-6 font-serif text-sm text-primary rounded-md bg-background cursor-pointer border border-2 border-transparent hover:border-ochre transition-colors">
       <div className="w-25 flex-shrink-0 flex flex-col gap-2 text-right">
-        <span className="text-ochre">{passage.type}</span>
+        <span className="text-navy capitalize">{passage.type}</span>
+        {passage.section && (
+          <span className="text-primary/50 capitalize">{passage.section}</span>
+        )}
         <div className="grow" />
         {passage.label && <span className="text-brick">{passage.label}</span>}
-        {passage.section && (
-          <span className="text-primary/50">{passage.section}</span>
-        )}
       </div>
       <Separator orientation="vertical" />
       {renderInner(match)}

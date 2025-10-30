@@ -8,19 +8,26 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
+  ScrollArea,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@design-system';
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { search } from '../data';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { SearchResults } from '../types';
+import { RESULTS_ENTITIES, SearchResults } from '../types';
 import { SearchResultCard } from './SearchResultCard';
+import { SearchResultsList } from './SearchResultsList';
 
 export const SearchButton = () => {
   const [workUuid, setWorkUuid] = useState<string>();
   const [toh, setToh] = useState<string>();
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
 
@@ -45,6 +52,13 @@ export const SearchButton = () => {
       setSearching(true);
 
       const results = await search({ text: searchQuery, uuid: workUuid, toh });
+      setHasResults(
+        !!results &&
+          (results.passages.length > 0 ||
+            results.alignments.length > 0 ||
+            results.bibliographies.length > 0 ||
+            results.glossaries.length > 0),
+      );
       setResults(results);
       setSearching(false);
     };
@@ -105,21 +119,42 @@ export const SearchButton = () => {
                   <Loader2Icon className="size-4 ml-2 animate-spin inline-block" />
                 )}
               </div>
-              {results ? (
-                <div className="grow flex flex-col gap-2 py-4 overflow-y-auto min-h-0">
-                  {[
-                    ...results.passages,
-                    ...results.alignments,
-                    ...results.glossaries,
-                    ...results.bibliographies,
-                  ].map((result, index) => (
-                    <SearchResultCard
-                      key={index}
-                      match={result}
-                      query={searchQuery}
-                    />
-                  ))}
-                </div>
+              {results && hasResults ? (
+                <Tabs
+                  defaultValue="passages"
+                  className="flex flex-col grow min-h-0 pt-2"
+                >
+                  <TabsList className="flex-shrink-0">
+                    {RESULTS_ENTITIES.map(
+                      (tab) =>
+                        results[tab].length > 0 && (
+                          <TabsTrigger key={tab} value={tab}>
+                            <span className="capitalize text-navy me-2">
+                              {tab}
+                            </span>
+                            <span className="text-ochre">
+                              ({results[tab].length})
+                            </span>
+                          </TabsTrigger>
+                        ),
+                    )}
+                  </TabsList>
+                  {RESULTS_ENTITIES.map(
+                    (tab) =>
+                      results[tab].length > 0 && (
+                        <TabsContent
+                          key={tab}
+                          className="grow min-h-0"
+                          value={tab}
+                        >
+                          <SearchResultsList
+                            query={searchQuery}
+                            results={results[tab]}
+                          />
+                        </TabsContent>
+                      ),
+                  )}
+                </Tabs>
               ) : (
                 <div className="mt-4 text-secondary">No results found.</div>
               )}
