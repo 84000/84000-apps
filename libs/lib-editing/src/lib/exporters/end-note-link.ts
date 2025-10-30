@@ -2,25 +2,30 @@ import { EndNoteLinkAnnotation } from '@data-access';
 import { Exporter } from './export';
 
 export const endNoteLink: Exporter<EndNoteLinkAnnotation> = ({
+  mark,
   node,
   start,
   passageUuid,
 }): EndNoteLinkAnnotation | undefined => {
-  const endNote = node.attrs.endNote;
-  const uuid = node.attrs.uuid;
+  const textContent = node.textContent;
+  const endNote = mark?.attrs.endNote;
+  const uuid = mark?.attrs.uuid;
 
-  if (!endNote) {
-    console.warn(`Endnote link instance ${uuid} is incomplete`);
-    console.log(node.attrs);
+  if (!textContent || !endNote || !uuid) {
+    console.warn(
+      `Endnote link instance ${uuid} is on passage ${passageUuid} incomplete`,
+    );
     return undefined;
   }
+
+  const end = start + textContent.length;
 
   return {
     uuid,
     type: 'endNoteLink',
     passageUuid,
-    start,
-    end: start,
+    start: end,
+    end,
     endNote,
   };
 };

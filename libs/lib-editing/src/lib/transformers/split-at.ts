@@ -47,12 +47,8 @@ export const splitContentAt: Transformer = (ctx) => {
       transform?.({ root, parent, block: lastPrefix, annotation });
     } else if (annotationEnd === firstSuffix?.attrs?.end) {
       transform?.({ root, parent, block: firstSuffix, annotation });
-    } else {
-      console.warn('splitAt: no content to transform for annotation', {
-        annotation,
-      });
-      console.log(prefix, middle, suffix);
     }
+
     newContent.push(...prefix);
     newContent.push(...middle);
     newContent.push(...suffix);

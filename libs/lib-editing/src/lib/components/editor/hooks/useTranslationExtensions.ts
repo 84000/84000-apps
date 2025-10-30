@@ -38,7 +38,7 @@ import { Italic } from '../extensions/Italic';
 import { Indent } from '../extensions/Indent';
 import { InternalLink } from '../extensions/InternalLink';
 import { MantraMark } from '../extensions/Mantra/Mantra';
-import { EndNoteLinkNode } from '../extensions/EndNoteLink/EndNoteLinkNode';
+import { EndNoteLinkMark } from '../extensions/EndNoteLink/EndNoteLinkMark';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import {
   Abbreviation,
@@ -95,7 +95,7 @@ export const useTranslationExtensions = ({
     HasAbbreviation,
     AbbreviationCommand,
     Bold,
-    EndNoteLinkNode.configure({
+    EndNoteLinkMark.configure({
       fetch: fetchEndNote,
     }),
     GlobalConfig,

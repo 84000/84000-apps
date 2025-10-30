@@ -16,7 +16,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const EndNoteLinkNode = Mark.create<EndNoteLinkOptions>({
+export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
   name: 'endNoteLink',
 
   addAttributes() {
@@ -34,26 +34,6 @@ export const EndNoteLinkNode = Mark.create<EndNoteLinkOptions>({
       HTMLAttributes: {},
       fetch: async (_uuid: string) => undefined,
     };
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'sup[type="endNoteLink"]',
-        getAttrs: (dom) => {
-          const endNote = (dom as HTMLElement).getAttribute('endNote');
-
-          if (!endNote) {
-            return false;
-          }
-          return null;
-        },
-      },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return ['sup', { ...HTMLAttributes, type: 'endNoteLink' }, 0];
   },
 
   addMarkView() {
