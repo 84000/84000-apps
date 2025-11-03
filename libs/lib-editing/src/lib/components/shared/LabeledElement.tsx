@@ -1,8 +1,14 @@
 'use client';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@design-system';
 import { cn } from '@lib-utils';
-import Link from 'next/link';
-import { ReactNode } from 'react';
+import { BookmarkIcon, CopyIcon } from 'lucide-react';
+import { ReactNode, useCallback } from 'react';
 
 export const LabeledElement = ({
   label,
@@ -15,17 +21,32 @@ export const LabeledElement = ({
   className?: string;
   children: ReactNode;
 }) => {
+  const copyLink = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.hash = `#${id}`;
+    navigator.clipboard.writeText(url.toString());
+  }, [id]);
+
   return (
     <div id={id} className="relative ml-6 scroll-m-20">
-      <Link
-        href={`#${id}`}
-        className={cn(
-          'absolute labeled -left-16 w-16 text-end hover:cursor-pointer',
-          className,
-        )}
-      >
-        {label || ''}
-      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            'absolute labeled -left-16 w-16 text-end hover:cursor-pointer',
+            className,
+          )}
+        >
+          {label || ''}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" alignOffset={48} className="w-64">
+          <DropdownMenuItem disabled>
+            <BookmarkIcon className="text-ochre" /> Add Bookmark
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={copyLink}>
+            <CopyIcon className="text-ochre" /> Copy Link
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div className="passage pl-6">{children}</div>
     </div>
   );

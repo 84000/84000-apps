@@ -1,17 +1,23 @@
 import { cn } from '@lib-utils';
-import { type ChangeEvent, type FocusEvent } from 'react';
 import type { NodeViewProps } from '@tiptap/react';
 import { NodeWrapper } from '../NodeWrapper';
-import Link from 'next/link';
+import {
+  Dialog,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@design-system';
+import { EditorOptions } from './EditorOptions';
+import { ReaderOptions } from './ReaderOptions';
+import { useState } from 'react';
+import { EditLabel } from './EditLabel';
+import { ShowAnnotations } from './ShowAnnotations';
 
 export const Passage = (props: NodeViewProps) => {
-  const { node, editor, updateAttributes } = props;
+  const { node, editor } = props;
 
-  const updateLabel = (
-    event: ChangeEvent<HTMLInputElement> | FocusEvent<HTMLInputElement>,
-  ) => {
-    updateAttributes({ label: event.target.value });
-  };
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState<string>();
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
@@ -25,25 +31,30 @@ export const Passage = (props: NodeViewProps) => {
       innerClassName="passage is-editable pl-6"
       {...props}
     >
-      {editor.isEditable ? (
-        <input
-          id={`input-${node.attrs.uuid}`}
-          className={cn(className, 'px-1 placeholder:text-brick-100')}
-          value={node.attrs.label || ''}
-          onChange={updateLabel}
-          onBlur={updateLabel}
-          placeholder="x.x"
-          type="text"
-          spellCheck={false}
-        />
-      ) : (
-        <Link
-          className={className}
-          contentEditable={false}
-          href={`#${node.attrs.uuid}`}
-        >
+      <DropdownMenu>
+        <DropdownMenuTrigger className={className} contentEditable={false}>
           {node.attrs.label || ''}
-        </Link>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" alignOffset={48} className="w-64">
+          {editor.isEditable ? (
+            <EditorOptions
+              onSelection={(item) => {
+                setDialogType(item);
+                setIsDialogOpen(true);
+              }}
+            />
+          ) : (
+            <ReaderOptions {...props} />
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {editor.isEditable && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          {dialogType === 'label' && (
+            <EditLabel {...props} close={() => setIsDialogOpen(false)} />
+          )}
+          {dialogType === 'attributes' && <ShowAnnotations {...props} />}
+        </Dialog>
       )}
     </NodeWrapper>
   );
