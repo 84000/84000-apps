@@ -4,6 +4,7 @@ export * from './canon';
 export * from './client';
 export * from './contributor';
 export * from './toh';
+export * from './folio';
 export * from './glossary';
 export * from './glossary-page';
 export * from './imprint';

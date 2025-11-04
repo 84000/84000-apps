@@ -40,7 +40,6 @@ export const ShowAnnotations = (props: NodeViewProps) => {
 
     (async () => {
       const fetchedPassage = await fetchPassage(uuid);
-      console.log('Fetched passage:', fetchedPassage);
       setPassage(fetchedPassage);
     })();
   }, [node, passage, fetchPassage]);

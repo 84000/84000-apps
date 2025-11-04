@@ -2,19 +2,22 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
-import { Title } from '@data-access';
+import { Folio, Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement } from 'react';
 import { useNavigation } from './NavigationProvider';
+import { SourceReader } from './SourceReader';
 
 export const BodyPanel = ({
   titles,
   body,
+  folios = [],
   renderTitles,
   renderTranslation,
 }: {
   titles: Title[];
   body: TranslationEditorContent;
+  folios?: Folio[];
   renderTitles: (params: TitlesRenderer) => ReactElement<TitlesRenderer>;
   renderTranslation: (
     params: TranslationRenderer,
@@ -31,7 +34,7 @@ export const BodyPanel = ({
       }}
       data-position="main"
       defaultValue="translation"
-      className="px-8 pb-[var(--header-height)] max-w-5xl w-full mx-auto mb-[var(--header-height)]"
+      className="px-8 pb-[var(--header-height)] w-full mb-[var(--header-height)]"
     >
       <TabsList className="sticky top-3 mx-auto -mt-25 z-10">
         <TabsTrigger value="translation">Translation</TabsTrigger>
@@ -39,7 +42,7 @@ export const BodyPanel = ({
         <TabsTrigger value="compare">Compare</TabsTrigger>
       </TabsList>
       <TabsContent value="translation">
-        <div className="w-full">
+        <div className="w-full max-w-5xl mx-auto">
           <div className="ms-12 mt-12 mb-8">
             {renderTitles({ titles, imprint })}
           </div>
@@ -50,7 +53,9 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="source">Source text coming soon...</TabsContent>
+      <TabsContent value="source">
+        <SourceReader />
+      </TabsContent>
       <TabsContent value="compare">
         Language comparison coming soon...
       </TabsContent>
