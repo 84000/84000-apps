@@ -63,7 +63,7 @@ export const Login = () => {
           <div className="md:hidden mb-2">
             <MainLogo width={112} />
           </div>
-          <H4 className="font-bold text-center">{header}</H4>
+          <H4 className="font-sans font-bold text-center">{header}</H4>
           {welcomeLines.map((line, index) => (
             <p
               key={index}
