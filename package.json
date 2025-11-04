@@ -54,6 +54,7 @@
     "jwt-decode": "^4.0.0",
     "lamatic": "^0.3.2",
     "lucide-react": "^0.477.0",
+    "motion": "^12.23.24",
     "next": "15.2.5",
     "nextra": "^4.2.16",
     "nextra-theme-docs": "^4.2.16",
