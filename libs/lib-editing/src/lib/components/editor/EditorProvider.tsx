@@ -109,7 +109,7 @@ export const EditorContextProvider = ({
   );
 
   const save = useCallback(async () => {
-    const editors = Object.values(editorCache);
+    const editors = Object.values(editorCache.current);
     if (!editors.length) {
       console.warn('No editor instance found, cannot save.');
       return;
