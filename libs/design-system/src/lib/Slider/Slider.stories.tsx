@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 
 import { Slider } from './Slider';
 
@@ -51,4 +51,4 @@ export const CustomStep: Story = {
   },
 };
 
-export default meta; 
+export default meta;

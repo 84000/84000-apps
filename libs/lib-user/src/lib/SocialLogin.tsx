@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import { useSession } from './SessionContext';
 import { cn } from '@lib-utils';
+import { AppleLogo, GoogleLogo } from '@design-system';
 
 const IS_APPLE_ENABLED = false;
 
@@ -15,28 +15,18 @@ export const SocialLogin = ({ className }: { className?: string }) => {
     >
       <div
         onClick={loginWithGoogle}
-        className="px-4 py-2 border-border border flex gap-2 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
+        className="px-4 py-2 border-border border flex gap-3 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
       >
-        <Image
-          src={'/images/svgs/google-icon.svg'}
-          alt="google"
-          height={16}
-          width={16}
-        />{' '}
-        Sign in with Google
+        <GoogleLogo />
+        <span>Sign in with Google</span>
       </div>
       {IS_APPLE_ENABLED && (
         <div
           onClick={loginWithApple}
-          className="px-4 py-2 border-border border flex gap-2 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
+          className="px-4 py-2 border-border border flex gap-3 items-enter w-full rounded-full text-center text-sm justify-center cursor-pointer"
         >
-          <Image
-            src={'/images/svgs/apple-icon.svg'}
-            alt="google"
-            height={16}
-            width={16}
-          />{' '}
-          Sign in with Apple
+          <AppleLogo />
+          <span>Sign in with Apple</span>
         </div>
       )}
     </div>

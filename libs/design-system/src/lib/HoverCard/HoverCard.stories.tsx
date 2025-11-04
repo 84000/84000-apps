@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 import {
   DEFAULT_HOVER_CARD_CLOSE_DELAY,
   DEFAULT_HOVER_CARD_OPEN_DELAY,

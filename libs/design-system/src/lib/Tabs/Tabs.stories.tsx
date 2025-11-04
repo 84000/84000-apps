@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './Tabs';
 
@@ -24,11 +24,9 @@ export const Default: Story = {
       <TabsContent value="introduction">
         Introduction content goes here.
       </TabsContent>
-      <TabsContent value="imprint">
-        Imprint content goes here.
-      </TabsContent>
+      <TabsContent value="imprint">Imprint content goes here.</TabsContent>
     </Tabs>
   ),
 };
 
-export default meta; 
+export default meta;

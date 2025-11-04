@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 import { DatePicker } from './DatePicker';
 
 const meta: Meta<typeof DatePicker> = {
