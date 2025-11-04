@@ -54,7 +54,7 @@ export const SourceReader = () => {
           key={index}
           label={`f.${folio.folio}.${folio.side}\nvol.${folio.volume}`}
         >
-          <div className="leading-8 text-lg whitespace-pre-wrap">
+          <div className="-mt-1 leading-8 text-lg whitespace-pre-wrap">
             {folio.content}
           </div>
         </LabeledElement>
