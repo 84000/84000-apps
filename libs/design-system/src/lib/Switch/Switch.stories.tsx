@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/react';
+import { Meta, StoryObj } from '@storybook/nextjs';
 import { Switch } from './Switch';
 
 const meta: Meta<typeof Switch> = {

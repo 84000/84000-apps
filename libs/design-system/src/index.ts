@@ -1,4 +1,5 @@
 export * from './lib/Accordion/Accordion';
+export * from './lib/AppleLogo/AppleLogo';
 export * from './lib/Avatar/Avatar';
 export * from './lib/Badge/Badge';
 export * from './lib/Breadcrumb/Breadcrumb';
@@ -14,6 +15,7 @@ export * from './lib/DatePicker/DatePicker';
 export * from './lib/Dialog/Dialog';
 export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
+export * from './lib/GoogleLogo/GoogleLogo';
 export * from './lib/Header/Header';
 export * from './lib/HoverCard/HoverCard';
 export * from './lib/Input/Input';
