@@ -1,4 +1,4 @@
-import { AnnotationType, BodyItemType, Passage } from '@data-access';
+import { Alignment, AnnotationType, BodyItemType, Passage } from '@data-access';
 import { annotateBlock } from './transformers/annotate';
 import {
   TranslationEditorContentItem,
@@ -6,6 +6,14 @@ import {
 } from './components/editor';
 
 const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
+  const alignments: { [key: string]: Alignment } =
+    passage.alignments?.reduce(
+      (acc, alignment) => {
+        acc[alignment.toh] = alignment;
+        return acc;
+      },
+      {} as { [key: string]: Alignment },
+    ) || {};
   const block: TranslationEditorContentItem = {
     type: 'passage',
     attrs: {
@@ -13,6 +21,7 @@ const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
       sort: passage.sort,
       type: passage.type,
       label: passage.label,
+      alignments,
     },
     content: [],
   };

@@ -66,6 +66,9 @@ export const PassageNode = Node.create({
           });
         },
       },
+      alignments: {
+        default: {},
+      },
     };
   },
   renderHTML({ HTMLAttributes }) {

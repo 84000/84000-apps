@@ -9,15 +9,36 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
+import { LabeledElement, useNavigation } from '../../../shared';
+import { Alignment } from '@data-access';
 
 export const Passage = (props: NodeViewProps) => {
   const { node, editor } = props;
 
+  const [isCompare, setIsCompare] = useState(false);
+  const [source, setSource] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
+
+  const { panels, toh } = useNavigation();
+
+  useEffect(() => {
+    const isCompare = panels.main.open && panels.main.tab === 'compare';
+    setIsCompare(isCompare);
+  }, [panels, editor]);
+
+  useEffect(() => {
+    if (!isCompare || !toh) {
+      setSource('');
+      return;
+    }
+
+    const alignment = node.attrs.alignments?.[toh] as Alignment;
+    setSource(alignment?.tibetan || '');
+  }, [isCompare, node, toh]);
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
@@ -25,38 +46,55 @@ export const Passage = (props: NodeViewProps) => {
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
       : '';
+
   return (
-    <NodeWrapper
-      className={cn('relative ml-6 scroll-m-20', borderClassName)}
-      innerClassName="passage is-editable pl-6"
-      {...props}
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger className={className} contentEditable={false}>
-          {node.attrs.label || ''}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" alignOffset={48} className="w-64">
-          {editor.isEditable ? (
-            <EditorOptions
-              onSelection={(item) => {
-                setDialogType(item);
-                setIsDialogOpen(true);
-              }}
-            />
-          ) : (
-            <ReaderOptions {...props} />
+    <div className="flex w-full gap-12">
+      <div className="w-full">
+        <NodeWrapper
+          className={cn(
+            'relative ml-6 scroll-m-20 w-full self-start',
+            borderClassName,
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {editor.isEditable && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          {dialogType === 'label' && (
-            <EditLabel {...props} close={() => setIsDialogOpen(false)} />
+          innerClassName="passage is-editable pl-6"
+          {...props}
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger className={className} contentEditable={false}>
+              {node.attrs.label || ''}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              alignOffset={48}
+              className="w-64"
+            >
+              {editor.isEditable ? (
+                <EditorOptions
+                  onSelection={(item) => {
+                    setDialogType(item);
+                    setIsDialogOpen(true);
+                  }}
+                />
+              ) : (
+                <ReaderOptions {...props} />
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {editor.isEditable && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              {dialogType === 'label' && (
+                <EditLabel {...props} close={() => setIsDialogOpen(false)} />
+              )}
+              {dialogType === 'attributes' && <ShowAnnotations {...props} />}
+            </Dialog>
           )}
-          {dialogType === 'attributes' && <ShowAnnotations {...props} />}
-        </Dialog>
+        </NodeWrapper>
+      </div>
+      {source && (
+        <div className="w-full mt-2">
+          <LabeledElement label={node.attrs.label}>{source}</LabeledElement>
+        </div>
       )}
-    </NodeWrapper>
+    </div>
   );
 };
 

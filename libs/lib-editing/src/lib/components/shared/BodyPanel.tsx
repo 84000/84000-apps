@@ -23,6 +23,19 @@ export const BodyPanel = ({
 }) => {
   const { panels, imprint, updatePanel } = useNavigation();
 
+  const theTranslation = (
+    <div className="w-full max-w-5xl mx-auto">
+      <div className="ms-12 mt-12 mb-8">
+        {renderTitles({ titles, imprint })}
+      </div>
+      {renderTranslation({
+        content: body,
+        className: 'block',
+        name: 'translation',
+      })}
+    </div>
+  );
+
   return (
     <Tabs
       value={panels.main.tab || 'translation'}
@@ -39,24 +52,11 @@ export const BodyPanel = ({
         <TabsTrigger value="source">Source</TabsTrigger>
         <TabsTrigger value="compare">Compare</TabsTrigger>
       </TabsList>
-      <TabsContent value="translation">
-        <div className="w-full max-w-5xl mx-auto">
-          <div className="ms-12 mt-12 mb-8">
-            {renderTitles({ titles, imprint })}
-          </div>
-          {renderTranslation({
-            content: body,
-            className: 'block',
-            name: 'translation',
-          })}
-        </div>
-      </TabsContent>
+      <TabsContent value="translation">{theTranslation}</TabsContent>
       <TabsContent value="source">
         <SourceReader />
       </TabsContent>
-      <TabsContent value="compare">
-        Language comparison coming soon...
-      </TabsContent>
+      <TabsContent value="compare">{theTranslation}</TabsContent>
     </Tabs>
   );
 };
