@@ -1,6 +1,9 @@
 import { cn } from '@lib-utils';
-import type { NodeViewProps } from '@tiptap/react';
-import { NodeWrapper } from '../NodeWrapper';
+import {
+  NodeViewContent,
+  NodeViewWrapper,
+  type NodeViewProps,
+} from '@tiptap/react';
 import {
   Dialog,
   DropdownMenu,
@@ -9,15 +12,43 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
+import { LabeledElement, useNavigation } from '../../../shared';
+import { Alignment } from '@data-access';
 
 export const Passage = (props: NodeViewProps) => {
   const { node, editor } = props;
 
+  const [compareLeadingSpace, setCompareLeadingSpace] = useState('md:mt-1');
+  const [isCompare, setIsCompare] = useState(false);
+  const [source, setSource] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
+
+  const { panels, toh } = useNavigation();
+
+  useEffect(() => {
+    const isCompare = panels.main.open && panels.main.tab === 'compare';
+    setIsCompare(isCompare);
+  }, [panels, editor]);
+
+  useEffect(() => {
+    if (!isCompare || !toh) {
+      setSource('');
+      return;
+    }
+
+    const alignment = node.attrs.alignments?.[toh] as Alignment;
+    setSource(alignment?.tibetan || '');
+    const firstChild = node.content.firstChild;
+    if (firstChild?.attrs.hasLeadingSpace) {
+      setCompareLeadingSpace('md:mt-5');
+    } else if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
+      setCompareLeadingSpace('md:mt-2');
+    }
+  }, [isCompare, node, toh]);
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
@@ -25,38 +56,60 @@ export const Passage = (props: NodeViewProps) => {
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
       : '';
+
   return (
-    <NodeWrapper
-      className={cn('relative ml-6 scroll-m-20', borderClassName)}
-      innerClassName="passage is-editable pl-6"
-      {...props}
+    <NodeViewWrapper
+      id={node.attrs.uuid}
+      as="div"
+      className="flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0"
     >
-      <DropdownMenu>
-        <DropdownMenuTrigger className={className} contentEditable={false}>
-          {node.attrs.label || ''}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" alignOffset={48} className="w-64">
-          {editor.isEditable ? (
-            <EditorOptions
-              onSelection={(item) => {
-                setDialogType(item);
-                setIsDialogOpen(true);
-              }}
-            />
-          ) : (
-            <ReaderOptions {...props} />
+      <div className="w-full">
+        <div
+          className={cn(
+            'relative ml-6 scroll-m-20 w-full self-start',
+            borderClassName,
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {editor.isEditable && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          {dialogType === 'label' && (
-            <EditLabel {...props} close={() => setIsDialogOpen(false)} />
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger className={className} contentEditable={false}>
+              {node.attrs.label || ''}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              alignOffset={48}
+              className="w-64"
+            >
+              {editor.isEditable ? (
+                <EditorOptions
+                  onSelection={(item) => {
+                    setDialogType(item);
+                    setIsDialogOpen(true);
+                  }}
+                />
+              ) : (
+                <ReaderOptions {...props} />
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <NodeViewContent className="passage is-editable pl-6" />
+          {editor.isEditable && (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              {dialogType === 'label' && (
+                <EditLabel {...props} close={() => setIsDialogOpen(false)} />
+              )}
+              {dialogType === 'attributes' && <ShowAnnotations {...props} />}
+            </Dialog>
           )}
-          {dialogType === 'attributes' && <ShowAnnotations {...props} />}
-        </Dialog>
-      )}
-    </NodeWrapper>
+        </div>
+      </div>
+      <div
+        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
+      >
+        <LabeledElement label={node.attrs.label} className="mt-1">
+          <div className="leading-8 text-lg whitespace-normal">{source}</div>
+        </LabeledElement>
+      </div>
+    </NodeViewWrapper>
   );
 };
 

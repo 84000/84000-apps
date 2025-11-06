@@ -57,15 +57,6 @@ export const PassageNode = Node.create({
           });
         },
       },
-      class: {
-        default: null,
-        parseHTML: (element) => element.getAttribute('class'),
-        renderHTML: (attributes) => {
-          return mergeAttributes(attributes, {
-            class: attributes.class,
-          });
-        },
-      },
       sort: {
         default: 0,
         parseHTML: (element) => element.getAttribute('sort'),
@@ -74,6 +65,9 @@ export const PassageNode = Node.create({
             sort: attributes.sort,
           });
         },
+      },
+      alignments: {
+        default: {},
       },
     };
   },

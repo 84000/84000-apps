@@ -1,3 +1,4 @@
+import { Alignment, AlignmentDTO, alignmentsFromDTO } from './alignment';
 import {
   Annotations,
   AnnotationsDTO,
@@ -48,6 +49,7 @@ export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnotes'];
 export const BACK_MATTER_FILTER = `(${BACK_MATTER.join('|')})`;
 
 export type Passage = {
+  alignments?: Alignment[];
   annotations: Annotations;
   content: string;
   label: string;
@@ -73,12 +75,14 @@ export type PassageRowDTO = {
 };
 
 export type PassageDTO = PassageRowDTO & {
+  alignments?: AlignmentDTO[];
   annotations?: AnnotationsDTO | null;
 };
 
 export const passageFromDTO = (
   dto: PassageDTO,
   annotations: Annotations = [],
+  alignments: Alignment[] = [],
 ): Passage => {
   return {
     content: dto.content,
@@ -89,6 +93,7 @@ export const passageFromDTO = (
     workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
     parent: dto.parent,
+    alignments,
     annotations,
   };
 };
@@ -98,6 +103,7 @@ export const passagesFromDTO = (dto: PassageDTO[]): Passage[] => {
     passageFromDTO(
       p,
       annotationsFromDTO(p.annotations || [], p.content.length),
+      alignmentsFromDTO(p.alignments || []),
     ),
   );
 };
@@ -126,6 +132,7 @@ export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
 };
 
 export const passageToDTO = (passage: Passage): PassageDTO => {
+  // NOTE: ignore alignments
   return {
     ...passageToRowDTO(passage),
     annotations: annotationsToDTO(passage.annotations) || [],

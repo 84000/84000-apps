@@ -1,3 +1,4 @@
+export * from './alignment';
 export * from './annotation';
 export * from './bibliography';
 export * from './canon';
