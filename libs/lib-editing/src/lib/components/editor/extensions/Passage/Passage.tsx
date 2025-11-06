@@ -48,7 +48,7 @@ export const Passage = (props: NodeViewProps) => {
       : '';
 
   return (
-    <div className="flex w-full gap-12">
+    <div className="flex w-full gap-16">
       <div className="w-full">
         <NodeWrapper
           className={cn(
@@ -89,11 +89,11 @@ export const Passage = (props: NodeViewProps) => {
           )}
         </NodeWrapper>
       </div>
-      {source && (
-        <div className="w-full mt-2">
-          <LabeledElement label={node.attrs.label}>{source}</LabeledElement>
-        </div>
-      )}
+      <div className={cn('w-full mt-1', source ? '' : 'hidden')}>
+        <LabeledElement label={node.attrs.label} className="mt-1">
+          <div className="leading-8 text-lg whitespace-normal">{source}</div>
+        </LabeledElement>
+      </div>
     </div>
   );
 };

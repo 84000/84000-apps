@@ -58,8 +58,8 @@ interface NavigationState {
 }
 
 const DEFAULT_PANELS: PanelsState = {
-  left: { open: true, tab: 'toc' },
-  right: { open: true, tab: 'endnotes' },
+  left: { open: false, tab: 'toc' },
+  right: { open: false, tab: 'endnotes' },
   main: { open: true, tab: 'translation' },
 };
 

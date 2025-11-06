@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement } from 'react';
+import { ReactElement, useMemo } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 
@@ -23,17 +23,20 @@ export const BodyPanel = ({
 }) => {
   const { panels, imprint, updatePanel } = useNavigation();
 
-  const theTranslation = (
-    <div className="w-full max-w-5xl mx-auto">
-      <div className="ms-12 mt-12 mb-8">
-        {renderTitles({ titles, imprint })}
-      </div>
-      {renderTranslation({
-        content: body,
-        className: 'block',
-        name: 'translation',
-      })}
-    </div>
+  const theTranslation = useMemo(
+    () => (
+      <>
+        <div className="ms-12 mt-12 mb-8">
+          {renderTitles({ titles, imprint })}
+        </div>
+        {renderTranslation({
+          content: body,
+          className: 'block',
+          name: 'translation',
+        })}
+      </>
+    ),
+    [body, imprint, renderTitles, renderTranslation, titles],
   );
 
   return (
@@ -52,11 +55,17 @@ export const BodyPanel = ({
         <TabsTrigger value="source">Source</TabsTrigger>
         <TabsTrigger value="compare">Compare</TabsTrigger>
       </TabsList>
-      <TabsContent value="translation">{theTranslation}</TabsContent>
+      <TabsContent value="translation">
+        <div className="w-full max-w-5xl mx-auto">{theTranslation}</div>
+      </TabsContent>
       <TabsContent value="source">
         <SourceReader />
       </TabsContent>
-      <TabsContent value="compare">{theTranslation}</TabsContent>
+      <TabsContent value="compare">
+        <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto">
+          {theTranslation}
+        </div>
+      </TabsContent>
     </Tabs>
   );
 };
