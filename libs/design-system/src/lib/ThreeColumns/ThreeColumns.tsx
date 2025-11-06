@@ -10,7 +10,7 @@ import {
 } from '../Resizable/Resizable';
 import { Button } from '../Button/Button';
 
-enum MinPanelSizes {
+export enum MinPanelSizes {
   COLLAPSED = 0,
   SIDE_DEFAULT = 20,
   MAIN_DEFAULT = 60,
@@ -94,7 +94,7 @@ export const ThreeColumns = ({
         className="bg-sidebar"
         collapsible
         collapsedSize={MinPanelSizes.COLLAPSED}
-        defaultSize={MinPanelSizes.SIDE_DEFAULT}
+        defaultSize={MinPanelSizes.COLLAPSED}
         minSize={MinPanelSizes.SIDE_MIN}
       >
         {leftPanelChildren}
@@ -133,7 +133,7 @@ export const ThreeColumns = ({
         className="bg-sidebar"
         collapsible
         collapsedSize={MinPanelSizes.COLLAPSED}
-        defaultSize={MinPanelSizes.SIDE_DEFAULT}
+        defaultSize={MinPanelSizes.COLLAPSED}
         minSize={MinPanelSizes.SIDE_MIN}
       >
         {rightPanelChildren}
