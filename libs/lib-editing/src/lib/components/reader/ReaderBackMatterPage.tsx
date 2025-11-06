@@ -7,8 +7,6 @@ import {
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
-import { Suspense } from 'react';
-import { TranslationSkeleton } from '../shared';
 
 export const ReaderBackMatterPage = async ({
   params,
@@ -35,13 +33,11 @@ export const ReaderBackMatterPage = async ({
   const bibliography = await getBibliographyEntries({ client, uuid: slug });
 
   return (
-    <Suspense fallback={<TranslationSkeleton />}>
-      <ReaderBackMatterPanel
-        abbreviations={abbreviations}
-        bibliography={bibliography}
-        endnotes={endnotes}
-        glossary={glossary}
-      />
-    </Suspense>
+    <ReaderBackMatterPanel
+      abbreviations={abbreviations}
+      bibliography={bibliography}
+      endnotes={endnotes}
+      glossary={glossary}
+    />
   );
 };

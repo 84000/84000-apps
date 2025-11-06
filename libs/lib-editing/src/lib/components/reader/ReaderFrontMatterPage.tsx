@@ -7,8 +7,6 @@ import {
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderFrontMatterPanel } from './ReaderFrontMatterPanel';
-import { TranslationSkeleton } from '../shared';
-import { Suspense } from 'react';
 
 export const ReaderFrontMatterPage = async ({
   params,
@@ -27,9 +25,5 @@ export const ReaderFrontMatterPage = async ({
   });
   const summary = blocksFromTranslationBody(passages);
 
-  return (
-    <Suspense fallback={<TranslationSkeleton />}>
-      <ReaderFrontMatterPanel summary={summary} toc={toc} work={work} />
-    </Suspense>
-  );
+  return <ReaderFrontMatterPanel summary={summary} toc={toc} work={work} />;
 };

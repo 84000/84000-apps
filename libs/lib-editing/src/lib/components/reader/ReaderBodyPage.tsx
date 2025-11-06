@@ -6,8 +6,6 @@ import {
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
-import { Suspense } from 'react';
-import { TranslationSkeleton } from '../shared';
 
 export const ReaderBodyPage = async ({
   params,
@@ -25,9 +23,5 @@ export const ReaderBodyPage = async ({
   const titles = await getTranslationTitles({ client, uuid: slug });
   const body = blocksFromTranslationBody(passages);
 
-  return (
-    <Suspense fallback={<TranslationSkeleton />}>
-      <ReaderBodyPanel titles={titles} body={body} />
-    </Suspense>
-  );
+  return <ReaderBodyPanel titles={titles} body={body} />;
 };
