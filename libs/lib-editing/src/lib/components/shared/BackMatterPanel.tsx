@@ -42,31 +42,47 @@ export const BackMatterPanel = ({
       className="px-8 pb-[var(--header-height)] max-w-4xl w-full mx-auto mb-[var(--header-height)]"
     >
       <TabsList className="sticky top-3 mx-auto z-10">
-        <TabsTrigger value="endnotes">Notes</TabsTrigger>
-        <TabsTrigger value="glossary">Glossary</TabsTrigger>
-        <TabsTrigger value="bibliography">Biblio</TabsTrigger>
-        <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
+        {endnotes.length > 0 && (
+          <TabsTrigger value="endnotes">Notes</TabsTrigger>
+        )}
+        {glossary.length > 0 && (
+          <TabsTrigger value="glossary">Glossary</TabsTrigger>
+        )}
+        {bibliography.length > 0 && (
+          <TabsTrigger value="bibliography">Biblio</TabsTrigger>
+        )}
+        {abbreviations.length > 0 && (
+          <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
+        )}
       </TabsList>
-      <TabsContent value="endnotes">
-        {renderTranslation({
-          content: endnotes,
-          className: 'block',
-          name: 'endnotes',
-        })}
-      </TabsContent>
-      <TabsContent value="glossary">
-        <GlossaryTermList content={glossary} />
-      </TabsContent>
-      <TabsContent value="bibliography">
-        <BibliographyList content={bibliography} />
-      </TabsContent>
-      <TabsContent value="abbreviations">
-        {renderTranslation({
-          content: abbreviations,
-          className: 'block',
-          name: 'abbreviations',
-        })}
-      </TabsContent>
+      {endnotes.length > 0 && (
+        <TabsContent value="endnotes">
+          {renderTranslation({
+            content: endnotes,
+            className: 'block',
+            name: 'endnotes',
+          })}
+        </TabsContent>
+      )}
+      {glossary.length > 0 && (
+        <TabsContent value="glossary">
+          <GlossaryTermList content={glossary} />
+        </TabsContent>
+      )}
+      {bibliography.length > 0 && (
+        <TabsContent value="bibliography">
+          <BibliographyList content={bibliography} />
+        </TabsContent>
+      )}
+      {abbreviations.length > 0 && (
+        <TabsContent value="abbreviations">
+          {renderTranslation({
+            content: abbreviations,
+            className: 'block',
+            name: 'abbreviations',
+          })}
+        </TabsContent>
+      )}
     </Tabs>
   );
 };

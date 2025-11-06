@@ -1,6 +1,10 @@
 'use client';
 
-import { ImperativePanelHandle, ThreeColumns } from '@design-system';
+import {
+  ImperativePanelHandle,
+  MinPanelSizes,
+  ThreeColumns,
+} from '@design-system';
 import { ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useNavigation } from './NavigationProvider';
 
@@ -24,7 +28,7 @@ export const ThreeColumnRenderer = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (panels.left.open) {
-      leftPanelRef.current?.expand();
+      leftPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
     } else {
       leftPanelRef.current?.collapse();
     }
@@ -32,7 +36,7 @@ export const ThreeColumnRenderer = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (panels.right.open) {
-      rightPanelRef.current?.expand();
+      rightPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
     } else {
       rightPanelRef.current?.collapse();
     }
