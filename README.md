@@ -2,23 +2,6 @@
 
 This repository contain web clients for 84000 applications.
 
-## Repo Structure
-
-```bash
-\apps
-|- applications
-\libs
-|- shared libraries
-
-```
-
-## Integrate with editors
-
-Enhance your Nx experience by installing [Nx Console](https://nx.dev/nx-console)
-for your favorite editor. Nx Console provides an interactive UI to view your
-projects, run tasks, generate code, and more! Available for VSCode, IntelliJ and
-comes with a LSP for Vim users.
-
 ## Start an application
 
 As described below, all commands within this monorepo follow a well-defined pattern.
@@ -34,6 +17,53 @@ npx nx dev web-main
 
 > We also have a Storybook design system supporting the `design-system` library.
 > Use the `nx storybook design-system` command to run it locally.
+
+The most common commands are probably:
+
+```bash
+# Run the web-main app in dev mode. Replace 'web-main' with the name of any
+# other app to run it instead
+npx nx dev web-main
+
+# Build the web-main app for production. Replace 'web-main' with the name of any
+# other app to build it instead. If a preview deployment fails, start by building
+# the app locally to see if there are any errors.
+npx nx build web-main
+
+# Run the design system Storybook locally
+npx nx storybook design-system
+```
+
+> If you install `nx` globally, you can replace `npx nx` with just `nx` in the
+> commands above.
+
+## Vercel applications
+
+If you are working on an application that is deployed to Vercel, you may need to
+set up environment variables locally. From within the directory of the application
+(such as `/apps/web-main`), start by running the command:
+
+```bash
+npx vercel env pull --environment development
+```
+
+This will create a `.env.local` file in the application directory with the necessary
+environment variables. They can be overridden as needed. If you rename the file
+for some reason, be sure to update the `.gitignore` file to prevent committing.
+
+## Repo Structure
+
+```bash
+\apps
+|- applications
+\libs
+|- shared libraries
+
+```
+
+As much as possible, code should be placed in `libs` and reused across multiple
+applications in `apps`. Applications should be as thin as possible, focusing on
+orchestrating the libraries to deliver the desired functionality.
 
 ## Build for production
 
