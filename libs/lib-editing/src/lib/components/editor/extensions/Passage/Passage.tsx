@@ -21,7 +21,7 @@ import { Alignment } from '@data-access';
 export const Passage = (props: NodeViewProps) => {
   const { node, editor } = props;
 
-  const [compareLeadingSpace, setCompareLeadingSpace] = useState('mt-1');
+  const [compareLeadingSpace, setCompareLeadingSpace] = useState('md:mt-1');
   const [isCompare, setIsCompare] = useState(false);
   const [source, setSource] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -44,9 +44,9 @@ export const Passage = (props: NodeViewProps) => {
     setSource(alignment?.tibetan || '');
     const firstChild = node.content.firstChild;
     if (firstChild?.attrs.hasLeadingSpace) {
-      setCompareLeadingSpace('mt-5');
+      setCompareLeadingSpace('md:mt-5');
     } else if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
-      setCompareLeadingSpace('mt-2');
+      setCompareLeadingSpace('md:mt-2');
     }
   }, [isCompare, node, toh]);
 
@@ -61,7 +61,7 @@ export const Passage = (props: NodeViewProps) => {
     <NodeViewWrapper
       id={node.attrs.uuid}
       as="div"
-      className="flex w-full gap-16"
+      className="flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0"
     >
       <div className="w-full">
         <div
