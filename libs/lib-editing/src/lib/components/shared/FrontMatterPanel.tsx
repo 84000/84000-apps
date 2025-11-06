@@ -41,19 +41,23 @@ export const FrontMatterPanel = ({
     >
       <TabsList className="sticky top-3 mx-auto z-10">
         <TabsTrigger value="toc">Navigation</TabsTrigger>
-        <TabsTrigger value="summary">Summary</TabsTrigger>
+        {summary.length > 0 && (
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+        )}
         <TabsTrigger value="imprint">Imprint</TabsTrigger>
       </TabsList>
       <TabsContent value="toc">
         <TableOfContents toc={toc} work={work} />
       </TabsContent>
-      <TabsContent value="summary">
-        {renderTranslation({
-          content: summary,
-          className: 'block',
-          name: 'summary',
-        })}
-      </TabsContent>
+      {summary.length > 0 && (
+        <TabsContent value="summary">
+          {renderTranslation({
+            content: summary,
+            className: 'block',
+            name: 'summary',
+          })}
+        </TabsContent>
+      )}
       <TabsContent value="imprint">
         <ImprintTab imprint={imprint} />
       </TabsContent>

@@ -102,7 +102,7 @@ export const tocFromDTO = (dto: TocDTO): Toc => {
     colophon: bodyMatter,
     endnotes: backMatter,
     homage: bodyMatter,
-    introduction: bodyMatter,
+    introduction: frontMatter,
     prelude: bodyMatter,
     prologue: bodyMatter,
     summary: frontMatter,
