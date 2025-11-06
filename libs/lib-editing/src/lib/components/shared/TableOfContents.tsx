@@ -36,6 +36,23 @@ const TAB_FOR_SECTION: Record<string, TabName> = {
   translation: 'translation',
 };
 
+const PANEL_FOR_SECTION: Record<string, PanelName> = {
+  abbreviations: 'right',
+  acknowledgment: 'left',
+  appendix: 'main',
+  bibliography: 'right',
+  colophon: 'main',
+  endnotes: 'right',
+  glossary: 'right',
+  homage: 'main',
+  imprint: 'left',
+  introduction: 'main',
+  prelude: 'main',
+  prologue: 'main',
+  summary: 'left',
+  translation: 'main',
+};
+
 export const TableOfContentsSection = ({
   node,
   className,
@@ -55,14 +72,13 @@ export const TableOfContentsSection = ({
 
   const onClick = useCallback(
     (entry: TocEntry) => {
-      if (panel) {
-        updatePanel({
-          name: panel,
-          state: { open: true, tab: TAB_FOR_SECTION[entry.section] },
-        });
-      }
+      const { section } = entry;
+      updatePanel({
+        name: PANEL_FOR_SECTION[section] || panel,
+        state: { open: true, tab: TAB_FOR_SECTION[section] || 'translation' },
+      });
     },
-    [panel, updatePanel],
+    [updatePanel, panel],
   );
 
   if (!node.children?.length) {
@@ -124,7 +140,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     content: 'Front Matter',
     sort: 0,
     level: 0,
-    section: 'acknowledgment',
+    section: 'summary',
     children: [
       {
         uuid: 'imprint',
@@ -142,7 +158,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     content: 'Body',
     sort: 0,
     level: 0,
-    section: 'introduction',
+    section: 'translation',
     children: toc?.body || [],
   };
   const backMatter: TocEntry = {
@@ -173,15 +189,18 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
   };
   return (
     <div>
-      <div className="pt-8 gap-2.5 flex text-navy font-semibold">
+      <div className="pt-12 gap-2.5 flex text-navy font-semibold">
         <div className="size-5 my-auto bg-ochre-300 text-background rounded-md">
           <MenuIcon className="size-full p-1" />
         </div>
         Table of Contents
       </div>
-      <Separator className="my-4" />
-      <div className="pb-2 text-sm uppercase text-slate">Title</div>
-      <div className={baseStyle}>{work.title}</div>
+      <div className={cn(baseStyle, 'font-light text-navy-200 mt-6')}>
+        {imprint?.section || work.section}
+      </div>
+      <div className={cn(baseStyle, 'font-bold text-navy-500')}>
+        {work.title}
+      </div>
       {work.toh.length > 1 ? (
         <Select
           value={localToh}
@@ -209,19 +228,15 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
           </SelectContent>
         </Select>
       ) : (
-        <div className={cn(baseStyle, 'font-semibold pt-3')}>
+        <div className={cn(baseStyle, 'font-semibold pt-3 text-ochre-500')}>
           {parseToh(localToh || '')}
         </div>
       )}
-      <div className={baseStyle}>{imprint?.section || work.section}</div>
       <Separator className="my-4" />
-      <div className="pb-2 text-sm uppercase text-slate">Front Matter</div>
       <TableOfContentsSection node={frontMatter} panel="left" />
       <Separator className="my-4" />
-      <div className="pb-2 text-sm uppercase text-slate">Translation</div>
       <TableOfContentsSection node={body} panel="main" />
       <Separator className="my-4" />
-      <div className="pb-2 text-sm uppercase text-slate">Back Matter</div>
       <TableOfContentsSection node={backMatter} panel="right" />
     </div>
   );
