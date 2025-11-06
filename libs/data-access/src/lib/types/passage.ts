@@ -47,6 +47,13 @@ export const BODY_MATTER: BodyItemType[] = [
 export const BODY_MATTER_FILTER = `(${BODY_MATTER.join('|')})`;
 export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnotes'];
 export const BACK_MATTER_FILTER = `(${BACK_MATTER.join('|')})`;
+export const COMPARE_MODE: BodyItemType[] = [
+  'translation',
+  'prelude',
+  'prologue',
+  'colophon',
+];
+export const COMPARE_MODE_FILTER = `(${COMPARE_MODE.join('|')})`;
 
 export type Passage = {
   alignments?: Alignment[];
