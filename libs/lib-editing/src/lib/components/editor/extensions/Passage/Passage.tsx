@@ -1,6 +1,9 @@
 import { cn } from '@lib-utils';
-import type { NodeViewProps } from '@tiptap/react';
-import { NodeWrapper } from '../NodeWrapper';
+import {
+  NodeViewContent,
+  NodeViewWrapper,
+  type NodeViewProps,
+} from '@tiptap/react';
 import {
   Dialog,
   DropdownMenu,
@@ -18,6 +21,7 @@ import { Alignment } from '@data-access';
 export const Passage = (props: NodeViewProps) => {
   const { node, editor } = props;
 
+  const [compareLeadingSpace, setCompareLeadingSpace] = useState('mt-1');
   const [isCompare, setIsCompare] = useState(false);
   const [source, setSource] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -38,6 +42,12 @@ export const Passage = (props: NodeViewProps) => {
 
     const alignment = node.attrs.alignments?.[toh] as Alignment;
     setSource(alignment?.tibetan || '');
+    const firstChild = node.content.firstChild;
+    if (firstChild?.attrs.hasLeadingSpace) {
+      setCompareLeadingSpace('mt-5');
+    } else if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
+      setCompareLeadingSpace('mt-2');
+    }
   }, [isCompare, node, toh]);
 
   const className =
@@ -48,15 +58,17 @@ export const Passage = (props: NodeViewProps) => {
       : '';
 
   return (
-    <div className="flex w-full gap-16">
+    <NodeViewWrapper
+      id={node.attrs.uuid}
+      as="div"
+      className="flex w-full gap-16"
+    >
       <div className="w-full">
-        <NodeWrapper
+        <div
           className={cn(
             'relative ml-6 scroll-m-20 w-full self-start',
             borderClassName,
           )}
-          innerClassName="passage is-editable pl-6"
-          {...props}
         >
           <DropdownMenu>
             <DropdownMenuTrigger className={className} contentEditable={false}>
@@ -79,6 +91,7 @@ export const Passage = (props: NodeViewProps) => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          <NodeViewContent className="passage is-editable pl-6" />
           {editor.isEditable && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               {dialogType === 'label' && (
@@ -87,14 +100,16 @@ export const Passage = (props: NodeViewProps) => {
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
             </Dialog>
           )}
-        </NodeWrapper>
+        </div>
       </div>
-      <div className={cn('w-full mt-1', source ? '' : 'hidden')}>
+      <div
+        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
+      >
         <LabeledElement label={node.attrs.label} className="mt-1">
           <div className="leading-8 text-lg whitespace-normal">{source}</div>
         </LabeledElement>
       </div>
-    </div>
+    </NodeViewWrapper>
   );
 };
 
