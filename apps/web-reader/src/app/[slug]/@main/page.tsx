@@ -1,6 +1,5 @@
 import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { ReaderBodyPage, TranslationSkeleton } from '@lib-editing';
-import { Suspense } from 'react';
+import { ReaderBodyPage } from '@lib-editing';
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -11,12 +10,6 @@ export const generateStaticParams = async () => {
   return uuids.map((slug) => ({ slug }));
 };
 
-const Page = async ({ params }: { params: Promise<{ slug: string }> }) => {
-  return (
-    <Suspense fallback={<TranslationSkeleton />}>
-      <ReaderBodyPage params={params} />
-    </Suspense>
-  );
-};
+const Page = ReaderBodyPage;
 
 export default Page;
