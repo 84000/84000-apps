@@ -1,10 +1,13 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
-import { TranslationEditorContent } from '../editor';
-import { Title } from '@data-access';
+import {
+  TranslationEditorContent,
+  TranslationEditorContentItem,
+} from '../editor';
+import { COMPARE_MODE, Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement, useMemo } from 'react';
+import { ReactElement, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 
@@ -22,21 +25,24 @@ export const BodyPanel = ({
   ) => ReactElement<TranslationRenderer>;
 }) => {
   const { panels, imprint, updatePanel } = useNavigation();
+  const [alignments, setAlignments] = useState<TranslationEditorContent>();
 
-  const theTranslation = useMemo(
+  useEffect(() => {
+    const passages = body as TranslationEditorContentItem[];
+    const alignments = passages.filter((item) =>
+      COMPARE_MODE.includes((item.attrs?.type || '').replace('Header', '')),
+    );
+    setAlignments(alignments);
+  }, [body]);
+
+  const theTitles = useMemo(
     () => (
-      <>
-        <div className="ms-12 mt-12 mb-8">
-          {renderTitles({ titles, imprint })}
-        </div>
-        {renderTranslation({
-          content: body,
-          className: 'block',
-          name: 'translation',
-        })}
-      </>
+      <div className="ms-12 mt-12 mb-8">
+        {renderTitles({ titles, imprint })}
+      </div>
     ),
-    [body, imprint, renderTitles, renderTranslation, titles],
+
+    [titles, imprint, renderTitles],
   );
 
   return (
@@ -53,19 +59,34 @@ export const BodyPanel = ({
       <TabsList className="sticky top-3 mx-auto -mt-25 z-10">
         <TabsTrigger value="translation">Translation</TabsTrigger>
         <TabsTrigger value="source">Source</TabsTrigger>
-        <TabsTrigger value="compare">Compare</TabsTrigger>
+        {alignments && alignments.length > 0 && (
+          <TabsTrigger value="compare">Compare</TabsTrigger>
+        )}
       </TabsList>
       <TabsContent value="translation">
-        <div className="w-full max-w-5xl mx-auto">{theTranslation}</div>
+        <div className="w-full max-w-5xl mx-auto">
+          {theTitles}
+          {renderTranslation({
+            content: body,
+            className: 'block',
+            name: 'translation',
+          })}
+        </div>
       </TabsContent>
       <TabsContent value="source">
         <SourceReader />
       </TabsContent>
-      <TabsContent value="compare">
-        <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto">
-          {theTranslation}
-        </div>
-      </TabsContent>
+      {alignments && alignments.length > 0 && (
+        <TabsContent value="compare">
+          <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
+            {renderTranslation({
+              content: alignments,
+              className: 'block',
+              name: 'translation',
+            })}
+          </div>
+        </TabsContent>
+      )}
     </Tabs>
   );
 };
