@@ -12,7 +12,7 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
 import { LabeledElement, useNavigation } from '../../../shared';
@@ -57,12 +57,15 @@ export const Passage = (props: NodeViewProps) => {
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
       : '';
 
+  const wrapperClassName = useMemo(() => {
+    const localToh = node.attrs.toh || toh;
+    return toh === localToh
+      ? 'flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0'
+      : 'hidden';
+  }, [toh, node.attrs.toh]);
+
   return (
-    <NodeViewWrapper
-      id={node.attrs.uuid}
-      as="div"
-      className="flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0"
-    >
+    <NodeViewWrapper id={node.attrs.uuid} as="div" className={wrapperClassName}>
       <div className="w-full">
         <div
           className={cn(
