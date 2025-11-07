@@ -33,7 +33,11 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
 
   const longBoLtnTitle = longTitles?.['Bo-Ltn'] || mainBoLtnTitle;
 
-  const translators = imprint?.tibetanTranslators?.split(',') || [];
+  const translators =
+    imprint?.tibetanTranslators
+      ?.split(',')
+      ?.map((t) => t.trim())
+      .filter((t) => !!t) || [];
 
   return (
     <div className="pt-8 pb-16 px-4 mx-auto max-w-2xl flex flex-col gap-1 w-full text-center text-sm font-serif">
@@ -53,7 +57,7 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
       )}
       {toh && <div className="pt-8">{`${DOT} ${toh} ${DOT}`}</div>}
       {imprint.sourceDescription && <div>{imprint.sourceDescription}</div>}
-      {translators.length && (
+      {translators.length > 0 && (
         <>
           <div className="pt-5 pb-1 uppercase text-xs">
             Translated into Tibetan by
@@ -61,9 +65,9 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
 
           <div className="flex gap-x-2 mx-auto flex-wrap justify-center">
             <span>{DOT}</span>
-            {translators.map((translator) => (
+            {translators.map((translator, idx) => (
               <>
-                <span key={translator}>{translator.trim()}</span>
+                <span key={`${translator}-${idx}`}>{translator}</span>
                 <span>{DOT}</span>
               </>
             ))}
