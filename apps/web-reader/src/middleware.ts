@@ -7,7 +7,12 @@ export async function middleware(request: NextRequest) {
   // match tohoku catalog shortlinks like /toh1234
   if (pathname.match(/^\/toh\d+/)) {
     const url = request.nextUrl.clone();
-    const toh = pathname.split('/')[1];
+    const toh = pathname.split('/')[1]?.split('.')[0];
+
+    if (!toh) {
+      return NextResponse.next();
+    }
+
     const client = await createServerClient();
     const { data, error } = await client
       .from('works')
