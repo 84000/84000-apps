@@ -68,7 +68,7 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
             {translators.map((translator, idx) => (
               <>
                 <span key={`${translator}-${idx}`}>{translator}</span>
-                <span>{DOT}</span>
+                <span key={`dot-${idx}`}>{DOT}</span>
               </>
             ))}
           </div>
