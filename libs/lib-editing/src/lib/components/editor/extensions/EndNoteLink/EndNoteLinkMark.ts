@@ -1,6 +1,7 @@
 import { Mark } from '@tiptap/core';
 import { createMarkViewDom } from '../../util';
 import { Passage } from '@data-access';
+import { cn } from '@lib-utils';
 
 export interface EndNoteLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -48,7 +49,7 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
       const { dom: endnoteDOM } = createMarkViewDom({
         ...props,
         element: 'sup',
-        className,
+        className: cn(className, props.mark.attrs.toh),
       });
 
       dom.appendChild(contentDOM);

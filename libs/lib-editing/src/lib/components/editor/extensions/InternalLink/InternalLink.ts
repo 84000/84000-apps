@@ -4,6 +4,7 @@ import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 import { InternalLinkView } from './InternalLinkView';
 import { createMarkViewDom } from '../../util';
+import { cn } from '@lib-utils';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -63,7 +64,7 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
         const { dom } = createMarkViewDom({
           ...props,
           element: 'a',
-          className: LINK_STYLE,
+          className: cn(LINK_STYLE, props.mark.attrs.toh),
         });
 
         dom.setAttribute('href', props.mark.attrs.href);

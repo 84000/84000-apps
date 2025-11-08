@@ -1,6 +1,7 @@
 import { Mark } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom } from '../../util';
+import { cn } from '@lib-utils';
 
 export interface GlossaryInstanceOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -68,7 +69,7 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       const { dom } = createMarkViewDom({
         ...props,
         element: 'span',
-        className: 'glossary-instance',
+        className: cn('glossary-instance', props.mark.attrs.toh),
       });
 
       dom.addEventListener('click', () => {
