@@ -42,7 +42,7 @@ export const GlossaryInstanceBody = ({
         {instance.names.sanskrit && (
           <Li className="italic">{instance.names.sanskrit}</Li>
         )}
-        {instance.names.chinese && <div>{instance.names.chinese}</div>}
+        {instance.names.chinese && <Li>{instance.names.chinese}</Li>}
         {instance.names.pali && (
           <Li className="italic">{instance.names.pali}</Li>
         )}
