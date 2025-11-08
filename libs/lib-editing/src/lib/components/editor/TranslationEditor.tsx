@@ -5,7 +5,7 @@ import type { XmlFragment } from 'yjs';
 import { useBlockEditor, useTranslationExtensions } from './hooks';
 import { TranslationBubbleMenu } from './menus';
 import { cn } from '@lib-utils';
-import { Passage } from '@data-access';
+import { Passage, TohokuCatalogEntry } from '@data-access';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -13,6 +13,7 @@ export type TranslationEditorContentItem = JSONContent & {
     class?: string | null;
     type?: string | null;
     sort?: number | null;
+    toh?: TohokuCatalogEntry | null;
   };
 };
 

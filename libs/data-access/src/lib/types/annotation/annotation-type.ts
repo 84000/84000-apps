@@ -1,3 +1,5 @@
+import { TohokuCatalogEntry } from '../toh';
+
 export type AnnotationDTOType =
   | 'abbreviation'
   | 'audio'
@@ -173,6 +175,7 @@ export type AnnotationDTO = {
   uuid: string;
   passage_uuid?: string;
   passageUuid?: string;
+  toh?: TohokuCatalogEntry;
 };
 
 export type AnnotationsDTO = AnnotationDTO[];
@@ -199,4 +202,5 @@ export type AnnotationBase = {
   uuid: string;
   passageUuid: string;
   validated?: boolean;
+  toh?: TohokuCatalogEntry;
 };

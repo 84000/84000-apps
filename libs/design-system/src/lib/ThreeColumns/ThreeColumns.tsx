@@ -16,6 +16,7 @@ export enum MinPanelSizes {
   MAIN_DEFAULT = 60,
   SIDE_MIN = 10,
   MAIN_MIN = 30,
+  FULL = 100,
 }
 
 export type ImperativePanelHandle = RRImperativePanelHandle;
@@ -102,7 +103,7 @@ export const ThreeColumns = ({
       <ResizableHandle />
       <ResizablePanel
         style={{ overflow: 'auto' }}
-        defaultSize={MinPanelSizes.MAIN_DEFAULT}
+        defaultSize={MinPanelSizes.FULL}
         minSize={MinPanelSizes.MAIN_MIN}
       >
         <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">

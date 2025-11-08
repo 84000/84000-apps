@@ -12,6 +12,7 @@ import { Passage } from '@data-access';
 export const passageFromNode = (node: Node, workUuid: string): Passage => {
   const uuid = node.attrs.uuid;
   const type = node.attrs.type;
+  const toh = node.attrs.toh;
 
   const ctx: ExporterContext = {
     passageUuid: uuid,
@@ -47,6 +48,7 @@ export const passageFromNode = (node: Node, workUuid: string): Passage => {
     sort: node.attrs.sort,
     label: node.attrs.label,
     content: node.textContent,
+    toh,
     annotations,
   };
   return passage;

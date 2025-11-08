@@ -61,7 +61,10 @@ export const Passage = (props: NodeViewProps) => {
     <NodeViewWrapper
       id={node.attrs.uuid}
       as="div"
-      className="flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0"
+      className={cn(
+        'flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0',
+        node.attrs.toh,
+      )}
     >
       <div className="w-full">
         <div

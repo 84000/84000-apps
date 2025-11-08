@@ -12,6 +12,7 @@ export const internalLink: Transformer = (ctx) => {
     start,
     end,
     linkType: type,
+    toh,
   } = annotation as InternalLinkAnnotation;
 
   if (!(end - start)) {
@@ -42,7 +43,7 @@ export const internalLink: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'internalLink',
-              attrs: { href: path, entity, type },
+              attrs: { href: path, entity, type, toh },
             },
           ];
         },

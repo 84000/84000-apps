@@ -5,7 +5,8 @@ import { splitContentAt } from './split-at';
 
 export const endNoteLink: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { endNote, uuid, start, end } = annotation as EndNoteLinkAnnotation;
+  const { endNote, uuid, start, end, toh } =
+    annotation as EndNoteLinkAnnotation;
 
   if (!endNote) {
     console.warn(`End note link ${uuid} is missing end note reference`);
@@ -28,6 +29,7 @@ export const endNoteLink: Transformer = (ctx) => {
                 uuid,
                 start,
                 end,
+                toh,
               },
             },
           ];

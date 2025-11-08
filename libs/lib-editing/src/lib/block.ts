@@ -21,6 +21,7 @@ const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
       sort: passage.sort,
       type: passage.type,
       label: passage.label,
+      toh: passage.toh,
       alignments,
     },
     content: [],

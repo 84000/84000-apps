@@ -5,6 +5,7 @@ import {
   annotationsFromDTO,
   annotationsToDTO,
 } from './annotation';
+import { TohokuCatalogEntry } from './toh';
 
 export const BODY_ITEM_TYPES = [
   'abbreviations',
@@ -66,6 +67,7 @@ export type Passage = {
   workUuid: string;
   xmlId?: string;
   parent?: string;
+  toh?: TohokuCatalogEntry;
 };
 
 export type Passages = Passage[];
@@ -79,6 +81,7 @@ export type PassageRowDTO = {
   work_uuid: string;
   xmlId?: string;
   parent?: string;
+  toh?: TohokuCatalogEntry;
 };
 
 export type PassageDTO = PassageRowDTO & {
@@ -100,6 +103,7 @@ export const passageFromDTO = (
     workUuid: dto.work_uuid,
     xmlId: dto.xmlId,
     parent: dto.parent,
+    toh: dto.toh,
     alignments,
     annotations,
   };
@@ -133,6 +137,10 @@ export const passageToRowDTO = (passage: Passage): PassageRowDTO => {
 
   if (passage.parent) {
     dto.parent = passage.parent;
+  }
+
+  if (passage.toh) {
+    dto.toh = passage.toh;
   }
 
   return dto;

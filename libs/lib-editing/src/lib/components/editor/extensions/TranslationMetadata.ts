@@ -32,6 +32,15 @@ export default Extension.create({
               });
             },
           },
+          toh: {
+            default: undefined,
+            parseHTML: (element) => element.getAttribute('toh'),
+            renderHTML: (attributes) => {
+              return mergeAttributes(attributes, {
+                toh: attributes.toh,
+              });
+            },
+          },
           invalid: {
             default: null,
             parseHTML: (element) =>

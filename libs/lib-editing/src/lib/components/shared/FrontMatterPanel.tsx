@@ -8,6 +8,7 @@ import { useNavigation } from './NavigationProvider';
 import { Toc, Work } from '@data-access';
 import { TableOfContents } from './TableOfContents';
 import { ImprintTab } from './ImprintTab';
+import { useTohToggle } from './hooks/useTohToggle';
 
 export const FrontMatterPanel = ({
   summary,
@@ -23,6 +24,8 @@ export const FrontMatterPanel = ({
   ) => ReactElement<TranslationRenderer>;
 }) => {
   const { panels, imprint, toh, updatePanel, setToh } = useNavigation();
+  useTohToggle({ work, toh });
+
   useEffect(() => {
     const currentToh = toh || work.toh[0] || '';
     setToh(currentToh);
