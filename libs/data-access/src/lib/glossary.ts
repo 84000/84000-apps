@@ -75,7 +75,11 @@ export const getGlossaryInstances = async ({
   }
 
   const dto = data as GlossaryTermInstancesDTO;
-  return dto.glossary_entries.map(glossaryTermInstanceFromDTO);
+  return dto.glossary_entries.map(glossaryTermInstanceFromDTO).sort((a, b) => {
+    const nameA = a.names.english || '';
+    const nameB = b.names.english || '';
+    return nameA.localeCompare(nameB);
+  });
 };
 
 export const getGlossaryInstance = async ({
