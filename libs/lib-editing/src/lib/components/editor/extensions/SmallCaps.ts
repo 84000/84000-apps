@@ -76,7 +76,7 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
     return [
       'sm',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: 'uppercase text-xs',
+        class: 'uppercase',
       }),
       0,
     ];
