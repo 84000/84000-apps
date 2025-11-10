@@ -33,7 +33,13 @@
     @apply text-brick cursor-pointer text-xs;
   }
 
-  .definition {
-    @apply mb-4;
+  .glossary-instance-definition {
+    p {
+      @apply mb-1 mt-2;
+
+      @variant position-sidebar {
+        @apply pt-1;
+      }
+    }
   }
 }
