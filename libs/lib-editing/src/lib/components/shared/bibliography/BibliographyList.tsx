@@ -42,7 +42,10 @@ export const BibliographyList = ({
                 key={entry.uuid}
                 label={`b.${i + 1}.${j + 1}`}
               >
-                <div dangerouslySetInnerHTML={{ __html: entry.html }} />
+                <div
+                  className="flex flex-col gap-4"
+                  dangerouslySetInnerHTML={{ __html: entry.html }}
+                />
               </LabeledElement>
             ))}
           </div>

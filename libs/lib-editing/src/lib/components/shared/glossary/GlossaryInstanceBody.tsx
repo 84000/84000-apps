@@ -48,7 +48,12 @@ export const GlossaryInstanceBody = ({
         )}
       </Ul>
       <div className="my-2" />
-      {definition && <p>{definition}</p>}
+      {instance.definition && (
+        <div
+          className="flex flex-col gap-4"
+          dangerouslySetInnerHTML={{ __html: instance.definition }}
+        />
+      )}
       <div className="text-sm text-mut my-2">
         <a
           href={`/glossary/${instance.authority}`}
