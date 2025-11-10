@@ -68,12 +68,12 @@ export const BodyPanel = ({
           {theTitles}
           {renderTranslation({
             content: body,
-            className: 'block',
+            className: 'block pb-32',
             name: 'translation',
           })}
         </div>
       </TabsContent>
-      <TabsContent value="source">
+      <TabsContent value="source" className="pb-32">
         <SourceReader />
       </TabsContent>
       {alignments && alignments.length > 0 && (
@@ -81,7 +81,7 @@ export const BodyPanel = ({
           <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
             {renderTranslation({
               content: alignments,
-              className: 'block',
+              className: 'block pb-32',
               name: 'translation',
             })}
           </div>
