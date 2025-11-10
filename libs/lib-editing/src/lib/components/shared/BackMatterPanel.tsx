@@ -59,18 +59,18 @@ export const BackMatterPanel = ({
         <TabsContent value="endnotes">
           {renderTranslation({
             content: endnotes,
-            className: 'block',
+            className: 'block pb-8',
             name: 'endnotes',
           })}
         </TabsContent>
       )}
       {glossary.length > 0 && (
-        <TabsContent value="glossary">
+        <TabsContent value="glossary" className="pb-8">
           <GlossaryTermList content={glossary} />
         </TabsContent>
       )}
       {bibliography.length > 0 && (
-        <TabsContent value="bibliography">
+        <TabsContent value="bibliography" className="pb-8">
           <BibliographyList content={bibliography} />
         </TabsContent>
       )}

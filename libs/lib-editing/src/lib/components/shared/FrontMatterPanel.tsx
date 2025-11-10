@@ -49,19 +49,19 @@ export const FrontMatterPanel = ({
         )}
         <TabsTrigger value="imprint">Imprint</TabsTrigger>
       </TabsList>
-      <TabsContent value="toc">
+      <TabsContent value="toc" className="pb-8">
         <TableOfContents toc={toc} work={work} />
       </TabsContent>
       {summary.length > 0 && (
         <TabsContent value="summary">
           {renderTranslation({
             content: summary,
-            className: 'block',
+            className: 'block pb-8',
             name: 'summary',
           })}
         </TabsContent>
       )}
-      <TabsContent value="imprint">
+      <TabsContent value="imprint" className="pb-8">
         <ImprintTab imprint={imprint} />
       </TabsContent>
     </Tabs>
