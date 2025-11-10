@@ -2,8 +2,7 @@
 
 import { GlossaryTermInstance } from '@data-access';
 import { Li, Ul } from '@design-system';
-import { cn, removeHtmlTags } from '@lib-utils';
-import { useEffect, useState } from 'react';
+import { cn } from '@lib-utils';
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -12,17 +11,6 @@ export const GlossaryInstanceBody = ({
   instance: GlossaryTermInstance;
   className?: string;
 }) => {
-  const [definition, setDefinition] = useState<string>();
-
-  useEffect(() => {
-    if (!instance?.definition) {
-      return;
-    }
-
-    const plainText = removeHtmlTags(instance.definition);
-    setDefinition(plainText);
-  }, [instance.definition, setDefinition]);
-
   return (
     <div className={cn('p-2 flex gap-1 flex-col', className)}>
       {instance.names.english && (
@@ -49,10 +37,7 @@ export const GlossaryInstanceBody = ({
       </Ul>
       <div className="my-2" />
       {instance.definition && (
-        <div
-          className="flex flex-col gap-4"
-          dangerouslySetInnerHTML={{ __html: instance.definition }}
-        />
+        <div dangerouslySetInnerHTML={{ __html: instance.definition }} />
       )}
       <div className="text-sm text-mut my-2">
         <a

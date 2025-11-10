@@ -32,4 +32,8 @@
   .end-note-link {
     @apply text-brick cursor-pointer text-xs;
   }
+
+  .definition {
+    @apply mb-4;
+  }
 }
