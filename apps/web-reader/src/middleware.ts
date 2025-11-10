@@ -15,17 +15,17 @@ export async function middleware(request: NextRequest) {
 
     const client = await createServerClient();
     const { data, error } = await client
-      .from('works')
-      .select('uuid')
-      .eq('toh', toh)
+      .from('work_toh')
+      .select('work_uuid')
+      .eq('toh_clean', toh)
       .single();
 
     if (error || !data) {
       return NextResponse.next();
     }
 
-    if (data?.uuid) {
-      url.pathname = `/${data.uuid}`;
+    if (data?.work_uuid) {
+      url.pathname = `/${data.work_uuid}`;
       url.searchParams.set('toh', toh);
     }
     return NextResponse.redirect(url);
