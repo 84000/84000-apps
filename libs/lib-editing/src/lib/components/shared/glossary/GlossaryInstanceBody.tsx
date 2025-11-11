@@ -2,6 +2,7 @@
 
 import { GlossaryTermInstance } from '@data-access';
 import { Li, Ul } from '@design-system';
+import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
 
 export const GlossaryInstanceBody = ({
@@ -35,23 +36,24 @@ export const GlossaryInstanceBody = ({
           <Li className="italic">{instance.names.pali}</Li>
         )}
       </Ul>
-      <div className="my-2" />
       {instance.definition && (
         <div
           className="glossary-instance-definition"
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />
       )}
-      <div className="text-sm text-mut my-2">
-        <a
-          href={`/glossary/${instance.authority}`}
-          target="_blank"
-          rel="noreferrer"
-          className="hover:underline decoration-slate hover:text-slate"
-        >
-          {'View full entry ›'}
-        </a>
-      </div>
+      <GatedFeature flag="authority-pages">
+        <div className="text-sm text-mut my-2">
+          <a
+            href={`/glossary/${instance.authority}`}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline decoration-slate hover:text-slate"
+          >
+            {'View full entry ›'}
+          </a>
+        </div>
+      </GatedFeature>
     </div>
   );
 };

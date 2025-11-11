@@ -1,0 +1,8 @@
+{
+  "name": "lib-instr",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/lib-instr/src",
+  "projectType": "library",
+  "tags": ["type:utility", "scope:shared"],
+  "targets": {}
+}

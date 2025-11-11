@@ -27,6 +27,8 @@
       "@lib-explore/ssr": ["libs/lib-explore/src/ssr.ts"],
       "@lib-glossary": ["libs/lib-glossary/src/index.ts"],
       "@lib-glossary/ssr": ["libs/lib-glossary/src/ssr.ts"],
+      "@lib-instr": ["libs/lib-instr/src/index.ts"],
+      "@lib-instr/ssr": ["libs/lib-instr/src/ssr.ts"],
       "@lib-search": ["libs/lib-search/src/index.ts"],
       "@lib-user": ["libs/lib-user/src/index.ts"],
       "@lib-user/ssr": ["libs/lib-user/src/ssr.ts"],
