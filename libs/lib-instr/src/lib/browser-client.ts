@@ -12,9 +12,12 @@ export const initializeInstrumentation = () => {
     console.warn('Missing NEXT_PUBLIC_POSTHOG_HOST environment variable');
   }
 
+  const apiHost =
+    process.env.NODE_ENV === 'development' ? POSTHOG_HOST : '/relay-ph/';
+
   if (POSTHOG_KEY && POSTHOG_HOST) {
     posthog.init(POSTHOG_KEY, {
-      api_host: '/relay-ph/',
+      api_host: apiHost,
       ui_host: POSTHOG_HOST,
       defaults: '2025-05-24',
       person_profiles: 'identified_only',

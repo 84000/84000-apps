@@ -6,10 +6,7 @@ import {
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
 
-export enum FeatureFlag {
-  AuthorityPages = 'authority-pages',
-  TranslationHoverCards = 'translation-hover-cards',
-}
+export type FeatureFlag = 'authority-pages' | 'translation-hover-cards';
 
 export type FeatureFlagPayload = {
   apps?: string[];
