@@ -217,7 +217,7 @@ export const ExplorePage = () => {
     <div className="bg-background h-full text-foreground flex flex-col">
       {showInitialInterface && (
         <div className="flex-1 flex items-center justify-center px-6">
-          <div className="max-w-reable w-full">
+          <div className="max-w-readable w-full">
             <div className="flex flex-col items-center justify-center text-center">
               <div className="mb-12">
                 <H1 className="text-navy">Welcome to Explore Mode</H1>
