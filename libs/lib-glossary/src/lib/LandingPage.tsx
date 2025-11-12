@@ -16,14 +16,13 @@ export const LandingPage = async () => {
 
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
-      <div className="w-full max-w-[1466px]">
+      <div className="w-full max-w-feed">
         <H2 className="text-navy-500">{'Glossaries'}</H2>
         <GlossariesLandingTable
           terms={terms}
           types={types}
           languages={languages}
         />
-        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );

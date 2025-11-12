@@ -115,6 +115,9 @@
   --breakpoint-3xl: 112rem;
   --breakpoint-4xl: 128rem;
 
+  --spacing-readable: 56rem;
+  --spacing-feed: 94rem;
+
   --font-sans:
     'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

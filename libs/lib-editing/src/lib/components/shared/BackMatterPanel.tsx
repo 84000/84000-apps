@@ -39,7 +39,7 @@ export const BackMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="endnotes"
-      className="px-8 pb-[var(--header-height)] max-w-4xl w-full mx-auto mb-[var(--header-height)]"
+      className="px-8 max-w-readable w-full mx-auto"
     >
       <TabsList className="sticky top-3 mx-auto z-10">
         {endnotes.length > 0 && (

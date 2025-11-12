@@ -40,7 +40,6 @@ const InnerProfileLayout = ({ children }: { children: ReactNode }) => {
         </div>
         <ScrollArea className="w-full">{children}</ScrollArea>
       </div>
-      <div className="h-[var(--header-height)]" />
     </div>
   );
 };

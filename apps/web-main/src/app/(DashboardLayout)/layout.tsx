@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScholarUser, useSession } from '@lib-user';
 import { AppHeader } from '../../components/ui/AppHeader';
-import { AppContent } from '../../components/ui/AppContent';
 export default function Layout({
   children,
 }: Readonly<{
@@ -41,13 +40,9 @@ export default function Layout({
   }
 
   return (
-    <div className="[--header-height:calc(--spacing(20))]">
-      <div className="fixed w-full z-50">
-        <AppHeader user={user} handleLogoutAction={handleLogout} />
-      </div>
-      <div className="flex flex-1 pt-(--header-height)">
-        <AppContent>{children}</AppContent>
-      </div>
+    <div className="h-screen flex flex-col">
+      <AppHeader user={user} handleLogoutAction={handleLogout} />
+      {children}
     </div>
   );
 }

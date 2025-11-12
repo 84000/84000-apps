@@ -25,11 +25,12 @@ const Layout = async ({
 
   return (
     <CanonProvider canon={canon}>
-      <div className="flex flex-col h-full w-full">
+      <div className="fixed flex flex-col size-full">
+        <div className="h-23" />
         <header className="sticky top-0 z-50 border-b-3 border-white">
           <Header />
         </header>
-        <ResizablePanelGroup direction="horizontal" className="h-full">
+        <ResizablePanelGroup direction="horizontal">
           <ResizablePanel
             id="sidebar"
             defaultSize={20}
