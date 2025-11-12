@@ -119,7 +119,7 @@ export const WorksPage = ({
   ];
 
   return (
-    <>
+    <div className="px-8 max-w-feed w-full mx-auto py-8">
       <H2 className="text-navy">{label}</H2>
       <DataTable
         name="texts"
@@ -134,7 +134,6 @@ export const WorksPage = ({
           </div>
         )}
       />
-      <div className="h-[var(--header-height)]" />
-    </>
+    </div>
   );
 };

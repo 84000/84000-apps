@@ -11,11 +11,13 @@ import {
 import { EditorHeader } from '../editor/EditorHeader';
 
 export const ReaderLayout = ({
+  withHeader = false,
   left,
   main,
   right,
   params,
 }: {
+  withHeader?: boolean;
   left: ReactNode;
   main: ReactNode;
   right: ReactNode;
@@ -24,7 +26,7 @@ export const ReaderLayout = ({
   const { slug } = use(params);
   return (
     <NavigationProvider uuid={slug}>
-      <ThreeColumnRenderer>
+      <ThreeColumnRenderer withHeader={withHeader}>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>
           <EditorHeader />

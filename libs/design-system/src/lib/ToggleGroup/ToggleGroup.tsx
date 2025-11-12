@@ -7,6 +7,8 @@ import { type VariantProps } from 'class-variance-authority';
 import { cn } from '@lib-utils';
 import { toggleVariants } from '../Toggle/Toggle';
 
+const DEFAULT_TOGGLE_SPACING = 8;
+
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants> & {
     spacing?: number;
@@ -14,14 +16,14 @@ const ToggleGroupContext = React.createContext<
 >({
   size: 'default',
   variant: 'default',
-  spacing: 0,
+  spacing: DEFAULT_TOGGLE_SPACING,
 });
 
 function ToggleGroup({
   className,
   variant,
   size,
-  spacing = 0,
+  spacing = DEFAULT_TOGGLE_SPACING,
   children,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &

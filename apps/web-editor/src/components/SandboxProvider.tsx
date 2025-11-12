@@ -24,7 +24,7 @@ export const SandboxProvider = ({ children }: { children: ReactNode }) => {
   const [format, setFormat] = useState<Format>();
   return (
     <SandboxContext.Provider value={{ slug, setSlug, format, setFormat }}>
-      <div className="[--header-height:calc(--spacing(20))]">{children}</div>
+      {children}
     </SandboxContext.Provider>
   );
 };

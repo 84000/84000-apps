@@ -24,7 +24,7 @@ export const ProjectsPage = () => {
 
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
-      <div className="w-full max-w-[1466px]">
+      <div className="w-full max-w-feed">
         <H2 className="text-navy-500">{'Translation Projects'}</H2>
         {projects.length ? (
           <ProjectsTable projects={projects} />
@@ -35,7 +35,6 @@ export const ProjectsPage = () => {
             <Skeleton className="w-full h-[500px] mt-6" />
           </>
         )}
-        <div className="h-[var(--header-height)]" />
       </div>
     </div>
   );

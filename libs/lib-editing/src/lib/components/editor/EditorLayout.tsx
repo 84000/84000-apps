@@ -47,7 +47,7 @@ export const EditorLayout = ({
 
   return (
     <EditorContextProvider work={work}>
-      <ThreeColumnRenderer>
+      <ThreeColumnRenderer withHeader={true}>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>
           <EditorHeader />

@@ -19,14 +19,10 @@ export const InnerPage = ({
 
   return (
     <ScrollArea className={scrollAreaClass}>
-      <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
-        <div className="w-5/6 max-w-[1080px]">
-          {tab === 'overview' && <ArticlePage section={section} />}
-          {tab === 'texts' && (
-            <WorksPage label={section.label} works={works || []} />
-          )}
-        </div>
-      </div>
+      {tab === 'overview' && <ArticlePage section={section} />}
+      {tab === 'texts' && (
+        <WorksPage label={section.label} works={works || []} />
+      )}
     </ScrollArea>
   );
 };

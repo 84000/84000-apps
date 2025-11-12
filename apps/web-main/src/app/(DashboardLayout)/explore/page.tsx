@@ -4,7 +4,6 @@ const Page = () => {
   return (
     <>
       <ExplorePage />
-      <div className="h-[var(--header-height)]" />
     </>
   );
 };
