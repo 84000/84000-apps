@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <SandboxProvider>
           <SandboxHeader />
-          <div className="flex flex-1 py-(--header-height)">
+          <div className="flex flex-1 py-20">
             <div className="fixed h-screen w-full overflow-auto px-8">
               {children}
             </div>
