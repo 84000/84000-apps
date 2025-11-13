@@ -6,6 +6,8 @@ import {
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
+import { isUuid } from '@lib-utils';
+import { notFound } from 'next/navigation';
 
 export const ReaderBodyPage = async ({
   params,
@@ -13,6 +15,10 @@ export const ReaderBodyPage = async ({
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await params;
+
+  if (!isUuid(slug)) {
+    return notFound();
+  }
 
   const client = createBrowserClient();
   const passages = await getTranslationPassages({

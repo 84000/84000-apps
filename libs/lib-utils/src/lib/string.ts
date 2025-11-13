@@ -22,3 +22,6 @@ export const toSlug = (str: string) =>
 
 export const parseToh = (toh: string) =>
   toh.replace(/,/g, ', ').replace(/toh/g, 'Toh ');
+
+export const isUuid = (str: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(str);

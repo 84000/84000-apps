@@ -13,9 +13,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.png" type="image/svg+xml" />
-      </head>
       <body>
         <div className="fixed size-full overflow-auto">{children}</div>
       </body>
