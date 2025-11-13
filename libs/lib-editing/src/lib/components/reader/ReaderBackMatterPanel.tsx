@@ -1,6 +1,10 @@
 'use client';
 
-import { GlossaryTermInstances, BibliographyEntries } from '@data-access';
+import {
+  GlossaryTermInstances,
+  BibliographyEntries,
+  BACK_MATTER_FILTER,
+} from '@data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationReader } from '.';
 import { TranslationEditorContent } from '../editor';
@@ -27,6 +31,7 @@ export const ReaderBackMatterPanel = ({
           content={content}
           name={name}
           className={className}
+          filter={BACK_MATTER_FILTER}
         />
       )}
     />

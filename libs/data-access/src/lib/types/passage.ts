@@ -56,6 +56,15 @@ export const COMPARE_MODE: BodyItemType[] = [
 ];
 export const COMPARE_MODE_FILTER = `(${COMPARE_MODE.join('|')})`;
 
+export const PANEL_FILTERS = [
+  FRONT_MATTER_FILTER,
+  BODY_MATTER_FILTER,
+  BACK_MATTER_FILTER,
+  COMPARE_MODE_FILTER,
+] as const;
+
+export type PanelFilter = (typeof PANEL_FILTERS)[number];
+
 export type Passage = {
   alignments?: Alignment[];
   annotations: Annotations;
@@ -87,6 +96,18 @@ export type PassageRowDTO = {
 export type PassageDTO = PassageRowDTO & {
   alignments?: AlignmentDTO[];
   annotations?: AnnotationsDTO | null;
+};
+
+export type PassagesPageDTO = {
+  passages: PassageDTO[];
+  nextCursor?: string;
+  hasMore: boolean;
+};
+
+export type PassagesPage = {
+  passages: Passage[];
+  nextCursor?: string;
+  hasMore: boolean;
 };
 
 export const passageFromDTO = (
@@ -160,4 +181,12 @@ export const passagesToDTO = (passages: Passage[]): PassageDTO[] => {
 
 export const passagesToRowDTO = (passages: Passage[]): PassageRowDTO[] => {
   return passages.map(passageToRowDTO);
+};
+
+export const passagesPageFromDTO = (dto: PassagesPageDTO): PassagesPage => {
+  return {
+    passages: passagesFromDTO(dto.passages),
+    nextCursor: dto.nextCursor,
+    hasMore: dto.hasMore,
+  };
 };

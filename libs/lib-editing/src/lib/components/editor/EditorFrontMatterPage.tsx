@@ -22,7 +22,7 @@ export const EditorFrontMatterPage = () => {
   useEffect(() => {
     (async () => {
       const client = createBrowserClient();
-      const passages = await getTranslationPassages({
+      const { passages } = await getTranslationPassages({
         client,
         uuid: work.uuid,
         type: FRONT_MATTER_FILTER,
@@ -49,6 +49,7 @@ export const EditorFrontMatterPage = () => {
           content={content}
           name={name}
           className={className}
+          filter={FRONT_MATTER_FILTER}
         />
       )}
     />

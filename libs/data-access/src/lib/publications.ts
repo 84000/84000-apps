@@ -1,15 +1,13 @@
-import { getBibliographyEntries } from './bibliography';
-import { getGlossaryInstances } from './glossary';
 import {
   BodyItemType,
   DataClient,
   TitlesDTO,
   WorkDTO,
   titlesFromDTO,
-  passagesFromDTO,
   workFromDTO,
-  Translation,
-  Passages,
+  passagesPageFromDTO,
+  PassagesPageDTO,
+  PassagesPage,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -25,53 +23,28 @@ export const getTranslationPassages = async ({
   client,
   uuid,
   type,
+  cursor,
 }: {
   client: DataClient;
   uuid: string;
   type?: BodyItemType;
-}) => {
-  const { data, error } = await client.rpc('get_passages_with_annotations', {
+  cursor?: string;
+}): Promise<PassagesPage> => {
+  const { data, error } = await client.rpc('get_passages_page', {
     uuid_input: uuid,
     passage_type_input: type,
+    cursor,
   });
 
   if (error) {
     console.error('Error fetching translation passages:', error);
-    return [];
+    return {
+      hasMore: false,
+      passages: [],
+    };
   }
 
-  return passagesFromDTO(data || []);
-};
-
-export const getTranslationPassageTypes = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  const { data, error } = await client.rpc(
-    'scholar_passages_get_types_by_work',
-    {
-      work_uuid_param: uuid,
-    },
-  );
-
-  if (error) {
-    console.error('Error fetching passage types:', error);
-    return [];
-  }
-
-  return data as BodyItemType[];
-};
-
-export const getTranslationSlugs = async ({
-  client,
-}: {
-  client: DataClient;
-}) => {
-  const { data } = await client.from('translation_json').select('toh');
-  return data?.map(({ toh }: { toh: string }) => toh) || [];
+  return passagesPageFromDTO(data as PassagesPageDTO);
 };
 
 export const getTranslationTitles = async ({
@@ -168,41 +141,4 @@ export const getTranslationsMetadata = async ({
     data?.map(({ work }: { work: unknown }) => workFromDTO(work as WorkDTO)) ||
     []
   );
-};
-
-export const getTranslationByUuid = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}): Promise<Translation> => {
-  const metadata = await getTranslationMetadataByUuid({ client, uuid });
-  const titles = await getTranslationTitles({ client, uuid });
-  const glossary = await getGlossaryInstances({ client, uuid });
-  const bibliography = await getBibliographyEntries({ client, uuid });
-  const passages = await getTranslationPassages({ client, uuid });
-
-  const passagesByType: Partial<Record<BodyItemType, Passages>> =
-    passages.reduce(
-      (acc, passage) => {
-        const type = passage.type.replace('Header', '') as BodyItemType;
-
-        if (!acc[type]) {
-          acc[type] = [];
-        }
-
-        acc[type]?.push(passage);
-        return acc;
-      },
-      {} as Partial<Record<BodyItemType, Passages>>,
-    );
-
-  return {
-    metadata,
-    titles,
-    passages: passagesByType,
-    glossary,
-    bibliography,
-  };
 };

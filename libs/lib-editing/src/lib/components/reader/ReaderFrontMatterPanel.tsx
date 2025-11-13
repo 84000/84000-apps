@@ -3,7 +3,7 @@
 import { FrontMatterPanel } from '../shared/FrontMatterPanel';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from '.';
-import { Toc, Work } from '@data-access';
+import { FRONT_MATTER_FILTER, Toc, Work } from '@data-access';
 
 export const ReaderFrontMatterPanel = ({
   summary,
@@ -24,6 +24,7 @@ export const ReaderFrontMatterPanel = ({
           content={content}
           name={name}
           className={className}
+          filter={FRONT_MATTER_FILTER}
         />
       )}
     />

@@ -1,6 +1,6 @@
 'use client';
 
-import { Titles as TitlesData } from '@data-access';
+import { BODY_MATTER_FILTER, Titles as TitlesData } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from '.';
@@ -12,6 +12,7 @@ export const ReaderBodyPanel = ({
 }: {
   titles: TitlesData;
   body: TranslationEditorContent;
+  cursor?: string;
 }) => {
   return (
     <BodyPanel
@@ -25,6 +26,7 @@ export const ReaderBodyPanel = ({
           content={content}
           name={name}
           className={className}
+          filter={BODY_MATTER_FILTER}
         />
       )}
     />

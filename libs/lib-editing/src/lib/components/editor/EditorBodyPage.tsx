@@ -23,7 +23,7 @@ export const EditorBodyPage = () => {
   useEffect(() => {
     (async () => {
       const client = createBrowserClient();
-      const passages = await getTranslationPassages({
+      const { passages } = await getTranslationPassages({
         client,
         uuid: work.uuid,
         type: BODY_MATTER_FILTER,
@@ -52,6 +52,7 @@ export const EditorBodyPage = () => {
           content={content}
           name={name}
           className={className}
+          filter={BODY_MATTER_FILTER}
         />
       )}
     />

@@ -24,7 +24,7 @@ export const ReaderFrontMatterPage = async ({
   const client = createBrowserClient();
   const work = await getTranslationMetadataByUuid({ client, uuid: slug });
   const toc = await getTranslationToc({ client, uuid: slug });
-  const passages = await getTranslationPassages({
+  const { passages } = await getTranslationPassages({
     client,
     uuid: slug,
     type: FRONT_MATTER_FILTER,

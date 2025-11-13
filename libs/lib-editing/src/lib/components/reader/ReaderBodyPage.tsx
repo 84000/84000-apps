@@ -21,7 +21,7 @@ export const ReaderBodyPage = async ({
   }
 
   const client = createBrowserClient();
-  const passages = await getTranslationPassages({
+  const { passages } = await getTranslationPassages({
     client,
     uuid: slug,
     type: BODY_MATTER_FILTER,
