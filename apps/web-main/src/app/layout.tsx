@@ -15,9 +15,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="overscroll-none">
-      <head>
-        <link rel="icon" href="/favicon.png" type="image/svg+xml" />
-      </head>
       <body>
         <InterfaceContextProvider>
           <SessionProvider>{children}</SessionProvider>

@@ -7,6 +7,8 @@ import {
 } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderFrontMatterPanel } from './ReaderFrontMatterPanel';
+import { isUuid } from '@lib-utils';
+import { notFound } from 'next/navigation';
 
 export const ReaderFrontMatterPage = async ({
   params,
@@ -14,6 +16,10 @@ export const ReaderFrontMatterPage = async ({
   params: Promise<{ slug: string }>;
 }) => {
   const { slug } = await params;
+
+  if (!isUuid(slug)) {
+    return notFound();
+  }
 
   const client = createBrowserClient();
   const work = await getTranslationMetadataByUuid({ client, uuid: slug });
