@@ -1,4 +1,3 @@
-// hooks/useScrollToHash.js
 'use client';
 
 import { DependencyList, useEffect } from 'react';

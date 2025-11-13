@@ -18,7 +18,6 @@ import { TranslationHoverCard } from './TranslationHoverCard';
 import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/GlossaryInstance';
 import { EndNoteLink } from '../editor/extensions/EndNoteLink/EndNoteLink';
 import { GlossaryTermInstance, Passage } from '@data-access';
-import { GatedFeature } from '@lib-instr';
 
 const HOVER_CARD_TYPES = ['glossaryInstance', 'endNoteLink'] as const;
 
@@ -269,26 +268,19 @@ export const HoverCardProvider = ({
       <div className="size-full" ref={editorRef}>
         {children}
       </div>
-      <GatedFeature flag="translation-hover-cards">
-        {anchor &&
-          uuid &&
-          cardType &&
-          fetchGlossaryInstance &&
-          fetchEndNote && (
-            <TranslationHoverCard
-              className={cn(
-                cardType === 'endNoteLink' &&
-                  'w-120 max-h-96 m-2 overflow-auto',
-                cardType === 'glossaryInstance' &&
-                  'w-120 lg:w-4xl max-h-100 m-2 overflow-auto',
-              )}
-              anchor={anchor}
-              setCard={setCard}
-            >
-              {renderCard(uuid, cardType)}
-            </TranslationHoverCard>
+      {anchor && uuid && cardType && fetchGlossaryInstance && fetchEndNote && (
+        <TranslationHoverCard
+          className={cn(
+            cardType === 'endNoteLink' && 'w-120 max-h-96 m-2 overflow-auto',
+            cardType === 'glossaryInstance' &&
+              'w-120 lg:w-4xl max-h-100 m-2 overflow-auto',
           )}
-      </GatedFeature>
+          anchor={anchor}
+          setCard={setCard}
+        >
+          {renderCard(uuid, cardType)}
+        </TranslationHoverCard>
+      )}
     </HoverCardContext.Provider>
   );
 };
