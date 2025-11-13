@@ -33,6 +33,7 @@ import {
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
+import { useFeatureFlagEnabled } from '@lib-instr';
 
 interface NavigationState {
   uuid: string;
@@ -41,11 +42,6 @@ interface NavigationState {
   toh?: TohokuCatalogEntry;
   setToh: (toh: TohokuCatalogEntry) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
-  createHashLink: (params: {
-    panel: string;
-    tab: string;
-    uuid: string;
-  }) => string;
   fetchBibliographyEntry: (
     uuid: string,
   ) => Promise<BibliographyEntryItem | undefined>;
@@ -70,9 +66,6 @@ export const NavigationContext = createContext<NavigationState>({
     throw new Error('Not implemented');
   },
   setToh: () => {
-    throw new Error('Not implemented');
-  },
-  createHashLink: () => {
     throw new Error('Not implemented');
   },
   fetchBibliographyEntry: async () => {
@@ -263,30 +256,13 @@ export const NavigationProvider = ({
     return { toh, panels };
   }, []);
 
-  const createHashLink = useCallback(
-    ({
-      panel,
-      tab,
-      uuid,
-    }: {
-      panel: string;
-      tab: string;
-      uuid: string;
-    }): string => {
-      const params = new URLSearchParams(window.location.search);
-      params.set(panel, `open:${tab}`);
-      return `?${params.toString()}#${uuid}`;
-    },
-    [],
-  );
-
   useEffect(() => {
     if (!window.location.hash) {
       return;
     }
 
     scrollToHash({
-      delay: 1000,
+      delay: 10,
     });
   }, []);
 
@@ -329,6 +305,8 @@ export const NavigationProvider = ({
     });
   }, [query, parsePanelParams]);
 
+  const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
+
   return (
     <NavigationContext.Provider
       value={{
@@ -338,7 +316,6 @@ export const NavigationProvider = ({
         toh,
         setToh,
         updatePanel,
-        createHashLink,
         fetchBibliographyEntry,
         fetchEndNote,
         fetchGlossaryTerm,
@@ -346,12 +323,16 @@ export const NavigationProvider = ({
         fetchWork,
       }}
     >
-      <HoverCardProvider
-        fetchEndNote={fetchEndNote}
-        fetchGlossaryInstance={fetchGlossaryTerm}
-      >
-        {children}
-      </HoverCardProvider>
+      {hasHoverCards ? (
+        <HoverCardProvider
+          fetchEndNote={fetchEndNote}
+          fetchGlossaryInstance={fetchGlossaryTerm}
+        >
+          {children}
+        </HoverCardProvider>
+      ) : (
+        children
+      )}
     </NavigationContext.Provider>
   );
 };

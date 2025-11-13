@@ -75,7 +75,11 @@ export const TableOfContentsSection = ({
       const { section } = entry;
       updatePanel({
         name: PANEL_FOR_SECTION[section] || panel,
-        state: { open: true, tab: TAB_FOR_SECTION[section] || 'translation' },
+        state: {
+          open: true,
+          tab: TAB_FOR_SECTION[section] || 'translation',
+          hash: entry.uuid,
+        },
       });
     },
     [updatePanel, panel],
@@ -95,13 +99,9 @@ export const TableOfContentsSection = ({
             className="border-b-0"
           >
             <AccordionTrigger className={cn(baseStyle, className)}>
-              <a
-                className="line-clamp-2"
-                href={`#${child.uuid}`}
-                onClick={() => onClick(child)}
-              >
+              <span className="line-clamp-2" onClick={() => onClick(child)}>
                 {child.content}
-              </a>
+              </span>
             </AccordionTrigger>
             <AccordionContent className={cn(depthClass, 'py-0')}>
               <TableOfContentsSection node={child} depth={depth + 1} />
@@ -109,13 +109,9 @@ export const TableOfContentsSection = ({
           </AccordionItem>
         ) : (
           <div key={child.uuid} className={baseStyle}>
-            <a
-              href={`#${child.uuid}`}
-              className="line-clamp-2"
-              onClick={() => onClick(child)}
-            >
+            <span className="line-clamp-2" onClick={() => onClick(child)}>
               {child.content}
-            </a>
+            </span>
           </div>
         );
       })}
