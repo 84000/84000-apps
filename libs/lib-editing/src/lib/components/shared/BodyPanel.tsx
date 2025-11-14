@@ -68,7 +68,7 @@ export const BodyPanel = ({
           {theTitles}
           {renderTranslation({
             content: body,
-            className: 'block pb-32',
+            className: 'block',
             name: 'translation',
           })}
         </div>
@@ -81,7 +81,7 @@ export const BodyPanel = ({
           <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
             {renderTranslation({
               content: alignments,
-              className: 'block pb-32',
+              className: 'block',
               name: 'translation',
             })}
           </div>

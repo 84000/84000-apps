@@ -9,6 +9,9 @@ import { ReaderBodyPanel } from './ReaderBodyPanel';
 import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
 
+const INITIAL_PASSAGES = 250;
+const INITIAL_MAX_CHARACTERS = 100000;
+
 export const ReaderBodyPage = async ({
   params,
 }: {
@@ -25,6 +28,8 @@ export const ReaderBodyPage = async ({
     client,
     uuid: slug,
     type: BODY_MATTER_FILTER,
+    maxPassages: INITIAL_PASSAGES,
+    maxCharacters: INITIAL_MAX_CHARACTERS,
   });
   const titles = await getTranslationTitles({ client, uuid: slug });
   const body = blocksFromTranslationBody(passages);

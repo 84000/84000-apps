@@ -15,6 +15,9 @@ import { TranslationBuilder, TranslationEditorContent } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
 
+const INITIAL_PASSAGES = 500;
+const INITIAL_MAX_CHARACTERS = 200000;
+
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
   const [body, setBody] = useState<TranslationEditorContent>();
@@ -27,6 +30,8 @@ export const EditorBodyPage = () => {
         client,
         uuid: work.uuid,
         type: BODY_MATTER_FILTER,
+        maxPassages: INITIAL_PASSAGES,
+        maxCharacters: INITIAL_MAX_CHARACTERS,
       });
       const body = blocksFromTranslationBody(passages);
       setBody(body);

@@ -24,16 +24,22 @@ export const getTranslationPassages = async ({
   uuid,
   type,
   cursor,
+  maxPassages,
+  maxCharacters,
 }: {
   client: DataClient;
   uuid: string;
   type?: BodyItemType;
   cursor?: string;
+  maxPassages?: number;
+  maxCharacters?: number;
 }): Promise<PassagesPage> => {
   const { data, error } = await client.rpc('get_passages_page', {
     uuid_input: uuid,
     passage_type_input: type,
     cursor,
+    max_passages: maxPassages,
+    char_budget: maxCharacters,
   });
 
   if (error) {
