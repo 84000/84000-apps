@@ -42,4 +42,8 @@
       }
     }
   }
+
+  .long-term {
+    @apply break-all;
+  }
 }
