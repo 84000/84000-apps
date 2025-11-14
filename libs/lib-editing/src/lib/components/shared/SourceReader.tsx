@@ -48,7 +48,7 @@ export const SourceReader = () => {
   }, [toh, uuid]);
 
   return (
-    <div className="px-12 pt-12 flex flex-col gap-8 mx-auto max-w-5xl 2xl:max-w-380">
+    <div className="pt-12 flex flex-col gap-8 mx-auto max-w-5xl 2xl:max-w-380">
       {folios.map((folio, index) => (
         <LabeledElement
           key={index}

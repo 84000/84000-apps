@@ -59,7 +59,7 @@ export const BackMatterPanel = ({
         <TabsContent value="endnotes">
           {renderTranslation({
             content: endnotes,
-            className: 'block pb-8',
+            className: 'block pb-8 pe-8',
             name: 'endnotes',
           })}
         </TabsContent>

@@ -10,7 +10,7 @@ import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
 
 const INITIAL_PASSAGES = 250;
-const INITIAL_MAX_CHARACTERS = 100000;
+const INITIAL_MAX_CHARACTERS = 80000;
 
 export const ReaderBodyPage = async ({
   params,
