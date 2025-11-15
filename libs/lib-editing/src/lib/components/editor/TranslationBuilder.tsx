@@ -6,6 +6,7 @@ import type { XmlFragment } from 'yjs';
 import { useEditorState } from './EditorProvider';
 import { TranslationEditor } from './TranslationEditor';
 import { TranslationSkeleton, useNavigation } from '../shared';
+import { PaginationProvider } from './PaginationProvider';
 
 export const TranslationBuilder = ({
   content,
@@ -18,7 +19,7 @@ export const TranslationBuilder = ({
 
   const { canEdit, setEditor, startObserving, getFragment } = useEditorState();
 
-  const { fetchEndNote } = useNavigation();
+  const { fetchEndNote, uuid } = useNavigation();
 
   useEffect(() => {
     (async () => {
@@ -32,9 +33,9 @@ export const TranslationBuilder = ({
   }, [name, canEdit, getFragment]);
 
   return content && fragment ? (
-    <TranslationEditor
+    <PaginationProvider
+      uuid={uuid}
       content={content}
-      className={className}
       fragment={fragment}
       isEditable={isEditable}
       fetchEndNote={fetchEndNote}
@@ -46,7 +47,9 @@ export const TranslationBuilder = ({
           startObserving(name);
         }
       }}
-    />
+    >
+      <TranslationEditor className={className} />
+    </PaginationProvider>
   ) : (
     <TranslationSkeleton />
   );

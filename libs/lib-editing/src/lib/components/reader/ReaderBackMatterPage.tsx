@@ -22,7 +22,7 @@ export const ReaderBackMatterPage = async ({
   }
 
   const client = createBrowserClient();
-  const passages = await getTranslationPassages({
+  const { passages } = await getTranslationPassages({
     client,
     uuid: slug,
     type: BACK_MATTER_FILTER,

@@ -29,7 +29,7 @@ export const EditorBackMatterPage = () => {
     (async () => {
       const { uuid } = work;
       const client = createBrowserClient();
-      const passages = await getTranslationPassages({
+      const { passages } = await getTranslationPassages({
         client,
         uuid,
         type: BACK_MATTER_FILTER,
@@ -68,6 +68,7 @@ export const EditorBackMatterPage = () => {
           content={content}
           name={name}
           className={className}
+          filter={BACK_MATTER_FILTER}
         />
       )}
     />

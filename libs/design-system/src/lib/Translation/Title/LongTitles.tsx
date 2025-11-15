@@ -1,3 +1,5 @@
+'use client';
+
 import { BO_TITLE_PREFIX, Imprint, TranslationLanguage } from '@data-access';
 import { TitlesCard } from './TitlesCard';
 import { cn } from '@lib-utils';
@@ -66,10 +68,10 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
           <div className="flex gap-x-2 mx-auto flex-wrap justify-center">
             <span>{DOT}</span>
             {translators.map((translator, idx) => (
-              <>
+              <div key={`translator-wrapper-${idx}`} className="flex gap-x-2">
                 <span key={`${translator}-${idx}`}>{translator}</span>
                 <span key={`dot-${idx}`}>{DOT}</span>
-              </>
+              </div>
             ))}
           </div>
         </>

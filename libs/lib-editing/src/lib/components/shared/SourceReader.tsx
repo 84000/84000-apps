@@ -4,8 +4,8 @@ import { useInView } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { Folio, getFolios } from '@data-access';
-import { Skeleton } from '@design-system';
 import { LabeledElement } from './LabeledElement';
+import { PassageSkeleton } from './PassageSkeleton';
 
 const PAGE_SIZE = 10;
 
@@ -48,7 +48,7 @@ export const SourceReader = () => {
   }, [toh, uuid]);
 
   return (
-    <div className="px-12 pt-12 flex flex-col gap-8 mx-auto max-w-5xl 2xl:max-w-380">
+    <div className="pt-12 flex flex-col gap-8 mx-auto max-w-5xl 2xl:max-w-380">
       {folios.map((folio, index) => (
         <LabeledElement
           key={index}
@@ -63,10 +63,7 @@ export const SourceReader = () => {
       {hasMore && (
         <>
           {Array.from({ length: 3 }).map((_, i) => (
-            <div className="flex gap-5" key={i}>
-              <Skeleton className="h-6 w-6" />
-              <Skeleton className="h-32 grow" />
-            </div>
+            <PassageSkeleton key={i} />
           ))}
         </>
       )}

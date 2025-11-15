@@ -1,11 +1,9 @@
 'use client';
 
-import { EditorContent, JSONContent, Editor } from '@tiptap/react';
-import type { XmlFragment } from 'yjs';
-import { useBlockEditor, useTranslationExtensions } from './hooks';
+import { EditorContent, JSONContent } from '@tiptap/react';
 import { TranslationBubbleMenu } from './menus';
 import { cn } from '@lib-utils';
-import { Passage, TohokuCatalogEntry } from '@data-access';
+import { usePagination } from './PaginationProvider';
 
 export type TranslationEditorContentItem = JSONContent & {
   attrs?: {
@@ -13,7 +11,6 @@ export type TranslationEditorContentItem = JSONContent & {
     class?: string | null;
     type?: string | null;
     sort?: number | null;
-    toh?: TohokuCatalogEntry | null;
   };
 };
 
@@ -21,32 +18,12 @@ export type TranslationEditorContent =
   | TranslationEditorContentItem[]
   | TranslationEditorContentItem;
 
-export const TranslationEditor = ({
-  content,
-  fragment,
-  isEditable = true,
-  className,
-  onCreate,
-  fetchEndNote,
-}: {
-  content: TranslationEditorContent;
-  fragment?: XmlFragment;
-  isEditable?: boolean;
-  className?: string;
-  onCreate?: (params: { editor: Editor }) => void;
-  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
-}) => {
-  const { extensions } = useTranslationExtensions({
-    fragment,
-    fetchEndNote,
-  });
+export const TranslationEditor = ({ className }: { className?: string }) => {
+  const { editor } = usePagination();
 
-  const { editor } = useBlockEditor({
-    extensions,
-    content,
-    isEditable,
-    onCreate,
-  });
+  if (!editor) {
+    return null;
+  }
 
   return (
     <div className={cn('flex h-full', className)}>
