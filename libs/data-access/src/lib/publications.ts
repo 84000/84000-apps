@@ -8,6 +8,7 @@ import {
   passagesPageFromDTO,
   PassagesPageDTO,
   PassagesPage,
+  PaginationDirection,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -26,6 +27,7 @@ export const getTranslationPassages = async ({
   cursor,
   maxPassages,
   maxCharacters,
+  direction,
 }: {
   client: DataClient;
   uuid: string;
@@ -33,6 +35,7 @@ export const getTranslationPassages = async ({
   cursor?: string;
   maxPassages?: number;
   maxCharacters?: number;
+  direction?: PaginationDirection;
 }): Promise<PassagesPage> => {
   const { data, error } = await client.rpc('get_passages_page', {
     uuid_input: uuid,
@@ -40,6 +43,7 @@ export const getTranslationPassages = async ({
     cursor,
     max_passages: maxPassages,
     char_budget: maxCharacters,
+    direction,
   });
 
   if (error) {

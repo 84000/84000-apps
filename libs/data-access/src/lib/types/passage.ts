@@ -98,6 +98,8 @@ export type PassageDTO = PassageRowDTO & {
   annotations?: AnnotationsDTO | null;
 };
 
+export type PaginationDirection = 'forward' | 'backward';
+
 export type PassagesPageDTO = {
   passages: PassageDTO[];
   nextCursor?: string;
