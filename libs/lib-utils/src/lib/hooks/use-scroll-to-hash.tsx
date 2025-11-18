@@ -8,7 +8,7 @@ import { DependencyList, useEffect } from 'react';
  * @param block Vertical alignment, either 'start', 'center', 'end', or 'nearest'.
  * @returns A cleanup function to clear the timeout if delay is used.
  */
-export const scrollToHash = ({
+export const scrollToHash = async ({
   delay = 0,
   behavior = 'smooth',
   block = 'start',
@@ -22,22 +22,31 @@ export const scrollToHash = ({
     return;
   }
 
-  const scrollToElement = () => {
-    const id = hash.replace('#', '');
-    const element = document.getElementById(id);
+  return new Promise<void>((resolve) => {
+    const scrollToElement = () => {
+      const id = hash.replace('#', '');
+      const element = document.getElementById(id);
 
-    if (element) {
-      element.scrollIntoView({ behavior, block });
+      if (element) {
+        element.scrollIntoView({ behavior, block });
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + window.location.search,
+        );
+      }
+
+      resolve();
+    };
+
+    if (delay > 0) {
+      const timeoutId = setTimeout(scrollToElement, delay);
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Use requestAnimationFrame to ensure DOM is painted
+      requestAnimationFrame(scrollToElement);
     }
-  };
-
-  if (delay > 0) {
-    const timeoutId = setTimeout(scrollToElement, delay);
-    return () => clearTimeout(timeoutId);
-  } else {
-    // Use requestAnimationFrame to ensure DOM is painted
-    requestAnimationFrame(scrollToElement);
-  }
+  });
 };
 
 /**

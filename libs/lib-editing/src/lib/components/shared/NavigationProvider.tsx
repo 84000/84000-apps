@@ -257,13 +257,23 @@ export const NavigationProvider = ({
   }, []);
 
   useEffect(() => {
-    if (!window.location.hash) {
-      return;
-    }
+    const handleInitialScroll = () => {
+      if (!window.location.hash) {
+        return;
+      }
 
-    scrollToHash({
-      delay: 10,
-    });
+      (async () => {
+        await scrollToHash({
+          delay: 100,
+        });
+      })();
+    };
+
+    window.addEventListener('load', handleInitialScroll);
+
+    return () => {
+      window.removeEventListener('load', handleInitialScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -300,9 +310,11 @@ export const NavigationProvider = ({
       setToh(newToh);
     }
 
-    scrollToHash({
-      delay: 100,
-    });
+    (async () => {
+      await scrollToHash({
+        delay: 10,
+      });
+    })();
   }, [query, parsePanelParams]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
