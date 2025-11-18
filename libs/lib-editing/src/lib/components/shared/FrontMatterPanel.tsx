@@ -40,30 +40,31 @@ export const FrontMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="toc"
-      className="px-8 max-w-readable w-full mx-auto"
     >
-      <TabsList className="sticky top-3 mx-auto z-10">
+      <TabsList className="sticky top-0 py-8 mx-auto z-10 w-full rounded-none bg-muted">
         <TabsTrigger value="toc">Navigation</TabsTrigger>
         {summary.length > 0 && (
           <TabsTrigger value="summary">Summary</TabsTrigger>
         )}
         <TabsTrigger value="imprint">Imprint</TabsTrigger>
       </TabsList>
-      <TabsContent value="toc" className="pb-8">
-        <TableOfContents toc={toc} work={work} />
-      </TabsContent>
-      {summary.length > 0 && (
-        <TabsContent value="summary">
-          {renderTranslation({
-            content: summary,
-            className: 'block pb-8',
-            name: 'summary',
-          })}
+      <div className="px-8 max-w-readable w-full mx-auto">
+        <TabsContent value="toc" className="pb-8">
+          <TableOfContents toc={toc} work={work} />
         </TabsContent>
-      )}
-      <TabsContent value="imprint" className="pb-8">
-        <ImprintTab imprint={imprint} />
-      </TabsContent>
+        {summary.length > 0 && (
+          <TabsContent value="summary">
+            {renderTranslation({
+              content: summary,
+              className: 'block pb-8',
+              name: 'summary',
+            })}
+          </TabsContent>
+        )}
+        <TabsContent value="imprint" className="pb-8">
+          <ImprintTab imprint={imprint} />
+        </TabsContent>
+      </div>
     </Tabs>
   );
 };

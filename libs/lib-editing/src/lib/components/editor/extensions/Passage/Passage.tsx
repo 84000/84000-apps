@@ -62,7 +62,7 @@ export const Passage = (props: NodeViewProps) => {
       id={node.attrs.uuid}
       as="div"
       className={cn(
-        'flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0',
+        'flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0 scroll-mt-20',
         node.attrs.toh,
       )}
     >
