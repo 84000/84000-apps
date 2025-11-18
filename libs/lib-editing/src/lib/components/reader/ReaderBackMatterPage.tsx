@@ -22,18 +22,20 @@ export const ReaderBackMatterPage = async ({
   }
 
   const client = createBrowserClient();
-  const { passages } = await getTranslationPassages({
+  const { passages: endnotePassages } = await getTranslationPassages({
     client,
     uuid: slug,
-    type: BACK_MATTER_FILTER,
+    type: 'endnotes',
   });
 
-  const endnotes = blocksFromTranslationBody(
-    passages.filter((p) => p.type.startsWith('endnotes')),
-  );
-  const abbreviations = blocksFromTranslationBody(
-    passages.filter((p) => p.type.startsWith('abbreviation')),
-  );
+  const endnotes = blocksFromTranslationBody(endnotePassages);
+
+  const { passages: abbreviationPassages } = await getTranslationPassages({
+    client,
+    uuid: slug,
+    type: 'abbreviations',
+  });
+  const abbreviations = blocksFromTranslationBody(abbreviationPassages);
 
   const glossary = await getGlossaryInstances({ client, uuid: slug });
   const bibliography = await getBibliographyEntries({ client, uuid: slug });

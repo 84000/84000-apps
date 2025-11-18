@@ -2,6 +2,16 @@
 
 import { DependencyList, useEffect } from 'react';
 
+export const findElementByHash = (): HTMLElement | null => {
+  const hash = window.location.hash;
+  if (!hash) {
+    return null;
+  }
+
+  const id = hash.replace('#', '');
+  return document.getElementById(id);
+};
+
 /** Scrolls to an element matching the URL hash.
  * @param delay Optional delay in milliseconds before scrolling.
  * @param behavior Scroll behavior, either 'auto' or 'smooth'.
@@ -17,24 +27,19 @@ export const scrollToHash = async ({
   behavior?: ScrollBehavior;
   block?: ScrollLogicalPosition;
 }) => {
-  const hash = window.location.hash;
-  if (!hash) {
+  const element = findElementByHash();
+  if (!element) {
     return;
   }
 
   return new Promise<void>((resolve) => {
     const scrollToElement = () => {
-      const id = hash.replace('#', '');
-      const element = document.getElementById(id);
-
-      if (element) {
-        element.scrollIntoView({ behavior, block });
-        window.history.replaceState(
-          null,
-          '',
-          window.location.pathname + window.location.search,
-        );
-      }
+      element.scrollIntoView({ behavior, block });
+      window.history.replaceState(
+        null,
+        '',
+        window.location.pathname + window.location.search,
+      );
 
       resolve();
     };
