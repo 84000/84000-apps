@@ -28,7 +28,7 @@ export const LabeledElement = ({
   }, [id]);
 
   return (
-    <div id={id} className="relative ml-6 scroll-m-20">
+    <div id={id} className="relative ml-6 scroll-mt-20">
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(

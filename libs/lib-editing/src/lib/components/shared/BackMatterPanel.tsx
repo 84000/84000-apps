@@ -39,9 +39,8 @@ export const BackMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="endnotes"
-      className="px-8 max-w-readable w-full mx-auto"
     >
-      <TabsList className="sticky top-3 mx-auto z-10">
+      <TabsList className="sticky top-0 py-8 mx-auto z-10 w-full rounded-none bg-muted">
         {endnotes.length > 0 && (
           <TabsTrigger value="endnotes">Notes</TabsTrigger>
         )}
@@ -55,34 +54,36 @@ export const BackMatterPanel = ({
           <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
         )}
       </TabsList>
-      {endnotes.length > 0 && (
-        <TabsContent value="endnotes">
-          {renderTranslation({
-            content: endnotes,
-            className: 'block pb-8 pe-8',
-            name: 'endnotes',
-          })}
-        </TabsContent>
-      )}
-      {glossary.length > 0 && (
-        <TabsContent value="glossary" className="pb-8">
-          <GlossaryTermList content={glossary} />
-        </TabsContent>
-      )}
-      {bibliography.length > 0 && (
-        <TabsContent value="bibliography" className="pb-8">
-          <BibliographyList content={bibliography} />
-        </TabsContent>
-      )}
-      {abbreviations.length > 0 && (
-        <TabsContent value="abbreviations">
-          {renderTranslation({
-            content: abbreviations,
-            className: 'block',
-            name: 'abbreviations',
-          })}
-        </TabsContent>
-      )}
+      <div className="px-8 max-w-readable w-full mx-auto ">
+        {endnotes.length > 0 && (
+          <TabsContent value="endnotes">
+            {renderTranslation({
+              content: endnotes,
+              className: 'block pb-8 pe-8',
+              name: 'endnotes',
+            })}
+          </TabsContent>
+        )}
+        {glossary.length > 0 && (
+          <TabsContent value="glossary" className="pb-8">
+            <GlossaryTermList content={glossary} />
+          </TabsContent>
+        )}
+        {bibliography.length > 0 && (
+          <TabsContent value="bibliography" className="pb-8">
+            <BibliographyList content={bibliography} />
+          </TabsContent>
+        )}
+        {abbreviations.length > 0 && (
+          <TabsContent value="abbreviations">
+            {renderTranslation({
+              content: abbreviations,
+              className: 'block',
+              name: 'abbreviations',
+            })}
+          </TabsContent>
+        )}
+      </div>
     </Tabs>
   );
 };
