@@ -21,6 +21,8 @@ import {
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
+import { useParams } from 'next/navigation';
+import { findElementByHash, isUuid } from '@lib-utils';
 
 interface PaginationContextState {
   cursor?: string;
@@ -53,18 +55,23 @@ export const PaginationProvider = ({
   fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
   children: ReactNode;
 }) => {
-  const initialCursor = Array.isArray(content)
+  const initialEndCursor = Array.isArray(content)
     ? content.at(-1)?.attrs?.uuid
     : content?.attrs?.uuid;
 
-  const [cursor, setCursor] = useState<string | undefined>(
-    initialCursor || undefined,
+  const [startCursor, setStartCursor] = useState<string | undefined>();
+  const [endCursor, setEndCursor] = useState<string | undefined>(
+    initialEndCursor || undefined,
   );
-  const [loading, setLoading] = useState(true);
-
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const shouldLoadMore = useInView(loadMoreRef);
+  const [startIsLoading, setStartIsLoading] = useState(false);
+  const [endIsLoading, setEndIsLoading] = useState(true);
+  const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
+  const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
+  const shouldLoadMoreAtStart = useInView(loadMoreAtStartRef);
+  const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
   const dataClient = createBrowserClient();
+
+  const params = useParams();
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -76,23 +83,43 @@ export const PaginationProvider = ({
     content,
     isEditable,
     onCreate: ({ editor }) => {
-      setLoading(false);
+      setEndIsLoading(false);
       onCreate?.({ editor });
     },
   });
 
   useEffect(() => {
-    if (loading || !shouldLoadMore || !cursor) {
+    const hash = window.location.hash?.substring(1);
+    if (!hash || !isUuid(hash)) {
       return;
     }
-    setLoading(true);
+
+    const element = findElementByHash();
+    if (element) {
+      return;
+    }
+
+    console.log('No element found for hash:', hash);
+  }, [params]);
+
+  useEffect(() => {
+    return () => {
+      editor?.destroy();
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (endIsLoading || !shouldLoadMoreAtEnd || !endCursor) {
+      return;
+    }
+    setEndIsLoading(true);
 
     (async () => {
       const { passages, hasMore, nextCursor } = await getTranslationPassages({
         client: dataClient,
         uuid,
         type: filter,
-        cursor,
+        cursor: endCursor,
       });
 
       const nextContent = blocksFromTranslationBody(passages);
@@ -102,10 +129,53 @@ export const PaginationProvider = ({
         editor?.commands.insertContentAt(pos, nextContent);
       }
 
-      setCursor(hasMore && nextCursor ? nextCursor : undefined);
-      setLoading(false);
+      setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
+      setEndIsLoading(false);
     })();
-  }, [uuid, filter, loading, editor, shouldLoadMore, cursor, dataClient]);
+  }, [
+    uuid,
+    filter,
+    endIsLoading,
+    editor,
+    shouldLoadMoreAtEnd,
+    endCursor,
+    dataClient,
+  ]);
+
+  useEffect(() => {
+    if (startIsLoading || !shouldLoadMoreAtStart || !startCursor) {
+      return;
+    }
+    setStartIsLoading(true);
+
+    (async () => {
+      const { passages, hasMore, nextCursor } = await getTranslationPassages({
+        client: dataClient,
+        uuid,
+        type: filter,
+        cursor: startCursor,
+        direction: 'backward',
+      });
+
+      const nextContent = blocksFromTranslationBody(passages);
+      const pos = 0;
+
+      if (nextContent.length && editor) {
+        editor.commands.insertContentAt(pos, nextContent);
+      }
+
+      setStartCursor(hasMore && nextCursor ? nextCursor : undefined);
+      setStartIsLoading(false);
+    })();
+  }, [
+    uuid,
+    filter,
+    startIsLoading,
+    editor,
+    shouldLoadMoreAtStart,
+    startCursor,
+    dataClient,
+  ]);
 
   return (
     <PaginationContext.Provider
@@ -115,9 +185,17 @@ export const PaginationProvider = ({
         editor,
       }}
     >
+      <div ref={loadMoreAtStartRef} className="h-0" />
+      {startCursor && (
+        <div className="flex flex-col gap-4 pt-8">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <PassageSkeleton key={i} />
+          ))}
+        </div>
+      )}
       {children}
-      <div ref={loadMoreRef} className="h-0" />
-      {cursor ? (
+      <div ref={loadMoreAtEndRef} className="h-0" />
+      {endCursor ? (
         <div className="flex flex-col gap-4 pb-8">
           {Array.from({ length: 3 }).map((_, i) => (
             <PassageSkeleton key={i} />
