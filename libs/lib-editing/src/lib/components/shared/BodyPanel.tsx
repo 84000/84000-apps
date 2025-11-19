@@ -64,7 +64,7 @@ export const BodyPanel = ({
         )}
       </TabsList>
       <TabsContent value="translation">
-        <div className="w-full max-w-5xl mx-auto">
+        <div className="w-full max-w-readable mx-auto">
           {theTitles}
           {renderTranslation({
             content: body,
