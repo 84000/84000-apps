@@ -14,17 +14,15 @@ import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
   createBrowserClient,
-  getPassage,
   getTranslationPassages,
   getTranslationPassagesAround,
   PanelFilter,
   Passage,
 } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
-import { HTMLElements, useInView } from 'motion/react';
+import { useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
-import { useParams } from 'next/navigation';
-import { findElementByHash, isUuid, scrollToElement } from '@lib-utils';
+import { isUuid, scrollToElement } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 
 interface PaginationContextState {
@@ -130,9 +128,18 @@ export const PaginationProvider = ({
         });
 
         const nextContent = blocksFromTranslationBody(passages);
+        // Wait for editor to finish updating
+        await new Promise<void>((resolve) => {
+          const handleUpdate = () => {
+            editor?.off('update', handleUpdate);
+            requestAnimationFrame(() => resolve());
+          };
+
+          editor?.on('update', handleUpdate);
+          editor?.chain().clearContent().setContent(nextContent).run();
+        });
         setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
         setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
-        editor?.chain().clearContent().setContent(nextContent).run();
 
         element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
       }
@@ -211,26 +218,37 @@ export const PaginationProvider = ({
     setStartIsLoading(true);
 
     (async () => {
-      const {
-        passages,
-        hasMoreAfter: hasMore,
-        nextCursor,
-      } = await getTranslationPassages({
-        client: dataClient,
-        uuid,
-        type: filter,
-        cursor: startCursor,
-        direction: 'backward',
-      });
+      const { passages, hasMoreBefore, prevCursor } =
+        await getTranslationPassages({
+          client: dataClient,
+          uuid,
+          type: filter,
+          cursor: startCursor,
+          direction: 'backward',
+        });
 
       const nextContent = blocksFromTranslationBody(passages);
       const pos = 0;
 
       if (nextContent.length && editor) {
+        const editorEl = editor.view.dom;
+        const scrollContainer =
+          editorEl.closest('[data-panel]') || editorEl.parentElement;
+        const previousScrollHeight = scrollContainer?.scrollHeight || 0;
+        const previousScrollTop = scrollContainer?.scrollTop || 0;
+
         editor.commands.insertContentAt(pos, nextContent);
+
+        requestAnimationFrame(() => {
+          const newScrollHeight = scrollContainer?.scrollHeight || 0;
+          const deltaHeight = newScrollHeight - previousScrollHeight;
+          if (scrollContainer) {
+            scrollContainer.scrollTop = previousScrollTop + deltaHeight;
+          }
+        });
       }
 
-      setStartCursor(hasMore && nextCursor ? nextCursor : undefined);
+      setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
       setStartIsLoading(false);
     })();
   }, [
@@ -251,7 +269,6 @@ export const PaginationProvider = ({
         editor,
       }}
     >
-      <div ref={loadMoreAtStartRef} className="h-0" />
       {startCursor && (
         <div className="flex flex-col gap-4 pt-8">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -259,6 +276,7 @@ export const PaginationProvider = ({
           ))}
         </div>
       )}
+      <div ref={loadMoreAtStartRef} className="h-0" />
       <div ref={childrenDivRef}>{children}</div>
       <div ref={loadMoreAtEndRef} className="h-0" />
       {endCursor ? (
