@@ -9,6 +9,8 @@ import {
   PassagesPageDTO,
   PassagesPage,
   PaginationDirection,
+  passagesPageAroundFromDTO,
+  PassagesPageAroundDTO,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -49,12 +51,48 @@ export const getTranslationPassages = async ({
   if (error) {
     console.error('Error fetching translation passages:', error);
     return {
-      hasMore: false,
+      hasMoreAfter: false,
+      hasMoreBefore: false,
       passages: [],
     };
   }
 
-  return passagesPageFromDTO(data as PassagesPageDTO);
+  return passagesPageFromDTO(direction || 'forward', data as PassagesPageDTO);
+};
+
+export const getTranslationPassagesAround = async ({
+  client,
+  uuid,
+  passageUuid,
+  type,
+  maxPassages,
+  maxCharacters,
+}: {
+  client: DataClient;
+  uuid: string;
+  passageUuid: string;
+  type?: BodyItemType;
+  maxPassages?: number;
+  maxCharacters?: number;
+}): Promise<PassagesPage> => {
+  const { data, error } = await client.rpc('get_passages_page_around', {
+    uuid_input: uuid,
+    cursor: passageUuid,
+    passage_type_input: type,
+    max_passages: maxPassages,
+    char_budget: maxCharacters,
+  });
+
+  if (error) {
+    console.error('Error fetching translation passages around:', error);
+    return {
+      hasMoreAfter: false,
+      hasMoreBefore: false,
+      passages: [],
+    };
+  }
+
+  return passagesPageAroundFromDTO(data as PassagesPageAroundDTO);
 };
 
 export const getTranslationTitles = async ({

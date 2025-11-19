@@ -8,12 +8,14 @@ export const TranslationReader = ({
   content,
   className,
   filter,
+  panel,
 }: TranslationRenderer) => {
   const { fetchEndNote, uuid } = useNavigation();
 
   return (
     <PaginationProvider
       uuid={uuid}
+      panel={panel}
       filter={filter}
       content={content}
       isEditable={false}

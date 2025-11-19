@@ -14,15 +14,18 @@ import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
   createBrowserClient,
+  getPassage,
   getTranslationPassages,
+  getTranslationPassagesAround,
   PanelFilter,
   Passage,
 } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
-import { useInView } from 'motion/react';
+import { HTMLElements, useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
 import { useParams } from 'next/navigation';
-import { findElementByHash, isUuid } from '@lib-utils';
+import { findElementByHash, isUuid, scrollToElement } from '@lib-utils';
+import { PanelName, useNavigation } from '../shared';
 
 interface PaginationContextState {
   cursor?: string;
@@ -39,6 +42,7 @@ export const PaginationContext = createContext<PaginationContextState>({
 export const PaginationProvider = ({
   uuid,
   filter,
+  panel,
   content,
   fragment,
   isEditable = true,
@@ -48,6 +52,7 @@ export const PaginationProvider = ({
 }: {
   uuid: string;
   filter?: PanelFilter;
+  panel: PanelName;
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
@@ -63,15 +68,18 @@ export const PaginationProvider = ({
   const [endCursor, setEndCursor] = useState<string | undefined>(
     initialEndCursor || undefined,
   );
+  const [navCursor, setNavCursor] = useState<string | undefined>();
+
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
   const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
   const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
+  const childrenDivRef = useRef<HTMLDivElement>(null);
   const shouldLoadMoreAtStart = useInView(loadMoreAtStartRef);
   const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
   const dataClient = createBrowserClient();
 
-  const params = useParams();
+  const { panels, updatePanel } = useNavigation();
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -89,18 +97,68 @@ export const PaginationProvider = ({
   });
 
   useEffect(() => {
-    const hash = window.location.hash?.substring(1);
-    if (!hash || !isUuid(hash)) {
+    const div = childrenDivRef.current;
+    if (!div) {
       return;
     }
 
-    const element = findElementByHash();
-    if (element) {
+    const hash = panels[panel]?.hash;
+    setNavCursor(hash);
+  }, [panel, panels]);
+
+  useEffect(() => {
+    const div = childrenDivRef.current;
+    if (!div || !navCursor || startIsLoading || endIsLoading) {
       return;
     }
 
-    console.log('No element found for hash:', hash);
-  }, [params]);
+    (async () => {
+      let element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
+
+      if (!element && isUuid(navCursor)) {
+        const {
+          passages,
+          hasMoreBefore,
+          hasMoreAfter,
+          prevCursor,
+          nextCursor,
+        } = await getTranslationPassagesAround({
+          client: dataClient,
+          uuid,
+          type: filter,
+          passageUuid: navCursor,
+        });
+
+        const nextContent = blocksFromTranslationBody(passages);
+        setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
+        setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
+        editor?.chain().clearContent().setContent(nextContent).run();
+
+        element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
+      }
+
+      if (!element) {
+        return;
+      }
+
+      await scrollToElement({ element, delay: 10 });
+      updatePanel({
+        name: panel,
+        state: { ...panels[panel], hash: undefined },
+      });
+    })();
+  }, [
+    panel,
+    uuid,
+    filter,
+    navCursor,
+    startIsLoading,
+    endIsLoading,
+    panels,
+    editor,
+    dataClient,
+    updatePanel,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -115,7 +173,11 @@ export const PaginationProvider = ({
     setEndIsLoading(true);
 
     (async () => {
-      const { passages, hasMore, nextCursor } = await getTranslationPassages({
+      const {
+        passages,
+        hasMoreAfter: hasMore,
+        nextCursor,
+      } = await getTranslationPassages({
         client: dataClient,
         uuid,
         type: filter,
@@ -149,7 +211,11 @@ export const PaginationProvider = ({
     setStartIsLoading(true);
 
     (async () => {
-      const { passages, hasMore, nextCursor } = await getTranslationPassages({
+      const {
+        passages,
+        hasMoreAfter: hasMore,
+        nextCursor,
+      } = await getTranslationPassages({
         client: dataClient,
         uuid,
         type: filter,
@@ -193,7 +259,7 @@ export const PaginationProvider = ({
           ))}
         </div>
       )}
-      {children}
+      <div ref={childrenDivRef}>{children}</div>
       <div ref={loadMoreAtEndRef} className="h-0" />
       {endCursor ? (
         <div className="flex flex-col gap-4 pb-8">

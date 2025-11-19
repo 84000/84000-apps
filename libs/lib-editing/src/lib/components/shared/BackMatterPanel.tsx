@@ -61,6 +61,7 @@ export const BackMatterPanel = ({
               content: endnotes,
               className: 'block pe-8',
               name: 'endnotes',
+              panel: 'right',
             })}
           </TabsContent>
         )}
@@ -80,6 +81,7 @@ export const BackMatterPanel = ({
               content: abbreviations,
               className: 'block pe-8',
               name: 'abbreviations',
+              panel: 'right',
             })}
           </TabsContent>
         )}

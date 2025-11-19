@@ -70,6 +70,7 @@ export const BodyPanel = ({
             content: body,
             className: 'block',
             name: 'translation',
+            panel: 'main',
           })}
         </div>
       </TabsContent>
@@ -83,6 +84,7 @@ export const BodyPanel = ({
               content: alignments,
               className: 'block',
               name: 'translation',
+              panel: 'main',
             })}
           </div>
         </TabsContent>

@@ -219,10 +219,7 @@ export const NavigationProvider = ({
 
       const params = new URLSearchParams(window.location.search);
       const openness = state.open ? 'open' : 'closed';
-      params.set(
-        name,
-        `${openness}${tab ? `:${tab}` : ''}:${hash || tab || '#'}`,
-      );
+      params.set(name, `${openness}${tab ? `:${tab}` : ''}:${hash || ''}`);
 
       const newUrl = `?${params.toString()}`;
       window.history.replaceState(null, '', newUrl);

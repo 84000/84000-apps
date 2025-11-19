@@ -28,6 +28,7 @@ export const ReaderBackMatterPanel = ({
           name={name}
           className={className}
           filter={name}
+          panel="right"
         />
       )}
     />

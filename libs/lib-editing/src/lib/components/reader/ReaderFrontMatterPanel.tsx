@@ -25,6 +25,7 @@ export const ReaderFrontMatterPanel = ({
           name={name}
           className={className}
           filter={FRONT_MATTER_FILTER}
+          panel="left"
         />
       )}
     />

@@ -12,6 +12,8 @@ export const TranslationBuilder = ({
   content,
   name,
   className,
+  filter,
+  panel,
 }: TranslationRenderer) => {
   const [fragment, setFragment] = useState<XmlFragment>();
   const [isObserving, setIsObserving] = useState(false);
@@ -35,6 +37,8 @@ export const TranslationBuilder = ({
   return content && fragment ? (
     <PaginationProvider
       uuid={uuid}
+      panel={panel}
+      filter={filter}
       content={content}
       fragment={fragment}
       isEditable={isEditable}
