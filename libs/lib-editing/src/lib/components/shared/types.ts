@@ -11,8 +11,7 @@ export const PANEL_NAMES = ['left', 'right', 'main'] as const;
 export type PanelName = (typeof PANEL_NAMES)[number];
 export type TabName =
   | 'toc'
-  | 'summary'
-  | 'imprint'
+  | 'front'
   | 'translation'
   | 'source'
   | 'compare'
