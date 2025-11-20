@@ -13,7 +13,7 @@ export const useScrollInTab = ({
   tab: TabName;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const { panels } = useNavigation();
+  const { panels, updatePanel } = useNavigation();
 
   useEffect(() => {
     const div = ref.current;
@@ -27,11 +27,17 @@ export const useScrollInTab = ({
       return;
     }
 
-    const element = div.querySelector<HTMLElement>(`#${CSS.escape(hash)}`);
-    if (element) {
-      scrollToElement({ element, delay: 10 });
-    }
-  }, [panels, panel, tab]);
+    (async () => {
+      const element = div.querySelector<HTMLElement>(`#${CSS.escape(hash)}`);
+      if (element) {
+        await scrollToElement({ element, behavior: 'smooth' });
+        updatePanel({
+          name: panel,
+          state: { open, tab: currentTab, hash: undefined },
+        });
+      }
+    })();
+  }, [panels, panel, tab, updatePanel]);
 
   return { ref };
 };

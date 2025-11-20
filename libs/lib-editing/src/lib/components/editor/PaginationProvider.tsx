@@ -150,7 +150,7 @@ export const PaginationProvider = ({
         return;
       }
 
-      await scrollToElement({ element, delay: 10 });
+      await scrollToElement({ element });
       updatePanel({
         name: panel,
         state: { ...panels[panel], hash: undefined },
