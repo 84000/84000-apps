@@ -23,14 +23,15 @@ export const EditorHeader = () => {
       const TAB_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, TabName>> = {
         abbreviations: 'abbreviations',
         endnotes: 'endnotes',
-        summary: 'summary',
+        summary: 'front',
+        introduction: 'front',
+        acknowledgements: 'front',
       };
 
       const SIDE_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, PanelName>> =
         {
           abbreviations: 'right',
           endnotes: 'right',
-          summary: 'left',
         };
 
       switch (result.type) {
