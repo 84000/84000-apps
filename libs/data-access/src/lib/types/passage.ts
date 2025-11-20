@@ -98,16 +98,28 @@ export type PassageDTO = PassageRowDTO & {
   annotations?: AnnotationsDTO | null;
 };
 
+export type PaginationDirection = 'forward' | 'backward';
+
 export type PassagesPageDTO = {
   passages: PassageDTO[];
   nextCursor?: string;
   hasMore: boolean;
 };
 
+export type PassagesPageAroundDTO = {
+  passages: PassageDTO[];
+  prevCursor?: string;
+  nextCursor?: string;
+  hasMoreBefore: boolean;
+  hasMoreAfter: boolean;
+};
+
 export type PassagesPage = {
   passages: Passage[];
+  prevCursor?: string;
   nextCursor?: string;
-  hasMore: boolean;
+  hasMoreAfter: boolean;
+  hasMoreBefore: boolean;
 };
 
 export const passageFromDTO = (
@@ -183,10 +195,27 @@ export const passagesToRowDTO = (passages: Passage[]): PassageRowDTO[] => {
   return passages.map(passageToRowDTO);
 };
 
-export const passagesPageFromDTO = (dto: PassagesPageDTO): PassagesPage => {
+export const passagesPageFromDTO = (
+  direction: PaginationDirection,
+  dto: PassagesPageDTO,
+): PassagesPage => {
+  return {
+    passages: passagesFromDTO(dto.passages),
+    nextCursor: direction === 'forward' ? dto.nextCursor : undefined,
+    prevCursor: direction === 'backward' ? dto.nextCursor : undefined,
+    hasMoreAfter: direction === 'forward' && dto.hasMore,
+    hasMoreBefore: direction === 'backward' && dto.hasMore,
+  };
+};
+
+export const passagesPageAroundFromDTO = (
+  dto: PassagesPageAroundDTO,
+): PassagesPage => {
   return {
     passages: passagesFromDTO(dto.passages),
     nextCursor: dto.nextCursor,
-    hasMore: dto.hasMore,
+    prevCursor: dto.prevCursor,
+    hasMoreAfter: dto.hasMoreAfter,
+    hasMoreBefore: dto.hasMoreBefore,
   };
 };

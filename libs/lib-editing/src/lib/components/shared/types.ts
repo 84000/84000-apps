@@ -7,18 +7,6 @@ export type EditorToolsType = 'summarizer' | 'bibliography' | 'glossary';
 
 export type EditorMenuItemType = EditorBuilderType | EditorToolsType;
 
-export interface TranslationRenderer {
-  content: TranslationEditorContent;
-  name: string;
-  className?: string;
-  filter?: PanelFilter;
-}
-
-export interface TitlesRenderer {
-  titles: Titles;
-  imprint?: Imprint;
-}
-
 export const PANEL_NAMES = ['left', 'right', 'main'] as const;
 export type PanelName = (typeof PANEL_NAMES)[number];
 export type TabName =
@@ -32,6 +20,19 @@ export type TabName =
   | 'bibliography'
   | 'glossary'
   | 'abbreviations';
+
+export interface TitlesRenderer {
+  titles: Titles;
+  imprint?: Imprint;
+}
+
+export interface TranslationRenderer {
+  content: TranslationEditorContent;
+  name: string;
+  className?: string;
+  filter?: PanelFilter;
+  panel: PanelName;
+}
 
 export type PanelState = {
   open: boolean;

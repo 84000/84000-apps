@@ -79,8 +79,8 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
         }
 
         const query = new URLSearchParams(window.location.search);
-        query.set('right', 'open:glossary');
-        window.history.pushState({}, '', `?${query.toString()}#${glossary}`);
+        query.set('right', `open:glossary:${glossary}`);
+        window.history.pushState({}, '', `?${query.toString()}`);
       });
 
       return {

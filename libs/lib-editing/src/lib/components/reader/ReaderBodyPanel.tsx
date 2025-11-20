@@ -27,6 +27,7 @@ export const ReaderBodyPanel = ({
           name={name}
           className={className}
           filter={BODY_MATTER_FILTER}
+          panel="main"
         />
       )}
     />

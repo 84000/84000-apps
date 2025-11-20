@@ -74,8 +74,8 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
         }
 
         const query = new URLSearchParams(window.location.search);
-        query.set('right', 'open:endnotes');
-        window.history.pushState({}, '', `?${query.toString()}#${endNote}`);
+        query.set('right', `open:endnotes:${endNote}`);
+        window.history.pushState({}, '', `?${query.toString()}`);
       });
       return {
         dom,

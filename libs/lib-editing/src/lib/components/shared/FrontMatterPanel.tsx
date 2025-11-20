@@ -56,8 +56,9 @@ export const FrontMatterPanel = ({
           <TabsContent value="summary">
             {renderTranslation({
               content: summary,
-              className: 'block pb-8',
+              className: 'block pb-8 pe-8',
               name: 'summary',
+              panel: 'left',
             })}
           </TabsContent>
         )}

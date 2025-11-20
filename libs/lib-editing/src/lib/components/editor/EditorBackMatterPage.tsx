@@ -69,6 +69,7 @@ export const EditorBackMatterPage = () => {
           name={name}
           className={className}
           filter={BACK_MATTER_FILTER}
+          panel="right"
         />
       )}
     />

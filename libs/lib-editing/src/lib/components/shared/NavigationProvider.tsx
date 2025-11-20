@@ -23,7 +23,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { scrollToHash } from '@lib-utils';
 import { useSearchParams } from 'next/navigation';
 import {
   PANEL_NAMES,
@@ -40,7 +39,9 @@ interface NavigationState {
   imprint?: Imprint;
   panels: PanelsState;
   toh?: TohokuCatalogEntry;
+  showOuterContent: boolean;
   setToh: (toh: TohokuCatalogEntry) => void;
+  setShowOuterContent: (withTitles: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   fetchBibliographyEntry: (
     uuid: string,
@@ -62,10 +63,14 @@ const DEFAULT_PANELS: PanelsState = {
 export const NavigationContext = createContext<NavigationState>({
   uuid: '',
   panels: DEFAULT_PANELS,
+  showOuterContent: true,
   updatePanel: () => {
     throw new Error('Not implemented');
   },
   setToh: () => {
+    throw new Error('Not implemented');
+  },
+  setShowOuterContent: () => {
     throw new Error('Not implemented');
   },
   fetchBibliographyEntry: async () => {
@@ -96,6 +101,7 @@ export const NavigationProvider = ({
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
+  const [showOuterContent, setShowOuterContent] = useState(true);
   const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
@@ -212,7 +218,7 @@ export const NavigationProvider = ({
 
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
-      const { open, tab } = state;
+      const { open, tab, hash } = state;
       setPanels((prev) => ({
         ...prev,
         [name]: { open, tab },
@@ -220,10 +226,9 @@ export const NavigationProvider = ({
 
       const params = new URLSearchParams(window.location.search);
       const openness = state.open ? 'open' : 'closed';
-      params.set(name, `${openness}${tab ? `:${tab}` : ''}`);
-      const hash = state.hash ? `#${state.hash}` : window.location.hash;
+      params.set(name, `${openness}${tab ? `:${tab}` : ''}:${hash || ''}`);
 
-      const newUrl = `?${params.toString()}${hash}`;
+      const newUrl = `?${params.toString()}`;
       window.history.replaceState(null, '', newUrl);
     },
     [],
@@ -239,7 +244,7 @@ export const NavigationProvider = ({
     for (const [key, value] of params.entries()) {
       const match = value.match(/^(open|closed)(?::(.+))?$/);
       if (match) {
-        const [, state, tab] = match;
+        const [state, tab, hash] = value.split(':');
         const panelKey = key as PanelName;
         if (!PANEL_NAMES.includes(panelKey)) {
           continue;
@@ -247,6 +252,7 @@ export const NavigationProvider = ({
         panels[panelKey] = {
           open: state === 'open',
           tab: tab as TabName | undefined,
+          hash: hash || undefined,
         };
       }
     }
@@ -254,16 +260,6 @@ export const NavigationProvider = ({
     const toh = (params.get('toh') as TohokuCatalogEntry) || undefined;
 
     return { toh, panels };
-  }, []);
-
-  useEffect(() => {
-    if (!window.location.hash) {
-      return;
-    }
-
-    scrollToHash({
-      delay: 10,
-    });
   }, []);
 
   useEffect(() => {
@@ -299,10 +295,6 @@ export const NavigationProvider = ({
     if (newToh) {
       setToh(newToh);
     }
-
-    scrollToHash({
-      delay: 100,
-    });
   }, [query, parsePanelParams]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
@@ -314,7 +306,9 @@ export const NavigationProvider = ({
         imprint,
         panels,
         toh,
+        showOuterContent,
         setToh,
+        setShowOuterContent,
         updatePanel,
         fetchBibliographyEntry,
         fetchEndNote,

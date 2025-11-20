@@ -59,8 +59,9 @@ export const BackMatterPanel = ({
           <TabsContent value="endnotes">
             {renderTranslation({
               content: endnotes,
-              className: 'block pb-8 pe-8',
+              className: 'block pe-8',
               name: 'endnotes',
+              panel: 'right',
             })}
           </TabsContent>
         )}
@@ -78,8 +79,9 @@ export const BackMatterPanel = ({
           <TabsContent value="abbreviations">
             {renderTranslation({
               content: abbreviations,
-              className: 'block',
+              className: 'block pe-8',
               name: 'abbreviations',
+              panel: 'right',
             })}
           </TabsContent>
         )}

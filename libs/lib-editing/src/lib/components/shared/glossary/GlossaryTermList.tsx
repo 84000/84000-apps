@@ -1,8 +1,11 @@
+'use client';
+
 import { H2 } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
 import { GlossaryTermInstances } from '@data-access';
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
 import { cn } from '@lib-utils';
+import { useScrollInTab } from '../hooks/useScrollInTab';
 
 export const GlossaryTermList = ({
   content,
@@ -11,8 +14,13 @@ export const GlossaryTermList = ({
   content: GlossaryTermInstances;
   className?: string;
 }) => {
+  const { ref } = useScrollInTab({
+    panel: 'right',
+    tab: 'glossary',
+  });
+
   return (
-    <div className={cn('flex flex-col w-full', className)}>
+    <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
         className="position-sidebar:mt-3.5 mt-6"
         id={'glossary'}
