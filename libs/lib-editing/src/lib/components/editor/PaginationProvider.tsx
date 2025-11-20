@@ -25,17 +25,15 @@ import { blocksFromTranslationBody } from '../../block';
 import { isUuid, scrollToElement } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 
+const LOADING_SKELETONS_COUNT = 3;
+
 interface PaginationContextState {
-  cursor?: string;
-  hasMore: boolean;
-  content: TranslationEditorContent;
+  endCursor?: string;
+  startCursor?: string;
   editor?: Editor;
 }
 
-export const PaginationContext = createContext<PaginationContextState>({
-  hasMore: false,
-  content: [],
-});
+export const PaginationContext = createContext<PaginationContextState>({});
 
 export const PaginationProvider = ({
   uuid,
@@ -77,7 +75,7 @@ export const PaginationProvider = ({
   const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
   const dataClient = createBrowserClient();
 
-  const { panels, updatePanel } = useNavigation();
+  const { panels, updatePanel, setShowOuterContent } = useNavigation();
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -93,6 +91,10 @@ export const PaginationProvider = ({
       onCreate?.({ editor });
     },
   });
+
+  useEffect(() => {
+    setShowOuterContent(!startCursor);
+  }, [startCursor, setShowOuterContent]);
 
   useEffect(() => {
     const div = childrenDivRef.current;
@@ -264,14 +266,14 @@ export const PaginationProvider = ({
   return (
     <PaginationContext.Provider
       value={{
-        hasMore: false,
-        content: [],
+        startCursor,
+        endCursor,
         editor,
       }}
     >
       {startCursor && (
         <div className="flex flex-col gap-4 pt-8">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
             <PassageSkeleton key={i} />
           ))}
         </div>
@@ -281,7 +283,7 @@ export const PaginationProvider = ({
       <div ref={loadMoreAtEndRef} className="h-0" />
       {endCursor ? (
         <div className="flex flex-col gap-4 pb-8">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
             <PassageSkeleton key={i} />
           ))}
         </div>

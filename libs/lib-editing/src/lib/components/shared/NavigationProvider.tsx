@@ -39,7 +39,9 @@ interface NavigationState {
   imprint?: Imprint;
   panels: PanelsState;
   toh?: TohokuCatalogEntry;
+  showOuterContent: boolean;
   setToh: (toh: TohokuCatalogEntry) => void;
+  setShowOuterContent: (withTitles: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   fetchBibliographyEntry: (
     uuid: string,
@@ -61,10 +63,14 @@ const DEFAULT_PANELS: PanelsState = {
 export const NavigationContext = createContext<NavigationState>({
   uuid: '',
   panels: DEFAULT_PANELS,
+  showOuterContent: true,
   updatePanel: () => {
     throw new Error('Not implemented');
   },
   setToh: () => {
+    throw new Error('Not implemented');
+  },
+  setShowOuterContent: () => {
     throw new Error('Not implemented');
   },
   fetchBibliographyEntry: async () => {
@@ -95,6 +101,7 @@ export const NavigationProvider = ({
   const query = useSearchParams();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
+  const [showOuterContent, setShowOuterContent] = useState(true);
   const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
@@ -299,7 +306,9 @@ export const NavigationProvider = ({
         imprint,
         panels,
         toh,
+        showOuterContent,
         setToh,
+        setShowOuterContent,
         updatePanel,
         fetchBibliographyEntry,
         fetchEndNote,

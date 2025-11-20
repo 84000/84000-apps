@@ -24,7 +24,7 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
 }) => {
-  const { panels, imprint, updatePanel } = useNavigation();
+  const { panels, imprint, showOuterContent, updatePanel } = useNavigation();
   const [alignments, setAlignments] = useState<TranslationEditorContent>();
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export const BodyPanel = ({
       </TabsList>
       <TabsContent value="translation">
         <div className="w-full max-w-readable mx-auto">
-          {theTitles}
+          {showOuterContent ? theTitles : null}
           {renderTranslation({
             content: body,
             className: 'block',
