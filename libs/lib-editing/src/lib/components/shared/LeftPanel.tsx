@@ -8,7 +8,7 @@ import { Toc, Work } from '@data-access';
 import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
 
-export const FrontMatterPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
+export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
   const { panels, toh, updatePanel, setToh } = useNavigation();
   useTohToggle({ work, toh });
 

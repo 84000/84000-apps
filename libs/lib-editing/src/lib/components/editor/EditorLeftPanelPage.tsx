@@ -1,12 +1,12 @@
 'use client';
 
 import { createBrowserClient, getTranslationToc, Toc } from '@data-access';
-import { FrontMatterPanel } from '../shared/FrontMatterPanel';
+import { LeftPanel } from '../shared/LeftPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 
-export const EditorFrontMatterPage = () => {
+export const EditorLeftPanelPage = () => {
   const { work } = useEditorState();
   const [toc, setToc] = useState<Toc>();
 
@@ -22,5 +22,5 @@ export const EditorFrontMatterPage = () => {
     return <TranslationSkeleton />;
   }
 
-  return <FrontMatterPanel toc={toc} work={work} />;
+  return <LeftPanel toc={toc} work={work} />;
 };

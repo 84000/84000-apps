@@ -3,11 +3,11 @@ import {
   getTranslationMetadataByUuid,
   getTranslationToc,
 } from '@data-access';
-import { ReaderFrontMatterPanel } from './ReaderFrontMatterPanel';
+import { ReaderLeftPanel } from './ReaderLeftPanel';
 import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
 
-export const ReaderFrontMatterPage = async ({
+export const ReaderLeftPanelPage = async ({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -22,5 +22,5 @@ export const ReaderFrontMatterPage = async ({
   const work = await getTranslationMetadataByUuid({ client, uuid: slug });
   const toc = await getTranslationToc({ client, uuid: slug });
 
-  return <ReaderFrontMatterPanel toc={toc} work={work} />;
+  return <ReaderLeftPanel toc={toc} work={work} />;
 };
