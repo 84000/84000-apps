@@ -47,11 +47,15 @@ export const BodyPanel = ({
   const theTitles = useMemo(
     () => (
       <div className="ms-12 mt-16 mb-8">
-        {renderTitles({ titles, imprint })}
+        {renderTitles({
+          titles,
+          imprint,
+          name: panels.main.tab || 'translation',
+        })}
       </div>
     ),
 
-    [titles, imprint, renderTitles],
+    [titles, imprint, renderTitles, panels.main.tab],
   );
 
   return (

@@ -8,7 +8,14 @@ import {
 import { BodyPanel } from '../shared/BodyPanel';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from '.';
-import { Titles } from '@design-system';
+import { Titles, TitlesVariant } from '@design-system';
+
+const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
+  translation: 'english',
+  source: 'tibetan',
+  front: 'english',
+  compare: 'comparison',
+};
 
 export const ReaderBodyPanel = ({
   titles,
@@ -25,9 +32,17 @@ export const ReaderBodyPanel = ({
       titles={titles}
       frontMatter={frontMatter}
       body={body}
-      renderTitles={({ titles, imprint }) => (
-        <Titles titles={titles} imprint={imprint} />
-      )}
+      renderTitles={({ titles, imprint, name }) => {
+        return (
+          <Titles
+            titles={titles}
+            imprint={imprint}
+            variant={
+              (TITLE_VARIANTS_FOR_TABS[name] || 'english') as TitlesVariant
+            }
+          />
+        );
+      }}
       renderTranslation={({ content, name, className }) => (
         <TranslationReader
           content={content}

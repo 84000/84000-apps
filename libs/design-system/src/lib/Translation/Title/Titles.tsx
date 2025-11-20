@@ -17,7 +17,7 @@ import { useState } from 'react';
 import { TitleForm } from './TitleForm';
 import { LongTitles } from './LongTitles';
 
-type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
+export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
 
 export const Titles = ({
   titles,
@@ -51,6 +51,41 @@ export const Titles = ({
   // TODO: support other variants once we have a good understanding of them
   // and the required data is available
   switch (variant) {
+    case 'tibetan':
+      {
+        const mainTitles = titlesByType['mainTitle'] || [];
+        const boMain =
+          imprint?.mainTitles?.bo ||
+          mainTitles.find((t) => t.language === 'bo')?.title;
+        const saMain =
+          imprint?.mainTitles?.['Sa-Ltn'] ||
+          mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
+          '...';
+        header = saMain;
+        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        footer = imprint?.toh
+          ? imprint.toh
+          : titlesByType['toh']?.[0]?.title || '';
+      }
+      break;
+    case 'comparison':
+      {
+        const mainTitles = titlesByType['mainTitle'] || [];
+        const boMain =
+          imprint?.mainTitles?.bo ||
+          mainTitles.find((t) => t.language === 'bo')?.title;
+        const enMain =
+          imprint?.mainTitles?.en ||
+          mainTitles.find((t) => t.language === 'en')?.title ||
+          '...';
+        header = enMain;
+        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        footer = imprint?.toh
+          ? imprint.toh
+          : titlesByType['toh']?.[0]?.title || '';
+      }
+      break;
+    case 'english':
     default:
       {
         const mainTitles = titlesByType['mainTitle'] || [];

@@ -23,6 +23,7 @@ export type TabName =
 export interface TitlesRenderer {
   titles: Titles;
   imprint?: Imprint;
+  name: string;
 }
 
 export interface TranslationRenderer {

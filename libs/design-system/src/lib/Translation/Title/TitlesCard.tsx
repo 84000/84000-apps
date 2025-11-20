@@ -22,10 +22,10 @@ export const TitlesCard = ({
   return (
     <FramedCard className="max-w-xl w-full mx-auto">
       <div className="flex flex-col gap-3 py-6 px-2">
-        <div className="min-h-10 pb-3 border-b border-navy-50 font-sans font-light text-xl text-navy-200 text-center line-clamp-1">
+        <div className="min-h-10 pb-3 border-b border-navy-50 font-sans font-light text-xl text-navy-200 text-center">
           {header}
         </div>
-        <div className="font-serif font-medium text-2xl text-navy-500 text-center line-clamp-2 leading-10">
+        <div className="font-serif font-medium text-2xl text-navy-500 text-center leading-10">
           {main}
         </div>
         <div className="min-h-10 pt-3 border-t border-navy-50 flex justify-between gap-2">
