@@ -1,7 +1,10 @@
+'use client';
+
 import { H2, H3 } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
 import { BibliographyEntries } from '@data-access';
 import { cn } from '@lib-utils';
+import { useScrollInTab } from '../hooks/useScrollInTab';
 
 export const BibliographyList = ({
   content,
@@ -10,8 +13,13 @@ export const BibliographyList = ({
   content: BibliographyEntries;
   className?: string;
 }) => {
+  const { ref } = useScrollInTab({
+    panel: 'right',
+    tab: 'bibliography',
+  });
+
   return (
-    <div className={cn('flex flex-col w-full', className)}>
+    <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
         className="position-sidebar:mt-3.5 mt-6"
         id={'bibliography'}
