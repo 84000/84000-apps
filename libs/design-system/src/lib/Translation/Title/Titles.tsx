@@ -77,7 +77,7 @@ export const Titles = ({
         main={main}
         footer={footer}
         canEdit={canEdit}
-        hasMore={!!imprint}
+        hasMore={false}
         onMore={() => setIsMoreOpen(true)}
         onEdit={() => setIsEditOpen(true)}
       />

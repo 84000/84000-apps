@@ -3,6 +3,7 @@
 import {
   BODY_MATTER_FILTER,
   createBrowserClient,
+  FRONT_MATTER_FILTER,
   getTranslationPassages,
   getTranslationTitles,
   Title,
@@ -21,33 +22,47 @@ const INITIAL_MAX_CHARACTERS = 200000;
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
   const [body, setBody] = useState<TranslationEditorContent>();
+  const [frontMatter, setFrontMatter] = useState<TranslationEditorContent>();
   const [titles, setTitles] = useState<Title[]>();
 
   useEffect(() => {
     (async () => {
       const client = createBrowserClient();
-      const { passages } = await getTranslationPassages({
+      const { passages: frontPassages } = await getTranslationPassages({
+        client,
+        uuid: work.uuid,
+        type: FRONT_MATTER_FILTER,
+        maxPassages: INITIAL_PASSAGES,
+        maxCharacters: INITIAL_MAX_CHARACTERS,
+      });
+
+      const { passages: bodyPassages } = await getTranslationPassages({
         client,
         uuid: work.uuid,
         type: BODY_MATTER_FILTER,
         maxPassages: INITIAL_PASSAGES,
         maxCharacters: INITIAL_MAX_CHARACTERS,
       });
-      const body = blocksFromTranslationBody(passages);
-      setBody(body);
 
       const titles = await getTranslationTitles({ client, uuid: work.uuid });
       setTitles(titles);
+
+      const frontMatter = blocksFromTranslationBody(frontPassages);
+      setFrontMatter(frontMatter);
+
+      const body = blocksFromTranslationBody(bodyPassages);
+      setBody(body);
     })();
   }, [work.uuid]);
 
-  if (!titles || !body) {
+  if (!titles || !frontMatter || !body) {
     return <TranslationSkeleton />;
   }
 
   return (
     <BodyPanel
       titles={titles}
+      frontMatter={frontMatter}
       body={body}
       renderTitles={({ titles, imprint }) => (
         <TitlesBuilder titles={titles} imprint={imprint} />
@@ -57,7 +72,7 @@ export const EditorBodyPage = () => {
           content={content}
           name={name}
           className={className}
-          filter={BODY_MATTER_FILTER}
+          filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
           panel="main"
         />
       )}

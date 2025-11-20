@@ -1,6 +1,10 @@
 'use client';
 
-import { BODY_MATTER_FILTER, Titles as TitlesData } from '@data-access';
+import {
+  BODY_MATTER_FILTER,
+  FRONT_MATTER_FILTER,
+  Titles as TitlesData,
+} from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from '.';
@@ -8,15 +12,18 @@ import { Titles } from '@design-system';
 
 export const ReaderBodyPanel = ({
   titles,
+  frontMatter,
   body,
 }: {
   titles: TitlesData;
+  frontMatter: TranslationEditorContent;
   body: TranslationEditorContent;
   cursor?: string;
 }) => {
   return (
     <BodyPanel
       titles={titles}
+      frontMatter={frontMatter}
       body={body}
       renderTitles={({ titles, imprint }) => (
         <Titles titles={titles} imprint={imprint} />
@@ -26,7 +33,7 @@ export const ReaderBodyPanel = ({
           content={content}
           name={name}
           className={className}
-          filter={BODY_MATTER_FILTER}
+          filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
           panel="main"
         />
       )}
