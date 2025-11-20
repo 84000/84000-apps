@@ -1,5 +1,5 @@
-import { EditorFrontMatterPage } from '@lib-editing';
+import { EditorLeftPanelPage } from '@lib-editing';
 
-const Page = EditorFrontMatterPage;
+const Page = EditorLeftPanelPage;
 
 export default Page;

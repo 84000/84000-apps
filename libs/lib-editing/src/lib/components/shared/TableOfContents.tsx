@@ -21,35 +21,35 @@ import { MenuIcon } from 'lucide-react';
 
 const TAB_FOR_SECTION: Record<string, TabName> = {
   abbreviations: 'abbreviations',
-  acknowledgment: 'summary',
+  acknowledgment: 'front',
   appendix: 'translation',
   bibliography: 'bibliography',
   colophon: 'translation',
   endnotes: 'endnotes',
   glossary: 'glossary',
   homage: 'translation',
-  imprint: 'imprint',
-  introduction: 'translation',
+  imprint: 'front',
+  introduction: 'front',
   prelude: 'translation',
   prologue: 'translation',
-  summary: 'summary',
+  summary: 'front',
   translation: 'translation',
 };
 
 const PANEL_FOR_SECTION: Record<string, PanelName> = {
   abbreviations: 'right',
-  acknowledgment: 'left',
+  acknowledgment: 'main',
   appendix: 'main',
   bibliography: 'right',
   colophon: 'main',
   endnotes: 'right',
   glossary: 'right',
   homage: 'main',
-  imprint: 'left',
+  imprint: 'main',
   introduction: 'main',
   prelude: 'main',
   prologue: 'main',
-  summary: 'left',
+  summary: 'main',
   translation: 'main',
 };
 
@@ -136,7 +136,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     content: 'Front Matter',
     sort: 0,
     level: 0,
-    section: 'summary',
+    section: 'front',
     children: [
       {
         uuid: 'imprint',
@@ -157,14 +157,26 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     section: 'translation',
     children: toc?.body || [],
   };
+
+  const endnotes = toc?.backMatter?.find(
+    (entry) => entry.section === 'endnotes',
+  );
+  const abbreviations = toc?.backMatter?.find(
+    (entry) => entry.section === 'abbreviations',
+  );
+  const otherBackMatter = toc?.backMatter?.filter(
+    (entry) =>
+      entry.section !== 'endnotes' && entry.section !== 'abbreviations',
+  );
   const backMatter: TocEntry = {
     uuid: 'back-matter',
     content: 'Back Matter',
     sort: 0,
     level: 0,
-    section: 'endnotes',
+    section: 'back',
     children: [
-      ...(toc?.backMatter || []),
+      ...(endnotes ? [endnotes] : []),
+      ...(otherBackMatter || []),
       {
         uuid: 'glossary',
         content: 'Glossary',
@@ -181,6 +193,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
         section: 'bibliography',
         children: [],
       },
+      ...(abbreviations ? [abbreviations] : []),
     ],
   };
   return (

@@ -34,10 +34,13 @@ export const BODY_ITEM_TYPES = [
 
 export type BodyItemType = (typeof BODY_ITEM_TYPES)[number] | 'unknown';
 
-export const FRONT_MATTER: BodyItemType[] = ['acknowledgment', 'summary'];
+export const FRONT_MATTER: BodyItemType[] = [
+  'acknowledgment',
+  'summary',
+  'introduction',
+];
 export const FRONT_MATTER_FILTER = `(${FRONT_MATTER.join('|')})`;
 export const BODY_MATTER: BodyItemType[] = [
-  'introduction',
   'prelude',
   'prologue',
   'translation',
@@ -48,12 +51,7 @@ export const BODY_MATTER: BodyItemType[] = [
 export const BODY_MATTER_FILTER = `(${BODY_MATTER.join('|')})`;
 export const BACK_MATTER: BodyItemType[] = ['abbreviations', 'endnotes'];
 export const BACK_MATTER_FILTER = `(${BACK_MATTER.join('|')})`;
-export const COMPARE_MODE: BodyItemType[] = [
-  'translation',
-  'prelude',
-  'prologue',
-  'colophon',
-];
+export const COMPARE_MODE = BODY_MATTER;
 export const COMPARE_MODE_FILTER = `(${COMPARE_MODE.join('|')})`;
 
 export const PANEL_FILTERS = [

@@ -1,5 +1,5 @@
 import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { ReaderFrontMatterPage } from '@lib-editing';
+import { ReaderLeftPanelPage } from '@lib-editing';
 
 export const revalidate = 60;
 export const dynamicParams = true;
@@ -10,6 +10,6 @@ export const generateStaticParams = async () => {
   return uuids.map((slug) => ({ slug }));
 };
 
-const Page = ReaderFrontMatterPage;
+const Page = ReaderLeftPanelPage;
 
 export default Page;
