@@ -6,11 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ type: string; slug: string }> },
 ) {
   const { type, slug: entity } = await params;
-  const path = await lookupEntity({
-    type,
-    entity,
-    prefix: '/publications/reader',
-  });
+  const path = await lookupEntity({ type, entity });
 
   if (!path) {
     return notFound();

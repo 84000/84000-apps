@@ -12,7 +12,6 @@ export async function GET(
   const path = await lookupEntity({
     type: 'translation',
     entity,
-    prefix: '/publications/reader',
     xmlId,
   });
 
