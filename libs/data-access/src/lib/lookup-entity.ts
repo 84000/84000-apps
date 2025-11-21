@@ -11,6 +11,7 @@ const ALLOWED_TYPES = ['bibliography', 'passage', 'translation', 'work'];
 export const lookupEntity = async (
   type: string,
   entity: string,
+  prefix = '',
   xmlId?: string,
 ) => {
   if (!ALLOWED_TYPES.includes(type)) {
@@ -27,7 +28,7 @@ export const lookupEntity = async (
           return;
         }
 
-        path = `/publications/reader/${item.workUuid}?right=open%3Abibliography#${item.uuid}`;
+        path = `${prefix}/${item.workUuid}?right=open%3Abibliography%3A${item.uuid}`;
       }
       break;
     case 'passage':
@@ -37,7 +38,8 @@ export const lookupEntity = async (
           return;
         }
 
-        path = `/publications/reader/${item.workUuid}#${item.uuid}`;
+        // NOTE: this assumes that the passage is in the translation body.
+        path = `${prefix}/${item.workUuid}?main=open%3Atranslation%3A${item.uuid}`;
       }
       break;
     case 'translation':
@@ -48,7 +50,7 @@ export const lookupEntity = async (
 
           if (item?.uuid && item?.workUuid) {
             const { uuid, workUuid } = item;
-            path = `/publications/reader/${workUuid}#${uuid}`;
+            path = `${prefix}/${workUuid}#${uuid}`;
             return path;
           }
         }
@@ -58,7 +60,7 @@ export const lookupEntity = async (
           return;
         }
 
-        path = `/publications/reader/${item.uuid}`;
+        path = `${prefix}/${item.uuid}`;
       }
       break;
     case 'work':
@@ -71,7 +73,7 @@ export const lookupEntity = async (
           return;
         }
 
-        path = `/publications/reader/${item.uuid}`;
+        path = `${prefix}/${item.uuid}`;
       }
       break;
     default: {
