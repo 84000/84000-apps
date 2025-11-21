@@ -5,8 +5,12 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ type: string; slug: string }> },
 ) {
-  const { type, slug } = await params;
-  const path = await lookupEntity(type, slug, '/publications/reader');
+  const { type, slug: entity } = await params;
+  const path = await lookupEntity({
+    type,
+    entity,
+    prefix: '/publications/reader',
+  });
 
   if (!path) {
     return notFound();

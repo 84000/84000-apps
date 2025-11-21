@@ -8,12 +8,17 @@ import {
 
 const ALLOWED_TYPES = ['bibliography', 'passage', 'translation', 'work'];
 
-export const lookupEntity = async (
-  type: string,
-  entity: string,
+export const lookupEntity = async ({
+  type,
+  entity,
   prefix = '',
-  xmlId?: string,
-) => {
+  xmlId,
+}: {
+  type: string;
+  entity: string;
+  prefix?: string;
+  xmlId?: string;
+}) => {
   if (!ALLOWED_TYPES.includes(type)) {
     return;
   }

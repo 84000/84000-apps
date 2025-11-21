@@ -5,8 +5,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ type: string; slug: string }> },
 ) {
-  const { type, slug } = await params;
-  const path = await lookupEntity(type, slug);
+  const { type, slug: entity } = await params;
+  const path = await lookupEntity({ type, entity });
 
   if (!path) {
     return notFound();
