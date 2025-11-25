@@ -5,8 +5,21 @@ import {
   getTranslationMetadataByToh,
   getTranslationMetadataByUuid,
 } from './publications';
+import { BodyItemType } from './types';
 
 const ALLOWED_TYPES = ['bibliography', 'passage', 'translation', 'work'];
+const TAB_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, string>> = {
+  abbreviations: 'abbreviations',
+  endnotes: 'endnotes',
+  summary: 'front',
+  introduction: 'front',
+  acknowledgements: 'front',
+};
+
+const PANEL_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, string>> = {
+  abbreviations: 'right',
+  endnotes: 'right',
+};
 
 export const lookupEntity = async ({
   type,
@@ -43,8 +56,10 @@ export const lookupEntity = async ({
           return;
         }
 
-        // NOTE: this assumes that the passage is in the translation body.
-        path = `${prefix}/${item.workUuid}?main=open%3Atranslation%3A${item.uuid}`;
+        const section = item.type.replace('Header', '') as BodyItemType;
+        const panel = PANEL_FOR_PASSAGE_SECTION[section] || 'main';
+        const tab = TAB_FOR_PASSAGE_SECTION[section] || 'translation';
+        path = `${prefix}/${item.workUuid}?${item.toh ? `toh=${item.toh}&` : ''}${panel}=open%3A${tab}%3A${item.uuid}`;
       }
       break;
     case 'translation':
@@ -53,9 +68,13 @@ export const lookupEntity = async ({
         if (xmlId) {
           const item = await getPassageUuidByXmlId({ client, xmlId });
 
+          const section = item.type.replace('Header', '') as BodyItemType;
+          const panel = PANEL_FOR_PASSAGE_SECTION[section] || 'main';
+          const tab = TAB_FOR_PASSAGE_SECTION[section] || 'translation';
+
           if (item?.uuid && item?.workUuid) {
             const { uuid, workUuid } = item;
-            path = `${prefix}/${workUuid}#${uuid}`;
+            path = `${prefix}/${workUuid}?toh=${toh}&${panel}=open%3A${tab}%3A${uuid}`;
             return path;
           }
         }
@@ -65,7 +84,7 @@ export const lookupEntity = async ({
           return;
         }
 
-        path = `${prefix}/${item.uuid}`;
+        path = `${prefix}/${item.uuid}?toh=${toh}`;
       }
       break;
     case 'work':
