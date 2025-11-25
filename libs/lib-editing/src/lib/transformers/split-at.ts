@@ -33,7 +33,7 @@ export const splitContentAt: Transformer = (ctx) => {
     return;
   }
 
-  const annotationEnd = annotation.end;
+  const annotationEnd = end;
   const currentContent = parent.content || [];
   const newContent = [];
 
@@ -54,5 +54,5 @@ export const splitContentAt: Transformer = (ctx) => {
     newContent.push(...suffix);
   }
 
-  parent.content = sort(newContent);
+  parent.content = newContent;
 };

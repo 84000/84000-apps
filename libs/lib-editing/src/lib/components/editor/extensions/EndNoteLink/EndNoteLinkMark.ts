@@ -72,11 +72,12 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
             label?: string;
           }) => {
             const { uuid, location, toh, endNote, label } = note;
+            const isStart = location === 'start';
 
             const endnoteDOM = document.createElement('sup');
             const updateAttributes = createUpdateAttributes(endnoteDOM);
             const attributes = mergeAttributes(this.options.HTMLAttributes, {
-              class: cn(className, toh),
+              class: cn(className, toh, isStart ? 'me-0.75' : ''),
               type: this.name,
               endNote,
               uuid,
@@ -84,7 +85,7 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
 
             updateAttributes(attributes);
 
-            if (location === 'start') {
+            if (isStart) {
               dom.insertBefore(endnoteDOM, dom.firstChild);
             } else {
               dom.appendChild(endnoteDOM);
