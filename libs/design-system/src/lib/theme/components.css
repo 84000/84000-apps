@@ -33,6 +33,10 @@
     @apply text-brick cursor-pointer text-xs;
   }
 
+  .end-note-link ~ .end-note-link {
+    @apply ml-0.75;
+  }
+
   .glossary-instance-definition {
     p {
       @apply mb-1 mt-2;

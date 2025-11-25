@@ -38,7 +38,7 @@ const EXPORTERS: Partial<
     | 'tableCell'
     | 'tableHeader'
     | 'tableRow',
-    Exporter<Annotation>
+    Exporter<Annotation | Annotation[]>
   >
 > = {
   abbreviation,
@@ -108,7 +108,13 @@ export const parameterAnnotationFromNode = (
     }
 
     const annotation = exporter?.({ ...ctx, start });
-    if (annotation) {
+    if (!annotation) {
+      return;
+    }
+
+    if (Array.isArray(annotation)) {
+      annotations.push(...annotation);
+    } else {
       annotations.push(annotation);
     }
   });
@@ -126,7 +132,13 @@ export const markAnnotationFromNode = (ctx: ExporterContext): Annotation[] => {
     }
     const type = mark.type.name as AnnotationType;
     const annotation = EXPORTERS[type]?.({ ...ctx, mark, start });
-    if (annotation) {
+    if (!annotation) {
+      return;
+    }
+
+    if (Array.isArray(annotation)) {
+      annotations.push(...annotation);
+    } else {
       annotations.push(annotation);
     }
   });
@@ -147,7 +159,11 @@ export const annotationExportsFromNode = (
   // NOTE: passages often have a root paragraph node that does not map to an
   // annotation. Ignore nodes without a uuid.
   if (node.attrs.uuid && blockAnnotation) {
-    annotations.push(blockAnnotation);
+    if (Array.isArray(blockAnnotation)) {
+      annotations.push(...blockAnnotation);
+    } else {
+      annotations.push(blockAnnotation);
+    }
   }
 
   node.content.forEach((child) => {

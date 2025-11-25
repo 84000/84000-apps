@@ -9,26 +9,29 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const toh = pathname.split('/')[1]?.split('.')[0];
 
-    if (!toh) {
-      return NextResponse.next();
-    }
+    if (toh) {
+      const client = await createServerClient();
+      const { data, error } = await client
+        .from('work_toh')
+        .select('work_uuid')
+        .eq('toh_clean', toh)
+        .single();
 
-    const client = await createServerClient();
-    const { data, error } = await client
-      .from('work_toh')
-      .select('work_uuid')
-      .eq('toh_clean', toh)
-      .single();
+      if (error || !data) {
+        return NextResponse.next();
+      }
 
-    if (error || !data) {
-      return NextResponse.next();
+      if (data?.work_uuid) {
+        url.pathname = `/${data.work_uuid}`;
+        url.searchParams.set('toh', toh);
+      }
+      return NextResponse.redirect(url);
     }
+  }
 
-    if (data?.work_uuid) {
-      url.pathname = `/${data.work_uuid}`;
-      url.searchParams.set('toh', toh);
-    }
-    return NextResponse.redirect(url);
+  const isKnowledgeBase = pathname.startsWith('/knowledgebase');
+  if (isKnowledgeBase) {
+    return NextResponse.redirect(new URL(pathname, 'https://84000.co'));
   }
 
   return NextResponse.next();

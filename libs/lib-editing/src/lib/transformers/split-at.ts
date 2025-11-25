@@ -21,19 +21,19 @@ export const splitContentAt: Transformer = (ctx) => {
 
   if (start !== end) {
     console.warn(
-      'splitAt: transformer expects to find an annotation with zero-length (insertion point).',
+      'splitContentAt: transformer expects to find an annotation with zero-length (insertion point).',
     );
     return;
   }
 
   if (!parent || !parent.content) {
     console.warn(
-      'splitAt: transformer expects to find a parent block with content.',
+      'splitContentAt: transformer expects to find a parent block with content.',
     );
     return;
   }
 
-  const annotationEnd = annotation.end;
+  const annotationEnd = end;
   const currentContent = parent.content || [];
   const newContent = [];
 
@@ -54,5 +54,5 @@ export const splitContentAt: Transformer = (ctx) => {
     newContent.push(...suffix);
   }
 
-  parent.content = sort(newContent);
+  parent.content = newContent;
 };
