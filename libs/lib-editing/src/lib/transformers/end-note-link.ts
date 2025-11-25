@@ -13,6 +13,8 @@ export const endNoteLink: Transformer = (ctx) => {
     return;
   }
 
+  const location = start === 0 ? 'start' : 'end';
+
   recurse({
     ...ctx,
     until: ['text'],
@@ -20,19 +22,32 @@ export const endNoteLink: Transformer = (ctx) => {
       splitContentAt({
         ...ctx,
         transform: ({ block }) => {
-          block.marks = [
-            ...(block.marks || []),
-            {
+          let endnoteMark = block.marks?.find((m) => m.type === 'endNoteLink');
+          const marks = block.marks || [];
+          const notes = endnoteMark?.attrs?.notes || [];
+          notes.push({
+            endNote,
+            uuid,
+            start,
+            end,
+            location,
+            toh,
+          });
+
+          if (endnoteMark) {
+            endnoteMark.attrs = endnoteMark.attrs || {};
+            endnoteMark.attrs.notes = notes;
+          } else {
+            endnoteMark = {
               type: 'endNoteLink',
               attrs: {
-                endNote,
-                uuid,
-                start,
-                end,
-                toh,
+                notes,
               },
-            },
-          ];
+            };
+            marks.push(endnoteMark);
+          }
+
+          block.marks = [...marks];
         },
       });
     },

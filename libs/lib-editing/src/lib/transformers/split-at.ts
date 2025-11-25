@@ -21,14 +21,14 @@ export const splitContentAt: Transformer = (ctx) => {
 
   if (start !== end) {
     console.warn(
-      'splitAt: transformer expects to find an annotation with zero-length (insertion point).',
+      'splitContentAt: transformer expects to find an annotation with zero-length (insertion point).',
     );
     return;
   }
 
   if (!parent || !parent.content) {
     console.warn(
-      'splitAt: transformer expects to find a parent block with content.',
+      'splitContentAt: transformer expects to find a parent block with content.',
     );
     return;
   }
