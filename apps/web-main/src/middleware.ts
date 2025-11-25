@@ -14,6 +14,12 @@ export async function middleware(request: NextRequest) {
   const { user, role, supabaseResponse } = await updateSession(request);
 
   const pathname = request.nextUrl.pathname;
+
+  const isKnowledgeBase = pathname.startsWith('/knowledgebase');
+  if (isKnowledgeBase) {
+    return NextResponse.redirect(new URL(pathname, 'https://84000.co'));
+  }
+
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
     pathname.startsWith(route),
   );
