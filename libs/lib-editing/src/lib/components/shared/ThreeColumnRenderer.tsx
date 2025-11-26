@@ -8,6 +8,7 @@ import {
 import { ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { cn } from '@lib-utils';
+import { TranslationHeader } from './TranslationHeader';
 
 export const ThreeColumnRenderer = ({
   withHeader = false,
@@ -50,23 +51,17 @@ export const ThreeColumnRenderer = ({
   }, [panels.right.open]);
 
   return (
-    <>
-      <div className="absolute fixed top-16 w-full bg-[url(/images/backgrounds/bg-reader.webp)] h-150 bg-[length:100%_auto] -z-10" />
-      <div className="absolute fixed top-16 w-full h-150 bg-gradient-to-b from-50% to-white -z-10" />
-      <div
-        className={cn(
-          'fixed flex flex-col size-full',
-          withHeader ? 'pb-20' : '',
-        )}
+    <div
+      className={cn('fixed flex flex-col size-full', withHeader ? 'pb-20' : '')}
+    >
+      <TranslationHeader />
+      <ThreeColumns
+        leftPanel={leftPanelRef}
+        rightPanel={rightPanelRef}
+        onToggle={onToggle}
       >
-        <ThreeColumns
-          leftPanel={leftPanelRef}
-          rightPanel={rightPanelRef}
-          onToggle={onToggle}
-        >
-          {children}
-        </ThreeColumns>
-      </div>
-    </>
+        {children}
+      </ThreeColumns>
+    </div>
   );
 };

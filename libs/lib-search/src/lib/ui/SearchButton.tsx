@@ -73,11 +73,10 @@ export const SearchButton = ({
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          size="xs"
-          className="bg-background text-brick hover:text-brick-800 py-3.5"
+          className="bg-background my-auto [&_svg]:size-5 lg:[&_svg]:size-6 hover:bg-background cursor-pointer lg:text-lg text-brick hover:text-brick-800"
         >
-          <SearchIcon className="size-6" />
-          <span className="hidden lg:flex">Search text</span>
+          <SearchIcon />
+          Search
         </Button>
       </DialogTrigger>
       <DialogContent
