@@ -1,7 +1,7 @@
 'use client';
 
 import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
-import { Children, ReactElement, ReactNode, RefObject, useRef } from 'react';
+import { Children, ReactElement, ReactNode, useRef, useEffect } from 'react';
 import type { ImperativePanelHandle as RRImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
@@ -9,6 +9,14 @@ import {
   ResizablePanelGroup,
 } from '../Resizable/Resizable';
 import { Button } from '../Button/Button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../Sheet/Sheet';
+import { cn, useIsMobile } from '@lib-utils';
 
 export enum MinPanelSizes {
   COLLAPSED = 0,
@@ -42,21 +50,21 @@ export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
 export const ThreeColumns = ({
   children,
   className,
-  leftPanel,
-  rightPanel,
-  onToggle,
+  leftPanelOpen,
+  rightPanelOpen,
+  onLeftPanelOpenChange,
+  onRightPanelOpenChange,
 }: {
   children: ReactNode;
   className?: string;
-  leftPanel?: RefObject<ImperativePanelHandle | null>;
-  rightPanel?: RefObject<ImperativePanelHandle | null>;
-  onToggle?: (panel?: ImperativePanelHandle | null) => void;
+  leftPanelOpen?: boolean;
+  rightPanelOpen?: boolean;
+  onLeftPanelOpenChange?: (open: boolean) => void;
+  onRightPanelOpenChange?: (open: boolean) => void;
 }) => {
-  const leftPanelInteral = useRef<ImperativePanelHandle | null>(null);
-  const rightPanelInternal = useRef<ImperativePanelHandle | null>(null);
-
-  const leftPanelRef = leftPanel || leftPanelInteral;
-  const rightPanelRef = rightPanel || rightPanelInternal;
+  const isMobile = useIsMobile();
+  const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
+  const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
 
   const leftPanelChildren = Children.toArray(children).filter(
     (child) => (child as ReactElement)?.type === LeftPanel,
@@ -74,18 +82,103 @@ export const ThreeColumns = ({
     (child) => (child as ReactElement)?.type === MainPanelHeader,
   );
 
-  const togglePanel = (panel?: ImperativePanelHandle | null) => {
-    if (!panel) {
-      return;
+  // Sync panel state with refs on desktop
+  useEffect(() => {
+    if (!isMobile) {
+      if (leftPanelOpen) {
+        leftPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+      } else {
+        leftPanelRef.current?.collapse();
+      }
     }
+  }, [leftPanelOpen, isMobile]);
 
-    if (onToggle) {
-      onToggle(panel);
-      return;
+  useEffect(() => {
+    if (!isMobile) {
+      if (rightPanelOpen) {
+        rightPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+      } else {
+        rightPanelRef.current?.collapse();
+      }
     }
+  }, [rightPanelOpen, isMobile]);
 
-    panel.isExpanded() ? panel.collapse() : panel.expand();
+  const toggleLeftPanel = () => {
+    if (isMobile) {
+      onLeftPanelOpenChange?.(!leftPanelOpen);
+    } else {
+      if (leftPanelRef.current?.isExpanded()) {
+        leftPanelRef.current?.collapse();
+        onLeftPanelOpenChange?.(false);
+      } else {
+        leftPanelRef.current?.expand();
+        onLeftPanelOpenChange?.(true);
+      }
+    }
   };
+
+  const toggleRightPanel = () => {
+    if (isMobile) {
+      onRightPanelOpenChange?.(!rightPanelOpen);
+    } else {
+      if (rightPanelRef.current?.isExpanded()) {
+        rightPanelRef.current?.collapse();
+        onRightPanelOpenChange?.(false);
+      } else {
+        rightPanelRef.current?.expand();
+        onRightPanelOpenChange?.(true);
+      }
+    }
+  };
+
+  if (isMobile) {
+    return (
+      <div className={cn('flex size-full overflow-hidden', className)}>
+        <div style={{ overflow: 'auto' }}>
+          <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+            <Button
+              variant="link"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={toggleLeftPanel}
+            >
+              <PanelLeftIcon />
+              <span className="sr-only">Toggle Left Panel</span>
+            </Button>
+            <Button
+              variant="link"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={toggleRightPanel}
+            >
+              <PanelRightIcon className="size-4" />
+              <span className="sr-only">Toggle Right Panel</span>
+            </Button>
+          </div>
+          {mainHeaderChildren}
+          {mainPanelChildren}
+        </div>
+        <Sheet open={leftPanelOpen} onOpenChange={onLeftPanelOpenChange}>
+          <SheetContent side="left" className="w-full sm:max-w-full">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Left Panel</SheetTitle>
+              <SheetDescription>Navigation and content panel</SheetDescription>
+            </SheetHeader>
+            <div className="h-full overflow-auto">{leftPanelChildren}</div>
+          </SheetContent>
+        </Sheet>
+        <Sheet open={rightPanelOpen} onOpenChange={onRightPanelOpenChange}>
+          <SheetContent side="right" className="w-full sm:max-w-full">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Right Panel</SheetTitle>
+              <SheetDescription>Additional content panel</SheetDescription>
+            </SheetHeader>
+            <div className="h-full overflow-auto">{rightPanelChildren}</div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    );
+  }
 
   return (
     <ResizablePanelGroup className={className} direction="horizontal">
@@ -111,17 +204,19 @@ export const ThreeColumns = ({
             variant="link"
             size="icon"
             className="text-muted-foreground hover:text-foreground"
-            onClick={() => togglePanel(leftPanelRef.current)}
+            onClick={toggleLeftPanel}
           >
             <PanelLeftIcon />
+            <span className="sr-only">Toggle Left Panel</span>
           </Button>
           <Button
             variant="link"
             size="icon"
             className="text-muted-foreground hover:text-foreground"
-            onClick={() => togglePanel(rightPanelRef.current)}
+            onClick={toggleRightPanel}
           >
             <PanelRightIcon />
+            <span className="sr-only">Toggle Right Panel</span>
           </Button>
         </div>
         {mainHeaderChildren}
