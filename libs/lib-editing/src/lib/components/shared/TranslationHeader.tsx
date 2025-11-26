@@ -10,7 +10,7 @@ import {
 import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
 import { ChevronLeftIcon, MenuIcon } from 'lucide-react';
 import { useNavigation } from './NavigationProvider';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@data-access';
 
@@ -18,7 +18,15 @@ const BACK_TO_DEFAULT = 'https://84000.co/all-publications';
 
 export const TranslationHeader = () => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();
-  const backTo = document.referrer || BACK_TO_DEFAULT;
+  const [backTo, setBackTo] = useState(BACK_TO_DEFAULT);
+
+  useEffect(() => {
+    if (!document?.referrer) {
+      return;
+    }
+
+    setBackTo(document.referrer);
+  }, []);
 
   const onResultSelected = useCallback(
     (result: SearchResult) => {
