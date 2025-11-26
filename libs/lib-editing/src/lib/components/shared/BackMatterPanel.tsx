@@ -79,7 +79,7 @@ export const BackMatterPanel = ({
           <TabsContent value="abbreviations">
             {renderTranslation({
               content: abbreviations,
-              className: 'block pe-8',
+              className: 'block',
               name: 'abbreviations',
               panel: 'right',
             })}
