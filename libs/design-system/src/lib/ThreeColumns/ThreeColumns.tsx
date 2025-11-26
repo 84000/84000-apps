@@ -147,31 +147,11 @@ export const ThreeColumns = ({
   ]);
 
   const toggleLeftPanel = () => {
-    if (isMobile) {
-      onLeftPanelOpenChange?.(!leftPanelOpen);
-    } else {
-      if (leftPanelRef.current?.isExpanded()) {
-        leftPanelRef.current?.collapse();
-        onLeftPanelOpenChange?.(false);
-      } else {
-        leftPanelRef.current?.expand();
-        onLeftPanelOpenChange?.(true);
-      }
-    }
+    onLeftPanelOpenChange?.(!leftPanelOpen);
   };
 
   const toggleRightPanel = () => {
-    if (isMobile) {
-      onRightPanelOpenChange?.(!rightPanelOpen);
-    } else {
-      if (rightPanelRef.current?.isExpanded()) {
-        rightPanelRef.current?.collapse();
-        onRightPanelOpenChange?.(false);
-      } else {
-        rightPanelRef.current?.expand();
-        onRightPanelOpenChange?.(true);
-      }
-    }
+    onRightPanelOpenChange?.(!rightPanelOpen);
   };
 
   return (
