@@ -97,7 +97,7 @@ export const TranslationHeader = () => {
         </Button>
         {!isMobile && (
           <span className="line-clamp-1 text-navy my-auto flex-shrink">
-            {`“${imprint?.mainTitles?.en}” from ${imprint?.section}`}
+            {`${imprint?.mainTitles?.en ? `“${imprint?.mainTitles?.en}”` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
           </span>
         )}
       </div>
