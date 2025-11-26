@@ -13,11 +13,14 @@ import { useNavigation } from './NavigationProvider';
 import { useCallback, useEffect, useState } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@data-access';
+import { useIsMobile } from '@lib-utils';
 
 const BACK_TO_DEFAULT = 'https://84000.co/all-publications';
 
 export const TranslationHeader = () => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();
+  const isMobile = useIsMobile();
+
   const [backTo, setBackTo] = useState(BACK_TO_DEFAULT);
 
   useEffect(() => {
@@ -92,18 +95,20 @@ export const TranslationHeader = () => {
         >
           <ChevronLeftIcon className="size-5 my-auto" /> Back
         </Button>
-        <span className="hidden md:flex truncate text-navy my-auto flex-shrink">
-          {`“${imprint?.mainTitles?.en}” from ${imprint?.section}`}
-        </span>
+        {!isMobile && (
+          <span className="line-clamp-1 text-navy my-auto flex-shrink">
+            {`“${imprint?.mainTitles?.en}” from ${imprint?.section}`}
+          </span>
+        )}
       </div>
-      <div className="hidden md:flex">
+      {!isMobile && (
         <SearchButton
           workUuid={uuid}
           toh={toh}
           onResultSelected={onResultSelected}
         />
-      </div>
-      <div className="flex md:hidden">
+      )}
+      {isMobile && (
         <Popover>
           <PopoverTrigger className="my-auto px-2 [&_svg]:size-6 cursor-pointer hover:bg-background hover:text-primary/50">
             <MenuIcon />
@@ -127,7 +132,7 @@ export const TranslationHeader = () => {
             </div>
           </PopoverContent>
         </Popover>
-      </div>
+      )}
     </div>
   );
 };
