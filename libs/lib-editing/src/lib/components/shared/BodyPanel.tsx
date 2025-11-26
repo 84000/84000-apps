@@ -69,14 +69,16 @@ export const BodyPanel = ({
       defaultValue="translation"
       className="px-12 w-full"
     >
-      <TabsList className="sticky top-3 mx-auto -mt-25 z-10">
-        <TabsTrigger value="front">Front</TabsTrigger>
-        <TabsTrigger value="translation">Translation</TabsTrigger>
-        <TabsTrigger value="source">Source</TabsTrigger>
-        {alignments && alignments.length > 0 && (
-          <TabsTrigger value="compare">Compare</TabsTrigger>
-        )}
-      </TabsList>
+      <div className="sticky top-3 -mt-25 z-10 w-full overflow-x-auto text-center">
+        <TabsList className="w-fit inline-flex">
+          <TabsTrigger value="front">Front</TabsTrigger>
+          <TabsTrigger value="translation">Translation</TabsTrigger>
+          <TabsTrigger value="source">Source</TabsTrigger>
+          {alignments && alignments.length > 0 && (
+            <TabsTrigger value="compare">Compare</TabsTrigger>
+          )}
+        </TabsList>
+      </div>
       {showOuterContent ? theTitles : null}
       <TabsContent value="front">
         <div className="w-full max-w-readable mx-auto">

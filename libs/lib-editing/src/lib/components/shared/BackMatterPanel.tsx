@@ -40,20 +40,22 @@ export const BackMatterPanel = ({
       data-position="sidebar"
       defaultValue="endnotes"
     >
-      <TabsList className="sticky top-0 py-8 mx-auto z-10 w-full rounded-none bg-muted">
-        {endnotes.length > 0 && (
-          <TabsTrigger value="endnotes">Notes</TabsTrigger>
-        )}
-        {glossary.length > 0 && (
-          <TabsTrigger value="glossary">Glossary</TabsTrigger>
-        )}
-        {bibliography.length > 0 && (
-          <TabsTrigger value="bibliography">Biblio</TabsTrigger>
-        )}
-        {abbreviations.length > 0 && (
-          <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
-        )}
-      </TabsList>
+      <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
+        <TabsList className="w-fit inline-flex mx-auto rounded-none bg-muted">
+          {endnotes.length > 0 && (
+            <TabsTrigger value="endnotes">Notes</TabsTrigger>
+          )}
+          {glossary.length > 0 && (
+            <TabsTrigger value="glossary">Glossary</TabsTrigger>
+          )}
+          {bibliography.length > 0 && (
+            <TabsTrigger value="bibliography">Biblio</TabsTrigger>
+          )}
+          {abbreviations.length > 0 && (
+            <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
+          )}
+        </TabsList>
+      </div>
       <div className="px-12 max-w-readable w-full mx-auto ">
         {endnotes.length > 0 && (
           <TabsContent value="endnotes">

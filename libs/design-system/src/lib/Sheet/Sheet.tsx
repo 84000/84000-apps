@@ -74,11 +74,11 @@ function SheetContent({
         {children}
         <SheetPrimitive.Close
           className={cn(
-            'absolute data-[side=right]:left-4 top-5.5 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary z-100',
-            side === 'right' ? 'left-4' : 'right-4',
+            'absolute top-0 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary z-100 size-16',
+            side === 'right' ? 'left-0' : 'right-0',
           )}
         >
-          <XIcon className="size-4" />
+          <XIcon className="size-16 p-6" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
