@@ -54,7 +54,7 @@ export const BackMatterPanel = ({
           <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
         )}
       </TabsList>
-      <div className="px-8 max-w-readable w-full mx-auto ">
+      <div className="px-12 max-w-readable w-full mx-auto ">
         {endnotes.length > 0 && (
           <TabsContent value="endnotes">
             {renderTranslation({

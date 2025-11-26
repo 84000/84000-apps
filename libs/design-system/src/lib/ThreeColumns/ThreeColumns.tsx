@@ -1,7 +1,14 @@
 'use client';
 
 import { PanelLeftIcon, PanelRightIcon } from 'lucide-react';
-import { Children, ReactElement, ReactNode, RefObject, useRef } from 'react';
+import {
+  Children,
+  ReactElement,
+  ReactNode,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import type { ImperativePanelHandle as RRImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
@@ -9,6 +16,14 @@ import {
   ResizablePanelGroup,
 } from '../Resizable/Resizable';
 import { Button } from '../Button/Button';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../Sheet/Sheet';
+import { cn, useIsMobile } from '@lib-utils';
 
 export enum MinPanelSizes {
   COLLAPSED = 0,
@@ -42,103 +57,243 @@ export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
 export const ThreeColumns = ({
   children,
   className,
-  leftPanel,
-  rightPanel,
-  onToggle,
+  leftPanelOpen,
+  rightPanelOpen,
+  onLeftPanelOpenChange,
+  onRightPanelOpenChange,
 }: {
   children: ReactNode;
   className?: string;
-  leftPanel?: RefObject<ImperativePanelHandle | null>;
-  rightPanel?: RefObject<ImperativePanelHandle | null>;
-  onToggle?: (panel?: ImperativePanelHandle | null) => void;
+  leftPanelOpen?: boolean;
+  rightPanelOpen?: boolean;
+  onLeftPanelOpenChange?: (open: boolean) => void;
+  onRightPanelOpenChange?: (open: boolean) => void;
 }) => {
-  const leftPanelInteral = useRef<ImperativePanelHandle | null>(null);
-  const rightPanelInternal = useRef<ImperativePanelHandle | null>(null);
+  const isMobile = useIsMobile();
+  const leftPanelRef = useRef<ImperativePanelHandle | null>(null);
+  const rightPanelRef = useRef<ImperativePanelHandle | null>(null);
+  const prevIsMobileRef = useRef(isMobile);
 
-  const leftPanelRef = leftPanel || leftPanelInteral;
-  const rightPanelRef = rightPanel || rightPanelInternal;
-
-  const leftPanelChildren = Children.toArray(children).filter(
-    (child) => (child as ReactElement)?.type === LeftPanel,
+  const leftPanelChildren = useMemo(
+    () =>
+      Children.toArray(children).filter(
+        (child) => (child as ReactElement)?.type === LeftPanel,
+      ),
+    [children],
   );
 
-  const mainPanelChildren = Children.toArray(children).filter(
-    (child) => (child as ReactElement)?.type === MainPanel,
+  const mainPanelChildren = useMemo(
+    () =>
+      Children.toArray(children).filter(
+        (child) => (child as ReactElement)?.type === MainPanel,
+      ),
+    [children],
   );
 
-  const rightPanelChildren = Children.toArray(children).filter(
-    (child) => (child as ReactElement)?.type === RightPanel,
+  const rightPanelChildren = useMemo(
+    () =>
+      Children.toArray(children).filter(
+        (child) => (child as ReactElement)?.type === RightPanel,
+      ),
+    [children],
   );
 
-  const mainHeaderChildren = Children.toArray(children).filter(
-    (child) => (child as ReactElement)?.type === MainPanelHeader,
+  const mainHeaderChildren = useMemo(
+    () =>
+      Children.toArray(children).filter(
+        (child) => (child as ReactElement)?.type === MainPanelHeader,
+      ),
+    [children],
   );
 
-  const togglePanel = (panel?: ImperativePanelHandle | null) => {
-    if (!panel) {
-      return;
+  // Sync panel state with refs on desktop
+  useEffect(() => {
+    if (!isMobile) {
+      if (leftPanelOpen) {
+        leftPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+      } else {
+        leftPanelRef.current?.collapse();
+      }
     }
+  }, [leftPanelOpen, isMobile]);
 
-    if (onToggle) {
-      onToggle(panel);
-      return;
+  useEffect(() => {
+    if (!isMobile) {
+      if (rightPanelOpen) {
+        rightPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+      } else {
+        rightPanelRef.current?.collapse();
+      }
     }
+  }, [rightPanelOpen, isMobile]);
 
-    panel.isExpanded() ? panel.collapse() : panel.expand();
+  // Close panels when switching between mobile and desktop
+  useEffect(() => {
+    if (prevIsMobileRef.current !== isMobile) {
+      if (leftPanelOpen) {
+        onLeftPanelOpenChange?.(false);
+      }
+      if (rightPanelOpen) {
+        onRightPanelOpenChange?.(false);
+      }
+      prevIsMobileRef.current = isMobile;
+    }
+  }, [
+    isMobile,
+    leftPanelOpen,
+    rightPanelOpen,
+    onLeftPanelOpenChange,
+    onRightPanelOpenChange,
+  ]);
+
+  const toggleLeftPanel = () => {
+    if (isMobile) {
+      onLeftPanelOpenChange?.(!leftPanelOpen);
+    } else {
+      if (leftPanelRef.current?.isExpanded()) {
+        leftPanelRef.current?.collapse();
+        onLeftPanelOpenChange?.(false);
+      } else {
+        leftPanelRef.current?.expand();
+        onLeftPanelOpenChange?.(true);
+      }
+    }
+  };
+
+  const toggleRightPanel = () => {
+    if (isMobile) {
+      onRightPanelOpenChange?.(!rightPanelOpen);
+    } else {
+      if (rightPanelRef.current?.isExpanded()) {
+        rightPanelRef.current?.collapse();
+        onRightPanelOpenChange?.(false);
+      } else {
+        rightPanelRef.current?.expand();
+        onRightPanelOpenChange?.(true);
+      }
+    }
   };
 
   return (
-    <ResizablePanelGroup className={className} direction="horizontal">
-      <ResizablePanel
-        ref={leftPanelRef}
-        style={{ overflow: 'auto' }}
-        className="bg-sidebar"
-        collapsible
-        collapsedSize={MinPanelSizes.COLLAPSED}
-        defaultSize={MinPanelSizes.COLLAPSED}
-        minSize={MinPanelSizes.SIDE_MIN}
+    <>
+      {/* Mobile Layout */}
+      <div
+        className={cn('flex size-full overflow-hidden md:hidden', className)}
       >
-        {leftPanelChildren}
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel
-        style={{ overflow: 'auto' }}
-        defaultSize={MinPanelSizes.FULL}
-        minSize={MinPanelSizes.MAIN_MIN}
-      >
-        <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
-          <Button
-            variant="link"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => togglePanel(leftPanelRef.current)}
-          >
-            <PanelLeftIcon />
-          </Button>
-          <Button
-            variant="link"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => togglePanel(rightPanelRef.current)}
-          >
-            <PanelRightIcon />
-          </Button>
+        <div style={{ overflow: 'auto' }}>
+          <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+            <Button
+              variant="link"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={toggleLeftPanel}
+            >
+              <PanelLeftIcon />
+              <span className="sr-only">Toggle Left Panel</span>
+            </Button>
+            <Button
+              variant="link"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={toggleRightPanel}
+            >
+              <PanelRightIcon className="size-4" />
+              <span className="sr-only">Toggle Right Panel</span>
+            </Button>
+          </div>
+          {mainHeaderChildren}
+          {mainPanelChildren}
         </div>
-        {mainHeaderChildren}
-        {mainPanelChildren}
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel
-        ref={rightPanelRef}
-        style={{ overflow: 'auto' }}
-        className="bg-sidebar"
-        collapsible
-        collapsedSize={MinPanelSizes.COLLAPSED}
-        defaultSize={MinPanelSizes.COLLAPSED}
-        minSize={MinPanelSizes.SIDE_MIN}
-      >
-        {rightPanelChildren}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+        <Sheet
+          open={leftPanelOpen && isMobile}
+          onOpenChange={onLeftPanelOpenChange}
+        >
+          <SheetContent
+            side="left"
+            className="md:hidden w-full sm:max-w-full bg-sidebar"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Left Panel</SheetTitle>
+              <SheetDescription>Navigation and content panel</SheetDescription>
+            </SheetHeader>
+            <div className="h-full overflow-auto">{leftPanelChildren}</div>
+          </SheetContent>
+        </Sheet>
+        <Sheet
+          open={rightPanelOpen && isMobile}
+          onOpenChange={onRightPanelOpenChange}
+        >
+          <SheetContent
+            side="right"
+            className="md:hidden w-full sm:max-w-full bg-sidebar"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Right Panel</SheetTitle>
+              <SheetDescription>Additional content panel</SheetDescription>
+            </SheetHeader>
+            <div className="h-full overflow-auto">{rightPanelChildren}</div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:block overflow-hidden size-full">
+        <ResizablePanelGroup className={className} direction="horizontal">
+          <ResizablePanel
+            ref={leftPanelRef}
+            style={{ overflow: 'auto' }}
+            className="bg-sidebar hidden md:block"
+            collapsible
+            collapsedSize={MinPanelSizes.COLLAPSED}
+            defaultSize={MinPanelSizes.COLLAPSED}
+            minSize={MinPanelSizes.SIDE_MIN}
+          >
+            {leftPanelChildren}
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel
+            className="hidden md:block"
+            style={{ overflow: 'auto' }}
+            defaultSize={MinPanelSizes.FULL}
+            minSize={MinPanelSizes.MAIN_MIN}
+          >
+            <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+              <Button
+                variant="link"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={toggleLeftPanel}
+              >
+                <PanelLeftIcon />
+                <span className="sr-only">Toggle Left Panel</span>
+              </Button>
+              <Button
+                variant="link"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={toggleRightPanel}
+              >
+                <PanelRightIcon />
+                <span className="sr-only">Toggle Right Panel</span>
+              </Button>
+            </div>
+            {mainHeaderChildren}
+            {mainPanelChildren}
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel
+            ref={rightPanelRef}
+            style={{ overflow: 'auto' }}
+            className="hidden md:block bg-sidebar"
+            collapsible
+            collapsedSize={MinPanelSizes.COLLAPSED}
+            defaultSize={MinPanelSizes.COLLAPSED}
+            minSize={MinPanelSizes.SIDE_MIN}
+          >
+            {rightPanelChildren}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </>
   );
 };

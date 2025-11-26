@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn, useIsMobile } from '@lib-utils';
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -28,6 +28,7 @@ export const Passage = (props: NodeViewProps) => {
   const [dialogType, setDialogType] = useState<string>();
 
   const { panels, toh } = useNavigation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const isCompare = panels.main.open && panels.main.tab === 'compare';
@@ -62,14 +63,15 @@ export const Passage = (props: NodeViewProps) => {
       id={node.attrs.uuid}
       as="div"
       className={cn(
-        'flex md:flex-row flex-col w-full md:gap-16 gap-2 pb-6 md:pb-0 scroll-mt-20',
+        'flex md:flex-row flex-col w-full md:gap-16 gap-2 scroll-mt-20',
+        isMobile && source && 'mb-8',
         node.attrs.toh,
       )}
     >
       <div className="w-full">
         <div
           className={cn(
-            'relative ml-6 scroll-m-20 w-full self-start',
+            'relative scroll-m-20 w-full self-start',
             borderClassName,
           )}
         >
