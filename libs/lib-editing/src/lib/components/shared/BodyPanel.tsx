@@ -46,7 +46,7 @@ export const BodyPanel = ({
 
   const theTitles = useMemo(
     () => (
-      <div className="ms-12 mt-16 mb-8">
+      <div className="mt-16 mb-8">
         {renderTitles({
           titles,
           imprint,
@@ -67,7 +67,7 @@ export const BodyPanel = ({
       }}
       data-position="main"
       defaultValue="translation"
-      className="px-8 w-full"
+      className="px-12 w-full"
     >
       <TabsList className="sticky top-3 mx-auto -mt-25 z-10">
         <TabsTrigger value="front">Front</TabsTrigger>
@@ -81,7 +81,7 @@ export const BodyPanel = ({
       <TabsContent value="front">
         <div className="w-full max-w-readable mx-auto">
           {showOuterContent ? (
-            <div className="mb-12 ms-12">
+            <div className="mb-12">
               {imprint && <TitleDetails imprint={imprint} />}
               <Imprint imprint={imprint} />
             </div>
