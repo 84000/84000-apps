@@ -27,9 +27,11 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
       data-position="sidebar"
       defaultValue="toc"
     >
-      <TabsList className="sticky top-0 py-8 mx-auto z-10 w-full rounded-none bg-muted">
-        <TabsTrigger value="toc">Table of Contents</TabsTrigger>
-      </TabsList>
+      <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
+        <TabsList className="w-fit inline-flex mx-auto rounded-none bg-muted">
+          <TabsTrigger value="toc">Table of Contents</TabsTrigger>
+        </TabsList>
+      </div>
       <div className="px-8 max-w-readable w-full mx-auto">
         <TabsContent value="toc" className="pb-8">
           <TableOfContents toc={toc} work={work} />
