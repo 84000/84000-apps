@@ -33,6 +33,7 @@ import {
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
 import { useFeatureFlagEnabled } from '@lib-instr';
+import { useIsMobile } from '@lib-utils';
 
 interface NavigationState {
   uuid: string;
@@ -99,6 +100,7 @@ export const NavigationProvider = ({
 }) => {
   const client = createBrowserClient();
   const query = useSearchParams();
+  const isMobile = useIsMobile();
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
@@ -219,19 +221,49 @@ export const NavigationProvider = ({
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
       const { open, tab, hash } = state;
-      setPanels((prev) => ({
-        ...prev,
-        [name]: { open, tab },
-      }));
+      setPanels((prev) => {
+        const newPanels = {
+          ...prev,
+          [name]: { open, tab },
+        };
 
-      const params = new URLSearchParams(window.location.search);
-      const openness = state.open ? 'open' : 'closed';
-      params.set(name, `${openness}${tab ? `:${tab}` : ''}:${hash || ''}`);
+        // On mobile, auto-close sidebars when navigating to other panels
+        if (isMobile && open) {
+          // If opening left panel with navigation, close right panel
+          if (name === 'left') {
+            newPanels.right = { ...prev.right, open: false };
+          }
+          // If opening right panel with navigation, close left panel
+          else if (name === 'right') {
+            newPanels.left = { ...prev.left, open: false };
+          }
+          // If opening main panel with navigation, close both sidebars
+          else if (name === 'main') {
+            newPanels.left = { ...prev.left, open: false };
+            newPanels.right = { ...prev.right, open: false };
+          }
+        }
 
-      const newUrl = `?${params.toString()}`;
-      window.history.replaceState(null, '', newUrl);
+        // Update URL to reflect the actual panel states (including closed ones on mobile)
+        const params = new URLSearchParams(window.location.search);
+        
+        // Update all panels in the URL to match actual state
+        Object.entries(newPanels).forEach(([panelName, panelState]) => {
+          const openness = panelState.open ? 'open' : 'closed';
+          const panelHash = panelName === name ? hash || '' : '';
+          params.set(
+            panelName,
+            `${openness}${panelState.tab ? `:${panelState.tab}` : ''}:${panelHash}`
+          );
+        });
+
+        const newUrl = `?${params.toString()}`;
+        window.history.replaceState(null, '', newUrl);
+
+        return newPanels;
+      });
     },
-    [],
+    [isMobile],
   );
 
   const parsePanelParams = useCallback((): {
