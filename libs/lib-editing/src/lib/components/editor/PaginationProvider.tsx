@@ -24,6 +24,7 @@ import { useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
+import { SHEET_ANIMATION_DURATION } from '@design-system';
 
 const LOADING_SKELETONS_COUNT = 3;
 
@@ -117,9 +118,11 @@ export const PaginationProvider = ({
       // On mobile, add a delay to allow panel Sheet animation to complete
       // before attempting to scroll to the element
       if (isMobile) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) =>
+          setTimeout(resolve, SHEET_ANIMATION_DURATION),
+        );
       }
-      
+
       let element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
 
       if (!element && isUuid(navCursor)) {
