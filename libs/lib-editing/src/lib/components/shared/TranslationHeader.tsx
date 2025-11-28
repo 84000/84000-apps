@@ -22,6 +22,7 @@ export const TranslationHeader = () => {
   const isMobile = useIsMobile();
 
   const [backTo, setBackTo] = useState(BACK_TO_DEFAULT);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   useEffect(() => {
     if (!document?.referrer) {
@@ -80,8 +81,13 @@ export const TranslationHeader = () => {
         name: side,
         state: panelState,
       });
+      
+      // Close the popover on mobile after selection
+      if (isMobile) {
+        setIsPopoverOpen(false);
+      }
     },
-    [updatePanel],
+    [updatePanel, isMobile],
   );
   return (
     <div className="h-16 w-full px-0 lg:px-6 flex justify-between text-lg">
@@ -109,7 +115,7 @@ export const TranslationHeader = () => {
         />
       )}
       {isMobile && (
-        <Popover>
+        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger className="my-auto px-2 [&_svg]:size-6 cursor-pointer hover:bg-background hover:text-primary/50">
             <MenuIcon />
           </PopoverTrigger>
