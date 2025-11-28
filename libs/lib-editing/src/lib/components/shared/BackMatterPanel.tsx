@@ -8,6 +8,7 @@ import { ReactElement } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { GlossaryTermList } from './glossary';
 import { BibliographyList } from './bibliography';
+import { cn, useIsMobile } from '@lib-utils';
 
 export const BackMatterPanel = ({
   endnotes,
@@ -25,6 +26,7 @@ export const BackMatterPanel = ({
   ) => ReactElement<TranslationRenderer>;
 }) => {
   const { panels, updatePanel } = useNavigation();
+  const isMobile = useIsMobile();
 
   return (
     <Tabs
@@ -39,9 +41,15 @@ export const BackMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="endnotes"
+      className="w-full"
     >
       <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
-        <TabsList className="w-fit inline-flex mx-auto rounded-none bg-muted">
+        <TabsList
+          className={cn(
+            'w-fit px-6 inline-flex mx-auto rounded-none',
+            isMobile && 'ps-12',
+          )}
+        >
           {endnotes.length > 0 && (
             <TabsTrigger value="endnotes">Notes</TabsTrigger>
           )}
