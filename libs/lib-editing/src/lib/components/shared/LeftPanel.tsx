@@ -7,9 +7,11 @@ import { useNavigation } from './NavigationProvider';
 import { Toc, Work } from '@data-access';
 import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
+import { cn, useIsMobile } from '@lib-utils';
 
 export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
   const { panels, toh, updatePanel, setToh } = useNavigation();
+  const isMobile = useIsMobile();
   useTohToggle({ work, toh });
 
   useEffect(() => {
@@ -26,9 +28,15 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
       }}
       data-position="sidebar"
       defaultValue="toc"
+      className="w-full"
     >
       <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
-        <TabsList className="w-fit inline-flex mx-auto rounded-none bg-muted">
+        <TabsList
+          className={cn(
+            'w-fit px-6 inline-flex mx-auto rounded-none',
+            isMobile && 'ps-12',
+          )}
+        >
           <TabsTrigger value="toc">Table of Contents</TabsTrigger>
         </TabsList>
       </div>
