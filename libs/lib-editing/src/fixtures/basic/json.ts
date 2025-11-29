@@ -40,9 +40,9 @@ export const content = {
       type: 'passage',
       content: [
         {
-          type: 'paragraph',
+          type: 'trailer',
           attrs: {
-            hasTrailer: true,
+            uuid: 'some-uuid-for-trailer',
           },
           content: [
             {

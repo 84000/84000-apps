@@ -160,7 +160,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     tableBodyData: BlockPriority.Block,
     tableBodyHeader: BlockPriority.OuterBlock,
     tableBodyRow: BlockPriority.OuterBlock,
-    trailer: BlockPriority.Attribute,
+    trailer: BlockPriority.OuterBlock,
     unknown: BlockPriority.Unknown,
   };
 

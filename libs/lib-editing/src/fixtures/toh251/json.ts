@@ -967,12 +967,11 @@ export const content: TranslationEditorContent = [
     },
     content: [
       {
-        type: 'paragraph',
+        type: 'trailer',
         attrs: {
           start: 0,
           end: 62,
-          uuid: 'de103c91-0bb2-4f90-9d98-c84718baecc9',
-          hasTrailer: true,
+          uuid: '76612414-df30-4c73-89fa-139e794a4a4d',
         },
         content: [
           {

@@ -3,13 +3,19 @@ import { Exporter } from './export';
 
 export const trailer: Exporter<TrailerAnnotation> = ({
   node,
-  parent,
   start,
   passageUuid,
 }) => {
-  const textContent = node.textContent || parent.textContent || '';
+  const textContent = node.textContent;
+  const uuid = node.attrs.uuid;
+
+  if (!textContent) {
+    console.warn(`Trailer node ${uuid} is missing body text`);
+    return undefined;
+  }
+
   return {
-    uuid: node.attrs.trailerUuid,
+    uuid,
     type: 'trailer',
     passageUuid,
     start,

@@ -81,7 +81,7 @@ export const ITALIC_LANGUAGES: ExtendedTranslationLanguage[] = [
 ] as const;
 
 export const isAttributeAnnotation = (type: TranslationEditorContentType) => {
-  return ['indent', 'leadingSpace', 'trailer'].includes(type);
+  return ['indent', 'leadingSpace'].includes(type);
 };
 
 export const isBlockAnnotation = (type: TranslationEditorContentType) => {
@@ -98,6 +98,7 @@ export const isBlockAnnotation = (type: TranslationEditorContentType) => {
     'tableBodyData',
     'tableBodyHeader',
     'tableBodyRow',
+    'trailer',
   ].includes(type);
 };
 

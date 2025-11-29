@@ -13,6 +13,7 @@ import {
   Heading2,
   Heading3,
   LetterTextIcon,
+  ListEndIcon,
   ListStartIcon,
   LucideIcon,
   QuoteIcon,
@@ -25,6 +26,7 @@ interface SelectorResult {
   isHeading3: boolean;
   isLineGroup: boolean;
   isBlockquote: boolean;
+  isTrailer: boolean;
 }
 
 interface MenuItem {
@@ -81,6 +83,12 @@ const items: MenuItem[] = [
         .run(),
     isActive: (state) => state.isBlockquote,
   },
+  {
+    name: 'Trailer',
+    icon: ListEndIcon,
+    onClick: (editor) => editor.chain().focus().toggleTrailer().run(),
+    isActive: (state) => state.isTrailer,
+  },
 ];
 
 export const TranslationNodeSelector = ({ editor }: { editor: Editor }) => {
@@ -93,6 +101,7 @@ export const TranslationNodeSelector = ({ editor }: { editor: Editor }) => {
       isHeading3: instance.editor.isActive('heading', { level: 3 }),
       isLineGroup: instance.editor.isActive('lineGroup'),
       isBlockquote: instance.editor.isActive('blockquote'),
+      isTrailer: instance.editor.isActive('trailer'),
     }),
   });
 

@@ -1,70 +1,42 @@
-import { Extension, mergeAttributes } from '@tiptap/core';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface TrailerOptions {
-  types: string[];
-  defaultHasTrailer: boolean;
-}
+import { mergeAttributes, Node } from '@tiptap/core';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     trailer: {
       /**
-       * Add a trailer
+       * Make block a trailer
        */
       setTrailer: () => ReturnType;
       /**
-       * Remove a trailer
-       */
-      unsetTrailer: () => ReturnType;
-
-      /**
-       * Toggle a trailer
+       * Toggle block a trailer
        */
       toggleTrailer: () => ReturnType;
     };
   }
 }
 
-export const Trailer = Extension.create<TrailerOptions>({
+export const Trailer = Node.create({
   name: 'trailer',
-  addOptions() {
-    return {
-      types: ['paragraph', 'heading', 'lineGroup'],
-      defaultHasTrailer: false,
-    };
-  },
-  addGlobalAttributes() {
+  priority: 1000,
+  group: 'block',
+  content: 'inline*',
+
+  parseHTML() {
     return [
       {
-        types: this.options.types,
-        attributes: {
-          hasTrailer: {
-            default: this.options.defaultHasTrailer,
-            parseHTML: (element) => element.className.includes('pb-6'),
-            renderHTML: (attributes) => {
-              if (attributes.hasTrailer) {
-                return mergeAttributes(attributes, { class: 'pb-6 no-indent' });
-              }
-
-              return {};
-            },
-          },
-          trailerUuid: {
-            default: undefined,
-            parseHTML: (element) =>
-              element.getAttribute('data-trailer-uuid') || undefined,
-            renderHTML: (attributes) => {
-              if (!attributes.trailerUuid) {
-                return {};
-              }
-              return {
-                'data-trailer-uuid': attributes.trailerUuid,
-              };
-            },
-          },
-        },
+        tag: 'p[type="trailer"]',
       },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'p',
+      mergeAttributes(HTMLAttributes, {
+        type: 'trailer',
+        class: 'italic my-4',
+      }),
+      0,
     ];
   },
 
@@ -73,31 +45,12 @@ export const Trailer = Extension.create<TrailerOptions>({
       setTrailer:
         () =>
         ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.updateAttributes(type, {
-                hasTrailer: true,
-                trailerUuid: uuidv4(),
-              }),
-            )
-            .every((response) => response);
-        },
-      unsetTrailer:
-        () =>
-        ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.resetAttributes(type, ['hasTrailer', 'trailerUuid']),
-            )
-            .every((response) => response);
+          return commands.setNode(this.name);
         },
       toggleTrailer:
         () =>
-        ({ editor, commands }) => {
-          if (editor.isActive({ hasTrailer: true })) {
-            return commands.unsetTrailer();
-          }
-          return commands.setTrailer();
+        ({ commands }) => {
+          return commands.toggleNode(this.name, 'paragraph');
         },
     };
   },
