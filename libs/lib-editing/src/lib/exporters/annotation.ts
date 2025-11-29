@@ -85,7 +85,6 @@ const EXPORTERS: Partial<
 const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
   hasIndent: 'indent',
   hasLeadingSpace: 'leadingSpace',
-  hasTrailer: 'trailer',
 };
 
 export const parameterAnnotationFromNode = (

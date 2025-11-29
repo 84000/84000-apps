@@ -2,16 +2,11 @@ import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { Button } from '@design-system';
-import {
-  ArrowDownToLineIcon,
-  ArrowUpToLineIcon,
-  IndentIcon,
-} from 'lucide-react';
+import { ArrowUpToLineIcon, IndentIcon } from 'lucide-react';
 
 interface SelectorResult {
   hasIndent: boolean;
   hasLeadingSpace: boolean;
-  hasTrailer: boolean;
 }
 
 const items = [
@@ -21,13 +16,6 @@ const items = [
       editor.chain().focus().toggleLeadingSpace().run();
     },
     isActive: (state: { hasLeadingSpace: boolean }) => state.hasLeadingSpace,
-  },
-  {
-    icon: ArrowDownToLineIcon,
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleTrailer().run();
-    },
-    isActive: (state: { hasTrailer: boolean }) => state.hasTrailer,
   },
   {
     icon: IndentIcon,
@@ -46,11 +34,6 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
         hasIndent: !!instance.editor.getAttributes('paragraph')['hasIndent'],
         hasLeadingSpace:
           !!instance.editor.getAttributes('paragraph')['hasLeadingSpace'],
-
-        hasTrailer:
-          !!instance.editor.getAttributes('paragraph')['hasTrailer'] ||
-          !!instance.editor.getAttributes('lineGroup')['hasTrailer'] ||
-          !!instance.editor.getAttributes('heading')['hasTrailer'],
       };
       return atts;
     },

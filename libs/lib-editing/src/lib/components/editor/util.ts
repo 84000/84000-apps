@@ -64,14 +64,6 @@ export const validateAttrs = async ({
       attrs.hasIndent = false;
     }
 
-    if (attrs.trailerUuid) {
-      attrs.trailingSpaceUuid = undefined;
-    }
-
-    if (attrs.hasTrailer) {
-      attrs.hasTrailingSpace = false;
-    }
-
     if (attrs.hasParagraphIndent) {
       attrs.hasParagraphIndent = false;
     }
