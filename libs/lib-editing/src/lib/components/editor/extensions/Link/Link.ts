@@ -3,7 +3,6 @@ import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 import { LinkView } from './LinkView';
 import { createMarkViewDom } from '../../util';
-import { LINK_STYLE } from '@design-system';
 
 export const Link = TipTapLink.extend({
   addCommands() {
@@ -31,7 +30,6 @@ export const Link = TipTapLink.extend({
         const { dom } = createMarkViewDom({
           ...props,
           element: 'a',
-          className: LINK_STYLE,
         });
 
         dom.setAttribute('href', props.mark.attrs.href);

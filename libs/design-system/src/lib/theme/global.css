@@ -58,6 +58,10 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  a {
+    @apply text-brick underline decoration-brick underline-offset-[3px] transition-colors cursor-pointer;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

@@ -186,7 +186,7 @@ export function A({
   ...props
 }: React.ComponentProps<'a'>) {
   return (
-    <a className={cn(LINK_STYLE, className)} {...props}>
+    <a className={className} {...props}>
       {children}
     </a>
   );
