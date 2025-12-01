@@ -3,7 +3,6 @@ import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-  LINK_STYLE,
 } from '@design-system';
 import { MarkViewContent, MarkViewProps } from '@tiptap/react';
 import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
@@ -51,12 +50,7 @@ export const LinkView = ({ mark, editor, updateAttributes }: MarkViewProps) => {
   return (
     <HoverCard open={isOpen} onOpenChange={setIsOpen}>
       <HoverCardTrigger asChild>
-        <Link
-          href={mark.attrs.href}
-          target="_blank"
-          rel="noreferrer"
-          className={LINK_STYLE}
-        >
+        <Link href={mark.attrs.href} target="_blank" rel="noreferrer">
           <MarkViewContent as="span" />
         </Link>
       </HoverCardTrigger>
