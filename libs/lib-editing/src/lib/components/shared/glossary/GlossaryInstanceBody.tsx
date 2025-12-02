@@ -4,6 +4,8 @@ import { GlossaryTermInstance } from '@data-access';
 import { Li, Ul } from '@design-system';
 import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
+import { useRef } from 'react';
+import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -12,6 +14,9 @@ export const GlossaryInstanceBody = ({
   instance: GlossaryTermInstance;
   className?: string;
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useGlossaryInstanceListener({ ref });
+
   return (
     <div className={cn('p-2 flex gap-1 flex-col', className)}>
       {instance.names.english && (
@@ -38,6 +43,7 @@ export const GlossaryInstanceBody = ({
       </Ul>
       {instance.definition && (
         <div
+          ref={ref}
           className="glossary-instance-definition"
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />

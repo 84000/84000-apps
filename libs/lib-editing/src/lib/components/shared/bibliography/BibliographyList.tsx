@@ -5,6 +5,7 @@ import { LabeledElement } from '../LabeledElement';
 import { BibliographyEntries } from '@data-access';
 import { cn } from '@lib-utils';
 import { useScrollInTab } from '../hooks/useScrollInTab';
+import { BibliographyBody } from './BibliographyBody';
 
 export const BibliographyList = ({
   content,
@@ -45,13 +46,11 @@ export const BibliographyList = ({
               </LabeledElement>
             )}
             {section.entries.map((entry, j) => (
-              <LabeledElement
-                id={entry.uuid}
-                key={entry.uuid}
+              <BibliographyBody
+                entry={entry}
                 label={`b.${i + 1}.${j + 1}`}
-              >
-                <div dangerouslySetInnerHTML={{ __html: entry.html }} />
-              </LabeledElement>
+                key={entry.uuid}
+              />
             ))}
           </div>
         ))}
