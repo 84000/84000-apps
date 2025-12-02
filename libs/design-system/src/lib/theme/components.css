@@ -47,19 +47,27 @@
     }
   }
 
+  [rend='small-caps'],
+  .small-caps {
+    font-variant-caps: small-caps;
+  }
+
   .long-term {
     @apply break-all;
   }
 
-  .title {
+  [xml\:lang]:not(
+      [xml\:lang='en'],
+      [xml\:lang='bo'],
+      [xml\:lang='ja'],
+      [xml\:lang='zh']
+    ) {
     @apply italic;
   }
 
+  emph,
+  distinct,
   .text-sa {
     @apply italic;
-  }
-
-  foreign {
-    @apply [&[xml\:lang*="-Ltn"]]:italic;
   }
 }
