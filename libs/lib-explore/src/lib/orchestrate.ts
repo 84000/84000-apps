@@ -12,8 +12,8 @@ import {
 
 export async function orchestratePipelineStep(
   query: string,
-  history: unknown[],
-  step: 'step1' | 'step2' | 'step3',
+  history: Message[],
+  step: 'step1',
   previousResults?: FlowResult,
 ): Promise<StepResult> {
   const { flows } = config;
@@ -31,14 +31,10 @@ export async function orchestratePipelineStep(
 
     // Fill inputs based on schema
     for (const inputKey of Object.keys(flow.inputSchema)) {
-      if (inputKey === 'query') {
+      if (inputKey === 'chatMessage') {
         inputs[inputKey] = query;
-      } else if (inputKey === 'history') {
+      } else if (inputKey === 'chatHistory') {
         inputs[inputKey] = history;
-      } else if (inputKey === 'research' && step === 'step3') {
-        if (previousResults?.step2?.research) {
-          inputs[inputKey] = previousResults.step2.research;
-        }
       } else if (previousResults) {
         // Try to map from previous results
         for (const [, prevResult] of Object.entries(previousResults)) {
@@ -60,17 +56,8 @@ export async function orchestratePipelineStep(
 
     const output: Message = {
       role: 'assistant',
-      message: '',
+      content: '',
     };
-
-    // Always capture steps if present
-    if (resData?.result?.steps) {
-      output.steps = resData.result.steps;
-    }
-
-    if (step === 'step2' && resData?.result?.research) {
-      output.research = resData.result.research;
-    }
 
     // Store declared outputs
     for (const key of Object.keys(flow.outputSchema)) {

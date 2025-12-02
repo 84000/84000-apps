@@ -7,7 +7,7 @@ import { Button, Card, H1, H5, Input, ScrollArea } from '@design-system';
 import { config } from './config';
 import { orchestratePipelineStep } from './orchestrate';
 import { Typewriter } from 'react-simple-typewriter';
-import type { FlowResult, Message } from './types';
+import type { Message } from './types';
 
 export const ExplorePage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,7 +43,7 @@ export const ExplorePage = () => {
     setSearchLinks([]);
     setIsTypewriterDone(false);
 
-    const userMessage: Message = { role: 'user', message: query };
+    const userMessage: Message = { role: 'user', content: query };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
@@ -51,21 +51,18 @@ export const ExplorePage = () => {
 
     try {
       const history = messages.map((msg) => ({
-        role: msg.role,
-        message: msg.message,
+        ...msg,
       }));
 
       console.log('[v0] Starting step-by-step orchestration pipeline');
 
       const assistantMessage: Message = {
         role: 'assistant',
-        message: '',
+        content: '',
         isProcessing: true,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      const results: FlowResult = {};
 
       console.log('[v0] Executing step1...');
       const step1Result = await orchestratePipelineStep(
@@ -78,83 +75,14 @@ export const ExplorePage = () => {
         throw new Error(step1Result.error || 'Failed to execute step1');
       }
 
-      if (step1Result.data?.steps) {
-        results.step1 = step1Result.data;
-        setMessages((prev) => {
-          const updated = [...prev];
-          const lastIndex = updated.length - 1;
-          if (updated[lastIndex]?.role === 'assistant') {
-            updated[lastIndex] = {
-              ...updated[lastIndex],
-              steps: step1Result.data?.steps,
-              isProcessing: true,
-            };
-          }
-          return updated;
-        });
-
-        setTimeout(() => {
-          setIsSearching(true);
-        }, 500);
-      }
-
-      console.log('[v0] Executing step2...');
-      const step2Result = await orchestratePipelineStep(
-        query,
-        history,
-        'step2',
-        results,
-      );
-
-      if (!step2Result.success) {
-        throw new Error(step2Result.error || 'Failed to execute step2');
-      }
-
-      if (step2Result.data?.links) {
-        results.step2 = step2Result.data;
-        const links = Array.isArray(step2Result.data.links)
-          ? step2Result.data.links
-          : [];
-        setSearchLinks(links);
-
-        setMessages((prev) => {
-          const updated = [...prev];
-          const lastIndex = updated.length - 1;
-          if (updated[lastIndex]?.role === 'assistant') {
-            updated[lastIndex] = {
-              ...updated[lastIndex],
-              links: links,
-              isProcessing: true,
-            };
-          }
-          return updated;
-        });
-
-        setTimeout(() => {
-          setIsSearching(false);
-        }, 1000);
-      }
-
-      console.log('[v0] Executing step3...');
-      const step3Result = await orchestratePipelineStep(
-        query,
-        history,
-        'step3',
-        results,
-      );
-
-      if (!step3Result.success) {
-        throw new Error(step3Result.error || 'Failed to execute step3');
-      }
-
-      if (step3Result.data?.answer) {
+      if (step1Result.data?.answer) {
         setMessages((prev) => {
           const updated = [...prev];
           const lastIndex = updated.length - 1;
           if (updated[lastIndex]?.role === 'assistant') {
             updated[lastIndex] = {
               role: 'assistant',
-              message: step3Result.data?.answer as string,
+              content: step1Result.data?.answer as string,
               references: updated[lastIndex].links || searchLinks,
               steps: undefined,
               isTyping: false,
@@ -172,7 +100,7 @@ export const ExplorePage = () => {
         if (updated[lastIndex]?.role === 'assistant') {
           updated[lastIndex] = {
             role: 'assistant',
-            message:
+            content:
               'Sorry, I encountered an error while processing your request. Please try again.',
             isProcessing: false,
           };
@@ -283,7 +211,7 @@ export const ExplorePage = () => {
                       {message.role === 'user' && (
                         <div className="border-b border-border pb-4">
                           <h1 className="text-3xl font-normal text-foreground">
-                            {message.message}
+                            {message.content}
                           </h1>
                         </div>
                       )}
@@ -363,7 +291,7 @@ export const ExplorePage = () => {
                             )}
 
                             {!nextMessage.isProcessing &&
-                              nextMessage.message && (
+                              nextMessage.content && (
                                 <div className="prose prose-lg max-w-none dark:prose-invert prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground prose-strong:text-foreground prose-h1:text-2xl prose-h1:font-bold prose-h1:mb-4 prose-h2:text-xl prose-h2:font-semibold prose-h2:mb-3 prose-h2:mt-6 prose-ul:space-y-2 prose-li:marker:text-muted-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
                                   <ReactMarkdown
                                     components={{
@@ -415,7 +343,7 @@ export const ExplorePage = () => {
                                       ),
                                     }}
                                   >
-                                    {nextMessage.message}
+                                    {nextMessage.content}
                                   </ReactMarkdown>
                                 </div>
                               )}

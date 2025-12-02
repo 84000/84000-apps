@@ -2,55 +2,24 @@ import { LamaticConfig } from './types';
 
 export const config: LamaticConfig = {
   api: {
-    endpoint: 'https://api.lamatic.com',
-    projectId: 'your-project-id',
+    endpoint: 'https://84000925-globalsearch883.lamatic.dev/graphql',
+    projectId: '61113b5c-8966-47f9-9021-02937385ef95',
   },
   suggestions: ['Help me explore the different meanings of karma.'],
   flows: {
     step1: {
       name: 'Generate Steps',
-      workflowId: '38*********************************6',
+      workflowId: 'e3ce7c46-69e2-440f-bb13-4acb2148a13e',
       description: 'Generates high-level reasoning steps for the query',
       mode: 'sync',
-      expectedOutput: ['steps'],
+      expectedOutput: ['answer', 'mode'],
       inputSchema: {
-        query: 'string',
-        history: 'array',
-      },
-      outputSchema: {
-        steps: 'string',
-      },
-    },
-    step2: {
-      name: 'Process Steps',
-      workflowId: 'f1*********************************9',
-      description:
-        'Processes the generated steps into research queries + links',
-      mode: 'sync',
-      dependsOn: ['step1'],
-      expectedOutput: ['result', 'links'],
-      inputSchema: {
-        steps: 'string',
-      },
-      outputSchema: {
-        result: 'string',
-        links: 'array',
-      },
-    },
-    step3: {
-      name: 'Final Writer',
-      workflowId: '50*********************************b',
-      description:
-        'Takes query and research results and generates the final markdown answer',
-      mode: 'sync',
-      dependsOn: ['step2'],
-      expectedOutput: ['answer'],
-      inputSchema: {
-        query: 'string',
-        research: 'array',
+        chatMessage: 'string',
+        chatHistory: 'array',
       },
       outputSchema: {
         answer: 'string',
+        mode: 'string',
       },
     },
   },
