@@ -50,4 +50,16 @@
   .long-term {
     @apply break-all;
   }
+
+  .title {
+    @apply italic;
+  }
+
+  .text-sa {
+    @apply italic;
+  }
+
+  foreign {
+    @apply [&[xml\:lang*="-Ltn"]]:italic;
+  }
 }
