@@ -45,6 +45,48 @@ export function Section({
   );
 }
 
+export const SECTION_TITLE_STYLE =
+  'font-serif text-navy mt-6 scroll-m-20 pb-4 text-3xl position-sidebar:pb-2 position-sidebar:mt-4 text-center';
+export function SectionTitle({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'h2'>) {
+  return (
+    <h2 className={cn(SECTION_TITLE_STYLE, className)} {...props}>
+      {children}
+    </h2>
+  );
+}
+
+export const BODY_TITLE_STYLE =
+  'font-serif text-navy scroll-m-20 pb-6 mt-2 text-2xl position-sidebar:text-xl position-sidebar:pb-4 position-sidebar:mt-0 text-center';
+export function BodyTitle({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'h2'>) {
+  return (
+    <h2 className={cn(BODY_TITLE_STYLE, className)} {...props}>
+      {children}
+    </h2>
+  );
+}
+
+export const HONORIFIC_TITLE_STYLE =
+  'font-serif text-navy scroll-m-20 text-xl text-center';
+export function HonorificTitle({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'h2'>) {
+  return (
+    <h2 className={cn(HONORIFIC_TITLE_STYLE, className)} {...props}>
+      {children}
+    </h2>
+  );
+}
+
 export const H1_STYLE = 'font-serif mt-8 scroll-m-20 pb-8 text-5xl lg:text-6xl';
 export function H1({
   children,

@@ -17,6 +17,15 @@
     @apply font-sans font-semibold text-brick leading-7 text-sm;
   }
 
+  .section-title,
+  .body-title-main,
+  .body-title-honorific {
+    font-variation-settings:
+      'wdth' 120,
+      'opsz' 144,
+      'GRAD' -50;
+  }
+
   .paragraph {
     @apply mb-1 mt-2;
 
