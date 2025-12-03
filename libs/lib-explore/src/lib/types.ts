@@ -5,18 +5,25 @@ export const OUTPUT_SCHEMA_KEYS = [
   'steps',
   'links',
   'answer',
+  'mode',
 ] as const;
 export type OutputSchemaKey = (typeof OUTPUT_SCHEMA_KEYS)[number];
 
 export const INPUT_SCHEMA_KEYS = [
-  'query',
-  'history',
+  'chatMessage',
+  'chatHistory',
   'steps',
   'research',
 ] as const;
 export type InputSchemaKey = (typeof INPUT_SCHEMA_KEYS)[number];
 
-export const OUTPUT_TYPES = ['steps', 'result', 'links', 'answer'] as const;
+export const OUTPUT_TYPES = [
+  'steps',
+  'result',
+  'links',
+  'answer',
+  'mode',
+] as const;
 export type OutputType = (typeof OUTPUT_TYPES)[number];
 
 export const SCHEME_VALUE_TYPES = ['string', 'array', 'object'] as const;
@@ -40,7 +47,7 @@ export type StepResult = {
 export type Message = FlowOutputData &
   FlowInputData & {
     role: MessageRole;
-    message: string;
+    content: string;
     research?: string;
     isProcessing?: boolean;
     isTyping?: boolean;
