@@ -1,4 +1,5 @@
 import type { TranslationEditorContentItem } from '../components/editor';
+import { splitMarks } from './split-marks';
 import { filterAttrs } from './util';
 
 type SplitBlock = {
@@ -42,49 +43,94 @@ export function splitNode(
 
   const splits: SplitBlock = { prefix: [], middle: [], suffix: [] };
   const attrs = filterAttrs(item.attrs);
+  const marks = item.marks ? [...item.marks] : undefined;
 
   if (preLen > 0) {
     const preText = text.slice(0, preLen);
     if (preText) {
-      splits.prefix.push({
+      const prefixStart = itemStart;
+      const prefixEnd = prefixStart + preText.length;
+
+      const prefix = {
         ...item,
         text: preText,
         attrs: {
           ...attrs,
-          start: itemStart,
-          end: itemStart + preText.length,
+          start: prefixStart,
+          end: prefixEnd,
         },
+      };
+
+      const prefixMarks = splitMarks({
+        marks,
+        start: prefixStart,
+        end: prefixEnd,
       });
+
+      if (prefixMarks?.length) {
+        prefix.marks = prefixMarks;
+      }
+
+      splits.prefix.push(prefix);
     }
   }
 
   if (midLen > 0) {
     const midText = text.slice(preLen, preLen + midLen);
     if (midText) {
-      splits.middle.push({
+      const midStart = itemStart + preLen;
+      const midEnd = midStart + midText.length;
+
+      const mid = {
         ...item,
         text: midText,
         attrs: {
           ...attrs,
-          start: itemStart + preLen,
-          end: itemStart + preLen + midText.length,
+          start: midStart,
+          end: midEnd,
         },
+      };
+
+      const midMarks = splitMarks({
+        marks,
+        start: midStart,
+        end: midEnd,
       });
+
+      if (midMarks?.length) {
+        mid.marks = midMarks;
+      }
+
+      splits.middle.push(mid);
     }
   }
 
   if (postStartIdx < text.length) {
     const postText = text.slice(postStartIdx);
     if (postText) {
-      splits.suffix.push({
+      const postStart = itemStart + postStartIdx;
+      const postEnd = postStart + postText.length;
+      const post = {
         ...item,
         text: postText,
         attrs: {
           ...attrs,
-          start: itemStart + postStartIdx,
-          end: itemStart + text.length,
+          start: postStart,
+          end: postEnd,
         },
+      };
+
+      const postMarks = splitMarks({
+        marks,
+        start: postStart,
+        end: postEnd,
       });
+
+      if (postMarks?.length) {
+        post.marks = postMarks;
+      }
+
+      splits.suffix.push(post);
     }
   }
 
