@@ -5,6 +5,7 @@ import {
   ComponentProps,
   forwardRef,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
@@ -28,18 +29,27 @@ const Input = forwardRef<
     ref,
   ) => {
     const [inputValue, setInputValue] = useState(value || '');
-    const [changeEvent, setChangeEvent] = useState<
-      ChangeEvent<HTMLInputElement> | undefined
-    >();
-    const [debouncedValue] = useDebounce(changeEvent, delay);
+    const [debouncedValue] = useDebounce(inputValue, delay);
+    const prevValueRef = useRef(value);
 
     useEffect(() => {
-      if (!debouncedValue) {
-        return;
+      if (value !== prevValueRef.current) {
+        setInputValue(value || '');
+        prevValueRef.current = value;
       }
+    }, [value]);
 
-      onChange?.(debouncedValue);
-    }, [debouncedValue, onChange]);
+    useEffect(() => {
+      if (debouncedValue !== value) {
+        const syntheticEvent = {
+          target: { value: debouncedValue },
+          currentTarget: { value: debouncedValue },
+        } as ChangeEvent<HTMLInputElement>;
+
+        onChange?.(syntheticEvent);
+        prevValueRef.current = debouncedValue;
+      }
+    }, [debouncedValue, onChange, value]);
 
     return (
       <input
@@ -51,7 +61,6 @@ const Input = forwardRef<
         )}
         onChange={(e) => {
           setInputValue(e.target.value);
-          setChangeEvent(e);
         }}
         ref={ref}
         {...props}

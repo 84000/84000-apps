@@ -25,8 +25,6 @@ export async function orchestratePipelineStep(
       throw new Error(`Step ${step} not found in configuration`);
     }
 
-    console.log(`[v0] Executing ${step}: ${flow.name}`);
-
     const inputs: Record<string, unknown> = {};
 
     // Fill inputs based on schema
@@ -49,10 +47,7 @@ export async function orchestratePipelineStep(
       }
     }
 
-    console.log(`[v0] ${step} inputs:`, inputs);
-
     const resData = await lamaticClient.executeFlow(flow.workflowId, inputs);
-    console.log(`[v0] ${step} raw response:`, resData);
 
     const output: Message = {
       role: 'assistant',
@@ -66,8 +61,6 @@ export async function orchestratePipelineStep(
         output[schemaKey] = resData.result[schemaKey];
       }
     }
-
-    console.log(`[v0] ${step} completed:`, output);
 
     return {
       success: true,
