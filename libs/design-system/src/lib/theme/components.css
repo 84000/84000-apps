@@ -65,12 +65,17 @@
     @apply break-all;
   }
 
+  /* TODO: remove in favor of other lang attribute */
   [xml\:lang]:not(
       [xml\:lang='en'],
       [xml\:lang='bo'],
       [xml\:lang='ja'],
       [xml\:lang='zh']
     ) {
+    @apply italic;
+  }
+
+  [lang]:not([lang='en'], [lang='bo'], [lang='ja'], [lang='zh']) {
     @apply italic;
   }
 
