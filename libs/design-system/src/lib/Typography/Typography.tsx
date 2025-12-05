@@ -101,7 +101,7 @@ export function H1({
 }
 
 export const H2_STYLE =
-  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4';
+  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4 title-main';
 export function H2({
   children,
   className,
@@ -115,7 +115,7 @@ export function H2({
 }
 
 export const H3_STYLE =
-  'font-serif mt-4 scroll-m-20 pb-2 text-xl lg:text-2xl position-sidebar:text-lg position-sidebar:pb-1 position-sidebar:mt-2';
+  'font-sans font-semibold text-secondary-600 mt-2 scroll-m-20 pb-1 text-lg lg:text-xl position-sidebar:text-md position-sidebar:pb-1 position-sidebar:mt-2';
 export function H3({
   children,
   className,
@@ -128,7 +128,8 @@ export function H3({
   );
 }
 
-export const H4_STYLE = 'font-serif mt-4 scroll-m-20 pb-2 text-lg lg:text-xl';
+export const H4_STYLE =
+  'font-sans font-medium mt-2 scroll-m-20 pb-1 text-lg position-sidebar:text-md position-sidebar:pb-1 position-sidebar:mt-2';
 export function H4({
   children,
   className,

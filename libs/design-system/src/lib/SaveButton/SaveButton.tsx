@@ -3,6 +3,7 @@
 import { Loader2Icon } from 'lucide-react';
 import { Button, ButtonProps } from '../Button/Button';
 import { useState } from 'react';
+import { cn } from '@lib-utils';
 
 export const SaveButton = ({
   onClick,
@@ -19,7 +20,7 @@ export const SaveButton = ({
   const [isSaving, setIsSaving] = useState(false);
   return (
     <Button
-      className={className}
+      className={cn('min-w-18', className)}
       disabled={disabled || isSaving}
       onClick={async () => {
         setIsSaving(true);

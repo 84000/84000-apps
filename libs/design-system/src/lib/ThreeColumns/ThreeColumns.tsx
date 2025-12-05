@@ -165,7 +165,7 @@ export const ThreeColumns = ({
             <Button
               variant="link"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleLeftPanel}
             >
               <PanelLeftIcon />
@@ -174,10 +174,10 @@ export const ThreeColumns = ({
             <Button
               variant="link"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleRightPanel}
             >
-              <PanelRightIcon className="size-4" />
+              <PanelRightIcon />
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
@@ -241,7 +241,7 @@ export const ThreeColumns = ({
               <Button
                 variant="link"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleLeftPanel}
               >
                 <PanelLeftIcon />
@@ -250,7 +250,7 @@ export const ThreeColumns = ({
               <Button
                 variant="link"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleRightPanel}
               >
                 <PanelRightIcon />
