@@ -91,7 +91,7 @@
     --popover: var(--background);
     --popover-foreground: var(--foreground);
 
-    --primary: var(--ochre-300);
+    --primary: var(--ochre-700);
     --primary-foreground: var(--white);
     --secondary: var(--brick-700);
     --secondary-foreground: var(--white);
@@ -103,7 +103,7 @@
     --accent-foreground: var(--white);
     --destructive: var(--brick-600);
     --destructive-foreground: var(--white);
-    --border: var(--navy-50);
+    --border: var(--navy-100);
     --input: var(--white);
     --ring: var(--navy-100);
     --success: var(--emerald-500);
@@ -132,10 +132,6 @@
 
   body {
     @apply bg-canvas text-foreground;
-  }
-
-  a {
-    @apply text-accent underline decoration-accent underline-offset-[3px] transition-colors cursor-pointer;
   }
 }
 

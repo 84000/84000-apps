@@ -1,7 +1,7 @@
 import { cn } from '@lib-utils';
 
 export const LINK_STYLE =
-  'text-brick underline decoration-brick underline-offset-[3px] transition-colors cursor-pointer';
+  'text-accent underline decoration-accent underline-offset-[3px] transition-colors cursor-pointer';
 
 export const HERO_STYLE =
   'font-serif mt-8 scroll-m-20 pb-8 text-8xl lg:text-9xl';
@@ -46,7 +46,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif text-navy mt-6 scroll-m-20 pb-4 text-3xl position-sidebar:pb-2 position-sidebar:mt-4 text-center';
+  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-3xl position-sidebar:pb-2 position-sidebar:mt-4 text-center section-title';
 export function SectionTitle({
   children,
   className,
@@ -60,7 +60,7 @@ export function SectionTitle({
 }
 
 export const BODY_TITLE_STYLE =
-  'font-serif text-navy scroll-m-20 pb-6 mt-2 text-2xl position-sidebar:text-xl position-sidebar:pb-4 position-sidebar:mt-0 text-center';
+  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-2xl position-sidebar:text-xl position-sidebar:pb-4 position-sidebar:mt-0 text-center body-title-main';
 export function BodyTitle({
   children,
   className,
@@ -74,7 +74,7 @@ export function BodyTitle({
 }
 
 export const HONORIFIC_TITLE_STYLE =
-  'font-serif text-navy scroll-m-20 text-xl text-center';
+  'font-serif font-light text-primary scroll-m-20 text-xl text-center body-title-honorific';
 export function HonorificTitle({
   children,
   className,
@@ -101,7 +101,7 @@ export function H1({
 }
 
 export const H2_STYLE =
-  'font-sans text-navy mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4';
+  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4';
 export function H2({
   children,
   className,

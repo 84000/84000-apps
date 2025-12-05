@@ -37,7 +37,7 @@ export enum MinPanelSizes {
 export type ImperativePanelHandle = RRImperativePanelHandle;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
-  return <div className="left-panel">{children}</div>;
+  return <div>{children}</div>;
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
@@ -45,7 +45,7 @@ export const MainPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {
-  return <div className="right-panel">{children}</div>;
+  return <div>{children}</div>;
 };
 
 export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
@@ -161,7 +161,7 @@ export const ThreeColumns = ({
         className={cn('flex size-full overflow-hidden md:hidden', className)}
       >
         <div style={{ overflow: 'auto' }}>
-          <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+          <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
@@ -237,7 +237,7 @@ export const ThreeColumns = ({
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
-            <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+            <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
               <Button
                 variant="link"
                 size="icon"

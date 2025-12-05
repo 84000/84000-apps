@@ -17,6 +17,7 @@
     @apply font-sans font-semibold text-brick leading-7 text-sm;
   }
 
+  .title-main,
   .section-title,
   .body-title-main,
   .body-title-honorific {
@@ -34,8 +35,12 @@
     }
   }
 
+  a {
+    @apply text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer;
+  }
+
   .glossary-instance {
-    @apply text-primary hover:text-brick underline decoration-brick decoration-dotted underline-offset-[3px] transition-colors cursor-pointer;
+    @apply text-foreground hover:text-primary underline decoration-primary decoration-dotted underline-offset-[3px] transition-colors cursor-pointer;
   }
 
   .end-note-link {
