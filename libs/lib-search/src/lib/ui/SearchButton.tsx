@@ -73,7 +73,7 @@ export const SearchButton = ({
       <DialogTrigger asChild>
         <Button
           variant="ghost"
-          className="bg-background my-auto [&_svg]:size-5 lg:[&_svg]:size-6 hover:bg-background cursor-pointer md:text-lg text-brick hover:text-brick-800"
+          className="bg-background my-auto [&_svg]:size-6 [&_svg]:stroke-1 hover:bg-background cursor-pointer text-base text-accent hover:text-accent/80"
         >
           <SearchIcon />
           Search

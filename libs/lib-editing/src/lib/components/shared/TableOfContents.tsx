@@ -17,7 +17,6 @@ import { cn, parseToh } from '@lib-utils';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { PanelName, TabName } from './types';
-import { MenuIcon } from 'lucide-react';
 
 const TAB_FOR_SECTION: Record<string, TabName> = {
   abbreviations: 'abbreviations',
@@ -67,7 +66,7 @@ export const TableOfContentsSection = ({
   const { updatePanel } = useNavigation();
 
   const baseStyle =
-    'w-full py-2 font-normal leading-6 text-sm text-primary hover:text-primary/60 hover:no-underline hover:cursor-pointer';
+    'w-full py-2 font-normal leading-6 text-sm hover:text-foreground/60 hover:no-underline hover:cursor-pointer';
   const depthClass = `pl-${depth * 2}`;
 
   const onClick = useCallback(
@@ -198,12 +197,6 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
   };
   return (
     <div>
-      <div className="pt-12 gap-2.5 flex text-navy font-semibold">
-        <div className="size-5 my-auto bg-ochre-300 text-background rounded-md">
-          <MenuIcon className="size-full p-1" />
-        </div>
-        Table of Contents
-      </div>
       <div className={cn(baseStyle, 'font-light text-navy-200 mt-6')}>
         {imprint?.section || work.section}
       </div>

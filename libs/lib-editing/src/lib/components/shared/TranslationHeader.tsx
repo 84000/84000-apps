@@ -13,11 +13,11 @@ import { useNavigation } from './NavigationProvider';
 import { useCallback, useEffect, useState } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@data-access';
-import { useIsMobile } from '@lib-utils';
+import { cn, useIsMobile } from '@lib-utils';
 
 const BACK_TO_DEFAULT = 'https://84000.co/all-publications';
 
-export const TranslationHeader = () => {
+export const TranslationHeader = ({ className }: { className?: string }) => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();
   const isMobile = useIsMobile();
 
@@ -81,7 +81,7 @@ export const TranslationHeader = () => {
         name: side,
         state: panelState,
       });
-      
+
       // Close the popover on mobile after selection
       if (isMobile) {
         setIsPopoverOpen(false);
@@ -90,19 +90,24 @@ export const TranslationHeader = () => {
     [updatePanel, isMobile],
   );
   return (
-    <div className="h-16 w-full px-0 lg:px-6 flex justify-between text-lg">
+    <div
+      className={cn(
+        'h-12 w-full px-0 lg:px-3 flex justify-between text-lg bg-background',
+        className,
+      )}
+    >
       <div className="flex gap-2 min-w-0">
         <Button
           variant="ghost"
-          className="text-brick my-auto text-lg px-3 cursor-pointer hover:bg-background hover:text-brick-100"
+          className="text-accent my-auto text-base px-3 cursor-pointer hover:bg-background hover:text-accent/80 [&_svg]:size-5 [&_svg]:stroke-2"
           onClick={() => {
             window.location.href = backTo;
           }}
         >
-          <ChevronLeftIcon className="size-5 my-auto" /> Back
+          <ChevronLeftIcon className="my-auto" /> Back
         </Button>
         {!isMobile && (
-          <span className="line-clamp-1 text-navy my-auto flex-shrink">
+          <span className="font-serif font-light line-clamp-1 text-darkgray text-sm my-auto flex-shrink">
             {`${imprint?.mainTitles?.en ? `“${imprint?.mainTitles?.en}”` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
           </span>
         )}

@@ -181,8 +181,10 @@ export const ThreeColumns = ({
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          {mainHeaderChildren}
-          {mainPanelChildren}
+          <div className="bg-surface">
+            {mainHeaderChildren}
+            {mainPanelChildren}
+          </div>
         </div>
         <Sheet
           open={leftPanelOpen && isMobile}
@@ -196,7 +198,9 @@ export const ThreeColumns = ({
               <SheetTitle>Left Panel</SheetTitle>
               <SheetDescription>Navigation and content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto">{leftPanelChildren}</div>
+            <div className="h-full overflow-auto bg-surface">
+              {leftPanelChildren}
+            </div>
           </SheetContent>
         </Sheet>
         <Sheet
@@ -211,7 +215,9 @@ export const ThreeColumns = ({
               <SheetTitle>Right Panel</SheetTitle>
               <SheetDescription>Additional content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto">{rightPanelChildren}</div>
+            <div className="h-full overflow-auto bg-surface">
+              {rightPanelChildren}
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -222,7 +228,7 @@ export const ThreeColumns = ({
           <ResizablePanel
             ref={leftPanelRef}
             style={{ overflow: 'auto' }}
-            className="bg-sidebar hidden md:block"
+            className="bg-sidebar hidden md:block bg-surface"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
@@ -237,7 +243,7 @@ export const ThreeColumns = ({
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
-            <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
+            <div className="bg-background sticky top-0 py-1.5 w-full flex justify-between z-10">
               <Button
                 variant="link"
                 size="icon"
@@ -257,14 +263,16 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            {mainHeaderChildren}
-            {mainPanelChildren}
+            <div className="bg-surface">
+              {mainHeaderChildren}
+              {mainPanelChildren}
+            </div>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel
             ref={rightPanelRef}
             style={{ overflow: 'auto' }}
-            className="hidden md:block bg-sidebar"
+            className="hidden md:block bg-surface"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
