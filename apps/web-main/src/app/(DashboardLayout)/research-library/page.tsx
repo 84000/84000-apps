@@ -2,7 +2,7 @@ import { H1, Skeleton } from '@design-system';
 
 const Page = () => {
   return (
-    <div className="flex flex-row justify-center p-4 w-full">
+    <div className="flex flex-row justify-center p-4 size-full bg-surface">
       <div className="xl:max-w-2/3 lg:max-w-3/4 sm:max-w-4/5 w-full">
         <H1 className="text-navy">Research Library is coming soon...</H1>
         <Skeleton className="w-full h-96" />

@@ -12,10 +12,10 @@ export function Header({
   toggleSidebar?: () => void | undefined;
 }) {
   return (
-    <header className="flex sticky top-0 z-50 w-full items-center bg-background shadow-sm shadow-background/50">
-      <div className="flex h-20 w-full items-center gap-2 px-4">
-        <div className="hidden md:flex flex-col justify-center h-12">
-          <MainLogo width={112} />
+    <header className="flex sticky top-0 z-50 w-full items-center bg-background shadow-sm">
+      <div className="flex h-18 w-full items-center gap-2 px-4">
+        <div className="hidden md:flex flex-col justify-center">
+          <MainLogo width={96} />
         </div>
         {toggleSidebar && (
           <Button

@@ -4,7 +4,7 @@ import * as React from 'react';
 
 import { cn } from '@lib-utils';
 
-export const TABLE_STYLE = 'w-full caption-bottom text-sm';
+export const TABLE_STYLE = 'w-full caption-bottom text-sm bg-background';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (

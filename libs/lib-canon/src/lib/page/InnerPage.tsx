@@ -15,7 +15,7 @@ export const InnerPage = ({
 }) => {
   const { tab } = useCanon();
 
-  const scrollAreaClass = `h-full ${tab === 'overview' ? 'bg-gray-50' : 'bg-background'}`;
+  const scrollAreaClass = 'h-full bg-surface';
 
   return (
     <ScrollArea className={scrollAreaClass}>

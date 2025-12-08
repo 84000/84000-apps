@@ -10,7 +10,7 @@ const page = async () => {
   const works = await getTranslationsMetadata({ client });
 
   return (
-    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
+    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full bg-surface">
       <div className="w-full max-w-feed">
         <H2 className="text-navy-500">{'The Reading Room'}</H2>
         <TranslationsTable works={works} />

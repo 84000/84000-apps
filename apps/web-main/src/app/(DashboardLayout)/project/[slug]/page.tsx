@@ -8,7 +8,7 @@ const page = async ({ params }: { params: Promise<{ slug: string }> }) => {
   const { slug } = await params;
 
   return (
-    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
+    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full bg-surface">
       <ProjectPage uuid={slug} />
     </div>
   );

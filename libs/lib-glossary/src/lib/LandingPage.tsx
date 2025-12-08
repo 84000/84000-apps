@@ -15,7 +15,7 @@ export const LandingPage = async () => {
   ).filter(Boolean);
 
   return (
-    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full">
+    <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full bg-surface">
       <div className="w-full max-w-feed">
         <H2 className="text-navy-500">{'Glossaries'}</H2>
         <GlossariesLandingTable

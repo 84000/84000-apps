@@ -6,7 +6,7 @@
 
 @layer components {
   .passage {
-    @apply font-serif leading-7;
+    @apply font-serif leading-7 text-justify;
 
     @variant position-sidebar {
       @apply leading-5 text-sm;
