@@ -18,7 +18,7 @@ export const Sidebar = () => {
   return (
     <div className="p-4">
       <CanonNavigator
-        className="uppercase tracking-wide text-primary/50"
+        className="uppercase tracking-wide text-foreground/50"
         node={rootNode}
       />
     </div>

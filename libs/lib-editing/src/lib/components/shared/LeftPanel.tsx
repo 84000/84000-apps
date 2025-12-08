@@ -28,9 +28,9 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
       }}
       data-position="sidebar"
       defaultValue="toc"
-      className="w-full"
+      className="w-full gap-0"
     >
-      <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
+      <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-none bg-background overflow-x-auto text-center">
         <TabsList
           className={cn(
             'w-fit px-6 inline-flex mx-auto rounded-none',
@@ -40,8 +40,8 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
           <TabsTrigger value="toc">Table of Contents</TabsTrigger>
         </TabsList>
       </div>
-      <div className="px-8 max-w-readable w-full mx-auto">
-        <TabsContent value="toc" className="pb-8">
+      <div className="px-2 pb-8 max-w-readable size-full mx-auto">
+        <TabsContent value="toc" className="px-2 mt-1.5">
           <TableOfContents toc={toc} work={work} />
         </TabsContent>
       </div>

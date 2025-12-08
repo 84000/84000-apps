@@ -20,7 +20,7 @@ export const DetailPage = async ({
   }
 
   return (
-    <div className="flex flex-row justify-center pt-0 pb-8 px-8 w-full">
+    <div className="flex flex-row justify-center pt-0 pb-8 px-8 size-full bg-surface">
       <div className="w-full pb-8 max-w-readable">
         <GlossaryHeading detail={detail} />
         <GlossaryEditor detail={detail} />

@@ -1,8 +1,6 @@
 'use client';
 
-import {
-  ThreeColumns,
-} from '@design-system';
+import { ThreeColumns } from '@design-system';
 import { ReactNode } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { cn } from '@lib-utils';
@@ -19,10 +17,16 @@ export const ThreeColumnRenderer = ({
 
   return (
     <div
-      className={cn('fixed flex flex-col size-full', withHeader ? 'pb-20' : '')}
+      className={cn(
+        'fixed flex flex-col size-full p-2.5',
+        withHeader ? 'pb-20' : '',
+      )}
     >
-      <TranslationHeader />
+      <div className="pb-2.5">
+        <TranslationHeader className="rounded-full shadow-lg" />
+      </div>
       <ThreeColumns
+        className="rounded-lg border border-navy-50 shadow-sm"
         leftPanelOpen={panels.left.open}
         rightPanelOpen={panels.right.open}
         onLeftPanelOpenChange={(open) => {

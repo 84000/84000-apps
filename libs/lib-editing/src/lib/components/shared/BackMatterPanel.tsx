@@ -41,9 +41,9 @@ export const BackMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="endnotes"
-      className="w-full"
+      className="w-full gap-0"
     >
-      <div className="sticky top-0 py-3 z-10 w-full rounded-none bg-muted overflow-x-auto text-center">
+      <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-none bg-background overflow-x-auto text-center">
         <TabsList
           className={cn(
             'w-fit px-6 inline-flex mx-auto rounded-none',

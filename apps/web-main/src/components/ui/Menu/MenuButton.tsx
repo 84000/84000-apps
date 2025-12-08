@@ -12,7 +12,7 @@ export const MenuButton = ({
   const router = useRouter();
   return (
     <div
-      className="p-2 h-full hover:bg-linear-to-r hover:from-transparent hover:to-accent hover:cursor-pointer rounded-lg transition-colors"
+      className="p-2 h-full hover:bg-linear-to-r hover:from-transparent hover:to-muted hover:cursor-pointer rounded-lg transition-colors"
       onClick={() => {
         router.push(subItem.href);
       }}

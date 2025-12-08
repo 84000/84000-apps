@@ -10,7 +10,7 @@ export const FilterResultsBanner = <T extends RowData>({
   name: string;
 }) => {
   return (
-    <div className="rounded-2xl border px-4 py-3 bg-muted/50 shadow-sm text-sm">
+    <div className="rounded-2xl border px-4 py-3 bg-background shadow-sm text-sm">
       Total results:
       <span className="px-1 text-emerald-500 font-semibold">
         {table.getFilteredRowModel().rows.length} {name}

@@ -37,7 +37,7 @@ export enum MinPanelSizes {
 export type ImperativePanelHandle = RRImperativePanelHandle;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
-  return <div className="left-panel">{children}</div>;
+  return <div>{children}</div>;
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
@@ -45,7 +45,7 @@ export const MainPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {
-  return <div className="right-panel">{children}</div>;
+  return <div>{children}</div>;
 };
 
 export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
@@ -161,11 +161,11 @@ export const ThreeColumns = ({
         className={cn('flex size-full overflow-hidden md:hidden', className)}
       >
         <div style={{ overflow: 'auto' }}>
-          <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+          <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleLeftPanel}
             >
               <PanelLeftIcon />
@@ -174,15 +174,17 @@ export const ThreeColumns = ({
             <Button
               variant="link"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleRightPanel}
             >
-              <PanelRightIcon className="size-4" />
+              <PanelRightIcon />
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          {mainHeaderChildren}
-          {mainPanelChildren}
+          <div className="bg-surface">
+            {mainHeaderChildren}
+            {mainPanelChildren}
+          </div>
         </div>
         <Sheet
           open={leftPanelOpen && isMobile}
@@ -196,7 +198,9 @@ export const ThreeColumns = ({
               <SheetTitle>Left Panel</SheetTitle>
               <SheetDescription>Navigation and content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto">{leftPanelChildren}</div>
+            <div className="h-full overflow-auto bg-surface">
+              {leftPanelChildren}
+            </div>
           </SheetContent>
         </Sheet>
         <Sheet
@@ -211,7 +215,9 @@ export const ThreeColumns = ({
               <SheetTitle>Right Panel</SheetTitle>
               <SheetDescription>Additional content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto">{rightPanelChildren}</div>
+            <div className="h-full overflow-auto bg-surface">
+              {rightPanelChildren}
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -222,7 +228,7 @@ export const ThreeColumns = ({
           <ResizablePanel
             ref={leftPanelRef}
             style={{ overflow: 'auto' }}
-            className="bg-sidebar hidden md:block"
+            className="bg-sidebar hidden md:block bg-surface"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
@@ -237,11 +243,11 @@ export const ThreeColumns = ({
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
-            <div className="bg-muted sticky top-0 py-3 w-full flex justify-between z-10">
+            <div className="bg-background sticky top-0 py-1.5 w-full flex justify-between z-10">
               <Button
                 variant="link"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleLeftPanel}
               >
                 <PanelLeftIcon />
@@ -250,21 +256,23 @@ export const ThreeColumns = ({
               <Button
                 variant="link"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleRightPanel}
               >
                 <PanelRightIcon />
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            {mainHeaderChildren}
-            {mainPanelChildren}
+            <div className="bg-surface">
+              {mainHeaderChildren}
+              {mainPanelChildren}
+            </div>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel
             ref={rightPanelRef}
             style={{ overflow: 'auto' }}
-            className="hidden md:block bg-sidebar"
+            className="hidden md:block bg-surface"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}

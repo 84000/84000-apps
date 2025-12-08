@@ -31,22 +31,14 @@ export type AvatarImageProps = {
 };
 
 export function AvatarImage({
-  className = '',
-  src,
-  alt = 'avatar',
-  width = 32,
-  height = 32,
-}: AvatarImageProps) {
-  if (!src) {
-    return null;
-  }
+  className,
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={width}
-      height={height}
-      className={cn('aspect-1 size-full', className)}
+    <AvatarPrimitive.Image
+      data-slot="avatar-image"
+      className={cn('aspect-square size-full', className)}
+      {...props}
     />
   );
 }

@@ -25,18 +25,21 @@ const Layout = async ({
 
   return (
     <CanonProvider canon={canon}>
-      <div className="fixed flex flex-col size-full">
-        <div className="h-23" />
-        <header className="sticky top-0 z-50 border-b-3 border-white">
+      <div className="fixed flex flex-col size-full p-2">
+        <div className="h-20" />
+        <header className="sticky top-0 z-50">
           <Header />
         </header>
-        <ResizablePanelGroup direction="horizontal">
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="rounded-lg border bg-surface"
+        >
           <ResizablePanel
             id="sidebar"
             defaultSize={20}
             minSize={10}
             maxSize={40}
-            className="bg-gray/20"
+            className="border-r border-r-border/50"
           >
             <ScrollArea className="h-full">{sidebar}</ScrollArea>
           </ResizablePanel>

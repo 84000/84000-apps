@@ -3,7 +3,7 @@ import React from 'react';
 
 const page = () => {
   return (
-    <div className="flex flex-row justify-center p-4 w-full">
+    <div className="flex flex-row justify-center p-4 size-full bg-surface">
       <div className="xl:max-w-2/3 lg:max-w-3/4 sm:max-w-4/5 w-full text-center">
         <H1 className="text-navy max-w-2xl mx-auto">
           {"Welcome to 84000's Scholar's Room"}

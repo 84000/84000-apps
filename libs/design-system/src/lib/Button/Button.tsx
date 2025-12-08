@@ -9,17 +9,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          'rounded-full bg-gradient-to-b from-brick-400 to-brick-800 text-secondary font-light hover:text-secondary hover:from-brick-800 hover:to-brick-400 transition-colors',
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         active:
-          'rounded-full bg-sidebar-accent text-sidebar-accent-foreground font-bold',
+          'rounded bg-sidebar-secondary text-sidebar-secondary-foreground font-bold',
         destructive:
-          'rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90',
+          'rounded bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
-          'rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+          'rounded border bg-background hover:bg-secondary hover:text-secondary-foreground',
         secondary:
-          'rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'rounded-full hover:bg-accent hover:text-accent-foreground',
+          'rounded bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost:
+          'rounded-full hover:bg-secondary hover:text-secondary-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
@@ -46,18 +46,6 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-
-    if (!variant || variant === 'default') {
-      return (
-        <div className="size-fit p-0.5 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
-          <Comp
-            className={cn(buttonVariants({ variant, size, className }))}
-            ref={ref}
-            {...props}
-          />
-        </div>
-      );
-    }
 
     return (
       <Comp

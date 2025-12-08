@@ -24,7 +24,7 @@ export const CanonNavigator = ({
   const { setCurrent, isActive } = useCanon();
 
   const baseStyle =
-    'w-full py-2 font-normal leading-6 text-primary/60 hover:no-underline hover:text-primary hover:cursor-default';
+    'w-full py-2 font-normal leading-6 text-foreground/60 hover:no-underline hover:text-foreground hover:cursor-default';
   const depthClass = `pl-${depth * 2}`;
 
   if (!node.children?.length) {
@@ -44,7 +44,7 @@ export const CanonNavigator = ({
               className={cn(
                 baseStyle,
                 className,
-                isActive(child.uuid) ? 'text-primary' : '',
+                isActive(child.uuid) ? 'text-foreground' : '',
               )}
             >
               <div className="w-full" onClick={() => setCurrent(child.uuid)}>
@@ -64,7 +64,7 @@ export const CanonNavigator = ({
             key={child.uuid}
             className={cn(
               baseStyle,
-              isActive(child.uuid) ? 'text-primary' : '',
+              isActive(child.uuid) ? 'text-foreground' : '',
             )}
             onClick={() => setCurrent(child.uuid)}
           >
