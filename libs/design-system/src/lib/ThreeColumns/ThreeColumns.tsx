@@ -181,7 +181,7 @@ export const ThreeColumns = ({
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          <div className="bg-surface">
+          <div className="bg-[linear-gradient(180deg,#fffc,#ffffffd1_27%,#fdfcfae6_48%,var(--color-surface)),url('https://cdn.prod.website-files.com/68c3085363e06919d9ef0a53/69268e58690b63ef40362936_landscape-with-stupas-ochre-for-reader.jpg">
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -263,7 +263,7 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            <div className="bg-surface">
+            <div className="bg-surface bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat bg-contain bg-[position:center_-30rem] bg-[length:100%_53rem]">
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
