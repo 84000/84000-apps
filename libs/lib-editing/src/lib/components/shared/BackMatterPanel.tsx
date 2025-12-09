@@ -65,8 +65,8 @@ export const BackMatterPanel = ({
         </TabsList>
       </div>
       <div className="px-2">
-        <div className="overflow-auto h-[calc(100vh-8.5rem)] rounded bg-surface">
-          <div className="rounded ps-10 pe-4 max-w-readable size-full mx-auto ">
+        <div className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
+          <div className="rounded ps-10 pe-4 max-w-readable mx-auto ">
             {endnotes.length > 0 && (
               <TabsContent value="endnotes">
                 {renderTranslation({

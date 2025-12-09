@@ -161,10 +161,13 @@ export const ThreeColumns = ({
     <>
       {/* Mobile Layout */}
       <div
-        className={cn('flex size-full overflow-hidden md:hidden', className)}
+        className={cn(
+          'flex size-full overflow-hidden md:hidden rounded border bg-background',
+          className,
+        )}
       >
         <div style={{ overflow: 'auto' }}>
-          <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
+          <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
@@ -201,9 +204,7 @@ export const ThreeColumns = ({
               <SheetTitle>Left Panel</SheetTitle>
               <SheetDescription>Navigation and content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto bg-surface">
-              {leftPanelChildren}
-            </div>
+            {leftPanelChildren}
           </SheetContent>
         </Sheet>
         <Sheet
@@ -218,9 +219,7 @@ export const ThreeColumns = ({
               <SheetTitle>Right Panel</SheetTitle>
               <SheetDescription>Additional content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto bg-surface">
-              {rightPanelChildren}
-            </div>
+            {rightPanelChildren}
           </SheetContent>
         </Sheet>
       </div>

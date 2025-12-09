@@ -41,8 +41,8 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
         </TabsList>
       </div>
       <div className="px-2">
-        <div className="overflow-auto h-[calc(100vh-8.5rem)] rounded bg-surface">
-          <div className="rounded px-2 pb-8 max-w-readable size-full mx-auto">
+        <div className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
+          <div className="rounded px-2 pb-8 max-w-readable mx-auto">
             <TabsContent value="toc" className="px-2 mt-1.5">
               <TableOfContents toc={toc} work={work} />
             </TabsContent>
