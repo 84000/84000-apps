@@ -5,7 +5,7 @@ import { Vajrasattva } from '../../Vajrasattva/Vajrasattva';
 
 export const TitlesCard = ({
   header = '',
-  main,
+  main = '',
   footer = '',
   toh = '',
   section = '',
@@ -13,7 +13,7 @@ export const TitlesCard = ({
   onEdit,
 }: {
   header?: string;
-  main: string;
+  main?: string;
   footer?: string;
   toh?: string;
   section?: string;
@@ -39,7 +39,12 @@ export const TitlesCard = ({
       )}
       <div className="grow flex flex-col justify-center gap-3 py-4 px-2 border md:rounded-e-lg md:rounded-s-none lg:rounded-none rounded-lg text-center">
         {header && (
-          <div className="font-sans font-semibold text-2xl text-navy-500">
+          <div
+            className={cn(
+              'font-tibetan text-navy-500',
+              main ? 'text-2xl' : 'text-3xl',
+            )}
+          >
             {header}
           </div>
         )}
