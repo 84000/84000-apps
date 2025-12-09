@@ -1,7 +1,10 @@
 {
   "name": "84000-apps",
   "version": "0.0.0",
-  "scripts": {},
+  "scripts": {
+    "lint:css": "stylelint '**/*.css' --cache --cache-location node_modules/.cache/stylelint",
+    "lint:css:fix": "stylelint '**/*.css' --fix --cache --cache-location node_modules/.cache/stylelint"
+  },
   "private": true,
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
@@ -136,6 +139,8 @@
     "prettier": "3.5.2",
     "storybook": "9.1.5",
     "style-loader": "^4.0.0",
+    "stylelint": "^16.26.1",
+    "stylelint-config-standard": "^39.0.1",
     "tailwindcss": "^4.1.11",
     "ts-jest": "29.4.1",
     "ts-node": "10.9.1",

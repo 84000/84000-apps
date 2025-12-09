@@ -240,7 +240,7 @@ export const ThreeColumns = ({
             <div className="flex size-full">
               <div
                 className="bg-surface rounded grow border border-border/60"
-                style={{ overflow: 'auto' }}
+                style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
               >
                 {leftPanelChildren}
               </div>
@@ -249,8 +249,8 @@ export const ThreeColumns = ({
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel
-            className="hidden md:block rounded border"
-            style={{ overflow: 'auto' }}
+            className="hidden md:block rounded border bg-surface"
+            style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
@@ -292,7 +292,7 @@ export const ThreeColumns = ({
               <VerticalEllipsis className="text-muted-foreground w-2 pe-0.25" />
               <div
                 className="bg-surface rounded grow border border-border/60"
-                style={{ overflow: 'auto' }}
+                style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
               >
                 {rightPanelChildren}
               </div>

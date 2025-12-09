@@ -1,0 +1,12 @@
+{
+  "name": "lint-css",
+  "executor": "nx:run-commands",
+  "options": {
+    "command": "stylelint '**/*.css' --cache --cache-location node_modules/.cache/stylelint"
+  },
+  "configurations": {
+    "fix": {
+      "command": "stylelint '**/*.css' --fix --cache --cache-location node_modules/.cache/stylelint"
+    }
+  }
+}

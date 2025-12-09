@@ -80,6 +80,10 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
+    "lint-css": {
+      "cache": true,
+      "inputs": ["default", "{workspaceRoot}/.stylelintrc.json", "{workspaceRoot}/.stylelintignore"]
+    },
     "e2e-ci--**/*": {
       "dependsOn": ["^build"]
     }
