@@ -92,7 +92,7 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
   return (
     <div
       className={cn(
-        'h-12 w-full px-0 lg:px-3 flex justify-between text-lg bg-background',
+        'h-11 w-full px-0 lg:px-3 flex justify-between text-lg bg-background',
         className,
       )}
     >

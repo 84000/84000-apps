@@ -47,7 +47,9 @@ export const LabeledElement = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <div className="passage pl-6">{children}</div>
+      <div className="passage pl-6 group-data-[position=sidebar]:pl-4">
+        {children}
+      </div>
     </div>
   );
 };

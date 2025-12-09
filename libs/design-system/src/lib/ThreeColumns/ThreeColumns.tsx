@@ -231,7 +231,7 @@ export const ThreeColumns = ({
           <ResizablePanel
             ref={leftPanelRef}
             className={cn(
-              'hidden md:block rounded border border-border/60 bg-surface',
+              'hidden md:block rounded border border-border/60 bg-background',
               !leftPanelOpen && 'border-none',
             )}
             collapsible
@@ -239,12 +239,7 @@ export const ThreeColumns = ({
             defaultSize={MinPanelSizes.COLLAPSED}
             minSize={MinPanelSizes.SIDE_MIN}
           >
-            <div
-              className="size-full"
-              style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
-            >
-              {leftPanelChildren}
-            </div>
+            {leftPanelChildren}
           </ResizablePanel>
           <ResizableHandle
             withHandle={leftPanelOpen}
@@ -254,7 +249,7 @@ export const ThreeColumns = ({
             )}
           />
           <ResizablePanel
-            className="hidden md:block rounded border bg-surface"
+            className="hidden md:block rounded border bg-background"
             style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
@@ -279,7 +274,7 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            <div className={BG_GRADIENT}>
+            <div className={cn(BG_GRADIENT)}>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
@@ -291,7 +286,7 @@ export const ThreeColumns = ({
           <ResizablePanel
             ref={rightPanelRef}
             className={cn(
-              'hidden md:block rounded border border-border/60 bg-surface',
+              'hidden md:block rounded border border-border/60 bg-background',
               !rightPanelOpen && 'border-none',
             )}
             collapsible
@@ -299,12 +294,7 @@ export const ThreeColumns = ({
             defaultSize={MinPanelSizes.COLLAPSED}
             minSize={MinPanelSizes.SIDE_MIN}
           >
-            <div
-              className="size-full"
-              style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
-            >
-              {rightPanelChildren}
-            </div>
+            {rightPanelChildren}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

@@ -6,15 +6,15 @@
 
 @layer components {
   .passage {
-    @apply font-serif leading-7 text-justify;
+    @apply font-serif font-light leading-6 text-sm text-justify;
 
     @variant position-sidebar {
-      @apply leading-5 text-sm;
+      @apply leading-5 text-xs;
     }
   }
 
   .labeled {
-    @apply font-sans font-semibold text-brick leading-7 text-sm;
+    @apply font-sans font-semibold text-accent-600 leading-7 text-xs;
   }
 
   .title-main,

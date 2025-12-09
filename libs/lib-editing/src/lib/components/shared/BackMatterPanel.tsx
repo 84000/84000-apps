@@ -41,7 +41,7 @@ export const BackMatterPanel = ({
       }}
       data-position="sidebar"
       defaultValue="endnotes"
-      className="w-full gap-0"
+      className="w-full gap-0 group"
     >
       <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList
@@ -60,41 +60,45 @@ export const BackMatterPanel = ({
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
           {abbreviations.length > 0 && (
-            <TabsTrigger value="abbreviations">Abbreviations</TabsTrigger>
+            <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
           )}
         </TabsList>
       </div>
-      <div className="px-12 max-w-readable w-full mx-auto ">
-        {endnotes.length > 0 && (
-          <TabsContent value="endnotes">
-            {renderTranslation({
-              content: endnotes,
-              className: 'block pe-8',
-              name: 'endnotes',
-              panel: 'right',
-            })}
-          </TabsContent>
-        )}
-        {glossary.length > 0 && (
-          <TabsContent value="glossary" className="pb-8">
-            <GlossaryTermList content={glossary} />
-          </TabsContent>
-        )}
-        {bibliography.length > 0 && (
-          <TabsContent value="bibliography" className="pb-8">
-            <BibliographyList content={bibliography} />
-          </TabsContent>
-        )}
-        {abbreviations.length > 0 && (
-          <TabsContent value="abbreviations">
-            {renderTranslation({
-              content: abbreviations,
-              className: 'block',
-              name: 'abbreviations',
-              panel: 'right',
-            })}
-          </TabsContent>
-        )}
+      <div className="px-2">
+        <div className="overflow-auto h-[calc(100vh-8.5rem)] rounded bg-surface">
+          <div className="rounded ps-10 pe-4 max-w-readable size-full mx-auto ">
+            {endnotes.length > 0 && (
+              <TabsContent value="endnotes">
+                {renderTranslation({
+                  content: endnotes,
+                  className: 'block',
+                  name: 'endnotes',
+                  panel: 'right',
+                })}
+              </TabsContent>
+            )}
+            {glossary.length > 0 && (
+              <TabsContent value="glossary" className="pb-8">
+                <GlossaryTermList content={glossary} />
+              </TabsContent>
+            )}
+            {bibliography.length > 0 && (
+              <TabsContent value="bibliography" className="pb-8">
+                <BibliographyList content={bibliography} />
+              </TabsContent>
+            )}
+            {abbreviations.length > 0 && (
+              <TabsContent value="abbreviations">
+                {renderTranslation({
+                  content: abbreviations,
+                  className: 'block',
+                  name: 'abbreviations',
+                  panel: 'right',
+                })}
+              </TabsContent>
+            )}
+          </div>
+        </div>
       </div>
     </Tabs>
   );
