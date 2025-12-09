@@ -11,26 +11,24 @@ type Story = StoryObj<typeof TitlesCard>;
 
 export const Primary: Story = {
   args: {
-    header: 'Discipline',
+    header: '༄༅།  །རབ་ཏུ་འབྱུང་བའི་གཞི།',
     main: 'The Chapter on Going Forth',
-    footer: 'Toh 1-1',
+    footer: 'Pravrajyāvastu',
+    toh: 'Toh 1-1',
+    section: 'Chapters on Monastic Discipline',
     canEdit: true,
-    hasMore: true,
     onEdit() {
       console.log('Edit clicked');
-    },
-    onMore() {
-      console.log('Card clicked');
     },
   },
   argTypes: {
     header: { control: 'text' },
     main: { control: 'text' },
     footer: { control: 'text' },
+    toh: { control: 'text' },
+    section: { control: 'text' },
     canEdit: { control: 'boolean' },
-    hasMore: { control: 'boolean' },
     onEdit: { control: false },
-    onMore: { control: false },
   },
 };
 

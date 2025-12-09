@@ -20,7 +20,6 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
         main={mainEnTitle}
         footer={imprint.toh}
         canEdit={false}
-        hasMore={false}
       />
       <div className="h-8" />
       <TitleDetails imprint={imprint} />

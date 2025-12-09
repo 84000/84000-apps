@@ -15,7 +15,6 @@ import {
 } from '../../Dialog/Dialog';
 import { useState } from 'react';
 import { TitleForm } from './TitleForm';
-import { LongTitles } from './LongTitles';
 
 export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
 
@@ -30,7 +29,6 @@ export const Titles = ({
   variant?: TitlesVariant;
   canEdit?: boolean;
 }) => {
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const titlesByType = titles.reduce(
@@ -112,17 +110,8 @@ export const Titles = ({
         main={main}
         footer={footer}
         canEdit={canEdit}
-        hasMore={false}
-        onMore={() => setIsMoreOpen(true)}
         onEdit={() => setIsEditOpen(true)}
       />
-      <Dialog open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <DialogContent className="max-w-4xl" showCloseButton={false}>
-          <DialogTitle className="hidden">All Titles</DialogTitle>
-          <DialogDescription className="hidden">All Titles</DialogDescription>
-          <LongTitles imprint={imprint} />
-        </DialogContent>
-      </Dialog>
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-4xl" showCloseButton={false}>
           <DialogTitle className="hidden">Edit Titles</DialogTitle>

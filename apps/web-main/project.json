@@ -4,6 +4,31 @@
   "sourceRoot": "apps/web-main",
   "projectType": "application",
   "tags": [],
-  "// targets": "to see all targets run: nx show project web-main --web",
-  "targets": {}
+  "// targets": "to see all targets run: nx show project web-reader --web",
+  "targets": {
+    "build": {
+      "options": {
+        "assets": [
+          "apps/web-reader/public",
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "public"
+          }
+        ]
+      }
+    },
+    "serve": {
+      "options": {
+        "assets": [
+          "apps/web-reader/public",
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "public"
+          }
+        ]
+      }
+    }
+  }
 }
