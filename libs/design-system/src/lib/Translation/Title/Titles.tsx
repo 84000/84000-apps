@@ -42,9 +42,14 @@ export const Titles = ({
     {} as Record<TitleType, TitlesData>,
   );
 
+  const mainTitles = titlesByType['mainTitle'] || [];
+
   let header = '';
   let main = '';
-  let footer = '';
+  const footer =
+    imprint?.mainTitles?.['Sa-Ltn'] ||
+    mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
+    '...';
 
   // TODO: support other variants once we have a good understanding of them
   // and the required data is available
@@ -55,20 +60,11 @@ export const Titles = ({
         const boMain =
           imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
-        const saMain =
-          imprint?.mainTitles?.['Sa-Ltn'] ||
-          mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
-          '...';
-        header = saMain;
-        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
       }
       break;
     case 'comparison':
       {
-        const mainTitles = titlesByType['mainTitle'] || [];
         const boMain =
           imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
@@ -76,29 +72,22 @@ export const Titles = ({
           imprint?.mainTitles?.en ||
           mainTitles.find((t) => t.language === 'en')?.title ||
           '...';
-        header = enMain;
-        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        main = enMain;
       }
       break;
     case 'english':
     default:
       {
-        const mainTitles = titlesByType['mainTitle'] || [];
         const boMain =
-          imprint?.section ||
+          imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
-        header = imprint?.section || `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
         main =
           imprint?.mainTitles?.en ||
           mainTitles.find((t) => t.language === 'en')?.title ||
           mainTitles[0]?.title ||
           '';
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
       }
       break;
   }
@@ -109,6 +98,8 @@ export const Titles = ({
         header={header}
         main={main}
         footer={footer}
+        toh={imprint?.toh}
+        section={imprint?.section}
         canEdit={canEdit}
         onEdit={() => setIsEditOpen(true)}
       />
