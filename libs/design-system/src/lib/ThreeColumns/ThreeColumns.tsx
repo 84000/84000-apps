@@ -24,6 +24,7 @@ import {
   SheetTitle,
 } from '../Sheet/Sheet';
 import { cn, useIsMobile } from '@lib-utils';
+import { VerticalEllipsis } from '../VerticalEllipsis/VerticalEllipsis';
 
 const BG_GRADIENT =
   "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";
@@ -230,23 +231,30 @@ export const ThreeColumns = ({
         <ResizablePanelGroup className={className} direction="horizontal">
           <ResizablePanel
             ref={leftPanelRef}
-            style={{ overflow: 'auto' }}
-            className="bg-sidebar hidden md:block bg-surface"
+            className="hidden md:block"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
             minSize={MinPanelSizes.SIDE_MIN}
           >
-            {leftPanelChildren}
+            <div className="flex size-full">
+              <div
+                className="bg-surface rounded grow border border-border/60"
+                style={{ overflow: 'auto' }}
+              >
+                {leftPanelChildren}
+              </div>
+              <VerticalEllipsis className="text-muted-foreground w-2 ps-0.25" />
+            </div>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel
-            className="hidden md:block"
+            className="hidden md:block rounded border"
             style={{ overflow: 'auto' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
-            <div className="bg-background sticky top-0 py-1.5 w-full flex justify-between z-10">
+            <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
               <Button
                 variant="link"
                 size="icon"
@@ -274,14 +282,21 @@ export const ThreeColumns = ({
           <ResizableHandle />
           <ResizablePanel
             ref={rightPanelRef}
-            style={{ overflow: 'auto' }}
-            className="hidden md:block bg-surface"
+            className="hidden md:block"
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
             minSize={MinPanelSizes.SIDE_MIN}
           >
-            {rightPanelChildren}
+            <div className="flex size-full">
+              <VerticalEllipsis className="text-muted-foreground w-2 pe-0.25" />
+              <div
+                className="bg-surface rounded grow border border-border/60"
+                style={{ overflow: 'auto' }}
+              >
+                {rightPanelChildren}
+              </div>
+            </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

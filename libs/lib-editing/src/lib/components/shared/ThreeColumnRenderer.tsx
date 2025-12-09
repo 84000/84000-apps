@@ -26,7 +26,6 @@ export const ThreeColumnRenderer = ({
         <TranslationHeader className="rounded-full shadow-lg" />
       </div>
       <ThreeColumns
-        className="rounded border border-navy-50 shadow-sm"
         leftPanelOpen={panels.left.open}
         rightPanelOpen={panels.right.open}
         onLeftPanelOpenChange={(open) => {

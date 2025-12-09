@@ -30,7 +30,7 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
       defaultValue="toc"
       className="w-full gap-0"
     >
-      <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-none bg-background overflow-x-auto text-center">
+      <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList
           className={cn(
             'w-fit px-6 inline-flex mx-auto rounded-none',
