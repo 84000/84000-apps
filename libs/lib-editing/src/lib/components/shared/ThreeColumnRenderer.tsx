@@ -18,7 +18,7 @@ export const ThreeColumnRenderer = ({
   return (
     <div
       className={cn(
-        'fixed flex flex-col size-full p-2.5',
+        'fixed flex flex-col size-full p-2',
         withHeader ? 'pb-20' : '',
       )}
     >
@@ -26,7 +26,6 @@ export const ThreeColumnRenderer = ({
         <TranslationHeader className="rounded-full shadow-lg" />
       </div>
       <ThreeColumns
-        className="rounded-lg border border-navy-50 shadow-sm"
         leftPanelOpen={panels.left.open}
         rightPanelOpen={panels.right.open}
         onLeftPanelOpenChange={(open) => {

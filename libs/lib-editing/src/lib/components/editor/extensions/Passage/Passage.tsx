@@ -64,7 +64,7 @@ export const Passage = (props: NodeViewProps) => {
       as="div"
       className={cn(
         'flex md:flex-row flex-col w-full md:gap-16 gap-2 scroll-mt-20',
-        isMobile && source && 'mb-8',
+        isMobile && 'mb-8',
         node.attrs.toh,
       )}
     >
@@ -96,7 +96,7 @@ export const Passage = (props: NodeViewProps) => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <NodeViewContent className="passage is-editable pl-6" />
+          <NodeViewContent className="passage is-editable pl-6 group-data-[position=sidebar]:pl-4" />
           {editor.isEditable && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               {dialogType === 'label' && (
@@ -110,8 +110,8 @@ export const Passage = (props: NodeViewProps) => {
       <div
         className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
       >
-        <LabeledElement label={node.attrs.label} className="mt-1">
-          <div className="leading-8 text-lg whitespace-normal">{source}</div>
+        <LabeledElement label={node.attrs.label} className="mt-0.5">
+          <div className="leading-7 text-lg whitespace-normal">{source}</div>
         </LabeledElement>
       </div>
     </NodeViewWrapper>

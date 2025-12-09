@@ -377,7 +377,6 @@
   --color-error-foreground: var(--error-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
-  --color-surface: var(--primary-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 }

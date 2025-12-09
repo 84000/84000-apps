@@ -80,7 +80,7 @@ function SheetContent({
             side === 'right' ? 'left-0' : 'right-0',
           )}
         >
-          <XIcon className="size-16 p-6" />
+          <XIcon className="size-16 px-6 pt-0 pb-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>

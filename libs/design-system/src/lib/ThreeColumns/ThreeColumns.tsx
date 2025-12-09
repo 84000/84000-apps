@@ -25,6 +25,9 @@ import {
 } from '../Sheet/Sheet';
 import { cn, useIsMobile } from '@lib-utils';
 
+const BG_GRADIENT =
+  "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";
+
 export enum MinPanelSizes {
   COLLAPSED = 0,
   SIDE_DEFAULT = 20,
@@ -158,10 +161,13 @@ export const ThreeColumns = ({
     <>
       {/* Mobile Layout */}
       <div
-        className={cn('flex size-full overflow-hidden md:hidden', className)}
+        className={cn(
+          'flex size-full overflow-hidden md:hidden rounded border bg-background',
+          className,
+        )}
       >
         <div style={{ overflow: 'auto' }}>
-          <div className="bg-background sticky top-0 py-3 w-full flex justify-between z-10">
+          <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
@@ -181,7 +187,7 @@ export const ThreeColumns = ({
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          <div className="bg-surface">
+          <div className={BG_GRADIENT}>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -198,9 +204,7 @@ export const ThreeColumns = ({
               <SheetTitle>Left Panel</SheetTitle>
               <SheetDescription>Navigation and content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto bg-surface">
-              {leftPanelChildren}
-            </div>
+            {leftPanelChildren}
           </SheetContent>
         </Sheet>
         <Sheet
@@ -215,9 +219,7 @@ export const ThreeColumns = ({
               <SheetTitle>Right Panel</SheetTitle>
               <SheetDescription>Additional content panel</SheetDescription>
             </SheetHeader>
-            <div className="h-full overflow-auto bg-surface">
-              {rightPanelChildren}
-            </div>
+            {rightPanelChildren}
           </SheetContent>
         </Sheet>
       </div>
@@ -227,8 +229,10 @@ export const ThreeColumns = ({
         <ResizablePanelGroup className={className} direction="horizontal">
           <ResizablePanel
             ref={leftPanelRef}
-            style={{ overflow: 'auto' }}
-            className="bg-sidebar hidden md:block bg-surface"
+            className={cn(
+              'hidden md:block rounded border border-border/60 bg-background',
+              !leftPanelOpen && 'border-none',
+            )}
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
@@ -236,14 +240,20 @@ export const ThreeColumns = ({
           >
             {leftPanelChildren}
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle
+            withHandle={leftPanelOpen}
+            className={cn(
+              'text-muted-foreground transparent',
+              leftPanelOpen && 'w-2',
+            )}
+          />
           <ResizablePanel
-            className="hidden md:block"
-            style={{ overflow: 'auto' }}
+            className="hidden md:block rounded border bg-background"
+            style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
           >
-            <div className="bg-background sticky top-0 py-1.5 w-full flex justify-between z-10">
+            <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
               <Button
                 variant="link"
                 size="icon"
@@ -263,16 +273,21 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            <div className="bg-surface">
+            <div className={cn(BG_GRADIENT)}>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle
+            withHandle={rightPanelOpen}
+            className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
+          />
           <ResizablePanel
             ref={rightPanelRef}
-            style={{ overflow: 'auto' }}
-            className="hidden md:block bg-surface"
+            className={cn(
+              'hidden md:block rounded border border-border/60 bg-background',
+              !rightPanelOpen && 'border-none',
+            )}
             collapsible
             collapsedSize={MinPanelSizes.COLLAPSED}
             defaultSize={MinPanelSizes.COLLAPSED}
