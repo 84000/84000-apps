@@ -5,6 +5,7 @@ import { GripVerticalIcon } from 'lucide-react';
 import * as ResizablePrimitive from 'react-resizable-panels';
 
 import { cn } from '@lib-utils';
+import { VerticalEllipsis } from '../VerticalEllipsis/VerticalEllipsis';
 
 export function ResizablePanelGroup({
   className,
@@ -45,8 +46,8 @@ export function ResizableHandle({
       {...props}
     >
       {withHandle && (
-        <div className="bg-canvas z-10 flex h-full w-3 items-center justify-center rounded-xs">
-          <GripVerticalIcon className="size-3 text-muted-foreground" />
+        <div className="flex h-full items-center justify-center">
+          <VerticalEllipsis className="mt-16" />
         </div>
       )}
     </ResizablePrimitive.PanelResizeHandle>
