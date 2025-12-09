@@ -96,7 +96,7 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
         className,
       )}
     >
-      <div className="flex gap-2 min-w-0">
+      <div className="flex gap-5 min-w-0">
         <Button
           variant="ghost"
           className="text-accent my-auto text-base px-3 cursor-pointer hover:bg-background hover:text-accent/80 [&_svg]:size-5 [&_svg]:stroke-2"

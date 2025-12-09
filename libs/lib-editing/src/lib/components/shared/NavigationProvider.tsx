@@ -56,7 +56,7 @@ interface NavigationState {
 }
 
 const DEFAULT_PANELS: PanelsState = {
-  left: { open: false, tab: 'toc' },
+  left: { open: true, tab: 'toc' },
   right: { open: false, tab: 'endnotes' },
   main: { open: true, tab: 'translation' },
 };
@@ -246,14 +246,14 @@ export const NavigationProvider = ({
 
         // Update URL to reflect the actual panel states (including closed ones on mobile)
         const params = new URLSearchParams(window.location.search);
-        
+
         // Update all panels in the URL to match actual state
         Object.entries(newPanels).forEach(([panelName, panelState]) => {
           const openness = panelState.open ? 'open' : 'closed';
           const panelHash = panelName === name ? hash || '' : '';
           params.set(
             panelName,
-            `${openness}${panelState.tab ? `:${panelState.tab}` : ''}:${panelHash}`
+            `${openness}${panelState.tab ? `:${panelState.tab}` : ''}:${panelHash}`,
           );
         });
 

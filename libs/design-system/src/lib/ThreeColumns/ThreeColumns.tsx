@@ -25,6 +25,9 @@ import {
 } from '../Sheet/Sheet';
 import { cn, useIsMobile } from '@lib-utils';
 
+const BG_GRADIENT =
+  "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";
+
 export enum MinPanelSizes {
   COLLAPSED = 0,
   SIDE_DEFAULT = 20,
@@ -181,7 +184,7 @@ export const ThreeColumns = ({
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          <div className="bg-[linear-gradient(180deg,#fffc,#ffffffd1_27%,#fdfcfae6_48%,var(--color-surface)),url('https://cdn.prod.website-files.com/68c3085363e06919d9ef0a53/69268e58690b63ef40362936_landscape-with-stupas-ochre-for-reader.jpg">
+          <div className={BG_GRADIENT}>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -263,7 +266,7 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            <div className="bg-surface bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat bg-contain bg-[position:center_-30rem] bg-[length:100%_53rem]">
+            <div className={BG_GRADIENT}>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
