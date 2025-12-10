@@ -63,11 +63,20 @@ export const Passage = (props: NodeViewProps) => {
       id={node.attrs.uuid}
       as="div"
       className={cn(
-        'flex md:flex-row flex-col w-full md:gap-16 gap-2 scroll-mt-20',
+        'flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20',
         isMobile && 'mb-8',
         node.attrs.toh,
       )}
     >
+      <div
+        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
+      >
+        <LabeledElement label={node.attrs.label} className="-mt-1">
+          <div className="leading-7 font-tibetan text-base whitespace-normal mt-2 pb-2">
+            {source}
+          </div>
+        </LabeledElement>
+      </div>
       <div className="w-full">
         <div
           className={cn(
@@ -106,13 +115,6 @@ export const Passage = (props: NodeViewProps) => {
             </Dialog>
           )}
         </div>
-      </div>
-      <div
-        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
-      >
-        <LabeledElement label={node.attrs.label} className="mt-0.5">
-          <div className="leading-7 text-lg whitespace-normal">{source}</div>
-        </LabeledElement>
       </div>
     </NodeViewWrapper>
   );
