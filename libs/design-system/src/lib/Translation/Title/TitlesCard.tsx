@@ -41,7 +41,7 @@ export const TitlesCard = ({
         {header && (
           <div
             className={cn(
-              'font-tibetan text-navy-500',
+              'font-tibetan text-navy-500 px-2',
               main ? 'text-2xl' : 'text-3xl',
             )}
           >
@@ -49,11 +49,11 @@ export const TitlesCard = ({
           </div>
         )}
         {main && (
-          <div className="font-serif text-3xl text-navy-500 title-main">
+          <div className="font-serif text-3xl text-navy-500 title-main px-2">
             {main}
           </div>
         )}
-        <div className="flex justify-between gap-2">
+        <div className="flex justify-between gap-2 px-2">
           {canEdit && <div className="w-1/8" />}
           {footer && (
             <span className="flex-grow font-serif font-light text-2xl text-muted-foreground italic title-sub">

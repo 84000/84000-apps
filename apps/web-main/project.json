@@ -6,14 +6,24 @@
   "tags": [],
   "// targets": "to see all targets run: nx show project web-reader --web",
   "targets": {
-    "build": {
+    "dev": {
       "options": {
         "assets": [
-          "apps/web-reader/public",
           {
             "glob": "**/*",
             "input": "libs/design-system/src/lib/assets",
-            "output": "public"
+            "output": "/"
+          }
+        ]
+      }
+    },
+    "build": {
+      "options": {
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "/"
           }
         ]
       }
@@ -21,11 +31,10 @@
     "serve": {
       "options": {
         "assets": [
-          "apps/web-reader/public",
           {
             "glob": "**/*",
             "input": "libs/design-system/src/lib/assets",
-            "output": "public"
+            "output": "/"
           }
         ]
       }

@@ -69,7 +69,7 @@ export const BodyPanel = ({
       defaultValue="translation"
       className="px-12 w-full"
     >
-      <div className="sticky top-0.75 -mt-25 z-10 w-full overflow-x-auto text-center">
+      <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center">
         <TabsList className="w-fit inline-flex">
           <TabsTrigger value="front">Front</TabsTrigger>
           <TabsTrigger value="translation">Translation</TabsTrigger>
