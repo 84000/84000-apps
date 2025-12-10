@@ -16,7 +16,7 @@ export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
       ?.map((t) => t.trim())
       .filter((t) => !!t) || [];
   return (
-    <div className="pt-8 pb-8 mx-auto max-2-2xl items-center text-center text-sm font-serif">
+    <div className="pb-4 mx-auto max-2-2xl items-center text-center text-xs font-serif text-foreground/75">
       {longTitles?.bo && <LongTitle title={longTitles.bo} language="bo" />}
       {longBoLtnTitle && <LongTitle title={longBoLtnTitle} language="Bo-Ltn" />}
       {longTitles?.en && <LongTitle title={longTitles.en} language="en" />}

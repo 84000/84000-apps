@@ -9,8 +9,6 @@ export const LongTitle = ({
   language: TranslationLanguage;
 }) => {
   const textStyle = ['Sa-Ltn', 'Bo-Ltn'].includes(language) ? 'italic' : '';
-  const textSize = ['bo'].includes(language)
-    ? 'text-lg font-semibold'
-    : 'text-sm';
+  const textSize = ['bo'].includes(language) ? 'font-tibetan' : '';
   return <div className={cn('py-1.5', textStyle, textSize)}>{title}</div>;
 };

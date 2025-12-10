@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import Svg from '../svg/vajrasattva.svg';
 
