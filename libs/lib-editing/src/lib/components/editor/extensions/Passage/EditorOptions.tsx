@@ -1,3 +1,5 @@
+'use client';
+
 import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
 import { BracesIcon, PencilIcon } from 'lucide-react';
 

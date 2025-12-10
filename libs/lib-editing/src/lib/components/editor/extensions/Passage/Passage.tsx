@@ -52,7 +52,7 @@ export const Passage = (props: NodeViewProps) => {
   }, [isCompare, node, toh]);
 
   const className =
-    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
+    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
   const borderClassName =
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
@@ -68,15 +68,6 @@ export const Passage = (props: NodeViewProps) => {
         node.attrs.toh,
       )}
     >
-      <div
-        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
-      >
-        <LabeledElement label={node.attrs.label} className="-mt-1">
-          <div className="leading-7 font-tibetan text-base whitespace-normal mt-2 pb-2">
-            {source}
-          </div>
-        </LabeledElement>
-      </div>
       <div className="w-full">
         <div
           className={cn(
@@ -115,6 +106,15 @@ export const Passage = (props: NodeViewProps) => {
             </Dialog>
           )}
         </div>
+      </div>
+      <div
+        className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
+      >
+        <LabeledElement label={node.attrs.label} className="-mt-1">
+          <div className="leading-7 font-tibetan text-base whitespace-normal mt-1.5 pb-2">
+            {source}
+          </div>
+        </LabeledElement>
       </div>
     </NodeViewWrapper>
   );

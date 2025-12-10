@@ -8,7 +8,13 @@ export const LongTitle = ({
   title: string;
   language: TranslationLanguage;
 }) => {
-  const textStyle = ['Sa-Ltn', 'Bo-Ltn'].includes(language) ? 'italic' : '';
-  const textSize = ['bo'].includes(language) ? 'font-tibetan' : '';
-  return <div className={cn('py-1.5', textStyle, textSize)}>{title}</div>;
+  const LANGAGE_STYLES: { [key in TranslationLanguage]?: string } = {
+    'Sa-Ltn': 'italic long-term',
+    'Bo-Ltn': 'italic',
+    bo: 'font-tibetan',
+  };
+
+  const textStyle = LANGAGE_STYLES[language] || '';
+
+  return <div className={cn('py-1.5', textStyle)}>{title}</div>;
 };

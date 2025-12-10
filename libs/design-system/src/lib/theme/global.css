@@ -210,6 +210,8 @@
   --radius: 0.5rem;
   --text-tiny: 0.625rem;
 
+  --breakpoint-2xs: 10rem;
+  --breakpoint-xs: 22rem;
   --breakpoint-3xl: 112rem;
   --breakpoint-4xl: 128rem;
 

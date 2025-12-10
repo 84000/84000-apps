@@ -25,7 +25,7 @@ export const TitlesCard = ({
   const RADIAL = 'bg-radial-[at_50%_50%] from-ochre-25 from-35% to-navy-25';
 
   return (
-    <div className="p-1.5 max-w-6xl w-full mx-auto border rounded-lg bg-background flex gap-1.5">
+    <div className="p-1.5 max-w-7xl w-full mx-auto border rounded-lg bg-background flex gap-1.5">
       {(toh || section) && (
         <div
           className={cn(
@@ -39,27 +39,27 @@ export const TitlesCard = ({
           <span className="uppercase text-xs text-muted-foreground">{toh}</span>
         </div>
       )}
-      <div className="grow flex flex-col justify-center gap-3 py-4 px-2 border md:rounded-e-lg md:rounded-s-none lg:rounded-none rounded-lg text-center">
+      <div className="grow min-w-0 flex flex-col justify-center gap-3 py-4 px-2 border md:rounded-e-lg md:rounded-s-none lg:rounded-none rounded-lg text-center">
         {header && (
           <div
             className={cn(
               'font-tibetan text-navy-500 px-2',
               main ? 'text-2xl' : 'text-3xl',
-              'leading-relaxed',
+              'leading-relaxed break-all xs:break-normal',
             )}
           >
             {header}
           </div>
         )}
         {main && (
-          <div className="font-serif text-3xl text-navy-500 title-main px-2">
+          <div className="font-serif text-3xl text-navy-500 title-main px-2 break-all xs:break-normal">
             {main}
           </div>
         )}
         <div className="flex justify-between gap-2 px-2">
           {canEdit && <div className="w-1/8" />}
           {footer && (
-            <span className="flex-grow font-serif font-light text-2xl text-muted-foreground italic title-sub">
+            <span className="flex-grow font-serif font-light text-2xl text-muted-foreground italic title-sub long-term">
               {footer}
             </span>
           )}
