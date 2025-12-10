@@ -12,7 +12,7 @@ export const Imprint = ({ imprint }: { imprint?: ImprintData }) => {
   return (
     <div id="imprint">
       <H2 className="mx-auto text-center">Imprint</H2>
-      <div className="flex flex-col mt-4 mx-auto max-w-xl gap-5 text-center text-sm">
+      <div className="flex flex-col mt-4 mx-auto max-w-xl gap-5 text-center text-xs text-foreground/75">
         {publishYear && <p>First published {publishYear}</p>}
         {version && <p>Current version v {version}</p>}
         {publisherStatement && <p>{publisherStatement}</p>}

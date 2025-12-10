@@ -29,8 +29,10 @@ export const GlossaryInstanceBody = ({
           <Li className="italic">{instance.names.wylie}</Li>
         )}
         {instance.names.tibetan && (
-          <Li>
-            <span className="text-lg">{instance.names.tibetan}</span>
+          <Li className="pt-1">
+            <span className="font-tibetan text-base">
+              {instance.names.tibetan}
+            </span>
           </Li>
         )}
         {instance.names.sanskrit && (

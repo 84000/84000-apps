@@ -99,6 +99,10 @@
     @apply italic;
   }
 
+  [lang='bo'] {
+    @apply font-tibetan text-base;
+  }
+
   emph,
   distinct,
   .text-sa {

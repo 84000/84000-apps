@@ -48,13 +48,13 @@ export const SourceReader = () => {
   }, [toh, uuid]);
 
   return (
-    <div className="pt-12 flex flex-col gap-8 mx-auto max-w-5xl 2xl:max-w-380">
+    <div className="pt-12 flex flex-col gap-5 mx-auto max-w-5xl 2xl:max-w-380">
       {folios.map((folio, index) => (
         <LabeledElement
           key={index}
           label={`f.${folio.folio}.${folio.side}\nvol.${folio.volume}`}
         >
-          <div className="-mt-1 leading-8 text-lg 2xl:whitespace-pre-wrap whitespace-normal">
+          <div className="leading-7 font-tibetan text-base 2xl:whitespace-pre-wrap whitespace-normal">
             {folio.content}
           </div>
         </LabeledElement>
