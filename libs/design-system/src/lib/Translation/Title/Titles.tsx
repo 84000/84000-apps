@@ -15,7 +15,6 @@ import {
 } from '../../Dialog/Dialog';
 import { useState } from 'react';
 import { TitleForm } from './TitleForm';
-import { LongTitles } from './LongTitles';
 
 export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
 
@@ -30,7 +29,6 @@ export const Titles = ({
   variant?: TitlesVariant;
   canEdit?: boolean;
 }) => {
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const titlesByType = titles.reduce(
@@ -44,9 +42,14 @@ export const Titles = ({
     {} as Record<TitleType, TitlesData>,
   );
 
+  const mainTitles = titlesByType['mainTitle'] || [];
+
   let header = '';
   let main = '';
-  let footer = '';
+  const footer =
+    imprint?.mainTitles?.['Sa-Ltn'] ||
+    mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
+    '...';
 
   // TODO: support other variants once we have a good understanding of them
   // and the required data is available
@@ -57,20 +60,11 @@ export const Titles = ({
         const boMain =
           imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
-        const saMain =
-          imprint?.mainTitles?.['Sa-Ltn'] ||
-          mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
-          '...';
-        header = saMain;
-        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
       }
       break;
     case 'comparison':
       {
-        const mainTitles = titlesByType['mainTitle'] || [];
         const boMain =
           imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
@@ -78,29 +72,22 @@ export const Titles = ({
           imprint?.mainTitles?.en ||
           mainTitles.find((t) => t.language === 'en')?.title ||
           '...';
-        header = enMain;
-        main = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        main = enMain;
       }
       break;
     case 'english':
     default:
       {
-        const mainTitles = titlesByType['mainTitle'] || [];
         const boMain =
-          imprint?.section ||
+          imprint?.mainTitles?.bo ||
           mainTitles.find((t) => t.language === 'bo')?.title;
-        header = imprint?.section || `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
         main =
           imprint?.mainTitles?.en ||
           mainTitles.find((t) => t.language === 'en')?.title ||
           mainTitles[0]?.title ||
           '';
-        footer = imprint?.toh
-          ? imprint.toh
-          : titlesByType['toh']?.[0]?.title || '';
       }
       break;
   }
@@ -111,18 +98,11 @@ export const Titles = ({
         header={header}
         main={main}
         footer={footer}
+        toh={imprint?.toh}
+        section={imprint?.section}
         canEdit={canEdit}
-        hasMore={false}
-        onMore={() => setIsMoreOpen(true)}
         onEdit={() => setIsEditOpen(true)}
       />
-      <Dialog open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <DialogContent className="max-w-4xl" showCloseButton={false}>
-          <DialogTitle className="hidden">All Titles</DialogTitle>
-          <DialogDescription className="hidden">All Titles</DialogDescription>
-          <LongTitles imprint={imprint} />
-        </DialogContent>
-      </Dialog>
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-4xl" showCloseButton={false}>
           <DialogTitle className="hidden">Edit Titles</DialogTitle>

@@ -18,9 +18,24 @@
   }
 
   .title-main,
-  .section-title,
   .body-title-main,
   .body-title-honorific {
+    font-variation-settings:
+      'wdth' 90.6,
+      'opsz' 144,
+      'GRAD' -50,
+      'wght' 300;
+  }
+
+  .title-sub {
+    font-variation-settings:
+      'wght' 300,
+      'wdth' 100,
+      'opsz' 144,
+      'GRAD' -50;
+  }
+
+  .section-title {
     font-variation-settings:
       'wdth' 120,
       'opsz' 144,

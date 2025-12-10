@@ -187,7 +187,7 @@ export const ThreeColumns = ({
               <span className="sr-only">Toggle Right Panel</span>
             </Button>
           </div>
-          <div className={BG_GRADIENT}>
+          <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -273,7 +273,7 @@ export const ThreeColumns = ({
                 <span className="sr-only">Toggle Right Panel</span>
               </Button>
             </div>
-            <div className={cn(BG_GRADIENT)}>
+            <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>

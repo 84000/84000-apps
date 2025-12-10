@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Roboto+Serif:ital,opsz,wght@0,8..144,100..900;1,8..144,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wdth,wght,YTLC@0,6..12,75..125,200..1000,440..540;1,6..12,75..125,200..1000,440..540&family=Roboto+Serif:ital,opsz,wdth,wght,GRAD@0,8..144,50..150,100..900,-50..100;1,8..144,50..150,100..900,-50..100&display=swap');
+@import url('/fonts/MonlamUniOuChan2.ttf');
+
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './editor.css';
@@ -187,6 +189,14 @@
     --error-foreground: var(--destructive-foreground);
   }
 
+  @font-face {
+    font-family: 'Monlam OuChan 2';
+    src: url('/fonts/MonlamUniOuChan2.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -211,6 +221,8 @@
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-serif:
     'Roboto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-tibetan:
+    'Monlam OuChan 2', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
 
   --color-white: var(--white);
   --color-black: var(--black);
