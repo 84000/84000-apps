@@ -78,17 +78,11 @@ export const Titles = ({
       break;
     case 'english':
     default:
-      {
-        const boMain =
-          imprint?.mainTitles?.bo ||
-          mainTitles.find((t) => t.language === 'bo')?.title;
-        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        main =
-          imprint?.mainTitles?.en ||
-          mainTitles.find((t) => t.language === 'en')?.title ||
-          mainTitles[0]?.title ||
-          '';
-      }
+      main =
+        imprint?.mainTitles?.en ||
+        mainTitles.find((t) => t.language === 'en')?.title ||
+        mainTitles[0]?.title ||
+        '';
       break;
   }
 

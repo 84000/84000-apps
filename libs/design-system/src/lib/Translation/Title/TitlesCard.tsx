@@ -1,3 +1,5 @@
+'use client';
+
 import { PencilIcon } from 'lucide-react';
 import { Button } from '../../Button/Button';
 import { cn } from '@lib-utils';
@@ -43,6 +45,7 @@ export const TitlesCard = ({
             className={cn(
               'font-tibetan text-navy-500 px-2',
               main ? 'text-2xl' : 'text-3xl',
+              'leading-relaxed',
             )}
           >
             {header}
