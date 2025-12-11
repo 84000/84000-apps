@@ -168,8 +168,6 @@ export const getTranslationsMetadata = async ({
 }: {
   client: DataClient;
 }) => {
-  // NOTE: currently we only fetch works "published" to translation_json, but
-  // that may not be the right choice in the future.
   const { data } = await client.from('works').select(
     `
     uuid,
