@@ -10,11 +10,13 @@ export const SearchResultTabs = ({ results }: { results: SearchResults }) => {
             <TabsTrigger
               key={tab}
               value={tab}
-              className="h-full border border-border rounded-xl flex-grow data-[state=inactive]:bg-muted data-[state=active]:border-slate-300 data-[state=active]:border-3 border-2"
+              className="h-full border border-border rounded-xl flex-grow data-[state=inactive]:bg-muted data-[state=active]:border-border data-[state=active]:border-3 border-2"
             >
               <div className="flex flex-col gap-1 items-center">
-                <span className="capitalize text-navy font-bold">{tab}</span>
-                <span className="text-ochre font-bold">
+                <span className="capitalize text-secondary font-bold">
+                  {tab}
+                </span>
+                <span className="text-primary font-bold">
                   {results[tab].length} matches
                 </span>
               </div>
