@@ -121,8 +121,9 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
 };
 
 enum BlockPriority {
-  OuterBlock = 1,
-  Attribute = 2,
+  OuterBlock = 0,
+  Attribute = 1,
+  ParentBlock = 2,
   Block = 3,
   Inline = 4,
   Mark = 5,
@@ -146,9 +147,9 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     internalLink: BlockPriority.Mark,
     leadingSpace: BlockPriority.Attribute,
     line: BlockPriority.Block,
-    lineGroup: BlockPriority.OuterBlock,
+    lineGroup: BlockPriority.ParentBlock,
     link: BlockPriority.Mark,
-    list: BlockPriority.OuterBlock,
+    list: BlockPriority.ParentBlock,
     listItem: BlockPriority.Block,
     mantra: BlockPriority.Mark,
     paragraph: BlockPriority.OuterBlock,
@@ -158,8 +159,8 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     span: BlockPriority.Mark,
     table: BlockPriority.OuterBlock,
     tableBodyData: BlockPriority.Block,
-    tableBodyHeader: BlockPriority.OuterBlock,
-    tableBodyRow: BlockPriority.OuterBlock,
+    tableBodyHeader: BlockPriority.ParentBlock,
+    tableBodyRow: BlockPriority.ParentBlock,
     trailer: BlockPriority.OuterBlock,
     unknown: BlockPriority.Unknown,
   };
