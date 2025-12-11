@@ -138,7 +138,9 @@ export const SearchButton = ({
                   )}
                 </Tabs>
               ) : (
-                <div className="mt-4 text-secondary">No results found.</div>
+                <div className="mt-4 text-secondary-foreground">
+                  No results found.
+                </div>
               )}
             </>
           )}
