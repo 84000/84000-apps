@@ -47,5 +47,6 @@ Thumbs.db
 .next
 .vercel
 out
+next-env.d.ts
 
 storybook-static
