@@ -6,9 +6,10 @@ const DOT = `·` as const;
 export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
   const { mainTitles, longTitles, toh } = imprint;
 
-  const mainBoLtnTitle = mainTitles?.['Bo-Ltn'] || '';
-
-  const longBoLtnTitle = longTitles?.['Bo-Ltn'] || mainBoLtnTitle;
+  const longBoTitle = longTitles?.bo || mainTitles?.bo;
+  const longBoLtnTitle = longTitles?.['Bo-Ltn'] || mainTitles?.['Bo-Ltn'];
+  const longEnTitle = longTitles?.en || mainTitles?.en;
+  const longSaLtnTitle = longTitles?.['Sa-Ltn'] || mainTitles?.['Sa-Ltn'];
 
   const translators =
     imprint?.tibetanTranslators
@@ -17,12 +18,10 @@ export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
       .filter((t) => !!t) || [];
   return (
     <div className="pb-4 mx-auto max-2-2xl items-center text-center text-xs font-serif text-foreground/75">
-      {longTitles?.bo && <LongTitle title={longTitles.bo} language="bo" />}
+      {longBoTitle && <LongTitle title={longBoTitle} language="bo" />}
       {longBoLtnTitle && <LongTitle title={longBoLtnTitle} language="Bo-Ltn" />}
-      {longTitles?.en && <LongTitle title={longTitles.en} language="en" />}
-      {longTitles?.['Sa-Ltn'] && (
-        <LongTitle title={longTitles['Sa-Ltn']} language="Sa-Ltn" />
-      )}
+      {longEnTitle && <LongTitle title={longEnTitle} language="en" />}
+      {longSaLtnTitle && <LongTitle title={longSaLtnTitle} language="Sa-Ltn" />}
       {toh && <div className="pt-8">{`${DOT} ${toh} ${DOT}`}</div>}
       {imprint.sourceDescription && <div>{imprint.sourceDescription}</div>}
       {translators.length > 0 && (
