@@ -17,6 +17,7 @@ import { cn, parseToh } from '@lib-utils';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { PanelName, TabName } from './types';
+import { BookOpenIcon, HashIcon, LibraryBigIcon } from 'lucide-react';
 
 const TAB_FOR_SECTION: Record<string, TabName> = {
   abbreviations: 'abbreviations',
@@ -55,8 +56,8 @@ const PANEL_FOR_SECTION: Record<string, PanelName> = {
 export const TableOfContentsSection = ({
   node,
   className,
-  panel,
   depth = 0,
+  panel,
 }: {
   node: TocEntry;
   className?: string;
@@ -66,8 +67,7 @@ export const TableOfContentsSection = ({
   const { updatePanel } = useNavigation();
 
   const baseStyle =
-    'w-full py-2 font-normal leading-6 text-sm hover:text-foreground/60 hover:no-underline hover:cursor-pointer';
-  const depthClass = `pl-${depth * 2}`;
+    'w-full py-0.75 font-light leading-5 text-sm hover:text-foreground/40 hover:no-underline hover:cursor-pointer';
 
   const onClick = useCallback(
     (entry: TocEntry) => {
@@ -89,8 +89,11 @@ export const TableOfContentsSection = ({
   }
 
   return (
-    <Accordion type="multiple" className={depthClass}>
+    <Accordion type="multiple" className={cn(depth && 'pl-2.5')}>
       {node.children.map((child) => {
+        // 'The Translation' is always bold
+        const maybeBold =
+          child.content === 'The Translation' ? 'font-bold' : '';
         return child.children?.length ? (
           <AccordionItem
             key={child.uuid}
@@ -98,17 +101,23 @@ export const TableOfContentsSection = ({
             className="border-b-0"
           >
             <AccordionTrigger className={cn(baseStyle, className)}>
-              <span className="line-clamp-2" onClick={() => onClick(child)}>
+              <span
+                className={cn('line-clamp-2', maybeBold)}
+                onClick={() => onClick(child)}
+              >
                 {child.content}
               </span>
             </AccordionTrigger>
-            <AccordionContent className={cn(depthClass, 'py-0')}>
+            <AccordionContent className="border-l border-dotted py-0">
               <TableOfContentsSection node={child} depth={depth + 1} />
             </AccordionContent>
           </AccordionItem>
         ) : (
           <div key={child.uuid} className={baseStyle}>
-            <span className="line-clamp-2" onClick={() => onClick(child)}>
+            <span
+              className={cn('line-clamp-2', maybeBold)}
+              onClick={() => onClick(child)}
+            >
               {child.content}
             </span>
           </div>
@@ -129,7 +138,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     setLocalToh(currentToh);
   }, [toh, work.toh, setToh]);
 
-  const baseStyle = 'w-full py-2 font-normal leading-6 text-sm text-primary';
+  const baseStyle = 'w-full py-2 leading-6 text-sm font-light text-foreground';
   const frontMatter: TocEntry = {
     uuid: 'front-matter',
     content: 'Front Matter',
@@ -197,43 +206,56 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
   };
   return (
     <div>
-      <div className={cn(baseStyle, 'font-light text-navy-200 mt-6')}>
-        {imprint?.section || work.section}
-      </div>
-      <div className={cn(baseStyle, 'font-bold text-navy-500')}>
-        {work.title}
-      </div>
-      {work.toh.length > 1 ? (
-        <Select
-          value={localToh}
-          onValueChange={(value) => {
-            setToh(value as TohokuCatalogEntry);
-          }}
-        >
-          <SelectTrigger
-            className={cn(
-              baseStyle,
-              'p-0 font-semibold bg-transparent border-none',
-            )}
-          >
-            <SelectValue placeholder="Select TOH" />
-          </SelectTrigger>
-          <SelectContent>
-            {work.toh.map((tohEntry) => {
-              const parsedToh = parseToh(tohEntry);
-              return (
-                <SelectItem key={tohEntry} value={tohEntry}>
-                  {parsedToh}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      ) : (
-        <div className={cn(baseStyle, 'font-semibold pt-3 text-ochre-500')}>
-          {parseToh(localToh || '')}
+      <div className={cn(baseStyle, 'flex gap-2 mt-6')}>
+        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+          <LibraryBigIcon />
         </div>
-      )}
+        <span className="my-auto font-light">
+          {imprint?.section || work.section}
+        </span>
+      </div>
+      <div className={cn(baseStyle, 'flex gap-2')}>
+        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+          <BookOpenIcon />
+        </div>
+        <span className="my-auto font-semibold">{work.title}</span>
+      </div>
+      <div className="flex gap-2">
+        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+          <HashIcon />
+        </div>
+        {work.toh.length > 1 ? (
+          <Select
+            value={localToh}
+            onValueChange={(value) => {
+              setToh(value as TohokuCatalogEntry);
+            }}
+          >
+            <SelectTrigger
+              className={cn(
+                baseStyle,
+                'p-0 font-light bg-transparent border-none',
+              )}
+            >
+              <SelectValue placeholder="Select TOH" />
+            </SelectTrigger>
+            <SelectContent>
+              {work.toh.map((tohEntry) => {
+                const parsedToh = parseToh(tohEntry);
+                return (
+                  <SelectItem key={tohEntry} value={tohEntry}>
+                    {parsedToh}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className={cn(baseStyle, 'font-light')}>
+            {parseToh(localToh || '')}
+          </div>
+        )}
+      </div>
       <Separator className="my-4" />
       <TableOfContentsSection node={frontMatter} panel="left" />
       <Separator className="my-4" />

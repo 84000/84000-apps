@@ -90,15 +90,17 @@ export const SearchResultCard = ({
   return (
     <div
       onClick={onClick}
-      className="flex gap-4 p-6 font-serif text-sm text-primary rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-slate-300 transition-colors"
+      className="flex gap-4 p-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-border transition-colors"
     >
       <div className="w-25 flex-shrink-0 flex flex-col gap-2 text-right">
-        <span className="text-navy capitalize">{passage.type}</span>
+        <span className="text-secondary capitalize">{passage.type}</span>
         {passage.section && (
-          <span className="text-primary/50 capitalize">{passage.section}</span>
+          <span className="text-foreground/50 capitalize">
+            {passage.section.replace('Header', '')}
+          </span>
         )}
         <div className="grow" />
-        {passage.label && <span className="text-brick">{passage.label}</span>}
+        {passage.label && <span className="text-accent">{passage.label}</span>}
       </div>
       <Separator orientation="vertical" />
       {renderInner(match)}

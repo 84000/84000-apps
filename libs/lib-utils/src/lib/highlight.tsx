@@ -8,7 +8,10 @@ export const highlightText = (text: string, query: string) => {
     const isMatch = part.toLowerCase() === query.toLowerCase();
 
     return isMatch ? (
-      <mark key={index} className="bg-transparent text-emerald font-semibold">
+      <mark
+        key={index}
+        className="bg-primary-200 text-foreground font-semibold"
+      >
         {part}
       </mark>
     ) : (

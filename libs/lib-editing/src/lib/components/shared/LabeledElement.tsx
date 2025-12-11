@@ -32,7 +32,7 @@ export const LabeledElement = ({
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            'absolute labeled -left-16 w-16 text-end hover:cursor-pointer',
+            'absolute labeled -left-16 w-16 text-end hover:cursor-pointer whitespace-pre-line leading-4',
             className,
           )}
         >

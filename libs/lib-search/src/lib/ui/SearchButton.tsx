@@ -88,10 +88,10 @@ export const SearchButton = ({
           Search this translation
         </DialogDescription>
         <div className="flex flex-col justify-start gap-2 h-[calc(100vh_-_2.5rem)]">
-          <div className="w-full flex flex-col gap-2 text-primary flex-shrink-0">
+          <div className="w-full flex flex-col gap-2 text-foreground flex-shrink-0">
             <div className="flex justify-end">
               <Button
-                className="text-secondary -me-3"
+                className="text-secondary-foreground -me-3"
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
@@ -102,13 +102,13 @@ export const SearchButton = ({
             <Input
               autoFocus
               placeholder="Type to search..."
-              className="w-full text-primary px-4 py-6"
+              className="w-full text-foreground px-4 py-6"
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           {searchQuery && (
             <>
-              <div className="text-sm text-secondary">
+              <div className="text-sm text-secondary-foreground">
                 Showing results for "<strong>{searchQuery}</strong>"
                 {searching && (
                   <Loader2Icon className="size-4 ml-2 animate-spin inline-block" />
