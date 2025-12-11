@@ -6,6 +6,7 @@ import { useNavigation } from './NavigationProvider';
 import { Folio, getFolios } from '@data-access';
 import { LabeledElement } from './LabeledElement';
 import { PassageSkeleton } from './PassageSkeleton';
+import { LotusPond } from '@design-system';
 
 const PAGE_SIZE = 10;
 
@@ -60,12 +61,16 @@ export const SourceReader = () => {
         </LabeledElement>
       ))}
       <div ref={loadMoreRef} className="h-0" />
-      {hasMore && (
+      {hasMore ? (
         <>
           {Array.from({ length: 3 }).map((_, i) => (
             <PassageSkeleton key={i} />
           ))}
         </>
+      ) : (
+        <div className="w-full pt-16 pb-6 group-data-[position=sidebar]:pt-8">
+          <LotusPond className="group-data-[position=sidebar]:hidden mx-auto w-96" />
+        </div>
       )}
     </div>
   );

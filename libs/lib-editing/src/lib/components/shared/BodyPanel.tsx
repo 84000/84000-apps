@@ -106,7 +106,7 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="source" className="pb-32">
+      <TabsContent value="source" className="pb-2">
         <SourceReader />
       </TabsContent>
       {alignments && alignments.length > 0 && (
