@@ -15,7 +15,7 @@ export const InnerPage = ({
 }) => {
   const { tab } = useCanon();
 
-  const scrollAreaClass = 'h-full bg-surface';
+  const scrollAreaClass = 'h-full bg-background';
 
   return (
     <ScrollArea className={scrollAreaClass}>

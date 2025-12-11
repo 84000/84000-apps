@@ -168,25 +168,18 @@ export const getTranslationsMetadata = async ({
 }: {
   client: DataClient;
 }) => {
-  // NOTE: currently we only fetch works "published" to translation_json, but
-  // that may not be the right choice in the future.
-  const { data } = await client.from('translation_json').select(
+  const { data } = await client.from('works').select(
     `
-    work:works!work_uuid (
-      uuid,
-      title,
-      toh,
-      publicationDate,
-      publicationVersion,
-      pages:source_pages,
-      restriction,
-      breadcrumb
-    )
+    uuid,
+    title,
+    toh,
+    publicationDate,
+    publicationVersion,
+    pages:source_pages,
+    restriction,
+    breadcrumb
   `,
   );
 
-  return (
-    data?.map(({ work }: { work: unknown }) => workFromDTO(work as WorkDTO)) ||
-    []
-  );
+  return data?.map((work) => workFromDTO(work as WorkDTO)) || [];
 };
