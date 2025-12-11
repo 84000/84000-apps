@@ -1,36 +1,17 @@
 'use client';
 
-import {
-  Button,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Separator,
-} from '@design-system';
+import { Button, MiniLogo } from '@design-system';
 import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
-import { ChevronLeftIcon, MenuIcon } from 'lucide-react';
 import { useNavigation } from './NavigationProvider';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@data-access';
-import { cn, useIsMobile } from '@lib-utils';
+import { cn } from '@lib-utils';
 
 const BACK_TO_DEFAULT = 'https://84000.co/all-publications';
 
 export const TranslationHeader = ({ className }: { className?: string }) => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();
-  const isMobile = useIsMobile();
-
-  const [backTo, setBackTo] = useState(BACK_TO_DEFAULT);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  useEffect(() => {
-    if (!document?.referrer) {
-      return;
-    }
-
-    setBackTo(document.referrer);
-  }, []);
 
   const onResultSelected = useCallback(
     (result: SearchResult) => {
@@ -81,13 +62,8 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
         name: side,
         state: panelState,
       });
-
-      // Close the popover on mobile after selection
-      if (isMobile) {
-        setIsPopoverOpen(false);
-      }
     },
-    [updatePanel, isMobile],
+    [updatePanel],
   );
   return (
     <div
@@ -96,54 +72,25 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
         className,
       )}
     >
-      <div className="flex gap-5 min-w-0">
+      <div className="flex gap-2 md:gap-5 min-w-0">
         <Button
           variant="ghost"
-          className="text-accent my-auto text-base px-3 cursor-pointer hover:bg-background hover:text-accent/80 [&_svg]:size-5 [&_svg]:stroke-2"
+          className="text-accent my-auto text-base px-3 cursor-pointer hover:bg-background hover:text-accent/80 min-w-16"
           onClick={() => {
-            window.location.href = backTo;
+            window.location.href = BACK_TO_DEFAULT;
           }}
         >
-          <ChevronLeftIcon className="my-auto" /> Back
+          <MiniLogo width={32} height={32} />
         </Button>
-        {!isMobile && (
-          <span className="font-serif font-light line-clamp-1 text-darkgray text-sm my-auto flex-shrink">
-            {`${imprint?.mainTitles?.en ? `“${imprint?.mainTitles?.en}”` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
-          </span>
-        )}
+        <span className="font-serif font-light truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
+          {`${imprint?.mainTitles?.en ? `“${imprint?.mainTitles?.en}”` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
+        </span>
       </div>
-      {!isMobile && (
-        <SearchButton
-          workUuid={uuid}
-          toh={toh}
-          onResultSelected={onResultSelected}
-        />
-      )}
-      {isMobile && (
-        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-          <PopoverTrigger className="my-auto px-2 [&_svg]:size-6 cursor-pointer hover:bg-background hover:text-primary/50">
-            <MenuIcon />
-          </PopoverTrigger>
-          <PopoverContent
-            sideOffset={8}
-            className="w-[100vw] h-[100vh] border-none"
-          >
-            <div className="size-full flex flex-col gap-2">
-              <span className="text-navy text-lg text-center">
-                {`“${imprint?.mainTitles?.en}” from ${imprint?.section}`}
-              </span>
-              <Separator />
-              <div className="w-full flex justify-center h-12 text-lg">
-                <SearchButton
-                  workUuid={uuid}
-                  toh={toh}
-                  onResultSelected={onResultSelected}
-                />
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
+      <SearchButton
+        workUuid={uuid}
+        toh={toh}
+        onResultSelected={onResultSelected}
+      />
     </div>
   );
 };

@@ -1,6 +1,8 @@
-import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
+'use client';
+
+import { DropdownMenuItem } from '@design-system';
 import { NodeViewProps } from '@tiptap/react';
-import { BookmarkIcon, CopyIcon } from 'lucide-react';
+import { CopyIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
 export const ReaderOptions = (props: NodeViewProps) => {
@@ -12,10 +14,10 @@ export const ReaderOptions = (props: NodeViewProps) => {
   }, [props.node]);
   return (
     <>
-      <DropdownMenuItem disabled>
-        <BookmarkIcon className="text-ochre" /> Add Bookmark
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
+      {/* <DropdownMenuItem disabled> */}
+      {/*   <BookmarkIcon className="text-ochre" /> Add Bookmark */}
+      {/* </DropdownMenuItem> */}
+      {/* <DropdownMenuSeparator /> */}
       <DropdownMenuItem onSelect={copyLink}>
         <CopyIcon className="text-ochre" /> Copy Link
       </DropdownMenuItem>

@@ -24,7 +24,7 @@ import { useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
-import { SHEET_ANIMATION_DURATION } from '@design-system';
+import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
 
 const LOADING_SKELETONS_COUNT = 3;
 
@@ -299,7 +299,9 @@ export const PaginationProvider = ({
           ))}
         </div>
       ) : (
-        <div className="h-24" />
+        <div className="w-full pt-16 pb-6 group-data-[position=sidebar]:pt-8">
+          <LotusPond className="group-data-[position=sidebar]:hidden mx-auto w-96" />
+        </div>
       )}
     </PaginationContext.Provider>
   );

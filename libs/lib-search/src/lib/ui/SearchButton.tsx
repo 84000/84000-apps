@@ -76,7 +76,7 @@ export const SearchButton = ({
           className="bg-background my-auto [&_svg]:size-6 [&_svg]:stroke-1 hover:bg-background cursor-pointer text-base text-accent hover:text-accent/80"
         >
           <SearchIcon />
-          Search
+          <span className="hidden md:flex">Search</span>
         </Button>
       </DialogTrigger>
       <DialogContent
