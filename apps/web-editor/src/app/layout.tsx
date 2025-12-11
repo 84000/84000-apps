@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import '@design-system-css';
+import { Fonts } from '@design-system';
 import { SandboxHeader } from '../components/SandoxHeader';
 import { SandboxProvider } from '../components/SandboxProvider';
 
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <Fonts />
+      </head>
       <body>
         <SandboxProvider>
           <SandboxHeader />

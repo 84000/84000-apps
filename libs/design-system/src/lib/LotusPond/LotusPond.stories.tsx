@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { LotusPond } from './LotusPond';
 
 const meta: Meta<typeof LotusPond> = {

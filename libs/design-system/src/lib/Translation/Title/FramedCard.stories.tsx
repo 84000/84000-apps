@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { FramedCard } from './FramedCard';
 
 const meta: Meta<typeof FramedCard> = {

@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { LeftPanel, MainPanel, RightPanel, ThreeColumns } from './ThreeColumns';
 import { Title } from '../Translation/Title/Title';
 import { P } from '../Typography/Typography';

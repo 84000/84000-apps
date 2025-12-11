@@ -6,6 +6,9 @@ import { mergeAttributes } from '@tiptap/react';
 export const List = BulletList.extend({
   addOptions() {
     return {
+      itemTypeName: 'listItem',
+      keepMarks: false,
+      keepAttributes: false,
       ...this.parent?.(),
       HTMLAttributes: {
         class: cn(UL_STYLE, 'list-none'),

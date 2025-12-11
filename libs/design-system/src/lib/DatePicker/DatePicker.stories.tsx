@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { DatePicker } from './DatePicker';
 
 const meta: Meta<typeof DatePicker> = {

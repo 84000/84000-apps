@@ -82,7 +82,11 @@
     },
     "lint-css": {
       "cache": true,
-      "inputs": ["default", "{workspaceRoot}/.stylelintrc.json", "{workspaceRoot}/.stylelintignore"]
+      "inputs": [
+        "default",
+        "{workspaceRoot}/.stylelintrc.json",
+        "{workspaceRoot}/.stylelintignore"
+      ]
     },
     "e2e-ci--**/*": {
       "dependsOn": ["^build"]

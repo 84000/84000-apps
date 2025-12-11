@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar } from './Calendar';
 import { DateRange, Modifiers } from 'react-day-picker';
 

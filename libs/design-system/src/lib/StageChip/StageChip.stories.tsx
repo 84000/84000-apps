@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { StageChip } from './StageChip';
 import { TooltipProvider } from '../Tooltip/Tooltip';
 import { PROJECT_STAGE_LABELS } from '@data-access';

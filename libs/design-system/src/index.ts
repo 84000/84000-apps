@@ -45,3 +45,4 @@ export * from './lib/Tooltip/Tooltip';
 export * from './lib/Translation';
 export * from './lib/Typography/Typography';
 export * from './lib/Vajrasattva/Vajrasattva';
+export * from './lib/Fonts/Fonts';

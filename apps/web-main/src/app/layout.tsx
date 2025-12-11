@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import '@design-system-css';
+import { Fonts } from '@design-system';
 import { InterfaceContextProvider } from './context/InterfaceContext';
 import { SessionProvider } from '@lib-user';
 
@@ -15,6 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="overscroll-none">
+      <head>
+        <Fonts />
+      </head>
       <body>
         <InterfaceContextProvider>
           <SessionProvider>{children}</SessionProvider>

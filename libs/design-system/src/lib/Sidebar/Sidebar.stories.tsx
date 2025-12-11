@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Calendar, Home, Inbox, Search, Settings } from 'lucide-react';
 import {
   Sidebar,
