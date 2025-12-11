@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { TitleForm } from './TitleForm';
 
 const meta: Meta<typeof TitleForm> = {

@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { LongTitles } from './LongTitles';
 
 const meta: Meta<typeof LongTitles> = {

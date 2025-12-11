@@ -1,4 +1,4 @@
-export default {
+module.exports = {
   displayName: 'lib-utils',
   preset: '../../jest.preset.js',
   transform: {

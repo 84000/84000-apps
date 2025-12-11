@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 import { Button } from '../Button/Button';
 import { TitleForm } from '../Translation/Title/TitleForm';

@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from '@storybook/nextjs';
+import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { DataTable } from './DataTable';
 import { FilterDropdown } from '../FilterDropdown/FilterDropdown';
 import { FuzzyGlobalFilter } from '../FuzzyGlobalFilter/FuzzyGlobalFilter';
