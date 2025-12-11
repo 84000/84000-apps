@@ -6,10 +6,14 @@
 
 @layer components {
   .passage {
-    @apply font-serif font-light leading-6 text-sm text-justify;
+    @apply font-serif font-light leading-6 text-sm;
 
     @variant position-sidebar {
       @apply leading-5 text-xs;
+    }
+
+    p {
+      @apply text-justify;
     }
   }
 
@@ -87,11 +91,11 @@
 
   /* TODO: remove in favor of other lang attribute */
   [xml\:lang]:not(
-      [xml\:lang='en'],
-      [xml\:lang='bo'],
-      [xml\:lang='ja'],
-      [xml\:lang='zh']
-    ) {
+    [xml\:lang='en'],
+    [xml\:lang='bo'],
+    [xml\:lang='ja'],
+    [xml\:lang='zh']
+  ) {
     @apply italic;
   }
 
