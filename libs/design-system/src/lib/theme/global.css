@@ -199,7 +199,7 @@
   }
 
   body {
-    @apply bg-canvas text-foreground;
+    @apply bg-surface text-foreground;
   }
 }
 

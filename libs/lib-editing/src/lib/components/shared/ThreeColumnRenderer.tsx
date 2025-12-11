@@ -18,7 +18,7 @@ export const ThreeColumnRenderer = ({
   return (
     <div
       className={cn(
-        'fixed flex flex-col size-full p-2',
+        'fixed flex flex-col size-full p-2 bg-canvas',
         withHeader ? 'pb-20' : '',
       )}
     >
