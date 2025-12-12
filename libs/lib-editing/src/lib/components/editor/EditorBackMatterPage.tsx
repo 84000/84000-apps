@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TranslationBuilder } from '../editor';
+import { isStaticFeatureEnabled } from '@lib-instr/static';
 
 export const EditorBackMatterPage = () => {
   const { work } = useEditorState();
@@ -45,7 +46,12 @@ export const EditorBackMatterPage = () => {
       );
       setAbbreviations(abbreviations);
 
-      const glossary = await getGlossaryInstances({ client, uuid });
+      const withAttestations = isStaticFeatureEnabled('glossary-attestations');
+      const glossary = await getGlossaryInstances({
+        client,
+        uuid,
+        withAttestations,
+      });
       setGlossary(glossary);
 
       const bibliography = await getBibliographyEntries({ client, uuid });

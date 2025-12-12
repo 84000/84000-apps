@@ -59,12 +59,15 @@ export const getAllGlossaryTerms = async ({
 export const getGlossaryInstances = async ({
   client,
   uuid,
+  withAttestations = false,
 }: {
   client: DataClient;
   uuid: string;
+  withAttestations?: boolean;
 }) => {
   const { data, error } = await client.rpc('show_glossary_entries', {
     v_work_uuid: uuid,
+    v_with_attestation: withAttestations,
   });
   if (error) {
     console.error(
