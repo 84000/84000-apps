@@ -42,15 +42,6 @@ export const italic: Exporter<
         end,
         lang,
       } as InlineTitleAnnotation;
-    case 'mantra':
-      return {
-        uuid,
-        type: 'mantra',
-        passageUuid,
-        start,
-        end,
-        lang,
-      } as MantraAnnotation;
     default:
       return {
         uuid,
