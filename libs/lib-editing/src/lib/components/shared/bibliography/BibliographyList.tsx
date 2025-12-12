@@ -1,6 +1,6 @@
 'use client';
 
-import { H2, H3 } from '@design-system';
+import { H3, SectionTitle } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
 import { BibliographyEntries } from '@data-access';
 import { cn } from '@lib-utils';
@@ -22,11 +22,11 @@ export const BibliographyList = ({
   return (
     <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
-        className="position-sidebar:mt-3.5 mt-6"
+        className="position-sidebar:mt-5 mt-6"
         id={'bibliography'}
         label="b."
       >
-        <H2>Bibliography</H2>
+        <SectionTitle>Bibliography</SectionTitle>
       </LabeledElement>
       <div className="mt-3 flex flex-col gap-6">
         {content.length === 0 && (
@@ -38,7 +38,7 @@ export const BibliographyList = ({
           <div key={i} className="flex flex-col gap-4">
             {section.heading && (
               <LabeledElement
-                className="position-sidebar:mt-2 mt-4"
+                className="position-sidebar:mt-3 mt-4"
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
               >
