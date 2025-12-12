@@ -1,4 +1,4 @@
-import { cn, useIsMobile } from '@lib-utils';
+import { cn } from '@lib-utils';
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -28,7 +28,6 @@ export const Passage = (props: NodeViewProps) => {
   const [dialogType, setDialogType] = useState<string>();
 
   const { panels, toh } = useNavigation();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     const isCompare = panels.main.open && panels.main.tab === 'compare';
@@ -110,7 +109,7 @@ export const Passage = (props: NodeViewProps) => {
         className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
       >
         <LabeledElement label={node.attrs.label} className="-mt-1">
-          <div className="leading-7 font-tibetan text-base whitespace-normal mt-1.5 pb-4 md:pb-2">
+          <div className="leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2">
             {source}
           </div>
         </LabeledElement>
