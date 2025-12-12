@@ -18,6 +18,7 @@ import { lineGroup } from './line-group';
 import { link } from './link';
 import { listItem } from './list-item';
 import { list } from './list';
+import { mantra } from './mantra';
 import { paragraph } from './paragraph';
 import { quote } from './quote';
 import { span } from './span';
@@ -61,7 +62,7 @@ const EXPORTERS: Partial<
   lineGroup,
   link,
   listItem,
-  mantra: italic,
+  mantra,
   paragraph,
   quote,
   reference: link,

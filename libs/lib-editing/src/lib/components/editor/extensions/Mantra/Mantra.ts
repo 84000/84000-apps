@@ -24,7 +24,7 @@ export const MantraMark = Mark.create<MantraOptions>({
         default: 'mantra',
       },
       lang: {
-        default: undefined,
+        default: 'Sa-Ltn',
       },
     };
   },
@@ -48,7 +48,7 @@ export const MantraMark = Mark.create<MantraOptions>({
     return [
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: !lang || lang === 'en' ? '' : 'italic',
+        lang,
       }),
       0,
     ];
