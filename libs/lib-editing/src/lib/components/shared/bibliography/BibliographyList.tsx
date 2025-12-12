@@ -1,6 +1,6 @@
 'use client';
 
-import { H3, SectionTitle } from '@design-system';
+import { SectionTitle } from '@design-system';
 import { LabeledElement } from '../LabeledElement';
 import { BibliographyEntries } from '@data-access';
 import { cn } from '@lib-utils';
@@ -38,11 +38,13 @@ export const BibliographyList = ({
           <div key={i} className="flex flex-col gap-4">
             {section.heading && (
               <LabeledElement
-                className="position-sidebar:mt-3 mt-4"
+                className="position-sidebar:mt-0.5 mt-4"
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
               >
-                <H3>{section.heading}</H3>
+                <div className="text-secondary font-sans text-base font-bold">
+                  {section.heading}
+                </div>
               </LabeledElement>
             )}
             {section.entries.map((entry, j) => (
