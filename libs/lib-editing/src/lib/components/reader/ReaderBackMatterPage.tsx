@@ -1,10 +1,10 @@
 import {
   createBrowserClient,
-  BACK_MATTER_FILTER,
   getTranslationPassages,
   getGlossaryInstances,
   getBibliographyEntries,
 } from '@data-access';
+import { isStaticFeatureEnabled } from '@lib-instr/static';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
 import { isUuid } from '@lib-utils';
@@ -37,7 +37,12 @@ export const ReaderBackMatterPage = async ({
   });
   const abbreviations = blocksFromTranslationBody(abbreviationPassages);
 
-  const glossary = await getGlossaryInstances({ client, uuid: slug });
+  const withAttestations = isStaticFeatureEnabled('glossary-attestations');
+  const glossary = await getGlossaryInstances({
+    client,
+    uuid: slug,
+    withAttestations,
+  });
   const bibliography = await getBibliographyEntries({ client, uuid: slug });
 
   return (
