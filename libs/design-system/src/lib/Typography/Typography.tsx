@@ -235,7 +235,7 @@ export function A({
   );
 }
 
-export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6 italic';
+export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6';
 export function Blockquote({
   children,
   className,
