@@ -56,7 +56,7 @@ export const SourceReader = () => {
           label={`f.${folio.folio}.${folio.side}\nvol.${folio.volume}`}
           className="mt-0.5"
         >
-          <div className="leading-7 font-tibetan text-base 2xl:whitespace-pre-wrap whitespace-normal">
+          <div className="leading-7 font-tibetan text-lg 2xl:whitespace-pre-wrap whitespace-normal">
             {folio.content}
           </div>
         </LabeledElement>

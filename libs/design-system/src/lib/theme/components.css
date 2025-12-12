@@ -6,10 +6,10 @@
 
 @layer components {
   .passage {
-    @apply font-serif font-light leading-6 text-sm;
+    @apply font-serif font-light leading-7;
 
     @variant position-sidebar {
-      @apply leading-5 text-xs;
+      @apply leading-5 text-sm;
     }
 
     p {
@@ -63,7 +63,7 @@
   }
 
   .end-note-link {
-    @apply text-brick cursor-pointer text-xs;
+    @apply text-accent cursor-pointer text-xs;
   }
 
   .end-note-link ~ .end-note-link {
@@ -104,7 +104,7 @@
   }
 
   [lang='bo'] {
-    @apply font-tibetan text-base;
+    @apply font-tibetan text-lg;
   }
 
   emph,
