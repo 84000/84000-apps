@@ -1,4 +1,6 @@
-import { highlightText, removeHtmlTags } from '@lib-utils';
+'use client';
+
+import { highlightText, removeHtmlTags, useIsMobile } from '@lib-utils';
 import {
   AlignmentMatch,
   BibliographyMatch,
@@ -26,7 +28,7 @@ export const AlignmentResult = ({
   query: string;
 }) => {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid md:grid-cols-2 gap-4">
       <div>{highlightText(match.content, query)}</div>
       <div className="text-lg">{highlightText(match.source, query)}</div>
     </div>
@@ -62,6 +64,8 @@ export const SearchResultCard = ({
   query: string;
   onClick: () => void;
 }) => {
+  const isMobile = useIsMobile();
+
   // cast as passage but treat properties as optional
   const passage = match as PassageMatch;
 
@@ -90,19 +94,23 @@ export const SearchResultCard = ({
   return (
     <div
       onClick={onClick}
-      className="flex gap-4 p-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-border transition-colors"
+      className="flex flex-col md:flex-row gap-4 py-6 px-4 md:px-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-border transition-colors"
     >
-      <div className="w-25 flex-shrink-0 flex flex-col gap-2 text-right">
-        <span className="text-secondary capitalize">{passage.type}</span>
-        {passage.section && (
-          <span className="text-foreground/50 capitalize">
-            {passage.section.replace('Header', '')}
-          </span>
-        )}
+      <div className="md:w-25 flex-shrink-0 flex md:flex-col gap-1 md:gap-2 md:text-right text-xs md:text-sm">
+        <div className="flex flex-col gap-1">
+          <span className="text-secondary capitalize">{passage.type}</span>
+          {passage.section && (
+            <span className="text-foreground/50 capitalize">
+              {passage.section.replace('Header', '')}
+            </span>
+          )}
+        </div>
         <div className="grow" />
-        {passage.label && <span className="text-accent">{passage.label}</span>}
+        {passage.label && (
+          <span className="text-accent mt-auto">{passage.label}</span>
+        )}
       </div>
-      <Separator orientation="vertical" />
+      <Separator orientation={isMobile ? 'horizontal' : 'vertical'} />
       {renderInner(match)}
     </div>
   );
