@@ -1,0 +1,43 @@
+{
+  "name": "web-reader-mfe",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web-reader-mfe",
+  "projectType": "application",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project web-reader-mfe --web",
+  "targets": {
+    "dev": {
+      "options": {
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "/"
+          }
+        ]
+      }
+    },
+    "build": {
+      "options": {
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "/"
+          }
+        ]
+      }
+    },
+    "serve": {
+      "options": {
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "/"
+          }
+        ]
+      }
+    }
+  }
+}
