@@ -1,6 +1,4 @@
-//@ts-check
-
-const { composePlugins, withNx } = require('@nx/next');
+import { composePlugins, withNx } from '@nx/next';
 import { withMicrofrontends } from '@vercel/microfrontends/next/config';
 
 /**
@@ -18,4 +16,4 @@ const plugins = [
   ...mfe,
 ];
 
-module.exports = composePlugins(...plugins)(nextConfig);
+export default composePlugins(...plugins)(nextConfig);

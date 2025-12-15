@@ -1,8 +1,4 @@
-//@ts-check
-
-// eslint-disable @typescript-eslint/no-require-imports
-const { composePlugins, withNx } = require('@nx/next');
-// eslint-enable @typescript-eslint/no-require-imports
+import { composePlugins, withNx } from '@nx/next';
 
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
@@ -23,4 +19,4 @@ const plugins = [
   withNx,
 ];
 
-module.exports = composePlugins(...plugins)(nextConfig);
+export default composePlugins(...plugins)(nextConfig);
