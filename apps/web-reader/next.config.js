@@ -1,6 +1,6 @@
 //@ts-check
 
-const { composePlugins, withNx } = require('@nx/next');
+import { composePlugins, withNx } from '@nx/next';
 import { withMicrofrontends } from '@vercel/microfrontends/next/config';
 
 /**
