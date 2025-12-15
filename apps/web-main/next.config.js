@@ -1,7 +1,8 @@
 //@ts-check
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable @typescript-eslint/no-require-imports
 const { composePlugins, withNx } = require('@nx/next');
+// eslint-enable @typescript-eslint/no-require-imports
 
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}

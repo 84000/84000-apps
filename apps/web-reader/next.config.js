@@ -1,6 +1,8 @@
 //@ts-check
 
-import { composePlugins, withNx } from '@nx/next';
+// eslint-disable @typescript-eslint/no-require-imports
+const { composePlugins, withNx } = require('@nx/next');
+// eslint-enable @typescript-eslint/no-require-imports
 import { withMicrofrontends } from '@vercel/microfrontends/next/config';
 
 /**
