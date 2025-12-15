@@ -27,8 +27,8 @@
     "**/*.jsx",
     "**/*.ts",
     "**/*.tsx",
-    "../../dist/web-reader/.next/types/**/*.ts",
-    "../../web-reader/.next/types/**/*.ts",
+    "../../dist/web-reader-mfe/.next/types/**/*.ts",
+    "../../web-reader-mfe/.next/types/**/*.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

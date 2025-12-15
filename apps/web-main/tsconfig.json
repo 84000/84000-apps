@@ -20,15 +20,15 @@
         "name": "next"
       }
     ],
-    "types": ["jest", "node"]
+    "types": ["node"]
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    "../../app/web-main/.next/types/**/*.ts",
-    "../../dist/app/web-main/.next/types/**/*.ts",
+    "../../dist/web-main/.next/types/**/*.ts",
+    "../../web-main/.next/types/**/*.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
