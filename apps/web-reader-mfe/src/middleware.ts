@@ -4,10 +4,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // match tohoku catalog shortlinks like /toh1234
-  if (pathname.match(/^\/toh\d+/)) {
+  // Remove the /reader prefix to get the local path within this app
+  const localPath = pathname.replace(/^\/reader/, '') || '/';
+
+  // match tohoku catalog shortlinks like /reader/toh1234
+  if (localPath.match(/^\/toh\d+/)) {
     const url = request.nextUrl.clone();
-    const toh = pathname.split('/').at(-1)?.split('.')[0];
+    const toh = localPath.split('/').at(-1)?.split('.')[0];
 
     if (toh) {
       const client = await createServerClient();
@@ -29,23 +32,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const isKnowledgeBase = pathname.startsWith('/knowledgebase');
-  if (isKnowledgeBase) {
-    return NextResponse.redirect(new URL(pathname, 'https://84000.co'));
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all request paths under /reader except for:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - icon and apple-touch-icon files
      */
-    '/((?!_next/static|_next/image|favicon.ico|icon.png|apple-touch-icon.png|apple-touch-icon-precomposed.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/reader/((?!_next/static|_next/image|favicon.ico|icon.png|apple-touch-icon.png|apple-touch-icon-precomposed.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
