@@ -74,6 +74,7 @@ const TRANSFORMERS: Partial<Record<AnnotationType, Transformer>> = {
 } as const;
 
 export const ITALIC_LANGUAGES: ExtendedTranslationLanguage[] = [
+  'en',
   'Bo-Ltn',
   'Pi-Ltn',
   'Sa-Ltn',
