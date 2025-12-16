@@ -87,13 +87,14 @@ export const TitlesCard = ({
               By
             </div>
             <div className="flex gap-x-2 mx-auto flex-wrap justify-center text-secondary -mt-2 text-xl">
-              <span>{'·'}</span>
               {authors.map((author, idx) => (
-                <div key={`author-wrapper-${idx}`} className="flex gap-x-2">
+                <div key={`author-wrapper-${idx}`} className="flex">
                   <span key={`${author}-${idx}`} className="italic">
                     {author}
                   </span>
-                  <span key={`dot-author-${idx}`}>{'·'}</span>
+                  {idx < authors.length - 1 && (
+                    <span key={`comma-${idx}`}>,</span>
+                  )}
                 </div>
               ))}
             </div>
