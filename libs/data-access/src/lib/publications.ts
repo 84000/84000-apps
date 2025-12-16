@@ -11,6 +11,7 @@ import {
   PaginationDirection,
   passagesPageAroundFromDTO,
   PassagesPageAroundDTO,
+  Work,
 } from './types';
 
 export const getTranslationUuids = async ({
@@ -167,19 +168,14 @@ export const getTranslationsMetadata = async ({
   client,
 }: {
   client: DataClient;
-}) => {
-  const { data } = await client.from('works').select(
-    `
-    uuid,
-    title,
-    toh,
-    publicationDate,
-    publicationVersion,
-    pages:source_pages,
-    restriction,
-    breadcrumb
-  `,
-  );
+}): Promise<Work[]> => {
+  const { data, error } = await client.rpc('get_works');
 
-  return data?.map((work) => workFromDTO(work as WorkDTO)) || [];
+  if (error) {
+    console.error('Error fetching translations metadata:', error);
+    return [];
+  }
+
+  const dto = data as WorkDTO[];
+  return dto?.map((work) => workFromDTO(work as WorkDTO)) || [];
 };
