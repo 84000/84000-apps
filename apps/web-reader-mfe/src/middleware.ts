@@ -32,6 +32,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Check for knowledgebase in the local path
+  const isKnowledgeBase = localPath.startsWith('/knowledgebase');
+  if (isKnowledgeBase) {
+    return NextResponse.redirect(new URL(localPath, 'https://84000.co'));
+  }
+
   return NextResponse.next();
 }
 
