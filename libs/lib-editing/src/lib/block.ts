@@ -122,9 +122,9 @@ const TEMPLATES_FOR_BLOCK_TYPE: {
 
 enum BlockPriority {
   OuterBlock = 0,
-  Attribute = 1,
-  ParentBlock = 2,
-  Block = 3,
+  ParentBlock = 1,
+  Block = 2,
+  Attribute = 3,
   Inline = 4,
   Mark = 5,
   Unknown = Number.MIN_SAFE_INTEGER,
