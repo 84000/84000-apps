@@ -30,7 +30,7 @@ export const Indent = Extension.create<IndentOptions>({
   name: 'indent',
   addOptions() {
     return {
-      types: ['paragraph'],
+      types: ['paragraph', 'lineGroup', 'list', 'blockquote'],
       defaultHasIndent: false,
     };
   },

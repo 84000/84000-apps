@@ -5,10 +5,10 @@ export const indent: Transformer = (ctx) => {
   const indentUuid = ctx.annotation.uuid;
   recurse({
     ...ctx,
-    until: ['paragraph'],
-    transform: ({ block: item }) => {
-      item.attrs = {
-        ...item.attrs,
+    until: ['paragraph', 'lineGroup', 'list', 'blockquote'],
+    transform: ({ block }) => {
+      block.attrs = {
+        ...block.attrs,
         hasIndent: true,
         indentUuid,
       };
