@@ -46,13 +46,17 @@ export const Titles = ({
 
   let header = '';
   let main = '';
+  const authors =
+    imprint?.tibetanAuthors
+      ?.split(',')
+      .map((a) => a.trim())
+      .filter((a) => !!a) || [];
+
   const footer =
     imprint?.mainTitles?.['Sa-Ltn'] ||
     mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
     '...';
 
-  // TODO: support other variants once we have a good understanding of them
-  // and the required data is available
   switch (variant) {
     case 'tibetan':
       {
@@ -94,6 +98,7 @@ export const Titles = ({
         footer={footer}
         toh={imprint?.toh}
         section={imprint?.section}
+        authors={authors}
         canEdit={canEdit}
         onEdit={() => setIsEditOpen(true)}
       />

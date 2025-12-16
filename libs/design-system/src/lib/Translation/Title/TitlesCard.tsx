@@ -11,6 +11,7 @@ export const TitlesCard = ({
   footer = '',
   toh = '',
   section = '',
+  authors = [],
   canEdit = false,
   onEdit,
 }: {
@@ -19,6 +20,7 @@ export const TitlesCard = ({
   footer?: string;
   toh?: string;
   section?: string;
+  authors?: string[];
   canEdit?: boolean;
   onEdit?(): void;
 }) => {
@@ -79,6 +81,25 @@ export const TitlesCard = ({
             </div>
           )}
         </div>
+        {authors.length > 0 && (
+          <div className="font-serif title-sub">
+            <div className="uppercase text-xs text-muted-foreground py-2">
+              By
+            </div>
+            <div className="flex gap-x-2 mx-auto flex-wrap justify-center text-secondary -mt-2 text-xl">
+              {authors.map((author, idx) => (
+                <div key={`author-wrapper-${idx}`} className="flex">
+                  <span key={`${author}-${idx}`} className="italic">
+                    {author}
+                  </span>
+                  {idx < authors.length - 1 && (
+                    <span key={`comma-${idx}`}>,</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className={cn('w-32 hidden lg:flex border rounded-e-lg', RADIAL)}>
         <Vajrasattva className="mix-blend-multiply opacity-40 object-contain size-full" />
