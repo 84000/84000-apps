@@ -7,6 +7,7 @@ export type Imprint = {
   toh: string;
   section?: string;
   version?: SemVer;
+  restriction?: boolean;
   publishYear?: string;
   tibetanAuthors?: string;
   sourceDescription?: string;
@@ -26,6 +27,7 @@ export type ImprintDTO = {
   toh: string;
   section?: string;
   version?: SemVer;
+  restriction?: boolean;
   publishYear?: string;
   tibetanAuthors?: string;
   sourceDescription?: string;
@@ -46,6 +48,7 @@ export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
     toh: dto.toh,
     section: dto.section,
     version: dto.version,
+    restriction: dto.restriction,
     publishYear: dto.publishYear,
     tibetanAuthors: dto.tibetanAuthors,
     sourceDescription: dto.sourceDescription,
