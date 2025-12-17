@@ -13,8 +13,10 @@ const TYPE_FOR_LANGUAGE: Record<ExtendedTranslationLanguage | 'toh', string> = {
   ja: 'jaTitle',
   zh: 'zhTitle',
   'Bo-Ltn': 'boLtnTitle',
-  'Sa-Ltn': 'saLtnTitle',
+  'Mt-Ltn': 'mtLtnTitle',
   'Pi-Ltn': 'piLtnTitle',
+  'Sa-Ltn': 'saLtnTitle',
+  'Zh-Ltn': 'zhLtnTitle',
 };
 
 const TITLES_TYPE_TO_NODE_TYPE: Record<TitleType, string> = {
