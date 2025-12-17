@@ -34,6 +34,7 @@ import {
 import { HoverCardProvider } from './HoverCardProvider';
 import { useFeatureFlagEnabled } from '@lib-instr';
 import { useIsMobile } from '@lib-utils';
+import { RestrictionWarning } from './RestrictionWarning';
 
 interface NavigationState {
   uuid: string;
@@ -359,6 +360,7 @@ export const NavigationProvider = ({
       ) : (
         children
       )}
+      <RestrictionWarning imprint={imprint} />
     </NavigationContext.Provider>
   );
 };
