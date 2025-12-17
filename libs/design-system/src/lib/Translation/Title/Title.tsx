@@ -9,9 +9,11 @@ export const TITLE_VARIANT_STYLES = {
   bo: 'my-1',
   ja: 'my-1 italic font-light text-muted-foreground',
   zh: 'my-1 italic font-light text-muted-foreground',
-  'Sa-Ltn': 'my-1 italic font-light text-muted-foreground',
   'Bo-Ltn': 'my-1 italic font-light text-muted-foreground',
+  'Mt-Ltn': 'my-1 italic font-light text-muted-foreground',
   'Pi-Ltn': 'my-1 italic font-light text-muted-foreground',
+  'Sa-Ltn': 'my-1 italic font-light text-muted-foreground',
+  'Zh-Ltn': 'my-1 italic font-light text-muted-foreground',
 };
 
 const titleVariants = cva('', {
@@ -23,12 +25,10 @@ const titleVariants = cva('', {
 
 export const Title = ({
   children,
-  uuid,
   language,
   ...props
 }: {
   children: ReactNode;
-  uuid?: string;
 } & VariantProps<typeof titleVariants>) => {
   const components: {
     [key in ExtendedTranslationLanguage]: typeof H2 | typeof H4;
@@ -37,9 +37,11 @@ export const Title = ({
     bo: H3,
     ja: H4,
     zh: H4,
-    'Sa-Ltn': H4,
-    'Bo-Ltn': H4,
-    'Pi-Ltn': H4,
+    'Bo-Ltn': H2,
+    'Mt-Ltn': H2,
+    'Pi-Ltn': H2,
+    'Sa-Ltn': H2,
+    'Zh-Ltn': H2,
   };
 
   const Component = (language && components[language]) || H4;
