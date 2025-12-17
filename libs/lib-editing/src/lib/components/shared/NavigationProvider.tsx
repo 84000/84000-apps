@@ -105,7 +105,6 @@ export const NavigationProvider = ({
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
-  const [showRestrictionWarning, setShowRestrictionWarning] = useState(false);
   const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
@@ -316,10 +315,6 @@ export const NavigationProvider = ({
     (async () => {
       const imprint = await getTranslationImprint({ client, uuid, toh });
       setImprint(imprint);
-
-      if (imprint?.restriction) {
-        setShowRestrictionWarning(true);
-      }
     })();
   }, [uuid, toh, client]);
 
