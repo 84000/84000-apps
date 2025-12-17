@@ -25,14 +25,14 @@ export const getCookie = (name: string): string | undefined => {
     .find((row) => row.startsWith(`${name}=`))
     ?.split('=')[1];
 
-  return cookieValue;
+  return decodeURIComponent(cookieValue || '');
 };
 
 export const setCookie = (name: string, value: string, days = 365) => {
   const date = new Date();
   date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
   const expires = `expires=${date.toUTCString()}`;
-  document.cookie = `${name}=${value}; ${expires}; path=/`;
+  document.cookie = `${name}=${encodeURIComponent(value)}; ${expires}; path=/`;
 };
 
 export const useRestrictionWarning = ({ imprint }: { imprint?: Imprint }) => {
