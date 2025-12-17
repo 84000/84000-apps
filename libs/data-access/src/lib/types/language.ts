@@ -4,7 +4,9 @@ export type ExtendedTranslationLanguage =
   | TranslationLanguage
   | 'zh'
   | 'ja'
-  | 'Pi-Ltn';
+  | 'Mt-Ltn'
+  | 'Pi-Ltn'
+  | 'Zh-Ltn';
 
 export const DISPLAY_LANGUAGES = [
   'tibetan',
@@ -13,7 +15,9 @@ export const DISPLAY_LANGUAGES = [
   'sanskrit',
   'chinese',
   'japanese',
+  'mongolian',
   'pali',
+  'pinyin',
 ] as const;
 export type DisplayLanguage = (typeof DISPLAY_LANGUAGES)[number];
 
@@ -27,7 +31,9 @@ export const LANGUAGE_MAP: Record<
   'Sa-Ltn': 'sanskrit',
   zh: 'chinese',
   ja: 'japanese',
+  'Mt-Ltn': 'mongolian',
   'Pi-Ltn': 'pali',
+  'Zh-Ltn': 'pinyin',
 };
 
 export const REVERSE_LANGUAGE_MAP: Record<
@@ -40,6 +46,8 @@ export const REVERSE_LANGUAGE_MAP: Record<
   sanskrit: 'Sa-Ltn',
   chinese: 'zh',
   japanese: 'ja',
+  mongolian: 'Mt-Ltn',
+  pinyin: 'Zh-Ltn',
   pali: 'Pi-Ltn',
 };
 
