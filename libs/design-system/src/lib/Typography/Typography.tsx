@@ -46,7 +46,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-3xl position-sidebar:text-2xl position-sidebar:pb-2 position-sidebar:mt-4 position-sidebar:text-left text-center section-title';
+  'font-serif font-light text-primary mt-6 scroll-m-20 pb-3 text-xl position-sidebar:pb-2 position-sidebar:mt-4 position-sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
@@ -60,7 +60,7 @@ export function SectionTitle({
 }
 
 export const BODY_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-2xl position-sidebar:text-xl position-sidebar:pb-4 position-sidebar:mt-0 text-center body-title-main';
+  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-4xl position-sidebar:text-2xl position-sidebar:pb-4 position-sidebar:mt-0 text-center body-title-main';
 export function BodyTitle({
   children,
   className,
@@ -74,7 +74,7 @@ export function BodyTitle({
 }
 
 export const HONORIFIC_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 text-xl text-center body-title-honorific';
+  'font-serif font-light text-primary scroll-m-20 text-2xl text-center body-title-honorific';
 export function HonorificTitle({
   children,
   className,
