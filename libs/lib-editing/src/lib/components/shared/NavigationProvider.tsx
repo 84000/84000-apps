@@ -92,6 +92,35 @@ export const NavigationContext = createContext<NavigationState>({
   },
 });
 
+const parsePanelParams = (
+  params: ReadonlyURLSearchParams,
+): {
+  toh?: TohokuCatalogEntry;
+  panels: PanelsState;
+} => {
+  const panels: PanelsState = { ...DEFAULT_PANELS };
+
+  for (const [key, value] of params.entries()) {
+    const match = value.match(/^(open|closed)(?::(.+))?$/);
+    if (match) {
+      const [state, tab, hash] = value.split(':');
+      const panelKey = key as PanelName;
+      if (!PANEL_NAMES.includes(panelKey)) {
+        continue;
+      }
+      panels[panelKey] = {
+        open: state === 'open',
+        tab: tab as TabName | undefined,
+        hash: hash || undefined,
+      };
+    }
+  }
+
+  const toh = (params.get('toh') as TohokuCatalogEntry) || undefined;
+
+  return { toh, panels };
+};
+
 export const NavigationProvider = ({
   uuid,
   children,
@@ -102,7 +131,10 @@ export const NavigationProvider = ({
   const client = createBrowserClient();
   const query = useSearchParams();
   const isMobile = useIsMobile();
-  const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
+  const [panels, setPanels] = useState<PanelsState>(
+    parsePanelParams(query).panels || DEFAULT_PANELS,
+  );
+  const [isPanelTransitioning, setIsPanelTransitioning] = useState(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [imprint, setImprint] = useState<Imprint | undefined>();
@@ -222,6 +254,7 @@ export const NavigationProvider = ({
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
       const { open } = state;
+      setIsPanelTransitioning(true);
       setPanels((prev) => {
         const newPanels = {
           ...prev,
@@ -251,48 +284,16 @@ export const NavigationProvider = ({
     [isMobile],
   );
 
-  const parsePanelParams = useCallback(
-    (
-      params: ReadonlyURLSearchParams,
-    ): {
-      toh?: TohokuCatalogEntry;
-      panels: PanelsState;
-    } => {
-      const panels: PanelsState = { ...DEFAULT_PANELS };
-
-      for (const [key, value] of params.entries()) {
-        const match = value.match(/^(open|closed)(?::(.+))?$/);
-        if (match) {
-          const [state, tab, hash] = value.split(':');
-          const panelKey = key as PanelName;
-          if (!PANEL_NAMES.includes(panelKey)) {
-            continue;
-          }
-          panels[panelKey] = {
-            open: state === 'open',
-            tab: tab as TabName | undefined,
-            hash: hash || undefined,
-          };
-        }
-      }
-
-      const toh = (params.get('toh') as TohokuCatalogEntry) || undefined;
-
-      return { toh, panels };
-    },
-    [],
-  );
-
   useEffect(() => {
     if (!toh && !panels) {
       return;
     }
 
+    setIsPanelTransitioning(true);
     const params = new URLSearchParams(window.location.search);
 
     if (toh) {
       params.set('toh', toh);
-      return;
     }
 
     if (panels) {
@@ -322,6 +323,11 @@ export const NavigationProvider = ({
   }, [uuid, toh, client]);
 
   useEffect(() => {
+    if (isPanelTransitioning) {
+      setIsPanelTransitioning(false);
+      return;
+    }
+
     const { panels: newPanels, toh: newToh } = parsePanelParams(query);
 
     if (newPanels) {
