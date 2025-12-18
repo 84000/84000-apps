@@ -1,14 +1,12 @@
 'use client';
 
-import { Button, MiniLogo } from '@design-system';
+import { MiniLogo } from '@design-system';
 import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
 import { useNavigation } from './NavigationProvider';
 import { useCallback } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@data-access';
 import { cn } from '@lib-utils';
-
-const BACK_TO_DEFAULT = 'https://84000.co/all-publications';
 
 export const TranslationHeader = ({ className }: { className?: string }) => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();
@@ -73,15 +71,7 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
       )}
     >
       <div className="flex gap-2 md:gap-5 min-w-0">
-        <Button
-          variant="ghost"
-          className="text-accent my-auto text-base px-3 cursor-pointer hover:bg-background hover:text-accent/80 min-w-16"
-          onClick={() => {
-            window.location.href = BACK_TO_DEFAULT;
-          }}
-        >
-          <MiniLogo width={32} height={32} />
-        </Button>
+        <MiniLogo className="ms-3 me-1" width={32} height={32} />
         <span className="font-serif font-light truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
           {`${imprint?.mainTitles?.en ? `“${imprint?.mainTitles?.en}”` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
         </span>
