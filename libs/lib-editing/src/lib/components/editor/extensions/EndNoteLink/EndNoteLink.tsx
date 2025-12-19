@@ -27,7 +27,9 @@ export const EndNoteLink = ({
 
   return content ? (
     <div className="p-2">
-      <LabeledElement label={content.label}>{content.content}</LabeledElement>
+      <LabeledElement label={content.label} contentType="endnotes">
+        {content.content}
+      </LabeledElement>
     </div>
   ) : (
     <Skeleton className="p-2 h-20 w-full" />

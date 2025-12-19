@@ -16,7 +16,12 @@ export const BibliographyBody = ({
   useGlossaryInstanceListener({ ref });
 
   return (
-    <LabeledElement id={entry.uuid} key={entry.uuid} label={label}>
+    <LabeledElement
+      id={entry.uuid}
+      key={entry.uuid}
+      label={label}
+      contentType="bibliography"
+    >
       <div ref={ref} dangerouslySetInnerHTML={{ __html: entry.html }} />
     </LabeledElement>
   );

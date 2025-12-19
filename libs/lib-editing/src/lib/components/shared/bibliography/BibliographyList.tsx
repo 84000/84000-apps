@@ -25,6 +25,7 @@ export const BibliographyList = ({
         className="position-sidebar:mt-5 mt-6"
         id={'bibliography'}
         label="b."
+        contentType="bibliography"
       >
         <SectionTitle>Bibliography</SectionTitle>
       </LabeledElement>
@@ -41,6 +42,7 @@ export const BibliographyList = ({
                 className="position-sidebar:mt-0.5 mt-4"
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
+                contentType="bibliography"
               >
                 <div className="text-secondary font-sans text-base font-bold">
                   {section.heading}

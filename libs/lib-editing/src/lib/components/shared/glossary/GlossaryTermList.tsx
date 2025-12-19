@@ -25,6 +25,7 @@ export const GlossaryTermList = ({
         className="position-sidebar:mt-5 mt-6"
         id={'glossary'}
         label="g."
+        contentType="glossary"
       >
         <SectionTitle>Glossary</SectionTitle>
       </LabeledElement>
@@ -37,6 +38,7 @@ export const GlossaryTermList = ({
             id={instance.uuid || instance.authority || `glossary-${index}`}
             key={instance.uuid || instance.authority || `glossary-${index}`}
             label={`g.${index + 1}`}
+            contentType="glossary"
           >
             <GlossaryInstanceBody
               instance={instance}

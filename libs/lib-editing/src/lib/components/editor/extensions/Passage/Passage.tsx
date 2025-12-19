@@ -90,7 +90,10 @@ export const Passage = (props: NodeViewProps) => {
                   }}
                 />
               ) : (
-                <ReaderOptions {...props} />
+                <ReaderOptions
+                  {...props}
+                  contentType={source ? 'compare' : node.attrs.type}
+                />
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -108,7 +111,7 @@ export const Passage = (props: NodeViewProps) => {
       <div
         className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
       >
-        <LabeledElement label={node.attrs.label} className="-mt-1">
+        <LabeledElement label={node.attrs.label} className="mt-0.5">
           <div className="leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2">
             {source}
           </div>
