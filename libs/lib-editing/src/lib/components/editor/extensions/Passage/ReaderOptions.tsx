@@ -1,17 +1,27 @@
 'use client';
 
+import { PanelContentType, urlForPanelContent } from '@data-access';
 import { DropdownMenuItem } from '@design-system';
 import { NodeViewProps } from '@tiptap/react';
 import { CopyIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
-export const ReaderOptions = (props: NodeViewProps) => {
+export const ReaderOptions = (
+  props: NodeViewProps & { contentType: PanelContentType },
+) => {
   const copyLink = useCallback(() => {
-    const uuid = props.node.attrs.uuid;
-    const url = new URL(window.location.href);
-    url.hash = `#${uuid}`;
-    navigator.clipboard.writeText(url.toString());
-  }, [props.node]);
+    const hash = props.node.attrs.uuid;
+    const contentType = props.contentType;
+    const location = window.location;
+
+    const link = urlForPanelContent({
+      location,
+      hash,
+      contentType,
+    });
+
+    navigator.clipboard.writeText(link);
+  }, [props.node, props.contentType]);
   return (
     <>
       {/* <DropdownMenuItem disabled> */}

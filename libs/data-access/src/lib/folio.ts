@@ -22,6 +22,7 @@ export const getFolios = async ({
     .from('tibetan_works_folios')
     .select(
       `
+      folio_uuid,
       content::text,
       volume_number::int4,
       folio_number::int4,

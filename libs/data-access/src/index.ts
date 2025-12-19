@@ -6,6 +6,7 @@ export * from './lib/client-server';
 export * from './lib/folio';
 export * from './lib/glossary';
 export * from './lib/imprint';
+export * from './lib/layout';
 export * from './lib/library';
 export * from './lib/passage';
 export * from './lib/projects';

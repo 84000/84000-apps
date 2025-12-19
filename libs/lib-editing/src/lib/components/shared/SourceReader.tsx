@@ -53,8 +53,10 @@ export const SourceReader = () => {
       {folios.map((folio, index) => (
         <LabeledElement
           key={index}
+          id={folio.uuid}
           label={`f.${folio.folio}.${folio.side}\nvol.${folio.volume}`}
           className="mt-0.5"
+          contentType="source"
         >
           <div className="leading-7 font-tibetan text-lg 2xl:whitespace-pre-wrap whitespace-normal">
             {folio.content}

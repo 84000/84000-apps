@@ -153,6 +153,41 @@ export const PaginationProvider = ({
         setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
         setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
 
+        // Wait for React to re-render and update the DOM (remove/add skeletons)
+        // by waiting until the element's position stabilizes
+        await new Promise<void>((resolve) => {
+          let stabilityCount = 0;
+          let lastTop = -1;
+
+          const checkStability = () => {
+            const el = div.querySelector<HTMLElement>(
+              `#${CSS.escape(navCursor)}`,
+            );
+            if (!el) {
+              requestAnimationFrame(checkStability);
+              return;
+            }
+
+            const currentTop = el.getBoundingClientRect().top;
+
+            // Check if position has stabilized (same for 2 consecutive frames)
+            if (currentTop === lastTop) {
+              stabilityCount++;
+              if (stabilityCount >= 2) {
+                resolve();
+                return;
+              }
+            } else {
+              stabilityCount = 0;
+            }
+
+            lastTop = currentTop;
+            requestAnimationFrame(checkStability);
+          };
+
+          requestAnimationFrame(checkStability);
+        });
+
         element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
       }
 
