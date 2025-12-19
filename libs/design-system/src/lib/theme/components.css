@@ -1,19 +1,9 @@
-@custom-variant position-sidebar {
-  &:where([data-position='sidebar'] *) {
-    @slot;
-  }
-}
-
 @layer components {
   .passage {
-    @apply font-serif font-light leading-7;
-
-    @variant position-sidebar {
-      @apply leading-5 text-sm;
-    }
+    @apply font-serif font-light leading-7 @c/sidebar:leading-5 @c/sidebar:text-sm;
 
     p {
-      @apply text-justify;
+      @apply @xl:text-justify;
     }
   }
 
@@ -47,11 +37,7 @@
   }
 
   .paragraph {
-    @apply mb-1 mt-2;
-
-    @variant position-sidebar {
-      @apply pt-1;
-    }
+    @apply mb-1 mt-2 @c/sidebar:pt-1;
   }
 
   a {
@@ -72,11 +58,7 @@
 
   .glossary-instance-definition {
     p {
-      @apply mb-1 mt-2;
-
-      @variant position-sidebar {
-        @apply pt-1;
-      }
+      @apply mb-1 mt-2 @c/sidebar:pt-1;
     }
   }
 

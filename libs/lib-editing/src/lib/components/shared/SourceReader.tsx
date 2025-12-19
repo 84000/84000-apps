@@ -71,8 +71,8 @@ export const SourceReader = () => {
           ))}
         </>
       ) : (
-        <div className="w-full pt-16 pb-6 group-data-[position=sidebar]:pt-8">
-          <LotusPond className="group-data-[position=sidebar]:hidden mx-auto w-96" />
+        <div className="w-full pt-16 pb-6">
+          <LotusPond className="mx-auto w-96" />
         </div>
       )}
     </div>

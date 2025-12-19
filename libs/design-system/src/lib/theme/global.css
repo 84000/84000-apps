@@ -215,6 +215,9 @@
   --spacing-readable: 40rem;
   --spacing-feed: 94rem;
 
+  /* utility for using a container value at any size */
+  --container-c: 0rem;
+
   --font-sans:
     'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

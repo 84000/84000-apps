@@ -22,7 +22,7 @@ export const GlossaryTermList = ({
   return (
     <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
-        className="position-sidebar:mt-5 mt-6"
+        className="@c/sidebar:mt-5 mt-6"
         id={'glossary'}
         label="g."
       >
@@ -40,7 +40,7 @@ export const GlossaryTermList = ({
           >
             <GlossaryInstanceBody
               instance={instance}
-              className="p-0 position-sidebar:-mt-0.5"
+              className="p-0 @c/sidebar:-mt-0.5"
             />
           </LabeledElement>
         ))}

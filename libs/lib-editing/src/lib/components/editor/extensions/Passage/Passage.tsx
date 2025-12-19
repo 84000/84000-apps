@@ -97,7 +97,7 @@ export const Passage = (props: NodeViewProps) => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <NodeViewContent className="passage is-editable pl-6 group-data-[position=sidebar]:pl-4" />
+          <NodeViewContent className="passage is-editable pl-6 @c/sidebar:pl-4" />
           {editor.isEditable && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               {dialogType === 'label' && (

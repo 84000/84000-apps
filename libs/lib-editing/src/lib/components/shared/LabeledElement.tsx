@@ -68,9 +68,7 @@ export const LabeledElement = ({
           {label || ''}
         </div>
       )}
-      <div className="passage pl-6 group-data-[position=sidebar]:pl-4">
-        {children}
-      </div>
+      <div className="passage pl-6 @c/sidebar:pl-4">{children}</div>
     </div>
   );
 };

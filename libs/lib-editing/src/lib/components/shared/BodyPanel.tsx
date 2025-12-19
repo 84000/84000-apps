@@ -65,9 +65,8 @@ export const BodyPanel = ({
         const tab = tabName as 'translation' | 'source' | 'compare';
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
-      data-position="main"
       defaultValue="translation"
-      className="px-12 w-full"
+      className="px-12 w-full @container/main"
     >
       <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center">
         <TabsList className="w-fit inline-flex">

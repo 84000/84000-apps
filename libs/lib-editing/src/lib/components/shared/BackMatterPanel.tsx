@@ -39,9 +39,8 @@ export const BackMatterPanel = ({
           | 'abbreviations';
         updatePanel({ name: 'right', state: { open: true, tab } });
       }}
-      data-position="sidebar"
       defaultValue="endnotes"
-      className="w-full gap-0 group"
+      className="w-full gap-0 @container/sidebar"
     >
       <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList
@@ -66,7 +65,7 @@ export const BackMatterPanel = ({
       </div>
       <div className="px-2">
         <div className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
-          <div className="rounded ps-10 pe-4 max-w-readable mx-auto ">
+          <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
             {endnotes.length > 0 && (
               <TabsContent value="endnotes">
                 {renderTranslation({

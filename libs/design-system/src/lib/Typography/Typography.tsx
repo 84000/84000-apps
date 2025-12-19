@@ -46,7 +46,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif font-light text-primary mt-6 scroll-m-20 pb-3 text-xl position-sidebar:pb-2 position-sidebar:mt-4 position-sidebar:text-left text-center section-title';
+  'font-serif font-light text-primary scroll-m-20 text-xl @c/sidebar:mt-4 mt-6 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
@@ -60,7 +60,7 @@ export function SectionTitle({
 }
 
 export const BODY_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-4xl position-sidebar:text-2xl position-sidebar:pb-4 position-sidebar:mt-0 text-center body-title-main';
+  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-4xl @c/sidebar:text-2xl @c/sidebar:pb-4 @c/sidebar:mt-0 text-center body-title-main';
 export function BodyTitle({
   children,
   className,
@@ -101,7 +101,7 @@ export function H1({
 }
 
 export const H2_STYLE =
-  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl position-sidebar:text-xl position-sidebar:pb-2 position-sidebar:mt-4 title-main';
+  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl @c/sidebar:text-xl @c/sidebar:pb-2 @c/sidebar:mt-4 title-main';
 export function H2({
   children,
   className,
@@ -115,7 +115,7 @@ export function H2({
 }
 
 export const H3_STYLE =
-  'font-sans font-semibold text-secondary-600 mt-2 scroll-m-20 pb-1 text-lg lg:text-xl position-sidebar:text-md position-sidebar:pb-1 position-sidebar:mt-2';
+  'font-sans font-semibold text-secondary-600 mt-2 scroll-m-20 pb-1 text-lg lg:text-xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-2';
 export function H3({
   children,
   className,
@@ -129,7 +129,7 @@ export function H3({
 }
 
 export const H4_STYLE =
-  'font-sans font-medium mt-2 scroll-m-20 pb-1 text-lg position-sidebar:text-md position-sidebar:pb-1 position-sidebar:mt-2';
+  'font-sans font-medium mt-2 scroll-m-20 pb-1 text-lg @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-2';
 export function H4({
   children,
   className,
