@@ -27,7 +27,7 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
         updatePanel({ name: 'left', state: { open: true, tab } });
       }}
       defaultValue="toc"
-      className="w-full gap-0 group @container/sidebar"
+      className="w-full gap-0 @container/sidebar"
     >
       <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList

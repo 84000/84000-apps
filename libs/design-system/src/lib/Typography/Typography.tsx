@@ -46,7 +46,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 text-xl @c/sidebar:mt-6 mt-4 @c/sidebar:pb-3 pb-2 @c/sidebar:text-left text-center section-title';
+  'font-serif font-light text-primary scroll-m-20 text-xl @c/sidebar:mt-4 mt-6 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
