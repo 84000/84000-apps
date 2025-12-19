@@ -22,7 +22,7 @@ export const BibliographyList = ({
   return (
     <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
-        className="position-sidebar:mt-5 mt-6"
+        className="@c/sidebar:mt-5 mt-6"
         id={'bibliography'}
         label="b."
       >
@@ -38,7 +38,7 @@ export const BibliographyList = ({
           <div key={i} className="flex flex-col gap-4">
             {section.heading && (
               <LabeledElement
-                className="position-sidebar:mt-0.5 mt-4"
+                className="@c/sidebar:mt-0.5 mt-4"
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
               >

@@ -334,8 +334,8 @@ export const PaginationProvider = ({
           ))}
         </div>
       ) : (
-        <div className="w-full pt-16 pb-6 group-data-[position=sidebar]:pt-8">
-          <LotusPond className="group-data-[position=sidebar]:hidden mx-auto w-96" />
+        <div className="w-full pt-16 pb-6 @c/sidebar:pt-8">
+          <LotusPond className="@c/sidebar:hidden mx-auto w-96" />
         </div>
       )}
     </PaginationContext.Provider>
