@@ -133,6 +133,8 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
     work.toh[0] || '',
   );
 
+  const title = imprint?.mainTitles?.en || work.title;
+
   useEffect(() => {
     const currentToh = toh || work.toh[0] || '';
     setLocalToh(currentToh);
@@ -218,7 +220,7 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
         <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
           <BookOpenIcon />
         </div>
-        <span className="my-auto font-semibold">{work.title}</span>
+        <span className="my-auto font-semibold">{title}</span>
       </div>
       <div className="flex gap-2">
         <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
