@@ -5,16 +5,12 @@ import { useEffect, useState } from 'react';
 import {
   BlockEditor,
   blocksFromTranslationBody,
-  TranslationEditor,
   TranslationEditorContent,
 } from '@lib-editing';
 import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
 import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
-import {
-  GlossaryTermInstance,
-  PassageDTO,
-  translationBodyFromDTO,
-} from '@data-access';
+import { Passage, PassageDTO, passagesFromDTO } from '@data-access';
+import { SandboxTranslationEditor } from './SandboxTranslationEditor';
 
 export const EditorPage = ({
   slug,
@@ -42,7 +38,7 @@ export const EditorPage = ({
       let parsedContent = content;
       if (format === 'passages') {
         const dtos = content as PassageDTO[];
-        const passages = translationBodyFromDTO(dtos);
+        const passages = passagesFromDTO(dtos);
         parsedContent = blocksFromTranslationBody(passages);
       }
 
@@ -51,40 +47,16 @@ export const EditorPage = ({
     })();
   }, [slug, format]);
 
-  const fetchEndNote = async (uuid: string) => {
-    return [
-      {
-        type: 'passage',
-        attrs: { label: 'n.1', uuid },
-        content: [
-          {
-            type: 'paragraph',
-            content: [
-              {
-                type: 'text',
-                text: `This is the content of endnote ${uuid}.`,
-              },
-            ],
-          },
-        ],
-      },
-    ];
-  };
-
-  const fetchGlossaryInstance = async (
-    uuid: string,
-  ): Promise<GlossaryTermInstance> => {
+  const fetchEndNote = async (uuid: string): Promise<Passage> => {
     return {
+      sort: 500,
+      type: 'endnote',
       uuid,
-      authority: 'Sample Term',
-      definition: `This is a sample definition for the glossary term with UUID ${uuid}.`,
-      names: {
-        english: 'Sample Term',
-        chinese: '示例术语',
-        sanskrit: 'udāharaṇa paccaya',
-        tibetan: 'དམ་བཅོས་གྲུབ་པ།',
-        wylie: 'dam bcos grub pa',
-      },
+      label: 'n.1',
+      content:
+        '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon dwelling in the wilderness even at the cost of their lives.',
+      workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
+      annotations: [],
     };
   };
 
@@ -95,10 +67,9 @@ export const EditorPage = ({
   switch (editorType) {
     case 'translation':
       return (
-        <TranslationEditor
+        <SandboxTranslationEditor
           content={content}
           fetchEndNote={fetchEndNote}
-          fetchGlossaryInstance={fetchGlossaryInstance}
         />
       );
 
