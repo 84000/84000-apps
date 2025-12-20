@@ -3,7 +3,7 @@
     @apply font-serif font-light leading-7 @c/sidebar:leading-5 @c/sidebar:text-sm;
 
     p {
-      @apply text-justify @c:text-left @xl:text-justify;
+      @apply md:text-justify @c:text-left @xl:text-justify;
     }
   }
 
