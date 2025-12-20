@@ -14,15 +14,12 @@ import { v4 as uuidv4 } from 'uuid';
  * a new UUID is generated and assigned. In the case of duplication, all
  * global attributes are set to their default values.
  */
-export const validateAttrs = async ({
+export const validateAttrs = ({
   node,
   editor,
   getPos,
   updateAttributes,
 }: Partial<NodeViewProps>) => {
-  // wait for next tick to ensure node is rendered
-  await Promise.resolve();
-
   if (!node?.attrs.uuid) {
     updateAttributes?.({ uuid: uuidv4() });
     return;
