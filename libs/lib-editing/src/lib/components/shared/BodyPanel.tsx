@@ -66,7 +66,7 @@ export const BodyPanel = ({
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
       defaultValue="translation"
-      className="px-12 w-full @container/main"
+      className="px-12 w-full"
     >
       <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center">
         <TabsList className="w-fit inline-flex">
