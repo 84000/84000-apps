@@ -72,7 +72,7 @@ export const TextAlignSelector = ({ editor }: { editor: Editor }) => {
             <div
               key={i}
               onClick={() => item.onClick(editor)}
-              className="flex space-x-2 items-center rounded-md hover:bg-accent px-2 py-1.5 text-accent-foreground cursor-pointer"
+              className="flex space-x-2 items-center rounded-md hover:bg-muted px-2 py-1.5 text-foreground cursor-pointer"
             >
               <item.icon className="size-4" />
               <span className="text-sm">{item.title}</span>

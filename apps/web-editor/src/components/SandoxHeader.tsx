@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSandbox } from './SandboxProvider';
 import { Format, Slug } from '@lib-editing/fixtures/types';
 import { useRouter } from 'next/navigation';
+import { ChevronDownIcon } from 'lucide-react';
 
 export const SandboxHeader = () => {
   const dropdownItems = Object.keys(SLUG_PATHS)
@@ -57,7 +58,7 @@ export const SandboxHeader = () => {
 
   return (
     <div className="fixed w-full z-50 bg-background border-b border-border">
-      <div className="px-6 flex flex-row justify-between">
+      <div className="px-6 py-2 flex flex-row justify-between">
         <H4
           className="hover:cursor-pointer"
           onClick={() => onHandleSelect('', false)}
@@ -68,9 +69,10 @@ export const SandboxHeader = () => {
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="rounded-full my-auto capitalize"
+              className="rounded-full my-auto capitalize flex gap-2"
             >
-              {selectedItem ? selectedItem : 'Select Example'}
+              <span>{selectedItem ? selectedItem : 'Select Example'}</span>
+              <ChevronDownIcon />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

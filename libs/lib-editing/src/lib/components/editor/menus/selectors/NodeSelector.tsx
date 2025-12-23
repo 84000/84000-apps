@@ -125,7 +125,7 @@ export const NodeSelector = ({ editor }: { editor: Editor }) => {
             <div
               key={i}
               onClick={() => item.onClick(editor)}
-              className="flex items-center text-sm rounded-md hover:bg-accent text-accent-foreground px-2 py-1.5 cursor-pointer"
+              className="flex items-center text-sm rounded-md hover:bg-muted px-2 py-1.5 cursor-pointer"
             >
               <item.icon className="size-3.5 me-2" />
               <span>{item.name}</span>

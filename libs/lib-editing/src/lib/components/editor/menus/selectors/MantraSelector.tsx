@@ -101,7 +101,7 @@ export const MantraSelector = ({ editor }: { editor: Editor }) => {
         {items.map((item) => (
           <div
             key={item.name}
-            className="flex items-center text-sm rounded-md hover:bg-accent text-accent-foreground px-2 py-1.5 cursor-pointer"
+            className="flex items-center text-sm rounded-md hover:bg-muted text-foreground px-2 py-1.5 cursor-pointer"
             onClick={() => item.onClick(editor)}
           >
             <span>{item.name}</span>

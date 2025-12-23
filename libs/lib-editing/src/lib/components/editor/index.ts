@@ -7,3 +7,4 @@ export * from './EditorProvider';
 export * from './TranslationBuilder';
 export * from './TranslationEditor';
 export * from './hooks';
+export * from './menus';

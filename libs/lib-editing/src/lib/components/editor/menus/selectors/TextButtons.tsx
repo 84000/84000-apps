@@ -74,7 +74,7 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
           >
             <item.icon
               className={cn('size-4', {
-                'text-primary': item.isActive(editorState),
+                'text-foreground': item.isActive(editorState),
               })}
               strokeWidth={2.5}
             />
