@@ -6,7 +6,7 @@ import { SandboxHeader } from '../components/SandoxHeader';
 import { SandboxProvider } from '../components/SandboxProvider';
 
 export const metadata: Metadata = {
-  title: 'Collaorative Editor Sandbox',
+  title: 'Collaborative Editor Sandbox',
   description: 'A sandbox for collaborative editing features',
 };
 
