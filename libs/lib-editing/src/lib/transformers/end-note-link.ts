@@ -5,13 +5,14 @@ import { splitContentAt } from './split-at';
 import { splitContent } from './split-content';
 
 const innerTransform: Transformer = ({ block, annotation }) => {
-  const { endNote, uuid, start, end, toh } =
+  const { endNote, label, uuid, start, end, toh } =
     annotation as EndNoteLinkAnnotation;
   let endnoteMark = block.marks?.find((m) => m.type === 'endNoteLink');
   const marks = block.marks || [];
   const notes = endnoteMark?.attrs?.notes || [];
   notes.push({
     endNote,
+    label,
     uuid,
     start,
     end,

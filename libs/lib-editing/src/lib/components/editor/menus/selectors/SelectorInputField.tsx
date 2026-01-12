@@ -1,3 +1,5 @@
+'use client';
+
 import { Button, Input } from '@design-system';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';

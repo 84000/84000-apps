@@ -1,3 +1,5 @@
+'use client';
+
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, ScrollBar } from '@design-system';

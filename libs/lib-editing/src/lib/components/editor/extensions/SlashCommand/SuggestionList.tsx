@@ -76,9 +76,9 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
             <div
               key={index}
               className={cn(
-                'flex space-x-2 hover:bg-accent p-1 rounded-md cursor-pointer text-foreground',
+                'flex space-x-2 hover:bg-muted p-1 rounded-md cursor-pointer text-foreground',
                 {
-                  'bg-accent': index === selectedIndex,
+                  'bg-muted': index === selectedIndex,
                 },
               )}
               onClick={() => {

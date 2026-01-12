@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
@@ -74,7 +76,7 @@ export const TextButtons = ({ editor }: { editor: Editor }) => {
           >
             <item.icon
               className={cn('size-4', {
-                'text-primary': item.isActive(editorState),
+                'text-foreground': item.isActive(editorState),
               })}
               strokeWidth={2.5}
             />

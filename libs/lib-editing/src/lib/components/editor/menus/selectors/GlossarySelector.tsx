@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
@@ -29,7 +31,9 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
           <BookOpenTextIcon
             className={cn(
               'size-4',
-              editorState.isActive ? 'text-primary' : 'text-muted-foreground',
+              editorState.isActive
+                ? 'text-foreground'
+                : 'text-muted-foreground',
             )}
             strokeWidth={2.5}
           />

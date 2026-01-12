@@ -1,3 +1,5 @@
+'use client';
+
 import { cn } from '@lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
@@ -47,20 +49,17 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
             key={i}
             variant="ghost"
             size="icon"
-            className="rounded-none flex-shrink-0"
+            className={cn(
+              'rounded-none flex-shrink-0',
+              item.isActive(editorState)
+                ? 'text-foreground'
+                : 'text-muted-foreground',
+            )}
             onClick={() => {
               item.onClick(editor);
             }}
           >
-            <item.icon
-              className={cn(
-                'size-4',
-                item.isActive(editorState)
-                  ? 'text-primary'
-                  : 'text-muted-foreground',
-              )}
-              strokeWidth={2.5}
-            />
+            <item.icon className={cn('size-4')} strokeWidth={2.5} />
           </Button>
         );
       })}

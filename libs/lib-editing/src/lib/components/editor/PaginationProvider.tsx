@@ -17,7 +17,6 @@ import {
   getTranslationPassages,
   getTranslationPassagesAround,
   PanelFilter,
-  Passage,
 } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { useInView } from 'motion/react';
@@ -44,7 +43,6 @@ export const PaginationProvider = ({
   fragment,
   isEditable = true,
   onCreate,
-  fetchEndNote,
   children,
 }: {
   uuid: string;
@@ -54,7 +52,6 @@ export const PaginationProvider = ({
   fragment?: XmlFragment;
   isEditable?: boolean;
   onCreate?: (params: { editor: Editor }) => void;
-  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
   children: ReactNode;
 }) => {
   const initialEndCursor = Array.isArray(content)
@@ -81,7 +78,6 @@ export const PaginationProvider = ({
 
   const { extensions } = useTranslationExtensions({
     fragment,
-    fetchEndNote,
   });
 
   const { editor } = useBlockEditor({

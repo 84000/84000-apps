@@ -21,7 +21,7 @@ export const TranslationBuilder = ({
 
   const { canEdit, setEditor, startObserving, getFragment } = useEditorState();
 
-  const { fetchEndNote, uuid } = useNavigation();
+  const { uuid } = useNavigation();
 
   useEffect(() => {
     (async () => {
@@ -42,7 +42,6 @@ export const TranslationBuilder = ({
       content={content}
       fragment={fragment}
       isEditable={isEditable}
-      fetchEndNote={fetchEndNote}
       onCreate={({ editor }) => {
         editor.commands.setDebug(true);
         setEditor(name, editor);
