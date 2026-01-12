@@ -51,7 +51,6 @@ import { Bold } from '../extensions/Bold';
 import { List } from '../extensions/List';
 import { Underline } from '../extensions/Underline';
 import { GlobalConfig } from '../extensions/GlobalConfig';
-import { Passage } from '@data-access';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -72,11 +71,9 @@ const PassageSuggestion: CommandSuggestionItem = {
 
 export const useTranslationExtensions = ({
   fragment,
-  fetchEndNote,
 }: {
   fragment?: XmlFragment;
-  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
-}) => {
+} = {}) => {
   const suggestions = [
     TextSuggestion,
     PassageSuggestion,
@@ -95,9 +92,7 @@ export const useTranslationExtensions = ({
     HasAbbreviation,
     AbbreviationCommand,
     Bold,
-    EndNoteLinkMark.configure({
-      fetch: fetchEndNote,
-    }),
+    EndNoteLinkMark,
     GlobalConfig,
     GlossaryInstanceNode,
     Heading,

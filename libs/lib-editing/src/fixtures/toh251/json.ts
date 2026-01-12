@@ -496,6 +496,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '2cb57e37-0798-4d57-81ae-eb25b4822a16',
+                      label: '1',
                       uuid: '1b1d26bc-4f47-44c3-a6e0-f2ff94f38116',
                       start: 78,
                       end: 78,
@@ -546,6 +547,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '24ee6eb1-a9ce-4447-b1f4-b38fb8e4a426',
+                      label: '2',
                       uuid: '30d3420e-b3f8-4b41-97e7-94242c6ad9a2',
                       start: 188,
                       end: 188,
@@ -596,6 +598,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '5c383b48-6d8b-4976-b8bd-1bab3f5a16d4',
+                      label: '3',
                       uuid: 'badbdb97-b3e8-4dca-b31c-0a28c8432e6f',
                       start: 380,
                       end: 380,
@@ -646,6 +649,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'd4bb4496-9915-45e9-9b41-6f4744056d34',
+                      label: '4',
                       uuid: '54c51c32-4597-4174-9e23-184521c456e3',
                       start: 422,
                       end: 422,
@@ -1215,6 +1219,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'b63546f7-f747-42eb-83e4-4508719b0342',
+                      label: '5',
                       uuid: '62eb1703-fb29-4c87-addf-cceb31efc04a',
                       start: 72,
                       end: 72,
@@ -1239,6 +1244,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'b5ba5c64-cea9-4985-8a32-40c7685f8b8c',
+                      label: '6',
                       uuid: 'f6eeb3c2-b289-464a-9b5b-a0dee255908e',
                       start: 85,
                       end: 85,
@@ -1319,6 +1325,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'aa913b64-fd95-433b-92ff-e756258f55c0',
+                      label: '7',
                       uuid: 'd1af8487-12fb-42f7-af65-6f3938e5031c',
                       start: 136,
                       end: 136,
@@ -1372,6 +1379,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '6bdebda4-694f-43c1-bfc7-a14974ebd8cd',
+                      label: '8',
                       uuid: 'afb666ac-6ddc-40ad-b566-750d112ecf8a',
                       start: 585,
                       end: 585,
@@ -1396,6 +1404,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '23afe851-d528-4bf8-8776-012cf2dc192c',
+                      label: '9',
                       uuid: '492760ba-0dfd-4805-b3db-65fb2d246267',
                       start: 602,
                       end: 602,
@@ -1502,6 +1511,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '0071b8fa-9ec4-43fd-8f40-47ce6c91c489',
+                      label: '10',
                       uuid: '842de512-4908-4b8b-a5cd-e60d5179182a',
                       start: 226,
                       end: 226,
@@ -1660,6 +1670,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '2e04f38b-14cf-48f1-8f5e-eebadac78e49',
+                      label: '11',
                       uuid: 'ffad76a0-3a7e-43c5-829f-11205fd28814',
                       start: 255,
                       end: 255,
@@ -1754,6 +1765,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '906dc92d-3438-43a0-b368-55e6288d3608',
+                      label: '12',
                       uuid: '95ece1d3-8650-44d4-a091-a1dee6104eea',
                       start: 449,
                       end: 449,
@@ -1855,6 +1867,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'e23dc433-53c0-48f4-8ae5-f3f4fe0db857',
+                      label: '13',
                       uuid: 'c0b56deb-c9e9-416a-84ad-aa62d51eb92d',
                       start: 620,
                       end: 620,
@@ -1956,6 +1969,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '1d76f3e1-914c-4682-8973-4d8ed2bd4b9f',
+                      label: '14',
                       uuid: '3c71c19a-a396-424b-ad7e-3d44ff2a329c',
                       start: 965,
                       end: 965,
@@ -2004,6 +2018,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'b8f11293-b74e-4137-873e-bd826dba04e1',
+                      label: '15',
                       uuid: '08eaa440-ef51-46f0-ac00-72bdc7de2c16',
                       start: 99,
                       end: 99,
@@ -2054,6 +2069,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '120d0fb2-a60f-49d3-8ac8-4891703b3442',
+                      label: '16',
                       uuid: 'b2969d71-74b4-44b0-b42f-8637a6ccc397',
                       start: 321,
                       end: 321,
@@ -2706,6 +2722,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: '5433d5e2-c2f2-4a05-bc48-60dcb1109fbf',
+                      label: '17',
                       uuid: 'de90ce7e-9b47-4324-ae1c-b803ee1cd28e',
                       start: 136,
                       end: 136,
@@ -2801,6 +2818,7 @@ export const content: TranslationEditorContent = [
                   notes: [
                     {
                       endNote: 'fb6c0152-67eb-4ef9-91bc-8fb6ea64e6f1',
+                      label: '18',
                       uuid: 'd5f88fe6-79d7-45ed-bf99-2cbfca3bc9f3',
                       start: 107,
                       end: 107,
@@ -2988,6 +3006,7 @@ export const content: TranslationEditorContent = [
                       notes: [
                         {
                           endNote: 'fb352874-9ae4-4658-97ea-ec944f2c6dfc',
+                          label: '19',
                           uuid: 'bc5071aa-2099-4323-a353-6318e01de343',
                           start: 102,
                           end: 102,

@@ -1,6 +1,5 @@
 'use client';
 
-import { Passage } from '@data-access';
 import {
   useBlockEditor,
   useTranslationExtensions,
@@ -11,14 +10,10 @@ import { EditorContent } from '@tiptap/react';
 
 export const SandboxTranslationEditor = ({
   content,
-  fetchEndNote,
 }: {
   content: TranslationEditorContent;
-  fetchEndNote(uuid: string): Promise<Passage>;
 }) => {
-  const { extensions } = useTranslationExtensions({
-    fetchEndNote,
-  });
+  const { extensions } = useTranslationExtensions();
 
   const { editor } = useBlockEditor({
     extensions,

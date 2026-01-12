@@ -3,7 +3,6 @@ import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
 import { InternalLinkView } from './InternalLinkView';
 import { createMarkViewDom } from '../../util';
-import { cn } from '@lib-utils';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;

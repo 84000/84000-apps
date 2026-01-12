@@ -16,6 +16,10 @@ export const transformer: AnnotationTransformer = (
     if (content.uuid) {
       endNote.endNote = content.uuid as string;
     }
+
+    if (content.label) {
+      endNote.label = content.label as string;
+    }
   });
 
   return endNote;

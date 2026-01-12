@@ -10,7 +10,7 @@ export const TranslationReader = ({
   filter,
   panel,
 }: TranslationRenderer) => {
-  const { fetchEndNote, uuid } = useNavigation();
+  const { uuid } = useNavigation();
 
   return (
     <PaginationProvider
@@ -19,7 +19,6 @@ export const TranslationReader = ({
       filter={filter}
       content={content}
       isEditable={false}
-      fetchEndNote={fetchEndNote}
     >
       <TranslationEditor className={className} />
     </PaginationProvider>

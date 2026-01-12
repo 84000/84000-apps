@@ -9,7 +9,7 @@ import {
 } from '@lib-editing';
 import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
 import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
-import { Passage, PassageDTO, passagesFromDTO } from '@data-access';
+import { PassageDTO, passagesFromDTO } from '@data-access';
 import { SandboxTranslationEditor } from './SandboxTranslationEditor';
 
 export const EditorPage = ({
@@ -29,36 +29,21 @@ export const EditorPage = ({
       return;
     }
 
-    (async () => {
-      const { type, content } = SLUG_PATHS[slug]?.[format] || {
-        content: EMPTY_DOCUMENT,
-        type: 'block',
-      };
-
-      let parsedContent = content;
-      if (format === 'passages') {
-        const dtos = content as PassageDTO[];
-        const passages = passagesFromDTO(dtos);
-        parsedContent = blocksFromTranslationBody(passages);
-      }
-
-      setContent(parsedContent);
-      setEditorType(type);
-    })();
-  }, [slug, format]);
-
-  const fetchEndNote = async (uuid: string): Promise<Passage> => {
-    return {
-      sort: 500,
-      type: 'endnote',
-      uuid,
-      label: 'n.1',
-      content:
-        '“Monks, for as long as they live, bodhisattvas, great beings, should not abandon dwelling in the wilderness even at the cost of their lives.',
-      workUuid: 'ef63eb47-f3e4-4d27-8d60-59e8411627a2',
-      annotations: [],
+    const { type, content } = SLUG_PATHS[slug]?.[format] || {
+      content: EMPTY_DOCUMENT,
+      type: 'block',
     };
-  };
+
+    let parsedContent = content;
+    if (format === 'passages') {
+      const dtos = content as PassageDTO[];
+      const passages = passagesFromDTO(dtos);
+      parsedContent = blocksFromTranslationBody(passages);
+    }
+
+    setContent(parsedContent);
+    setEditorType(type);
+  }, [slug, format]);
 
   if (!content) {
     return <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>;
@@ -66,12 +51,7 @@ export const EditorPage = ({
 
   switch (editorType) {
     case 'translation':
-      return (
-        <SandboxTranslationEditor
-          content={content}
-          fetchEndNote={fetchEndNote}
-        />
-      );
+      return <SandboxTranslationEditor content={content} />;
 
     default:
       return <BlockEditor content={content} />;

@@ -292,6 +292,9 @@ export const content: PassageDTO[] = [
             uuid: '2cb57e37-0798-4d57-81ae-eb25b4822a16',
             endnote_xmlId: 'UT22084-066-009-59',
           },
+          {
+            label: '1',
+          },
         ],
         passage_uuid: 'f5faeec0-ad74-4c36-aab7-a1f492694460',
       },
@@ -316,6 +319,9 @@ export const content: PassageDTO[] = [
           {
             uuid: '24ee6eb1-a9ce-4447-b1f4-b38fb8e4a426',
             endnote_xmlId: 'UT22084-066-009-207',
+          },
+          {
+            label: '2',
           },
         ],
         passage_uuid: 'f5faeec0-ad74-4c36-aab7-a1f492694460',
@@ -342,6 +348,9 @@ export const content: PassageDTO[] = [
             uuid: '5c383b48-6d8b-4976-b8bd-1bab3f5a16d4',
             endnote_xmlId: 'UT22084-066-009-281',
           },
+          {
+            label: '3',
+          },
         ],
         passage_uuid: 'f5faeec0-ad74-4c36-aab7-a1f492694460',
       },
@@ -366,6 +375,9 @@ export const content: PassageDTO[] = [
           {
             uuid: 'd4bb4496-9915-45e9-9b41-6f4744056d34',
             endnote_xmlId: 'UT22084-066-009-62',
+          },
+          {
+            label: '4',
           },
         ],
         passage_uuid: 'f5faeec0-ad74-4c36-aab7-a1f492694460',
@@ -667,6 +679,9 @@ export const content: PassageDTO[] = [
             uuid: 'b63546f7-f747-42eb-83e4-4508719b0342',
             endnote_xmlId: 'UT22084-066-009-16',
           },
+          {
+            label: '5',
+          },
         ],
         passage_uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
       },
@@ -679,6 +694,9 @@ export const content: PassageDTO[] = [
           {
             uuid: 'b5ba5c64-cea9-4985-8a32-40c7685f8b8c',
             endnote_xmlId: 'UT22084-066-009-17',
+          },
+          {
+            label: '6',
           },
         ],
         passage_uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
@@ -717,6 +735,9 @@ export const content: PassageDTO[] = [
             uuid: 'aa913b64-fd95-433b-92ff-e756258f55c0',
             endnote_xmlId: 'UT22084-066-009-18',
           },
+          {
+            label: '7',
+          },
         ],
         passage_uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
       },
@@ -745,6 +766,9 @@ export const content: PassageDTO[] = [
             uuid: '6bdebda4-694f-43c1-bfc7-a14974ebd8cd',
             endnote_xmlId: 'UT22084-066-009-19',
           },
+          {
+            label: '8',
+          },
         ],
         passage_uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
       },
@@ -757,6 +781,9 @@ export const content: PassageDTO[] = [
           {
             uuid: '23afe851-d528-4bf8-8776-012cf2dc192c',
             endnote_xmlId: 'UT22084-066-009-20',
+          },
+          {
+            label: '9',
           },
         ],
         passage_uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
@@ -807,6 +834,9 @@ export const content: PassageDTO[] = [
           {
             uuid: '0071b8fa-9ec4-43fd-8f40-47ce6c91c489',
             endnote_xmlId: 'UT22084-066-009-209',
+          },
+          {
+            label: '10',
           },
         ],
         passage_uuid: '064a4cd7-e548-469b-b7c1-7d230c7f164a',
@@ -882,6 +912,9 @@ export const content: PassageDTO[] = [
             uuid: '2e04f38b-14cf-48f1-8f5e-eebadac78e49',
             endnote_xmlId: 'UT22084-066-009-11',
           },
+          {
+            label: '11',
+          },
         ],
         passage_uuid: '9835d1d6-9dc2-4359-9029-f109b28c1c54',
       },
@@ -930,6 +963,9 @@ export const content: PassageDTO[] = [
           {
             uuid: '906dc92d-3438-43a0-b368-55e6288d3608',
             endnote_xmlId: 'UT22084-066-009-12',
+          },
+          {
+            label: '12',
           },
         ],
         passage_uuid: '9835d1d6-9dc2-4359-9029-f109b28c1c54',
@@ -982,6 +1018,9 @@ export const content: PassageDTO[] = [
             uuid: 'e23dc433-53c0-48f4-8ae5-f3f4fe0db857',
             endnote_xmlId: 'UT22084-066-009-13',
           },
+          {
+            label: '13',
+          },
         ],
         passage_uuid: '9835d1d6-9dc2-4359-9029-f109b28c1c54',
       },
@@ -1033,6 +1072,9 @@ export const content: PassageDTO[] = [
             uuid: '1d76f3e1-914c-4682-8973-4d8ed2bd4b9f',
             endnote_xmlId: 'UT22084-066-009-14',
           },
+          {
+            label: '14',
+          },
         ],
         passage_uuid: '9835d1d6-9dc2-4359-9029-f109b28c1c54',
       },
@@ -1067,6 +1109,9 @@ export const content: PassageDTO[] = [
             uuid: 'b8f11293-b74e-4137-873e-bd826dba04e1',
             endnote_xmlId: 'UT22084-066-009-22',
           },
+          {
+            label: '15',
+          },
         ],
         passage_uuid: '9293d581-2755-4c1c-91e0-77bc2c0810ef',
       },
@@ -1091,6 +1136,9 @@ export const content: PassageDTO[] = [
           {
             uuid: '120d0fb2-a60f-49d3-8ac8-4891703b3442',
             endnote_xmlId: 'UT22084-066-009-23',
+          },
+          {
+            label: '16',
           },
         ],
         passage_uuid: '9293d581-2755-4c1c-91e0-77bc2c0810ef',
@@ -1502,6 +1550,9 @@ export const content: PassageDTO[] = [
             uuid: '5433d5e2-c2f2-4a05-bc48-60dcb1109fbf',
             endnote_xmlId: 'UT22084-066-009-34',
           },
+          {
+            label: '17',
+          },
         ],
         passage_uuid: '965340e9-4b95-4ab7-966d-059e25b094aa',
       },
@@ -1565,6 +1616,9 @@ export const content: PassageDTO[] = [
           {
             uuid: 'fb6c0152-67eb-4ef9-91bc-8fb6ea64e6f1',
             endnote_xmlId: 'UT22084-066-009-135',
+          },
+          {
+            label: '18',
           },
         ],
         passage_uuid: '06d427ec-46d0-4df1-9d48-08716f8710ec',
@@ -1683,6 +1737,9 @@ export const content: PassageDTO[] = [
           {
             uuid: 'fb352874-9ae4-4658-97ea-ec944f2c6dfc',
             endnote_xmlId: 'UT22084-066-009-39',
+          },
+          {
+            label: '19',
           },
         ],
         passage_uuid: '7ece3672-4152-4d60-a0d5-cc623a8cfa6f',

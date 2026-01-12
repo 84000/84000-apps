@@ -1,12 +1,10 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
-import { Passage } from '@data-access';
 import { cn } from '@lib-utils';
 import { createUpdateAttributes } from '../../util';
 
 export interface EndNoteLinkOptions {
   HTMLAttributes: Record<string, unknown>;
-  fetch: (uuid: string) => Promise<Passage | undefined>;
 }
 
 declare module '@tiptap/core' {
@@ -34,7 +32,6 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
   addOptions() {
     return {
       HTMLAttributes: {},
-      fetch: async (_uuid: string) => undefined,
     };
   },
 
@@ -49,66 +46,63 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
       const contentDOM = document.createElement('span');
       dom.appendChild(contentDOM);
 
-      (async () => {
-        const notes = props.mark.attrs.notes || [];
-        const fullNotes = await Promise.all(
-          notes.map(async (note: { endNote: string }) => {
-            const item = await this.options.fetch(note.endNote);
-            return {
-              ...note,
-              label: item?.label,
-            };
-          }),
-        );
+      // Define a visible default label when editable to indicate something
+      // _should_ be there.
+      const defaultLabel = isEditable ? '*' : '';
+      const notes: [
+        {
+          uuid: string;
+          location: string;
+          toh?: string;
+          endNote: string;
+          label?: string;
+        },
+      ] = props.mark.attrs.notes || [];
+      notes.sort((a, b) =>
+        (a.label || defaultLabel).localeCompare(b.label || defaultLabel),
+      );
+      notes.forEach(
+        (note: {
+          uuid: string;
+          location: string;
+          toh?: string;
+          endNote: string;
+          label?: string;
+        }) => {
+          const { uuid, location, toh, endNote, label } = note;
+          const isStart = location === 'start';
 
-        fullNotes.sort((a, b) => a.label.localeCompare(b.label));
+          const endnoteDOM = document.createElement('sup');
+          const updateAttributes = createUpdateAttributes(endnoteDOM);
+          const attributes = mergeAttributes(this.options.HTMLAttributes, {
+            class: cn(className, toh, isStart ? 'me-0.75' : ''),
+            type: this.name,
+            endNote,
+            uuid,
+          });
 
-        fullNotes.forEach(
-          (note: {
-            uuid: string;
-            location: string;
-            toh?: string;
-            endNote: string;
-            label?: string;
-          }) => {
-            const { uuid, location, toh, endNote, label } = note;
-            const isStart = location === 'start';
+          updateAttributes(attributes);
 
-            const endnoteDOM = document.createElement('sup');
-            const updateAttributes = createUpdateAttributes(endnoteDOM);
-            const attributes = mergeAttributes(this.options.HTMLAttributes, {
-              class: cn(className, toh, isStart ? 'me-0.75' : ''),
-              type: this.name,
-              endNote,
-              uuid,
-            });
+          if (isStart) {
+            dom.insertBefore(endnoteDOM, dom.firstChild);
+          } else {
+            dom.appendChild(endnoteDOM);
+          }
 
-            updateAttributes(attributes);
+          const itemLabel = label?.split('.').pop() || defaultLabel;
+          endnoteDOM.textContent = itemLabel || defaultLabel;
 
-            if (isStart) {
-              dom.insertBefore(endnoteDOM, dom.firstChild);
-            } else {
-              dom.appendChild(endnoteDOM);
+          endnoteDOM.addEventListener('click', () => {
+            if (!endNote) {
+              return;
             }
 
-            // Set a default label while fetching, and make it visible when editable
-            // to indicate something _should_ be there.
-            const defaultLabel = isEditable ? '*' : '';
-            const itemLabel = label?.split('.').pop() || defaultLabel;
-            endnoteDOM.textContent = itemLabel || defaultLabel;
-
-            endnoteDOM.addEventListener('click', () => {
-              if (!endNote) {
-                return;
-              }
-
-              const query = new URLSearchParams(window.location.search);
-              query.set('right', `open:endnotes:${endNote}`);
-              window.history.pushState({}, '', `?${query.toString()}`);
-            });
-          },
-        );
-      })();
+            const query = new URLSearchParams(window.location.search);
+            query.set('right', `open:endnotes:${endNote}`);
+            window.history.pushState({}, '', `?${query.toString()}`);
+          });
+        },
+      );
 
       return {
         dom,

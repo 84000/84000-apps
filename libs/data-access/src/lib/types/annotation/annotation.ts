@@ -32,6 +32,7 @@ export type DeprecatedAnnotation = AnnotationBase & {
 export type EndNoteLinkAnnotation = AnnotationBase & {
   type: 'endNoteLink';
   endNote: string;
+  label?: string;
 };
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
