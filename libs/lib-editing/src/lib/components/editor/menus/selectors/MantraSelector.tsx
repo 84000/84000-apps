@@ -1,3 +1,5 @@
+'use client';
+
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
