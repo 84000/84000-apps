@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import '@design-system-css';
 import { Fonts } from '@design-system';
-import { SandboxHeader } from '../components/SandoxHeader';
+import { SandboxHeader } from '../components/SandboxHeader';
 import { SandboxProvider } from '../components/SandboxProvider';
 
 export const metadata: Metadata = {

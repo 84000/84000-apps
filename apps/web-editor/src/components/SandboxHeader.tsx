@@ -7,8 +7,9 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   H4,
+  SaveButton,
 } from '@design-system';
-import { SLUG_PATHS } from '../components/constants';
+import { SLUG_PATHS } from './constants';
 import { useCallback, useEffect, useState } from 'react';
 import { useSandbox } from './SandboxProvider';
 import { Format, Slug } from '@lib-editing/fixtures/types';
@@ -25,7 +26,7 @@ export const SandboxHeader = () => {
   const [selectedItem, setSelectedItem] = useState<string>();
   const [didSelect, setDidSelect] = useState(false);
 
-  const { slug, format, setFormat, setSlug } = useSandbox();
+  const { slug, format, setFormat, setSlug, editor } = useSandbox();
   const router = useRouter();
 
   useEffect(() => {
@@ -58,19 +59,23 @@ export const SandboxHeader = () => {
 
   return (
     <div className="fixed w-full z-50 bg-background border-b border-border">
-      <div className="px-6 py-2 flex flex-row justify-between">
+      <div className="px-6 py-2 flex flex-row justify-between gap-4">
         <H4
           className="hover:cursor-pointer"
           onClick={() => onHandleSelect('', false)}
         >
           Editor Sandbox
         </H4>
+        <div className="grow" />
+        <SaveButton
+          label="Compare"
+          onClick={async () => {
+            console.log(JSON.stringify(editor?.getJSON(), null, 2));
+          }}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="rounded-full my-auto capitalize flex gap-2"
-            >
+            <Button variant="outline" className="my-auto capitalize flex gap-2">
               <span>{selectedItem ? selectedItem : 'Select Example'}</span>
               <ChevronDownIcon />
             </Button>

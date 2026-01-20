@@ -360,12 +360,7 @@ export const NavigationProvider = ({
       }}
     >
       {hasHoverCards ? (
-        <HoverCardProvider
-          fetchEndNote={fetchEndNote}
-          fetchGlossaryInstance={fetchGlossaryTerm}
-        >
-          {children}
-        </HoverCardProvider>
+        <HoverCardProvider>{children}</HoverCardProvider>
       ) : (
         children
       )}

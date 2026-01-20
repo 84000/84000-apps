@@ -1,21 +1,21 @@
 import { Button } from '@design-system';
 import { Editor } from '@tiptap/core';
-import { BookOpenIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { FileTextIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { GlossaryInput } from './GlossaryInput';
-import { findMarkByUuid } from '../../util';
+import { HoverInputField } from '../HoverInputField';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
+import { findEndnoteMarkByUuid } from '../../util';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
-export const GlossaryInstance = ({
+export const EndNoteLinkHoverContent = ({
   uuid,
-  glossary,
+  endNote,
   editor,
   anchor,
 }: {
   uuid: string;
-  glossary: string;
+  endNote: string;
   editor: Editor;
   anchor: HTMLElement;
 }) => {
@@ -30,56 +30,71 @@ export const GlossaryInstance = ({
     [setIsEditingContext],
   );
 
-  const deleteLink = useCallback(() => {
+  const deleteEndNote = useCallback(() => {
     setIsEditing(false);
     close();
 
     setTimeout(() => {
-      const range = findMarkByUuid({
-        editor,
-        uuid,
-        markType: 'glossaryInstance',
-      });
+      // Find the mark that contains this endnote by traversing up from the anchor
+      const range = findEndnoteMarkByUuid({ editor, uuid });
       if (!range) {
-        console.warn('GlossaryInstance mark not found in the document.');
+        console.warn('EndNoteLink mark not found in the document.');
         return;
       }
 
       const { from, to, mark } = range;
       const { tr } = editor.state;
       tr.removeMark(from, to, mark.type);
+      const notes = (mark.attrs.notes || []).filter(
+        (note: { uuid: string }) => uuid !== note.uuid,
+      );
+      if (notes.length > 0) {
+        tr.addMark(from, to, mark.type.create({ ...mark.attrs, notes }));
+      }
       editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setIsEditing]);
+  }, [editor, uuid, anchor, close, setIsEditing]);
 
-  const updateGlossary = useCallback(
-    (newGlossary: string) => {
+  const updateEndNote = useCallback(
+    (newEndNote: string) => {
       setIsEditing(false);
       close();
 
       setTimeout(() => {
-        const range = findMarkByUuid({
-          editor,
-          uuid,
-          markType: 'glossaryInstance',
-        });
+        const range = findEndnoteMarkByUuid({ editor, uuid });
         if (!range) {
-          console.warn('GlossaryInstance mark not found in the document.');
+          console.warn('EndNoteLink mark not found in the document.');
           return;
         }
 
         const { from, to, mark } = range;
         const { tr } = editor.state;
         tr.removeMark(from, to, mark.type);
+        const note = (mark.attrs.notes || []).find(
+          (note: { uuid: string }) => uuid === note.uuid,
+        );
+        const notes = [
+          ...(mark.attrs.notes || []).filter(
+            (note: { uuid: string }) => uuid !== note.uuid,
+          ),
+          {
+            ...note,
+            uuid,
+            endNote: newEndNote,
+          },
+        ];
         tr.addMark(
           from,
           to,
-          mark.type.create({ ...mark.attrs, glossary: newGlossary }),
+          mark.type.create({
+            ...mark.attrs,
+            notes,
+          }),
         );
         editor.view.dispatch(tr);
 
         // Update the DOM attribute directly for immediate feedback
-        anchor.setAttribute('glossary', newGlossary);
+        anchor.setAttribute('endNote', newEndNote);
       }, EDITOR_UPDATE_DELAY_MS);
     },
     [editor, uuid, anchor, close, setIsEditing],
@@ -88,22 +103,25 @@ export const GlossaryInstance = ({
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
       {isEditing ? (
-        <GlossaryInput
-          uuid={glossary}
-          onSubmit={(newGlossary) => {
-            if (newGlossary) {
-              updateGlossary(newGlossary);
+        <HoverInputField
+          type="endNoteLink"
+          attr="endNote"
+          valueRef={endNote}
+          placeholder="End note ID..."
+          onSubmit={(value) => {
+            if (value) {
+              updateEndNote(value);
             } else {
-              deleteLink();
+              deleteEndNote();
             }
             setIsEditing(false);
           }}
         />
       ) : (
         <>
-          <BookOpenIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
+          <FileTextIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
-            {glossary}
+            {endNote}
           </span>
           <span className="flex-grow" />
           <Button
@@ -118,7 +136,7 @@ export const GlossaryInstance = ({
             variant="ghost"
             size="icon"
             className="size-6 [&_svg]:size-4"
-            onClick={deleteLink}
+            onClick={deleteEndNote}
           >
             <Trash2Icon className="text-destructive my-auto" />
           </Button>

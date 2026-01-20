@@ -1,10 +1,17 @@
 import { Link as TipTapLink } from '@tiptap/extension-link';
-import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
-import { LinkView } from './LinkView';
-import { createMarkViewDom } from '../../util';
+import { createMarkViewDom, registerEditorElement } from '../../util';
 
 export const Link = TipTapLink.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      uuid: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('uuid'),
+      },
+    };
+  },
   addCommands() {
     const name = this.name;
     return {
@@ -25,25 +32,34 @@ export const Link = TipTapLink.extend({
     };
   },
   addMarkView() {
-    if (!this.editor.isEditable) {
-      return (props) => {
-        const { dom } = createMarkViewDom({
-          ...props,
-          element: 'a',
-        });
+    return (props) => {
+      const isEditable = props.editor.isEditable;
+      const { dom } = createMarkViewDom({
+        ...props,
+        element: 'a',
+      });
 
-        dom.setAttribute('href', props.mark.attrs.href);
-        dom.setAttribute('target', '_blank');
-        dom.setAttribute('rel', 'noreferrer');
+      dom.setAttribute('href', props.mark.attrs.href);
+      dom.setAttribute('target', '_blank');
+      dom.setAttribute('rel', 'noreferrer');
 
-        return {
-          dom,
-          contentDOM: dom,
-        };
+      // Set uuid attribute for HoverCardProvider identification
+      if (props.mark.attrs.uuid) {
+        dom.setAttribute('uuid', props.mark.attrs.uuid);
+      }
+
+      // Only add type attribute in edit mode for hover card detection
+      if (isEditable) {
+        dom.setAttribute('type', 'link');
+        registerEditorElement(dom, props.editor);
+      }
+
+      return {
+        dom,
+        contentDOM: dom,
       };
-    }
-    return ReactMarkViewRenderer(LinkView);
+    };
   },
 }).configure({
-  openOnClick: true,
+  openOnClick: false,
 });

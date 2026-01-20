@@ -1,7 +1,9 @@
 import {
-  autoPlacement,
   autoUpdate,
+  flip,
+  inline,
   offset,
+  shift,
   useFloating,
 } from '@floating-ui/react';
 import { ReactNode, useEffect, useRef, useState } from 'react';
@@ -22,7 +24,13 @@ export const TranslationHoverCard = ({
   const [isVisible, setIsVisible] = useState(false);
 
   const { refs, floatingStyles } = useFloating({
-    middleware: [offset(DEFAULT_HOVER_CARD_SIDE_OFFSET), autoPlacement()],
+    placement: 'bottom-start',
+    middleware: [
+      inline(),
+      offset(DEFAULT_HOVER_CARD_SIDE_OFFSET),
+      flip(),
+      shift(),
+    ],
     whileElementsMounted: autoUpdate,
   });
 
@@ -58,7 +66,7 @@ export const TranslationHoverCard = ({
     <div
       ref={refs.setFloating}
       style={{ ...floatingStyles, pointerEvents: 'auto', cursor: 'default' }}
-      className="z-100 p-4"
+      className="z-100"
     >
       <div
         ref={innerRef}

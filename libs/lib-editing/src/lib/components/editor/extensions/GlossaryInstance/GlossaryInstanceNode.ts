@@ -1,6 +1,6 @@
 import { Mark } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
-import { createMarkViewDom } from '../../util';
+import { createMarkViewDom, registerEditorElement } from '../../util';
 import { cn } from '@lib-utils';
 
 export interface GlossaryInstanceOptions {
@@ -26,6 +26,12 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
         default: undefined,
         parseHTML(element) {
           return element.getAttribute('glossary');
+        },
+      },
+      uuid: {
+        default: undefined,
+        parseHTML(element) {
+          return element.getAttribute('uuid');
         },
       },
       isInline: { default: true },
@@ -66,11 +72,26 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
 
   addMarkView() {
     return (props) => {
+      const isEditable = props.editor.isEditable;
       const { dom } = createMarkViewDom({
         ...props,
         element: 'span',
         className: cn('glossary-instance', props.mark.attrs.toh),
       });
+
+      // Set attributes for HoverCardProvider identification
+      if (props.mark.attrs.uuid) {
+        dom.setAttribute('uuid', props.mark.attrs.uuid);
+      }
+      if (props.mark.attrs.glossary) {
+        dom.setAttribute('glossary', props.mark.attrs.glossary);
+      }
+
+      // Only add type attribute and register in edit mode for hover card detection
+      if (isEditable) {
+        dom.setAttribute('type', 'glossaryInstance');
+        registerEditorElement(dom, props.editor);
+      }
 
       dom.addEventListener('click', () => {
         const { glossary } = props.mark.attrs;
