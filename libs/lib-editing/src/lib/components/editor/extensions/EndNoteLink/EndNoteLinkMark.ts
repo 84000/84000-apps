@@ -121,15 +121,17 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
       setEndNoteLink:
         (endNote) =>
         ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: { notes: [{ uuid: uuidv4(), endNote }] },
+          return commands.setMark(this.name, {
+            notes: [{ uuid: uuidv4(), endNote }],
           });
         },
       unsetEndNoteLink:
         () =>
-        ({ commands }) => {
-          return commands.deleteSelection();
+        ({ chain }) => {
+          return chain()
+            .unsetMark(this.name)
+            .resetAttributes(this.name, ['notes'])
+            .run();
         },
     };
   },
