@@ -4,8 +4,30 @@ import {
   NodeViewProps,
   NodeViewRendererProps,
 } from '@tiptap/react';
+import { Editor } from '@tiptap/core';
 import { HTMLElementType } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * WeakMap to associate DOM elements with their editor instances.
+ * Used by HoverCardProvider to find the correct editor for a hovered element.
+ */
+const editorElementMap = new WeakMap<HTMLElement, Editor>();
+
+/**
+ * Registers an editor for a DOM element.
+ * Call this when creating mark/node views to enable hover card functionality.
+ */
+export const registerEditorElement = (element: HTMLElement, editor: Editor) => {
+  editorElementMap.set(element, editor);
+};
+
+/**
+ * Gets the editor associated with a DOM element.
+ */
+export const getEditorForElement = (element: HTMLElement): Editor | undefined => {
+  return editorElementMap.get(element);
+};
 
 /**
  * Validates and updates the attributes of a Node.
@@ -98,6 +120,43 @@ export const findMarkRange = ({ editor, mark }: Partial<MarkViewProps>) => {
     });
 
     return !foundMark;
+  });
+
+  return foundRange;
+};
+
+/**
+ * Finds a mark in the editor's document by its UUID attribute.
+ * Returns an object with 'from', 'to', and 'mark' if found, otherwise undefined.
+ */
+export const findMarkByUuid = ({
+  editor,
+  uuid,
+  markType,
+}: {
+  editor: { state: { doc: MarkViewProps['editor']['state']['doc']; tr: MarkViewProps['editor']['state']['tr'] } };
+  uuid: string;
+  markType: string;
+}): { from: number; to: number; mark: MarkViewProps['mark'] } | undefined => {
+  const { state } = editor;
+  const { doc, tr } = state;
+
+  let foundRange: { from: number; to: number; mark: MarkViewProps['mark'] } | undefined = undefined;
+
+  doc.descendants((node, pos) => {
+    if (foundRange) return false;
+
+    const from = tr.mapping.map(pos);
+    const to = from + node.nodeSize;
+
+    for (const m of node.marks) {
+      if (m.type.name === markType && m.attrs.uuid === uuid) {
+        foundRange = { from, to, mark: m };
+        return false;
+      }
+    }
+
+    return true;
   });
 
   return foundRange;

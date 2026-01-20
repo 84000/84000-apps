@@ -1,8 +1,6 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
-import { ReactMarkViewRenderer } from '@tiptap/react';
 import { v4 as uuidv4 } from 'uuid';
-import { InternalLinkView } from './InternalLinkView';
-import { createMarkViewDom } from '../../util';
+import { createMarkViewDom, registerEditorElement } from '../../util';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -23,15 +21,19 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
     return {
       entity: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute('uuid'),
+        parseHTML: (element) => element.getAttribute('entity'),
       },
       type: {
         default: undefined,
-        parseHTML: (element) => element.getAttribute('type'),
+        parseHTML: (element) => element.getAttribute('entity-type'),
       },
       href: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('href'),
+      },
+      uuid: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('uuid'),
       },
     };
   },
@@ -55,25 +57,40 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
     ];
   },
   addMarkView() {
-    if (!this.editor.isEditable) {
-      return (props) => {
-        const { dom } = createMarkViewDom({
-          ...props,
-          element: 'a',
-          className: props.mark.attrs.toh,
-        });
+    return (props) => {
+      const isEditable = props.editor.isEditable;
+      const { dom } = createMarkViewDom({
+        ...props,
+        element: 'a',
+        className: props.mark.attrs.toh,
+      });
 
-        dom.setAttribute('href', props.mark.attrs.href);
-        dom.setAttribute('target', '_blank');
-        dom.setAttribute('rel', 'noreferrer');
+      dom.setAttribute('href', props.mark.attrs.href);
+      dom.setAttribute('target', '_blank');
+      dom.setAttribute('rel', 'noreferrer');
 
-        return {
-          dom,
-          contentDOM: dom,
-        };
+      // Set attributes for HoverCardProvider identification
+      if (props.mark.attrs.uuid) {
+        dom.setAttribute('uuid', props.mark.attrs.uuid);
+      }
+      if (props.mark.attrs.entity) {
+        dom.setAttribute('entity', props.mark.attrs.entity);
+      }
+      if (props.mark.attrs.type) {
+        dom.setAttribute('entity-type', props.mark.attrs.type);
+      }
+
+      // Only add type attribute in edit mode for hover card detection
+      if (isEditable) {
+        dom.setAttribute('type', 'internalLink');
+        registerEditorElement(dom, props.editor);
+      }
+
+      return {
+        dom,
+        contentDOM: dom,
       };
-    }
-    return ReactMarkViewRenderer(InternalLinkView);
+    };
   },
   addCommands() {
     return {

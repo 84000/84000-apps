@@ -1,26 +1,23 @@
 import { Button } from '@design-system';
 import { Editor } from '@tiptap/core';
-import {
-  BookOpenIcon,
-  ChevronRightIcon,
-  PencilIcon,
-  Trash2Icon,
-} from 'lucide-react';
+import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { GlossaryInput } from './GlossaryInput';
+import { InternalLinkInput } from './InternalLinkInput';
 import { findMarkByUuid } from '../../util';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
-export const GlossaryInstance = ({
+export const InternalLinkHoverContent = ({
   uuid,
-  glossary,
+  entityType,
+  entity,
   editor,
   anchor,
 }: {
   uuid: string;
-  glossary: string;
+  entityType: string;
+  entity: string;
   editor: Editor;
   anchor: HTMLElement;
 }) => {
@@ -32,9 +29,9 @@ export const GlossaryInstance = ({
     close();
 
     setTimeout(() => {
-      const range = findMarkByUuid({ editor, uuid, markType: 'glossaryInstance' });
+      const range = findMarkByUuid({ editor, uuid, markType: 'internalLink' });
       if (!range) {
-        console.warn('GlossaryInstance mark not found in the document.');
+        console.warn('InternalLink mark not found in the document.');
         return;
       }
 
@@ -45,39 +42,52 @@ export const GlossaryInstance = ({
     }, EDITOR_UPDATE_DELAY_MS);
   }, [editor, uuid, close]);
 
-  const updateGlossary = useCallback(
-    (newGlossary: string) => {
+  const updateValues = useCallback(
+    (newType: string, newEntity: string) => {
       setIsEditing(false);
       close();
 
       setTimeout(() => {
-        const range = findMarkByUuid({ editor, uuid, markType: 'glossaryInstance' });
+        const range = findMarkByUuid({ editor, uuid, markType: 'internalLink' });
         if (!range) {
-          console.warn('GlossaryInstance mark not found in the document.');
+          console.warn('InternalLink mark not found in the document.');
           return;
         }
 
         const { from, to, mark } = range;
+        const newHref = `/entity/${newType}/${newEntity}`;
         const { tr } = editor.state;
         tr.removeMark(from, to, mark.type);
-        tr.addMark(from, to, mark.type.create({ ...mark.attrs, glossary: newGlossary }));
+        tr.addMark(
+          from,
+          to,
+          mark.type.create({
+            ...mark.attrs,
+            type: newType,
+            entity: newEntity,
+            href: newHref,
+          }),
+        );
         editor.view.dispatch(tr);
 
-        // Update the DOM attribute directly for immediate feedback
-        anchor.setAttribute('glossary', newGlossary);
+        // Update the DOM attributes directly for immediate feedback
+        anchor.setAttribute('entity-type', newType);
+        anchor.setAttribute('entity', newEntity);
+        anchor.setAttribute('href', newHref);
       }, EDITOR_UPDATE_DELAY_MS);
     },
     [editor, uuid, anchor, close],
   );
 
   return (
-    <div className="flex justify-between gap-2 p-2 w-fit max-w-72">
+    <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
       {isEditing ? (
-        <GlossaryInput
-          uuid={glossary}
-          onSubmit={(newGlossary) => {
-            if (newGlossary) {
-              updateGlossary(newGlossary);
+        <InternalLinkInput
+          type={entityType}
+          uuid={entity}
+          onSubmit={(type, entityVal) => {
+            if (type && entityVal) {
+              updateValues(type, entityVal);
             } else {
               deleteLink();
             }
@@ -86,13 +96,12 @@ export const GlossaryInstance = ({
         />
       ) : (
         <>
-          <BookOpenIcon className="text-muted-foreground my-auto size-4" />
           <span className="text-muted-foreground text-sm my-auto">
-            glossary
+            {entityType}
           </span>
           <ChevronRightIcon className="my-auto size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
-            {glossary}
+            {entity}
           </span>
           <span className="flex-grow" />
           <Button

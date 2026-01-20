@@ -1,26 +1,21 @@
 import { Button } from '@design-system';
 import { Editor } from '@tiptap/core';
-import {
-  BookOpenIcon,
-  ChevronRightIcon,
-  PencilIcon,
-  Trash2Icon,
-} from 'lucide-react';
+import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { GlossaryInput } from './GlossaryInput';
+import { HoverInputField } from '../HoverInputField';
 import { findMarkByUuid } from '../../util';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
-export const GlossaryInstance = ({
+export const LinkHoverContent = ({
   uuid,
-  glossary,
+  href,
   editor,
   anchor,
 }: {
   uuid: string;
-  glossary: string;
+  href: string;
   editor: Editor;
   anchor: HTMLElement;
 }) => {
@@ -32,9 +27,9 @@ export const GlossaryInstance = ({
     close();
 
     setTimeout(() => {
-      const range = findMarkByUuid({ editor, uuid, markType: 'glossaryInstance' });
+      const range = findMarkByUuid({ editor, uuid, markType: 'link' });
       if (!range) {
-        console.warn('GlossaryInstance mark not found in the document.');
+        console.warn('Link mark not found in the document.');
         return;
       }
 
@@ -45,26 +40,26 @@ export const GlossaryInstance = ({
     }, EDITOR_UPDATE_DELAY_MS);
   }, [editor, uuid, close]);
 
-  const updateGlossary = useCallback(
-    (newGlossary: string) => {
+  const updateLink = useCallback(
+    (newHref: string) => {
       setIsEditing(false);
       close();
 
       setTimeout(() => {
-        const range = findMarkByUuid({ editor, uuid, markType: 'glossaryInstance' });
+        const range = findMarkByUuid({ editor, uuid, markType: 'link' });
         if (!range) {
-          console.warn('GlossaryInstance mark not found in the document.');
+          console.warn('Link mark not found in the document.');
           return;
         }
 
         const { from, to, mark } = range;
         const { tr } = editor.state;
         tr.removeMark(from, to, mark.type);
-        tr.addMark(from, to, mark.type.create({ ...mark.attrs, glossary: newGlossary }));
+        tr.addMark(from, to, mark.type.create({ ...mark.attrs, href: newHref }));
         editor.view.dispatch(tr);
 
         // Update the DOM attribute directly for immediate feedback
-        anchor.setAttribute('glossary', newGlossary);
+        anchor.setAttribute('href', newHref);
       }, EDITOR_UPDATE_DELAY_MS);
     },
     [editor, uuid, anchor, close],
@@ -73,11 +68,14 @@ export const GlossaryInstance = ({
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-72">
       {isEditing ? (
-        <GlossaryInput
-          uuid={glossary}
-          onSubmit={(newGlossary) => {
-            if (newGlossary) {
-              updateGlossary(newGlossary);
+        <HoverInputField
+          type="link"
+          attr="href"
+          valueRef={href}
+          placeholder="Add link..."
+          onSubmit={(value) => {
+            if (value) {
+              updateLink(value);
             } else {
               deleteLink();
             }
@@ -86,13 +84,9 @@ export const GlossaryInstance = ({
         />
       ) : (
         <>
-          <BookOpenIcon className="text-muted-foreground my-auto size-4" />
-          <span className="text-muted-foreground text-sm my-auto">
-            glossary
-          </span>
-          <ChevronRightIcon className="my-auto size-4" />
+          <GlobeIcon className="text-muted-foreground my-auto size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
-            {glossary}
+            {href}
           </span>
           <span className="flex-grow" />
           <Button

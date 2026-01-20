@@ -4,37 +4,51 @@ import {
   DEFAULT_HOVER_CARD_CLOSE_DELAY,
   DEFAULT_HOVER_CARD_OPEN_DELAY,
 } from '@design-system';
-import { cn, isInBounds } from '@lib-utils';
+import { isInBounds } from '@lib-utils';
 import {
   createContext,
   ReactNode,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { TranslationHoverCard } from './TranslationHoverCard';
 import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/GlossaryInstance';
-import { EndNoteLink } from '../editor/extensions/EndNoteLink/EndNoteLink';
+import { EndNoteLinkHoverContent } from '../editor/extensions/EndNoteLink/EndNoteLinkHoverContent';
+import { LinkHoverContent } from '../editor/extensions/Link/LinkHoverContent';
+import { InternalLinkHoverContent } from '../editor/extensions/InternalLink/InternalLinkHoverContent';
 import { GlossaryTermInstance, Passage } from '@data-access';
+import { Editor } from '@tiptap/core';
+import { getEditorForElement } from '../editor/util';
 
-const HOVER_CARD_TYPES = ['glossaryInstance', 'endNoteLink'] as const;
+const HOVER_CARD_TYPES = [
+  'glossaryInstance',
+  'endNoteLink',
+  'link',
+  'internalLink',
+] as const;
 
 export type HoverCardType = (typeof HOVER_CARD_TYPES)[number];
 
 const TYPE_ATTRIBUTE_MAP: Record<HoverCardType, string> = {
-  glossaryInstance: 'glossary',
+  glossaryInstance: 'uuid',
   endNoteLink: 'endNote',
+  link: 'uuid',
+  internalLink: 'uuid',
 };
 
 export interface HoverCardState {
   anchor: HTMLElement | null;
   uuid?: string;
   cardType?: HoverCardType;
+  editor?: Editor;
   setAnchor: (anchor: HTMLElement | null) => void;
   setUuid: (uuid?: string) => void;
   setCard: (card: HTMLElement | null) => void;
+  close: () => void;
 }
 
 export const HoverCardContext = createContext<HoverCardState>({
@@ -47,6 +61,9 @@ export const HoverCardContext = createContext<HoverCardState>({
   },
   setUuid: () => {
     throw new Error('setUuid function not implemented');
+  },
+  close: () => {
+    throw new Error('close function not implemented');
   },
 });
 
@@ -67,8 +84,17 @@ export const HoverCardProvider = ({
   ) => Promise<GlossaryTermInstance | undefined>;
   children: ReactNode;
 }) => {
-  const editorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
+
+  // Get editor for anchor element using the WeakMap registry
+  const getEditorForAnchor = useCallback(
+    (anchorEl: HTMLElement): Editor | undefined => {
+      const editor = getEditorForElement(anchorEl);
+      return editor?.isEditable ? editor : undefined;
+    },
+    [],
+  );
 
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [card, setCard] = useState<HTMLElement | null>(null);
@@ -76,6 +102,12 @@ export const HoverCardProvider = ({
   const [cardType, setCardType] = useState<HoverCardType>();
   const [isHoveringAnchor, setIsHoveringAnchor] = useState(false);
   const [isHoveringCard, setIsHoveringCard] = useState(false);
+
+  // Get the editor for the current anchor
+  const editor = useMemo(() => {
+    if (!anchor) return undefined;
+    return getEditorForAnchor(anchor);
+  }, [anchor, getEditorForAnchor]);
 
   const close = useCallback(() => {
     timeoutRef.current = setTimeout(() => {
@@ -86,7 +118,7 @@ export const HoverCardProvider = ({
   }, [closeDelay]);
 
   useEffect(() => {
-    const editorEl = editorRef.current;
+    const editorEl = containerRef.current;
     if (!editorEl) {
       return;
     }
@@ -167,7 +199,7 @@ export const HoverCardProvider = ({
       }
     };
   }, [
-    editorRef,
+    containerRef,
     typeMap,
     openDelay,
     closeDelay,
@@ -209,17 +241,7 @@ export const HoverCardProvider = ({
     };
 
     // Stop all mouse events from propagating
-    const events = [
-      'mouseenter',
-      'mouseleave',
-      'mouseover',
-      'mouseout',
-      'mousedown',
-      'mouseup',
-      'click',
-      'dblclick',
-      'contextmenu',
-    ];
+    const events = ['mouseenter', 'mouseleave', 'mouseover', 'mouseout'];
 
     events.forEach((eventType) => {
       card.addEventListener(eventType, stopPropagation, true);
@@ -244,15 +266,60 @@ export const HoverCardProvider = ({
     close();
   }, [isHoveringAnchor, isHoveringCard, closeDelay, close]);
 
-  const renderCard = (uuid: string, type: string) => {
-    if (type === 'glossaryInstance' && fetchGlossaryInstance) {
-      return <GlossaryInstance uuid={uuid} fetch={fetchGlossaryInstance} />;
+  const renderCard = (uuid: string, type: string, anchorEl: HTMLElement) => {
+    if (!editor) return null;
+
+    if (type === 'glossaryInstance') {
+      const glossary = anchorEl.getAttribute('glossary') || '';
+      return <GlossaryInstance uuid={uuid} glossary={glossary} editor={editor} anchor={anchorEl} />;
     }
-    if (type === 'endNoteLink' && fetchEndNote) {
-      return <EndNoteLink uuid={uuid} fetch={fetchEndNote} />;
+    if (type === 'endNoteLink') {
+      const endNote = anchorEl.getAttribute('endNote') || '';
+      return <EndNoteLinkHoverContent uuid={uuid} endNote={endNote} editor={editor} anchor={anchorEl} />;
+    }
+    if (type === 'link') {
+      const href = anchorEl.getAttribute('href') || '';
+      return <LinkHoverContent uuid={uuid} href={href} editor={editor} anchor={anchorEl} />;
+    }
+    if (type === 'internalLink') {
+      const entityType = anchorEl.getAttribute('entity-type') || '';
+      const entity = anchorEl.getAttribute('entity') || '';
+      return (
+        <InternalLinkHoverContent
+          uuid={uuid}
+          entityType={entityType}
+          entity={entity}
+          editor={editor}
+          anchor={anchorEl}
+        />
+      );
     }
     return null;
   };
+
+  const closeImmediately = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setAnchor(null);
+    setUuid(undefined);
+    setCardType(undefined);
+    setIsHoveringAnchor(false);
+    setIsHoveringCard(false);
+  }, []);
+
+  const getCardClassName = (type: HoverCardType) => {
+    if (type === 'endNoteLink') {
+      return 'w-120 max-h-96 m-2 overflow-auto p-0';
+    }
+    if (type === 'link' || type === 'internalLink' || type === 'glossaryInstance') {
+      return 'p-0';
+    }
+    return 'p-0';
+  };
+
+  // Only show hover card when editor is available (editing mode only)
+  const shouldShowCard = anchor && uuid && cardType && editor;
 
   return (
     <HoverCardContext.Provider
@@ -260,25 +327,23 @@ export const HoverCardProvider = ({
         anchor,
         uuid,
         cardType,
+        editor,
         setAnchor,
         setCard,
         setUuid,
+        close: closeImmediately,
       }}
     >
-      <div className="size-full" ref={editorRef}>
+      <div className="size-full" ref={containerRef}>
         {children}
       </div>
-      {anchor && uuid && cardType && fetchGlossaryInstance && fetchEndNote && (
+      {shouldShowCard && (
         <TranslationHoverCard
-          className={cn(
-            cardType === 'endNoteLink' && 'w-120 max-h-96 m-2 overflow-auto',
-            cardType === 'glossaryInstance' &&
-              'w-120 lg:w-4xl max-h-100 m-2 overflow-auto',
-          )}
-          anchor={anchor}
+          className={getCardClassName(cardType!)}
+          anchor={anchor!}
           setCard={setCard}
         >
-          {renderCard(uuid, cardType)}
+          {renderCard(uuid!, cardType!, anchor!)}
         </TranslationHoverCard>
       )}
     </HoverCardContext.Provider>

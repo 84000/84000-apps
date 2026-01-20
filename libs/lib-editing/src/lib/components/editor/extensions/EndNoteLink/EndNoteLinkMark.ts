@@ -1,7 +1,7 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@lib-utils';
-import { createUpdateAttributes } from '../../util';
+import { createUpdateAttributes, registerEditorElement } from '../../util';
 
 export interface EndNoteLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -82,6 +82,11 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
           });
 
           updateAttributes(attributes);
+
+          // Register editor element for hover card detection in edit mode
+          if (isEditable) {
+            registerEditorElement(endnoteDOM, props.editor);
+          }
 
           if (isStart) {
             dom.insertBefore(endnoteDOM, dom.firstChild);
