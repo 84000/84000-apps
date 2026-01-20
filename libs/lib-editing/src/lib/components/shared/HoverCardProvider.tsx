@@ -41,14 +41,17 @@ export interface HoverCardState {
   uuid?: string;
   cardType?: HoverCardType;
   editor?: Editor;
+  isEditing: boolean;
   setAnchor: (anchor: HTMLElement | null) => void;
   setUuid: (uuid?: string) => void;
   setCard: (card: HTMLElement | null) => void;
+  setIsEditing: (isEditing: boolean) => void;
   close: () => void;
 }
 
 export const HoverCardContext = createContext<HoverCardState>({
   anchor: null,
+  isEditing: false,
   setAnchor: () => {
     throw new Error('setAnchor function not implemented');
   },
@@ -57,6 +60,9 @@ export const HoverCardContext = createContext<HoverCardState>({
   },
   setUuid: () => {
     throw new Error('setUuid function not implemented');
+  },
+  setIsEditing: () => {
+    throw new Error('setIsEditing function not implemented');
   },
   close: () => {
     throw new Error('close function not implemented');
@@ -92,6 +98,7 @@ export const HoverCardProvider = ({
   const [cardType, setCardType] = useState<HoverCardType>();
   const [isHoveringAnchor, setIsHoveringAnchor] = useState(false);
   const [isHoveringCard, setIsHoveringCard] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Get the editor for the current anchor
   const editor = useMemo(() => {
@@ -99,13 +106,25 @@ export const HoverCardProvider = ({
     return getEditorForAnchor(anchor);
   }, [anchor, getEditorForAnchor]);
 
-  const close = useCallback(() => {
+  const closeWithDelay = useCallback(() => {
     timeoutRef.current = setTimeout(() => {
       setAnchor(null);
       setUuid(undefined);
       setCardType(undefined);
     }, closeDelay);
   }, [closeDelay]);
+
+  const closeImmediately = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setAnchor(null);
+    setUuid(undefined);
+    setCardType(undefined);
+    setIsHoveringAnchor(false);
+    setIsHoveringCard(false);
+    setIsEditing(false);
+  }, []);
 
   useEffect(() => {
     const editorEl = containerRef.current;
@@ -168,22 +187,20 @@ export const HoverCardProvider = ({
       setIsHoveringAnchor(false);
     };
 
-    const handlEscape = (event: KeyboardEvent) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsHoveringAnchor(false);
-        setIsHoveringCard(false);
-        close();
+        closeImmediately();
       }
     };
 
     editorEl.addEventListener('mouseenter', handleMouseOver, true);
     editorEl.addEventListener('mouseleave', handleMouseLeave, true);
-    document.addEventListener('keydown', handlEscape, true);
+    document.addEventListener('keydown', handleEscape, true);
 
     return () => {
       editorEl.removeEventListener('mouseenter', handleMouseOver, true);
       editorEl.removeEventListener('mouseleave', handleMouseLeave, true);
-      document.removeEventListener('keydown', handlEscape, true);
+      document.removeEventListener('keydown', handleEscape, true);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
@@ -195,7 +212,7 @@ export const HoverCardProvider = ({
     closeDelay,
     isHoveringAnchor,
     isHoveringCard,
-    close,
+    closeImmediately,
   ]);
 
   useEffect(() => {
@@ -249,12 +266,38 @@ export const HoverCardProvider = ({
       clearTimeout(timeoutRef.current);
     }
 
-    if (isHoveringAnchor || isHoveringCard) {
+    // Don't close while editing or hovering
+    if (isEditing || isHoveringAnchor || isHoveringCard) {
       return;
     }
 
-    close();
-  }, [isHoveringAnchor, isHoveringCard, closeDelay, close]);
+    closeWithDelay();
+  }, [isEditing, isHoveringAnchor, isHoveringCard, closeDelay, closeWithDelay]);
+
+  // Handle click outside to dismiss the hover card
+  useEffect(() => {
+    if (!card && !anchor) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+
+      // Check if click is inside the card or anchor
+      const isInsideCard = card?.contains(target);
+      const isInsideAnchor = anchor?.contains(target);
+
+      if (!isInsideCard && !isInsideAnchor) {
+        closeImmediately();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [card, anchor, closeImmediately]);
 
   const renderCard = (uuid: string, type: string, anchorEl: HTMLElement) => {
     if (!editor) return null;
@@ -308,17 +351,6 @@ export const HoverCardProvider = ({
     return null;
   };
 
-  const closeImmediately = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    setAnchor(null);
-    setUuid(undefined);
-    setCardType(undefined);
-    setIsHoveringAnchor(false);
-    setIsHoveringCard(false);
-  }, []);
-
   // Only show hover card when editor is available (editing mode only)
   const shouldShowCard = anchor && uuid && cardType && editor;
 
@@ -329,9 +361,11 @@ export const HoverCardProvider = ({
         uuid,
         cardType,
         editor,
+        isEditing,
         setAnchor,
         setCard,
         setUuid,
+        setIsEditing,
         close: closeImmediately,
       }}
     >

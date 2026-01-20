@@ -19,8 +19,16 @@ export const EndNoteLinkHoverContent = ({
   editor: Editor;
   anchor: HTMLElement;
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const { close } = useHoverCard();
+  const [isEditing, setIsEditingLocal] = useState(false);
+  const { close, setIsEditing: setIsEditingContext } = useHoverCard();
+
+  const setIsEditing = useCallback(
+    (editing: boolean) => {
+      setIsEditingLocal(editing);
+      setIsEditingContext(editing);
+    },
+    [setIsEditingContext],
+  );
 
   const deleteEndNote = useCallback(() => {
     setIsEditing(false);
@@ -45,7 +53,7 @@ export const EndNoteLinkHoverContent = ({
       }
       editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, anchor, close]);
+  }, [editor, uuid, anchor, close, setIsEditing]);
 
   const updateEndNote = useCallback(
     (newEndNote: string) => {
@@ -89,7 +97,7 @@ export const EndNoteLinkHoverContent = ({
         anchor.setAttribute('endNote', newEndNote);
       }, EDITOR_UPDATE_DELAY_MS);
     },
-    [editor, uuid, anchor, close],
+    [editor, uuid, anchor, close, setIsEditing],
   );
 
   return (
