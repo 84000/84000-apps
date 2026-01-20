@@ -271,15 +271,36 @@ export const HoverCardProvider = ({
 
     if (type === 'glossaryInstance') {
       const glossary = anchorEl.getAttribute('glossary') || '';
-      return <GlossaryInstance uuid={uuid} glossary={glossary} editor={editor} anchor={anchorEl} />;
+      return (
+        <GlossaryInstance
+          uuid={uuid}
+          glossary={glossary}
+          editor={editor}
+          anchor={anchorEl}
+        />
+      );
     }
     if (type === 'endNoteLink') {
       const endNote = anchorEl.getAttribute('endNote') || '';
-      return <EndNoteLinkHoverContent uuid={uuid} endNote={endNote} editor={editor} anchor={anchorEl} />;
+      return (
+        <EndNoteLinkHoverContent
+          uuid={uuid}
+          endNote={endNote}
+          editor={editor}
+          anchor={anchorEl}
+        />
+      );
     }
     if (type === 'link') {
       const href = anchorEl.getAttribute('href') || '';
-      return <LinkHoverContent uuid={uuid} href={href} editor={editor} anchor={anchorEl} />;
+      return (
+        <LinkHoverContent
+          uuid={uuid}
+          href={href}
+          editor={editor}
+          anchor={anchorEl}
+        />
+      );
     }
     if (type === 'internalLink') {
       const entityType = anchorEl.getAttribute('entity-type') || '';
@@ -308,16 +329,6 @@ export const HoverCardProvider = ({
     setIsHoveringCard(false);
   }, []);
 
-  const getCardClassName = (type: HoverCardType) => {
-    if (type === 'endNoteLink') {
-      return 'w-120 max-h-96 m-2 overflow-auto p-0';
-    }
-    if (type === 'link' || type === 'internalLink' || type === 'glossaryInstance') {
-      return 'p-0';
-    }
-    return 'p-0';
-  };
-
   // Only show hover card when editor is available (editing mode only)
   const shouldShowCard = anchor && uuid && cardType && editor;
 
@@ -338,12 +349,8 @@ export const HoverCardProvider = ({
         {children}
       </div>
       {shouldShowCard && (
-        <TranslationHoverCard
-          className={getCardClassName(cardType!)}
-          anchor={anchor!}
-          setCard={setCard}
-        >
-          {renderCard(uuid!, cardType!, anchor!)}
+        <TranslationHoverCard className="p-0" anchor={anchor} setCard={setCard}>
+          {renderCard(uuid, cardType, anchor)}
         </TranslationHoverCard>
       )}
     </HoverCardContext.Provider>

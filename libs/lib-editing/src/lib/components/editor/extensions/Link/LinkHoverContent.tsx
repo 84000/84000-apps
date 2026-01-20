@@ -55,7 +55,11 @@ export const LinkHoverContent = ({
         const { from, to, mark } = range;
         const { tr } = editor.state;
         tr.removeMark(from, to, mark.type);
-        tr.addMark(from, to, mark.type.create({ ...mark.attrs, href: newHref }));
+        tr.addMark(
+          from,
+          to,
+          mark.type.create({ ...mark.attrs, href: newHref }),
+        );
         editor.view.dispatch(tr);
 
         // Update the DOM attribute directly for immediate feedback
@@ -84,7 +88,7 @@ export const LinkHoverContent = ({
         />
       ) : (
         <>
-          <GlobeIcon className="text-muted-foreground my-auto size-4" />
+          <GlobeIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
             {href}
           </span>

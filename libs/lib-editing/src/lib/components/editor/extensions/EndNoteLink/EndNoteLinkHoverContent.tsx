@@ -45,7 +45,9 @@ export const EndNoteLinkHoverContent = ({
         for (const m of node.marks) {
           if (m.type.name === 'endNoteLink') {
             const notes = m.attrs.notes || [];
-            const noteIndex = notes.findIndex((n: { uuid: string }) => n.uuid === uuid);
+            const noteIndex = notes.findIndex(
+              (n: { uuid: string }) => n.uuid === uuid,
+            );
             if (noteIndex !== -1) {
               const from = tr.mapping.map(pos);
               const to = from + node.nodeSize;
@@ -55,9 +57,15 @@ export const EndNoteLinkHoverContent = ({
                 tr.removeMark(from, to, m.type);
               } else {
                 // Remove just this note from the array
-                const newNotes = notes.filter((_: unknown, i: number) => i !== noteIndex);
+                const newNotes = notes.filter(
+                  (_: unknown, i: number) => i !== noteIndex,
+                );
                 tr.removeMark(from, to, m.type);
-                tr.addMark(from, to, m.type.create({ ...m.attrs, notes: newNotes }));
+                tr.addMark(
+                  from,
+                  to,
+                  m.type.create({ ...m.attrs, notes: newNotes }),
+                );
               }
 
               found = true;
@@ -93,17 +101,26 @@ export const EndNoteLinkHoverContent = ({
           for (const m of node.marks) {
             if (m.type.name === 'endNoteLink') {
               const notes = m.attrs.notes || [];
-              const noteIndex = notes.findIndex((n: { uuid: string }) => n.uuid === uuid);
+              const noteIndex = notes.findIndex(
+                (n: { uuid: string }) => n.uuid === uuid,
+              );
               if (noteIndex !== -1) {
                 const from = tr.mapping.map(pos);
                 const to = from + node.nodeSize;
 
                 // Update the note in the array
                 const newNotes = [...notes];
-                newNotes[noteIndex] = { ...newNotes[noteIndex], endNote: newEndNote };
+                newNotes[noteIndex] = {
+                  ...newNotes[noteIndex],
+                  endNote: newEndNote,
+                };
 
                 tr.removeMark(from, to, m.type);
-                tr.addMark(from, to, m.type.create({ ...m.attrs, notes: newNotes }));
+                tr.addMark(
+                  from,
+                  to,
+                  m.type.create({ ...m.attrs, notes: newNotes }),
+                );
 
                 found = true;
 
@@ -128,7 +145,7 @@ export const EndNoteLinkHoverContent = ({
   );
 
   return (
-    <div className="flex justify-between gap-2 p-2 w-fit max-w-72">
+    <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
       {isEditing ? (
         <HoverInputField
           type="endNoteLink"
@@ -146,7 +163,7 @@ export const EndNoteLinkHoverContent = ({
         />
       ) : (
         <>
-          <FileTextIcon className="text-muted-foreground my-auto size-4" />
+          <FileTextIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
             {endNote}
           </span>

@@ -48,7 +48,11 @@ export const InternalLinkHoverContent = ({
       close();
 
       setTimeout(() => {
-        const range = findMarkByUuid({ editor, uuid, markType: 'internalLink' });
+        const range = findMarkByUuid({
+          editor,
+          uuid,
+          markType: 'internalLink',
+        });
         if (!range) {
           console.warn('InternalLink mark not found in the document.');
           return;
@@ -96,9 +100,7 @@ export const InternalLinkHoverContent = ({
         />
       ) : (
         <>
-          <span className="text-muted-foreground text-sm my-auto">
-            {entityType}
-          </span>
+          <span className="text-primary text-sm my-auto">{entityType}</span>
           <ChevronRightIcon className="my-auto size-4" />
           <span className="truncate text-muted-foreground text-sm my-auto">
             {entity}
