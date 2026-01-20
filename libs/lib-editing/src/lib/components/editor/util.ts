@@ -25,7 +25,9 @@ export const registerEditorElement = (element: HTMLElement, editor: Editor) => {
 /**
  * Gets the editor associated with a DOM element.
  */
-export const getEditorForElement = (element: HTMLElement): Editor | undefined => {
+export const getEditorForElement = (
+  element: HTMLElement,
+): Editor | undefined => {
   return editorElementMap.get(element);
 };
 
@@ -133,15 +135,24 @@ export const findMarkByUuid = ({
   editor,
   uuid,
   markType,
+  comparator = (mark, uuid) => mark.attrs.uuid === uuid,
 }: {
-  editor: { state: { doc: MarkViewProps['editor']['state']['doc']; tr: MarkViewProps['editor']['state']['tr'] } };
+  editor: {
+    state: {
+      doc: MarkViewProps['editor']['state']['doc'];
+      tr: MarkViewProps['editor']['state']['tr'];
+    };
+  };
   uuid: string;
   markType: string;
+  comparator?: (mark: MarkViewProps['mark'], uuid: string) => boolean;
 }): { from: number; to: number; mark: MarkViewProps['mark'] } | undefined => {
   const { state } = editor;
   const { doc, tr } = state;
 
-  let foundRange: { from: number; to: number; mark: MarkViewProps['mark'] } | undefined = undefined;
+  let foundRange:
+    | { from: number; to: number; mark: MarkViewProps['mark'] }
+    | undefined = undefined;
 
   doc.descendants((node, pos) => {
     if (foundRange) return false;
@@ -150,7 +161,7 @@ export const findMarkByUuid = ({
     const to = from + node.nodeSize;
 
     for (const m of node.marks) {
-      if (m.type.name === markType && m.attrs.uuid === uuid) {
+      if (m.type.name === markType && comparator(m, uuid)) {
         foundRange = { from, to, mark: m };
         return false;
       }
@@ -160,6 +171,27 @@ export const findMarkByUuid = ({
   });
 
   return foundRange;
+};
+
+export const findEndnoteMarkByUuid = ({
+  editor,
+  uuid,
+}: {
+  editor: {
+    state: {
+      doc: MarkViewProps['editor']['state']['doc'];
+      tr: MarkViewProps['editor']['state']['tr'];
+    };
+  };
+  uuid: string;
+}): { from: number; to: number; mark: MarkViewProps['mark'] } | undefined => {
+  return findMarkByUuid({
+    editor,
+    uuid,
+    markType: 'endNoteLink',
+    comparator: (mark, uuid) =>
+      mark.attrs.notes?.find((note: { uuid: string }) => note.uuid === uuid),
+  });
 };
 
 /**

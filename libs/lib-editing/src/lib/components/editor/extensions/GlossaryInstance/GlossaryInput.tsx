@@ -7,13 +7,12 @@ export const GlossaryInput = ({
   onSubmit,
 }: {
   uuid: string;
-  onSubmit: (type?: string, entity?: string) => void;
+  onSubmit: (entity?: string) => void;
 }) => {
-  const typeRef = useRef<HTMLInputElement>(null);
   const uuidRef = useRef<HTMLInputElement>(null);
 
   const submit = () => {
-    onSubmit(typeRef.current?.value, uuidRef.current?.value);
+    onSubmit(uuidRef.current?.value);
   };
 
   return (
@@ -32,7 +31,7 @@ export const GlossaryInput = ({
       <Button
         size="icon"
         variant="ghost"
-        disabled={!!uuidRef.current && !!typeRef.current}
+        disabled={!!uuidRef.current}
         onClick={submit}
       >
         <CheckIcon />
@@ -44,9 +43,6 @@ export const GlossaryInput = ({
         onClick={() => {
           if (uuidRef.current) {
             uuidRef.current.value = '';
-          }
-          if (typeRef.current) {
-            typeRef.current.value = '';
           }
           onSubmit();
         }}

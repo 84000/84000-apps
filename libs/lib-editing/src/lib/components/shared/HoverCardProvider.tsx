@@ -20,22 +20,18 @@ import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/Glossary
 import { EndNoteLinkHoverContent } from '../editor/extensions/EndNoteLink/EndNoteLinkHoverContent';
 import { LinkHoverContent } from '../editor/extensions/Link/LinkHoverContent';
 import { InternalLinkHoverContent } from '../editor/extensions/InternalLink/InternalLinkHoverContent';
-import { GlossaryTermInstance, Passage } from '@data-access';
 import { Editor } from '@tiptap/core';
 import { getEditorForElement } from '../editor/util';
 
-const HOVER_CARD_TYPES = [
-  'glossaryInstance',
-  'endNoteLink',
-  'link',
-  'internalLink',
-] as const;
-
-export type HoverCardType = (typeof HOVER_CARD_TYPES)[number];
+export type HoverCardType =
+  | 'glossaryInstance'
+  | 'endNoteLink'
+  | 'link'
+  | 'internalLink';
 
 const TYPE_ATTRIBUTE_MAP: Record<HoverCardType, string> = {
   glossaryInstance: 'uuid',
-  endNoteLink: 'endNote',
+  endNoteLink: 'uuid',
   link: 'uuid',
   internalLink: 'uuid',
 };
@@ -71,17 +67,11 @@ export const HoverCardProvider = ({
   openDelay = DEFAULT_HOVER_CARD_OPEN_DELAY,
   closeDelay = DEFAULT_HOVER_CARD_CLOSE_DELAY,
   typeMap = TYPE_ATTRIBUTE_MAP,
-  fetchEndNote,
-  fetchGlossaryInstance,
   children,
 }: {
   closeDelay?: number;
   openDelay?: number;
   typeMap?: Record<string, string>;
-  fetchEndNote?: (uuid: string) => Promise<Passage | undefined>;
-  fetchGlossaryInstance?: (
-    uuid: string,
-  ) => Promise<GlossaryTermInstance | undefined>;
   children: ReactNode;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);

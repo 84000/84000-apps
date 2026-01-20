@@ -4,6 +4,7 @@ import { FileTextIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
+import { findEndnoteMarkByUuid } from '../../util';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
@@ -27,60 +28,22 @@ export const EndNoteLinkHoverContent = ({
 
     setTimeout(() => {
       // Find the mark that contains this endnote by traversing up from the anchor
-      const markContainer = anchor.closest('span');
-      if (!markContainer) {
-        console.warn('EndNoteLink container not found.');
+      const range = findEndnoteMarkByUuid({ editor, uuid });
+      if (!range) {
+        console.warn('EndNoteLink mark not found in the document.');
         return;
       }
 
-      // Find the position in the editor
-      const { state } = editor;
-      const { doc, tr } = state;
-
-      let found = false;
-
-      doc.descendants((node, pos) => {
-        if (found) return false;
-
-        for (const m of node.marks) {
-          if (m.type.name === 'endNoteLink') {
-            const notes = m.attrs.notes || [];
-            const noteIndex = notes.findIndex(
-              (n: { uuid: string }) => n.uuid === uuid,
-            );
-            if (noteIndex !== -1) {
-              const from = tr.mapping.map(pos);
-              const to = from + node.nodeSize;
-
-              if (notes.length === 1) {
-                // Remove the entire mark if this is the only note
-                tr.removeMark(from, to, m.type);
-              } else {
-                // Remove just this note from the array
-                const newNotes = notes.filter(
-                  (_: unknown, i: number) => i !== noteIndex,
-                );
-                tr.removeMark(from, to, m.type);
-                tr.addMark(
-                  from,
-                  to,
-                  m.type.create({ ...m.attrs, notes: newNotes }),
-                );
-              }
-
-              found = true;
-              return false;
-            }
-          }
-        }
-        return true;
-      });
-
-      if (found) {
-        editor.view.dispatch(tr);
-      } else {
-        console.warn('EndNoteLink mark not found in the document.');
+      const { from, to, mark } = range;
+      const { tr } = editor.state;
+      tr.removeMark(from, to, mark.type);
+      const notes = (mark.attrs.notes || []).filter(
+        (note: { uuid: string }) => uuid !== note.uuid,
+      );
+      if (notes.length > 0) {
+        tr.addMark(from, to, mark.type.create({ ...mark.attrs, notes }));
       }
+      editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
   }, [editor, uuid, anchor, close]);
 
@@ -90,55 +53,40 @@ export const EndNoteLinkHoverContent = ({
       close();
 
       setTimeout(() => {
-        const { state } = editor;
-        const { doc, tr } = state;
-
-        let found = false;
-
-        doc.descendants((node, pos) => {
-          if (found) return false;
-
-          for (const m of node.marks) {
-            if (m.type.name === 'endNoteLink') {
-              const notes = m.attrs.notes || [];
-              const noteIndex = notes.findIndex(
-                (n: { uuid: string }) => n.uuid === uuid,
-              );
-              if (noteIndex !== -1) {
-                const from = tr.mapping.map(pos);
-                const to = from + node.nodeSize;
-
-                // Update the note in the array
-                const newNotes = [...notes];
-                newNotes[noteIndex] = {
-                  ...newNotes[noteIndex],
-                  endNote: newEndNote,
-                };
-
-                tr.removeMark(from, to, m.type);
-                tr.addMark(
-                  from,
-                  to,
-                  m.type.create({ ...m.attrs, notes: newNotes }),
-                );
-
-                found = true;
-
-                // Update the DOM attribute directly for immediate feedback
-                anchor.setAttribute('endNote', newEndNote);
-
-                return false;
-              }
-            }
-          }
-          return true;
-        });
-
-        if (found) {
-          editor.view.dispatch(tr);
-        } else {
+        const range = findEndnoteMarkByUuid({ editor, uuid });
+        if (!range) {
           console.warn('EndNoteLink mark not found in the document.');
+          return;
         }
+
+        const { from, to, mark } = range;
+        const { tr } = editor.state;
+        tr.removeMark(from, to, mark.type);
+        const note = (mark.attrs.notes || []).find(
+          (note: { uuid: string }) => uuid === note.uuid,
+        );
+        const notes = [
+          ...(mark.attrs.notes || []).filter(
+            (note: { uuid: string }) => uuid !== note.uuid,
+          ),
+          {
+            ...note,
+            uuid,
+            endNote: newEndNote,
+          },
+        ];
+        tr.addMark(
+          from,
+          to,
+          mark.type.create({
+            ...mark.attrs,
+            notes,
+          }),
+        );
+        editor.view.dispatch(tr);
+
+        // Update the DOM attribute directly for immediate feedback
+        anchor.setAttribute('endNote', newEndNote);
       }, EDITOR_UPDATE_DELAY_MS);
     },
     [editor, uuid, anchor, close],

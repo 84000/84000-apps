@@ -7,6 +7,7 @@ import { recurse } from './recurse';
 export const internalLink: Transformer = (ctx) => {
   const { annotation } = ctx;
   const {
+    uuid,
     entity,
     href = '#',
     start,
@@ -43,7 +44,7 @@ export const internalLink: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'internalLink',
-              attrs: { href: path, entity, type, toh },
+              attrs: { uuid, href: path, entity, type, toh },
             },
           ];
         },

@@ -23,7 +23,8 @@ export const endNoteLink: Exporter<EndNoteLinkAnnotation[]> = ({
         uuid,
         type: 'endNoteLink',
         passageUuid,
-        start,
+        // end note links are 0-length annotations
+        start: end,
         end,
         endNote,
       };
