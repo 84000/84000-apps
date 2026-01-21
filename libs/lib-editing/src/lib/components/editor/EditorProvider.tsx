@@ -1,13 +1,6 @@
 'use client';
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import {
@@ -19,11 +12,12 @@ import {
 } from '@data-access';
 import { passagesFromNodes } from '../../passage';
 import { NavigationProvider } from '../shared';
+import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
 
 interface EditorContextState {
   doc?: Doc;
-  dirtyUuids: string[];
   work: Work;
+  dirtyStore: DirtyStore;
   canEdit(): Promise<boolean>;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
@@ -45,7 +39,17 @@ export const EditorContext = createContext<EditorContextState>({
     restriction: false,
     toh: [],
   },
-  dirtyUuids: [],
+  dirtyStore: {
+    isDirty: false,
+    listeners: new Set(),
+    subscribe: () => () => {
+      throw Error('Not implemented');
+    },
+    setDirty: () => {
+      throw Error('Not implemented');
+    },
+    getSnapshot: () => false,
+  },
   canEdit: async () => {
     throw Error('Not implemented');
   },
@@ -85,10 +89,13 @@ export const EditorContextProvider = ({
 }: EditorContextProps) => {
   const client = createBrowserClient();
 
-  const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
+  const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
   // Use ref for immediate tracking to avoid state updates on every keystroke
   const dirtyUuidsRef = useRef<Set<string>>(new Set());
-  const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
+
+  // Store for dirty state with subscription support
+  const dirtyStore = useDirtyStore();
+
   const editorCache = useRef<{ [key: string]: Editor }>({});
 
   const getEditor = useCallback((key: string) => {
@@ -141,7 +148,7 @@ export const EditorContextProvider = ({
 
     // Clear both ref and state
     dirtyUuidsRef.current.clear();
-    setDirtyUuids([]);
+    dirtyStore.setDirty(false);
   }, [editorCache, client, work.uuid]);
 
   const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
@@ -159,6 +166,11 @@ export const EditorContextProvider = ({
       if (uuid) {
         // Add directly to ref - no state update on every keystroke
         dirtyUuidsRef.current.add(uuid);
+        // Only update dirty state if it's not already dirty
+        // This prevents re-renders on every keystroke after the first one
+        if (!dirtyStore.isDirty) {
+          dirtyStore.setDirty(true);
+        }
       }
     });
   }, []);
@@ -187,30 +199,12 @@ export const EditorContextProvider = ({
     return await hasPermission({ client, permission: 'editor.edit' });
   }, [client]);
 
-  // Sync dirty UUIDs from ref to state periodically (for UI display only)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (dirtyUuidsRef.current.size > 0) {
-        setDirtyUuids(Array.from(dirtyUuidsRef.current));
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!dirtyUuids.length) {
-      return;
-    }
-
-    // TODO: when we are ready, debounce and save automatically
-  }, [dirtyUuids, save]);
-
   return (
     <EditorContext.Provider
       value={{
         work,
         doc,
-        dirtyUuids,
+        dirtyStore,
         canEdit,
         getFragment,
         setDoc,

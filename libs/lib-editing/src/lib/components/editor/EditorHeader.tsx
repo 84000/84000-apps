@@ -1,22 +1,22 @@
 'use client';
 
+import { useSyncExternalStore } from 'react';
 import { SaveButton } from '@design-system';
 import { useEditorState } from './EditorProvider';
-import { useEffect, useState } from 'react';
 
 export const EditorHeader = () => {
-  const [canSave, setCanSave] = useState(false);
-  const { dirtyUuids, save } = useEditorState();
+  const { dirtyStore, save } = useEditorState();
 
-  useEffect(() => {
-    setCanSave(dirtyUuids.length > 0);
-  }, [dirtyUuids]);
+  // Subscribe to dirty state directly
+  const isDirty = useSyncExternalStore(
+    dirtyStore.subscribe.bind(dirtyStore),
+    dirtyStore.getSnapshot.bind(dirtyStore),
+    () => false,
+  );
 
   return (
     <div className="px-4 py-3 flex justify-end h-12 z-10 gap-2">
-      {canSave && (
-        <SaveButton size="xs" onClick={save} disabled={!dirtyUuids.length} />
-      )}
+      {isDirty && <SaveButton size="xs" onClick={save} />}
     </div>
   );
 };
