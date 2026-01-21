@@ -1,5 +1,6 @@
 import { AnnotationType } from '@data-access';
 import { TransformationContextWithCallback, Transformer } from './transformer';
+import { TranslationEditorContentItem } from '../components';
 
 export const recurse: Transformer = (ctx) => {
   if (trasformOnMatch(ctx)) {
@@ -34,4 +35,23 @@ const trasformOnMatch = (ctx: TransformationContextWithCallback) => {
   }
 
   return false;
+};
+
+export const recurseForType = ({
+  block,
+  until,
+}: {
+  block: TranslationEditorContentItem;
+  until: AnnotationType;
+}): TranslationEditorContentItem | undefined => {
+  if (block.type === until) {
+    return block;
+  }
+
+  for (const child of block.content || []) {
+    const val = recurseForType({ block: child, until });
+    if (val) {
+      return val;
+    }
+  }
 };
