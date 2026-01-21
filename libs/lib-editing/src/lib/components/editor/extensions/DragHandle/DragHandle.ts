@@ -221,6 +221,10 @@ export const DragHandlePlugin = (
     hideDragHandle();
   }
 
+  // Throttling state for mousemove handler
+  let lastPos = { x: 0, y: 0 };
+  let rafId: number | null = null;
+
   return new Plugin({
     key: new PluginKey(options.pluginKey),
     view: (view) => {
@@ -262,6 +266,7 @@ export const DragHandlePlugin = (
 
       return {
         destroy: () => {
+          if (rafId) cancelAnimationFrame(rafId);
           if (!handleBySelector) {
             dragHandleElement?.remove?.();
           }
@@ -285,50 +290,63 @@ export const DragHandlePlugin = (
             return;
           }
 
-          const node = nodeDOMAtCoords(
-            {
-              x: event.clientX + 50 + options.dragHandleWidth,
-              y: event.clientY,
-            },
-            options,
-          );
+          // Skip if position hasn't changed significantly (< 5px threshold)
+          const dx = Math.abs(event.clientX - lastPos.x);
+          const dy = Math.abs(event.clientY - lastPos.y);
+          if (dx < 5 && dy < 5) return;
 
-          const notDragging = node?.closest('.not-draggable');
-          const excludedTagList = options.excludedTags
-            .concat(['ol', 'ul'])
-            .join(', ');
+          lastPos = { x: event.clientX, y: event.clientY };
 
-          if (
-            !(node instanceof Element) ||
-            node.matches(excludedTagList) ||
-            notDragging
-          ) {
-            hideDragHandle();
-            return;
-          }
+          // Use requestAnimationFrame to batch updates
+          if (rafId) cancelAnimationFrame(rafId);
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
 
-          const compStyle = window.getComputedStyle(node);
-          const parsedLineHeight = parseInt(compStyle.lineHeight, 10);
-          const lineHeight = isNaN(parsedLineHeight)
-            ? parseInt(compStyle.fontSize) * 1.2
-            : parsedLineHeight;
-          const paddingTop = parseInt(compStyle.paddingTop, 10);
+            const node = nodeDOMAtCoords(
+              {
+                x: event.clientX + 50 + options.dragHandleWidth,
+                y: event.clientY,
+              },
+              options,
+            );
 
-          const rect = absoluteRect(node);
+            const notDragging = node?.closest('.not-draggable');
+            const excludedTagList = options.excludedTags
+              .concat(['ol', 'ul'])
+              .join(', ');
 
-          rect.top += (lineHeight - 24) / 2;
-          rect.top += paddingTop;
-          // Li markers
-          if (node.matches('ul:not([data-type=taskList]) li, ol li')) {
-            rect.left -= options.dragHandleWidth;
-          }
-          rect.width = options.dragHandleWidth;
+            if (
+              !(node instanceof Element) ||
+              node.matches(excludedTagList) ||
+              notDragging
+            ) {
+              hideDragHandle();
+              return;
+            }
 
-          if (!dragHandleElement) return;
+            const compStyle = window.getComputedStyle(node);
+            const parsedLineHeight = parseInt(compStyle.lineHeight, 10);
+            const lineHeight = isNaN(parsedLineHeight)
+              ? parseInt(compStyle.fontSize) * 1.2
+              : parsedLineHeight;
+            const paddingTop = parseInt(compStyle.paddingTop, 10);
 
-          dragHandleElement.style.left = `${rect.left - rect.width}px`;
-          dragHandleElement.style.top = `${rect.top}px`;
-          showDragHandle();
+            const rect = absoluteRect(node);
+
+            rect.top += (lineHeight - 24) / 2;
+            rect.top += paddingTop;
+            // Li markers
+            if (node.matches('ul:not([data-type=taskList]) li, ol li')) {
+              rect.left -= options.dragHandleWidth;
+            }
+            rect.width = options.dragHandleWidth;
+
+            if (!dragHandleElement) return;
+
+            dragHandleElement.style.left = `${rect.left - rect.width}px`;
+            dragHandleElement.style.top = `${rect.top}px`;
+            showDragHandle();
+          });
         },
         keydown: () => {
           hideDragHandle();

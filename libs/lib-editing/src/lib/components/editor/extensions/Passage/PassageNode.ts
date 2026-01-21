@@ -106,27 +106,46 @@ export const PassageNode = Node.create({
           const currentPrefix = currentLabel.split('.').slice(0, -1).join('.');
           const currentDepth = currentPrefix.length;
 
-          state.doc.descendants((node, pos) => {
-            const targetLabel = node.attrs.label as string;
-            const isChildPassage =
-              node.type.name === 'passage' && pos > passagePos && !!targetLabel;
+          // Optimized: Only traverse siblings after current position instead of entire document
+          const parentDepth = passageDepth - 1;
+          if (parentDepth < 0) {
+            return false;
+          }
 
-            if (!isChildPassage) {
-              return;
+          const parentNode = $from.node(parentDepth);
+          const startIndex = $from.index(parentDepth);
+
+          // Start position after current passage
+          let pos = passagePos + currentPassage.nodeSize;
+
+          for (let i = startIndex + 1; i < parentNode.childCount; i++) {
+            const child = parentNode.child(i);
+
+            if (child.type.name !== 'passage') {
+              pos += child.nodeSize;
+              continue;
             }
 
-            const matchesPrefix = targetLabel.startsWith(currentPrefix);
-            if (!matchesPrefix) {
-              return false;
+            const targetLabel = child.attrs.label as string;
+            if (!targetLabel) {
+              pos += child.nodeSize;
+              continue;
             }
 
-            const oldAttrs = node.attrs;
+            // Early exit - if we've moved past our prefix scope, stop
+            if (!targetLabel.startsWith(currentPrefix)) {
+              break;
+            }
+
             txn.setNodeMarkup(pos, null, {
-              ...oldAttrs,
-              label: incrementLabel(oldAttrs.label, currentDepth),
+              ...child.attrs,
+              label: incrementLabel(child.attrs.label, currentDepth),
             });
-          });
 
+            pos += child.nodeSize;
+          }
+
+          dispatch(txn);
           return true;
         },
       splitPassage:

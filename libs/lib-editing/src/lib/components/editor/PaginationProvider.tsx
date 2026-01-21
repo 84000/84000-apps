@@ -26,6 +26,34 @@ import { PanelName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
 
 const LOADING_SKELETONS_COUNT = 3;
+const CHUNK_SIZE = 25;
+
+/**
+ * Insert content in chunks with yielding to browser to prevent long frame blocking
+ */
+const insertContentChunked = async (
+  editor: Editor,
+  pos: number,
+  content: TranslationEditorContent,
+) => {
+  if (!Array.isArray(content) || content.length <= CHUNK_SIZE) {
+    // Small content - insert all at once
+    editor.commands.insertContentAt(pos, content);
+    return;
+  }
+
+  // Insert in chunks to avoid blocking the main thread
+  for (let i = 0; i < content.length; i += CHUNK_SIZE) {
+    const chunk = content.slice(i, i + CHUNK_SIZE);
+    const insertPos = i === 0 ? pos : editor.state.doc.content.size;
+    editor.commands.insertContentAt(insertPos, chunk);
+
+    // Yield to browser between chunks (except after last chunk)
+    if (i + CHUNK_SIZE < content.length) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+  }
+};
 
 interface PaginationContextState {
   endCursor?: string;
@@ -238,8 +266,8 @@ export const PaginationProvider = ({
       const nextContent = blocksFromTranslationBody(passages);
       const pos = editor?.state.doc?.content.size;
 
-      if (pos >= 0 && nextContent.length) {
-        editor?.commands.insertContentAt(pos, nextContent);
+      if (pos >= 0 && nextContent.length && editor) {
+        await insertContentChunked(editor, pos, nextContent);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -281,6 +309,8 @@ export const PaginationProvider = ({
         const previousScrollHeight = scrollContainer?.scrollHeight || 0;
         const previousScrollTop = scrollContainer?.scrollTop || 0;
 
+        // For start insertion, insert all at once to maintain scroll position accuracy.
+        // Chunking here would cause scroll jank since we adjust scroll after insertion.
         editor.commands.insertContentAt(pos, nextContent);
 
         requestAnimationFrame(() => {

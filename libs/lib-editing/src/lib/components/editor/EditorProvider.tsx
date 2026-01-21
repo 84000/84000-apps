@@ -86,6 +86,8 @@ export const EditorContextProvider = ({
   const client = createBrowserClient();
 
   const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
+  // Use ref for immediate tracking to avoid state updates on every keystroke
+  const dirtyUuidsRef = useRef<Set<string>>(new Set());
   const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
   const editorCache = useRef<{ [key: string]: Editor }>({});
 
@@ -115,12 +117,19 @@ export const EditorContextProvider = ({
       return;
     }
 
+    // Use the ref directly for the most up-to-date dirty UUIDs
+    const uuidsToSave = Array.from(dirtyUuidsRef.current);
+    if (!uuidsToSave.length) {
+      console.log('No changes to save.');
+      return;
+    }
+
     const passages: Passage[] = [];
     editors.forEach((editor) => {
       editor.commands.blur();
       passages.push(
         ...passagesFromNodes({
-          uuids: dirtyUuids,
+          uuids: uuidsToSave,
           workUuid: work.uuid,
           editor,
         }),
@@ -130,15 +139,16 @@ export const EditorContextProvider = ({
     savePassages({ client, passages });
     console.log('Document state saved.');
 
+    // Clear both ref and state
+    dirtyUuidsRef.current.clear();
     setDirtyUuids([]);
-  }, [editorCache, dirtyUuids, client, work.uuid]);
+  }, [editorCache, client, work.uuid]);
 
   const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
     if (!txn.local) {
       return;
     }
 
-    const uuids: Set<string> = new Set();
     txn.changed.forEach((_change, key) => {
       let node = key.parent as XmlElement;
       while (node?.nodeName !== 'passage' && node?.parent) {
@@ -147,12 +157,9 @@ export const EditorContextProvider = ({
 
       const uuid = node?.getAttribute?.('uuid');
       if (uuid) {
-        uuids.add(uuid);
+        // Add directly to ref - no state update on every keystroke
+        dirtyUuidsRef.current.add(uuid);
       }
-    });
-
-    setDirtyUuids((prev) => {
-      return [...new Set([...prev, ...uuids])];
     });
   }, []);
 
@@ -179,6 +186,16 @@ export const EditorContextProvider = ({
   const canEdit = useCallback(async () => {
     return await hasPermission({ client, permission: 'editor.edit' });
   }, [client]);
+
+  // Sync dirty UUIDs from ref to state periodically (for UI display only)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (dirtyUuidsRef.current.size > 0) {
+        setDirtyUuids(Array.from(dirtyUuidsRef.current));
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!dirtyUuids.length) {
