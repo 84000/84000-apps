@@ -12,13 +12,13 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
 import { LabeledElement, useNavigation } from '../../../shared';
 import { Alignment } from '@data-access';
 
-export const Passage = (props: NodeViewProps) => {
+const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
 
   const [compareLeadingSpace, setCompareLeadingSpace] = useState('md:mt-1');
@@ -32,7 +32,7 @@ export const Passage = (props: NodeViewProps) => {
   useEffect(() => {
     const isCompare = panels.main.open && panels.main.tab === 'compare';
     setIsCompare(isCompare);
-  }, [panels, editor]);
+  }, [panels.main.open, panels.main.tab]);
 
   useEffect(() => {
     if (!isCompare || !toh) {
@@ -120,5 +120,7 @@ export const Passage = (props: NodeViewProps) => {
     </NodeViewWrapper>
   );
 };
+
+export const Passage = memo(PassageComponent);
 
 export default Passage;

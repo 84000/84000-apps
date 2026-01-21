@@ -1,13 +1,6 @@
 'use client';
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
 import {
@@ -19,11 +12,12 @@ import {
 } from '@data-access';
 import { passagesFromNodes } from '../../passage';
 import { NavigationProvider } from '../shared';
+import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
 
 interface EditorContextState {
   doc?: Doc;
-  dirtyUuids: string[];
   work: Work;
+  dirtyStore: DirtyStore;
   canEdit(): Promise<boolean>;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
@@ -45,7 +39,17 @@ export const EditorContext = createContext<EditorContextState>({
     restriction: false,
     toh: [],
   },
-  dirtyUuids: [],
+  dirtyStore: {
+    isDirty: false,
+    listeners: new Set(),
+    subscribe: () => () => {
+      throw Error('Not implemented');
+    },
+    setDirty: () => {
+      throw Error('Not implemented');
+    },
+    getSnapshot: () => false,
+  },
   canEdit: async () => {
     throw Error('Not implemented');
   },
@@ -85,8 +89,13 @@ export const EditorContextProvider = ({
 }: EditorContextProps) => {
   const client = createBrowserClient();
 
-  const [doc, setDoc] = useState<Doc>(initialDoc || new Doc());
-  const [dirtyUuids, setDirtyUuids] = useState<string[]>([]);
+  const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
+  // Use ref for immediate tracking to avoid state updates on every keystroke
+  const dirtyUuidsRef = useRef<Set<string>>(new Set());
+
+  // Store for dirty state with subscription support
+  const dirtyStore = useDirtyStore();
+
   const editorCache = useRef<{ [key: string]: Editor }>({});
 
   const getEditor = useCallback((key: string) => {
@@ -115,12 +124,19 @@ export const EditorContextProvider = ({
       return;
     }
 
+    // Use the ref directly for the most up-to-date dirty UUIDs
+    const uuidsToSave = Array.from(dirtyUuidsRef.current);
+    if (!uuidsToSave.length) {
+      console.log('No changes to save.');
+      return;
+    }
+
     const passages: Passage[] = [];
     editors.forEach((editor) => {
       editor.commands.blur();
       passages.push(
         ...passagesFromNodes({
-          uuids: dirtyUuids,
+          uuids: uuidsToSave,
           workUuid: work.uuid,
           editor,
         }),
@@ -130,15 +146,16 @@ export const EditorContextProvider = ({
     savePassages({ client, passages });
     console.log('Document state saved.');
 
-    setDirtyUuids([]);
-  }, [editorCache, dirtyUuids, client, work.uuid]);
+    // Clear both ref and state
+    dirtyUuidsRef.current.clear();
+    dirtyStore.setDirty(false);
+  }, [editorCache, client, work.uuid]);
 
   const observerFunction = useCallback((_evts: unknown[], txn: Transaction) => {
     if (!txn.local) {
       return;
     }
 
-    const uuids: Set<string> = new Set();
     txn.changed.forEach((_change, key) => {
       let node = key.parent as XmlElement;
       while (node?.nodeName !== 'passage' && node?.parent) {
@@ -147,12 +164,14 @@ export const EditorContextProvider = ({
 
       const uuid = node?.getAttribute?.('uuid');
       if (uuid) {
-        uuids.add(uuid);
+        // Add directly to ref - no state update on every keystroke
+        dirtyUuidsRef.current.add(uuid);
+        // Only update dirty state if it's not already dirty
+        // This prevents re-renders on every keystroke after the first one
+        if (!dirtyStore.isDirty) {
+          dirtyStore.setDirty(true);
+        }
       }
-    });
-
-    setDirtyUuids((prev) => {
-      return [...new Set([...prev, ...uuids])];
     });
   }, []);
 
@@ -180,20 +199,12 @@ export const EditorContextProvider = ({
     return await hasPermission({ client, permission: 'editor.edit' });
   }, [client]);
 
-  useEffect(() => {
-    if (!dirtyUuids.length) {
-      return;
-    }
-
-    // TODO: when we are ready, debounce and save automatically
-  }, [dirtyUuids, save]);
-
   return (
     <EditorContext.Provider
       value={{
         work,
         doc,
-        dirtyUuids,
+        dirtyStore,
         canEdit,
         getFragment,
         setDoc,
