@@ -6,7 +6,7 @@ import {
 } from '@data-access';
 import { inlineTitle } from './inline-title';
 import { blockFromPassage } from '../block';
-import { findTextNodeWithMarks } from './util';
+import { findTextNodeWithMarks } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,

@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -34,8 +35,10 @@ describe('listItem transformer', () => {
   }
 
   it('should transform listItem annotation correctly', () => {
-    // The listItem should be in block.content[0]
-    const listItemNode = block.content?.[0];
+    const listItemNode = recurseForType({
+      until: 'listItem',
+      block,
+    });
     expect(listItemNode).toBeDefined();
     expect(listItemNode?.type).toBe('listItem');
     expect(listItemNode?.attrs?.uuid).toBe('listitem-uuid-1');

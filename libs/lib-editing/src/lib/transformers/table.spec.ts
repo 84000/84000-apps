@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -34,8 +35,10 @@ describe('table transformer', () => {
   }
 
   it('should transform table annotation correctly', () => {
-    // The table should be in block.content[0]
-    const tableNode = block.content?.[0];
+    const tableNode = recurseForType({
+      until: 'table',
+      block,
+    });
     expect(tableNode).toBeDefined();
     expect(tableNode?.type).toBe('table');
     expect(tableNode?.content).toBeDefined();

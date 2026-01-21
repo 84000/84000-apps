@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -41,21 +42,10 @@ describe('audio transformer', () => {
   }
 
   it('should transform audio annotation correctly', () => {
-    // Find the audio node
-    const findAudioNode = (node: any): any => {
-      if (node.type === 'audio') {
-        return node;
-      }
-      if (node.content) {
-        for (const child of node.content) {
-          const found = findAudioNode(child);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const audioNode = findAudioNode(block);
+    const audioNode = recurseForType({
+      until: 'audio',
+      block,
+    });
     expect(audioNode).toBeDefined();
     expect(audioNode?.type).toBe('audio');
     expect(audioNode?.attrs?.src).toBe('https://example.com/audio.mp3');

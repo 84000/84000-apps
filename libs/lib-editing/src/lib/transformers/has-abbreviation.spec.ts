@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -38,21 +39,7 @@ describe('hasAbbreviation transformer', () => {
   }
 
   it('should transform hasAbbreviation annotation correctly', () => {
-    // Find the hasAbbreviation node
-    const findHasAbbreviationNode = (node: any): any => {
-      if (node.type === 'hasAbbreviation') {
-        return node;
-      }
-      if (node.content) {
-        for (const child of node.content) {
-          const found = findHasAbbreviationNode(child);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const hasAbbrNode = findHasAbbreviationNode(block);
+    const hasAbbrNode = recurseForType({ block, until: 'hasAbbreviation' });
     expect(hasAbbrNode).toBeDefined();
     expect(hasAbbrNode?.type).toBe('hasAbbreviation');
     expect(hasAbbrNode?.attrs?.abbreviation).toBe('abbr-uuid-1');

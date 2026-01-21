@@ -55,3 +55,22 @@ export const recurseForType = ({
     }
   }
 };
+
+/**
+ * Recursively searches a node tree to find the first text node that has marks applied.
+ * Used in tests to verify that mark transformers (span, code, link, etc.) are working correctly.
+ */
+export const findTextNodeWithMarks = (
+  node: TranslationEditorContentItem,
+): TranslationEditorContentItem | null => {
+  if (node.type === 'text' && node.marks && node.marks.length > 0) {
+    return node;
+  }
+  if (node.content) {
+    for (const child of node.content) {
+      const found = findTextNodeWithMarks(child);
+      if (found) return found;
+    }
+  }
+  return null;
+};

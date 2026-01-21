@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -34,8 +35,10 @@ describe('lineGroup transformer', () => {
   }
 
   it('should transform lineGroup annotation correctly', () => {
-    // The lineGroup should be in block.content[0]
-    const lineGroupNode = block.content?.[0];
+    const lineGroupNode = recurseForType({
+      until: 'lineGroup',
+      block,
+    });
     expect(lineGroupNode).toBeDefined();
     expect(lineGroupNode?.type).toBe('lineGroup');
     expect(lineGroupNode?.attrs?.uuid).toBe('linegroup-uuid-1');

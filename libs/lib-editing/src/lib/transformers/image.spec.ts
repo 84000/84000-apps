@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -38,21 +39,10 @@ describe('image transformer', () => {
   }
 
   it('should transform image annotation correctly', () => {
-    // Find the image node
-    const findImageNode = (node: any): any => {
-      if (node.type === 'image') {
-        return node;
-      }
-      if (node.content) {
-        for (const child of node.content) {
-          const found = findImageNode(child);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const imageNode = findImageNode(block);
+    const imageNode = recurseForType({
+      until: 'image',
+      block,
+    });
     expect(imageNode).toBeDefined();
     expect(imageNode?.type).toBe('image');
     expect(imageNode?.attrs?.src).toBe('https://example.com/image.jpg');

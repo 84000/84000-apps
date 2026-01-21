@@ -1,5 +1,6 @@
 import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
 import { blockFromPassage } from '../block';
+import { recurseForType } from './recurse';
 
 const dto: PassageDTO = {
   sort: 1,
@@ -34,8 +35,10 @@ describe('blockquote transformer', () => {
   }
 
   it('should transform blockquote annotation correctly', () => {
-    // The blockquote should be in block.content[0]
-    const blockquoteNode = block.content?.[0];
+    const blockquoteNode = recurseForType({
+      until: 'blockquote',
+      block,
+    });
     expect(blockquoteNode).toBeDefined();
     expect(blockquoteNode?.type).toBe('blockquote');
     expect(blockquoteNode?.attrs?.uuid).toBe('blockquote-uuid-1');
