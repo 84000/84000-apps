@@ -9,7 +9,7 @@
     "copy-assets": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "cp -r libs/design-system/src/lib/assets/* apps/web-editor/public/"
+        "command": "mkdir -p apps/web-editor/public && cp -r libs/design-system/src/lib/assets/* apps/web-editor/public/"
       }
     },
     "dev": {

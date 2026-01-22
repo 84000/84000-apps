@@ -9,7 +9,7 @@
     "copy-assets": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "cp -r libs/design-system/src/lib/assets/* apps/web-reader-mfe/public/"
+        "command": "mkdir -p apps/web-reader-mfe/public && cp -r libs/design-system/src/lib/assets/* apps/web-reader-mfe/public/"
       }
     },
     "dev": {
