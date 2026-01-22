@@ -6,38 +6,17 @@
   "tags": [],
   "// targets": "to see all targets run: nx show project web-reader --web",
   "targets": {
-    "dev": {
+    "copy-assets": {
+      "executor": "nx:run-commands",
       "options": {
-        "assets": [
-          {
-            "glob": "**/*",
-            "input": "{workspaceRoot}/libs/design-system/src/lib/assets",
-            "output": "/"
-          }
-        ]
+        "command": "cp -r libs/design-system/src/lib/assets/* apps/web-main/public/"
       }
+    },
+    "dev": {
+      "dependsOn": ["copy-assets"]
     },
     "build": {
-      "options": {
-        "assets": [
-          {
-            "glob": "**/*",
-            "input": "{workspaceRoot}/libs/design-system/src/lib/assets",
-            "output": "/"
-          }
-        ]
-      }
-    },
-    "serve": {
-      "options": {
-        "assets": [
-          {
-            "glob": "**/*",
-            "input": "{workspaceRoot}/libs/design-system/src/lib/assets",
-            "output": "/"
-          }
-        ]
-      }
+      "dependsOn": ["copy-assets"]
     }
   }
 }
