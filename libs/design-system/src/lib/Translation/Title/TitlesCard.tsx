@@ -12,6 +12,8 @@ export const TitlesCard = ({
   toh = '',
   section = '',
   authors = [],
+  attribution = 'by',
+  authorsJoiner = ',',
   canEdit = false,
   onEdit,
 }: {
@@ -21,6 +23,8 @@ export const TitlesCard = ({
   toh?: string;
   section?: string;
   authors?: string[];
+  attribution?: string;
+  authorsJoiner?: string;
   canEdit?: boolean;
   onEdit?(): void;
 }) => {
@@ -84,7 +88,7 @@ export const TitlesCard = ({
         {authors.length > 0 && (
           <div className="font-serif title-sub">
             <div className="uppercase text-xs text-muted-foreground py-2">
-              By
+              {attribution}
             </div>
             <div className="flex gap-x-2 mx-auto flex-wrap justify-center text-secondary -mt-2 text-xl">
               {authors.map((author, idx) => (
@@ -93,7 +97,9 @@ export const TitlesCard = ({
                     {author}
                   </span>
                   {idx < authors.length - 1 && (
-                    <span key={`comma-${idx}`}>,</span>
+                    <span key={`comma-${idx}`} className="whitespace-pre">
+                      {authorsJoiner}
+                    </span>
                   )}
                 </div>
               ))}

@@ -9,7 +9,8 @@ export type Imprint = {
   version?: SemVer;
   restriction?: boolean;
   publishYear?: string;
-  tibetanAuthors?: string;
+  tibetanAuthors?: string[];
+  isAuthorContested: boolean;
   sourceDescription?: string;
   publisherStatement?: string;
   tibetanTranslators?: string;
@@ -30,6 +31,7 @@ export type ImprintDTO = {
   restriction?: boolean;
   publishYear?: string;
   tibetanAuthors?: string;
+  isAuthorContested?: boolean;
   sourceDescription?: string;
   publisherStatement?: string;
   tibetanTranslators?: string;
@@ -50,7 +52,11 @@ export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
     version: dto.version,
     restriction: dto.restriction,
     publishYear: dto.publishYear,
-    tibetanAuthors: dto.tibetanAuthors,
+    tibetanAuthors: dto.tibetanAuthors
+      ?.split(',')
+      .map((author) => author.trim())
+      .filter((author) => author.length > 0),
+    isAuthorContested: dto.isAuthorContested || false,
     sourceDescription: dto.sourceDescription,
     publisherStatement: dto.publisherStatement,
     tibetanTranslators: dto.tibetanTranslators,

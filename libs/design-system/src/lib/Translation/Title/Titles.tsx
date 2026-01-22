@@ -46,11 +46,7 @@ export const Titles = ({
 
   let header = '';
   let main = '';
-  const authors =
-    imprint?.tibetanAuthors
-      ?.split(',')
-      .map((a) => a.trim())
-      .filter((a) => !!a) || [];
+  const authors = imprint?.tibetanAuthors || [];
 
   const footer =
     imprint?.mainTitles?.['Sa-Ltn'] ||
@@ -99,6 +95,8 @@ export const Titles = ({
         toh={imprint?.toh}
         section={imprint?.section}
         authors={authors}
+        attribution={imprint?.isAuthorContested ? 'attributed to' : 'by'}
+        authorsJoiner={imprint?.isAuthorContested ? ' or' : ','}
         canEdit={canEdit}
         onEdit={() => setIsEditOpen(true)}
       />
