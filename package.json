@@ -7,6 +7,7 @@
   },
   "private": true,
   "dependencies": {
+    "@apollo/server": "^5.0.0",
     "@floating-ui/dom": "^1.7.4",
     "@floating-ui/react": "^0.27.16",
     "@floating-ui/react-dom": "^2.1.6",
@@ -53,6 +54,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
+    "graphql": "^16.10.0",
     "i": "^0.3.7",
     "i18next": "24.2.2",
     "install": "^0.13.0",

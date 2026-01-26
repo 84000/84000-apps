@@ -1,0 +1,7 @@
+{
+  "name": "api-graphql",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/api-graphql",
+  "projectType": "application",
+  "tags": ["type:app", "scope:api"]
+}
