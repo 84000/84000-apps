@@ -1,0 +1,56 @@
+"""
+A published translation work from the 84000 canon
+"""
+type Work {
+  """
+  Unique identifier for the work
+  """
+  uuid: ID!
+
+  """
+  Title of the work
+  """
+  title: String!
+
+  """
+  Tohoku catalog entry numbers (e.g., ["toh1", "toh2"])
+  """
+  toh: [String!]!
+
+  """
+  Date the work was published
+  """
+  publicationDate: String!
+
+  """
+  Semantic version of the publication (e.g., "1.0.0")
+  """
+  publicationVersion: String!
+
+  """
+  Number of source pages
+  """
+  pages: Int!
+
+  """
+  Whether access to this work is restricted
+  """
+  restriction: Boolean!
+
+  """
+  Section of the canon this work belongs to
+  """
+  section: String!
+}
+
+extend type Query {
+  """
+  Get all published translation works
+  """
+  works: [Work!]!
+
+  """
+  Get a single work by UUID or Tohoku catalog number
+  """
+  work(uuid: ID, toh: String): Work
+}
