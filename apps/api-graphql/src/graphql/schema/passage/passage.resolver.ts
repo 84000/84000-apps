@@ -2,7 +2,7 @@ import type { BodyItemType } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 import { PASSAGE_TYPE_TO_DB, PASSAGE_TYPE_TO_ENUM } from './passage.types';
-import { ANNOTATION_DTO_TYPE_TO_ENUM } from '../annotation/annotation.types';
+import { transformAnnotation } from '../annotation/annotation.resolver';
 
 export const passagesResolver = async (
   parent: WorkParent,
@@ -98,13 +98,7 @@ export const passagesResolver = async (
       sort: passage.sort,
       type: PASSAGE_TYPE_TO_ENUM[passage.type as BodyItemType] ?? 'UNKNOWN',
       xmlId: passage.xmlId ?? null,
-      annotations: annotations.map((annotation) => ({
-        uuid: annotation.uuid,
-        type: ANNOTATION_DTO_TYPE_TO_ENUM[annotation.type] ?? 'UNKNOWN',
-        start: annotation.start,
-        end: annotation.end,
-        content: annotation.content ? JSON.stringify(annotation.content) : null,
-      })),
+      annotations: annotations.map(transformAnnotation),
     };
   });
 

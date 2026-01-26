@@ -36,6 +36,28 @@ enum AnnotationType {
 }
 
 """
+Language codes for text annotations
+"""
+enum Language {
+  BO
+  BO_LTN
+  EN
+  SA_LTN
+  ZH
+  PI_LTN
+}
+
+"""
+Classification of heading annotations
+"""
+enum HeadingClass {
+  SECTION_LABEL
+  SECTION_TITLE
+  SUPPLEMENTARY
+  TABLE_LABEL
+}
+
+"""
 An annotation marking up a range within a passage
 """
 type Annotation {
@@ -59,8 +81,100 @@ type Annotation {
   """
   end: Int!
 
+  # Type-specific fields (all optional)
+
   """
-  Additional type-specific data (JSON encoded)
+  Heading level (HeadingAnnotation)
   """
-  content: String
+  level: Int
+
+  """
+  Heading classification (HeadingAnnotation)
+  """
+  headingClass: HeadingClass
+
+  """
+  URL for external links or reference for internal links (LinkAnnotation, InternalLinkAnnotation)
+  """
+  href: String
+
+  """
+  Display text for links (LinkAnnotation)
+  """
+  text: String
+
+  """
+  Type of internal link (InternalLinkAnnotation)
+  """
+  linkType: String
+
+  """
+  Label for links and end notes (InternalLinkAnnotation, EndNoteLinkAnnotation)
+  """
+  label: String
+
+  """
+  UUID of linked entity (InternalLinkAnnotation)
+  """
+  entity: String
+
+  """
+  Whether the link is pending review (InternalLinkAnnotation)
+  """
+  isPending: Boolean
+
+  """
+  Text style class (SpanAnnotation)
+  """
+  textStyle: String
+
+  """
+  Language code (SpanAnnotation, MantraAnnotation, InlineTitleAnnotation)
+  """
+  lang: Language
+
+  """
+  Glossary XML ID (GlossaryInstanceAnnotation)
+  """
+  glossary: String
+
+  """
+  End note XML ID (EndNoteLinkAnnotation)
+  """
+  endNote: String
+
+  """
+  Source URL for media (AudioAnnotation, ImageAnnotation)
+  """
+  src: String
+
+  """
+  Media MIME type (AudioAnnotation)
+  """
+  mediaType: String
+
+  """
+  List spacing style (ListAnnotation)
+  """
+  spacing: String
+
+  """
+  List nesting level (ListAnnotation)
+  """
+  nesting: Int
+
+  """
+  List item marker style (ListAnnotation)
+  """
+  itemStyle: String
+
+  """
+  Abbreviation text (AbbreviationAnnotation, HasAbbreviationAnnotation)
+  """
+  abbreviation: String
+
+  """
+  Quote XML ID (QuoteAnnotation)
+  """
+  quote: String
 }

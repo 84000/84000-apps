@@ -34,3 +34,25 @@ export const ANNOTATION_DTO_TYPE_TO_ENUM: Record<string, string> = {
   trailer: 'TRAILER',
   unknown: 'UNKNOWN',
 };
+
+/**
+ * Map language codes to GraphQL Language enum values
+ */
+export const LANG_TO_ENUM: Record<string, string> = {
+  Bo: 'BO',
+  'Bo-Ltn': 'BO_LTN',
+  en: 'EN',
+  'Sa-Ltn': 'SA_LTN',
+  zh: 'ZH',
+  'Pi-Ltn': 'PI_LTN',
+};
+
+/**
+ * Map heading type values to GraphQL HeadingClass enum values
+ */
+export const HEADING_CLASS_TO_ENUM: Record<string, string> = {
+  'section-label': 'SECTION_LABEL',
+  'section-title': 'SECTION_TITLE',
+  supplementary: 'SUPPLEMENTARY',
+  'table-label': 'TABLE_LABEL',
+};
