@@ -1,0 +1,14 @@
+"""
+Health status response
+"""
+type HealthStatus {
+  """
+  Current status of the API (e.g., "ok", "degraded")
+  """
+  status: String!
+
+  """
+  ISO 8601 timestamp of the health check
+  """
+  timestamp: String!
+}

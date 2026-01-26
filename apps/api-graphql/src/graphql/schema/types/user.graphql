@@ -1,0 +1,30 @@
+"""
+User role levels
+"""
+enum UserRole {
+  READER
+  SCHOLAR
+  TRANSLATOR
+  EDITOR
+  ADMIN
+}
+
+"""
+Currently authenticated user
+"""
+type CurrentUser {
+  """
+  User's unique identifier
+  """
+  id: ID!
+
+  """
+  User's email address
+  """
+  email: String!
+
+  """
+  User's role
+  """
+  role: UserRole!
+}
