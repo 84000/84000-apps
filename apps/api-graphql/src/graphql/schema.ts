@@ -1,25 +1,14 @@
-export const typeDefs = /* GraphQL */ `
-  type Query {
-    """
-    Health check query
-    """
-    health: HealthStatus!
+import { loadFilesSync } from '@graphql-tools/load-files';
+import { mergeTypeDefs } from '@graphql-tools/merge';
+import { join } from 'node:path';
 
-    """
-    Get the current API version
-    """
-    version: String!
-  }
+const schemaDir = join(process.cwd(), 'src/graphql/schema');
 
-  type HealthStatus {
-    status: String!
-    timestamp: String!
-  }
+// Load all .graphql files from schema directory and subdirectories
+const typesArray = loadFilesSync(schemaDir, {
+  extensions: ['graphql'],
+  recursive: true,
+});
 
-  type Mutation {
-    """
-    Placeholder mutation - replace with your actual mutations
-    """
-    _placeholder: Boolean
-  }
-`;
+// Merge all type definitions into a single schema
+export const typeDefs = mergeTypeDefs(typesArray);

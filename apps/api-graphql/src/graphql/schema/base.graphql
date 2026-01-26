@@ -1,0 +1,24 @@
+"""
+Root Query type - extend this in other schema files
+"""
+type Query {
+  """
+  Health check query
+  """
+  health: HealthStatus!
+
+  """
+  Get the current API version
+  """
+  version: String!
+}
+
+"""
+Root Mutation type - extend this in other schema files
+"""
+type Mutation {
+  """
+  Placeholder mutation - replace with your actual mutations
+  """
+  _placeholder: Boolean
+}
