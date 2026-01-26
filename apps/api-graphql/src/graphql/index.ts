@@ -1,3 +1,3 @@
 export { typeDefs } from './schema';
 export { resolvers } from './resolvers';
-export { createContext, type GraphQLContext } from './context';
+export { createContext, requireAuth, requireRole, type GraphQLContext } from './context';

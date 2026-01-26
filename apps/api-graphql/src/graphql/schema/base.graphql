@@ -11,6 +11,11 @@ type Query {
   Get the current API version
   """
   version: String!
+
+  """
+  Get the currently authenticated user (null if not authenticated)
+  """
+  me: CurrentUser
 }
 
 """
