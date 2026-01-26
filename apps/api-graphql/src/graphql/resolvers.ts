@@ -3,9 +3,7 @@ import {
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
   getTranslationImprint,
-  getTranslationPassages,
   type BodyItemType,
-  type PaginationDirection,
 } from '@data-access';
 import type { GraphQLContext } from './context';
 
@@ -75,27 +73,27 @@ const PASSAGE_TYPE_TO_ENUM: Record<BodyItemType, string> = {
   unknown: 'UNKNOWN',
 };
 
-// Map database annotation types to GraphQL enum values
-const ANNOTATION_TYPE_TO_ENUM: Record<string, string> = {
+// Map database annotation types (kebab-case) to GraphQL enum values
+const ANNOTATION_DTO_TYPE_TO_ENUM: Record<string, string> = {
   abbreviation: 'ABBREVIATION',
   audio: 'AUDIO',
   blockquote: 'BLOCKQUOTE',
   code: 'CODE',
-  deprecated: 'DEPRECATED',
-  endNoteLink: 'END_NOTE_LINK',
-  glossaryInstance: 'GLOSSARY_INSTANCE',
-  hasAbbreviation: 'HAS_ABBREVIATION',
+  'deprecated-internal-link': 'DEPRECATED',
+  'end-note-link': 'END_NOTE_LINK',
+  'glossary-instance': 'GLOSSARY_INSTANCE',
+  'has-abbreviation': 'HAS_ABBREVIATION',
   heading: 'HEADING',
   image: 'IMAGE',
   indent: 'INDENT',
-  inlineTitle: 'INLINE_TITLE',
-  internalLink: 'INTERNAL_LINK',
-  leadingSpace: 'LEADING_SPACE',
+  'inline-title': 'INLINE_TITLE',
+  'internal-link': 'INTERNAL_LINK',
+  'leading-space': 'LEADING_SPACE',
   line: 'LINE',
-  lineGroup: 'LINE_GROUP',
+  'line-group': 'LINE_GROUP',
   link: 'LINK',
   list: 'LIST',
-  listItem: 'LIST_ITEM',
+  'list-item': 'LIST_ITEM',
   mantra: 'MANTRA',
   paragraph: 'PARAGRAPH',
   quote: 'QUOTE',
@@ -103,11 +101,38 @@ const ANNOTATION_TYPE_TO_ENUM: Record<string, string> = {
   reference: 'REFERENCE',
   span: 'SPAN',
   table: 'TABLE',
-  tableBodyData: 'TABLE_BODY_DATA',
-  tableBodyHeader: 'TABLE_BODY_HEADER',
-  tableBodyRow: 'TABLE_BODY_ROW',
+  'table-body-data': 'TABLE_BODY_DATA',
+  'table-body-header': 'TABLE_BODY_HEADER',
+  'table-body-row': 'TABLE_BODY_ROW',
   trailer: 'TRAILER',
   unknown: 'UNKNOWN',
+};
+
+// Map database passage types (camelCase) to database format
+const PASSAGE_TYPE_TO_DB: Record<string, string> = {
+  ABBREVIATIONS: 'abbreviations',
+  ABBREVIATIONS_HEADER: 'abbreviationsHeader',
+  ACKNOWLEDGMENT: 'acknowledgment',
+  ACKNOWLEDGMENT_HEADER: 'acknowledgmentHeader',
+  APPENDIX: 'appendix',
+  APPENDIX_HEADER: 'appendixHeader',
+  COLOPHON: 'colophon',
+  COLOPHON_HEADER: 'colophonHeader',
+  ENDNOTES: 'endnotes',
+  ENDNOTES_HEADER: 'endnotesHeader',
+  HOMAGE: 'homage',
+  HOMAGE_HEADER: 'homageHeader',
+  INTRODUCTION: 'introduction',
+  INTRODUCTION_HEADER: 'introductionHeader',
+  PRELUDE: 'prelude',
+  PRELUDE_HEADER: 'preludeHeader',
+  PROLOGUE: 'prologue',
+  PROLOGUE_HEADER: 'prologueHeader',
+  SUMMARY: 'summary',
+  SUMMARY_HEADER: 'summaryHeader',
+  TRANSLATION: 'translation',
+  TRANSLATION_HEADER: 'translationHeader',
+  UNKNOWN: 'unknown',
 };
 
 export const resolvers = {
@@ -240,41 +265,110 @@ export const resolvers = {
 
       // Map GraphQL filter type to database type
       const passageType = args.filter?.type
-        ? PASSAGE_TYPE_MAP[args.filter.type]
+        ? PASSAGE_TYPE_TO_DB[args.filter.type]
         : undefined;
 
-      const result = await getTranslationPassages({
-        client: ctx.supabase,
-        uuid: parent.uuid,
-        type: passageType,
-        cursor: args.cursor,
-        maxPassages: limit,
-        direction: 'forward' as PaginationDirection,
-      });
+      // If cursor provided, get its sort value for pagination
+      let cursorSort: number | null = null;
+      if (args.cursor) {
+        const { data: cursorPassage } = await ctx.supabase
+          .from('passages')
+          .select('sort')
+          .eq('uuid', args.cursor)
+          .single();
+
+        if (cursorPassage) {
+          cursorSort = cursorPassage.sort;
+        }
+      }
+
+      // Build the passages query
+      let query = ctx.supabase
+        .from('passages')
+        .select('uuid, content, label, sort, type, xmlId')
+        .eq('work_uuid', parent.uuid)
+        .order('sort', { ascending: true })
+        .limit(limit + 1); // Fetch one extra to determine hasMoreAfter
+
+      // Apply cursor filter
+      if (cursorSort !== null) {
+        query = query.gt('sort', cursorSort);
+      }
+
+      // Apply type filter
+      if (passageType) {
+        query = query.eq('type', passageType);
+      }
+
+      const { data: passages, error: passagesError } = await query;
+
+      if (passagesError) {
+        console.error('Error fetching passages:', passagesError);
+        return {
+          nodes: [],
+          nextCursor: null,
+          prevCursor: null,
+          hasMoreAfter: false,
+          hasMoreBefore: false,
+        };
+      }
+
+      // Determine if there are more passages
+      const hasMoreAfter = passages && passages.length > limit;
+      const resultPassages = hasMoreAfter ? passages.slice(0, limit) : passages;
+
+      // Determine if there are passages before (only if we have a cursor)
+      const hasMoreBefore = cursorSort !== null;
+
+      if (!resultPassages || resultPassages.length === 0) {
+        return {
+          nodes: [],
+          nextCursor: null,
+          prevCursor: args.cursor ?? null,
+          hasMoreAfter: false,
+          hasMoreBefore,
+        };
+      }
+
+      // Load annotations for all passages using DataLoader (batched)
+      const passageUuids = resultPassages.map((p) => p.uuid);
+      const annotationsByPassage = await ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids);
 
       // Transform passages to GraphQL format
-      const nodes = result.passages.map((passage) => ({
-        uuid: passage.uuid,
-        content: passage.content,
-        label: passage.label,
-        sort: passage.sort,
-        type: PASSAGE_TYPE_TO_ENUM[passage.type] ?? 'UNKNOWN',
-        xmlId: passage.xmlId ?? null,
-        annotations: passage.annotations.map((annotation) => ({
-          uuid: annotation.uuid,
-          type: ANNOTATION_TYPE_TO_ENUM[annotation.type] ?? 'UNKNOWN',
-          start: annotation.start,
-          end: annotation.end,
-          content: null, // Content is embedded in annotation-specific fields
-        })),
-      }));
+      const nodes = resultPassages.map((passage, index) => {
+        const passageAnnotations = annotationsByPassage[index];
+        // Handle potential Error from loadMany
+        const annotations = passageAnnotations instanceof Error ? [] : passageAnnotations;
+
+        return {
+          uuid: passage.uuid,
+          content: passage.content,
+          label: passage.label,
+          sort: passage.sort,
+          type: PASSAGE_TYPE_TO_ENUM[passage.type as BodyItemType] ?? 'UNKNOWN',
+          xmlId: passage.xmlId ?? null,
+          annotations: annotations.map((annotation) => ({
+            uuid: annotation.uuid,
+            type: ANNOTATION_DTO_TYPE_TO_ENUM[annotation.type] ?? 'UNKNOWN',
+            start: annotation.start,
+            end: annotation.end,
+            content: annotation.content
+              ? JSON.stringify(annotation.content)
+              : null,
+          })),
+        };
+      });
+
+      // Compute cursors
+      const lastPassage = resultPassages[resultPassages.length - 1];
+      const nextCursor = hasMoreAfter ? lastPassage.uuid : null;
 
       return {
         nodes,
-        nextCursor: result.nextCursor ?? null,
-        prevCursor: result.prevCursor ?? null,
-        hasMoreAfter: result.hasMoreAfter,
-        hasMoreBefore: result.hasMoreBefore,
+        nextCursor,
+        prevCursor: args.cursor ?? null,
+        hasMoreAfter,
+        hasMoreBefore,
       };
     },
   },

@@ -2,34 +2,55 @@ import DataLoader from 'dataloader';
 import type { DataClient } from '@data-access';
 
 /**
- * DataLoader factory for batching and caching database queries.
- *
- * Phase 1: Scaffolding for future use.
- * The imprint and passages fields are typically accessed on single-work queries,
- * so N+1 prevention isn't critical yet. This infrastructure will be used for
- * future fields like titles and creators that need batching on list queries.
+ * Annotation row from passage_annotations table
  */
-export interface Loaders {
-  // Future loaders will be added here as needed
-  // e.g., titlesByWorkUuid: DataLoader<string, Title[]>;
-  // e.g., creatorsByWorkUuid: DataLoader<string, Creator[]>;
+export interface AnnotationRow {
+  uuid: string;
+  passage_uuid: string;
+  type: string;
+  start: number;
+  end: number;
+  content: unknown[] | null;
 }
 
-export function createLoaders(_supabase: DataClient): Loaders {
-  // Loaders will be created here as needed
-  // Example pattern for future use:
-  //
-  // titlesByWorkUuid: new DataLoader(async (workUuids) => {
-  //   const { data } = await supabase
-  //     .from('titles')
-  //     .select('*')
-  //     .in('work_uuid', workUuids as string[]);
-  //
-  //   // Group by work_uuid and return in same order as input
-  //   return workUuids.map(uuid =>
-  //     data?.filter(t => t.work_uuid === uuid) ?? []
-  //   );
-  // }),
+export interface Loaders {
+  /**
+   * Load annotations for passage UUIDs.
+   * Batches multiple passage annotation requests into a single query.
+   */
+  annotationsByPassageUuid: DataLoader<string, AnnotationRow[]>;
+}
 
-  return {};
+export function createLoaders(supabase: DataClient): Loaders {
+  return {
+    annotationsByPassageUuid: new DataLoader(async (passageUuids) => {
+      const { data, error } = await supabase
+        .from('passage_annotations')
+        .select('uuid, passage_uuid, type, start, end, content')
+        .in('passage_uuid', passageUuids as string[]);
+
+      if (error) {
+        console.error('Error batch loading annotations:', error);
+        // Return empty arrays for all keys on error
+        return passageUuids.map(() => []);
+      }
+
+      // Group annotations by passage_uuid
+      const annotationsByPassage = new Map<string, AnnotationRow[]>();
+      for (const annotation of data ?? []) {
+        const passageUuid = annotation.passage_uuid;
+        const existing = annotationsByPassage.get(passageUuid);
+        if (existing) {
+          existing.push(annotation);
+        } else {
+          annotationsByPassage.set(passageUuid, [annotation]);
+        }
+      }
+
+      // Return in same order as input keys
+      return passageUuids.map(
+        (uuid) => annotationsByPassage.get(uuid) ?? []
+      );
+    }),
+  };
 }
