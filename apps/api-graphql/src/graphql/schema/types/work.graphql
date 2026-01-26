@@ -41,6 +41,37 @@ type Work {
   Section of the canon this work belongs to
   """
   section: String!
+
+  """
+  Publication imprint information.
+  For works with multiple Tohoku numbers, optionally specify which one.
+  """
+  imprint(
+    """
+    Specific Tohoku number to get imprint for (defaults to first toh in the work)
+    """
+    toh: String
+  ): Imprint
+
+  """
+  Paginated passages from this work
+  """
+  passages(
+    """
+    Cursor for pagination (passage UUID to start after)
+    """
+    cursor: String
+
+    """
+    Maximum number of passages to return (default: 20, max: 100)
+    """
+    limit: Int
+
+    """
+    Filter passages by criteria
+    """
+    filter: PassageFilter
+  ): PassageConnection!
 }
 
 extend type Query {
