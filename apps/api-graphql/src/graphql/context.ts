@@ -1,10 +1,12 @@
 import type { NextRequest } from 'next/server';
 import { createServerClient, getSession } from '@data-access';
 import type { DataClient, UserClaims, UserRole } from '@data-access';
+import { createLoaders, type Loaders } from './loaders';
 
 export interface GraphQLContext {
   req: NextRequest;
   supabase: DataClient;
+  loaders: Loaders;
   session: {
     claims: UserClaims;
     userId: string;
@@ -40,6 +42,7 @@ export async function createContext(req: NextRequest): Promise<GraphQLContext> {
   return {
     req,
     supabase,
+    loaders: createLoaders(supabase),
     session,
   };
 }

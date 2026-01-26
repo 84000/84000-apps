@@ -1,0 +1,180 @@
+"""
+Type of annotation within a passage
+"""
+enum AnnotationType {
+  ABBREVIATION
+  AUDIO
+  BLOCKQUOTE
+  CODE
+  DEPRECATED
+  END_NOTE_LINK
+  GLOSSARY_INSTANCE
+  HAS_ABBREVIATION
+  HEADING
+  IMAGE
+  INDENT
+  INLINE_TITLE
+  INTERNAL_LINK
+  LEADING_SPACE
+  LINE
+  LINE_GROUP
+  LINK
+  LIST
+  LIST_ITEM
+  MANTRA
+  PARAGRAPH
+  QUOTE
+  QUOTED
+  REFERENCE
+  SPAN
+  TABLE
+  TABLE_BODY_DATA
+  TABLE_BODY_HEADER
+  TABLE_BODY_ROW
+  TRAILER
+  UNKNOWN
+}
+
+"""
+Language codes for text annotations
+"""
+enum Language {
+  BO
+  BO_LTN
+  EN
+  SA_LTN
+  ZH
+  PI_LTN
+}
+
+"""
+Classification of heading annotations
+"""
+enum HeadingClass {
+  SECTION_LABEL
+  SECTION_TITLE
+  SUPPLEMENTARY
+  TABLE_LABEL
+}
+
+"""
+An annotation marking up a range within a passage
+"""
+type Annotation {
+  """
+  Unique identifier for the annotation
+  """
+  uuid: ID!
+
+  """
+  Type of annotation
+  """
+  type: AnnotationType!
+
+  """
+  Start offset within the passage content
+  """
+  start: Int!
+
+  """
+  End offset within the passage content
+  """
+  end: Int!
+
+  # Type-specific fields (all optional)
+
+  """
+  Heading level (HeadingAnnotation)
+  """
+  level: Int
+
+  """
+  Heading classification (HeadingAnnotation)
+  """
+  headingClass: HeadingClass
+
+  """
+  URL for external links or reference for internal links (LinkAnnotation, InternalLinkAnnotation)
+  """
+  href: String
+
+  """
+  Display text for links (LinkAnnotation)
+  """
+  text: String
+
+  """
+  Type of internal link (InternalLinkAnnotation)
+  """
+  linkType: String
+
+  """
+  Label for links and end notes (InternalLinkAnnotation, EndNoteLinkAnnotation)
+  """
+  label: String
+
+  """
+  UUID of linked entity (InternalLinkAnnotation)
+  """
+  entity: String
+
+  """
+  Whether the link is pending review (InternalLinkAnnotation)
+  """
+  isPending: Boolean
+
+  """
+  Text style class (SpanAnnotation)
+  """
+  textStyle: String
+
+  """
+  Language code (SpanAnnotation, MantraAnnotation, InlineTitleAnnotation)
+  """
+  lang: Language
+
+  """
+  Glossary XML ID (GlossaryInstanceAnnotation)
+  """
+  glossary: String
+
+  """
+  End note XML ID (EndNoteLinkAnnotation)
+  """
+  endNote: String
+
+  """
+  Source URL for media (AudioAnnotation, ImageAnnotation)
+  """
+  src: String
+
+  """
+  Media MIME type (AudioAnnotation)
+  """
+  mediaType: String
+
+  """
+  List spacing style (ListAnnotation)
+  """
+  spacing: String
+
+  """
+  List nesting level (ListAnnotation)
+  """
+  nesting: Int
+
+  """
+  List item marker style (ListAnnotation)
+  """
+  itemStyle: String
+
+  """
+  Abbreviation text (AbbreviationAnnotation, HasAbbreviationAnnotation)
+  """
+  abbreviation: String
+
+  """
+  Quote XML ID (QuoteAnnotation)
+  """
+  quote: String
+}

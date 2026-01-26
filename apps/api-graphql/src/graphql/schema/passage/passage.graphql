@@ -1,0 +1,108 @@
+"""
+Type of passage content
+"""
+enum PassageType {
+  ABBREVIATIONS
+  ABBREVIATIONS_HEADER
+  ACKNOWLEDGMENT
+  ACKNOWLEDGMENT_HEADER
+  APPENDIX
+  APPENDIX_HEADER
+  COLOPHON
+  COLOPHON_HEADER
+  ENDNOTES
+  ENDNOTES_HEADER
+  HOMAGE
+  HOMAGE_HEADER
+  INTRODUCTION
+  INTRODUCTION_HEADER
+  PRELUDE
+  PRELUDE_HEADER
+  PROLOGUE
+  PROLOGUE_HEADER
+  SUMMARY
+  SUMMARY_HEADER
+  TRANSLATION
+  TRANSLATION_HEADER
+  UNKNOWN
+}
+
+"""
+A passage of text from a work
+"""
+type Passage {
+  """
+  Unique identifier for the passage
+  """
+  uuid: ID!
+
+  """
+  Text content of the passage
+  """
+  content: String!
+
+  """
+  Display label for the passage (e.g., "1.1")
+  """
+  label: String!
+
+  """
+  Sort order within the work
+  """
+  sort: Int!
+
+  """
+  Type of passage content
+  """
+  type: PassageType!
+
+  """
+  XML ID from the source document
+  """
+  xmlId: String
+
+  """
+  Annotations marking up ranges within this passage
+  """
+  annotations: [Annotation!]!
+}
+
+"""
+Filter options for passages
+"""
+input PassageFilter {
+  """
+  Filter by passage type
+  """
+  type: PassageType
+}
+
+"""
+Paginated connection of passages
+"""
+type PassageConnection {
+  """
+  List of passages
+  """
+  nodes: [Passage!]!
+
+  """
+  Cursor for fetching the next page
+  """
+  nextCursor: String
+
+  """
+  Cursor for fetching the previous page
+  """
+  prevCursor: String
+
+  """
+  Whether there are more passages after the current page
+  """
+  hasMoreAfter: Boolean!
+
+  """
+  Whether there are more passages before the current page
+  """
+  hasMoreBefore: Boolean!
+}

@@ -1,28 +1,22 @@
-import type { GraphQLContext } from './context';
+import { healthQueries } from './schema/health/health.query';
+import { userQueries } from './schema/user/user.query';
+import { workQueries } from './schema/work/work.query';
+import { imprintResolver } from './schema/imprint/imprint.resolver';
+import { passagesResolver } from './schema/passage/passage.resolver';
 
 export const resolvers = {
   Query: {
-    health: () => ({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-    }),
-
-    version: () => '1.0.0',
-
-    me: (_parent: unknown, _args: unknown, ctx: GraphQLContext) => {
-      if (!ctx.session) {
-        return null;
-      }
-
-      return {
-        id: ctx.session.userId,
-        email: ctx.session.email,
-        role: ctx.session.claims.role.toUpperCase(),
-      };
-    },
+    ...healthQueries,
+    ...userQueries,
+    ...workQueries,
   },
 
   Mutation: {
     _placeholder: () => true,
+  },
+
+  Work: {
+    imprint: imprintResolver,
+    passages: passagesResolver,
   },
 };

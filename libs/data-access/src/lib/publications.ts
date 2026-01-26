@@ -169,8 +169,21 @@ export const getTranslationsMetadata = async ({
 }: {
   client: DataClient;
 }): Promise<Work[]> => {
-  const { data, error } = await client.rpc('get_works');
-
+  const { data, error } = await client
+    .from('works')
+    .select(
+      `
+      uuid,
+      title,
+      toh,
+      publicationDate,
+      publicationVersion,
+      pages:source_pages,
+      restriction,
+      breadcrumb
+    `,
+    )
+    .not('toh', 'like', 'toh00%');
   if (error) {
     console.error('Error fetching translations metadata:', error);
     return [];

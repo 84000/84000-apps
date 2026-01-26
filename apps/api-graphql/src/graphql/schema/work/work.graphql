@@ -1,0 +1,87 @@
+"""
+A published translation work from the 84000 canon
+"""
+type Work {
+  """
+  Unique identifier for the work
+  """
+  uuid: ID!
+
+  """
+  Title of the work
+  """
+  title: String!
+
+  """
+  Tohoku catalog entry numbers (e.g., ["toh1", "toh2"])
+  """
+  toh: [String!]!
+
+  """
+  Date the work was published
+  """
+  publicationDate: String!
+
+  """
+  Semantic version of the publication (e.g., "1.0.0")
+  """
+  publicationVersion: String!
+
+  """
+  Number of source pages
+  """
+  pages: Int!
+
+  """
+  Whether access to this work is restricted
+  """
+  restriction: Boolean!
+
+  """
+  Section of the canon this work belongs to
+  """
+  section: String!
+
+  """
+  Publication imprint information.
+  For works with multiple Tohoku numbers, optionally specify which one.
+  """
+  imprint(
+    """
+    Specific Tohoku number to get imprint for (defaults to first toh in the work)
+    """
+    toh: String
+  ): Imprint
+
+  """
+  Paginated passages from this work
+  """
+  passages(
+    """
+    Cursor for pagination (passage UUID to start after)
+    """
+    cursor: String
+
+    """
+    Maximum number of passages to return (default: 20, max: 100)
+    """
+    limit: Int
+
+    """
+    Filter passages by criteria
+    """
+    filter: PassageFilter
+  ): PassageConnection!
+}
+
+extend type Query {
+  """
+  Get all published translation works
+  """
+  works: [Work!]!
+
+  """
+  Get a single work by UUID or Tohoku catalog number
+  """
+  work(uuid: ID, toh: String): Work
+}

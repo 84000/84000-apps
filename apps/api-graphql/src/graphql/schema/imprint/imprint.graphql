@@ -1,0 +1,114 @@
+"""
+License information for a published work
+"""
+type License {
+  """
+  Name of the license (e.g., "CC BY-NC-ND 4.0")
+  """
+  name: String
+
+  """
+  URL to the license text
+  """
+  link: String
+
+  """
+  Human-readable description of the license terms
+  """
+  description: String
+}
+
+"""
+Titles grouped by language
+"""
+type TitlesByLanguage {
+  """
+  Tibetan title
+  """
+  tibetan: String
+
+  """
+  English title
+  """
+  english: String
+
+  """
+  Wylie transliteration of Tibetan title
+  """
+  wylie: String
+
+  """
+  Sanskrit title
+  """
+  sanskrit: String
+}
+
+"""
+Publication imprint information for a work
+"""
+type Imprint {
+  """
+  Tohoku catalog entry number (e.g., "toh1")
+  """
+  toh: String!
+
+  """
+  Section of the canon (e.g., "Sutra")
+  """
+  section: String
+
+  """
+  Publication version (semantic versioning)
+  """
+  version: String
+
+  """
+  Whether access to this work is restricted
+  """
+  restriction: Boolean
+
+  """
+  Year the translation was published
+  """
+  publishYear: String
+
+  """
+  Names of Tibetan authors
+  """
+  tibetanAuthors: [String!]
+
+  """
+  Whether the authorship is contested
+  """
+  isAuthorContested: Boolean!
+
+  """
+  Description of the source text
+  """
+  sourceDescription: String
+
+  """
+  Publisher statement
+  """
+  publisherStatement: String
+
+  """
+  Names of Tibetan translators
+  """
+  tibetanTranslators: String
+
+  """
+  License information
+  """
+  license: License!
+
+  """
+  Main titles by language
+  """
+  mainTitles: TitlesByLanguage
+
+  """
+  Long titles by language
+  """
+  longTitles: TitlesByLanguage
+}
