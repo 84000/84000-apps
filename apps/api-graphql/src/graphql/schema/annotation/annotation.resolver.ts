@@ -17,7 +17,6 @@ import {
   type QuoteAnnotation,
   type QuotedAnnotation,
 } from '@data-access';
-import type { AnnotationRow } from '../passage/passage.loader';
 
 /**
  * Transformed annotation for GraphQL response
@@ -27,187 +26,130 @@ interface TransformedAnnotation {
   type: string;
   start: number;
   end: number;
-  // Type-specific fields
-  level: number | null;
-  headingClass: string | null;
-  href: string | null;
-  text: string | null;
-  linkType: string | null;
-  label: string | null;
-  entity: string | null;
-  isPending: boolean | null;
-  textStyle: string | null;
-  lang: string | null;
-  glossary: string | null;
-  endNote: string | null;
-  src: string | null;
-  mediaType: string | null;
-  spacing: string | null;
-  nesting: number | null;
-  itemStyle: string | null;
-  abbreviation: string | null;
-  quote: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 /**
- * Converts an AnnotationRow (from the DB loader) to an AnnotationDTO
- * that can be passed to data-access's annotationFromDTO.
+ * Extracts type-specific metadata from the parsed domain annotation.
+ * Returns null if there's no type-specific data.
  */
-function rowToDTO(row: AnnotationRow): AnnotationDTO {
-  return {
-    uuid: row.uuid,
-    passage_uuid: row.passage_uuid,
-    type: row.type as AnnotationDTO['type'],
-    start: row.start,
-    end: row.end,
-    content: (row.content as AnnotationDTO['content']) ?? [],
-  };
+function extractMetadata(
+  annotation: ReturnType<typeof annotationFromDTO>,
+): Record<string, unknown> | null {
+  switch (annotation.type) {
+    case 'heading': {
+      const { level, class: headingClass } = annotation as HeadingAnnotation;
+      return { level, ...(headingClass && { class: headingClass }) };
+    }
+
+    case 'internalLink': {
+      const { linkType, href, label, entity, isPending } =
+        annotation as InternalLinkAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (linkType) meta.linkType = linkType;
+      if (href) meta.href = href;
+      if (label) meta.label = label;
+      if (entity) meta.entity = entity;
+      if (isPending) meta.isPending = isPending;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'link': {
+      const { href, text } = annotation as LinkAnnotation;
+      return { href, text };
+    }
+
+    case 'span': {
+      const { textStyle, lang } = annotation as SpanAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (textStyle) meta.textStyle = textStyle;
+      if (lang) meta.lang = lang;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'mantra': {
+      const { lang } = annotation as MantraAnnotation;
+      return { lang };
+    }
+
+    case 'inlineTitle': {
+      const { lang } = annotation as InlineTitleAnnotation;
+      return { lang };
+    }
+
+    case 'audio': {
+      const { src, mediaType } = annotation as AudioAnnotation;
+      return { src, mediaType };
+    }
+
+    case 'image': {
+      const { src } = annotation as ImageAnnotation;
+      return { src };
+    }
+
+    case 'list': {
+      const { spacing, nesting, itemStyle } = annotation as ListAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (spacing) meta.spacing = spacing;
+      if (nesting !== undefined) meta.nesting = nesting;
+      if (itemStyle) meta.itemStyle = itemStyle;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'glossaryInstance': {
+      const { glossary } = annotation as GlossaryInstanceAnnotation;
+      return { glossary };
+    }
+
+    case 'endNoteLink': {
+      const { endNote, label } = annotation as EndNoteLinkAnnotation;
+      const meta: Record<string, unknown> = { endNote };
+      if (label) meta.label = label;
+      return meta;
+    }
+
+    case 'abbreviation': {
+      const { abbreviation } = annotation as AbbreviationAnnotation;
+      return { abbreviation };
+    }
+
+    case 'hasAbbreviation': {
+      const { abbreviation } = annotation as HasAbbreviationAnnotation;
+      return { abbreviation };
+    }
+
+    case 'quote': {
+      const { quote } = annotation as QuoteAnnotation;
+      return quote ? { quote } : null;
+    }
+
+    case 'quoted': {
+      const { quote } = annotation as QuotedAnnotation;
+      return quote ? { quote } : null;
+    }
+
+    default:
+      return null;
+  }
 }
 
 /**
- * Maps the parsed domain annotation to a flat GraphQL-compatible format.
+ * Maps the parsed domain annotation to a GraphQL-compatible format.
  * Uses data-access's annotationFromDTO for parsing, then extracts
- * type-specific fields from the domain model.
+ * type-specific fields into a metadata object.
  */
-export function transformAnnotation(row: AnnotationRow): TransformedAnnotation {
-  // Convert row to DTO format expected by data-access
-  const dto = rowToDTO(row);
-
+export function transformAnnotation(
+  dto: AnnotationDTO,
+  passageLength: number = Number.MAX_SAFE_INTEGER,
+): TransformedAnnotation {
   // Use data-access's parsing logic to get the domain model
-  // passageLength is not critical here since we're not validating ranges
-  const annotation = annotationFromDTO(dto, Number.MAX_SAFE_INTEGER);
+  const annotation = annotationFromDTO(dto, passageLength);
 
-  // Build the base response
-  const result: TransformedAnnotation = {
+  return {
     uuid: annotation.uuid,
     type: annotation.type,
     start: annotation.start,
     end: annotation.end,
-    // Initialize all type-specific fields as null
-    level: null,
-    headingClass: null,
-    href: null,
-    text: null,
-    linkType: null,
-    label: null,
-    entity: null,
-    isPending: null,
-    textStyle: null,
-    lang: null,
-    glossary: null,
-    endNote: null,
-    src: null,
-    mediaType: null,
-    spacing: null,
-    nesting: null,
-    itemStyle: null,
-    abbreviation: null,
-    quote: null,
+    metadata: extractMetadata(annotation),
   };
-
-  // Extract type-specific fields from the parsed domain model
-  switch (annotation.type) {
-    case 'heading': {
-      const heading = annotation as HeadingAnnotation;
-      result.level = heading.level;
-      result.headingClass = heading.class ?? null;
-      break;
-    }
-
-    case 'internalLink': {
-      const link = annotation as InternalLinkAnnotation;
-      result.linkType = link.linkType ?? null;
-      result.href = link.href ?? null;
-      result.label = link.label ?? null;
-      result.entity = link.entity ?? null;
-      result.isPending = link.isPending ?? null;
-      break;
-    }
-
-    case 'link': {
-      const link = annotation as LinkAnnotation;
-      result.href = link.href ?? null;
-      result.text = link.text ?? null;
-      break;
-    }
-
-    case 'span': {
-      const span = annotation as SpanAnnotation;
-      result.textStyle = span.textStyle ?? null;
-      result.lang = span.lang ?? null;
-      break;
-    }
-
-    case 'mantra': {
-      const mantra = annotation as MantraAnnotation;
-      result.lang = mantra.lang ?? null;
-      break;
-    }
-
-    case 'inlineTitle': {
-      const inlineTitle = annotation as InlineTitleAnnotation;
-      result.lang = inlineTitle.lang ?? null;
-      break;
-    }
-
-    case 'audio': {
-      const audio = annotation as AudioAnnotation;
-      result.src = audio.src ?? null;
-      result.mediaType = audio.mediaType ?? null;
-      break;
-    }
-
-    case 'image': {
-      const image = annotation as ImageAnnotation;
-      result.src = image.src ?? null;
-      break;
-    }
-
-    case 'list': {
-      const list = annotation as ListAnnotation;
-      result.spacing = list.spacing ?? null;
-      result.nesting = list.nesting ?? null;
-      result.itemStyle = list.itemStyle ?? null;
-      break;
-    }
-
-    case 'glossaryInstance': {
-      const glossary = annotation as GlossaryInstanceAnnotation;
-      result.glossary = glossary.glossary ?? null;
-      break;
-    }
-
-    case 'endNoteLink': {
-      const endNote = annotation as EndNoteLinkAnnotation;
-      result.endNote = endNote.endNote ?? null;
-      result.label = endNote.label ?? null;
-      break;
-    }
-
-    case 'abbreviation': {
-      const abbrev = annotation as AbbreviationAnnotation;
-      result.abbreviation = abbrev.abbreviation ?? null;
-      break;
-    }
-
-    case 'hasAbbreviation': {
-      const abbrev = annotation as HasAbbreviationAnnotation;
-      result.abbreviation = abbrev.abbreviation ?? null;
-      break;
-    }
-
-    case 'quote': {
-      const quote = annotation as QuoteAnnotation;
-      result.quote = quote.quote ?? null;
-      break;
-    }
-
-    case 'quoted': {
-      const quoted = annotation as QuotedAnnotation;
-      result.quote = quoted.quote ?? null;
-      break;
-    }
-  }
-
-  return result;
 }

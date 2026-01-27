@@ -22,100 +22,19 @@ type Annotation {
   """
   end: Int!
 
-  # Type-specific fields (all optional)
-
   """
-  Heading level (HeadingAnnotation)
+  Type-specific metadata. Contents vary by annotation type:
+  - heading: { level, class }
+  - link: { href, text }
+  - internalLink: { linkType, href, label, entity, isPending }
+  - span/mantra/inlineTitle: { textStyle, lang }
+  - audio: { src, mediaType }
+  - image: { src }
+  - list: { spacing, nesting, itemStyle }
+  - glossaryInstance: { glossary }
+  - endNoteLink: { endNote, label }
+  - abbreviation/hasAbbreviation: { abbreviation }
+  - quote/quoted: { quote }
   """
-  level: Int
-
-  """
-  Heading classification (HeadingAnnotation)
-  """
-  headingClass: String
-
-  """
-  URL for external links or reference for internal links (LinkAnnotation, InternalLinkAnnotation)
-  """
-  href: String
-
-  """
-  Display text for links (LinkAnnotation)
-  """
-  text: String
-
-  """
-  Type of internal link (InternalLinkAnnotation)
-  """
-  linkType: String
-
-  """
-  Label for links and end notes (InternalLinkAnnotation, EndNoteLinkAnnotation)
-  """
-  label: String
-
-  """
-  UUID of linked entity (InternalLinkAnnotation)
-  """
-  entity: String
-
-  """
-  Whether the link is pending review (InternalLinkAnnotation)
-  """
-  isPending: Boolean
-
-  """
-  Text style class (SpanAnnotation)
-  """
-  textStyle: String
-
-  """
-  Language code (SpanAnnotation, MantraAnnotation, InlineTitleAnnotation)
-  """
-  lang: String
-
-  """
-  Glossary XML ID (GlossaryInstanceAnnotation)
-  """
-  glossary: String
-
-  """
-  End note XML ID (EndNoteLinkAnnotation)
-  """
-  endNote: String
-
-  """
-  Source URL for media (AudioAnnotation, ImageAnnotation)
-  """
-  src: String
-
-  """
-  Media MIME type (AudioAnnotation)
-  """
-  mediaType: String
-
-  """
-  List spacing style (ListAnnotation)
-  """
-  spacing: String
-
-  """
-  List nesting level (ListAnnotation)
-  """
-  nesting: Int
-
-  """
-  List item marker style (ListAnnotation)
-  """
-  itemStyle: String
-
-  """
-  Abbreviation text (AbbreviationAnnotation, HasAbbreviationAnnotation)
-  """
-  abbreviation: String
-
-  """
-  Quote XML ID (QuoteAnnotation)
-  """
-  quote: String
+  metadata: JSON
 }

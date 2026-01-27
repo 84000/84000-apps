@@ -1,8 +1,7 @@
-import type { BodyItemType } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import { PASSAGE_TYPE_TO_DB, PASSAGE_TYPE_TO_ENUM } from './passage.types';
 import { transformAnnotation } from '../annotation/annotation.resolver';
+import { PassageRowDTO } from '@data-access';
 
 export const passagesResolver = async (
   parent: WorkParent,
@@ -12,10 +11,8 @@ export const passagesResolver = async (
   // Default and clamp limit
   const limit = Math.min(Math.max(args.limit ?? 20, 1), 100);
 
-  // Map GraphQL filter type to database type
-  const passageType = args.filter?.type
-    ? PASSAGE_TYPE_TO_DB[args.filter.type]
-    : undefined;
+  // Filter type is passed through directly (no enum conversion needed)
+  const passageType = args.filter?.type;
 
   // If cursor provided, get its sort value for pagination
   let cursorSort: number | null = null;
@@ -49,7 +46,7 @@ export const passagesResolver = async (
     query = query.eq('type', passageType);
   }
 
-  const { data: passages, error: passagesError } = await query;
+  const { data, error: passagesError } = await query;
 
   if (passagesError) {
     console.error('Error fetching passages:', passagesError);
@@ -61,6 +58,8 @@ export const passagesResolver = async (
       hasMoreBefore: false,
     };
   }
+
+  const passages = (data ?? []) as PassageRowDTO[];
 
   // Determine if there are more passages
   const hasMoreAfter = passages && passages.length > limit;
@@ -96,9 +95,11 @@ export const passagesResolver = async (
       content: passage.content,
       label: passage.label,
       sort: passage.sort,
-      type: PASSAGE_TYPE_TO_ENUM[passage.type as BodyItemType] ?? 'UNKNOWN',
+      type: passage.type,
       xmlId: passage.xmlId ?? null,
-      annotations: annotations.map(transformAnnotation),
+      annotations: annotations.map((a) =>
+        transformAnnotation(a, passage.content.length),
+      ),
     };
   });
 

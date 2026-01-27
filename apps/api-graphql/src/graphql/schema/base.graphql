@@ -1,4 +1,9 @@
 """
+JSON scalar for arbitrary JSON data
+"""
+scalar JSON
+
+"""
 Root Query type - extend this in other schema files
 """
 type Query {
