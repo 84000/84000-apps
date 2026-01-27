@@ -1,63 +1,4 @@
 """
-Type of annotation within a passage
-"""
-enum AnnotationType {
-  ABBREVIATION
-  AUDIO
-  BLOCKQUOTE
-  CODE
-  DEPRECATED
-  END_NOTE_LINK
-  GLOSSARY_INSTANCE
-  HAS_ABBREVIATION
-  HEADING
-  IMAGE
-  INDENT
-  INLINE_TITLE
-  INTERNAL_LINK
-  LEADING_SPACE
-  LINE
-  LINE_GROUP
-  LINK
-  LIST
-  LIST_ITEM
-  MANTRA
-  PARAGRAPH
-  QUOTE
-  QUOTED
-  REFERENCE
-  SPAN
-  TABLE
-  TABLE_BODY_DATA
-  TABLE_BODY_HEADER
-  TABLE_BODY_ROW
-  TRAILER
-  UNKNOWN
-}
-
-"""
-Language codes for text annotations
-"""
-enum Language {
-  BO
-  BO_LTN
-  EN
-  SA_LTN
-  ZH
-  PI_LTN
-}
-
-"""
-Classification of heading annotations
-"""
-enum HeadingClass {
-  SECTION_LABEL
-  SECTION_TITLE
-  SUPPLEMENTARY
-  TABLE_LABEL
-}
-
-"""
 An annotation marking up a range within a passage
 """
 type Annotation {
@@ -67,9 +8,9 @@ type Annotation {
   uuid: ID!
 
   """
-  Type of annotation
+  Type of annotation (e.g., heading, span, link, internalLink, glossaryInstance)
   """
-  type: AnnotationType!
+  type: String!
 
   """
   Start offset within the passage content
@@ -91,7 +32,7 @@ type Annotation {
   """
   Heading classification (HeadingAnnotation)
   """
-  headingClass: HeadingClass
+  headingClass: String
 
   """
   URL for external links or reference for internal links (LinkAnnotation, InternalLinkAnnotation)
@@ -131,7 +72,7 @@ type Annotation {
   """
   Language code (SpanAnnotation, MantraAnnotation, InlineTitleAnnotation)
   """
-  lang: Language
+  lang: String
 
   """
   Glossary XML ID (GlossaryInstanceAnnotation)

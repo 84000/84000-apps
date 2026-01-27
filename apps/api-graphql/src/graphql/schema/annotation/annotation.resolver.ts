@@ -1,9 +1,23 @@
-import type { AnnotationRow } from '../passage/passage.loader';
 import {
-  ANNOTATION_DTO_TYPE_TO_ENUM,
-  HEADING_CLASS_TO_ENUM,
-  LANG_TO_ENUM,
-} from './annotation.types';
+  annotationFromDTO,
+  type AnnotationDTO,
+  type HeadingAnnotation,
+  type InternalLinkAnnotation,
+  type LinkAnnotation,
+  type SpanAnnotation,
+  type MantraAnnotation,
+  type InlineTitleAnnotation,
+  type AudioAnnotation,
+  type ImageAnnotation,
+  type ListAnnotation,
+  type GlossaryInstanceAnnotation,
+  type EndNoteLinkAnnotation,
+  type AbbreviationAnnotation,
+  type HasAbbreviationAnnotation,
+  type QuoteAnnotation,
+  type QuotedAnnotation,
+} from '@data-access';
+import type { AnnotationRow } from '../passage/passage.loader';
 
 /**
  * Transformed annotation for GraphQL response
@@ -36,113 +50,164 @@ interface TransformedAnnotation {
 }
 
 /**
- * Flattens the content array into a single object for easier access
+ * Converts an AnnotationRow (from the DB loader) to an AnnotationDTO
+ * that can be passed to data-access's annotationFromDTO.
  */
-function flattenContent(content: unknown[] | null): Record<string, unknown> {
-  if (!content || !Array.isArray(content)) {
-    return {};
-  }
-  return content.reduce<Record<string, unknown>>((acc, item) => {
-    if (item && typeof item === 'object') {
-      return { ...acc, ...(item as Record<string, unknown>) };
-    }
-    return acc;
-  }, {});
+function rowToDTO(row: AnnotationRow): AnnotationDTO {
+  return {
+    uuid: row.uuid,
+    passage_uuid: row.passage_uuid,
+    type: row.type as AnnotationDTO['type'],
+    start: row.start,
+    end: row.end,
+    content: (row.content as AnnotationDTO['content']) ?? [],
+  };
 }
 
 /**
- * Transforms a database annotation row into a GraphQL-compatible format
- * with typed fields instead of JSON-stringified content.
- *
- * Field mappings match the data-access library transformers:
- * - glossary-instance: uuid → glossary
- * - end-note-link: uuid → endNote, label → label
- * - quote/quoted: uuid → quote
- * - abbreviation: uuid → abbreviation
- * - internal-link: uuid → entity, type → linkType, link-type='pending' → isPending
- * - link: title → text, href → href
- * - heading: heading-level → level, heading-type → headingClass
- * - span/mantra/inline-title: text-style → textStyle, lang → lang
- * - audio: src → src, media-type → mediaType
- * - list: list-spacing → spacing, nesting → nesting, list-item-style → itemStyle
+ * Maps the parsed domain annotation to a flat GraphQL-compatible format.
+ * Uses data-access's annotationFromDTO for parsing, then extracts
+ * type-specific fields from the domain model.
  */
-export function transformAnnotation(
-  annotation: AnnotationRow,
-): TransformedAnnotation {
-  const dtoType = annotation.type;
-  const type = ANNOTATION_DTO_TYPE_TO_ENUM[dtoType] ?? 'UNKNOWN';
-  const content = flattenContent(annotation.content);
+export function transformAnnotation(row: AnnotationRow): TransformedAnnotation {
+  // Convert row to DTO format expected by data-access
+  const dto = rowToDTO(row);
 
-  // Extract language and map to enum
-  const rawLang = content['lang'] as string | undefined;
-  const lang = rawLang && LANG_TO_ENUM[rawLang] ? LANG_TO_ENUM[rawLang] : null;
+  // Use data-access's parsing logic to get the domain model
+  // passageLength is not critical here since we're not validating ranges
+  const annotation = annotationFromDTO(dto, Number.MAX_SAFE_INTEGER);
 
-  // Extract heading class and map to enum
-  const rawHeadingType = content['heading-type'] as string | undefined;
-  const headingClass =
-    rawHeadingType && HEADING_CLASS_TO_ENUM[rawHeadingType]
-      ? HEADING_CLASS_TO_ENUM[rawHeadingType]
-      : null;
-
-  // Extract isPending from link-type (only for internal-link)
-  const linkTypeValue = content['link-type'] as string | undefined;
-  const isPending =
-    dtoType === 'internal-link' && linkTypeValue === 'pending' ? true : null;
-
-  // The 'uuid' key in content has different meanings based on annotation type
-  const contentUuid = content['uuid'] as string | undefined;
-  const level = content['heading-level'] as string | undefined;
-
-  return {
+  // Build the base response
+  const result: TransformedAnnotation = {
     uuid: annotation.uuid,
-    type,
+    type: annotation.type,
     start: annotation.start,
     end: annotation.end,
-
-    // Heading fields
-    level: level ? parseInt(level.replace('h', ''), 10) : null,
-    headingClass,
-
-    // Link fields (link type uses 'title' for text)
-    href: (content['href'] as string) ?? null,
-    text: dtoType === 'link' ? ((content['title'] as string) ?? null) : null,
-    linkType:
-      dtoType === 'internal-link'
-        ? ((content['type'] as string) ?? null)
-        : null,
-    label: (content['label'] as string) ?? null,
-    entity: dtoType === 'internal-link' ? (contentUuid ?? null) : null,
-    isPending,
-
-    // Span fields
-    textStyle: (content['text-style'] as string) ?? null,
-    lang,
-
-    // Glossary fields (glossary-instance uses uuid for glossary reference)
-    glossary: dtoType === 'glossary-instance' ? (contentUuid ?? null) : null,
-
-    // End note fields (end-note-link uses uuid for endNote reference)
-    endNote: dtoType === 'end-note-link' ? (contentUuid ?? null) : null,
-
-    // Media fields
-    src: (content['src'] as string) ?? null,
-    mediaType: (content['media-type'] as string) ?? null,
-
-    // List fields
-    spacing: (content['list-spacing'] as string) ?? null,
-    nesting: (content['nesting'] as number) ?? null,
-    itemStyle: (content['list-item-style'] as string) ?? null,
-
-    // Abbreviation fields (abbreviation and has-abbreviation use uuid)
-    abbreviation:
-      dtoType === 'abbreviation' || dtoType === 'has-abbreviation'
-        ? (contentUuid ?? null)
-        : null,
-
-    // Quote fields (quote and quoted use uuid for quote reference)
-    quote:
-      dtoType === 'quote' || dtoType === 'quoted'
-        ? (contentUuid ?? null)
-        : null,
+    // Initialize all type-specific fields as null
+    level: null,
+    headingClass: null,
+    href: null,
+    text: null,
+    linkType: null,
+    label: null,
+    entity: null,
+    isPending: null,
+    textStyle: null,
+    lang: null,
+    glossary: null,
+    endNote: null,
+    src: null,
+    mediaType: null,
+    spacing: null,
+    nesting: null,
+    itemStyle: null,
+    abbreviation: null,
+    quote: null,
   };
+
+  // Extract type-specific fields from the parsed domain model
+  switch (annotation.type) {
+    case 'heading': {
+      const heading = annotation as HeadingAnnotation;
+      result.level = heading.level;
+      result.headingClass = heading.class ?? null;
+      break;
+    }
+
+    case 'internalLink': {
+      const link = annotation as InternalLinkAnnotation;
+      result.linkType = link.linkType ?? null;
+      result.href = link.href ?? null;
+      result.label = link.label ?? null;
+      result.entity = link.entity ?? null;
+      result.isPending = link.isPending ?? null;
+      break;
+    }
+
+    case 'link': {
+      const link = annotation as LinkAnnotation;
+      result.href = link.href ?? null;
+      result.text = link.text ?? null;
+      break;
+    }
+
+    case 'span': {
+      const span = annotation as SpanAnnotation;
+      result.textStyle = span.textStyle ?? null;
+      result.lang = span.lang ?? null;
+      break;
+    }
+
+    case 'mantra': {
+      const mantra = annotation as MantraAnnotation;
+      result.lang = mantra.lang ?? null;
+      break;
+    }
+
+    case 'inlineTitle': {
+      const inlineTitle = annotation as InlineTitleAnnotation;
+      result.lang = inlineTitle.lang ?? null;
+      break;
+    }
+
+    case 'audio': {
+      const audio = annotation as AudioAnnotation;
+      result.src = audio.src ?? null;
+      result.mediaType = audio.mediaType ?? null;
+      break;
+    }
+
+    case 'image': {
+      const image = annotation as ImageAnnotation;
+      result.src = image.src ?? null;
+      break;
+    }
+
+    case 'list': {
+      const list = annotation as ListAnnotation;
+      result.spacing = list.spacing ?? null;
+      result.nesting = list.nesting ?? null;
+      result.itemStyle = list.itemStyle ?? null;
+      break;
+    }
+
+    case 'glossaryInstance': {
+      const glossary = annotation as GlossaryInstanceAnnotation;
+      result.glossary = glossary.glossary ?? null;
+      break;
+    }
+
+    case 'endNoteLink': {
+      const endNote = annotation as EndNoteLinkAnnotation;
+      result.endNote = endNote.endNote ?? null;
+      result.label = endNote.label ?? null;
+      break;
+    }
+
+    case 'abbreviation': {
+      const abbrev = annotation as AbbreviationAnnotation;
+      result.abbreviation = abbrev.abbreviation ?? null;
+      break;
+    }
+
+    case 'hasAbbreviation': {
+      const abbrev = annotation as HasAbbreviationAnnotation;
+      result.abbreviation = abbrev.abbreviation ?? null;
+      break;
+    }
+
+    case 'quote': {
+      const quote = annotation as QuoteAnnotation;
+      result.quote = quote.quote ?? null;
+      break;
+    }
+
+    case 'quoted': {
+      const quoted = annotation as QuotedAnnotation;
+      result.quote = quoted.quote ?? null;
+      break;
+    }
+  }
+
+  return result;
 }
