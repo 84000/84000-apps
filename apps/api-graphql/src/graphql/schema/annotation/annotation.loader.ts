@@ -27,6 +27,16 @@ export function createAnnotationLoader(supabase: DataClient) {
       }
     }
 
+    // Sort each group by start ascending, then end descending
+    for (const annotations of annotationsByPassage.values()) {
+      annotations.sort((a, b) => {
+        if (a.start !== b.start) {
+          return a.start - b.start;
+        }
+        return b.end - a.end;
+      });
+    }
+
     // Return in same order as input keys
     return passageUuids.map((uuid) => annotationsByPassage.get(uuid) ?? []);
   });
