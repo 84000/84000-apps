@@ -58,7 +58,7 @@ type Work {
   """
   passages(
     """
-    Cursor for pagination (passage UUID to start after)
+    Cursor for pagination (passage UUID to start from)
     """
     cursor: String
 
@@ -71,6 +71,11 @@ type Work {
     Filter passages by criteria
     """
     filter: PassageFilter
+
+    """
+    Direction for pagination (default: FORWARD)
+    """
+    direction: PaginationDirection
   ): PassageConnection!
 }
 

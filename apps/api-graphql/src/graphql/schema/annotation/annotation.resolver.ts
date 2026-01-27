@@ -1,9 +1,22 @@
-import type { AnnotationRow } from '../passage/passage.loader';
 import {
-  ANNOTATION_DTO_TYPE_TO_ENUM,
-  HEADING_CLASS_TO_ENUM,
-  LANG_TO_ENUM,
-} from './annotation.types';
+  annotationFromDTO,
+  type AnnotationDTO,
+  type HeadingAnnotation,
+  type InternalLinkAnnotation,
+  type LinkAnnotation,
+  type SpanAnnotation,
+  type MantraAnnotation,
+  type InlineTitleAnnotation,
+  type AudioAnnotation,
+  type ImageAnnotation,
+  type ListAnnotation,
+  type GlossaryInstanceAnnotation,
+  type EndNoteLinkAnnotation,
+  type AbbreviationAnnotation,
+  type HasAbbreviationAnnotation,
+  type QuoteAnnotation,
+  type QuotedAnnotation,
+} from '@data-access';
 
 /**
  * Transformed annotation for GraphQL response
@@ -13,136 +26,130 @@ interface TransformedAnnotation {
   type: string;
   start: number;
   end: number;
-  // Type-specific fields
-  level: number | null;
-  headingClass: string | null;
-  href: string | null;
-  text: string | null;
-  linkType: string | null;
-  label: string | null;
-  entity: string | null;
-  isPending: boolean | null;
-  textStyle: string | null;
-  lang: string | null;
-  glossary: string | null;
-  endNote: string | null;
-  src: string | null;
-  mediaType: string | null;
-  spacing: string | null;
-  nesting: number | null;
-  itemStyle: string | null;
-  abbreviation: string | null;
-  quote: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 /**
- * Flattens the content array into a single object for easier access
+ * Extracts type-specific metadata from the parsed domain annotation.
+ * Returns null if there's no type-specific data.
  */
-function flattenContent(content: unknown[] | null): Record<string, unknown> {
-  if (!content || !Array.isArray(content)) {
-    return {};
-  }
-  return content.reduce<Record<string, unknown>>((acc, item) => {
-    if (item && typeof item === 'object') {
-      return { ...acc, ...(item as Record<string, unknown>) };
+function extractMetadata(
+  annotation: ReturnType<typeof annotationFromDTO>,
+): Record<string, unknown> | null {
+  switch (annotation.type) {
+    case 'heading': {
+      const { level, class: headingClass } = annotation as HeadingAnnotation;
+      return { level, ...(headingClass && { class: headingClass }) };
     }
-    return acc;
-  }, {});
+
+    case 'internalLink': {
+      const { linkType, href, label, entity, isPending } =
+        annotation as InternalLinkAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (linkType) meta.linkType = linkType;
+      if (href) meta.href = href;
+      if (label) meta.label = label;
+      if (entity) meta.entity = entity;
+      if (isPending) meta.isPending = isPending;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'link': {
+      const { href, text } = annotation as LinkAnnotation;
+      return { href, text };
+    }
+
+    case 'span': {
+      const { textStyle, lang } = annotation as SpanAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (textStyle) meta.textStyle = textStyle;
+      if (lang) meta.lang = lang;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'mantra': {
+      const { lang } = annotation as MantraAnnotation;
+      return { lang };
+    }
+
+    case 'inlineTitle': {
+      const { lang } = annotation as InlineTitleAnnotation;
+      return { lang };
+    }
+
+    case 'audio': {
+      const { src, mediaType } = annotation as AudioAnnotation;
+      return { src, mediaType };
+    }
+
+    case 'image': {
+      const { src } = annotation as ImageAnnotation;
+      return { src };
+    }
+
+    case 'list': {
+      const { spacing, nesting, itemStyle } = annotation as ListAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (spacing) meta.spacing = spacing;
+      if (nesting !== undefined) meta.nesting = nesting;
+      if (itemStyle) meta.itemStyle = itemStyle;
+      return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'glossaryInstance': {
+      const { glossary } = annotation as GlossaryInstanceAnnotation;
+      return { glossary };
+    }
+
+    case 'endNoteLink': {
+      const { endNote, label } = annotation as EndNoteLinkAnnotation;
+      const meta: Record<string, unknown> = { endNote };
+      if (label) meta.label = label;
+      return meta;
+    }
+
+    case 'abbreviation': {
+      const { abbreviation } = annotation as AbbreviationAnnotation;
+      return { abbreviation };
+    }
+
+    case 'hasAbbreviation': {
+      const { abbreviation } = annotation as HasAbbreviationAnnotation;
+      return { abbreviation };
+    }
+
+    case 'quote': {
+      const { quote } = annotation as QuoteAnnotation;
+      return quote ? { quote } : null;
+    }
+
+    case 'quoted': {
+      const { quote } = annotation as QuotedAnnotation;
+      return quote ? { quote } : null;
+    }
+
+    default:
+      return null;
+  }
 }
 
 /**
- * Transforms a database annotation row into a GraphQL-compatible format
- * with typed fields instead of JSON-stringified content.
- *
- * Field mappings match the data-access library transformers:
- * - glossary-instance: uuid → glossary
- * - end-note-link: uuid → endNote, label → label
- * - quote/quoted: uuid → quote
- * - abbreviation: uuid → abbreviation
- * - internal-link: uuid → entity, type → linkType, link-type='pending' → isPending
- * - link: title → text, href → href
- * - heading: heading-level → level, heading-type → headingClass
- * - span/mantra/inline-title: text-style → textStyle, lang → lang
- * - audio: src → src, media-type → mediaType
- * - list: list-spacing → spacing, nesting → nesting, list-item-style → itemStyle
+ * Maps the parsed domain annotation to a GraphQL-compatible format.
+ * Uses data-access's annotationFromDTO for parsing, then extracts
+ * type-specific fields into a metadata object.
  */
 export function transformAnnotation(
-  annotation: AnnotationRow,
+  dto: AnnotationDTO,
+  passageLength: number = Number.MAX_SAFE_INTEGER,
 ): TransformedAnnotation {
-  const dtoType = annotation.type;
-  const type = ANNOTATION_DTO_TYPE_TO_ENUM[dtoType] ?? 'UNKNOWN';
-  const content = flattenContent(annotation.content);
-
-  // Extract language and map to enum
-  const rawLang = content['lang'] as string | undefined;
-  const lang = rawLang && LANG_TO_ENUM[rawLang] ? LANG_TO_ENUM[rawLang] : null;
-
-  // Extract heading class and map to enum
-  const rawHeadingType = content['heading-type'] as string | undefined;
-  const headingClass =
-    rawHeadingType && HEADING_CLASS_TO_ENUM[rawHeadingType]
-      ? HEADING_CLASS_TO_ENUM[rawHeadingType]
-      : null;
-
-  // Extract isPending from link-type (only for internal-link)
-  const linkTypeValue = content['link-type'] as string | undefined;
-  const isPending =
-    dtoType === 'internal-link' && linkTypeValue === 'pending' ? true : null;
-
-  // The 'uuid' key in content has different meanings based on annotation type
-  const contentUuid = content['uuid'] as string | undefined;
-  const level = content['heading-level'] as string | undefined;
+  // Use data-access's parsing logic to get the domain model
+  const annotation = annotationFromDTO(dto, passageLength);
 
   return {
     uuid: annotation.uuid,
-    type,
+    type: annotation.type,
     start: annotation.start,
     end: annotation.end,
-
-    // Heading fields
-    level: level ? parseInt(level.replace('h', ''), 10) : null,
-    headingClass,
-
-    // Link fields (link type uses 'title' for text)
-    href: (content['href'] as string) ?? null,
-    text: dtoType === 'link' ? ((content['title'] as string) ?? null) : null,
-    linkType:
-      dtoType === 'internal-link'
-        ? ((content['type'] as string) ?? null)
-        : null,
-    label: (content['label'] as string) ?? null,
-    entity: dtoType === 'internal-link' ? (contentUuid ?? null) : null,
-    isPending,
-
-    // Span fields
-    textStyle: (content['text-style'] as string) ?? null,
-    lang,
-
-    // Glossary fields (glossary-instance uses uuid for glossary reference)
-    glossary: dtoType === 'glossary-instance' ? (contentUuid ?? null) : null,
-
-    // End note fields (end-note-link uses uuid for endNote reference)
-    endNote: dtoType === 'end-note-link' ? (contentUuid ?? null) : null,
-
-    // Media fields
-    src: (content['src'] as string) ?? null,
-    mediaType: (content['media-type'] as string) ?? null,
-
-    // List fields
-    spacing: (content['list-spacing'] as string) ?? null,
-    nesting: (content['nesting'] as number) ?? null,
-    itemStyle: (content['list-item-style'] as string) ?? null,
-
-    // Abbreviation fields (abbreviation and has-abbreviation use uuid)
-    abbreviation:
-      dtoType === 'abbreviation' || dtoType === 'has-abbreviation'
-        ? (contentUuid ?? null)
-        : null,
-
-    // Quote fields (quote and quoted use uuid for quote reference)
-    quote:
-      dtoType === 'quote' || dtoType === 'quoted'
-        ? (contentUuid ?? null)
-        : null,
+    metadata: extractMetadata(annotation),
   };
 }

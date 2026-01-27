@@ -1,33 +1,4 @@
 """
-Type of passage content
-"""
-enum PassageType {
-  ABBREVIATIONS
-  ABBREVIATIONS_HEADER
-  ACKNOWLEDGMENT
-  ACKNOWLEDGMENT_HEADER
-  APPENDIX
-  APPENDIX_HEADER
-  COLOPHON
-  COLOPHON_HEADER
-  ENDNOTES
-  ENDNOTES_HEADER
-  HOMAGE
-  HOMAGE_HEADER
-  INTRODUCTION
-  INTRODUCTION_HEADER
-  PRELUDE
-  PRELUDE_HEADER
-  PROLOGUE
-  PROLOGUE_HEADER
-  SUMMARY
-  SUMMARY_HEADER
-  TRANSLATION
-  TRANSLATION_HEADER
-  UNKNOWN
-}
-
-"""
 A passage of text from a work
 """
 type Passage {
@@ -52,9 +23,9 @@ type Passage {
   sort: Int!
 
   """
-  Type of passage content
+  Type of passage content (e.g., translation, introduction, colophon)
   """
-  type: PassageType!
+  type: String!
 
   """
   XML ID from the source document
@@ -72,9 +43,29 @@ Filter options for passages
 """
 input PassageFilter {
   """
-  Filter by passage type
+  Filter by passage type (e.g., translation, introduction, colophon)
   """
-  type: PassageType
+  type: String
+}
+
+"""
+Direction for pagination
+"""
+enum PaginationDirection {
+  """
+  Fetch passages after the cursor (default)
+  """
+  FORWARD
+
+  """
+  Fetch passages before the cursor
+  """
+  BACKWARD
+
+  """
+  Fetch passages around the cursor (both before and after)
+  """
+  AROUND
 }
 
 """

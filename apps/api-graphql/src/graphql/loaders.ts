@@ -1,10 +1,5 @@
 import type { DataClient } from '@data-access';
-import {
-  createPassageLoaders,
-  type AnnotationRow,
-} from './schema/passage/passage.loader';
-
-export type { AnnotationRow };
+import { createPassageLoaders } from './schema/passage/passage.loader';
 
 export interface Loaders {
   /**

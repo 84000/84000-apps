@@ -1,26 +1,15 @@
 import DataLoader from 'dataloader';
-import type { DataClient } from '@data-access';
-
-/**
- * Annotation row from passage_annotations table
- */
-export interface AnnotationRow {
-  uuid: string;
-  passage_uuid: string;
-  type: string;
-  start: number;
-  end: number;
-  content: unknown[] | null;
-}
+import type { AnnotationDTO, DataClient } from '@data-access';
 
 export function createPassageLoaders(supabase: DataClient) {
   return {
-    annotationsByPassageUuid: new DataLoader<string, AnnotationRow[]>(
+    annotationsByPassageUuid: new DataLoader<string, AnnotationDTO[]>(
       async (passageUuids) => {
         const { data, error } = await supabase
           .from('passage_annotations')
           .select('uuid, passage_uuid, type, start, end, content')
-          .in('passage_uuid', passageUuids as string[]);
+          .in('passage_uuid', passageUuids as string[])
+          .not('type', 'like', 'deprecated%');
 
         if (error) {
           console.error('Error batch loading annotations:', error);
@@ -29,7 +18,7 @@ export function createPassageLoaders(supabase: DataClient) {
         }
 
         // Group annotations by passage_uuid
-        const annotationsByPassage = new Map<string, AnnotationRow[]>();
+        const annotationsByPassage = new Map<string, AnnotationDTO[]>();
         for (const annotation of data ?? []) {
           const passageUuid = annotation.passage_uuid;
           const existing = annotationsByPassage.get(passageUuid);
@@ -41,9 +30,7 @@ export function createPassageLoaders(supabase: DataClient) {
         }
 
         // Return in same order as input keys
-        return passageUuids.map(
-          (uuid) => annotationsByPassage.get(uuid) ?? [],
-        );
+        return passageUuids.map((uuid) => annotationsByPassage.get(uuid) ?? []);
       },
     ),
   };
