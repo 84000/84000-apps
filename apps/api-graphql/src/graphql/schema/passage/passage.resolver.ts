@@ -1,7 +1,52 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import { transformAnnotation } from '../annotation/annotation.resolver';
-import { PassageRowDTO, alignmentFromDTO } from '@data-access';
+import {
+  transformAnnotation,
+  type AnnotationEnrichmentContext,
+} from '../annotation/annotation.resolver';
+import { PassageRowDTO, alignmentFromDTO, type AnnotationDTO } from '@data-access';
+
+/**
+ * Extracts endNote UUIDs from annotations of type 'end-note-link'.
+ * The endNote UUID is stored in the annotation's content array.
+ */
+function extractEndNoteUuids(annotations: AnnotationDTO[]): string[] {
+  return annotations
+    .filter((a) => a.type === 'end-note-link')
+    .flatMap((a) => {
+      // The content is a JSON array with objects that may have a 'uuid' field
+      const content = a.content as Array<{ uuid?: string }> | undefined;
+      return content?.filter((c) => c.uuid).map((c) => c.uuid as string) ?? [];
+    });
+}
+
+/**
+ * Fetches endNote labels for a collection of annotations and returns an enrichment context.
+ */
+async function buildAnnotationEnrichment(
+  annotations: AnnotationDTO[],
+  ctx: GraphQLContext,
+): Promise<AnnotationEnrichmentContext> {
+  const endNoteUuids = extractEndNoteUuids(annotations);
+
+  if (endNoteUuids.length === 0) {
+    return {};
+  }
+
+  // Batch-fetch labels using the DataLoader
+  const labels = await ctx.loaders.passageLabelsByUuid.loadMany(endNoteUuids);
+
+  // Build the endNoteLabels map
+  const endNoteLabels = new Map<string, string>();
+  endNoteUuids.forEach((uuid, index) => {
+    const label = labels[index];
+    if (typeof label === 'string') {
+      endNoteLabels.set(uuid, label);
+    }
+  });
+
+  return { endNoteLabels };
+}
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -113,6 +158,17 @@ export const passagesResolver = async (
     ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
   ]);
 
+  // Collect all annotations for enrichment
+  const allAnnotations: AnnotationDTO[] = [];
+  for (const result of annotationsByPassage) {
+    if (!(result instanceof Error)) {
+      allAnnotations.push(...result);
+    }
+  }
+
+  // Build enrichment context with endNote labels
+  const enrichment = await buildAnnotationEnrichment(allAnnotations, ctx);
+
   // Transform passages to GraphQL format
   const nodes = resultPassages.map((passage, index) => {
     const passageAnnotations = annotationsByPassage[index];
@@ -131,7 +187,7 @@ export const passagesResolver = async (
       type: passage.type,
       xmlId: passage.xmlId ?? null,
       annotations: annotations.map((a) =>
-        transformAnnotation(a, passage.content.length),
+        transformAnnotation(a, passage.content.length, enrichment),
       ),
       alignments: alignments.map(alignmentFromDTO),
     };
@@ -284,6 +340,17 @@ const passagesAroundResolver = async (
     ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
   ]);
 
+  // Collect all annotations for enrichment
+  const allAnnotations: AnnotationDTO[] = [];
+  for (const result of annotationsByPassage) {
+    if (!(result instanceof Error)) {
+      allAnnotations.push(...result);
+    }
+  }
+
+  // Build enrichment context with endNote labels
+  const enrichment = await buildAnnotationEnrichment(allAnnotations, ctx);
+
   // Transform passages to GraphQL format
   const nodes = resultPassages.map((passage, index) => {
     const passageAnnotations = annotationsByPassage[index];
@@ -301,7 +368,7 @@ const passagesAroundResolver = async (
       type: passage.type,
       xmlId: passage.xmlId ?? null,
       annotations: annotations.map((a) =>
-        transformAnnotation(a, passage.content.length),
+        transformAnnotation(a, passage.content.length, enrichment),
       ),
       alignments: alignments.map(alignmentFromDTO),
     };

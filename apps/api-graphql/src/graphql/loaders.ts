@@ -17,6 +17,14 @@ export interface Loaders {
   alignmentsByPassageUuid: ReturnType<
     typeof createPassageLoaders
   >['alignmentsByPassageUuid'];
+
+  /**
+   * Load passage labels by UUID.
+   * Used to enrich endNoteLink annotations with labels from target passages.
+   */
+  passageLabelsByUuid: ReturnType<
+    typeof createPassageLoaders
+  >['passageLabelsByUuid'];
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
