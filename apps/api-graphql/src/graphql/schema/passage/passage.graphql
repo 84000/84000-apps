@@ -49,6 +49,26 @@ input PassageFilter {
 }
 
 """
+Direction for pagination
+"""
+enum PaginationDirection {
+  """
+  Fetch passages after the cursor (default)
+  """
+  FORWARD
+
+  """
+  Fetch passages before the cursor
+  """
+  BACKWARD
+
+  """
+  Fetch passages around the cursor (both before and after)
+  """
+  AROUND
+}
+
+"""
 Paginated connection of passages
 """
 type PassageConnection {
