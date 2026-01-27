@@ -1,7 +1,7 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 import { transformAnnotation } from '../annotation/annotation.resolver';
-import { PassageRowDTO } from '@data-access';
+import { PassageRowDTO, alignmentFromDTO } from '@data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -81,7 +81,7 @@ export const passagesResolver = async (
     };
   }
 
-  let passages = (data ?? []) as PassageRowDTO[];
+  const passages = (data ?? []) as PassageRowDTO[];
 
   // Determine if there are more passages in the query direction
   const hasMore = passages.length > limit;
@@ -106,17 +106,22 @@ export const passagesResolver = async (
     };
   }
 
-  // Load annotations for all passages using DataLoader (batched)
+  // Load annotations and alignments for all passages using DataLoader (batched)
   const passageUuids = resultPassages.map((p) => p.uuid);
-  const annotationsByPassage =
-    await ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids);
+  const [annotationsByPassage, alignmentsByPassage] = await Promise.all([
+    ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids),
+    ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
+  ]);
 
   // Transform passages to GraphQL format
   const nodes = resultPassages.map((passage, index) => {
     const passageAnnotations = annotationsByPassage[index];
+    const passageAlignments = alignmentsByPassage[index];
     // Handle potential Error from loadMany
     const annotations =
       passageAnnotations instanceof Error ? [] : passageAnnotations;
+    const alignments =
+      passageAlignments instanceof Error ? [] : passageAlignments;
 
     return {
       uuid: passage.uuid,
@@ -128,6 +133,7 @@ export const passagesResolver = async (
       annotations: annotations.map((a) =>
         transformAnnotation(a, passage.content.length),
       ),
+      alignments: alignments.map(alignmentFromDTO),
     };
   });
 
@@ -271,16 +277,21 @@ const passagesAroundResolver = async (
     };
   }
 
-  // Load annotations for all passages using DataLoader (batched)
+  // Load annotations and alignments for all passages using DataLoader (batched)
   const passageUuids = resultPassages.map((p) => p.uuid);
-  const annotationsByPassage =
-    await ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids);
+  const [annotationsByPassage, alignmentsByPassage] = await Promise.all([
+    ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids),
+    ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
+  ]);
 
   // Transform passages to GraphQL format
   const nodes = resultPassages.map((passage, index) => {
     const passageAnnotations = annotationsByPassage[index];
+    const passageAlignments = alignmentsByPassage[index];
     const annotations =
       passageAnnotations instanceof Error ? [] : passageAnnotations;
+    const alignments =
+      passageAlignments instanceof Error ? [] : passageAlignments;
 
     return {
       uuid: passage.uuid,
@@ -292,6 +303,7 @@ const passagesAroundResolver = async (
       annotations: annotations.map((a) =>
         transformAnnotation(a, passage.content.length),
       ),
+      alignments: alignments.map(alignmentFromDTO),
     };
   });
 

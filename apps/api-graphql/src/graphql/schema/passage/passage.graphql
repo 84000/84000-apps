@@ -36,6 +36,11 @@ type Passage {
   Annotations marking up ranges within this passage
   """
   annotations: [Annotation!]!
+
+  """
+  Alignments linking this passage to Tibetan source text
+  """
+  alignments: [Alignment!]!
 }
 
 """

@@ -9,6 +9,14 @@ export interface Loaders {
   annotationsByPassageUuid: ReturnType<
     typeof createPassageLoaders
   >['annotationsByPassageUuid'];
+
+  /**
+   * Load alignments for passage UUIDs.
+   * Batches multiple passage alignment requests into a single query.
+   */
+  alignmentsByPassageUuid: ReturnType<
+    typeof createPassageLoaders
+  >['alignmentsByPassageUuid'];
 }
 
 export function createLoaders(supabase: DataClient): Loaders {

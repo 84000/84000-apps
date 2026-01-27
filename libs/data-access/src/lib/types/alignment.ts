@@ -1,6 +1,7 @@
 import { TohokuCatalogEntry } from './toh';
 
 export type AlignmentDTO = {
+  passage_uuid: string;
   folio_uuid: string;
   toh: TohokuCatalogEntry;
   tibetan: string;
