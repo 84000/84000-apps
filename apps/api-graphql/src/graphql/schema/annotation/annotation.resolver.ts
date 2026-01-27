@@ -30,11 +30,21 @@ interface TransformedAnnotation {
 }
 
 /**
+ * Context for enriching annotations with additional data.
+ * Allows passing resolved data (e.g., labels from related passages) to metadata extraction.
+ */
+export interface AnnotationEnrichmentContext {
+  /** Map of endNote passage UUIDs to their labels */
+  endNoteLabels?: Map<string, string>;
+}
+
+/**
  * Extracts type-specific metadata from the parsed domain annotation.
  * Returns null if there's no type-specific data.
  */
 function extractMetadata(
   annotation: ReturnType<typeof annotationFromDTO>,
+  enrichment?: AnnotationEnrichmentContext,
 ): Record<string, unknown> | null {
   switch (annotation.type) {
     case 'heading': {
@@ -102,9 +112,16 @@ function extractMetadata(
     }
 
     case 'endNoteLink': {
-      const { endNote, label } = annotation as EndNoteLinkAnnotation;
+      const { endNote } = annotation as EndNoteLinkAnnotation;
       const meta: Record<string, unknown> = { endNote };
-      if (label) meta.label = label;
+      // Look up label from enrichment context (fetched from target passage)
+      const fullLabel = enrichment?.endNoteLabels?.get(endNote);
+      if (fullLabel) {
+        // Extract only the part after the last dot (e.g., "1.2.3" -> "3")
+        const lastDotIndex = fullLabel.lastIndexOf('.');
+        meta.label =
+          lastDotIndex >= 0 ? fullLabel.slice(lastDotIndex + 1) : fullLabel;
+      }
       return meta;
     }
 
@@ -137,10 +154,15 @@ function extractMetadata(
  * Maps the parsed domain annotation to a GraphQL-compatible format.
  * Uses data-access's annotationFromDTO for parsing, then extracts
  * type-specific fields into a metadata object.
+ *
+ * @param dto - The annotation DTO from the database
+ * @param passageLength - Length of the parent passage content (for bounds validation)
+ * @param enrichment - Optional enrichment context with resolved data (e.g., endNote labels)
  */
 export function transformAnnotation(
   dto: AnnotationDTO,
   passageLength: number = Number.MAX_SAFE_INTEGER,
+  enrichment?: AnnotationEnrichmentContext,
 ): TransformedAnnotation {
   // Use data-access's parsing logic to get the domain model
   const annotation = annotationFromDTO(dto, passageLength);
@@ -150,6 +172,6 @@ export function transformAnnotation(
     type: annotation.type,
     start: annotation.start,
     end: annotation.end,
-    metadata: extractMetadata(annotation),
+    metadata: extractMetadata(annotation, enrichment),
   };
 }
