@@ -8,7 +8,8 @@ export function createPassageLoaders(supabase: DataClient) {
         const { data, error } = await supabase
           .from('passage_annotations')
           .select('uuid, passage_uuid, type, start, end, content')
-          .in('passage_uuid', passageUuids as string[]);
+          .in('passage_uuid', passageUuids as string[])
+          .not('type', 'like', 'deprecated%');
 
         if (error) {
           console.error('Error batch loading annotations:', error);
