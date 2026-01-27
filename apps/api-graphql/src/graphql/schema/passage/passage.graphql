@@ -1,34 +1,4 @@
 """
-An alignment linking a passage to Tibetan source text
-"""
-type Alignment {
-  """
-  UUID of the folio containing the Tibetan source
-  """
-  folioUuid: ID!
-
-  """
-  Tohoku catalog reference (e.g., "toh123")
-  """
-  toh: String!
-
-  """
-  Tibetan source text content
-  """
-  tibetan: String!
-
-  """
-  Folio number within the volume
-  """
-  folioNumber: Int!
-
-  """
-  Volume number
-  """
-  volumeNumber: Int!
-}
-
-"""
 A passage of text from a work
 """
 type Passage {
