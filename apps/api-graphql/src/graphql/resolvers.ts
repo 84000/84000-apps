@@ -4,7 +4,11 @@ import { userQueries } from './schema/user/user.query';
 import { workQueries } from './schema/work/work.query';
 import { imprintResolver } from './schema/imprint/imprint.resolver';
 import { passagesResolver } from './schema/passage/passage.resolver';
-import { passageJsonResolver } from './schema/passage/passage.field-resolver';
+import {
+  passageJsonResolver,
+  passageAnnotationsResolver,
+  passageAlignmentsResolver,
+} from './schema/passage/passage.field-resolver';
 import { tocResolver } from './schema/toc/toc.resolver';
 
 export const resolvers = {
@@ -28,5 +32,7 @@ export const resolvers = {
 
   Passage: {
     json: passageJsonResolver,
+    annotations: passageAnnotationsResolver,
+    alignments: passageAlignmentsResolver,
   },
 };

@@ -2,12 +2,116 @@ import { blockFromPassage } from '@lib-editing';
 import {
   annotationsFromDTO,
   alignmentsFromDTO,
+  alignmentFromDTO,
   type Passage as DataAccessPassage,
   type BodyItemType,
+  type AnnotationDTO,
 } from '@data-access';
-import type { PassageParent } from './passage.resolver';
+import type { GraphQLContext } from '../../context';
+import {
+  transformAnnotation,
+  type AnnotationEnrichmentContext,
+} from '../annotation/annotation.resolver';
 
-export const passageJsonResolver = (parent: PassageParent) => {
+/**
+ * Parent object passed from the passages resolver.
+ * Contains only base passage data - annotations/alignments are loaded by field resolvers.
+ */
+interface PassageParent {
+  uuid: string;
+  content: string;
+  label: string;
+  sort: number;
+  type: string;
+  xmlId: string | null;
+}
+
+/**
+ * Builds enrichment context for endNoteLink annotations.
+ * Fetches labels for referenced endNote passages.
+ */
+async function buildEnrichment(
+  annotations: AnnotationDTO[],
+  ctx: GraphQLContext,
+): Promise<AnnotationEnrichmentContext> {
+  const endNoteUuids = annotations
+    .filter((a) => a.type === 'end-note-link')
+    .flatMap((a) => {
+      const content = a.content as Array<{ uuid?: string }> | undefined;
+      return content?.filter((c) => c.uuid).map((c) => c.uuid as string) ?? [];
+    });
+
+  if (endNoteUuids.length === 0) {
+    return {};
+  }
+
+  // Batch-fetch labels using the DataLoader
+  const labels = await ctx.loaders.passageLabelsByUuid.loadMany(endNoteUuids);
+
+  const endNoteLabels = new Map<string, string>();
+  endNoteUuids.forEach((uuid, i) => {
+    const label = labels[i];
+    if (typeof label === 'string') {
+      endNoteLabels.set(uuid, label);
+    }
+  });
+
+  return { endNoteLabels };
+}
+
+/**
+ * Field resolver for Passage.annotations.
+ * Loads annotations via DataLoader (batched across all passages in the request).
+ */
+export const passageAnnotationsResolver = async (
+  parent: PassageParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+) => {
+  // Load annotations via DataLoader (batched with other passages)
+  const annotations = await ctx.loaders.annotationsByPassageUuid.load(
+    parent.uuid,
+  );
+
+  // Build enrichment for endNoteLink annotations
+  const enrichment = await buildEnrichment(annotations, ctx);
+
+  // Transform to GraphQL format
+  return annotations.map((a) =>
+    transformAnnotation(a, parent.content.length, enrichment),
+  );
+};
+
+/**
+ * Field resolver for Passage.alignments.
+ * Loads alignments via DataLoader (batched across all passages in the request).
+ */
+export const passageAlignmentsResolver = async (
+  parent: PassageParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+) => {
+  const alignments = await ctx.loaders.alignmentsByPassageUuid.load(
+    parent.uuid,
+  );
+  return alignments.map(alignmentFromDTO);
+};
+
+/**
+ * Field resolver for Passage.json.
+ * Loads both annotations and alignments, then transforms to TipTap editor JSON.
+ */
+export const passageJsonResolver = async (
+  parent: PassageParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+) => {
+  // Load both annotations and alignments in parallel
+  const [rawAnnotations, rawAlignments] = await Promise.all([
+    ctx.loaders.annotationsByPassageUuid.load(parent.uuid),
+    ctx.loaders.alignmentsByPassageUuid.load(parent.uuid),
+  ]);
+
   const passage: DataAccessPassage = {
     uuid: parent.uuid,
     content: parent.content,
@@ -16,11 +120,8 @@ export const passageJsonResolver = (parent: PassageParent) => {
     type: parent.type as BodyItemType,
     workUuid: '',
     xmlId: parent.xmlId ?? undefined,
-    annotations: annotationsFromDTO(
-      parent._rawAnnotations,
-      parent.content.length,
-    ),
-    alignments: alignmentsFromDTO(parent._rawAlignments),
+    annotations: annotationsFromDTO(rawAnnotations, parent.content.length),
+    alignments: alignmentsFromDTO(rawAlignments),
   };
 
   return blockFromPassage(passage);

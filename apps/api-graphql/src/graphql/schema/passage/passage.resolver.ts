@@ -1,57 +1,6 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import {
-  transformAnnotation,
-  type AnnotationEnrichmentContext,
-} from '../annotation/annotation.resolver';
-import {
-  PassageRowDTO,
-  alignmentFromDTO,
-  type AnnotationDTO,
-  type AlignmentDTO,
-} from '@data-access';
-
-/**
- * Extracts endNote UUIDs from annotations of type 'end-note-link'.
- * The endNote UUID is stored in the annotation's content array.
- */
-function extractEndNoteUuids(annotations: AnnotationDTO[]): string[] {
-  return annotations
-    .filter((a) => a.type === 'end-note-link')
-    .flatMap((a) => {
-      // The content is a JSON array with objects that may have a 'uuid' field
-      const content = a.content as Array<{ uuid?: string }> | undefined;
-      return content?.filter((c) => c.uuid).map((c) => c.uuid as string) ?? [];
-    });
-}
-
-/**
- * Fetches endNote labels for a collection of annotations and returns an enrichment context.
- */
-async function buildAnnotationEnrichment(
-  annotations: AnnotationDTO[],
-  ctx: GraphQLContext,
-): Promise<AnnotationEnrichmentContext> {
-  const endNoteUuids = extractEndNoteUuids(annotations);
-
-  if (endNoteUuids.length === 0) {
-    return {};
-  }
-
-  // Batch-fetch labels using the DataLoader
-  const labels = await ctx.loaders.passageLabelsByUuid.loadMany(endNoteUuids);
-
-  // Build the endNoteLabels map
-  const endNoteLabels = new Map<string, string>();
-  endNoteUuids.forEach((uuid, index) => {
-    const label = labels[index];
-    if (typeof label === 'string') {
-      endNoteLabels.set(uuid, label);
-    }
-  });
-
-  return { endNoteLabels };
-}
+import { PassageRowDTO } from '@data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -156,50 +105,15 @@ export const passagesResolver = async (
     };
   }
 
-  // Load annotations and alignments for all passages using DataLoader (batched)
-  const passageUuids = resultPassages.map((p) => p.uuid);
-  const [annotationsByPassage, alignmentsByPassage] = await Promise.all([
-    ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids),
-    ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
-  ]);
-
-  // Collect all annotations for enrichment
-  const allAnnotations: AnnotationDTO[] = [];
-  for (const result of annotationsByPassage) {
-    if (!(result instanceof Error)) {
-      allAnnotations.push(...result);
-    }
-  }
-
-  // Build enrichment context with endNote labels
-  const enrichment = await buildAnnotationEnrichment(allAnnotations, ctx);
-
-  // Transform passages to GraphQL format
-  const nodes = resultPassages.map((passage, index) => {
-    const passageAnnotations = annotationsByPassage[index];
-    const passageAlignments = alignmentsByPassage[index];
-    // Handle potential Error from loadMany
-    const annotations =
-      passageAnnotations instanceof Error ? [] : passageAnnotations;
-    const alignments =
-      passageAlignments instanceof Error ? [] : passageAlignments;
-
-    return {
-      uuid: passage.uuid,
-      content: passage.content,
-      label: passage.label,
-      sort: passage.sort,
-      type: passage.type,
-      xmlId: passage.xmlId ?? null,
-      annotations: annotations.map((a) =>
-        transformAnnotation(a, passage.content.length, enrichment),
-      ),
-      alignments: alignments.map(alignmentFromDTO),
-      // Raw DTOs for json field resolver
-      _rawAnnotations: annotations,
-      _rawAlignments: alignments,
-    };
-  });
+  // Return base passage data - annotations/alignments loaded by field resolvers
+  const nodes = resultPassages.map((passage) => ({
+    uuid: passage.uuid,
+    content: passage.content,
+    label: passage.label,
+    sort: passage.sort,
+    type: passage.type,
+    xmlId: passage.xmlId ?? null,
+  }));
 
   // Compute cursors
   const firstPassage = resultPassages[0];
@@ -214,17 +128,6 @@ export const passagesResolver = async (
     hasMoreAfter,
     hasMoreBefore,
   };
-};
-
-export type PassageParent = {
-  uuid: string;
-  content: string;
-  label: string;
-  sort: number;
-  type: string;
-  xmlId: string | null;
-  _rawAnnotations: AnnotationDTO[];
-  _rawAlignments: AlignmentDTO[];
 };
 
 /**
@@ -352,49 +255,15 @@ const passagesAroundResolver = async (
     };
   }
 
-  // Load annotations and alignments for all passages using DataLoader (batched)
-  const passageUuids = resultPassages.map((p) => p.uuid);
-  const [annotationsByPassage, alignmentsByPassage] = await Promise.all([
-    ctx.loaders.annotationsByPassageUuid.loadMany(passageUuids),
-    ctx.loaders.alignmentsByPassageUuid.loadMany(passageUuids),
-  ]);
-
-  // Collect all annotations for enrichment
-  const allAnnotations: AnnotationDTO[] = [];
-  for (const result of annotationsByPassage) {
-    if (!(result instanceof Error)) {
-      allAnnotations.push(...result);
-    }
-  }
-
-  // Build enrichment context with endNote labels
-  const enrichment = await buildAnnotationEnrichment(allAnnotations, ctx);
-
-  // Transform passages to GraphQL format
-  const nodes = resultPassages.map((passage, index) => {
-    const passageAnnotations = annotationsByPassage[index];
-    const passageAlignments = alignmentsByPassage[index];
-    const annotations =
-      passageAnnotations instanceof Error ? [] : passageAnnotations;
-    const alignments =
-      passageAlignments instanceof Error ? [] : passageAlignments;
-
-    return {
-      uuid: passage.uuid,
-      content: passage.content,
-      label: passage.label,
-      sort: passage.sort,
-      type: passage.type,
-      xmlId: passage.xmlId ?? null,
-      annotations: annotations.map((a) =>
-        transformAnnotation(a, passage.content.length, enrichment),
-      ),
-      alignments: alignments.map(alignmentFromDTO),
-      // Raw DTOs for json field resolver
-      _rawAnnotations: annotations,
-      _rawAlignments: alignments,
-    };
-  });
+  // Return base passage data - annotations/alignments loaded by field resolvers
+  const nodes = resultPassages.map((passage) => ({
+    uuid: passage.uuid,
+    content: passage.content,
+    label: passage.label,
+    sort: passage.sort,
+    type: passage.type,
+    xmlId: passage.xmlId ?? null,
+  }));
 
   // Compute cursors
   const firstPassage = resultPassages[0];
