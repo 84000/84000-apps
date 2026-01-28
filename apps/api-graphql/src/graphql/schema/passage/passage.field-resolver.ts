@@ -98,6 +98,57 @@ export const passageAlignmentsResolver = async (
 };
 
 /**
+ * Enriches annotation DTOs with endNote labels.
+ * Modifies the DTOs in place to add labels to end-note-link annotations.
+ */
+async function enrichAnnotationDTOs(
+  annotations: AnnotationDTO[],
+  ctx: GraphQLContext,
+): Promise<void> {
+  // Extract endNote UUIDs and their annotation indices
+  const endNoteRefs: Array<{ annotationIndex: number; uuid: string }> = [];
+
+  annotations.forEach((a, index) => {
+    if (a.type === 'end-note-link') {
+      const content = a.content as Array<{ uuid?: string }> | undefined;
+      content?.forEach((c) => {
+        if (c.uuid) {
+          endNoteRefs.push({ annotationIndex: index, uuid: c.uuid });
+        }
+      });
+    }
+  });
+
+  if (endNoteRefs.length === 0) {
+    return;
+  }
+
+  // Batch-fetch labels using the DataLoader
+  const uuids = endNoteRefs.map((ref) => ref.uuid);
+  const labels = await ctx.loaders.passageLabelsByUuid.loadMany(uuids);
+
+  // Inject labels into the annotation DTOs
+  endNoteRefs.forEach((ref, i) => {
+    const label = labels[i];
+    if (typeof label === 'string') {
+      const annotation = annotations[ref.annotationIndex];
+      const content = annotation.content as Array<{
+        uuid?: string;
+        label?: string;
+      }>;
+      // Find the content item with this UUID and add the label
+      const contentItem = content.find((c) => c.uuid === ref.uuid);
+      if (contentItem) {
+        // Extract only the part after the last dot (e.g., "1.2.3" -> "3")
+        const lastDotIndex = label.lastIndexOf('.');
+        contentItem.label =
+          lastDotIndex >= 0 ? label.slice(lastDotIndex + 1) : label;
+      }
+    }
+  });
+}
+
+/**
  * Field resolver for Passage.json.
  * Loads both annotations and alignments, then transforms to TipTap editor JSON.
  */
@@ -111,6 +162,9 @@ export const passageJsonResolver = async (
     ctx.loaders.annotationsByPassageUuid.load(parent.uuid),
     ctx.loaders.alignmentsByPassageUuid.load(parent.uuid),
   ]);
+
+  // Enrich annotations with endNote labels before transformation
+  await enrichAnnotationDTOs(rawAnnotations, ctx);
 
   const passage: DataAccessPassage = {
     uuid: parent.uuid,
