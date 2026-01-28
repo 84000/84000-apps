@@ -4,6 +4,7 @@
 export interface WorkParent {
   uuid: string;
   toh: string[];
+  selectedToh?: string; // The toh selected in the work query (composite key)
   title: string;
   publicationDate: string;
   publicationVersion: string;

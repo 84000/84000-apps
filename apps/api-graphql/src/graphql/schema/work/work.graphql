@@ -44,14 +44,10 @@ type Work {
 
   """
   Publication imprint information.
-  For works with multiple Tohoku numbers, optionally specify which one.
+  If the work query specified a toh argument, that value will be used.
+  Otherwise, imprint for the first toh in the work is returned.
   """
-  imprint(
-    """
-    Specific Tohoku number to get imprint for (defaults to first toh in the work)
-    """
-    toh: String
-  ): Imprint
+  imprint: Imprint
 
   """
   Paginated passages from this work
@@ -86,7 +82,20 @@ extend type Query {
   works: [Work!]!
 
   """
-  Get a single work by UUID or Tohoku catalog number
+  Get a single work by UUID or Tohoku catalog number.
+  When both uuid and toh are provided, toh acts as a composite key
+  and will be used as the default for nested resolvers (like imprint).
   """
-  work(uuid: ID, toh: String): Work
+  work(
+    """
+    Unique identifier for the work
+    """
+    uuid: ID
+
+    """
+    Tohoku catalog entry number. Can be combined with uuid to select
+    a specific toh for multi-toh works (composite key).
+    """
+    toh: String
+  ): Work
 }

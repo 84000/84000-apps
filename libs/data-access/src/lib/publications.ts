@@ -145,23 +145,32 @@ export const getTranslationMetadataByToh = async ({
   toh: string;
 }) => {
   const { data } = await client
-    .from('works')
+    .from('work_toh')
     .select(
       `
-      uuid,
-      title,
-      toh,
-      publicationDate,
-      publicationVersion,
-      pages:source_pages,
-      restriction,
-      breadcrumb
+      work_uuid,
+      works!inner(
+        uuid,
+        title,
+        toh,
+        publicationDate,
+        publicationVersion,
+        pages:source_pages,
+        restriction,
+        breadcrumb
+      )
     `,
     )
-    .eq('toh', toh)
+    .eq('toh_clean', toh)
     .single();
 
-  return workFromDTO(data as WorkDTO);
+  // Extract the work data from the joined result
+  const workData = data?.works as WorkDTO | undefined;
+  if (!workData) {
+    return null;
+  }
+
+  return workFromDTO(workData);
 };
 
 export const getTranslationsMetadata = async ({
