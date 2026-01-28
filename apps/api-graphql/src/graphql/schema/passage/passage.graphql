@@ -41,6 +41,12 @@ type Passage {
   Alignments linking this passage to Tibetan source text
   """
   alignments: [Alignment!]!
+
+  """
+  TipTap editor JSON representation of this passage.
+  Transforms content and annotations into nested JSON structure.
+  """
+  json: JSON
 }
 
 """

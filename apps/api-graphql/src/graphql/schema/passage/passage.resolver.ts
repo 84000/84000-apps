@@ -4,7 +4,12 @@ import {
   transformAnnotation,
   type AnnotationEnrichmentContext,
 } from '../annotation/annotation.resolver';
-import { PassageRowDTO, alignmentFromDTO, type AnnotationDTO } from '@data-access';
+import {
+  PassageRowDTO,
+  alignmentFromDTO,
+  type AnnotationDTO,
+  type AlignmentDTO,
+} from '@data-access';
 
 /**
  * Extracts endNote UUIDs from annotations of type 'end-note-link'.
@@ -190,6 +195,9 @@ export const passagesResolver = async (
         transformAnnotation(a, passage.content.length, enrichment),
       ),
       alignments: alignments.map(alignmentFromDTO),
+      // Raw DTOs for json field resolver
+      _rawAnnotations: annotations,
+      _rawAlignments: alignments,
     };
   });
 
@@ -206,6 +214,17 @@ export const passagesResolver = async (
     hasMoreAfter,
     hasMoreBefore,
   };
+};
+
+export type PassageParent = {
+  uuid: string;
+  content: string;
+  label: string;
+  sort: number;
+  type: string;
+  xmlId: string | null;
+  _rawAnnotations: AnnotationDTO[];
+  _rawAlignments: AlignmentDTO[];
 };
 
 /**
@@ -371,6 +390,9 @@ const passagesAroundResolver = async (
         transformAnnotation(a, passage.content.length, enrichment),
       ),
       alignments: alignments.map(alignmentFromDTO),
+      // Raw DTOs for json field resolver
+      _rawAnnotations: annotations,
+      _rawAlignments: alignments,
     };
   });
 
