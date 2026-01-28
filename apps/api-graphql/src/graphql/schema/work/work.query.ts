@@ -2,6 +2,7 @@ import {
   getTranslationsMetadata,
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
+  type TohokuCatalogEntry,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
 
@@ -25,6 +26,15 @@ export const workQueries = {
         client: ctx.supabase,
         uuid: args.uuid,
       });
+
+      // Validate toh if both uuid and toh are provided
+      if (
+        args.toh &&
+        work &&
+        !work.toh.includes(args.toh as TohokuCatalogEntry)
+      ) {
+        throw new Error(`Work ${args.uuid} does not contain toh ${args.toh}`);
+      }
     } else if (args.toh) {
       work = await getTranslationMetadataByToh({
         client: ctx.supabase,
@@ -37,6 +47,7 @@ export const workQueries = {
     if (!work) return null;
     return {
       ...work,
+      selectedToh: args.toh, // Pass the selected toh to child resolvers
       publicationDate: work.publicationDate.toISOString(),
     };
   },

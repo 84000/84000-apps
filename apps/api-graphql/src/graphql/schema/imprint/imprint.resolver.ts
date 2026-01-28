@@ -1,14 +1,15 @@
 import { getTranslationImprint } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
+import { parseToh } from '@lib-utils';
 
 export const imprintResolver = async (
   parent: WorkParent,
-  args: { toh?: string },
+  _args: unknown,
   ctx: GraphQLContext,
 ) => {
-  // Use provided toh or default to first toh in the work
-  const toh = args.toh ?? parent.toh[0];
+  // Use selectedToh from work query or default to first toh in the work
+  const toh = parent.selectedToh ?? parent.toh[0];
 
   if (!toh) {
     return null;
@@ -26,7 +27,7 @@ export const imprintResolver = async (
 
   // Transform to GraphQL schema format
   return {
-    toh: imprint.toh,
+    toh: imprint.toh ?? parseToh(toh),
     section: imprint.section,
     version: imprint.version ?? null,
     restriction: imprint.restriction,
