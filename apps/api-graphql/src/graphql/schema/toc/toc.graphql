@@ -1,0 +1,90 @@
+"""
+A hierarchical entry in a work's table of contents.
+
+This is a recursive type - each entry can contain nested children entries.
+Due to GraphQL's explicit nesting requirement, queries must specify the
+desired depth using fragments.
+
+Example query for 3 levels deep:
+  fragment TocFields on TocEntry {
+    uuid
+    content
+    label
+    level
+  }
+
+  query {
+    work(uuid: "...") {
+      toc {
+        frontMatter {
+          ...TocFields
+          children {
+            ...TocFields
+            children {
+              ...TocFields
+            }
+          }
+        }
+      }
+    }
+  }
+
+Maximum query depth is limited to 12 levels.
+"""
+type TocEntry {
+  """
+  Unique identifier for the passage
+  """
+  uuid: ID!
+
+  """
+  Content of the TOC entry (title/heading)
+  """
+  content: String!
+
+  """
+  Optional label for the entry
+  """
+  label: String
+
+  """
+  Sort order within the section
+  """
+  sort: Int!
+
+  """
+  Nesting level (1 for top level, 2+ for nested)
+  """
+  level: Int!
+
+  """
+  Section type (e.g., "introduction", "translation", "colophon")
+  """
+  section: String!
+
+  """
+  Child entries nested under this entry.
+  Must be explicitly queried to desired depth using fragments.
+  """
+  children: [TocEntry!]!
+}
+
+"""
+Table of contents for a work, organized by major sections
+"""
+type Toc {
+  """
+  Front matter entries (acknowledgment, introduction, summary)
+  """
+  frontMatter: [TocEntry!]!
+
+  """
+  Body entries (homage, translation, colophon, etc.)
+  """
+  body: [TocEntry!]!
+
+  """
+  Back matter entries (endnotes, abbreviations)
+  """
+  backMatter: [TocEntry!]!
+}

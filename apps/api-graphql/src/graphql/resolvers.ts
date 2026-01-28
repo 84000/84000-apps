@@ -4,6 +4,7 @@ import { userQueries } from './schema/user/user.query';
 import { workQueries } from './schema/work/work.query';
 import { imprintResolver } from './schema/imprint/imprint.resolver';
 import { passagesResolver } from './schema/passage/passage.resolver';
+import { tocResolver } from './schema/toc/toc.resolver';
 
 export const resolvers = {
   JSON: JSONResolver,
@@ -20,6 +21,7 @@ export const resolvers = {
 
   Work: {
     imprint: imprintResolver,
+    toc: tocResolver,
     passages: passagesResolver,
   },
 };

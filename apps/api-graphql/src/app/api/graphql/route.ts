@@ -1,6 +1,7 @@
 import { ApolloServer, HeaderMap } from '@apollo/server';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { NextRequest, NextResponse } from 'next/server';
+import depthLimit from 'graphql-depth-limit';
 
 import { typeDefs, resolvers, createContext } from '../../../graphql';
 
@@ -9,6 +10,7 @@ const server = new ApolloServer({
   resolvers,
   introspection: true,
   plugins: [ApolloServerPluginLandingPageLocalDefault({ embed: true })],
+  validationRules: [depthLimit(12)],
 });
 
 // Ensure server is started
@@ -25,7 +27,11 @@ async function handler(req: NextRequest) {
     headers.set(key, value);
   });
 
-  const { body: responseBody, headers: responseHeaders, status } = await server.executeHTTPGraphQLRequest({
+  const {
+    body: responseBody,
+    headers: responseHeaders,
+    status,
+  } = await server.executeHTTPGraphQLRequest({
     httpGraphQLRequest: {
       method: req.method,
       headers,
@@ -37,7 +43,7 @@ async function handler(req: NextRequest) {
 
   const response = new NextResponse(
     responseBody.kind === 'complete' ? responseBody.string : null,
-    { status }
+    { status },
   );
 
   for (const [key, value] of responseHeaders) {

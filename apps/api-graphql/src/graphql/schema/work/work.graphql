@@ -50,6 +50,13 @@ type Work {
   imprint: Imprint
 
   """
+  Table of contents for the work, organized by major sections.
+  Returns a recursive tree structure up to 12 levels deep.
+  See the TocEntry type documentation for query examples.
+  """
+  toc: Toc
+
+  """
   Paginated passages from this work
   """
   passages(
