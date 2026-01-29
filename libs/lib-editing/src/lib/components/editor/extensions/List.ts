@@ -1,7 +1,18 @@
-import { UL_STYLE } from '@design-system';
-import { cn } from '@lib-utils';
 import { BulletList } from '@tiptap/extension-list';
 import { mergeAttributes } from '@tiptap/react';
+
+const ITEM_STYLE_TO_CLASS: { [key: string]: string } = {
+  none: 'list-none',
+  dots: 'list-[disc]',
+  circles: 'list-[circle]',
+  numbers: 'list-decimal',
+  letters: 'list-[lower-latin]',
+};
+
+const LIST_SPACING_TO_CLASS: { [key: string]: string } = {
+  horizontal: 'ml-4',
+  vertical: 'mt-4',
+};
 
 export const List = BulletList.extend({
   addOptions() {
@@ -10,20 +21,21 @@ export const List = BulletList.extend({
       keepMarks: false,
       keepAttributes: false,
       ...this.parent?.(),
-      HTMLAttributes: {
-        class: cn(UL_STYLE, 'list-none'),
-      },
+      HTMLAttributes: {},
     };
   },
   addAttributes() {
     return {
       ...this.parent?.(),
       spacing: {
-        default: undefined,
+        default: 'horizontal',
         parseHTML: (element) => element.getAttribute('data-spacing'),
         renderHTML(attributes) {
           return mergeAttributes(attributes, {
-            'data-spacing': attributes.listSpacing,
+            'data-spacing': attributes.spacing,
+            class:
+              LIST_SPACING_TO_CLASS[attributes.spacing || 'horizontal'] ||
+              'ml-4',
           });
         },
       },
@@ -40,11 +52,14 @@ export const List = BulletList.extend({
         },
       },
       itemStyle: {
-        default: undefined,
+        default: 'none',
         parseHTML: (element) => element.getAttribute('data-item-style'),
         renderHTML(attributes) {
           return mergeAttributes(attributes, {
             'data-item-style': attributes.itemStyle,
+            class:
+              ITEM_STYLE_TO_CLASS[attributes.itemStyle || 'none'] ||
+              'list-none',
           });
         },
       },
