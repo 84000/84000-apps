@@ -4,7 +4,7 @@ import {
   getTranslationMetadataByUuid,
 } from '@data-access';
 import { MainLogoSvg } from '@design-system';
-import { isUuid } from '@lib-utils';
+import { isUuid, parseToh } from '@lib-utils';
 import { cache } from 'react';
 
 export const runtime = 'nodejs';
@@ -30,7 +30,7 @@ export default async function Image({
   }
 
   const title = work?.title || '84000 Translation';
-  const toh = work?.toh.map((t) => t).join(', ') || '';
+  const toh = work?.toh.map(parseToh).join(', ') || '';
 
   return new ImageResponse(
     <div

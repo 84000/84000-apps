@@ -5,7 +5,7 @@ import {
   createBrowserClient,
   getTranslationMetadataByUuid,
 } from '@data-access';
-import { isUuid } from '@lib-utils';
+import { isUuid, parseToh } from '@lib-utils';
 
 export async function generateMetadata({
   params,
@@ -29,7 +29,7 @@ export async function generateMetadata({
     return { title: '84000 Translation Reader' };
   }
 
-  const tohDisplay = work.toh.map((t) => t).join(', ');
+  const tohDisplay = work.toh.map(parseToh).join(', ');
 
   return {
     title: `${work.title} | 84000`,
