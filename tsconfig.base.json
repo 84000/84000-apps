@@ -18,6 +18,7 @@
       "@data-access": ["libs/data-access/src/index.ts"],
       "@data-access/ssr": ["libs/data-access/src/ssr.ts"],
       "@design-system": ["libs/design-system/src/index.ts"],
+      "@design-system/ssr": ["libs/design-system/src/ssr.ts"],
       "@design-system-css": ["libs/design-system/src/lib/theme/global.css"],
       "@lib-canon": ["libs/lib-canon/src/index.ts"],
       "@lib-canon/ssr": ["libs/lib-canon/src/ssr.ts"],

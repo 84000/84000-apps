@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { MiniLogoSvg } from '@design-system';
+import { MiniLogoSvg } from '@design-system/ssr';
 
 export const runtime = 'nodejs';
 export const size = { width: 32, height: 32 };
