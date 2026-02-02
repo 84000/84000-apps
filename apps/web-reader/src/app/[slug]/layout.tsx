@@ -1,7 +1,10 @@
 import { ReaderLayout, TranslationSkeleton } from '@lib-editing';
+import { generateMetadata } from '@lib-editing/ssr';
 import { ReactNode, Suspense } from 'react';
 
-export const Layout = (props: {
+export { generateMetadata };
+
+const Layout = (props: {
   left: ReactNode;
   main: ReactNode;
   right: ReactNode;

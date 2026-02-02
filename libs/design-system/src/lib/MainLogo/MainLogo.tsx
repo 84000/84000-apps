@@ -1,25 +1,18 @@
 'use client';
 
-import Image from 'next/image';
-import Logo from '../svg/logo.svg';
 import Link from 'next/link';
+import { MainLogoSvg } from './MainLogoSvg';
 
 export const MainLogo = ({
-  width = 166, // defined in svg
-  height = 100, // defined in svg
+  width = 166,
+  height = 100,
 }: {
-  width?: number | undefined;
-  height?: number | undefined;
+  width?: number;
+  height?: number;
 }) => {
   return (
     <Link href={'/'}>
-      <Image
-        src={Logo}
-        alt="logo"
-        className="block"
-        width={width}
-        height={height}
-      />
+      <MainLogoSvg width={width} height={height} className="block" />
     </Link>
   );
 };
