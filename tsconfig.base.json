@@ -23,6 +23,7 @@
       "@lib-canon": ["libs/lib-canon/src/index.ts"],
       "@lib-canon/ssr": ["libs/lib-canon/src/ssr.ts"],
       "@lib-editing": ["libs/lib-editing/src/index.ts"],
+      "@lib-editing/ssr": ["libs/lib-editing/src/ssr.ts"],
       "@lib-editing/fixtures/*": ["libs/lib-editing/src/fixtures/*"],
       "@lib-explore": ["libs/lib-explore/src/index.ts"],
       "@lib-explore/ssr": ["libs/lib-explore/src/ssr.ts"],

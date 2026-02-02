@@ -1,8 +1,5 @@
-import {
-  generateMetadata,
-  ReaderLayout,
-  TranslationSkeleton,
-} from '@lib-editing';
+import { ReaderLayout, TranslationSkeleton } from '@lib-editing';
+import { generateMetadata } from '@lib-editing/ssr';
 import { ReactNode, Suspense } from 'react';
 
 export { generateMetadata };
