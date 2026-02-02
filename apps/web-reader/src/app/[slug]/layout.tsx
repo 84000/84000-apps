@@ -1,5 +1,40 @@
 import { ReaderLayout, TranslationSkeleton } from '@lib-editing';
-import { ReactNode, Suspense } from 'react';
+import { cache, ReactNode, Suspense } from 'react';
+import { Metadata } from 'next';
+import { getTranslationMetadataByUuid } from '@data-access';
+import { createServerClient } from '@data-access/ssr';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const client = await createServerClient();
+
+  const work = await cache(getTranslationMetadataByUuid)({
+    client,
+    uuid: slug,
+  });
+
+  if (!work) {
+    return { title: '84000 Translation Reader' };
+  }
+
+  const tohDisplay = work.toh.map((t) => t).join(', ');
+
+  return {
+    title: `${work.title} | 84000`,
+    description:
+      work.description || `${work.title} - ${tohDisplay} - ${work.section}`,
+    openGraph: {
+      title: work.title,
+      description:
+        work.description || `Buddhist translation from the ${work.section}`,
+      type: 'article',
+    },
+  };
+}
 
 export const Layout = (props: {
   left: ReactNode;

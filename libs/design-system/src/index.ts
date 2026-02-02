@@ -22,6 +22,7 @@ export * from './lib/Input/Input';
 export * from './lib/Label/Label';
 export * from './lib/LotusPond/LotusPond';
 export * from './lib/MainLogo/MainLogo';
+export * from './lib/MainLogo/MainLogoSvg';
 export * from './lib/MiniLogo/MiniLogo';
 export * from './lib/NavigationMenu/NavigationMenu';
 export * from './lib/Popover/Popover';

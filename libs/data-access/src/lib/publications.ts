@@ -123,6 +123,7 @@ export const getTranslationMetadataByUuid = async ({
       `
       uuid,
       title,
+      description,
       toh,
       publicationDate,
       publicationVersion,
@@ -152,6 +153,7 @@ export const getTranslationMetadataByToh = async ({
       works!inner(
         uuid,
         title,
+        description,
         toh,
         publicationDate,
         publicationVersion,
@@ -184,6 +186,7 @@ export const getTranslationsMetadata = async ({
       `
       uuid,
       title,
+      description,
       toh,
       publicationDate,
       publicationVersion,

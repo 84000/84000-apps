@@ -4,6 +4,7 @@ import { SemVer } from './semver';
 export type Work = {
   uuid: string;
   title: string;
+  description?: string;
   toh: TohokuCatalogEntry[];
   publicationDate: Date;
   publicationVersion: SemVer;
@@ -15,6 +16,7 @@ export type Work = {
 export type WorkDTO = {
   uuid: string;
   title: string;
+  description?: string;
   toh: string;
   publicationDate: string;
   publicationVersion: string;
@@ -27,6 +29,7 @@ export function workFromDTO(dto: WorkDTO): Work {
   return {
     uuid: dto.uuid,
     title: dto.title,
+    description: dto.description,
     toh: dto.toh?.split(',') as TohokuCatalogEntry[],
     publicationDate: new Date(dto.publicationDate),
     publicationVersion: dto.publicationVersion as SemVer,
