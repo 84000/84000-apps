@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og';
-import { getTranslationMetadataByUuid } from '@data-access';
-import { createServerClient } from '@data-access/ssr';
+import {
+  createBrowserClient,
+  getTranslationMetadataByUuid,
+} from '@data-access';
 import { MainLogoSvg } from '@design-system';
 import { isUuid } from '@lib-utils';
 import { cache } from 'react';
@@ -20,7 +22,7 @@ export default async function Image({
   // Only fetch work metadata for valid UUIDs
   let work = null;
   if (isUuid(slug)) {
-    const client = await createServerClient();
+    const client = createBrowserClient();
     work = await cache(getTranslationMetadataByUuid)({
       client,
       uuid: slug,

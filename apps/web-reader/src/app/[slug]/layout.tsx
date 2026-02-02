@@ -1,8 +1,10 @@
 import { ReaderLayout, TranslationSkeleton } from '@lib-editing';
 import { cache, ReactNode, Suspense } from 'react';
 import { Metadata } from 'next';
-import { getTranslationMetadataByUuid } from '@data-access';
-import { createServerClient } from '@data-access/ssr';
+import {
+  createBrowserClient,
+  getTranslationMetadataByUuid,
+} from '@data-access';
 import { isUuid } from '@lib-utils';
 
 export async function generateMetadata({
@@ -17,8 +19,7 @@ export async function generateMetadata({
     return { title: '84000 Translation Reader' };
   }
 
-  const client = await createServerClient();
-
+  const client = createBrowserClient();
   const work = await cache(getTranslationMetadataByUuid)({
     client,
     uuid: slug,
@@ -43,7 +44,7 @@ export async function generateMetadata({
   };
 }
 
-export const Layout = (props: {
+const Layout = (props: {
   left: ReactNode;
   main: ReactNode;
   right: ReactNode;
