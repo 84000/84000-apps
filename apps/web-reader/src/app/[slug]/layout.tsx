@@ -3,6 +3,7 @@ import { cache, ReactNode, Suspense } from 'react';
 import { Metadata } from 'next';
 import { getTranslationMetadataByUuid } from '@data-access';
 import { createServerClient } from '@data-access/ssr';
+import { isUuid } from '@lib-utils';
 
 export async function generateMetadata({
   params,
@@ -10,6 +11,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+
+  // Skip metadata generation for non-UUID paths (e.g., icon requests)
+  if (!isUuid(slug)) {
+    return { title: '84000 Translation Reader' };
+  }
+
   const client = await createServerClient();
 
   const work = await cache(getTranslationMetadataByUuid)({

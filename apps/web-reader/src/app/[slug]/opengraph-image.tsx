@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getTranslationMetadataByUuid } from '@data-access';
 import { createServerClient } from '@data-access/ssr';
 import { MainLogoSvg } from '@design-system';
+import { isUuid } from '@lib-utils';
 import { cache } from 'react';
 
 export const runtime = 'nodejs';
@@ -15,11 +16,16 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const client = await createServerClient();
-  const work = await cache(getTranslationMetadataByUuid)({
-    client,
-    uuid: slug,
-  });
+
+  // Only fetch work metadata for valid UUIDs
+  let work = null;
+  if (isUuid(slug)) {
+    const client = await createServerClient();
+    work = await cache(getTranslationMetadataByUuid)({
+      client,
+      uuid: slug,
+    });
+  }
 
   const title = work?.title || '84000 Translation';
   const toh = work?.toh.map((t) => t).join(', ') || '';
