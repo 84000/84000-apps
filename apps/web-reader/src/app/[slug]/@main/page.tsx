@@ -1,11 +1,14 @@
-import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { ReaderBodyPage } from '@lib-editing';
+import {
+  createGraphQLClient,
+  getTranslationUuids,
+} from '@client-graphql';
+import { ReaderBodyPage } from '@lib-editing/ssr';
 
 export const revalidate = 60;
 export const dynamicParams = true;
 
 export const generateStaticParams = async () => {
-  const client = createBrowserClient();
+  const client = createGraphQLClient();
   const uuids = await getTranslationUuids({ client });
   return uuids.map((slug) => ({ slug }));
 };

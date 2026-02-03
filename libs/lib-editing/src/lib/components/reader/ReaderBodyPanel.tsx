@@ -7,7 +7,7 @@ import {
 } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { TranslationEditorContent } from '../editor';
-import { TranslationReader } from '.';
+import { TranslationReader } from './TranslationReader';
 import { Titles, TitlesVariant } from '@design-system';
 
 const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
