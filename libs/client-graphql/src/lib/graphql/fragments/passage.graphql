@@ -16,3 +16,12 @@ fragment PassageWithAnnotations on Passage {
     ...AlignmentFields
   }
 }
+
+fragment PassageWithJson on Passage {
+  uuid
+  label
+  sort
+  type
+  xmlId
+  json
+}

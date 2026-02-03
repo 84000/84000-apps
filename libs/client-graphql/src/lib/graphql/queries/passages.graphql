@@ -49,3 +49,54 @@ query GetPassagesBasic(
     }
   }
 }
+
+query GetPassagesWithJson(
+  $uuid: ID!
+  $cursor: String
+  $limit: Int
+  $direction: PaginationDirection
+  $filter: PassageFilter
+) {
+  work(uuid: $uuid) {
+    uuid
+    passages(
+      cursor: $cursor
+      limit: $limit
+      direction: $direction
+      filter: $filter
+    ) {
+      nodes {
+        ...PassageWithJson
+      }
+      nextCursor
+      prevCursor
+      hasMoreAfter
+      hasMoreBefore
+    }
+  }
+}
+
+query GetPassagesAroundWithJson(
+  $uuid: ID!
+  $cursor: String!
+  $limit: Int
+  $filter: PassageFilter
+) {
+  work(uuid: $uuid) {
+    uuid
+    passages(
+      cursor: $cursor
+      limit: $limit
+      direction: AROUND
+      filter: $filter
+    ) {
+      nodes {
+        ...PassageWithJson
+      }
+      nextCursor
+      prevCursor
+      hasMoreAfter
+      hasMoreBefore
+    }
+  }
+}

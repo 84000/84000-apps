@@ -5,11 +5,14 @@ export { createGraphQLClient, resetGraphQLClient } from './lib/client';
 export {
   getTranslationPassages,
   getTranslationPassagesAround,
+  getTranslationBlocks,
+  getTranslationBlocksAround,
   getTranslationTitles,
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
   getTranslationsMetadata,
   getTranslationUuids,
+  type TranslationBlocksPage,
 } from './lib/functions';
 
 // Re-export types from @data-access for convenience

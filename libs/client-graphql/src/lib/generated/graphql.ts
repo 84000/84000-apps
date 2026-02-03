@@ -398,6 +398,8 @@ export type PassageWithAnnotationsFragment = (
   & PassageFieldsFragment
 );
 
+export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, label: string, sort: number, type: string, xmlId?: string | null, json?: any | null };
+
 export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string };
 
 export type TocEntryFieldsFragment = { __typename?: 'TocEntry', uuid: string, content: string, label?: string | null, sort: number, level: number, section: string };
@@ -461,6 +463,33 @@ export type GetPassagesBasicQueryVariables = Exact<{
 export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
         { __typename?: 'Passage' }
         & PassageFieldsFragment
+      )> } } | null };
+
+export type GetPassagesWithJsonQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  direction?: InputMaybe<PaginationDirection>;
+  filter?: InputMaybe<PassageFilter>;
+}>;
+
+
+export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithJsonFragment
+      )> } } | null };
+
+export type GetPassagesAroundWithJsonQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  cursor: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  filter?: InputMaybe<PassageFilter>;
+}>;
+
+
+export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithJsonFragment
       )> } } | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
@@ -613,6 +642,16 @@ export const PassageWithAnnotationsFragmentDoc = gql`
   }
 }
     `;
+export const PassageWithJsonFragmentDoc = gql`
+    fragment PassageWithJson on Passage {
+  uuid
+  label
+  sort
+  type
+  xmlId
+  json
+}
+    `;
 export const TitleFieldsFragmentDoc = gql`
     fragment TitleFields on Title {
   uuid
@@ -711,6 +750,38 @@ export const GetPassagesBasicDocument = gql`
   }
 }
     ${PassageFieldsFragmentDoc}`;
+export const GetPassagesWithJsonDocument = gql`
+    query GetPassagesWithJson($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageWithJson
+      }
+      nextCursor
+      prevCursor
+      hasMoreAfter
+      hasMoreBefore
+    }
+  }
+}
+    ${PassageWithJsonFragmentDoc}`;
+export const GetPassagesAroundWithJsonDocument = gql`
+    query GetPassagesAroundWithJson($uuid: ID!, $cursor: String!, $limit: Int, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: AROUND, filter: $filter) {
+      nodes {
+        ...PassageWithJson
+      }
+      nextCursor
+      prevCursor
+      hasMoreAfter
+      hasMoreBefore
+    }
+  }
+}
+    ${PassageWithJsonFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -789,6 +860,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetPassagesBasic(variables: GetPassagesBasicQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesBasicQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesBasicQuery>({ document: GetPassagesBasicDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesBasic', 'query', variables);
+    },
+    GetPassagesWithJson(variables: GetPassagesWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesWithJsonQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesWithJsonQuery>({ document: GetPassagesWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesWithJson', 'query', variables);
+    },
+    GetPassagesAroundWithJson(variables: GetPassagesAroundWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesAroundWithJsonQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesAroundWithJsonQuery>({ document: GetPassagesAroundWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesAroundWithJson', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);
