@@ -66,7 +66,10 @@ export type AnnotationType =
   | 'trailer'
   | 'unknown';
 
-const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
+export const ANNOTATION_TYPE_DTO_TO_TYPE: Record<
+  AnnotationDTOType,
+  AnnotationType
+> = {
   abbreviation: 'abbreviation',
   audio: 'audio',
   blockquote: 'blockquote',
@@ -103,42 +106,43 @@ const ANNOATION_TYPE_DTO_TO_TYPE: Record<AnnotationDTOType, AnnotationType> = {
 export const annotationTypeFromDTO = (
   type: AnnotationDTOType,
 ): AnnotationType => {
-  return ANNOATION_TYPE_DTO_TO_TYPE[type] || 'unknown';
+  return ANNOTATION_TYPE_DTO_TO_TYPE[type] || 'unknown';
 };
 
-const ANNOATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> = {
-  abbreviation: 'abbreviation',
-  audio: 'audio',
-  blockquote: 'blockquote',
-  code: 'code',
-  deprecated: 'deprecated-internal-link',
-  endNoteLink: 'end-note-link',
-  glossaryInstance: 'glossary-instance',
-  hasAbbreviation: 'has-abbreviation',
-  heading: 'heading',
-  image: 'image',
-  indent: 'indent',
-  inlineTitle: 'inline-title',
-  internalLink: 'internal-link',
-  leadingSpace: 'leading-space',
-  line: 'line',
-  lineGroup: 'line-group',
-  link: 'link',
-  list: 'list',
-  listItem: 'list-item',
-  mantra: 'mantra',
-  paragraph: 'paragraph',
-  quote: 'quote',
-  quoted: 'quoted',
-  reference: 'reference',
-  span: 'span',
-  table: 'table',
-  tableBodyData: 'table-body-data',
-  tableBodyHeader: 'table-body-header',
-  tableBodyRow: 'table-body-row',
-  trailer: 'trailer',
-  unknown: 'unknown',
-} as const;
+export const ANNOTATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> =
+  {
+    abbreviation: 'abbreviation',
+    audio: 'audio',
+    blockquote: 'blockquote',
+    code: 'code',
+    deprecated: 'deprecated-internal-link',
+    endNoteLink: 'end-note-link',
+    glossaryInstance: 'glossary-instance',
+    hasAbbreviation: 'has-abbreviation',
+    heading: 'heading',
+    image: 'image',
+    indent: 'indent',
+    inlineTitle: 'inline-title',
+    internalLink: 'internal-link',
+    leadingSpace: 'leading-space',
+    line: 'line',
+    lineGroup: 'line-group',
+    link: 'link',
+    list: 'list',
+    listItem: 'list-item',
+    mantra: 'mantra',
+    paragraph: 'paragraph',
+    quote: 'quote',
+    quoted: 'quoted',
+    reference: 'reference',
+    span: 'span',
+    table: 'table',
+    tableBodyData: 'table-body-data',
+    tableBodyHeader: 'table-body-header',
+    tableBodyRow: 'table-body-row',
+    trailer: 'trailer',
+    unknown: 'unknown',
+  } as const;
 
 export type AnnotationDTOContentKey =
   | 'endnote_xmlId'
@@ -183,7 +187,7 @@ export type AnnotationsDTO = AnnotationDTO[];
 export const annotationTypeToDTO = (
   type: AnnotationType,
 ): AnnotationDTOType => {
-  return ANNOATION_TYPE_TO_DTO[type] || 'unknown';
+  return ANNOTATION_TYPE_TO_DTO[type] || 'unknown';
 };
 
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [

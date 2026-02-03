@@ -1,0 +1,38 @@
+query GetWorkByUuid($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+  }
+}
+
+query GetWorkByToh($toh: String!) {
+  work(toh: $toh) {
+    ...WorkFields
+  }
+}
+
+query GetWorkWithTitles($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+    titles {
+      ...TitleFields
+    }
+  }
+}
+
+query GetWorkWithImprint($uuid: ID!, $toh: String) {
+  work(uuid: $uuid, toh: $toh) {
+    ...WorkFields
+    imprint {
+      ...ImprintFields
+    }
+  }
+}
+
+query GetWorkWithToc($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+    toc {
+      ...TocFields
+    }
+  }
+}

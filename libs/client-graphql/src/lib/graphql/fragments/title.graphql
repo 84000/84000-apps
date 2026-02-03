@@ -1,0 +1,6 @@
+fragment TitleFields on Title {
+  uuid
+  content
+  language
+  type
+}

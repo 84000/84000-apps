@@ -54,9 +54,16 @@ Filter options for passages
 """
 input PassageFilter {
   """
-  Filter by passage type (e.g., translation, introduction, colophon)
+  Filter by passage type (e.g., translation, introduction, colophon).
+  Can be a single type or use LIKE pattern with %.
   """
   type: String
+
+  """
+  Filter by multiple passage types (OR logic).
+  Use this instead of type when filtering by multiple types.
+  """
+  types: [String!]
 }
 
 """

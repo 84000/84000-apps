@@ -9,7 +9,7 @@ export const passagesResolver = async (
   args: {
     cursor?: string;
     limit?: number;
-    filter?: { type?: string };
+    filter?: { type?: string; types?: string[] };
     direction?: PaginationDirection;
   },
   ctx: GraphQLContext,
@@ -17,7 +17,8 @@ export const passagesResolver = async (
   // Default and clamp limit
   const limit = Math.min(Math.max(args.limit ?? 20, 1), 100);
 
-  // Filter type is passed through directly (no enum conversion needed)
+  // Filter type - prefer types array over single type
+  const passageTypes = args.filter?.types;
   const passageType = args.filter?.type;
 
   // Default direction is FORWARD
@@ -25,7 +26,14 @@ export const passagesResolver = async (
 
   // Handle AROUND direction
   if (direction === 'AROUND') {
-    return passagesAroundResolver(parent, args, ctx, limit, passageType);
+    return passagesAroundResolver(
+      parent,
+      args,
+      ctx,
+      limit,
+      passageType,
+      passageTypes,
+    );
   }
 
   // Handle FORWARD and BACKWARD directions
@@ -62,9 +70,14 @@ export const passagesResolver = async (
     }
   }
 
-  // Apply type filter
-  if (passageType) {
-    query = query.eq('type', passageType);
+  // Apply type filter - prefer types array for multiple types
+  if (passageTypes && passageTypes.length > 0) {
+    query = query.in('type', passageTypes);
+  } else if (passageType) {
+    // Use Postgres regex match (~) for patterns and append .* to match header
+    // variants (e.g., introduction and introductionHeader)
+    const pattern = `${passageType}.*`;
+    query = query.filter('type', 'match', pattern);
   }
 
   const { data, error: passagesError } = await query;
@@ -138,11 +151,12 @@ const passagesAroundResolver = async (
   args: {
     cursor?: string;
     limit?: number;
-    filter?: { type?: string };
+    filter?: { type?: string; types?: string[] };
   },
   ctx: GraphQLContext,
   limit: number,
   passageType?: string,
+  passageTypes?: string[],
 ) => {
   // AROUND requires a cursor
   if (!args.cursor) {
@@ -201,10 +215,15 @@ const passagesAroundResolver = async (
     .order('sort', { ascending: true })
     .limit(limitAfter + 1); // +1 to check hasMoreAfter
 
-  // Apply type filter if provided
-  if (passageType) {
-    beforeQuery = beforeQuery.eq('type', passageType);
-    afterQuery = afterQuery.eq('type', passageType);
+  // Apply type filter - prefer types array for multiple types
+  if (passageTypes && passageTypes.length > 0) {
+    beforeQuery = beforeQuery.in('type', passageTypes);
+    afterQuery = afterQuery.in('type', passageTypes);
+  } else if (passageType) {
+    // Use Postgres regex match (~) for patterns
+    const pattern = `${passageType}.*`;
+    beforeQuery = beforeQuery.filter('type', '~', pattern);
+    afterQuery = afterQuery.filter('type', '~', pattern);
   }
 
   // Execute both queries in parallel

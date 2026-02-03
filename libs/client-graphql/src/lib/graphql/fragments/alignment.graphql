@@ -1,0 +1,7 @@
+fragment AlignmentFields on Alignment {
+  folioUuid
+  toh
+  tibetan
+  folioNumber
+  volumeNumber
+}

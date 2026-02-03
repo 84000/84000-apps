@@ -1,0 +1,27 @@
+fragment PassageFields on Passage {
+  uuid
+  content
+  label
+  sort
+  type
+  xmlId
+}
+
+fragment PassageWithAnnotations on Passage {
+  ...PassageFields
+  annotations {
+    ...AnnotationFields
+  }
+  alignments {
+    ...AlignmentFields
+  }
+}
+
+fragment PassageWithJson on Passage {
+  uuid
+  label
+  sort
+  type
+  xmlId
+  json
+}

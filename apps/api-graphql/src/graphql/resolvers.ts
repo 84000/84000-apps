@@ -10,6 +10,7 @@ import {
   passageAlignmentsResolver,
 } from './schema/passage/passage.field-resolver';
 import { tocResolver } from './schema/toc/toc.resolver';
+import { titlesResolver } from './schema/work/title.resolver';
 
 export const resolvers = {
   JSON: JSONResolver,
@@ -28,6 +29,7 @@ export const resolvers = {
     imprint: imprintResolver,
     toc: tocResolver,
     passages: passagesResolver,
+    titles: titlesResolver,
   },
 
   Passage: {

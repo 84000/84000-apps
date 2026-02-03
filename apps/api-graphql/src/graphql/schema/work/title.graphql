@@ -1,0 +1,31 @@
+"""
+A title of a work in a specific language
+"""
+type Title {
+  """
+  Unique identifier for the title
+  """
+  uuid: ID!
+
+  """
+  The title text content
+  """
+  content: String!
+
+  """
+  Language code (e.g., "en", "bo", "Sa-Ltn", "Bo-Ltn")
+  """
+  language: String!
+
+  """
+  Type of title (e.g., "mainTitle", "longTitle", "otherTitle", "toh", "shortcode")
+  """
+  type: String!
+}
+
+extend type Work {
+  """
+  All titles associated with this work, in various languages and types
+  """
+  titles: [Title!]!
+}

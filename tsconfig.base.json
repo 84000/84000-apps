@@ -35,7 +35,9 @@
       "@lib-search": ["libs/lib-search/src/index.ts"],
       "@lib-user": ["libs/lib-user/src/index.ts"],
       "@lib-user/ssr": ["libs/lib-user/src/ssr.ts"],
-      "@lib-utils": ["libs/lib-utils/src/index.ts"]
+      "@lib-utils": ["libs/lib-utils/src/index.ts"],
+      "@client-graphql": ["libs/client-graphql/src/index.ts"],
+      "@client-graphql/ssr": ["libs/client-graphql/src/ssr.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
