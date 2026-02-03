@@ -183,8 +183,16 @@ export type PassageConnection = {
 
 /** Filter options for passages */
 export type PassageFilter = {
-  /** Filter by passage type (e.g., translation, introduction, colophon) */
+  /**
+   * Filter by passage type (e.g., translation, introduction, colophon).
+   * Can be a single type or use LIKE pattern with %.
+   */
   type?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Filter by multiple passage types (OR logic).
+   * Use this instead of type when filtering by multiple types.
+   */
+  types?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 /** Root Query type - extend this in other schema files */

@@ -1,6 +1,10 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { BodyItemType, PaginationDirection, PassagesPage } from '@data-access';
+import type {
+  BodyItemType,
+  PaginationDirection,
+  PassagesPage,
+} from '@data-access';
 import { passagesPageFromGraphQL } from '../mappers';
 
 const GET_PASSAGES = gql`
@@ -117,7 +121,7 @@ export async function getTranslationPassages({
   uuid,
   type,
   cursor,
-  maxPassages,
+  maxPassages = 100,
   maxCharacters: _maxCharacters,
   direction,
 }: {

@@ -1,3 +1,4 @@
+import 'server-only';
 import { GraphQLClient } from 'graphql-request';
 import { cookies } from 'next/headers';
 import { getGraphQLUrl } from './config';
