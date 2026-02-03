@@ -1,9 +1,10 @@
-import type {
-  Annotation,
-  Annotations,
-  AnnotationType,
-  HeadingClass,
-  ExtendedTranslationLanguage,
+import {
+  type Annotation,
+  type Annotations,
+  type AnnotationType,
+  type HeadingClass,
+  type ExtendedTranslationLanguage,
+  ANNOTATION_TYPE_DTO_TO_TYPE,
 } from '@data-access';
 
 /**
@@ -21,37 +22,7 @@ export type GraphQLAnnotation = {
  * Map from DTO-style type names (kebab-case) to internal type names (camelCase)
  */
 const typeMap: Record<string, AnnotationType> = {
-  abbreviation: 'abbreviation',
-  audio: 'audio',
-  blockquote: 'blockquote',
-  code: 'code',
-  'deprecated-internal-link': 'deprecated',
-  'end-note-link': 'endNoteLink',
-  'glossary-instance': 'glossaryInstance',
-  'has-abbreviation': 'hasAbbreviation',
-  heading: 'heading',
-  image: 'image',
-  indent: 'indent',
-  'inline-title': 'inlineTitle',
-  'internal-link': 'internalLink',
-  'leading-space': 'leadingSpace',
-  line: 'line',
-  'line-group': 'lineGroup',
-  link: 'link',
-  list: 'list',
-  'list-item': 'listItem',
-  mantra: 'mantra',
-  paragraph: 'paragraph',
-  quote: 'quote',
-  quoted: 'quoted',
-  reference: 'reference',
-  span: 'span',
-  table: 'table',
-  'table-body-data': 'tableBodyData',
-  'table-body-header': 'tableBodyHeader',
-  'table-body-row': 'tableBodyRow',
-  trailer: 'trailer',
-  unknown: 'unknown',
+  ...ANNOTATION_TYPE_DTO_TO_TYPE,
   // Also handle camelCase types (from GraphQL)
   endNoteLink: 'endNoteLink',
   glossaryInstance: 'glossaryInstance',
@@ -217,10 +188,13 @@ export function annotationsFromGraphQL(
   passageUuid: string,
 ): Annotations {
   // Filter out ignored annotation types
-  const ignoredTypes = ['deprecated-internal-link', 'quoted', 'reference', 'unknown'];
-  const filtered = gqlAnnotations.filter(
-    (a) => !ignoredTypes.includes(a.type),
-  );
+  const ignoredTypes = [
+    'deprecated-internal-link',
+    'quoted',
+    'reference',
+    'unknown',
+  ];
+  const filtered = gqlAnnotations.filter((a) => !ignoredTypes.includes(a.type));
 
   return filtered.map((a) => annotationFromGraphQL(a, passageUuid));
 }
