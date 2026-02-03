@@ -117,14 +117,14 @@ export const getTranslationMetadataByUuid = async ({
   client: DataClient;
   uuid: string;
 }) => {
-  const { data } = await client
+  const { data, error } = await client
     .from('works')
     .select(
       `
       uuid,
       title,
       description,
-      toh,
+      tohs:work_toh!inner(toh:toh_clean),
       publicationDate,
       publicationVersion,
       pages:source_pages,
@@ -134,6 +134,12 @@ export const getTranslationMetadataByUuid = async ({
     )
     .eq('uuid', uuid)
     .single();
+
+  if (error) {
+    throw new Error(
+      `Error fetching translation metadata by UUID: ${error.message}`,
+    );
+  }
 
   return workFromDTO(data as WorkDTO);
 };
@@ -145,7 +151,7 @@ export const getTranslationMetadataByToh = async ({
   client: DataClient;
   toh: string;
 }) => {
-  const { data } = await client
+  const { data, error } = await client
     .from('work_toh')
     .select(
       `
@@ -154,7 +160,7 @@ export const getTranslationMetadataByToh = async ({
         uuid,
         title,
         description,
-        toh,
+        tohs:work_toh!inner(toh:toh_clean),
         publicationDate,
         publicationVersion,
         pages:source_pages,
@@ -168,7 +174,8 @@ export const getTranslationMetadataByToh = async ({
 
   // Extract the work data from the joined result
   const workData = data?.works as WorkDTO | undefined;
-  if (!workData) {
+  if (error || !workData) {
+    console.error('Error fetching translation metadata by TOH:', error);
     return null;
   }
 
@@ -187,7 +194,7 @@ export const getTranslationsMetadata = async ({
       uuid,
       title,
       description,
-      toh,
+      tohs:work_toh!inner(toh:toh_clean),
       publicationDate,
       publicationVersion,
       pages:source_pages,
