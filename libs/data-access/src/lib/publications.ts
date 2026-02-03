@@ -136,8 +136,9 @@ export const getTranslationMetadataByUuid = async ({
     .single();
 
   if (error) {
-    console.error('Error fetching translation metadata by UUID:', error);
-    return null;
+    throw new Error(
+      `Error fetching translation metadata by UUID: ${error.message}`,
+    );
   }
 
   return workFromDTO(data as WorkDTO);
