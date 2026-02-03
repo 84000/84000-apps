@@ -9,11 +9,13 @@ export async function GET(
   const { slug: entity } = await params;
   const query = request.nextUrl.searchParams;
   const xmlId = query.get('xmlId') || undefined;
+  query.delete('xmlId');
   const path = await lookupEntity({
     type: 'translation',
     entity,
     prefix: '/publications/reader',
     xmlId,
+    searchParams: query,
   });
 
   if (!path) {

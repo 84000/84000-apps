@@ -14,17 +14,20 @@ export const lookupEntity = async ({
   entity,
   prefix = '',
   xmlId,
+  searchParams,
 }: {
   type: string;
   entity: string;
   prefix?: string;
   xmlId?: string;
+  searchParams?: URLSearchParams;
 }) => {
   if (!ALLOWED_TYPES.includes(type)) {
     return;
   }
   const client = await createServerClient();
   let path = '';
+  const query = searchParams || new URLSearchParams();
 
   switch (type) {
     case 'bibliography':
@@ -34,7 +37,8 @@ export const lookupEntity = async ({
           return;
         }
 
-        path = `${prefix}/${item.workUuid}?right=open%3Abibliography%3A${item.uuid}`;
+        query.set('right', `open:bibliography:${item.uuid}`);
+        path = `${prefix}/${item.workUuid}?${query.toString()}`;
       }
       break;
     case 'passage':
@@ -44,20 +48,34 @@ export const lookupEntity = async ({
           return;
         }
 
-        const { panel, tab } = panelAndTabForContentType(item.type);
-        path = `${prefix}/${item.workUuid}?${item.toh ? `toh=${item.toh}&` : ''}${panel}=open%3A${tab}%3A${item.uuid}`;
+        const queryTab = query.get('tab') || undefined;
+        const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
+
+        query.delete('tab');
+        query.set(panel, `open:${tab}:${item.uuid}`);
+        if (item.toh) {
+          query.set('toh', item.toh);
+        }
+
+        path = `${prefix}/${item.workUuid}?${query.toString()}`;
       }
       break;
     case 'translation':
       {
         const toh = entity.replace('.html', '');
+        query.set('toh', toh);
+
         if (xmlId) {
           const item = await getPassageUuidByXmlId({ client, xmlId });
-          const { panel, tab } = panelAndTabForContentType(item.type);
+          const queryTab = query.get('tab') || undefined;
+          const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
 
           if (item?.uuid && item?.workUuid) {
             const { uuid, workUuid } = item;
-            path = `${prefix}/${workUuid}?toh=${toh}&${panel}=open%3A${tab}%3A${uuid}`;
+            query.delete('tab');
+            query.set(panel, `open:${tab}:${uuid}`);
+
+            path = `${prefix}/${workUuid}?${query.toString()}`;
             return path;
           }
         }
@@ -67,7 +85,7 @@ export const lookupEntity = async ({
           return;
         }
 
-        path = `${prefix}/${item.uuid}?toh=${toh}`;
+        path = `${prefix}/${item.uuid}?${query.toString()}`;
       }
       break;
     case 'work':
@@ -80,7 +98,7 @@ export const lookupEntity = async ({
           return;
         }
 
-        path = `${prefix}/${item.uuid}`;
+        path = `${prefix}/${item.uuid}?${query.toString()}`;
       }
       break;
     default: {
