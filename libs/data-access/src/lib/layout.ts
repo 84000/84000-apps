@@ -2,14 +2,20 @@ import {
   PANEL_FOR_CONTENT_SECTION,
   PanelContentType,
   TAB_FOR_CONTENT_SECTION,
+  VARIANT_TABS_FOR_TAB,
 } from './types';
 
 export const panelAndTabForContentType = (
   contentType: PanelContentType,
+  desiredTab?: string,
 ): { panel: string; tab: string } => {
   const section = contentType.replace('Header', '');
   const panel = PANEL_FOR_CONTENT_SECTION[section] || 'main';
-  const tab = TAB_FOR_CONTENT_SECTION[section] || 'translation';
+  const defaultTab = TAB_FOR_CONTENT_SECTION[section] || 'translation';
+  const variantTabs = VARIANT_TABS_FOR_TAB[section] || [];
+  const tab =
+    desiredTab && variantTabs.includes(desiredTab) ? desiredTab : defaultTab;
+
   return { panel, tab };
 };
 
