@@ -1,0 +1,7 @@
+fragment AnnotationFields on Annotation {
+  uuid
+  type
+  start
+  end
+  metadata
+}

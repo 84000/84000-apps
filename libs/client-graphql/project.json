@@ -1,0 +1,8 @@
+{
+  "name": "client-graphql",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/client-graphql/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {}
+}

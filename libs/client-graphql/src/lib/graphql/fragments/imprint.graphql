@@ -1,0 +1,34 @@
+fragment LicenseFields on License {
+  name
+  link
+  description
+}
+
+fragment TitlesByLanguageFields on TitlesByLanguage {
+  tibetan
+  english
+  wylie
+  sanskrit
+}
+
+fragment ImprintFields on Imprint {
+  toh
+  section
+  version
+  restriction
+  publishYear
+  tibetanAuthors
+  isAuthorContested
+  sourceDescription
+  publisherStatement
+  tibetanTranslators
+  license {
+    ...LicenseFields
+  }
+  mainTitles {
+    ...TitlesByLanguageFields
+  }
+  longTitles {
+    ...TitlesByLanguageFields
+  }
+}

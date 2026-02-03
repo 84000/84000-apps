@@ -64,7 +64,7 @@ export const passagesResolver = async (
 
   // Apply type filter
   if (passageType) {
-    query = query.eq('type', passageType);
+    query = query.like('type', passageType);
   }
 
   const { data, error: passagesError } = await query;
@@ -203,8 +203,8 @@ const passagesAroundResolver = async (
 
   // Apply type filter if provided
   if (passageType) {
-    beforeQuery = beforeQuery.eq('type', passageType);
-    afterQuery = afterQuery.eq('type', passageType);
+    beforeQuery = beforeQuery.like('type', passageType);
+    afterQuery = afterQuery.like('type', passageType);
   }
 
   // Execute both queries in parallel

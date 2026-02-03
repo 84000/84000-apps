@@ -1,0 +1,11 @@
+query GetAllWorks {
+  works {
+    ...WorkFields
+  }
+}
+
+query GetWorkUuids {
+  works {
+    uuid
+  }
+}

@@ -1,0 +1,40 @@
+fragment TocEntryFields on TocEntry {
+  uuid
+  content
+  label
+  sort
+  level
+  section
+}
+
+# Recursive fragment for TOC entries up to 6 levels deep
+fragment TocEntryNested on TocEntry {
+  ...TocEntryFields
+  children {
+    ...TocEntryFields
+    children {
+      ...TocEntryFields
+      children {
+        ...TocEntryFields
+        children {
+          ...TocEntryFields
+          children {
+            ...TocEntryFields
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment TocFields on Toc {
+  frontMatter {
+    ...TocEntryNested
+  }
+  body {
+    ...TocEntryNested
+  }
+  backMatter {
+    ...TocEntryNested
+  }
+}

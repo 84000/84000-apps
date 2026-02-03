@@ -1,0 +1,10 @@
+fragment WorkFields on Work {
+  uuid
+  title
+  toh
+  publicationDate
+  publicationVersion
+  pages
+  restriction
+  section
+}
