@@ -17,7 +17,7 @@ export type WorkDTO = {
   uuid: string;
   title: string;
   description?: string;
-  toh: string;
+  tohs: { toh: string }[];
   publicationDate: string;
   publicationVersion: string;
   pages: number;
@@ -30,7 +30,7 @@ export function workFromDTO(dto: WorkDTO): Work {
     uuid: dto.uuid,
     title: dto.title,
     description: dto.description,
-    toh: dto.toh?.split(',') as TohokuCatalogEntry[],
+    toh: dto.tohs.map((t) => t.toh) as TohokuCatalogEntry[],
     publicationDate: new Date(dto.publicationDate),
     publicationVersion: dto.publicationVersion as SemVer,
     pages: dto.pages,
