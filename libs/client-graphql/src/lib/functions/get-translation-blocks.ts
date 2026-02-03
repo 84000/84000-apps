@@ -1,10 +1,11 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { BodyItemType, PaginationDirection } from '@data-access';
 import type {
+  BodyItemType,
+  PaginationDirection,
   TranslationEditorContent,
   TranslationEditorContentItem,
-} from '@lib-editing';
+} from '@data-access';
 
 const GET_PASSAGES_WITH_JSON = gql`
   fragment PassageWithJson on Passage {

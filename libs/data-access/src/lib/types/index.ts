@@ -4,6 +4,7 @@ export * from './bibliography';
 export * from './canon';
 export * from './client';
 export * from './contributor';
+export * from './editor-content';
 export * from './toh';
 export * from './folio';
 export * from './glossary';

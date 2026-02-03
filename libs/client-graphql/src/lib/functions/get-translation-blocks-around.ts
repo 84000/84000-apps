@@ -1,7 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { BodyItemType } from '@data-access';
-import type { TranslationEditorContentItem } from '@lib-editing';
+import type { BodyItemType, TranslationEditorContentItem } from '@data-access';
 import type { TranslationBlocksPage } from './get-translation-blocks';
 
 const GET_PASSAGES_AROUND_WITH_JSON = gql`
