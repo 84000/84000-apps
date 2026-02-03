@@ -26,7 +26,14 @@ export const passagesResolver = async (
 
   // Handle AROUND direction
   if (direction === 'AROUND') {
-    return passagesAroundResolver(parent, args, ctx, limit, passageType, passageTypes);
+    return passagesAroundResolver(
+      parent,
+      args,
+      ctx,
+      limit,
+      passageType,
+      passageTypes,
+    );
   }
 
   // Handle FORWARD and BACKWARD directions
@@ -67,12 +74,10 @@ export const passagesResolver = async (
   if (passageTypes && passageTypes.length > 0) {
     query = query.in('type', passageTypes);
   } else if (passageType) {
-    // Use SIMILAR TO for patterns with | (OR) syntax, append % for wildcard
-    // This matches both base types and header variants (e.g., introduction and introductionHeader)
-    const pattern = passageType.includes('|')
-      ? `${passageType}%`
-      : passageType;
-    query = query.filter('type', 'similar', pattern);
+    // Use Postgres regex match (~) for patterns and append .* to match header
+    // variants (e.g., introduction and introductionHeader)
+    const pattern = `${passageType}.*`;
+    query = query.filter('type', 'match', pattern);
   }
 
   const { data, error: passagesError } = await query;
@@ -215,12 +220,10 @@ const passagesAroundResolver = async (
     beforeQuery = beforeQuery.in('type', passageTypes);
     afterQuery = afterQuery.in('type', passageTypes);
   } else if (passageType) {
-    // Use SIMILAR TO for patterns with | (OR) syntax, append % for wildcard
-    const pattern = passageType.includes('|')
-      ? `${passageType}%`
-      : passageType;
-    beforeQuery = beforeQuery.filter('type', 'similar', pattern);
-    afterQuery = afterQuery.filter('type', 'similar', pattern);
+    // Use Postgres regex match (~) for patterns
+    const pattern = `${passageType}.*`;
+    beforeQuery = beforeQuery.filter('type', '~', pattern);
+    afterQuery = afterQuery.filter('type', '~', pattern);
   }
 
   // Execute both queries in parallel
