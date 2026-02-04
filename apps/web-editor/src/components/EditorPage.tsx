@@ -46,14 +46,20 @@ export const EditorPage = ({
   }, [slug, format]);
 
   if (!content) {
-    return <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>;
+    return (
+      <div className="w-full overflow-auto px-8 max-w-readable mx-auto">
+        <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>
+      </div>
+    );
   }
 
-  switch (editorType) {
-    case 'translation':
-      return <SandboxTranslationEditor content={content} />;
-
-    default:
-      return <BlockEditor content={content} />;
-  }
+  return (
+    <div className="w-full overflow-auto px-8 max-w-readable mx-auto">
+      {editorType === 'translation' ? (
+        <SandboxTranslationEditor content={content} />
+      ) : (
+        <BlockEditor content={content} />
+      )}
+    </div>
+  );
 };

@@ -7,14 +7,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   H4,
-  SaveButton,
 } from '@design-system';
 import { SLUG_PATHS } from './constants';
 import { useCallback, useEffect, useState } from 'react';
 import { useSandbox } from './SandboxProvider';
 import { Format, Slug } from '@lib-editing/fixtures/types';
 import { useRouter } from 'next/navigation';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, SplitIcon } from 'lucide-react';
 
 export const SandboxHeader = () => {
   const dropdownItems = Object.keys(SLUG_PATHS)
@@ -26,7 +25,7 @@ export const SandboxHeader = () => {
   const [selectedItem, setSelectedItem] = useState<string>();
   const [didSelect, setDidSelect] = useState(false);
 
-  const { slug, format, setFormat, setSlug, editor } = useSandbox();
+  const { slug, format, setFormat, setSlug, editor, setContent } = useSandbox();
   const router = useRouter();
 
   useEffect(() => {
@@ -67,12 +66,18 @@ export const SandboxHeader = () => {
           Editor Sandbox
         </H4>
         <div className="grow" />
-        <SaveButton
-          label="Compare"
-          onClick={async () => {
-            console.log(JSON.stringify(editor?.getJSON(), null, 2));
+        <Button
+          variant="outline"
+          size="sm"
+          className="my-auto flex gap-2"
+          onClick={() => {
+            if (editor) setContent(editor.getJSON());
+            router.push('/json-compare');
           }}
-        />
+        >
+          <SplitIcon className="size-4" />
+          <span>JSON Compare</span>
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="my-auto capitalize flex gap-2">
