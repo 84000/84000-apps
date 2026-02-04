@@ -5,6 +5,16 @@ import depthLimit from 'graphql-depth-limit';
 
 import { typeDefs, resolvers, createContext } from '../../../graphql';
 
+function getCorsHeaders(req: NextRequest): Record<string, string> {
+  const origin = req.headers.get('origin') || '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
+
 const server = new ApolloServer({
   typeDefs,
   resolvers,
@@ -18,6 +28,8 @@ const serverStartPromise = server.start();
 
 async function handler(req: NextRequest) {
   await serverStartPromise;
+
+  const corsHeaders = getCorsHeaders(req);
 
   const body = req.method === 'POST' ? await req.json() : {};
 
@@ -50,7 +62,18 @@ async function handler(req: NextRequest) {
     response.headers.set(key, value);
   }
 
+  for (const [key, value] of Object.entries(corsHeaders)) {
+    response.headers.set(key, value);
+  }
+
   return response;
 }
 
-export { handler as GET, handler as POST };
+function optionsHandler(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(req),
+  });
+}
+
+export { handler as GET, handler as POST, optionsHandler as OPTIONS };
