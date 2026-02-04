@@ -89,7 +89,7 @@ const JsonCompareEditor = ({
 
   return (
     <div className="flex flex-col flex-1 h-full overflow-auto">
-      <div className="mx-auto max-w-readable h-full">
+      <div className="mx-auto w-full max-w-readable h-full">
         <EditorContent className="flex-1 px-8" editor={editor} />
         <TranslationBubbleMenu editor={editor} />
       </div>
