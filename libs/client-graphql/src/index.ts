@@ -12,6 +12,8 @@ export {
   getTranslationMetadataByToh,
   getTranslationsMetadata,
   getTranslationUuids,
+  getTranslationToc,
+  getTranslationImprint,
   type TranslationBlocksPage,
 } from './lib/functions';
 
@@ -29,6 +31,9 @@ export type {
   Title,
   Titles,
   TitleType,
+  Toc,
+  TocEntry,
+  Imprint,
 } from '@data-access';
 
 // Re-export constants for passage filters

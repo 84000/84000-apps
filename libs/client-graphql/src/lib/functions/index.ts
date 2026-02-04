@@ -12,3 +12,5 @@ export {
 } from './get-translation-metadata';
 export { getTranslationsMetadata } from './get-translations-metadata';
 export { getTranslationUuids } from './get-translation-uuids';
+export { getTranslationToc } from './get-translation-toc';
+export { getTranslationImprint } from './get-translation-imprint';

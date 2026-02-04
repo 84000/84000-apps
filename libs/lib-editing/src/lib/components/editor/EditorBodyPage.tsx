@@ -1,13 +1,13 @@
 'use client';
 
 import {
+  createGraphQLClient,
   BODY_MATTER_FILTER,
-  createBrowserClient,
   FRONT_MATTER_FILTER,
   getTranslationPassages,
   getTranslationTitles,
-  Title,
-} from '@data-access';
+} from '@client-graphql';
+import type { Title } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { blocksFromTranslationBody } from '../../block';
 import { useEditorState } from './EditorProvider';
@@ -27,7 +27,7 @@ export const EditorBodyPage = () => {
 
   useEffect(() => {
     (async () => {
-      const client = createBrowserClient();
+      const client = createGraphQLClient();
       const { passages: frontPassages } = await getTranslationPassages({
         client,
         uuid: work.uuid,

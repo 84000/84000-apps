@@ -1,13 +1,18 @@
 'use client';
 
 import {
-  BibliographyEntryItem,
+  createGraphQLClient,
+  getTranslationImprint,
+  getTranslationMetadataByUuid,
+} from '@client-graphql';
+import {
   createBrowserClient,
   getBibliographyEntry,
   getGlossaryInstance,
   getPassage,
-  getTranslationImprint,
-  getTranslationMetadataByUuid,
+} from '@data-access';
+import type {
+  BibliographyEntryItem,
   GlossaryTermInstance,
   Imprint,
   Passage,
@@ -128,7 +133,8 @@ export const NavigationProvider = ({
   uuid: string;
   children: ReactNode;
 }) => {
-  const client = createBrowserClient();
+  const graphqlClient = createGraphQLClient();
+  const supabaseClient = createBrowserClient();
   const query = useSearchParams();
   const isMobile = useIsMobile();
   const [panels, setPanels] = useState<PanelsState>(
@@ -156,7 +162,7 @@ export const NavigationProvider = ({
         return bibliographyCache.current[uuid];
       }
 
-      const entry = await getBibliographyEntry({ client, uuid });
+      const entry = await getBibliographyEntry({ client: supabaseClient, uuid });
       if (!entry) {
         return undefined;
       }
@@ -164,7 +170,7 @@ export const NavigationProvider = ({
       bibliographyCache.current[uuid] = entry;
       return entry;
     },
-    [client],
+    [supabaseClient],
   );
 
   const fetchEndNote = useCallback(
@@ -177,7 +183,7 @@ export const NavigationProvider = ({
         return endnoteCache.current[uuid];
       }
 
-      const endnote = await getPassage({ client, uuid });
+      const endnote = await getPassage({ client: supabaseClient, uuid });
       if (!endnote) {
         return undefined;
       }
@@ -185,7 +191,7 @@ export const NavigationProvider = ({
       endnoteCache.current[uuid] = endnote;
       return endnote;
     },
-    [client],
+    [supabaseClient],
   );
 
   const fetchGlossaryTerm = useCallback(
@@ -198,7 +204,7 @@ export const NavigationProvider = ({
         return glossaryCache.current[uuid];
       }
 
-      const term = await getGlossaryInstance({ client, uuid });
+      const term = await getGlossaryInstance({ client: supabaseClient, uuid });
       if (!term) {
         return undefined;
       }
@@ -206,7 +212,7 @@ export const NavigationProvider = ({
       glossaryCache.current[uuid] = term;
       return term;
     },
-    [client],
+    [supabaseClient],
   );
 
   const fetchPassage = useCallback(
@@ -219,7 +225,7 @@ export const NavigationProvider = ({
         return passageCache.current[uuid];
       }
 
-      const passage = await getPassage({ client, uuid });
+      const passage = await getPassage({ client: supabaseClient, uuid });
       if (!passage) {
         return undefined;
       }
@@ -227,7 +233,7 @@ export const NavigationProvider = ({
       passageCache.current[uuid] = passage;
       return passage;
     },
-    [client],
+    [supabaseClient],
   );
 
   const fetchWork = useCallback(
@@ -240,7 +246,7 @@ export const NavigationProvider = ({
         return workCache.current[uuid];
       }
 
-      const work = await getTranslationMetadataByUuid({ client, uuid });
+      const work = await getTranslationMetadataByUuid({ client: graphqlClient, uuid });
       if (!work) {
         return undefined;
       }
@@ -248,7 +254,7 @@ export const NavigationProvider = ({
       workCache.current[uuid] = work;
       return work;
     },
-    [client],
+    [graphqlClient],
   );
 
   const updatePanel = useCallback(
@@ -317,10 +323,10 @@ export const NavigationProvider = ({
     }
 
     (async () => {
-      const imprint = await getTranslationImprint({ client, uuid, toh });
+      const imprint = await getTranslationImprint({ client: graphqlClient, uuid, toh });
       setImprint(imprint);
     })();
-  }, [uuid, toh, client]);
+  }, [uuid, toh, graphqlClient]);
 
   useEffect(() => {
     if (isPanelTransitioning) {

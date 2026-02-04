@@ -1,14 +1,16 @@
 'use client';
 
 import {
-  createBrowserClient,
+  createGraphQLClient,
   BACK_MATTER_FILTER,
   getTranslationPassages,
+} from '@client-graphql';
+import {
+  createBrowserClient,
   getGlossaryInstances,
   getBibliographyEntries,
-  GlossaryTermInstances,
-  BibliographyEntries,
 } from '@data-access';
+import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { useEditorState } from './EditorProvider';
@@ -29,9 +31,10 @@ export const EditorBackMatterPage = () => {
   useEffect(() => {
     (async () => {
       const { uuid } = work;
-      const client = createBrowserClient();
+      const graphqlClient = createGraphQLClient();
+      const supabaseClient = createBrowserClient();
       const { passages } = await getTranslationPassages({
-        client,
+        client: graphqlClient,
         uuid,
         type: BACK_MATTER_FILTER,
       });
@@ -48,13 +51,13 @@ export const EditorBackMatterPage = () => {
 
       const withAttestations = isStaticFeatureEnabled('glossary-attestations');
       const glossary = await getGlossaryInstances({
-        client,
+        client: supabaseClient,
         uuid,
         withAttestations,
       });
       setGlossary(glossary);
 
-      const bibliography = await getBibliographyEntries({ client, uuid });
+      const bibliography = await getBibliographyEntries({ client: supabaseClient, uuid });
       setBibliography(bibliography);
     })();
   }, [work]);
