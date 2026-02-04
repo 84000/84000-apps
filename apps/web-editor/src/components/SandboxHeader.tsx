@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSandbox } from './SandboxProvider';
 import { Format, Slug } from '@lib-editing/fixtures/types';
 import { useRouter } from 'next/navigation';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, SplitIcon } from 'lucide-react';
 
 export const SandboxHeader = () => {
   const dropdownItems = Object.keys(SLUG_PATHS)
@@ -67,6 +67,15 @@ export const SandboxHeader = () => {
           Editor Sandbox
         </H4>
         <div className="grow" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="my-auto flex gap-2"
+          onClick={() => router.push('/json-compare')}
+        >
+          <SplitIcon className="size-4" />
+          <span>JSON Compare</span>
+        </Button>
         <SaveButton
           label="Compare"
           onClick={async () => {

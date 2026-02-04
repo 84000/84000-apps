@@ -20,9 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <SandboxProvider>
           <SandboxHeader />
           <div className="h-20" />
-          <div className="w-full overflow-auto px-8 max-w-readable mx-auto">
-            {children}
-          </div>
+          {children}
           <div className="h-20" />
         </SandboxProvider>
       </body>
