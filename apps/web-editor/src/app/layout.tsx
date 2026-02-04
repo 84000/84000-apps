@@ -21,7 +21,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SandboxHeader />
           <div className="h-20" />
           {children}
-          <div className="h-20" />
         </SandboxProvider>
       </body>
     </html>

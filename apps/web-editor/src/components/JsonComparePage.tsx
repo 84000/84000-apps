@@ -28,6 +28,7 @@ import { linter } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { ViewUpdate } from '@codemirror/view';
 import { Doc, XmlFragment } from 'yjs';
+import { useSandbox } from './SandboxProvider';
 
 type EditorType = 'block' | 'translation';
 
@@ -87,9 +88,11 @@ const JsonCompareEditor = ({
   }, [editor, jsonData, isExternalUpdate]);
 
   return (
-    <div className="relative flex flex-col flex-1 h-full overflow-auto">
-      <EditorContent className="flex-1 px-8" editor={editor} />
-      <TranslationBubbleMenu editor={editor} />
+    <div className="flex flex-col flex-1 h-full overflow-auto">
+      <div className="mx-auto max-w-readable h-full">
+        <EditorContent className="flex-1 px-8" editor={editor} />
+        <TranslationBubbleMenu editor={editor} />
+      </div>
     </div>
   );
 };
@@ -150,6 +153,8 @@ const useCodeMirror = ({
 };
 
 export const JsonComparePage = () => {
+  const { content, setContent } = useSandbox();
+
   const [parsedJson, setParsedJson] = useState<object | null>(() => {
     try {
       return JSON.parse(STARTER_JSON);
@@ -188,6 +193,23 @@ export const JsonComparePage = () => {
     initialValue: STARTER_JSON,
     onChange: handleChange,
   });
+
+  // Sync content from sandbox context into CodeMirror once it arrives
+  useEffect(() => {
+    if (!content) return;
+
+    const view = viewRef.current;
+    if (view) {
+      const jsonStr = JSON.stringify(content, null, 2);
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: jsonStr },
+      });
+    }
+
+    setParsedJson(content as object);
+    if (content.type === 'doc') setEditorType('block');
+    setContent(undefined as never);
+  }, [content, viewRef, setContent]);
 
   const handleTiptapUpdate = useCallback(
     ({ editor }: { editor: Editor }) => {

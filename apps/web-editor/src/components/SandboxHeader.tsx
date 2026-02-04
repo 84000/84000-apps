@@ -7,7 +7,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   H4,
-  SaveButton,
 } from '@design-system';
 import { SLUG_PATHS } from './constants';
 import { useCallback, useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ export const SandboxHeader = () => {
   const [selectedItem, setSelectedItem] = useState<string>();
   const [didSelect, setDidSelect] = useState(false);
 
-  const { slug, format, setFormat, setSlug, editor } = useSandbox();
+  const { slug, format, setFormat, setSlug, editor, setContent } = useSandbox();
   const router = useRouter();
 
   useEffect(() => {
@@ -71,17 +70,14 @@ export const SandboxHeader = () => {
           variant="outline"
           size="sm"
           className="my-auto flex gap-2"
-          onClick={() => router.push('/json-compare')}
+          onClick={() => {
+            if (editor) setContent(editor.getJSON());
+            router.push('/json-compare');
+          }}
         >
           <SplitIcon className="size-4" />
           <span>JSON Compare</span>
         </Button>
-        <SaveButton
-          label="Compare"
-          onClick={async () => {
-            console.log(JSON.stringify(editor?.getJSON(), null, 2));
-          }}
-        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="my-auto capitalize flex gap-2">
