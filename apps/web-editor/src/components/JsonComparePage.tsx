@@ -1,8 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { EditorContent } from '@tiptap/react';
 import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Editor, EditorContent } from '@tiptap/react';
+import {
+  TranslationBubbleMenu,
   useBlockEditor,
   useDefaultExtensions,
   useTranslationExtensions,
@@ -12,12 +20,14 @@ import {
   ResizablePanel,
   ResizableHandle,
   Button,
+  Switch,
 } from '@design-system';
 import { EditorView, basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { linter } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { ViewUpdate } from '@codemirror/view';
+import { Doc, XmlFragment } from 'yjs';
 
 type EditorType = 'block' | 'translation';
 
@@ -35,12 +45,22 @@ const STARTER_JSON = JSON.stringify(
 const JsonCompareEditor = ({
   json: jsonData,
   editorType,
+  isEditable,
+  isExternalUpdate,
+  fragment,
+  onUpdate,
 }: {
   json: object | null;
   editorType: EditorType;
+  isEditable: boolean;
+  isExternalUpdate: MutableRefObject<boolean>;
+  fragment?: XmlFragment;
+  onUpdate?: (props: { editor: Editor }) => void;
 }) => {
   const { extensions: blockExtensions } = useDefaultExtensions();
-  const { extensions: translationExtensions } = useTranslationExtensions();
+  const { extensions: translationExtensions } = useTranslationExtensions({
+    fragment,
+  });
 
   const extensions =
     editorType === 'translation' ? translationExtensions : blockExtensions;
@@ -48,18 +68,28 @@ const JsonCompareEditor = ({
   const { editor } = useBlockEditor({
     extensions,
     content: { type: DOC_TYPES[editorType], content: [] },
-    isEditable: false,
+    isEditable,
+    onUpdate,
   });
 
   useEffect(() => {
-    if (editor && jsonData) {
-      editor.commands.setContent(jsonData);
+    if (editor) {
+      editor.setEditable(isEditable);
     }
-  }, [editor, jsonData]);
+  }, [editor, isEditable]);
+
+  useEffect(() => {
+    if (editor && jsonData) {
+      isExternalUpdate.current = true;
+      editor.commands.setContent(jsonData);
+      isExternalUpdate.current = false;
+    }
+  }, [editor, jsonData, isExternalUpdate]);
 
   return (
     <div className="relative flex flex-col flex-1 h-full overflow-auto">
       <EditorContent className="flex-1 px-8" editor={editor} />
+      <TranslationBubbleMenu editor={editor} />
     </div>
   );
 };
@@ -79,11 +109,13 @@ const useCodeMirror = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
-      if (update.docChanged) {
-        onChangeRef.current(update.state.doc.toString());
-      }
-    });
+    const updateListener = EditorView.updateListener.of(
+      (update: ViewUpdate) => {
+        if (update.docChanged) {
+          onChangeRef.current(update.state.doc.toString());
+        }
+      },
+    );
 
     const state = EditorState.create({
       doc: initialValue,
@@ -92,6 +124,7 @@ const useCodeMirror = ({
         json(),
         linter(jsonParseLinter()),
         updateListener,
+        EditorView.lineWrapping,
         EditorView.theme({
           '&': { height: '100%' },
           '.cm-scroller': { overflow: 'auto' },
@@ -111,7 +144,6 @@ const useCodeMirror = ({
       viewRef.current = null;
     };
     // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { containerRef, viewRef };
@@ -127,9 +159,16 @@ export const JsonComparePage = () => {
   });
   const [parseError, setParseError] = useState<string | null>(null);
   const [editorType, setEditorType] = useState<EditorType>('translation');
+  const ydoc = useMemo(() => new Doc(), []);
+  const fragment = useMemo(() => ydoc.getXmlFragment('json-compare'), [ydoc]);
+  const [isEditable, setIsEditable] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const isExternalUpdate = useRef(false);
+  const isTiptapSync = useRef(false);
 
   const handleChange = useCallback((value: string) => {
+    if (isTiptapSync.current) return;
+
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
@@ -140,9 +179,7 @@ export const JsonComparePage = () => {
         setParsedJson(parsed);
         setParseError(null);
       } catch (err) {
-        setParseError(
-          err instanceof Error ? err.message : 'Invalid JSON',
-        );
+        setParseError(err instanceof Error ? err.message : 'Invalid JSON');
       }
     }, 300);
   }, []);
@@ -151,6 +188,23 @@ export const JsonComparePage = () => {
     initialValue: STARTER_JSON,
     onChange: handleChange,
   });
+
+  const handleTiptapUpdate = useCallback(
+    ({ editor }: { editor: Editor }) => {
+      if (isExternalUpdate.current) return;
+
+      const view = viewRef.current;
+      if (!view) return;
+
+      const jsonStr = JSON.stringify(editor.getJSON(), null, 2);
+      isTiptapSync.current = true;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: jsonStr },
+      });
+      isTiptapSync.current = false;
+    },
+    [viewRef],
+  );
 
   const switchEditorType = useCallback(
     (newType: EditorType) => {
@@ -201,6 +255,19 @@ export const JsonComparePage = () => {
         >
           Block
         </Button>
+        <div className="ml-4 border-l border-border pl-4 flex items-center gap-2">
+          <label
+            htmlFor="editable-toggle"
+            className="text-sm text-muted-foreground"
+          >
+            Editable
+          </label>
+          <Switch
+            id="editable-toggle"
+            checked={isEditable}
+            onCheckedChange={setIsEditable}
+          />
+        </div>
       </div>
       <ResizablePanelGroup direction="horizontal" className="flex-1">
         <ResizablePanel defaultSize={50} minSize={20}>
@@ -213,19 +280,29 @@ export const JsonComparePage = () => {
             )}
           </div>
         </ResizablePanel>
-        <ResizableHandle withHandle className="border-l border-r border-border" />
+        <ResizableHandle
+          withHandle
+          className="border-l border-r border-border"
+        />
         <ResizablePanel defaultSize={50} minSize={20}>
           {editorType === 'block' ? (
             <JsonCompareEditor
               key="block"
               json={parsedJson}
               editorType="block"
+              isEditable={isEditable}
+              isExternalUpdate={isExternalUpdate}
+              onUpdate={handleTiptapUpdate}
             />
           ) : (
             <JsonCompareEditor
               key="translation"
               json={parsedJson}
               editorType="translation"
+              isEditable={isEditable}
+              isExternalUpdate={isExternalUpdate}
+              fragment={fragment}
+              onUpdate={handleTiptapUpdate}
             />
           )}
         </ResizablePanel>
