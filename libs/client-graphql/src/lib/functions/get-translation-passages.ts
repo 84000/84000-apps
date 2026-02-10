@@ -26,6 +26,7 @@ const GET_PASSAGES = gql`
 
   fragment PassageWithAnnotations on Passage {
     uuid
+    workUuid
     content
     label
     sort
@@ -74,6 +75,7 @@ type GetPassagesResponse = {
     passages: {
       nodes: Array<{
         uuid: string;
+        workUuid: string;
         content: string;
         label: string;
         sort: number;

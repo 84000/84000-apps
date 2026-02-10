@@ -8,6 +8,11 @@ type Passage {
   uuid: ID!
 
   """
+  UUID of the work this passage belongs to
+  """
+  workUuid: ID!
+
+  """
   Text content of the passage
   """
   content: String!
@@ -121,4 +126,16 @@ type PassageConnection {
   """
   hasMoreBefore: Boolean!
     @deprecated(reason: "Use pageInfo.hasMoreBefore instead")
+}
+
+extend type Query {
+  """
+  Fetch a single passage by UUID
+  """
+  passage(
+    """
+    The unique identifier of the passage
+    """
+    uuid: ID!
+  ): Passage
 }

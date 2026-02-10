@@ -10,6 +10,7 @@ type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 function buildPassageConnection(
   nodes: Array<{
     uuid: string;
+    workUuid: string;
     content: string;
     label: string;
     sort: number;
@@ -143,6 +144,7 @@ export const passagesResolver = async (
   // Return base passage data - annotations/alignments loaded by field resolvers
   const nodes = resultPassages.map((passage) => ({
     uuid: passage.uuid,
+    workUuid: parent.uuid,
     content: passage.content,
     label: passage.label,
     sort: passage.sort,
@@ -275,6 +277,7 @@ const passagesAroundResolver = async (
   // Return base passage data - annotations/alignments loaded by field resolvers
   const nodes = resultPassages.map((passage) => ({
     uuid: passage.uuid,
+    workUuid: parent.uuid,
     content: passage.content,
     label: passage.label,
     sort: passage.sort,

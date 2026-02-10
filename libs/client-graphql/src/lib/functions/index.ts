@@ -1,3 +1,4 @@
+export { getPassage } from './get-passage';
 export { getTranslationPassages } from './get-translation-passages';
 export { getTranslationPassagesAround } from './get-translation-passages-around';
 export {

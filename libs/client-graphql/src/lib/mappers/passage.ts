@@ -7,6 +7,7 @@ import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
  */
 export type GraphQLPassage = {
   uuid: string;
+  workUuid: string;
   content: string;
   label: string;
   sort: number;
@@ -39,7 +40,7 @@ export type GraphQLPassageConnection = {
  */
 export function passageFromGraphQL(
   gqlPassage: GraphQLPassage,
-  workUuid: string,
+  workUuid?: string,
 ): Passage {
   const annotations = gqlPassage.annotations
     ? annotationsFromGraphQL(gqlPassage.annotations, gqlPassage.uuid)
@@ -56,7 +57,7 @@ export function passageFromGraphQL(
     sort: gqlPassage.sort,
     type: gqlPassage.type as BodyItemType,
     xmlId: gqlPassage.xmlId ?? undefined,
-    workUuid,
+    workUuid: gqlPassage.workUuid ?? workUuid ?? '',
     annotations,
     alignments,
   };

@@ -1,5 +1,6 @@
 fragment PassageFields on Passage {
   uuid
+  workUuid
   content
   label
   sort
@@ -19,6 +20,7 @@ fragment PassageWithAnnotations on Passage {
 
 fragment PassageWithJson on Passage {
   uuid
+  workUuid
   label
   sort
   type

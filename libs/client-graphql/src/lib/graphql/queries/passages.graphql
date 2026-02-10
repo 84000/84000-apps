@@ -108,3 +108,9 @@ query GetPassagesAroundWithJson(
     }
   }
 }
+
+query GetPassage($uuid: ID!) {
+  passage(uuid: $uuid) {
+    ...PassageWithAnnotations
+  }
+}

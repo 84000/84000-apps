@@ -6,6 +6,7 @@ import type { TranslationBlocksPage } from './get-translation-blocks';
 const GET_PASSAGES_AROUND_WITH_JSON = gql`
   fragment PassageWithJson on Passage {
     uuid
+    workUuid
     label
     sort
     type
@@ -43,6 +44,7 @@ const GET_PASSAGES_AROUND_WITH_JSON = gql`
 
 type PassageWithJson = {
   uuid: string;
+  workUuid: string;
   label: string;
   sort: number;
   type: string;

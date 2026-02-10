@@ -22,6 +22,7 @@ const GET_PASSAGES_AROUND = gql`
 
   fragment PassageWithAnnotations on Passage {
     uuid
+    workUuid
     content
     label
     sort
@@ -69,6 +70,7 @@ type GetPassagesAroundResponse = {
     passages: {
       nodes: Array<{
         uuid: string;
+        workUuid: string;
         content: string;
         label: string;
         sort: number;
