@@ -13,11 +13,11 @@ import { TranslationEditorContent } from './TranslationEditor';
 import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
-  createBrowserClient,
+  createGraphQLClient,
   getTranslationPassages,
   getTranslationPassagesAround,
-  PanelFilter,
-} from '@data-access';
+} from '@client-graphql';
+import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { useInView } from 'motion/react';
 import { blocksFromTranslationBody } from '../../block';
@@ -99,7 +99,7 @@ export const PaginationProvider = ({
   const childrenDivRef = useRef<HTMLDivElement>(null);
   const shouldLoadMoreAtStart = useInView(loadMoreAtStartRef);
   const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
-  const dataClient = createBrowserClient();
+  const dataClient = createGraphQLClient();
 
   const { panels, updatePanel, setShowOuterContent } = useNavigation();
   const isMobile = useIsMobile();
