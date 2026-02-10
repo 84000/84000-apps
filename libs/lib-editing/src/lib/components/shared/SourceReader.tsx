@@ -3,7 +3,8 @@
 import { useInView } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { Folio, getFolios } from '@data-access';
+import { createGraphQLClient, getWorkFolios } from '@client-graphql';
+import type { Folio } from '@data-access';
 import { LabeledElement } from './LabeledElement';
 import { PassageSkeleton } from './PassageSkeleton';
 import { LotusPond } from '@design-system';
@@ -18,13 +19,15 @@ export const SourceReader = () => {
   const { toh, uuid } = useNavigation();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const shouldLoadMore = useInView(loadMoreRef);
+  const graphqlClient = createGraphQLClient();
 
   const fetchMore = useCallback(async () => {
     if (!toh || !uuid) return;
 
-    const folios = await getFolios({
-      toh,
+    const folios = await getWorkFolios({
+      client: graphqlClient,
       uuid,
+      toh,
       page,
       size: PAGE_SIZE,
     });
@@ -33,7 +36,7 @@ export const SourceReader = () => {
       setFolios((prevFolios) => [...prevFolios, ...folios]);
       setHasMore(folios.length >= PAGE_SIZE);
     }
-  }, [toh, uuid, page]);
+  }, [toh, uuid, page, graphqlClient]);
 
   useEffect(() => {
     if (shouldLoadMore && hasMore) {
