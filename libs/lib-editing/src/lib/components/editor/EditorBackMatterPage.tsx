@@ -4,12 +4,9 @@ import {
   createGraphQLClient,
   BACK_MATTER_FILTER,
   getTranslationPassages,
+  getWorkGlossary,
+  getWorkBibliography,
 } from '@client-graphql';
-import {
-  createBrowserClient,
-  getGlossaryInstances,
-  getBibliographyEntries,
-} from '@data-access';
 import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
 import { blocksFromTranslationBody } from '../../block';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
@@ -32,7 +29,6 @@ export const EditorBackMatterPage = () => {
     (async () => {
       const { uuid } = work;
       const graphqlClient = createGraphQLClient();
-      const supabaseClient = createBrowserClient();
       const { passages } = await getTranslationPassages({
         client: graphqlClient,
         uuid,
@@ -50,14 +46,17 @@ export const EditorBackMatterPage = () => {
       setAbbreviations(abbreviations);
 
       const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-      const glossary = await getGlossaryInstances({
-        client: supabaseClient,
+      const glossary = await getWorkGlossary({
+        client: graphqlClient,
         uuid,
         withAttestations,
       });
       setGlossary(glossary);
 
-      const bibliography = await getBibliographyEntries({ client: supabaseClient, uuid });
+      const bibliography = await getWorkBibliography({
+        client: graphqlClient,
+        uuid,
+      });
       setBibliography(bibliography);
     })();
   }, [work]);
