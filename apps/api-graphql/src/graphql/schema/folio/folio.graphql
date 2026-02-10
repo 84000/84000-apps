@@ -1,0 +1,59 @@
+"""
+Folio side (recto/verso)
+"""
+enum FolioSide {
+  a
+  b
+}
+
+"""
+A folio page from a Tibetan work
+"""
+type Folio {
+  """
+  Unique identifier
+  """
+  uuid: ID!
+
+  """
+  Content of the folio
+  """
+  content: String!
+
+  """
+  Volume number
+  """
+  volume: Int!
+
+  """
+  Folio number within the volume
+  """
+  folio: Int!
+
+  """
+  Side of the folio (a or b)
+  """
+  side: FolioSide!
+}
+
+extend type Work {
+  """
+  Folios for this work, filtered by toh and paginated
+  """
+  folios(
+    """
+    Tohoku catalog entry (e.g., "toh94")
+    """
+    toh: String!
+
+    """
+    Page number (0-indexed)
+    """
+    page: Int
+
+    """
+    Number of folios per page
+    """
+    size: Int
+  ): [Folio!]!
+}

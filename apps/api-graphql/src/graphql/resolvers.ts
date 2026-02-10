@@ -3,6 +3,7 @@ import {
   bibliographyEntryResolver,
   workBibliographyResolver,
 } from './schema/bibliography/bibliography.resolver';
+import { workFoliosResolver } from './schema/folio/folio.resolver';
 import {
   glossaryTermsResolver,
   glossaryEntryResolver,
@@ -48,6 +49,7 @@ export const resolvers = {
     titles: titlesResolver,
     glossary: workGlossaryResolver,
     bibliography: workBibliographyResolver,
+    folios: workFoliosResolver,
   },
 
   Passage: {
