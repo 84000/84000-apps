@@ -2,9 +2,9 @@ import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 import type { Work } from '@data-access';
 
-const GET_WORKS_CONNECTION = gql`
-  query GetWorksConnection($cursor: String, $limit: Int) {
-    worksConnection(cursor: $cursor, limit: $limit) {
+const GET_WORKS = gql`
+  query GetWorks($cursor: String, $limit: Int) {
+    works(cursor: $cursor, limit: $limit) {
       items {
         uuid
         title
@@ -44,15 +44,15 @@ type PageInfo = {
   hasMoreBefore: boolean;
 };
 
-type GetWorksConnectionResponse = {
-  worksConnection: {
+type GetWorksResponse = {
+  works: {
     items: GraphQLWork[];
     pageInfo: PageInfo;
     totalCount: number;
   };
 };
 
-export type WorksConnectionPage = {
+export type WorksPage = {
   items: Work[];
   pageInfo: PageInfo;
   totalCount: number;
@@ -75,7 +75,7 @@ function workFromGraphQL(gqlWork: GraphQLWork): Work {
 /**
  * Get paginated works.
  */
-export async function getWorksConnection({
+export async function getWorks({
   client,
   cursor,
   limit = 50,
@@ -83,20 +83,20 @@ export async function getWorksConnection({
   client: GraphQLClient;
   cursor?: string;
   limit?: number;
-}): Promise<WorksConnectionPage> {
+}): Promise<WorksPage> {
   try {
-    const response = await client.request<GetWorksConnectionResponse>(
-      GET_WORKS_CONNECTION,
-      { cursor, limit },
-    );
+    const response = await client.request<GetWorksResponse>(GET_WORKS, {
+      cursor,
+      limit,
+    });
 
     return {
-      items: response.worksConnection.items.map(workFromGraphQL),
-      pageInfo: response.worksConnection.pageInfo,
-      totalCount: response.worksConnection.totalCount,
+      items: response.works.items.map(workFromGraphQL),
+      pageInfo: response.works.pageInfo,
+      totalCount: response.works.totalCount,
     };
   } catch (error) {
-    console.error('Error fetching works connection:', error);
+    console.error('Error fetching works:', error);
     return {
       items: [],
       pageInfo: {

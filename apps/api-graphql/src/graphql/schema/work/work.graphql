@@ -104,15 +104,9 @@ type WorkConnection {
 
 extend type Query {
   """
-  Get all published translation works (deprecated, use worksConnection for pagination)
-  """
-  works: [Work!]!
-    @deprecated(reason: "Use worksConnection for pagination support")
-
-  """
   Get paginated published translation works
   """
-  worksConnection(
+  works(
     """
     Cursor for pagination (work UUID to start from)
     """

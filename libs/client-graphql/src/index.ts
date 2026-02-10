@@ -22,11 +22,11 @@ export {
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,
-  getWorksConnection,
+  getWorks,
   hasPermission,
   savePassages,
   type TranslationBlocksPage,
-  type WorksConnectionPage,
+  type WorksPage,
   type Permission,
 } from './lib/functions';
 

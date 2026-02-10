@@ -22,9 +22,6 @@ export { getWorkGlossary } from './get-work-glossary';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';
-export {
-  getWorksConnection,
-  type WorksConnectionPage,
-} from './get-works-connection';
+export { getWorks, type WorksPage } from './get-works';
 export { hasPermission, type Permission } from './has-permission';
 export { savePassages } from './save-passages';

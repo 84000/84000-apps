@@ -1,11 +1,23 @@
-query GetAllWorks {
-  works {
-    ...WorkFields
+query GetAllWorks($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      ...WorkFields
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
   }
 }
 
-query GetWorkUuids {
-  works {
-    uuid
+query GetWorkUuids($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      uuid
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
   }
 }

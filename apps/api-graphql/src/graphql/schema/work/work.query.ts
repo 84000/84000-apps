@@ -1,5 +1,4 @@
 import {
-  getTranslationsMetadata,
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
   type TohokuCatalogEntry,
@@ -33,15 +32,7 @@ const workFromDTO = (dto: WorkDTO): Work => ({
 });
 
 export const workQueries = {
-  works: async (_parent: unknown, _args: unknown, ctx: GraphQLContext) => {
-    const works = await getTranslationsMetadata({ client: ctx.supabase });
-    return works.map((work) => ({
-      ...work,
-      publicationDate: work.publicationDate.toISOString(),
-    }));
-  },
-
-  worksConnection: async (
+  works: async (
     _parent: unknown,
     args: { cursor?: string; limit?: number },
     ctx: GraphQLContext,
@@ -86,7 +77,7 @@ export const workQueries = {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching works connection:', error);
+      console.error('Error fetching works:', error);
       return {
         items: [],
         pageInfo: {

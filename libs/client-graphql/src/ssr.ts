@@ -22,9 +22,9 @@ export {
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,
-  getWorksConnection,
+  getWorks,
   type TranslationBlocksPage,
-  type WorksConnectionPage,
+  type WorksPage,
 } from './lib/functions';
 
 // Re-export types from @data-access for convenience
