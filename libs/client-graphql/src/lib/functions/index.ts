@@ -15,3 +15,7 @@ export { getTranslationsMetadata } from './get-translations-metadata';
 export { getTranslationUuids } from './get-translation-uuids';
 export { getTranslationToc } from './get-translation-toc';
 export { getTranslationImprint } from './get-translation-imprint';
+export { getGlossaryTerms } from './get-glossary-terms';
+export { getGlossaryEntry } from './get-glossary-entry';
+export { getGlossaryInstance } from './get-glossary-instance';
+export { getWorkGlossary } from './get-work-glossary';

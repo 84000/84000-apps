@@ -1,4 +1,10 @@
 import { JSONResolver } from 'graphql-scalars';
+import {
+  glossaryTermsResolver,
+  glossaryEntryResolver,
+  glossaryInstanceResolver,
+  workGlossaryResolver,
+} from './schema/glossary/glossary.resolver';
 import { healthQueries } from './schema/health/health.query';
 import { passageQueries } from './schema/passage/passage.query';
 import { userQueries } from './schema/user/user.query';
@@ -21,6 +27,9 @@ export const resolvers = {
     ...passageQueries,
     ...userQueries,
     ...workQueries,
+    glossaryTerms: glossaryTermsResolver,
+    glossaryEntry: glossaryEntryResolver,
+    glossaryInstance: glossaryInstanceResolver,
   },
 
   Mutation: {
@@ -32,6 +41,7 @@ export const resolvers = {
     toc: tocResolver,
     passages: passagesResolver,
     titles: titlesResolver,
+    glossary: workGlossaryResolver,
   },
 
   Passage: {

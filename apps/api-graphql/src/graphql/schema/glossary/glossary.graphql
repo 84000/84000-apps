@@ -1,0 +1,293 @@
+"""
+Names for a glossary term instance in different languages
+"""
+type GlossaryTermNames {
+  """
+  English name/translation
+  """
+  english: String
+
+  """
+  Tibetan name
+  """
+  tibetan: String
+
+  """
+  Sanskrit name
+  """
+  sanskrit: String
+
+  """
+  Pali name
+  """
+  pali: String
+
+  """
+  Chinese name
+  """
+  chinese: String
+
+  """
+  Wylie transliteration
+  """
+  wylie: String
+}
+
+"""
+A glossary term instance within a specific work
+"""
+type GlossaryTermInstance {
+  """
+  Unique identifier
+  """
+  uuid: ID!
+
+  """
+  Authority UUID for the term
+  """
+  authority: String!
+
+  """
+  Definition of the term
+  """
+  definition: String
+
+  """
+  Names in different languages
+  """
+  names: GlossaryTermNames!
+}
+
+"""
+A glossary item for the landing page listing
+"""
+type GlossaryLandingItem {
+  """
+  Authority UUID
+  """
+  uuid: ID!
+
+  """
+  Primary headword for the term
+  """
+  headword: String!
+
+  """
+  Type/classification of the term
+  """
+  type: String!
+
+  """
+  Primary language of the headword
+  """
+  language: String!
+
+  """
+  Name variants for the term
+  """
+  nameVariants: String!
+
+  """
+  Definition of the term
+  """
+  definition: String!
+
+  """
+  Number of glossary entries across works
+  """
+  numGlossaryEntries: Int!
+}
+
+"""
+A glossary instance appearing in a specific work
+"""
+type GlossaryInstance {
+  """
+  UUID of the work containing this instance
+  """
+  workUuid: ID!
+
+  """
+  Tohoku catalog entry
+  """
+  toh: String!
+
+  """
+  Definition for this instance
+  """
+  definition: String
+
+  """
+  Canon the work belongs to
+  """
+  canon: String
+
+  """
+  English names/translations
+  """
+  english: [String!]!
+
+  """
+  Tibetan names
+  """
+  tibetan: [String!]!
+
+  """
+  Sanskrit names
+  """
+  sanskrit: [String!]!
+
+  """
+  Pali names
+  """
+  pali: [String!]!
+
+  """
+  Chinese names
+  """
+  chinese: [String!]!
+
+  """
+  Creators/translators
+  """
+  creators: [String!]!
+}
+
+"""
+Related entity for a glossary entry
+"""
+type GlossaryEntity {
+  """
+  Source entity headword
+  """
+  sourceHeadword: String!
+
+  """
+  Source entity UUID
+  """
+  sourceUuid: ID!
+
+  """
+  Target entity headword
+  """
+  targetHeadword: String!
+
+  """
+  Target entity UUID
+  """
+  targetUuid: ID!
+}
+
+"""
+Detailed glossary entry for the detail page
+"""
+type GlossaryEntry {
+  """
+  Authority UUID
+  """
+  authorityUuid: ID!
+
+  """
+  Primary headword
+  """
+  headword: String!
+
+  """
+  Primary language of the headword
+  """
+  language: String!
+
+  """
+  Classifications/types
+  """
+  classifications: [String!]!
+
+  """
+  Definition of the term
+  """
+  definition: String
+
+  """
+  XML ID from source
+  """
+  xmlId: String
+
+  """
+  English names/translations
+  """
+  english: [String!]!
+
+  """
+  Tibetan names
+  """
+  tibetan: [String!]!
+
+  """
+  Sanskrit names
+  """
+  sanskrit: [String!]!
+
+  """
+  Pali names
+  """
+  pali: [String!]!
+
+  """
+  Chinese names
+  """
+  chinese: [String!]!
+
+  """
+  Related instances across works
+  """
+  relatedInstances: [GlossaryInstance!]!
+
+  """
+  Related entities
+  """
+  relatedEntities: [GlossaryEntity!]!
+}
+
+extend type Query {
+  """
+  Get all glossary terms for the landing page
+  """
+  glossaryTerms(
+    """
+    Optional filter by authority UUIDs
+    """
+    uuids: [ID!]
+  ): [GlossaryLandingItem!]!
+
+  """
+  Get a single glossary entry by UUID (for detail page)
+  """
+  glossaryEntry(
+    """
+    The authority UUID
+    """
+    uuid: ID!
+  ): GlossaryEntry
+
+  """
+  Get a single glossary instance by UUID
+  """
+  glossaryInstance(
+    """
+    The glossary instance UUID
+    """
+    uuid: ID!
+  ): GlossaryTermInstance
+}
+
+extend type Work {
+  """
+  Glossary term instances for this work
+  """
+  glossary(
+    """
+    Include attestation information
+    """
+    withAttestations: Boolean
+  ): [GlossaryTermInstance!]!
+}
