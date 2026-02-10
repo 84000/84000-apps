@@ -1,3 +1,22 @@
+/**
+ * Migration script: Glossary Instance Annotations
+ *
+ * This script migrates glossary-instance passage annotations to include
+ * the glossary UUID alongside the existing glossary_xmlId.
+ *
+ * Problem solved:
+ * - Annotations originally only stored `glossary_xmlId` references
+ * - This script looks up the corresponding glossary UUID from the `glossaries` table
+ * - Updates the annotation content to include both xmlId and uuid for faster lookups
+ *
+ * Process:
+ * 1. Fetch batches of glossary-instance annotations that have xmlId but no uuid
+ * 2. Look up the glossary UUIDs from the `glossaries` table (termType: translationMain)
+ * 3. Upsert the annotations with the enriched content structure
+ *
+ * Run: npx ts-node apps/node-scripts/src/migrate-glossary-instances.ts
+ */
+
 import { loadConfig } from './config';
 import { fetchPage } from './fetch';
 import { AnnotationTransformer, PassageAnnotationModel } from './types';
