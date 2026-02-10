@@ -82,11 +82,47 @@ type Work {
   ): PassageConnection!
 }
 
+"""
+Connection type for paginated works
+"""
+type WorkConnection {
+  """
+  List of works in this page
+  """
+  items: [Work!]!
+
+  """
+  Pagination information
+  """
+  pageInfo: PageInfo!
+
+  """
+  Total count of works matching the query
+  """
+  totalCount: Int!
+}
+
 extend type Query {
   """
-  Get all published translation works
+  Get all published translation works (deprecated, use worksConnection for pagination)
   """
   works: [Work!]!
+    @deprecated(reason: "Use worksConnection for pagination support")
+
+  """
+  Get paginated published translation works
+  """
+  worksConnection(
+    """
+    Cursor for pagination (work UUID to start from)
+    """
+    cursor: String
+
+    """
+    Maximum number of works to return (default: 50, max: 200)
+    """
+    limit: Int
+  ): WorkConnection!
 
   """
   Get a single work by UUID or Tohoku catalog number.

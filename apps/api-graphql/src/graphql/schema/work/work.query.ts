@@ -3,8 +3,34 @@ import {
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
   type TohokuCatalogEntry,
+  type Work,
+  type SemVer,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
+
+type WorkDTO = {
+  uuid: string;
+  title: string;
+  description: string | null;
+  tohs: { toh: TohokuCatalogEntry }[];
+  publicationDate: string;
+  publicationVersion: string;
+  pages: number;
+  restriction: boolean;
+  breadcrumb: string[] | null;
+};
+
+const workFromDTO = (dto: WorkDTO): Work => ({
+  uuid: dto.uuid,
+  title: dto.title,
+  description: dto.description ?? '',
+  toh: dto.tohs?.map((t) => t.toh) ?? [],
+  publicationDate: new Date(dto.publicationDate),
+  publicationVersion: dto.publicationVersion as SemVer,
+  pages: dto.pages,
+  restriction: dto.restriction,
+  section: dto.breadcrumb?.[0] ?? '',
+});
 
 export const workQueries = {
   works: async (_parent: unknown, _args: unknown, ctx: GraphQLContext) => {
@@ -13,6 +39,89 @@ export const workQueries = {
       ...work,
       publicationDate: work.publicationDate.toISOString(),
     }));
+  },
+
+  worksConnection: async (
+    _parent: unknown,
+    args: { cursor?: string; limit?: number },
+    ctx: GraphQLContext,
+  ) => {
+    const limit = Math.min(args.limit ?? 50, 200);
+
+    // Build the query
+    let query = ctx.supabase
+      .from('works')
+      .select(
+        `
+        uuid,
+        title,
+        description,
+        tohs:work_toh!inner(toh:toh_clean),
+        publicationDate,
+        publicationVersion,
+        pages:source_pages,
+        restriction,
+        breadcrumb
+      `,
+        { count: 'exact' },
+      )
+      .not('toh', 'like', 'toh00%')
+      .order('title', { ascending: true })
+      .limit(limit + 1); // Fetch one extra to check if there are more
+
+    // Apply cursor if provided
+    if (args.cursor) {
+      // Get the title of the cursor work for cursor-based pagination
+      const { data: cursorWork } = await ctx.supabase
+        .from('works')
+        .select('title')
+        .eq('uuid', args.cursor)
+        .single();
+
+      if (cursorWork) {
+        query = query.gt('title', cursorWork.title);
+      }
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching works connection:', error);
+      return {
+        items: [],
+        pageInfo: {
+          nextCursor: null,
+          prevCursor: null,
+          hasMoreAfter: false,
+          hasMoreBefore: false,
+        },
+        totalCount: 0,
+      };
+    }
+
+    const hasMoreAfter = data.length > limit;
+    const items = hasMoreAfter ? data.slice(0, limit) : data;
+    const works = items.map((dto) => {
+      const work = workFromDTO(dto as WorkDTO);
+      return {
+        ...work,
+        publicationDate: work.publicationDate.toISOString(),
+      };
+    });
+
+    const nextCursor = hasMoreAfter ? works[works.length - 1]?.uuid : null;
+    const prevCursor = args.cursor ?? null;
+
+    return {
+      items: works,
+      pageInfo: {
+        nextCursor,
+        prevCursor,
+        hasMoreAfter,
+        hasMoreBefore: !!args.cursor,
+      },
+      totalCount: count ?? 0,
+    };
   },
 
   work: async (
