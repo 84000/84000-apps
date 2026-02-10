@@ -1,3 +1,22 @@
+/**
+ * Migration script: Endnote Link Annotations
+ *
+ * This script migrates end-note-link passage annotations to include
+ * the endnote passage UUID alongside the existing endnote_xmlId.
+ *
+ * Problem solved:
+ * - Annotations originally only stored `endnote_xmlId` references
+ * - This script looks up the corresponding passage UUID from the `passages` table
+ * - Updates the annotation content to include both xmlId and uuid for faster lookups
+ *
+ * Process:
+ * 1. Fetch batches of end-note-link annotations that have xmlId but no uuid
+ * 2. Look up the endnote passage UUIDs from the `passages` table
+ * 3. Upsert the annotations with the enriched content structure
+ *
+ * Run: npx ts-node apps/node-scripts/src/migrate-endnotes.ts
+ */
+
 import { loadConfig } from './config';
 import { fetchPage } from './fetch';
 import { AnnotationTransformer, PassageAnnotationModel } from './types';

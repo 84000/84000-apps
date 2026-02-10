@@ -1,3 +1,21 @@
+/**
+ * Migration script: Passage Reference (Abbreviation) Annotations
+ *
+ * This script migrates abbreviation passage annotations to include
+ * the passage UUID alongside the existing abbreviation_xmlId.
+ *
+ * Problem solved:
+ * - Annotations originally only stored `abbreviation_xmlId` references
+ * - This script restructures the content to include both xmlId and uuid
+ *
+ * Process:
+ * 1. Fetch batches of abbreviation annotations that have xmlId but no uuid
+ * 2. Transform the content structure to include the passage uuid
+ * 3. Upsert the annotations with the enriched content structure
+ *
+ * Run: npx ts-node apps/node-scripts/src/migrate-passage-refs.ts
+ */
+
 import { loadConfig } from './config';
 import { fetchPage } from './fetch';
 import { PassageAnnotationModel } from './types';

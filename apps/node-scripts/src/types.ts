@@ -1,3 +1,11 @@
+/**
+ * Type definitions for passage annotation migration scripts.
+ */
+
+/**
+ * Represents a passage annotation record as stored in the database.
+ * Used for upserting migrated annotation data.
+ */
 export type PassageAnnotationModel = {
   uuid: string;
   created_at: unknown | null;
@@ -12,6 +20,11 @@ export type PassageAnnotationModel = {
   toh: unknown | null;
 };
 
+/**
+ * Intermediate type used during annotation migration.
+ * Extends fetched annotation data with a target UUID field
+ * that gets populated by looking up the referenced entity.
+ */
 export type AnnotationTransformer = {
   annotationUuid: string;
   createdAt: unknown;
