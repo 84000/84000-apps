@@ -23,8 +23,11 @@ export {
   getWorkBibliography,
   getWorkFolios,
   getWorksConnection,
+  hasPermission,
+  savePassages,
   type TranslationBlocksPage,
   type WorksConnectionPage,
+  type Permission,
 } from './lib/functions';
 
 // Re-export types from @data-access for convenience

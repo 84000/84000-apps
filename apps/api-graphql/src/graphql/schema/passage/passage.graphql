@@ -139,3 +139,76 @@ extend type Query {
     uuid: ID!
   ): Passage
 }
+
+"""
+Input type for saving a passage
+"""
+input PassageInput {
+  """
+  Unique identifier for the passage
+  """
+  uuid: ID!
+
+  """
+  UUID of the work this passage belongs to
+  """
+  workUuid: ID!
+
+  """
+  Text content of the passage
+  """
+  content: String!
+
+  """
+  Display label for the passage
+  """
+  label: String!
+
+  """
+  Sort order within the work
+  """
+  sort: Int!
+
+  """
+  Type of passage content
+  """
+  type: String!
+
+  """
+  XML ID from the source document
+  """
+  xmlId: String
+
+  """
+  Annotations as JSON array
+  """
+  annotations: JSON!
+}
+
+"""
+Result of saving passages
+"""
+type SavePassagesResult {
+  """
+  Whether the save was successful
+  """
+  success: Boolean!
+
+  """
+  Number of passages saved
+  """
+  savedCount: Int!
+
+  """
+  Error message if the save failed
+  """
+  error: String
+}
+
+extend type Mutation {
+  """
+  Save one or more passages.
+  Requires editor.edit permission.
+  """
+  savePassages(passages: [PassageInput!]!): SavePassagesResult!
+}

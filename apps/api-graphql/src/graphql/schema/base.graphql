@@ -54,7 +54,7 @@ Root Mutation type - extend this in other schema files
 """
 type Mutation {
   """
-  Placeholder mutation - replace with your actual mutations
+  Placeholder for schema validation - not used
   """
-  _placeholder: Boolean
+  _empty: Boolean
 }

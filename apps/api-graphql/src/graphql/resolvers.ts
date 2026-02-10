@@ -12,6 +12,7 @@ import {
 } from './schema/glossary/glossary.resolver';
 import { healthQueries } from './schema/health/health.query';
 import { passageQueries } from './schema/passage/passage.query';
+import { savePassagesMutation } from './schema/passage/passage.mutation';
 import { userQueries } from './schema/user/user.query';
 import { workQueries } from './schema/work/work.query';
 import { imprintResolver } from './schema/imprint/imprint.resolver';
@@ -39,7 +40,7 @@ export const resolvers = {
   },
 
   Mutation: {
-    _placeholder: () => true,
+    savePassages: savePassagesMutation,
   },
 
   Work: {

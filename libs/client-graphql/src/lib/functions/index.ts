@@ -26,3 +26,5 @@ export {
   getWorksConnection,
   type WorksConnectionPage,
 } from './get-works-connection';
+export { hasPermission, type Permission } from './has-permission';
+export { savePassages } from './save-passages';

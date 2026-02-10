@@ -3,13 +3,12 @@
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
+import type { Passage, Work } from '@data-access';
 import {
-  Passage,
-  Work,
-  createBrowserClient,
+  createGraphQLClient,
   hasPermission,
   savePassages,
-} from '@data-access';
+} from '@client-graphql';
 import { passagesFromNodes } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
@@ -87,7 +86,7 @@ export const EditorContextProvider = ({
   doc: initialDoc,
   children,
 }: EditorContextProps) => {
-  const client = createBrowserClient();
+  const client = createGraphQLClient();
 
   const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
   // Use ref for immediate tracking to avoid state updates on every keystroke
@@ -196,7 +195,7 @@ export const EditorContextProvider = ({
   );
 
   const canEdit = useCallback(async () => {
-    return await hasPermission({ client, permission: 'editor.edit' });
+    return await hasPermission({ client, permission: 'EDITOR_EDIT' });
   }, [client]);
 
   return (
