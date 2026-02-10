@@ -2,13 +2,11 @@
 
 import {
   createGraphQLClient,
-  BACK_MATTER_FILTER,
-  getTranslationPassages,
+  getTranslationBlocks,
   getWorkGlossary,
   getWorkBibliography,
 } from '@client-graphql';
 import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
-import { blocksFromTranslationBody } from '../../block';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
@@ -29,21 +27,20 @@ export const EditorBackMatterPage = () => {
     (async () => {
       const { uuid } = work;
       const graphqlClient = createGraphQLClient();
-      const { passages } = await getTranslationPassages({
+
+      const { blocks: endnoteBlocks } = await getTranslationBlocks({
         client: graphqlClient,
         uuid,
-        type: BACK_MATTER_FILTER,
+        type: 'endnotes',
       });
+      setEndnotes(endnoteBlocks);
 
-      const endnotes = blocksFromTranslationBody(
-        passages.filter((p) => p.type.startsWith('endnote')),
-      );
-      setEndnotes(endnotes);
-
-      const abbreviations = blocksFromTranslationBody(
-        passages.filter((p) => p.type.startsWith('abbreviation')),
-      );
-      setAbbreviations(abbreviations);
+      const { blocks: abbreviationBlocks } = await getTranslationBlocks({
+        client: graphqlClient,
+        uuid,
+        type: 'abbreviations',
+      });
+      setAbbreviations(abbreviationBlocks);
 
       const withAttestations = isStaticFeatureEnabled('glossary-attestations');
       const glossary = await getWorkGlossary({

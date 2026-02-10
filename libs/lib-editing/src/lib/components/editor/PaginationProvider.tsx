@@ -14,13 +14,12 @@ import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
   createGraphQLClient,
-  getTranslationPassages,
-  getTranslationPassagesAround,
+  getTranslationBlocks,
+  getTranslationBlocksAround,
 } from '@client-graphql';
 import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { useInView } from 'motion/react';
-import { blocksFromTranslationBody } from '../../block';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
@@ -150,20 +149,14 @@ export const PaginationProvider = ({
       let element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
 
       if (!element && isUuid(navCursor)) {
-        const {
-          passages,
-          hasMoreBefore,
-          hasMoreAfter,
-          prevCursor,
-          nextCursor,
-        } = await getTranslationPassagesAround({
-          client: dataClient,
-          uuid,
-          type: filter,
-          passageUuid: navCursor,
-        });
+        const { blocks, hasMoreBefore, hasMoreAfter, prevCursor, nextCursor } =
+          await getTranslationBlocksAround({
+            client: dataClient,
+            uuid,
+            type: filter,
+            passageUuid: navCursor,
+          });
 
-        const nextContent = blocksFromTranslationBody(passages);
         // Wait for editor to finish updating
         await new Promise<void>((resolve) => {
           const handleUpdate = () => {
@@ -172,7 +165,7 @@ export const PaginationProvider = ({
           };
 
           editor?.on('update', handleUpdate);
-          editor?.chain().clearContent().setContent(nextContent).run();
+          editor?.chain().clearContent().setContent(blocks).run();
         });
         setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
         setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
@@ -253,21 +246,20 @@ export const PaginationProvider = ({
 
     (async () => {
       const {
-        passages,
+        blocks,
         hasMoreAfter: hasMore,
         nextCursor,
-      } = await getTranslationPassages({
+      } = await getTranslationBlocks({
         client: dataClient,
         uuid,
         type: filter,
         cursor: endCursor,
       });
 
-      const nextContent = blocksFromTranslationBody(passages);
       const pos = editor?.state.doc?.content.size;
 
-      if (pos >= 0 && nextContent.length && editor) {
-        await insertContentChunked(editor, pos, nextContent);
+      if (pos >= 0 && blocks.length && editor) {
+        await insertContentChunked(editor, pos, blocks);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -290,19 +282,17 @@ export const PaginationProvider = ({
     setStartIsLoading(true);
 
     (async () => {
-      const { passages, hasMoreBefore, prevCursor } =
-        await getTranslationPassages({
-          client: dataClient,
-          uuid,
-          type: filter,
-          cursor: startCursor,
-          direction: 'backward',
-        });
+      const { blocks, hasMoreBefore, prevCursor } = await getTranslationBlocks({
+        client: dataClient,
+        uuid,
+        type: filter,
+        cursor: startCursor,
+        direction: 'backward',
+      });
 
-      const nextContent = blocksFromTranslationBody(passages);
       const pos = 0;
 
-      if (nextContent.length && editor) {
+      if (blocks.length && editor) {
         const editorEl = editor.view.dom;
         const scrollContainer =
           editorEl.closest('[data-panel]') || editorEl.parentElement;
@@ -311,7 +301,7 @@ export const PaginationProvider = ({
 
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
-        editor.commands.insertContentAt(pos, nextContent);
+        editor.commands.insertContentAt(pos, blocks);
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;

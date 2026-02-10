@@ -1,11 +1,10 @@
 import {
   createServerGraphQLClient,
-  getTranslationPassages,
+  getTranslationBlocks,
   getWorkGlossary,
   getWorkBibliography,
 } from '@client-graphql/ssr';
 import { isStaticFeatureEnabled } from '@lib-instr/static';
-import { blocksFromTranslationBody } from '../../block';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
 import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
@@ -23,20 +22,17 @@ export const ReaderBackMatterPage = async ({
 
   const graphqlClient = await createServerGraphQLClient();
 
-  const { passages: endnotePassages } = await getTranslationPassages({
+  const { blocks: endnotes } = await getTranslationBlocks({
     client: graphqlClient,
     uuid: slug,
     type: 'endnotes',
   });
 
-  const endnotes = blocksFromTranslationBody(endnotePassages);
-
-  const { passages: abbreviationPassages } = await getTranslationPassages({
+  const { blocks: abbreviations } = await getTranslationBlocks({
     client: graphqlClient,
     uuid: slug,
     type: 'abbreviations',
   });
-  const abbreviations = blocksFromTranslationBody(abbreviationPassages);
 
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
   const glossary = await getWorkGlossary({

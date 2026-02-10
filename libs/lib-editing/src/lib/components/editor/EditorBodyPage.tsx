@@ -4,12 +4,11 @@ import {
   createGraphQLClient,
   BODY_MATTER_FILTER,
   FRONT_MATTER_FILTER,
-  getTranslationPassages,
+  getTranslationBlocks,
   getTranslationTitles,
 } from '@client-graphql';
 import type { Title } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
-import { blocksFromTranslationBody } from '../../block';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
 import { TranslationBuilder, TranslationEditorContent } from '.';
@@ -17,7 +16,6 @@ import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
 
 const INITIAL_PASSAGES = 500;
-const INITIAL_MAX_CHARACTERS = 200000;
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
@@ -28,30 +26,25 @@ export const EditorBodyPage = () => {
   useEffect(() => {
     (async () => {
       const client = createGraphQLClient();
-      const { passages: frontPassages } = await getTranslationPassages({
+      const { blocks: frontBlocks } = await getTranslationBlocks({
         client,
         uuid: work.uuid,
         type: FRONT_MATTER_FILTER,
         maxPassages: INITIAL_PASSAGES,
-        maxCharacters: INITIAL_MAX_CHARACTERS,
       });
 
-      const { passages: bodyPassages } = await getTranslationPassages({
+      const { blocks: bodyBlocks } = await getTranslationBlocks({
         client,
         uuid: work.uuid,
         type: BODY_MATTER_FILTER,
         maxPassages: INITIAL_PASSAGES,
-        maxCharacters: INITIAL_MAX_CHARACTERS,
       });
 
       const titles = await getTranslationTitles({ client, uuid: work.uuid });
       setTitles(titles);
 
-      const frontMatter = blocksFromTranslationBody(frontPassages);
-      setFrontMatter(frontMatter);
-
-      const body = blocksFromTranslationBody(bodyPassages);
-      setBody(body);
+      setFrontMatter(frontBlocks);
+      setBody(bodyBlocks);
     })();
   }, [work.uuid]);
 
