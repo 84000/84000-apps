@@ -96,22 +96,29 @@ type PassageConnection {
   nodes: [Passage!]!
 
   """
+  Pagination information
+  """
+  pageInfo: PageInfo!
+
+  """
   Cursor for fetching the next page
   """
-  nextCursor: String
+  nextCursor: String @deprecated(reason: "Use pageInfo.nextCursor instead")
 
   """
   Cursor for fetching the previous page
   """
-  prevCursor: String
+  prevCursor: String @deprecated(reason: "Use pageInfo.prevCursor instead")
 
   """
   Whether there are more passages after the current page
   """
   hasMoreAfter: Boolean!
+    @deprecated(reason: "Use pageInfo.hasMoreAfter instead")
 
   """
   Whether there are more passages before the current page
   """
   hasMoreBefore: Boolean!
+    @deprecated(reason: "Use pageInfo.hasMoreBefore instead")
 }

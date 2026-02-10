@@ -4,6 +4,40 @@ import { PassageRowDTO } from '@data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
+/**
+ * Helper to build a PassageConnection response with both pageInfo and deprecated fields
+ */
+function buildPassageConnection(
+  nodes: Array<{
+    uuid: string;
+    content: string;
+    label: string;
+    sort: number;
+    type: string;
+    xmlId: string | null;
+  }>,
+  nextCursor: string | null,
+  prevCursor: string | null,
+  hasMoreAfter: boolean,
+  hasMoreBefore: boolean,
+) {
+  return {
+    nodes,
+    // New pageInfo object
+    pageInfo: {
+      nextCursor,
+      prevCursor,
+      hasMoreAfter,
+      hasMoreBefore,
+    },
+    // Deprecated fields (kept for backward compatibility)
+    nextCursor,
+    prevCursor,
+    hasMoreAfter,
+    hasMoreBefore,
+  };
+}
+
 export const passagesResolver = async (
   parent: WorkParent,
   args: {
@@ -84,13 +118,7 @@ export const passagesResolver = async (
 
   if (passagesError) {
     console.error('Error fetching passages:', passagesError);
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    };
+    return buildPassageConnection([], null, null, false, false);
   }
 
   const passages = (data ?? []) as PassageRowDTO[];
@@ -109,13 +137,7 @@ export const passagesResolver = async (
   const hasMoreBefore = isForward ? cursorSort !== null : hasMore;
 
   if (!resultPassages || resultPassages.length === 0) {
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore,
-    };
+    return buildPassageConnection([], null, null, false, hasMoreBefore);
   }
 
   // Return base passage data - annotations/alignments loaded by field resolvers
@@ -134,13 +156,13 @@ export const passagesResolver = async (
   const nextCursor = hasMoreAfter ? lastPassage.uuid : null;
   const prevCursor = hasMoreBefore ? firstPassage.uuid : null;
 
-  return {
+  return buildPassageConnection(
     nodes,
     nextCursor,
     prevCursor,
     hasMoreAfter,
     hasMoreBefore,
-  };
+  );
 };
 
 /**
@@ -161,13 +183,7 @@ const passagesAroundResolver = async (
   // AROUND requires a cursor
   if (!args.cursor) {
     console.error('AROUND direction requires a cursor');
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    };
+    return buildPassageConnection([], null, null, false, false);
   }
 
   // Get the cursor passage's sort value
@@ -179,13 +195,7 @@ const passagesAroundResolver = async (
 
   if (!cursorPassage) {
     console.error('Cursor passage not found');
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    };
+    return buildPassageConnection([], null, null, false, false);
   }
 
   const cursorSort = cursorPassage.sort;
@@ -237,13 +247,7 @@ const passagesAroundResolver = async (
       'Error fetching passages around:',
       beforeResult.error || afterResult.error,
     );
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    };
+    return buildPassageConnection([], null, null, false, false);
   }
 
   const passagesBefore = (beforeResult.data ?? []) as PassageRowDTO[];
@@ -265,13 +269,7 @@ const passagesAroundResolver = async (
   const resultPassages = [...trimmedBefore.reverse(), ...trimmedAfter];
 
   if (resultPassages.length === 0) {
-    return {
-      nodes: [],
-      nextCursor: null,
-      prevCursor: null,
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    };
+    return buildPassageConnection([], null, null, false, false);
   }
 
   // Return base passage data - annotations/alignments loaded by field resolvers
@@ -290,11 +288,11 @@ const passagesAroundResolver = async (
   const nextCursor = hasMoreAfter ? lastPassage.uuid : null;
   const prevCursor = hasMoreBefore ? firstPassage.uuid : null;
 
-  return {
+  return buildPassageConnection(
     nodes,
     nextCursor,
     prevCursor,
     hasMoreAfter,
     hasMoreBefore,
-  };
+  );
 };
