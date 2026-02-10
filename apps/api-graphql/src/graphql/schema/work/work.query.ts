@@ -2,34 +2,10 @@ import {
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
   type TohokuCatalogEntry,
-  type Work,
-  type SemVer,
+  WorkDTO,
+  workFromDTO,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
-
-type WorkDTO = {
-  uuid: string;
-  title: string;
-  description: string | null;
-  tohs: { toh: TohokuCatalogEntry }[];
-  publicationDate: string;
-  publicationVersion: string;
-  pages: number;
-  restriction: boolean;
-  breadcrumb: string[] | null;
-};
-
-const workFromDTO = (dto: WorkDTO): Work => ({
-  uuid: dto.uuid,
-  title: dto.title,
-  description: dto.description ?? '',
-  toh: dto.tohs?.map((t) => t.toh) ?? [],
-  publicationDate: new Date(dto.publicationDate),
-  publicationVersion: dto.publicationVersion as SemVer,
-  pages: dto.pages,
-  restriction: dto.restriction,
-  section: dto.breadcrumb?.[0] ?? '',
-});
 
 export const workQueries = {
   works: async (

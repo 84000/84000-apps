@@ -1,22 +1,11 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import type { Folio, FolioSide, TohokuCatalogEntry } from '@data-access';
-
-type FolioDTO = {
-  folio_uuid: string;
-  content: string;
-  volume_number: number;
-  folio_number: number;
-  side: FolioSide;
-};
-
-const folioFromDTO = (dto: FolioDTO): Folio => ({
-  uuid: dto.folio_uuid,
-  content: dto.content,
-  volume: dto.volume_number,
-  folio: dto.folio_number,
-  side: dto.side,
-});
+import {
+  FolioDTO,
+  folioFromDTO,
+  type Folio,
+  type TohokuCatalogEntry,
+} from '@data-access';
 
 /**
  * Resolver for Work.folios - fetches folios for a work with pagination
