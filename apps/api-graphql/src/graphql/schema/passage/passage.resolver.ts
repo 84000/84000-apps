@@ -232,10 +232,10 @@ const passagesAroundResolver = async (
     beforeQuery = beforeQuery.in('type', passageTypes);
     afterQuery = afterQuery.in('type', passageTypes);
   } else if (passageType) {
-    // Use Postgres regex match (~) for patterns
+    // Use Postgres regex match for patterns
     const pattern = `${passageType}.*`;
-    beforeQuery = beforeQuery.filter('type', '~', pattern);
-    afterQuery = afterQuery.filter('type', '~', pattern);
+    beforeQuery = beforeQuery.filter('type', 'match', pattern);
+    afterQuery = afterQuery.filter('type', 'match', pattern);
   }
 
   // Execute both queries in parallel
