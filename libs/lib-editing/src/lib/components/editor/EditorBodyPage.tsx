@@ -26,23 +26,25 @@ export const EditorBodyPage = () => {
   useEffect(() => {
     (async () => {
       const client = createGraphQLClient();
-      const { blocks: frontBlocks } = await getTranslationBlocks({
-        client,
-        uuid: work.uuid,
-        type: FRONT_MATTER_FILTER,
-        maxPassages: INITIAL_PASSAGES,
-      });
 
-      const { blocks: bodyBlocks } = await getTranslationBlocks({
-        client,
-        uuid: work.uuid,
-        type: BODY_MATTER_FILTER,
-        maxPassages: INITIAL_PASSAGES,
-      });
+      const [{ blocks: frontBlocks }, { blocks: bodyBlocks }, titlesData] =
+        await Promise.all([
+          getTranslationBlocks({
+            client,
+            uuid: work.uuid,
+            type: FRONT_MATTER_FILTER,
+            maxPassages: INITIAL_PASSAGES,
+          }),
+          getTranslationBlocks({
+            client,
+            uuid: work.uuid,
+            type: BODY_MATTER_FILTER,
+            maxPassages: INITIAL_PASSAGES,
+          }),
+          getTranslationTitles({ client, uuid: work.uuid }),
+        ]);
 
-      const titles = await getTranslationTitles({ client, uuid: work.uuid });
-      setTitles(titles);
-
+      setTitles(titlesData);
       setFrontMatter(frontBlocks);
       setBody(bodyBlocks);
     })();

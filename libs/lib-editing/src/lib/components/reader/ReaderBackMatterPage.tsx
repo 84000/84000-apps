@@ -21,29 +21,34 @@ export const ReaderBackMatterPage = async ({
   }
 
   const graphqlClient = await createServerGraphQLClient();
-
-  const { blocks: endnotes } = await getTranslationBlocks({
-    client: graphqlClient,
-    uuid: slug,
-    type: 'endnotes',
-  });
-
-  const { blocks: abbreviations } = await getTranslationBlocks({
-    client: graphqlClient,
-    uuid: slug,
-    type: 'abbreviations',
-  });
-
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-  const glossary = await getWorkGlossary({
-    client: graphqlClient,
-    uuid: slug,
-    withAttestations,
-  });
-  const bibliography = await getWorkBibliography({
-    client: graphqlClient,
-    uuid: slug,
-  });
+
+  const [
+    { blocks: endnotes },
+    { blocks: abbreviations },
+    glossary,
+    bibliography,
+  ] = await Promise.all([
+    getTranslationBlocks({
+      client: graphqlClient,
+      uuid: slug,
+      type: 'endnotes',
+    }),
+    getTranslationBlocks({
+      client: graphqlClient,
+      uuid: slug,
+      type: 'abbreviations',
+    }),
+    getWorkGlossary({
+      client: graphqlClient,
+      uuid: slug,
+      withAttestations,
+    }),
+    getWorkBibliography({
+      client: graphqlClient,
+      uuid: slug,
+    }),
+  ]);
 
   return (
     <ReaderBackMatterPanel

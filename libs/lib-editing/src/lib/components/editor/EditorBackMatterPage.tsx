@@ -27,34 +27,39 @@ export const EditorBackMatterPage = () => {
     (async () => {
       const { uuid } = work;
       const graphqlClient = createGraphQLClient();
-
-      const { blocks: endnoteBlocks } = await getTranslationBlocks({
-        client: graphqlClient,
-        uuid,
-        type: 'endnotes',
-      });
-      setEndnotes(endnoteBlocks);
-
-      const { blocks: abbreviationBlocks } = await getTranslationBlocks({
-        client: graphqlClient,
-        uuid,
-        type: 'abbreviations',
-      });
-      setAbbreviations(abbreviationBlocks);
-
       const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-      const glossary = await getWorkGlossary({
-        client: graphqlClient,
-        uuid,
-        withAttestations,
-      });
-      setGlossary(glossary);
 
-      const bibliography = await getWorkBibliography({
-        client: graphqlClient,
-        uuid,
-      });
-      setBibliography(bibliography);
+      const [
+        { blocks: endnoteBlocks },
+        { blocks: abbreviationBlocks },
+        glossaryData,
+        bibliographyData,
+      ] = await Promise.all([
+        getTranslationBlocks({
+          client: graphqlClient,
+          uuid,
+          type: 'endnotes',
+        }),
+        getTranslationBlocks({
+          client: graphqlClient,
+          uuid,
+          type: 'abbreviations',
+        }),
+        getWorkGlossary({
+          client: graphqlClient,
+          uuid,
+          withAttestations,
+        }),
+        getWorkBibliography({
+          client: graphqlClient,
+          uuid,
+        }),
+      ]);
+
+      setEndnotes(endnoteBlocks);
+      setAbbreviations(abbreviationBlocks);
+      setGlossary(glossaryData);
+      setBibliography(bibliographyData);
     })();
   }, [work]);
 
