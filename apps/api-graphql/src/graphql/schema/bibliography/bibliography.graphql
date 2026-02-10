@@ -1,0 +1,53 @@
+"""
+A single bibliography entry item
+"""
+type BibliographyEntryItem {
+  """
+  Unique identifier
+  """
+  uuid: ID!
+
+  """
+  HTML content of the bibliography entry
+  """
+  html: String!
+
+  """
+  UUID of the work this entry belongs to
+  """
+  workUuid: ID
+}
+
+"""
+A bibliography section with heading and entries
+"""
+type BibliographyEntry {
+  """
+  Section heading
+  """
+  heading: String!
+
+  """
+  Bibliography entries in this section
+  """
+  entries: [BibliographyEntryItem!]!
+}
+
+extend type Query {
+  """
+  Get a single bibliography entry by UUID
+  """
+  bibliographyEntry(
+    """
+    The bibliography entry UUID
+    """
+    uuid: ID!
+  ): BibliographyEntryItem
+}
+
+extend type Work {
+  """
+  Bibliography entries for this work, grouped by section
+  """
+  bibliography: [BibliographyEntry!]!
+}

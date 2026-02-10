@@ -1,5 +1,9 @@
 import { JSONResolver } from 'graphql-scalars';
 import {
+  bibliographyEntryResolver,
+  workBibliographyResolver,
+} from './schema/bibliography/bibliography.resolver';
+import {
   glossaryTermsResolver,
   glossaryEntryResolver,
   glossaryInstanceResolver,
@@ -30,6 +34,7 @@ export const resolvers = {
     glossaryTerms: glossaryTermsResolver,
     glossaryEntry: glossaryEntryResolver,
     glossaryInstance: glossaryInstanceResolver,
+    bibliographyEntry: bibliographyEntryResolver,
   },
 
   Mutation: {
@@ -42,6 +47,7 @@ export const resolvers = {
     passages: passagesResolver,
     titles: titlesResolver,
     glossary: workGlossaryResolver,
+    bibliography: workBibliographyResolver,
   },
 
   Passage: {

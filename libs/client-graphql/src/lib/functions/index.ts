@@ -19,3 +19,5 @@ export { getGlossaryTerms } from './get-glossary-terms';
 export { getGlossaryEntry } from './get-glossary-entry';
 export { getGlossaryInstance } from './get-glossary-instance';
 export { getWorkGlossary } from './get-work-glossary';
+export { getBibliographyEntry } from './get-bibliography-entry';
+export { getWorkBibliography } from './get-work-bibliography';
