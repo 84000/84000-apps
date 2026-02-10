@@ -16,10 +16,12 @@ query GetPassages(
       nodes {
         ...PassageWithAnnotations
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -42,10 +44,12 @@ query GetPassagesBasic(
       nodes {
         ...PassageFields
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -68,10 +72,12 @@ query GetPassagesWithJson(
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -93,10 +99,12 @@ query GetPassagesAroundWithJson(
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }

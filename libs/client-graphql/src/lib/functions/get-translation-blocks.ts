@@ -35,10 +35,12 @@ const GET_PASSAGES_WITH_JSON = gql`
         nodes {
           ...PassageWithJson
         }
-        nextCursor
-        prevCursor
-        hasMoreAfter
-        hasMoreBefore
+        pageInfo {
+          nextCursor
+          prevCursor
+          hasMoreAfter
+          hasMoreBefore
+        }
       }
     }
   }
@@ -58,10 +60,12 @@ type GetPassagesWithJsonResponse = {
     uuid: string;
     passages: {
       nodes: PassageWithJson[];
-      nextCursor?: string | null;
-      prevCursor?: string | null;
-      hasMoreAfter: boolean;
-      hasMoreBefore: boolean;
+      pageInfo: {
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+        hasMoreAfter: boolean;
+        hasMoreBefore: boolean;
+      };
     };
   } | null;
 };
@@ -138,10 +142,10 @@ export async function getTranslationBlocks({
 
     return {
       blocks,
-      nextCursor: passages.nextCursor ?? undefined,
-      prevCursor: passages.prevCursor ?? undefined,
-      hasMoreAfter: passages.hasMoreAfter,
-      hasMoreBefore: passages.hasMoreBefore,
+      nextCursor: passages.pageInfo.nextCursor ?? undefined,
+      prevCursor: passages.pageInfo.prevCursor ?? undefined,
+      hasMoreAfter: passages.pageInfo.hasMoreAfter,
+      hasMoreBefore: passages.pageInfo.hasMoreBefore,
     };
   } catch (error) {
     console.error('Error fetching translation blocks:', error);

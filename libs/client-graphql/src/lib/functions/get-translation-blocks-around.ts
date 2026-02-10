@@ -21,14 +21,21 @@ const GET_PASSAGES_AROUND_WITH_JSON = gql`
   ) {
     work(uuid: $uuid) {
       uuid
-      passages(cursor: $cursor, limit: $limit, direction: AROUND, filter: $filter) {
+      passages(
+        cursor: $cursor
+        limit: $limit
+        direction: AROUND
+        filter: $filter
+      ) {
         nodes {
           ...PassageWithJson
         }
-        nextCursor
-        prevCursor
-        hasMoreAfter
-        hasMoreBefore
+        pageInfo {
+          nextCursor
+          prevCursor
+          hasMoreAfter
+          hasMoreBefore
+        }
       }
     }
   }
@@ -48,10 +55,12 @@ type GetPassagesAroundWithJsonResponse = {
     uuid: string;
     passages: {
       nodes: PassageWithJson[];
-      nextCursor?: string | null;
-      prevCursor?: string | null;
-      hasMoreAfter: boolean;
-      hasMoreBefore: boolean;
+      pageInfo: {
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+        hasMoreAfter: boolean;
+        hasMoreBefore: boolean;
+      };
     };
   } | null;
 };
@@ -104,10 +113,10 @@ export async function getTranslationBlocksAround({
 
     return {
       blocks,
-      nextCursor: passages.nextCursor ?? undefined,
-      prevCursor: passages.prevCursor ?? undefined,
-      hasMoreAfter: passages.hasMoreAfter,
-      hasMoreBefore: passages.hasMoreBefore,
+      nextCursor: passages.pageInfo.nextCursor ?? undefined,
+      prevCursor: passages.pageInfo.prevCursor ?? undefined,
+      hasMoreAfter: passages.pageInfo.hasMoreAfter,
+      hasMoreBefore: passages.pageInfo.hasMoreBefore,
     };
   } catch (error) {
     console.error('Error fetching translation blocks around:', error);

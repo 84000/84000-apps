@@ -52,10 +52,12 @@ const GET_PASSAGES_AROUND = gql`
         nodes {
           ...PassageWithAnnotations
         }
-        nextCursor
-        prevCursor
-        hasMoreAfter
-        hasMoreBefore
+        pageInfo {
+          nextCursor
+          prevCursor
+          hasMoreAfter
+          hasMoreBefore
+        }
       }
     }
   }
@@ -87,10 +89,12 @@ type GetPassagesAroundResponse = {
           volumeNumber: number;
         }>;
       }>;
-      nextCursor?: string | null;
-      prevCursor?: string | null;
-      hasMoreAfter: boolean;
-      hasMoreBefore: boolean;
+      pageInfo: {
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+        hasMoreAfter: boolean;
+        hasMoreBefore: boolean;
+      };
     };
   } | null;
 };

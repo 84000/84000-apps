@@ -131,6 +131,22 @@ export type Mutation = {
   _placeholder?: Maybe<Scalars['Boolean']['output']>;
 };
 
+/**
+ * Pagination information for connections.
+ * Used consistently across all paginated queries.
+ */
+export type PageInfo = {
+  __typename?: 'PageInfo';
+  /** Whether there are more items after the current page */
+  hasMoreAfter: Scalars['Boolean']['output'];
+  /** Whether there are more items before the current page */
+  hasMoreBefore: Scalars['Boolean']['output'];
+  /** Cursor for fetching the next page */
+  nextCursor?: Maybe<Scalars['String']['output']>;
+  /** Cursor for fetching the previous page */
+  prevCursor?: Maybe<Scalars['String']['output']>;
+};
+
 /** Direction for pagination */
 export type PaginationDirection =
   /** Fetch passages around the cursor (both before and after) */
@@ -169,15 +185,29 @@ export type Passage = {
 /** Paginated connection of passages */
 export type PassageConnection = {
   __typename?: 'PassageConnection';
-  /** Whether there are more passages after the current page */
+  /**
+   * Whether there are more passages after the current page
+   * @deprecated Use pageInfo.hasMoreAfter instead
+   */
   hasMoreAfter: Scalars['Boolean']['output'];
-  /** Whether there are more passages before the current page */
+  /**
+   * Whether there are more passages before the current page
+   * @deprecated Use pageInfo.hasMoreBefore instead
+   */
   hasMoreBefore: Scalars['Boolean']['output'];
-  /** Cursor for fetching the next page */
+  /**
+   * Cursor for fetching the next page
+   * @deprecated Use pageInfo.nextCursor instead
+   */
   nextCursor?: Maybe<Scalars['String']['output']>;
   /** List of passages */
   nodes: Array<Passage>;
-  /** Cursor for fetching the previous page */
+  /** Pagination information */
+  pageInfo: PageInfo;
+  /**
+   * Cursor for fetching the previous page
+   * @deprecated Use pageInfo.prevCursor instead
+   */
   prevCursor?: Maybe<Scalars['String']['output']>;
 };
 
@@ -446,10 +476,10 @@ export type GetPassagesQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithAnnotationsFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesBasicQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -460,10 +490,10 @@ export type GetPassagesBasicQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageFieldsFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -474,10 +504,10 @@ export type GetPassagesWithJsonQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithJsonFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesAroundWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -487,10 +517,10 @@ export type GetPassagesAroundWithJsonQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithJsonFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -723,10 +753,12 @@ export const GetPassagesDocument = gql`
       nodes {
         ...PassageWithAnnotations
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -742,10 +774,12 @@ export const GetPassagesBasicDocument = gql`
       nodes {
         ...PassageFields
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -758,10 +792,12 @@ export const GetPassagesWithJsonDocument = gql`
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -774,10 +810,12 @@ export const GetPassagesAroundWithJsonDocument = gql`
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }

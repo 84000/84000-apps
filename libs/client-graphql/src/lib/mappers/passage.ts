@@ -1,8 +1,5 @@
 import type { Passage, PassagesPage, BodyItemType } from '@data-access';
-import {
-  annotationsFromGraphQL,
-  type GraphQLAnnotation,
-} from './annotation';
+import { annotationsFromGraphQL, type GraphQLAnnotation } from './annotation';
 import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
 
 /**
@@ -20,14 +17,21 @@ export type GraphQLPassage = {
 };
 
 /**
- * GraphQL PassageConnection type
+ * GraphQL PageInfo type
  */
-export type GraphQLPassageConnection = {
-  nodes: GraphQLPassage[];
+export type GraphQLPageInfo = {
   nextCursor?: string | null;
   prevCursor?: string | null;
   hasMoreAfter: boolean;
   hasMoreBefore: boolean;
+};
+
+/**
+ * GraphQL PassageConnection type
+ */
+export type GraphQLPassageConnection = {
+  nodes: GraphQLPassage[];
+  pageInfo: GraphQLPageInfo;
 };
 
 /**
@@ -67,9 +71,9 @@ export function passagesPageFromGraphQL(
 ): PassagesPage {
   return {
     passages: connection.nodes.map((p) => passageFromGraphQL(p, workUuid)),
-    nextCursor: connection.nextCursor ?? undefined,
-    prevCursor: connection.prevCursor ?? undefined,
-    hasMoreAfter: connection.hasMoreAfter,
-    hasMoreBefore: connection.hasMoreBefore,
+    nextCursor: connection.pageInfo.nextCursor ?? undefined,
+    prevCursor: connection.pageInfo.prevCursor ?? undefined,
+    hasMoreAfter: connection.pageInfo.hasMoreAfter,
+    hasMoreBefore: connection.pageInfo.hasMoreBefore,
   };
 }
