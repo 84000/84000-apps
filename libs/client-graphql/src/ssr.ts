@@ -3,6 +3,7 @@ export { createServerGraphQLClient } from './lib/client-ssr';
 
 // Functions (same as browser)
 export {
+  getPassage,
   getTranslationPassages,
   getTranslationPassagesAround,
   getTranslationBlocks,
@@ -14,7 +15,16 @@ export {
   getTranslationUuids,
   getTranslationToc,
   getTranslationImprint,
+  getGlossaryTerms,
+  getGlossaryEntry,
+  getGlossaryInstance,
+  getWorkGlossary,
+  getBibliographyEntry,
+  getWorkBibliography,
+  getWorkFolios,
+  getWorksConnection,
   type TranslationBlocksPage,
+  type WorksConnectionPage,
 } from './lib/functions';
 
 // Re-export types from @data-access for convenience
@@ -34,6 +44,13 @@ export type {
   Toc,
   TocEntry,
   Imprint,
+  GlossaryTermInstance,
+  GlossaryLandingItem,
+  GlossaryPageItem,
+  BibliographyEntry,
+  BibliographyEntryItem,
+  BibliographyEntries,
+  Folio,
 } from '@data-access';
 
 // Re-export constants for passage filters

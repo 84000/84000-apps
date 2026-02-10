@@ -1,12 +1,9 @@
 import {
   createServerGraphQLClient,
   getTranslationPassages,
+  getWorkGlossary,
+  getWorkBibliography,
 } from '@client-graphql/ssr';
-import {
-  createBrowserClient,
-  getGlossaryInstances,
-  getBibliographyEntries,
-} from '@data-access';
 import { isStaticFeatureEnabled } from '@lib-instr/static';
 import { blocksFromTranslationBody } from '../../block';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
@@ -25,7 +22,6 @@ export const ReaderBackMatterPage = async ({
   }
 
   const graphqlClient = await createServerGraphQLClient();
-  const supabaseClient = createBrowserClient();
 
   const { passages: endnotePassages } = await getTranslationPassages({
     client: graphqlClient,
@@ -43,12 +39,15 @@ export const ReaderBackMatterPage = async ({
   const abbreviations = blocksFromTranslationBody(abbreviationPassages);
 
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-  const glossary = await getGlossaryInstances({
-    client: supabaseClient,
+  const glossary = await getWorkGlossary({
+    client: graphqlClient,
     uuid: slug,
     withAttestations,
   });
-  const bibliography = await getBibliographyEntries({ client: supabaseClient, uuid: slug });
+  const bibliography = await getWorkBibliography({
+    client: graphqlClient,
+    uuid: slug,
+  });
 
   return (
     <ReaderBackMatterPanel
