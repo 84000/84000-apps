@@ -12,7 +12,7 @@ function buildPassageConnection(
     uuid: string;
     workUuid: string;
     content: string;
-    label: string;
+    label: string | null;
     sort: number;
     type: string;
     xmlId: string | null;

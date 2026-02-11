@@ -20,7 +20,7 @@ type Passage {
   """
   Display label for the passage (e.g., "1.1")
   """
-  label: String!
+  label: String
 
   """
   Sort order within the work
