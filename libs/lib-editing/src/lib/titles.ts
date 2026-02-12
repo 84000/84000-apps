@@ -1,10 +1,10 @@
 import {
-  ExtendedTranslationLanguage,
+  type ExtendedTranslationLanguage,
   TITLE_TYPES,
-  Titles,
-  TitleType,
+  type Titles,
+  type TitleType,
 } from '@data-access';
-import { BlockEditorContent } from './components/editor';
+import type { BlockEditorContent } from './components';
 
 const TYPE_FOR_LANGUAGE: Record<ExtendedTranslationLanguage | 'toh', string> = {
   toh: 'tohTitle',

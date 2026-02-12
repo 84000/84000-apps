@@ -1,11 +1,10 @@
 import {
-  createBrowserClient,
-  getTranslationPassages,
-  getGlossaryInstances,
-  getBibliographyEntries,
-} from '@data-access';
+  createServerGraphQLClient,
+  getTranslationBlocks,
+  getWorkGlossary,
+  getWorkBibliography,
+} from '@client-graphql/ssr';
 import { isStaticFeatureEnabled } from '@lib-instr/static';
-import { blocksFromTranslationBody } from '../../block';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
 import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
@@ -21,29 +20,35 @@ export const ReaderBackMatterPage = async ({
     return notFound();
   }
 
-  const client = createBrowserClient();
-  const { passages: endnotePassages } = await getTranslationPassages({
-    client,
-    uuid: slug,
-    type: 'endnotes',
-  });
-
-  const endnotes = blocksFromTranslationBody(endnotePassages);
-
-  const { passages: abbreviationPassages } = await getTranslationPassages({
-    client,
-    uuid: slug,
-    type: 'abbreviations',
-  });
-  const abbreviations = blocksFromTranslationBody(abbreviationPassages);
-
+  const graphqlClient = await createServerGraphQLClient();
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-  const glossary = await getGlossaryInstances({
-    client,
-    uuid: slug,
-    withAttestations,
-  });
-  const bibliography = await getBibliographyEntries({ client, uuid: slug });
+
+  const [
+    { blocks: endnotes },
+    { blocks: abbreviations },
+    glossary,
+    bibliography,
+  ] = await Promise.all([
+    getTranslationBlocks({
+      client: graphqlClient,
+      uuid: slug,
+      type: 'endnotes',
+    }),
+    getTranslationBlocks({
+      client: graphqlClient,
+      uuid: slug,
+      type: 'abbreviations',
+    }),
+    getWorkGlossary({
+      client: graphqlClient,
+      uuid: slug,
+      withAttestations,
+    }),
+    getWorkBibliography({
+      client: graphqlClient,
+      uuid: slug,
+    }),
+  ]);
 
   return (
     <ReaderBackMatterPanel

@@ -43,12 +43,12 @@ export type BibliographyEntryItem = {
 };
 
 export type BlibliographyEntryDTO = {
-  heading: string;
+  heading?: string;
   entries: BibliographyEntryItemDTO[];
 };
 
 export type BibliographyEntry = {
-  heading: string;
+  heading?: string;
   entries: BibliographyEntryItem[];
 };
 

@@ -3,10 +3,10 @@
 import { ReactNode, use, useEffect, useState } from 'react';
 import { EditorContextProvider } from './EditorProvider';
 import {
-  createBrowserClient,
+  createGraphQLClient,
   getTranslationMetadataByUuid,
   Work,
-} from '@data-access';
+} from '@client-graphql';
 import { ThreeColumnRenderer, TranslationSkeleton } from '../shared';
 import {
   LeftPanel,
@@ -32,12 +32,14 @@ export const EditorLayout = ({
 
   useEffect(() => {
     (async () => {
-      const client = createBrowserClient();
+      const client = createGraphQLClient();
       const work = await getTranslationMetadataByUuid({
         client,
         uuid: slug,
       });
-      setWork(work);
+      if (work) {
+        setWork(work);
+      }
     })();
   }, [slug]);
 

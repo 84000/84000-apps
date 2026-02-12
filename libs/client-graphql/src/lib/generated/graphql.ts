@@ -62,6 +62,26 @@ export type Annotation = {
   uuid: Scalars['ID']['output'];
 };
 
+/** A bibliography section with heading and entries */
+export type BibliographyEntry = {
+  __typename?: 'BibliographyEntry';
+  /** Bibliography entries in this section */
+  entries: Array<BibliographyEntryItem>;
+  /** Section heading */
+  heading?: Maybe<Scalars['String']['output']>;
+};
+
+/** A single bibliography entry item */
+export type BibliographyEntryItem = {
+  __typename?: 'BibliographyEntryItem';
+  /** HTML content of the bibliography entry */
+  html: Scalars['String']['output'];
+  /** Unique identifier */
+  uuid: Scalars['ID']['output'];
+  /** UUID of the work this entry belongs to */
+  workUuid?: Maybe<Scalars['ID']['output']>;
+};
+
 /** Currently authenticated user */
 export type CurrentUser = {
   __typename?: 'CurrentUser';
@@ -71,6 +91,144 @@ export type CurrentUser = {
   id: Scalars['ID']['output'];
   /** User's role */
   role: UserRole;
+};
+
+/** A folio page from a Tibetan work */
+export type Folio = {
+  __typename?: 'Folio';
+  /** Content of the folio */
+  content: Scalars['String']['output'];
+  /** Folio number within the volume */
+  folio: Scalars['Int']['output'];
+  /** Side of the folio (a or b) */
+  side: FolioSide;
+  /** Unique identifier */
+  uuid: Scalars['ID']['output'];
+  /** Volume number */
+  volume: Scalars['Int']['output'];
+};
+
+/** Folio side (recto/verso) */
+export type FolioSide =
+  | 'a'
+  | 'b';
+
+/** Related entity for a glossary entry */
+export type GlossaryEntity = {
+  __typename?: 'GlossaryEntity';
+  /** Source entity headword */
+  sourceHeadword: Scalars['String']['output'];
+  /** Source entity UUID */
+  sourceUuid: Scalars['ID']['output'];
+  /** Target entity headword */
+  targetHeadword: Scalars['String']['output'];
+  /** Target entity UUID */
+  targetUuid: Scalars['ID']['output'];
+};
+
+/** Detailed glossary entry for the detail page */
+export type GlossaryEntry = {
+  __typename?: 'GlossaryEntry';
+  /** Authority UUID */
+  authorityUuid: Scalars['ID']['output'];
+  /** Chinese names */
+  chinese: Array<Scalars['String']['output']>;
+  /** Classifications/types */
+  classifications: Array<Scalars['String']['output']>;
+  /** Definition of the term */
+  definition?: Maybe<Scalars['String']['output']>;
+  /** English names/translations */
+  english: Array<Scalars['String']['output']>;
+  /** Primary headword */
+  headword: Scalars['String']['output'];
+  /** Primary language of the headword */
+  language: Scalars['String']['output'];
+  /** Pali names */
+  pali: Array<Scalars['String']['output']>;
+  /** Related entities */
+  relatedEntities: Array<GlossaryEntity>;
+  /** Related instances across works */
+  relatedInstances: Array<GlossaryInstance>;
+  /** Sanskrit names */
+  sanskrit: Array<Scalars['String']['output']>;
+  /** Tibetan names */
+  tibetan: Array<Scalars['String']['output']>;
+  /** XML ID from source */
+  xmlId?: Maybe<Scalars['String']['output']>;
+};
+
+/** A glossary instance appearing in a specific work */
+export type GlossaryInstance = {
+  __typename?: 'GlossaryInstance';
+  /** Canon the work belongs to */
+  canon?: Maybe<Scalars['String']['output']>;
+  /** Chinese names */
+  chinese: Array<Scalars['String']['output']>;
+  /** Creators/translators */
+  creators: Array<Scalars['String']['output']>;
+  /** Definition for this instance */
+  definition?: Maybe<Scalars['String']['output']>;
+  /** English names/translations */
+  english: Array<Scalars['String']['output']>;
+  /** Pali names */
+  pali: Array<Scalars['String']['output']>;
+  /** Sanskrit names */
+  sanskrit: Array<Scalars['String']['output']>;
+  /** Tibetan names */
+  tibetan: Array<Scalars['String']['output']>;
+  /** Tohoku catalog entry */
+  toh: Scalars['String']['output'];
+  /** UUID of the work containing this instance */
+  workUuid: Scalars['ID']['output'];
+};
+
+/** A glossary item for the landing page listing */
+export type GlossaryLandingItem = {
+  __typename?: 'GlossaryLandingItem';
+  /** Definition of the term */
+  definition: Scalars['String']['output'];
+  /** Primary headword for the term */
+  headword: Scalars['String']['output'];
+  /** Primary language of the headword */
+  language: Scalars['String']['output'];
+  /** Name variants for the term */
+  nameVariants: Scalars['String']['output'];
+  /** Number of glossary entries across works */
+  numGlossaryEntries: Scalars['Int']['output'];
+  /** Type/classification of the term */
+  type: Scalars['String']['output'];
+  /** Authority UUID */
+  uuid: Scalars['ID']['output'];
+};
+
+/** A glossary term instance within a specific work */
+export type GlossaryTermInstance = {
+  __typename?: 'GlossaryTermInstance';
+  /** Authority UUID for the term */
+  authority: Scalars['String']['output'];
+  /** Definition of the term */
+  definition?: Maybe<Scalars['String']['output']>;
+  /** Names in different languages */
+  names: GlossaryTermNames;
+  /** Unique identifier */
+  uuid: Scalars['ID']['output'];
+};
+
+/** Names for a glossary term instance in different languages */
+export type GlossaryTermNames = {
+  __typename?: 'GlossaryTermNames';
+  /** Chinese name */
+  chinese?: Maybe<Scalars['String']['output']>;
+  /** English name/translation */
+  english?: Maybe<Scalars['String']['output']>;
+  /** Pali name */
+  pali?: Maybe<Scalars['String']['output']>;
+  /** Sanskrit name */
+  sanskrit?: Maybe<Scalars['String']['output']>;
+  /** Tibetan name */
+  tibetan?: Maybe<Scalars['String']['output']>;
+  /** Wylie transliteration */
+  wylie?: Maybe<Scalars['String']['output']>;
 };
 
 /** Health status response */
@@ -127,8 +285,35 @@ export type License = {
 /** Root Mutation type - extend this in other schema files */
 export type Mutation = {
   __typename?: 'Mutation';
-  /** Placeholder mutation - replace with your actual mutations */
-  _placeholder?: Maybe<Scalars['Boolean']['output']>;
+  /** Placeholder for schema validation - not used */
+  _empty?: Maybe<Scalars['Boolean']['output']>;
+  /**
+   * Save one or more passages.
+   * Requires editor.edit permission.
+   */
+  savePassages: SavePassagesResult;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationSavePassagesArgs = {
+  passages: Array<PassageInput>;
+};
+
+/**
+ * Pagination information for connections.
+ * Used consistently across all paginated queries.
+ */
+export type PageInfo = {
+  __typename?: 'PageInfo';
+  /** Whether there are more items after the current page */
+  hasMoreAfter: Scalars['Boolean']['output'];
+  /** Whether there are more items before the current page */
+  hasMoreBefore: Scalars['Boolean']['output'];
+  /** Cursor for fetching the next page */
+  nextCursor?: Maybe<Scalars['String']['output']>;
+  /** Cursor for fetching the previous page */
+  prevCursor?: Maybe<Scalars['String']['output']>;
 };
 
 /** Direction for pagination */
@@ -155,13 +340,15 @@ export type Passage = {
    */
   json?: Maybe<Scalars['JSON']['output']>;
   /** Display label for the passage (e.g., "1.1") */
-  label: Scalars['String']['output'];
+  label?: Maybe<Scalars['String']['output']>;
   /** Sort order within the work */
   sort: Scalars['Int']['output'];
   /** Type of passage content (e.g., translation, introduction, colophon) */
   type: Scalars['String']['output'];
   /** Unique identifier for the passage */
   uuid: Scalars['ID']['output'];
+  /** UUID of the work this passage belongs to */
+  workUuid: Scalars['ID']['output'];
   /** XML ID from the source document */
   xmlId?: Maybe<Scalars['String']['output']>;
 };
@@ -169,15 +356,29 @@ export type Passage = {
 /** Paginated connection of passages */
 export type PassageConnection = {
   __typename?: 'PassageConnection';
-  /** Whether there are more passages after the current page */
+  /**
+   * Whether there are more passages after the current page
+   * @deprecated Use pageInfo.hasMoreAfter instead
+   */
   hasMoreAfter: Scalars['Boolean']['output'];
-  /** Whether there are more passages before the current page */
+  /**
+   * Whether there are more passages before the current page
+   * @deprecated Use pageInfo.hasMoreBefore instead
+   */
   hasMoreBefore: Scalars['Boolean']['output'];
-  /** Cursor for fetching the next page */
+  /**
+   * Cursor for fetching the next page
+   * @deprecated Use pageInfo.nextCursor instead
+   */
   nextCursor?: Maybe<Scalars['String']['output']>;
   /** List of passages */
   nodes: Array<Passage>;
-  /** Cursor for fetching the previous page */
+  /** Pagination information */
+  pageInfo: PageInfo;
+  /**
+   * Cursor for fetching the previous page
+   * @deprecated Use pageInfo.prevCursor instead
+   */
   prevCursor?: Maybe<Scalars['String']['output']>;
 };
 
@@ -195,13 +396,57 @@ export type PassageFilter = {
   types?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+/** Input type for saving a passage */
+export type PassageInput = {
+  /** Annotations as JSON array */
+  annotations: Scalars['JSON']['input'];
+  /** Text content of the passage */
+  content: Scalars['String']['input'];
+  /** Display label for the passage */
+  label: Scalars['String']['input'];
+  /** Sort order within the work */
+  sort: Scalars['Int']['input'];
+  /** Type of passage content */
+  type: Scalars['String']['input'];
+  /** Unique identifier for the passage */
+  uuid: Scalars['ID']['input'];
+  /** UUID of the work this passage belongs to */
+  workUuid: Scalars['ID']['input'];
+  /** XML ID from the source document */
+  xmlId?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** Permission types that can be checked */
+export type Permission =
+  | 'EDITOR_ADMIN'
+  | 'EDITOR_EDIT'
+  | 'EDITOR_READ'
+  | 'PROJECTS_ADMIN'
+  | 'PROJECTS_EDIT'
+  | 'PROJECTS_READ';
+
 /** Root Query type - extend this in other schema files */
 export type Query = {
   __typename?: 'Query';
+  /** Get a single bibliography entry by UUID */
+  bibliographyEntry?: Maybe<BibliographyEntryItem>;
+  /** Get a single glossary entry by UUID (for detail page) */
+  glossaryEntry?: Maybe<GlossaryEntry>;
+  /** Get a single glossary instance by UUID */
+  glossaryInstance?: Maybe<GlossaryTermInstance>;
+  /** Get all glossary terms for the landing page */
+  glossaryTerms: Array<GlossaryLandingItem>;
+  /**
+   * Check if the current user has a specific permission.
+   * Returns false if not authenticated.
+   */
+  hasPermission: Scalars['Boolean']['output'];
   /** Health check query */
   health: HealthStatus;
   /** Get the currently authenticated user (null if not authenticated) */
   me?: Maybe<CurrentUser>;
+  /** Fetch a single passage by UUID */
+  passage?: Maybe<Passage>;
   /** Get the current API version */
   version: Scalars['String']['output'];
   /**
@@ -210,8 +455,44 @@ export type Query = {
    * and will be used as the default for nested resolvers (like imprint).
    */
   work?: Maybe<Work>;
-  /** Get all published translation works */
-  works: Array<Work>;
+  /** Get paginated published translation works */
+  works: WorkConnection;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryBibliographyEntryArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryGlossaryEntryArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryGlossaryInstanceArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryGlossaryTermsArgs = {
+  uuids?: InputMaybe<Array<Scalars['ID']['input']>>;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryHasPermissionArgs = {
+  permission: Permission;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryPassageArgs = {
+  uuid: Scalars['ID']['input'];
 };
 
 
@@ -219,6 +500,24 @@ export type Query = {
 export type QueryWorkArgs = {
   toh?: InputMaybe<Scalars['String']['input']>;
   uuid?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryWorksArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Result of saving passages */
+export type SavePassagesResult = {
+  __typename?: 'SavePassagesResult';
+  /** Error message if the save failed */
+  error?: Maybe<Scalars['String']['output']>;
+  /** Number of passages saved */
+  savedCount: Scalars['Int']['output'];
+  /** Whether the save was successful */
+  success: Scalars['Boolean']['output'];
 };
 
 /** A title of a work in a specific language */
@@ -323,6 +622,12 @@ export type UserRole =
 /** A published translation work from the 84000 canon */
 export type Work = {
   __typename?: 'Work';
+  /** Bibliography entries for this work, grouped by section */
+  bibliography: Array<BibliographyEntry>;
+  /** Folios for this work, filtered by toh and paginated */
+  folios: Array<Folio>;
+  /** Glossary term instances for this work */
+  glossary: Array<GlossaryTermInstance>;
   /**
    * Publication imprint information.
    * If the work query specified a toh argument, that value will be used.
@@ -359,11 +664,36 @@ export type Work = {
 
 
 /** A published translation work from the 84000 canon */
+export type WorkFoliosArgs = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  size?: InputMaybe<Scalars['Int']['input']>;
+  toh: Scalars['String']['input'];
+};
+
+
+/** A published translation work from the 84000 canon */
+export type WorkGlossaryArgs = {
+  withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+/** A published translation work from the 84000 canon */
 export type WorkPassagesArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>;
   direction?: InputMaybe<PaginationDirection>;
   filter?: InputMaybe<PassageFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Connection type for paginated works */
+export type WorkConnection = {
+  __typename?: 'WorkConnection';
+  /** List of works in this page */
+  items: Array<Work>;
+  /** Pagination information */
+  pageInfo: PageInfo;
+  /** Total count of works matching the query */
+  totalCount: Scalars['Int']['output'];
 };
 
 export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: string, toh: string, tibetan: string, folioNumber: number, volumeNumber: number };
@@ -385,7 +715,7 @@ export type ImprintFieldsFragment = { __typename?: 'Imprint', toh: string, secti
     & TitlesByLanguageFieldsFragment
   ) | null };
 
-export type PassageFieldsFragment = { __typename?: 'Passage', uuid: string, content: string, label: string, sort: number, type: string, xmlId?: string | null };
+export type PassageFieldsFragment = { __typename?: 'Passage', uuid: string, workUuid: string, content: string, label?: string | null, sort: number, type: string, xmlId?: string | null };
 
 export type PassageWithAnnotationsFragment = (
   { __typename?: 'Passage', annotations: Array<(
@@ -398,7 +728,7 @@ export type PassageWithAnnotationsFragment = (
   & PassageFieldsFragment
 );
 
-export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, label: string, sort: number, type: string, xmlId?: string | null, json?: any | null };
+export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, workUuid: string, label?: string | null, sort: number, type: string, xmlId?: string | null, json?: any | null };
 
 export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string };
 
@@ -446,10 +776,10 @@ export type GetPassagesQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithAnnotationsFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesBasicQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -460,10 +790,10 @@ export type GetPassagesBasicQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageFieldsFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -474,10 +804,10 @@ export type GetPassagesWithJsonQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithJsonFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesAroundWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -487,10 +817,20 @@ export type GetPassagesAroundWithJsonQueryVariables = Exact<{
 }>;
 
 
-export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean, nodes: Array<(
+export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
         { __typename?: 'Passage' }
         & PassageWithJsonFragment
-      )> } } | null };
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
+
+export type GetPassageQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+}>;
+
+
+export type GetPassageQuery = { __typename?: 'Query', passage?: (
+    { __typename?: 'Passage' }
+    & PassageWithAnnotationsFragment
+  ) | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -552,18 +892,24 @@ export type GetWorkWithTocQuery = { __typename?: 'Query', work?: (
     & WorkFieldsFragment
   ) | null };
 
-export type GetAllWorksQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetAllWorksQueryVariables = Exact<{
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
 
 
-export type GetAllWorksQuery = { __typename?: 'Query', works: Array<(
-    { __typename?: 'Work' }
-    & WorkFieldsFragment
-  )> };
+export type GetAllWorksQuery = { __typename?: 'Query', works: { __typename?: 'WorkConnection', items: Array<(
+      { __typename?: 'Work' }
+      & WorkFieldsFragment
+    )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, hasMoreAfter: boolean } } };
 
-export type GetWorkUuidsQueryVariables = Exact<{ [key: string]: never; }>;
+export type GetWorkUuidsQueryVariables = Exact<{
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
 
 
-export type GetWorkUuidsQuery = { __typename?: 'Query', works: Array<{ __typename?: 'Work', uuid: string }> };
+export type GetWorkUuidsQuery = { __typename?: 'Query', works: { __typename?: 'WorkConnection', items: Array<{ __typename?: 'Work', uuid: string }>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, hasMoreAfter: boolean } } };
 
 export const LicenseFieldsFragmentDoc = gql`
     fragment LicenseFields on License {
@@ -606,6 +952,7 @@ export const ImprintFieldsFragmentDoc = gql`
 export const PassageFieldsFragmentDoc = gql`
     fragment PassageFields on Passage {
   uuid
+  workUuid
   content
   label
   sort
@@ -645,6 +992,7 @@ export const PassageWithAnnotationsFragmentDoc = gql`
 export const PassageWithJsonFragmentDoc = gql`
     fragment PassageWithJson on Passage {
   uuid
+  workUuid
   label
   sort
   type
@@ -723,10 +1071,12 @@ export const GetPassagesDocument = gql`
       nodes {
         ...PassageWithAnnotations
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -742,10 +1092,12 @@ export const GetPassagesBasicDocument = gql`
       nodes {
         ...PassageFields
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -758,10 +1110,12 @@ export const GetPassagesWithJsonDocument = gql`
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
@@ -774,14 +1128,26 @@ export const GetPassagesAroundWithJsonDocument = gql`
       nodes {
         ...PassageWithJson
       }
-      nextCursor
-      prevCursor
-      hasMoreAfter
-      hasMoreBefore
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
     }
   }
 }
     ${PassageWithJsonFragmentDoc}`;
+export const GetPassageDocument = gql`
+    query GetPassage($uuid: ID!) {
+  passage(uuid: $uuid) {
+    ...PassageWithAnnotations
+  }
+}
+    ${PassageWithAnnotationsFragmentDoc}
+${PassageFieldsFragmentDoc}
+${AnnotationFieldsFragmentDoc}
+${AlignmentFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -834,16 +1200,28 @@ ${TocFieldsFragmentDoc}
 ${TocEntryNestedFragmentDoc}
 ${TocEntryFieldsFragmentDoc}`;
 export const GetAllWorksDocument = gql`
-    query GetAllWorks {
-  works {
-    ...WorkFields
+    query GetAllWorks($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      ...WorkFields
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
   }
 }
     ${WorkFieldsFragmentDoc}`;
 export const GetWorkUuidsDocument = gql`
-    query GetWorkUuids {
-  works {
-    uuid
+    query GetWorkUuids($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      uuid
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
   }
 }
     `;
@@ -866,6 +1244,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetPassagesAroundWithJson(variables: GetPassagesAroundWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesAroundWithJsonQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesAroundWithJsonQuery>({ document: GetPassagesAroundWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesAroundWithJson', 'query', variables);
+    },
+    GetPassage(variables: GetPassageQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassageQuery>({ document: GetPassageDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassage', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);

@@ -1,8 +1,12 @@
 // SSR Client
-export { createServerGraphQLClient } from './lib/client-ssr';
+export {
+  createServerGraphQLClient,
+  createBuildGraphQLClient,
+} from './lib/client-ssr';
 
 // Functions (same as browser)
 export {
+  getPassage,
   getTranslationPassages,
   getTranslationPassagesAround,
   getTranslationBlocks,
@@ -12,7 +16,18 @@ export {
   getTranslationMetadataByToh,
   getTranslationsMetadata,
   getTranslationUuids,
+  getTranslationToc,
+  getTranslationImprint,
+  getGlossaryTerms,
+  getGlossaryEntry,
+  getGlossaryInstance,
+  getWorkGlossary,
+  getBibliographyEntry,
+  getWorkBibliography,
+  getWorkFolios,
+  getWorks,
   type TranslationBlocksPage,
+  type WorksPage,
 } from './lib/functions';
 
 // Re-export types from @data-access for convenience
@@ -29,6 +44,16 @@ export type {
   Title,
   Titles,
   TitleType,
+  Toc,
+  TocEntry,
+  Imprint,
+  GlossaryTermInstance,
+  GlossaryLandingItem,
+  GlossaryPageItem,
+  BibliographyEntry,
+  BibliographyEntryItem,
+  BibliographyEntries,
+  Folio,
 } from '@data-access';
 
 // Re-export constants for passage filters

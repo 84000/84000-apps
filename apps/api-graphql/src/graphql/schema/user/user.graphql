@@ -10,6 +10,18 @@ enum UserRole {
 }
 
 """
+Permission types that can be checked
+"""
+enum Permission {
+  PROJECTS_READ
+  PROJECTS_EDIT
+  PROJECTS_ADMIN
+  EDITOR_READ
+  EDITOR_EDIT
+  EDITOR_ADMIN
+}
+
+"""
 Currently authenticated user
 """
 type CurrentUser {
@@ -27,4 +39,12 @@ type CurrentUser {
   User's role
   """
   role: UserRole!
+}
+
+extend type Query {
+  """
+  Check if the current user has a specific permission.
+  Returns false if not authenticated.
+  """
+  hasPermission(permission: Permission!): Boolean!
 }

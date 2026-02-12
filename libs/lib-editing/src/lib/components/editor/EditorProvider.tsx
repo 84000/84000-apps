@@ -3,13 +3,12 @@
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment } from 'yjs';
+import type { Passage, Work } from '@data-access';
 import {
-  Passage,
-  Work,
-  createBrowserClient,
+  createGraphQLClient,
   hasPermission,
   savePassages,
-} from '@data-access';
+} from '@client-graphql';
 import { passagesFromNodes } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
@@ -43,30 +42,26 @@ export const EditorContext = createContext<EditorContextState>({
     isDirty: false,
     listeners: new Set(),
     subscribe: () => () => {
-      throw Error('Not implemented');
+      // No-op cleanup - safe for useSyncExternalStore in reader mode
     },
     setDirty: () => {
-      throw Error('Not implemented');
+      // No-op when outside provider (reader mode)
     },
     getSnapshot: () => false,
   },
-  canEdit: async () => {
-    throw Error('Not implemented');
-  },
+  canEdit: async () => false,
   getFragment: () => {
     throw Error('Not implemented');
   },
   setDoc: () => {
     throw Error('Not implemented');
   },
-  getEditor: () => {
-    throw Error('Not implemented');
-  },
+  getEditor: () => undefined,
   setEditor: () => {
     throw Error('Not implemented');
   },
   save: async () => {
-    throw Error('Not implemented');
+    // No-op when outside provider
   },
   startObserving: () => {
     throw Error('Not implemented');
@@ -87,7 +82,7 @@ export const EditorContextProvider = ({
   doc: initialDoc,
   children,
 }: EditorContextProps) => {
-  const client = createBrowserClient();
+  const client = createGraphQLClient();
 
   const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
   // Use ref for immediate tracking to avoid state updates on every keystroke
@@ -196,7 +191,7 @@ export const EditorContextProvider = ({
   );
 
   const canEdit = useCallback(async () => {
-    return await hasPermission({ client, permission: 'editor.edit' });
+    return await hasPermission({ client, permission: 'EDITOR_EDIT' });
   }, [client]);
 
   return (

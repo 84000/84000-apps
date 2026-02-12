@@ -1,15 +1,14 @@
 'use client';
 
 import {
+  createGraphQLClient,
   BODY_MATTER_FILTER,
-  createBrowserClient,
   FRONT_MATTER_FILTER,
-  getTranslationPassages,
+  getTranslationBlocks,
   getTranslationTitles,
-  Title,
-} from '@data-access';
+} from '@client-graphql';
+import type { Title } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
-import { blocksFromTranslationBody } from '../../block';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
 import { TranslationBuilder, TranslationEditorContent } from '.';
@@ -17,7 +16,6 @@ import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
 
 const INITIAL_PASSAGES = 500;
-const INITIAL_MAX_CHARACTERS = 200000;
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
@@ -27,31 +25,28 @@ export const EditorBodyPage = () => {
 
   useEffect(() => {
     (async () => {
-      const client = createBrowserClient();
-      const { passages: frontPassages } = await getTranslationPassages({
-        client,
-        uuid: work.uuid,
-        type: FRONT_MATTER_FILTER,
-        maxPassages: INITIAL_PASSAGES,
-        maxCharacters: INITIAL_MAX_CHARACTERS,
-      });
+      const client = createGraphQLClient();
 
-      const { passages: bodyPassages } = await getTranslationPassages({
-        client,
-        uuid: work.uuid,
-        type: BODY_MATTER_FILTER,
-        maxPassages: INITIAL_PASSAGES,
-        maxCharacters: INITIAL_MAX_CHARACTERS,
-      });
+      const [{ blocks: frontBlocks }, { blocks: bodyBlocks }, titlesData] =
+        await Promise.all([
+          getTranslationBlocks({
+            client,
+            uuid: work.uuid,
+            type: FRONT_MATTER_FILTER,
+            maxPassages: INITIAL_PASSAGES,
+          }),
+          getTranslationBlocks({
+            client,
+            uuid: work.uuid,
+            type: BODY_MATTER_FILTER,
+            maxPassages: INITIAL_PASSAGES,
+          }),
+          getTranslationTitles({ client, uuid: work.uuid }),
+        ]);
 
-      const titles = await getTranslationTitles({ client, uuid: work.uuid });
-      setTitles(titles);
-
-      const frontMatter = blocksFromTranslationBody(frontPassages);
-      setFrontMatter(frontMatter);
-
-      const body = blocksFromTranslationBody(bodyPassages);
-      setBody(body);
+      setTitles(titlesData);
+      setFrontMatter(frontBlocks);
+      setBody(bodyBlocks);
     })();
   }, [work.uuid]);
 

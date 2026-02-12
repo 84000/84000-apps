@@ -4,6 +4,32 @@ JSON scalar for arbitrary JSON data
 scalar JSON
 
 """
+Pagination information for connections.
+Used consistently across all paginated queries.
+"""
+type PageInfo {
+  """
+  Cursor for fetching the next page
+  """
+  nextCursor: String
+
+  """
+  Cursor for fetching the previous page
+  """
+  prevCursor: String
+
+  """
+  Whether there are more items after the current page
+  """
+  hasMoreAfter: Boolean!
+
+  """
+  Whether there are more items before the current page
+  """
+  hasMoreBefore: Boolean!
+}
+
+"""
 Root Query type - extend this in other schema files
 """
 type Query {
@@ -28,7 +54,7 @@ Root Mutation type - extend this in other schema files
 """
 type Mutation {
   """
-  Placeholder mutation - replace with your actual mutations
+  Placeholder for schema validation - not used
   """
-  _placeholder: Boolean
+  _empty: Boolean
 }

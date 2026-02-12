@@ -1,6 +1,7 @@
 'use client';
 
-import { createBrowserClient, getTranslationToc, Toc } from '@data-access';
+import { createGraphQLClient, getTranslationToc } from '@client-graphql';
+import type { Toc } from '@data-access';
 import { LeftPanel } from '../shared/LeftPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
@@ -12,7 +13,7 @@ export const EditorLeftPanelPage = () => {
 
   useEffect(() => {
     (async () => {
-      const client = createBrowserClient();
+      const client = createGraphQLClient();
       const toc = await getTranslationToc({ client, uuid: work.uuid });
       setToc(toc);
     })();

@@ -30,3 +30,14 @@ export async function createServerGraphQLClient(): Promise<GraphQLClient> {
 
   return client;
 }
+
+/**
+ * Create a GraphQL client for build-time requests (generateStaticParams).
+ * Does not use cookies since there's no request context during builds.
+ *
+ * Use this in generateStaticParams and other build-time contexts.
+ */
+export function createBuildGraphQLClient(): GraphQLClient {
+  const url = getGraphQLUrl();
+  return new GraphQLClient(url);
+}

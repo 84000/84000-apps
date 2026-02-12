@@ -1,7 +1,7 @@
 import {
-  createBrowserClient,
+  createServerGraphQLClient,
   getTranslationMetadataByUuid,
-} from '@data-access';
+} from '@client-graphql/ssr';
 import { isUuid, parseToh } from '@lib-utils';
 import { Metadata } from 'next';
 import { cache } from 'react';
@@ -18,7 +18,7 @@ export async function generateMetadata({
     return { title: '84000 Translation Reader' };
   }
 
-  const client = createBrowserClient();
+  const client = await createServerGraphQLClient();
   const work = await cache(getTranslationMetadataByUuid)({
     client,
     uuid: slug,

@@ -1,8 +1,8 @@
 import { ImageResponse } from 'next/og';
 import {
-  createBrowserClient,
+  createServerGraphQLClient,
   getTranslationMetadataByUuid,
-} from '@data-access';
+} from '@client-graphql/ssr';
 import { MainLogoSvg } from '@design-system/ssr';
 import { isUuid, parseToh } from '@lib-utils';
 import { cache } from 'react';
@@ -22,7 +22,7 @@ export const OpenGraphImage = async ({
   // Only fetch work metadata for valid UUIDs
   let work = null;
   if (isUuid(slug)) {
-    const client = createBrowserClient();
+    const client = await createServerGraphQLClient();
     work = await cache(getTranslationMetadataByUuid)({
       client,
       uuid: slug,

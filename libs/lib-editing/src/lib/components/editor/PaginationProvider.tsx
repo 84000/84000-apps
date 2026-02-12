@@ -13,14 +13,13 @@ import { TranslationEditorContent } from './TranslationEditor';
 import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
-  createBrowserClient,
-  getTranslationPassages,
-  getTranslationPassagesAround,
-  PanelFilter,
-} from '@data-access';
+  createGraphQLClient,
+  getTranslationBlocks,
+  getTranslationBlocksAround,
+} from '@client-graphql';
+import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { useInView } from 'motion/react';
-import { blocksFromTranslationBody } from '../../block';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
@@ -91,6 +90,7 @@ export const PaginationProvider = ({
     initialEndCursor || undefined,
   );
   const [navCursor, setNavCursor] = useState<string | undefined>();
+  const processedNavCursorRef = useRef<string | undefined>(undefined);
 
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
@@ -99,10 +99,14 @@ export const PaginationProvider = ({
   const childrenDivRef = useRef<HTMLDivElement>(null);
   const shouldLoadMoreAtStart = useInView(loadMoreAtStartRef);
   const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
-  const dataClient = createBrowserClient();
+  const dataClient = createGraphQLClient();
 
   const { panels, updatePanel, setShowOuterContent } = useNavigation();
   const isMobile = useIsMobile();
+
+  // Extract hash as a primitive value so we only react to actual hash changes,
+  // not to every panels object reference change
+  const panelHash = panels[panel]?.hash;
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -128,15 +132,23 @@ export const PaginationProvider = ({
       return;
     }
 
-    const hash = panels[panel]?.hash;
-    setNavCursor(hash);
-  }, [panel, panels]);
+    setNavCursor(panelHash);
+  }, [panelHash]);
 
   useEffect(() => {
     const div = childrenDivRef.current;
     if (!div || !navCursor || startIsLoading || endIsLoading) {
       return;
     }
+
+    // Guard: Don't re-process the same hash
+    if (processedNavCursorRef.current === navCursor) {
+      return;
+    }
+
+    // Mark as processing IMMEDIATELY (synchronously) to prevent re-entry
+    // from effect re-runs while async work is in progress
+    processedNavCursorRef.current = navCursor;
 
     (async () => {
       // On mobile, add a delay to allow panel Sheet animation to complete
@@ -150,20 +162,14 @@ export const PaginationProvider = ({
       let element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
 
       if (!element && isUuid(navCursor)) {
-        const {
-          passages,
-          hasMoreBefore,
-          hasMoreAfter,
-          prevCursor,
-          nextCursor,
-        } = await getTranslationPassagesAround({
-          client: dataClient,
-          uuid,
-          type: filter,
-          passageUuid: navCursor,
-        });
+        const { blocks, hasMoreBefore, hasMoreAfter, prevCursor, nextCursor } =
+          await getTranslationBlocksAround({
+            client: dataClient,
+            uuid,
+            type: filter,
+            passageUuid: navCursor,
+          });
 
-        const nextContent = blocksFromTranslationBody(passages);
         // Wait for editor to finish updating
         await new Promise<void>((resolve) => {
           const handleUpdate = () => {
@@ -172,7 +178,7 @@ export const PaginationProvider = ({
           };
 
           editor?.on('update', handleUpdate);
-          editor?.chain().clearContent().setContent(nextContent).run();
+          editor?.chain().clearContent().setContent(blocks).run();
         });
         setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
         setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
@@ -220,6 +226,7 @@ export const PaginationProvider = ({
       }
 
       await scrollToElement({ element });
+
       updatePanel({
         name: panel,
         state: { ...panels[panel], hash: undefined },
@@ -232,7 +239,8 @@ export const PaginationProvider = ({
     navCursor,
     startIsLoading,
     endIsLoading,
-    panels,
+    // Intentionally excluding `panels` - we only read its current value when clearing hash.
+    // Including it causes infinite loops since updatePanel() creates a new panels object.
     editor,
     dataClient,
     updatePanel,
@@ -253,21 +261,20 @@ export const PaginationProvider = ({
 
     (async () => {
       const {
-        passages,
+        blocks,
         hasMoreAfter: hasMore,
         nextCursor,
-      } = await getTranslationPassages({
+      } = await getTranslationBlocks({
         client: dataClient,
         uuid,
         type: filter,
         cursor: endCursor,
       });
 
-      const nextContent = blocksFromTranslationBody(passages);
       const pos = editor?.state.doc?.content.size;
 
-      if (pos >= 0 && nextContent.length && editor) {
-        await insertContentChunked(editor, pos, nextContent);
+      if (pos >= 0 && blocks.length && editor) {
+        await insertContentChunked(editor, pos, blocks);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -290,19 +297,17 @@ export const PaginationProvider = ({
     setStartIsLoading(true);
 
     (async () => {
-      const { passages, hasMoreBefore, prevCursor } =
-        await getTranslationPassages({
-          client: dataClient,
-          uuid,
-          type: filter,
-          cursor: startCursor,
-          direction: 'backward',
-        });
+      const { blocks, hasMoreBefore, prevCursor } = await getTranslationBlocks({
+        client: dataClient,
+        uuid,
+        type: filter,
+        cursor: startCursor,
+        direction: 'backward',
+      });
 
-      const nextContent = blocksFromTranslationBody(passages);
       const pos = 0;
 
-      if (nextContent.length && editor) {
+      if (blocks.length && editor?.view?.dom) {
         const editorEl = editor.view.dom;
         const scrollContainer =
           editorEl.closest('[data-panel]') || editorEl.parentElement;
@@ -311,7 +316,7 @@ export const PaginationProvider = ({
 
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
-        editor.commands.insertContentAt(pos, nextContent);
+        editor.commands.insertContentAt(pos, blocks);
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;
@@ -320,6 +325,9 @@ export const PaginationProvider = ({
             scrollContainer.scrollTop = previousScrollTop + deltaHeight;
           }
         });
+      } else if (blocks.length && editor) {
+        // Fallback: insert without scroll preservation when view not ready
+        editor.commands.insertContentAt(pos, blocks);
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);

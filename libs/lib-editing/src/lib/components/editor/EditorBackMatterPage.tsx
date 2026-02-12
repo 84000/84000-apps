@@ -1,15 +1,12 @@
 'use client';
 
 import {
-  createBrowserClient,
-  BACK_MATTER_FILTER,
-  getTranslationPassages,
-  getGlossaryInstances,
-  getBibliographyEntries,
-  GlossaryTermInstances,
-  BibliographyEntries,
-} from '@data-access';
-import { blocksFromTranslationBody } from '../../block';
+  createGraphQLClient,
+  getTranslationBlocks,
+  getWorkGlossary,
+  getWorkBibliography,
+} from '@client-graphql';
+import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';
@@ -29,33 +26,40 @@ export const EditorBackMatterPage = () => {
   useEffect(() => {
     (async () => {
       const { uuid } = work;
-      const client = createBrowserClient();
-      const { passages } = await getTranslationPassages({
-        client,
-        uuid,
-        type: BACK_MATTER_FILTER,
-      });
-
-      const endnotes = blocksFromTranslationBody(
-        passages.filter((p) => p.type.startsWith('endnote')),
-      );
-      setEndnotes(endnotes);
-
-      const abbreviations = blocksFromTranslationBody(
-        passages.filter((p) => p.type.startsWith('abbreviation')),
-      );
-      setAbbreviations(abbreviations);
-
+      const graphqlClient = createGraphQLClient();
       const withAttestations = isStaticFeatureEnabled('glossary-attestations');
-      const glossary = await getGlossaryInstances({
-        client,
-        uuid,
-        withAttestations,
-      });
-      setGlossary(glossary);
 
-      const bibliography = await getBibliographyEntries({ client, uuid });
-      setBibliography(bibliography);
+      const [
+        { blocks: endnoteBlocks },
+        { blocks: abbreviationBlocks },
+        glossaryData,
+        bibliographyData,
+      ] = await Promise.all([
+        getTranslationBlocks({
+          client: graphqlClient,
+          uuid,
+          type: 'endnotes',
+        }),
+        getTranslationBlocks({
+          client: graphqlClient,
+          uuid,
+          type: 'abbreviations',
+        }),
+        getWorkGlossary({
+          client: graphqlClient,
+          uuid,
+          withAttestations,
+        }),
+        getWorkBibliography({
+          client: graphqlClient,
+          uuid,
+        }),
+      ]);
+
+      setEndnotes(endnoteBlocks);
+      setAbbreviations(abbreviationBlocks);
+      setGlossary(glossaryData);
+      setBibliography(bibliographyData);
     })();
   }, [work]);
 

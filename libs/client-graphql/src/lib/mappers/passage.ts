@@ -1,8 +1,5 @@
 import type { Passage, PassagesPage, BodyItemType } from '@data-access';
-import {
-  annotationsFromGraphQL,
-  type GraphQLAnnotation,
-} from './annotation';
+import { annotationsFromGraphQL, type GraphQLAnnotation } from './annotation';
 import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
 
 /**
@@ -10,6 +7,7 @@ import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
  */
 export type GraphQLPassage = {
   uuid: string;
+  workUuid: string;
   content: string;
   label: string;
   sort: number;
@@ -20,10 +18,9 @@ export type GraphQLPassage = {
 };
 
 /**
- * GraphQL PassageConnection type
+ * GraphQL PageInfo type
  */
-export type GraphQLPassageConnection = {
-  nodes: GraphQLPassage[];
+export type GraphQLPageInfo = {
   nextCursor?: string | null;
   prevCursor?: string | null;
   hasMoreAfter: boolean;
@@ -31,11 +28,19 @@ export type GraphQLPassageConnection = {
 };
 
 /**
+ * GraphQL PassageConnection type
+ */
+export type GraphQLPassageConnection = {
+  nodes: GraphQLPassage[];
+  pageInfo: GraphQLPageInfo;
+};
+
+/**
  * Convert a GraphQL passage to the internal Passage type
  */
 export function passageFromGraphQL(
   gqlPassage: GraphQLPassage,
-  workUuid: string,
+  workUuid?: string,
 ): Passage {
   const annotations = gqlPassage.annotations
     ? annotationsFromGraphQL(gqlPassage.annotations, gqlPassage.uuid)
@@ -52,7 +57,7 @@ export function passageFromGraphQL(
     sort: gqlPassage.sort,
     type: gqlPassage.type as BodyItemType,
     xmlId: gqlPassage.xmlId ?? undefined,
-    workUuid,
+    workUuid: gqlPassage.workUuid ?? workUuid ?? '',
     annotations,
     alignments,
   };
@@ -67,9 +72,9 @@ export function passagesPageFromGraphQL(
 ): PassagesPage {
   return {
     passages: connection.nodes.map((p) => passageFromGraphQL(p, workUuid)),
-    nextCursor: connection.nextCursor ?? undefined,
-    prevCursor: connection.prevCursor ?? undefined,
-    hasMoreAfter: connection.hasMoreAfter,
-    hasMoreBefore: connection.hasMoreBefore,
+    nextCursor: connection.pageInfo.nextCursor ?? undefined,
+    prevCursor: connection.pageInfo.prevCursor ?? undefined,
+    hasMoreAfter: connection.pageInfo.hasMoreAfter,
+    hasMoreBefore: connection.pageInfo.hasMoreBefore,
   };
 }

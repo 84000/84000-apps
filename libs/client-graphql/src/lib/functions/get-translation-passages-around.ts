@@ -22,6 +22,7 @@ const GET_PASSAGES_AROUND = gql`
 
   fragment PassageWithAnnotations on Passage {
     uuid
+    workUuid
     content
     label
     sort
@@ -52,10 +53,12 @@ const GET_PASSAGES_AROUND = gql`
         nodes {
           ...PassageWithAnnotations
         }
-        nextCursor
-        prevCursor
-        hasMoreAfter
-        hasMoreBefore
+        pageInfo {
+          nextCursor
+          prevCursor
+          hasMoreAfter
+          hasMoreBefore
+        }
       }
     }
   }
@@ -67,6 +70,7 @@ type GetPassagesAroundResponse = {
     passages: {
       nodes: Array<{
         uuid: string;
+        workUuid: string;
         content: string;
         label: string;
         sort: number;
@@ -87,10 +91,12 @@ type GetPassagesAroundResponse = {
           volumeNumber: number;
         }>;
       }>;
-      nextCursor?: string | null;
-      prevCursor?: string | null;
-      hasMoreAfter: boolean;
-      hasMoreBefore: boolean;
+      pageInfo: {
+        nextCursor?: string | null;
+        prevCursor?: string | null;
+        hasMoreAfter: boolean;
+        hasMoreBefore: boolean;
+      };
     };
   } | null;
 };

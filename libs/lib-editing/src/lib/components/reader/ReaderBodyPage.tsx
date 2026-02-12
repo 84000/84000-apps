@@ -1,17 +1,15 @@
 import {
   BODY_MATTER_FILTER,
-  createBrowserClient,
+  createServerGraphQLClient,
   FRONT_MATTER_FILTER,
-  getTranslationPassages,
+  getTranslationBlocks,
   getTranslationTitles,
-} from '@data-access';
-import { blocksFromTranslationBody } from '../../block';
+} from '@client-graphql/ssr';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
 import { isUuid } from '@lib-utils';
 import { notFound } from 'next/navigation';
 
 const INITIAL_PASSAGES = 250;
-const INITIAL_MAX_CHARACTERS = 80000;
 
 export const ReaderBodyPage = async ({
   params,
@@ -24,27 +22,23 @@ export const ReaderBodyPage = async ({
     return notFound();
   }
 
-  const client = createBrowserClient();
+  const client = await createServerGraphQLClient();
 
-  const { passages: frontPassages } = await getTranslationPassages({
+  const { blocks: frontMatter } = await getTranslationBlocks({
     client,
     uuid: slug,
     type: FRONT_MATTER_FILTER,
     maxPassages: INITIAL_PASSAGES,
-    maxCharacters: INITIAL_MAX_CHARACTERS,
   });
 
-  const { passages: bodyPassages } = await getTranslationPassages({
+  const { blocks: body } = await getTranslationBlocks({
     client,
     uuid: slug,
     type: BODY_MATTER_FILTER,
     maxPassages: INITIAL_PASSAGES,
-    maxCharacters: INITIAL_MAX_CHARACTERS,
   });
 
   const titles = await getTranslationTitles({ client, uuid: slug });
-  const frontMatter = blocksFromTranslationBody(frontPassages);
-  const body = blocksFromTranslationBody(bodyPassages);
 
   return (
     <ReaderBodyPanel titles={titles} frontMatter={frontMatter} body={body} />
