@@ -1,15 +1,10 @@
-import {
-  createGraphQLClient,
-  getTranslationUuids,
-} from '@client-graphql';
 import { ReaderBodyPage } from '@lib-editing/ssr';
+import { getStaticUuids } from '../get-static-uuids';
 
-export const revalidate = 60;
 export const dynamicParams = true;
 
 export const generateStaticParams = async () => {
-  const client = createGraphQLClient();
-  const uuids = await getTranslationUuids({ client });
+  const uuids = await getStaticUuids();
   return uuids.map((slug) => ({ slug }));
 };
 

@@ -25,7 +25,7 @@ type BibliographyEntry {
   """
   Section heading
   """
-  heading: String!
+  heading: String
 
   """
   Bibliography entries in this section

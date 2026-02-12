@@ -10,7 +10,7 @@ import type { GraphQLContext } from '../../context';
 export const workQueries = {
   works: async (
     _parent: unknown,
-    args: { cursor?: string; limit?: number },
+    args: { cursor?: string; limit?: number; filter?: { maxPages?: number } },
     ctx: GraphQLContext,
   ) => {
     const limit = Math.min(args.limit ?? 50, 200);
@@ -35,6 +35,11 @@ export const workQueries = {
       .not('toh', 'like', 'toh00%')
       .order('title', { ascending: true })
       .limit(limit + 1); // Fetch one extra to check if there are more
+
+    // Apply maxPages filter if provided
+    if (args.filter?.maxPages) {
+      query = query.lt('source_pages', args.filter.maxPages);
+    }
 
     // Apply cursor if provided
     if (args.cursor) {

@@ -1,6 +1,10 @@
 'use client';
 
-import { Content, EditorContent, UseEditorOptions } from '@tiptap/react';
+import {
+  EditorContent,
+  type Content,
+  type UseEditorOptions,
+} from '@tiptap/react';
 import { useBlockEditor, useDefaultExtensions } from './hooks';
 import { MainBubbleMenu } from './menus/MainBubbleMenu';
 

@@ -102,6 +102,16 @@ type WorkConnection {
   totalCount: Int!
 }
 
+"""
+Filter criteria for works query
+"""
+input WorkFilter {
+  """
+  Maximum number of source pages (exclusive). Only return works with fewer pages than this value.
+  """
+  maxPages: Int
+}
+
 extend type Query {
   """
   Get paginated published translation works
@@ -116,6 +126,11 @@ extend type Query {
     Maximum number of works to return (default: 50, max: 200)
     """
     limit: Int
+
+    """
+    Filter criteria for works
+    """
+    filter: WorkFilter
   ): WorkConnection!
 
   """

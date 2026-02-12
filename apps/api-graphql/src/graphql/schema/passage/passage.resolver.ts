@@ -39,6 +39,9 @@ function buildPassageConnection(
   };
 }
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
 export const passagesResolver = async (
   parent: WorkParent,
   args: {
@@ -50,7 +53,7 @@ export const passagesResolver = async (
   ctx: GraphQLContext,
 ) => {
   // Default and clamp limit
-  const limit = Math.min(Math.max(args.limit ?? 20, 1), 100);
+  const limit = Math.min(Math.max(args.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
 
   // Filter type - prefer types array over single type
   const passageTypes = args.filter?.types;

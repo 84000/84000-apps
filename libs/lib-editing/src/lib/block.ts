@@ -1,9 +1,12 @@
-import { Alignment, AnnotationType, BodyItemType, Passage } from '@data-access';
-import { annotateBlock } from './transformers/annotate';
-import {
+import type {
+  Alignment,
+  AnnotationType,
+  BodyItemType,
+  Passage,
   TranslationEditorContentItem,
   TranslationEditorContent,
-} from './components/editor';
+} from '@data-access';
+import { annotateBlock } from './transformers/annotate';
 
 const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
   const alignments: { [key: string]: Alignment } =

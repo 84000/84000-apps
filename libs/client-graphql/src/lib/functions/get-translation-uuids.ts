@@ -1,9 +1,11 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 
+const DEFAULT_PAGE_SIZE = 200;
+
 const GET_WORK_UUIDS = gql`
-  query GetWorkUuids($cursor: String, $limit: Int) {
-    works(cursor: $cursor, limit: $limit) {
+  query GetWorkUuids($cursor: String, $limit: Int, $filter: WorkFilter) {
+    works(cursor: $cursor, limit: $limit, filter: $filter) {
       items {
         uuid
       }
@@ -25,33 +27,35 @@ type GetWorkUuidsResponse = {
   };
 };
 
+type WorkFilter = {
+  maxPages?: number;
+};
+
 /**
- * Get all work UUIDs (fetches all pages).
+ * Get work UUIDs with optional filtering.
+ * @param client - GraphQL client
+ * @param filter - Optional filter criteria (e.g., maxPages)
+ * @param limit - Optional limit on total results (fetches all pages if not specified)
  */
 export async function getTranslationUuids({
   client,
+  filter,
+  limit,
 }: {
   client: GraphQLClient;
+  filter?: WorkFilter;
+  limit?: number;
 }): Promise<string[]> {
   try {
-    const allUuids: string[] = [];
-    let cursor: string | null = null;
+    // Single request - no pagination needed for static params
+    const response: GetWorkUuidsResponse =
+      await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
+        cursor: null,
+        limit: limit ?? DEFAULT_PAGE_SIZE,
+        filter,
+      });
 
-    // Fetch all pages
-    do {
-      const response: GetWorkUuidsResponse =
-        await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
-          cursor,
-          limit: 200,
-        });
-
-      allUuids.push(...response.works.items.map((w) => w.uuid));
-      cursor = response.works.pageInfo.hasMoreAfter
-        ? response.works.pageInfo.nextCursor
-        : null;
-    } while (cursor !== null);
-
-    return allUuids;
+    return response.works.items.map((w) => w.uuid);
   } catch (error) {
     console.error('Error fetching translation UUIDs:', error);
     return [];

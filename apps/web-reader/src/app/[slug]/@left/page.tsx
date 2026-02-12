@@ -1,12 +1,10 @@
-import { createBrowserClient, getTranslationUuids } from '@data-access';
 import { ReaderLeftPanelPage } from '@lib-editing/ssr';
+import { getStaticUuids } from '../get-static-uuids';
 
-export const revalidate = 60;
 export const dynamicParams = true;
 
 export const generateStaticParams = async () => {
-  const client = createBrowserClient();
-  const uuids = await getTranslationUuids({ client });
+  const uuids = await getStaticUuids();
   return uuids.map((slug) => ({ slug }));
 };
 

@@ -1,5 +1,8 @@
 // SSR Client
-export { createServerGraphQLClient } from './lib/client-ssr';
+export {
+  createServerGraphQLClient,
+  createBuildGraphQLClient,
+} from './lib/client-ssr';
 
 // Functions (same as browser)
 export {
