@@ -42,30 +42,26 @@ export const EditorContext = createContext<EditorContextState>({
     isDirty: false,
     listeners: new Set(),
     subscribe: () => () => {
-      throw Error('Not implemented');
+      // No-op cleanup - safe for useSyncExternalStore in reader mode
     },
     setDirty: () => {
-      throw Error('Not implemented');
+      // No-op when outside provider (reader mode)
     },
     getSnapshot: () => false,
   },
-  canEdit: async () => {
-    throw Error('Not implemented');
-  },
+  canEdit: async () => false,
   getFragment: () => {
     throw Error('Not implemented');
   },
   setDoc: () => {
     throw Error('Not implemented');
   },
-  getEditor: () => {
-    throw Error('Not implemented');
-  },
+  getEditor: () => undefined,
   setEditor: () => {
     throw Error('Not implemented');
   },
   save: async () => {
-    throw Error('Not implemented');
+    // No-op when outside provider
   },
   startObserving: () => {
     throw Error('Not implemented');

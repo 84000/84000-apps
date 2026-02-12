@@ -23,7 +23,7 @@ export const TranslationEditor = ({ className }: { className?: string }) => {
     <div className={cn('flex h-full', className)}>
       <div className="relative flex flex-col flex-1 h-full">
         <EditorContent className="flex-1" editor={editor} />
-        <TranslationBubbleMenu editor={editor} />
+        {editor.isEditable && <TranslationBubbleMenu editor={editor} />}
       </div>
     </div>
   );

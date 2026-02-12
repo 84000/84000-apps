@@ -90,6 +90,7 @@ export const PaginationProvider = ({
     initialEndCursor || undefined,
   );
   const [navCursor, setNavCursor] = useState<string | undefined>();
+  const processedNavCursorRef = useRef<string | undefined>(undefined);
 
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
@@ -102,6 +103,10 @@ export const PaginationProvider = ({
 
   const { panels, updatePanel, setShowOuterContent } = useNavigation();
   const isMobile = useIsMobile();
+
+  // Extract hash as a primitive value so we only react to actual hash changes,
+  // not to every panels object reference change
+  const panelHash = panels[panel]?.hash;
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -127,15 +132,23 @@ export const PaginationProvider = ({
       return;
     }
 
-    const hash = panels[panel]?.hash;
-    setNavCursor(hash);
-  }, [panel, panels]);
+    setNavCursor(panelHash);
+  }, [panelHash]);
 
   useEffect(() => {
     const div = childrenDivRef.current;
     if (!div || !navCursor || startIsLoading || endIsLoading) {
       return;
     }
+
+    // Guard: Don't re-process the same hash
+    if (processedNavCursorRef.current === navCursor) {
+      return;
+    }
+
+    // Mark as processing IMMEDIATELY (synchronously) to prevent re-entry
+    // from effect re-runs while async work is in progress
+    processedNavCursorRef.current = navCursor;
 
     (async () => {
       // On mobile, add a delay to allow panel Sheet animation to complete
@@ -213,6 +226,7 @@ export const PaginationProvider = ({
       }
 
       await scrollToElement({ element });
+
       updatePanel({
         name: panel,
         state: { ...panels[panel], hash: undefined },
@@ -225,7 +239,8 @@ export const PaginationProvider = ({
     navCursor,
     startIsLoading,
     endIsLoading,
-    panels,
+    // Intentionally excluding `panels` - we only read its current value when clearing hash.
+    // Including it causes infinite loops since updatePanel() creates a new panels object.
     editor,
     dataClient,
     updatePanel,
@@ -292,7 +307,7 @@ export const PaginationProvider = ({
 
       const pos = 0;
 
-      if (blocks.length && editor) {
+      if (blocks.length && editor?.view?.dom) {
         const editorEl = editor.view.dom;
         const scrollContainer =
           editorEl.closest('[data-panel]') || editorEl.parentElement;
@@ -310,6 +325,9 @@ export const PaginationProvider = ({
             scrollContainer.scrollTop = previousScrollTop + deltaHeight;
           }
         });
+      } else if (blocks.length && editor) {
+        // Fallback: insert without scroll preservation when view not ready
+        editor.commands.insertContentAt(pos, blocks);
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
