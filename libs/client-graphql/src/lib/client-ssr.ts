@@ -16,9 +16,10 @@ export async function createServerGraphQLClient(): Promise<GraphQLClient> {
   const cookieStore = await cookies();
   const allCookies = cookieStore.getAll();
 
-  // Build cookie header string
+  // Build cookie header string with encoded values to ensure HTTP header compatibility
+  // Cookie values may contain non-ASCII characters which are invalid in HTTP headers (ByteString)
   const cookieHeader = allCookies
-    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .map((cookie) => `${cookie.name}=${encodeURIComponent(cookie.value)}`)
     .join('; ');
 
   const client = new GraphQLClient(url, {
