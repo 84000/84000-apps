@@ -10,7 +10,7 @@ const RESTRICTED_ROUTE_ROLES: Record<RestrictedRoute, string[]> = {
   '/project': ['admin', 'editor', 'translator'],
 };
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { user, role, supabaseResponse } = await updateSession(request);
 
   const pathname = request.nextUrl.pathname;

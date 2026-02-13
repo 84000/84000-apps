@@ -1,7 +1,7 @@
 import { updateSession } from '@data-access/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Update session to refresh auth cookies
   const { supabaseResponse } = await updateSession(request);
 
