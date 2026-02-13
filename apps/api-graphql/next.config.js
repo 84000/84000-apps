@@ -1,6 +1,8 @@
 import { composePlugins, withNx } from '@nx/next';
 
-/** @type {import('next').NextConfig} */
+/**
+ * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
+ **/
 const nextConfig = {
   nx: {},
 };

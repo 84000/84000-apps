@@ -1,168 +1,38 @@
 import {
   BookOpenIcon,
-  CloudUploadIcon,
   Edit3Icon,
-  GalleryHorizontalEndIcon,
-  GalleryVerticalIcon,
-  HeartIcon,
-  LayoutListIcon,
   LibraryIcon,
-  ListIcon,
-  SparklesIcon,
+  SearchIcon,
   SquareGanttChartIcon,
 } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
 
 export const MENU_ITEMS: NavigationMenuItemProps[] = [
   {
-    title: 'Publications',
+    title: 'Translations',
     color: 'brick',
-    href: '/publications/reader',
+    href: '/translations/reader',
     hero: {
-      header: 'The 84000 Reading Room',
-      body: 'An immersive reading experience for our publications',
+      header: 'Translation Tools',
+      body: 'Read and edit translations in the 84000 collection',
       image:
         'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/assets/image/menu/publications.webp',
     },
     sections: [
       {
-        header: 'Reading Room',
+        header: 'Translations',
         items: [
           {
-            header: 'Current Publications',
-            body: 'The current publications available in the 84000 Reading Room',
-            href: '/publications/reader',
-            icon: ListIcon,
-          },
-          {
-            header: 'Last Read',
-            body: 'Go to my last publication',
-            href: '/publications/reader',
+            header: 'Reader',
+            body: 'Browse and read published translations',
+            href: '/translations/reader',
             icon: BookOpenIcon,
           },
           {
-            header: 'My Passages',
-            body: 'The list of passages stored in my library',
-            href: '/publications/reader',
-            icon: GalleryVerticalIcon,
-          },
-        ],
-      },
-      {
-        header: 'Highlights',
-        items: [
-          {
-            header: 'Latest Publications',
-            body: 'The list of highlights stored in my library',
-            href: '/publications/reader',
-            icon: GalleryHorizontalEndIcon,
-          },
-          {
-            header: 'Most Popular Publications',
-            body: 'The list of highlights stored in my library',
-            href: '/publications/reader',
-            icon: HeartIcon,
-          },
-          {
-            header: 'Upcoming Translations',
-            body: 'Stay tuned with the translations currently in the pipeline',
-            href: '/publications/reader',
-            icon: CloudUploadIcon,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Canon',
-    color: 'ochre',
-    href: '/canon',
-    hero: {
-      header: 'The Tibetan Canon',
-      body: 'Ways to navigate the catalogs of the Kangyur and Tengyur',
-      image:
-        'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/assets/image/menu/canon.webp',
-    },
-    sections: [
-      {
-        header: 'The Kangyur',
-        items: [
-          {
-            header: 'Major Divisions',
-            body: 'The major divisions of the Degé Kangyur Canon',
-            href: '/canon',
-            icon: ListIcon,
-          },
-          {
-            header: 'Kangyur Catalog',
-            body: 'A complete catalog of the Degé Kangyur including sections and texts ',
-            href: '/canon',
-            icon: LibraryIcon,
-          },
-          {
-            header: 'Content +',
-            body: 'Additional content of the Degé Kangyur Canon',
-            href: '/canon',
-            icon: LayoutListIcon,
-          },
-        ],
-      },
-      {
-        header: 'The Tengyur',
-        items: [
-          {
-            header: 'Major Divisions',
-            body: 'The major divisions of the Degé Tengyur Canon',
-            href: '/canon',
-            icon: ListIcon,
-          },
-          {
-            header: 'Tengyur Catalog',
-            body: 'A complete catalog of the Degé Tengyur including sections and texts ',
-            href: '/canon',
-            icon: LibraryIcon,
-          },
-          {
-            header: 'Content +',
-            body: 'Additional content of the Degé Tengyur Canon',
-            href: '/canon',
-            icon: LayoutListIcon,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'Glossaries',
-    color: 'slate',
-    href: '/glossary',
-    hero: {
-      header: '84000 Glossaries',
-      body: 'A collection of glossaries for Tibetan terms and concepts',
-      image:
-        'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/assets/image/menu/glossaries.webp',
-    },
-    sections: [
-      {
-        header: 'Tibetan Glossaries',
-        items: [
-          {
-            header: 'All Glossaries',
-            body: 'All terms used in translations',
-            href: '/glossary',
-            icon: ListIcon,
-          },
-          {
-            header: 'Tibetan-English Glossary',
-            body: 'A glossary of Tibetan terms with English translations',
-            href: '/glossaries',
-            icon: LibraryIcon,
-          },
-          {
-            header: 'Tibetan-Sanskrit Glossary',
-            body: 'A glossary of Tibetan terms with Sanskrit translations',
-            href: '/glossaries',
-            icon: LayoutListIcon,
+            header: 'Editor',
+            body: 'Edit translations in the pipeline',
+            href: '/translations/editor',
+            icon: Edit3Icon,
           },
         ],
       },
@@ -171,7 +41,7 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
   {
     title: 'Research Library',
     color: 'navy',
-    href: '/research-library',
+    href: '/research/library',
     hero: {
       header: '84000 Research Library',
       body: 'A hub of scholarly resources for the research and study of Tibetan Canon',
@@ -180,91 +50,43 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
     },
     sections: [
       {
-        header: 'Resource Navigator',
+        header: 'Research',
         items: [
           {
-            header: 'All Resources',
-            body: 'Navigate resources in the 84000 Research Library for research',
-            href: '/library',
-            icon: ListIcon,
-          },
-          {
-            header: 'Primary Resources',
-            body: 'Tibetan, Sanskrit, Pali and Chinese resources',
-            href: '/library',
+            header: 'Library',
+            body: 'Upload and manage research library resources',
+            href: '/research/library',
             icon: LibraryIcon,
           },
           {
-            header: 'Secondary Resources',
-            body: 'Secondary resource description',
-            href: '/library',
-            icon: LayoutListIcon,
-          },
-        ],
-      },
-      {
-        header: 'Types',
-        items: [
-          {
-            header: 'Dictionaries',
-            body: 'A bibliographical repository of authoritative works',
-            href: '/library',
-            icon: ListIcon,
-          },
-          {
-            header: 'Articles',
-            body: 'A growing collection of academic papers relevant to researchers',
-            href: '/library',
-            icon: LibraryIcon,
-          },
-          {
-            header: 'Dissertations',
-            body: 'Explore our collection of audio, video, and interactive media',
-            href: '/library',
-            icon: LayoutListIcon,
+            header: 'Explore',
+            body: 'AI-powered exploration of the canon',
+            href: '/research/explore',
+            icon: SearchIcon,
           },
         ],
       },
     ],
   },
   {
-    title: 'Workflows',
+    title: 'Projects',
     color: 'emerald',
-    href: '/project',
-    roles: ['admin', 'editor', 'translator'],
+    href: '/projects',
     hero: {
-      header: '84000 Workflows',
-      body: 'Role-based workflows for the 84000 team for translation and publication ',
+      header: '84000 Projects',
+      body: 'Manage translation projects in the pipeline',
       image:
         'https://ivwvvjgudwqwjbclvfjy.supabase.co/storage/v1/object/public/assets/image/menu/workflows.webp',
     },
     sections: [
       {
-        header: 'Internal Tools',
+        header: 'Project Management',
         items: [
           {
-            header: 'Project Management',
-            body: 'Projects in the translation pipeline',
-            href: '/project',
+            header: 'Translation Projects',
+            body: 'View and manage projects in the translation pipeline',
+            href: '/projects',
             icon: SquareGanttChartIcon,
-          },
-          {
-            header: 'Translation Editor',
-            body: 'Our pipeline of  translation for editing',
-            href: '/publications/editor',
-            icon: Edit3Icon,
-          },
-          {
-            header: 'AI Summaries',
-            body: 'A tool for generating summaries for translations',
-            href: '/ai-summaries',
-            icon: SparklesIcon,
-          },
-          {
-            header: 'Research Library',
-            body: 'Uploading and managing research library resource',
-            href: '/research-library-internal',
-            icon: LibraryIcon,
           },
         ],
       },
