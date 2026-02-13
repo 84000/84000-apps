@@ -17,18 +17,17 @@ import {
 import { MenuIcon } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
 import { MenuButton } from './MenuButton';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@lib-utils';
 
 export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
-  const router = useRouter();
   const pathname = usePathname();
   const prefixes = item.sections.flatMap((section) =>
     section.items.map((i) => i.href),
   );
   const isActive = prefixes.some((prefix) => pathname.startsWith(prefix));
 
-  return item.roles?.length ? (
+  return (
     <Accordion
       defaultValue={item.title}
       type="single"
@@ -60,23 +59,6 @@ export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
         </AccordionContent>
       </AccordionItem>
     </Accordion>
-  ) : (
-    <SheetClose asChild className="w-full text-start">
-      <button
-        type="button"
-        className="hover:cursor-pointer border-b-2 px-4 py-1 border-transparent transition-colors"
-        onClick={() => router.push(item.href)}
-      >
-        <div
-          className={cn(
-            'pt-3 leading-6',
-            isActive ? 'font-bold' : 'font-normal',
-          )}
-        >
-          {item.title}
-        </div>
-      </button>
-    </SheetClose>
   );
 };
 

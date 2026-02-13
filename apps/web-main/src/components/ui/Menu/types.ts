@@ -1,4 +1,3 @@
-import { UserRole } from '@data-access';
 import { LucideProps } from 'lucide-react';
 import { ForwardRefExoticComponent, RefAttributes } from 'react';
 
@@ -76,7 +75,6 @@ export type NavigationMenuItemProps = {
   title: string;
   color: BrandColor;
   href: string;
-  roles?: UserRole[];
   hero: {
     header: string;
     body: string;

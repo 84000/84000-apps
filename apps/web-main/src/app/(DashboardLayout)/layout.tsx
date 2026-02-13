@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { ScholarUser, useSession } from '@lib-user';
 import { AppHeader } from '../../components/ui/AppHeader';
+
+const ALLOWED_ROLES = ['admin', 'editor', 'translator'];
+
 export default function Layout({
   children,
 }: Readonly<{
@@ -11,6 +14,7 @@ export default function Layout({
 }>) {
   const { getUser, logout } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [user, setUser] = useState<ScholarUser | null>();
 
@@ -23,8 +27,17 @@ export default function Layout({
         router.replace('/login');
         return;
       }
+
+      // Check role-based access (skip check for unauthorized page to avoid redirect loop)
+      if (
+        pathname !== '/unauthorized' &&
+        !ALLOWED_ROLES.includes(user.role)
+      ) {
+        router.replace('/unauthorized');
+        return;
+      }
     })();
-  }, [router, getUser]);
+  }, [router, getUser, pathname]);
 
   const handleLogout = () => {
     (async () => {

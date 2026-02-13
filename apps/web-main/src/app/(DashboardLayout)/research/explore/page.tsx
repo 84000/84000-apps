@@ -1,11 +1,7 @@
 import { ExplorePage } from '@lib-explore';
 
 const Page = () => {
-  return (
-    <>
-      <ExplorePage />
-    </>
-  );
+  return <ExplorePage />;
 };
 
 export default Page;

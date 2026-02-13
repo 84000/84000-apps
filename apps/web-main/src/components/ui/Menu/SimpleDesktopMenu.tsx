@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@lib-utils';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { CLASSES_FOR_COLOR, NavigationMenuItemProps } from './types';
 import {
   Popover,
@@ -18,7 +18,6 @@ export const DesktopMenuItem = ({
 }: {
   item: NavigationMenuItemProps;
 }) => {
-  const router = useRouter();
   const pathname = usePathname();
   const { active, open, inactive, border, text } =
     CLASSES_FOR_COLOR[item.color];
@@ -30,7 +29,7 @@ export const DesktopMenuItem = ({
 
   const [isOpen, setIsOpen] = useState(false);
 
-  return item.roles?.length ? (
+  return (
     <Popover onOpenChange={(open) => setIsOpen(open)}>
       <PopoverTrigger asChild>
         <button
@@ -65,17 +64,6 @@ export const DesktopMenuItem = ({
         </div>
       </PopoverContent>
     </Popover>
-  ) : (
-    <button
-      type="button"
-      className={cn(
-        'hover:cursor-pointer border-b-1 px-3 border-transparent transition-colors',
-        isActive ? active : inactive,
-      )}
-      onClick={() => router.push(item.href)}
-    >
-      <div className="pt-3 font-semibold leading-6">{item.title}</div>
-    </button>
   );
 };
 
