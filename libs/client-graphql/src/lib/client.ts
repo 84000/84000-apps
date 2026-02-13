@@ -28,19 +28,22 @@ export function createGraphQLClient(): GraphQLClient {
   clientInstance = new GraphQLClient(url, {
     // Dynamic headers - called on each request
     requestMiddleware: async (request) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'apollo-require-preflight': 'true',
+      };
+
       if (getAccessToken) {
         const token = await getAccessToken();
         if (token) {
-          return {
-            ...request,
-            headers: {
-              ...request.headers,
-              Authorization: `Bearer ${token}`,
-            },
-          };
+          headers['Authorization'] = `Bearer ${token}`;
         }
       }
-      return request;
+
+      return {
+        ...request,
+        headers,
+      };
     },
   });
 
