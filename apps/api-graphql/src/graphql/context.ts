@@ -1,7 +1,10 @@
 import type { NextRequest } from 'next/server';
-import { createServerClient, getSession } from '@data-access';
+import {
+  createServerClient,
+  createTokenClient,
+  getSession,
+} from '@data-access';
 import type { DataClient, UserClaims, UserRole } from '@data-access';
-import { createClient } from '@supabase/supabase-js';
 import { jwtDecode } from 'jwt-decode';
 import { createLoaders, type Loaders } from './loaders';
 
@@ -29,17 +32,7 @@ export async function createContext(req: NextRequest): Promise<GraphQLContext> {
       }>(token);
 
       // Create Supabase client with the access token
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      ) as DataClient;
+      const supabase = createTokenClient(token);
 
       const session = {
         claims: { role: decoded.user_role || 'reader' },

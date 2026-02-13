@@ -11,7 +11,8 @@ function getCorsHeaders(req: NextRequest): Record<string, string> {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, apollo-require-preflight',
   };
 }
 

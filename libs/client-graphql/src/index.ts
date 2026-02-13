@@ -1,5 +1,9 @@
 // Client
-export { createGraphQLClient, resetGraphQLClient } from './lib/client';
+export {
+  createGraphQLClient,
+  resetGraphQLClient,
+  setAccessTokenProvider,
+} from './lib/client';
 
 // Functions
 export {

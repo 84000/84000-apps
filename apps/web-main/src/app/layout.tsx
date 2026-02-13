@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import '@design-system-css';
 import { FONTS } from '@design-system';
 import { InterfaceContextProvider } from './context/InterfaceContext';
-import { SessionProvider } from '@lib-user';
+import { SessionProvider, GraphQLAuthProvider } from '@lib-user';
 
 export const metadata: Metadata = {
   title: "84000 Scholar's Room",
@@ -19,7 +19,9 @@ export default function RootLayout({
       <head>{FONTS}</head>
       <body>
         <InterfaceContextProvider>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider>
+            <GraphQLAuthProvider>{children}</GraphQLAuthProvider>
+          </SessionProvider>
         </InterfaceContextProvider>
       </body>
     </html>
