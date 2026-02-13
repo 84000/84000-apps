@@ -1,7 +1,7 @@
 import { createServerClient } from '@data-access/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Remove the /reader prefix to get the local path within this app
