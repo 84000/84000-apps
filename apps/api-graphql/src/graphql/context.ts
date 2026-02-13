@@ -1,6 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { createServerClient, getSession } from '@data-access';
 import type { DataClient, UserClaims, UserRole } from '@data-access';
+import { createClient } from '@supabase/supabase-js';
+import { jwtDecode } from 'jwt-decode';
 import { createLoaders, type Loaders } from './loaders';
 
 export interface GraphQLContext {
@@ -15,7 +17,49 @@ export interface GraphQLContext {
 }
 
 export async function createContext(req: NextRequest): Promise<GraphQLContext> {
-  // Create Supabase client with cookies from the request
+  // First, try to get session from Authorization header (for cross-domain requests)
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      const decoded = jwtDecode<{
+        sub: string;
+        email?: string;
+        user_role?: UserRole;
+      }>(token);
+
+      // Create Supabase client with the access token
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      ) as DataClient;
+
+      const session = {
+        claims: { role: decoded.user_role || 'reader' },
+        userId: decoded.sub,
+        email: decoded.email || '',
+      };
+
+      return {
+        req,
+        supabase,
+        loaders: createLoaders(supabase),
+        session,
+      };
+    } catch (error) {
+      console.error('Failed to decode Authorization token:', error);
+      // Fall through to cookie-based auth
+    }
+  }
+
+  // Fallback: try cookie-based auth (for same-domain requests)
   const supabase = createServerClient({
     cookies: {
       getAll: () => {
