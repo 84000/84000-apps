@@ -1,4 +1,5 @@
 export * from './lib/EmailLogin';
+export * from './lib/GraphQLAuthProvider';
 export * from './lib/LibraryBibliographiesPage';
 export * from './lib/LibraryGlossariesPage';
 export * from './lib/LibraryPageLoading';

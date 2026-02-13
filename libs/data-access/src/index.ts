@@ -3,6 +3,7 @@ export * from './lib/bibliography';
 export * from './lib/canon';
 export * from './lib/client-browser';
 export * from './lib/client-server';
+export * from './lib/client-token';
 export * from './lib/folio';
 export * from './lib/glossary';
 export * from './lib/imprint';

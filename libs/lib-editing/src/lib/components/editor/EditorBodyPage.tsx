@@ -15,7 +15,7 @@ import { TranslationBuilder, TranslationEditorContent } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
 
-const INITIAL_PASSAGES = 500;
+const INITIAL_PASSAGES = 100;
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
