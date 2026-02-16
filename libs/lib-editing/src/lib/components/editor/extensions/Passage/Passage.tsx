@@ -12,7 +12,7 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { memo, useEffect, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
 import { LabeledElement, useNavigation } from '../../../shared';
@@ -21,34 +21,32 @@ import { Alignment } from '@data-access';
 const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
 
-  const [compareLeadingSpace, setCompareLeadingSpace] = useState('md:mt-1');
-  const [isCompare, setIsCompare] = useState(false);
-  const [source, setSource] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
 
   const { panels, toh } = useNavigation();
 
-  useEffect(() => {
-    const isCompare = panels.main.open && panels.main.tab === 'compare';
-    setIsCompare(isCompare);
-  }, [panels.main.open, panels.main.tab]);
+  // Compute values directly instead of using effects to avoid re-render loops
+  const isCompare = panels.main.open && panels.main.tab === 'compare';
 
-  useEffect(() => {
+  const { source, compareLeadingSpace } = useMemo(() => {
     if (!isCompare || !toh) {
-      setSource('');
-      return;
+      return { source: '', compareLeadingSpace: 'md:mt-1' };
     }
 
     const alignment = node.attrs.alignments?.[toh] as Alignment;
-    setSource(alignment?.tibetan || '');
+    const source = alignment?.tibetan || '';
+
     const firstChild = node.content.firstChild;
+    let compareLeadingSpace = 'md:mt-1';
     if (firstChild?.attrs.hasLeadingSpace) {
-      setCompareLeadingSpace('md:mt-5');
+      compareLeadingSpace = 'md:mt-5';
     } else if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
-      setCompareLeadingSpace('md:mt-2');
+      compareLeadingSpace = 'md:mt-2';
     }
-  }, [isCompare, node, toh]);
+
+    return { source, compareLeadingSpace };
+  }, [isCompare, toh, node.attrs.alignments, node.content.firstChild]);
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
