@@ -8,7 +8,7 @@ Agent coding guidelines for the 84000-apps monorepo.
 
 ```bash
 # Run an app in dev mode
-npx nx dev web-main          # Main app (Scholar's Room)
+npx nx dev web-main          # Main app (Studio)
 npx nx dev web-editor        # Editor app
 npx nx dev web-reader        # Reader app
 npx nx dev web-docs          # Documentation

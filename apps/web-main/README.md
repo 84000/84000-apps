@@ -1,6 +1,6 @@
 # Web Main App
 
-This is the main web app for 84000 applications, namely the Scholar's Room. It is
+This is the main web app for 84000 Studio. It is
 build using [Next.js](https://nextjs.org/) and uses the [TipTap](https://tiptap.dev/)
 collaborative text editor.
 
