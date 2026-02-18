@@ -241,6 +241,8 @@ export const PaginationProvider = ({
           name: panel,
           state: { ...panels[panel], hash: undefined },
         });
+      } catch (error) {
+        console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
       }
