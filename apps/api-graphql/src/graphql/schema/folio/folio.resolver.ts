@@ -32,6 +32,7 @@ export const workFoliosResolver = async (
     )
     .eq('work_uuid', parent.uuid)
     .eq('toh', args.toh as TohokuCatalogEntry)
+    .order('volume_number', { ascending: true })
     .order('folio_number', { ascending: true })
     .order('side', { ascending: true })
     .range(start, end);
