@@ -1,2 +1,5 @@
 public/images/
 public/fonts/
+
+# Generated at build time by scripts/fetch-studio-config.ts
+src/config/studio-routes.json

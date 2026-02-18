@@ -17,4 +17,7 @@ export interface MenuSubItemConfig {
   body: string;
   href: string;
   icon: string; // Lucide icon name, e.g., "BookOpen"
+  proxyTo?: string; // MFE destination URL, e.g., "https://external-app.com"
+  roles?: string[]; // Required roles (empty = just login required)
+  public?: boolean; // No auth required
 }

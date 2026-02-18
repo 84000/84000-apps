@@ -62,10 +62,3 @@ const FALLBACK_ICON = FileTextIcon;
 export function getIconByName(iconName: string): LucideIcon {
   return ICON_REGISTRY[iconName] ?? FALLBACK_ICON;
 }
-
-/**
- * Checks if an icon name exists in the registry
- */
-export function isValidIconName(iconName: string): boolean {
-  return iconName in ICON_REGISTRY;
-}
