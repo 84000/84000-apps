@@ -8,7 +8,7 @@ export const passageQueries = {
   ) => {
     const { data, error } = await ctx.supabase
       .from('passages')
-      .select('uuid, content, label, sort, type, xmlId, work_uuid')
+      .select('uuid, content, label, sort, type, xmlId, toh, work_uuid')
       .eq('uuid', args.uuid)
       .single();
 
@@ -28,6 +28,7 @@ export const passageQueries = {
       label: data.label,
       sort: data.sort,
       type: data.type,
+      toh: data.toh ?? null,
       xmlId: data.xmlId ?? null,
     };
   },

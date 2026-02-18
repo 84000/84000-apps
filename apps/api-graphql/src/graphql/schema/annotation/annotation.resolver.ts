@@ -26,6 +26,7 @@ interface TransformedAnnotation {
   type: string;
   start: number;
   end: number;
+  toh: string | null;
   metadata: Record<string, unknown> | null;
 }
 
@@ -172,6 +173,7 @@ export function transformAnnotation(
     type: annotation.type,
     start: annotation.start,
     end: annotation.end,
+    toh: annotation.toh ?? null,
     metadata: extractMetadata(annotation, enrichment),
   };
 }
