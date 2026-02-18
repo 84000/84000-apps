@@ -15,6 +15,7 @@ function buildPassageConnection(
     label: string | null;
     sort: number;
     type: string;
+    toh: string | null;
     xmlId: string | null;
   }>,
   nextCursor: string | null,
@@ -94,7 +95,7 @@ export const passagesResolver = async (
   // Build the passages query
   let query = ctx.supabase
     .from('passages')
-    .select('uuid, content, label, sort, type, xmlId')
+    .select('uuid, content, label, sort, type, toh, xmlId')
     .eq('work_uuid', parent.uuid)
     .order('sort', { ascending: isForward })
     .limit(limit + 1); // Fetch one extra to determine hasMore
@@ -152,6 +153,7 @@ export const passagesResolver = async (
     label: passage.label,
     sort: passage.sort,
     type: passage.type,
+    toh: passage.toh ?? null,
     xmlId: passage.xmlId ?? null,
   }));
 
@@ -210,7 +212,7 @@ const passagesAroundResolver = async (
   const limitAfter = limit - limitBefore;
 
   // Build base query conditions
-  const baseSelect = 'uuid, content, label, sort, type, xmlId';
+  const baseSelect = 'uuid, content, label, sort, type, toh, xmlId';
 
   // Query for passages before cursor (descending order to get closest ones)
   let beforeQuery = ctx.supabase
@@ -285,6 +287,7 @@ const passagesAroundResolver = async (
     label: passage.label,
     sort: passage.sort,
     type: passage.type,
+    toh: passage.toh ?? null,
     xmlId: passage.xmlId ?? null,
   }));
 

@@ -6,6 +6,7 @@ import {
   type Passage as DataAccessPassage,
   type BodyItemType,
   type AnnotationDTO,
+  TohokuCatalogEntry,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import {
@@ -24,6 +25,8 @@ interface PassageParent {
   sort: number;
   type: string;
   xmlId: string | null;
+  toh: TohokuCatalogEntry | null;
+  workUuid: string;
 }
 
 /**
@@ -172,7 +175,8 @@ export const passageJsonResolver = async (
     label: parent.label,
     sort: parent.sort,
     type: parent.type as BodyItemType,
-    workUuid: '',
+    workUuid: parent.workUuid,
+    toh: (parent.toh as TohokuCatalogEntry) ?? undefined,
     xmlId: parent.xmlId ?? undefined,
     annotations: annotationsFromDTO(rawAnnotations, parent.content.length),
     alignments: alignmentsFromDTO(rawAlignments),

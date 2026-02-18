@@ -33,6 +33,11 @@ type Passage {
   type: String!
 
   """
+  Tohoku number associated with this passage, if applicable
+  """
+  toh: String
+
+  """
   XML ID from the source document
   """
   xmlId: String
