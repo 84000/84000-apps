@@ -6,7 +6,7 @@ import {
   type Passage as DataAccessPassage,
   type BodyItemType,
   type AnnotationDTO,
-  TohokuCatalogEntry,
+  type TohokuCatalogEntry,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import {
