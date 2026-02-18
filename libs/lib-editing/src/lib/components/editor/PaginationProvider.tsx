@@ -19,7 +19,6 @@ import {
 } from '@client-graphql';
 import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
-import { useInView } from 'motion/react';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
@@ -95,11 +94,13 @@ export const PaginationProvider = ({
 
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
+  const [isEditorReady, setIsEditorReady] = useState(false);
   const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
   const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
   const childrenDivRef = useRef<HTMLDivElement>(null);
-  const shouldLoadMoreAtStart = useInView(loadMoreAtStartRef);
-  const shouldLoadMoreAtEnd = useInView(loadMoreAtEndRef);
+  const shouldLoadMoreAtStartRef = useRef(false);
+  const shouldLoadMoreAtEndRef = useRef(false);
+  const [loadMoreTrigger, setLoadMoreTrigger] = useState(0);
   const dataClient = createGraphQLClient();
 
   const { panels, updatePanel, setShowOuterContent } = useNavigation();
@@ -119,6 +120,7 @@ export const PaginationProvider = ({
     isEditable,
     onCreate: ({ editor }) => {
       setEndIsLoading(false);
+      setIsEditorReady(true);
       onCreate?.({ editor });
     },
   });
@@ -268,10 +270,38 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
+  // Set up IntersectionObserver only after the editor has created and rendered
+  // initial content. isEditorReady flips to true once and stays true, so the
+  // observer is created once and never torn down/recreated during page fetches.
+  useEffect(() => {
+    if (!isEditorReady) return;
+
+    const startEl = loadMoreAtStartRef.current;
+    const endEl = loadMoreAtEndRef.current;
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === startEl) {
+          shouldLoadMoreAtStartRef.current = entry.isIntersecting;
+        } else if (entry.target === endEl) {
+          shouldLoadMoreAtEndRef.current = entry.isIntersecting;
+        }
+        if (entry.isIntersecting) {
+          setLoadMoreTrigger((c) => c + 1);
+        }
+      }
+    });
+
+    if (startEl) observer.observe(startEl);
+    if (endEl) observer.observe(endEl);
+
+    return () => observer.disconnect();
+  }, [isEditorReady]);
+
   useEffect(() => {
     if (
       endIsLoading ||
-      !shouldLoadMoreAtEnd ||
+      !shouldLoadMoreAtEndRef.current ||
       !endCursor ||
       isNavigatingRef.current
     ) {
@@ -305,15 +335,15 @@ export const PaginationProvider = ({
     filter,
     endIsLoading,
     editor,
-    shouldLoadMoreAtEnd,
     endCursor,
     dataClient,
+    loadMoreTrigger,
   ]);
 
   useEffect(() => {
     if (
       startIsLoading ||
-      !shouldLoadMoreAtStart ||
+      !shouldLoadMoreAtStartRef.current ||
       !startCursor ||
       isNavigatingRef.current
     ) {
@@ -363,9 +393,9 @@ export const PaginationProvider = ({
     filter,
     startIsLoading,
     editor,
-    shouldLoadMoreAtStart,
     startCursor,
     dataClient,
+    loadMoreTrigger,
   ]);
 
   return (
