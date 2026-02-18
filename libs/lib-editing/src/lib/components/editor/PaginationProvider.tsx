@@ -247,6 +247,12 @@ export const PaginationProvider = ({
         console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
+        // Re-trigger load-more check: the observer may have fired while
+        // navigation was in progress (sentinel entered view after content
+        // was replaced), but the load-more effect was blocked by the
+        // isNavigatingRef guard. Bumping the trigger re-evaluates now
+        // that navigation is complete.
+        setLoadMoreTrigger((c) => c + 1);
       }
     })();
   }, [
