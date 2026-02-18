@@ -6,7 +6,10 @@ import {
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
 
-export type FeatureFlag = 'authority-pages' | 'translation-hover-cards';
+export type FeatureFlag =
+  | 'authority-pages'
+  | 'translation-hover-cards'
+  | 'studio-header-config';
 
 export type FeatureFlagPayload = {
   apps?: string[];
@@ -55,4 +58,19 @@ export type GatedFeatureProps = PostHogFeatureProps & {
 export const GatedFeature = ({ children, flag }: GatedFeatureProps) => {
   const enabled = useFeatureFlagEnabled(flag);
   return enabled ? children : null;
+};
+
+/**
+ * Returns the studio header config payload from PostHog.
+ * Returns undefined if the flag is not enabled or has no payload.
+ */
+export const useStudioHeaderConfig = (): unknown => {
+  const enabled = phUseFeatureFlagEnabled('studio-header-config');
+  const payload = phUseFeatureFlagPayload('studio-header-config');
+
+  if (!enabled) {
+    return undefined;
+  }
+
+  return payload;
 };

@@ -1,14 +1,16 @@
 'use client';
 
-import { MENU_ITEMS } from './MenuItems';
 import { SimpleDesktopMenu } from './SimpleDesktopMenu';
 import { SimpleMobileMenu } from './SimpleMobileMenu';
+import { useMenuConfig } from './useMenuConfig';
 
 export const AppNavigationMenu = () => {
+  const menuItems = useMenuConfig();
+
   return (
     <>
-      <SimpleDesktopMenu items={MENU_ITEMS} />
-      <SimpleMobileMenu items={MENU_ITEMS} />
+      <SimpleDesktopMenu items={menuItems} />
+      <SimpleMobileMenu items={menuItems} />
     </>
   );
 };

@@ -6,7 +6,7 @@ import { InterfaceContextProvider } from './context/InterfaceContext';
 import { SessionProvider, GraphQLAuthProvider } from '@lib-user';
 
 export const metadata: Metadata = {
-  title: "84000 Scholar's Room",
+  title: '84000 Studio',
 };
 
 export default function RootLayout({

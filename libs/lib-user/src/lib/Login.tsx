@@ -15,9 +15,9 @@ const HEADER = {
 
 const WELCOME_LINES = {
   create: [
-    'Let’s get started. Fill in the details below to create your workspace in 84000 Scholar’s Room.',
+    'Let’s get started. Fill in the details below to create your workspace in 84000 Studio.',
   ],
-  login: ['Welcome Back!', "Sign into the 84000's Scholar's Room."],
+  login: ['Welcome Back!', 'Sign into 84000 Studio.'],
 };
 
 const FOOTER_TEXT = {
@@ -54,11 +54,11 @@ export const Login = () => {
     <div className="h-full w-full">
       <div className="absolute w-full p-4 hidden md:flex gap-2">
         <MainLogo width={140} />
-        <span className="my-auto w-[5rem] text-tiny leading-3 text-navy">
+        <span className="my-auto w-20 text-tiny leading-3 text-navy">
           {"Bringing the Buddha's Words to Life"}
         </span>
       </div>
-      <div className="w-full md:h-full p-8 max-w-[25rem] m-auto">
+      <div className="w-full md:h-full p-8 max-w-100 m-auto">
         <div className="flex flex-col items-center justify-center w-full h-full">
           <div className="md:hidden mb-2">
             <MainLogo width={112} />

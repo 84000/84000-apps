@@ -1,7 +1,7 @@
 import { LucideProps } from 'lucide-react';
 import { ForwardRefExoticComponent, RefAttributes } from 'react';
 
-type BrandColor = 'brick' | 'ochre' | 'slate' | 'navy' | 'emerald';
+export type BrandColor = 'brick' | 'ochre' | 'slate' | 'navy' | 'emerald';
 
 export const CLASSES_FOR_COLOR: Record<
   BrandColor,
