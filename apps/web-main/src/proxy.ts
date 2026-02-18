@@ -13,7 +13,9 @@ let studioRoutes: StudioRoutesConfig = {
   restrictedRoutes: {},
 };
 try {
-  studioRoutes = require('./config/studio-routes.json');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require('./config/studio-routes.json');
+  studioRoutes = mod.default ?? mod;
 } catch {
   // File doesn't exist - use empty defaults
 }

@@ -26,7 +26,7 @@ async function fetchAndWriteStudioRoutes() {
   try {
     const payload = await client.getFeatureFlagPayload(
       'studio-header-config',
-      'build-user'
+      'build-user',
     );
 
     if (!payload?.items) {
@@ -71,8 +71,8 @@ function writeStudioRoutes(config) {
   writeFileSync(studioRoutesPath, JSON.stringify(config, null, 2));
 }
 
-// Fetch config at startup using top-level await
-const studioRoutes = await fetchAndWriteStudioRoutes();
+// Start fetch immediately so it runs in parallel with config setup
+const studioRoutesPromise = fetchAndWriteStudioRoutes();
 
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
@@ -87,6 +87,7 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const studioRoutes = await studioRoutesPromise;
     return studioRoutes.rewrites || [];
   },
 };
