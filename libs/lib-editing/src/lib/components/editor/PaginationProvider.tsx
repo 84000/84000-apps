@@ -91,6 +91,7 @@ export const PaginationProvider = ({
   );
   const [navCursor, setNavCursor] = useState<string | undefined>();
   const processedNavCursorRef = useRef<string | undefined>(undefined);
+  const isNavigatingRef = useRef(false);
 
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
@@ -151,86 +152,98 @@ export const PaginationProvider = ({
     processedNavCursorRef.current = navCursor;
 
     (async () => {
-      // On mobile, add a delay to allow panel Sheet animation to complete
-      // before attempting to scroll to the element
-      if (isMobile) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, SHEET_ANIMATION_DURATION),
+      isNavigatingRef.current = true;
+      try {
+        // On mobile, add a delay to allow panel Sheet animation to complete
+        // before attempting to scroll to the element
+        if (isMobile) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, SHEET_ANIMATION_DURATION),
+          );
+        }
+
+        let element = div.querySelector<HTMLElement>(
+          `#${CSS.escape(navCursor)}`,
         );
-      }
 
-      let element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
-
-      if (!element && isUuid(navCursor)) {
-        const { blocks, hasMoreBefore, hasMoreAfter, prevCursor, nextCursor } =
-          await getTranslationBlocksAround({
+        if (!element && isUuid(navCursor)) {
+          const {
+            blocks,
+            hasMoreBefore,
+            hasMoreAfter,
+            prevCursor,
+            nextCursor,
+          } = await getTranslationBlocksAround({
             client: dataClient,
             uuid,
             type: filter,
             passageUuid: navCursor,
           });
 
-        // Wait for editor to finish updating
-        await new Promise<void>((resolve) => {
-          const handleUpdate = () => {
-            editor?.off('update', handleUpdate);
-            requestAnimationFrame(() => resolve());
-          };
+          // Wait for editor to finish updating
+          await new Promise<void>((resolve) => {
+            const handleUpdate = () => {
+              editor?.off('update', handleUpdate);
+              requestAnimationFrame(() => resolve());
+            };
 
-          editor?.on('update', handleUpdate);
-          editor?.chain().clearContent().setContent(blocks).run();
-        });
-        setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
-        setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
+            editor?.on('update', handleUpdate);
+            editor?.chain().clearContent().setContent(blocks).run();
+          });
+          setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
+          setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
 
-        // Wait for React to re-render and update the DOM (remove/add skeletons)
-        // by waiting until the element's position stabilizes
-        await new Promise<void>((resolve) => {
-          let stabilityCount = 0;
-          let lastTop = -1;
+          // Wait for React to re-render and update the DOM (remove/add skeletons)
+          // by waiting until the element's position stabilizes
+          await new Promise<void>((resolve) => {
+            let stabilityCount = 0;
+            let lastTop = -1;
 
-          const checkStability = () => {
-            const el = div.querySelector<HTMLElement>(
-              `#${CSS.escape(navCursor)}`,
-            );
-            if (!el) {
-              requestAnimationFrame(checkStability);
-              return;
-            }
-
-            const currentTop = el.getBoundingClientRect().top;
-
-            // Check if position has stabilized (same for 2 consecutive frames)
-            if (currentTop === lastTop) {
-              stabilityCount++;
-              if (stabilityCount >= 2) {
-                resolve();
+            const checkStability = () => {
+              const el = div.querySelector<HTMLElement>(
+                `#${CSS.escape(navCursor)}`,
+              );
+              if (!el) {
+                requestAnimationFrame(checkStability);
                 return;
               }
-            } else {
-              stabilityCount = 0;
-            }
 
-            lastTop = currentTop;
+              const currentTop = el.getBoundingClientRect().top;
+
+              // Check if position has stabilized (same for 2 consecutive frames)
+              if (currentTop === lastTop) {
+                stabilityCount++;
+                if (stabilityCount >= 2) {
+                  resolve();
+                  return;
+                }
+              } else {
+                stabilityCount = 0;
+              }
+
+              lastTop = currentTop;
+              requestAnimationFrame(checkStability);
+            };
+
             requestAnimationFrame(checkStability);
-          };
+          });
 
-          requestAnimationFrame(checkStability);
+          element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
+        }
+
+        if (!element) {
+          return;
+        }
+
+        await scrollToElement({ element });
+
+        updatePanel({
+          name: panel,
+          state: { ...panels[panel], hash: undefined },
         });
-
-        element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
+      } finally {
+        isNavigatingRef.current = false;
       }
-
-      if (!element) {
-        return;
-      }
-
-      await scrollToElement({ element });
-
-      updatePanel({
-        name: panel,
-        state: { ...panels[panel], hash: undefined },
-      });
     })();
   }, [
     panel,
@@ -254,7 +267,12 @@ export const PaginationProvider = ({
   }, [editor]);
 
   useEffect(() => {
-    if (endIsLoading || !shouldLoadMoreAtEnd || !endCursor) {
+    if (
+      endIsLoading ||
+      !shouldLoadMoreAtEnd ||
+      !endCursor ||
+      isNavigatingRef.current
+    ) {
       return;
     }
     setEndIsLoading(true);
@@ -291,7 +309,12 @@ export const PaginationProvider = ({
   ]);
 
   useEffect(() => {
-    if (startIsLoading || !shouldLoadMoreAtStart || !startCursor) {
+    if (
+      startIsLoading ||
+      !shouldLoadMoreAtStart ||
+      !startCursor ||
+      isNavigatingRef.current
+    ) {
       return;
     }
     setStartIsLoading(true);
