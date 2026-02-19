@@ -36,7 +36,7 @@ function transformConfigItem(item: MenuItemConfig): NavigationMenuItemProps {
     title: item.title,
     color: item.color,
     href: item.href ?? item.items[0]?.href ?? '',
-    hero: { header: '', body: '', image: '' },
+    hero: { header: '', body: item.body ?? '', image: '' },
     sections: [
       {
         header: item.title,
@@ -45,6 +45,7 @@ function transformConfigItem(item: MenuItemConfig): NavigationMenuItemProps {
           body: subItem.body,
           href: subItem.href,
           icon: getIconByName(subItem.icon),
+          showOnHomepage: subItem.showOnHomepage,
         })),
       },
     ],
