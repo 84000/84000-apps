@@ -25,7 +25,8 @@
     "../../dist/api-graphql/.next/types/**/*.ts",
     "../../api-graphql/.next/types/**/*.ts",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "next.config.mjs"
   ],
   "exclude": ["node_modules", "jest.config.ts", "**/*.spec.ts", "**/*.test.ts"]
 }
