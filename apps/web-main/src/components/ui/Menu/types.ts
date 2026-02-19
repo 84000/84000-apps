@@ -69,6 +69,7 @@ export type MenuSubItem = {
   icon: ForwardRefExoticComponent<
     Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>
   >;
+  showOnHomepage?: boolean;
 };
 
 export type NavigationMenuItemProps = {
