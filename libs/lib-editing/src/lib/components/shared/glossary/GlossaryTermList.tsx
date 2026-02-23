@@ -37,6 +37,7 @@ export const GlossaryTermList = ({
             id={instance.uuid || instance.authority || `glossary-${index}`}
             key={instance.uuid || instance.authority || `glossary-${index}`}
             label={`g.${index + 1}`}
+            contentType="glossary"
           >
             <GlossaryInstanceBody
               instance={instance}

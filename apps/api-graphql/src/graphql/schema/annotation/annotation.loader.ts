@@ -12,7 +12,7 @@ export function createAnnotationLoader(supabase: DataClient) {
     while (hasMore) {
       const { data, error } = await supabase
         .from('passage_annotations')
-        .select('uuid, passage_uuid, type, start, end, content')
+        .select('uuid, passage_uuid, type, start, end, content, toh')
         .in('passage_uuid', passageUuids as string[])
         .not('type', 'like', 'deprecated%')
         .range(offset, offset + PAGE_SIZE - 1);

@@ -41,6 +41,7 @@ export const BibliographyList = ({
                 className="@c/sidebar:mt-0.5 mt-4"
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
+                contentType="bibliography"
               >
                 <div className="text-secondary font-sans text-base font-bold">
                   {section.heading}

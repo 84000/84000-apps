@@ -23,6 +23,11 @@ type Annotation {
   end: Int!
 
   """
+  Tohoku number associated with this annotation, if applicable
+  """
+  toh: String
+
+  """
   Type-specific metadata. Contents vary by annotation type:
   - heading: { level, class }
   - link: { href, text }

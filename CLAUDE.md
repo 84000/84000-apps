@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm install
 
 # Run an app in dev mode
-npx nx dev web-main          # Main app (Scholar's Room)
+npx nx dev web-main          # Main app (Studio)
 npx nx dev web-editor        # Editor app
 npx nx dev web-reader        # Reader app
 npx nx dev web-docs          # Docs app
@@ -39,7 +39,8 @@ npx nx run-many -t build lint -p web-main design-system  # Multiple projects and
 This is an **Nx monorepo** containing multiple Next.js applications and shared libraries. Code should be placed in `libs/` and reused across `apps/`. Applications should be thin orchestration layers.
 
 ### Apps (`/apps`)
-- **web-main**: Main web app (Scholar's Room) - Next.js with TipTap collaborative editor
+
+- **web-main**: Main web app (Studio) - Next.js with TipTap collaborative editor
 - **web-editor**: Editor application
 - **web-reader**: Reader application
 - **web-reader-mfe**: Reader micro-frontend
@@ -49,11 +50,13 @@ This is an **Nx monorepo** containing multiple Next.js applications and shared l
 ### Libraries (`/libs`)
 
 **Core libraries:**
+
 - **data-access**: Supabase client and data layer (auth, canon, glossary, publications, storage, etc.). Has `/ssr` export for server-side use.
 - **design-system**: Shared UI components (Button, Dialog, Card, Table, etc.) built with Radix UI primitives. Run Storybook to explore.
 - **lib-utils**: Utility functions (compare, style helpers, highlight, hooks, string manipulation)
 
 **Feature libraries:**
+
 - **lib-editing**: TipTap editor components, block types, passage and title editing
 - **lib-user**: User authentication components (Login, ProfileDropdown, SessionContext, Library pages)
 - **lib-canon**: Canon navigation context, sidebar, and page components
@@ -65,6 +68,7 @@ This is an **Nx monorepo** containing multiple Next.js applications and shared l
 ### Path Aliases
 
 Import libraries using aliases defined in `tsconfig.base.json`:
+
 ```typescript
 import { Button } from '@design-system';
 import { createBrowserClient } from '@data-access';
@@ -89,8 +93,10 @@ Many libraries have `/ssr` exports for server-side components.
 ## Environment Setup
 
 For Vercel-deployed apps, pull environment variables from within the app directory:
+
 ```bash
 cd apps/web-main
 npx vercel env pull --environment development
 ```
+
 This creates `.env.local` with required variables.

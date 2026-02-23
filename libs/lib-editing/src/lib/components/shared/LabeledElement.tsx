@@ -1,14 +1,19 @@
 'use client';
 
-import { PanelContentType, urlForPanelContent } from '@data-access';
+import {
+  PanelContentType,
+  urlForPanelContent,
+  useBookmark,
+} from '@data-access';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@design-system';
 import { cn } from '@lib-utils';
-import { CopyIcon } from 'lucide-react';
+import { BookmarkIcon, CopyIcon } from 'lucide-react';
 import { ReactNode, useCallback } from 'react';
 
 export const LabeledElement = ({
@@ -24,6 +29,11 @@ export const LabeledElement = ({
   contentType?: PanelContentType;
   children: ReactNode;
 }) => {
+  const { isBookmarked, toggle } = useBookmark(id ?? '', {
+    type: contentType ?? '',
+    tab: contentType ?? '',
+  });
+
   const copyLink = useCallback(() => {
     if (!id) {
       return;
@@ -41,6 +51,14 @@ export const LabeledElement = ({
     <div id={id} className="relative scroll-mt-20">
       {id ? (
         <DropdownMenu>
+          {isBookmarked && (
+            <div className="absolute -left-15.75 top-5 w-16 flex justify-end">
+              <BookmarkIcon
+                className="text-accent size-3"
+                fill="currentColor"
+              />
+            </div>
+          )}
           <DropdownMenuTrigger
             className={cn(
               'absolute labeled -left-16 w-16 text-end hover:cursor-pointer whitespace-pre-line leading-4',
@@ -50,9 +68,11 @@ export const LabeledElement = ({
             {label || ''}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" alignOffset={48} className="w-64">
-            {/* <DropdownMenuItem disabled> */}
-            {/*   <BookmarkIcon className="text-ochre" /> Add Bookmark */}
-            {/* </DropdownMenuItem> */}
+            <DropdownMenuItem onSelect={toggle}>
+              <BookmarkIcon className="text-ochre" />
+              {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={copyLink}>
               <CopyIcon className="text-ochre" /> Copy Link
             </DropdownMenuItem>

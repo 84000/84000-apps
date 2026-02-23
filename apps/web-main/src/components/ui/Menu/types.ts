@@ -1,7 +1,7 @@
 import { LucideProps } from 'lucide-react';
 import { ForwardRefExoticComponent, RefAttributes } from 'react';
 
-type BrandColor = 'brick' | 'ochre' | 'slate' | 'navy' | 'emerald';
+export type BrandColor = 'brick' | 'ochre' | 'slate' | 'navy' | 'emerald';
 
 export const CLASSES_FOR_COLOR: Record<
   BrandColor,
@@ -66,9 +66,11 @@ export type MenuSubItem = {
   header: string;
   body: string;
   href: string;
+  isProxy?: boolean;
   icon: ForwardRefExoticComponent<
     Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>
   >;
+  showOnHomepage?: boolean;
 };
 
 export type NavigationMenuItemProps = {

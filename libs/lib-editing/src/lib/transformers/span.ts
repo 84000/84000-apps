@@ -46,6 +46,12 @@ export const span: Transformer = (ctx) => {
       splitContent({
         ...ctx,
         transform: ({ block }) => {
+          // If the block already has the mark, skip it becuase the editor
+          // doesn't like multiple marks of the same type on a single block.
+          if (block.marks?.some((m) => m.type === markType)) {
+            return;
+          }
+
           block.attrs = {
             ...block.attrs,
             start,

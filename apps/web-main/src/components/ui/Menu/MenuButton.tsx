@@ -14,6 +14,10 @@ export const MenuButton = ({
     <div
       className="p-2 h-full hover:bg-linear-to-r hover:from-transparent hover:to-muted hover:cursor-pointer rounded-lg transition-colors"
       onClick={() => {
+        if (subItem.isProxy) {
+          window.location.href = subItem.href;
+          return;
+        }
         router.push(subItem.href);
       }}
     >
