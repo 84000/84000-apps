@@ -6,9 +6,14 @@ import nextra from 'nextra';
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
  **/
-const nextConfig = {};
+const nextConfig = {
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/docs' : undefined,
+};
 
-const withNextra = nextra({});
+const withNextra = nextra({
+  contentDirBasePath:
+    process.env.NODE_ENV === 'production' ? '/docs' : undefined,
+});
 
 const plugins = [
   // Add more Next.js plugins to this list if needed.
