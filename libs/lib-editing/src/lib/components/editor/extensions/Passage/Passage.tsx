@@ -16,13 +16,19 @@ import { memo, useMemo, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
 import { LabeledElement, useNavigation } from '../../../shared';
-import { Alignment } from '@data-access';
+import { Alignment, useBookmark } from '@data-access';
+import { BookmarkIcon } from 'lucide-react';
 
 const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
+
+  const { isBookmarked, toggle: toggleBookmark } = useBookmark(
+    node.attrs.uuid,
+    { type: 'passage', subType: node.attrs.type, tab: node.attrs.type ?? '' },
+  );
 
   const { panels, toh } = useNavigation();
 
@@ -72,6 +78,14 @@ const PassageComponent = (props: NodeViewProps) => {
           )}
         >
           <DropdownMenu>
+            {!editor.isEditable && isBookmarked && (
+              <div className="absolute -left-15.75 top-6 w-16 flex justify-end">
+                <BookmarkIcon
+                  className="text-accent size-3"
+                  fill="currentColor"
+                />
+              </div>
+            )}
             <DropdownMenuTrigger className={className} contentEditable={false}>
               {node.attrs.label || ''}
             </DropdownMenuTrigger>
@@ -91,6 +105,8 @@ const PassageComponent = (props: NodeViewProps) => {
                 <ReaderOptions
                   {...props}
                   contentType={source ? 'compare' : node.attrs.type}
+                  isBookmarked={isBookmarked}
+                  toggleBookmark={toggleBookmark}
                 />
               )}
             </DropdownMenuContent>

@@ -14,3 +14,5 @@ export * from './lib/projects';
 export * from './lib/publications';
 export * from './lib/storage';
 export * from './lib/types';
+export * from './lib/local-storage';
+export * from './lib/use-bookmark';

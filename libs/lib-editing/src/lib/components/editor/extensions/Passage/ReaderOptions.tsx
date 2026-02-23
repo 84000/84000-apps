@@ -1,13 +1,17 @@
 'use client';
 
 import { PanelContentType, urlForPanelContent } from '@data-access';
-import { DropdownMenuItem } from '@design-system';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
 import { NodeViewProps } from '@tiptap/react';
-import { CopyIcon } from 'lucide-react';
+import { BookmarkIcon, CopyIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
 export const ReaderOptions = (
-  props: NodeViewProps & { contentType: PanelContentType },
+  props: NodeViewProps & {
+    contentType: PanelContentType;
+    isBookmarked?: boolean;
+    toggleBookmark?: () => void;
+  },
 ) => {
   const copyLink = useCallback(() => {
     const hash = props.node.attrs.uuid;
@@ -24,10 +28,11 @@ export const ReaderOptions = (
   }, [props.node, props.contentType]);
   return (
     <>
-      {/* <DropdownMenuItem disabled> */}
-      {/*   <BookmarkIcon className="text-ochre" /> Add Bookmark */}
-      {/* </DropdownMenuItem> */}
-      {/* <DropdownMenuSeparator /> */}
+      <DropdownMenuItem onSelect={props.toggleBookmark}>
+        <BookmarkIcon className="text-ochre" />
+        {props.isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={copyLink}>
         <CopyIcon className="text-ochre" /> Copy Link
       </DropdownMenuItem>
