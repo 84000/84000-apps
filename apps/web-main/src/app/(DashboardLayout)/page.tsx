@@ -38,23 +38,37 @@ const Page = () => {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="flex flex-col gap-3">
-                  {homepageItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors no-underline"
-                    >
-                      <item.icon
-                        className={`size-5 ${colorClasses.text} shrink-0 mt-0.5`}
-                      />
-                      <div>
-                        <div className="font-medium">{item.header}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.body}
+                  {homepageItems.map((item) => {
+                    const className =
+                      'flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors no-underline';
+                    const fragment = (
+                      <>
+                        <item.icon
+                          className={`size-5 ${colorClasses.text} shrink-0 mt-0.5`}
+                        />
+                        <div>
+                          <div className="font-medium">{item.header}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.body}
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </>
+                    );
+
+                    return item.isProxy ? (
+                      <a key={item.href} href={item.href} className={className}>
+                        {fragment}
+                      </a>
+                    ) : (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={className}
+                      >
+                        {fragment}
+                      </Link>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

@@ -46,6 +46,7 @@ function transformConfigItem(item: MenuItemConfig): NavigationMenuItemProps {
           href: subItem.href,
           icon: getIconByName(subItem.icon),
           showOnHomepage: subItem.showOnHomepage,
+          isProxy: !!subItem.proxyTo,
         })),
       },
     ],

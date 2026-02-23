@@ -66,6 +66,7 @@ export type MenuSubItem = {
   header: string;
   body: string;
   href: string;
+  isProxy?: boolean;
   icon: ForwardRefExoticComponent<
     Omit<LucideProps, 'ref'> & RefAttributes<SVGSVGElement>
   >;
