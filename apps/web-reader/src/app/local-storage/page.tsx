@@ -2,10 +2,12 @@
 
 import { useEffect } from 'react';
 
-const ALLOWED_ORIGINS = [
-  'https://reading-room.84000.co',
-  'https://studio.84000.co',
-];
+const ALLOWED_ORIGINS = (
+  process.env.NEXT_PUBLIC_ALLOWED_ORIGINS ?? ''
+)
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 export default function LocalStorageBridge() {
   useEffect(() => {
