@@ -64,16 +64,17 @@ export const BodyPanel = ({
       node && node.offsetParent !== null ? findScrollParent(node) : null;
   }, []);
 
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    panels.main.tab,
+  );
+
   useScrollPositionRestore(
     'main',
     scrollContainerRef,
     panels.main.tab,
     !!panels.main.hash,
-  );
-
-  const passageAnchorRef = usePassageAnchorRestore(
-    scrollContainerRef,
-    panels.main.tab,
+    passageAnchorRef,
   );
 
   useEffect(() => {
@@ -104,9 +105,13 @@ export const BodyPanel = ({
       value={panels.main.tab || 'translation'}
       onValueChange={(tabName) => {
         const tab = tabName as 'translation' | 'source' | 'compare';
-        // Snapshot the topmost visible passage so we can realign after
-        // the tab switch (content width may differ between tabs).
-        if (scrollContainerRef.current) {
+        // Capture a passage anchor when leaving translation or compare.
+        // These tabs contain passage elements whose UUID lets us realign
+        // scroll position after the tab switch — immune to the scrollTop
+        // clamping that happens when hidden content changes scroll height.
+        const current = panels.main.tab || 'translation';
+        const passageTabs = ['translation', 'compare'];
+        if (scrollContainerRef.current && passageTabs.includes(current)) {
           passageAnchorRef.current = capturePassageAnchor(
             scrollContainerRef.current,
           );

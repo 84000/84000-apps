@@ -65,9 +65,19 @@ export function restorePassageAnchor(
   scrollContainer: HTMLElement,
   anchor: PassageAnchor,
 ): void {
-  const el = scrollContainer.querySelector<HTMLElement>(
+  // Use querySelectorAll because Translation and Compare can both contain
+  // passages with the same UUID. querySelector would return the first
+  // (hidden Translation), so we need to find the visible one.
+  const candidates = scrollContainer.querySelectorAll<HTMLElement>(
     `[data-node-view-wrapper]#${CSS.escape(anchor.uuid)}`,
   );
+  let el: HTMLElement | null = null;
+  for (const candidate of candidates) {
+    if (candidate.getBoundingClientRect().height > 0) {
+      el = candidate;
+      break;
+    }
+  }
   if (!el) return;
 
   const containerTop = scrollContainer.getBoundingClientRect().top;
@@ -76,11 +86,9 @@ export function restorePassageAnchor(
   scrollContainer.scrollTop += delta;
 }
 
-/**
- * Hook that provides a mutable ref to store a passage anchor snapshot.
- * Call `capturePassageAnchor` before a tab switch and store in the ref,
- * then the hook's effect will restore it after React re-renders.
- */
+/** Tabs whose content contains passage elements (data-node-view-wrapper). */
+const PASSAGE_TABS = ['translation', 'compare'];
+
 export function usePassageAnchorRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
@@ -92,15 +100,20 @@ export function usePassageAnchorRestore(
     if (prevTabRef.current === activeTab) return;
     prevTabRef.current = activeTab;
 
+    // Only restore when arriving at a passage tab (translation/compare).
+    // When switching to front/source, keep the anchor so it's available
+    // when the user eventually returns to a passage tab.
+    if (!PASSAGE_TABS.includes(activeTab || '')) return;
+
     const container = scrollContainerRef.current;
     const anchor = anchorRef.current;
     if (!container || !anchor) return;
 
-    // Clear immediately so it's one-shot
-    anchorRef.current = null;
-
-    // Use rAF to let the browser finish layout after the tab switch
+    // Clear inside rAF, not here — useScrollPositionRestore reads the ref
+    // synchronously (in its effect, which runs after this one) to decide
+    // whether to skip its own restore.
     requestAnimationFrame(() => {
+      anchorRef.current = null;
       restorePassageAnchor(container, anchor);
     });
   }, [activeTab, scrollContainerRef]);
@@ -200,6 +213,7 @@ export function useScrollPositionRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
   hasHash: boolean,
+  passageAnchorRef?: RefObject<PassageAnchor | null>,
 ) {
   const prevTabRef = useRef<string | undefined>(undefined);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -228,8 +242,14 @@ export function useScrollPositionRestore(
       scrollPositions.set(`${panelId}:${prevKey}`, container.scrollTop);
     }
 
-    // Restore incoming tab's scroll position
-    if (prevKey !== currentKey && !hasHash && container) {
+    // Restore incoming tab's scroll position.
+    // Skip when a passage anchor is pending AND we're arriving at a passage
+    // tab — the passage anchor restore is more accurate (immune to scrollTop
+    // clamping from hidden content) and will handle positioning instead.
+    const passageAnchorWillRestore =
+      !!passageAnchorRef?.current &&
+      PASSAGE_TABS.includes(activeTab || '');
+    if (prevKey !== currentKey && !hasHash && !passageAnchorWillRestore && container) {
       const saved = scrollPositions.get(`${panelId}:${currentKey}`) ?? 0;
       if (saved === 0) {
         requestAnimationFrame(() => {
