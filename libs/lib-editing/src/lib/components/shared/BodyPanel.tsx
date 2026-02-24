@@ -13,10 +13,17 @@ import {
 } from '../editor';
 import { COMPARE_MODE, Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement, useEffect, useMemo, useState } from 'react';
+import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { cn } from '@lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';
+import {
+  capturePassageAnchor,
+  findScrollParent,
+  usePassageAnchorRestore,
+  useScrollPositionRestore,
+} from './hooks/useScrollPositionRestore';
 
 export const BodyPanel = ({
   titles,
@@ -35,6 +42,39 @@ export const BodyPanel = ({
 }) => {
   const { panels, imprint, showOuterContent, updatePanel } = useNavigation();
   const [alignments, setAlignments] = useState<TranslationEditorContent>();
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const activeTab = panels.main.tab || 'translation';
+
+  // Once the user first visits Compare, keep its editor alive so subsequent
+  // switches are instant. The editor must be born while the active tab is
+  // 'compare' so that TipTap node views pick up isCompare=true from context.
+  const [compareActivated, setCompareActivated] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'compare' && !compareActivated) {
+      setCompareActivated(true);
+    }
+  }, [activeTab, compareActivated]);
+
+  const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
+    tabsRef.current = node;
+    // Only track scroll for visible instances (skip the hidden mobile duplicate)
+    scrollContainerRef.current =
+      node && node.offsetParent !== null ? findScrollParent(node) : null;
+  }, []);
+
+  useScrollPositionRestore(
+    'main',
+    scrollContainerRef,
+    panels.main.tab,
+    !!panels.main.hash,
+  );
+
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    panels.main.tab,
+  );
 
   useEffect(() => {
     const passages = body as TranslationEditorContentItem[];
@@ -60,9 +100,17 @@ export const BodyPanel = ({
 
   return (
     <Tabs
+      ref={tabsRefCallback}
       value={panels.main.tab || 'translation'}
       onValueChange={(tabName) => {
         const tab = tabName as 'translation' | 'source' | 'compare';
+        // Snapshot the topmost visible passage so we can realign after
+        // the tab switch (content width may differ between tabs).
+        if (scrollContainerRef.current) {
+          passageAnchorRef.current = capturePassageAnchor(
+            scrollContainerRef.current,
+          );
+        }
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
       defaultValue="translation"
@@ -95,7 +143,13 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="translation">
+      {/* Translation uses forceMount so its TipTap editor stays alive when
+         switching to Compare or other tabs, avoiding expensive re-creation. */}
+      <TabsContent
+        value="translation"
+        forceMount
+        className={cn(activeTab !== 'translation' && 'hidden')}
+      >
         <div className="w-full max-w-readable mx-auto">
           {renderTranslation({
             content: body,
@@ -108,8 +162,11 @@ export const BodyPanel = ({
       <TabsContent value="source" className="pb-2">
         <SourceReader />
       </TabsContent>
-      {alignments && alignments.length > 0 && (
-        <TabsContent value="compare">
+      {/* Compare is lazily mounted on first activation so its TipTap editor is
+         born while panels.main.tab === 'compare', ensuring Passage node views
+         detect compare mode. Once created, it stays alive via CSS hiding. */}
+      {alignments && alignments.length > 0 && compareActivated && (
+        <div className={cn('mt-2', activeTab !== 'compare' && 'hidden')}>
           <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
             {renderTranslation({
               content: alignments,
@@ -118,7 +175,7 @@ export const BodyPanel = ({
               panel: 'main',
             })}
           </div>
-        </TabsContent>
+        </div>
       )}
     </Tabs>
   );
