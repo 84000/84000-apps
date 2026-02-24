@@ -40,7 +40,12 @@ export const ReaderOptions = (
       {props.onSuggestRevision && (
         <>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={props.onSuggestRevision}>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              props.onSuggestRevision?.();
+            }}
+          >
             <MessageSquareIcon className="text-ochre" /> Suggest Revision
           </DropdownMenuItem>
         </>

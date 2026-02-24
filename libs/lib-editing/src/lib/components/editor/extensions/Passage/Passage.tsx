@@ -18,7 +18,7 @@ import { ShowAnnotations } from './ShowAnnotations';
 import {
   LabeledElement,
   useNavigation,
-  SuggestRevisionDialog,
+  SuggestRevisionForm,
 } from '../../../shared';
 import { Alignment, useBookmark } from '@data-access';
 import { BookmarkIcon } from 'lucide-react';
@@ -28,7 +28,8 @@ const PassageComponent = (props: NodeViewProps) => {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
-  const [isRevisionDialogOpen, setIsRevisionDialogOpen] = useState(false);
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(
     node.attrs.uuid,
@@ -82,7 +83,13 @@ const PassageComponent = (props: NodeViewProps) => {
             borderClassName,
           )}
         >
-          <DropdownMenu>
+          <DropdownMenu
+            open={dropdownOpen}
+            onOpenChange={(open) => {
+              setDropdownOpen(open);
+              if (!open) setShowRevisionForm(false);
+            }}
+          >
             {!editor.isEditable && isBookmarked && (
               <div className="absolute -left-15.75 top-6 w-16 flex justify-end">
                 <BookmarkIcon
@@ -97,9 +104,19 @@ const PassageComponent = (props: NodeViewProps) => {
             <DropdownMenuContent
               align="start"
               alignOffset={48}
-              className="w-64"
+              className={cn(showRevisionForm ? 'w-80' : 'w-64')}
             >
-              {editor.isEditable ? (
+              {showRevisionForm ? (
+                <SuggestRevisionForm
+                  toh={toh ?? ''}
+                  type={'passage'}
+                  label={node.attrs.label ?? ''}
+                  onClose={() => {
+                    setShowRevisionForm(false);
+                    setDropdownOpen(false);
+                  }}
+                />
+              ) : editor.isEditable ? (
                 <EditorOptions
                   onSelection={(item) => {
                     setDialogType(item);
@@ -112,7 +129,7 @@ const PassageComponent = (props: NodeViewProps) => {
                   contentType={source ? 'compare' : node.attrs.type}
                   isBookmarked={isBookmarked}
                   toggleBookmark={toggleBookmark}
-                  onSuggestRevision={() => setIsRevisionDialogOpen(true)}
+                  onSuggestRevision={() => setShowRevisionForm(true)}
                 />
               )}
             </DropdownMenuContent>
@@ -126,13 +143,6 @@ const PassageComponent = (props: NodeViewProps) => {
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
             </Dialog>
           )}
-          <SuggestRevisionDialog
-            open={isRevisionDialogOpen}
-            onOpenChange={setIsRevisionDialogOpen}
-            toh={toh ?? ''}
-            type={'passage'}
-            label={node.attrs.label ?? ''}
-          />
         </div>
       </div>
       <div
