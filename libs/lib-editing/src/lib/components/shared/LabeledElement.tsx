@@ -13,8 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@design-system';
 import { cn } from '@lib-utils';
-import { BookmarkIcon, CopyIcon } from 'lucide-react';
-import { ReactNode, useCallback } from 'react';
+import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
+import { ReactNode, useCallback, useState } from 'react';
+import { SuggestRevisionForm } from './SuggestRevisionForm';
+import { useNavigation } from './NavigationProvider';
 
 export const LabeledElement = ({
   label,
@@ -34,6 +36,10 @@ export const LabeledElement = ({
     tab: contentType ?? '',
   });
 
+  const { toh } = useNavigation();
+  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const copyLink = useCallback(() => {
     if (!id) {
       return;
@@ -50,7 +56,13 @@ export const LabeledElement = ({
   return (
     <div id={id} className="relative scroll-mt-20">
       {id ? (
-        <DropdownMenu>
+        <DropdownMenu
+          open={dropdownOpen}
+          onOpenChange={(open) => {
+            setDropdownOpen(open);
+            if (!open) setShowRevisionForm(false);
+          }}
+        >
           {isBookmarked && (
             <div className="absolute -left-15.75 top-5 w-16 flex justify-end">
               <BookmarkIcon
@@ -67,15 +79,42 @@ export const LabeledElement = ({
           >
             {label || ''}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" alignOffset={48} className="w-64">
-            <DropdownMenuItem onSelect={toggle}>
-              <BookmarkIcon className="text-ochre" />
-              {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={copyLink}>
-              <CopyIcon className="text-ochre" /> Copy Link
-            </DropdownMenuItem>
+          <DropdownMenuContent
+            align="start"
+            alignOffset={48}
+            className={cn(showRevisionForm ? 'w-80' : 'w-64')}
+          >
+            {showRevisionForm ? (
+              <SuggestRevisionForm
+                toh={toh ?? ''}
+                type={contentType ?? ''}
+                label={label ?? ''}
+                onClose={() => {
+                  setShowRevisionForm(false);
+                  setDropdownOpen(false);
+                }}
+              />
+            ) : (
+              <>
+                <DropdownMenuItem onSelect={toggle}>
+                  <BookmarkIcon className="text-ochre" />
+                  {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={copyLink}>
+                  <CopyIcon className="text-ochre" /> Copy Link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setShowRevisionForm(true);
+                  }}
+                >
+                  <MessageSquareIcon className="text-ochre" /> Suggest Revision
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (

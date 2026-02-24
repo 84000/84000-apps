@@ -3,7 +3,7 @@
 import { PanelContentType, urlForPanelContent } from '@data-access';
 import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
 import { NodeViewProps } from '@tiptap/react';
-import { BookmarkIcon, CopyIcon } from 'lucide-react';
+import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
 export const ReaderOptions = (
@@ -11,6 +11,7 @@ export const ReaderOptions = (
     contentType: PanelContentType;
     isBookmarked?: boolean;
     toggleBookmark?: () => void;
+    onSuggestRevision?: () => void;
   },
 ) => {
   const copyLink = useCallback(() => {
@@ -36,6 +37,19 @@ export const ReaderOptions = (
       <DropdownMenuItem onSelect={copyLink}>
         <CopyIcon className="text-ochre" /> Copy Link
       </DropdownMenuItem>
+      {props.onSuggestRevision && (
+        <>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              props.onSuggestRevision?.();
+            }}
+          >
+            <MessageSquareIcon className="text-ochre" /> Suggest Revision
+          </DropdownMenuItem>
+        </>
+      )}
     </>
   );
 };
