@@ -15,7 +15,11 @@ import { ReaderOptions } from './ReaderOptions';
 import { memo, useMemo, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
-import { LabeledElement, useNavigation } from '../../../shared';
+import {
+  LabeledElement,
+  useNavigation,
+  SuggestRevisionDialog,
+} from '../../../shared';
 import { Alignment, useBookmark } from '@data-access';
 import { BookmarkIcon } from 'lucide-react';
 
@@ -24,6 +28,7 @@ const PassageComponent = (props: NodeViewProps) => {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<string>();
+  const [isRevisionDialogOpen, setIsRevisionDialogOpen] = useState(false);
 
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(
     node.attrs.uuid,
@@ -107,6 +112,7 @@ const PassageComponent = (props: NodeViewProps) => {
                   contentType={source ? 'compare' : node.attrs.type}
                   isBookmarked={isBookmarked}
                   toggleBookmark={toggleBookmark}
+                  onSuggestRevision={() => setIsRevisionDialogOpen(true)}
                 />
               )}
             </DropdownMenuContent>
@@ -120,6 +126,13 @@ const PassageComponent = (props: NodeViewProps) => {
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
             </Dialog>
           )}
+          <SuggestRevisionDialog
+            open={isRevisionDialogOpen}
+            onOpenChange={setIsRevisionDialogOpen}
+            toh={toh ?? ''}
+            type={'passage'}
+            label={node.attrs.label ?? ''}
+          />
         </div>
       </div>
       <div

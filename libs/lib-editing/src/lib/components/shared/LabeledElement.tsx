@@ -13,8 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@design-system';
 import { cn } from '@lib-utils';
-import { BookmarkIcon, CopyIcon } from 'lucide-react';
-import { ReactNode, useCallback } from 'react';
+import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
+import { ReactNode, useCallback, useState } from 'react';
+import { SuggestRevisionDialog } from './SuggestRevisionDialog';
+import { useNavigation } from './NavigationProvider';
 
 export const LabeledElement = ({
   label,
@@ -34,6 +36,9 @@ export const LabeledElement = ({
     tab: contentType ?? '',
   });
 
+  const { toh } = useNavigation();
+  const [isRevisionDialogOpen, setIsRevisionDialogOpen] = useState(false);
+
   const copyLink = useCallback(() => {
     if (!id) {
       return;
@@ -50,34 +55,47 @@ export const LabeledElement = ({
   return (
     <div id={id} className="relative scroll-mt-20">
       {id ? (
-        <DropdownMenu>
-          {isBookmarked && (
-            <div className="absolute -left-15.75 top-5 w-16 flex justify-end">
-              <BookmarkIcon
-                className="text-accent size-3"
-                fill="currentColor"
-              />
-            </div>
-          )}
-          <DropdownMenuTrigger
-            className={cn(
-              'absolute labeled -left-16 w-16 text-end hover:cursor-pointer whitespace-pre-line leading-4',
-              className,
+        <>
+          <DropdownMenu>
+            {isBookmarked && (
+              <div className="absolute -left-15.75 top-5 w-16 flex justify-end">
+                <BookmarkIcon
+                  className="text-accent size-3"
+                  fill="currentColor"
+                />
+              </div>
             )}
-          >
-            {label || ''}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" alignOffset={48} className="w-64">
-            <DropdownMenuItem onSelect={toggle}>
-              <BookmarkIcon className="text-ochre" />
-              {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={copyLink}>
-              <CopyIcon className="text-ochre" /> Copy Link
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                'absolute labeled -left-16 w-16 text-end hover:cursor-pointer whitespace-pre-line leading-4',
+                className,
+              )}
+            >
+              {label || ''}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" alignOffset={48} className="w-64">
+              <DropdownMenuItem onSelect={toggle}>
+                <BookmarkIcon className="text-ochre" />
+                {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={copyLink}>
+                <CopyIcon className="text-ochre" /> Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setIsRevisionDialogOpen(true)}>
+                <MessageSquareIcon className="text-ochre" /> Suggest Revision
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <SuggestRevisionDialog
+            open={isRevisionDialogOpen}
+            onOpenChange={setIsRevisionDialogOpen}
+            toh={toh ?? ''}
+            type={contentType ?? ''}
+            label={label ?? ''}
+          />
+        </>
       ) : (
         <div
           className={cn(

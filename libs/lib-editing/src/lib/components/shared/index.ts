@@ -1,6 +1,7 @@
 export * from './AiSummarizerPage';
 export * from './NavigationProvider';
 export * from './LabeledElement';
+export * from './SuggestRevisionDialog';
 export * from './ThreeColumnRenderer';
 export * from './TranslationSkeleton';
 export * from './TranslationTable';
