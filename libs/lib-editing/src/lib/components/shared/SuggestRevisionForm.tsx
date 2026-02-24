@@ -58,7 +58,7 @@ export const SuggestRevisionForm = ({
   return (
     <div className="p-1">
       <p className="text-sm font-semibold">Suggest a Revision</p>
-      <p className="text-muted-foreground text-xs capitalize mb-2">
+      <p className="text-secondary text-xs capitalize py-2">
         {parseToh(toh)} &middot; {type} {label}
       </p>
       <form onSubmit={handleSubmit}>
@@ -80,19 +80,14 @@ export const SuggestRevisionForm = ({
           </p>
         )}
         <div className="flex justify-end gap-2 mt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={onClose}
-          >
+          <Button variant="outline" size="sm" type="button" onClick={onClose}>
             Cancel
           </Button>
           <Button
             variant="default"
             size="sm"
             type="submit"
-            className="px-5"
+            className="px-3"
             disabled={status === 'loading' || status === 'success'}
           >
             {status === 'loading' ? 'Sending...' : 'Submit'}

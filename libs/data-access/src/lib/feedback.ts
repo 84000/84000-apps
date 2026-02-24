@@ -22,20 +22,15 @@ async function sendRevisionEmail({
   }
 
   const resend = new Resend(apiKey);
+  const trimmedLabel = label.split('\n').join(', ').trim();
 
-  const subject = `[Revision Suggestion] ${toh} - ${type} ${label}`;
+  const subject = `[Revision Suggestion] ${parseToh(toh)} - ${type} ${trimmedLabel}`;
 
   const { error } = await resend.emails.send({
     from,
     to,
     subject,
-    text: [
-      `Revision suggestion for ${parseToh(toh)}`,
-      `Type: ${type}`,
-      `Label: ${label}`,
-      '',
-      body,
-    ].join('\n'),
+    text: body,
   });
 
   if (error) {
