@@ -17,6 +17,12 @@ const GET_WORK_GLOSSARY = gql`
           chinese
           wylie
         }
+        passages {
+          uuid
+          type
+          label
+          sort
+        }
       }
     }
   }

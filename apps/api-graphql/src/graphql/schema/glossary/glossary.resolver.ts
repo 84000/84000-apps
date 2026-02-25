@@ -8,6 +8,17 @@ import {
 } from '@data-access';
 
 /**
+ * Field resolver for GlossaryTermInstance.passages
+ */
+export const glossaryTermPassagesResolver = (
+  parent: { uuid: string },
+  _args: unknown,
+  ctx: GraphQLContext,
+) => {
+  return ctx.loaders.glossaryPassagesByTermUuid.load(parent.uuid);
+};
+
+/**
  * Resolver for Query.glossaryTerms - fetches all glossary terms for landing page
  */
 export const glossaryTermsResolver = async (
