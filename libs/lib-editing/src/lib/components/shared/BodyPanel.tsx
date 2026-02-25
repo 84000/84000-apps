@@ -11,7 +11,7 @@ import {
   TranslationEditorContent,
   TranslationEditorContentItem,
 } from '../editor';
-import { COMPARE_MODE, Title } from '@data-access';
+import { Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement, useCallback, useMemo, useRef } from 'react';
 import { cn } from '@lib-utils';
@@ -47,8 +47,8 @@ export const BodyPanel = ({
 
   const hasAlignments = useMemo(() => {
     const passages = body as TranslationEditorContentItem[];
-    return passages.some((item) =>
-      COMPARE_MODE.includes((item.attrs?.type || '').replace('Header', '')),
+    return passages.some(
+      (item) => Object.keys(item.attrs?.alignments || {}).length > 0,
     );
   }, [body]);
 
