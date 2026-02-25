@@ -13,7 +13,7 @@ import {
 } from '../editor';
 import { COMPARE_MODE, Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, useCallback, useMemo, useRef } from 'react';
 import { cn } from '@lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
@@ -41,21 +41,16 @@ export const BodyPanel = ({
   ) => ReactElement<TranslationRenderer>;
 }) => {
   const { panels, imprint, showOuterContent, updatePanel } = useNavigation();
-  const [alignments, setAlignments] = useState<TranslationEditorContent>();
   const tabsRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const activeTab = panels.main.tab || 'translation';
 
-  // Once the user first visits Compare, keep its editor alive so subsequent
-  // switches are instant. The editor must be born while the active tab is
-  // 'compare' so that TipTap node views pick up isCompare=true from context.
-  const [compareActivated, setCompareActivated] = useState(false);
-
-  useEffect(() => {
-    if (activeTab === 'compare' && !compareActivated) {
-      setCompareActivated(true);
-    }
-  }, [activeTab, compareActivated]);
+  const hasAlignments = useMemo(() => {
+    const passages = body as TranslationEditorContentItem[];
+    return passages.some((item) =>
+      COMPARE_MODE.includes((item.attrs?.type || '').replace('Header', '')),
+    );
+  }, [body]);
 
   const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
     tabsRef.current = node;
@@ -77,14 +72,6 @@ export const BodyPanel = ({
     passageAnchorRef,
   );
 
-  useEffect(() => {
-    const passages = body as TranslationEditorContentItem[];
-    const alignments = passages.filter((item) =>
-      COMPARE_MODE.includes((item.attrs?.type || '').replace('Header', '')),
-    );
-    setAlignments(alignments);
-  }, [body]);
-
   const theTitles = useMemo(
     () => (
       <div className="mt-16 mb-8">
@@ -104,7 +91,7 @@ export const BodyPanel = ({
       ref={tabsRefCallback}
       value={panels.main.tab || 'translation'}
       onValueChange={(tabName) => {
-        const tab = tabName as 'translation' | 'source' | 'compare';
+        const tab = tabName as 'translation' | 'source' | 'compare' | 'front';
         // Capture a passage anchor when leaving translation or compare.
         // These tabs contain passage elements whose UUID lets us realign
         // scroll position after the tab switch — immune to the scrollTop
@@ -125,10 +112,10 @@ export const BodyPanel = ({
         <TabsList className="w-fit inline-flex">
           <TabsTrigger value="front">Front</TabsTrigger>
           <TabsTrigger value="translation">Translation</TabsTrigger>
-          <TabsTrigger value="source">Source</TabsTrigger>
-          {alignments && alignments.length > 0 && (
+          {hasAlignments && (
             <TabsTrigger value="compare">Compare</TabsTrigger>
           )}
+          <TabsTrigger value="source">Source</TabsTrigger>
         </TabsList>
       </div>
       {showOuterContent ? theTitles : null}
@@ -148,14 +135,24 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      {/* Translation uses forceMount so its TipTap editor stays alive when
-         switching to Compare or other tabs, avoiding expensive re-creation. */}
+      {/* Single editor instance shared between Translation and Compare tabs.
+         Passage node views reactively show/hide the Tibetan source column
+         based on the active tab from NavigationContext. */}
       <TabsContent
         value="translation"
         forceMount
-        className="data-[state=inactive]:hidden"
+        className={cn(
+          activeTab !== 'translation' && activeTab !== 'compare' && 'hidden',
+        )}
       >
-        <div className="w-full max-w-readable mx-auto">
+        <div
+          className={cn(
+            'w-full mx-auto',
+            activeTab === 'compare'
+              ? '2xl:max-w-7xl max-w-5xl mt-8'
+              : 'max-w-readable',
+          )}
+        >
           {renderTranslation({
             content: body,
             className: 'block',
@@ -171,21 +168,6 @@ export const BodyPanel = ({
       >
         <SourceReader />
       </TabsContent>
-      {/* Compare is lazily mounted on first activation so its TipTap editor is
-         born while panels.main.tab === 'compare', ensuring Passage node views
-         detect compare mode. Once created, it stays alive via CSS hiding. */}
-      {alignments && alignments.length > 0 && compareActivated && (
-        <div className={cn('mt-2', activeTab !== 'compare' && 'hidden')}>
-          <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
-            {renderTranslation({
-              content: alignments,
-              className: 'block',
-              name: 'translation',
-              panel: 'main',
-            })}
-          </div>
-        </div>
-      )}
     </Tabs>
   );
 };
