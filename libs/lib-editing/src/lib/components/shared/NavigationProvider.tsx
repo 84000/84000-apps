@@ -22,6 +22,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -353,24 +354,41 @@ export const NavigationProvider = ({
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
 
+  const contextValue = useMemo(
+    () => ({
+      uuid,
+      imprint,
+      panels,
+      toh,
+      showOuterContent,
+      setToh,
+      setShowOuterContent,
+      updatePanel,
+      fetchBibliographyEntry,
+      fetchEndNote,
+      fetchGlossaryTerm,
+      fetchPassage,
+      fetchWork,
+    }),
+    [
+      uuid,
+      imprint,
+      panels,
+      toh,
+      showOuterContent,
+      setToh,
+      setShowOuterContent,
+      updatePanel,
+      fetchBibliographyEntry,
+      fetchEndNote,
+      fetchGlossaryTerm,
+      fetchPassage,
+      fetchWork,
+    ],
+  );
+
   return (
-    <NavigationContext.Provider
-      value={{
-        uuid,
-        imprint,
-        panels,
-        toh,
-        showOuterContent,
-        setToh,
-        setShowOuterContent,
-        updatePanel,
-        fetchBibliographyEntry,
-        fetchEndNote,
-        fetchGlossaryTerm,
-        fetchPassage,
-        fetchWork,
-      }}
-    >
+    <NavigationContext.Provider value={contextValue}>
       {hasHoverCards ? (
         <HoverCardProvider>{children}</HoverCardProvider>
       ) : (

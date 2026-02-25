@@ -153,7 +153,7 @@ export const BodyPanel = ({
       <TabsContent
         value="translation"
         forceMount
-        className={cn(activeTab !== 'translation' && 'hidden')}
+        className="data-[state=inactive]:hidden"
       >
         <div className="w-full max-w-readable mx-auto">
           {renderTranslation({
@@ -164,7 +164,11 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="source" className="pb-2">
+      <TabsContent
+        value="source"
+        forceMount
+        className="pb-2 data-[state=inactive]:hidden"
+      >
         <SourceReader />
       </TabsContent>
       {/* Compare is lazily mounted on first activation so its TipTap editor is

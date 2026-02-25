@@ -8,8 +8,9 @@ import {
 } from '@client-graphql';
 import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
+import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TranslationBuilder } from '../editor';
@@ -67,21 +68,26 @@ export const EditorBackMatterPage = () => {
     return <TranslationSkeleton />;
   }
 
+  const renderTranslation = useCallback(
+    ({ content, name, className }: TranslationRenderer) => (
+      <TranslationBuilder
+        content={content}
+        name={name}
+        className={className}
+        filter={name}
+        panel="right"
+      />
+    ),
+    [],
+  );
+
   return (
     <BackMatterPanel
       endnotes={endnotes}
       glossary={glossary}
       bibliography={bibliography}
       abbreviations={abbreviations}
-      renderTranslation={({ content, name, className }) => (
-        <TranslationBuilder
-          content={content}
-          name={name}
-          className={className}
-          filter={name}
-          panel="right"
-        />
-      )}
+      renderTranslation={renderTranslation}
     />
   );
 };
