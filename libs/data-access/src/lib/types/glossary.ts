@@ -1,3 +1,5 @@
+import { Passages } from "./passage";
+
 export type GlossaryItem = {
   authorityUuid: string;
   definition?: string | null;
@@ -44,6 +46,7 @@ export type GlossaryTermInstance = {
     tibetan?: string;
     wylie?: string;
   };
+  passages?: Passages
 };
 
 export type GlossaryTermInstances = GlossaryTermInstance[];

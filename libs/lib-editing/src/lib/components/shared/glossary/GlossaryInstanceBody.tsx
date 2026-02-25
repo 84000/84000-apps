@@ -1,11 +1,13 @@
 'use client';
 
 import { GlossaryTermInstance } from '@data-access';
-import { Li, Ul } from '@design-system';
+import { Button, Li, Ul } from '@design-system';
 import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
-import { useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
+import { useNavigation } from '../NavigationProvider';
+import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -16,6 +18,25 @@ export const GlossaryInstanceBody = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
+  const { updatePanel } = useNavigation();
+
+  const sortedPassages = instance.passages
+    ?.slice()
+    .sort((a, b) => a.sort - b.sort);
+
+  const handlePassageClick = useCallback(
+    (passage: { uuid: string; type: string }) => {
+      updatePanel({
+        name: PANEL_FOR_SECTION[passage.type] || 'main',
+        state: {
+          open: true,
+          tab: TAB_FOR_SECTION[passage.type] || 'translation',
+          hash: passage.uuid,
+        },
+      });
+    },
+    [updatePanel],
+  );
 
   return (
     <div className={cn('p-2 flex gap-1 flex-col', className)}>
@@ -49,6 +70,22 @@ export const GlossaryInstanceBody = ({
           className="glossary-instance-definition"
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />
+      )}
+      {sortedPassages && sortedPassages.length > 0 && (
+        <div>
+          {sortedPassages.map((passage, index) => (
+            <span key={passage.uuid}>
+              {index > 0 && ', '}
+              <Button
+                variant="link"
+                className='p-0 h-6 font-normal'
+                onClick={() => handlePassageClick(passage)}
+              >
+                {passage.label || passage.uuid.slice(0, 6)}
+              </Button>
+            </span>
+          ))}
+        </div>
       )}
       <GatedFeature flag="authority-pages">
         <div className="text-sm text-mut my-2">
