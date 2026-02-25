@@ -9,8 +9,9 @@ import {
 } from '@client-graphql';
 import type { Title } from '@data-access';
 import { BodyPanel } from '../shared/BodyPanel';
+import { TitlesRenderer, TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { TranslationBuilder, TranslationEditorContent } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
@@ -50,6 +51,26 @@ export const EditorBodyPage = () => {
     })();
   }, [work.uuid]);
 
+  const renderTitles = useCallback(
+    ({ titles, imprint }: TitlesRenderer) => (
+      <TitlesBuilder titles={titles} imprint={imprint} />
+    ),
+    [],
+  );
+
+  const renderTranslation = useCallback(
+    ({ content, name, className }: TranslationRenderer) => (
+      <TranslationBuilder
+        content={content}
+        name={name}
+        className={className}
+        filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
+        panel="main"
+      />
+    ),
+    [],
+  );
+
   if (!titles || !frontMatter || !body) {
     return <TranslationSkeleton />;
   }
@@ -59,18 +80,8 @@ export const EditorBodyPage = () => {
       titles={titles}
       frontMatter={frontMatter}
       body={body}
-      renderTitles={({ titles, imprint }) => (
-        <TitlesBuilder titles={titles} imprint={imprint} />
-      )}
-      renderTranslation={({ content, name, className }) => (
-        <TranslationBuilder
-          content={content}
-          name={name}
-          className={className}
-          filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
-          panel="main"
-        />
-      )}
+      renderTitles={renderTitles}
+      renderTranslation={renderTranslation}
     />
   );
 };

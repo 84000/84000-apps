@@ -13,10 +13,17 @@ import {
 } from '../editor';
 import { COMPARE_MODE, Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement, useEffect, useMemo, useState } from 'react';
+import { ReactElement, useCallback, useMemo, useRef } from 'react';
+import { cn } from '@lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';
+import {
+  capturePassageAnchor,
+  findScrollParent,
+  usePassageAnchorRestore,
+  useScrollPositionRestore,
+} from './hooks/useScrollPositionRestore';
 
 export const BodyPanel = ({
   titles,
@@ -34,15 +41,36 @@ export const BodyPanel = ({
   ) => ReactElement<TranslationRenderer>;
 }) => {
   const { panels, imprint, showOuterContent, updatePanel } = useNavigation();
-  const [alignments, setAlignments] = useState<TranslationEditorContent>();
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const activeTab = panels.main.tab || 'translation';
 
-  useEffect(() => {
+  const hasAlignments = useMemo(() => {
     const passages = body as TranslationEditorContentItem[];
-    const alignments = passages.filter((item) =>
+    return passages.some((item) =>
       COMPARE_MODE.includes((item.attrs?.type || '').replace('Header', '')),
     );
-    setAlignments(alignments);
   }, [body]);
+
+  const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
+    tabsRef.current = node;
+    // Only track scroll for visible instances (skip the hidden mobile duplicate)
+    scrollContainerRef.current =
+      node && node.offsetParent !== null ? findScrollParent(node) : null;
+  }, []);
+
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    panels.main.tab,
+  );
+
+  useScrollPositionRestore(
+    'main',
+    scrollContainerRef,
+    panels.main.tab,
+    !!panels.main.hash,
+    passageAnchorRef,
+  );
 
   const theTitles = useMemo(
     () => (
@@ -60,9 +88,21 @@ export const BodyPanel = ({
 
   return (
     <Tabs
+      ref={tabsRefCallback}
       value={panels.main.tab || 'translation'}
       onValueChange={(tabName) => {
-        const tab = tabName as 'translation' | 'source' | 'compare';
+        const tab = tabName as 'translation' | 'source' | 'compare' | 'front';
+        // Capture a passage anchor when leaving translation or compare.
+        // These tabs contain passage elements whose UUID lets us realign
+        // scroll position after the tab switch — immune to the scrollTop
+        // clamping that happens when hidden content changes scroll height.
+        const current = panels.main.tab || 'translation';
+        const passageTabs = ['translation', 'compare'];
+        if (scrollContainerRef.current && passageTabs.includes(current)) {
+          passageAnchorRef.current = capturePassageAnchor(
+            scrollContainerRef.current,
+          );
+        }
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
       defaultValue="translation"
@@ -72,10 +112,10 @@ export const BodyPanel = ({
         <TabsList className="w-fit inline-flex">
           <TabsTrigger value="front">Front</TabsTrigger>
           <TabsTrigger value="translation">Translation</TabsTrigger>
-          <TabsTrigger value="source">Source</TabsTrigger>
-          {alignments && alignments.length > 0 && (
+          {hasAlignments && (
             <TabsTrigger value="compare">Compare</TabsTrigger>
           )}
+          <TabsTrigger value="source">Source</TabsTrigger>
         </TabsList>
       </div>
       {showOuterContent ? theTitles : null}
@@ -95,8 +135,24 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="translation">
-        <div className="w-full max-w-readable mx-auto">
+      {/* Single editor instance shared between Translation and Compare tabs.
+         Passage node views reactively show/hide the Tibetan source column
+         based on the active tab from NavigationContext. */}
+      <TabsContent
+        value="translation"
+        forceMount
+        className={cn(
+          activeTab !== 'translation' && activeTab !== 'compare' && 'hidden',
+        )}
+      >
+        <div
+          className={cn(
+            'w-full mx-auto',
+            activeTab === 'compare'
+              ? '2xl:max-w-7xl max-w-5xl mt-8'
+              : 'max-w-readable',
+          )}
+        >
           {renderTranslation({
             content: body,
             className: 'block',
@@ -105,21 +161,13 @@ export const BodyPanel = ({
           })}
         </div>
       </TabsContent>
-      <TabsContent value="source" className="pb-2">
+      <TabsContent
+        value="source"
+        forceMount
+        className="pb-2 data-[state=inactive]:hidden"
+      >
         <SourceReader />
       </TabsContent>
-      {alignments && alignments.length > 0 && (
-        <TabsContent value="compare">
-          <div className="w-full 2xl:max-w-7xl max-w-5xl mx-auto mt-8">
-            {renderTranslation({
-              content: alignments,
-              className: 'block',
-              name: 'translation',
-              panel: 'main',
-            })}
-          </div>
-        </TabsContent>
-      )}
     </Tabs>
   );
 };
