@@ -64,10 +64,6 @@ export const EditorBackMatterPage = () => {
     })();
   }, [work]);
 
-  if (!endnotes || !glossary || !bibliography || !abbreviations) {
-    return <TranslationSkeleton />;
-  }
-
   const renderTranslation = useCallback(
     ({ content, name, className }: TranslationRenderer) => (
       <TranslationBuilder
@@ -80,6 +76,10 @@ export const EditorBackMatterPage = () => {
     ),
     [],
   );
+
+  if (!endnotes || !glossary || !bibliography || !abbreviations) {
+    return <TranslationSkeleton />;
+  }
 
   return (
     <BackMatterPanel

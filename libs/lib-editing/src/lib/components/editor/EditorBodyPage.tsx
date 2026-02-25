@@ -51,10 +51,6 @@ export const EditorBodyPage = () => {
     })();
   }, [work.uuid]);
 
-  if (!titles || !frontMatter || !body) {
-    return <TranslationSkeleton />;
-  }
-
   const renderTitles = useCallback(
     ({ titles, imprint }: TitlesRenderer) => (
       <TitlesBuilder titles={titles} imprint={imprint} />
@@ -74,6 +70,10 @@ export const EditorBodyPage = () => {
     ),
     [],
   );
+
+  if (!titles || !frontMatter || !body) {
+    return <TranslationSkeleton />;
+  }
 
   return (
     <BodyPanel
