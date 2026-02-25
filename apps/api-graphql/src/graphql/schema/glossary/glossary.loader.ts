@@ -15,56 +15,40 @@ export interface GlossaryPassageLocation {
 export function createGlossaryPassagesLoader(supabase: DataClient) {
   return new DataLoader<string, GlossaryPassageLocation[]>(
     async (glossaryTermUuids) => {
-      const PAGE_SIZE = 1000;
+      // Phase 1: Query passage_annotations via RPC for glossary-instance annotations
+      const { data: annotations, error: annotationsError } = await supabase.rpc(
+        'get_passage_annotations_by_content_uuids',
+        {
+          annotation_type: 'glossary-instance',
+          target_uuids: glossaryTermUuids as string[],
+        },
+      );
 
-      // Phase 1: Query passage_annotations for glossary-instance annotations
-      let allAnnotations: { passage_uuid: string; content: unknown[] }[] = [];
-      let offset = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('passage_annotations')
-          .select('passage_uuid, content')
-          .eq('type', 'glossary-instance')
-          .filter(
-            'content->0->>uuid',
-            'in',
-            `(${(glossaryTermUuids as string[]).map((u) => `"${u}"`).join(',')})`,
-          )
-          .range(offset, offset + PAGE_SIZE - 1);
-
-        if (error) {
-          console.error(
-            'Error batch loading glossary passage annotations:',
-            error,
-          );
-          return glossaryTermUuids.map(() => []);
-        }
-
-        allAnnotations = allAnnotations.concat(
-          (data as { passage_uuid: string; content: unknown[] }[]) ?? [],
+      if (annotationsError) {
+        console.error(
+          'Error batch loading glossary passage annotations:',
+          annotationsError,
         );
-        hasMore = (data?.length ?? 0) === PAGE_SIZE;
-        offset += PAGE_SIZE;
+        return glossaryTermUuids.map(() => []);
       }
 
       // Collect unique passage UUIDs and map term UUID -> passage UUIDs
       const termToPassageUuids = new Map<string, Set<string>>();
       const allPassageUuids = new Set<string>();
 
-      for (const annotation of allAnnotations) {
-        const content = annotation.content as { uuid?: string }[];
-        const termUuid = content?.[0]?.uuid;
-        if (!termUuid || !annotation.passage_uuid) continue;
+      for (const row of (annotations ?? []) as Array<{
+        passage_uuid: string;
+        target_uuid: string;
+      }>) {
+        if (!row.target_uuid || !row.passage_uuid) continue;
 
-        allPassageUuids.add(annotation.passage_uuid);
-        let passageSet = termToPassageUuids.get(termUuid);
+        allPassageUuids.add(row.passage_uuid);
+        let passageSet = termToPassageUuids.get(row.target_uuid);
         if (!passageSet) {
           passageSet = new Set<string>();
-          termToPassageUuids.set(termUuid, passageSet);
+          termToPassageUuids.set(row.target_uuid, passageSet);
         }
-        passageSet.add(annotation.passage_uuid);
+        passageSet.add(row.passage_uuid);
       }
 
       // Phase 2: Query passages table for full passage data
