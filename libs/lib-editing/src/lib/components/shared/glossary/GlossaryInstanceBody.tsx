@@ -78,7 +78,7 @@ export const GlossaryInstanceBody = ({
               {index > 0 && ', '}
               <Button
                 variant="link"
-                className='p-0 h-6 font-normal'
+                className='p-0 h-6 font-normal hover:cursor-pointer'
                 onClick={() => handlePassageClick(passage)}
               >
                 {passage.label || passage.uuid.slice(0, 6)}

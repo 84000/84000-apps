@@ -163,7 +163,7 @@ const PassageComponent = (props: NodeViewProps) => {
                   {index > 0 && ', '}
                   <Button
                     variant="link"
-                    className="p-0 h-6 font-normal"
+                    className="p-0 h-6 font-normal hover:cursor-pointer"
                     onClick={() => handleReferenceClick(ref)}
                   >
                     {ref.label || ref.uuid.slice(0, 6)}
