@@ -1,19 +1,8 @@
 import DataLoader from 'dataloader';
-import type { DataClient } from '@data-access';
-
-export interface GlossaryPassageLocation {
-  uuid: string;
-  workUuid: string;
-  content: string;
-  label: string | null;
-  sort: number;
-  type: string;
-  toh: string | null;
-  xmlId: string | null;
-}
+import { passageFromDTO, type DataClient, type Passage, type PassageDTO, type Passages } from '@data-access';
 
 export function createGlossaryPassagesLoader(supabase: DataClient) {
-  return new DataLoader<string, GlossaryPassageLocation[]>(
+  return new DataLoader<string, Passages>(
     async (glossaryTermUuids) => {
       // Phase 1: Query passage_annotations via RPC for glossary-instance annotations
       const { data: annotations, error: annotationsError } = await supabase.rpc(
@@ -54,7 +43,7 @@ export function createGlossaryPassagesLoader(supabase: DataClient) {
       // Phase 2: Query passages table for full passage data
       // Batch .in() calls to avoid PostgREST URL length limits
       const passageUuidArray = Array.from(allPassageUuids);
-      const passageMap = new Map<string, GlossaryPassageLocation>();
+      const passageMap = new Map<string, Passage>();
       const IN_BATCH_SIZE = 300;
 
       for (let i = 0; i < passageUuidArray.length; i += IN_BATCH_SIZE) {
@@ -70,26 +59,10 @@ export function createGlossaryPassagesLoader(supabase: DataClient) {
           return glossaryTermUuids.map(() => []);
         }
 
-        for (const row of (data ?? []) as Array<{
-          uuid: string;
-          content: string;
-          label: string | null;
-          sort: number;
-          type: string;
-          toh: string | null;
-          xmlId: string | null;
-          work_uuid: string;
-        }>) {
-          passageMap.set(row.uuid, {
-            uuid: row.uuid,
-            workUuid: row.work_uuid,
-            content: row.content,
-            label: row.label,
-            sort: row.sort,
-            type: row.type,
-            toh: row.toh,
-            xmlId: row.xmlId,
-          });
+        for (const row of (data ?? []) as Array<PassageDTO>) {
+          passageMap.set(row.uuid,
+            passageFromDTO(row),
+          );
         }
       }
 
@@ -98,7 +71,7 @@ export function createGlossaryPassagesLoader(supabase: DataClient) {
         const passageUuids = termToPassageUuids.get(termUuid);
         if (!passageUuids) return [];
 
-        const locations: GlossaryPassageLocation[] = [];
+        const locations: Passages = [];
         for (const passageUuid of passageUuids) {
           const passage = passageMap.get(passageUuid);
           if (passage) {

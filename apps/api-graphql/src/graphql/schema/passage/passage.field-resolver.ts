@@ -152,6 +152,22 @@ async function enrichAnnotationDTOs(
 }
 
 /**
+ * Field resolver for Passage.references.
+ * Loads passages that reference this endnote passage via end-note-link annotations.
+ * Only returns results for endnotes type passages.
+ */
+export const passageReferencesResolver = async (
+  parent: PassageParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+) => {
+  if (parent.type !== 'endnotes') {
+    return [];
+  }
+  return ctx.loaders.passageReferencesByPassageUuid.load(parent.uuid);
+};
+
+/**
  * Field resolver for Passage.json.
  * Loads both annotations and alignments, then transforms to TipTap editor JSON.
  */
@@ -160,10 +176,15 @@ export const passageJsonResolver = async (
   _args: unknown,
   ctx: GraphQLContext,
 ) => {
-  // Load both annotations and alignments in parallel
-  const [rawAnnotations, rawAlignments] = await Promise.all([
+  const isEndnotes = parent.type === 'endnotes';
+
+  // Load annotations, alignments, and (for endnotes) references in parallel
+  const [rawAnnotations, rawAlignments, references] = await Promise.all([
     ctx.loaders.annotationsByPassageUuid.load(parent.uuid),
     ctx.loaders.alignmentsByPassageUuid.load(parent.uuid),
+    isEndnotes
+      ? ctx.loaders.passageReferencesByPassageUuid.load(parent.uuid)
+      : Promise.resolve([]),
   ]);
 
   // Enrich annotations with endNote labels before transformation
@@ -180,6 +201,7 @@ export const passageJsonResolver = async (
     xmlId: parent.xmlId ?? undefined,
     annotations: annotationsFromDTO(rawAnnotations, parent.content.length),
     alignments: alignmentsFromDTO(rawAlignments),
+    references: references
   };
 
   return blockFromPassage(passage);

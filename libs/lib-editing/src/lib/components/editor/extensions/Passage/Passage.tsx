@@ -5,6 +5,7 @@ import {
   type NodeViewProps,
 } from '@tiptap/react';
 import {
+  Button,
   Dialog,
   DropdownMenu,
   DropdownMenuContent,
@@ -12,13 +13,15 @@ import {
 } from '@design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { EditLabel } from './EditLabel';
 import { ShowAnnotations } from './ShowAnnotations';
 import {
   LabeledElement,
   useNavigation,
   SuggestRevisionForm,
+  PANEL_FOR_SECTION,
+  TAB_FOR_SECTION,
 } from '../../../shared';
 import { Alignment, useBookmark } from '@data-access';
 import { BookmarkIcon } from 'lucide-react';
@@ -36,7 +39,7 @@ const PassageComponent = (props: NodeViewProps) => {
     { type: 'passage', subType: node.attrs.type, tab: node.attrs.type ?? '' },
   );
 
-  const { panels, toh } = useNavigation();
+  const { panels, toh, updatePanel } = useNavigation();
 
   // Compute values directly instead of using effects to avoid re-render loops
   const isCompare = panels.main.open && panels.main.tab === 'compare';
@@ -59,6 +62,24 @@ const PassageComponent = (props: NodeViewProps) => {
 
     return { source, compareLeadingSpace };
   }, [isCompare, toh, node.attrs.alignments, node.content.firstChild]);
+
+  const references = node.attrs.references as
+    | { uuid: string; label: string | null; sort: number; type: string }[]
+    | undefined;
+
+  const handleReferenceClick = useCallback(
+    (passage: { uuid: string; type: string }) => {
+      updatePanel({
+        name: PANEL_FOR_SECTION[passage.type] || 'main',
+        state: {
+          open: true,
+          tab: TAB_FOR_SECTION[passage.type] || 'translation',
+          hash: passage.uuid,
+        },
+      });
+    },
+    [updatePanel],
+  );
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
@@ -135,6 +156,22 @@ const PassageComponent = (props: NodeViewProps) => {
             </DropdownMenuContent>
           </DropdownMenu>
           <NodeViewContent className="passage is-editable pl-6 @c/sidebar:pl-4" />
+          {references && references.length > 0 && (
+            <div className="pl-6 @c/sidebar:pl-4 mt-1" contentEditable={false}>
+              {references.map((ref, index) => (
+                <span key={ref.uuid}>
+                  {index > 0 && ', '}
+                  <Button
+                    variant="link"
+                    className="p-0 h-6 font-normal"
+                    onClick={() => handleReferenceClick(ref)}
+                  >
+                    {ref.label || ref.uuid.slice(0, 6)}
+                  </Button>
+                </span>
+              ))}
+            </div>
+          )}
           {editor.isEditable && (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               {dialogType === 'label' && (
