@@ -26,6 +26,7 @@ const passageTemplate = (passage: Passage): TranslationEditorContentItem => {
       label: passage.label,
       toh: passage.toh,
       alignments,
+      ...(passage.references?.length ? { references: passage.references } : {}),
     },
     content: [],
   };
