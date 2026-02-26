@@ -22,6 +22,7 @@ import {
   passageJsonResolver,
   passageAnnotationsResolver,
   passageAlignmentsResolver,
+  passageReferencesResolver,
 } from './schema/passage/passage.field-resolver';
 import { tocResolver } from './schema/toc/toc.resolver';
 import { titlesResolver } from './schema/work/title.resolver';
@@ -62,5 +63,6 @@ export const resolvers = {
     json: passageJsonResolver,
     annotations: passageAnnotationsResolver,
     alignments: passageAlignmentsResolver,
+    references: passageReferencesResolver,
   },
 };

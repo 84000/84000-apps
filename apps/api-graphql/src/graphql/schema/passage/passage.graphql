@@ -57,6 +57,12 @@ type Passage {
   Transforms content and annotations into nested JSON structure.
   """
   json: JSON
+
+  """
+  Passages that reference this endnote passage via end-note-link annotations.
+  Only populated for endnotes type passages; empty for all other types.
+  """
+  references: [Passage!]!
 }
 
 """

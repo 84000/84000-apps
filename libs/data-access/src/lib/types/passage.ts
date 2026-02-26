@@ -75,6 +75,7 @@ export type Passage = {
   xmlId?: string;
   parent?: string;
   toh?: TohokuCatalogEntry;
+  references?: Passages;
 };
 
 export type Passages = Passage[];
