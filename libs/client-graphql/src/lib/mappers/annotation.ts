@@ -83,6 +83,9 @@ export function annotationFromGraphQL(
         label: metadata.label as string | undefined,
         entity: metadata.entity as string | undefined,
         isPending: metadata.isPending as boolean | undefined,
+        isSameWork: metadata.isSameWork as boolean | undefined,
+        subtype: metadata.subtype as string | undefined,
+        linkToh: metadata.linkToh as string | undefined,
       };
 
     case 'span':

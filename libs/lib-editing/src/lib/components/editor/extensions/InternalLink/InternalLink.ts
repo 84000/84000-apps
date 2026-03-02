@@ -1,6 +1,10 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
+import {
+  PANEL_FOR_SECTION,
+  TAB_FOR_SECTION,
+} from '../../../shared/types';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -35,6 +39,19 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
         default: undefined,
         parseHTML: (element) => element.getAttribute('uuid'),
       },
+      isSameWork: {
+        default: undefined,
+        parseHTML: (element) =>
+          element.getAttribute('data-same-work') === 'true',
+      },
+      subtype: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-subtype'),
+      },
+      linkToh: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-link-toh'),
+      },
     };
   },
   addOptions() {
@@ -65,19 +82,67 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
         className: props.mark.attrs.toh,
       });
 
-      dom.setAttribute('href', props.mark.attrs.href);
-      dom.setAttribute('target', '_blank');
-      dom.setAttribute('rel', 'noreferrer');
+      const { isSameWork, subtype, entity, type: linkType, linkToh } =
+        props.mark.attrs;
+
+      if (isSameWork) {
+        // Same-work links navigate in-place via panel system
+        dom.setAttribute('href', '#');
+        dom.setAttribute('data-same-work', 'true');
+        if (subtype) {
+          dom.setAttribute('data-subtype', subtype);
+        }
+        if (linkToh) {
+          dom.setAttribute('data-link-toh', linkToh);
+        }
+
+        if (!isEditable) {
+          dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            const query = new URLSearchParams(window.location.search);
+
+            if (linkToh) {
+              query.set('toh', linkToh);
+            }
+
+            switch (linkType) {
+              case 'bibliography':
+                query.set('right', `open:bibliography:${entity}`);
+                break;
+              case 'glossary':
+                query.set('right', `open:glossary:${entity}`);
+                break;
+              case 'passage': {
+                const panel =
+                  PANEL_FOR_SECTION[subtype] || 'main';
+                const tab =
+                  TAB_FOR_SECTION[subtype] || 'translation';
+                query.set(panel, `open:${tab}:${entity}`);
+              }
+                break;
+              default:
+                break;
+            }
+
+            window.history.pushState({}, '', `?${query.toString()}`);
+          });
+        }
+      } else {
+        // Cross-work links open in a new tab
+        dom.setAttribute('href', props.mark.attrs.href);
+        dom.setAttribute('target', '_blank');
+        dom.setAttribute('rel', 'noreferrer');
+      }
 
       // Set attributes for HoverCardProvider identification
       if (props.mark.attrs.uuid) {
         dom.setAttribute('uuid', props.mark.attrs.uuid);
       }
-      if (props.mark.attrs.entity) {
-        dom.setAttribute('entity', props.mark.attrs.entity);
+      if (entity) {
+        dom.setAttribute('entity', entity);
       }
-      if (props.mark.attrs.type) {
-        dom.setAttribute('entity-type', props.mark.attrs.type);
+      if (linkType) {
+        dom.setAttribute('entity-type', linkType);
       }
 
       // Only add type attribute in edit mode for hover card detection
@@ -96,24 +161,24 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
     return {
       setInternalLink:
         (entity: string, type: string) =>
-        ({ chain }) => {
-          return chain()
-            .setMark(this.name, {
-              entity,
-              type,
-              uuid: uuidv4(),
-              href: `/entity/${type}/${entity}`,
-            })
-            .run();
-        },
+          ({ chain }) => {
+            return chain()
+              .setMark(this.name, {
+                entity,
+                type,
+                uuid: uuidv4(),
+                href: `/entity/${type}/${entity}`,
+              })
+              .run();
+          },
       unsetInternalLink:
         () =>
-        ({ chain }) => {
-          return chain()
-            .unsetMark(this.name)
-            .resetAttributes(this.name, ['entity', 'type'])
-            .run();
-        },
+          ({ chain }) => {
+            return chain()
+              .unsetMark(this.name)
+              .resetAttributes(this.name, ['entity', 'type'])
+              .run();
+          },
     };
   },
 });

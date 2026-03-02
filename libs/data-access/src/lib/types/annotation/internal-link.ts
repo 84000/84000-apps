@@ -31,6 +31,18 @@ export const transformer: AnnotationTransformer = (
     if (content.uuid) {
       internalLink.entity = content.uuid as string;
     }
+
+    if (content.same_work !== undefined) {
+      internalLink.isSameWork = !!content.same_work;
+    }
+
+    if (content.subtype) {
+      internalLink.subtype = content.subtype as string;
+    }
+
+    if (content.toh) {
+      internalLink.linkToh = content.toh as string;
+    }
   });
 
   return internalLink;

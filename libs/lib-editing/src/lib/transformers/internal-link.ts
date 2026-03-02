@@ -14,6 +14,9 @@ export const internalLink: Transformer = (ctx) => {
     end,
     linkType: type,
     toh,
+    isSameWork,
+    subtype,
+    linkToh,
   } = annotation as InternalLinkAnnotation;
 
   if (!(end - start)) {
@@ -44,7 +47,16 @@ export const internalLink: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'internalLink',
-              attrs: { uuid, href: path, entity, type, toh },
+              attrs: {
+                uuid,
+                href: path,
+                entity,
+                type,
+                toh,
+                isSameWork,
+                subtype,
+                linkToh,
+              },
             },
           ];
         },

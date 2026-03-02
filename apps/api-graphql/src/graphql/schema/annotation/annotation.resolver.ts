@@ -54,14 +54,25 @@ function extractMetadata(
     }
 
     case 'internalLink': {
-      const { linkType, href, label, entity, isPending } =
-        annotation as InternalLinkAnnotation;
+      const {
+        linkType,
+        href,
+        label,
+        entity,
+        isPending,
+        isSameWork,
+        subtype,
+        linkToh,
+      } = annotation as InternalLinkAnnotation;
       const meta: Record<string, unknown> = {};
       if (linkType) meta.linkType = linkType;
       if (href) meta.href = href;
       if (label) meta.label = label;
       if (entity) meta.entity = entity;
       if (isPending) meta.isPending = isPending;
+      if (isSameWork !== undefined) meta.isSameWork = isSameWork;
+      if (subtype) meta.subtype = subtype;
+      if (linkToh) meta.linkToh = linkToh;
       return Object.keys(meta).length > 0 ? meta : null;
     }
 
