@@ -19,6 +19,7 @@ import { link } from './link';
 import { listItem } from './list-item';
 import { list } from './list';
 import { mantra } from './mantra';
+import { mention } from './mention';
 import { paragraph } from './paragraph';
 import { quote } from './quote';
 import { span } from './span';
@@ -63,6 +64,7 @@ const EXPORTERS: Partial<
   link,
   listItem,
   mantra,
+  mention,
   paragraph,
   quote,
   reference: link,

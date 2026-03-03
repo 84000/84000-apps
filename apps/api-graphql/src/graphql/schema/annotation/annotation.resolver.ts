@@ -16,6 +16,7 @@ import {
   type HasAbbreviationAnnotation,
   type QuoteAnnotation,
   type QuotedAnnotation,
+  type MentionAnnotation,
 } from '@data-access';
 
 /**
@@ -37,6 +38,8 @@ interface TransformedAnnotation {
 export interface AnnotationEnrichmentContext {
   /** Map of endNote passage UUIDs to their labels */
   endNoteLabels?: Map<string, string>;
+  /** Map of mention annotation UUIDs to their resolved display texts */
+  mentionTexts?: Map<string, string>;
 }
 
 /**
@@ -155,6 +158,29 @@ function extractMetadata(
     case 'quoted': {
       const { quote } = annotation as QuotedAnnotation;
       return quote ? { quote } : null;
+    }
+
+    case 'mention': {
+      const {
+        entity,
+        linkType,
+        text,
+        isSameWork,
+        subtype,
+        linkToh,
+      } = annotation as MentionAnnotation;
+      const meta: Record<string, unknown> = {};
+      if (entity) meta.entity = entity;
+      if (linkType) meta.linkType = linkType;
+      if (text) meta.text = text;
+      if (linkType && entity) meta.href = `/entity/${linkType}/${entity}`;
+      if (isSameWork !== undefined) meta.isSameWork = isSameWork;
+      if (subtype) meta.subtype = subtype;
+      if (linkToh) meta.linkToh = linkToh;
+      // Look up displayText from enrichment context
+      const displayText = enrichment?.mentionTexts?.get(annotation.uuid);
+      if (displayText) meta.displayText = displayText;
+      return Object.keys(meta).length > 0 ? meta : null;
     }
 
     default:

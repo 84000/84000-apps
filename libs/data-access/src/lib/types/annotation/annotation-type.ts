@@ -21,6 +21,7 @@ export type AnnotationDTOType =
   | 'list'
   | 'list-item'
   | 'mantra'
+  | 'mention'
   | 'paragraph'
   | 'quote'
   | 'quoted'
@@ -54,6 +55,7 @@ export type AnnotationType =
   | 'list'
   | 'listItem'
   | 'mantra'
+  | 'mention'
   | 'paragraph'
   | 'quote'
   | 'quoted'
@@ -90,6 +92,7 @@ export const ANNOTATION_TYPE_DTO_TO_TYPE: Record<
   list: 'list',
   'list-item': 'listItem',
   mantra: 'mantra',
+  mention: 'mention',
   paragraph: 'paragraph',
   quote: 'quote',
   quoted: 'quoted',
@@ -131,6 +134,7 @@ export const ANNOTATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> =
     list: 'list',
     listItem: 'list-item',
     mantra: 'mantra',
+    mention: 'mention',
     paragraph: 'paragraph',
     quote: 'quote',
     quoted: 'quoted',
@@ -163,6 +167,7 @@ export type AnnotationDTOContentKey =
   | 'quote_xmlId'
   | 'src'
   | 'text-style'
+  | 'text'
   | 'type'
   | 'title'
   | 'uuid'

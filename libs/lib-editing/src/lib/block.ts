@@ -156,6 +156,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     list: BlockPriority.ParentBlock,
     listItem: BlockPriority.Block,
     mantra: BlockPriority.Mark,
+    mention: BlockPriority.Inline,
     paragraph: BlockPriority.OuterBlock,
     quote: BlockPriority.Inline,
     quoted: BlockPriority.Unknown,
