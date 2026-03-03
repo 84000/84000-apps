@@ -117,6 +117,17 @@ export type MantraAnnotation = AnnotationBase & {
   lang: ExtendedTranslationLanguage;
 };
 
+export type MentionAnnotation = AnnotationBase & {
+  type: 'mention';
+  entity: string;
+  linkType: string;
+  text?: string;
+  displayText?: string;
+  isSameWork?: boolean;
+  subtype?: string;
+  linkToh?: string;
+};
+
 export type ParagraphAnnotation = AnnotationBase & {
   type: 'paragraph';
 };
@@ -186,6 +197,7 @@ export type Annotation =
   | ListAnnotation
   | ListItemAnnotation
   | MantraAnnotation
+  | MentionAnnotation
   | ParagraphAnnotation
   | QuoteAnnotation
   | QuotedAnnotation

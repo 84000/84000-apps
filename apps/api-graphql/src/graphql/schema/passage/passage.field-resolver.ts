@@ -7,6 +7,7 @@ import {
   type BodyItemType,
   type AnnotationDTO,
   type TohokuCatalogEntry,
+  type MentionAnnotation,
 } from '@data-access';
 import type { GraphQLContext } from '../../context';
 import {
@@ -30,8 +31,114 @@ interface PassageParent {
 }
 
 /**
- * Builds enrichment context for endNoteLink annotations.
- * Fetches labels for referenced endNote passages.
+ * Resolves display texts for mention annotations by batch-fetching
+ * labels from the target entities based on their linkType.
+ * Returns a map of annotation UUID → resolved display text.
+ */
+async function resolveMentionTexts(
+  annotations: AnnotationDTO[],
+  ctx: GraphQLContext,
+): Promise<Map<string, string>> {
+  const mentionTexts = new Map<string, string>();
+
+  // Extract mentions that need resolution (skip those with custom text override)
+  const mentions: Array<{
+    annotationUuid: string;
+    entityUuid: string;
+    linkType: string;
+  }> = [];
+
+  for (const a of annotations) {
+    if (a.type !== 'mention') continue;
+    const content = a.content as Array<{
+      uuid?: string;
+      type?: string;
+      text?: string;
+    }>;
+    const entityUuid = content?.find((c) => c.uuid)?.uuid;
+    const linkType = content?.find((c) => c.type)?.type;
+    const hasCustomText = content?.some((c) => c.text);
+
+    if (!entityUuid || !linkType || hasCustomText) continue;
+    mentions.push({ annotationUuid: a.uuid, entityUuid, linkType });
+  }
+
+  if (mentions.length === 0) return mentionTexts;
+
+  // Group by linkType for batched fetching
+  const byType = new Map<string, typeof mentions>();
+  for (const m of mentions) {
+    const group = byType.get(m.linkType) || [];
+    group.push(m);
+    byType.set(m.linkType, group);
+  }
+
+  // Fetch labels per linkType
+  const fetchPromises: Promise<void>[] = [];
+
+  const passageMentions = byType.get('passage');
+  if (passageMentions) {
+    fetchPromises.push(
+      ctx.loaders.passageLabelsByUuid
+        .loadMany(passageMentions.map((m) => m.entityUuid))
+        .then((labels) => {
+          passageMentions.forEach((m, i) => {
+            const label = labels[i];
+            if (typeof label === 'string') {
+              mentionTexts.set(m.annotationUuid, label);
+            }
+          });
+        }),
+    );
+  }
+
+  const workMentions = byType.get('work');
+  if (workMentions) {
+    fetchPromises.push(
+      ctx.loaders.workTitlesByUuid
+        .loadMany(workMentions.map((m) => m.entityUuid))
+        .then((titles) => {
+          workMentions.forEach((m, i) => {
+            const title = titles[i];
+            if (typeof title === 'string') {
+              mentionTexts.set(m.annotationUuid, title);
+            }
+          });
+        }),
+    );
+  }
+
+  const glossaryMentions = byType.get('glossary');
+  if (glossaryMentions) {
+    fetchPromises.push(
+      ctx.loaders.glossaryNamesByUuid
+        .loadMany(glossaryMentions.map((m) => m.entityUuid))
+        .then((names) => {
+          glossaryMentions.forEach((m, i) => {
+            const name = names[i];
+            if (typeof name === 'string') {
+              mentionTexts.set(m.annotationUuid, name);
+            }
+          });
+        }),
+    );
+  }
+
+  // Bibliography gets a static label
+  const bibMentions = byType.get('bibliography');
+  if (bibMentions) {
+    for (const m of bibMentions) {
+      mentionTexts.set(m.annotationUuid, 'Bibliography');
+    }
+  }
+
+  await Promise.all(fetchPromises);
+  return mentionTexts;
+}
+
+/**
+ * Builds enrichment context for annotations.
+ * Fetches labels for referenced endNote passages and mention display texts.
  */
 async function buildEnrichment(
   annotations: AnnotationDTO[],
@@ -44,22 +151,26 @@ async function buildEnrichment(
       return content?.filter((c) => c.uuid).map((c) => c.uuid as string) ?? [];
     });
 
-  if (endNoteUuids.length === 0) {
-    return {};
-  }
-
-  // Batch-fetch labels using the DataLoader
-  const labels = await ctx.loaders.passageLabelsByUuid.loadMany(endNoteUuids);
+  // Fetch endNote labels and mention texts in parallel
+  const [endNoteLabelsResult, mentionTexts] = await Promise.all([
+    endNoteUuids.length > 0
+      ? ctx.loaders.passageLabelsByUuid.loadMany(endNoteUuids)
+      : Promise.resolve([]),
+    resolveMentionTexts(annotations, ctx),
+  ]);
 
   const endNoteLabels = new Map<string, string>();
   endNoteUuids.forEach((uuid, i) => {
-    const label = labels[i];
+    const label = endNoteLabelsResult[i];
     if (typeof label === 'string') {
       endNoteLabels.set(uuid, label);
     }
   });
 
-  return { endNoteLabels };
+  return {
+    ...(endNoteLabels.size > 0 && { endNoteLabels }),
+    ...(mentionTexts.size > 0 && { mentionTexts }),
+  };
 }
 
 /**
@@ -187,8 +298,24 @@ export const passageJsonResolver = async (
       : Promise.resolve([]),
   ]);
 
-  // Enrich annotations with endNote labels before transformation
-  await enrichAnnotationDTOs(rawAnnotations, ctx);
+  // Enrich annotations with endNote labels and mention display texts before transformation
+  const [, mentionTexts] = await Promise.all([
+    enrichAnnotationDTOs(rawAnnotations, ctx),
+    resolveMentionTexts(rawAnnotations, ctx),
+  ]);
+
+  const annotations = annotationsFromDTO(rawAnnotations, parent.content.length);
+
+  // Set displayText on parsed MentionAnnotation objects (avoids DTO mutation)
+  for (const annotation of annotations) {
+    if (annotation.type === 'mention') {
+      const mention = annotation as MentionAnnotation;
+      const resolvedText = mentionTexts.get(mention.uuid);
+      if (resolvedText) {
+        mention.displayText = resolvedText;
+      }
+    }
+  }
 
   const passage: DataAccessPassage = {
     uuid: parent.uuid,
@@ -199,7 +326,7 @@ export const passageJsonResolver = async (
     workUuid: parent.workUuid,
     toh: (parent.toh as TohokuCatalogEntry) ?? undefined,
     xmlId: parent.xmlId ?? undefined,
-    annotations: annotationsFromDTO(rawAnnotations, parent.content.length),
+    annotations,
     alignments: alignmentsFromDTO(rawAlignments),
     references: references
   };

@@ -20,6 +20,7 @@ import { exporter as link } from './link';
 import { exporter as list } from './list';
 import { exporter as listItem } from './list-item';
 import { exporter as mantra } from './mantra';
+import { exporter as mention } from './mention';
 import { exporter as paragraph } from './paragraph';
 import { exporter as quote } from './quote';
 import { exporter as quoted } from './quoted';
@@ -53,6 +54,7 @@ export const annotationToDtoMap: Record<AnnotationType, AnnotationExporter> = {
   list,
   listItem,
   mantra,
+  mention,
   paragraph,
   quote,
   quoted,

@@ -20,6 +20,7 @@ import { GlossaryInstance } from '../editor/extensions/GlossaryInstance/Glossary
 import { EndNoteLinkHoverContent } from '../editor/extensions/EndNoteLink/EndNoteLinkHoverContent';
 import { LinkHoverContent } from '../editor/extensions/Link/LinkHoverContent';
 import { InternalLinkHoverContent } from '../editor/extensions/InternalLink/InternalLinkHoverContent';
+import { MentionHoverContent } from '../editor/extensions/Mention/MentionHoverContent';
 import { Editor } from '@tiptap/core';
 import { getEditorForElement } from '../editor/util';
 
@@ -27,13 +28,15 @@ export type HoverCardType =
   | 'glossaryInstance'
   | 'endNoteLink'
   | 'link'
-  | 'internalLink';
+  | 'internalLink'
+  | 'mention';
 
 const TYPE_ATTRIBUTE_MAP: Record<HoverCardType, string> = {
   glossaryInstance: 'uuid',
   endNoteLink: 'uuid',
   link: 'uuid',
   internalLink: 'uuid',
+  mention: 'uuid',
 };
 
 export interface HoverCardState {
@@ -340,6 +343,19 @@ export const HoverCardProvider = ({
       const entity = anchorEl.getAttribute('entity') || '';
       return (
         <InternalLinkHoverContent
+          uuid={uuid}
+          entityType={entityType}
+          entity={entity}
+          editor={editor}
+          anchor={anchorEl}
+        />
+      );
+    }
+    if (type === 'mention') {
+      const entityType = anchorEl.getAttribute('entity-type') || '';
+      const entity = anchorEl.getAttribute('entity') || '';
+      return (
+        <MentionHoverContent
           uuid={uuid}
           entityType={entityType}
           entity={entity}

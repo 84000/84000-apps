@@ -31,6 +31,7 @@ import { transformer as link } from './link';
 import { transformer as list } from './list';
 import { transformer as listItem } from './list-item';
 import { transformer as mantra } from './mantra';
+import { transformer as mention } from './mention';
 import { transformer as paragraph } from './paragraph';
 import { transformer as quote } from './quote';
 import { transformer as quoted } from './quoted';
@@ -65,6 +66,7 @@ const dtoToAnnotationMap: Record<AnnotationDTOType, AnnotationTransformer> = {
   list,
   'list-item': listItem,
   mantra,
+  mention,
   paragraph,
   quote,
   quoted,

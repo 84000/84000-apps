@@ -38,6 +38,7 @@ import { Italic } from '../extensions/Italic';
 import { Indent } from '../extensions/Indent';
 import { InternalLink } from '../extensions/InternalLink';
 import { MantraMark } from '../extensions/Mantra/Mantra';
+import { Mention } from '../extensions/Mention/Mention';
 import { EndNoteLinkMark } from '../extensions/EndNoteLink/EndNoteLinkMark';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import {
@@ -106,6 +107,7 @@ export const useTranslationExtensions = ({
     Link,
     List,
     MantraMark,
+    Mention,
     Paragraph,
     ParagraphIndent,
     PassageNode,

@@ -1,7 +1,9 @@
 import type { DataClient } from '@data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryPassagesLoader } from './schema/glossary/glossary.loader';
+import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
+import { createWorkTitleLoader } from './schema/work/work-title.loader';
 
 export interface Loaders {
   /**
@@ -40,6 +42,18 @@ export interface Loaders {
   passageReferencesByPassageUuid: ReturnType<
     typeof createPassageReferencesLoader
   >;
+
+  /**
+   * Load work titles by UUID.
+   * Used to enrich mention annotations with display text from target works.
+   */
+  workTitlesByUuid: ReturnType<typeof createWorkTitleLoader>;
+
+  /**
+   * Load glossary display names by UUID.
+   * Used to enrich mention annotations with display text from target glossary entries.
+   */
+  glossaryNamesByUuid: ReturnType<typeof createGlossaryNameLoader>;
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
@@ -47,5 +61,7 @@ export function createLoaders(supabase: DataClient): Loaders {
     ...createPassageLoaders(supabase),
     glossaryPassagesByTermUuid: createGlossaryPassagesLoader(supabase),
     passageReferencesByPassageUuid: createPassageReferencesLoader(supabase),
+    workTitlesByUuid: createWorkTitleLoader(supabase),
+    glossaryNamesByUuid: createGlossaryNameLoader(supabase),
   };
 }

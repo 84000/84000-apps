@@ -18,6 +18,7 @@ export * from './link';
 export * from './list-item';
 export * from './list';
 export * from './mantra';
+export * from './mention';
 export * from './paragraph';
 export * from './quote';
 export * from './quoted';
