@@ -80,7 +80,7 @@ export const Mention = Node.create<MentionOptions>({
 
       items.forEach((item) => {
         const anchor = document.createElement('a');
-        anchor.classList.add('mention-link');
+        anchor.classList.add('mention-link', 'pe-1');
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
         anchor.textContent = item.text || item.displayText || item.entity;
@@ -165,20 +165,20 @@ export const Mention = Node.create<MentionOptions>({
     return {
       setMention:
         (entity: string, linkType: string) =>
-        ({ commands }) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: {
-              items: [
-                {
-                  uuid: uuidv4(),
-                  entity,
-                  linkType,
-                },
-              ],
-            },
-          });
-        },
+          ({ commands }) => {
+            return commands.insertContent({
+              type: this.name,
+              attrs: {
+                items: [
+                  {
+                    uuid: uuidv4(),
+                    entity,
+                    linkType,
+                  },
+                ],
+              },
+            });
+          },
     };
   },
 });
