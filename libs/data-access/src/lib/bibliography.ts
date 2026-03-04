@@ -36,7 +36,7 @@ export const getBibliographyEntry = async ({
   uuid: string;
 }) => {
   const { data, error } = await client
-    .from('bibliography')
+    .from('bibliographies')
     .select(
       `
       uuid::uuid,

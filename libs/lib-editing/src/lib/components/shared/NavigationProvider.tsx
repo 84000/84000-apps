@@ -137,7 +137,7 @@ export const NavigationProvider = ({
   const [panels, setPanels] = useState<PanelsState>(
     parsePanelParams(query).panels || DEFAULT_PANELS,
   );
-  const [isPanelTransitioning, setIsPanelTransitioning] = useState(false);
+  const isPanelTransitioning = useRef(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [imprint, setImprint] = useState<Imprint | undefined>();
@@ -263,7 +263,7 @@ export const NavigationProvider = ({
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
       const { open } = state;
-      setIsPanelTransitioning(true);
+      isPanelTransitioning.current = true;
       setPanels((prev) => {
         const newPanels = {
           ...prev,
@@ -298,7 +298,7 @@ export const NavigationProvider = ({
       return;
     }
 
-    setIsPanelTransitioning(true);
+    isPanelTransitioning.current = true;
     const params = new URLSearchParams(window.location.search);
 
     if (toh) {
@@ -336,8 +336,8 @@ export const NavigationProvider = ({
   }, [uuid, toh, graphqlClient]);
 
   useEffect(() => {
-    if (isPanelTransitioning) {
-      setIsPanelTransitioning(false);
+    if (isPanelTransitioning.current) {
+      isPanelTransitioning.current = false;
       return;
     }
 

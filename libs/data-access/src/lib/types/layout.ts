@@ -13,6 +13,7 @@ export const TAB_FOR_CONTENT_SECTION: Partial<
   abbreviations: 'abbreviations',
   acknowledgment: 'front',
   bibliography: 'bibliography',
+  glossary: 'glossary',
   endnotes: 'endnotes',
   introduction: 'front',
   summary: 'front',
