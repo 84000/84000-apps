@@ -37,6 +37,7 @@ export type GlossaryNamesDTO = GlossaryNameDTO[];
 export type GlossaryTermInstance = {
   uuid: string;
   authority: string;
+  workUuid: string;
   definition?: string | null;
   names: {
     chinese?: string;
@@ -54,6 +55,7 @@ export type GlossaryTermInstances = GlossaryTermInstance[];
 export type GlossaryTermInstanceDTO = {
   uuid: string;
   authority_uuid: string;
+  work_uuid: string;
   definition?: string;
   names: {
     chinese?: string;
@@ -100,6 +102,7 @@ export const glossaryTermInstanceFromDTO = (
   return {
     uuid: dto.uuid,
     authority: dto.authority_uuid,
+    workUuid: dto.work_uuid,
     definition: dto.definition,
     names: dto.names,
   };

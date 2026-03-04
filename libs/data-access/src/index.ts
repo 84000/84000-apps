@@ -7,7 +7,7 @@ export * from './lib/client-token';
 export * from './lib/folio';
 export * from './lib/glossary';
 export * from './lib/imprint';
-export * from './lib/layout';
+export * from './lib/panel-url';
 export * from './lib/library';
 export * from './lib/passage';
 export * from './lib/projects';

@@ -28,7 +28,6 @@ export const urlForPanelContent = ({
   hash: string;
   contentType?: PanelContentType;
 }): string => {
-  console.log(contentType);
   const { href, search } = location;
   const baseUrl = new URL(href);
   const searchParams = new URLSearchParams(search);
@@ -40,6 +39,5 @@ export const urlForPanelContent = ({
   const { panel, tab } = panelAndTabForContentType(contentType);
   searchParams.set(panel, `open:${tab}:${hash}`);
   baseUrl.search = searchParams.toString();
-  console.log(baseUrl.toString());
   return baseUrl.toString();
 };

@@ -5,9 +5,10 @@ import {
   getTranslationMetadataByToh,
   getTranslationMetadataByUuid,
 } from './publications';
-import { panelAndTabForContentType } from './layout';
+import { panelAndTabForContentType } from './panel-url';
+import { getGlossaryInstance } from './glossary';
 
-const ALLOWED_TYPES = ['bibliography', 'passage', 'translation', 'work'];
+const ALLOWED_TYPES = ['bibliography', 'glossary', 'passage', 'translation', 'work'];
 
 export const lookupEntity = async ({
   type,
@@ -38,6 +39,17 @@ export const lookupEntity = async ({
         }
 
         query.set('right', `open:bibliography:${item.uuid}`);
+        path = `${prefix}/${item.workUuid}?${query.toString()}`;
+      }
+      break;
+    case 'glossary':
+      {
+        const item = await getGlossaryInstance({ client, uuid: entity });
+        if (!item?.workUuid || !item.uuid) {
+          return;
+        }
+
+        query.set('right', `open:glossary:${item.uuid}`);
         path = `${prefix}/${item.workUuid}?${query.toString()}`;
       }
       break;
