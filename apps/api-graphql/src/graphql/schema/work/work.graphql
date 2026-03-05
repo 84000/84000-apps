@@ -20,7 +20,7 @@ type Work {
   """
   Date the work was published
   """
-  publicationDate: String!
+  publicationDate: String
 
   """
   Semantic version of the publication (e.g., "1.0.0")

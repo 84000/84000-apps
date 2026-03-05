@@ -1,13 +1,13 @@
-import { createBrowserClient, getTranslationsMetadata } from '@data-access';
 import { TranslationsTable } from '@lib-editing';
-import React from 'react';
 import { H2 } from '@design-system';
+import { createServerGraphQLClient, getTranslationsMetadata } from '@client-graphql/ssr';
+import React from 'react';
 
 export const revalidate = 60;
 
 const page = async () => {
-  const client = createBrowserClient();
-  const works = await getTranslationsMetadata({ client });
+  const client = await createServerGraphQLClient();
+  const works = await getTranslationsMetadata({ client, limit: 1000 });
 
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full bg-surface">

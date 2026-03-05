@@ -50,8 +50,10 @@ type GetAllWorksResponse = {
  */
 export async function getTranslationsMetadata({
   client,
+  limit = 200,
 }: {
   client: GraphQLClient;
+  limit?: number;
 }): Promise<Work[]> {
   try {
     const allWorks: GraphQLWork[] = [];
@@ -62,7 +64,7 @@ export async function getTranslationsMetadata({
       const response: GetAllWorksResponse =
         await client.request<GetAllWorksResponse>(GET_ALL_WORKS, {
           cursor,
-          limit: 200,
+          limit,
         });
 
       allWorks.push(...response.works.items);
