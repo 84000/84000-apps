@@ -77,7 +77,7 @@ export const workQueries = {
       const work = workFromDTO(dto as WorkDTO);
       return {
         ...work,
-        publicationDate: work.publicationDate.toISOString(),
+        publicationDate: work.publicationDate?.toISOString(),
       };
     });
 
@@ -129,7 +129,7 @@ export const workQueries = {
     return {
       ...work,
       selectedToh: args.toh, // Pass the selected toh to child resolvers
-      publicationDate: work.publicationDate.toISOString(),
+      publicationDate: work.publicationDate?.toISOString(),
     };
   },
 };

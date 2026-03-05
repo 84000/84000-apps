@@ -56,6 +56,8 @@ export type Annotation = {
   metadata?: Maybe<Scalars['JSON']['output']>;
   /** Start offset within the passage content */
   start: Scalars['Int']['output'];
+  /** Tohoku number associated with this annotation, if applicable */
+  toh?: Maybe<Scalars['String']['output']>;
   /** Type of annotation (e.g., heading, span, link, internalLink, glossaryInstance) */
   type: Scalars['String']['output'];
   /** Unique identifier for the annotation */
@@ -210,6 +212,8 @@ export type GlossaryTermInstance = {
   definition?: Maybe<Scalars['String']['output']>;
   /** Names in different languages */
   names: GlossaryTermNames;
+  /** Passages where this term appears */
+  passages: Array<Passage>;
   /** Unique identifier */
   uuid: Scalars['ID']['output'];
 };
@@ -341,8 +345,15 @@ export type Passage = {
   json?: Maybe<Scalars['JSON']['output']>;
   /** Display label for the passage (e.g., "1.1") */
   label?: Maybe<Scalars['String']['output']>;
+  /**
+   * Passages that reference this endnote passage via end-note-link annotations.
+   * Only populated for endnotes type passages; empty for all other types.
+   */
+  references: Array<Passage>;
   /** Sort order within the work */
   sort: Scalars['Int']['output'];
+  /** Tohoku number associated with this passage, if applicable */
+  toh?: Maybe<Scalars['String']['output']>;
   /** Type of passage content (e.g., translation, introduction, colophon) */
   type: Scalars['String']['output'];
   /** Unique identifier for the passage */
@@ -506,6 +517,7 @@ export type QueryWorkArgs = {
 /** Root Query type - extend this in other schema files */
 export type QueryWorksArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<WorkFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -639,7 +651,7 @@ export type Work = {
   /** Paginated passages from this work */
   passages: PassageConnection;
   /** Date the work was published */
-  publicationDate: Scalars['String']['output'];
+  publicationDate?: Maybe<Scalars['String']['output']>;
   /** Semantic version of the publication (e.g., "1.0.0") */
   publicationVersion: Scalars['String']['output'];
   /** Whether access to this work is restricted */
@@ -694,6 +706,12 @@ export type WorkConnection = {
   pageInfo: PageInfo;
   /** Total count of works matching the query */
   totalCount: Scalars['Int']['output'];
+};
+
+/** Filter criteria for works query */
+export type WorkFilter = {
+  /** Maximum number of source pages (exclusive). Only return works with fewer pages than this value. */
+  maxPages?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: string, toh: string, tibetan: string, folioNumber: number, volumeNumber: number };
@@ -765,7 +783,7 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
     & TocEntryNestedFragment
   )> };
 
-export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate: string, publicationVersion: string, pages: number, restriction: boolean, section: string };
+export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, pages: number, restriction: boolean, section: string };
 
 export type GetPassagesQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];

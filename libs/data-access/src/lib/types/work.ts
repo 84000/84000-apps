@@ -6,7 +6,7 @@ export type Work = {
   title: string;
   description?: string;
   toh: TohokuCatalogEntry[];
-  publicationDate: Date;
+  publicationDate?: Date;
   publicationVersion: SemVer;
   pages: number;
   restriction: boolean;
@@ -15,7 +15,7 @@ export type Work = {
 
 export type WorkDTO = {
   uuid: string;
-  title: string;
+  title?: string;
   description?: string;
   tohs: { toh: TohokuCatalogEntry }[];
   publicationDate: string;
@@ -27,12 +27,12 @@ export type WorkDTO = {
 
 export const workFromDTO = (dto: WorkDTO) => ({
   uuid: dto.uuid,
-  title: dto.title,
+  title: dto.title || '<Untitled>',
   description: dto.description || '',
   toh: dto.tohs.map((t) => t.toh) as TohokuCatalogEntry[],
-  publicationDate: new Date(dto.publicationDate),
-  publicationVersion: dto.publicationVersion as SemVer,
-  pages: dto.pages,
+  publicationDate: dto.publicationDate ? new Date(dto.publicationDate) : undefined,
+  publicationVersion: (dto.publicationVersion || '0.0.0') as SemVer,
+  pages: dto.pages || 0,
   restriction: dto.restriction,
   section: dto.breadcrumb?.split('>').at(-2)?.trim() || '',
 });

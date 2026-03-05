@@ -47,7 +47,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     const tableWorks: TableWork[] = works.map((w) => ({
       ...w,
       toh: w.toh.join(', '),
-      publicationDate: w.publicationDate.toLocaleDateString(),
+      publicationDate: w.publicationDate?.toLocaleDateString() || 'Unpublished',
     }));
     setData(tableWorks);
   }, [works]);
