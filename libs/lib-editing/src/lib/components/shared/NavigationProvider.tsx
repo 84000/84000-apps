@@ -35,7 +35,7 @@ import {
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
-import { useFeatureFlagEnabled } from '@lib-instr';
+import { GatedFeature, useFeatureFlagEnabled } from '@lib-instr';
 import { useIsMobile } from '@lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
 
@@ -394,7 +394,9 @@ export const NavigationProvider = ({
       ) : (
         children
       )}
-      <RestrictionWarning imprint={imprint} />
+      <GatedFeature flag="show-restriction-warning">
+        <RestrictionWarning imprint={imprint} />
+      </GatedFeature>
     </NavigationContext.Provider>
   );
 };

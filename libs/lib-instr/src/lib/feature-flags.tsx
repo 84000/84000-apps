@@ -9,7 +9,8 @@ import { JsonType } from 'posthog-js';
 export type FeatureFlag =
   | 'authority-pages'
   | 'translation-hover-cards'
-  | 'studio-header-config';
+  | 'studio-header-config'
+  | 'show-restriction-warning';
 
 export type FeatureFlagPayload = {
   apps?: string[];
