@@ -1,12 +1,12 @@
 import { TranslationsTable } from '@lib-editing';
 import { H2 } from '@design-system';
-import { createServerGraphQLClient, getTranslationsMetadata } from '@client-graphql/ssr';
+import { createBuildGraphQLClient, getTranslationsMetadata } from '@client-graphql/ssr';
 import React from 'react';
 
 export const revalidate = 60;
 
 const page = async () => {
-  const client = await createServerGraphQLClient();
+  const client = createBuildGraphQLClient();
   const works = await getTranslationsMetadata({ client, limit: 1000 });
 
   return (

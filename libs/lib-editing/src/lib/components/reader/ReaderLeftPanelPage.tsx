@@ -1,5 +1,5 @@
 import {
-  createServerGraphQLClient,
+  createBuildGraphQLClient,
   getTranslationMetadataByUuid,
   getTranslationToc,
 } from '@client-graphql/ssr';
@@ -18,7 +18,7 @@ export const ReaderLeftPanelPage = async ({
     return notFound();
   }
 
-  const client = await createServerGraphQLClient();
+  const client = createBuildGraphQLClient();
   const work = await getTranslationMetadataByUuid({ client, uuid: slug });
 
   if (!work) {
