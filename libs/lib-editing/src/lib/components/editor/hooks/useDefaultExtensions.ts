@@ -13,7 +13,7 @@ import StarterKit from '../extensions/StarterKit';
 import { Italic } from '../extensions/Italic';
 import { Underline } from '../extensions/Underline';
 import { Bold } from '../extensions/Bold';
-import { List } from '../extensions/List';
+import { List, ListItem } from '../extensions/List';
 
 export const useDefaultExtensions = () => {
   return {
@@ -25,6 +25,7 @@ export const useDefaultExtensions = () => {
       Italic,
       Link,
       List,
+      ListItem,
       Paragraph,
       Placeholder,
       SlashCommand.configure({

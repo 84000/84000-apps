@@ -13,6 +13,7 @@ export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   underline: false,
   bold: false,
   bulletList: false,
+  listItem: false,
   code: {
     HTMLAttributes: {
       class: CODE_STYLE,
