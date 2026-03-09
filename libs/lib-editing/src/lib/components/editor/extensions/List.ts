@@ -1,4 +1,4 @@
-import { BulletList } from '@tiptap/extension-list';
+import { BulletList, ListItem as TipTapListItem } from '@tiptap/extension-list';
 import { mergeAttributes } from '@tiptap/react';
 
 const ITEM_STYLE_TO_CLASS: { [key: string]: string } = {
@@ -13,6 +13,10 @@ const LIST_SPACING_TO_CLASS: { [key: string]: string } = {
   horizontal: 'ml-4',
   vertical: 'mt-4',
 };
+
+export const ListItem = TipTapListItem.extend({
+  content: '(paragraph | heading) block*',
+});
 
 export const List = BulletList.extend({
   addOptions() {

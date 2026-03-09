@@ -49,7 +49,7 @@ import {
 } from '../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../extensions/ParagraphIndent';
 import { Bold } from '../extensions/Bold';
-import { List } from '../extensions/List';
+import { List, ListItem } from '../extensions/List';
 import { Underline } from '../extensions/Underline';
 import { GlobalConfig } from '../extensions/GlobalConfig';
 
@@ -106,6 +106,7 @@ export const useTranslationExtensions = ({
     LineNode,
     Link,
     List,
+    ListItem,
     MantraMark,
     Mention,
     Paragraph,
