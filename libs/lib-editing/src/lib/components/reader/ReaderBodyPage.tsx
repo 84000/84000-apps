@@ -1,6 +1,6 @@
 import {
   BODY_MATTER_FILTER,
-  createServerGraphQLClient,
+  createBuildGraphQLClient,
   FRONT_MATTER_FILTER,
   getTranslationBlocks,
   getTranslationTitles,
@@ -22,7 +22,7 @@ export const ReaderBodyPage = async ({
     return notFound();
   }
 
-  const client = await createServerGraphQLClient();
+  const client = createBuildGraphQLClient();
 
   const { blocks: frontMatter } = await getTranslationBlocks({
     client,

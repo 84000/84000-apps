@@ -1,5 +1,5 @@
 import {
-  createServerGraphQLClient,
+  createBuildGraphQLClient,
   getTranslationBlocks,
   getWorkGlossary,
   getWorkBibliography,
@@ -20,7 +20,7 @@ export const ReaderBackMatterPage = async ({
     return notFound();
   }
 
-  const graphqlClient = await createServerGraphQLClient();
+  const graphqlClient = createBuildGraphQLClient();
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
 
   const [
