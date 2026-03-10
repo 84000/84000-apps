@@ -23,6 +23,7 @@ interface PassageInput {
 interface SavePassagesResult {
   success: boolean;
   savedCount: number;
+  deletedCount?: number;
   error?: string;
 }
 
@@ -31,7 +32,7 @@ interface SavePassagesResult {
  */
 export const savePassagesMutation = async (
   _parent: unknown,
-  args: { passages: PassageInput[] },
+  args: { passages: PassageInput[]; deletedUuids?: string[] },
   ctx: GraphQLContext,
 ): Promise<SavePassagesResult> => {
   // Check authentication
@@ -73,6 +74,117 @@ export const savePassagesMutation = async (
       annotations: input.annotations as Annotation[],
     }));
 
+    // Phase A — Detect new passages
+    const inputUuids = passages.map((p) => p.uuid);
+    const { data: existingRows } = await ctx.supabase
+      .from('passages')
+      .select('uuid')
+      .in('uuid', inputUuids);
+    const existingUuidSet = new Set((existingRows ?? []).map((r) => r.uuid));
+    const newPassages = passages.filter((p) => !existingUuidSet.has(p.uuid));
+
+    // Phase B — Sort shift for new passages (descending sort order to avoid conflicts)
+    const sortedNewPassages = [...newPassages].sort((a, b) => b.sort - a.sort);
+    for (const p of sortedNewPassages) {
+      const { error: shiftError } = await ctx.supabase.rpc(
+        'shift_passage_sorts',
+        {
+          p_work_uuid: p.workUuid,
+          p_from_sort: p.sort,
+          p_delta: 1,
+        },
+      );
+      if (shiftError) {
+        console.error('Error shifting passage sorts:', shiftError);
+      }
+    }
+
+    // Phase C — Label increment for new passages
+    for (const p of sortedNewPassages) {
+      const parts = p.label.split('.');
+      const prefix = parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : '';
+      const { error: labelError } = await ctx.supabase.rpc(
+        'adjust_passage_labels',
+        {
+          p_work_uuid: p.workUuid,
+          p_from_sort: p.sort,
+          p_prefix: prefix,
+          p_delta: 1,
+        },
+      );
+      if (labelError) {
+        console.error('Error adjusting passage labels:', labelError);
+      }
+    }
+
+    // Phase D — Handle deletions
+    let deletedCount = 0;
+    if (args.deletedUuids && args.deletedUuids.length > 0) {
+      // Fetch deleted passage info
+      const { data: deletedPassages } = await ctx.supabase
+        .from('passages')
+        .select('uuid, sort, label, work_uuid')
+        .in('uuid', args.deletedUuids);
+
+      if (deletedPassages && deletedPassages.length > 0) {
+        // Adjust labels for deleted passages (descending sort order)
+        const sortedDeleted = [...deletedPassages].sort(
+          (a, b) => b.sort - a.sort,
+        );
+        for (const dp of sortedDeleted) {
+          const parts = (dp.label || '').split('.');
+          const prefix =
+            parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : '';
+          const { error: labelError } = await ctx.supabase.rpc(
+            'adjust_passage_labels',
+            {
+              p_work_uuid: dp.work_uuid,
+              p_from_sort: dp.sort,
+              p_prefix: prefix,
+              p_delta: -1,
+            },
+          );
+          if (labelError) {
+            console.error(
+              'Error adjusting labels for deleted passage:',
+              labelError,
+            );
+          }
+        }
+
+        // Delete annotations first (passage_annotations has ON DELETE RESTRICT)
+        const { error: deleteAnnotationsError } = await ctx.supabase
+          .from('passage_annotations')
+          .delete()
+          .in('passage_uuid', args.deletedUuids);
+
+        if (deleteAnnotationsError) {
+          console.error(
+            'Error deleting annotations for deleted passages:',
+            deleteAnnotationsError,
+          );
+        }
+
+        // Delete passages
+        const { error: deletePassagesError } = await ctx.supabase
+          .from('passages')
+          .delete()
+          .in('uuid', args.deletedUuids);
+
+        if (deletePassagesError) {
+          console.error('Error deleting passages:', deletePassagesError);
+          return {
+            success: false,
+            savedCount: 0,
+            error: `Failed to delete passages: ${deletePassagesError.message}`,
+          };
+        }
+
+        deletedCount = deletedPassages.length;
+      }
+    }
+
+    // Phase E — Existing upsert logic
     // Convert to DTOs
     const dtos = passagesToDTO(passages);
     const passageRowDtos = passagesToRowDTO(passages);
@@ -139,6 +251,7 @@ export const savePassagesMutation = async (
     return {
       success: true,
       savedCount: passages.length,
+      deletedCount,
     };
   } catch (error) {
     console.error('Unexpected error saving passages:', error);

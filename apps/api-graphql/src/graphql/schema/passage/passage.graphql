@@ -211,6 +211,11 @@ type SavePassagesResult {
   savedCount: Int!
 
   """
+  Number of passages deleted
+  """
+  deletedCount: Int
+
+  """
   Error message if the save failed
   """
   error: String
@@ -221,5 +226,5 @@ extend type Mutation {
   Save one or more passages.
   Requires editor.edit permission.
   """
-  savePassages(passages: [PassageInput!]!): SavePassagesResult!
+  savePassages(passages: [PassageInput!]!, deletedUuids: [ID!]): SavePassagesResult!
 }

@@ -8,6 +8,7 @@ declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     passage: {
       refreshLabelsAfter: () => ReturnType;
+      refreshLabelsAfterDelete: () => ReturnType;
       splitPassage: () => ReturnType;
     };
   }
@@ -30,6 +31,16 @@ const incrementLabel = (label: string, depth = -1) => {
   const index = depth === -1 ? labelParts.length - 1 : depth;
   const toIncrement = `${labelParts[index]}` || '0';
   const newVal = Number.parseInt(toIncrement) + 1;
+  labelParts[index] = newVal;
+
+  return labelParts.join('.');
+};
+
+const decrementLabel = (label: string, depth = -1) => {
+  const labelParts: (string | number)[] = ((label as string) || '').split('.');
+  const index = depth === -1 ? labelParts.length - 1 : depth;
+  const toDecrement = `${labelParts[index]}` || '0';
+  const newVal = Math.max(0, Number.parseInt(toDecrement) - 1);
   labelParts[index] = newVal;
 
   return labelParts.join('.');
@@ -151,6 +162,72 @@ export const PassageNode = Node.create({
           dispatch(txn);
           return true;
         },
+      refreshLabelsAfterDelete:
+        () =>
+        ({ state, dispatch }) => {
+          if (!dispatch) {
+            return true;
+          }
+
+          const { selection } = state;
+          const { $from } = selection;
+          const txn = state.tr;
+
+          const passageDepth = currentPassageDepth($from);
+          if (passageDepth === null) {
+            return false;
+          }
+
+          const passagePos = $from.start(passageDepth) - 1;
+          const currentPassage = $from.node(passageDepth);
+          const currentLabel = currentPassage.attrs.label as string;
+
+          if (!currentLabel) {
+            return false;
+          }
+
+          const currentPrefix = currentLabel.split('.').slice(0, -1).join('.');
+          const currentDepth = currentPrefix.length;
+
+          const parentDepth = passageDepth - 1;
+          if (parentDepth < 0) {
+            return false;
+          }
+
+          const parentNode = $from.node(parentDepth);
+          const startIndex = $from.index(parentDepth);
+
+          let pos = passagePos + currentPassage.nodeSize;
+
+          for (let i = startIndex + 1; i < parentNode.childCount; i++) {
+            const child = parentNode.child(i);
+
+            if (child.type.name !== 'passage') {
+              pos += child.nodeSize;
+              continue;
+            }
+
+            const targetLabel = child.attrs.label as string;
+            if (!targetLabel) {
+              pos += child.nodeSize;
+              continue;
+            }
+
+            if (!targetLabel.startsWith(currentPrefix)) {
+              break;
+            }
+
+            txn.setNodeMarkup(pos, null, {
+              ...child.attrs,
+              label: decrementLabel(child.attrs.label, currentDepth),
+            });
+
+            pos += child.nodeSize;
+          }
+
+          dispatch(txn);
+          return true;
+        },
       splitPassage:
         () =>
         ({ state, dispatch }) => {
@@ -190,7 +267,8 @@ export const PassageNode = Node.create({
           const oldAttrs = passageNode.attrs;
           const attrs = {
             ...oldAttrs,
-            uuid: null,
+            uuid: crypto.randomUUID(),
+            sort: oldAttrs.sort + 1,
             label: incrementLabel(oldAttrs.label),
           };
           // Insert new passage with remaining content

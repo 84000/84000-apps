@@ -22,6 +22,7 @@ import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
 import { PanelName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
+import { useEditorState } from './EditorProvider';
 
 const LOADING_SKELETONS_COUNT = 3;
 const CHUNK_SIZE = 25;
@@ -83,6 +84,8 @@ export const PaginationProvider = ({
   const initialEndCursor = Array.isArray(content)
     ? content.at(-1)?.attrs?.uuid
     : content?.attrs?.uuid;
+
+  const { setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
   const [endCursor, setEndCursor] = useState<string | undefined>(
@@ -155,6 +158,7 @@ export const PaginationProvider = ({
 
     (async () => {
       isNavigatingRef.current = true;
+      setNavigating(true, true);
       try {
         // On mobile, add a delay to allow panel Sheet animation to complete
         // before attempting to scroll to the element
@@ -247,6 +251,7 @@ export const PaginationProvider = ({
         console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
+        setNavigating(false);
         // Re-trigger load-more check: the observer may have fired while
         // navigation was in progress (sentinel entered view after content
         // was replaced), but the load-more effect was blocked by the
@@ -330,7 +335,9 @@ export const PaginationProvider = ({
       const pos = editor?.state.doc?.content.size;
 
       if (pos >= 0 && blocks.length && editor) {
+        setNavigating(true);
         await insertContentChunked(editor, pos, blocks);
+        setNavigating(false);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -377,7 +384,9 @@ export const PaginationProvider = ({
 
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
+        setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
+        setNavigating(false);
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;
@@ -388,7 +397,9 @@ export const PaginationProvider = ({
         });
       } else if (blocks.length && editor) {
         // Fallback: insert without scroll preservation when view not ready
+        setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
+        setNavigating(false);
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
