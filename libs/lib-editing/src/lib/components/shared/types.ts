@@ -32,6 +32,7 @@ export interface TranslationRenderer {
   className?: string;
   filter?: PanelFilter;
   panel: PanelName;
+  tab?: TabName;
 }
 
 export const TAB_FOR_SECTION: Record<string, TabName> = {

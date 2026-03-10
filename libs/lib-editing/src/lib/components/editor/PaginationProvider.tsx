@@ -20,7 +20,7 @@ import {
 import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
-import { PanelName, useNavigation } from '../shared';
+import { PanelName, TabName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
 import { useEditorState } from './EditorProvider';
 
@@ -66,6 +66,7 @@ export const PaginationProvider = ({
   uuid,
   filter,
   panel,
+  tab,
   content,
   fragment,
   isEditable = true,
@@ -75,6 +76,7 @@ export const PaginationProvider = ({
   uuid: string;
   filter?: PanelFilter;
   panel: PanelName;
+  tab?: TabName;
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
@@ -110,8 +112,12 @@ export const PaginationProvider = ({
   const isMobile = useIsMobile();
 
   // Extract hash as a primitive value so we only react to actual hash changes,
-  // not to every panels object reference change
-  const panelHash = panels[panel]?.hash;
+  // not to every panels object reference change.
+  // When a `tab` is specified, only accept the hash when the panel's active tab
+  // matches — this prevents a PaginationProvider for one tab (e.g. endnotes)
+  // from reacting to hashes set by a different tab (e.g. glossary).
+  const panelHash =
+    !tab || panels[panel]?.tab === tab ? panels[panel]?.hash : undefined;
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -185,6 +191,13 @@ export const PaginationProvider = ({
             type: filter,
             passageUuid: navCursor,
           });
+
+          // Guard: if the UUID doesn't correspond to any passages for this
+          // filter (e.g. a cross-tab UUID leaked through), bail out rather
+          // than wiping the editor with an empty setContent([]) call.
+          if (!blocks || blocks.length === 0) {
+            return;
+          }
 
           // Wait for editor to finish updating
           await new Promise<void>((resolve) => {

@@ -245,27 +245,29 @@ export const EditorContextProvider = ({
         }
       }
 
-      txn.changed.forEach((_change, key) => {
-        // Start from key itself (not key.parent) so that structural changes
-        // directly on a passage XmlElement (e.g. children moved during merge)
-        // are detected. For leaf types like XmlText, nodeName is undefined so
-        // the walk-up proceeds to the parent as before.
-        let node = key as unknown as XmlElement;
-        while (node?.nodeName !== 'passage' && node?.parent) {
-          node = node.parent as XmlElement;
-        }
-
-        const uuid = node?.getAttribute?.('uuid');
-        if (uuid) {
-          // Add directly to ref - no state update on every keystroke
-          dirtyUuidsRef.current.add(uuid);
-          // Only update dirty state if it's not already dirty
-          // This prevents re-renders on every keystroke after the first one
-          if (!dirtyStore.isDirty) {
-            dirtyStore.setDirty(true);
+      if (!isNavigatingRef.current) {
+        txn.changed.forEach((_change, key) => {
+          // Start from key itself (not key.parent) so that structural changes
+          // directly on a passage XmlElement (e.g. children moved during merge)
+          // are detected. For leaf types like XmlText, nodeName is undefined so
+          // the walk-up proceeds to the parent as before.
+          let node = key as unknown as XmlElement;
+          while (node?.nodeName !== 'passage' && node?.parent) {
+            node = node.parent as XmlElement;
           }
-        }
-      });
+
+          const uuid = node?.getAttribute?.('uuid');
+          if (uuid) {
+            // Add directly to ref - no state update on every keystroke
+            dirtyUuidsRef.current.add(uuid);
+            // Only update dirty state if it's not already dirty
+            // This prevents re-renders on every keystroke after the first one
+            if (!dirtyStore.isDirty) {
+              dirtyStore.setDirty(true);
+            }
+          }
+        });
+      }
 
       // Mark dirty if there are deletions
       if (deletedUuidsRef.current.size > 0 && !dirtyStore.isDirty) {

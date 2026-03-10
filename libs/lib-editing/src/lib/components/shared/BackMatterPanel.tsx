@@ -67,35 +67,67 @@ export const BackMatterPanel = ({
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
           {abbreviations.length > 0 && (
-            <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
+            <TabsContent
+              value="abbreviations"
+              forceMount
+              className="data-[state=inactive]:hidden"
+            >
+              {renderTranslation({
+                content: abbreviations,
+                className: 'block',
+                name: 'abbreviations',
+                panel: 'right',
+                tab: 'abbreviations',
+              })}
+            </TabsContent>
           )}
         </TabsList>
       </div>
       <div className="px-2">
-        <div ref={scrollContainerRef} className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
+        <div
+          ref={scrollContainerRef}
+          className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface"
+        >
           <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
             {endnotes.length > 0 && (
-              <TabsContent value="endnotes" forceMount className="data-[state=inactive]:hidden">
+              <TabsContent
+                value="endnotes"
+                forceMount
+                className="data-[state=inactive]:hidden"
+              >
                 {renderTranslation({
                   content: endnotes,
                   className: 'block',
                   name: 'endnotes',
                   panel: 'right',
+                  tab: 'endnotes',
                 })}
               </TabsContent>
             )}
             {glossary.length > 0 && (
-              <TabsContent value="glossary" forceMount className="pb-8 data-[state=inactive]:hidden">
+              <TabsContent
+                value="glossary"
+                forceMount
+                className="pb-8 data-[state=inactive]:hidden"
+              >
                 <GlossaryTermList content={glossary} />
               </TabsContent>
             )}
             {bibliography.length > 0 && (
-              <TabsContent value="bibliography" forceMount className="pb-8 data-[state=inactive]:hidden">
+              <TabsContent
+                value="bibliography"
+                forceMount
+                className="pb-8 data-[state=inactive]:hidden"
+              >
                 <BibliographyList content={bibliography} />
               </TabsContent>
             )}
             {abbreviations.length > 0 && (
-              <TabsContent value="abbreviations" forceMount className="data-[state=inactive]:hidden">
+              <TabsContent
+                value="abbreviations"
+                forceMount
+                className="data-[state=inactive]:hidden"
+              >
                 {renderTranslation({
                   content: abbreviations,
                   className: 'block',

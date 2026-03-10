@@ -14,6 +14,7 @@ export const TranslationBuilder = ({
   className,
   filter,
   panel,
+  tab,
 }: TranslationRenderer) => {
   const [fragment, setFragment] = useState<XmlFragment>();
   const [isObserving, setIsObserving] = useState(false);
@@ -38,6 +39,7 @@ export const TranslationBuilder = ({
     <PaginationProvider
       uuid={uuid}
       panel={panel}
+      tab={tab}
       filter={filter}
       content={content}
       fragment={fragment}
