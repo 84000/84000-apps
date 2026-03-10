@@ -80,3 +80,39 @@ describe('incrementLabel and decrementLabel are inverses', () => {
     expect(decrementLabel(incrementLabel(original, 1), 1)).toBe(original);
   });
 });
+
+describe('normalizeLabelsAfter helpers', () => {
+  it('incrementLabel of empty string produces "1"', () => {
+    expect(incrementLabel('')).toBe('1');
+  });
+
+  it('repeated incrementLabel produces a contiguous sequence', () => {
+    let label = '1.2';
+    const sequence = [label];
+    for (let i = 0; i < 4; i++) {
+      label = incrementLabel(label);
+      sequence.push(label);
+    }
+    expect(sequence).toEqual(['1.2', '1.3', '1.4', '1.5', '1.6']);
+  });
+
+  it('repeated incrementLabel produces a contiguous sequence for single-component labels', () => {
+    let label = '3';
+    const sequence = [label];
+    for (let i = 0; i < 3; i++) {
+      label = incrementLabel(label);
+      sequence.push(label);
+    }
+    expect(sequence).toEqual(['3', '4', '5', '6']);
+  });
+
+  it('repeated incrementLabel produces a contiguous sequence for deeply nested labels', () => {
+    let label = '2.1.4';
+    const sequence = [label];
+    for (let i = 0; i < 3; i++) {
+      label = incrementLabel(label);
+      sequence.push(label);
+    }
+    expect(sequence).toEqual(['2.1.4', '2.1.5', '2.1.6', '2.1.7']);
+  });
+});
