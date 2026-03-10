@@ -12,6 +12,7 @@ import {
 import { passagesFromNodes } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
+import { computeSavePayload } from './save-filter';
 
 interface EditorContextState {
   doc?: Doc;
@@ -127,12 +128,16 @@ export const EditorContextProvider = ({
     }
 
     // Use the ref directly for the most up-to-date dirty/deleted UUIDs
-    const deletedUuids = Array.from(deletedUuidsRef.current);
-    const uuidsToSave = Array.from(dirtyUuidsRef.current).filter(
-      (uuid) => !deletedUuidsRef.current.has(uuid),
-    );
+    const {
+      uuidsToSave,
+      uuidsToDelete: deletedUuids,
+      hasChanges,
+    } = computeSavePayload({
+      dirtyUuids: dirtyUuidsRef.current,
+      deletedUuids: deletedUuidsRef.current,
+    });
 
-    if (!uuidsToSave.length && !deletedUuids.length) {
+    if (!hasChanges) {
       console.log('No changes to save.');
       return;
     }
@@ -228,7 +233,7 @@ export const EditorContextProvider = ({
       // directly on a passage XmlElement (e.g. children moved during merge)
       // are detected. For leaf types like XmlText, nodeName is undefined so
       // the walk-up proceeds to the parent as before.
-      let node = key as XmlElement;
+      let node = key as unknown as XmlElement;
       while (node?.nodeName !== 'passage' && node?.parent) {
         node = node.parent as XmlElement;
       }

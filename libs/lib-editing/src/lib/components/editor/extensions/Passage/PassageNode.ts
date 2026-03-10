@@ -3,6 +3,7 @@ import { ReactNodeViewRenderer, mergeAttributes } from '@tiptap/react';
 import { Passage } from './Passage';
 import { Selection, TextSelection } from '@tiptap/pm/state';
 import { ResolvedPos } from '@tiptap/pm/model';
+import { incrementLabel, decrementLabel } from './label';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -24,26 +25,6 @@ const currentPassageDepth = ($from: ResolvedPos) => {
   }
 
   return passageDepth;
-};
-
-const incrementLabel = (label: string, depth = -1) => {
-  const labelParts: (string | number)[] = ((label as string) || '').split('.');
-  const index = depth === -1 ? labelParts.length - 1 : depth;
-  const toIncrement = `${labelParts[index]}` || '0';
-  const newVal = Number.parseInt(toIncrement) + 1;
-  labelParts[index] = newVal;
-
-  return labelParts.join('.');
-};
-
-const decrementLabel = (label: string, depth = -1) => {
-  const labelParts: (string | number)[] = ((label as string) || '').split('.');
-  const index = depth === -1 ? labelParts.length - 1 : depth;
-  const toDecrement = `${labelParts[index]}` || '0';
-  const newVal = Math.max(0, Number.parseInt(toDecrement) - 1);
-  labelParts[index] = newVal;
-
-  return labelParts.join('.');
 };
 
 export const PassageNode = Node.create({
