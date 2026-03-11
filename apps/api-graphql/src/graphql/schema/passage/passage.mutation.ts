@@ -1,11 +1,97 @@
 import type { GraphQLContext } from '../../context';
 import {
   ANNOTATIONS_TO_IGNORE,
+  DataClient,
   Passage,
   Annotation,
   passagesToDTO,
   passagesToRowDTO,
 } from '@data-access';
+
+const PAGE_SIZE = 500;
+
+async function normalizePassageLabelsAfter(
+  supabase: DataClient,
+  workUuid: string,
+  fromSort: number,
+  fromLabel: string,
+  delta: number, // +1 for insert, -1 for delete
+): Promise<void> {
+  const parts = fromLabel.split('.');
+  const depth = parts.length;
+  const prefix = depth > 1 ? parts.slice(0, -1).join('.') + '.' : '';
+  let nextInt = parseInt(parts[depth - 1], 10) + Math.max(delta, 0);
+
+  let lastSort = fromSort;
+  let done = false;
+
+  while (!done) {
+    const { data, error } = await supabase
+      .from('passages')
+      .select('uuid, label, sort')
+      .eq('work_uuid', workUuid)
+      .gt('sort', lastSort)
+      .order('sort', { ascending: true })
+      .limit(PAGE_SIZE);
+
+    if (error || !data || data.length === 0) break;
+
+    const labelUpdates: { uuid: string; label: string }[] = [];
+    const prefixRenames: { oldPrefix: string; newPrefix: string }[] = [];
+
+    for (const row of data) {
+      const rowParts = (row.label ?? '').split('.');
+
+      if (rowParts.length < depth) {
+        done = true;
+        break;
+      } // shallower → stop
+      if (!row.label.startsWith(prefix)) {
+        done = true;
+        break;
+      } // different prefix → stop
+      if (rowParts.length > depth) continue; // deeper → skip (handled by prefix rename)
+
+      const expectedLabel = prefix + nextInt;
+      if (row.label === expectedLabel) {
+        done = true;
+        break;
+      } // already contiguous → stop
+
+      labelUpdates.push({ uuid: row.uuid, label: expectedLabel });
+      prefixRenames.push({
+        oldPrefix: row.label + '.',
+        newPrefix: expectedLabel + '.',
+      });
+      nextInt++;
+    }
+
+    if (labelUpdates.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('passages')
+        .upsert(labelUpdates, { onConflict: 'uuid' });
+      if (upsertError)
+        console.error('Error normalizing passage labels:', upsertError);
+
+      // Fire child prefix renames after same-depth labels are committed
+      for (const { oldPrefix, newPrefix } of prefixRenames) {
+        const { error: prefixError } = await supabase.rpc(
+          'rename_passage_label_prefix',
+          {
+            p_work_uuid: workUuid,
+            p_old_prefix: oldPrefix,
+            p_new_prefix: newPrefix,
+          },
+        );
+        if (prefixError)
+          console.error('Error renaming passage label prefix:', prefixError);
+      }
+    }
+
+    if (done || data.length < PAGE_SIZE) break;
+    lastSort = data[data.length - 1].sort;
+  }
+}
 
 interface PassageInput {
   uuid: string;
@@ -99,22 +185,15 @@ export const savePassagesMutation = async (
       }
     }
 
-    // Phase C — Label increment for new passages
+    // Phase C — Normalize labels for new passages
     for (const p of sortedNewPassages) {
-      const parts = p.label.split('.');
-      const prefix = parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : '';
-      const { error: labelError } = await ctx.supabase.rpc(
-        'adjust_passage_labels',
-        {
-          p_work_uuid: p.workUuid,
-          p_from_sort: p.sort,
-          p_prefix: prefix,
-          p_delta: 1,
-        },
+      await normalizePassageLabelsAfter(
+        ctx.supabase,
+        p.workUuid,
+        p.sort,
+        p.label,
+        1,
       );
-      if (labelError) {
-        console.error('Error adjusting passage labels:', labelError);
-      }
     }
 
     // Phase D — Handle deletions
@@ -132,24 +211,13 @@ export const savePassagesMutation = async (
           (a, b) => b.sort - a.sort,
         );
         for (const dp of sortedDeleted) {
-          const parts = (dp.label || '').split('.');
-          const prefix =
-            parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : '';
-          const { error: labelError } = await ctx.supabase.rpc(
-            'adjust_passage_labels',
-            {
-              p_work_uuid: dp.work_uuid,
-              p_from_sort: dp.sort,
-              p_prefix: prefix,
-              p_delta: -1,
-            },
+          await normalizePassageLabelsAfter(
+            ctx.supabase,
+            dp.work_uuid,
+            dp.sort,
+            dp.label,
+            -1,
           );
-          if (labelError) {
-            console.error(
-              'Error adjusting labels for deleted passage:',
-              labelError,
-            );
-          }
         }
 
         // Delete annotations first (passage_annotations has ON DELETE RESTRICT)
