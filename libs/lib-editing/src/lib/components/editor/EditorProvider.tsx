@@ -145,6 +145,10 @@ export const EditorContextProvider = ({
     const passages: Passage[] = [];
     if (uuidsToSave.length) {
       editors.forEach((editor) => {
+        // Skip editors whose DOM view has been unmounted (e.g. inactive tabs).
+        // Calling blur()/focus() on a destroyed editor throws a TipTap error
+        // about view['hasFocus'] not being accessible.
+        if (editor.isDestroyed) return;
         // Ensure all nodes have unique, non-null UUIDs before reading them.
         // New paragraph nodes created by splitting (e.g. pressing Enter) have
         // uuid: null until the NodeView mount cycle runs validateAttrs. If we
