@@ -10,6 +10,7 @@ import {
   glossaryInstanceResolver,
   workGlossaryResolver,
   glossaryTermPassagesResolver,
+  glossaryTermPassagesPageResolver,
 } from './schema/glossary/glossary.resolver';
 import { healthQueries } from './schema/health/health.query';
 import { passageQueries } from './schema/passage/passage.query';
@@ -38,6 +39,7 @@ export const resolvers = {
     glossaryTerms: glossaryTermsResolver,
     glossaryEntry: glossaryEntryResolver,
     glossaryInstance: glossaryInstanceResolver,
+    glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
   },
 

@@ -5,6 +5,8 @@ import {
   getGlossaryEntry,
   getGlossaryInstance,
   getGlossaryInstances,
+  passageFromDTO,
+  type PassageDTO,
 } from '@data-access';
 
 /**
@@ -68,6 +70,63 @@ export const glossaryInstanceResolver = async (
   });
 
   return instance ?? null;
+};
+
+/**
+ * Resolver for Query.glossaryTermPassages - paginated passage refs for a single term
+ * Uses two-step approach: JSONB @> filter on passage_annotations (GIN index),
+ * then paginated passages query ordered by sort.
+ */
+export const glossaryTermPassagesPageResolver = async (
+  _parent: unknown,
+  args: { uuid: string; first?: number; after?: string },
+  ctx: GraphQLContext,
+) => {
+  const limit = args.first ?? 10;
+  const offset = args.after ? parseInt(args.after, 10) : 0;
+
+  // Step 1: Get all passage UUIDs for this term using GIN-indexed @> filter
+  const { data: annotations, error: annotationsError } = await ctx.supabase
+    .from('passage_annotations')
+    .select('passage_uuid')
+    .eq('type', 'glossary-instance')
+    .filter('content', 'cs', JSON.stringify([{ uuid: args.uuid }]));
+
+  if (annotationsError) {
+    console.error('Error fetching glossary passage annotations:', annotationsError);
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  const passageUuids = (annotations ?? []).map(
+    (a: { passage_uuid: string }) => a.passage_uuid,
+  );
+
+  if (passageUuids.length === 0) {
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  // Step 2: Fetch passage data ordered by sort with offset pagination
+  const { data: passages, error: passagesError } = await ctx.supabase
+    .from('passages')
+    .select('uuid, content, label, sort, type, xmlId, work_uuid, toh')
+    .in('uuid', passageUuids)
+    .order('sort', { ascending: true })
+    .range(offset, offset + limit); // limit+1 to detect hasMore
+
+  if (passagesError) {
+    console.error('Error fetching glossary passages:', passagesError);
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  const rows = passages ?? [];
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    items: items.map((p: PassageDTO) => passageFromDTO(p)),
+    nextCursor: hasMore ? String(offset + limit) : null,
+    hasMore,
+  };
 };
 
 /**
