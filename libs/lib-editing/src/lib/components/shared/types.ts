@@ -28,7 +28,7 @@ export interface TitlesRenderer {
 
 export interface TranslationRenderer {
   content: TranslationEditorContent;
-  name: string;
+  name: TabName;
   className?: string;
   filter?: PanelFilter;
   panel: PanelName;

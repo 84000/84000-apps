@@ -38,6 +38,7 @@ export const TranslationBuilder = ({
     <PaginationProvider
       uuid={uuid}
       panel={panel}
+      tab={name}
       filter={filter}
       content={content}
       fragment={fragment}

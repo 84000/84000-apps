@@ -3,11 +3,12 @@ import { ReactNodeViewRenderer, mergeAttributes } from '@tiptap/react';
 import { Passage } from './Passage';
 import { Selection, TextSelection } from '@tiptap/pm/state';
 import { ResolvedPos } from '@tiptap/pm/model';
+import { incrementLabel } from './label';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     passage: {
-      refreshLabelsAfter: () => ReturnType;
+      normalizeLabelsAfter: () => ReturnType;
       splitPassage: () => ReturnType;
     };
   }
@@ -23,16 +24,6 @@ const currentPassageDepth = ($from: ResolvedPos) => {
   }
 
   return passageDepth;
-};
-
-const incrementLabel = (label: string, depth = -1) => {
-  const labelParts: (string | number)[] = ((label as string) || '').split('.');
-  const index = depth === -1 ? labelParts.length - 1 : depth;
-  const toIncrement = `${labelParts[index]}` || '0';
-  const newVal = Number.parseInt(toIncrement) + 1;
-  labelParts[index] = newVal;
-
-  return labelParts.join('.');
 };
 
 export const PassageNode = Node.create({
@@ -82,134 +73,151 @@ export const PassageNode = Node.create({
   },
   addCommands() {
     return {
-      refreshLabelsAfter:
+      normalizeLabelsAfter:
         () =>
-        ({ state, dispatch }) => {
-          if (!dispatch) {
+          ({ dispatch, tr }) => {
+            if (!dispatch) return true;
+
+            // Use tr.selection so this works correctly when chained after commands
+            // like joinBackward that have already modified the document.
+            const { $from } = tr.selection;
+            const passageDepth = currentPassageDepth($from);
+            if (passageDepth === null) return false;
+
+            const passagePos = $from.start(passageDepth) - 1;
+            const currentPassage = $from.node(passageDepth);
+            const currentLabel = currentPassage.attrs.label as string;
+            if (!currentLabel) return false;
+
+            const currentParts = currentLabel.split('.');
+            const numParts = currentParts.length;
+            const currentPrefixWithDot =
+              numParts > 1 ? currentParts.slice(0, -1).join('.') + '.' : '';
+
+            const parentDepth = passageDepth - 1;
+            if (parentDepth < 0) return false;
+
+            const parentNode = $from.node(parentDepth);
+            const startIndex = $from.index(parentDepth);
+
+            let expectedNext = incrementLabel(currentLabel);
+            let pos = passagePos + currentPassage.nodeSize;
+            let changed = false;
+
+            for (let i = startIndex + 1; i < parentNode.childCount; i++) {
+              const child = parentNode.child(i);
+
+              if (child.type.name !== 'passage') {
+                pos += child.nodeSize;
+                continue;
+              }
+
+              const targetLabel = child.attrs.label as string;
+              if (!targetLabel) {
+                pos += child.nodeSize;
+                continue;
+              }
+
+              const targetParts = targetLabel.split('.');
+              if (targetParts.length < numParts) break; // shallower → out of scope
+              if (targetParts.length > numParts) {
+                // deeper → skip sub-passage
+                pos += child.nodeSize;
+                continue;
+              }
+              if (!targetLabel.startsWith(currentPrefixWithDot)) break; // different prefix
+
+              if (targetLabel === expectedNext) break; // already contiguous
+
+              tr.setNodeMarkup(pos, null, { ...child.attrs, label: expectedNext });
+              expectedNext = incrementLabel(expectedNext);
+              changed = true;
+              pos += child.nodeSize;
+            }
+
+            if (changed) dispatch(tr);
             return true;
-          }
-
-          const { selection } = state;
-          const { $from } = selection;
-          const txn = state.tr;
-
-          const passageDepth = currentPassageDepth($from);
-          if (passageDepth === null) {
-            return false;
-          }
-
-          const passagePos = $from.start(passageDepth) - 1;
-          const currentPassage = $from.node(passageDepth);
-          const currentLabel = currentPassage.attrs.label as string;
-
-          if (!currentLabel) {
-            return false;
-          }
-
-          const currentPrefix = currentLabel.split('.').slice(0, -1).join('.');
-          const currentDepth = currentPrefix.length;
-
-          // Optimized: Only traverse siblings after current position instead of entire document
-          const parentDepth = passageDepth - 1;
-          if (parentDepth < 0) {
-            return false;
-          }
-
-          const parentNode = $from.node(parentDepth);
-          const startIndex = $from.index(parentDepth);
-
-          // Start position after current passage
-          let pos = passagePos + currentPassage.nodeSize;
-
-          for (let i = startIndex + 1; i < parentNode.childCount; i++) {
-            const child = parentNode.child(i);
-
-            if (child.type.name !== 'passage') {
-              pos += child.nodeSize;
-              continue;
-            }
-
-            const targetLabel = child.attrs.label as string;
-            if (!targetLabel) {
-              pos += child.nodeSize;
-              continue;
-            }
-
-            // Early exit - if we've moved past our prefix scope, stop
-            if (!targetLabel.startsWith(currentPrefix)) {
-              break;
-            }
-
-            txn.setNodeMarkup(pos, null, {
-              ...child.attrs,
-              label: incrementLabel(child.attrs.label, currentDepth),
-            });
-
-            pos += child.nodeSize;
-          }
-
-          dispatch(txn);
-          return true;
-        },
+          },
       splitPassage:
         () =>
-        ({ state, dispatch }) => {
-          const { selection } = state;
-          const { $from } = selection;
+          ({ state, dispatch }) => {
+            const { selection } = state;
+            const { $from } = selection;
 
-          // Find the passage node that contains the current selection
-          const passageDepth = currentPassageDepth($from);
-          if (passageDepth === null) {
-            return false;
-          }
+            // Find the passage node that contains the current selection
+            const passageDepth = currentPassageDepth($from);
+            if (passageDepth === null) {
+              return false;
+            }
 
-          const passageNode = $from.node(passageDepth);
-          const passageStart = $from.start(passageDepth) - 1; // -1 to include the passage node itself
-          const passageEnd = $from.end(passageDepth) + 1; // +1 to include the passage node itself
+            const passageNode = $from.node(passageDepth);
+            const passageStart = $from.start(passageDepth) - 1; // -1 to include the passage node itself
+            const passageEnd = $from.end(passageDepth) + 1; // +1 to include the passage node itself
 
-          // Get the position within the passage content
-          const posInPassage = $from.pos - $from.start(passageDepth);
+            // Get the position within the passage content
+            const posInPassage = $from.pos - $from.start(passageDepth);
 
-          // Split the passage content
-          const beforeContent = passageNode.content.cut(0, posInPassage);
-          const afterContent = passageNode.content.cut(posInPassage);
+            // Split the passage content
+            const beforeContent = passageNode.content.cut(0, posInPassage);
+            const afterContent = passageNode.content.cut(posInPassage);
 
-          if (!dispatch) return true;
+            if (!dispatch) return true;
 
-          const tr = state.tr;
+            const tr = state.tr;
 
-          // Replace current passage with first part
-          tr.replaceWith(
-            passageStart,
-            passageEnd,
-            state.schema.nodes.passage.create(passageNode.attrs, beforeContent),
-          );
+            // Replace current passage with first part
+            tr.replaceWith(
+              passageStart,
+              passageEnd,
+              state.schema.nodes.passage.create(passageNode.attrs, beforeContent),
+            );
 
-          // Calculate where to insert the new passage
-          const newPassagePos = passageStart + beforeContent.size + 2; // +2 for passage wrapper
-          const oldAttrs = passageNode.attrs;
-          const attrs = {
-            ...oldAttrs,
-            uuid: null,
-            label: incrementLabel(oldAttrs.label),
-          };
-          // Insert new passage with remaining content
-          tr.insert(
-            newPassagePos,
-            state.schema.nodes.passage.create(attrs, afterContent),
-          );
+            // Calculate where to insert the new passage
+            const newPassagePos = passageStart + beforeContent.size + 2; // +2 for passage wrapper
+            const oldAttrs = passageNode.attrs;
+            const attrs = {
+              ...oldAttrs,
+              uuid: crypto.randomUUID(),
+              sort: oldAttrs.sort + 1,
+              label: incrementLabel(oldAttrs.label),
+            };
+            // Insert new passage with remaining content
+            tr.insert(
+              newPassagePos,
+              state.schema.nodes.passage.create(attrs, afterContent),
+            );
 
-          // move the cursor to the new paragraph
-          const $pos = tr.doc.resolve(newPassagePos + 1);
-          const newSelection =
-            TextSelection.findFrom($pos, 1, true) || Selection.near($pos, 1);
-          if (newSelection) {
-            tr.setSelection(newSelection);
-          }
+            // move the cursor to the new paragraph
+            const $pos = tr.doc.resolve(newPassagePos + 1);
+            const newSelection =
+              TextSelection.findFrom($pos, 1, true) || Selection.near($pos, 1);
+            if (newSelection) {
+              tr.setSelection(newSelection);
+            }
 
-          dispatch(tr);
-          return true;
-        },
+            dispatch(tr);
+            return true;
+          },
+    };
+  },
+  addKeyboardShortcuts() {
+    return {
+      Backspace: () =>
+        this.editor.commands.first(({ commands }) => [
+          () => commands.undoInputRule(),
+          () => {
+            // Only intercept at the very start of a passage's content
+            const { $from } = this.editor.state.selection;
+            const passageDepth = currentPassageDepth($from);
+            if (passageDepth === null) return false;
+            const isAtStart =
+              $from.parentOffset === 0 && $from.index(passageDepth) === 0;
+            if (!isAtStart) return false;
+            const joined = commands.joinBackward();
+            if (joined) commands.normalizeLabelsAfter();
+            return joined;
+          },
+        ]),
     };
   },
 });

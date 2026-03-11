@@ -65,7 +65,7 @@ const PassageSuggestion: CommandSuggestionItem = {
       .selectParentNode()
       .deleteCurrentNode()
       .splitPassage()
-      .refreshLabelsAfter()
+      .normalizeLabelsAfter()
       .run();
   },
 };

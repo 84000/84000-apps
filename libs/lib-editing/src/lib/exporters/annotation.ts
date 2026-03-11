@@ -160,7 +160,14 @@ export const annotationExportsFromNode = (
 
   // NOTE: passages often have a root paragraph node that does not map to an
   // annotation. Ignore nodes without a uuid.
-  if (node.attrs.uuid && blockAnnotation) {
+  if (!node.attrs.uuid) {
+    if (blockAnnotation) {
+      console.warn(
+        `Node "${node.type.name}" is missing a uuid — its annotation was skipped. ` +
+          'This is likely a timing issue where ensureUuids() was not called before export.',
+      );
+    }
+  } else if (blockAnnotation) {
     if (Array.isArray(blockAnnotation)) {
       annotations.push(...blockAnnotation);
     } else {

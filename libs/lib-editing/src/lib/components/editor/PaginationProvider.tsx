@@ -20,8 +20,9 @@ import {
 import type { PanelFilter } from '@data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
-import { PanelName, useNavigation } from '../shared';
+import { PanelName, TabName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
+import { useEditorState } from './EditorProvider';
 
 const LOADING_SKELETONS_COUNT = 3;
 const CHUNK_SIZE = 25;
@@ -65,6 +66,7 @@ export const PaginationProvider = ({
   uuid,
   filter,
   panel,
+  tab,
   content,
   fragment,
   isEditable = true,
@@ -74,6 +76,7 @@ export const PaginationProvider = ({
   uuid: string;
   filter?: PanelFilter;
   panel: PanelName;
+  tab?: TabName;
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
@@ -83,6 +86,8 @@ export const PaginationProvider = ({
   const initialEndCursor = Array.isArray(content)
     ? content.at(-1)?.attrs?.uuid
     : content?.attrs?.uuid;
+
+  const { setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
   const [endCursor, setEndCursor] = useState<string | undefined>(
@@ -107,8 +112,12 @@ export const PaginationProvider = ({
   const isMobile = useIsMobile();
 
   // Extract hash as a primitive value so we only react to actual hash changes,
-  // not to every panels object reference change
-  const panelHash = panels[panel]?.hash;
+  // not to every panels object reference change.
+  // When a `tab` is specified, only accept the hash when the panel's active tab
+  // matches — this prevents a PaginationProvider for one tab (e.g. endnotes)
+  // from reacting to hashes set by a different tab (e.g. glossary).
+  const panelHash =
+    !tab || panels[panel]?.tab === tab ? panels[panel]?.hash : undefined;
 
   const { extensions } = useTranslationExtensions({
     fragment,
@@ -155,6 +164,7 @@ export const PaginationProvider = ({
 
     (async () => {
       isNavigatingRef.current = true;
+      setNavigating(true, true);
       try {
         // On mobile, add a delay to allow panel Sheet animation to complete
         // before attempting to scroll to the element
@@ -181,6 +191,13 @@ export const PaginationProvider = ({
             type: filter,
             passageUuid: navCursor,
           });
+
+          // Guard: if the UUID doesn't correspond to any passages for this
+          // filter (e.g. a cross-tab UUID leaked through), bail out rather
+          // than wiping the editor with an empty setContent([]) call.
+          if (!blocks || blocks.length === 0) {
+            return;
+          }
 
           // Wait for editor to finish updating
           await new Promise<void>((resolve) => {
@@ -247,6 +264,7 @@ export const PaginationProvider = ({
         console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
+        setNavigating(false);
         // Re-trigger load-more check: the observer may have fired while
         // navigation was in progress (sentinel entered view after content
         // was replaced), but the load-more effect was blocked by the
@@ -330,7 +348,9 @@ export const PaginationProvider = ({
       const pos = editor?.state.doc?.content.size;
 
       if (pos >= 0 && blocks.length && editor) {
+        setNavigating(true);
         await insertContentChunked(editor, pos, blocks);
+        setNavigating(false);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -377,7 +397,9 @@ export const PaginationProvider = ({
 
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
+        setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
+        setNavigating(false);
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;
@@ -388,7 +410,9 @@ export const PaginationProvider = ({
         });
       } else if (blocks.length && editor) {
         // Fallback: insert without scroll preservation when view not ready
+        setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
+        setNavigating(false);
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);

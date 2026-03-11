@@ -1214,6 +1214,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'b1ac687a-8ba7-46ca-9851-125cf2d77439',
       },
     ],
     annotations: [
@@ -1276,6 +1277,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'b7a07809-d6e0-427b-bfc6-50ea2acd8155',
       },
     ],
   },
@@ -1297,6 +1299,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '2dda83c5-f367-4b13-96b0-14835d5bb2dd',
       },
     ],
     annotations: [
@@ -1356,6 +1359,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'df6f18e0-7db5-4b06-8a8a-fb3a31144f85',
       },
     ],
     annotations: [
@@ -1393,6 +1397,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '1350a8f8-cb5f-48d6-8d24-7152124b2ed9',
       },
     ],
     annotations: [
@@ -1444,6 +1449,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'f1ed1290-9632-4bcf-8e9d-e6bf561e32a8',
       },
     ],
     annotations: [
@@ -1495,6 +1501,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '965340e9-4b95-4ab7-966d-059e25b094aa',
       },
     ],
     annotations: [
@@ -1576,6 +1583,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '06d427ec-46d0-4df1-9d48-08716f8710ec',
       },
     ],
     annotations: [
@@ -1643,6 +1651,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '7dea2dba-3580-4d45-8bb3-f9cea52a1991',
       },
     ],
     annotations: [
@@ -1680,6 +1689,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'd9096952-6a7d-4f87-93cf-a8c99a4c1ef3',
       },
     ],
   },
@@ -1701,6 +1711,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: '7ece3672-4152-4d60-a0d5-cc623a8cfa6f',
       },
     ],
     annotations: [
@@ -1822,6 +1833,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '0247fcba-036f-4724-bf7c-b1642982dc56',
         folio_number: 60,
         volume_number: 66,
+        passage_uuid: 'ee947d31-48e1-4b37-a901-b999b24962f3',
       },
     ],
     annotations: [
@@ -1899,6 +1911,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '9cb7de38-b313-4014-91a2-71dc81d46c96',
         folio_number: 61,
         volume_number: 66,
+        passage_uuid: '3c0a9671-d031-40fa-ae5b-def8887c4ded',
       },
     ],
   },
@@ -1918,6 +1931,7 @@ export const content: PassageDTO[] = [
         folio_uuid: '9cb7de38-b313-4014-91a2-71dc81d46c96',
         folio_number: 61,
         volume_number: 66,
+        passage_uuid: 'de103c91-0bb2-4f90-9d98-c84718baecc9',
       },
     ],
     annotations: [
