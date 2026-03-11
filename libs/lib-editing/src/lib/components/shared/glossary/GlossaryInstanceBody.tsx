@@ -4,7 +4,7 @@ import { GlossaryTermInstance } from '@data-access';
 import { Button, Li, Ul } from '@design-system';
 import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
 import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
@@ -19,10 +19,15 @@ export const GlossaryInstanceBody = ({
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
   const { updatePanel } = useNavigation();
+  const [showAll, setShowAll] = useState(false);
 
   const sortedPassages = instance.passages
     ?.slice()
     .sort((a, b) => a.sort - b.sort);
+
+  const PASSAGE_LIMIT = 10;
+  const visiblePassages = showAll ? sortedPassages : sortedPassages?.slice(0, PASSAGE_LIMIT);
+  const hasMore = (sortedPassages?.length ?? 0) > PASSAGE_LIMIT;
 
   const handlePassageClick = useCallback(
     (passage: { uuid: string; type: string }) => {
@@ -71,9 +76,9 @@ export const GlossaryInstanceBody = ({
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />
       )}
-      {sortedPassages && sortedPassages.length > 0 && (
+      {visiblePassages && visiblePassages.length > 0 && (
         <div>
-          {sortedPassages.map((passage, index) => (
+          {visiblePassages.map((passage, index) => (
             <span key={passage.uuid}>
               {index > 0 && ', '}
               <Button
@@ -85,6 +90,30 @@ export const GlossaryInstanceBody = ({
               </Button>
             </span>
           ))}
+          {hasMore && !showAll && (
+            <span>
+              {', '}
+              <Button
+                variant="link"
+                className='p-0 h-6 font-normal hover:cursor-pointer'
+                onClick={() => setShowAll(true)}
+              >
+                more &rsaquo;
+              </Button>
+            </span>
+          )}
+          {hasMore && showAll && (
+            <span>
+              {', '}
+              <Button
+                variant="link"
+                className='p-0 h-6 font-normal hover:cursor-pointer'
+                onClick={() => setShowAll(false)}
+              >
+                &lsaquo; less
+              </Button>
+            </span>
+          )}
         </div>
       )}
       <GatedFeature flag="authority-pages">
