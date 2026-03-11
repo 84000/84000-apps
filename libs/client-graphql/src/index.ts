@@ -23,6 +23,8 @@ export {
   getGlossaryEntry,
   getGlossaryInstance,
   getWorkGlossary,
+  getTermPassages,
+  type GlossaryPassagesPage,
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,

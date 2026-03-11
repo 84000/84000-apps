@@ -4,10 +4,13 @@ import { GlossaryTermInstance } from '@data-access';
 import { Button, Li, Ul } from '@design-system';
 import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
 import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
+import { createGraphQLClient, getTermPassages, type GlossaryPassagesPage } from '@client-graphql';
+
+type PassageItem = GlossaryPassagesPage['items'][number];
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -19,18 +22,47 @@ export const GlossaryInstanceBody = ({
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
   const { updatePanel } = useNavigation();
-  const [showAll, setShowAll] = useState(false);
 
-  const sortedPassages = instance.passages
-    ?.slice()
-    .sort((a, b) => a.sort - b.sort);
+  const [passages, setPassages] = useState<PassageItem[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const PASSAGE_LIMIT = 10;
-  const visiblePassages = showAll ? sortedPassages : sortedPassages?.slice(0, PASSAGE_LIMIT);
-  const hasMore = (sortedPassages?.length ?? 0) > PASSAGE_LIMIT;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getTermPassages({ client: createGraphQLClient(), uuid: instance.uuid, first: 10 }).then(
+      (page) => {
+        if (cancelled) return;
+        setPassages(page.items);
+        setNextCursor(page.nextCursor);
+        setHasMore(page.hasMore);
+        setLoading(false);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [instance.uuid]);
+
+  const loadMore = useCallback(() => {
+    if (!nextCursor || loading) return;
+    setLoading(true);
+    getTermPassages({
+      client: createGraphQLClient(),
+      uuid: instance.uuid,
+      first: 10,
+      after: nextCursor,
+    }).then((page) => {
+      setPassages((prev) => [...prev, ...page.items]);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMore);
+      setLoading(false);
+    });
+  }, [instance.uuid, nextCursor, loading]);
 
   const handlePassageClick = useCallback(
-    (passage: { uuid: string; type: string }) => {
+    (passage: PassageItem) => {
       updatePanel({
         name: PANEL_FOR_SECTION[passage.type] || 'main',
         state: {
@@ -76,9 +108,9 @@ export const GlossaryInstanceBody = ({
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />
       )}
-      {visiblePassages && visiblePassages.length > 0 && (
+      {passages.length > 0 && (
         <div>
-          {visiblePassages.map((passage, index) => (
+          {passages.map((passage, index) => (
             <span key={passage.uuid}>
               {index > 0 && ', '}
               <Button
@@ -90,29 +122,20 @@ export const GlossaryInstanceBody = ({
               </Button>
             </span>
           ))}
-          {hasMore && !showAll && (
+          {hasMore && !loading && (
             <span>
               {', '}
               <Button
                 variant="link"
                 className='p-0 h-6 font-normal hover:cursor-pointer'
-                onClick={() => setShowAll(true)}
+                onClick={loadMore}
               >
                 more &rsaquo;
               </Button>
             </span>
           )}
-          {hasMore && showAll && (
-            <span>
-              {', '}
-              <Button
-                variant="link"
-                className='p-0 h-6 font-normal hover:cursor-pointer'
-                onClick={() => setShowAll(false)}
-              >
-                &lsaquo; less
-              </Button>
-            </span>
+          {loading && passages.length > 0 && (
+            <span className="text-muted-foreground text-sm">{', …'}</span>
           )}
         </div>
       )}

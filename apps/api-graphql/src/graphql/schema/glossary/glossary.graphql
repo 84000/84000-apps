@@ -253,6 +253,26 @@ type GlossaryEntry {
   relatedEntities: [GlossaryEntity!]!
 }
 
+"""
+Paginated passage references for a glossary term
+"""
+type GlossaryPassagesPage {
+  """
+  Passages in this page
+  """
+  items: [Passage!]!
+
+  """
+  Cursor for fetching the next page (offset encoded as string), null if no more
+  """
+  nextCursor: String
+
+  """
+  Whether more passages exist beyond this page
+  """
+  hasMore: Boolean!
+}
+
 extend type Query {
   """
   Get all glossary terms for the landing page
@@ -283,6 +303,26 @@ extend type Query {
     """
     uuid: ID!
   ): GlossaryTermInstance
+
+  """
+  Get paginated passage references for a glossary term (per-term, on-demand)
+  """
+  glossaryTermPassages(
+    """
+    The glossary term instance UUID
+    """
+    uuid: ID!
+
+    """
+    Number of passages to return per page
+    """
+    first: Int
+
+    """
+    Cursor from previous page's nextCursor (offset-based)
+    """
+    after: String
+  ): GlossaryPassagesPage!
 }
 
 extend type Work {
