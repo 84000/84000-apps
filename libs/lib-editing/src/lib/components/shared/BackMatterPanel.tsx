@@ -67,19 +67,7 @@ export const BackMatterPanel = ({
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
           {abbreviations.length > 0 && (
-            <TabsContent
-              value="abbreviations"
-              forceMount
-              className="data-[state=inactive]:hidden"
-            >
-              {renderTranslation({
-                content: abbreviations,
-                className: 'block',
-                name: 'abbreviations',
-                panel: 'right',
-                tab: 'abbreviations',
-              })}
-            </TabsContent>
+            <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
           )}
         </TabsList>
       </div>
@@ -100,7 +88,6 @@ export const BackMatterPanel = ({
                   className: 'block',
                   name: 'endnotes',
                   panel: 'right',
-                  tab: 'endnotes',
                 })}
               </TabsContent>
             )}

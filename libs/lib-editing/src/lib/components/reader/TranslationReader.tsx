@@ -9,7 +9,7 @@ export const TranslationReader = ({
   className,
   filter,
   panel,
-  tab,
+  name,
 }: TranslationRenderer) => {
   const { uuid } = useNavigation();
 
@@ -17,7 +17,7 @@ export const TranslationReader = ({
     <PaginationProvider
       uuid={uuid}
       panel={panel}
-      tab={tab}
+      tab={name}
       filter={filter}
       content={content}
       isEditable={false}

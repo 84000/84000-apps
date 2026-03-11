@@ -28,11 +28,10 @@ export interface TitlesRenderer {
 
 export interface TranslationRenderer {
   content: TranslationEditorContent;
-  name: string;
+  name: TabName;
   className?: string;
   filter?: PanelFilter;
   panel: PanelName;
-  tab?: TabName;
 }
 
 export const TAB_FOR_SECTION: Record<string, TabName> = {
