@@ -5,30 +5,37 @@ export function createGlossaryPassagesLoader(supabase: DataClient) {
   return new DataLoader<string, Passages>(
     async (glossaryTermUuids) => {
       // Phase 1: Query passage_annotations via RPC for glossary-instance annotations
-      const { data: annotations, error: annotationsError } = await supabase.rpc(
-        'get_passage_annotations_by_content_uuids',
-        {
-          annotation_type: 'glossary-instance',
-          target_uuids: glossaryTermUuids as string[],
-        },
-      );
+      const PAGE_SIZE = 1000;
+      const annotations: Array<{ passage_uuid: string; target_uuid: string }> = [];
+      let offset = 0;
+      let hasMore = true;
 
-      if (annotationsError) {
-        console.error(
-          'Error batch loading glossary passage annotations:',
-          annotationsError,
-        );
-        return glossaryTermUuids.map(() => []);
+      while (hasMore) {
+        const { data, error: annotationsError } = await supabase
+          .rpc('get_passage_annotations_by_content_uuids', {
+            annotation_type: 'glossary-instance',
+            target_uuids: glossaryTermUuids as string[],
+          })
+          .range(offset, offset + PAGE_SIZE - 1);
+
+        if (annotationsError) {
+          console.error(
+            'Error batch loading glossary passage annotations:',
+            annotationsError,
+          );
+          return glossaryTermUuids.map(() => []);
+        }
+
+        annotations.push(...(data ?? []));
+        hasMore = (data?.length ?? 0) === PAGE_SIZE;
+        offset += PAGE_SIZE;
       }
 
       // Collect unique passage UUIDs and map term UUID -> passage UUIDs
       const termToPassageUuids = new Map<string, Set<string>>();
       const allPassageUuids = new Set<string>();
 
-      for (const row of (annotations ?? []) as Array<{
-        passage_uuid: string;
-        target_uuid: string;
-      }>) {
+      for (const row of annotations) {
         if (!row.target_uuid || !row.passage_uuid) continue;
 
         allPassageUuids.add(row.passage_uuid);
