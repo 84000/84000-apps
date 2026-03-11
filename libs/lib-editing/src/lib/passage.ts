@@ -35,6 +35,10 @@ import { Passage } from '@data-access';
  * It must be called (and awaited via a Promise.resolve()) before
  * passagesFromNodes() so that the transaction is committed to the editor state.
  */
+// Parameter annotation UUID attributes that live on block node attrs (not marks)
+// and must be deduplicated alongside the main `uuid` attribute.
+const PARAMETER_UUID_ATTRS = ['leadingSpaceUuid', 'indentUuid'] as const;
+
 export const ensureUuids = (editor: Editor): void => {
   const { state, view } = editor;
   const { doc, tr } = state;
@@ -47,19 +51,32 @@ export const ensureUuids = (editor: Editor): void => {
       return true;
     }
 
-    const existing: string | null | undefined = node.attrs.uuid;
-    const isDuplicate = existing ? seen.has(existing) : false;
+    let newAttrs: Record<string, unknown> | null = null;
 
-    if (!existing || isDuplicate) {
-      const newUuid = uuidv4();
-      tr.setNodeMarkup(pos, undefined, {
-        ...node.attrs,
-        uuid: newUuid,
-      });
-      seen.add(newUuid);
-      changed = true;
+    // Check main uuid
+    const existing: string | null | undefined = node.attrs.uuid;
+    if (!existing || seen.has(existing)) {
+      newAttrs = { ...node.attrs, uuid: uuidv4() };
+      seen.add(newAttrs.uuid as string);
     } else {
       seen.add(existing);
+    }
+
+    // Check parameter annotation UUIDs
+    for (const attrKey of PARAMETER_UUID_ATTRS) {
+      const existingParam = node.attrs[attrKey] as string | null | undefined;
+      if (existingParam === undefined) continue; // node type doesn't use this attr
+      if (!existingParam || seen.has(existingParam)) {
+        newAttrs = { ...(newAttrs ?? node.attrs), [attrKey]: uuidv4() };
+        seen.add(newAttrs[attrKey] as string);
+      } else {
+        seen.add(existingParam);
+      }
+    }
+
+    if (newAttrs) {
+      tr.setNodeMarkup(pos, undefined, newAttrs);
+      changed = true;
     }
 
     return true;
