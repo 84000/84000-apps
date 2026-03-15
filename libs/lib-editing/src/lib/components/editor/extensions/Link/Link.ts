@@ -61,5 +61,5 @@ export const Link = TipTapLink.extend({
     };
   },
 }).configure({
-  openOnClick: false,
+  openOnClick: true,
 });
