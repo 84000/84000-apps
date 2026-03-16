@@ -80,6 +80,11 @@ input PassageFilter {
   Use this instead of type when filtering by multiple types.
   """
   types: [String!]
+
+  """
+  Filter by label pattern using ILIKE (e.g., "n.5%")
+  """
+  label: String
 }
 
 """
