@@ -203,6 +203,17 @@ export type GlossaryLandingItem = {
   uuid: Scalars['ID']['output'];
 };
 
+/** Paginated passage references for a glossary term */
+export type GlossaryPassagesPage = {
+  __typename?: 'GlossaryPassagesPage';
+  /** Whether more passages exist beyond this page */
+  hasMore: Scalars['Boolean']['output'];
+  /** Passages in this page */
+  items: Array<Passage>;
+  /** Cursor for fetching the next page (offset encoded as string), null if no more */
+  nextCursor?: Maybe<Scalars['String']['output']>;
+};
+
 /** A glossary term instance within a specific work */
 export type GlossaryTermInstance = {
   __typename?: 'GlossaryTermInstance';
@@ -301,6 +312,7 @@ export type Mutation = {
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationSavePassagesArgs = {
+  deletedUuids?: InputMaybe<Array<Scalars['ID']['input']>>;
   passages: Array<PassageInput>;
 };
 
@@ -445,6 +457,8 @@ export type Query = {
   glossaryEntry?: Maybe<GlossaryEntry>;
   /** Get a single glossary instance by UUID */
   glossaryInstance?: Maybe<GlossaryTermInstance>;
+  /** Get paginated passage references for a glossary term (per-term, on-demand) */
+  glossaryTermPassages: GlossaryPassagesPage;
   /** Get all glossary terms for the landing page */
   glossaryTerms: Array<GlossaryLandingItem>;
   /**
@@ -490,6 +504,14 @@ export type QueryGlossaryInstanceArgs = {
 
 
 /** Root Query type - extend this in other schema files */
+export type QueryGlossaryTermPassagesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
 export type QueryGlossaryTermsArgs = {
   uuids?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
@@ -524,6 +546,8 @@ export type QueryWorksArgs = {
 /** Result of saving passages */
 export type SavePassagesResult = {
   __typename?: 'SavePassagesResult';
+  /** Number of passages deleted */
+  deletedCount?: Maybe<Scalars['Int']['output']>;
   /** Error message if the save failed */
   error?: Maybe<Scalars['String']['output']>;
   /** Number of passages saved */
