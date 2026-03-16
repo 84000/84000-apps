@@ -45,7 +45,7 @@ export const Heading = TiptapHeading.extend({
     return ({ node, editor, extension, getPos, HTMLAttributes }) => {
       const nodeLevel = parseInt(node.attrs.level, 10) as Level;
       const hasLevel = this.options.levels.includes(nodeLevel);
-      const level = hasLevel ? nodeLevel : this.options.levels[0];
+      const level = hasLevel ? nodeLevel : this.options.levels.at(-1);
       const element = `h${level}` as HTMLElementType;
       const className =
         CLASS_FOR_CLASS[node.attrs.class] || CLASS_FOR_LEVEL[nodeLevel];

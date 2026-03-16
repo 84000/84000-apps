@@ -5,6 +5,8 @@ import {
   PANEL_FOR_SECTION,
   TAB_FOR_SECTION,
 } from '../../../shared/types';
+import { cn } from '@lib-utils';
+import { LINK_STYLE } from '@design-system';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;
@@ -78,61 +80,48 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
       const isEditable = props.editor.isEditable;
       const { dom } = createMarkViewDom({
         ...props,
-        element: 'a',
-        className: props.mark.attrs.toh,
+        element: 'span',
+        className: cn(LINK_STYLE, props.mark.attrs.toh),
       });
 
       const { isSameWork, subtype, entity, type: linkType, linkToh } =
         props.mark.attrs;
 
-      if (isSameWork) {
-        // Same-work links navigate in-place via panel system
-        dom.setAttribute('href', '#');
-        dom.setAttribute('data-same-work', 'true');
-        if (subtype) {
-          dom.setAttribute('data-subtype', subtype);
+      dom.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!isSameWork) {
+          // Cross-work links open in a new tab
+          const href = props.mark.attrs.href || '#';
+          window.open(href, '_blank');
+          return
         }
+        const query = new URLSearchParams(window.location.search);
+
         if (linkToh) {
-          dom.setAttribute('data-link-toh', linkToh);
+          query.set('toh', linkToh);
         }
 
-        if (!isEditable) {
-          dom.addEventListener('click', (e) => {
-            e.preventDefault();
-            const query = new URLSearchParams(window.location.search);
-
-            if (linkToh) {
-              query.set('toh', linkToh);
-            }
-
-            switch (linkType) {
-              case 'bibliography':
-                query.set('right', `open:bibliography:${entity}`);
-                break;
-              case 'glossary':
-                query.set('right', `open:glossary:${entity}`);
-                break;
-              case 'passage': {
-                const panel =
-                  PANEL_FOR_SECTION[subtype] || 'main';
-                const tab =
-                  TAB_FOR_SECTION[subtype] || 'translation';
-                query.set(panel, `open:${tab}:${entity}`);
-              }
-                break;
-              default:
-                break;
-            }
-
-            window.history.pushState({}, '', `?${query.toString()}`);
-          });
+        switch (linkType) {
+          case 'bibliography':
+            query.set('right', `open:bibliography:${entity}`);
+            break;
+          case 'glossary':
+            query.set('right', `open:glossary:${entity}`);
+            break;
+          case 'passage': {
+            const panel =
+              PANEL_FOR_SECTION[subtype] || 'main';
+            const tab =
+              TAB_FOR_SECTION[subtype] || 'translation';
+            query.set(panel, `open:${tab}:${entity}`);
+          }
+            break;
+          default:
+            break;
         }
-      } else {
-        // Cross-work links open in a new tab
-        dom.setAttribute('href', props.mark.attrs.href);
-        dom.setAttribute('target', '_blank');
-        dom.setAttribute('rel', 'noreferrer');
-      }
+
+        window.history.pushState({}, '', `?${query.toString()}`);
+      });
 
       // Set attributes for HoverCardProvider identification
       if (props.mark.attrs.uuid) {
