@@ -195,6 +195,49 @@ export const findEndnoteMarkByUuid = ({
 };
 
 /**
+ * Finds all endNoteLink marks in the editor where notes[].endNote matches the given passage UUID.
+ * Returns an array of { from, to, mark } objects.
+ */
+export const findAllEndnoteMarksForPassage = ({
+  editor,
+  endNotePassageUuid,
+}: {
+  editor: {
+    state: {
+      doc: MarkViewProps['editor']['state']['doc'];
+      tr: MarkViewProps['editor']['state']['tr'];
+    };
+  };
+  endNotePassageUuid: string;
+}): { from: number; to: number; mark: MarkViewProps['mark'] }[] => {
+  const { state } = editor;
+  const { doc, tr } = state;
+  const results: { from: number; to: number; mark: MarkViewProps['mark'] }[] =
+    [];
+
+  doc.descendants((node, pos) => {
+    const from = tr.mapping.map(pos);
+    const to = from + node.nodeSize;
+
+    for (const m of node.marks) {
+      if (
+        m.type.name === 'endNoteLink' &&
+        m.attrs.notes?.find(
+          (note: { endNote: string }) =>
+            note.endNote === endNotePassageUuid,
+        )
+      ) {
+        results.push({ from, to, mark: m });
+      }
+    }
+
+    return true;
+  });
+
+  return results;
+};
+
+/**
  * Creates a function to update the attributes of a given HTML element.
  * The returned function takes an object of attributes and sets them on the element.
  */
