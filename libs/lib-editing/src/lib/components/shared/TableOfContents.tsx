@@ -14,7 +14,7 @@ import {
   Separator,
 } from '@design-system';
 import { cn, parseToh } from '@lib-utils';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import {
   PanelName,
@@ -97,8 +97,22 @@ export const TableOfContentsSection = ({
   );
 };
 
-export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
-  const { toh, imprint, setToh } = useNavigation();
+export const TableOfContents = ({
+  toc,
+  work,
+  limitWhenNoTranslation = false,
+}: {
+  toc?: Toc;
+  work: Work;
+  limitWhenNoTranslation?: boolean;
+}) => {
+  const {
+    toh,
+    imprint,
+    setToh,
+    hasTranslationContent,
+    setHasTranslationContent,
+  } = useNavigation();
   const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
     work.toh[0] || '',
   );
@@ -111,23 +125,33 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
   }, [toh, work.toh, setToh]);
 
   const baseStyle = 'w-full py-2 leading-6 text-sm font-light text-foreground';
+  const inferredHasTranslationContent = useMemo(() => {
+    if (!toc) {
+      return hasTranslationContent;
+    }
+    return (toc.body?.length || 0) > 0;
+  }, [toc, hasTranslationContent]);
+  const allowTranslationSections = limitWhenNoTranslation
+    ? inferredHasTranslationContent
+    : true;
+  const imprintEntry: TocEntry = {
+    uuid: 'imprint',
+    content: 'Imprint',
+    sort: 0,
+    level: 0,
+    section: 'imprint',
+    children: [],
+  };
+  const frontMatterChildren = allowTranslationSections
+    ? [imprintEntry, ...(toc?.frontMatter || [])]
+    : [imprintEntry];
   const frontMatter: TocEntry = {
     uuid: 'front-matter',
     content: 'Front Matter',
     sort: 0,
     level: 0,
     section: 'front',
-    children: [
-      {
-        uuid: 'imprint',
-        content: 'Imprint',
-        sort: 0,
-        level: 0,
-        section: 'imprint',
-        children: [],
-      },
-      ...(toc?.frontMatter || []),
-    ],
+    children: frontMatterChildren,
   };
   const body: TocEntry = {
     uuid: 'root',
@@ -176,6 +200,19 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
       ...(abbreviations ? [abbreviations] : []),
     ],
   };
+
+  useEffect(() => {
+    if (!toc || !limitWhenNoTranslation) {
+      return;
+    }
+    setHasTranslationContent(inferredHasTranslationContent);
+  }, [
+    toc,
+    inferredHasTranslationContent,
+    limitWhenNoTranslation,
+    setHasTranslationContent,
+  ]);
+
   return (
     <div>
       <div className={cn(baseStyle, 'flex gap-2 mt-6')}>
@@ -230,10 +267,14 @@ export const TableOfContents = ({ toc, work }: { toc?: Toc; work: Work }) => {
       </div>
       <Separator className="my-4" />
       <TableOfContentsSection node={frontMatter} panel="left" />
-      <Separator className="my-4" />
-      <TableOfContentsSection node={body} panel="main" />
-      <Separator className="my-4" />
-      <TableOfContentsSection node={backMatter} panel="right" />
+      {allowTranslationSections && (
+        <>
+          <Separator className="my-4" />
+          <TableOfContentsSection node={body} panel="main" />
+          <Separator className="my-4" />
+          <TableOfContentsSection node={backMatter} panel="right" />
+        </>
+      )}
     </div>
   );
 };

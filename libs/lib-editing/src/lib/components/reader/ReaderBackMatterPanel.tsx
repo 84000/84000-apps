@@ -6,6 +6,7 @@ import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { TranslationReader } from '.';
 import { TranslationEditorContent } from '../editor';
+import { useNavigation } from '../shared/NavigationProvider';
 
 export const ReaderBackMatterPanel = ({
   endnotes,
@@ -18,6 +19,11 @@ export const ReaderBackMatterPanel = ({
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
 }) => {
+  const { hasTranslationContent } = useNavigation();
+  if (!hasTranslationContent) {
+    return null;
+  }
+
   const renderTranslation = useCallback(
     ({ content, name, className }: TranslationRenderer) => (
       <TranslationReader

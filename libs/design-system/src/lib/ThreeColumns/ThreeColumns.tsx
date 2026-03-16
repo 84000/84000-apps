@@ -62,6 +62,8 @@ export const ThreeColumns = ({
   className,
   leftPanelOpen,
   rightPanelOpen,
+  leftPanelEnabled = true,
+  rightPanelEnabled = true,
   onLeftPanelOpenChange,
   onRightPanelOpenChange,
 }: {
@@ -69,6 +71,8 @@ export const ThreeColumns = ({
   className?: string;
   leftPanelOpen?: boolean;
   rightPanelOpen?: boolean;
+  leftPanelEnabled?: boolean;
+  rightPanelEnabled?: boolean;
   onLeftPanelOpenChange?: (open: boolean) => void;
   onRightPanelOpenChange?: (open: boolean) => void;
 }) => {
@@ -150,10 +154,16 @@ export const ThreeColumns = ({
   ]);
 
   const toggleLeftPanel = () => {
+    if (!leftPanelEnabled) {
+      return;
+    }
     onLeftPanelOpenChange?.(!leftPanelOpen);
   };
 
   const toggleRightPanel = () => {
+    if (!rightPanelEnabled) {
+      return;
+    }
     onRightPanelOpenChange?.(!rightPanelOpen);
   };
 
@@ -177,76 +187,90 @@ export const ThreeColumns = ({
               <PanelLeftIcon />
               <span className="sr-only">Toggle Left Panel</span>
             </Button>
-            <Button
-              variant="link"
-              size="icon"
-              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-              onClick={toggleRightPanel}
-            >
-              <PanelRightIcon />
-              <span className="sr-only">Toggle Right Panel</span>
-            </Button>
+            {rightPanelEnabled && (
+              <Button
+                variant="link"
+                size="icon"
+                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                onClick={toggleRightPanel}
+              >
+                <PanelRightIcon />
+                <span className="sr-only">Toggle Right Panel</span>
+              </Button>
+            )}
           </div>
           <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
         </div>
-        <Sheet
-          open={leftPanelOpen && isMobile}
-          onOpenChange={onLeftPanelOpenChange}
-        >
-          <SheetContent
-            side="left"
-            className="md:hidden w-full sm:max-w-full bg-sidebar"
+        {leftPanelEnabled && (
+          <Sheet
+            open={leftPanelOpen && isMobile}
+            onOpenChange={onLeftPanelOpenChange}
           >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Left Panel</SheetTitle>
-              <SheetDescription>Navigation and content panel</SheetDescription>
-            </SheetHeader>
-            {leftPanelChildren}
-          </SheetContent>
-        </Sheet>
-        <Sheet
-          open={rightPanelOpen && isMobile}
-          onOpenChange={onRightPanelOpenChange}
-        >
-          <SheetContent
-            side="right"
-            className="md:hidden w-full sm:max-w-full bg-sidebar"
+            <SheetContent
+              side="left"
+              className="md:hidden w-full sm:max-w-full bg-sidebar"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>Left Panel</SheetTitle>
+                <SheetDescription>Navigation and content panel</SheetDescription>
+              </SheetHeader>
+              {leftPanelChildren}
+            </SheetContent>
+          </Sheet>
+        )}
+        {rightPanelEnabled && (
+          <Sheet
+            open={rightPanelOpen && isMobile}
+            onOpenChange={onRightPanelOpenChange}
           >
-            <SheetHeader className="sr-only">
-              <SheetTitle>Right Panel</SheetTitle>
-              <SheetDescription>Additional content panel</SheetDescription>
-            </SheetHeader>
-            {rightPanelChildren}
-          </SheetContent>
-        </Sheet>
+            <SheetContent
+              side="right"
+              className="md:hidden w-full sm:max-w-full bg-sidebar"
+            >
+              <SheetHeader className="sr-only">
+                <SheetTitle>Right Panel</SheetTitle>
+                <SheetDescription>Additional content panel</SheetDescription>
+              </SheetHeader>
+              {rightPanelChildren}
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
       {/* Desktop Layout */}
       <div className="hidden md:block overflow-hidden size-full">
         <ResizablePanelGroup className={className} direction="horizontal">
-          <ResizablePanel
-            ref={leftPanelRef}
-            className={cn(
-              'hidden md:block rounded border border-border/60 bg-background',
-              !leftPanelOpen && 'border-none',
-            )}
-            collapsible
-            collapsedSize={MinPanelSizes.COLLAPSED}
-            defaultSize={MinPanelSizes.COLLAPSED}
-            minSize={MinPanelSizes.SIDE_MIN}
-          >
-            {leftPanelChildren}
-          </ResizablePanel>
-          <ResizableHandle
-            withHandle={leftPanelOpen}
-            className={cn(
-              'text-muted-foreground transparent',
-              leftPanelOpen && 'w-2',
-            )}
-          />
+          {leftPanelEnabled && (
+            <>
+              <ResizablePanel
+                ref={leftPanelRef}
+                className={cn(
+                  'hidden md:block rounded border border-border/60 bg-background',
+                  !leftPanelOpen && 'border-none',
+                )}
+                collapsible
+                collapsedSize={MinPanelSizes.COLLAPSED}
+                defaultSize={
+                  leftPanelOpen
+                    ? MinPanelSizes.SIDE_DEFAULT
+                    : MinPanelSizes.COLLAPSED
+                }
+                minSize={MinPanelSizes.SIDE_MIN}
+              >
+                {leftPanelChildren}
+              </ResizablePanel>
+              <ResizableHandle
+                withHandle={leftPanelOpen}
+                className={cn(
+                  'text-muted-foreground transparent',
+                  leftPanelOpen && 'w-2',
+                )}
+              />
+            </>
+          )}
           <ResizablePanel
             className="hidden md:block rounded border bg-background"
             style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
@@ -263,38 +287,48 @@ export const ThreeColumns = ({
                 <PanelLeftIcon />
                 <span className="sr-only">Toggle Left Panel</span>
               </Button>
-              <Button
-                variant="link"
-                size="icon"
-                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                onClick={toggleRightPanel}
-              >
-                <PanelRightIcon />
-                <span className="sr-only">Toggle Right Panel</span>
-              </Button>
+              {rightPanelEnabled && (
+                <Button
+                  variant="link"
+                  size="icon"
+                  className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  onClick={toggleRightPanel}
+                >
+                  <PanelRightIcon />
+                  <span className="sr-only">Toggle Right Panel</span>
+                </Button>
+              )}
             </div>
             <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
           </ResizablePanel>
-          <ResizableHandle
-            withHandle={rightPanelOpen}
-            className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
-          />
-          <ResizablePanel
-            ref={rightPanelRef}
-            className={cn(
-              'hidden md:block rounded border border-border/60 bg-background',
-              !rightPanelOpen && 'border-none',
-            )}
-            collapsible
-            collapsedSize={MinPanelSizes.COLLAPSED}
-            defaultSize={MinPanelSizes.COLLAPSED}
-            minSize={MinPanelSizes.SIDE_MIN}
-          >
-            {rightPanelChildren}
-          </ResizablePanel>
+          {rightPanelEnabled && (
+            <>
+              <ResizableHandle
+                withHandle={rightPanelOpen}
+                className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
+              />
+              <ResizablePanel
+                ref={rightPanelRef}
+                className={cn(
+                  'hidden md:block rounded border border-border/60 bg-background',
+                  !rightPanelOpen && 'border-none',
+                )}
+                collapsible
+                collapsedSize={MinPanelSizes.COLLAPSED}
+                defaultSize={
+                  rightPanelOpen
+                    ? MinPanelSizes.SIDE_DEFAULT
+                    : MinPanelSizes.COLLAPSED
+                }
+                minSize={MinPanelSizes.SIDE_MIN}
+              >
+                {rightPanelChildren}
+              </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
     </>
