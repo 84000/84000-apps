@@ -25,6 +25,18 @@ const GET_WORK_WITH_TOC = gql`
             ...TocEntryFields
             children {
               ...TocEntryFields
+              children {
+                ...TocEntryFields
+                children {
+                  ...TocEntryFields
+                  children {
+                    ...TocEntryFields
+                    children {
+                      ...TocEntryFields
+                    }
+                  }
+                }
+              }
             }
           }
         }
