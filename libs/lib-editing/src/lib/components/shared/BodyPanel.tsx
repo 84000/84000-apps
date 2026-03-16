@@ -13,7 +13,7 @@ import {
 } from '../editor';
 import { Title } from '@data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
-import { ReactElement, useCallback, useMemo, useRef } from 'react';
+import { ReactElement, useCallback, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
@@ -31,6 +31,7 @@ export const BodyPanel = ({
   body,
   renderTitles,
   renderTranslation,
+  limitWhenNoTranslation = false,
 }: {
   titles: Title[];
   frontMatter: TranslationEditorContent;
@@ -39,18 +40,50 @@ export const BodyPanel = ({
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
+  limitWhenNoTranslation?: boolean;
 }) => {
-  const { panels, imprint, showOuterContent, updatePanel } = useNavigation();
+  const {
+    panels,
+    imprint,
+    showOuterContent,
+    updatePanel,
+    setHasTranslationContent,
+  } = useNavigation();
   const tabsRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
-  const activeTab = panels.main.tab || 'translation';
+  const hasTranslationContent = useMemo(() => {
+    if (!limitWhenNoTranslation) {
+      return true;
+    }
+    if (Array.isArray(body)) {
+      return body.length > 0;
+    }
+    return Boolean(body);
+  }, [body, limitWhenNoTranslation]);
+  const activeTab =
+    panels.main.tab || (hasTranslationContent ? 'translation' : 'source');
+  const safeTab =
+    !hasTranslationContent &&
+    (activeTab === 'translation' || activeTab === 'compare')
+      ? 'source'
+      : activeTab;
 
   const hasAlignments = useMemo(() => {
+    if (!hasTranslationContent) {
+      return false;
+    }
     const passages = body as TranslationEditorContentItem[];
     return passages.some(
       (item) => Object.keys(item.attrs?.alignments || {}).length > 0,
     );
-  }, [body]);
+  }, [body, hasTranslationContent]);
+
+  useEffect(() => {
+    if (!limitWhenNoTranslation) {
+      return;
+    }
+    setHasTranslationContent(hasTranslationContent);
+  }, [hasTranslationContent, limitWhenNoTranslation, setHasTranslationContent]);
 
   const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
     tabsRef.current = node;
@@ -61,13 +94,13 @@ export const BodyPanel = ({
 
   const passageAnchorRef = usePassageAnchorRestore(
     scrollContainerRef,
-    panels.main.tab,
+    safeTab,
   );
 
   useScrollPositionRestore(
     'main',
     scrollContainerRef,
-    panels.main.tab,
+    safeTab,
     !!panels.main.hash,
     passageAnchorRef,
   );
@@ -78,25 +111,25 @@ export const BodyPanel = ({
         {renderTitles({
           titles,
           imprint,
-          name: panels.main.tab || 'translation',
+          name: safeTab,
         })}
       </div>
     ),
 
-    [titles, imprint, renderTitles, panels.main.tab],
+    [titles, imprint, renderTitles, safeTab],
   );
 
   return (
     <Tabs
       ref={tabsRefCallback}
-      value={panels.main.tab || 'translation'}
+      value={safeTab}
       onValueChange={(tabName) => {
         const tab = tabName as 'translation' | 'source' | 'compare' | 'front';
         // Capture a passage anchor when leaving translation or compare.
         // These tabs contain passage elements whose UUID lets us realign
         // scroll position after the tab switch — immune to the scrollTop
         // clamping that happens when hidden content changes scroll height.
-        const current = panels.main.tab || 'translation';
+        const current = safeTab;
         const passageTabs = ['translation', 'compare'];
         if (scrollContainerRef.current && passageTabs.includes(current)) {
           passageAnchorRef.current = capturePassageAnchor(
@@ -105,14 +138,16 @@ export const BodyPanel = ({
         }
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
-      defaultValue="translation"
+      defaultValue={hasTranslationContent ? 'translation' : 'source'}
       className="px-12 w-full"
     >
       <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center">
         <TabsList className="w-fit inline-flex">
           <TabsTrigger value="front">Front</TabsTrigger>
-          <TabsTrigger value="translation">Translation</TabsTrigger>
-          {hasAlignments && (
+          {hasTranslationContent && (
+            <TabsTrigger value="translation">Translation</TabsTrigger>
+          )}
+          {hasTranslationContent && hasAlignments && (
             <TabsTrigger value="compare">Compare</TabsTrigger>
           )}
           <TabsTrigger value="source">Source</TabsTrigger>
@@ -138,29 +173,31 @@ export const BodyPanel = ({
       {/* Single editor instance shared between Translation and Compare tabs.
          Passage node views reactively show/hide the Tibetan source column
          based on the active tab from NavigationContext. */}
-      <TabsContent
-        value="translation"
-        forceMount
-        className={cn(
-          activeTab !== 'translation' && activeTab !== 'compare' && 'hidden',
-        )}
-      >
-        <div
+      {hasTranslationContent && (
+        <TabsContent
+          value="translation"
+          forceMount
           className={cn(
-            'w-full mx-auto',
-            activeTab === 'compare'
-              ? '2xl:max-w-7xl max-w-5xl mt-8'
-              : 'max-w-readable',
+            safeTab !== 'translation' && safeTab !== 'compare' && 'hidden',
           )}
         >
-          {renderTranslation({
-            content: body,
-            className: 'block',
-            name: 'translation',
-            panel: 'main',
-          })}
-        </div>
-      </TabsContent>
+          <div
+            className={cn(
+              'w-full mx-auto',
+              safeTab === 'compare'
+                ? '2xl:max-w-7xl max-w-5xl mt-8'
+                : 'max-w-readable',
+            )}
+          >
+            {renderTranslation({
+              content: body,
+              className: 'block',
+              name: 'translation',
+              panel: 'main',
+            })}
+          </div>
+        </TabsContent>
+      )}
       <TabsContent
         value="source"
         forceMount

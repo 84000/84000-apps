@@ -9,7 +9,15 @@ import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
 import { cn, useIsMobile } from '@lib-utils';
 
-export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
+export const LeftPanel = ({
+  toc,
+  work,
+  limitWhenNoTranslation = false,
+}: {
+  toc?: Toc;
+  work: Work;
+  limitWhenNoTranslation?: boolean;
+}) => {
   const { panels, toh, updatePanel, setToh } = useNavigation();
   const isMobile = useIsMobile();
   useTohToggle({ work, toh });
@@ -43,7 +51,11 @@ export const LeftPanel = ({ toc, work }: { toc?: Toc; work: Work }) => {
         <div className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
           <div className="rounded px-2 pb-8 max-w-readable mx-auto">
             <TabsContent value="toc" className="px-2 mt-1.5">
-              <TableOfContents toc={toc} work={work} />
+              <TableOfContents
+                toc={toc}
+                work={work}
+                limitWhenNoTranslation={limitWhenNoTranslation}
+              />
             </TabsContent>
           </div>
         </div>

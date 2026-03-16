@@ -13,7 +13,8 @@ export const ThreeColumnRenderer = ({
   withHeader?: boolean;
   children: ReactNode;
 }) => {
-  const { panels, updatePanel } = useNavigation();
+  const { panels, updatePanel, hasTranslationContent } = useNavigation();
+  const rightPanelEnabled = hasTranslationContent;
 
   return (
     <div
@@ -27,19 +28,24 @@ export const ThreeColumnRenderer = ({
       </div>
       <ThreeColumns
         leftPanelOpen={panels.left.open}
-        rightPanelOpen={panels.right.open}
+        rightPanelOpen={rightPanelEnabled ? panels.right.open : false}
+        rightPanelEnabled={rightPanelEnabled}
         onLeftPanelOpenChange={(open) => {
           updatePanel({
             name: 'left',
             state: { open, tab: panels.left.tab },
           });
         }}
-        onRightPanelOpenChange={(open) => {
-          updatePanel({
-            name: 'right',
-            state: { open, tab: panels.right.tab },
-          });
-        }}
+        onRightPanelOpenChange={
+          rightPanelEnabled
+            ? (open) => {
+                updatePanel({
+                  name: 'right',
+                  state: { open, tab: panels.right.tab },
+                });
+              }
+            : undefined
+        }
       >
         {children}
       </ThreeColumns>

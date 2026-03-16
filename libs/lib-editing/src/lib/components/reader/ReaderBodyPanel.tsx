@@ -62,6 +62,7 @@ export const ReaderBodyPanel = ({
       body={body}
       renderTitles={renderTitles}
       renderTranslation={renderTranslation}
+      limitWhenNoTranslation={true}
     />
   );
 };

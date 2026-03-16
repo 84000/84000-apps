@@ -45,8 +45,10 @@ interface NavigationState {
   panels: PanelsState;
   toh?: TohokuCatalogEntry;
   showOuterContent: boolean;
+  hasTranslationContent: boolean;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
+  setHasTranslationContent: (hasTranslationContent: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   fetchBibliographyEntry: (
     uuid: string,
@@ -69,6 +71,7 @@ export const NavigationContext = createContext<NavigationState>({
   uuid: '',
   panels: DEFAULT_PANELS,
   showOuterContent: true,
+  hasTranslationContent: true,
   updatePanel: () => {
     throw new Error('Not implemented');
   },
@@ -76,6 +79,9 @@ export const NavigationContext = createContext<NavigationState>({
     throw new Error('Not implemented');
   },
   setShowOuterContent: () => {
+    throw new Error('Not implemented');
+  },
+  setHasTranslationContent: () => {
     throw new Error('Not implemented');
   },
   fetchBibliographyEntry: async () => {
@@ -140,6 +146,7 @@ export const NavigationProvider = ({
   const isPanelTransitioning = useRef(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
+  const [hasTranslationContent, setHasTranslationContent] = useState(true);
   const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
@@ -290,7 +297,7 @@ export const NavigationProvider = ({
         return newPanels;
       });
     },
-    [isMobile],
+    [isMobile, hasTranslationContent],
   );
 
   useEffect(() => {
@@ -354,6 +361,20 @@ export const NavigationProvider = ({
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
 
+  useEffect(() => {
+    if (!hasTranslationContent) {
+      setPanels((prev) => {
+        if (!prev.right.open) {
+          return prev;
+        }
+        return {
+          ...prev,
+          right: { ...prev.right, open: false },
+        };
+      });
+    }
+  }, [hasTranslationContent]);
+
   const contextValue = useMemo(
     () => ({
       uuid,
@@ -361,8 +382,10 @@ export const NavigationProvider = ({
       panels,
       toh,
       showOuterContent,
+      hasTranslationContent,
       setToh,
       setShowOuterContent,
+      setHasTranslationContent,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
@@ -376,8 +399,10 @@ export const NavigationProvider = ({
       panels,
       toh,
       showOuterContent,
+      hasTranslationContent,
       setToh,
       setShowOuterContent,
+      setHasTranslationContent,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
