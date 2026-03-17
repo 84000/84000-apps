@@ -154,7 +154,11 @@ export const BodyPanel = ({
         </TabsList>
       </div>
       {showOuterContent ? theTitles : null}
-      <TabsContent value="front">
+      <TabsContent
+        value="front"
+        forceMount
+        className={cn(safeTab !== 'front' && 'hidden')}
+      >
         <div className="w-full max-w-readable mx-auto">
           {showOuterContent ? (
             <div className="mb-12">
