@@ -1,20 +1,21 @@
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@design-system';
+import { Button } from '@design-system';
 import { Editor } from '@tiptap/core';
-import { FileTextIcon, Trash2Icon } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  AsteriskIcon,
+  Loader2Icon,
+  UnlinkIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
 import { useNavigation } from '../../../shared';
-import { findEndnoteMarkByUuid } from '../../util';
+import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
 import {
   removeAllEndnoteLinksForPassage,
   deleteEndnotePassageNode,
+  syncEndnoteLinkLabelsAcrossEditors,
 } from './endnote-utils';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
@@ -30,20 +31,44 @@ export const EndNoteLinkHoverContent = ({
   anchor: HTMLElement;
 }) => {
   const [label, setLabel] = useState<string | undefined>();
-  const { close } = useHoverCard();
+  const [labelState, setLabelState] = useState<
+    'loading' | 'loaded' | 'error'
+  >('loading');
+  const { close, setIsEditing } = useHoverCard();
   const { getEditor } = useEditorState();
   const { fetchEndNote } = useNavigation();
 
   useEffect(() => {
-    if (!endNote) return;
+    if (!endNote) {
+      setLabelState('error');
+      return;
+    }
+
+    // Try the local endnotes editor first — works for unpersisted passages too
+    const endnotesEditor = getEditor('endnotes');
+    if (endnotesEditor) {
+      const found = findPassageNode(endnotesEditor, endNote);
+      if (found?.node.attrs.label) {
+        setLabel(found.node.attrs.label);
+        setLabelState('loaded');
+        return;
+      }
+    }
+
+    // Fall back to network fetch
+    setLabelState('loading');
     fetchEndNote(endNote).then((passage) => {
       if (passage?.label) {
         setLabel(passage.label);
+        setLabelState('loaded');
+      } else {
+        setLabelState('error');
       }
     });
-  }, [endNote, fetchEndNote]);
+  }, [endNote, fetchEndNote, getEditor]);
 
   const removeLink = useCallback(() => {
+    setIsEditing(false);
     close();
 
     setTimeout(() => {
@@ -64,50 +89,64 @@ export const EndNoteLinkHoverContent = ({
       }
       editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close]);
+  }, [editor, uuid, close, setIsEditing]);
 
   const deleteEndnoteAndLink = useCallback(() => {
+    setIsEditing(false);
     close();
 
     setTimeout(() => {
-      removeAllEndnoteLinksForPassage(editor, endNote);
+      // Remove all links pointing to the deleted endnote from both editors
+      const frontEditor = getEditor('front');
+      if (frontEditor) removeAllEndnoteLinksForPassage(frontEditor, endNote);
+      const translationEditor = getEditor('translation');
+      if (translationEditor)
+        removeAllEndnoteLinksForPassage(translationEditor, endNote);
 
+      // Delete the passage and renumber subsequent passages
       const endnotesEditor = getEditor('endnotes');
       if (endnotesEditor) {
         deleteEndnotePassageNode(endnotesEditor, endNote);
+
+        // Sync the updated labels into endNoteLink marks across all editors
+        syncEndnoteLinkLabelsAcrossEditors(endnotesEditor, getEditor);
       }
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, endNote, getEditor, close]);
+  }, [editor, endNote, getEditor, close, setIsEditing]);
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
-      <FileTextIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
-      <span className="truncate text-muted-foreground text-sm my-auto">
-        {label || endNote}
-      </span>
+      <AsteriskIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
+      {labelState === 'loading' && (
+        <Loader2Icon className="text-muted-foreground my-auto size-4 animate-spin" />
+      )}
+      {labelState === 'error' && (
+        <AlertCircleIcon className="text-destructive my-auto size-4" />
+      )}
+      {labelState === 'loaded' && (
+        <span className="truncate text-muted-foreground text-sm my-auto">
+          {label}
+        </span>
+      )}
       <span className="flex-grow" />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-          >
-            <Trash2Icon className="text-destructive my-auto" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={removeLink}>
-            Remove link
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={deleteEndnoteAndLink}
-            className="text-destructive"
-          >
-            Delete endnote
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 [&_svg]:size-4"
+        title="Remove link"
+        onClick={removeLink}
+      >
+        <UnlinkIcon className="text-destructive my-auto" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 [&_svg]:size-4"
+        title="Delete endnote"
+        onClick={deleteEndnoteAndLink}
+      >
+        <Trash2Icon className="text-destructive my-auto" />
+      </Button>
     </div>
   );
 };

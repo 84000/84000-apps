@@ -1,5 +1,6 @@
 import { Editor } from '@tiptap/core';
 import { incrementLabel } from '../Passage/label';
+import { findPassageNode } from '../../util';
 
 interface EndNoteLinkNote {
   uuid: string;
@@ -109,29 +110,8 @@ export function removeAllEndnoteLinksForPassage(
   editor.view.dispatch(tr);
 }
 
-/**
- * Find a passage node in the endnotes editor by UUID.
- * Returns { pos, node } or undefined.
- */
-export function findEndnotePassageNode(
-  editor: Editor,
-  passageUuid: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): { pos: number; node: any } | undefined {
-  const { doc } = editor.state;
-  let result: { pos: number; node: typeof doc } | undefined;
-
-  doc.descendants((node, pos) => {
-    if (result) return false;
-    if (node.type.name === 'passage' && node.attrs.uuid === passageUuid) {
-      result = { pos, node };
-      return false;
-    }
-    return true;
-  });
-
-  return result;
-}
+// Re-export for convenience — canonical definition is in ../../util.ts
+export { findPassageNode } from '../../util';
 
 /**
  * Get the last passage node in the endnotes editor.
@@ -162,11 +142,23 @@ export function getLastEndnoteInEditor(
 }
 
 /**
- * Insert a new empty endnote passage at the end of the endnotes editor document.
+ * Insert a new empty endnote passage into the endnotes editor at the correct
+ * position (after `afterPassageUuid` if provided, otherwise at the end).
+ * Increments labels and sort values of all subsequent passages.
  */
 export function insertEndnotePassage(
   editor: Editor,
-  { label, sort, uuid }: { label: string; sort: number; uuid: string },
+  {
+    label,
+    sort,
+    uuid,
+    afterPassageUuid,
+  }: {
+    label: string;
+    sort: number;
+    uuid: string;
+    afterPassageUuid?: string;
+  },
 ): void {
   const { state } = editor;
   const { tr, schema } = state;
@@ -183,9 +175,49 @@ export function insertEndnotePassage(
     paragraphType.create(),
   );
 
-  // Insert at end of document
-  const endPos = state.doc.content.size;
-  tr.insert(endPos, newPassage);
+  // Find insertion position: right after afterPassageUuid, or end of doc
+  let insertPos = state.doc.content.size;
+  if (afterPassageUuid) {
+    state.doc.descendants((node, pos) => {
+      if (
+        node.type.name === 'passage' &&
+        node.attrs.uuid === afterPassageUuid
+      ) {
+        insertPos = pos + node.nodeSize;
+        return false;
+      }
+      return true;
+    });
+  }
+
+  tr.insert(insertPos, newPassage);
+
+  // Increment labels and sorts of passages after the insertion point.
+  // After the insert, the new passage occupies [insertPos, insertPos + newPassage.nodeSize).
+  // Passages that were at insertPos in the original doc are now shifted by newPassage.nodeSize.
+  const afterNewPos = insertPos + newPassage.nodeSize;
+  const prefix = label.split('.').slice(0, -1).join('.');
+  const prefixWithDot = prefix ? prefix + '.' : '';
+  const depth = label.split('.').length;
+  let expectedNext = incrementLabel(label);
+
+  tr.doc.descendants((child, childPos) => {
+    if (childPos < afterNewPos) return true;
+    if (child.type.name !== 'passage') return true;
+    const childLabel = child.attrs.label as string;
+    if (!childLabel) return true;
+    if (prefixWithDot && !childLabel.startsWith(prefixWithDot)) return true;
+    if (childLabel.split('.').length !== depth) return true;
+
+    tr.setNodeMarkup(childPos, null, {
+      ...child.attrs,
+      label: expectedNext,
+      sort: (child.attrs.sort ?? 0) + 1,
+    });
+    expectedNext = incrementLabel(expectedNext);
+    return true;
+  });
+
   editor.view.dispatch(tr);
 }
 
@@ -197,40 +229,37 @@ export function deleteEndnotePassageNode(
   editor: Editor,
   passageUuid: string,
 ): void {
-  const found = findEndnotePassageNode(editor, passageUuid);
+  const found = findPassageNode(editor, passageUuid);
   if (!found) return;
 
   const { pos, node } = found;
   const { tr } = editor.state;
 
-  // Find the passage before the deleted one for label normalization
-  let prevPassageLabel: string | undefined;
-  editor.state.doc.descendants((n, p) => {
-    if (p >= pos) return false;
-    if (n.type.name === 'passage' && n.attrs.label) {
-      prevPassageLabel = n.attrs.label;
-    }
-    return true;
-  });
+  // Capture the deleted passage's label before removing it — subsequent
+  // passages should be renumbered starting from this label.
+  const deletedLabel = node.attrs.label as string | undefined;
 
   // Delete the passage node
   tr.delete(pos, pos + node.nodeSize);
 
-  // Normalize labels after deletion: decrement subsequent passage labels
-  if (prevPassageLabel) {
-    let expectedNext = incrementLabel(prevPassageLabel);
-    const prefix = prevPassageLabel.split('.').slice(0, -1).join('.');
+  // Normalize labels after deletion: passages that were after the deleted
+  // node (now starting at `pos` in the updated doc) get renumbered.
+  if (deletedLabel) {
+    let expectedNext = deletedLabel;
+    const prefix = deletedLabel.split('.').slice(0, -1).join('.');
     const prefixWithDot = prefix ? prefix + '.' : '';
-    const prevDepth = prevPassageLabel.split('.').length;
+    const depth = deletedLabel.split('.').length;
 
     tr.doc.descendants((child, childPos) => {
+      // Only process passages at or after the deletion point
+      if (childPos < pos) return true;
       if (child.type.name !== 'passage') return true;
       const childLabel = child.attrs.label as string;
       if (!childLabel) return true;
 
-      // Only normalize passages with same prefix
+      // Only normalize passages with same prefix and depth
       if (prefixWithDot && !childLabel.startsWith(prefixWithDot)) return true;
-      if (childLabel.split('.').length !== prevDepth) return true;
+      if (childLabel.split('.').length !== depth) return true;
 
       if (childLabel !== expectedNext) {
         tr.setNodeMarkup(childPos, null, {
@@ -244,4 +273,87 @@ export function deleteEndnotePassageNode(
   }
 
   editor.view.dispatch(tr);
+}
+
+/**
+ * Build a map of endnote passage UUID → label from the endnotes editor.
+ */
+export function buildEndnoteLabelMap(
+  endnotesEditor: Editor,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  endnotesEditor.state.doc.descendants((node) => {
+    if (node.type.name === 'passage' && node.attrs.uuid && node.attrs.label) {
+      map.set(node.attrs.uuid, node.attrs.label);
+    }
+    return true;
+  });
+  return map;
+}
+
+/**
+ * Update the `label` field inside `endNoteLink` marks in an editor to match
+ * the current labels in the endnotes editor. Call this after deleting/renumbering
+ * endnote passages so the superscript numbers in the UI stay in sync.
+ */
+export function syncEndnoteLinkLabels(
+  editor: Editor,
+  labelMap: Map<string, string>,
+): void {
+  const { tr } = editor.state;
+  let changed = false;
+
+  editor.state.doc.descendants((node, pos) => {
+    for (const mark of node.marks) {
+      if (mark.type.name !== 'endNoteLink') continue;
+      const notes: EndNoteLinkNote[] = mark.attrs.notes || [];
+      let notesChanged = false;
+
+      const updatedNotes = notes.map((note) => {
+        const newLabel = labelMap.get(note.endNote);
+        if (newLabel !== undefined && newLabel !== note.label) {
+          notesChanged = true;
+          return { ...note, label: newLabel };
+        }
+        return note;
+      });
+
+      if (notesChanged) {
+        const from = pos;
+        const to = pos + node.nodeSize;
+        tr.removeMark(from, to, mark.type);
+        tr.addMark(
+          from,
+          to,
+          mark.type.create({ ...mark.attrs, notes: updatedNotes }),
+        );
+        changed = true;
+      }
+    }
+    return true;
+  });
+
+  if (changed) {
+    editor.view.dispatch(tr);
+  }
+}
+
+/** Editor keys that can contain endNoteLink marks. */
+const ENDNOTE_LINK_EDITOR_KEYS = ['front', 'translation'] as const;
+
+/**
+ * After deleting/renumbering endnote passages, sync the updated labels into
+ * endNoteLink marks across all editors that may contain them (front + translation).
+ */
+export function syncEndnoteLinkLabelsAcrossEditors(
+  endnotesEditor: Editor,
+  getEditor: (key: string) => Editor | undefined,
+): void {
+  const labelMap = buildEndnoteLabelMap(endnotesEditor);
+  for (const key of ENDNOTE_LINK_EDITOR_KEYS) {
+    const ed = getEditor(key);
+    if (ed) {
+      syncEndnoteLinkLabels(ed, labelMap);
+    }
+  }
 }

@@ -34,6 +34,7 @@ import { useEditorState } from '../../EditorProvider';
 import {
   removeAllEndnoteLinksForPassage,
   deleteEndnotePassageNode,
+  syncEndnoteLinkLabelsAcrossEditors,
 } from '../EndNoteLink/endnote-utils';
 
 const PassageComponent = (props: NodeViewProps) => {
@@ -95,15 +96,18 @@ const PassageComponent = (props: NodeViewProps) => {
   const handleDeleteEndnote = useCallback(() => {
     const passageUuid = node.attrs.uuid;
 
-    // Remove all endnote links from the main editor(s)
-    // Try 'translation' editor first, then iterate all editors
-    const mainEditor = getEditor('translation');
-    if (mainEditor) {
-      removeAllEndnoteLinksForPassage(mainEditor, passageUuid);
-    }
+    // Remove all endnote links from both front and translation editors
+    const frontEditor = getEditor('front');
+    if (frontEditor) removeAllEndnoteLinksForPassage(frontEditor, passageUuid);
+    const translationEditor = getEditor('translation');
+    if (translationEditor)
+      removeAllEndnoteLinksForPassage(translationEditor, passageUuid);
 
     // Delete the passage from the current (endnotes) editor
     deleteEndnotePassageNode(editor, passageUuid);
+
+    // Sync updated labels into endNoteLink marks across all editors
+    syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
 
     setIsDialogOpen(false);
   }, [node.attrs.uuid, editor, getEditor]);

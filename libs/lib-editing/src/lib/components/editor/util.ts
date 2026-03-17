@@ -238,6 +238,30 @@ export const findAllEndnoteMarksForPassage = ({
 };
 
 /**
+ * Find a passage node in any editor by UUID.
+ * Returns { pos, node } or undefined.
+ */
+export const findPassageNode = (
+  editor: Editor,
+  passageUuid: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): { pos: number; node: any } | undefined => {
+  const { doc } = editor.state;
+  let result: { pos: number; node: typeof doc } | undefined;
+
+  doc.descendants((node, pos) => {
+    if (result) return false;
+    if (node.type.name === 'passage' && node.attrs.uuid === passageUuid) {
+      result = { pos, node };
+      return false;
+    }
+    return true;
+  });
+
+  return result;
+};
+
+/**
  * Creates a function to update the attributes of a given HTML element.
  * The returned function takes an object of attributes and sets them on the element.
  */

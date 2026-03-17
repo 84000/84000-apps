@@ -22,6 +22,7 @@ import {
   findLastEndNoteLinkBefore,
   getLastEndnoteInEditor,
   insertEndnotePassage,
+  syncEndnoteLinkLabelsAcrossEditors,
 } from '../../extensions/EndNoteLink/endnote-utils';
 import { incrementLabel } from '../../extensions/Passage/label';
 
@@ -145,8 +146,12 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   }, [searchQuery, searchEndnotes]);
 
   const linkToExisting = useCallback(
-    (endnoteUuid: string) => {
-      editor.chain().focus().setEndNoteLink(endnoteUuid).run();
+    (endnoteUuid: string, endnoteLabel: string | null) => {
+      editor
+        .chain()
+        .focus()
+        .setEndNoteLink(endnoteUuid, endnoteLabel ?? undefined)
+        .run();
       setOpen(false);
       setSearchQuery('');
       setResults([]);
@@ -158,25 +163,27 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     const endnotesEditor = getEditor('endnotes');
     const cursorPos = editor.state.selection.from;
 
-    // Find the previous endnote link before cursor to determine label
+    // Find the previous endnote link before cursor to determine insertion point
     const prevLink = findLastEndNoteLinkBefore(editor, cursorPos);
 
     let newLabel: string;
     let newSort: number;
+    let afterPassageUuid: string | undefined;
 
-    if (prevLink && endnotesEditor) {
-      // Try to get the label from the endnotes editor
+    if (prevLink) {
+      // Try to get the label/sort from the endnotes editor or API
       const passage = await fetchEndNote(prevLink.endNote);
       if (passage) {
         newLabel = incrementLabel(passage.label || 'n.0');
         newSort = passage.sort + 1;
-      } else {
-        // Fallback: get last endnote in editor
-        const last = endnotesEditor
-          ? getLastEndnoteInEditor(endnotesEditor)
-          : undefined;
+        afterPassageUuid = passage.uuid;
+      } else if (endnotesEditor) {
+        const last = getLastEndnoteInEditor(endnotesEditor);
         newLabel = last ? incrementLabel(last.label) : 'n.1';
         newSort = last ? last.sort + 1 : 1;
+      } else {
+        newLabel = 'n.1';
+        newSort = 1;
       }
     } else if (endnotesEditor) {
       // No previous link; append after last endnote
@@ -190,16 +197,20 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
 
     const newPassageUuid = uuidv4();
 
-    // Insert endNoteLink mark in main editor
-    editor.chain().focus().setEndNoteLink(newPassageUuid).run();
+    // Insert endNoteLink mark in main editor with the label for immediate display
+    editor.chain().focus().setEndNoteLink(newPassageUuid, newLabel).run();
 
-    // Insert new passage in endnotes editor
+    // Insert new passage in endnotes editor at the correct position
     if (endnotesEditor) {
       insertEndnotePassage(endnotesEditor, {
         label: newLabel,
         sort: newSort,
         uuid: newPassageUuid,
+        afterPassageUuid,
       });
+
+      // Sync updated labels into endNoteLink marks across front + translation
+      syncEndnoteLinkLabelsAcrossEditors(endnotesEditor, getEditor);
     }
 
     // Navigate to the new endnote
@@ -217,8 +228,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
             node.type.name === 'passage' &&
             node.attrs.uuid === newPassageUuid
           ) {
-            // Focus inside the passage's first child (paragraph)
-            const targetPos = pos + 2; // +1 for passage open, +1 for paragraph open
+            const targetPos = pos + 2;
             endnotesEditor.commands.focus(targetPos);
             return false;
           }
@@ -275,7 +285,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
                 <button
                   key={result.uuid}
                   className="flex items-start gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer text-left w-full"
-                  onClick={() => linkToExisting(result.uuid)}
+                  onClick={() => linkToExisting(result.uuid, result.label)}
                 >
                   <span className="font-medium text-primary shrink-0">
                     {result.label}
