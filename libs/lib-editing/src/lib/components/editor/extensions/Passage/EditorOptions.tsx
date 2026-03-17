@@ -5,10 +5,8 @@ import { BracesIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 
 export const EditorOptions = ({
   onSelection,
-  type,
 }: {
   onSelection: (item: string) => void;
-  type?: string;
 }) => {
   return (
     <>
@@ -19,17 +17,13 @@ export const EditorOptions = ({
       <DropdownMenuItem onSelect={() => onSelection('attributes')}>
         <BracesIcon className="text-ochre" /> View Attributes
       </DropdownMenuItem>
-      {type === 'endnotes' && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => onSelection('deleteEndnote')}
-            className="text-destructive"
-          >
-            <Trash2Icon className="text-destructive" /> Delete Endnote
-          </DropdownMenuItem>
-        </>
-      )}
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={() => onSelection('delete')}
+        className="text-destructive"
+      >
+        <Trash2Icon className="text-destructive" /> Delete
+      </DropdownMenuItem>
     </>
   );
 };

@@ -12,11 +12,7 @@ import { useHoverCard } from '../../../shared/HoverCardProvider';
 import { useNavigation } from '../../../shared';
 import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
-import {
-  removeAllEndnoteLinksForPassage,
-  deleteEndnotePassageNode,
-  syncEndnoteLinkLabelsAcrossEditors,
-} from './endnote-utils';
+import { deleteEndnotePassageNode } from './endnote-utils';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
@@ -96,23 +92,12 @@ export const EndNoteLinkHoverContent = ({
     close();
 
     setTimeout(() => {
-      // Remove all links pointing to the deleted endnote from both editors
-      const frontEditor = getEditor('front');
-      if (frontEditor) removeAllEndnoteLinksForPassage(frontEditor, endNote);
-      const translationEditor = getEditor('translation');
-      if (translationEditor)
-        removeAllEndnoteLinksForPassage(translationEditor, endNote);
-
-      // Delete the passage and renumber subsequent passages
       const endnotesEditor = getEditor('endnotes');
       if (endnotesEditor) {
         deleteEndnotePassageNode(endnotesEditor, endNote);
-
-        // Sync the updated labels into endNoteLink marks across all editors
-        syncEndnoteLinkLabelsAcrossEditors(endnotesEditor, getEditor);
       }
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, endNote, getEditor, close, setIsEditing]);
+  }, [endNote, getEditor, close, setIsEditing]);
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">

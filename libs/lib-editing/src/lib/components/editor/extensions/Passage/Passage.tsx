@@ -30,12 +30,7 @@ import {
 } from '../../../shared';
 import { Alignment, useBookmark } from '@data-access';
 import { BookmarkIcon } from 'lucide-react';
-import { useEditorState } from '../../EditorProvider';
-import {
-  removeAllEndnoteLinksForPassage,
-  deleteEndnotePassageNode,
-  syncEndnoteLinkLabelsAcrossEditors,
-} from '../EndNoteLink/endnote-utils';
+import { deleteEndnotePassageNode } from '../EndNoteLink/endnote-utils';
 
 const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
@@ -51,7 +46,6 @@ const PassageComponent = (props: NodeViewProps) => {
   );
 
   const { panels, toh, updatePanel } = useNavigation();
-  const { getEditor } = useEditorState();
 
   // Compute values directly instead of using effects to avoid re-render loops
   const isCompare = panels.main.open && panels.main.tab === 'compare';
@@ -93,24 +87,10 @@ const PassageComponent = (props: NodeViewProps) => {
     [updatePanel],
   );
 
-  const handleDeleteEndnote = useCallback(() => {
-    const passageUuid = node.attrs.uuid;
-
-    // Remove all endnote links from both front and translation editors
-    const frontEditor = getEditor('front');
-    if (frontEditor) removeAllEndnoteLinksForPassage(frontEditor, passageUuid);
-    const translationEditor = getEditor('translation');
-    if (translationEditor)
-      removeAllEndnoteLinksForPassage(translationEditor, passageUuid);
-
-    // Delete the passage from the current (endnotes) editor
-    deleteEndnotePassageNode(editor, passageUuid);
-
-    // Sync updated labels into endNoteLink marks across all editors
-    syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
-
+  const handleDeletePassage = useCallback(() => {
+    deleteEndnotePassageNode(editor, node.attrs.uuid);
     setIsDialogOpen(false);
-  }, [node.attrs.uuid, editor, getEditor]);
+  }, [node.attrs.uuid, editor]);
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
@@ -170,7 +150,6 @@ const PassageComponent = (props: NodeViewProps) => {
                 />
               ) : editor.isEditable ? (
                 <EditorOptions
-                  type={node.attrs.type}
                   onSelection={(item) => {
                     setDialogType(item);
                     setIsDialogOpen(true);
@@ -210,14 +189,15 @@ const PassageComponent = (props: NodeViewProps) => {
                 <EditLabel {...props} close={() => setIsDialogOpen(false)} />
               )}
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
-              {dialogType === 'deleteEndnote' && (
+              {dialogType === 'delete' && (
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Delete Endnote</DialogTitle>
+                    <DialogTitle>Delete Passage</DialogTitle>
                     <DialogDescription>
-                      This will delete endnote {node.attrs.label} and remove all
-                      links to it in the translation. This action cannot be
-                      undone after saving.
+                      This will delete passage {node.attrs.label}
+                      {node.attrs.type === 'endnotes' &&
+                        ' and remove all links to it in the translation'}
+                      . This action cannot be undone after saving.
                     </DialogDescription>
                   </DialogHeader>
                   <DialogFooter>
@@ -227,7 +207,7 @@ const PassageComponent = (props: NodeViewProps) => {
                     >
                       Cancel
                     </Button>
-                    <Button variant="destructive" onClick={handleDeleteEndnote}>
+                    <Button variant="destructive" onClick={handleDeletePassage}>
                       Delete
                     </Button>
                   </DialogFooter>
