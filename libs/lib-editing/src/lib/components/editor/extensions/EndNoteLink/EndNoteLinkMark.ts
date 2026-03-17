@@ -10,7 +10,7 @@ export interface EndNoteLinkOptions {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     endNoteLink: {
-      setEndNoteLink: (endNote: string) => ReturnType;
+      setEndNoteLink: (endNote: string, label?: string) => ReturnType;
       unsetEndNoteLink: () => ReturnType;
     };
   }
@@ -119,10 +119,10 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
   addCommands() {
     return {
       setEndNoteLink:
-        (endNote) =>
+        (endNote, label) =>
         ({ commands }) => {
           return commands.setMark(this.name, {
-            notes: [{ uuid: uuidv4(), endNote }],
+            notes: [{ uuid: uuidv4(), endNote, label }],
           });
         },
       unsetEndNoteLink:
