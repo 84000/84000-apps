@@ -48,7 +48,7 @@ export const passagesResolver = async (
   args: {
     cursor?: string;
     limit?: number;
-    filter?: { type?: string; types?: string[]; label?: string };
+    filter?: { type?: string; types?: string[] };
     direction?: PaginationDirection;
   },
   ctx: GraphQLContext,
@@ -119,11 +119,6 @@ export const passagesResolver = async (
     query = query.filter('type', 'match', pattern);
   }
 
-  // Apply label filter
-  if (args.filter?.label) {
-    query = query.ilike('label', args.filter.label);
-  }
-
   const { data, error: passagesError } = await query;
 
   if (passagesError) {
@@ -185,7 +180,7 @@ const passagesAroundResolver = async (
   args: {
     cursor?: string;
     limit?: number;
-    filter?: { type?: string; types?: string[]; label?: string };
+    filter?: { type?: string; types?: string[] };
   },
   ctx: GraphQLContext,
   limit: number,
@@ -246,12 +241,6 @@ const passagesAroundResolver = async (
     const pattern = `${passageType}.*`;
     beforeQuery = beforeQuery.filter('type', 'match', pattern);
     afterQuery = afterQuery.filter('type', 'match', pattern);
-  }
-
-  // Apply label filter
-  if (args.filter?.label) {
-    beforeQuery = beforeQuery.ilike('label', args.filter.label);
-    afterQuery = afterQuery.ilike('label', args.filter.label);
   }
 
   // Execute both queries in parallel
