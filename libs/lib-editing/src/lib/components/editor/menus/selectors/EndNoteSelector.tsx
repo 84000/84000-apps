@@ -20,6 +20,7 @@ import { useEditorState } from '../../EditorProvider';
 import { useNavigation } from '../../../shared';
 import {
   findLastEndNoteLinkBefore,
+  findPassageNode,
   getFirstEndnoteInEditor,
   getLastEndnoteInEditor,
   insertEndnotePassage,
@@ -294,18 +295,10 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     // Focus the new endnote passage after navigation
     if (endnotesEditor) {
       setTimeout(() => {
-        const { doc } = endnotesEditor.state;
-        doc.descendants((node, pos) => {
-          if (
-            node.type.name === 'passage' &&
-            node.attrs.uuid === newPassageUuid
-          ) {
-            const targetPos = pos + 2;
-            endnotesEditor.commands.focus(targetPos);
-            return false;
-          }
-          return true;
-        });
+        const found = findPassageNode(endnotesEditor, newPassageUuid);
+        if (found) {
+          endnotesEditor.commands.focus(found.pos + 2);
+        }
       }, 200);
     }
 
