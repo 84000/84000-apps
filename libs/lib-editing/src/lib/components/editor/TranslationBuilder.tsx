@@ -34,13 +34,13 @@ export const TranslationBuilder = ({
 
   const { uuid } = useNavigation();
 
-  // Track known passage UUIDs for the endnotes editor so we can detect
-  // deletions (backspace, merge, etc.) and clean up endnote link marks
-  // in the front/translation editors. This ref is independent of the
-  // Y.js observer's knownUuidsRef, which can be cleared during navigation.
-  const endnotePassageUuidsRef = useRef<Set<string>>(new Set());
+  // Track known passage UUIDs by passage type so we can detect deletions
+  // (backspace, merge, etc.) and clean up related marks in other editors.
+  // This ref is independent of the Y.js observer's knownUuidsRef, which
+  // can be cleared during navigation.
+  const passageUuidsByTypeRef = useRef<Record<string, Set<string>>>({});
   const debouncedSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pendingDeletedRef = useRef<Set<string>>(new Set());
+  const pendingDeletedByTypeRef = useRef<Record<string, Set<string>>>({});
 
   useEffect(() => {
     (async () => {
@@ -71,72 +71,91 @@ export const TranslationBuilder = ({
         }
 
         if (name === 'endnotes') {
-          // Initialize known passage UUIDs from the editor's current state
-          const uuids = new Set<string>();
+          // Initialize known passage UUIDs grouped by type
+          const byType: Record<string, Set<string>> = {};
           const doc = editor.state.doc;
           for (let i = 0; i < doc.childCount; i++) {
             const child = doc.child(i);
             if (child.type.name === 'passage' && child.attrs.uuid) {
-              uuids.add(child.attrs.uuid);
+              const pType = (child.attrs.type as string) || 'unknown';
+              (byType[pType] ??= new Set()).add(child.attrs.uuid);
             }
           }
-          endnotePassageUuidsRef.current = uuids;
+          passageUuidsByTypeRef.current = byType;
 
           editor.on('update', () => {
-            // Collect current passage UUIDs (cheap — always keep baseline accurate)
-            const currentUuids = new Set<string>();
+            // Collect current passage UUIDs grouped by type (cheap)
+            const currentByType: Record<string, Set<string>> = {};
             const doc = editor.state.doc;
             for (let i = 0; i < doc.childCount; i++) {
               const child = doc.child(i);
               if (child.type.name === 'passage' && child.attrs.uuid) {
-                currentUuids.add(child.attrs.uuid);
+                const pType = (child.attrs.type as string) || 'unknown';
+                (currentByType[pType] ??= new Set()).add(child.attrs.uuid);
               }
             }
 
-            // Detect deleted and added passages (skip during navigation to
-            // avoid false positives from content replacement)
-            const deleted: string[] = [];
+            // Detect deleted and added passages per type (skip during
+            // navigation to avoid false positives from content replacement)
+            const deletedByType: Record<string, string[]> = {};
             let hasAdded = false;
             if (!isNavigating()) {
-              endnotePassageUuidsRef.current.forEach((uuid) => {
-                if (!currentUuids.has(uuid)) {
-                  deleted.push(uuid);
-                }
-              });
-              if (!hasAdded) {
-                currentUuids.forEach((uuid) => {
-                  if (!endnotePassageUuidsRef.current.has(uuid)) {
-                    hasAdded = true;
+              const prevByType = passageUuidsByTypeRef.current;
+              for (const pType of Object.keys(prevByType)) {
+                const prev = prevByType[pType];
+                const curr = currentByType[pType];
+                prev.forEach((uuid) => {
+                  if (!curr?.has(uuid)) {
+                    (deletedByType[pType] ??= []).push(uuid);
                   }
                 });
+              }
+              if (!hasAdded) {
+                outer: for (const pType of Object.keys(currentByType)) {
+                  const prev = prevByType[pType];
+                  for (const uuid of currentByType[pType]) {
+                    if (!prev?.has(uuid)) {
+                      hasAdded = true;
+                      break outer;
+                    }
+                  }
+                }
               }
             }
 
             // Always update the baseline so the next diff is accurate
-            endnotePassageUuidsRef.current = currentUuids;
+            passageUuidsByTypeRef.current = currentByType;
+
+            const hasDeleted = Object.keys(deletedByType).length > 0;
 
             // Accumulate deletions and debounce the expensive sync work
             // so rapid keystrokes don't trigger multiple full traversals
-            for (const uuid of deleted) {
-              pendingDeletedRef.current.add(uuid);
+            for (const [pType, uuids] of Object.entries(deletedByType)) {
+              const pending = (pendingDeletedByTypeRef.current[pType] ??=
+                new Set());
+              for (const uuid of uuids) {
+                pending.add(uuid);
+              }
             }
 
-            if (deleted.length > 0 || hasAdded) {
+            if (hasDeleted || hasAdded) {
               if (debouncedSyncRef.current) {
                 clearTimeout(debouncedSyncRef.current);
               }
               debouncedSyncRef.current = setTimeout(() => {
-                if (pendingDeletedRef.current.size > 0) {
+                const pendingEndnotes =
+                  pendingDeletedByTypeRef.current['endnotes'];
+                if (pendingEndnotes?.size) {
                   const frontEditor = getEditor('front');
                   const translationEditor = getEditor('translation');
-                  for (const uuid of pendingDeletedRef.current) {
+                  for (const uuid of pendingEndnotes) {
                     if (frontEditor)
                       removeAllEndnoteLinksForPassage(frontEditor, uuid);
                     if (translationEditor)
                       removeAllEndnoteLinksForPassage(translationEditor, uuid);
                   }
-                  pendingDeletedRef.current.clear();
                 }
+                pendingDeletedByTypeRef.current = {};
                 syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
               }, 150);
             }
