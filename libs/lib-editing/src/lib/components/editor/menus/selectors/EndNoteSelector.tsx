@@ -20,6 +20,7 @@ import { useEditorState } from '../../EditorProvider';
 import { useNavigation } from '../../../shared';
 import {
   findLastEndNoteLinkBefore,
+  getFirstEndnoteInEditor,
   getLastEndnoteInEditor,
   insertEndnotePassage,
   syncEndnoteLinkLabelsAcrossEditors,
@@ -102,7 +103,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
         }>(SEARCH_ENDNOTES, {
           uuid: workUuid,
           limit: 20,
-          filter: { type: 'endnotes', label: labelPattern },
+          filter: { types: ['endnotes'], label: labelPattern },
         });
 
         const nodes = response.work?.passages.nodes ?? [];
@@ -219,10 +220,16 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
         newSort = 1;
       }
     } else if (endnotesEditor) {
-      // No previous link; append after last endnote
-      const last = getLastEndnoteInEditor(endnotesEditor);
-      newLabel = last ? incrementLabel(last.label) : 'n.1';
-      newSort = last ? last.sort + 1 : 1;
+      // No previous link; insert before the first endnote passage
+      const first = getFirstEndnoteInEditor(endnotesEditor);
+      if (first) {
+        newLabel = 'n.1';
+        newSort = 1;
+        beforePassageUuid = first.uuid;
+      } else {
+        newLabel = 'n.1';
+        newSort = 1;
+      }
     } else {
       newLabel = 'n.1';
       newSort = 1;

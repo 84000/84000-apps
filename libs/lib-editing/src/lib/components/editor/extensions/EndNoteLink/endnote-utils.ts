@@ -141,6 +141,32 @@ export function getLastEndnoteInEditor(
 }
 
 /**
+ * Get the first endnotes-type passage node in the endnotes editor.
+ * Skips endnotesHeader passages.
+ * Returns { label, sort, uuid } or undefined if no passages exist.
+ */
+export function getFirstEndnoteInEditor(
+  editor: Editor,
+): { label: string; sort: number; uuid: string } | undefined {
+  const { doc } = editor.state;
+  let first: { label: string; sort: number; uuid: string } | undefined;
+
+  doc.descendants((node) => {
+    if (!first && node.type.name === 'passage' && node.attrs.type === 'endnotes') {
+      first = {
+        label: node.attrs.label || '',
+        sort: node.attrs.sort ?? 0,
+        uuid: node.attrs.uuid,
+      };
+      return false;
+    }
+    return true;
+  });
+
+  return first;
+}
+
+/**
  * Insert a new empty endnote passage into the endnotes editor at the correct
  * position. Use `afterPassageUuid` to insert after a passage, or
  * `beforePassageUuid` to insert before one. Falls back to end of doc.
