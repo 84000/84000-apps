@@ -141,69 +141,83 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
             return true;
           }
 
-          // Find the contiguous range of an existing endNoteLink mark
-          // that overlaps [from, to] within the same parent block.
-          const $from = state.doc.resolve(from);
-          const parent = $from.parent;
-          const parentStart = $from.start();
+          // Only the end of the selection matters — the endnote
+          // superscript renders there. Find the contiguous mark range
+          // that contains `to` within the same parent block.
+          const $to = state.doc.resolve(to);
+          const parent = $to.parent;
+          const parentStart = $to.start();
 
-          let existingFrom = -1;
-          let existingTo = -1;
+          let markFrom = -1;
+          let markTo = -1;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let existingMark: any = null;
           let found = false;
 
           parent.forEach((child, offset) => {
-            if (found) return; // Stop scanning after finding the overlapping range
+            if (found) return;
 
             const childStart = parentStart + offset;
             const childEnd = childStart + child.nodeSize;
             const mark = markType.isInSet(child.marks);
 
-            if (mark) {
-              if (existingFrom === -1) {
-                existingFrom = childStart;
+            if (mark && (markFrom === -1 || mark.eq(existingMark))) {
+              // Same mark (type + attrs) — extend the contiguous range
+              if (markFrom === -1) {
+                markFrom = childStart;
                 existingMark = mark;
               }
-              existingTo = childEnd;
-            } else if (existingFrom !== -1) {
-              // End of a contiguous range — stop if it overlaps selection
-              if (existingTo > from && existingFrom < to) {
+              markTo = childEnd;
+            } else if (markFrom !== -1) {
+              // End of a contiguous range (no mark, or different attrs)
+              if (to > markFrom && to <= markTo) {
                 found = true;
                 return;
               }
-              // Not overlapping, reset and keep scanning
-              existingFrom = -1;
-              existingTo = -1;
-              existingMark = null;
+              if (mark) {
+                // Start a new range for a different endNoteLink mark
+                markFrom = childStart;
+                markTo = childEnd;
+                existingMark = mark;
+              } else {
+                markFrom = -1;
+                markTo = -1;
+                existingMark = null;
+              }
+            } else if (mark) {
+              markFrom = childStart;
+              markTo = childEnd;
+              existingMark = mark;
             }
           });
 
-          // Check if final range overlaps selection
-          const hasOverlap =
-            existingMark && existingTo > from && existingFrom < to;
+          const toIsInMark =
+            existingMark && to > markFrom && to <= markTo;
 
-          if (!hasOverlap) {
-            // No existing mark: simple apply
+          if (!toIsInMark) {
+            // No existing mark at the end of the selection: create new
             tr.addMark(from, to, markType.create({ notes: [newNote] }));
-          } else if (existingFrom >= from && existingTo <= to) {
-            // Selection covers the existing mark entirely: append note
+          } else if (to === markTo) {
+            // `to` is exactly at the end of the mark — append the new
+            // note and keep the mark's original range unchanged.
             const existingNotes = existingMark.attrs.notes || [];
-            tr.removeMark(existingFrom, existingTo, markType);
+            tr.removeMark(markFrom, markTo, markType);
             tr.addMark(
-              from,
-              to,
+              markFrom,
+              markTo,
               markType.create({ notes: [...existingNotes, newNote] }),
             );
           } else {
-            // Existing mark extends beyond selection: split at selection end.
-            // Left side (up to selection end) gets the new note, replacing
-            // the original. Right side keeps the original mark unchanged.
-            tr.removeMark(existingFrom, existingTo, markType);
-            tr.addMark(existingFrom, to, markType.create({ notes: [newNote] }));
-            if (existingTo > to) {
-              tr.addMark(to, existingTo, existingMark);
-            }
+            // `to` is in the middle of the mark — split. Left side
+            // (up to `to`) gets only the new note, right side keeps
+            // the original mark unchanged.
+            tr.removeMark(markFrom, markTo, markType);
+            tr.addMark(
+              markFrom,
+              to,
+              markType.create({ notes: [newNote] }),
+            );
+            tr.addMark(to, markTo, existingMark);
           }
 
           if (dispatch) dispatch(tr);
