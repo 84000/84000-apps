@@ -151,8 +151,11 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
           let existingTo = -1;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let existingMark: any = null;
+          let found = false;
 
           parent.forEach((child, offset) => {
+            if (found) return; // Stop scanning after finding the overlapping range
+
             const childStart = parentStart + offset;
             const childEnd = childStart + child.nodeSize;
             const mark = markType.isInSet(child.marks);
@@ -165,7 +168,10 @@ export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
               existingTo = childEnd;
             } else if (existingFrom !== -1) {
               // End of a contiguous range — stop if it overlaps selection
-              if (existingTo > from && existingFrom < to) return;
+              if (existingTo > from && existingFrom < to) {
+                found = true;
+                return;
+              }
               // Not overlapping, reset and keep scanning
               existingFrom = -1;
               existingTo = -1;
