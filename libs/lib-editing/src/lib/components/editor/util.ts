@@ -190,32 +190,8 @@ export const findEndnoteMarkByUuid = ({
     uuid,
     markType: 'endNoteLink',
     comparator: (mark, uuid) =>
-      mark.attrs.notes?.some((note: { uuid: string }) => note.uuid === uuid),
+      mark.attrs.notes?.find((note: { uuid: string }) => note.uuid === uuid),
   });
-};
-
-/**
- * Find a passage node in any editor by UUID.
- * Returns { pos, node } or undefined.
- */
-export const findPassageNode = (
-  editor: Editor,
-  passageUuid: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): { pos: number; node: any } | undefined => {
-  const { doc } = editor.state;
-  let result: { pos: number; node: typeof doc } | undefined;
-
-  doc.descendants((node, pos) => {
-    if (result) return false;
-    if (node.type.name === 'passage' && node.attrs.uuid === passageUuid) {
-      result = { pos, node };
-      return false;
-    }
-    return true;
-  });
-
-  return result;
 };
 
 /**

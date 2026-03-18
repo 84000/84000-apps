@@ -164,7 +164,7 @@ export const PaginationProvider = ({
 
     (async () => {
       isNavigatingRef.current = true;
-      setNavigating(true, true, fragment);
+      setNavigating(true, true);
       try {
         // On mobile, add a delay to allow panel Sheet animation to complete
         // before attempting to scroll to the element

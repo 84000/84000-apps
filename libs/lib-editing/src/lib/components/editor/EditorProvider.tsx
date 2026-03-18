@@ -26,12 +26,7 @@ interface EditorContextState {
   save: () => Promise<void>;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
-  setNavigating: (
-    navigating: boolean,
-    resetKnownUuids?: boolean,
-    fragment?: XmlFragment,
-  ) => void;
-  isNavigating: () => boolean;
+  setNavigating: (navigating: boolean, resetKnownUuids?: boolean) => void;
 }
 
 export const EditorContext = createContext<EditorContextState>({
@@ -79,7 +74,6 @@ export const EditorContext = createContext<EditorContextState>({
   setNavigating: () => {
     // No-op when outside provider
   },
-  isNavigating: () => false,
 });
 
 interface EditorContextProps {
@@ -100,7 +94,6 @@ export const EditorContextProvider = ({
   const dirtyUuidsRef = useRef<Set<string>>(new Set());
   const deletedUuidsRef = useRef<Set<string>>(new Set());
   const isNavigatingRef = useRef(false);
-  const clearedFragmentRef = useRef<XmlFragment | null>(null);
   const knownUuidsRef = useRef<Map<XmlFragment, Set<string>>>(new Map());
 
   // Store for dirty state with subscription support
@@ -325,49 +318,18 @@ export const EditorContextProvider = ({
   );
 
   const setNavigating = useCallback(
-    (
-      navigating: boolean,
-      resetKnownUuids = false,
-      fragment?: XmlFragment,
-    ) => {
+    (navigating: boolean, resetKnownUuids = false) => {
       isNavigatingRef.current = navigating;
       if (navigating && resetKnownUuids) {
         // Clear known UUIDs so the first observer call after navigation
         // repopulates without diffing against the stale pre-navigation set.
         // Only done for full navigation (clearContent + setContent), not for
         // load-more which only adds passages and needs to keep its baseline.
-        // When a specific fragment is provided, only clear that fragment's
-        // entry so other editors (e.g. endnotes) retain their baseline and
-        // can still detect deletions.
-        if (fragment) {
-          knownUuidsRef.current.delete(fragment);
-          clearedFragmentRef.current = fragment;
-        } else {
-          knownUuidsRef.current.clear();
-        }
-      }
-
-      // When navigation ends, repopulate the baseline for any fragment that
-      // was cleared so deletion detection works immediately — without waiting
-      // for an intervening Y.js event to re-establish the baseline.
-      if (!navigating && clearedFragmentRef.current) {
-        const f = clearedFragmentRef.current;
-        clearedFragmentRef.current = null;
-        const uuids = new Set<string>();
-        for (let i = 0; i < f.length; i++) {
-          const child = f.get(i);
-          if (child instanceof XmlElement && child.nodeName === 'passage') {
-            const uuid = child.getAttribute('uuid');
-            if (uuid) uuids.add(uuid);
-          }
-        }
-        knownUuidsRef.current.set(f, uuids);
+        knownUuidsRef.current.clear();
       }
     },
     [],
   );
-
-  const isNavigating = useCallback(() => isNavigatingRef.current, []);
 
   const canEdit = useCallback(async () => {
     return await hasPermission({ client, permission: 'EDITOR_EDIT' });
@@ -388,7 +350,6 @@ export const EditorContextProvider = ({
         startObserving,
         stopObserving,
         setNavigating,
-        isNavigating,
       }}
     >
       <NavigationProvider uuid={work.uuid}>{children}</NavigationProvider>

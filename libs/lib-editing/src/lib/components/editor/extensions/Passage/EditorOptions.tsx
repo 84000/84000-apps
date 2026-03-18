@@ -1,7 +1,7 @@
 'use client';
 
 import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
-import { BracesIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { BracesIcon, PencilIcon } from 'lucide-react';
 
 export const EditorOptions = ({
   onSelection,
@@ -16,13 +16,6 @@ export const EditorOptions = ({
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => onSelection('attributes')}>
         <BracesIcon className="text-ochre" /> View Attributes
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        onSelect={() => onSelection('delete')}
-        className="text-destructive"
-      >
-        <Trash2Icon className="text-destructive" /> Delete
       </DropdownMenuItem>
     </>
   );
