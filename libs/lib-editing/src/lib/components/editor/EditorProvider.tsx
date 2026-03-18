@@ -13,10 +13,6 @@ import { passagesFromNodes, ensureUuids } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
 import { computeSavePayload } from './save-filter';
-import {
-  removeAllEndnoteLinksForPassage,
-  syncEndnoteLinkLabelsAcrossEditors,
-} from './extensions/EndNoteLink/endnote-utils';
 
 interface EditorContextState {
   doc?: Doc;
@@ -31,6 +27,7 @@ interface EditorContextState {
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
   setNavigating: (navigating: boolean, resetKnownUuids?: boolean) => void;
+  isNavigating: () => boolean;
 }
 
 export const EditorContext = createContext<EditorContextState>({
@@ -78,6 +75,7 @@ export const EditorContext = createContext<EditorContextState>({
   setNavigating: () => {
     // No-op when outside provider
   },
+  isNavigating: () => false,
 });
 
 interface EditorContextProps {
@@ -99,7 +97,6 @@ export const EditorContextProvider = ({
   const deletedUuidsRef = useRef<Set<string>>(new Set());
   const isNavigatingRef = useRef(false);
   const knownUuidsRef = useRef<Map<XmlFragment, Set<string>>>(new Map());
-  const endnotesFragmentRef = useRef<XmlFragment | null>(null);
 
   // Store for dirty state with subscription support
   const dirtyStore = useDirtyStore();
@@ -233,37 +230,11 @@ export const EditorContextProvider = ({
           const knownForFragment = knownUuidsRef.current.get(fragment);
           if (knownForFragment && knownForFragment.size > 0) {
             // Detect deletions: UUIDs in known set but not in current
-            const deletedFromFragment: string[] = [];
             knownForFragment.forEach((uuid) => {
               if (!currentUuids.has(uuid)) {
                 deletedUuidsRef.current.add(uuid);
-                deletedFromFragment.push(uuid);
               }
             });
-
-            // When endnote passages are deleted (backspace, merge, etc.),
-            // remove the corresponding endNoteLink marks from front/translation
-            // editors and sync labels so superscript numbers stay correct.
-            if (
-              deletedFromFragment.length > 0 &&
-              fragment === endnotesFragmentRef.current
-            ) {
-              const frontEditor = editorCache.current['front'];
-              const translationEditor = editorCache.current['translation'];
-              for (const uuid of deletedFromFragment) {
-                if (frontEditor)
-                  removeAllEndnoteLinksForPassage(frontEditor, uuid);
-                if (translationEditor)
-                  removeAllEndnoteLinksForPassage(translationEditor, uuid);
-              }
-              const endnotesEditor = editorCache.current['endnotes'];
-              if (endnotesEditor) {
-                syncEndnoteLinkLabelsAcrossEditors(
-                  endnotesEditor,
-                  (key: string) => editorCache.current[key],
-                );
-              }
-            }
 
             // Detect new passages: UUIDs in current but not in known.
             // This catches passages created by splitPassage, where the Yjs
@@ -316,9 +287,6 @@ export const EditorContextProvider = ({
     (builder: string) => {
       const fragment = getFragment(builder);
       if (fragment) {
-        if (builder === 'endnotes') {
-          endnotesFragmentRef.current = fragment;
-        }
         // Pre-populate knownUuidsRef so the diff-based deletion detection
         // has a baseline from the very first observer event. Without this,
         // a merge that happens before any other edit would not be detected
@@ -365,6 +333,8 @@ export const EditorContextProvider = ({
     [],
   );
 
+  const isNavigating = useCallback(() => isNavigatingRef.current, []);
+
   const canEdit = useCallback(async () => {
     return await hasPermission({ client, permission: 'EDITOR_EDIT' });
   }, [client]);
@@ -384,6 +354,7 @@ export const EditorContextProvider = ({
         startObserving,
         stopObserving,
         setNavigating,
+        isNavigating,
       }}
     >
       <NavigationProvider uuid={work.uuid}>{children}</NavigationProvider>
