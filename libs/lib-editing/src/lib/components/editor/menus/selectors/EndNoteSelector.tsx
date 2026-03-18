@@ -224,7 +224,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
       const first = getFirstEndnoteInEditor(endnotesEditor);
       if (first) {
         newLabel = 'n.1';
-        newSort = 1;
+        newSort = first.sort;
         beforePassageUuid = first.uuid;
       } else {
         newLabel = 'n.1';

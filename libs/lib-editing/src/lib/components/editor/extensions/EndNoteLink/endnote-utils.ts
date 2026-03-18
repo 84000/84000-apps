@@ -248,12 +248,20 @@ export function insertEndnotePassage(
     if (prefixWithDot && !childLabel.startsWith(prefixWithDot)) return true;
     if (childLabel.split('.').length !== depth) return true;
 
-    tr.setNodeMarkup(childPos, null, {
-      ...child.attrs,
-      label: expectedNext,
-      sort: (child.attrs.sort ?? 0) + 1,
-    });
-    expectedNext = incrementLabel(expectedNext);
+    if (child.attrs.type === 'endnotesHeader') {
+      // Only update sort, never change header labels
+      tr.setNodeMarkup(childPos, null, {
+        ...child.attrs,
+        sort: (child.attrs.sort ?? 0) + 1,
+      });
+    } else {
+      tr.setNodeMarkup(childPos, null, {
+        ...child.attrs,
+        label: expectedNext,
+        sort: (child.attrs.sort ?? 0) + 1,
+      });
+      expectedNext = incrementLabel(expectedNext);
+    }
     return true;
   });
 
@@ -300,6 +308,10 @@ export function deleteEndnotePassageNode(
       if (prefixWithDot && !childLabel.startsWith(prefixWithDot)) return true;
       if (childLabel.split('.').length !== depth) return true;
 
+      if (child.attrs.type === 'endnotesHeader') {
+        // Never change header labels
+        return true;
+      }
       if (childLabel !== expectedNext) {
         tr.setNodeMarkup(childPos, null, {
           ...child.attrs,
