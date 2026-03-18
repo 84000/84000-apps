@@ -147,10 +147,12 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
 
   const linkToExisting = useCallback(
     (endnoteUuid: string, endnoteLabel: string | null) => {
+      const { to } = editor.state.selection;
       editor
         .chain()
         .focus()
         .setEndNoteLink(endnoteUuid, endnoteLabel ?? undefined)
+        .setTextSelection(to)
         .run();
       setOpen(false);
       setSearchQuery('');
@@ -161,16 +163,47 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
 
   const createNewEndnote = useCallback(async () => {
     const endnotesEditor = getEditor('endnotes');
-    const cursorPos = editor.state.selection.from;
+    const { from, to } = editor.state.selection;
+    const selectionIsRange = from !== to;
+
+    // Detect split case: selection is within an existing endNoteLink mark
+    const nodeAtFrom = selectionIsRange
+      ? editor.state.doc.nodeAt(from)
+      : null;
+    const splitMark = nodeAtFrom?.marks.find(
+      (m) => m.type.name === 'endNoteLink',
+    );
+    const splitNote =
+      splitMark &&
+      (splitMark.attrs.notes as { endNote: string }[] | undefined)?.find(
+        (n) => n.endNote,
+      );
 
     // Find the previous endnote link before cursor to determine insertion point
-    const prevLink = findLastEndNoteLinkBefore(editor, cursorPos);
+    const prevLink = findLastEndNoteLinkBefore(editor, from);
 
     let newLabel: string;
     let newSort: number;
     let afterPassageUuid: string | undefined;
+    let beforePassageUuid: string | undefined;
 
-    if (prevLink) {
+    if (splitNote) {
+      // Split case: the new endnote takes the existing passage's label and
+      // is inserted before it. The existing passage gets incremented.
+      const passage = await fetchEndNote(splitNote.endNote);
+      if (passage) {
+        newLabel = passage.label || 'n.1';
+        newSort = passage.sort;
+        beforePassageUuid = passage.uuid;
+      } else if (endnotesEditor) {
+        const last = getLastEndnoteInEditor(endnotesEditor);
+        newLabel = last ? incrementLabel(last.label) : 'n.1';
+        newSort = last ? last.sort + 1 : 1;
+      } else {
+        newLabel = 'n.1';
+        newSort = 1;
+      }
+    } else if (prevLink) {
       // Try to get the label/sort from the endnotes editor or API
       const passage = await fetchEndNote(prevLink.endNote);
       if (passage) {
@@ -197,8 +230,14 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
 
     const newPassageUuid = uuidv4();
 
-    // Insert endNoteLink mark in main editor with the label for immediate display
-    editor.chain().focus().setEndNoteLink(newPassageUuid, newLabel).run();
+    // Insert endNoteLink mark in main editor with the label for immediate display,
+    // then collapse the selection to dismiss the bubble menu.
+    editor
+      .chain()
+      .focus()
+      .setEndNoteLink(newPassageUuid, newLabel)
+      .setTextSelection(to)
+      .run();
 
     // Insert new passage in endnotes editor at the correct position
     if (endnotesEditor) {
@@ -207,6 +246,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
         sort: newSort,
         uuid: newPassageUuid,
         afterPassageUuid,
+        beforePassageUuid,
       });
 
       // Sync updated labels into endNoteLink marks across front + translation

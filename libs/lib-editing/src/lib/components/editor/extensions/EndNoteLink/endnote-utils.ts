@@ -14,9 +14,9 @@ interface MarkRange {
   from: number;
   to: number;
   mark: ReturnType<Editor['state']['doc']['resolve']> extends never
-    ? never
-    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      any;
+  ? never
+  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any;
   note: EndNoteLinkNote;
 }
 
@@ -121,7 +121,6 @@ export function getLastEndnoteInEditor(
   editor: Editor,
 ): { label: string; sort: number; uuid: string } | undefined {
   const { doc } = editor.state;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let last: { label: string; sort: number; uuid: string; pos: number } | undefined;
 
   doc.descendants((node, pos) => {
@@ -143,7 +142,8 @@ export function getLastEndnoteInEditor(
 
 /**
  * Insert a new empty endnote passage into the endnotes editor at the correct
- * position (after `afterPassageUuid` if provided, otherwise at the end).
+ * position. Use `afterPassageUuid` to insert after a passage, or
+ * `beforePassageUuid` to insert before one. Falls back to end of doc.
  * Increments labels and sort values of all subsequent passages.
  */
 export function insertEndnotePassage(
@@ -153,11 +153,13 @@ export function insertEndnotePassage(
     sort,
     uuid,
     afterPassageUuid,
+    beforePassageUuid,
   }: {
     label: string;
     sort: number;
     uuid: string;
     afterPassageUuid?: string;
+    beforePassageUuid?: string;
   },
 ): void {
   const { state } = editor;
@@ -175,9 +177,20 @@ export function insertEndnotePassage(
     paragraphType.create(),
   );
 
-  // Find insertion position: right after afterPassageUuid, or end of doc
+  // Find insertion position
   let insertPos = state.doc.content.size;
-  if (afterPassageUuid) {
+  if (beforePassageUuid) {
+    state.doc.descendants((node, pos) => {
+      if (
+        node.type.name === 'passage' &&
+        node.attrs.uuid === beforePassageUuid
+      ) {
+        insertPos = pos;
+        return false;
+      }
+      return true;
+    });
+  } else if (afterPassageUuid) {
     state.doc.descendants((node, pos) => {
       if (
         node.type.name === 'passage' &&

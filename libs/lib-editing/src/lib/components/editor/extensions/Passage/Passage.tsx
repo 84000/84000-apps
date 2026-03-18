@@ -190,7 +190,10 @@ const PassageComponent = (props: NodeViewProps) => {
               )}
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
               {dialogType === 'delete' && (
-                <DialogContent>
+                <DialogContent
+                  className="max-w-readable w-full font-serif"
+                  showCloseButton={false}
+                >
                   <DialogHeader>
                     <DialogTitle>Delete Passage</DialogTitle>
                     <DialogDescription>
