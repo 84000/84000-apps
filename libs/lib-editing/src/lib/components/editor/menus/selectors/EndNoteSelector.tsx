@@ -167,18 +167,25 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     const { from, to } = editor.state.selection;
     const selectionIsRange = from !== to;
 
-    // Detect split case: selection is within an existing endNoteLink mark
-    const nodeAtFrom = selectionIsRange
-      ? editor.state.doc.nodeAt(from)
-      : null;
-    const splitMark = nodeAtFrom?.marks.find(
+    // Check for an existing endNoteLink mark at the end of the selection.
+    // Only the end matters — the endnote superscript renders there.
+    const nodeBeforeTo =
+      selectionIsRange ? editor.state.doc.nodeAt(to - 1) : null;
+    const endMark = nodeBeforeTo?.marks.find(
       (m) => m.type.name === 'endNoteLink',
     );
-    const splitNote =
-      splitMark &&
-      (splitMark.attrs.notes as { endNote: string }[] | undefined)?.find(
+    const endNote =
+      endMark &&
+      (endMark.attrs.notes as { endNote: string }[] | undefined)?.find(
         (n) => n.endNote,
       );
+
+    // Determine whether `to` is exactly at the end of the mark or in the middle.
+    // nodeAt(to) returns the character after the selection — if it still carries
+    // the same mark, `to` is in the middle and a split is needed.
+    const markType = editor.state.schema.marks.endNoteLink;
+    const nodeAtTo = endNote ? editor.state.doc.nodeAt(to) : null;
+    const markContinues = nodeAtTo && markType.isInSet(nodeAtTo.marks);
 
     // Find the previous endnote link before cursor to determine insertion point
     const prevLink = findLastEndNoteLinkBefore(editor, from);
@@ -188,10 +195,28 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     let afterPassageUuid: string | undefined;
     let beforePassageUuid: string | undefined;
 
-    if (splitNote) {
-      // Split case: the new endnote takes the existing passage's label and
-      // is inserted before it. The existing passage gets incremented.
-      const passage = await fetchEndNote(splitNote.endNote);
+    if (endNote && !markContinues) {
+      // `to` is at the exact end of the mark — append a new note after
+      // the last existing note's passage.
+      const notes = endMark.attrs.notes as { endNote: string }[];
+      const lastNote = notes[notes.length - 1];
+      const passage = await fetchEndNote(lastNote.endNote);
+      if (passage) {
+        newLabel = incrementLabel(passage.label || 'n.0');
+        newSort = passage.sort + 1;
+        afterPassageUuid = passage.uuid;
+      } else if (endnotesEditor) {
+        const last = getLastEndnoteInEditor(endnotesEditor);
+        newLabel = last ? incrementLabel(last.label) : 'n.1';
+        newSort = last ? last.sort + 1 : 1;
+      } else {
+        newLabel = 'n.1';
+        newSort = 1;
+      }
+    } else if (endNote && markContinues) {
+      // `to` is in the middle of the mark — split. The new endnote takes
+      // the existing passage's label and is inserted before it.
+      const passage = await fetchEndNote(endNote.endNote);
       if (passage) {
         newLabel = passage.label || 'n.1';
         newSort = passage.sort;
