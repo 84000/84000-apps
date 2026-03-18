@@ -91,15 +91,23 @@ export const TranslationBuilder = ({
               }
             }
 
-            // Detect deleted passages (skip during navigation to avoid
-            // false positives from content replacement)
+            // Detect deleted and added passages (skip during navigation to
+            // avoid false positives from content replacement)
             const deleted: string[] = [];
+            let hasAdded = false;
             if (!isNavigating()) {
               endnotePassageUuidsRef.current.forEach((uuid) => {
                 if (!currentUuids.has(uuid)) {
                   deleted.push(uuid);
                 }
               });
+              if (!hasAdded) {
+                currentUuids.forEach((uuid) => {
+                  if (!endnotePassageUuidsRef.current.has(uuid)) {
+                    hasAdded = true;
+                  }
+                });
+              }
             }
 
             // Always update the baseline so the next diff is accurate
@@ -114,6 +122,10 @@ export const TranslationBuilder = ({
                 if (translationEditor)
                   removeAllEndnoteLinksForPassage(translationEditor, uuid);
               }
+              syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
+            } else if (hasAdded) {
+              // New passages (e.g. from splitPassage) may have caused
+              // renumbering — sync endnote link labels to match.
               syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
             }
           });
