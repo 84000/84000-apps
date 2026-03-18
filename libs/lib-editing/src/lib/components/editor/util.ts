@@ -190,51 +190,8 @@ export const findEndnoteMarkByUuid = ({
     uuid,
     markType: 'endNoteLink',
     comparator: (mark, uuid) =>
-      mark.attrs.notes?.find((note: { uuid: string }) => note.uuid === uuid),
+      mark.attrs.notes?.some((note: { uuid: string }) => note.uuid === uuid),
   });
-};
-
-/**
- * Finds all endNoteLink marks in the editor where notes[].endNote matches the given passage UUID.
- * Returns an array of { from, to, mark } objects.
- */
-export const findAllEndnoteMarksForPassage = ({
-  editor,
-  endNotePassageUuid,
-}: {
-  editor: {
-    state: {
-      doc: MarkViewProps['editor']['state']['doc'];
-      tr: MarkViewProps['editor']['state']['tr'];
-    };
-  };
-  endNotePassageUuid: string;
-}): { from: number; to: number; mark: MarkViewProps['mark'] }[] => {
-  const { state } = editor;
-  const { doc, tr } = state;
-  const results: { from: number; to: number; mark: MarkViewProps['mark'] }[] =
-    [];
-
-  doc.descendants((node, pos) => {
-    const from = tr.mapping.map(pos);
-    const to = from + node.nodeSize;
-
-    for (const m of node.marks) {
-      if (
-        m.type.name === 'endNoteLink' &&
-        m.attrs.notes?.find(
-          (note: { endNote: string }) =>
-            note.endNote === endNotePassageUuid,
-        )
-      ) {
-        results.push({ from, to, mark: m });
-      }
-    }
-
-    return true;
-  });
-
-  return results;
 };
 
 /**

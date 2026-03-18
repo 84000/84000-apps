@@ -235,9 +235,10 @@ export function insertEndnotePassage(
   // After the insert, the new passage occupies [insertPos, insertPos + newPassage.nodeSize).
   // Passages that were at insertPos in the original doc are now shifted by newPassage.nodeSize.
   const afterNewPos = insertPos + newPassage.nodeSize;
-  const prefix = label.split('.').slice(0, -1).join('.');
+  const parts = label.split('.');
+  const prefix = parts.slice(0, -1).join('.');
   const prefixWithDot = prefix ? prefix + '.' : '';
-  const depth = label.split('.').length;
+  const depth = parts.length;
   let expectedNext = incrementLabel(label);
 
   tr.doc.descendants((child, childPos) => {
@@ -293,9 +294,10 @@ export function deleteEndnotePassageNode(
   // node (now starting at `pos` in the updated doc) get renumbered.
   if (deletedLabel) {
     let expectedNext = deletedLabel;
-    const prefix = deletedLabel.split('.').slice(0, -1).join('.');
+    const parts = deletedLabel.split('.');
+    const prefix = parts.slice(0, -1).join('.');
     const prefixWithDot = prefix ? prefix + '.' : '';
-    const depth = deletedLabel.split('.').length;
+    const depth = parts.length;
 
     tr.doc.descendants((child, childPos) => {
       // Only process passages at or after the deletion point

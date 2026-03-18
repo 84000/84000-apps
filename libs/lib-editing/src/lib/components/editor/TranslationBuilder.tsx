@@ -39,6 +39,8 @@ export const TranslationBuilder = ({
   // in the front/translation editors. This ref is independent of the
   // Y.js observer's knownUuidsRef, which can be cleared during navigation.
   const endnotePassageUuidsRef = useRef<Set<string>>(new Set());
+  const debouncedSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pendingDeletedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -81,7 +83,7 @@ export const TranslationBuilder = ({
           endnotePassageUuidsRef.current = uuids;
 
           editor.on('update', () => {
-            // Collect current passage UUIDs
+            // Collect current passage UUIDs (cheap — always keep baseline accurate)
             const currentUuids = new Set<string>();
             const doc = editor.state.doc;
             for (let i = 0; i < doc.childCount; i++) {
@@ -113,20 +115,30 @@ export const TranslationBuilder = ({
             // Always update the baseline so the next diff is accurate
             endnotePassageUuidsRef.current = currentUuids;
 
-            if (deleted.length > 0) {
-              const frontEditor = getEditor('front');
-              const translationEditor = getEditor('translation');
-              for (const uuid of deleted) {
-                if (frontEditor)
-                  removeAllEndnoteLinksForPassage(frontEditor, uuid);
-                if (translationEditor)
-                  removeAllEndnoteLinksForPassage(translationEditor, uuid);
+            // Accumulate deletions and debounce the expensive sync work
+            // so rapid keystrokes don't trigger multiple full traversals
+            for (const uuid of deleted) {
+              pendingDeletedRef.current.add(uuid);
+            }
+
+            if (deleted.length > 0 || hasAdded) {
+              if (debouncedSyncRef.current) {
+                clearTimeout(debouncedSyncRef.current);
               }
-              syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
-            } else if (hasAdded) {
-              // New passages (e.g. from splitPassage) may have caused
-              // renumbering — sync endnote link labels to match.
-              syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
+              debouncedSyncRef.current = setTimeout(() => {
+                if (pendingDeletedRef.current.size > 0) {
+                  const frontEditor = getEditor('front');
+                  const translationEditor = getEditor('translation');
+                  for (const uuid of pendingDeletedRef.current) {
+                    if (frontEditor)
+                      removeAllEndnoteLinksForPassage(frontEditor, uuid);
+                    if (translationEditor)
+                      removeAllEndnoteLinksForPassage(translationEditor, uuid);
+                  }
+                  pendingDeletedRef.current.clear();
+                }
+                syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
+              }, 150);
             }
           });
         }
