@@ -72,33 +72,15 @@ export const NavigationContext = createContext<NavigationState>({
   panels: DEFAULT_PANELS,
   showOuterContent: true,
   hasTranslationContent: true,
-  updatePanel: () => {
-    throw new Error('Not implemented');
-  },
-  setToh: () => {
-    throw new Error('Not implemented');
-  },
-  setShowOuterContent: () => {
-    throw new Error('Not implemented');
-  },
-  setHasTranslationContent: () => {
-    throw new Error('Not implemented');
-  },
-  fetchBibliographyEntry: async () => {
-    throw new Error('Not implemented');
-  },
-  fetchEndNote: async () => {
-    throw new Error('Not implemented');
-  },
-  fetchGlossaryTerm: async () => {
-    throw new Error('Not implemented');
-  },
-  fetchPassage: async () => {
-    throw new Error('Not implemented');
-  },
-  fetchWork: async () => {
-    throw new Error('Not implemented');
-  },
+  updatePanel: () => {},
+  setToh: () => {},
+  setShowOuterContent: () => {},
+  setHasTranslationContent: () => {},
+  fetchBibliographyEntry: async () => undefined,
+  fetchEndNote: async () => undefined,
+  fetchGlossaryTerm: async () => undefined,
+  fetchPassage: async () => undefined,
+  fetchWork: async () => undefined,
 });
 
 const parsePanelParams = (
