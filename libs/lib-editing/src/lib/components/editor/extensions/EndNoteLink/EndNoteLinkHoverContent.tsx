@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
-import { useNavigation } from '../../../shared/NavigationProvider';
+import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
 import { deleteEndnotePassageNode } from './endnote-utils';
