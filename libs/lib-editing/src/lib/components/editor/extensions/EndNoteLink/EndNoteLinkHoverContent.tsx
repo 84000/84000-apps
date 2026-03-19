@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@design-system';
 import { Editor } from '@tiptap/core';
 import {
