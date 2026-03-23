@@ -7,7 +7,6 @@ import {
   useRef,
   useState,
   useEffect,
-  useCallback,
   useMemo,
 } from 'react';
 import type { GlossaryTermInstance } from '@data-access';
@@ -66,12 +65,16 @@ export const GlossaryPaginationProvider = ({
   const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
   const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const shouldLoadMoreAtStartRef = useRef(false);
-  const shouldLoadMoreAtEndRef = useRef(false);
-  const [loadMoreTrigger, setLoadMoreTrigger] = useState(0);
+  const startCursorRef = useRef(startCursor);
+  const endCursorRef = useRef(endCursor);
+  const startLoadArmedRef = useRef(true);
+  const endLoadArmedRef = useRef(true);
+  const handledStartLoadRequestRef = useRef(0);
+  const handledEndLoadRequestRef = useRef(0);
+  const [startLoadRequest, setStartLoadRequest] = useState(0);
+  const [endLoadRequest, setEndLoadRequest] = useState(0);
 
   // Stable reference — prevents re-renders from re-triggering load effects
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const dataClient = useMemo(() => createGraphQLClient(), []);
   const { panels, updatePanel } = useNavigation();
 
@@ -83,6 +86,20 @@ export const GlossaryPaginationProvider = ({
   useEffect(() => {
     setNavCursor(panelHash);
   }, [panelHash]);
+
+  useEffect(() => {
+    if (!panelHash) {
+      processedNavCursorRef.current = undefined;
+    }
+  }, [panelHash]);
+
+  useEffect(() => {
+    startCursorRef.current = startCursor;
+  }, [startCursor]);
+
+  useEffect(() => {
+    endCursorRef.current = endCursor;
+  }, [endCursor]);
 
   // Hash navigation: navigate to a specific glossary term
   useEffect(() => {
@@ -144,10 +161,8 @@ export const GlossaryPaginationProvider = ({
       } finally {
         isNavigatingRef.current = false;
         setEndIsLoading(false);
-        setLoadMoreTrigger((c) => c + 1);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navCursor, startIsLoading, endIsLoading, workUuid]);
 
   // IntersectionObserver for load-more sentinels
@@ -157,13 +172,28 @@ export const GlossaryPaginationProvider = ({
 
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.target === startEl) {
-          shouldLoadMoreAtStartRef.current = entry.isIntersecting;
-        } else if (entry.target === endEl) {
-          shouldLoadMoreAtEndRef.current = entry.isIntersecting;
+        if (entry.target === startEl && !entry.isIntersecting) {
+          startLoadArmedRef.current = true;
+          continue;
         }
-        if (entry.isIntersecting) {
-          setLoadMoreTrigger((c) => c + 1);
+
+        if (entry.target === endEl && !entry.isIntersecting) {
+          endLoadArmedRef.current = true;
+          continue;
+        }
+
+        if (entry.target === startEl && startCursorRef.current) {
+          if (!startLoadArmedRef.current) {
+            continue;
+          }
+          startLoadArmedRef.current = false;
+          setStartLoadRequest((c) => c + 1);
+        } else if (entry.target === endEl && endCursorRef.current) {
+          if (!endLoadArmedRef.current) {
+            continue;
+          }
+          endLoadArmedRef.current = false;
+          setEndLoadRequest((c) => c + 1);
         }
       }
     });
@@ -177,13 +207,16 @@ export const GlossaryPaginationProvider = ({
   // Load more at end (forward pagination)
   useEffect(() => {
     if (
+      endLoadRequest === 0 ||
+      handledEndLoadRequestRef.current === endLoadRequest ||
       endIsLoading ||
-      !shouldLoadMoreAtEndRef.current ||
       !endCursor ||
       isNavigatingRef.current
     ) {
       return;
     }
+
+    handledEndLoadRequestRef.current = endLoadRequest;
     setEndIsLoading(true);
 
     (async () => {
@@ -203,19 +236,21 @@ export const GlossaryPaginationProvider = ({
       );
       setEndIsLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workUuid, endIsLoading, endCursor, loadMoreTrigger]);
+  }, [workUuid, endIsLoading, endCursor, endLoadRequest]);
 
   // Load more at start (backward pagination)
   useEffect(() => {
     if (
+      startLoadRequest === 0 ||
+      handledStartLoadRequestRef.current === startLoadRequest ||
       startIsLoading ||
-      !shouldLoadMoreAtStartRef.current ||
       !startCursor ||
       isNavigatingRef.current
     ) {
       return;
     }
+
+    handledStartLoadRequestRef.current = startLoadRequest;
     setStartIsLoading(true);
 
     (async () => {
@@ -250,8 +285,7 @@ export const GlossaryPaginationProvider = ({
       );
       setStartIsLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workUuid, startIsLoading, startCursor, loadMoreTrigger]);
+  }, [workUuid, startIsLoading, startCursor, startLoadRequest]);
 
   return (
     <GlossaryPaginationContext.Provider
@@ -264,18 +298,11 @@ export const GlossaryPaginationProvider = ({
         endIsLoading,
       }}
     >
-      {startCursor && (
-        <div className="flex flex-col gap-6 pt-4">
-          {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
-            <GlossarySkeleton key={i} />
-          ))}
-        </div>
-      )}
       <div ref={loadMoreAtStartRef} className="h-0" />
       <div ref={contentRef}>{children}</div>
       <div ref={loadMoreAtEndRef} className="h-0" />
       {(endCursor || (endIsLoading && terms.length === 0)) && (
-        <div className="flex flex-col gap-6 pb-4">
+        <div className="flex flex-col gap-6 pb-4 pt-6">
           {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
             <GlossarySkeleton key={i} />
           ))}

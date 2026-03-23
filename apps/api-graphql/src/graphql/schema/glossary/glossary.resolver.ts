@@ -315,29 +315,83 @@ function buildGlossaryTermConnection(
 
 const DEFAULT_GLOSSARY_LIMIT = 50;
 const MAX_GLOSSARY_LIMIT = 200;
+const DEFAULT_GLOSSARY_PASSAGES_LIMIT = 10;
+
+function parseOffsetCursor(after?: string) {
+  if (!after) return 0;
+
+  const parsed = Number.parseInt(after, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+async function getPaginatedGlossaryTermPassages(
+  supabase: DataClient,
+  uuid: string,
+  first?: number,
+  after?: string,
+) {
+  const limit = Math.max(first ?? DEFAULT_GLOSSARY_PASSAGES_LIMIT, 1);
+  const offset = parseOffsetCursor(after);
+
+  // Step 1: Find matching passages using the indexed JSONB filter.
+  const { data: annotations, error: annotationsError } = await supabase
+    .from('passage_annotations')
+    .select('passage_uuid')
+    .eq('type', 'glossary-instance')
+    .filter('content', 'cs', JSON.stringify([{ uuid }]));
+
+  if (annotationsError) {
+    console.error('Error fetching glossary passage annotations:', annotationsError);
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  const passageUuids = (annotations ?? []).map(
+    (annotation: { passage_uuid: string }) => annotation.passage_uuid,
+  );
+
+  if (passageUuids.length === 0) {
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  // Step 2: Fetch the requested window plus one row to compute hasMore.
+  const { data: passages, error: passagesError } = await supabase
+    .from('passages')
+    .select('uuid, content, label, sort, type, xmlId, work_uuid, toh')
+    .in('uuid', passageUuids)
+    .order('sort', { ascending: true })
+    .range(offset, offset + limit);
+
+  if (passagesError) {
+    console.error('Error fetching glossary passages:', passagesError);
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  const rows = passages ?? [];
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    items: items.map((passage: PassageDTO) => passageFromDTO(passage)),
+    nextCursor: hasMore ? String(offset + limit) : null,
+    hasMore,
+  };
+}
 
 /**
  * Field resolver for GlossaryTermInstance.passages
- * Uses the batched DataLoader and paginates results in-memory.
+ * Fetches only the requested window of passages for this glossary term.
  */
 export const glossaryTermPassagesResolver = async (
   parent: { uuid: string },
   args: { first?: number; after?: string },
   ctx: GraphQLContext,
 ) => {
-  const allPassages = await ctx.loaders.glossaryPassagesByTermUuid.load(parent.uuid);
-  const sorted = [...allPassages].sort((a, b) => a.sort - b.sort);
-
-  const offset = args.after ? parseInt(args.after, 10) : 0;
-  const limit = args.first ?? sorted.length;
-  const sliced = sorted.slice(offset, offset + limit);
-  const hasMore = offset + limit < sorted.length;
-
-  return {
-    items: sliced,
-    nextCursor: hasMore ? String(offset + limit) : null,
-    hasMore,
-  };
+  return getPaginatedGlossaryTermPassages(
+    ctx.supabase,
+    parent.uuid,
+    args.first,
+    args.after,
+  );
 };
 
 /**
@@ -402,51 +456,12 @@ export const glossaryTermPassagesPageResolver = async (
   args: { uuid: string; first?: number; after?: string },
   ctx: GraphQLContext,
 ) => {
-  const limit = args.first ?? 10;
-  const offset = args.after ? parseInt(args.after, 10) : 0;
-
-  // Step 1: Get all passage UUIDs for this term using GIN-indexed @> filter
-  const { data: annotations, error: annotationsError } = await ctx.supabase
-    .from('passage_annotations')
-    .select('passage_uuid')
-    .eq('type', 'glossary-instance')
-    .filter('content', 'cs', JSON.stringify([{ uuid: args.uuid }]));
-
-  if (annotationsError) {
-    console.error('Error fetching glossary passage annotations:', annotationsError);
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  const passageUuids = (annotations ?? []).map(
-    (a: { passage_uuid: string }) => a.passage_uuid,
+  return getPaginatedGlossaryTermPassages(
+    ctx.supabase,
+    args.uuid,
+    args.first,
+    args.after,
   );
-
-  if (passageUuids.length === 0) {
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  // Step 2: Fetch passage data ordered by sort with offset pagination
-  const { data: passages, error: passagesError } = await ctx.supabase
-    .from('passages')
-    .select('uuid, content, label, sort, type, xmlId, work_uuid, toh')
-    .in('uuid', passageUuids)
-    .order('sort', { ascending: true })
-    .range(offset, offset + limit); // limit+1 to detect hasMore
-
-  if (passagesError) {
-    console.error('Error fetching glossary passages:', passagesError);
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  const rows = passages ?? [];
-  const hasMore = rows.length > limit;
-  const items = hasMore ? rows.slice(0, limit) : rows;
-
-  return {
-    items: items.map((p: PassageDTO) => passageFromDTO(p)),
-    nextCursor: hasMore ? String(offset + limit) : null,
-    hasMore,
-  };
 };
 
 /**

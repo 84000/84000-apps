@@ -437,7 +437,7 @@ export const PaginationProvider = ({
       }}
     >
       {startCursor && (
-        <div className="flex flex-col gap-4 pt-8">
+        <div className="flex flex-col gap-4 pt-6">
           {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
             <PassageSkeleton key={i} />
           ))}
@@ -447,7 +447,7 @@ export const PaginationProvider = ({
       <div ref={childrenDivRef}>{children}</div>
       <div ref={loadMoreAtEndRef} className="h-0" />
       {endCursor ? (
-        <div className="flex flex-col gap-4 pb-8">
+        <div className="flex flex-col gap-4 pb-8 pt-6">
           {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
             <PassageSkeleton key={i} />
           ))}

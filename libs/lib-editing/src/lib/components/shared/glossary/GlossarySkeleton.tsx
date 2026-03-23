@@ -6,8 +6,8 @@ import { Skeleton } from '@design-system';
  */
 export const GlossarySkeleton = () => {
   return (
-    <div className="flex gap-5">
-      <Skeleton className="h-4 w-8 mt-1" />
+    <div className="flex gap-3 -ms-5">
+      <Skeleton className="h-4 w-6" />
       <div className="flex flex-col gap-1.5 grow">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-4 w-32" />
