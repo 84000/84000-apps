@@ -376,7 +376,7 @@ extend type Work {
   """
   glossaryTerms(
     """
-    Cursor for pagination (glossary term UUID)
+    Cursor for pagination (glossary term authority UUID)
     """
     cursor: String
 
