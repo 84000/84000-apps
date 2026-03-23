@@ -1,4 +1,3 @@
-import { Passages } from "./passage";
 
 export type GlossaryItem = {
   authorityUuid: string;
@@ -39,6 +38,7 @@ export type GlossaryTermInstance = {
   authority: string;
   workUuid: string;
   definition?: string | null;
+  termNumber: number;
   names: {
     chinese?: string;
     english?: string;
@@ -47,7 +47,11 @@ export type GlossaryTermInstance = {
     tibetan?: string;
     wylie?: string;
   };
-  passages?: Passages
+  passages?: {
+    items: Array<{ uuid: string; type: string; label: string }>;
+    nextCursor: string | null;
+    hasMore: boolean;
+  }
 };
 
 export type GlossaryTermInstances = GlossaryTermInstance[];
@@ -104,6 +108,7 @@ export const glossaryTermInstanceFromDTO = (
     authority: dto.authority_uuid,
     workUuid: dto.work_uuid,
     definition: dto.definition,
+    termNumber: 0,
     names: dto.names,
   };
 };

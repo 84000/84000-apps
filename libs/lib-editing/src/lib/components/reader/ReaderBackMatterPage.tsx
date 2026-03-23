@@ -1,7 +1,7 @@
 import {
   createBuildGraphQLClient,
   getTranslationBlocks,
-  getWorkGlossary,
+  getWorkGlossaryTerms,
   getWorkBibliography,
 } from '@client-graphql/ssr';
 import { isStaticFeatureEnabled } from '@lib-instr/static';
@@ -39,7 +39,7 @@ export const ReaderBackMatterPage = async ({
       uuid: slug,
       type: 'abbreviations',
     }),
-    getWorkGlossary({
+    getWorkGlossaryTerms({
       client: graphqlClient,
       uuid: slug,
       withAttestations,
@@ -52,6 +52,7 @@ export const ReaderBackMatterPage = async ({
 
   return (
     <ReaderBackMatterPanel
+      workUuid={slug}
       abbreviations={abbreviations}
       bibliography={bibliography}
       endnotes={endnotes}

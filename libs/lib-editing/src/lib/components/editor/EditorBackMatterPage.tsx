@@ -3,10 +3,11 @@
 import {
   createGraphQLClient,
   getTranslationBlocks,
-  getWorkGlossary,
+  getWorkGlossaryTerms,
   getWorkBibliography,
+  type GlossaryTermsPage,
 } from '@client-graphql';
-import type { GlossaryTermInstances, BibliographyEntries } from '@data-access';
+import type { BibliographyEntries } from '@data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
@@ -21,7 +22,7 @@ export const EditorBackMatterPage = () => {
   const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
   const [abbreviations, setAbbreviations] =
     useState<TranslationEditorContent>();
-  const [glossary, setGlossary] = useState<GlossaryTermInstances>();
+  const [glossary, setGlossary] = useState<GlossaryTermsPage>();
   const [bibliography, setBibliography] = useState<BibliographyEntries>();
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export const EditorBackMatterPage = () => {
           uuid,
           type: 'abbreviations',
         }),
-        getWorkGlossary({
+        getWorkGlossaryTerms({
           client: graphqlClient,
           uuid,
           withAttestations,
@@ -83,6 +84,7 @@ export const EditorBackMatterPage = () => {
 
   return (
     <BackMatterPanel
+      workUuid={work.uuid}
       endnotes={endnotes}
       glossary={glossary}
       bibliography={bibliography}
