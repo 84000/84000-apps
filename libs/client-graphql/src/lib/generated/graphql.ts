@@ -407,6 +407,8 @@ export type PassageConnection = {
 
 /** Filter options for passages */
 export type PassageFilter = {
+  /** Filter by label pattern using ILIKE (e.g., "n.5%") */
+  label?: InputMaybe<Scalars['String']['input']>;
   /**
    * Filter by passage type (e.g., translation, introduction, colophon).
    * Can be a single type or use LIKE pattern with %.

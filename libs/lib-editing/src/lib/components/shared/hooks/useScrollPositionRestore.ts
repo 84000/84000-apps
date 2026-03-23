@@ -1,6 +1,6 @@
 'use client';
 
-import { MutableRefObject, RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
 
 /**
  * Snapshot of the topmost visible passage element: its UUID and how far
@@ -38,9 +38,10 @@ export function findScrollParent(element: HTMLElement): HTMLElement | null {
 export function capturePassageAnchor(
   scrollContainer: HTMLElement,
 ): PassageAnchor | null {
-  const passages = scrollContainer.querySelectorAll<HTMLElement>(
+  const passagesList = scrollContainer.querySelectorAll<HTMLElement>(
     '[data-node-view-wrapper][id]',
   );
+  const passages = Array.from(passagesList);
   const containerTop = scrollContainer.getBoundingClientRect().top;
 
   for (const el of passages) {
@@ -68,9 +69,10 @@ export function restorePassageAnchor(
   // Use querySelectorAll because Translation and Compare can both contain
   // passages with the same UUID. querySelector would return the first
   // (hidden Translation), so we need to find the visible one.
-  const candidates = scrollContainer.querySelectorAll<HTMLElement>(
+  const candidatesList = scrollContainer.querySelectorAll<HTMLElement>(
     `[data-node-view-wrapper]#${CSS.escape(anchor.uuid)}`,
   );
+  const candidates = Array.from(candidatesList);
   let el: HTMLElement | null = null;
   for (const candidate of candidates) {
     if (candidate.getBoundingClientRect().height > 0) {
@@ -92,7 +94,7 @@ const PASSAGE_TABS = ['translation', 'compare'];
 export function usePassageAnchorRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
-): MutableRefObject<PassageAnchor | null> {
+): RefObject<PassageAnchor | null> {
   const anchorRef = useRef<PassageAnchor | null>(null);
   const prevTabRef = useRef<string | undefined>(undefined);
 
@@ -152,7 +154,7 @@ function waitForContentAndRestore(
   // Try immediately — content may already be present (non-paginated tabs)
   container.scrollTop = targetScroll;
   if (Math.abs(container.scrollTop - targetScroll) < 2) {
-    return () => {};
+    return () => { /* no-op */ };
   }
 
   let settled = false;

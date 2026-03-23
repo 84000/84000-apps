@@ -7,6 +7,11 @@ import {
 import {
   Button,
   Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
@@ -25,6 +30,7 @@ import {
 } from '../../../shared';
 import { Alignment, useBookmark } from '@data-access';
 import { BookmarkIcon } from 'lucide-react';
+import { deleteEndnotePassageNode } from '../EndNoteLink/endnote-utils';
 
 const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
@@ -80,6 +86,11 @@ const PassageComponent = (props: NodeViewProps) => {
     },
     [updatePanel],
   );
+
+  const handleDeletePassage = useCallback(() => {
+    deleteEndnotePassageNode(editor, node.attrs.uuid);
+    setIsDialogOpen(false);
+  }, [node.attrs.uuid, editor]);
 
   const className =
     'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
@@ -178,6 +189,33 @@ const PassageComponent = (props: NodeViewProps) => {
                 <EditLabel {...props} close={() => setIsDialogOpen(false)} />
               )}
               {dialogType === 'attributes' && <ShowAnnotations {...props} />}
+              {dialogType === 'delete' && (
+                <DialogContent
+                  className="max-w-readable w-full font-serif"
+                  showCloseButton={false}
+                >
+                  <DialogHeader>
+                    <DialogTitle>Delete Passage</DialogTitle>
+                    <DialogDescription>
+                      This will delete passage {node.attrs.label}
+                      {node.attrs.type === 'endnotes' &&
+                        ' and remove all links to it in the translation'}
+                      . This action cannot be undone after saving.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDeletePassage}>
+                      Delete
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              )}
             </Dialog>
           )}
         </div>

@@ -17,10 +17,8 @@ import type {
   Work,
 } from '@data-access';
 import {
-  createContext,
   ReactNode,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -38,50 +36,10 @@ import { HoverCardProvider } from './HoverCardProvider';
 import { GatedFeature, useFeatureFlagEnabled } from '@lib-instr';
 import { useIsMobile } from '@lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
+import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
 
-interface NavigationState {
-  uuid: string;
-  imprint?: Imprint;
-  panels: PanelsState;
-  toh?: TohokuCatalogEntry;
-  showOuterContent: boolean;
-  hasTranslationContent: boolean;
-  setToh: (toh: TohokuCatalogEntry) => void;
-  setShowOuterContent: (withTitles: boolean) => void;
-  setHasTranslationContent: (hasTranslationContent: boolean) => void;
-  updatePanel: (params: { name: PanelName; state: PanelState }) => void;
-  fetchBibliographyEntry: (
-    uuid: string,
-  ) => Promise<BibliographyEntryItem | undefined>;
-  fetchEndNote: (uuid: string) => Promise<Passage | undefined>;
-  fetchGlossaryTerm: (
-    uuid: string,
-  ) => Promise<GlossaryTermInstance | undefined>;
-  fetchPassage: (uuid: string) => Promise<Passage | undefined>;
-  fetchWork: (uuid: string) => Promise<Work | undefined>;
-}
-
-const DEFAULT_PANELS: PanelsState = {
-  left: { open: true, tab: 'toc' },
-  right: { open: false, tab: 'endnotes' },
-  main: { open: true, tab: 'translation' },
-};
-
-export const NavigationContext = createContext<NavigationState>({
-  uuid: '',
-  panels: DEFAULT_PANELS,
-  showOuterContent: true,
-  hasTranslationContent: true,
-  updatePanel: () => {},
-  setToh: () => {},
-  setShowOuterContent: () => {},
-  setHasTranslationContent: () => {},
-  fetchBibliographyEntry: async () => undefined,
-  fetchEndNote: async () => undefined,
-  fetchGlossaryTerm: async () => undefined,
-  fetchPassage: async () => undefined,
-  fetchWork: async () => undefined,
-});
+export { NavigationContext, useNavigation } from './NavigationContext';
+export type { NavigationState } from './NavigationContext';
 
 const parsePanelParams = (
   params: ReadonlyURLSearchParams,
@@ -408,10 +366,3 @@ export const NavigationProvider = ({
   );
 };
 
-export const useNavigation = () => {
-  const context = useContext(NavigationContext);
-  if (!context) {
-    throw new Error('useReaderCache must be used within a ReaderCacheProvider');
-  }
-  return context;
-};
