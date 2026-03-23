@@ -2,6 +2,7 @@ import type { DataClient } from '@data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryPassagesLoader } from './schema/glossary/glossary.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
+import { createSortedGlossaryRowsLoader } from './schema/glossary/glossary-sorted-rows.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
 
@@ -54,6 +55,12 @@ export interface Loaders {
    * Used to enrich mention annotations with display text from target glossary entries.
    */
   glossaryNamesByUuid: ReturnType<typeof createGlossaryNameLoader>;
+
+  /**
+   * Load deduplicated, sorted glossary rows by work UUID.
+   * Cached per request to avoid re-fetching on each paginated call.
+   */
+  sortedGlossaryRowsByWorkUuid: ReturnType<typeof createSortedGlossaryRowsLoader>;
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
@@ -63,5 +70,6 @@ export function createLoaders(supabase: DataClient): Loaders {
     passageReferencesByPassageUuid: createPassageReferencesLoader(supabase),
     workTitlesByUuid: createWorkTitleLoader(supabase),
     glossaryNamesByUuid: createGlossaryNameLoader(supabase),
+    sortedGlossaryRowsByWorkUuid: createSortedGlossaryRowsLoader(supabase),
   };
 }

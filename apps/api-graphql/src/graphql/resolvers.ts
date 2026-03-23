@@ -9,6 +9,7 @@ import {
   glossaryEntryResolver,
   glossaryInstanceResolver,
   workGlossaryResolver,
+  workGlossaryTermsResolver,
   glossaryTermPassagesResolver,
   glossaryTermPassagesPageResolver,
 } from './schema/glossary/glossary.resolver';
@@ -53,6 +54,7 @@ export const resolvers = {
     passages: passagesResolver,
     titles: titlesResolver,
     glossary: workGlossaryResolver,
+    glossaryTerms: workGlossaryTermsResolver,
     bibliography: workBibliographyResolver,
     folios: workFoliosResolver,
   },
