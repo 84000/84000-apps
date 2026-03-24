@@ -1,6 +1,5 @@
 import type { DataClient } from '@data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
-import { createGlossaryPassagesLoader } from './schema/glossary/glossary.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
@@ -31,12 +30,6 @@ export interface Loaders {
   >['passageLabelsByUuid'];
 
   /**
-   * Load passage locations for glossary term UUIDs.
-   * Batches multiple glossary term passage requests into a single query.
-   */
-  glossaryPassagesByTermUuid: ReturnType<typeof createGlossaryPassagesLoader>;
-
-  /**
    * Load passages that reference a given endnote passage UUID via end-note-link annotations.
    */
   passageReferencesByPassageUuid: ReturnType<
@@ -59,7 +52,6 @@ export interface Loaders {
 export function createLoaders(supabase: DataClient): Loaders {
   return {
     ...createPassageLoaders(supabase),
-    glossaryPassagesByTermUuid: createGlossaryPassagesLoader(supabase),
     passageReferencesByPassageUuid: createPassageReferencesLoader(supabase),
     workTitlesByUuid: createWorkTitleLoader(supabase),
     glossaryNamesByUuid: createGlossaryNameLoader(supabase),

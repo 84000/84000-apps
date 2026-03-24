@@ -58,9 +58,24 @@ type GlossaryTermInstance {
   names: GlossaryTermNames!
 
   """
-  Passages where this term appears
+  Absolute position of this term in the work's glossary (1-based)
   """
-  passages: [Passage!]!
+  termNumber: Int!
+
+  """
+  Paginated passage references where this term appears
+  """
+  passages(
+    """
+    Number of passages to return (default: all)
+    """
+    first: Int
+
+    """
+    Cursor from previous page's nextCursor (offset-based)
+    """
+    after: String
+  ): GlossaryPassagesPage!
 }
 
 """
@@ -325,6 +340,26 @@ extend type Query {
   ): GlossaryPassagesPage!
 }
 
+"""
+Paginated connection of glossary term instances for a work
+"""
+type GlossaryTermConnection {
+  """
+  List of glossary term instances in this page
+  """
+  nodes: [GlossaryTermInstance!]!
+
+  """
+  Pagination information
+  """
+  pageInfo: PageInfo!
+
+  """
+  Total number of glossary terms in this work
+  """
+  totalCount: Int!
+}
+
 extend type Work {
   """
   Glossary term instances for this work
@@ -334,5 +369,30 @@ extend type Work {
     Include attestation information
     """
     withAttestations: Boolean
-  ): [GlossaryTermInstance!]!
+  ): [GlossaryTermInstance!]! @deprecated(reason: "Use glossaryTerms for paginated access")
+
+  """
+  Paginated glossary term instances for this work
+  """
+  glossaryTerms(
+    """
+    Cursor for pagination (glossary term authority UUID)
+    """
+    cursor: String
+
+    """
+    Maximum number of terms to return (default: 50, max: 200)
+    """
+    limit: Int
+
+    """
+    Direction for pagination (default: FORWARD)
+    """
+    direction: PaginationDirection
+
+    """
+    Include attestation information
+    """
+    withAttestations: Boolean
+  ): GlossaryTermConnection!
 }

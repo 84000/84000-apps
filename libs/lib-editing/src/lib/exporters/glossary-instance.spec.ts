@@ -10,6 +10,7 @@ describe('glossaryInstance exporter', () => {
     const mark = {
       attrs: {
         uuid: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
+        authority: 'f1e2d3c4-5678-90ab-cdef-fedcba098766',
         glossary: 'f1e2d3c4-5678-90ab-cdef-fedcba098765',
       },
     } as unknown as Mark;
@@ -25,6 +26,7 @@ describe('glossaryInstance exporter', () => {
 
     expect(result).toEqual({
       uuid: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
+      authority: 'f1e2d3c4-5678-90ab-cdef-fedcba098766',
       passageUuid: 'passage-uuid-1234',
       type: 'glossaryInstance',
       start: 5,
@@ -42,6 +44,7 @@ describe('glossaryInstance exporter', () => {
       attrs: {
         uuid: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
         glossary: 'f1e2d3c4-5678-90ab-cdef-fedcba098765',
+        authority: 'f1e2d3c4-5678-90ab-cdef-fedcba098766',
       },
     } as unknown as Mark;
 

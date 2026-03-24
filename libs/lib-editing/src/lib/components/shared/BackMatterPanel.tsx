@@ -3,23 +3,26 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
-import { BibliographyEntries, GlossaryTermInstances } from '@data-access';
+import { BibliographyEntries } from '@data-access';
+import type { GlossaryTermsPage } from '@client-graphql';
 import { ReactElement, useRef } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { GlossaryTermList } from './glossary';
+import { GlossaryTermList, GlossaryPaginationProvider } from './glossary';
 import { BibliographyList } from './bibliography';
 import { cn, useIsMobile } from '@lib-utils';
 import { useScrollPositionRestore } from './hooks/useScrollPositionRestore';
 
 export const BackMatterPanel = ({
+  workUuid,
   endnotes,
   glossary,
   bibliography,
   abbreviations,
   renderTranslation,
 }: {
+  workUuid: string;
   endnotes: TranslationEditorContent;
-  glossary: GlossaryTermInstances;
+  glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
   renderTranslation: (
@@ -35,6 +38,9 @@ export const BackMatterPanel = ({
     panels.right.tab,
     !!panels.right.hash,
   );
+
+  const hasGlossary =
+    glossary.terms.length > 0 || glossary.hasMoreAfter;
 
   return (
     <Tabs
@@ -60,7 +66,7 @@ export const BackMatterPanel = ({
           {endnotes.length > 0 && (
             <TabsTrigger value="endnotes">Notes</TabsTrigger>
           )}
-          {glossary.length > 0 && (
+          {hasGlossary && (
             <TabsTrigger value="glossary">Glossary</TabsTrigger>
           )}
           {bibliography.length > 0 && (
@@ -75,6 +81,7 @@ export const BackMatterPanel = ({
         <div
           ref={scrollContainerRef}
           className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface"
+          data-panel="right"
         >
           <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
             {endnotes.length > 0 && (
@@ -91,13 +98,18 @@ export const BackMatterPanel = ({
                 })}
               </TabsContent>
             )}
-            {glossary.length > 0 && (
+            {hasGlossary && (
               <TabsContent
                 value="glossary"
                 forceMount
                 className="pb-8 data-[state=inactive]:hidden"
               >
-                <GlossaryTermList content={glossary} />
+                <GlossaryPaginationProvider
+                  workUuid={workUuid}
+                  initialPage={glossary}
+                >
+                  <GlossaryTermList />
+                </GlossaryPaginationProvider>
               </TabsContent>
             )}
             {bibliography.length > 0 && (

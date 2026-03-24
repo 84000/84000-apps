@@ -1,16 +1,16 @@
 'use client';
 
-import { GlossaryTermInstance } from '@data-access';
+import type { GlossaryTermInstance } from '@data-access';
 import { Button, Li, Ul } from '@design-system';
 import { GatedFeature } from '@lib-instr';
 import { cn } from '@lib-utils';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
 import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
-import { createGraphQLClient, getTermPassages, type GlossaryPassagesPage } from '@client-graphql';
+import { createGraphQLClient, getTermPassages } from '@client-graphql';
 
-type PassageItem = GlossaryPassagesPage['items'][number];
+type PassageItem = { uuid: string; type: string; label: string };
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -23,27 +23,15 @@ export const GlossaryInstanceBody = ({
   useGlossaryInstanceListener({ ref });
   const { updatePanel } = useNavigation();
 
-  const [passages, setPassages] = useState<PassageItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const initialPage = instance.passages;
+  const [passages, setPassages] = useState<PassageItem[]>(
+    initialPage?.items ?? [],
+  );
+  const [nextCursor, setNextCursor] = useState<string | null>(
+    initialPage?.nextCursor ?? null,
+  );
+  const [hasMore, setHasMore] = useState(initialPage?.hasMore ?? false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    getTermPassages({ client: createGraphQLClient(), uuid: instance.uuid, first: 10 }).then(
-      (page) => {
-        if (cancelled) return;
-        setPassages(page.items);
-        setNextCursor(page.nextCursor);
-        setHasMore(page.hasMore);
-        setLoading(false);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [instance.uuid]);
 
   const loadMore = useCallback(() => {
     if (!nextCursor || loading) return;
@@ -134,7 +122,7 @@ export const GlossaryInstanceBody = ({
               </Button>
             </span>
           )}
-          {loading && passages.length > 0 && (
+          {loading && (
             <span className="text-muted-foreground text-sm">{', …'}</span>
           )}
         </div>

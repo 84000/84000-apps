@@ -16,6 +16,10 @@ export const transformer: AnnotationTransformer = (
     if (content.uuid) {
       glossaryInstance.glossary = content.uuid as string;
     }
+
+    if (content.authority) {
+      glossaryInstance.authority = content.authority as string
+    }
   });
   return glossaryInstance;
 };

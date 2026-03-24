@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { GlossaryTermInstances, BibliographyEntries } from '@data-access';
+import { BibliographyEntries } from '@data-access';
+import type { GlossaryTermsPage } from '@client-graphql';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { TranslationReader } from '.';
@@ -9,13 +10,15 @@ import { TranslationEditorContent } from '../editor';
 import { useNavigation } from '../shared/NavigationProvider';
 
 export const ReaderBackMatterPanel = ({
+  workUuid,
   endnotes,
   glossary,
   bibliography,
   abbreviations,
 }: {
+  workUuid: string;
   endnotes: TranslationEditorContent;
-  glossary: GlossaryTermInstances;
+  glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
 }) => {
@@ -39,6 +42,7 @@ export const ReaderBackMatterPanel = ({
 
   return (
     <BackMatterPanel
+      workUuid={workUuid}
       endnotes={endnotes}
       glossary={glossary}
       bibliography={bibliography}

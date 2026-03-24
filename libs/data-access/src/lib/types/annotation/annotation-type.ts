@@ -149,6 +149,7 @@ export const ANNOTATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> =
   } as const;
 
 export type AnnotationDTOContentKey =
+  | 'authority'
   | 'endnote_xmlId'
   | 'glossary_xmlId'
   | 'heading-level'

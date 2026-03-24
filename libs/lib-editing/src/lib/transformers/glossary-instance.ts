@@ -5,7 +5,7 @@ import { splitContent } from './split-content';
 
 export const glossaryInstance: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { uuid, glossary, toh } = annotation as GlossaryInstanceAnnotation;
+  const { uuid, glossary, authority, toh } = annotation as GlossaryInstanceAnnotation;
 
   if (!glossary) {
     console.warn(`Glossary instance ${uuid} is missing glossary UUID`);
@@ -26,6 +26,7 @@ export const glossaryInstance: Transformer = (ctx) => {
             {
               type: 'glossaryInstance',
               attrs: {
+                authority,
                 glossary,
                 uuid,
                 toh,
