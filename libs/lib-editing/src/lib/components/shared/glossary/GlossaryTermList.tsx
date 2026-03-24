@@ -41,8 +41,8 @@ export const GlossaryTermList = ({
         )}
         {terms.map((instance, index) => (
           <LabeledElement
-            id={instance.uuid || instance.authority || `glossary-${index}`}
-            key={instance.uuid || instance.authority || `glossary-${index}`}
+            id={instance.authority || instance.uuid || `glossary-${index}`}
+            key={instance.authority || instance.uuid || `glossary-${index}`}
             label={`g.${instance.termNumber}`}
             contentType="glossary"
           >

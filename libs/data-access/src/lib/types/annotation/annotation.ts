@@ -38,6 +38,7 @@ export type EndNoteLinkAnnotation = AnnotationBase & {
 export type GlossaryInstanceAnnotation = AnnotationBase & {
   type: 'glossaryInstance';
   glossary: string;
+  authority: string;
 };
 
 export type HasAbbreviationAnnotation = AnnotationBase & {

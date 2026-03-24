@@ -9,7 +9,7 @@ export interface GlossaryInstanceOptions {
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
-    gloassaryInstance: {
+    glossaryInstance: {
       setGlossaryInstance: (glossary: string) => ReturnType;
       unsetGlossaryInstance: () => ReturnType;
     };
@@ -22,6 +22,12 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
   addAttributes() {
     return {
       ...this.parent?.(),
+      authority: {
+        default: undefined,
+        parseHTML(element) {
+          return element.getAttribute('authority');
+        }
+      },
       glossary: {
         default: undefined,
         parseHTML(element) {
@@ -51,9 +57,10 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       {
         tag: 'span[type="gloassaryInstance"]',
         getAttrs: (dom) => {
+          const authority = (dom as HTMLElement).getAttribute('authority');
           const glossary = (dom as HTMLElement).getAttribute('glossary');
 
-          if (!glossary) {
+          if (!authority || !glossary) {
             return false;
           }
           return null;
@@ -83,6 +90,9 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       if (props.mark.attrs.uuid) {
         dom.setAttribute('uuid', props.mark.attrs.uuid);
       }
+      if (props.mark.attrs.authority) {
+        dom.setAttribute('authority', props.mark.attrs.authority);
+      }
       if (props.mark.attrs.glossary) {
         dom.setAttribute('glossary', props.mark.attrs.glossary);
       }
@@ -94,13 +104,13 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       }
 
       dom.addEventListener('click', () => {
-        const { glossary } = props.mark.attrs;
-        if (!glossary) {
+        const { authority } = props.mark.attrs;
+        if (!authority) {
           return;
         }
 
         const query = new URLSearchParams(window.location.search);
-        query.set('right', `open:glossary:${glossary}`);
+        query.set('right', `open:glossary:${authority}`);
         window.history.pushState({}, '', `?${query.toString()}`);
       });
 
@@ -115,24 +125,24 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
     return {
       setGlossaryInstance:
         (glossary) =>
-        ({ chain }) => {
-          return chain()
-            .setMark(this.name)
-            .updateAttributes(this.name, {
-              glossary,
-              uuid: uuidv4(),
-            })
-            .run();
-        },
+          ({ chain }) => {
+            return chain()
+              .setMark(this.name)
+              .updateAttributes(this.name, {
+                glossary,
+                uuid: uuidv4(),
+              })
+              .run();
+          },
 
       unsetGlossaryInstance:
         () =>
-        ({ chain }) => {
-          return chain()
-            .unsetMark(this.name)
-            .resetAttributes(this.name, 'glossary')
-            .run();
-        },
+          ({ chain }) => {
+            return chain()
+              .unsetMark(this.name)
+              .resetAttributes(this.name, 'glossary')
+              .run();
+          },
     };
   },
 });
