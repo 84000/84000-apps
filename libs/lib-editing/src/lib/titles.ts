@@ -3,7 +3,7 @@ import {
   TITLE_TYPES,
   type Titles,
   type TitleType,
-} from '@data-access';
+} from '@84000/data-access';
 import type { BlockEditorContent } from './components';
 
 const TYPE_FOR_LANGUAGE: Record<ExtendedTranslationLanguage | 'toh', string> = {

@@ -4,5 +4,17 @@
   "sourceRoot": "libs/lib-utils/src",
   "projectType": "library",
   "tags": [],
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/lib-utils",
+        "main": "libs/lib-utils/src/index.ts",
+        "tsConfig": "libs/lib-utils/tsconfig.lib.json",
+        "rootDir": "libs/lib-utils/src",
+        "generateExportsField": true
+      }
+    }
+  }
 }

@@ -4,7 +4,7 @@ import type {
   BodyItemType,
   PaginationDirection,
   PassagesPage,
-} from '@data-access';
+} from '@84000/data-access';
 import { passagesPageFromGraphQL } from '../mappers';
 
 const GET_PASSAGES = gql`

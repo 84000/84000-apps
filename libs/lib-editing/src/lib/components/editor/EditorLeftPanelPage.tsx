@@ -1,7 +1,7 @@
 'use client';
 
-import { createGraphQLClient, getTranslationToc } from '@client-graphql';
-import type { Toc } from '@data-access';
+import { createGraphQLClient, getTranslationToc } from '@84000/client-graphql';
+import type { Toc } from '@84000/data-access';
 import { LeftPanel } from '../shared/LeftPanel';
 import { useEditorState } from './EditorProvider';
 import { useEffect, useState } from 'react';

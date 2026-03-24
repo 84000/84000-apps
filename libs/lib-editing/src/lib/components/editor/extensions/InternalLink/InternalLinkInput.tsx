@@ -1,4 +1,4 @@
-import { Button, Input } from '@design-system';
+import { Button, Input } from '@84000/design-system';
 import { CheckIcon, Trash2Icon } from 'lucide-react';
 import { useRef } from 'react';
 

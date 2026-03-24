@@ -1,4 +1,4 @@
-import { ExtendedTranslationLanguage, SpanAnnotation } from '@data-access';
+import { ExtendedTranslationLanguage, SpanAnnotation } from '@84000/data-access';
 import { Exporter, ExporterContext } from './export';
 import { SpanMarkType } from '../types';
 

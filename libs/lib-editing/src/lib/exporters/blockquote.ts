@@ -1,4 +1,4 @@
-import { BlockquoteAnnotation } from '@data-access';
+import { BlockquoteAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const blockquote: Exporter<BlockquoteAnnotation> = ({

@@ -6,8 +6,8 @@ import {
   FRONT_MATTER_FILTER,
   getTranslationBlocks,
   getTranslationTitles,
-} from '@client-graphql';
-import type { Title } from '@data-access';
+} from '@84000/client-graphql';
+import type { Title } from '@84000/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { TitlesRenderer, TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';

@@ -1,4 +1,4 @@
-import { removeHtmlTags } from '@lib-utils';
+import { removeHtmlTags } from '@84000/lib-utils';
 import { TohokuCatalogEntry } from './toh';
 import {
   ExtendedTranslationLanguage,

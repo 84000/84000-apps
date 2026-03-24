@@ -1,4 +1,4 @@
-import { removeDiacritics } from '@lib-utils';
+import { removeDiacritics } from '@84000/lib-utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { FilterMeta, Row, RowData, Table } from '@tanstack/react-table';
 import { DebounceLevel, Input } from '../../Input/Input';

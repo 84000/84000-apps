@@ -7,8 +7,8 @@ import {
   DataTableColumn,
   DataTable,
   FuzzyGlobalFilter,
-} from '@design-system';
-import { Work } from '@data-access';
+} from '@84000/design-system';
+import { Work } from '@84000/data-access';
 import { useEffect, useState } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';

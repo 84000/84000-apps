@@ -2,7 +2,7 @@
 
 import { PencilIcon } from 'lucide-react';
 import { Button } from '../../Button/Button';
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { Vajrasattva } from '../../Vajrasattva/Vajrasattva';
 
 export const TitlesCard = ({

@@ -1,4 +1,4 @@
-import { HasAbbreviationAnnotation } from '@data-access';
+import { HasAbbreviationAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const hasAbbreviation: Exporter<HasAbbreviationAnnotation> = ({

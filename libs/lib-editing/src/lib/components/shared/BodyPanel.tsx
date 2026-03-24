@@ -6,15 +6,15 @@ import {
   TabsList,
   TabsTrigger,
   TitleDetails,
-} from '@design-system';
+} from '@84000/design-system';
 import {
   TranslationEditorContent,
   TranslationEditorContentItem,
 } from '../editor';
-import { Title } from '@data-access';
+import { Title } from '@84000/data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement, useCallback, useEffect, useMemo, useRef } from 'react';
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';

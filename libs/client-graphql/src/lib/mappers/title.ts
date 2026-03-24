@@ -3,7 +3,7 @@ import type {
   Titles,
   TitleType,
   ExtendedTranslationLanguage,
-} from '@data-access';
+} from '@84000/data-access';
 
 /**
  * GraphQL Title type

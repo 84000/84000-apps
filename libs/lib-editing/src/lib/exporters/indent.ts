@@ -1,4 +1,4 @@
-import { IndentAnnotation } from '@data-access';
+import { IndentAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const indent: Exporter<IndentAnnotation> = ({

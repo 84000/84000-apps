@@ -3,12 +3,12 @@
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment, YEvent } from 'yjs';
-import type { Passage, Work } from '@data-access';
+import type { Passage, Work } from '@84000/data-access';
 import {
   createGraphQLClient,
   hasPermission,
   savePassages,
-} from '@client-graphql';
+} from '@84000/client-graphql';
 import { passagesFromNodes, ensureUuids } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';

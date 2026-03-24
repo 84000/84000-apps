@@ -1,15 +1,19 @@
 import { Input } from '../../Input/Input';
 import { Label } from '../../Label/Label';
-import { LANGUAGES, Title, Titles } from '@data-access';
+import {
+  LANGUAGES,
+  TranslationTitle,
+  TranslationTitles,
+} from '../../types';
 
 export const TitleForm = ({
   titles = [],
   onChange,
 }: {
-  titles?: Titles;
-  onChange: (title: Title) => void;
+  titles?: TranslationTitles;
+  onChange: (title: TranslationTitle) => void;
 }) => {
-  const titlesByLanguage: { [key: string]: Title } = {};
+  const titlesByLanguage: { [key: string]: TranslationTitle } = {};
   titles.forEach((title) => {
     titlesByLanguage[title.language] = title;
   });

@@ -1,4 +1,4 @@
-import { Skeleton } from '@design-system';
+import { Skeleton } from '@84000/design-system';
 
 export const PassageSkeleton = () => {
   return (

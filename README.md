@@ -93,6 +93,36 @@ npx nx run-many -t <target1> <target2> -p <proj1> <proj2>
 Targets can be defined in the `package.json` or `projects.json`. Learn more
 [in the docs](https://nx.dev/features/run-tasks).
 
+## Publishing packages
+
+The monorepo now has npm packaging groundwork for these shared libraries:
+
+- `@84000/lib-utils`
+- `@84000/data-access`
+- `@84000/client-graphql`
+- `@84000/lib-instr`
+- `@84000/design-system`
+- `@84000/lib-editing`
+
+Build the publishable libraries with:
+
+```bash
+npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-editing
+```
+
+Version and publish with Nx release:
+
+```bash
+npm run release:version
+npm run release:publish
+```
+
+For `@84000/design-system`, consumers should import the theme entry explicitly:
+
+```ts
+import '@84000/design-system/css';
+```
+
 ## Explore the project graph
 
 Run `npx nx graph` to show the graph of the workspace.

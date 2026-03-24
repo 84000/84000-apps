@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@design-system';
+import { Button } from '@84000/design-system';
 import { Editor } from '@tiptap/core';
 import {
   AlertCircleIcon,

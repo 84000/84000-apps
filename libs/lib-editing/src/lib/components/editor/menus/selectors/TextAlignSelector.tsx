@@ -5,7 +5,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@design-system';
+} from '@84000/design-system';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {

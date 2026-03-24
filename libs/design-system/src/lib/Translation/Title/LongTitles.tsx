@@ -1,11 +1,11 @@
 'use client';
 
-import { Imprint } from '@data-access';
+import { TranslationImprint } from '../../types';
 import { TitlesCard } from './TitlesCard';
 import { Skeleton } from '../../Skeleton/Skeleton';
 import { TitleDetails } from './TitleDetails';
 
-export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
+export const LongTitles = ({ imprint }: { imprint?: TranslationImprint }) => {
   if (!imprint) {
     return <Skeleton className="h-48 w-full" />;
   }

@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Folio } from '@data-access';
+import type { Folio } from '@84000/data-access';
 
 const GET_WORK_FOLIOS = gql`
   query GetWorkFolios($uuid: ID!, $toh: String!, $page: Int, $size: Int) {

@@ -1,12 +1,12 @@
 'use client';
 
-import { MiniLogo } from '@design-system';
+import { MiniLogo } from '@84000/design-system';
 import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
 import { useNavigation } from './NavigationProvider';
 import { useCallback } from 'react';
 import { PanelName, PanelState, TabName } from './types';
-import { BodyItemType } from '@data-access';
-import { cn } from '@lib-utils';
+import { BodyItemType } from '@84000/data-access';
+import { cn } from '@84000/lib-utils';
 
 export const TranslationHeader = ({ className }: { className?: string }) => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();

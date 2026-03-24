@@ -1,9 +1,9 @@
 'use client';
 
-import { ThreeColumns } from '@design-system';
+import { ThreeColumns } from '@84000/design-system';
 import { ReactNode } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { TranslationHeader } from './TranslationHeader';
 
 export const ThreeColumnRenderer = ({

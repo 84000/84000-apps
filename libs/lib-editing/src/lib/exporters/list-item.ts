@@ -1,4 +1,4 @@
-import { ListItemAnnotation } from '@data-access';
+import { ListItemAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const listItem: Exporter<ListItemAnnotation> = ({

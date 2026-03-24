@@ -1,6 +1,6 @@
 'use client';
 
-import { Imprint } from '@data-access';
+import { Imprint } from '@84000/data-access';
 import {
   Accordion,
   AccordionContent,
@@ -13,7 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@design-system';
+} from '@84000/design-system';
 import { CircleAlertIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

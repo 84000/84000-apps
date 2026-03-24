@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryTermInstance } from '@data-access';
+import type { GlossaryTermInstance } from '@84000/data-access';
 import type { GlossaryTermsPage } from './get-work-glossary-terms';
 
 const GET_WORK_GLOSSARY_TERMS_AROUND = gql`

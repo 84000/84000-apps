@@ -1,7 +1,7 @@
 import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { StageChip } from './StageChip';
 import { TooltipProvider } from '../Tooltip/Tooltip';
-import { PROJECT_STAGE_LABELS } from '@data-access';
+import { PROJECT_STAGE_LABELS } from '../types';
 
 const meta: Meta<typeof StageChip> = {
   title: 'Core/StageChip',

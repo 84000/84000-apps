@@ -3,7 +3,7 @@ import {
   InternalLinkAnnotation,
   LinkAnnotation,
   ReferenceAnnotation,
-} from '@data-access';
+} from '@84000/data-access';
 import { Exporter, ExporterContext } from './export';
 
 export const LINK_TYPES: AnnotationType[] = ['link', 'reference'];

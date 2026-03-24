@@ -188,7 +188,7 @@
 
   @font-face {
     font-family: 'Monlam OuChan 2';
-    src: url('/fonts/MonlamUniOuChan2.ttf') format('truetype');
+    src: url('../assets/fonts/MonlamUniOuChan2.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;

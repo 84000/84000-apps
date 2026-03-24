@@ -1,4 +1,4 @@
-import { ParagraphAnnotation } from '@data-access';
+import { ParagraphAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const paragraph: Exporter<ParagraphAnnotation> = ({

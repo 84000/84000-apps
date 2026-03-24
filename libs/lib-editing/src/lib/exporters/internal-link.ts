@@ -1,4 +1,4 @@
-import { InternalLinkAnnotation } from '@data-access';
+import { InternalLinkAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const internalLink: Exporter<InternalLinkAnnotation> = ({

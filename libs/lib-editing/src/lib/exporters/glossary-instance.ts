@@ -1,4 +1,4 @@
-import { GlossaryInstanceAnnotation } from '@data-access';
+import { GlossaryInstanceAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const glossaryInstance: Exporter<GlossaryInstanceAnnotation> = ({

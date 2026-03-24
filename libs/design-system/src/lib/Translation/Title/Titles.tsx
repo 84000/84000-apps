@@ -2,10 +2,10 @@
 
 import {
   BO_TITLE_PREFIX,
-  Imprint,
-  Titles as TitlesData,
   TitleType,
-} from '@data-access';
+  TranslationImprint,
+  TranslationTitles,
+} from '../../types';
 import { TitlesCard } from './TitlesCard';
 import {
   Dialog,
@@ -24,8 +24,8 @@ export const Titles = ({
   imprint,
   canEdit = false,
 }: {
-  titles: TitlesData;
-  imprint?: Imprint;
+  titles: TranslationTitles;
+  imprint?: TranslationImprint;
   variant?: TitlesVariant;
   canEdit?: boolean;
 }) => {
@@ -39,7 +39,7 @@ export const Titles = ({
       acc[title.type].push(title);
       return acc;
     },
-    {} as Record<TitleType, TitlesData>,
+    {} as Record<TitleType, TranslationTitles>,
   );
 
   const mainTitles = titlesByType['mainTitle'] || [];

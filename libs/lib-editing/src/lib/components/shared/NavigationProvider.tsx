@@ -7,7 +7,7 @@ import {
   getPassage,
   getTranslationImprint,
   getTranslationMetadataByUuid,
-} from '@client-graphql';
+} from '@84000/client-graphql';
 import type {
   BibliographyEntryItem,
   GlossaryTermInstance,
@@ -15,7 +15,7 @@ import type {
   Passage,
   TohokuCatalogEntry,
   Work,
-} from '@data-access';
+} from '@84000/data-access';
 import {
   ReactNode,
   useCallback,
@@ -33,8 +33,8 @@ import {
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
-import { GatedFeature, useFeatureFlagEnabled } from '@lib-instr';
-import { useIsMobile } from '@lib-utils';
+import { GatedFeature, useFeatureFlagEnabled } from '@84000/lib-instr';
+import { useIsMobile } from '@84000/lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
 import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
 

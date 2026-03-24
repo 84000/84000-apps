@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryPageItem, TohokuCatalogEntry } from '@data-access';
+import type { GlossaryPageItem, TohokuCatalogEntry } from '@84000/data-access';
 
 const GET_GLOSSARY_ENTRY = gql`
   query GetGlossaryEntry($uuid: ID!) {

@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Toc } from '@data-access';
+import type { Toc } from '@84000/data-access';
 import { tocFromGraphQL } from '../mappers';
 
 const GET_WORK_WITH_TOC = gql`

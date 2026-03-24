@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
@@ -8,7 +8,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@design-system';
+} from '@84000/design-system';
 import { BookOpenTextIcon } from 'lucide-react';
 import { SelectorInputField } from './SelectorInputField';
 

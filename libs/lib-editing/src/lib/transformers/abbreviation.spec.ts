@@ -3,7 +3,7 @@ import {
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
-} from '@data-access';
+} from '@84000/data-access';
 import { abbreviation } from './abbreviation';
 import { blockFromPassage } from '../block';
 import { recurseForType } from './recurse';

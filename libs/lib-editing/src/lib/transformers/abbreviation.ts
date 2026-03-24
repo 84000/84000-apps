@@ -1,4 +1,4 @@
-import { AbbreviationAnnotation } from '@data-access';
+import { AbbreviationAnnotation } from '@84000/data-access';
 import { recurse } from './recurse';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';

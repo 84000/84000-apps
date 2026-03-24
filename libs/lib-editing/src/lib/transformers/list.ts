@@ -1,4 +1,4 @@
-import { ListAnnotation } from '@data-access';
+import { ListAnnotation } from '@84000/data-access';
 import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';

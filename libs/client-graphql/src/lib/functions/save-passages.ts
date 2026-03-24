@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Passage } from '@data-access';
+import type { Passage } from '@84000/data-access';
 
 const SAVE_PASSAGES_MUTATION = gql`
   mutation SavePassages($passages: [PassageInput!]!, $deletedUuids: [ID!]) {

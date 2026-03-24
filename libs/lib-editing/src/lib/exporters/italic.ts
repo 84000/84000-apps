@@ -5,7 +5,7 @@ import {
   InlineTitleAnnotation,
   MantraAnnotation,
   SpanAnnotation,
-} from '@data-access';
+} from '@84000/data-access';
 
 export const italic: Exporter<
   InlineTitleAnnotation | MantraAnnotation | SpanAnnotation

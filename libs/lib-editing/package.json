@@ -1,12 +1,31 @@
 {
-  "name": "lib-editing",
-  "version": "1.0.0",
-  "description": "This library was generated with [Nx](https://nx.dev).",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "@84000/lib-editing",
+  "version": "0.1.0",
+  "description": "Shared editing and reader components for 84000 translation workflows.",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/lib-editing"
   },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@84000/client-graphql": "^0.1.0",
+    "@84000/data-access": "^0.1.0",
+    "@84000/design-system": "^0.1.0",
+    "@84000/lib-instr": "^0.1.0",
+    "@84000/lib-utils": "^0.1.0"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "sideEffects": false,
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": ""
 }

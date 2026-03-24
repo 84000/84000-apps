@@ -23,7 +23,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../Sheet/Sheet';
-import { cn, useIsMobile } from '@lib-utils';
+import { cn, useIsMobile } from '@84000/lib-utils';
 
 const BG_GRADIENT =
   "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";

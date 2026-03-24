@@ -1,4 +1,4 @@
-import { MentionAnnotation } from '@data-access';
+import { MentionAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const mention: Exporter<MentionAnnotation[]> = ({

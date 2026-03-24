@@ -2,7 +2,7 @@ import {
   ProjectStageLabel,
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
-} from '@data-access';
+} from '../types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../Tooltip/Tooltip';
 import { Badge } from '../Badge/Badge';
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@design-system';
-import { parseToh } from '@lib-utils';
+import { Button } from '@84000/design-system';
+import { parseToh } from '@84000/lib-utils';
 import { FormEvent, useState } from 'react';
 
 export const SuggestRevisionForm = ({

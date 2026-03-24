@@ -5,12 +5,12 @@ import {
   BODY_MATTER_FILTER,
   FRONT_MATTER_FILTER,
   Titles as TitlesData,
-} from '@data-access';
+} from '@84000/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { TitlesRenderer, TranslationRenderer } from '../shared/types';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from './TranslationReader';
-import { Titles, TitlesVariant } from '@design-system';
+import { Titles, TitlesVariant } from '@84000/design-system';
 
 const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
   translation: 'english',

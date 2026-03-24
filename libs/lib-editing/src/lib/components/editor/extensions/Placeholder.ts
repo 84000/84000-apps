@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { Placeholder } from '@tiptap/extensions';
 
 export default Placeholder.configure({

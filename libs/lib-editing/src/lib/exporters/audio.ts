@@ -1,4 +1,4 @@
-import { AudioAnnotation } from '@data-access';
+import { AudioAnnotation } from '@84000/data-access';
 import { Exporter } from './export';
 
 export const audio: Exporter<AudioAnnotation> = ({

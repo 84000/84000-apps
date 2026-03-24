@@ -1,9 +1,9 @@
-import { Imprint } from '@data-access';
+import { TranslationImprint } from '../../types';
 import { LongTitle } from './LongTitle';
 
 const DOT = `·` as const;
 
-export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
+export const TitleDetails = ({ imprint }: { imprint: TranslationImprint }) => {
   const { mainTitles, longTitles, toh } = imprint;
 
   const longBoTitle = longTitles?.bo || mainTitles?.bo;

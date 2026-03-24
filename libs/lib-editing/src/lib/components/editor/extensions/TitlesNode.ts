@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@84000/lib-utils';
 import { Node, mergeAttributes } from '@tiptap/core';
 
 // TODO: make nice custom components for each titles type

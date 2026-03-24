@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Titles } from '@data-access';
+import type { Titles } from '@84000/data-access';
 import { titlesFromGraphQL } from '../mappers';
 
 const GET_WORK_TITLES = gql`
