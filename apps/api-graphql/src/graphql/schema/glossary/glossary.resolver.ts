@@ -27,20 +27,6 @@ type GlossaryTermNode = {
   };
 };
 
-type GlossaryTermPageRow = {
-  uuid: string;
-  authority_uuid: string;
-  term_number: number | string;
-  definition: string | null;
-  english: string | null;
-  wylie: string | null;
-  tibetan: string | null;
-  sanskrit: string | null;
-  chinese: string | null;
-  pali: string | null;
-  total_count: number | string;
-};
-
 type GlossaryTermIndexRow = {
   glossary_uuid: string;
   authority_uuid: string;
@@ -97,21 +83,22 @@ function parseCount(value: number | string | null | undefined) {
 
 function rowToGlossaryTermNode(
   row: Pick<
-    GlossaryTermPageRow,
-    | 'uuid'
+    GlossaryTermIndexRow,
+    | 'glossary_uuid'
     | 'authority_uuid'
     | 'definition'
     | 'term_number'
     | 'english'
     | 'wylie'
     | 'tibetan'
-    | 'sanskrit'
+    | 'sanskrit_plain'
+    | 'sanskrit_attested'
     | 'chinese'
     | 'pali'
-  >,
+  > & { withAttestations: boolean },
 ): GlossaryTermNode {
   return {
-    uuid: row.uuid,
+    uuid: row.glossary_uuid,
     authority: row.authority_uuid,
     definition: row.definition,
     termNumber: parseCount(row.term_number),
@@ -119,7 +106,9 @@ function rowToGlossaryTermNode(
       english: row.english,
       wylie: row.wylie,
       tibetan: row.tibetan,
-      sanskrit: row.sanskrit,
+      sanskrit: row.withAttestations
+        ? row.sanskrit_attested
+        : row.sanskrit_plain,
       chinese: row.chinese,
       pali: row.pali,
     },
@@ -185,26 +174,94 @@ async function getGlossaryTermsPage(
   direction: Exclude<PaginationDirection, 'AROUND'>,
   withAttestations: boolean,
 ) {
-  const { data, error } = await supabase.rpc('show_glossary_entries_page', {
-    v_work_uuid: workUuid,
-    v_limit: limit,
-    v_cursor_glossary_uuid: cursor,
-    v_direction: direction.toLowerCase(),
-    v_with_attestation: withAttestations,
-  });
+  const [{ count, error: countError }, { data: cursorRows, error: cursorError }] =
+    await Promise.all([
+      supabase
+        .from('glossary_term_index')
+        .select('authority_uuid', { count: 'exact', head: true })
+        .eq('work_uuid', workUuid),
+      cursor
+        ? supabase
+          .from('glossary_term_index')
+          .select('authority_uuid, term_number')
+          .eq('work_uuid', workUuid)
+          .eq('authority_uuid', cursor)
+          .limit(1)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  if (countError) {
+    console.error('Error counting glossary terms:', countError);
+    return buildGlossaryTermConnection([], null, null, false, false, 0);
+  }
+
+  if (cursorError) {
+    console.error('Error fetching glossary cursor term:', cursorError);
+    return buildGlossaryTermConnection([], null, null, false, false, 0);
+  }
+
+  const totalCount = count ?? 0;
+  if (totalCount === 0) {
+    return buildGlossaryTermConnection([], null, null, false, false, 0);
+  }
+
+  const cursorRow = cursor
+    ? ((cursorRows ?? [])[0] as
+      | { authority_uuid: string; term_number: number | string }
+      | undefined)
+    : undefined;
+
+  if (cursor && !cursorRow) {
+    return buildGlossaryTermConnection([], null, null, false, false, totalCount);
+  }
+
+  const cursorTermNumber =
+    cursorRow !== undefined ? parseCount(cursorRow.term_number) : null;
+
+  let query = supabase
+    .from('glossary_term_index')
+    .select(
+      `glossary_uuid,
+       authority_uuid,
+       term_number,
+       definition,
+       english,
+       wylie,
+       tibetan,
+       sanskrit_plain,
+       sanskrit_attested,
+       chinese,
+       pali`,
+    )
+    .eq('work_uuid', workUuid);
+
+  if (cursorTermNumber !== null) {
+    query =
+      direction === 'FORWARD'
+        ? query.gt('term_number', cursorTermNumber)
+        : query.lt('term_number', cursorTermNumber);
+  }
+
+  const ascending = direction === 'FORWARD';
+  const { data, error } = await query
+    .order('term_number', { ascending })
+    .limit(limit);
 
   if (error) {
     console.error('Error fetching paginated glossary terms:', error);
-    return buildGlossaryTermConnection([], null, null, false, false, 0);
+    return buildGlossaryTermConnection([], null, null, false, false, totalCount);
   }
 
-  const rows = (data ?? []) as GlossaryTermPageRow[];
+  const pageRows = (data ?? []) as GlossaryTermIndexRow[];
+  const rows = ascending ? pageRows : [...pageRows].reverse();
+
   if (rows.length === 0) {
-    return buildGlossaryTermConnection([], null, null, false, false, 0);
+    return buildGlossaryTermConnection([], null, null, false, false, totalCount);
   }
 
-  const nodes = rows.map(rowToGlossaryTermNode);
-  const totalCount = parseCount(rows[0]?.total_count);
+  const nodes = rows.map((row) =>
+    rowToGlossaryTermNode({ ...row, withAttestations }),
+  );
   const firstRow = rows[0];
   const lastRow = rows[rows.length - 1];
   const hasMoreBefore = parseCount(firstRow.term_number) > 1;
@@ -212,8 +269,8 @@ async function getGlossaryTermsPage(
 
   return buildGlossaryTermConnection(
     nodes,
-    hasMoreAfter ? lastRow.uuid : null,
-    hasMoreBefore ? firstRow.uuid : null,
+    hasMoreAfter ? lastRow.authority_uuid : null,
+    hasMoreBefore ? firstRow.authority_uuid : null,
     hasMoreAfter,
     hasMoreBefore,
     totalCount,
@@ -242,13 +299,13 @@ async function getGlossaryTermsAround(
     await Promise.all([
       supabase
         .from('glossary_term_index')
-        .select('glossary_uuid', { count: 'exact', head: true })
+        .select('authority_uuid', { count: 'exact', head: true })
         .eq('work_uuid', workUuid),
       supabase
         .from('glossary_term_index')
-        .select('glossary_uuid, term_number')
+        .select('authority_uuid, term_number')
         .eq('work_uuid', workUuid)
-        .eq('glossary_uuid', cursor)
+        .eq('authority_uuid', cursor)
         .limit(1),
     ]);
 
@@ -271,7 +328,7 @@ async function getGlossaryTermsAround(
 
   const totalCount = count ?? 0;
   const cursorRow = (cursorRows ?? [])[0] as
-    | { glossary_uuid: string; term_number: number | string }
+    | { authority_uuid: string; term_number: number | string }
     | undefined;
 
   if (!cursorRow) {
@@ -297,7 +354,17 @@ async function getGlossaryTermsAround(
   const { data, error } = await supabase
     .from('glossary_term_index')
     .select(
-      'glossary_uuid, authority_uuid, term_number, definition, english, wylie, tibetan, sanskrit_plain, sanskrit_attested, chinese, pali',
+      `glossary_uuid,
+       authority_uuid,
+       term_number,
+       definition,
+       english,
+       wylie,
+       tibetan,
+       sanskrit_plain,
+       sanskrit_attested,
+       chinese,
+       pali`,
     )
     .eq('work_uuid', workUuid)
     .gte('term_number', startTerm)
@@ -311,20 +378,7 @@ async function getGlossaryTermsAround(
 
   const rows = (data ?? []) as GlossaryTermIndexRow[];
   const nodes = rows.map((row) =>
-    rowToGlossaryTermNode({
-      uuid: row.glossary_uuid,
-      authority_uuid: row.authority_uuid,
-      term_number: row.term_number,
-      definition: row.definition,
-      english: row.english,
-      wylie: row.wylie,
-      tibetan: row.tibetan,
-      sanskrit: withAttestations
-        ? row.sanskrit_attested
-        : row.sanskrit_plain,
-      chinese: row.chinese,
-      pali: row.pali,
-    }),
+    rowToGlossaryTermNode({ ...row, withAttestations }),
   );
 
   const hasMoreBefore = startTerm > 1;
@@ -334,8 +388,8 @@ async function getGlossaryTermsAround(
 
   return buildGlossaryTermConnection(
     nodes,
-    hasMoreAfter && lastRow ? lastRow.glossary_uuid : null,
-    hasMoreBefore && firstRow ? firstRow.glossary_uuid : null,
+    hasMoreAfter && lastRow ? lastRow.authority_uuid : null,
+    hasMoreBefore && firstRow ? firstRow.authority_uuid : null,
     hasMoreAfter,
     hasMoreBefore,
     totalCount,
