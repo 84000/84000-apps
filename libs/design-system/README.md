@@ -1,8 +1,8 @@
-# The 84000 Design System
+# @eightyfourthousand/design-system
 
-This library contains shared components for 84000 applications. It also contains
-a Storybook for exploring and prototyping components. To run Storybook locally,
-run `npx nx storybook design-system`.
+Shared React UI components and theme assets for 84000 applications.
+
+This package includes the common component library and CSS theme entry used across the 84000 frontend apps. To run Storybook locally, use `npx nx storybook design-system`.
 
 ## Running unit tests
 

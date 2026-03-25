@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
 
     steps:
       - name: Checkout code
@@ -42,11 +43,7 @@ jobs:
       - name: Publish packages to npm
         if: ${{ !inputs.dry_run }}
         run: npx nx release publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Dry run publish
         if: ${{ inputs.dry_run }}
         run: npx nx release publish --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

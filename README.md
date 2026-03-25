@@ -118,7 +118,9 @@ npm run release:version
 npm run release:publish
 ```
 
-To publish from GitHub Actions, add an `NPM_TOKEN` repository secret with publish access to the `@eightyfourthousand` npm scope, then run the manual `Publish Packages` workflow. The workflow includes a `dry_run` input so you can verify the publish plan before pushing packages to npm.
+To publish from GitHub Actions, configure npm Trusted Publishing for this repository and the `publish-packages.yml` workflow, then run the manual `Publish Packages` workflow. The workflow includes a `dry_run` input so you can verify the publish plan before pushing packages to npm. No `NPM_TOKEN` secret is required for CI publishing when trusted publishing is configured correctly.
+
+For local manual publishing, use a granular npm access token with bypass 2FA enabled if your npm account uses passkeys or other non-OTP 2FA methods.
 
 For `@eightyfourthousand/design-system`, consumers should import the theme entry explicitly:
 
