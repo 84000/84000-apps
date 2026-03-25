@@ -13,6 +13,9 @@
     "url": "https://github.com/84000/84000-apps/issues"
   },
   "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

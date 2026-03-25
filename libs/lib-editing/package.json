@@ -13,6 +13,9 @@
     "url": "https://github.com/84000/84000-apps/issues"
   },
   "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@eightyfourthousand/client-graphql": "^2026.3.0",
     "@eightyfourthousand/data-access": "^2026.3.0",
