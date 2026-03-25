@@ -1,6 +1,6 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { createUpdateAttributes, registerEditorElement } from '../../util';
 
 export interface EndNoteLinkOptions {

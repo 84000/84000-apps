@@ -5,7 +5,7 @@ import type {
   PaginationDirection,
   TranslationEditorContent,
   TranslationEditorContentItem,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 
 const GET_PASSAGES_WITH_JSON = gql`
   fragment PassageWithJson on Passage {

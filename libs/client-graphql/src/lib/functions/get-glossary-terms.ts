@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryLandingItem } from '@84000/data-access';
+import type { GlossaryLandingItem } from '@eightyfourthousand/data-access';
 
 const GET_GLOSSARY_TERMS = gql`
   query GetGlossaryTerms($uuids: [ID!]) {

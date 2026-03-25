@@ -9,7 +9,7 @@ import {
   H5_STYLE,
   HONORIFIC_TITLE_STYLE,
   SECTION_TITLE_STYLE,
-} from '@84000/design-system';
+} from '@eightyfourthousand/design-system';
 import { createNodeViewDom } from '../../util';
 import { HTMLElementType } from 'react';
 

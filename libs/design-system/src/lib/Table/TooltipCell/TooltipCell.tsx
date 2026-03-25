@@ -1,4 +1,4 @@
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../Tooltip/Tooltip';
 
 export const TooltipCell = ({

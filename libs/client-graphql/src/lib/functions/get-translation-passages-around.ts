@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { BodyItemType, PassagesPage } from '@84000/data-access';
+import type { BodyItemType, PassagesPage } from '@eightyfourthousand/data-access';
 import { passagesPageFromGraphQL } from '../mappers';
 
 const GET_PASSAGES_AROUND = gql`

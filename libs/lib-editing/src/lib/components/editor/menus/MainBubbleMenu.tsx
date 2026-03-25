@@ -2,7 +2,7 @@
 
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { ScrollArea, Separator, ScrollBar } from '@84000/design-system';
+import { ScrollArea, Separator, ScrollBar } from '@eightyfourthousand/design-system';
 import { NodeSelector, TextAlignSelector, TextButtons } from './selectors';
 
 export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {

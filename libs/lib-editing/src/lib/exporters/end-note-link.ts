@@ -1,4 +1,4 @@
-import { EndNoteLinkAnnotation } from '@84000/data-access';
+import { EndNoteLinkAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const endNoteLink: Exporter<EndNoteLinkAnnotation[]> = ({

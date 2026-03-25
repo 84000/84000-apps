@@ -3,7 +3,7 @@
 import * as React from 'react';
 import * as ResizablePrimitive from 'react-resizable-panels';
 
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { VerticalEllipsis } from '../VerticalEllipsis/VerticalEllipsis';
 
 export function ResizablePanelGroup({

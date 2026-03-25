@@ -1,4 +1,4 @@
-import type { Alignment, TohokuCatalogEntry } from '@84000/data-access';
+import type { Alignment, TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 
 /**
  * GraphQL Alignment type from generated code

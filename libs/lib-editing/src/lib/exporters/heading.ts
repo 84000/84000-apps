@@ -1,4 +1,4 @@
-import { HeadingAnnotation } from '@84000/data-access';
+import { HeadingAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const heading: Exporter<HeadingAnnotation> = ({

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { SaveButton } from '@84000/design-system';
+import { SaveButton } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 
 export const EditorHeader = () => {

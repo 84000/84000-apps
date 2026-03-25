@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TABLE_STYLE = 'w-full caption-bottom text-sm bg-background';
 

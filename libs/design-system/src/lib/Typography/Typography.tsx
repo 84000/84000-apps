@@ -1,4 +1,4 @@
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const LINK_STYLE =
   'text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer';

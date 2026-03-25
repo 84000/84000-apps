@@ -4,9 +4,9 @@ import {
   FRONT_MATTER_FILTER,
   getTranslationBlocks,
   getTranslationTitles,
-} from '@84000/client-graphql/ssr';
+} from '@eightyfourthousand/client-graphql/ssr';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
-import { isUuid } from '@84000/lib-utils';
+import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 
 const INITIAL_PASSAGES = 250;

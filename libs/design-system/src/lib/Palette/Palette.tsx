@@ -1,4 +1,4 @@
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { H2, H4 } from '../Typography/Typography';
 
 // NOTE: Avoid being clever here. passing in an explicit list of colors ensures

@@ -9,7 +9,7 @@ import {
   NavigationMenuTrigger,
 } from './NavigationMenu';
 import { ComponentProps } from 'react';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { BookOpen, ChartPieIcon, Edit, LayoutGrid, Search } from 'lucide-react';
 
 function ListItem({ className, children, ...props }: ComponentProps<'a'>) {

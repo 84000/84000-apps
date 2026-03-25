@@ -1,7 +1,7 @@
 import { Mark } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export interface GlossaryInstanceOptions {
   HTMLAttributes: Record<string, unknown>;

@@ -4,15 +4,15 @@ import {
   PanelContentType,
   urlForPanelContent,
   useBookmark,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@84000/design-system';
-import { cn } from '@84000/lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
 import { ReactNode, useCallback, useState } from 'react';
 import { SuggestRevisionForm } from './SuggestRevisionForm';

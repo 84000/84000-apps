@@ -3,8 +3,8 @@ import {
   TABLE_HEAD_STYLE,
   TABLE_ROW_STYLE,
   TABLE_STYLE,
-} from '@84000/design-system';
-import { cn } from '@84000/lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { TableKit as TipTapTableKit } from '@tiptap/extension-table';
 
 export const TableKit = TipTapTableKit.configure({

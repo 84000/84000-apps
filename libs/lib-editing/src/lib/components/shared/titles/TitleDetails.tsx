@@ -1,4 +1,4 @@
-import { Imprint } from '@84000/data-access';
+import { Imprint } from '@eightyfourthousand/data-access';
 import { LongTitle } from './LongTitle';
 
 const DOT = `·` as const;

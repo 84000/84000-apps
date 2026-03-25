@@ -1,4 +1,4 @@
-import { ExtendedTranslationLanguage, SpanAnnotation } from '@84000/data-access';
+import { ExtendedTranslationLanguage, SpanAnnotation } from '@eightyfourthousand/data-access';
 import type { Transformer } from './transformer';
 import { type SpanMarkType, MARK_TYPES } from '../types';
 import { splitContent } from './split-content';

@@ -3,7 +3,7 @@ import {
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 import { link } from './link';
 import { blockFromPassage } from '../block';
 import { findTextNodeWithMarks } from './recurse';

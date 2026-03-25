@@ -1,4 +1,4 @@
-import { HeadingAnnotation } from '@84000/data-access';
+import { HeadingAnnotation } from '@eightyfourthousand/data-access';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';

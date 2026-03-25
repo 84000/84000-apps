@@ -1,8 +1,8 @@
 'use client';
 
-import { Skeleton } from '@84000/design-system';
+import { Skeleton } from '@eightyfourthousand/design-system';
 import { useEffect, useState } from 'react';
-import { Passage } from '@84000/data-access';
+import { Passage } from '@eightyfourthousand/data-access';
 import { LabeledElement } from '../../../shared';
 
 export const EndNoteLink = ({

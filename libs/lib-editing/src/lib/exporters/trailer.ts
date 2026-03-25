@@ -1,4 +1,4 @@
-import { TrailerAnnotation } from '@84000/data-access';
+import { TrailerAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const trailer: Exporter<TrailerAnnotation> = ({

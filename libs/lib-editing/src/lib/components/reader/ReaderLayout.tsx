@@ -7,7 +7,7 @@ import {
   MainPanel,
   MainPanelHeader,
   RightPanel,
-} from '@84000/design-system';
+} from '@eightyfourthousand/design-system';
 import { EditorHeader } from '../editor/EditorHeader';
 
 export const ReaderLayout = ({

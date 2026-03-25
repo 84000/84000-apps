@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryTermInstance } from '@84000/data-access';
+import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
 
 const GET_GLOSSARY_INSTANCE = gql`
   query GetGlossaryInstance($uuid: ID!) {

@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Imprint } from '@84000/data-access';
+import type { Imprint } from '@eightyfourthousand/data-access';
 import { imprintFromGraphQL } from '../mappers';
 
 const GET_WORK_WITH_IMPRINT = gql`

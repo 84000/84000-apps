@@ -7,7 +7,7 @@ import type {
   Passage,
   TohokuCatalogEntry,
   Work,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 import { createContext, useContext } from 'react';
 import { PanelName, PanelsState, PanelState, TabName } from './types';
 

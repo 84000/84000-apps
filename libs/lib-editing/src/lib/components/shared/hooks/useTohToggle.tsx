@@ -1,6 +1,6 @@
 'use client';
 
-import { TohokuCatalogEntry, Work } from '@84000/data-access';
+import { TohokuCatalogEntry, Work } from '@eightyfourthousand/data-access';
 import { useEffect } from 'react';
 
 export const useTohToggle = ({

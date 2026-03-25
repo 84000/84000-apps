@@ -1,4 +1,4 @@
-import { PassageDTO } from '@84000/data-access';
+import { PassageDTO } from '@eightyfourthousand/data-access';
 import { EditorType } from '../types';
 
 export const type: EditorType = 'translation';

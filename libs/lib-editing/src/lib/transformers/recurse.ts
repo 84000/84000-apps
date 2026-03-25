@@ -1,4 +1,4 @@
-import { AnnotationType } from '@84000/data-access';
+import { AnnotationType } from '@eightyfourthousand/data-access';
 import { TransformationContextWithCallback, Transformer } from './transformer';
 import { TranslationEditorContentItem } from '../components';
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { Imprint } from '@84000/data-access';
-import { Skeleton } from '@84000/design-system';
+import { Imprint } from '@eightyfourthousand/data-access';
+import { Skeleton } from '@eightyfourthousand/design-system';
 import { TitleDetails } from './TitleDetails';
 import { TitlesCard } from './TitlesCard';
 

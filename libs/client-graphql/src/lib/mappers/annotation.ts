@@ -5,7 +5,7 @@ import {
   type HeadingClass,
   type ExtendedTranslationLanguage,
   ANNOTATION_TYPE_DTO_TO_TYPE,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 
 /**
  * GraphQL Annotation type from generated code

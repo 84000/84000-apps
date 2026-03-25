@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { BibliographyEntryItem } from '@84000/data-access';
+import type { BibliographyEntryItem } from '@eightyfourthousand/data-access';
 
 const GET_BIBLIOGRAPHY_ENTRY = gql`
   query GetBibliographyEntry($uuid: ID!) {

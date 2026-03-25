@@ -9,14 +9,14 @@ import {
   useEffect,
   useMemo,
 } from 'react';
-import type { GlossaryTermInstance } from '@84000/data-access';
-import type { GlossaryTermsPage } from '@84000/client-graphql';
+import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
+import type { GlossaryTermsPage } from '@eightyfourthousand/client-graphql';
 import {
   createGraphQLClient,
   getWorkGlossaryTerms,
   getWorkGlossaryTermsAround,
-} from '@84000/client-graphql';
-import { isUuid, scrollToElement } from '@84000/lib-utils';
+} from '@eightyfourthousand/client-graphql';
+import { isUuid, scrollToElement } from '@eightyfourthousand/lib-utils';
 import { useNavigation } from '../NavigationProvider';
 import { GlossarySkeleton } from './GlossarySkeleton';
 

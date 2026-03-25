@@ -1,5 +1,5 @@
 {
-  "name": "@84000/lib-search",
+  "name": "@eightyfourthousand/lib-search",
   "version": "2026.3.0",
   "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
@@ -14,9 +14,9 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/data-access": "^2026.3.0",
-    "@84000/design-system": "^2026.3.0",
-    "@84000/lib-utils": "^2026.3.0"
+    "@eightyfourthousand/data-access": "^2026.3.0",
+    "@eightyfourthousand/design-system": "^2026.3.0",
+    "@eightyfourthousand/lib-utils": "^2026.3.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",

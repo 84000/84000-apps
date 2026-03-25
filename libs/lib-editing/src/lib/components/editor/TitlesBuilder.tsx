@@ -1,6 +1,6 @@
 'use client';
 
-import { Imprint, Titles as TitlesData } from '@84000/data-access';
+import { Imprint, Titles as TitlesData } from '@eightyfourthousand/data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorProvider';
 import { Titles } from '../shared/titles';

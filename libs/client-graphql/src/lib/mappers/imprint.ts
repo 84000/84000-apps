@@ -1,4 +1,4 @@
-import type { Imprint, SemVer, TranslationLanguage } from '@84000/data-access';
+import type { Imprint, SemVer, TranslationLanguage } from '@eightyfourthousand/data-access';
 
 /**
  * GraphQL TitlesByLanguage type

@@ -1,8 +1,8 @@
 import { ReactNode } from 'react';
-import { ExtendedTranslationLanguage } from '@84000/data-access';
-import { H2, H3, H4 } from '@84000/design-system';
+import { ExtendedTranslationLanguage } from '@eightyfourthousand/data-access';
+import { H2, H3, H4 } from '@eightyfourthousand/design-system';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TITLE_VARIANT_STYLES = {
   en: '',

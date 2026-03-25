@@ -8,7 +8,7 @@ import {
 } from './exporters';
 import { findNodePosition, nodeNotFound } from './exporters/util';
 import { ExporterContext } from './exporters/export';
-import { Passage } from '@84000/data-access';
+import { Passage } from '@eightyfourthousand/data-access';
 
 /**
  * Ensures every node in the editor document has a unique, non-null UUID.

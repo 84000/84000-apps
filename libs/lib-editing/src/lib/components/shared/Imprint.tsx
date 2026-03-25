@@ -1,6 +1,6 @@
-import { Imprint as ImprintData } from '@84000/data-access';
+import { Imprint as ImprintData } from '@eightyfourthousand/data-access';
 import { TranslationSkeleton } from './TranslationSkeleton';
-import { SectionTitle } from '@84000/design-system';
+import { SectionTitle } from '@eightyfourthousand/design-system';
 
 export const Imprint = ({ imprint }: { imprint?: ImprintData }) => {
   if (!imprint) {

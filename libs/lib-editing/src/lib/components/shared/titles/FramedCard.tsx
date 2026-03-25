@@ -1,5 +1,5 @@
 import { ReactNode, SVGProps } from 'react';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const OrnamentBG = ({ className }: SVGProps<SVGElement>) => {
   return (

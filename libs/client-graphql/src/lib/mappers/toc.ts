@@ -1,4 +1,4 @@
-import type { Toc, TocEntry, TranslationSection } from '@84000/data-access';
+import type { Toc, TocEntry, TranslationSection } from '@eightyfourthousand/data-access';
 
 /**
  * GraphQL TocEntry type

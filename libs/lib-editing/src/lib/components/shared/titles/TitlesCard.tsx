@@ -1,8 +1,8 @@
 'use client';
 
 import { PencilIcon } from 'lucide-react';
-import { Button, Vajrasattva } from '@84000/design-system';
-import { cn } from '@84000/lib-utils';
+import { Button, Vajrasattva } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TitlesCard = ({
   header = '',

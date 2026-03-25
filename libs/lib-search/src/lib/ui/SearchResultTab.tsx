@@ -1,4 +1,4 @@
-import { TabsList, TabsTrigger } from '@84000/design-system';
+import { TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
 import { RESULTS_ENTITIES, SearchResults } from '../types';
 
 export const SearchResultTabs = ({ results }: { results: SearchResults }) => {

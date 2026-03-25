@@ -1,5 +1,5 @@
 {
-  "name": "@84000/lib-instr",
+  "name": "@eightyfourthousand/lib-instr",
   "version": "2026.3.0",
   "description": "Feature flag and instrumentation helpers for 84000 applications.",
   "private": false,

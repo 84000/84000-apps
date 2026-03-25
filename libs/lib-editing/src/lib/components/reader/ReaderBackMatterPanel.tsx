@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { BibliographyEntries } from '@84000/data-access';
-import type { GlossaryTermsPage } from '@84000/client-graphql';
+import { BibliographyEntries } from '@eightyfourthousand/data-access';
+import type { GlossaryTermsPage } from '@eightyfourthousand/client-graphql';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { TranslationReader } from '.';

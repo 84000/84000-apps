@@ -5,15 +5,15 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@84000/design-system';
+} from '@eightyfourthousand/design-system';
 import {
   TranslationEditorContent,
   TranslationEditorContentItem,
 } from '../editor';
-import { Title } from '@84000/data-access';
+import { Title } from '@eightyfourthousand/data-access';
 import { TitlesRenderer, TranslationRenderer } from './types';
 import { ReactElement, useCallback, useEffect, useMemo, useRef } from 'react';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';

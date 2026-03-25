@@ -1,6 +1,6 @@
 'use client';
 
-import { BibliographyEntryItem } from '@84000/data-access';
+import { BibliographyEntryItem } from '@eightyfourthousand/data-access';
 import { LabeledElement } from '../LabeledElement';
 import { useRef } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';

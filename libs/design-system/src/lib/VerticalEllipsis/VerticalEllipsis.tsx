@@ -1,4 +1,4 @@
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const VerticalEllipsis = ({ className }: { className?: string }) => {
   return (

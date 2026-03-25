@@ -5,7 +5,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '../Button/Button';
 import { Calendar } from '../Calendar/Calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../Popover/Popover';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useEffect, useState } from 'react';
 
 const YEAR_RANGE = 10;

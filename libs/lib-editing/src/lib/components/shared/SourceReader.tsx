@@ -3,11 +3,11 @@
 import { useInView } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { createGraphQLClient, getWorkFolios } from '@84000/client-graphql';
-import type { Folio } from '@84000/data-access';
+import { createGraphQLClient, getWorkFolios } from '@eightyfourthousand/client-graphql';
+import type { Folio } from '@eightyfourthousand/data-access';
 import { LabeledElement } from './LabeledElement';
 import { PassageSkeleton } from './PassageSkeleton';
-import { LotusPond } from '@84000/design-system';
+import { LotusPond } from '@eightyfourthousand/design-system';
 
 const PAGE_SIZE = 10;
 

@@ -1,5 +1,5 @@
-import { Skeleton } from '@84000/design-system';
-import { cn } from '@84000/lib-utils';
+import { Skeleton } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TranslationSkeleton = ({ className }: { className?: string }) => {
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Input } from '@84000/design-system';
+import { Button, Input } from '@eightyfourthousand/design-system';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { CheckIcon, Trash2Icon } from 'lucide-react';

@@ -6,8 +6,8 @@ import {
   getWorkGlossaryTerms,
   getWorkBibliography,
   type GlossaryTermsPage,
-} from '@84000/client-graphql';
-import type { BibliographyEntries } from '@84000/data-access';
+} from '@eightyfourthousand/client-graphql';
+import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
@@ -15,7 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TranslationBuilder } from '../editor';
-import { isStaticFeatureEnabled } from '@84000/lib-instr/static';
+import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 
 export const EditorBackMatterPage = () => {
   const { work } = useEditorState();

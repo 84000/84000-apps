@@ -2,7 +2,7 @@
 
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { ScrollArea, ScrollBar } from '@84000/design-system';
+import { ScrollArea, ScrollBar } from '@eightyfourthousand/design-system';
 
 export const EmptyBubbleMenu = ({ editor }: { editor: Editor | null }) => {
   if (!editor) {

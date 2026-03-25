@@ -1,5 +1,5 @@
-import { TranslationLanguage } from '@84000/data-access';
-import { cn } from '@84000/lib-utils';
+import { TranslationLanguage } from '@eightyfourthousand/data-access';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const LongTitle = ({
   title,

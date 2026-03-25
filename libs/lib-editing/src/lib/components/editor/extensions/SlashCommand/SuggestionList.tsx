@@ -1,7 +1,7 @@
 'use client';
 
 import { SlashCommandNodeAttributes, SuggestionItem } from './SlashCommand';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { LucideIcon } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';

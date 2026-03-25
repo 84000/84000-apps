@@ -1,4 +1,4 @@
-import { GlossaryInstanceAnnotation } from '@84000/data-access';
+import { GlossaryInstanceAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitContent } from './split-content';

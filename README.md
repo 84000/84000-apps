@@ -97,17 +97,18 @@ Targets can be defined in the `package.json` or `projects.json`. Learn more
 
 The monorepo now has npm packaging groundwork for these shared libraries:
 
-- `@84000/lib-utils`
-- `@84000/data-access`
-- `@84000/client-graphql`
-- `@84000/lib-instr`
-- `@84000/design-system`
-- `@84000/lib-editing`
+- `@eightyfourthousand/lib-utils`
+- `@eightyfourthousand/data-access`
+- `@eightyfourthousand/client-graphql`
+- `@eightyfourthousand/lib-instr`
+- `@eightyfourthousand/design-system`
+- `@eightyfourthousand/lib-search`
+- `@eightyfourthousand/lib-editing`
 
 Build the publishable libraries with:
 
 ```bash
-npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-editing
+npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-search,lib-editing
 ```
 
 Version and publish with Nx release:
@@ -117,10 +118,12 @@ npm run release:version
 npm run release:publish
 ```
 
-For `@84000/design-system`, consumers should import the theme entry explicitly:
+To publish from GitHub Actions, add an `NPM_TOKEN` repository secret with publish access to the `@eightyfourthousand` npm scope, then run the manual `Publish Packages` workflow. The workflow includes a `dry_run` input so you can verify the publish plan before pushing packages to npm.
+
+For `@eightyfourthousand/design-system`, consumers should import the theme entry explicitly:
 
 ```ts
-import '@84000/design-system/css';
+import '@eightyfourthousand/design-system/css';
 ```
 
 ## Explore the project graph

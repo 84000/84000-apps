@@ -1,4 +1,4 @@
-import { CodeAnnotation } from '@84000/data-access';
+import { CodeAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const code: Exporter<CodeAnnotation> = ({

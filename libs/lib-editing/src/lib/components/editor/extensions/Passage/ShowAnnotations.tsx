@@ -7,11 +7,11 @@ import {
   Skeleton,
   ToggleGroup,
   ToggleGroupItem,
-} from '@84000/design-system';
+} from '@eightyfourthousand/design-system';
 import { NodeViewProps } from '@tiptap/react';
 import { useNavigation } from '../../../shared';
 import { useEffect, useState } from 'react';
-import { Passage } from '@84000/data-access';
+import { Passage } from '@eightyfourthousand/data-access';
 
 const CodeBlock = ({ code }: { code: string }) => {
   return (

@@ -1,5 +1,5 @@
 {
-  "name": "@84000/lib-editing",
+  "name": "@eightyfourthousand/lib-editing",
   "version": "2026.3.0",
   "description": "Shared editing and reader components for 84000 translation workflows.",
   "private": false,
@@ -14,12 +14,12 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/client-graphql": "^2026.3.0",
-    "@84000/data-access": "^2026.3.0",
-    "@84000/design-system": "^2026.3.0",
-    "@84000/lib-instr": "^2026.3.0",
-    "@84000/lib-search": "^2026.3.0",
-    "@84000/lib-utils": "^2026.3.0"
+    "@eightyfourthousand/client-graphql": "^2026.3.0",
+    "@eightyfourthousand/data-access": "^2026.3.0",
+    "@eightyfourthousand/design-system": "^2026.3.0",
+    "@eightyfourthousand/lib-instr": "^2026.3.0",
+    "@eightyfourthousand/lib-search": "^2026.3.0",
+    "@eightyfourthousand/lib-utils": "^2026.3.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",

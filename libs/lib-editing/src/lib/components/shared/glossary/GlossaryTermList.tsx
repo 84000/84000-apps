@@ -1,9 +1,9 @@
 'use client';
 
-import { SectionTitle } from '@84000/design-system';
+import { SectionTitle } from '@eightyfourthousand/design-system';
 import { LabeledElement } from '../LabeledElement';
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useGlossaryPagination } from './GlossaryPaginationProvider';
 import { GlossarySkeleton } from './GlossarySkeleton';
 

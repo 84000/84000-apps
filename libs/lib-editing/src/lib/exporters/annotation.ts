@@ -1,4 +1,4 @@
-import { Annotation, AnnotationType } from '@84000/data-access';
+import { Annotation, AnnotationType } from '@eightyfourthousand/data-access';
 import { Exporter, ExporterContext } from './export';
 import { abbreviation } from './abbreviation';
 import { audio } from './audio';

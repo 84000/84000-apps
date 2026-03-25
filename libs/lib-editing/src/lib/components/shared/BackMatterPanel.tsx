@@ -1,15 +1,15 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@84000/design-system';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
-import { BibliographyEntries } from '@84000/data-access';
-import type { GlossaryTermsPage } from '@84000/client-graphql';
+import { BibliographyEntries } from '@eightyfourthousand/data-access';
+import type { GlossaryTermsPage } from '@eightyfourthousand/client-graphql';
 import { ReactElement, useRef } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { GlossaryTermList, GlossaryPaginationProvider } from './glossary';
 import { BibliographyList } from './bibliography';
-import { cn, useIsMobile } from '@84000/lib-utils';
+import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { useScrollPositionRestore } from './hooks/useScrollPositionRestore';
 
 export const BackMatterPanel = ({

@@ -5,7 +5,7 @@ import {
   BODY_MATTER_FILTER,
   FRONT_MATTER_FILTER,
   Titles as TitlesData,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { Titles, TitlesVariant } from '../shared/titles';
 import { TitlesRenderer, TranslationRenderer } from '../shared/types';

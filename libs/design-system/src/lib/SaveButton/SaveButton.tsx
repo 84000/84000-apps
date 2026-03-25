@@ -3,7 +3,7 @@
 import { Loader2Icon } from 'lucide-react';
 import { Button, ButtonProps } from '../Button/Button';
 import { useState } from 'react';
-import { cn } from '@84000/lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const SaveButton = ({
   onClick,

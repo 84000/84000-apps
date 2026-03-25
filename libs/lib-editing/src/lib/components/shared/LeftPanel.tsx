@@ -1,13 +1,13 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@84000/design-system';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
 import { TabName } from './types';
 import { useEffect } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { Toc, Work } from '@84000/data-access';
+import { Toc, Work } from '@eightyfourthousand/data-access';
 import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
-import { cn, useIsMobile } from '@84000/lib-utils';
+import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 
 export const LeftPanel = ({
   toc,

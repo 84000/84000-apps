@@ -6,13 +6,13 @@ import {
   Imprint,
   Titles as TitlesData,
   TitleType,
-} from '@84000/data-access';
+} from '@eightyfourthousand/data-access';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '@84000/design-system';
+} from '@eightyfourthousand/design-system';
 import { TitlesCard } from './TitlesCard';
 import { TitleForm } from './TitleForm';
 

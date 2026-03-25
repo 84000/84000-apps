@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { PanelName, TabName } from '../types';
 import { useNavigation } from '../NavigationProvider';
-import { scrollToElement } from '@84000/lib-utils';
+import { scrollToElement } from '@eightyfourthousand/lib-utils';
 
 export const useScrollInTab = ({
   panel,
