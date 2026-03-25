@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-search",
-  "version": "2026.3.0",
+  "version": "2026.3.1",
   "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,9 +17,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/data-access": "^2026.3.0",
-    "@eightyfourthousand/design-system": "^2026.3.0",
-    "@eightyfourthousand/lib-utils": "^2026.3.0"
+    "@eightyfourthousand/data-access": "^2026.3.1",
+    "@eightyfourthousand/design-system": "^2026.3.1",
+    "@eightyfourthousand/lib-utils": "^2026.3.1"
   },
   "peerDependencies": {
     "next": "^16.0.0",
