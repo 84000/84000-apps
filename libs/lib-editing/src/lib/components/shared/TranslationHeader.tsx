@@ -1,7 +1,7 @@
 'use client';
 
 import { MiniLogo } from '@84000/design-system';
-import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
+import { PassageMatch, SearchButton, SearchResult } from '@84000/lib-search';
 import { useNavigation } from './NavigationProvider';
 import { useCallback } from 'react';
 import { PanelName, PanelState, TabName } from './types';

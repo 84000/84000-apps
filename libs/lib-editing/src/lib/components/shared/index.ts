@@ -7,4 +7,5 @@ export * from './TranslationSkeleton';
 export * from './TranslationTable';
 export * from './bibliography';
 export * from './glossary';
+export * from './titles';
 export * from './types';

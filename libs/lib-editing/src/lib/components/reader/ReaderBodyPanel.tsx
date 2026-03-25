@@ -7,10 +7,10 @@ import {
   Titles as TitlesData,
 } from '@84000/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
+import { Titles, TitlesVariant } from '../shared/titles';
 import { TitlesRenderer, TranslationRenderer } from '../shared/types';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from './TranslationReader';
-import { Titles, TitlesVariant } from '@84000/design-system';
 
 const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
   translation: 'english',

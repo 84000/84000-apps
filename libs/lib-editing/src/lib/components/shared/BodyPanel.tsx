@@ -5,7 +5,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  TitleDetails,
 } from '@84000/design-system';
 import {
   TranslationEditorContent,
@@ -18,6 +17,7 @@ import { cn } from '@84000/lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';
+import { TitleDetails } from './titles';
 import {
   capturePassageAnchor,
   findScrollParent,
