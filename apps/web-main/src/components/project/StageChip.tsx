@@ -2,9 +2,13 @@ import {
   ProjectStageLabel,
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
-} from '../types';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../Tooltip/Tooltip';
-import { Badge } from '../Badge/Badge';
+} from '@data-access';
+import {
+  Badge,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@design-system';
 
 export const StageChip = ({ stage }: { stage: ProjectStageLabel }) => {
   const color = STAGE_COLORS[stage];
@@ -20,7 +24,7 @@ export const StageChip = ({ stage }: { stage: ProjectStageLabel }) => {
       <TooltipTrigger asChild>
         <Badge className={triggerClassName}>{stageLabel}</Badge>
       </TooltipTrigger>
-      <TooltipContent className="border-hidden shadow-none bg-transparent">
+      <TooltipContent className="border-hidden bg-transparent shadow-none">
         <Badge className={badgeClassName}>
           {stageLabel}
           <span className="pl-1">{STAGE_DESCRIPTIONS[stage]}</span>
