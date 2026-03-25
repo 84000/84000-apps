@@ -1,6 +1,6 @@
 'use client';
 
-import { highlightText, removeHtmlTags, useIsMobile } from '@lib-utils';
+import { highlightText, removeHtmlTags, useIsMobile } from '@84000/lib-utils';
 import {
   AlignmentMatch,
   BibliographyMatch,
@@ -8,7 +8,7 @@ import {
   PassageMatch,
   SearchResult,
 } from '../types';
-import { Separator } from '@design-system';
+import { Separator } from '@84000/design-system';
 
 export const PassageResult = ({
   match,

@@ -28,6 +28,7 @@
       "@84000/lib-instr": ["libs/lib-instr/src/index.ts"],
       "@84000/lib-instr/ssr": ["libs/lib-instr/src/ssr.ts"],
       "@84000/lib-instr/static": ["libs/lib-instr/src/static.ts"],
+      "@84000/lib-search": ["libs/lib-search/src/index.ts"],
       "@84000/lib-utils": ["libs/lib-utils/src/index.ts"],
       "@data-access": ["libs/data-access/src/index.ts"],
       "@data-access/ssr": ["libs/data-access/src/ssr.ts"],

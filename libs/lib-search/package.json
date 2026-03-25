@@ -1,12 +1,12 @@
 {
-  "name": "@84000/lib-editing",
+  "name": "@84000/lib-search",
   "version": "0.1.0",
-  "description": "Shared editing and reader components for 84000 translation workflows.",
+  "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/84000/84000-apps.git",
-    "directory": "libs/lib-editing"
+    "directory": "libs/lib-search"
   },
   "homepage": "https://github.com/84000/84000-apps",
   "bugs": {
@@ -14,11 +14,8 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/client-graphql": "^0.1.0",
     "@84000/data-access": "^0.1.0",
     "@84000/design-system": "^0.1.0",
-    "@84000/lib-instr": "^0.1.0",
-    "@84000/lib-search": "^0.1.0",
     "@84000/lib-utils": "^0.1.0"
   },
   "peerDependencies": {
