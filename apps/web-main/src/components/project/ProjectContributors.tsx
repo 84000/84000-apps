@@ -2,7 +2,7 @@ import {
   Project,
   ProjectContributors as Contributors,
   getProjectContributors,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import {
   Button,
   Skeleton,
@@ -12,11 +12,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { ArrowRightIcon } from 'lucide-react';
 import { Placeholder } from '../ui/Placeholder';
 import { useSession } from '@lib-user';
-import { camelCaseToHuman } from '@lib-utils';
+import { camelCaseToHuman } from '@eightyfourthousand/lib-utils';
 import { useEffect, useState } from 'react';
 
 export const ProjectContributors = ({

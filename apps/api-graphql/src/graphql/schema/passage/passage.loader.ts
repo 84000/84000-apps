@@ -1,4 +1,4 @@
-import type { DataClient } from '@data-access';
+import type { DataClient } from '@eightyfourthousand/data-access';
 import { createAlignmentLoader } from '../alignment/alignment.loader';
 import { createAnnotationLoader } from '../annotation/annotation.loader';
 import { createPassageLabelLoader } from './passage-label.loader';

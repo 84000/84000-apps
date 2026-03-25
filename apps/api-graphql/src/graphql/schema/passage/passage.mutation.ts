@@ -6,7 +6,7 @@ import {
   Annotation,
   passagesToDTO,
   passagesToRowDTO,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 const PAGE_SIZE = 500;
 

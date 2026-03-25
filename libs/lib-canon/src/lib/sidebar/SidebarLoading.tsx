@@ -1,6 +1,6 @@
 'use client';
 
-import { Skeleton } from '@design-system';
+import { Skeleton } from '@eightyfourthousand/design-system';
 export const SidebarLoading = () => {
   return (
     <div>

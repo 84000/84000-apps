@@ -1,13 +1,13 @@
 'use client';
 
-import { GlossaryLandingItem } from '@data-access';
+import { GlossaryLandingItem } from '@eightyfourthousand/data-access';
 import {
   DataTable,
   DataTableColumn,
   SortableHeader,
   TooltipCell,
   defaultFilterFn,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
 import { GlossariesLandingFilters } from './GlossariesLandingFilters';

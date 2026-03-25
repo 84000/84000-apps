@@ -1,5 +1,5 @@
-import { createBrowserClient, getTranslationUuids } from '@data-access';
-import { ReaderBackMatterPage } from '@lib-editing/ssr';
+import { createBrowserClient, getTranslationUuids } from '@eightyfourthousand/data-access';
+import { ReaderBackMatterPage } from '@eightyfourthousand/lib-editing/ssr';
 
 export const revalidate = 60;
 export const dynamicParams = true;

@@ -1,15 +1,15 @@
 'use client';
 
-import { H3 } from '@design-system';
+import { H3 } from '@eightyfourthousand/design-system';
 import { useEffect, useState } from 'react';
 import {
   BlockEditor,
   blocksFromTranslationBody,
   TranslationEditorContent,
-} from '@lib-editing';
-import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
+} from '@eightyfourthousand/lib-editing';
+import { EditorType, Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { EMPTY_DOCUMENT, SLUG_PATHS } from './constants';
-import { PassageDTO, passagesFromDTO } from '@data-access';
+import { PassageDTO, passagesFromDTO } from '@eightyfourthousand/data-access';
 import { SandboxTranslationEditor } from './SandboxTranslationEditor';
 
 export const EditorPage = ({

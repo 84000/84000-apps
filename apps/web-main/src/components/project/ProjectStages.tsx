@@ -1,4 +1,4 @@
-import { Project, ProjectStageDetail, getProjectStages } from '@data-access';
+import { Project, ProjectStageDetail, getProjectStages } from '@eightyfourthousand/data-access';
 import {
   Button,
   Skeleton,
@@ -8,7 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { useSession } from '@lib-user';
 import { Placeholder } from '../ui/Placeholder';
 import { MoreHorizontalIcon } from 'lucide-react';

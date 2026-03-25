@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { passageFromDTO, type DataClient, type Passage, type PassageDTO, type Passages } from '@data-access';
+import { passageFromDTO, type DataClient, type Passage, type PassageDTO, type Passages } from '@eightyfourthousand/data-access';
 
 export function createPassageReferencesLoader(supabase: DataClient) {
   return new DataLoader<string, Passages>(

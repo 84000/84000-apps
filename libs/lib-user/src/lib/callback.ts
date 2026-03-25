@@ -1,4 +1,4 @@
-import { createServerClient } from '@data-access/ssr';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { NextResponse } from 'next/server';
 
 export const authCallback = async (request: Request) => {

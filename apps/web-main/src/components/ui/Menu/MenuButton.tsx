@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useRouter } from 'next/navigation';
 import { MenuSubItem } from './types';
 

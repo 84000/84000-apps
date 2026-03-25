@@ -13,12 +13,12 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { MenuIcon } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
 import { MenuButton } from './MenuButton';
 import { usePathname } from 'next/navigation';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const MobileMenuItem = ({ item }: { item: NavigationMenuItemProps }) => {
   const pathname = usePathname();

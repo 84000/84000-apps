@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { usePathname } from 'next/navigation';
 import {
   Popover,
@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
   Separator,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import Image from 'next/image';
 import { useState } from 'react';
 import { CLASSES_FOR_COLOR, NavigationMenuItemProps } from './types';

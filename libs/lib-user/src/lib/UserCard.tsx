@@ -14,13 +14,13 @@ import {
   Label,
   SaveButton,
   buttonVariants,
-} from '@design-system';
-import { cn } from '@lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { UploadIcon, UserIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 } from 'uuid';
 import { useProfile } from './ProfileProvider';
-import { updateUserProfile, uploadToStorage } from '@data-access';
+import { updateUserProfile, uploadToStorage } from '@eightyfourthousand/data-access';
 
 export const UserCard = () => {
   const { user, dataClient, refreshProfile } = useProfile();

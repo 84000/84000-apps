@@ -1,7 +1,7 @@
 'use client';
 
-import { Project, getProjects } from '@data-access';
-import { H2, Skeleton } from '@design-system';
+import { Project, getProjects } from '@eightyfourthousand/data-access';
+import { H2, Skeleton } from '@eightyfourthousand/design-system';
 import { useSession } from '@lib-user';
 import { ProjectsTable } from './ProjectsTable';
 import { useEffect, useState } from 'react';

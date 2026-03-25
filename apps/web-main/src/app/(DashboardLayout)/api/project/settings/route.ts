@@ -1,4 +1,4 @@
-import { createServerClient, getSession } from '@data-access/ssr';
+import { createServerClient, getSession } from '@eightyfourthousand/data-access/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 const REQUIRED_ROLES = ['admin'];

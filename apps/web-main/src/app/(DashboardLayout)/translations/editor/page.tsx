@@ -1,6 +1,6 @@
-import { TranslationsTable } from '@lib-editing';
-import { H2 } from '@design-system';
-import { createBuildGraphQLClient, getTranslationsMetadata } from '@client-graphql/ssr';
+import { TranslationsTable } from '@eightyfourthousand/lib-editing';
+import { H2 } from '@eightyfourthousand/design-system';
+import { createBuildGraphQLClient, getTranslationsMetadata } from '@eightyfourthousand/client-graphql/ssr';
 import React from 'react';
 
 export const revalidate = 60;

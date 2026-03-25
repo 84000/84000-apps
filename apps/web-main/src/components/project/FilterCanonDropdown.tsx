@@ -1,6 +1,6 @@
 import { FilterFn, Table } from '@tanstack/react-table';
-import { FilterDropdown } from '@design-system';
-import { CANON_TYPES } from '@data-access';
+import { FilterDropdown } from '@eightyfourthousand/design-system';
+import { CANON_TYPES } from '@eightyfourthousand/data-access';
 import { TableProject } from './TableProject';
 
 export const filterFn: FilterFn<TableProject> = (

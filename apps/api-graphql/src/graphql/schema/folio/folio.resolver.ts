@@ -5,7 +5,7 @@ import {
   folioFromDTO,
   type Folio,
   type TohokuCatalogEntry,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 /**
  * Resolver for Work.folios - fetches folios for a work with pagination

@@ -1,6 +1,6 @@
 'use client';
 
-import { EditorLayout } from '@lib-editing';
+import { EditorLayout } from '@eightyfourthousand/lib-editing';
 
 const Layout = EditorLayout;
 

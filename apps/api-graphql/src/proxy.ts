@@ -1,4 +1,4 @@
-import { updateSession } from '@data-access/ssr';
+import { updateSession } from '@eightyfourthousand/data-access/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {

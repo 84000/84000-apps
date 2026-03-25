@@ -1,6 +1,6 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from './work.types';
-import type { TitleDTO } from '@data-access';
+import type { TitleDTO } from '@eightyfourthousand/data-access';
 
 type TitleResult = {
   uuid: string;

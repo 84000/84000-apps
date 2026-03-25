@@ -2,13 +2,13 @@ import {
   ProjectStageLabel,
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import {
   Badge,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 
 export const StageChip = ({ stage }: { stage: ProjectStageLabel }) => {
   const color = STAGE_COLORS[stage];

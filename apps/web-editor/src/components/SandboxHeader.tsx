@@ -7,11 +7,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   H4,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { SLUG_PATHS } from './constants';
 import { useCallback, useEffect, useState } from 'react';
 import { useSandbox } from './SandboxProvider';
-import { Format, Slug } from '@lib-editing/fixtures/types';
+import { Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { useRouter } from 'next/navigation';
 import { ChevronDownIcon, SplitIcon } from 'lucide-react';
 

@@ -1,6 +1,6 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import { PassageRowDTO } from '@data-access';
+import { PassageRowDTO } from '@eightyfourthousand/data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 

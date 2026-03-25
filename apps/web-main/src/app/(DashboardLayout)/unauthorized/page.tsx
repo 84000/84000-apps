@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, H2 } from '@design-system';
+import { Button, H2 } from '@eightyfourthousand/design-system';
 import { useSession } from '@lib-user';
 import { useRouter } from 'next/navigation';
 

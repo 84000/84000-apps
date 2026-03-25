@@ -73,23 +73,23 @@ This is an **Nx monorepo** with Next.js apps and shared libraries.
 Import libraries using TypeScript path aliases (defined in `tsconfig.base.json`):
 
 ```typescript
-import { Button, Dialog } from '@design-system';
-import { createBrowserClient } from '@data-access';
-import { createServerClient } from '@data-access/ssr';
+import { Button, Dialog } from '@eightyfourthousand/design-system';
+import { createBrowserClient } from '@eightyfourthousand/data-access';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { useProfile } from '@lib-user';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 ```
 
 ### Server-Side Imports
 
 Many libraries export `/ssr` versions for server components:
 
-- `@data-access/ssr`
+- `@eightyfourthousand/data-access/ssr`
 - `@lib-user/ssr`
 - `@lib-canon/ssr`
 - `@lib-glossary/ssr`
 - `@lib-explore/ssr`
-- `@lib-instr/ssr`
+- `@eightyfourthousand/lib-instr/ssr`
 
 ## Code Style Guidelines
 
@@ -103,8 +103,8 @@ Many libraries export `/ssr` versions for server components:
 
 ```typescript
 // Good
-import { Button } from '@design-system';
-import { cn } from '@lib-utils';
+import { Button } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 // Avoid
 import { Button } from '../../../libs/design-system/src/lib/Button';
@@ -174,11 +174,11 @@ export async function Page() {
 #### Tailwind CSS
 
 - Use Tailwind utility classes
-- Use `cn()` helper from `@lib-utils` to merge classes
+- Use `cn()` helper from `@eightyfourthousand/lib-utils` to merge classes
 - Follow Tailwind CSS 4 conventions
 
 ```typescript
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 <div className={cn('flex items-center', className)} />
 ```
@@ -271,7 +271,7 @@ export const Component = () => { ... };
 ### Data Fetching (Server-Side)
 
 ```typescript
-import { createServerClient } from '@data-access/ssr';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 
 const client = createServerClient();
 const data = await fetchData({ client });
@@ -281,7 +281,7 @@ const data = await fetchData({ client });
 
 ```typescript
 'use client';
-import { createBrowserClient } from '@data-access';
+import { createBrowserClient } from '@eightyfourthousand/data-access';
 
 const client = createBrowserClient();
 ```

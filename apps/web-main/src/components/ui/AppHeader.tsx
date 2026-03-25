@@ -1,6 +1,6 @@
 'use client';
 
-import { Header } from '@design-system';
+import { Header } from '@eightyfourthousand/design-system';
 import type { ScholarUser } from '@lib-user';
 import { ProfileDropdown } from '@lib-user';
 import { AppNavigationMenu } from './Menu';

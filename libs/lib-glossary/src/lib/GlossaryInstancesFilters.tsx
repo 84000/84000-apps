@@ -1,7 +1,7 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
-import { FuzzyGlobalFilter } from '@design-system';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
+import { FuzzyGlobalFilter } from '@eightyfourthousand/design-system';
 import { Table } from '@tanstack/react-table';
 import { useEffect, useState } from 'react';
 import { FilterCanonPathDropdown } from './FilterCanonPathDropdown';

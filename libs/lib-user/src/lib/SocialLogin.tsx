@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from './SessionContext';
-import { cn } from '@lib-utils';
-import { AppleLogo, GoogleLogo } from '@design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
+import { AppleLogo, GoogleLogo } from '@eightyfourthousand/design-system';
 
 const IS_APPLE_ENABLED = false;
 

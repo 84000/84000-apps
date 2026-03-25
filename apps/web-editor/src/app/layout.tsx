@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import '@design-system-css';
-import { FONTS } from '@design-system';
+import '@eightyfourthousand/design-system/css';
+import { FONTS } from '@eightyfourthousand/design-system';
 import { SandboxHeader } from '../components/SandboxHeader';
 import { SandboxProvider } from '../components/SandboxProvider';
 

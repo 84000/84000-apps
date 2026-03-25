@@ -1,4 +1,4 @@
-import { Button } from '@design-system';
+import { Button } from '@eightyfourthousand/design-system';
 import { ArrowRightIcon } from 'lucide-react';
 
 export const OpenButton = ({ url }: { url: string }) => {

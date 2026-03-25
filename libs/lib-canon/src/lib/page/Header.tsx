@@ -1,6 +1,6 @@
 'use client';
 
-import { ToggleGroup, ToggleGroupItem } from '@design-system';
+import { ToggleGroup, ToggleGroupItem } from '@eightyfourthousand/design-system';
 import { TabOption, useCanon } from '../context';
 
 export const Header = () => {

@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, H2, Label, ScrollArea } from '@design-system';
+import { Button, H2, Label, ScrollArea } from '@eightyfourthousand/design-system';
 import { ReactNode } from 'react';
 import { ProfileProvider, useProfile } from './ProfileProvider';
-import { LIBRARY_ITEMS } from '@data-access';
+import { LIBRARY_ITEMS } from '@eightyfourthousand/data-access';
 
 const InnerProfileLayout = ({ children }: { children: ReactNode }) => {
   const { activeMenu, pageTitle, onMenuChange } = useProfile();

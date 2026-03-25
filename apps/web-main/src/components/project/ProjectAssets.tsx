@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Project, ProjectAsset as Asset, getProjectAssets } from '@data-access';
+import { Project, ProjectAsset as Asset, getProjectAssets } from '@eightyfourthousand/data-access';
 import { useSession } from '@lib-user';
 import {
   Button,
@@ -10,7 +10,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import Link from 'next/link';
 import { DownloadIcon } from 'lucide-react';
 

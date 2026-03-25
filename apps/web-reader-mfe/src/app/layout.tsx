@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import '@design-system-css';
-import { FONTS } from '@design-system';
+import '@eightyfourthousand/design-system/css';
+import { FONTS } from '@eightyfourthousand/design-system';
 
 export const metadata: Metadata = {
   title: '84000 Translation Reader',

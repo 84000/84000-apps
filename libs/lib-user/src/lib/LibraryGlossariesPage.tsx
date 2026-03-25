@@ -7,7 +7,7 @@ import {
   DataTableRow,
   SortableHeader,
   TooltipCell,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { useProfile } from './ProfileProvider';
 import { OpenButton } from './OpenButton';
 import { RemoveButton } from './RemoveButton';

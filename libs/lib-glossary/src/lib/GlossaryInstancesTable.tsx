@@ -1,20 +1,20 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
 import {
   DataTable,
   DataTableColumn,
   H4,
   SortableHeader,
   TooltipCell,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { filterFn as canonFilterFn } from './FilterCanonPathDropdown';
 import { filterFn as translatorFilterFn } from './FilterTranslatorsDropdown';
 import { GlossaryInstancesFilters } from './GlossaryInstancesFilters';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import { GlossaryInstanceRow } from './types';
-import { parseToh, removeHtmlTags } from '@lib-utils';
+import { parseToh, removeHtmlTags } from '@eightyfourthousand/lib-utils';
 
 type GlossaryInstanceColumn = DataTableColumn<GlossaryInstanceRow>;
 

@@ -1,5 +1,5 @@
 import { Table, FilterFn } from '@tanstack/react-table';
-import { FilterDropdown } from '@design-system';
+import { FilterDropdown } from '@eightyfourthousand/design-system';
 import { CanonWorkRow } from './WorksPage';
 
 export const filterFn: FilterFn<CanonWorkRow> = (

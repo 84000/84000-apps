@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import type { DataClient } from '@data-access';
+import type { DataClient } from '@eightyfourthousand/data-access';
 
 /**
  * Creates a DataLoader for batch-fetching passage labels by UUID.

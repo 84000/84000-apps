@@ -1,6 +1,6 @@
 'use client';
 
-import { Skeleton } from '@design-system';
+import { Skeleton } from '@eightyfourthousand/design-system';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 

@@ -8,7 +8,7 @@ import {
   passageFromDTO,
   type DataClient,
   type PassageDTO,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 

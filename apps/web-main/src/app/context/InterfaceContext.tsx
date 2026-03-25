@@ -1,6 +1,6 @@
 'use client';
 import React, { createContext, useState, ReactNode, useContext } from 'react';
-import { TooltipProvider } from '@design-system';
+import { TooltipProvider } from '@eightyfourthousand/design-system';
 
 // Define the shape of the context state
 interface InterfaceContextState {

@@ -1,7 +1,7 @@
 'use client';
 
-import { CanonHead, CanonNode } from '@data-access';
-import { toSlug } from '@lib-utils';
+import { CanonHead, CanonNode } from '@eightyfourthousand/data-access';
+import { toSlug } from '@eightyfourthousand/lib-utils';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   ReactElement,

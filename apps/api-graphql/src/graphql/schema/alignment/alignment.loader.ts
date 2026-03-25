@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import type { AlignmentDTO, DataClient } from '@data-access';
+import type { AlignmentDTO, DataClient } from '@eightyfourthousand/data-access';
 
 type AlignmentRow = AlignmentDTO & { passage_uuid: string };
 

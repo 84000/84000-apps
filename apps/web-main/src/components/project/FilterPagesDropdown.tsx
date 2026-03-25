@@ -1,5 +1,5 @@
 import { FilterFn, Table } from '@tanstack/react-table';
-import { FilterDropdown } from '@design-system';
+import { FilterDropdown } from '@eightyfourthousand/design-system';
 import { useCallback } from 'react';
 import { TableProject } from './TableProject';
 import { MinMax } from './MinMax';

@@ -1,6 +1,6 @@
 import { CheckCircleIcon, CircleIcon, TimerIcon } from 'lucide-react';
-import { CanonWorkStatus } from '@data-access';
-import { cn } from '@lib-utils';
+import { CanonWorkStatus } from '@eightyfourthousand/data-access';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const WorkStatus = ({
   className,

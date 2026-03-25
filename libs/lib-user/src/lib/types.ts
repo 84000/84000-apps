@@ -1,4 +1,4 @@
-import { UserRole } from '@data-access';
+import { UserRole } from '@eightyfourthousand/data-access';
 
 export const SUBSCRIPTION_TYPES = ['news'] as const;
 

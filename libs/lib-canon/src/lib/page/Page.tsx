@@ -5,7 +5,7 @@ import {
   getCanonSection,
   getCanonTree,
   getCanonWorks,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import { InnerPage } from './InnerPage';
 
 export const CanonPage = async ({

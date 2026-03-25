@@ -1,4 +1,4 @@
-import { ReaderBackMatterPage } from '@lib-editing/ssr';
+import { ReaderBackMatterPage } from '@eightyfourthousand/lib-editing/ssr';
 import { getStaticUuids } from '../get-static-uuids';
 
 export const dynamicParams = true;

@@ -14,14 +14,14 @@ import {
   useBlockEditor,
   useDefaultExtensions,
   useTranslationExtensions,
-} from '@lib-editing';
+} from '@eightyfourthousand/lib-editing';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
   Button,
   Switch,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { EditorView, basicSetup } from 'codemirror';
 import { json, jsonParseLinter } from '@codemirror/lang-json';
 import { linter } from '@codemirror/lint';

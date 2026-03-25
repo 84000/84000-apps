@@ -1,7 +1,7 @@
 import {
   createBuildGraphQLClient,
   getTranslationUuids,
-} from '@client-graphql/ssr';
+} from '@eightyfourthousand/client-graphql/ssr';
 import { unstable_cache } from 'next/cache';
 
 const fetchStaticUuids = async (): Promise<string[]> => {

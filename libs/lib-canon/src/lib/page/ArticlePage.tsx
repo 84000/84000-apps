@@ -1,9 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { CanonDetail } from '@data-access';
-import { H2 } from '@design-system';
-import { BlockEditor } from '@lib-editing';
+import { CanonDetail } from '@eightyfourthousand/data-access';
+import { H2 } from '@eightyfourthousand/design-system';
+import { BlockEditor } from '@eightyfourthousand/lib-editing';
 
 export const ArticlePage = ({ section }: { section: CanonDetail }) => {
   const { label, description, article } = section;

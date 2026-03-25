@@ -25,7 +25,7 @@ import {
   getUserSearches,
   removeUserLibraryItem,
   updateUserProfile,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 export const MENU_ITEMS = ['profile', ...LIBRARY_ITEMS] as const;
 

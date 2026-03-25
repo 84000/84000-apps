@@ -1,4 +1,4 @@
-import { getTranslationToc } from '@data-access';
+import { getTranslationToc } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 

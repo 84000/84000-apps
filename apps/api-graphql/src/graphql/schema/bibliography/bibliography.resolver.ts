@@ -1,6 +1,6 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import { getBibliographyEntries, getBibliographyEntry } from '@data-access';
+import { getBibliographyEntries, getBibliographyEntry } from '@eightyfourthousand/data-access';
 
 /**
  * Resolver for Query.bibliographyEntry - fetches a single bibliography entry

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, H2, H5, MiniLogo } from '@design-system';
+import { Button, H2, H5, MiniLogo } from '@eightyfourthousand/design-system';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 export const metadata: Metadata = {

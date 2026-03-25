@@ -1,5 +1,5 @@
-import { createBrowserClient, getAllGlossaryTerms } from '@data-access';
-import { H2 } from '@design-system';
+import { createBrowserClient, getAllGlossaryTerms } from '@eightyfourthousand/data-access';
+import { H2 } from '@eightyfourthousand/design-system';
 import { GlossariesLandingTable } from './GlossariesLandingTable';
 
 export const LandingPage = async () => {

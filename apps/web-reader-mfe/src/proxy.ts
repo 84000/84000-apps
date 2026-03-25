@@ -1,4 +1,4 @@
-import { createServerClient } from '@data-access/ssr';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function proxy(request: NextRequest) {

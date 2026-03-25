@@ -4,7 +4,7 @@ import {
   type TohokuCatalogEntry,
   WorkDTO,
   workFromDTO,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 
 export const workQueries = {

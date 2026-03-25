@@ -1,9 +1,9 @@
 'use client';
 
-import { DataTable } from '@design-system';
-import { Project } from '@data-access';
+import { DataTable } from '@eightyfourthousand/design-system';
+import { Project } from '@eightyfourthousand/data-access';
 import { useEffect, useState } from 'react';
-import { parseToh, removeDiacritics } from '@lib-utils';
+import { parseToh, removeDiacritics } from '@eightyfourthousand/lib-utils';
 import { TableProject } from './TableProject';
 import { ProjectFilters } from './ProjectFilters';
 import { useProjectColumns } from './ProjectColumns';

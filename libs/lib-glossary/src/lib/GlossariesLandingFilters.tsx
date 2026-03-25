@@ -3,7 +3,7 @@ import {
   DebounceLevel,
   FilterDropdown,
   FuzzyGlobalFilter,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { GlossariesLandingRow } from './types';
 
 export const GlossariesLandingFilters = ({

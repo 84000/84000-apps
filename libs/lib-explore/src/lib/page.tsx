@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, ArrowUp, ExternalLink, Loader2Icon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { Button, H1, H5, Input, ScrollArea } from '@design-system';
+import { Button, H1, H5, Input, ScrollArea } from '@eightyfourthousand/design-system';
 import { config } from './config';
 import { orchestratePipelineStep } from './orchestrate';
 import type { Message } from './types';
