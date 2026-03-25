@@ -1,6 +1,6 @@
 {
   "name": "@84000/client-graphql",
-  "version": "0.1.0",
+  "version": "2026.3.0",
   "description": "GraphQL client helpers and typed query functions for 84000 applications.",
   "private": false,
   "repository": {
@@ -14,7 +14,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/data-access": "^0.1.0"
+    "@84000/data-access": "^2026.3.0"
   },
   "sideEffects": false,
   "keywords": [],

@@ -1,6 +1,6 @@
 {
   "name": "@84000/lib-editing",
-  "version": "0.1.0",
+  "version": "2026.3.0",
   "description": "Shared editing and reader components for 84000 translation workflows.",
   "private": false,
   "repository": {
@@ -14,12 +14,12 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/client-graphql": "^0.1.0",
-    "@84000/data-access": "^0.1.0",
-    "@84000/design-system": "^0.1.0",
-    "@84000/lib-instr": "^0.1.0",
-    "@84000/lib-search": "^0.1.0",
-    "@84000/lib-utils": "^0.1.0"
+    "@84000/client-graphql": "^2026.3.0",
+    "@84000/data-access": "^2026.3.0",
+    "@84000/design-system": "^2026.3.0",
+    "@84000/lib-instr": "^2026.3.0",
+    "@84000/lib-search": "^2026.3.0",
+    "@84000/lib-utils": "^2026.3.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@84000/lib-instr",
-  "version": "0.1.0",
+  "version": "2026.3.0",
   "description": "Feature flag and instrumentation helpers for 84000 applications.",
   "private": false,
   "repository": {

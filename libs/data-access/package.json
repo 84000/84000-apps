@@ -1,6 +1,6 @@
 {
   "name": "@84000/data-access",
-  "version": "0.1.0",
+  "version": "2026.3.0",
   "description": "Shared data access clients, DTO mappers, and domain types for 84000 applications.",
   "private": false,
   "repository": {
@@ -14,7 +14,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@84000/lib-utils": "^0.1.0"
+    "@84000/lib-utils": "^2026.3.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",

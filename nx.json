@@ -118,6 +118,7 @@
       "client-graphql",
       "lib-instr",
       "design-system",
+      "lib-search",
       "lib-editing"
     ]
   },
