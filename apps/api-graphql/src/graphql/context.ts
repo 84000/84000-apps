@@ -3,8 +3,8 @@ import {
   createServerClient,
   createTokenClient,
   getSession,
-} from '@data-access';
-import type { DataClient, UserClaims, UserRole } from '@data-access';
+} from '@eightyfourthousand/data-access';
+import type { DataClient, UserClaims, UserRole } from '@eightyfourthousand/data-access';
 import { jwtDecode } from 'jwt-decode';
 import { createLoaders, type Loaders } from './loaders';
 

@@ -1,4 +1,4 @@
-import { createBrowserClient, getGlossaryEntry } from '@data-access';
+import { createBrowserClient, getGlossaryEntry } from '@eightyfourthousand/data-access';
 import { GlossaryEditor } from './GlossaryEditor';
 import { GlossaryHeading } from './GlossaryHeading';
 import { GlossaryInstancesTable } from './GlossaryInstancesTable';

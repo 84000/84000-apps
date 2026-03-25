@@ -1,4 +1,4 @@
-import { ReaderLayout, TranslationSkeleton } from '@lib-editing';
+import { ReaderLayout, TranslationSkeleton } from '@eightyfourthousand/lib-editing';
 import { ReactNode, Suspense } from 'react';
 
 export const Layout = (props: {

@@ -1,19 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import {
   BO_TITLE_PREFIX,
   Imprint,
   Titles as TitlesData,
   TitleType,
-} from '@data-access';
-import { TitlesCard } from './TitlesCard';
+} from '@eightyfourthousand/data-access';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from '../../Dialog/Dialog';
-import { useState } from 'react';
+} from '@eightyfourthousand/design-system';
+import { TitlesCard } from './TitlesCard';
 import { TitleForm } from './TitleForm';
 
 export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
@@ -54,28 +54,25 @@ export const Titles = ({
     '...';
 
   switch (variant) {
-    case 'tibetan':
-      {
-        const mainTitles = titlesByType['mainTitle'] || [];
-        const boMain =
-          imprint?.mainTitles?.bo ||
-          mainTitles.find((t) => t.language === 'bo')?.title;
-        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-      }
+    case 'tibetan': {
+      const boMain =
+        imprint?.mainTitles?.bo ||
+        mainTitles.find((t) => t.language === 'bo')?.title;
+      header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
       break;
-    case 'comparison':
-      {
-        const boMain =
-          imprint?.mainTitles?.bo ||
-          mainTitles.find((t) => t.language === 'bo')?.title;
-        const enMain =
-          imprint?.mainTitles?.en ||
-          mainTitles.find((t) => t.language === 'en')?.title ||
-          '...';
-        header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
-        main = enMain;
-      }
+    }
+    case 'comparison': {
+      const boMain =
+        imprint?.mainTitles?.bo ||
+        mainTitles.find((t) => t.language === 'bo')?.title;
+      const enMain =
+        imprint?.mainTitles?.en ||
+        mainTitles.find((t) => t.language === 'en')?.title ||
+        '...';
+      header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+      main = enMain;
       break;
+    }
     case 'english':
     default:
       main =

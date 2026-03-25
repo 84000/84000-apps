@@ -1,7 +1,7 @@
 'use client';
 
-import { Project, UserRole, getProjectByUuid } from '@data-access';
-import { Button, H3, Separator, Skeleton } from '@design-system';
+import { Project, UserRole, getProjectByUuid } from '@eightyfourthousand/data-access';
+import { Button, H3, Separator, Skeleton } from '@eightyfourthousand/design-system';
 import { useSession } from '@lib-user';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,7 +10,7 @@ import { ProjectStages } from './ProjectStages';
 import { ProjectNotes } from './ProjectNotes';
 import { ProjectContributors } from './ProjectContributors';
 import { ProjectAssets } from './ProjectAssets';
-import { parseToh } from '@lib-utils';
+import { parseToh } from '@eightyfourthousand/lib-utils';
 import { ProjectSettings } from './ProjectSettings';
 
 export type ProjectPageProps = {

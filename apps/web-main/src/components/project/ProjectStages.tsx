@@ -1,19 +1,19 @@
-import { Project, ProjectStageDetail, getProjectStages } from '@data-access';
+import { Project, ProjectStageDetail, getProjectStages } from '@eightyfourthousand/data-access';
 import {
   Button,
   Skeleton,
-  StageChip,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { useSession } from '@lib-user';
 import { Placeholder } from '../ui/Placeholder';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { StageChip } from './StageChip';
 
 export const ProjectStages = ({ project }: { project?: Project | null }) => {
   const { apiClient: client } = useSession();

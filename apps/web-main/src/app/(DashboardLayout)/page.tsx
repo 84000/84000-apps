@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
   H1,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import Link from 'next/link';
 import { useMenuConfig } from '../../components/ui/Menu/useMenuConfig';
 import { CLASSES_FOR_COLOR } from '../../components/ui/Menu/types';

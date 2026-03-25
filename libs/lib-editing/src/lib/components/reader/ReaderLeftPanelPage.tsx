@@ -2,9 +2,9 @@ import {
   createBuildGraphQLClient,
   getTranslationMetadataByUuid,
   getTranslationToc,
-} from '@client-graphql/ssr';
+} from '@eightyfourthousand/client-graphql/ssr';
 import { ReaderLeftPanel } from './ReaderLeftPanel';
-import { isUuid } from '@lib-utils';
+import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 
 export const ReaderLeftPanelPage = async ({

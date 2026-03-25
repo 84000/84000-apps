@@ -1,4 +1,4 @@
-import { MentionAnnotation } from '@data-access';
+import { MentionAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';

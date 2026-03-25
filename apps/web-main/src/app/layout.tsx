@@ -1,7 +1,7 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import '@design-system-css';
-import { FONTS } from '@design-system';
+import '@eightyfourthousand/design-system/css';
+import { FONTS } from '@eightyfourthousand/design-system';
 import { InterfaceContextProvider } from './context/InterfaceContext';
 import { SessionProvider, GraphQLAuthProvider } from '@lib-user';
 

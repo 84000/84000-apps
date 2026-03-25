@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Work } from '@data-access';
+import type { Work } from '@eightyfourthousand/data-access';
 import { workFromGraphQL } from '../mappers';
 
 const GET_WORK_BY_UUID = gql`

@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { Check } from 'lucide-react';
 import { FilterPopover } from '../FilterPopover/FilterPopover';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { DataTableRow } from '../hooks';
 
 export const defaultFilterFn = <T extends DataTableRow>(

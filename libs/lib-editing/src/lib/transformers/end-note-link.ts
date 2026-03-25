@@ -1,4 +1,4 @@
-import { EndNoteLinkAnnotation } from '@data-access';
+import { EndNoteLinkAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitContentAt } from './split-at';

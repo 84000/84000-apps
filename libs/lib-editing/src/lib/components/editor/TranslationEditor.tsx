@@ -2,12 +2,12 @@
 
 import { EditorContent } from '@tiptap/react';
 import { TranslationBubbleMenu } from './menus';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { usePagination } from './PaginationProvider';
 import type {
   TranslationEditorContentItem,
   TranslationEditorContent,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 // Re-export for backwards compatibility
 export type { TranslationEditorContentItem, TranslationEditorContent };

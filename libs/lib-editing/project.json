@@ -5,6 +5,18 @@
   "projectType": "library",
   "tags": [],
   "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/lib-editing",
+        "main": "libs/lib-editing/src/index.ts",
+        "tsConfig": "libs/lib-editing/tsconfig.lib.json",
+        "rootDir": "libs/lib-editing/src",
+        "generateExportsField": true,
+        "additionalEntryPoints": ["libs/lib-editing/src/ssr.ts"]
+      }
+    },
     "test": {
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],

@@ -1,4 +1,4 @@
-import { AnnotationType } from '@data-access';
+import { AnnotationType } from '@eightyfourthousand/data-access';
 import { isInlineAnnotation } from './annotate';
 import { Transformer } from './transformer';
 import { splitNode } from './split-node';

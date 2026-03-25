@@ -1,6 +1,8 @@
-# data-access
+# @eightyfourthousand/data-access
 
-This library was generated with [Nx](https://nx.dev).
+Shared data-access clients, DTO mappers, and domain types for 84000 applications.
+
+Use this package for typed access to shared application data models and server/client data helpers.
 
 ## Running unit tests
 

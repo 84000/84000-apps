@@ -1,4 +1,4 @@
-import { lookupEntity } from '@data-access/ssr';
+import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
 import { notFound, redirect } from 'next/navigation';
 import { NextRequest } from 'next/server';
 

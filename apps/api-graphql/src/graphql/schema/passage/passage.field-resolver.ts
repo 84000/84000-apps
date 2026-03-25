@@ -1,4 +1,4 @@
-import { blockFromPassage } from '@lib-editing';
+import { blockFromPassage } from '@eightyfourthousand/lib-editing';
 import {
   annotationsFromDTO,
   alignmentsFromDTO,
@@ -8,7 +8,7 @@ import {
   type AnnotationDTO,
   type TohokuCatalogEntry,
   type MentionAnnotation,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 import {
   transformAnnotation,

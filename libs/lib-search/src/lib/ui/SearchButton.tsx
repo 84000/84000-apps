@@ -10,7 +10,7 @@ import {
   Input,
   Tabs,
   TabsContent,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { search } from '../data';

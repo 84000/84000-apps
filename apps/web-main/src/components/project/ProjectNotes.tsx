@@ -1,5 +1,5 @@
-import { Project, UserRole } from '@data-access';
-import { SaveButton, Skeleton } from '@design-system';
+import { Project, UserRole } from '@eightyfourthousand/data-access';
+import { SaveButton, Skeleton } from '@eightyfourthousand/design-system';
 import { NotesEditor } from './NotesEditor';
 import { useEffect, useState } from 'react';
 

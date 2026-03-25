@@ -1,5 +1,5 @@
-import { GlossaryLandingItem } from '@data-access';
-import { DataTableRow } from '@design-system';
+import { GlossaryLandingItem } from '@eightyfourthousand/data-access';
+import { DataTableRow } from '@eightyfourthousand/design-system';
 
 export type GlossaryInstanceRow = DataTableRow & {
   uuid: string;

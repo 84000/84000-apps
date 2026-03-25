@@ -1,4 +1,4 @@
-import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
+import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@eightyfourthousand/data-access';
 import { blockFromPassage } from '../block';
 
 // The quote transformer is a no-op (pass), so we just verify it doesn't break

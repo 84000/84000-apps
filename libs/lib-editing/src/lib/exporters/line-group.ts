@@ -1,4 +1,4 @@
-import { LineGroupAnnotation } from '@data-access';
+import { LineGroupAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const lineGroup: Exporter<LineGroupAnnotation> = ({

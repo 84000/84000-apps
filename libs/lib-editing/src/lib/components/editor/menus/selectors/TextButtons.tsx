@@ -1,9 +1,9 @@
 'use client';
 
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
-import { Button } from '@design-system';
+import { Button } from '@eightyfourthousand/design-system';
 import {
   BoldIcon,
   ItalicIcon,

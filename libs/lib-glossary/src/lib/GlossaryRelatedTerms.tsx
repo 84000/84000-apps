@@ -1,7 +1,7 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
-import { Button, H4 } from '@design-system';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
+import { Button, H4 } from '@eightyfourthousand/design-system';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 

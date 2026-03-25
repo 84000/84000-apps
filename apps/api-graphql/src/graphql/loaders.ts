@@ -1,4 +1,4 @@
-import type { DataClient } from '@data-access';
+import type { DataClient } from '@eightyfourthousand/data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';

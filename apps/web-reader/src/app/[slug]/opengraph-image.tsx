@@ -1,3 +1,3 @@
-import { OpenGraphImage } from '@lib-editing/ssr';
+import { OpenGraphImage } from '@eightyfourthousand/lib-editing/ssr';
 
 export default OpenGraphImage;

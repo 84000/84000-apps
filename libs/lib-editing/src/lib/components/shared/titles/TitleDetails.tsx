@@ -1,4 +1,4 @@
-import { Imprint } from '@data-access';
+import { Imprint } from '@eightyfourthousand/data-access';
 import { LongTitle } from './LongTitle';
 
 const DOT = `·` as const;
@@ -16,6 +16,7 @@ export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
       ?.split(',')
       ?.map((t) => t.trim())
       .filter((t) => !!t) || [];
+
   return (
     <div className="pb-4 mx-auto max-2-2xl items-center text-center text-xs font-serif text-foreground/75">
       {longBoTitle && <LongTitle title={longBoTitle} language="bo" />}
@@ -26,11 +27,11 @@ export const TitleDetails = ({ imprint }: { imprint: Imprint }) => {
       {imprint.sourceDescription && <div>{imprint.sourceDescription}</div>}
       {translators.length > 0 && (
         <>
-          <div className="pt-5 pb-1 uppercase text-xs">
+          <div className="pb-1 pt-5 text-xs uppercase">
             Translated into Tibetan by
           </div>
 
-          <div className="flex gap-x-2 mx-auto flex-wrap justify-center">
+          <div className="mx-auto flex flex-wrap justify-center gap-x-2">
             <span>{DOT}</span>
             {translators.map((translator, idx) => (
               <div key={`translator-wrapper-${idx}`} className="flex gap-x-2">

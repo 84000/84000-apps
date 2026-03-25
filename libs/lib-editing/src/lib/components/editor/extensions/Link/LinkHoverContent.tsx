@@ -1,4 +1,4 @@
-import { Button } from '@design-system';
+import { Button } from '@eightyfourthousand/design-system';
 import { Editor } from '@tiptap/core';
 import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';

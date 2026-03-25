@@ -1,6 +1,6 @@
 'use client';
 
-import { CanonWork } from '@data-access';
+import { CanonWork } from '@eightyfourthousand/data-access';
 import {
   DataTable,
   DataTableColumn,
@@ -10,8 +10,8 @@ import {
   SortableHeader,
   TooltipCell,
   defaultFilterFn,
-} from '@design-system';
-import { cn, parseToh } from '@lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn, parseToh } from '@eightyfourthousand/lib-utils';
 import { Cell } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import { WorkStatus } from './WorkStatus';

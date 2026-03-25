@@ -1,4 +1,4 @@
-import { ImageAnnotation } from '@data-access';
+import { ImageAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';

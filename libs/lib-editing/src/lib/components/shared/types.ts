@@ -1,4 +1,4 @@
-import { BodyItemType, Imprint, PanelFilter, Titles } from '@data-access';
+import { BodyItemType, Imprint, PanelFilter, Titles } from '@eightyfourthousand/data-access';
 import { TranslationEditorContent } from '../editor';
 
 export type EditorBuilderType = BodyItemType | 'titles';

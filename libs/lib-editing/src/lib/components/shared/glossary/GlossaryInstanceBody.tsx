@@ -1,14 +1,14 @@
 'use client';
 
-import type { GlossaryTermInstance } from '@data-access';
-import { Button, Li, Ul } from '@design-system';
-import { GatedFeature } from '@lib-instr';
-import { cn } from '@lib-utils';
+import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
+import { Button, Li, Ul } from '@eightyfourthousand/design-system';
+import { GatedFeature } from '@eightyfourthousand/lib-instr';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useCallback, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
 import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
-import { createGraphQLClient, getTermPassages } from '@client-graphql';
+import { createGraphQLClient, getTermPassages } from '@eightyfourthousand/client-graphql';
 
 type PassageItem = { uuid: string; type: string; label: string };
 

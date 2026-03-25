@@ -1,0 +1,25 @@
+{
+  "name": "@eightyfourthousand/client-graphql",
+  "version": "2026.3.1",
+  "description": "GraphQL client helpers and typed query functions for 84000 applications.",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/client-graphql"
+  },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@eightyfourthousand/data-access": "^2026.3.1"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": ""
+}

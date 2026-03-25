@@ -59,6 +59,20 @@
         "testStorybookTargetName": "test-storybook",
         "staticStorybookTargetName": "static-storybook"
       }
+    },
+    {
+      "plugin": "@nx/js/typescript",
+      "options": {
+        "typecheck": {
+          "targetName": "typecheck"
+        },
+        "build": {
+          "targetName": "tsc:build",
+          "configName": "tsconfig.lib.json",
+          "buildDepsName": "tsc:build-deps",
+          "watchDepsName": "tsc:watch-deps"
+        }
+      }
     }
   ],
   "generators": {
@@ -75,6 +89,11 @@
     }
   },
   "targetDefaults": {
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
+    },
     "@nx/esbuild:esbuild": {
       "cache": true,
       "dependsOn": ["^build"],
@@ -91,6 +110,17 @@
     "e2e-ci--**/*": {
       "dependsOn": ["^build"]
     }
+  },
+  "release": {
+    "projects": [
+      "lib-utils",
+      "data-access",
+      "client-graphql",
+      "lib-instr",
+      "design-system",
+      "lib-search",
+      "lib-editing"
+    ]
   },
   "neverConnectToCloud": true
 }

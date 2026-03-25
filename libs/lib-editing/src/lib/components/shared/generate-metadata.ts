@@ -1,8 +1,8 @@
 import {
   createServerGraphQLClient,
   getTranslationMetadataByUuid,
-} from '@client-graphql/ssr';
-import { isUuid, parseToh } from '@lib-utils';
+} from '@eightyfourthousand/client-graphql/ssr';
+import { isUuid, parseToh } from '@eightyfourthousand/lib-utils';
 import { Metadata } from 'next';
 import { cache } from 'react';
 

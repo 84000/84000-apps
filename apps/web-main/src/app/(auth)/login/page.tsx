@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Login } from '@lib-user';
 
 const LoginPage = () => {

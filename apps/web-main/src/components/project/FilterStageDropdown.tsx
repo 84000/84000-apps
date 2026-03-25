@@ -3,9 +3,9 @@ import {
   STAGE_COLORS,
   STAGE_DESCRIPTIONS,
   ProjectStageLabel,
-} from '@data-access';
-import { FilterDropdown, Separator } from '@design-system';
-import { cn } from '@lib-utils';
+} from '@eightyfourthousand/data-access';
+import { FilterDropdown, Separator } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Table } from '@tanstack/react-table';
 import { Check } from 'lucide-react';
 import { TableProject } from './TableProject';

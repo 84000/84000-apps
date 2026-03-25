@@ -1,5 +1,5 @@
-import { ProjectStage } from '@data-access';
-import { DataTableRow } from '@design-system';
+import { ProjectStage } from '@eightyfourthousand/data-access';
+import { DataTableRow } from '@eightyfourthousand/design-system';
 
 export type TableProject = DataTableRow & {
   uuid: string;

@@ -1,5 +1,5 @@
 import { Table } from '@tanstack/react-table';
-import { FuzzyGlobalFilter } from '@design-system';
+import { FuzzyGlobalFilter } from '@eightyfourthousand/design-system';
 import { TableProject } from './TableProject';
 import { FilterStageDropdown } from './FilterStageDropdown';
 import { DownloadSheet, exportSheet } from './DownloadSheet';

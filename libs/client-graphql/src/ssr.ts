@@ -33,7 +33,7 @@ export {
   type WorksPage,
 } from './lib/functions';
 
-// Re-export types from @data-access for convenience
+// Re-export types from @eightyfourthousand/data-access for convenience
 export type {
   Passage,
   Passages,
@@ -57,7 +57,7 @@ export type {
   BibliographyEntryItem,
   BibliographyEntries,
   Folio,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 // Re-export constants for passage filters
 export {
@@ -70,4 +70,4 @@ export {
   BACK_MATTER_FILTER,
   COMPARE_MODE,
   COMPARE_MODE_FILTER,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';

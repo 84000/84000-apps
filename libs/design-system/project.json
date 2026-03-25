@@ -5,6 +5,35 @@
   "projectType": "library",
   "tags": [],
   "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/design-system",
+        "main": "libs/design-system/src/index.ts",
+        "tsConfig": "libs/design-system/tsconfig.lib.json",
+        "rootDir": "libs/design-system/src",
+        "generateExportsField": true,
+        "additionalEntryPoints": ["libs/design-system/src/ssr.ts"],
+        "assets": [
+          {
+            "glob": "**/*.css",
+            "input": "libs/design-system/src/lib",
+            "output": "lib"
+          },
+          {
+            "glob": "**/*",
+            "input": "libs/design-system/src/lib/assets",
+            "output": "lib/assets"
+          },
+          {
+            "glob": "**/*.svg",
+            "input": "libs/design-system/src/lib/svg",
+            "output": "lib/svg"
+          }
+        ]
+      }
+    },
     "build-storybook": {
       "executor": "@nx/storybook:build",
       "outputs": ["{options.outputDir}"],

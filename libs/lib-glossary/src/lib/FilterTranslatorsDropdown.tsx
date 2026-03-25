@@ -1,5 +1,5 @@
 import { Table } from '@tanstack/react-table';
-import { FilterDropdown, defaultFilterFn } from '@design-system';
+import { FilterDropdown, defaultFilterFn } from '@eightyfourthousand/design-system';
 import { GlossaryInstanceRow } from './types';
 
 export const filterFn = defaultFilterFn<GlossaryInstanceRow>;

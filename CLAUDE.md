@@ -70,9 +70,9 @@ This is an **Nx monorepo** containing multiple Next.js applications and shared l
 Import libraries using aliases defined in `tsconfig.base.json`:
 
 ```typescript
-import { Button } from '@design-system';
-import { createBrowserClient } from '@data-access';
-import { createServerClient } from '@data-access/ssr';
+import { Button } from '@eightyfourthousand/design-system';
+import { createBrowserClient } from '@eightyfourthousand/data-access';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { useProfile } from '@lib-user';
 import { GlossaryEditor } from '@lib-glossary';
 ```

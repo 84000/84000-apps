@@ -2,6 +2,9 @@
   "name": "84000-apps",
   "version": "0.0.0",
   "scripts": {
+    "release": "nx release",
+    "release:publish": "nx release publish",
+    "release:version": "nx release version",
     "lint:css": "stylelint '**/*.css' --cache --cache-location node_modules/.cache/stylelint",
     "lint:css:fix": "stylelint '**/*.css' --fix --cache --cache-location node_modules/.cache/stylelint",
     "codegen:client-graphql": "graphql-codegen --config libs/client-graphql/codegen.ts",
@@ -116,7 +119,7 @@
     "@nx/eslint": "22.2.1",
     "@nx/eslint-plugin": "22.2.1",
     "@nx/jest": "22.2.1",
-    "@nx/js": "22.2.1",
+    "@nx/js": "^22.2.1",
     "@nx/next": "22.2.1",
     "@nx/node": "22.2.1",
     "@nx/react": "22.2.1",

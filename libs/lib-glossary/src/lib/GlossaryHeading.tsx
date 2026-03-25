@@ -1,7 +1,7 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
-import { Button, H3, Separator } from '@design-system';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
+import { Button, H3, Separator } from '@eightyfourthousand/design-system';
 import { ArrowLeftIcon } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 

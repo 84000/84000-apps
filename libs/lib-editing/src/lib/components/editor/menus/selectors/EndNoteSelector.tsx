@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Editor } from '@tiptap/core';
 import { useEditorState as useTiptapEditorState } from '@tiptap/react';
 import {
@@ -10,11 +10,11 @@ import {
   PopoverContent,
   PopoverTrigger,
   Separator,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { AsteriskIcon, Loader2Icon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { createGraphQLClient } from '@client-graphql';
+import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
 import { gql } from 'graphql-request';
 import { useEditorState } from '../../EditorProvider';
 import { useNavigation } from '../../../shared';

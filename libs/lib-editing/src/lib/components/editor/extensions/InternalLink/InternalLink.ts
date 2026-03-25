@@ -5,8 +5,8 @@ import {
   PANEL_FOR_SECTION,
   TAB_FOR_SECTION,
 } from '../../../shared/types';
-import { cn } from '@lib-utils';
-import { LINK_STYLE } from '@design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
+import { LINK_STYLE } from '@eightyfourthousand/design-system';
 
 export interface InternalLinkOptions {
   HTMLAttributes: Record<string, unknown>;

@@ -1,4 +1,4 @@
-import { ImageAnnotation } from '@data-access';
+import { ImageAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const image: Exporter<ImageAnnotation> = ({

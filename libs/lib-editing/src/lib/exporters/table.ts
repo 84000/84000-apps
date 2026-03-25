@@ -1,4 +1,4 @@
-import { TableAnnotation } from '@data-access';
+import { TableAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const table: Exporter<TableAnnotation> = ({

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Input, Label } from '@design-system';
+import { Button, Input, Label } from '@eightyfourthousand/design-system';
 import { LoginAction, LoginVariation } from './types';
 import { useSession } from './SessionContext';
 

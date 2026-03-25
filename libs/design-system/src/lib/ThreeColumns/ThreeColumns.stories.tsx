@@ -1,7 +1,6 @@
 import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { LeftPanel, MainPanel, RightPanel, ThreeColumns } from './ThreeColumns';
-import { Title } from '../Translation/Title/Title';
-import { P } from '../Typography/Typography';
+import { H3, P } from '../Typography/Typography';
 
 const meta: Meta<typeof ThreeColumns> = {
   title: 'Layout/ThreeColumns',
@@ -20,7 +19,7 @@ export const Default: Story = {
         </LeftPanel>
         <MainPanel>
           <div className="h-[400px] px-8">
-            <Title language={'en'}>Main column content</Title>
+            <H3>Main column content</H3>
             <P>
               {`Lorem Ipsum is simply dummy text of the printing and typesetting
           industry. Lorem Ipsum has been the industry's standard dummy text ever

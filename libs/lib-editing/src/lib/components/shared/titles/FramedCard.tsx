@@ -1,5 +1,5 @@
-import { cn } from '@lib-utils';
 import { ReactNode, SVGProps } from 'react';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const OrnamentBG = ({ className }: SVGProps<SVGElement>) => {
   return (
@@ -59,7 +59,7 @@ export const FramedCard = ({
         <div
           className={cn(
             border,
-            'absolute top-1.25 start-1.25 border-t-transparent border-s-transparent z-2',
+            'absolute top-1.25 start-1.25 z-2 border-t-transparent border-s-transparent',
           )}
         />
       </div>
@@ -68,7 +68,7 @@ export const FramedCard = ({
           height,
           border,
           bgColor,
-          'relative border-b-transparent rounded-t-md',
+          'relative rounded-t-md border-b-transparent',
         )}
       >
         <div className="absolute -top-1.25 h-0 w-full overflow-visible">
@@ -82,7 +82,7 @@ export const FramedCard = ({
         <div
           className={cn(
             border,
-            'absolute top-1.25 end-0.75 border-t-transparent border-e-transparent z-2',
+            'absolute top-1.25 end-0.75 z-2 border-t-transparent border-e-transparent',
           )}
         />
       </div>
@@ -91,23 +91,23 @@ export const FramedCard = ({
           width,
           border,
           bgColor,
-          'border-e-transparent rounded-s-md border-double',
+          'rounded-s-md border-e-transparent border-double',
         )}
-      ></div>
+      />
       <div className={cn('fit-content', bgColor)}>{children}</div>
       <div
         className={cn(
           width,
           border,
           bgColor,
-          'border-s-transparent rounded-e-md',
+          'rounded-e-md border-s-transparent',
         )}
-      ></div>
+      />
       <div className={cn(size, 'relative')}>
         <div
           className={cn(
             border,
-            'absolute bottom-0.75 start-1.25 border-b-transparent border-s-transparent z-2',
+            'absolute bottom-0.75 start-1.25 z-2 border-b-transparent border-s-transparent',
           )}
         />
       </div>
@@ -116,14 +116,14 @@ export const FramedCard = ({
           height,
           border,
           bgColor,
-          'border-t-transparent rounded-b-md',
+          'rounded-b-md border-t-transparent',
         )}
-      ></div>
+      />
       <div className={cn(size, 'relative')}>
         <div
           className={cn(
             border,
-            'absolute bottom-0.75 end-0.75 border-b-transparent border-e-transparent z-2',
+            'absolute right-0.75 bottom-0.75 z-2 border-b-transparent border-e-transparent',
           )}
         />
       </div>

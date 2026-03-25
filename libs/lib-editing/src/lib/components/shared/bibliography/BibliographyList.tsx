@@ -1,9 +1,9 @@
 'use client';
 
-import { SectionTitle } from '@design-system';
+import { SectionTitle } from '@eightyfourthousand/design-system';
 import { LabeledElement } from '../LabeledElement';
-import { BibliographyEntries } from '@data-access';
-import { cn } from '@lib-utils';
+import { BibliographyEntries } from '@eightyfourthousand/data-access';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useScrollInTab } from '../hooks/useScrollInTab';
 import { BibliographyBody } from './BibliographyBody';
 

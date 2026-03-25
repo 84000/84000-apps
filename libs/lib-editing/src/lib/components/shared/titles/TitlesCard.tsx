@@ -1,9 +1,8 @@
 'use client';
 
 import { PencilIcon } from 'lucide-react';
-import { Button } from '../../Button/Button';
-import { cn } from '@lib-utils';
-import { Vajrasattva } from '../../Vajrasattva/Vajrasattva';
+import { Button, Vajrasattva } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TitlesCard = ({
   header = '',
@@ -28,24 +27,25 @@ export const TitlesCard = ({
   canEdit?: boolean;
   onEdit?(): void;
 }) => {
-  const RADIAL = 'bg-radial-[at_50%_50%] from-ochre-25 from-35% to-navy-25';
+  const radial =
+    'bg-radial-[at_50%_50%] from-ochre-25 from-35% to-navy-25';
 
   return (
-    <div className="p-1.5 max-w-7xl w-full mx-auto border rounded-lg bg-background flex gap-1.5">
+    <div className="mx-auto flex w-full max-w-7xl gap-1.5 rounded-lg border bg-background p-1.5">
       {(toh || section) && (
         <div
           className={cn(
-            'w-32 hidden md:flex flex-col gap-4 p-2 justify-center text-center border rounded-s-lg',
-            RADIAL,
+            'hidden w-32 flex-col justify-center gap-4 rounded-s-lg border p-2 text-center md:flex',
+            radial,
           )}
         >
-          <span className="font-light text-sm leading-4 text-ochre-700">
+          <span className="text-sm leading-4 font-light text-ochre-700">
             {section}
           </span>
-          <span className="uppercase text-xs text-muted-foreground">{toh}</span>
+          <span className="text-xs uppercase text-muted-foreground">{toh}</span>
         </div>
       )}
-      <div className="grow min-w-0 flex flex-col justify-center gap-3 py-4 px-2 border md:rounded-e-lg md:rounded-s-none lg:rounded-none rounded-lg text-center">
+      <div className="grow min-w-0 flex flex-col justify-center gap-3 rounded-lg border px-2 py-4 text-center md:rounded-s-none md:rounded-e-lg lg:rounded-none">
         {header && (
           <div
             className={cn(
@@ -58,39 +58,37 @@ export const TitlesCard = ({
           </div>
         )}
         {main && (
-          <div className="font-serif text-3xl text-navy-500 title-main px-2 break-all xs:break-normal">
+          <div className="title-main break-all px-2 font-serif text-3xl text-navy-500 xs:break-normal">
             {main}
           </div>
         )}
         <div className="flex justify-between gap-2 px-2">
           {canEdit && <div className="w-1/8" />}
           {footer && (
-            <span className="flex-grow font-serif font-light text-2xl text-muted-foreground italic title-sub long-term">
+            <span className="title-sub long-term flex-grow font-serif text-2xl font-light italic text-muted-foreground">
               {footer}
             </span>
           )}
           {canEdit && (
-            <div className="w-1/8 flex gap-1 justify-end">
-              {canEdit && (
-                <Button
-                  className="rounded-lg size-7 text-muted-foreground"
-                  size="icon"
-                  variant="outline"
-                  aria-label="Edit titles"
-                  onClick={onEdit}
-                >
-                  <PencilIcon />
-                </Button>
-              )}
+            <div className="w-1/8 flex justify-end gap-1">
+              <Button
+                className="size-7 rounded-lg text-muted-foreground"
+                size="icon"
+                variant="outline"
+                aria-label="Edit titles"
+                onClick={onEdit}
+              >
+                <PencilIcon />
+              </Button>
             </div>
           )}
         </div>
         {authors.length > 0 && (
-          <div className="font-serif title-sub">
-            <div className="uppercase text-xs text-muted-foreground py-2">
+          <div className="title-sub font-serif">
+            <div className="py-2 text-xs uppercase text-muted-foreground">
               {attribution}
             </div>
-            <div className="flex gap-x-2 mx-auto flex-wrap justify-center text-secondary -mt-2 text-xl">
+            <div className="-mt-2 mx-auto flex flex-wrap justify-center gap-x-2 text-xl text-secondary">
               {authors.map((author, idx) => (
                 <div key={`author-wrapper-${idx}`} className="flex">
                   <span key={`${author}-${idx}`} className="italic">
@@ -107,8 +105,8 @@ export const TitlesCard = ({
           </div>
         )}
       </div>
-      <div className={cn('w-32 hidden lg:flex border rounded-e-lg', RADIAL)}>
-        <Vajrasattva className="mix-blend-multiply opacity-40 object-contain size-full" />
+      <div className={cn('hidden w-32 rounded-e-lg border lg:flex', radial)}>
+        <Vajrasattva className="size-full object-contain opacity-40 mix-blend-multiply" />
       </div>
     </div>
   );

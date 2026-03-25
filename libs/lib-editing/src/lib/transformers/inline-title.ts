@@ -1,4 +1,4 @@
-import { InlineTitleAnnotation } from '@data-access';
+import { InlineTitleAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';

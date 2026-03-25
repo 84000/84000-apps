@@ -1,4 +1,4 @@
-import { Skeleton } from '@design-system';
+import { Skeleton } from '@eightyfourthousand/design-system';
 
 /**
  * Skeleton that mimics the shape of a glossary entry:

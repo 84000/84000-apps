@@ -2,9 +2,9 @@ import { ImageResponse } from 'next/og';
 import {
   createServerGraphQLClient,
   getTranslationMetadataByUuid,
-} from '@client-graphql/ssr';
-import { MainLogoSvg } from '@design-system/ssr';
-import { isUuid, parseToh } from '@lib-utils';
+} from '@eightyfourthousand/client-graphql/ssr';
+import { MainLogoSvg } from '@eightyfourthousand/design-system/ssr';
+import { isUuid, parseToh } from '@eightyfourthousand/lib-utils';
 import { cache } from 'react';
 
 export const runtime = 'nodejs';

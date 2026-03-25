@@ -1,6 +1,6 @@
 'use client';
 
-import { Toc, TocEntry, TohokuCatalogEntry, Work } from '@data-access';
+import { Toc, TocEntry, TohokuCatalogEntry, Work } from '@eightyfourthousand/data-access';
 import {
   Accordion,
   AccordionContent,
@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
   Separator,
-} from '@design-system';
-import { cn, parseToh } from '@lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn, parseToh } from '@eightyfourthousand/lib-utils';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import {

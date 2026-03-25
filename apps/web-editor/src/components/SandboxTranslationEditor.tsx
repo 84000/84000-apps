@@ -5,7 +5,7 @@ import {
   useTranslationExtensions,
   TranslationBubbleMenu,
   TranslationEditorContent,
-} from '@lib-editing';
+} from '@eightyfourthousand/lib-editing';
 import { EditorContent } from '@tiptap/react';
 import { useSandbox } from './SandboxProvider';
 import { useEffect } from 'react';

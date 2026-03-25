@@ -1,4 +1,4 @@
-import { EditorBackMatterPage } from '@lib-editing';
+import { EditorBackMatterPage } from '@eightyfourthousand/lib-editing';
 
 const Page = EditorBackMatterPage;
 

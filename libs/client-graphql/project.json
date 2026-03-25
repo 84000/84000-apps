@@ -4,5 +4,18 @@
   "sourceRoot": "libs/client-graphql/src",
   "projectType": "library",
   "tags": [],
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/client-graphql",
+        "main": "libs/client-graphql/src/index.ts",
+        "tsConfig": "libs/client-graphql/tsconfig.lib.json",
+        "rootDir": "libs/client-graphql/src",
+        "generateExportsField": true,
+        "additionalEntryPoints": ["libs/client-graphql/src/ssr.ts"]
+      }
+    }
+  }
 }

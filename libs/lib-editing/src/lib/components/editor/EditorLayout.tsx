@@ -6,14 +6,14 @@ import {
   createGraphQLClient,
   getTranslationMetadataByUuid,
   Work,
-} from '@client-graphql';
+} from '@eightyfourthousand/client-graphql';
 import { ThreeColumnRenderer, TranslationSkeleton } from '../shared';
 import {
   LeftPanel,
   MainPanel,
   MainPanelHeader,
   RightPanel,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { EditorHeader } from './EditorHeader';
 
 export const EditorLayout = ({

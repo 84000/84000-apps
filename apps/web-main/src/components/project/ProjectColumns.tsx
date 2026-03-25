@@ -1,18 +1,14 @@
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { EyeIcon, MoreHorizontalIcon } from 'lucide-react';
 import { TableProject } from './TableProject';
-import { ProjectStageLabel } from '@data-access';
+import { ProjectStageLabel } from '@eightyfourthousand/data-access';
 import { filterFn as canonsFilterFn } from './FilterCanonDropdown';
 import { filterFn as pagesFilterFn } from './FilterPagesDropdown';
 import { filterFn as tohsFilterFn } from './FilterTohsDropdown';
-import {
-  DataTableColumn,
-  SortableHeader,
-  StageChip,
-  TooltipCell,
-} from '@design-system';
+import { DataTableColumn, SortableHeader, TooltipCell } from '@eightyfourthousand/design-system';
 import { usePathname, useRouter } from 'next/navigation';
 import { Cell } from '@tanstack/react-table';
+import { StageChip } from './StageChip';
 
 const ProjectHeader = SortableHeader<TableProject>;
 

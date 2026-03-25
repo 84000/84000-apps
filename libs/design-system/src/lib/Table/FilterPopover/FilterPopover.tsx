@@ -2,7 +2,7 @@ import { ChevronDown, ListFilter } from 'lucide-react';
 import { ReactElement } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../Popover/Popover';
 import { Button } from '../../Button/Button';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const FilterPopover = ({
   label,

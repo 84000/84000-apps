@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogTitle,
   Input,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { NodeViewProps } from '@tiptap/react';
 import { ChangeEvent, useCallback, useState } from 'react';
 

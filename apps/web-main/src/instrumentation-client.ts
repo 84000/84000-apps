@@ -1,3 +1,3 @@
-import { initializeInstrumentation } from '@lib-instr';
+import { initializeInstrumentation } from '@eightyfourthousand/lib-instr';
 
 initializeInstrumentation();

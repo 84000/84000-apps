@@ -1,7 +1,7 @@
-import { getTranslationImprint } from '@data-access';
+import { getTranslationImprint } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
-import { parseToh } from '@lib-utils';
+import { parseToh } from '@eightyfourthousand/lib-utils';
 
 export const imprintResolver = async (
   parent: WorkParent,

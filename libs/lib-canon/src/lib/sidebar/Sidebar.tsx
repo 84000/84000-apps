@@ -1,6 +1,6 @@
 'use client';
 
-import { CanonNode } from '@data-access';
+import { CanonNode } from '@eightyfourthousand/data-access';
 import { CanonNavigator } from './CanonNavigator';
 import { useCanon } from '../context';
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { PanelContentType, urlForPanelContent } from '@data-access';
-import { DropdownMenuItem, DropdownMenuSeparator } from '@design-system';
+import { PanelContentType, urlForPanelContent } from '@eightyfourthousand/data-access';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@eightyfourthousand/design-system';
 import { NodeViewProps } from '@tiptap/react';
 import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback } from 'react';

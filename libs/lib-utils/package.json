@@ -1,12 +1,26 @@
 {
-  "name": "lib-utils",
-  "version": "1.0.0",
-  "description": "This library was generated with [Nx](https://nx.dev).",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "@eightyfourthousand/lib-utils",
+  "version": "2026.3.1",
+  "description": "Shared utility helpers for 84000 applications.",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/lib-utils"
   },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "sideEffects": false,
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": ""
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useStudioHeaderConfig } from '@lib-instr';
+import { useStudioHeaderConfig } from '@eightyfourthousand/lib-instr';
 import { NavigationMenuItemProps } from './types';
 import { MENU_ITEMS } from './MenuItems';
 import { StudioHeaderConfig, MenuItemConfig } from './config.types';

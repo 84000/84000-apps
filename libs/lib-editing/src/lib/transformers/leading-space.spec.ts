@@ -3,7 +3,7 @@ import {
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import { leadingSpace } from './leading-space';
 import { blockFromPassage } from '../block';
 

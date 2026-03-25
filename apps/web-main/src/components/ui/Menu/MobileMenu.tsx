@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { MenuIcon } from 'lucide-react';
 import { NavigationMenuItemProps } from './types';
 import { MenuButton } from './MenuButton';

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { SocialLogin } from './SocialLogin';
-import { Button, H4, MainLogo, Separator } from '@design-system';
+import { Button, H4, MainLogo, Separator } from '@eightyfourthousand/design-system';
 import { EmailLogin } from './EmailLogin';
 import { LoginVariation } from './types';
 

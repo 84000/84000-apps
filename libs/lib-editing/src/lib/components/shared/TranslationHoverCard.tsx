@@ -7,8 +7,8 @@ import {
   useFloating,
 } from '@floating-ui/react';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { cn } from '@lib-utils';
-import { DEFAULT_HOVER_CARD_SIDE_OFFSET } from '@design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
+import { DEFAULT_HOVER_CARD_SIDE_OFFSET } from '@eightyfourthousand/design-system';
 
 export const TranslationHoverCard = ({
   anchor,

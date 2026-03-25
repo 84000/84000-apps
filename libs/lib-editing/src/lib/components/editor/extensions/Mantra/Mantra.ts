@@ -1,4 +1,4 @@
-import { TranslationLanguage } from '@data-access';
+import { TranslationLanguage } from '@eightyfourthousand/data-access';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 

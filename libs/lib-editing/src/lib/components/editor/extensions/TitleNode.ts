@@ -1,7 +1,8 @@
 import { mergeAttributes } from '@tiptap/core';
 import TiptapHeading from '@tiptap/extension-heading';
-import { H3_STYLE, H4_STYLE, TITLE_VARIANT_STYLES } from '@design-system';
-import { cn } from '@lib-utils';
+import { H3_STYLE, H4_STYLE } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
+import { TITLE_VARIANT_STYLES } from '../../shared/titles';
 
 export const TohTitleNode = TiptapHeading.extend({
   name: 'tohTitle',

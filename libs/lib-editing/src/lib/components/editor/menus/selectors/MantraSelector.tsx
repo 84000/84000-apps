@@ -7,9 +7,9 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { CheckIcon, ChevronDownIcon, SpeechIcon } from 'lucide-react';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 interface SelectorResult {
   isEnglish: boolean;

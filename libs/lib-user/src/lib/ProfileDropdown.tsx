@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { ScholarUser } from './types';
 import { LogOutIcon, UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';

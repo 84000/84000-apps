@@ -4,5 +4,18 @@
   "sourceRoot": "libs/data-access/src",
   "projectType": "library",
   "tags": [],
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/data-access",
+        "main": "libs/data-access/src/index.ts",
+        "tsConfig": "libs/data-access/tsconfig.lib.json",
+        "rootDir": "libs/data-access/src",
+        "generateExportsField": true,
+        "additionalEntryPoints": ["libs/data-access/src/ssr.ts"]
+      }
+    }
+  }
 }

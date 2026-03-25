@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { setAccessTokenProvider } from '@client-graphql';
+import { setAccessTokenProvider } from '@eightyfourthousand/client-graphql';
 import { useSession } from './SessionContext';
 
 /**

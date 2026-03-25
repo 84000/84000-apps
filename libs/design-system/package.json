@@ -1,12 +1,34 @@
 {
-  "name": "design-system",
-  "version": "1.0.0",
-  "description": "This library was generated with [Nx](https://nx.dev).",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "@eightyfourthousand/design-system",
+  "version": "2026.3.1",
+  "description": "Shared React UI components and theme assets for 84000 applications.",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/design-system"
   },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@eightyfourthousand/lib-utils": "^2026.3.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "exports": {
+    "./css": "./lib/theme/global.css"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": ""
 }

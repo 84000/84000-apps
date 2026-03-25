@@ -1,4 +1,4 @@
-import { BlockEditor } from '@lib-editing';
+import { BlockEditor } from '@eightyfourthousand/lib-editing';
 import { EditorEvents, JSONContent } from '@tiptap/react';
 import { useCallback, useEffect, useState } from 'react';
 

@@ -3,7 +3,7 @@ import {
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import { indent } from './indent';
 import { blockFromPassage } from '../block';
 

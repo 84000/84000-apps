@@ -3,10 +3,10 @@ import {
   getTranslationBlocks,
   getWorkGlossaryTerms,
   getWorkBibliography,
-} from '@client-graphql/ssr';
-import { isStaticFeatureEnabled } from '@lib-instr/static';
+} from '@eightyfourthousand/client-graphql/ssr';
+import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 import { ReaderBackMatterPanel } from './ReaderBackMatterPanel';
-import { isUuid } from '@lib-utils';
+import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 
 export const ReaderBackMatterPage = async ({

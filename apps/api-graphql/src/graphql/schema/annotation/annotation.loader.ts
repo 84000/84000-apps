@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import type { AnnotationDTO, DataClient } from '@data-access';
+import type { AnnotationDTO, DataClient } from '@eightyfourthousand/data-access';
 
 export function createAnnotationLoader(supabase: DataClient) {
   return new DataLoader<string, AnnotationDTO[]>(async (passageUuids) => {

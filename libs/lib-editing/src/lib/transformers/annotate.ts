@@ -2,7 +2,7 @@ import {
   AnnotationType,
   Annotations,
   ExtendedTranslationLanguage,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import type { TranslationEditorContentType, Transformer } from './transformer';
 import {
   audio,

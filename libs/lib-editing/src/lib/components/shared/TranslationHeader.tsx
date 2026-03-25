@@ -1,12 +1,12 @@
 'use client';
 
-import { MiniLogo } from '@design-system';
-import { PassageMatch, SearchButton, SearchResult } from '@lib-search';
+import { MiniLogo } from '@eightyfourthousand/design-system';
+import { PassageMatch, SearchButton, SearchResult } from '@eightyfourthousand/lib-search';
 import { useNavigation } from './NavigationProvider';
 import { useCallback } from 'react';
 import { PanelName, PanelState, TabName } from './types';
-import { BodyItemType } from '@data-access';
-import { cn } from '@lib-utils';
+import { BodyItemType } from '@eightyfourthousand/data-access';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TranslationHeader = ({ className }: { className?: string }) => {
   const { imprint, uuid, toh, updatePanel } = useNavigation();

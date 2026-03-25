@@ -1,6 +1,5 @@
-import { Input } from '../../Input/Input';
-import { Label } from '../../Label/Label';
-import { LANGUAGES, Title, Titles } from '@data-access';
+import { LANGUAGES, Title, Titles } from '@eightyfourthousand/data-access';
+import { Input, Label } from '@eightyfourthousand/design-system';
 
 export const TitleForm = ({
   titles = [],

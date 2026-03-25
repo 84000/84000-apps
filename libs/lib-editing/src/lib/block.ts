@@ -5,7 +5,7 @@ import type {
   Passage,
   TranslationEditorContentItem,
   TranslationEditorContent,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import { annotateBlock } from './transformers/annotate';
 
 const passageTemplate = (passage: Passage): TranslationEditorContentItem => {

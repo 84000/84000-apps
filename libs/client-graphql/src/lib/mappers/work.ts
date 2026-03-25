@@ -1,4 +1,4 @@
-import type { Work, TohokuCatalogEntry, SemVer } from '@data-access';
+import type { Work, TohokuCatalogEntry, SemVer } from '@eightyfourthousand/data-access';
 
 /**
  * GraphQL Work type

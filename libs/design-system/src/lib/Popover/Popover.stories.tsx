@@ -1,7 +1,6 @@
 import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 import { Button } from '../Button/Button';
-import { TitleForm } from '../Translation/Title/TitleForm';
 
 const meta: Meta<typeof Popover> = {
   title: 'Core/Popover',
@@ -18,8 +17,10 @@ export const Primary: Story = {
       </PopoverTrigger>
       <PopoverContent className="w-120">
         <div className="flex flex-col gap-6">
-          <h4 className="font-medium leading-none">Edit Titles</h4>
-          <TitleForm onChange={(title) => console.log(title)} titles={[]} />
+          <h4 className="font-medium leading-none">Popover Content</h4>
+          <p className="text-sm text-muted-foreground">
+            Use this area for inline actions or small supporting forms.
+          </p>
         </div>
       </PopoverContent>
     </Popover>

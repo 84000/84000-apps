@@ -1,7 +1,7 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
-import { BlockEditor } from '@lib-editing';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
+import { BlockEditor } from '@eightyfourthousand/lib-editing';
 import { EditorEvents } from '@tiptap/react';
 import { useCallback, useState } from 'react';
 

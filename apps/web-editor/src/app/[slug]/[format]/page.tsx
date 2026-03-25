@@ -1,4 +1,4 @@
-import { Format, Slug } from '@lib-editing/fixtures/types';
+import { Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { EditorPage } from '../../../components/EditorPage';
 
 const Page = async ({

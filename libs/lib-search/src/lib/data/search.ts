@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerClient } from '@data-access/ssr';
+import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { searchResultsFromDTO } from '../types';
 
 export const search = async ({

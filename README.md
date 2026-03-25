@@ -93,6 +93,41 @@ npx nx run-many -t <target1> <target2> -p <proj1> <proj2>
 Targets can be defined in the `package.json` or `projects.json`. Learn more
 [in the docs](https://nx.dev/features/run-tasks).
 
+## Publishing packages
+
+The monorepo now has npm packaging groundwork for these shared libraries:
+
+- `@eightyfourthousand/lib-utils`
+- `@eightyfourthousand/data-access`
+- `@eightyfourthousand/client-graphql`
+- `@eightyfourthousand/lib-instr`
+- `@eightyfourthousand/design-system`
+- `@eightyfourthousand/lib-search`
+- `@eightyfourthousand/lib-editing`
+
+Build the publishable libraries with:
+
+```bash
+npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-search,lib-editing
+```
+
+Version and publish with Nx release:
+
+```bash
+npm run release:version
+npm run release:publish
+```
+
+To publish from GitHub Actions, configure npm Trusted Publishing for this repository and the `publish-packages.yml` workflow, then run the manual `Publish Packages` workflow. The workflow includes a `dry_run` input so you can verify the publish plan before pushing packages to npm. No `NPM_TOKEN` secret is required for CI publishing when trusted publishing is configured correctly.
+
+For local manual publishing, use a granular npm access token with bypass 2FA enabled if your npm account uses passkeys or other non-OTP 2FA methods.
+
+For `@eightyfourthousand/design-system`, consumers should import the theme entry explicitly:
+
+```ts
+import '@eightyfourthousand/design-system/css';
+```
+
 ## Explore the project graph
 
 Run `npx nx graph` to show the graph of the workspace.

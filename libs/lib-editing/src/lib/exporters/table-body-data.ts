@@ -1,4 +1,4 @@
-import { TableBodyDataAnnotation } from '@data-access';
+import { TableBodyDataAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const tableBodyData: Exporter<TableBodyDataAnnotation> = ({

@@ -13,10 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { useProfile } from './ProfileProvider';
 import { useCallback, useState } from 'react';
-import { deleteAccount } from '@data-access';
+import { deleteAccount } from '@eightyfourthousand/data-access';
 import { useRouter } from 'next/navigation';
 
 const DELETE_TITLE = 'Delete Account';

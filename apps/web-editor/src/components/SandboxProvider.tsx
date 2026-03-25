@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor, JSONContent } from '@tiptap/react';
-import { Format, Slug } from '@lib-editing/fixtures/types';
+import { Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { ReactNode, createContext, useContext, useState } from 'react';
 
 export interface SandboxContextType {

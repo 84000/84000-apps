@@ -1,6 +1,8 @@
-# lib-utils
+# @eightyfourthousand/lib-utils
 
-This library was generated with [Nx](https://nx.dev).
+Shared utility helpers for 84000 applications.
+
+This package contains common utility functions and lightweight React helpers used throughout the monorepo.
 
 ## Running unit tests
 

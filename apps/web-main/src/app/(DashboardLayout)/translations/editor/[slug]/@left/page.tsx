@@ -1,4 +1,4 @@
-import { EditorLeftPanelPage } from '@lib-editing';
+import { EditorLeftPanelPage } from '@eightyfourthousand/lib-editing';
 
 const Page = EditorLeftPanelPage;
 

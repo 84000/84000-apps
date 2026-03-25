@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 
 export function CardDescription({
   className,

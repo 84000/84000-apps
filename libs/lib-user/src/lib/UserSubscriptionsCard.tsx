@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
   Switch,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { SUBSCRIPTION_TYPES, SubscriptionType } from './types';
 import { useCallback, useEffect, useState } from 'react';
 import { useProfile } from './ProfileProvider';

@@ -1,10 +1,10 @@
 'use client';
 
-import { Imprint, Titles as TitlesData } from '@data-access';
+import { Imprint, Titles as TitlesData } from '@eightyfourthousand/data-access';
 import { useEffect, useState } from 'react';
 import { useEditorState } from './EditorProvider';
+import { Titles } from '../shared/titles';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
-import { Titles } from '@design-system';
 
 export const TitlesBuilder = ({
   titles,

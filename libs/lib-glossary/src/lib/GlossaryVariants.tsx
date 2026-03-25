@@ -1,7 +1,7 @@
 'use client';
 
-import { GlossaryPageItem } from '@data-access';
-import { H4, H5, Li, Ul } from '@design-system';
+import { GlossaryPageItem } from '@eightyfourthousand/data-access';
+import { H4, H5, Li, Ul } from '@eightyfourthousand/design-system';
 import { useEffect, useState } from 'react';
 
 export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {

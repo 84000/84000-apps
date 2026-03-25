@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { Passage } from '@data-access';
+import type { Passage } from '@eightyfourthousand/data-access';
 import { passageFromGraphQL, type GraphQLPassage } from '../mappers';
 
 const GET_PASSAGE = gql`

@@ -1,9 +1,20 @@
 {
   "name": "lib-search",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "libs/lib-seach/src",
+  "sourceRoot": "libs/lib-search/src",
   "projectType": "library",
   "tags": [],
-  "// targets": "to see all targets run: nx show project lib-search --web",
-  "targets": {}
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/lib-search",
+        "main": "libs/lib-search/src/index.ts",
+        "tsConfig": "libs/lib-search/tsconfig.lib.json",
+        "rootDir": "libs/lib-search/src",
+        "generateExportsField": true
+      }
+    }
+  }
 }

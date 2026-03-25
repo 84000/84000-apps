@@ -1,17 +1,17 @@
 import {
   content as basicJsonContent,
   type as basicJsonType,
-} from '@lib-editing/fixtures/basic/json';
+} from '@eightyfourthousand/lib-editing/fixtures/basic/json';
 import {
   content as toh251JsonContent,
   type as toh251JsonType,
-} from '@lib-editing/fixtures/toh251/json';
+} from '@eightyfourthousand/lib-editing/fixtures/toh251/json';
 import {
   content as toh251PassagesContent,
   type as toh251PassagesType,
-} from '@lib-editing/fixtures/toh251/passages';
+} from '@eightyfourthousand/lib-editing/fixtures/toh251/passages';
 
-import { EditorType, Format, Slug } from '@lib-editing/fixtures/types';
+import { EditorType, Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { JSONContent } from '@tiptap/react';
 
 export const EMPTY_DOCUMENT: JSONContent = {

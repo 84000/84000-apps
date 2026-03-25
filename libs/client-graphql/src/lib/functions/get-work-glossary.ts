@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryTermInstance } from '@data-access';
+import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
 
 const GET_WORK_GLOSSARY = gql`
   query GetWorkGlossary($uuid: ID!, $withAttestations: Boolean) {

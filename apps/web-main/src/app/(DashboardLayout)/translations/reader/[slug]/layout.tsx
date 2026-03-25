@@ -1,4 +1,4 @@
-import { ReaderLayout } from '@lib-editing';
+import { ReaderLayout } from '@eightyfourthousand/lib-editing';
 import { ReactNode } from 'react';
 
 const Layout = ({

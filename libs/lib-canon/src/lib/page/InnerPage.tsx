@@ -2,8 +2,8 @@
 
 import { ArticlePage } from './ArticlePage';
 import { WorksPage } from './WorksPage';
-import { ScrollArea } from '@design-system';
-import { CanonDetail, CanonWork } from '@data-access';
+import { ScrollArea } from '@eightyfourthousand/design-system';
+import { CanonDetail, CanonWork } from '@eightyfourthousand/data-access';
 import { useCanon } from '../context';
 
 export const InnerPage = ({

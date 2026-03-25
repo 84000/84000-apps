@@ -1,4 +1,4 @@
-import { LeadingSpaceAnnotation } from '@data-access';
+import { LeadingSpaceAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const leadingSpace: Exporter<LeadingSpaceAnnotation> = ({

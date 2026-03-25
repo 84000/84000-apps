@@ -9,7 +9,7 @@ import {
   flexRender,
 } from '@tanstack/react-table';
 import { ReactElement, useEffect, useState } from 'react';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { DataTableColumn, DataTableRow, useDataTable } from '../hooks';
 import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
 import {

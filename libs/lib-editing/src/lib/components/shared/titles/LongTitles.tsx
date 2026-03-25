@@ -1,9 +1,9 @@
 'use client';
 
-import { Imprint } from '@data-access';
-import { TitlesCard } from './TitlesCard';
-import { Skeleton } from '../../Skeleton/Skeleton';
+import { Imprint } from '@eightyfourthousand/data-access';
+import { Skeleton } from '@eightyfourthousand/design-system';
 import { TitleDetails } from './TitleDetails';
+import { TitlesCard } from './TitlesCard';
 
 export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
   if (!imprint) {
@@ -14,7 +14,7 @@ export const LongTitles = ({ imprint }: { imprint?: Imprint }) => {
   const mainEnTitle = mainTitles?.en || '';
 
   return (
-    <div className="pt-8 px-4 mx-auto flex flex-col gap-1 w-full">
+    <div className="mx-auto flex w-full flex-col gap-1 px-4 pt-8">
       <TitlesCard
         header={imprint.section}
         main={mainEnTitle}

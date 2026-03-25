@@ -17,7 +17,7 @@ import {
   type QuoteAnnotation,
   type QuotedAnnotation,
   type MentionAnnotation,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 
 /**
  * Transformed annotation for GraphQL response

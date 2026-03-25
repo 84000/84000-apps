@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Button } from '@design-system';
+import { Button } from '@eightyfourthousand/design-system';
 import { DownloadIcon } from 'lucide-react';
 import { TableProject } from './TableProject';
 

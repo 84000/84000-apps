@@ -1,4 +1,4 @@
-import { AudioAnnotation } from '@data-access';
+import { AudioAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';

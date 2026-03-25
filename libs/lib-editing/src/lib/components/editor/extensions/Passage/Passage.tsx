@@ -1,4 +1,4 @@
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import {
   NodeViewContent,
   NodeViewWrapper,
@@ -15,7 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { EditorOptions } from './EditorOptions';
 import { ReaderOptions } from './ReaderOptions';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -28,7 +28,7 @@ import {
   PANEL_FOR_SECTION,
   TAB_FOR_SECTION,
 } from '../../../shared';
-import { Alignment, useBookmark } from '@data-access';
+import { Alignment, useBookmark } from '@eightyfourthousand/data-access';
 import { BookmarkIcon } from 'lucide-react';
 import { deleteEndnotePassageNode } from '../EndNoteLink/endnote-utils';
 

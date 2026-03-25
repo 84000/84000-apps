@@ -1,4 +1,4 @@
-import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@data-access';
+import { annotationsFromDTO, PassageDTO, passageFromDTO } from '@eightyfourthousand/data-access';
 import { blockFromPassage } from '../block';
 
 const dto: PassageDTO = {

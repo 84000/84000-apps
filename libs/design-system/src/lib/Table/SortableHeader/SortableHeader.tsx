@@ -1,6 +1,6 @@
 import { Column } from '@tanstack/react-table';
 import { SortIcon } from '../SortIcon/SortIcon';
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Button } from '../../Button/Button';
 import { DataTableRow } from '../hooks';
 

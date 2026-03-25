@@ -1,4 +1,4 @@
-import { Annotation, AnnotationType, BodyItemType } from '@data-access';
+import { Annotation, AnnotationType, BodyItemType } from '@eightyfourthousand/data-access';
 import { TranslationEditorContentItem } from '../components/editor';
 
 export type TranslationEditorContentType =

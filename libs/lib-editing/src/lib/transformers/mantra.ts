@@ -1,4 +1,4 @@
-import { MantraAnnotation } from '@data-access';
+import { MantraAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { recurse } from './recurse';

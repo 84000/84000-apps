@@ -1,4 +1,4 @@
-import { MantraAnnotation } from '@data-access';
+import { MantraAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const mantra: Exporter<MantraAnnotation> = ({

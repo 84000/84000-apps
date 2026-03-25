@@ -1,6 +1,8 @@
-# lib-editing
+# @eightyfourthousand/lib-editing
 
-This library was generated with [Nx](https://nx.dev).
+Shared editing and reader components for 84000 translation workflows.
+
+Use this package for the translation editor, reader UI, shared body-panel rendering, and related editing helpers.
 
 ## Running unit tests
 

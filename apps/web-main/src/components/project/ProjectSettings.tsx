@@ -1,4 +1,4 @@
-import { Project, UserRole } from '@data-access';
+import { Project, UserRole } from '@eightyfourthousand/data-access';
 import {
   Button,
   DatePicker,
@@ -12,7 +12,7 @@ import {
   Input,
   SaveButton,
   Skeleton,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { SettingsIcon } from 'lucide-react';
 import { Placeholder } from '../ui/Placeholder';
 import { ReactNode, useCallback, useEffect, useState } from 'react';

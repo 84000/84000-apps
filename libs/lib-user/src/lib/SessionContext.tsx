@@ -10,7 +10,7 @@ import {
   logout as logoutCall,
   resetPassword as resetPasswordCall,
   signUpWithEmail as signUpWithEmailCall,
-} from '@data-access';
+} from '@eightyfourthousand/data-access';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ScholarUser } from './types';
 import { useRouter } from 'next/navigation';

@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@lib-utils';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { usePathname } from 'next/navigation';
 import { CLASSES_FOR_COLOR, NavigationMenuItemProps } from './types';
 import {
@@ -8,7 +8,7 @@ import {
   PopoverClose,
   PopoverContent,
   PopoverTrigger,
-} from '@design-system';
+} from '@eightyfourthousand/design-system';
 import { useState } from 'react';
 import { MenuButton } from './MenuButton';
 import { ChevronDownIcon } from 'lucide-react';

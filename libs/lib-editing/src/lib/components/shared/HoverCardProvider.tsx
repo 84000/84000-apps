@@ -3,8 +3,8 @@
 import {
   DEFAULT_HOVER_CARD_CLOSE_DELAY,
   DEFAULT_HOVER_CARD_OPEN_DELAY,
-} from '@design-system';
-import { isInBounds } from '@lib-utils';
+} from '@eightyfourthousand/design-system';
+import { isInBounds } from '@eightyfourthousand/lib-utils';
 import {
   createContext,
   ReactNode,

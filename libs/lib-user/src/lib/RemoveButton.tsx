@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LibraryItemType } from '@data-access';
-import { Button } from '@design-system';
+import { LibraryItemType } from '@eightyfourthousand/data-access';
+import { Button } from '@eightyfourthousand/design-system';
 import { CircleMinusIcon, Loader2Icon } from 'lucide-react';
 import { useProfile } from './ProfileProvider';
 

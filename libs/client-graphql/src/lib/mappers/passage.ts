@@ -1,4 +1,4 @@
-import type { Passage, PassagesPage, BodyItemType } from '@data-access';
+import type { Passage, PassagesPage, BodyItemType } from '@eightyfourthousand/data-access';
 import { annotationsFromGraphQL, type GraphQLAnnotation } from './annotation';
 import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
 

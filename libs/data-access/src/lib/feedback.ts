@@ -1,4 +1,4 @@
-import { parseToh } from '@lib-utils';
+import { parseToh } from '@eightyfourthousand/lib-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 

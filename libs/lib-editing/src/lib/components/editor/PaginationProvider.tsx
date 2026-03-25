@@ -16,12 +16,12 @@ import {
   createGraphQLClient,
   getTranslationBlocks,
   getTranslationBlocksAround,
-} from '@client-graphql';
-import type { PanelFilter } from '@data-access';
+} from '@eightyfourthousand/client-graphql';
+import type { PanelFilter } from '@eightyfourthousand/data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
-import { isUuid, scrollToElement, useIsMobile } from '@lib-utils';
+import { isUuid, scrollToElement, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { PanelName, TabName, useNavigation } from '../shared';
-import { LotusPond, SHEET_ANIMATION_DURATION } from '@design-system';
+import { LotusPond, SHEET_ANIMATION_DURATION } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 
 const LOADING_SKELETONS_COUNT = 3;

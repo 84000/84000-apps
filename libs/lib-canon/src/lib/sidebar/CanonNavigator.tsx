@@ -1,13 +1,13 @@
 'use client';
 
-import { CanonNode } from '@data-access';
+import { CanonNode } from '@eightyfourthousand/data-access';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@design-system';
-import { cn } from '@lib-utils';
+} from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { useCanon } from '../context';
 
 export const CanonNavigator = ({
