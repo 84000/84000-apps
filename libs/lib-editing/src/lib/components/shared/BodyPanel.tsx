@@ -64,7 +64,7 @@ export const BodyPanel = ({
     panels.main.tab || (hasTranslationContent ? 'translation' : 'source');
   const safeTab =
     !hasTranslationContent &&
-    (activeTab === 'translation' || activeTab === 'compare')
+      (activeTab === 'translation' || activeTab === 'compare')
       ? 'source'
       : activeTab;
 
@@ -153,7 +153,7 @@ export const BodyPanel = ({
           <TabsTrigger value="source">Source</TabsTrigger>
         </TabsList>
       </div>
-      {showOuterContent ? theTitles : null}
+      {showOuterContent && safeTab === 'front' ? theTitles : null}
       <TabsContent
         value="front"
         forceMount
@@ -187,9 +187,9 @@ export const BodyPanel = ({
         >
           <div
             className={cn(
-              'w-full mx-auto',
+              'w-full mx-auto mt-8',
               safeTab === 'compare'
-                ? '2xl:max-w-7xl max-w-5xl mt-8'
+                ? '2xl:max-w-7xl max-w-5xl'
                 : 'max-w-readable',
             )}
           >

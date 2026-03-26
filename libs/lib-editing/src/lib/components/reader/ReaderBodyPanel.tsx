@@ -15,7 +15,7 @@ import { TranslationReader } from './TranslationReader';
 const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
   translation: 'english',
   source: 'tibetan',
-  front: 'english',
+  front: 'front',
   compare: 'comparison',
 };
 
