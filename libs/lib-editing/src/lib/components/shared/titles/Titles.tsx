@@ -16,7 +16,7 @@ import {
 import { TitlesCard } from './TitlesCard';
 import { TitleForm } from './TitleForm';
 
-export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
+export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'front' | 'other';
 
 export const Titles = ({
   titles,
@@ -71,6 +71,18 @@ export const Titles = ({
         '...';
       header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
       main = enMain;
+      break;
+    }
+    case 'front': {
+      const boMain =
+        imprint?.mainTitles?.bo ||
+        mainTitles.find((t) => t.language === 'bo')?.title;
+      header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+      main =
+        imprint?.mainTitles?.en ||
+        mainTitles.find((t) => t.language === 'en')?.title ||
+        mainTitles[0]?.title ||
+        '';
       break;
     }
     case 'english':

@@ -14,7 +14,7 @@ import {
   Separator,
 } from '@eightyfourthousand/design-system';
 import { cn, parseToh } from '@eightyfourthousand/lib-utils';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import {
   PanelName,
@@ -59,38 +59,51 @@ export const TableOfContentsSection = ({
   }
 
   return (
-    <Accordion type="multiple" className={cn(depth && 'pl-2.5')}>
-      {node.children.map((child) => {
+    <Accordion type="multiple" className={cn(depth && 'pl-5')}>
+      {node.children.map((child, index) => {
         // 'The Translation' is always bold
         const maybeBold =
           child.content === 'The Translation' ? 'font-bold' : '';
+        // Show dividers above and below the top-level introduction section
+        const isIntroduction =
+          depth === 0 && child.section === 'introduction';
+        const prevChild = node.children[index - 1];
+        const prevWasIntroduction =
+          depth === 0 && prevChild?.section === 'introduction';
+        const showDividerBefore =
+          isIntroduction && !prevWasIntroduction;
         return child.children?.length ? (
-          <AccordionItem
-            key={child.uuid}
-            value={child.uuid}
-            className="border-b-0"
-          >
-            <AccordionTrigger className={cn(baseStyle, className)}>
+          <React.Fragment key={child.uuid}>
+            {showDividerBefore && <Separator className="my-4" />}
+            <AccordionItem
+              value={child.uuid}
+              className="border-b-0"
+            >
+              <AccordionTrigger className={cn(baseStyle, className)}>
+                <span
+                  className={cn('line-clamp-2', maybeBold)}
+                  onClick={() => onClick(child)}
+                >
+                  {child.content}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="border-l border-dotted py-0">
+                <TableOfContentsSection node={child} depth={depth + 1} />
+              </AccordionContent>
+            </AccordionItem>
+          </React.Fragment>
+        ) : (
+          <React.Fragment key={child.uuid}>
+            {showDividerBefore && <Separator className="my-4" />}
+            <div className={baseStyle}>
               <span
                 className={cn('line-clamp-2', maybeBold)}
                 onClick={() => onClick(child)}
               >
                 {child.content}
               </span>
-            </AccordionTrigger>
-            <AccordionContent className="border-l border-dotted py-0">
-              <TableOfContentsSection node={child} depth={depth + 1} />
-            </AccordionContent>
-          </AccordionItem>
-        ) : (
-          <div key={child.uuid} className={baseStyle}>
-            <span
-              className={cn('line-clamp-2', maybeBold)}
-              onClick={() => onClick(child)}
-            >
-              {child.content}
-            </span>
-          </div>
+            </div>
+          </React.Fragment>
         );
       })}
     </Accordion>
@@ -227,7 +240,7 @@ export const TableOfContents = ({
         <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
           <BookOpenIcon />
         </div>
-        <span className="my-auto font-semibold">{title}</span>
+        <span className="my-auto font-bold">{title}</span>
       </div>
       <div className="flex gap-2">
         <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
