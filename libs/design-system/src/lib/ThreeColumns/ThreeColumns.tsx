@@ -25,9 +25,6 @@ import {
 } from '../Sheet/Sheet';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 
-const BG_GRADIENT =
-  "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";
-
 export enum MinPanelSizes {
   COLLAPSED = 0,
   SIDE_DEFAULT = 20,
@@ -64,6 +61,7 @@ export const ThreeColumns = ({
   rightPanelOpen,
   leftPanelEnabled = true,
   rightPanelEnabled = true,
+  mainPanelActions,
   onLeftPanelOpenChange,
   onRightPanelOpenChange,
 }: {
@@ -73,6 +71,7 @@ export const ThreeColumns = ({
   rightPanelOpen?: boolean;
   leftPanelEnabled?: boolean;
   rightPanelEnabled?: boolean;
+  mainPanelActions?: ReactNode;
   onLeftPanelOpenChange?: (open: boolean) => void;
   onRightPanelOpenChange?: (open: boolean) => void;
 }) => {
@@ -187,19 +186,22 @@ export const ThreeColumns = ({
               <PanelLeftIcon />
               <span className="sr-only">Toggle Left Panel</span>
             </Button>
-            {rightPanelEnabled && (
-              <Button
-                variant="link"
-                size="icon"
-                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                onClick={toggleRightPanel}
-              >
-                <PanelRightIcon />
-                <span className="sr-only">Toggle Right Panel</span>
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {mainPanelActions}
+              {rightPanelEnabled && (
+                <Button
+                  variant="link"
+                  size="icon"
+                  className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  onClick={toggleRightPanel}
+                >
+                  <PanelRightIcon />
+                  <span className="sr-only">Toggle Right Panel</span>
+                </Button>
+              )}
+            </div>
           </div>
-          <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
+          <div className='bg-surface min-h-[calc(100vh-8rem)]'>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -287,19 +289,22 @@ export const ThreeColumns = ({
                 <PanelLeftIcon />
                 <span className="sr-only">Toggle Left Panel</span>
               </Button>
-              {rightPanelEnabled && (
-                <Button
-                  variant="link"
-                  size="icon"
-                  className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                  onClick={toggleRightPanel}
-                >
-                  <PanelRightIcon />
-                  <span className="sr-only">Toggle Right Panel</span>
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {mainPanelActions}
+                {rightPanelEnabled && (
+                  <Button
+                    variant="link"
+                    size="icon"
+                    className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                    onClick={toggleRightPanel}
+                  >
+                    <PanelRightIcon />
+                    <span className="sr-only">Toggle Right Panel</span>
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
+            <div className='bg-surface min-h-[calc(100vh-8rem)]'>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>
