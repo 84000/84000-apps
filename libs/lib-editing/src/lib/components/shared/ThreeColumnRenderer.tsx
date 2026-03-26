@@ -1,10 +1,11 @@
 'use client';
 
 import { ThreeColumns } from '@eightyfourthousand/design-system';
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { TranslationHeader } from './TranslationHeader';
+import { ReaderSearchButton } from './ReaderSearchButton';
 
 export const ThreeColumnRenderer = ({
   withHeader = false,
@@ -15,6 +16,8 @@ export const ThreeColumnRenderer = ({
 }) => {
   const { panels, updatePanel, hasTranslationContent } = useNavigation();
   const rightPanelEnabled = hasTranslationContent;
+
+  const searchButton = useMemo(() => <ReaderSearchButton />, []);
 
   return (
     <div
@@ -30,6 +33,7 @@ export const ThreeColumnRenderer = ({
         leftPanelOpen={panels.left.open}
         rightPanelOpen={rightPanelEnabled ? panels.right.open : false}
         rightPanelEnabled={rightPanelEnabled}
+        mainPanelActions={searchButton}
         onLeftPanelOpenChange={(open) => {
           updatePanel({
             name: 'left',
@@ -39,11 +43,11 @@ export const ThreeColumnRenderer = ({
         onRightPanelOpenChange={
           rightPanelEnabled
             ? (open) => {
-                updatePanel({
-                  name: 'right',
-                  state: { open, tab: panels.right.tab },
-                });
-              }
+              updatePanel({
+                name: 'right',
+                state: { open, tab: panels.right.tab },
+              });
+            }
             : undefined
         }
       >

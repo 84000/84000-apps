@@ -15,7 +15,7 @@ export const EditorHeader = () => {
   );
 
   return (
-    <div className="px-4 py-3 flex justify-end h-12 z-10 gap-2">
+    <div className="px-4 py-3 flex justify-end h-12 z-10 gap-2 pointer-events-none [&>*]:pointer-events-auto">
       {isDirty && <SaveButton size="xs" onClick={save} />}
     </div>
   );

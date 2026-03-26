@@ -141,8 +141,8 @@ export const BodyPanel = ({
       defaultValue={hasTranslationContent ? 'translation' : 'source'}
       className="px-12 w-full"
     >
-      <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center">
-        <TabsList className="w-fit inline-flex">
+      <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center pointer-events-none">
+        <TabsList className="w-fit inline-flex pointer-events-auto">
           <TabsTrigger value="front">Front</TabsTrigger>
           {hasTranslationContent && (
             <TabsTrigger value="translation">Translation</TabsTrigger>

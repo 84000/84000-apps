@@ -50,7 +50,7 @@ export const RightPanel = ({ children }: { children: ReactNode }) => {
 
 export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="sticky top-16 w-full flex justify-end z-10">{children}</div>
+    <div className="sticky top-16 flex justify-end z-10">{children}</div>
   );
 };
 
@@ -180,7 +180,7 @@ export const ThreeColumns = ({
             <Button
               variant="link"
               size="icon"
-              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+              className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleLeftPanel}
             >
               <PanelLeftIcon />
@@ -192,7 +192,7 @@ export const ThreeColumns = ({
                 <Button
                   variant="link"
                   size="icon"
-                  className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                   onClick={toggleRightPanel}
                 >
                   <PanelRightIcon />
@@ -283,7 +283,7 @@ export const ThreeColumns = ({
               <Button
                 variant="link"
                 size="icon"
-                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleLeftPanel}
               >
                 <PanelLeftIcon />
@@ -295,7 +295,7 @@ export const ThreeColumns = ({
                   <Button
                     variant="link"
                     size="icon"
-                    className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                    className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                     onClick={toggleRightPanel}
                   >
                     <PanelRightIcon />
