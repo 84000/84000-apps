@@ -175,7 +175,7 @@ export const ThreeColumns = ({
           className,
         )}
       >
-        <div style={{ overflow: 'auto' }}>
+        <div className="flex flex-col" style={{ overflow: 'auto' }}>
           <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
             <Button
               variant="link"
@@ -201,7 +201,7 @@ export const ThreeColumns = ({
               )}
             </div>
           </div>
-          <div className='bg-surface min-h-[calc(100vh-8rem)]'>
+          <div className='bg-surface flex-1'>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -274,7 +274,7 @@ export const ThreeColumns = ({
             </>
           )}
           <ResizablePanel
-            className="hidden md:block rounded border bg-background"
+            className="hidden md:flex md:flex-col rounded border bg-background"
             style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
@@ -304,7 +304,7 @@ export const ThreeColumns = ({
                 )}
               </div>
             </div>
-            <div className='bg-surface min-h-[calc(100vh-8rem)]'>
+            <div className='bg-surface flex-1'>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>

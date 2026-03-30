@@ -35,7 +35,7 @@ export const LeftPanel = ({
         updatePanel({ name: 'left', state: { open: true, tab } });
       }}
       defaultValue="toc"
-      className="w-full gap-0 @container/sidebar"
+      className="w-full gap-0 @container/sidebar h-full flex flex-col"
     >
       <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList
@@ -47,8 +47,8 @@ export const LeftPanel = ({
           <TabsTrigger value="toc">Table of Contents</TabsTrigger>
         </TabsList>
       </div>
-      <div className="px-2">
-        <div className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface">
+      <div className="px-2 flex-1 min-h-0 mb-2">
+        <div className="overflow-auto h-full rounded bg-surface">
           <div className="rounded px-2 pb-8 max-w-readable mx-auto">
             <TabsContent value="toc" className="px-2 mt-1.5">
               <TableOfContents

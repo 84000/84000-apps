@@ -54,7 +54,7 @@ export const BackMatterPanel = ({
         updatePanel({ name: 'right', state: { open: true, tab } });
       }}
       defaultValue="endnotes"
-      className="w-full gap-0 @container/sidebar"
+      className="w-full gap-0 @container/sidebar h-full flex flex-col"
     >
       <div className="sticky top-0 pt-1 pb-2 z-10 w-full rounded-t bg-background overflow-x-auto text-center">
         <TabsList
@@ -77,10 +77,10 @@ export const BackMatterPanel = ({
           )}
         </TabsList>
       </div>
-      <div className="px-2">
+      <div className="px-2 flex-1 min-h-0 mb-2">
         <div
           ref={scrollContainerRef}
-          className="overflow-auto md:h-[calc(100vh-8.5rem)] h-[calc(100vh-4rem)] rounded bg-surface"
+          className="overflow-auto h-full rounded bg-surface"
           data-panel="right"
         >
           <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
