@@ -6,6 +6,7 @@ import { useNavigation } from './NavigationProvider';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { TranslationHeader } from './TranslationHeader';
 import { ReaderSearchButton } from './ReaderSearchButton';
+import { GatedFeature } from '@eightyfourthousand/lib-instr';
 
 export const ThreeColumnRenderer = ({
   withHeader = false,
@@ -26,9 +27,11 @@ export const ThreeColumnRenderer = ({
         withHeader ? 'pb-20' : '',
       )}
     >
-      <div className="pb-2.5">
-        <TranslationHeader className="rounded-full shadow-lg" />
-      </div>
+      <GatedFeature flag='show-reader-header'>
+        <div className="pb-2.5">
+          <TranslationHeader className="rounded-full shadow-lg" />
+        </div>
+      </GatedFeature>
       <ThreeColumns
         leftPanelOpen={panels.left.open}
         rightPanelOpen={rightPanelEnabled ? panels.right.open : false}

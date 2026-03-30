@@ -56,7 +56,7 @@ const PassageComponent = (props: NodeViewProps) => {
     }
 
     const alignment = node.attrs.alignments?.[toh] as Alignment;
-    const source = alignment?.tibetan || '';
+    const source = alignment?.tibetan.trim() || '';
 
     const firstChild = node.content.firstChild;
     let compareLeadingSpace = 'md:mt-1';
