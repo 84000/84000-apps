@@ -6,7 +6,7 @@
 @layer base {
   :root {
     --white: oklch(1 0 0);
-    --surface: #faf8f5;
+    --surface: #f5f6f5;
     --lightgray: oklch(0.84 0 0);
     --gray: oklch(0.74 0 0);
     --darkgray: oklch(0.51 0 0);
