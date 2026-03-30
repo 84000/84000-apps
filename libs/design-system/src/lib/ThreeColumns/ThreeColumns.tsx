@@ -37,7 +37,7 @@ export enum MinPanelSizes {
 export type ImperativePanelHandle = RRImperativePanelHandle;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
-  return <div>{children}</div>;
+  return <div className='size-full'>{children}</div>;
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
@@ -45,7 +45,7 @@ export const MainPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {
-  return <div>{children}</div>;
+  return <div className='size-full'>{children}</div>;
 };
 
 export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
