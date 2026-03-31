@@ -19,6 +19,7 @@ import {
 import { isUuid, scrollToElement } from '@eightyfourthousand/lib-utils';
 import { useNavigation } from '../NavigationProvider';
 import { GlossarySkeleton } from './GlossarySkeleton';
+import { usePaginationLoadTriggers } from '../hooks/usePaginationLoadTriggers';
 
 const LOADING_SKELETONS_COUNT = 3;
 
@@ -62,21 +63,24 @@ export const GlossaryPaginationProvider = ({
   const processedNavCursorRef = useRef<string | undefined>(undefined);
   const isNavigatingRef = useRef(false);
 
-  const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
-  const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const startCursorRef = useRef(startCursor);
-  const endCursorRef = useRef(endCursor);
-  const startLoadArmedRef = useRef(true);
-  const endLoadArmedRef = useRef(true);
   const handledStartLoadRequestRef = useRef(0);
   const handledEndLoadRequestRef = useRef(0);
-  const [startLoadRequest, setStartLoadRequest] = useState(0);
-  const [endLoadRequest, setEndLoadRequest] = useState(0);
 
   // Stable reference — prevents re-renders from re-triggering load effects
   const dataClient = useMemo(() => createGraphQLClient(), []);
   const { panels, updatePanel } = useNavigation();
+  const {
+    loadMoreAtStartRef: observedLoadMoreAtStartRef,
+    loadMoreAtEndRef,
+    startLoadRequest,
+    endLoadRequest,
+  } = usePaginationLoadTriggers({
+    startCursor,
+    endCursor,
+    startIsLoading,
+    endIsLoading,
+  });
 
   // Only accept hash when right panel is on glossary tab
   const panelHash =
@@ -92,14 +96,6 @@ export const GlossaryPaginationProvider = ({
       processedNavCursorRef.current = undefined;
     }
   }, [panelHash]);
-
-  useEffect(() => {
-    startCursorRef.current = startCursor;
-  }, [startCursor]);
-
-  useEffect(() => {
-    endCursorRef.current = endCursor;
-  }, [endCursor]);
 
   // Hash navigation: navigate to a specific glossary term
   useEffect(() => {
@@ -164,45 +160,6 @@ export const GlossaryPaginationProvider = ({
       }
     })();
   }, [navCursor, startIsLoading, endIsLoading, workUuid]);
-
-  // IntersectionObserver for load-more sentinels
-  useEffect(() => {
-    const startEl = loadMoreAtStartRef.current;
-    const endEl = loadMoreAtEndRef.current;
-
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === startEl && !entry.isIntersecting) {
-          startLoadArmedRef.current = true;
-          continue;
-        }
-
-        if (entry.target === endEl && !entry.isIntersecting) {
-          endLoadArmedRef.current = true;
-          continue;
-        }
-
-        if (entry.target === startEl && startCursorRef.current) {
-          if (!startLoadArmedRef.current) {
-            continue;
-          }
-          startLoadArmedRef.current = false;
-          setStartLoadRequest((c) => c + 1);
-        } else if (entry.target === endEl && endCursorRef.current) {
-          if (!endLoadArmedRef.current) {
-            continue;
-          }
-          endLoadArmedRef.current = false;
-          setEndLoadRequest((c) => c + 1);
-        }
-      }
-    });
-
-    if (startEl) observer.observe(startEl);
-    if (endEl) observer.observe(endEl);
-
-    return () => observer.disconnect();
-  }, []);
 
   // Load more at end (forward pagination)
   useEffect(() => {
@@ -298,7 +255,7 @@ export const GlossaryPaginationProvider = ({
         endIsLoading,
       }}
     >
-      <div ref={loadMoreAtStartRef} className="h-0" />
+      <div ref={observedLoadMoreAtStartRef} className="h-0" />
       <div ref={contentRef}>{children}</div>
       <div ref={loadMoreAtEndRef} className="h-0" />
       {(endCursor || (endIsLoading && terms.length === 0)) && (
