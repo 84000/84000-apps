@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useMemo,
 } from 'react';
 import { Editor } from '@tiptap/react';
 import { TranslationEditorContent } from './TranslationEditor';
@@ -23,6 +24,7 @@ import { isUuid, scrollToElement, useIsMobile } from '@eightyfourthousand/lib-ut
 import { PanelName, TabName, useNavigation } from '../shared';
 import { LotusPond, SHEET_ANIMATION_DURATION } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
+import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
 
 const LOADING_SKELETONS_COUNT = 3;
 const CHUNK_SIZE = 25;
@@ -100,13 +102,10 @@ export const PaginationProvider = ({
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(true);
   const [isEditorReady, setIsEditorReady] = useState(false);
-  const loadMoreAtStartRef = useRef<HTMLDivElement>(null);
-  const loadMoreAtEndRef = useRef<HTMLDivElement>(null);
   const childrenDivRef = useRef<HTMLDivElement>(null);
-  const shouldLoadMoreAtStartRef = useRef(false);
-  const shouldLoadMoreAtEndRef = useRef(false);
-  const [loadMoreTrigger, setLoadMoreTrigger] = useState(0);
-  const dataClient = createGraphQLClient();
+  const handledStartLoadRequestRef = useRef(0);
+  const handledEndLoadRequestRef = useRef(0);
+  const dataClient = useMemo(() => createGraphQLClient(), []);
 
   const { panels, updatePanel, setShowOuterContent } = useNavigation();
   const isMobile = useIsMobile();
@@ -132,6 +131,18 @@ export const PaginationProvider = ({
       setIsEditorReady(true);
       onCreate?.({ editor });
     },
+  });
+  const {
+    loadMoreAtStartRef,
+    loadMoreAtEndRef,
+    startLoadRequest,
+    endLoadRequest,
+  } = usePaginationLoadTriggers({
+    enabled: isEditorReady,
+    startCursor,
+    endCursor,
+    startIsLoading,
+    endIsLoading,
   });
 
   useEffect(() => {
@@ -265,12 +276,6 @@ export const PaginationProvider = ({
       } finally {
         isNavigatingRef.current = false;
         setNavigating(false);
-        // Re-trigger load-more check: the observer may have fired while
-        // navigation was in progress (sentinel entered view after content
-        // was replaced), but the load-more effect was blocked by the
-        // isNavigatingRef guard. Bumping the trigger re-evaluates now
-        // that navigation is complete.
-        setLoadMoreTrigger((c) => c + 1);
       }
     })();
   }, [
@@ -294,43 +299,18 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
-  // Set up IntersectionObserver only after the editor has created and rendered
-  // initial content. isEditorReady flips to true once and stays true, so the
-  // observer is created once and never torn down/recreated during page fetches.
-  useEffect(() => {
-    if (!isEditorReady) return;
-
-    const startEl = loadMoreAtStartRef.current;
-    const endEl = loadMoreAtEndRef.current;
-
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === startEl) {
-          shouldLoadMoreAtStartRef.current = entry.isIntersecting;
-        } else if (entry.target === endEl) {
-          shouldLoadMoreAtEndRef.current = entry.isIntersecting;
-        }
-        if (entry.isIntersecting) {
-          setLoadMoreTrigger((c) => c + 1);
-        }
-      }
-    });
-
-    if (startEl) observer.observe(startEl);
-    if (endEl) observer.observe(endEl);
-
-    return () => observer.disconnect();
-  }, [isEditorReady]);
-
   useEffect(() => {
     if (
+      endLoadRequest === 0 ||
+      handledEndLoadRequestRef.current === endLoadRequest ||
       endIsLoading ||
-      !shouldLoadMoreAtEndRef.current ||
       !endCursor ||
       isNavigatingRef.current
     ) {
       return;
     }
+
+    handledEndLoadRequestRef.current = endLoadRequest;
     setEndIsLoading(true);
 
     (async () => {
@@ -363,18 +343,21 @@ export const PaginationProvider = ({
     editor,
     endCursor,
     dataClient,
-    loadMoreTrigger,
+    endLoadRequest,
   ]);
 
   useEffect(() => {
     if (
+      startLoadRequest === 0 ||
+      handledStartLoadRequestRef.current === startLoadRequest ||
       startIsLoading ||
-      !shouldLoadMoreAtStartRef.current ||
       !startCursor ||
       isNavigatingRef.current
     ) {
       return;
     }
+
+    handledStartLoadRequestRef.current = startLoadRequest;
     setStartIsLoading(true);
 
     (async () => {
@@ -425,7 +408,7 @@ export const PaginationProvider = ({
     editor,
     startCursor,
     dataClient,
-    loadMoreTrigger,
+    startLoadRequest,
   ]);
 
   return (
