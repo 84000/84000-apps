@@ -1,0 +1,57 @@
+enum DocxImportJobStatus {
+  QUEUED_UPLOAD
+  QUEUED
+  PROCESSING
+  NEEDS_REVIEW
+  COMPLETED
+  FAILED
+}
+
+type DocxImportDiagnostic {
+  code: String!
+  message: String!
+  detail: String
+}
+
+type DocxImportJob {
+  importJobId: ID!
+  workUuid: ID!
+  status: DocxImportJobStatus!
+  storageBucket: String!
+  storagePath: String!
+  originalFilename: String!
+  mimeType: String!
+  dryRun: Boolean!
+  diagnostics: [DocxImportDiagnostic!]!
+  warnings: [String!]!
+  result: JSON
+  createdAt: String
+  updatedAt: String
+}
+
+type DocxImportUploadPayload {
+  importJobId: ID!
+  workUuid: ID!
+  storageBucket: String!
+  storagePath: String!
+  uploadToken: String!
+  signedUrl: String!
+  expiresIn: Int!
+  status: DocxImportJobStatus!
+  dryRun: Boolean!
+}
+
+extend type Query {
+  docxImportJob(importJobId: ID!): DocxImportJob
+}
+
+extend type Mutation {
+  createDocxImportUpload(
+    workUuid: ID!
+    filename: String!
+    contentType: String!
+    dryRun: Boolean
+  ): DocxImportUploadPayload!
+
+  startDocxImport(importJobId: ID!): DocxImportJob!
+}
