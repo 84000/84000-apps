@@ -66,3 +66,22 @@ export const downloadFromStorage = async ({
 
   return data;
 };
+
+export const storageBucketExists = async ({
+  client,
+  bucket,
+}: {
+  client: DataClient;
+  bucket: string;
+}) => {
+  const { error } = await client.storage.from(bucket).list('', {
+    limit: 1,
+  });
+
+  if (error) {
+    console.error(`Failed to access storage bucket "${bucket}":`, error);
+    return false;
+  }
+
+  return true;
+};
