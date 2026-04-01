@@ -3,17 +3,30 @@ import type { GraphQLContext } from '../../context';
 export const passageQueries = {
   passage: async (
     _parent: unknown,
-    args: { uuid: string },
+    args: { uuid?: string; xmlId?: string },
     ctx: GraphQLContext,
   ) => {
-    const { data, error } = await ctx.supabase
+    if (!args.uuid && !args.xmlId) {
+      return null;
+    }
+
+    let query = ctx.supabase
       .from('passages')
-      .select('uuid, content, label, sort, type, xmlId, toh, work_uuid')
-      .eq('uuid', args.uuid)
-      .single();
+      .select('uuid, content, label, sort, type, xmlId, toh, work_uuid');
+
+    if (args.uuid) {
+      query = query.eq('uuid', args.uuid);
+    } else if (args.xmlId) {
+      query = query.eq('xmlId', args.xmlId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
-      console.error(`Error fetching passage ${args.uuid}:`, error);
+      console.error(
+        `Error fetching passage ${args.uuid || args.xmlId}:`,
+        error,
+      );
       return null;
     }
 

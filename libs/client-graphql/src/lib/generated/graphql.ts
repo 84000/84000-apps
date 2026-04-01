@@ -214,6 +214,17 @@ export type GlossaryPassagesPage = {
   nextCursor?: Maybe<Scalars['String']['output']>;
 };
 
+/** Paginated connection of glossary term instances for a work */
+export type GlossaryTermConnection = {
+  __typename?: 'GlossaryTermConnection';
+  /** List of glossary term instances in this page */
+  nodes: Array<GlossaryTermInstance>;
+  /** Pagination information */
+  pageInfo: PageInfo;
+  /** Total number of glossary terms in this work */
+  totalCount: Scalars['Int']['output'];
+};
+
 /** A glossary term instance within a specific work */
 export type GlossaryTermInstance = {
   __typename?: 'GlossaryTermInstance';
@@ -223,10 +234,19 @@ export type GlossaryTermInstance = {
   definition?: Maybe<Scalars['String']['output']>;
   /** Names in different languages */
   names: GlossaryTermNames;
-  /** Passages where this term appears */
-  passages: Array<Passage>;
+  /** Paginated passage references where this term appears */
+  passages: GlossaryPassagesPage;
+  /** Absolute position of this term in the work's glossary (1-based) */
+  termNumber: Scalars['Int']['output'];
   /** Unique identifier */
   uuid: Scalars['ID']['output'];
+};
+
+
+/** A glossary term instance within a specific work */
+export type GlossaryTermInstancePassagesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /** Names for a glossary term instance in different languages */
@@ -472,7 +492,10 @@ export type Query = {
   health: HealthStatus;
   /** Get the currently authenticated user (null if not authenticated) */
   me?: Maybe<CurrentUser>;
-  /** Fetch a single passage by UUID */
+  /**
+   * Fetch a single passage by UUID or XML ID.
+   * At least one of uuid or xmlId must be provided. Prefers uuid if both are present.
+   */
   passage?: Maybe<Passage>;
   /** Get the current API version */
   version: Scalars['String']['output'];
@@ -527,7 +550,8 @@ export type QueryHasPermissionArgs = {
 
 /** Root Query type - extend this in other schema files */
 export type QueryPassageArgs = {
-  uuid: Scalars['ID']['input'];
+  uuid?: InputMaybe<Scalars['ID']['input']>;
+  xmlId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -664,8 +688,13 @@ export type Work = {
   bibliography: Array<BibliographyEntry>;
   /** Folios for this work, filtered by toh and paginated */
   folios: Array<Folio>;
-  /** Glossary term instances for this work */
+  /**
+   * Glossary term instances for this work
+   * @deprecated Use glossaryTerms for paginated access
+   */
   glossary: Array<GlossaryTermInstance>;
+  /** Paginated glossary term instances for this work */
+  glossaryTerms: GlossaryTermConnection;
   /**
    * Publication imprint information.
    * If the work query specified a toh argument, that value will be used.
@@ -711,6 +740,15 @@ export type WorkFoliosArgs = {
 
 /** A published translation work from the 84000 canon */
 export type WorkGlossaryArgs = {
+  withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+/** A published translation work from the 84000 canon */
+export type WorkGlossaryTermsArgs = {
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  direction?: InputMaybe<PaginationDirection>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
   withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -867,7 +905,8 @@ export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __
       )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassageQueryVariables = Exact<{
-  uuid: Scalars['ID']['input'];
+  uuid?: InputMaybe<Scalars['ID']['input']>;
+  xmlId?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
@@ -1183,8 +1222,8 @@ export const GetPassagesAroundWithJsonDocument = gql`
 }
     ${PassageWithJsonFragmentDoc}`;
 export const GetPassageDocument = gql`
-    query GetPassage($uuid: ID!) {
-  passage(uuid: $uuid) {
+    query GetPassage($uuid: ID, $xmlId: String) {
+  passage(uuid: $uuid, xmlId: $xmlId) {
     ...PassageWithAnnotations
   }
 }
@@ -1289,7 +1328,7 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     GetPassagesAroundWithJson(variables: GetPassagesAroundWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesAroundWithJsonQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesAroundWithJsonQuery>({ document: GetPassagesAroundWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesAroundWithJson', 'query', variables);
     },
-    GetPassage(variables: GetPassageQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageQuery> {
+    GetPassage(variables?: GetPassageQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassageQuery>({ document: GetPassageDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassage', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
