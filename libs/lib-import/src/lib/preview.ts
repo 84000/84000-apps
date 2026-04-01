@@ -26,14 +26,14 @@ const SECTION_CONFIG: Record<string, SectionConfig> = {
   },
   acknowledgements: {
     headerLabel: 'ac.',
-    headerType: 'acknowledgementHeader',
-    bodyType: 'acknowledgement',
+    headerType: 'acknowledgmentHeader',
+    bodyType: 'acknowledgment',
     supported: true,
   },
   preface: {
     headerLabel: 'pr.',
-    headerType: 'prefaceHeader',
-    bodyType: 'preface',
+    headerType: 'preludeHeader',
+    bodyType: 'prelude',
     supported: true,
   },
   introduction: {
@@ -103,33 +103,37 @@ function buildHeadingAnnotation(level: number, type = 'section-title'): PreviewA
     end: 0,
     data: {
       level,
-      type,
+      class: type,
     },
   };
 }
 
 function buildStyleAnnotations(paragraph: NormalizedParagraph): PreviewAnnotationOperation[] {
-  const style = paragraph.styleName || '';
+  const style = (paragraph.styleName || '').trim().toLowerCase();
   const annotations: PreviewAnnotationOperation[] = [];
 
-  if (style === 'Block' || style === 'Trailer') {
+  if (style === 'block' || style === 'trailer') {
     annotations.push({ kind: 'blockquote', start: 0, end: 0 });
   }
 
-  if (style === 'Mantra-Block') {
+  if (style === 'mantra-block') {
     annotations.push({ kind: 'paragraph', start: 0, end: 0 });
     annotations.push({ kind: 'indent', start: 0, end: 0 });
   }
 
-  if (style === 'Mantra-Block-Verse') {
+  if (style === 'mantra-block-verse') {
     annotations.push({ kind: 'indent', start: 0, end: 0 });
   }
 
-  if (style === 'Block-Verse') {
+  if (style === 'block-verse') {
     annotations.push({ kind: 'blockquote', start: 0, end: 0 });
   }
 
-  if (style === 'Verse' || style === 'Block-Verse' || style === 'Mantra-Block-Verse') {
+  if (
+    style === 'verse' ||
+    style === 'block-verse' ||
+    style === 'mantra-block-verse'
+  ) {
     const text = paragraph.text;
     if (text.includes('\n')) {
       let offset = 0;

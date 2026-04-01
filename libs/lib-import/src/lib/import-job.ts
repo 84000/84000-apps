@@ -7,6 +7,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 import { parseDocxDocument } from './docx';
+import { assertDocxImportBucketReady, persistImportPreview } from './persist';
 import { buildImportPreview } from './preview';
 import type {
   CreateImportUploadJobInput,
@@ -79,6 +80,11 @@ export async function createImportUploadJob({
   requestedBy,
   dryRun = false,
 }: CreateImportUploadJobInput): Promise<CreateImportUploadJobResult> {
+  await assertDocxImportBucketReady({
+    client,
+    bucket: DOCX_IMPORT_BUCKET,
+  });
+
   const workExists = await ensureWorkExists({ client, workUuid });
   if (!workExists) {
     throw new Error(`Work not found: ${workUuid}`);
@@ -235,7 +241,7 @@ export async function runImportJob({
 
   let diagnostics: ImportDiagnostic[] = [];
   let warnings: string[] = [];
-  let status: ImportJobResult['status'] = job.dryRun ? 'completed' : 'needs_review';
+  let status: ImportJobResult['status'] = 'completed';
   let resultJson: Record<string, unknown> | null = null;
 
   try {
@@ -245,23 +251,31 @@ export async function runImportJob({
       workUuid: job.workUuid,
     });
 
-    if (!job.dryRun) {
-      warnings = [
-        'Document parsing and preview generation completed, but live database persistence has not been implemented yet.',
-      ];
-      diagnostics = [
-        {
-          code: 'IMPORT_PERSISTENCE_PENDING',
-          message: 'The import preview was generated successfully, but row persistence is still pending implementation.',
-        },
-      ];
+    if (job.dryRun) {
+      resultJson = {
+        parserImplemented: true,
+        persistenceImplemented: false,
+        preview,
+      };
+    } else {
+      const persistence = await persistImportPreview({
+        client,
+        workUuid: job.workUuid,
+        preview,
+      });
+
+      warnings = persistence.warnings;
+      resultJson = {
+        parserImplemented: true,
+        persistenceImplemented: true,
+        preview,
+        persistedCounts: persistence.counts,
+      };
     }
 
-    resultJson = {
-      parserImplemented: true,
-      persistenceImplemented: false,
-      preview,
-    };
+    if (diagnostics.length > 0) {
+      status = 'needs_review';
+    }
   } catch (error) {
     status = 'failed';
     diagnostics = [
