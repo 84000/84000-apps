@@ -109,8 +109,8 @@ query GetPassagesAroundWithJson(
   }
 }
 
-query GetPassage($uuid: ID!) {
-  passage(uuid: $uuid) {
+query GetPassage($uuid: ID, $xmlId: String) {
+  passage(uuid: $uuid, xmlId: $xmlId) {
     ...PassageWithAnnotations
   }
 }

@@ -40,8 +40,8 @@ const GET_PASSAGE = gql`
     }
   }
 
-  query GetPassage($uuid: ID!) {
-    passage(uuid: $uuid) {
+  query GetPassage($uuid: ID, $xmlId: String) {
+    passage(uuid: $uuid, xmlId: $xmlId) {
       ...PassageWithAnnotations
     }
   }
@@ -52,18 +52,21 @@ type GetPassageResponse = {
 };
 
 /**
- * Get a single passage by UUID.
+ * Get a single passage by UUID or XML ID.
  */
 export async function getPassage({
   client,
   uuid,
+  xmlId,
 }: {
   client: GraphQLClient;
-  uuid: string;
+  uuid?: string;
+  xmlId?: string;
 }): Promise<Passage | undefined> {
   try {
     const response = await client.request<GetPassageResponse>(GET_PASSAGE, {
       uuid,
+      xmlId,
     });
 
     if (!response.passage) {

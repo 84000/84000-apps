@@ -38,7 +38,7 @@ type Passage {
   toh: String
 
   """
-  XML ID from the source document
+  The Legacy XML ID from the source document
   """
   xmlId: String
 
@@ -146,13 +146,19 @@ type PassageConnection {
 
 extend type Query {
   """
-  Fetch a single passage by UUID
+  Fetch a single passage by UUID or XML ID.
+  At least one of uuid or legacy xmlId must be provided. Prefers uuid if both are present.
   """
   passage(
     """
     The unique identifier of the passage
     """
-    uuid: ID!
+    uuid: ID
+
+    """
+    The Legacy XML ID from the source document (e.g., UT22084-31-2-108)
+    """
+    xmlId: String @deprecated(reason: "Use uuid instead")
   ): Passage
 }
 
@@ -191,7 +197,7 @@ input PassageInput {
   type: String!
 
   """
-  XML ID from the source document
+  The Legacy XML ID from the source document
   """
   xmlId: String
 

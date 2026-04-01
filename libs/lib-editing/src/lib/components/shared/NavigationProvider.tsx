@@ -27,14 +27,16 @@ import {
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import {
   PANEL_NAMES,
+  PANEL_FOR_SECTION,
   PanelName,
   PanelsState,
   PanelState,
+  TAB_FOR_SECTION,
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
 import { GatedFeature, useFeatureFlagEnabled } from '@eightyfourthousand/lib-instr';
-import { useIsMobile } from '@eightyfourthousand/lib-utils';
+import { isXmlId, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
 import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
 
@@ -266,6 +268,36 @@ export const NavigationProvider = ({
     const newUrl = `?${params.toString()}${window.location.hash}`;
     window.history.replaceState(null, '', newUrl);
   }, [toh, panels]);
+
+  // On initial load, check for an XML ID in the URL hash and resolve it to a passage UUID
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '');
+    if (!hash || !isXmlId(hash)) {
+      return;
+    }
+
+    // Remove hash from URL immediately
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}`,
+    );
+
+    (async () => {
+      const passage = await getPassage({ client: graphqlClient, xmlId: hash });
+      if (!passage) {
+        return;
+      }
+
+      const panel = PANEL_FOR_SECTION[passage.type] ?? 'main';
+      const tab = TAB_FOR_SECTION[passage.type] ?? 'translation';
+
+      updatePanel({
+        name: panel,
+        state: { open: true, tab, hash: passage.uuid },
+      });
+    })();
+  }, []);
 
   useEffect(() => {
     if (!uuid || !toh) {

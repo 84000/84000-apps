@@ -25,3 +25,6 @@ export const parseToh = (toh: string) =>
 
 export const isUuid = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(str);
+
+export const isXmlId = (str: string) =>
+  /^UT\d+-\d+-\d+(-[\w]+)*$/.test(str);
