@@ -6,6 +6,8 @@ import {
 } from '@eightyfourthousand/data-access';
 import { v4 as uuidv4 } from 'uuid';
 
+import { parseDocxDocument } from './docx';
+import { buildImportPreview } from './preview';
 import type {
   CreateImportUploadJobInput,
   CreateImportUploadJobResult,
@@ -221,26 +223,65 @@ export async function runImportJob({
     throw new Error('Failed to mark import job as processing');
   }
 
-  // The deterministic extraction/mapping engine is the next implementation step.
-  // For now, queueing and audit records are real, while parsing remains behind this boundary.
-  const diagnostics: ImportDiagnostic[] = [
-    {
-      code: 'IMPORT_PIPELINE_PENDING',
-      message: 'Import job was queued successfully, but document parsing has not been implemented yet.',
-      detail: 'The GraphQL submission flow, storage handoff, and job tracking are active.',
-    },
-  ];
+  const file = await downloadFromStorage({
+    client,
+    bucket: job.storageBucket,
+    path: job.storagePath,
+  });
+
+  if (!file) {
+    throw new Error('Uploaded file not found in storage');
+  }
+
+  let diagnostics: ImportDiagnostic[] = [];
+  let warnings: string[] = [];
+  let status: ImportJobResult['status'] = job.dryRun ? 'completed' : 'needs_review';
+  let resultJson: Record<string, unknown> | null = null;
+
+  try {
+    const document = await parseDocxDocument(file);
+    const preview = buildImportPreview({
+      document,
+      workUuid: job.workUuid,
+    });
+
+    if (!job.dryRun) {
+      warnings = [
+        'Document parsing and preview generation completed, but live database persistence has not been implemented yet.',
+      ];
+      diagnostics = [
+        {
+          code: 'IMPORT_PERSISTENCE_PENDING',
+          message: 'The import preview was generated successfully, but row persistence is still pending implementation.',
+        },
+      ];
+    }
+
+    resultJson = {
+      parserImplemented: true,
+      persistenceImplemented: false,
+      preview,
+    };
+  } catch (error) {
+    status = 'failed';
+    diagnostics = [
+      {
+        code: 'DOCX_PARSE_FAILED',
+        message: 'Failed to parse the uploaded .docx document.',
+        detail: error instanceof Error ? error.message : String(error),
+      },
+    ];
+    warnings = [];
+    resultJson = null;
+  }
 
   const { data, error } = await client
     .from('import_jobs')
     .update({
-      status: 'needs_review',
+      status,
       diagnostics_json: diagnostics,
-      warnings_json: ['Document ingestion pipeline is not implemented yet.'],
-      result_json: {
-        phase: 'queued',
-        parserImplemented: false,
-      },
+      warnings_json: warnings,
+      result_json: resultJson,
     })
     .eq('uuid', importJobId)
     .select('*')
