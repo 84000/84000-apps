@@ -1,3 +1,5 @@
+'use client';
+
 import {
   useFeatureFlagEnabled as phUseFeatureFlagEnabled,
   useFeatureFlagPayload as phUseFeatureFlagPayload,
@@ -5,11 +7,13 @@ import {
   PostHogFeatureProps,
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
+import { useEffect, useState } from 'react';
 
 export type FeatureFlag =
   | 'authority-pages'
   | 'translation-hover-cards'
   | 'studio-header-config'
+  | 'show-reader-header'
   | 'show-restriction-warning';
 
 export type FeatureFlagPayload = {
@@ -57,7 +61,17 @@ export type GatedFeatureProps = PostHogFeatureProps & {
 };
 
 export const GatedFeature = ({ children, flag }: GatedFeatureProps) => {
+  const [isClient, setIsClient] = useState(false);
   const enabled = useFeatureFlagEnabled(flag);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
   return enabled ? children : null;
 };
 

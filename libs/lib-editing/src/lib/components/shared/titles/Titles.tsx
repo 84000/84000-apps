@@ -16,7 +16,7 @@ import {
 import { TitlesCard } from './TitlesCard';
 import { TitleForm } from './TitleForm';
 
-export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'other';
+export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'front' | 'other';
 
 export const Titles = ({
   titles,
@@ -50,15 +50,14 @@ export const Titles = ({
 
   const footer =
     imprint?.mainTitles?.['Sa-Ltn'] ||
-    mainTitles.find((t) => t.language === 'Sa-Ltn')?.title ||
-    '...';
+    mainTitles.find((t) => t.language === 'Sa-Ltn')?.title;
 
   switch (variant) {
     case 'tibetan': {
       const boMain =
         imprint?.mainTitles?.bo ||
         mainTitles.find((t) => t.language === 'bo')?.title;
-      header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
       break;
     }
     case 'comparison': {
@@ -68,9 +67,21 @@ export const Titles = ({
       const enMain =
         imprint?.mainTitles?.en ||
         mainTitles.find((t) => t.language === 'en')?.title ||
-        '...';
-      header = `${BO_TITLE_PREFIX}${boMain || '...'}`;
+        '';
+      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
       main = enMain;
+      break;
+    }
+    case 'front': {
+      const boMain =
+        imprint?.mainTitles?.bo ||
+        mainTitles.find((t) => t.language === 'bo')?.title;
+      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
+      main =
+        imprint?.mainTitles?.en ||
+        mainTitles.find((t) => t.language === 'en')?.title ||
+        mainTitles[0]?.title ||
+        '';
       break;
     }
     case 'english':

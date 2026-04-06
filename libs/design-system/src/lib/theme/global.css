@@ -6,11 +6,11 @@
 @layer base {
   :root {
     --white: oklch(1 0 0);
-    --surface: #faf8f5;
-    --lightgray: oklch(0.84 0 0);
-    --gray: oklch(0.74 0 0);
-    --darkgray: oklch(0.51 0 0);
-    --black: oklch(0.18 0 0);
+    --surface: #f8faf8;
+    --lightgray: oklch(0.84 0 360);
+    --gray: oklch(0.74 0 360);
+    --darkgray: oklch(0.51 0 360);
+    --black: oklch(0.30 0 360);
 
     --navy: oklch(0.35 0.09 250);
     --navy-25: oklch(0.95 0.01 250);
@@ -186,6 +186,63 @@
     --error-foreground: var(--destructive-foreground);
   }
 
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --white: oklch(0.15 0.01 250);
+      --surface: #1a1a1a;
+      --lightgray: oklch(0.32 0.02 250);
+      --gray: oklch(0.55 0 0);
+      --darkgray: oklch(0.75 0 0);
+      --black: oklch(0.8 0 0);
+
+      --background: var(--white);
+      --foreground: var(--black);
+      --canvas: oklch(0.12 0.01 250);
+
+      --card: oklch(0.2 0.01 250);
+      --card-foreground: var(--foreground);
+      --popover: oklch(0.2 0.01 250);
+      --popover-foreground: var(--foreground);
+
+      --primary: var(--ochre-400);
+      --primary-foreground: oklch(0.15 0 0);
+
+      --secondary: var(--navy-200);
+      --secondary-foreground: oklch(0.15 0 0);
+
+      --tertiary: var(--emerald-300);
+      --tertiary-foreground: oklch(0.15 0 0);
+
+      --accent: var(--brick-400);
+      --accent-foreground: oklch(0.15 0 0);
+
+      --muted: oklch(0.22 0.01 250);
+      --muted-foreground: oklch(0.6 0 0);
+      --destructive: var(--brick-400);
+      --destructive-foreground: oklch(0.15 0 0);
+      --border: oklch(0.3 0.02 250);
+      --input: oklch(0.3 0.02 250);
+      --ring: var(--navy-600);
+      --success: var(--emerald-400);
+      --success-hover: var(--emerald-300);
+      --success-foreground: oklch(0.15 0 0);
+
+      --sidebar-background: oklch(0.17 0.01 250);
+      --sidebar-foreground: var(--foreground);
+      --sidebar-primary: var(--ochre-600);
+      --sidebar-primary-foreground: var(--foreground);
+      --sidebar-accent: var(--brick-400);
+      --sidebar-accent-foreground: oklch(0.15 0 0);
+      --sidebar-border: oklch(0.28 0.02 250);
+      --sidebar-ring: var(--navy-700);
+
+      --warning: var(--ochre-400);
+      --warning-foreground: var(--foreground);
+      --error: var(--brick-400);
+      --error-foreground: oklch(0.15 0 0);
+    }
+  }
+
   @font-face {
     font-family: 'Monlam OuChan 2';
     src: url('../assets/fonts/MonlamUniOuChan2.ttf') format('truetype');
@@ -222,7 +279,7 @@
     'Nunito Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-serif:
-    'Roboto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    'Noto Serif', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
   --font-tibetan:
     'Monlam OuChan 2', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
 

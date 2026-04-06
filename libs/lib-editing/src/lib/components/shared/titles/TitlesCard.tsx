@@ -31,7 +31,7 @@ export const TitlesCard = ({
     'bg-radial-[at_50%_50%] from-ochre-25 from-35% to-navy-25';
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl gap-1.5 rounded-lg border bg-background p-1.5">
+    <div className="mx-auto flex w-full max-w-7xl gap-1.5 rounded-lg border bg-[#fff] p-1.5">
       {(toh || section) && (
         <div
           className={cn(
@@ -45,7 +45,7 @@ export const TitlesCard = ({
           <span className="text-xs uppercase text-muted-foreground">{toh}</span>
         </div>
       )}
-      <div className="grow min-w-0 flex flex-col justify-center gap-3 rounded-lg border px-2 py-4 text-center md:rounded-s-none md:rounded-e-lg lg:rounded-none">
+      <div className="bg-[#fff] grow min-w-0 flex flex-col justify-center gap-3 rounded-lg border px-2 py-4 text-center md:rounded-s-none md:rounded-e-lg lg:rounded-none">
         {header && (
           <div
             className={cn(

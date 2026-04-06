@@ -50,10 +50,10 @@ export const SearchButton = ({
       const results = await search({ text: searchQuery, uuid: workUuid, toh });
       setHasResults(
         !!results &&
-          (results.passages.length > 0 ||
-            results.alignments.length > 0 ||
-            results.bibliographies.length > 0 ||
-            results.glossaries.length > 0),
+        (results.passages.length > 0 ||
+          results.alignments.length > 0 ||
+          results.bibliographies.length > 0 ||
+          results.glossaries.length > 0),
       );
       setResults(results);
       setSearching(false);
@@ -73,10 +73,10 @@ export const SearchButton = ({
       <DialogTrigger asChild>
         <Button
           variant="ghost"
+          size="icon"
           className="bg-background my-auto [&_svg]:size-6 [&_svg]:stroke-1 hover:bg-background cursor-pointer text-base text-accent hover:text-accent/80"
         >
           <SearchIcon />
-          <span className="hidden md:flex">Search</span>
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -87,8 +87,8 @@ export const SearchButton = ({
         <DialogDescription className="hidden">
           Search this translation
         </DialogDescription>
-        <div className="flex flex-col justify-start gap-2 h-[calc(100vh_-_2.5rem)]">
-          <div className="w-full flex flex-col gap-2 text-foreground flex-shrink-0">
+        <div className="flex flex-col justify-start gap-2 h-[calc(100vh-2.5rem)]">
+          <div className="w-full flex flex-col gap-2 text-foreground shrink-0">
             <div className="flex justify-end">
               <Button
                 className="text-secondary-foreground -me-3"

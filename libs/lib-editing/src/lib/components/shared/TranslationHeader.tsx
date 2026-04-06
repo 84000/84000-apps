@@ -1,68 +1,12 @@
 'use client';
 
 import { MiniLogo } from '@eightyfourthousand/design-system';
-import { PassageMatch, SearchButton, SearchResult } from '@eightyfourthousand/lib-search';
 import { useNavigation } from './NavigationProvider';
-import { useCallback } from 'react';
-import { PanelName, PanelState, TabName } from './types';
-import { BodyItemType } from '@eightyfourthousand/data-access';
 import { cn } from '@eightyfourthousand/lib-utils';
 
 export const TranslationHeader = ({ className }: { className?: string }) => {
-  const { imprint, uuid, toh, updatePanel } = useNavigation();
+  const { imprint } = useNavigation();
 
-  const onResultSelected = useCallback(
-    (result: SearchResult) => {
-      let side: PanelName = 'main';
-      const panelState: PanelState = {
-        open: true,
-        hash: result.uuid,
-      };
-
-      const TAB_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, TabName>> = {
-        abbreviations: 'abbreviations',
-        endnotes: 'endnotes',
-        summary: 'front',
-        introduction: 'front',
-        acknowledgements: 'front',
-      };
-
-      const SIDE_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, PanelName>> =
-        {
-          abbreviations: 'right',
-          endnotes: 'right',
-        };
-
-      switch (result.type) {
-        case 'passage':
-          {
-            const passage = result as PassageMatch;
-            side = SIDE_FOR_PASSAGE_SECTION[passage.section] || 'main';
-            panelState.tab =
-              TAB_FOR_PASSAGE_SECTION[passage.section] || 'translation';
-          }
-          break;
-        case 'alignment':
-          side = 'main';
-          panelState.tab = 'compare';
-          break;
-        case 'bibliography':
-          side = 'right';
-          panelState.tab = 'bibliography';
-          break;
-        case 'glossary':
-          side = 'right';
-          panelState.tab = 'glossary';
-          break;
-      }
-
-      updatePanel({
-        name: side,
-        state: panelState,
-      });
-    },
-    [updatePanel],
-  );
   return (
     <div
       className={cn(
@@ -72,15 +16,10 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
     >
       <div className="flex gap-2 md:gap-5 min-w-0">
         <MiniLogo className="ms-3 me-1 my-auto" width={32} height={32} />
-        <span className="font-serif font-light truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
+        <span className="font-serif truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
           {`${imprint?.mainTitles?.en ? `${imprint?.mainTitles?.en}` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
         </span>
       </div>
-      <SearchButton
-        workUuid={uuid}
-        toh={toh}
-        onResultSelected={onResultSelected}
-      />
     </div>
   );
 };

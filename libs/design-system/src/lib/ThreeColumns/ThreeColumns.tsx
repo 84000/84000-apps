@@ -25,9 +25,6 @@ import {
 } from '../Sheet/Sheet';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 
-const BG_GRADIENT =
-  "bg-surface 2xl:bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_40rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-[linear-gradient(to_bottom,#fffc,#ffffffd1_30rem,var(--surface)_53rem),url('/images/backgrounds/landscape-with-stupas-ochre.jpg')] bg-no-repeat 2xl:bg-[position:center_-15rem] bg-[position:center_-30rem] 2xl:bg-[length:100%_60rem] bg-[length:auto_53rem]";
-
 export enum MinPanelSizes {
   COLLAPSED = 0,
   SIDE_DEFAULT = 20,
@@ -40,7 +37,7 @@ export enum MinPanelSizes {
 export type ImperativePanelHandle = RRImperativePanelHandle;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
-  return <div>{children}</div>;
+  return <div className='size-full'>{children}</div>;
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
@@ -48,12 +45,12 @@ export const MainPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {
-  return <div>{children}</div>;
+  return <div className='size-full'>{children}</div>;
 };
 
 export const MainPanelHeader = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="sticky top-16 w-full flex justify-end z-10">{children}</div>
+    <div className="sticky top-16 flex justify-end z-10">{children}</div>
   );
 };
 
@@ -64,6 +61,7 @@ export const ThreeColumns = ({
   rightPanelOpen,
   leftPanelEnabled = true,
   rightPanelEnabled = true,
+  mainPanelActions,
   onLeftPanelOpenChange,
   onRightPanelOpenChange,
 }: {
@@ -73,6 +71,7 @@ export const ThreeColumns = ({
   rightPanelOpen?: boolean;
   leftPanelEnabled?: boolean;
   rightPanelEnabled?: boolean;
+  mainPanelActions?: ReactNode;
   onLeftPanelOpenChange?: (open: boolean) => void;
   onRightPanelOpenChange?: (open: boolean) => void;
 }) => {
@@ -176,30 +175,33 @@ export const ThreeColumns = ({
           className,
         )}
       >
-        <div style={{ overflow: 'auto' }}>
+        <div className="flex flex-col" style={{ overflow: 'auto' }}>
           <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
-              className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+              className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
               onClick={toggleLeftPanel}
             >
               <PanelLeftIcon />
               <span className="sr-only">Toggle Left Panel</span>
             </Button>
-            {rightPanelEnabled && (
-              <Button
-                variant="link"
-                size="icon"
-                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                onClick={toggleRightPanel}
-              >
-                <PanelRightIcon />
-                <span className="sr-only">Toggle Right Panel</span>
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {mainPanelActions}
+              {rightPanelEnabled && (
+                <Button
+                  variant="link"
+                  size="icon"
+                  className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  onClick={toggleRightPanel}
+                >
+                  <PanelRightIcon />
+                  <span className="sr-only">Toggle Right Panel</span>
+                </Button>
+              )}
+            </div>
           </div>
-          <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
+          <div className='bg-surface flex-1'>
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -272,7 +274,7 @@ export const ThreeColumns = ({
             </>
           )}
           <ResizablePanel
-            className="hidden md:block rounded border bg-background"
+            className="hidden md:flex md:flex-col rounded border bg-background"
             style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
             defaultSize={MinPanelSizes.FULL}
             minSize={MinPanelSizes.MAIN_MIN}
@@ -281,25 +283,28 @@ export const ThreeColumns = ({
               <Button
                 variant="link"
                 size="icon"
-                className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
                 onClick={toggleLeftPanel}
               >
                 <PanelLeftIcon />
                 <span className="sr-only">Toggle Left Panel</span>
               </Button>
-              {rightPanelEnabled && (
-                <Button
-                  variant="link"
-                  size="icon"
-                  className="text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                  onClick={toggleRightPanel}
-                >
-                  <PanelRightIcon />
-                  <span className="sr-only">Toggle Right Panel</span>
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {mainPanelActions}
+                {rightPanelEnabled && (
+                  <Button
+                    variant="link"
+                    size="icon"
+                    className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                    onClick={toggleRightPanel}
+                  >
+                    <PanelRightIcon />
+                    <span className="sr-only">Toggle Right Panel</span>
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className={cn(BG_GRADIENT, 'min-h-[calc(100vh-8rem)]')}>
+            <div className='bg-surface flex-1'>
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>

@@ -22,7 +22,7 @@ export const BibliographyList = ({
   return (
     <div ref={ref} className={cn('flex flex-col w-full', className)}>
       <LabeledElement
-        className="@c/sidebar:mt-5 mt-6"
+        className="mt-2"
         id={'bibliography'}
         label="b."
       >

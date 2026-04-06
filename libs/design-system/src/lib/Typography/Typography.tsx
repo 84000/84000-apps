@@ -18,7 +18,7 @@ export function Hero({
 }
 
 export const HEADLINE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-7xl lg:text-8xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-7xl';
 export function Headline({
   children,
   className,
@@ -32,7 +32,7 @@ export function Headline({
 }
 
 export const TITLE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-6xl lg:text-7xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-6xl';
 export function Section({
   children,
   className,
@@ -46,21 +46,21 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 text-xl @c/sidebar:mt-4 mt-6 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
+  'font-serif text-primary scroll-m-20 @c/sidebar:mt-1 mt-2 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
   ...props
 }: React.ComponentProps<'h2'>) {
   return (
-    <h2 className={cn(SECTION_TITLE_STYLE, className)} {...props}>
+    <h2 className={cn('text-xl', SECTION_TITLE_STYLE, className)} {...props}>
       {children}
     </h2>
   );
 }
 
 export const BODY_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 pb-6 mt-2 text-4xl @c/sidebar:text-2xl @c/sidebar:pb-4 @c/sidebar:mt-0 text-center body-title-main';
+  'font-serif text-primary scroll-m-20 pb-12 mt-1 text-3xl @c/sidebar:text-2xl @c/sidebar:pb-6 @c/sidebar:mt-0 text-center body-title-main';
 export function BodyTitle({
   children,
   className,
@@ -74,7 +74,7 @@ export function BodyTitle({
 }
 
 export const HONORIFIC_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 text-2xl text-center body-title-honorific';
+  'font-serif text-primary scroll-m-20 text-2xl text-center body-title-honorific';
 export function HonorificTitle({
   children,
   className,
@@ -87,7 +87,7 @@ export function HonorificTitle({
   );
 }
 
-export const H1_STYLE = 'font-serif mt-8 scroll-m-20 pb-8 text-5xl lg:text-6xl';
+export const H1_STYLE = 'font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2';
 export function H1({
   children,
   className,
@@ -101,7 +101,7 @@ export function H1({
 }
 
 export const H2_STYLE =
-  'font-serif font-light text-primary mt-6 scroll-m-20 pb-4 text-2xl lg:text-3xl @c/sidebar:text-xl @c/sidebar:pb-2 @c/sidebar:mt-4 title-main';
+  'font-serif text-primary mt-4 scroll-m-20 pb-2 text-2xl @c/sidebar:text-xl @c/sidebar:pb-1 @c/sidebar:mt-2 title-main';
 export function H2({
   children,
   className,
@@ -115,7 +115,7 @@ export function H2({
 }
 
 export const H3_STYLE =
-  'font-sans font-semibold text-secondary-600 mt-2 scroll-m-20 pb-1 text-lg lg:text-xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-2';
+  'font-sans font-semibold text-secondary-600 mt-2 scroll-m-20 pb-1 text-xl lg:text-2xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-1';
 export function H3({
   children,
   className,
@@ -129,7 +129,7 @@ export function H3({
 }
 
 export const H4_STYLE =
-  'font-sans font-medium mt-2 scroll-m-20 pb-1 text-lg @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-2';
+  'font-sans font-medium mt-1 scroll-m-20 pb-1 text-lg lg:text-xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-0';
 export function H4({
   children,
   className,
@@ -143,7 +143,7 @@ export function H4({
 }
 
 export const H5_STYLE =
-  'font-serif mt-2 scroll-m-20 pb-1 font-semibold lg:text-lg';
+  'font-serif mt-0 scroll-m-20 pb-1 font-semibold lg:text-lg';
 export function H5({
   children,
   className,
@@ -156,7 +156,21 @@ export function H5({
   );
 }
 
-export const P_STYLE = 'leading-7';
+export const H6_STYLE =
+  'font-serif mt-0 scroll-m-20 pb-1 font-semibold';
+export function H6({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<'h6'>) {
+  return (
+    <h5 className={cn(H6_STYLE, className)} {...props}>
+      {children}
+    </h5>
+  );
+}
+
+export const P_STYLE = 'leading-6';
 export function P({
   children,
   className,
@@ -344,7 +358,7 @@ export function Th({
   return (
     <th
       className={cn(
-        'border border-border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right',
+        'border border-border px-4 py-2 text-left font-bold [[align=center]]:text-center [[align=right]]:text-right',
         className,
       )}
       {...props}
@@ -380,7 +394,7 @@ export function Td({
   return (
     <td
       className={cn(
-        'border border-border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right',
+        'border border-border px-4 py-2 text-left [[align=center]]:text-center [[align=right]]:text-right',
         className,
       )}
       {...props}

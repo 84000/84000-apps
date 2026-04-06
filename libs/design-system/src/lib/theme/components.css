@@ -1,6 +1,6 @@
 @layer components {
   .passage {
-    @apply font-serif font-light leading-7 @c/sidebar:leading-5 @c/sidebar:text-sm;
+    @apply font-serif leading-7 @c/sidebar:leading-5 @c/sidebar:text-sm;
 
     p {
       @apply md:text-justify @c:text-left @xl:text-justify;
@@ -8,32 +8,7 @@
   }
 
   .labeled {
-    @apply font-sans font-semibold text-accent-600 leading-7 text-xs;
-  }
-
-  .title-main,
-  .body-title-main,
-  .body-title-honorific {
-    font-variation-settings:
-      'wdth' 90.6,
-      'opsz' 144,
-      'GRAD' -50,
-      'wght' 300;
-  }
-
-  .title-sub {
-    font-variation-settings:
-      'wght' 300,
-      'wdth' 100,
-      'opsz' 144,
-      'GRAD' -50;
-  }
-
-  .section-title {
-    font-variation-settings:
-      'wdth' 120,
-      'opsz' 144,
-      'GRAD' -50;
+    @apply font-sans text-accent leading-7 text-sm @c/sidebar:text-xs;
   }
 
   .paragraph {

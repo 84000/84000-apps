@@ -56,7 +56,7 @@ const PassageComponent = (props: NodeViewProps) => {
     }
 
     const alignment = node.attrs.alignments?.[toh] as Alignment;
-    const source = alignment?.tibetan || '';
+    const source = alignment?.tibetan.trim() || '';
 
     const firstChild = node.content.firstChild;
     let compareLeadingSpace = 'md:mt-1';
@@ -93,7 +93,7 @@ const PassageComponent = (props: NodeViewProps) => {
   }, [node.attrs.uuid, editor]);
 
   const className =
-    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
+    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
   const borderClassName =
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
@@ -223,7 +223,7 @@ const PassageComponent = (props: NodeViewProps) => {
       <div
         className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
       >
-        <LabeledElement label={node.attrs.label} className="mt-0.5">
+        <LabeledElement className="mt-0.5">
           <div className="leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2">
             {source}
           </div>
