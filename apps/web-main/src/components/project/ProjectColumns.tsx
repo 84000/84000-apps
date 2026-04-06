@@ -109,7 +109,7 @@ export const PROJECT_COLUMNS: DataTableColumn<TableProject>[] = [
     enableColumnFilter: false,
     enableSorting: false,
     cell: () => (
-      <div className={cn(CLASSNAME_FOR_COL.uuid, 'text-brick')}>
+      <div className={cn(CLASSNAME_FOR_COL.uuid, 'text-primary')}>
         <MoreHorizontalIcon
           className={cn(CLASSNAME_FOR_COL.uuid, 'group-hover:hidden block')}
         />

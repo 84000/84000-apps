@@ -11,11 +11,11 @@ export const EditorOptions = ({
   return (
     <>
       <DropdownMenuItem onSelect={() => onSelection('label')}>
-        <PencilIcon className="text-ochre" /> Edit Label
+        <PencilIcon className="text-Primary" /> Edit Label
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => onSelection('attributes')}>
-        <BracesIcon className="text-ochre" /> View Attributes
+        <BracesIcon className="text-primary" /> View Attributes
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem

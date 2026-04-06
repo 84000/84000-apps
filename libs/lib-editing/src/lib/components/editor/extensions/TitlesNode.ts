@@ -4,7 +4,7 @@ import { Node, mergeAttributes } from '@tiptap/core';
 // TODO: make nice custom components for each titles type
 
 const BASE_STYLE =
-  'relative border-t border-border/50 pb-8 pt-12 before:absolute before:top-0 before:text-lg before:text-slate';
+  'relative border-t border-border/50 pb-8 pt-12 before:absolute before:top-0 before:text-lg before:text-secondary';
 
 export const TohsNode = Node.create({
   name: 'tohs',

@@ -133,7 +133,7 @@ export const GlossaryInstanceBody = ({
             href={`/glossary/${instance.authority}`}
             target="_blank"
             rel="noreferrer"
-            className="hover:underline decoration-slate hover:text-slate"
+            className="hover:underline decoration-primary hover:text-primary"
           >
             {'View full entry ›'}
           </a>
