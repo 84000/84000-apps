@@ -54,7 +54,7 @@ export const Login = () => {
     <div className="h-full w-full">
       <div className="absolute w-full p-4 hidden md:flex gap-2">
         <MainLogo width={140} />
-        <span className="my-auto w-20 text-tiny leading-3 text-primary">
+        <span className="my-auto w-20 text-tiny leading-3 text-navy">
           {"Bringing the Buddha's Words to Life"}
         </span>
       </div>
@@ -90,7 +90,7 @@ export const Login = () => {
             <Button
               variant="link"
               onClick={toggleVariation}
-              className="text-accent font-semibold px-0"
+              className="text-brick font-semibold px-0"
             >
               {linkText}
             </Button>

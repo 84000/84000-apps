@@ -68,7 +68,7 @@ export const ProjectAssets = ({ project }: { project: Project | null }) => {
                     <Link
                       href={asset.url}
                       target="_blank"
-                      className="flex flex-row gap-2 text-primary"
+                      className="flex flex-row gap-2 text-ochre"
                     >
                       <DownloadIcon className="size-4 mt-0.5" />
                     </Link>

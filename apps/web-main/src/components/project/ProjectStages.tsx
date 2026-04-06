@@ -71,7 +71,7 @@ export const ProjectStages = ({ project }: { project?: Project | null }) => {
                     )}
                   </TableCell>
                   <TableCell className="w-16">
-                    <MoreHorizontalIcon className="text-primary" />
+                    <MoreHorizontalIcon className="text-ochre" />
                   </TableCell>
                 </TableRow>
               ))}

@@ -28,7 +28,7 @@ export const TitlesCard = ({
   onEdit?(): void;
 }) => {
   const radial =
-    'bg-radial-[at_50%_50%] from-ochre/20 from-35% to-navy/10';
+    'bg-radial-[at_50%_50%] from-ochre-25 from-35% to-navy-25';
 
   return (
     <div className="mx-auto flex w-full max-w-7xl gap-1.5 rounded-lg border bg-[#fff] p-1.5">
@@ -39,7 +39,7 @@ export const TitlesCard = ({
             radial,
           )}
         >
-          <span className="text-sm leading-4 font-light text-primary">
+          <span className="text-sm leading-4 font-light text-ochre-700">
             {section}
           </span>
           <span className="text-xs uppercase text-muted-foreground">{toh}</span>
@@ -49,7 +49,7 @@ export const TitlesCard = ({
         {header && (
           <div
             className={cn(
-              'font-tibetan text-primary px-2',
+              'font-tibetan text-navy-500 px-2',
               main ? 'text-2xl' : 'text-3xl',
               'leading-relaxed break-all xs:break-normal',
             )}
@@ -58,7 +58,7 @@ export const TitlesCard = ({
           </div>
         )}
         {main && (
-          <div className="title-main break-all px-2 font-serif text-3xl text-primary xs:break-normal">
+          <div className="title-main break-all px-2 font-serif text-3xl text-navy-500 xs:break-normal">
             {main}
           </div>
         )}

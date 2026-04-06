@@ -97,12 +97,12 @@ export const LabeledElement = ({
             ) : (
               <>
                 <DropdownMenuItem onSelect={toggle}>
-                  <BookmarkIcon className="text-primary" />
+                  <BookmarkIcon className="text-ochre" />
                   {isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={copyLink}>
-                  <CopyIcon className="text-primary" /> Copy Link
+                  <CopyIcon className="text-ochre" /> Copy Link
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -111,7 +111,7 @@ export const LabeledElement = ({
                     setShowRevisionForm(true);
                   }}
                 >
-                  <MessageSquareIcon className="text-primary" /> Suggest Revision
+                  <MessageSquareIcon className="text-ochre" /> Suggest Revision
                 </DropdownMenuItem>
               </>
             )}

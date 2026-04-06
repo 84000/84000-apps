@@ -23,7 +23,7 @@ export const MenuButton = ({
     >
       <div className="flex gap-1">
         <div className="w-6 me-4">
-          <subItem.icon className={cn('size-6 text-primary')} />
+          <subItem.icon className={cn('size-6 text-ochre')} />
         </div>
         <div className="flex flex-col">
           <div className={cn('text-sm pb-1', textStyle)}>{subItem.header}</div>

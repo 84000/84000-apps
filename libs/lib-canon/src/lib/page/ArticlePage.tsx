@@ -10,7 +10,7 @@ export const ArticlePage = ({ section }: { section: CanonDetail }) => {
 
   return (
     <div className="px-8 py-4 max-w-readable w-full mx-auto py-8">
-      <H2 className="text-primary">{label}</H2>
+      <H2 className="text-navy">{label}</H2>
       {article?.body ? (
         <>
           {article.image && (

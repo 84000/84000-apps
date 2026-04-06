@@ -103,8 +103,8 @@ export const ProjectSettings = ({
     setCanSave(
       (contractId !== project?.contractId ||
         contractDate?.toISOString().split('T')[0] !==
-        project?.contractDate?.toISOString().split('T')[0]) &&
-      canEdit,
+          project?.contractDate?.toISOString().split('T')[0]) &&
+        canEdit,
     );
   }, [
     contractId,
@@ -131,7 +131,7 @@ export const ProjectSettings = ({
     <Dialog>
       <DialogTrigger asChild>
         <Button variant="outline" className="rounded-full">
-          <SettingsIcon className="text-primary" />
+          <SettingsIcon className="text-brick" />
           Settings
         </Button>
       </DialogTrigger>

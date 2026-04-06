@@ -20,7 +20,7 @@ export const RemoveButton = ({
 
   return (
     <Button
-      className={isWorking ? '' : 'text-destructive hover:cursor-pointer'}
+      className={isWorking ? '' : 'text-brick hover:cursor-pointer'}
       variant="ghost"
       size="icon"
       disabled={isWorking}

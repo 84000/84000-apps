@@ -15,7 +15,7 @@ export const GlossaryHeading = ({ detail }: { detail: GlossaryPageItem }) => {
     <>
       <div className="pt-6">
         <Button
-          className="pl-0 text-accent hover:bg-transparent hover:cursor-pointer"
+          className="pl-0 text-brick hover:bg-transparent hover:cursor-pointer"
           variant="ghost"
           onClick={() => router.push(backPath)}
         >
@@ -24,35 +24,35 @@ export const GlossaryHeading = ({ detail }: { detail: GlossaryPageItem }) => {
         </Button>
       </div>
       <div className="grid gap-2 pb-2">
-        <H3 className="text-primary pb-2">{detail.headword}</H3>
+        <H3 className="text-navy pb-2">{detail.headword}</H3>
         <div className="flex flex-row flex-wrap gap-y-2 gap-x-8 text-sm">
           <div>
             <span className="text-muted-foreground pe-2">Type:</span>
-            <span className="text-primary">{classifications}</span>
+            <span className="text-navy-200">{classifications}</span>
           </div>
           <div className="py-1">
             <Separator
               orientation="vertical"
-              className="h-full w-0.5 bg-accent"
+              className="h-full w-0.5 bg-ochre-300"
             />
           </div>
           <div>
             <span className="text-muted-foreground pe-2">
               Headword Language:
             </span>
-            <span className="text-primary capitalize">{detail.language}</span>
+            <span className="text-navy-200 capitalize">{detail.language}</span>
           </div>
           <div className="py-1">
             <Separator
               orientation="vertical"
-              className="h-full w-0.5 bg-accent"
+              className="h-full w-0.5 bg-ochre-300"
             />
           </div>
           <div className="truncate">
             <span className="text-muted-foreground pe-2">Authority ID:</span>
-            <span className="text-primary">{detail.authorityUuid}</span>
+            <span className="text-navy-200">{detail.authorityUuid}</span>
             {detail.xmlId && (
-              <span className="pl-2 text-primary">({detail.xmlId})</span>
+              <span className="pl-2 text-navy-200">({detail.xmlId})</span>
             )}
           </div>
         </div>

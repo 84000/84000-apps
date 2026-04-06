@@ -37,9 +37,9 @@ export const FramedCard = ({
   children: ReactNode;
   className?: string;
 }) => {
-  const borderColor = `border-navy/50`;
-  const bgColor = `bg-navy/10`;
-  const ornamentTint = `fill-navy/20`;
+  const borderColor = `border-navy-50`;
+  const bgColor = `bg-navy-25/40`;
+  const ornamentTint = `fill-navy-50`;
   const ornamentBgTint = `fill-white/75`;
 
   const cornerSize = 2;
