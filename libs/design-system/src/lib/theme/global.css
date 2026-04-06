@@ -10,7 +10,7 @@
     --lightgray: oklch(0.84 0 360);
     --gray: oklch(0.74 0 360);
     --darkgray: oklch(0.51 0 360);
-    --black: oklch(0.30 0 360);
+    --black: oklch(0.4 0 360);
 
     --navy: oklch(0.35 0.09 250);
     --navy-25: oklch(0.95 0.01 250);

@@ -77,10 +77,10 @@ export const BackMatterPanel = ({
           )}
         </TabsList>
       </div>
-      <div className="px-2 flex-1 min-h-0 mb-2">
+      <div className="flex-1 min-h-0">
         <div
           ref={scrollContainerRef}
-          className="overflow-auto h-full rounded bg-surface"
+          className="overflow-auto h-full bg-surface"
           data-panel="right"
         >
           <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
