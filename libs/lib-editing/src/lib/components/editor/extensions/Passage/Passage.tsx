@@ -93,7 +93,7 @@ const PassageComponent = (props: NodeViewProps) => {
   }, [node.attrs.uuid, editor]);
 
   const className =
-    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer -mt-0.25';
+    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
   const borderClassName =
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
