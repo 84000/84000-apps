@@ -10,7 +10,7 @@ const InnerProfileLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="flex flex-col pt-0 pb-8 md:px-8 px-4 w-full">
-      <H2 className="text-navy-500 capitalize">{pageTitle}</H2>
+      <H2 className="text-primary capitalize">{pageTitle}</H2>
       <div className="flex flex-row gap-10">
         <div className="rounded-2xl shadow-md bg-sidebar-background w-[20rem] hidden md:flex">
           <div className="flex flex-col gap-4 w-full">

@@ -10,7 +10,7 @@ export const highlightText = (text: string, query: string) => {
     return isMatch ? (
       <mark
         key={index}
-        className="bg-primary-200 text-foreground font-semibold"
+        className="bg-highlight text-foreground font-semibold"
       >
         {part}
       </mark>

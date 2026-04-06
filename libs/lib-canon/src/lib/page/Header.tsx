@@ -9,16 +9,19 @@ export const Header = () => {
   return (
     <div className="h-16 py-1">
       <div className="flex items-center gap-4 bg-background rounded-full py-1 px-4 shadow-lg">
-        <h1 className="text-xl font-semibold text-navy">Canon Navigator</h1>
+        <h1 className="text-xl font-semibold text-primary">Canon Navigator</h1>
         <div className="flex-1" />
-        <div className="text-sm text-brick font-medium">Content Display:</div>
+        <div className="text-sm text-accent font-medium">Content Display:</div>
         <ToggleGroup
           variant="toggle"
           size="sm"
           type="single"
           value={tab}
           onValueChange={(nextVal) => {
-            nextVal && setTab(nextVal as TabOption);
+            if (!nextVal) {
+              return;
+            }
+            setTab(nextVal as TabOption);
           }}
           className="rounded-full bg-background p-1 gap-1"
         >
