@@ -6,11 +6,11 @@
 @layer base {
   :root {
     --white: oklch(1 0 0);
-    --surface: #f5f6f5;
-    --lightgray: oklch(0.84 0 0);
-    --gray: oklch(0.74 0 0);
-    --darkgray: oklch(0.51 0 0);
-    --black: oklch(0.18 0 0);
+    --surface: #f8faf8;
+    --lightgray: oklch(0.84 0 360);
+    --gray: oklch(0.74 0 360);
+    --darkgray: oklch(0.51 0 360);
+    --black: oklch(0.30 0 360);
 
     --navy: oklch(0.35 0.09 250);
     --navy-25: oklch(0.95 0.01 250);
@@ -193,7 +193,7 @@
       --lightgray: oklch(0.32 0.02 250);
       --gray: oklch(0.55 0 0);
       --darkgray: oklch(0.75 0 0);
-      --black: oklch(0.93 0 0);
+      --black: oklch(0.8 0 0);
 
       --background: var(--white);
       --foreground: var(--black);

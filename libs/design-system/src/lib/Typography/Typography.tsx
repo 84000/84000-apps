@@ -18,7 +18,7 @@ export function Hero({
 }
 
 export const HEADLINE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-7xl lg:text-8xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-7xl';
 export function Headline({
   children,
   className,
@@ -32,7 +32,7 @@ export function Headline({
 }
 
 export const TITLE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-6xl lg:text-7xl';
+  'font-serif mt-8 scroll-m-20 pb-8 text-6xl';
 export function Section({
   children,
   className,
@@ -46,7 +46,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 @c/sidebar:mt-1 mt-2 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
+  'font-serif text-primary scroll-m-20 @c/sidebar:mt-1 mt-2 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
@@ -60,7 +60,7 @@ export function SectionTitle({
 }
 
 export const BODY_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 pb-12 mt-1 text-4xl lg:text-5xl @c/sidebar:text-2xl @c/sidebar:pb-6 @c/sidebar:mt-0 text-center body-title-main';
+  'font-serif text-primary scroll-m-20 pb-12 mt-1 text-3xl @c/sidebar:text-2xl @c/sidebar:pb-6 @c/sidebar:mt-0 text-center body-title-main';
 export function BodyTitle({
   children,
   className,
@@ -74,7 +74,7 @@ export function BodyTitle({
 }
 
 export const HONORIFIC_TITLE_STYLE =
-  'font-serif font-light text-primary scroll-m-20 text-2xl lg:text-3xl text-center body-title-honorific';
+  'font-serif text-primary scroll-m-20 text-2xl text-center body-title-honorific';
 export function HonorificTitle({
   children,
   className,
@@ -87,7 +87,7 @@ export function HonorificTitle({
   );
 }
 
-export const H1_STYLE = 'font-serif mt-6 scroll-m-20 pb-4 text-4xl lg:text-5xl @c/sidebar:pb-2';
+export const H1_STYLE = 'font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2';
 export function H1({
   children,
   className,
@@ -101,7 +101,7 @@ export function H1({
 }
 
 export const H2_STYLE =
-  'font-serif font-light text-primary mt-4 scroll-m-20 pb-2 text-2xl lg:text-3xl @c/sidebar:text-xl @c/sidebar:pb-1 @c/sidebar:mt-2 title-main';
+  'font-serif text-primary mt-4 scroll-m-20 pb-2 text-2xl @c/sidebar:text-xl @c/sidebar:pb-1 @c/sidebar:mt-2 title-main';
 export function H2({
   children,
   className,

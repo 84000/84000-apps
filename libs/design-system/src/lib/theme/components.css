@@ -8,7 +8,7 @@
   }
 
   .labeled {
-    @apply font-sans font-bold text-accent leading-7 text-sm @c/sidebar:text-xs;
+    @apply font-sans text-accent leading-7 text-sm @c/sidebar:text-xs;
   }
 
   .paragraph {

@@ -16,7 +16,7 @@ export const TranslationHeader = ({ className }: { className?: string }) => {
     >
       <div className="flex gap-2 md:gap-5 min-w-0">
         <MiniLogo className="ms-3 me-1 my-auto" width={32} height={32} />
-        <span className="font-serif font-light truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
+        <span className="font-serif truncate text-darkgray text-xs sm:text-sm my-auto flex-shrink">
           {`${imprint?.mainTitles?.en ? `${imprint?.mainTitles?.en}` : ''}${imprint?.section ? ` from ${imprint?.section}` : ''}`}
         </span>
       </div>
