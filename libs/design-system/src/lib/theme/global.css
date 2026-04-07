@@ -6,7 +6,6 @@
 @layer base {
   :root {
     --white: oklch(1 0 0);
-    --surface: oklch(0.983 0.0034 145.55);
     --lightgray: oklch(0.84 0 0);
     --gray: oklch(0.74 0 0);
     --darkgray: oklch(0.51 0 0);
@@ -18,9 +17,11 @@
     --slate: oklch(0.5871 0.0782 194.12);
     --emerald: oklch(0.644 0.081 132.01);
 
+    --surface: oklch(0.983 0.0034 145.55);
+    --canvas: oklch(0.9677 0.0027 286.35);
+
     --background: var(--white);
     --foreground: var(--black);
-    --canvas: var(--navy);
 
     --card: var(--background);
     --card-foreground: var(--foreground);
@@ -68,12 +69,12 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --white: oklch(0.15 0.01 250);
-      --surface: oklch(0.1822 0 0);
       --lightgray: oklch(0.32 0.02 250);
       --gray: oklch(0.55 0 0);
       --darkgray: oklch(0.75 0 0);
       --black: oklch(0.8 0 0);
 
+      --surface: oklch(0.2235 0.0049 145.41);
       --background: var(--white);
       --foreground: var(--black);
       --canvas: oklch(0.12 0.01 250);

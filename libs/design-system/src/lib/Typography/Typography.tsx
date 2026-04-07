@@ -115,7 +115,7 @@ export function H2({
 }
 
 export const H3_STYLE =
-  'font-sans font-semibold text-secondary mt-2 scroll-m-20 pb-1 text-xl lg:text-2xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-1';
+  'font-sans font-semibold text-primary mt-2 scroll-m-20 pb-1 text-xl lg:text-2xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-1';
 export function H3({
   children,
   className,

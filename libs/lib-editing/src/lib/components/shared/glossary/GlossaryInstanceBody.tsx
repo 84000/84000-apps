@@ -66,7 +66,7 @@ export const GlossaryInstanceBody = ({
   return (
     <div className={cn('p-2 flex gap-1 flex-col', className)}>
       {instance.names.english && (
-        <div className="text-secondary font-sans text-base font-bold">
+        <div className="text-primary font-sans text-base font-bold">
           {instance.names.english}
         </div>
       )}
