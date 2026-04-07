@@ -55,10 +55,10 @@ export const GlossaryVariants = ({ detail }: { detail: GlossaryPageItem }) => {
 
   return (
     <>
-      <H4 className="text-navy py-2">Name Variants</H4>
+      <H4 className="text-primary py-2">Name Variants</H4>
       {variants.map(({ language, variants: names, className }, index) => (
         <div key={index} className="py-0">
-          <H5 className="text-navy py-0">{language}</H5>
+          <H5 className="text-primary py-0">{language}</H5>
           <Ul className="my-1 text-sm">
             {names.map((name, idx) => (
               <Li key={`${index}-${idx}`} className={className}>

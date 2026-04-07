@@ -14,8 +14,8 @@ const Error = () => {
           <div className="flex justify-center mb-6">
             <MiniLogo width={100} height={100} />
           </div>
-          <H2 className="text-slate mb-6">Oops!!!</H2>
-          <H5 className="text-slate">
+          <H2 className="text-primary mb-6">Oops!!!</H2>
+          <H5 className="text-secondary">
             This page you are looking for could not be found.
           </H5>
           <Button variant={'link'} className="w-fit mt-6 mx-auto">

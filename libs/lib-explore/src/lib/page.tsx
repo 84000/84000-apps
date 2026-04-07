@@ -122,8 +122,8 @@ export const ExplorePage = () => {
           <div className="max-w-readable w-full">
             <div className="flex flex-col items-center justify-center text-center">
               <div className="mb-12">
-                <H1 className="text-navy">Welcome to Explore Mode</H1>
-                <H5 className="text-brick">Dive deep into 84000 resources</H5>
+                <H1 className="text-primary">Welcome to Explore Mode</H1>
+                <H5 className="text-accent">Dive deep into 84000 resources</H5>
               </div>
 
               <div className="w-full max-w-2xl mb-8">

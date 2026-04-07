@@ -30,12 +30,12 @@ export const ReaderOptions = (
   return (
     <>
       <DropdownMenuItem onSelect={props.toggleBookmark}>
-        <BookmarkIcon className="text-ochre" />
+        <BookmarkIcon className="text-primary" />
         {props.isBookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={copyLink}>
-        <CopyIcon className="text-ochre" /> Copy Link
+        <CopyIcon className="text-primary" /> Copy Link
       </DropdownMenuItem>
       {props.onSuggestRevision && (
         <>
@@ -46,7 +46,7 @@ export const ReaderOptions = (
               props.onSuggestRevision?.();
             }}
           >
-            <MessageSquareIcon className="text-ochre" /> Suggest Revision
+            <MessageSquareIcon className="text-primary" /> Suggest Revision
           </DropdownMenuItem>
         </>
       )}

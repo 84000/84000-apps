@@ -43,7 +43,7 @@ export const BibliographyList = ({
                 label={`b.${i + 1}`}
                 contentType="bibliography"
               >
-                <div className="text-secondary font-sans text-base font-bold">
+                <div className="text-primary font-sans text-base font-bold">
                   {section.heading}
                 </div>
               </LabeledElement>

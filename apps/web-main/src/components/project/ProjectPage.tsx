@@ -50,7 +50,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
     <div className="w-full">
       <div className="py-6">
         <Button
-          className="pl-0 text-brick hover:bg-transparent hover:cursor-pointer"
+          className="pl-0 text-accent hover:bg-transparent hover:cursor-pointer"
           variant="ghost"
           onClick={() => router.push(backPath)}
         >
@@ -63,7 +63,7 @@ export const ProjectPage = ({ uuid }: ProjectPageProps) => {
           <H3 className="flex flex-row mt-0 font-semibold">
             <span className="truncate">{project.title}</span>
             <div className="flex flex-col justify-center">
-              <span className="px-4 text-brick text-2xl">-</span>
+              <span className="px-4 text-primary text-2xl">-</span>
             </div>
             <span className="capitalize text-nowrap text-gray-400 pe-2">
               {parseToh(project.toh)}

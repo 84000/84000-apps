@@ -87,7 +87,7 @@ export const ProjectContributors = ({
                     )}
                   </TableCell>
                   <TableCell className="w-16">
-                    <span className="flex flex-row gap-2 text-ochre">
+                    <span className="flex flex-row gap-2 text-primary">
                       Edit
                       <ArrowRightIcon className="size-4 mt-0.5" />
                     </span>

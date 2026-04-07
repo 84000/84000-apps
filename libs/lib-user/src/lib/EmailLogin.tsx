@@ -54,7 +54,7 @@ export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {
         <Label className="flex items-center gap-2 text-sm text-muted-foreground">
           <input
             type="checkbox"
-            className="cursor-pointer accent-brick"
+            className="cursor-pointer accent-accent"
             defaultChecked
           />
           Keep me signed in
@@ -67,12 +67,12 @@ export const EmailLogin = ({ variation }: { variation: LoginVariation }) => {
           Forgot password?
         </Button>
       </div>
-      <div className="w-full p-0.5 my-2 rounded-full bg-gradient-to-b from-brick-200 to-brick-500">
+      <div className="w-full p-0.5 my-2 rounded-full bg-gradient-to-b from-accent/50 to-accent">
         <Button
           onSubmit={() => handleSubmit(variation)}
           type="submit"
           variant="ghost"
-          className="w-full rounded-full bg-gradient-to-b from-brick-400 to-brick-800 text-secondary font-light hover:text-secondary hover:from-brick-800 hover:to-brick-400 transition-colors"
+          className="w-full rounded-full bg-gradient-to-b from-accent/80 to-accent text-secondary font-light hover:text-secondary hover:from-accent hover:to-accent/80 transition-colors"
         >
           {BUTTON_TEXT[variation]}
         </Button>

@@ -229,7 +229,7 @@ export const TableOfContents = ({
   return (
     <div>
       <div className={cn(baseStyle, 'flex gap-2 mt-6')}>
-        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+        <div className="size-5 text-primary [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
           <LibraryBigIcon />
         </div>
         <span className="my-auto font-light">
@@ -237,13 +237,13 @@ export const TableOfContents = ({
         </span>
       </div>
       <div className={cn(baseStyle, 'flex gap-2')}>
-        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+        <div className="size-5 text-primary [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
           <BookOpenIcon />
         </div>
         <span className="my-auto font-bold">{title}</span>
       </div>
       <div className="flex gap-2">
-        <div className="size-5 text-primary-200 [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
+        <div className="size-5 text-primary [&_svg]:stroke-1 [&_svg]:size-5 my-auto">
           <HashIcon />
         </div>
         {work.toh.length > 1 ? (

@@ -58,7 +58,7 @@ export const SuggestRevisionForm = ({
   return (
     <div className="p-1">
       <p className="text-sm font-semibold">Suggest a Revision</p>
-      <p className="text-secondary text-xs capitalize py-2">
+      <p className="text-primary text-xs capitalize py-2">
         {parseToh(toh)} &middot; {type} {label}
       </p>
       <form onSubmit={handleSubmit}>

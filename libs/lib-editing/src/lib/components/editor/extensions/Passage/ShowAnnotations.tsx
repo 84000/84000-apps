@@ -54,13 +54,13 @@ export const ShowAnnotations = (props: NodeViewProps) => {
       </DialogDescription>
 
       <div className="text-sm flex gap-1">
-        <span className="text-navy">UUID: </span>
+        <span className="text-primary">UUID: </span>
         <span>{node.attrs.uuid}</span>
         <span className="text-muted-foreground px-2">{'|'}</span>
-        <span className="text-navy">Label:</span>
+        <span className="text-primary">Label:</span>
         <span>{node.attrs.label}</span>
         <span className="text-muted-foreground px-2">{'|'}</span>
-        <span className="text-navy">Type:</span>
+        <span className="text-primary">Type:</span>
         <span>{node.attrs.type}</span>
       </div>
 
