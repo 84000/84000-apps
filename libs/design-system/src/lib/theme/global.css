@@ -68,7 +68,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --white: oklch(0.15 0.01 250);
-      --surface: #1a1a1a;
+      --surface: oklch(0.1822 0 0);
       --lightgray: oklch(0.32 0.02 250);
       --gray: oklch(0.55 0 0);
       --darkgray: oklch(0.75 0 0);
@@ -83,10 +83,10 @@
       --popover: oklch(0.2 0.01 250);
       --popover-foreground: var(--foreground);
 
-      --primary: var(--navy);
+      --primary: var(--slate);
       --primary-foreground: oklch(0.15 0 0);
 
-      --secondary: var(--slate);
+      --secondary: var(--ochre);
       --secondary-foreground: oklch(0.15 0 0);
 
       --accent: var(--brick);
