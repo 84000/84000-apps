@@ -269,6 +269,16 @@ type ReplaceResult {
   deletedAnnotationCount: Int!
 
   """
+  Passage UUID after which the next single replace should continue
+  """
+  nextPassageUuid: ID
+
+  """
+  Character offset within nextPassageUuid where the next single replace should continue
+  """
+  nextOccurrenceStart: Int
+
+  """
   Updated target passages for client-side refresh
   """
   passages: [Passage!]!
@@ -296,5 +306,7 @@ extend type Mutation {
     targetUuids: [ID!]!
     type: ReplaceType = PASSAGE
     occurrenceIndex: Int
+    cursorPassageUuid: ID
+    cursorStart: Int
   ): ReplaceResult!
 }

@@ -120,6 +120,8 @@ interface SavePassagesResult {
 interface ReplaceResult {
   deletedAnnotationCount: number;
   error?: string;
+  nextOccurrenceStart?: number | null;
+  nextPassageUuid?: string | null;
   passages: Array<{
     content: string;
     label: string;
@@ -366,6 +368,8 @@ export const savePassagesMutation = async (
 export const replaceMutation = async (
   _parent: unknown,
   args: {
+    cursorPassageUuid?: string;
+    cursorStart?: number;
     occurrenceIndex?: number;
     replaceText: string;
     searchText: string;
@@ -382,6 +386,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: permission.error,
     };
@@ -395,6 +401,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: `Unsupported replace type: ${replaceType}`,
     };
@@ -408,6 +416,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: 'At least one target UUID is required',
     };
@@ -420,6 +430,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: 'searchText is required',
     };
@@ -435,8 +447,27 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: 'occurrenceIndex must be a non-negative integer',
+    };
+  }
+
+  if (
+    args.cursorStart !== undefined &&
+    (!Number.isInteger(args.cursorStart) || args.cursorStart < 0)
+  ) {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
+      passages: [],
+      error: 'cursorStart must be a non-negative integer',
     };
   }
 
@@ -447,6 +478,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
     };
   }
@@ -465,6 +498,8 @@ export const replaceMutation = async (
         replacedOccurrenceCount: 0,
         updatedAnnotationCount: 0,
         deletedAnnotationCount: 0,
+        nextOccurrenceStart: null,
+        nextPassageUuid: null,
         passages: [],
         error: `Failed to fetch replace targets: ${rowsError.message}`,
       };
@@ -479,6 +514,8 @@ export const replaceMutation = async (
         replacedOccurrenceCount: 0,
         updatedAnnotationCount: 0,
         deletedAnnotationCount: 0,
+        nextOccurrenceStart: null,
+        nextPassageUuid: null,
         passages: [],
         error: `Unknown target UUIDs: ${missingUuids.join(', ')}`,
       };
@@ -508,6 +545,8 @@ export const replaceMutation = async (
         replacedOccurrenceCount: 0,
         updatedAnnotationCount: 0,
         deletedAnnotationCount: 0,
+        nextOccurrenceStart: null,
+        nextPassageUuid: null,
         passages: [],
         error: `Failed to fetch annotations: ${annotationsError.message}`,
       };
@@ -529,10 +568,43 @@ export const replaceMutation = async (
     let deletedAnnotationCount = 0;
     let replacedOccurrenceCount = 0;
     let remainingOccurrenceIndex = args.occurrenceIndex;
+    let singleOccurrenceApplied = false;
+    let nextOccurrenceStart: number | null = null;
+    let nextPassageUuid: string | null = null;
 
     for (const row of orderedRows) {
+      if (singleOccurrenceApplied) {
+        break;
+      }
+
       let occurrenceIndex = remainingOccurrenceIndex;
-      if (remainingOccurrenceIndex !== undefined) {
+      if (
+        args.cursorPassageUuid !== undefined ||
+        args.cursorStart !== undefined
+      ) {
+        const cursorPassageUuid = args.cursorPassageUuid;
+        const cursorStart = args.cursorStart ?? 0;
+
+        if (cursorPassageUuid && row.uuid !== cursorPassageUuid) {
+          const cursorIndex = targetUuids.indexOf(cursorPassageUuid);
+          const rowIndex = targetUuids.indexOf(row.uuid);
+          if (cursorIndex !== -1 && rowIndex < cursorIndex) {
+            continue;
+          }
+        }
+
+        const occurrences = findLiteralOccurrences(row.content, args.searchText);
+        occurrenceIndex =
+          row.uuid === cursorPassageUuid
+            ? occurrences.findIndex((occurrence) => occurrence.start >= cursorStart)
+            : occurrences.length > 0
+              ? 0
+              : -1;
+
+        if (occurrenceIndex < 0) {
+          continue;
+        }
+      } else if (remainingOccurrenceIndex !== undefined) {
         const occurrences = findLiteralOccurrences(row.content, args.searchText);
         if (remainingOccurrenceIndex >= occurrences.length) {
           remainingOccurrenceIndex -= occurrences.length;
@@ -568,9 +640,24 @@ export const replaceMutation = async (
 
       updatedPassages.push(replacement.passage);
       updatedAnnotationCount += replacement.updatedAnnotationCount;
-      deletedAnnotationCount += replacement.deletedAnnotationCount;
-      replacedOccurrenceCount += replacement.replacementsApplied;
-    }
+        deletedAnnotationCount += replacement.deletedAnnotationCount;
+        replacedOccurrenceCount += replacement.replacementsApplied;
+
+        if (args.occurrenceIndex !== undefined && replacement.replacementsApplied > 0) {
+          singleOccurrenceApplied = true;
+        }
+
+        if (
+          (args.occurrenceIndex !== undefined ||
+            args.cursorPassageUuid !== undefined ||
+            args.cursorStart !== undefined) &&
+          replacement.replacementsApplied > 0
+        ) {
+          nextPassageUuid = row.uuid;
+          nextOccurrenceStart = replacement.nextSearchStart ?? null;
+          singleOccurrenceApplied = true;
+        }
+      }
 
     if (updatedPassages.length === 0) {
       return {
@@ -579,6 +666,8 @@ export const replaceMutation = async (
         replacedOccurrenceCount: 0,
         updatedAnnotationCount: 0,
         deletedAnnotationCount: 0,
+        nextOccurrenceStart: null,
+        nextPassageUuid: null,
         passages: [],
       };
     }
@@ -607,6 +696,8 @@ export const replaceMutation = async (
         replacedOccurrenceCount: 0,
         updatedAnnotationCount: 0,
         deletedAnnotationCount: 0,
+        nextOccurrenceStart: null,
+        nextPassageUuid: null,
         passages: [],
         error: `Failed to save replaced passages: ${passageError.message}`,
       };
@@ -625,6 +716,8 @@ export const replaceMutation = async (
           replacedOccurrenceCount: 0,
           updatedAnnotationCount: 0,
           deletedAnnotationCount: 0,
+          nextOccurrenceStart: null,
+          nextPassageUuid: null,
           passages: [],
           error: `Failed to save replaced annotations: ${annotationError.message}`,
         };
@@ -648,6 +741,8 @@ export const replaceMutation = async (
           replacedOccurrenceCount: 0,
           updatedAnnotationCount: 0,
           deletedAnnotationCount: 0,
+          nextOccurrenceStart: null,
+          nextPassageUuid: null,
           passages: [],
           error: `Failed to delete replaced annotations: ${deleteError.message}`,
         };
@@ -660,6 +755,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount,
       updatedAnnotationCount,
       deletedAnnotationCount,
+      nextOccurrenceStart,
+      nextPassageUuid,
       passages: orderedRows
         .filter((row) => updatedPassageUuids.includes(row.uuid))
         .map((row) => {
@@ -687,6 +784,8 @@ export const replaceMutation = async (
       replacedOccurrenceCount: 0,
       updatedAnnotationCount: 0,
       deletedAnnotationCount: 0,
+      nextOccurrenceStart: null,
+      nextPassageUuid: null,
       passages: [],
       error: error instanceof Error ? error.message : 'Unknown error',
     };
