@@ -28,7 +28,7 @@ export const TitlesCard = ({
   onEdit?(): void;
 }) => {
   const radial =
-    'bg-radial-[at_50%_50%] from-ochre/20 from-35% to-navy/10';
+    'bg-radial-[at_50%_50%] from-ochre/10 from-35% to-navy/10';
 
   return (
     <div className="mx-auto flex w-full max-w-7xl gap-1.5 rounded-lg border bg-[#fff] p-1.5">

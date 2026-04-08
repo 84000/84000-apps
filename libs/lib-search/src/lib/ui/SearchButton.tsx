@@ -2,9 +2,6 @@
 
 import {
   Button,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,16 +17,11 @@ import {
   replace,
   type ReplacedPassage,
 } from '@eightyfourthousand/client-graphql';
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  Loader2Icon,
-  SearchIcon,
-  XIcon,
-} from 'lucide-react';
+import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
 import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
+import { SearchReplacePanel } from './SearchReplacePanel';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
 
@@ -401,90 +393,31 @@ export const SearchButton = ({
               }}
             />
             {canReplace && searchQuery && (
-              <Collapsible
-                open={replaceOpen}
-                onOpenChange={setReplaceOpen}
-                className="bg-background border rounded-lg px-4 py-3 text-foreground"
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="group/collapsible flex w-full items-center justify-start gap-2 text-left text-sm font-medium cursor-pointer"
-                  >
-                    <ChevronRightIcon className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                    <span>Replace</span>
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  <div className="flex flex-col">
-                    <Input
-                      id="replace-query"
-                      placeholder="Replace with..."
-                      value={replaceQuery}
-                      onChange={(e) => {
-                        const nextValue = e.target.value;
-                        if (nextValue === replaceQuery) {
-                          return;
-                        }
-                        setNextReplaceCursor(null);
-                        setReplaceQuery(nextValue);
-                      }}
-                    />
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-foreground">
-                      <span>
-                        {passageOccurrences.length > 0 && activeOccurrence
-                          ? `Occurrence ${(activeOccurrenceIndex || 0) + 1} of ${passageOccurrences.length} in ${activePassageLabel || activePassageUuid}`
-                          : 'No exact passage occurrences available for replacement.'}
-                      </span>
-                      {replaceDisabledReason && (
-                        <span>{replaceDisabledReason}</span>
-                      )}
-                    </div>
-                    <div className='text-sm text-muted-foreground pb-4'>
-                      Replace is case sensitive and is only applied to passages.
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        disabled={!canRunReplace}
-                        onClick={() => runReplace({ replaceAll: false })}
-                      >
-                        {replacing ? 'Replacing…' : 'Replace'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!canRunReplace}
-                        onClick={() => runReplace({ replaceAll: true })}
-                      >
-                        Replace all
-                      </Button>
-                      <div className="ml-auto flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
-                          disabled={!canStepBackward}
-                          onClick={() => moveActiveOccurrence('previous')}
-                        >
-                          <ChevronRightIcon className="size-4 rotate-[-90deg]" />
-                          <span className="sr-only">Previous occurrence</span>
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8"
-                          disabled={!canStepForward}
-                          onClick={() => moveActiveOccurrence('next')}
-                        >
-                          <ChevronDownIcon className="size-4" />
-                          <span className="sr-only">Next occurrence</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+              <SearchReplacePanel
+                activeOccurrenceIndex={activeOccurrenceIndex}
+                activePassageLabel={activePassageLabel}
+                activePassageUuid={activePassageUuid}
+                canRunReplace={canRunReplace}
+                canStepBackward={canStepBackward}
+                canStepForward={canStepForward}
+                passageOccurrencesCount={passageOccurrences.length}
+                replaceDisabledReason={replaceDisabledReason}
+                replaceOpen={replaceOpen}
+                replaceQuery={replaceQuery}
+                replacing={replacing}
+                onMoveNext={() => moveActiveOccurrence('next')}
+                onMovePrevious={() => moveActiveOccurrence('previous')}
+                onReplace={() => runReplace({ replaceAll: false })}
+                onReplaceAll={() => runReplace({ replaceAll: true })}
+                onReplaceOpenChange={setReplaceOpen}
+                onReplaceQueryChange={(nextValue) => {
+                  if (nextValue === replaceQuery) {
+                    return;
+                  }
+                  setNextReplaceCursor(null);
+                  setReplaceQuery(nextValue);
+                }}
+              />
             )}
           </div>
           {searchQuery && (
