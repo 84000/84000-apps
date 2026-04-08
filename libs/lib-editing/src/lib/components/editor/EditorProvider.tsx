@@ -7,6 +7,7 @@ import type { Passage, Work } from '@eightyfourthousand/data-access';
 import {
   createGraphQLClient,
   hasPermission,
+  type ReplacedPassage,
   savePassages,
 } from '@eightyfourthousand/client-graphql';
 import { passagesFromNodes, ensureUuids } from '../../passage';
@@ -19,6 +20,7 @@ interface EditorContextState {
   work: Work;
   dirtyStore: DirtyStore;
   canEdit(): Promise<boolean>;
+  applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
   getEditor: (key: string) => Editor | undefined;
@@ -57,6 +59,9 @@ export const EditorContext = createContext<EditorContextState>({
     getSnapshot: () => false,
   },
   canEdit: async () => false,
+  applyReplacedPassages: async () => {
+    // No-op when outside provider
+  },
   getFragment: () => {
     throw Error('Not implemented');
   },
@@ -373,6 +378,76 @@ export const EditorContextProvider = ({
     return await hasPermission({ client, permission: 'EDITOR_EDIT' });
   }, [client]);
 
+  const applyReplacedPassages = useCallback(
+    async (passages: ReplacedPassage[]) => {
+      if (passages.length === 0) {
+        return;
+      }
+
+      setNavigating(true);
+
+      try {
+        const passagesByUuid = new Map(
+          passages
+            .filter(
+              (passage): passage is ReplacedPassage & { json: NonNullable<ReplacedPassage['json']> } =>
+                Boolean(passage.json),
+            )
+            .map((passage) => [passage.uuid, passage]),
+        );
+
+        Object.values(editorCache.current).forEach((editor) => {
+          if (editor.isDestroyed || passagesByUuid.size === 0) {
+            return;
+          }
+
+          const replacements: Array<{
+            from: number;
+            nodeSize: number;
+            replacement: NonNullable<ReplacedPassage['json']>;
+          }> = [];
+
+          editor.state.doc.descendants((node, pos) => {
+            if (node.type.name !== 'passage' || !node.attrs.uuid) {
+              return true;
+            }
+
+            const replacement = passagesByUuid.get(node.attrs.uuid);
+            if (replacement?.json) {
+              replacements.push({
+                from: pos,
+                nodeSize: node.nodeSize,
+                replacement: replacement.json,
+              });
+            }
+
+            return true;
+          });
+
+          if (replacements.length === 0) {
+            return;
+          }
+
+          let tr = editor.state.tr;
+          replacements
+            .sort((a, b) => b.from - a.from)
+            .forEach(({ from, nodeSize, replacement }) => {
+              tr = tr.replaceWith(
+                from,
+                from + nodeSize,
+                editor.schema.nodeFromJSON(replacement),
+              );
+            });
+
+          editor.view.dispatch(tr);
+        });
+      } finally {
+        setNavigating(false);
+      }
+    },
+    [setNavigating],
+  );
+
   return (
     <EditorContext.Provider
       value={{
@@ -380,6 +455,7 @@ export const EditorContextProvider = ({
         doc,
         dirtyStore,
         canEdit,
+        applyReplacedPassages,
         getFragment,
         setDoc,
         getEditor,

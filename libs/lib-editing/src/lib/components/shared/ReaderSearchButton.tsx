@@ -1,13 +1,40 @@
 'use client';
 
-import { PassageMatch, SearchButton, SearchResult } from '@eightyfourthousand/lib-search';
-import { useNavigation } from './NavigationProvider';
-import { useCallback } from 'react';
-import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@eightyfourthousand/data-access';
+import {
+  PassageMatch,
+  SearchButton,
+  SearchResult,
+} from '@eightyfourthousand/lib-search';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useEditorState } from '../editor/EditorProvider';
+import { useNavigation } from './NavigationProvider';
+import { SearchReplacePanel } from './SearchReplacePanel';
+import { PanelName, PanelState, TabName } from './types';
 
 export const ReaderSearchButton = () => {
   const { uuid, toh, updatePanel } = useNavigation();
+  const { applyReplacedPassages, canEdit, dirtyStore } = useEditorState();
+  const [canReplace, setCanReplace] = useState(false);
+  const isDirty = useSyncExternalStore(
+    dirtyStore.subscribe.bind(dirtyStore),
+    dirtyStore.getSnapshot.bind(dirtyStore),
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      const editable = await canEdit();
+      if (active) {
+        setCanReplace(editable);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [canEdit]);
 
   const onResultSelected = useCallback(
     (result: SearchResult) => {
@@ -67,6 +94,16 @@ export const ReaderSearchButton = () => {
       workUuid={uuid}
       toh={toh}
       onResultSelected={onResultSelected}
+      renderActions={(searchContext) => (
+        <SearchReplacePanel
+          canReplace={canReplace}
+          replaceDisabledReason={
+            isDirty ? 'Save changes before using search and replace.' : undefined
+          }
+          onPassagesReplaced={applyReplacedPassages}
+          searchContext={searchContext}
+        />
+      )}
     />
   );
 };

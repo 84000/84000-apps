@@ -232,10 +232,81 @@ type SavePassagesResult {
   error: String
 }
 
+"""
+Supported target types for search-and-replace operations
+"""
+enum ReplaceType {
+  PASSAGE
+}
+
+"""
+Result of a replace mutation
+"""
+type ReplaceResult {
+  """
+  Whether the replace was successful
+  """
+  success: Boolean!
+
+  """
+  Number of target records updated
+  """
+  updatedCount: Int!
+
+  """
+  Number of occurrences replaced
+  """
+  replacedOccurrenceCount: Int!
+
+  """
+  Number of annotations whose ranges changed
+  """
+  updatedAnnotationCount: Int!
+
+  """
+  Number of annotations deleted because the replacement removed them
+  """
+  deletedAnnotationCount: Int!
+
+  """
+  Passage UUID after which the next single replace should continue
+  """
+  nextPassageUuid: ID
+
+  """
+  Character offset within nextPassageUuid where the next single replace should continue
+  """
+  nextOccurrenceStart: Int
+
+  """
+  Updated target passages for client-side refresh
+  """
+  passages: [Passage!]!
+
+  """
+  Error message if the replace failed
+  """
+  error: String
+}
+
 extend type Mutation {
   """
   Save one or more passages.
   Requires editor.edit permission.
   """
   savePassages(passages: [PassageInput!]!, deletedUuids: [ID!]): SavePassagesResult!
+
+  """
+  Replace text within one or more targets.
+  Requires editor.edit permission.
+  """
+  replace(
+    searchText: String!
+    replaceText: String!
+    targetUuids: [ID!]!
+    type: ReplaceType = PASSAGE
+    occurrenceIndex: Int
+    cursorPassageUuid: ID
+    cursorStart: Int
+  ): ReplaceResult!
 }

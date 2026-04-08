@@ -1,5 +1,7 @@
 'use client';
 
+import type { PassageOccurrence } from '@eightyfourthousand/data-access';
+import { getPassageOccurrences } from '@eightyfourthousand/data-access';
 import {
   Button,
   Dialog,
@@ -12,61 +14,273 @@ import {
   TabsContent,
 } from '@eightyfourthousand/design-system';
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
-import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
+import type { PassageMatch, SearchResult, SearchResults } from '../types';
+import { RESULTS_ENTITIES } from '../types';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
 
+export type SearchPendingSelection =
+  | { kind: 'index'; index: number }
+  | { kind: 'cursor'; start: number; passageUuid: string };
+
+export interface SearchActionContext {
+  activeOccurrence?: PassageOccurrence;
+  activeOccurrenceIndex: number;
+  activePassageLabel?: string;
+  activePassageUuid?: string;
+  moveActiveOccurrence: (direction: 'next' | 'previous') => void;
+  passageOccurrences: PassageOccurrence[];
+  passages: PassageMatch[];
+  refreshSearch: (options?: {
+    nextSelection?: SearchPendingSelection | null;
+  }) => Promise<void>;
+  searchQuery: string;
+  searching: boolean;
+  scrollActiveOccurrenceIntoView: () => void;
+  setActiveOccurrenceIndex: (index: number) => void;
+  setShouldScrollActiveOccurrence: (shouldScroll: boolean) => void;
+}
+
+export interface SearchButtonProps {
+  onResultSelected: (result: SearchResult) => void;
+  renderActions?: (context: SearchActionContext) => ReactNode;
+  toh?: string;
+  workUuid?: string;
+}
+
 export const SearchButton = ({
+  renderActions,
   workUuid,
   toh,
   onResultSelected,
-}: {
-  workUuid?: string;
-  toh?: string;
-  onResultSelected: (result: SearchResult) => void;
-}) => {
+}: SearchButtonProps) => {
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
+  const [activeOccurrenceIndex, setActiveOccurrenceIndexState] = useState(0);
+  const [shouldScrollActiveOccurrence, setShouldScrollActiveOccurrence] =
+    useState(false);
+  const pendingOccurrenceSelectionRef =
+    useRef<SearchPendingSelection | null>(null);
+
+  const passageOccurrences = useMemo(
+    () => getPassageOccurrences(results?.passages || [], searchQuery),
+    [results?.passages, searchQuery],
+  );
+  const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
+  const activeOccurrenceStart = activeOccurrence?.start ?? null;
+  const activePassageUuid = activeOccurrence?.passageUuid;
+  const activePassageLabel = results?.passages.find(
+    (passage) => passage.uuid === activePassageUuid,
+  )?.label;
+  const passageOrder = useMemo(
+    () =>
+      new Map(
+        (results?.passages || []).map((passage, index) => [passage.uuid, index]),
+      ),
+    [results?.passages],
+  );
+
+  const scrollActiveOccurrenceIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('[data-search-result-active="true"]')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+    });
+  }, []);
+
+  const refreshSearch = useCallback(
+    async (options: { nextSelection?: SearchPendingSelection | null } = {}) => {
+      if (!searchQuery || !workUuid || !toh) {
+        setResults(undefined);
+        setHasResults(false);
+        return;
+      }
+
+      setSearching(true);
+      const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
+      setHasResults(
+        !!nextResults &&
+          (nextResults.passages.length > 0 ||
+            nextResults.alignments.length > 0 ||
+            nextResults.bibliographies.length > 0 ||
+            nextResults.glossaries.length > 0),
+      );
+      setResults(nextResults);
+
+      if ('nextSelection' in options) {
+        pendingOccurrenceSelectionRef.current = options.nextSelection ?? null;
+      }
+
+      setSearching(false);
+    },
+    [searchQuery, toh, workUuid],
+  );
+
+  const setActiveOccurrenceIndex = useCallback(
+    (nextIndex: number) => {
+      pendingOccurrenceSelectionRef.current = null;
+      setActiveOccurrenceIndexState(
+        Math.max(0, Math.min(nextIndex, Math.max(passageOccurrences.length - 1, 0))),
+      );
+    },
+    [passageOccurrences.length],
+  );
+
+  const moveActiveOccurrence = useCallback(
+    (direction: 'next' | 'previous') => {
+      if (passageOccurrences.length === 0) {
+        return;
+      }
+
+      pendingOccurrenceSelectionRef.current = null;
+      setActiveOccurrenceIndexState((current) => {
+        if (direction === 'previous') {
+          return Math.max(current - 1, 0);
+        }
+
+        return Math.min(current + 1, passageOccurrences.length - 1);
+      });
+    },
+    [passageOccurrences.length],
+  );
+
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      void refreshSearch();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [refreshSearch]);
+
+  useEffect(() => {
+    setResults(undefined);
+    setSearchQuery('');
+    setActiveOccurrenceIndexState(0);
+    setShouldScrollActiveOccurrence(false);
+    pendingOccurrenceSelectionRef.current = null;
+  }, [open]);
+
+  useEffect(() => {
+    if (passageOccurrences.length === 0) {
+      setActiveOccurrenceIndexState(0);
+      pendingOccurrenceSelectionRef.current = null;
+      return;
+    }
+
+    const pendingSelection = pendingOccurrenceSelectionRef.current;
+    if (pendingSelection) {
+      if (pendingSelection.kind === 'index') {
+        setActiveOccurrenceIndexState(
+          Math.min(pendingSelection.index, passageOccurrences.length - 1),
+        );
+        pendingOccurrenceSelectionRef.current = null;
+        return;
+      }
+
+      const nextIndex = passageOccurrences.findIndex((occurrence) => {
+        if (
+          pendingSelection.kind === 'cursor' &&
+          occurrence.passageUuid === pendingSelection.passageUuid &&
+          occurrence.start >= pendingSelection.start
+        ) {
+          return true;
+        }
+
+        return false;
+      });
+
+      if (nextIndex >= 0) {
+        setActiveOccurrenceIndexState(nextIndex);
+        pendingOccurrenceSelectionRef.current = null;
+        return;
+      }
+
+      const currentPassageOrder =
+        pendingSelection.kind === 'cursor'
+          ? passageOrder.get(pendingSelection.passageUuid)
+          : undefined;
+      const nextPassageIndex =
+        pendingSelection.kind === 'cursor' && currentPassageOrder != null
+          ? passageOccurrences.findIndex((occurrence) => {
+              const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
+              return (
+                occurrenceOrder != null && occurrenceOrder > currentPassageOrder
+              );
+            })
+          : -1;
+
+      setActiveOccurrenceIndexState(nextPassageIndex >= 0 ? nextPassageIndex : 0);
+      pendingOccurrenceSelectionRef.current = null;
+      return;
+    }
+
+    setActiveOccurrenceIndexState((current) =>
+      Math.min(current, passageOccurrences.length - 1),
+    );
+  }, [passageOccurrences, passageOrder]);
+
+  useEffect(() => {
+    if (
+      !shouldScrollActiveOccurrence ||
+      !activePassageUuid ||
+      activeOccurrenceStart == null
+    ) {
+      return;
+    }
+
+    scrollActiveOccurrenceIntoView();
+  }, [
+    activeOccurrenceStart,
+    activePassageUuid,
+    scrollActiveOccurrenceIntoView,
+    shouldScrollActiveOccurrence,
+  ]);
 
   const onCardClick = (result: SearchResult) => {
     setOpen(false);
     onResultSelected(result);
   };
 
-  useEffect(() => {
-    const performSearch = async () => {
-      if (!searchQuery || !workUuid || !toh) {
-        setResults(undefined);
-        return;
-      }
-
-      setSearching(true);
-
-      const results = await search({ text: searchQuery, uuid: workUuid, toh });
-      setHasResults(
-        !!results &&
-        (results.passages.length > 0 ||
-          results.alignments.length > 0 ||
-          results.bibliographies.length > 0 ||
-          results.glossaries.length > 0),
-      );
-      setResults(results);
-      setSearching(false);
-    };
-
-    const debounce = setTimeout(performSearch, 300);
-    return () => clearTimeout(debounce);
-  }, [searchQuery, workUuid, toh]);
-
-  useEffect(() => {
-    setResults(undefined);
-    setSearchQuery('');
-  }, [open]);
+  const actionContext = useMemo<SearchActionContext>(
+    () => ({
+      activeOccurrence,
+      activeOccurrenceIndex,
+      activePassageLabel,
+      activePassageUuid,
+      moveActiveOccurrence,
+      passageOccurrences,
+      passages: results?.passages || [],
+      refreshSearch,
+      searchQuery,
+      searching,
+      scrollActiveOccurrenceIntoView,
+      setActiveOccurrenceIndex,
+      setShouldScrollActiveOccurrence,
+    }),
+    [
+      activeOccurrence,
+      activeOccurrenceIndex,
+      activePassageLabel,
+      activePassageUuid,
+      moveActiveOccurrence,
+      passageOccurrences,
+      refreshSearch,
+      results?.passages,
+      scrollActiveOccurrenceIntoView,
+      searchQuery,
+      searching,
+      setActiveOccurrenceIndex,
+    ],
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -102,17 +316,29 @@ export const SearchButton = ({
             <Input
               autoFocus
               placeholder="Type to search..."
+              value={searchQuery}
               className="w-full text-foreground px-4 py-6"
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                if (nextValue === searchQuery) {
+                  return;
+                }
+                setActiveOccurrenceIndexState(0);
+                pendingOccurrenceSelectionRef.current = null;
+                setSearchQuery(nextValue);
+              }}
             />
+            {searchQuery && renderActions?.(actionContext)}
           </div>
           {searchQuery && (
             <>
-              <div className="text-sm text-secondary-foreground">
-                Showing results for "<strong>{searchQuery}</strong>"
-                {searching && (
-                  <Loader2Icon className="size-4 ml-2 animate-spin inline-block" />
-                )}
+              <div className="flex flex-col gap-3 text-sm text-secondary-foreground">
+                <div>
+                  Showing results for "<strong>{searchQuery}</strong>"
+                  {searching && (
+                    <Loader2Icon className="size-4 ml-2 animate-spin inline-block" />
+                  )}
+                </div>
               </div>
               {results && hasResults ? (
                 <Tabs
@@ -129,6 +355,8 @@ export const SearchButton = ({
                           value={tab}
                         >
                           <SearchResultsList
+                            activeOccurrenceStart={activeOccurrenceStart ?? undefined}
+                            activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}
                             onCardClick={onCardClick}

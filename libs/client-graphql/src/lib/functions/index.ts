@@ -30,4 +30,5 @@ export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';
 export { getWorks, type WorksPage } from './get-works';
 export { hasPermission, type Permission } from './has-permission';
+export { replace, type ReplaceType, type ReplacedPassage } from './replace';
 export { savePassages } from './save-passages';
