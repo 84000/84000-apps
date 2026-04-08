@@ -1,9 +1,13 @@
 import type { GraphQLContext } from '../../context';
 import {
   ANNOTATIONS_TO_IGNORE,
+  AnnotationDTO,
   DataClient,
   Passage,
   Annotation,
+  annotationsFromDTO,
+  findLiteralOccurrences,
+  replacePassageText,
   passagesToDTO,
   passagesToRowDTO,
 } from '@eightyfourthousand/data-access';
@@ -113,24 +117,33 @@ interface SavePassagesResult {
   error?: string;
 }
 
-/**
- * Mutation resolver for saving passages
- */
-export const savePassagesMutation = async (
-  _parent: unknown,
-  args: { passages: PassageInput[]; deletedUuids?: string[] },
-  ctx: GraphQLContext,
-): Promise<SavePassagesResult> => {
-  // Check authentication
+interface ReplaceResult {
+  deletedAnnotationCount: number;
+  error?: string;
+  passages: Array<{
+    content: string;
+    label: string;
+    sort: number;
+    toh: string | null;
+    type: string;
+    uuid: string;
+    workUuid: string;
+    xmlId: string | null;
+  }>;
+  replacedOccurrenceCount: number;
+  success: boolean;
+  updatedAnnotationCount: number;
+  updatedCount: number;
+}
+
+const requireEditorEditPermission = async (ctx: GraphQLContext) => {
   if (!ctx.session) {
     return {
-      success: false,
-      savedCount: 0,
+      ok: false as const,
       error: 'Not authenticated',
     };
   }
 
-  // Check permission
   const { data: hasPermission, error: permError } = await ctx.supabase.rpc(
     'authorize',
     {
@@ -140,9 +153,28 @@ export const savePassagesMutation = async (
 
   if (permError || !hasPermission) {
     return {
+      ok: false as const,
+      error: 'Permission denied: editor.edit required',
+    };
+  }
+
+  return { ok: true as const };
+};
+
+/**
+ * Mutation resolver for saving passages
+ */
+export const savePassagesMutation = async (
+  _parent: unknown,
+  args: { passages: PassageInput[]; deletedUuids?: string[] },
+  ctx: GraphQLContext,
+): Promise<SavePassagesResult> => {
+  const permission = await requireEditorEditPermission(ctx);
+  if (!permission.ok) {
+    return {
       success: false,
       savedCount: 0,
-      error: 'Permission denied: editor.edit required',
+      error: permission.error,
     };
   }
 
@@ -326,6 +358,336 @@ export const savePassagesMutation = async (
     return {
       success: false,
       savedCount: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};
+
+export const replaceMutation = async (
+  _parent: unknown,
+  args: {
+    occurrenceIndex?: number;
+    replaceText: string;
+    searchText: string;
+    targetUuids: string[];
+    type?: 'PASSAGE';
+  },
+  ctx: GraphQLContext,
+): Promise<ReplaceResult> => {
+  const permission = await requireEditorEditPermission(ctx);
+  if (!permission.ok) {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+      error: permission.error,
+    };
+  }
+
+  const replaceType = args.type ?? 'PASSAGE';
+  if (replaceType !== 'PASSAGE') {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+      error: `Unsupported replace type: ${replaceType}`,
+    };
+  }
+
+  const targetUuids = Array.from(new Set(args.targetUuids.filter(Boolean)));
+  if (targetUuids.length === 0) {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+      error: 'At least one target UUID is required',
+    };
+  }
+
+  if (!args.searchText) {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+      error: 'searchText is required',
+    };
+  }
+
+  if (
+    args.occurrenceIndex !== undefined &&
+    (!Number.isInteger(args.occurrenceIndex) || args.occurrenceIndex < 0)
+  ) {
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+      error: 'occurrenceIndex must be a non-negative integer',
+    };
+  }
+
+  if (args.searchText === args.replaceText) {
+    return {
+      success: true,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
+    };
+  }
+
+  try {
+    const { data: rows, error: rowsError } = await ctx.supabase
+      .from('passages')
+      .select('uuid, work_uuid, content, label, sort, type, toh, xmlId')
+      .in('uuid', targetUuids);
+
+    if (rowsError) {
+      console.error('Error fetching replace targets:', rowsError);
+      return {
+        success: false,
+        updatedCount: 0,
+        replacedOccurrenceCount: 0,
+        updatedAnnotationCount: 0,
+        deletedAnnotationCount: 0,
+        passages: [],
+        error: `Failed to fetch replace targets: ${rowsError.message}`,
+      };
+    }
+
+    const rowsByUuid = new Map((rows ?? []).map((row) => [row.uuid, row]));
+    const missingUuids = targetUuids.filter((uuid) => !rowsByUuid.has(uuid));
+    if (missingUuids.length > 0) {
+      return {
+        success: false,
+        updatedCount: 0,
+        replacedOccurrenceCount: 0,
+        updatedAnnotationCount: 0,
+        deletedAnnotationCount: 0,
+        passages: [],
+        error: `Unknown target UUIDs: ${missingUuids.join(', ')}`,
+      };
+    }
+
+    const orderedRows = targetUuids
+      .map((uuid) => rowsByUuid.get(uuid))
+      .filter(
+        (
+          row,
+        ): row is NonNullable<typeof rows>[number] & {
+          work_uuid: string;
+        } => Boolean(row),
+      );
+
+    const { data: rawAnnotations, error: annotationsError } = await ctx.supabase
+      .from('passage_annotations')
+      .select('uuid, content, end, start, type, passage_uuid, toh')
+      .in('passage_uuid', targetUuids)
+      .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
+
+    if (annotationsError) {
+      console.error('Error fetching annotations for replace:', annotationsError);
+      return {
+        success: false,
+        updatedCount: 0,
+        replacedOccurrenceCount: 0,
+        updatedAnnotationCount: 0,
+        deletedAnnotationCount: 0,
+        passages: [],
+        error: `Failed to fetch annotations: ${annotationsError.message}`,
+      };
+    }
+
+    const annotationsByPassageUuid = new Map<string, AnnotationDTO[]>();
+    for (const annotation of (rawAnnotations ?? []) as AnnotationDTO[]) {
+      const passageUuid = annotation.passage_uuid || annotation.passageUuid;
+      if (!passageUuid) {
+        continue;
+      }
+      const existing = annotationsByPassageUuid.get(passageUuid) || [];
+      existing.push(annotation);
+      annotationsByPassageUuid.set(passageUuid, existing);
+    }
+
+    const updatedPassages: Passage[] = [];
+    let updatedAnnotationCount = 0;
+    let deletedAnnotationCount = 0;
+    let replacedOccurrenceCount = 0;
+    let remainingOccurrenceIndex = args.occurrenceIndex;
+
+    for (const row of orderedRows) {
+      let occurrenceIndex = remainingOccurrenceIndex;
+      if (remainingOccurrenceIndex !== undefined) {
+        const occurrences = findLiteralOccurrences(row.content, args.searchText);
+        if (remainingOccurrenceIndex >= occurrences.length) {
+          remainingOccurrenceIndex -= occurrences.length;
+          continue;
+        }
+        occurrenceIndex = remainingOccurrenceIndex;
+        remainingOccurrenceIndex = undefined;
+      }
+
+      const replacement = replacePassageText({
+        passage: {
+          uuid: row.uuid,
+          workUuid: row.work_uuid,
+          content: row.content,
+          label: row.label ?? '',
+          sort: row.sort,
+          type: row.type as Passage['type'],
+          toh: row.toh ?? undefined,
+          xmlId: row.xmlId ?? undefined,
+          annotations: annotationsFromDTO(
+            annotationsByPassageUuid.get(row.uuid),
+            row.content.length,
+          ) as Annotation[],
+        },
+        searchText: args.searchText,
+        replaceText: args.replaceText,
+        occurrenceIndex,
+      });
+
+      if (replacement.replacementsApplied === 0) {
+        continue;
+      }
+
+      updatedPassages.push(replacement.passage);
+      updatedAnnotationCount += replacement.updatedAnnotationCount;
+      deletedAnnotationCount += replacement.deletedAnnotationCount;
+      replacedOccurrenceCount += replacement.replacementsApplied;
+    }
+
+    if (updatedPassages.length === 0) {
+      return {
+        success: true,
+        updatedCount: 0,
+        replacedOccurrenceCount: 0,
+        updatedAnnotationCount: 0,
+        deletedAnnotationCount: 0,
+        passages: [],
+      };
+    }
+
+    const passageRowDtos = passagesToRowDTO(updatedPassages);
+    const annotationDtos = passagesToDTO(updatedPassages).flatMap(
+      (passage) => passage.annotations || [],
+    );
+    const updatedPassageUuids = updatedPassages.map((passage) => passage.uuid);
+    const updatedAnnotationUuids = new Set(annotationDtos.map((a) => a.uuid));
+    const annotationsToDelete = ((rawAnnotations ?? []) as AnnotationDTO[]).filter(
+      (annotation) =>
+        updatedPassageUuids.includes(annotation.passage_uuid || '') &&
+        !updatedAnnotationUuids.has(annotation.uuid),
+    );
+
+    const { error: passageError } = await ctx.supabase
+      .from('passages')
+      .upsert(passageRowDtos, { onConflict: 'uuid' });
+
+    if (passageError) {
+      console.error('Error saving replaced passages:', passageError);
+      return {
+        success: false,
+        updatedCount: 0,
+        replacedOccurrenceCount: 0,
+        updatedAnnotationCount: 0,
+        deletedAnnotationCount: 0,
+        passages: [],
+        error: `Failed to save replaced passages: ${passageError.message}`,
+      };
+    }
+
+    if (annotationDtos.length > 0) {
+      const { error: annotationError } = await ctx.supabase
+        .from('passage_annotations')
+        .upsert(annotationDtos, { onConflict: 'uuid' });
+
+      if (annotationError) {
+        console.error('Error saving replaced annotations:', annotationError);
+        return {
+          success: false,
+          updatedCount: 0,
+          replacedOccurrenceCount: 0,
+          updatedAnnotationCount: 0,
+          deletedAnnotationCount: 0,
+          passages: [],
+          error: `Failed to save replaced annotations: ${annotationError.message}`,
+        };
+      }
+    }
+
+    if (annotationsToDelete.length > 0) {
+      const { error: deleteError } = await ctx.supabase
+        .from('passage_annotations')
+        .delete()
+        .in(
+          'uuid',
+          annotationsToDelete.map((annotation) => annotation.uuid),
+        );
+
+      if (deleteError) {
+        console.error('Error deleting replaced annotations:', deleteError);
+        return {
+          success: false,
+          updatedCount: 0,
+          replacedOccurrenceCount: 0,
+          updatedAnnotationCount: 0,
+          deletedAnnotationCount: 0,
+          passages: [],
+          error: `Failed to delete replaced annotations: ${deleteError.message}`,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      updatedCount: updatedPassages.length,
+      replacedOccurrenceCount,
+      updatedAnnotationCount,
+      deletedAnnotationCount,
+      passages: orderedRows
+        .filter((row) => updatedPassageUuids.includes(row.uuid))
+        .map((row) => {
+          const updatedPassage = updatedPassages.find(
+            (passage) => passage.uuid === row.uuid,
+          );
+
+          return {
+            uuid: row.uuid,
+            workUuid: row.work_uuid,
+            content: updatedPassage?.content ?? row.content,
+            label: row.label ?? '',
+            sort: row.sort,
+            type: row.type,
+            toh: row.toh ?? null,
+            xmlId: row.xmlId ?? null,
+          };
+        }),
+    };
+  } catch (error) {
+    console.error('Unexpected error replacing passages:', error);
+    return {
+      success: false,
+      updatedCount: 0,
+      replacedOccurrenceCount: 0,
+      updatedAnnotationCount: 0,
+      deletedAnnotationCount: 0,
+      passages: [],
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
