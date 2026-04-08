@@ -1,5 +1,7 @@
 'use client';
 
+import type { PassageOccurrence } from '@eightyfourthousand/data-access';
+import { getPassageOccurrences } from '@eightyfourthousand/data-access';
 import {
   Button,
   Dialog,
@@ -11,54 +13,60 @@ import {
   Tabs,
   TabsContent,
 } from '@eightyfourthousand/design-system';
-import { getPassageOccurrences } from '@eightyfourthousand/data-access';
-import {
-  createGraphQLClient,
-  replace,
-  type ReplacedPassage,
-} from '@eightyfourthousand/client-graphql';
 import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
-import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
-import { SearchReplacePanel } from './SearchReplacePanel';
+import type { PassageMatch, SearchResult, SearchResults } from '../types';
+import { RESULTS_ENTITIES } from '../types';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
 
+export type SearchPendingSelection =
+  | { kind: 'index'; index: number }
+  | { kind: 'cursor'; start: number; passageUuid: string };
+
+export interface SearchActionContext {
+  activeOccurrence?: PassageOccurrence;
+  activeOccurrenceIndex: number;
+  activePassageLabel?: string;
+  activePassageUuid?: string;
+  moveActiveOccurrence: (direction: 'next' | 'previous') => void;
+  passageOccurrences: PassageOccurrence[];
+  passages: PassageMatch[];
+  refreshSearch: (options?: {
+    nextSelection?: SearchPendingSelection | null;
+  }) => Promise<void>;
+  searchQuery: string;
+  searching: boolean;
+  scrollActiveOccurrenceIntoView: () => void;
+  setActiveOccurrenceIndex: (index: number) => void;
+  setShouldScrollActiveOccurrence: (shouldScroll: boolean) => void;
+}
+
+export interface SearchButtonProps {
+  onResultSelected: (result: SearchResult) => void;
+  renderActions?: (context: SearchActionContext) => ReactNode;
+  toh?: string;
+  workUuid?: string;
+}
+
 export const SearchButton = ({
-  canReplace = false,
-  onPassagesReplaced,
+  renderActions,
   workUuid,
-  replaceDisabledReason,
   toh,
   onResultSelected,
-}: {
-  canReplace?: boolean;
-  onPassagesReplaced?: (passages: ReplacedPassage[]) => Promise<void> | void;
-  workUuid?: string;
-  replaceDisabledReason?: string;
-  toh?: string;
-  onResultSelected: (result: SearchResult) => void;
-}) => {
-  const client = useMemo(() => createGraphQLClient(), []);
+}: SearchButtonProps) => {
   const [open, setOpen] = useState(false);
-  const [replaceOpen, setReplaceOpen] = useState(false);
-  const [replaceQuery, setReplaceQuery] = useState('');
-  const [replacing, setReplacing] = useState(false);
   const [searching, setSearching] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
-  const [activeOccurrenceIndex, setActiveOccurrenceIndex] = useState(0);
-  const [nextReplaceCursor, setNextReplaceCursor] = useState<{
-    passageUuid?: string | null;
-    start?: number | null;
-  } | null>(null);
-  const pendingOccurrenceSelectionRef = useRef<
-    | { kind: 'index'; index: number }
-    | { kind: 'cursor'; start: number; passageUuid: string }
-    | null
-  >(null);
+  const [activeOccurrenceIndex, setActiveOccurrenceIndexState] = useState(0);
+  const [shouldScrollActiveOccurrence, setShouldScrollActiveOccurrence] =
+    useState(false);
+  const pendingOccurrenceSelectionRef =
+    useRef<SearchPendingSelection | null>(null);
 
   const passageOccurrences = useMemo(
     () => getPassageOccurrences(results?.passages || [], searchQuery),
@@ -77,79 +85,93 @@ export const SearchButton = ({
       ),
     [results?.passages],
   );
-  const hasNextReplaceCursor =
-    nextReplaceCursor?.passageUuid != null && nextReplaceCursor?.start != null;
-  const canRunReplace =
-    canReplace &&
-    !replaceDisabledReason &&
-    !!searchQuery &&
-    !!replaceQuery &&
-    passageOccurrences.length > 0 &&
-    !replacing;
-  const canStepOccurrences = replaceOpen && passageOccurrences.length > 0;
-  const canStepBackward = canStepOccurrences && activeOccurrenceIndex > 0;
-  const canStepForward =
-    canStepOccurrences && activeOccurrenceIndex < passageOccurrences.length - 1;
 
-  const runSearch = async ({
-    nextOccurrenceIndex,
-    preservePendingSelection = false,
-  }: {
-    nextOccurrenceIndex?: number | null;
-    preservePendingSelection?: boolean;
-  } = {}) => {
-    if (!searchQuery || !workUuid || !toh) {
-      setResults(undefined);
-      setHasResults(false);
-      return;
-    }
+  const scrollActiveOccurrenceIntoView = useCallback(() => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('[data-search-result-active="true"]')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+    });
+  }, []);
 
-    setSearching(true);
-    const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
-    setHasResults(
-      !!nextResults &&
-      (nextResults.passages.length > 0 ||
-        nextResults.alignments.length > 0 ||
-        nextResults.bibliographies.length > 0 ||
-        nextResults.glossaries.length > 0),
-    );
-    setResults(nextResults);
-    if (!preservePendingSelection) {
-      pendingOccurrenceSelectionRef.current =
-        nextOccurrenceIndex === undefined || nextOccurrenceIndex === null
-          ? null
-          : { kind: 'index', index: nextOccurrenceIndex };
-    }
-    setSearching(false);
-  };
+  const refreshSearch = useCallback(
+    async (options: { nextSelection?: SearchPendingSelection | null } = {}) => {
+      if (!searchQuery || !workUuid || !toh) {
+        setResults(undefined);
+        setHasResults(false);
+        return;
+      }
 
-  const onCardClick = (result: SearchResult) => {
-    setOpen(false);
-    onResultSelected(result);
-  };
+      setSearching(true);
+      const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
+      setHasResults(
+        !!nextResults &&
+          (nextResults.passages.length > 0 ||
+            nextResults.alignments.length > 0 ||
+            nextResults.bibliographies.length > 0 ||
+            nextResults.glossaries.length > 0),
+      );
+      setResults(nextResults);
+
+      if ('nextSelection' in options) {
+        pendingOccurrenceSelectionRef.current = options.nextSelection ?? null;
+      }
+
+      setSearching(false);
+    },
+    [searchQuery, toh, workUuid],
+  );
+
+  const setActiveOccurrenceIndex = useCallback(
+    (nextIndex: number) => {
+      pendingOccurrenceSelectionRef.current = null;
+      setActiveOccurrenceIndexState(
+        Math.max(0, Math.min(nextIndex, Math.max(passageOccurrences.length - 1, 0))),
+      );
+    },
+    [passageOccurrences.length],
+  );
+
+  const moveActiveOccurrence = useCallback(
+    (direction: 'next' | 'previous') => {
+      if (passageOccurrences.length === 0) {
+        return;
+      }
+
+      pendingOccurrenceSelectionRef.current = null;
+      setActiveOccurrenceIndexState((current) => {
+        if (direction === 'previous') {
+          return Math.max(current - 1, 0);
+        }
+
+        return Math.min(current + 1, passageOccurrences.length - 1);
+      });
+    },
+    [passageOccurrences.length],
+  );
 
   useEffect(() => {
-    const performSearch = async () => {
-      await runSearch();
-    };
+    const debounce = setTimeout(() => {
+      void refreshSearch();
+    }, 300);
 
-    const debounce = setTimeout(performSearch, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, workUuid, toh]);
+  }, [refreshSearch]);
 
   useEffect(() => {
     setResults(undefined);
     setSearchQuery('');
-    setReplaceOpen(false);
-    setReplaceQuery('');
-    setActiveOccurrenceIndex(0);
-    setNextReplaceCursor(null);
+    setActiveOccurrenceIndexState(0);
+    setShouldScrollActiveOccurrence(false);
     pendingOccurrenceSelectionRef.current = null;
   }, [open]);
 
   useEffect(() => {
     if (passageOccurrences.length === 0) {
-      setActiveOccurrenceIndex(0);
+      setActiveOccurrenceIndexState(0);
       pendingOccurrenceSelectionRef.current = null;
       return;
     }
@@ -157,7 +179,7 @@ export const SearchButton = ({
     const pendingSelection = pendingOccurrenceSelectionRef.current;
     if (pendingSelection) {
       if (pendingSelection.kind === 'index') {
-        setActiveOccurrenceIndex(
+        setActiveOccurrenceIndexState(
           Math.min(pendingSelection.index, passageOccurrences.length - 1),
         );
         pendingOccurrenceSelectionRef.current = null;
@@ -173,15 +195,11 @@ export const SearchButton = ({
           return true;
         }
 
-        if (pendingSelection.kind !== 'cursor') {
-          return false;
-        }
-
         return false;
       });
 
       if (nextIndex >= 0) {
-        setActiveOccurrenceIndex(nextIndex);
+        setActiveOccurrenceIndexState(nextIndex);
         pendingOccurrenceSelectionRef.current = null;
         return;
       }
@@ -200,150 +218,69 @@ export const SearchButton = ({
             })
           : -1;
 
-      setActiveOccurrenceIndex(nextPassageIndex >= 0 ? nextPassageIndex : 0);
+      setActiveOccurrenceIndexState(nextPassageIndex >= 0 ? nextPassageIndex : 0);
       pendingOccurrenceSelectionRef.current = null;
       return;
     }
 
-    setActiveOccurrenceIndex((current) =>
+    setActiveOccurrenceIndexState((current) =>
       Math.min(current, passageOccurrences.length - 1),
     );
-  }, [passageOccurrences]);
+  }, [passageOccurrences, passageOrder]);
 
   useEffect(() => {
     if (
-      !replaceOpen ||
+      !shouldScrollActiveOccurrence ||
       !activePassageUuid ||
       activeOccurrenceStart == null
     ) {
       return;
     }
 
-    requestAnimationFrame(() => {
-      document
-        .querySelector<HTMLElement>('[data-search-result-active="true"]')
-        ?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-    });
-  }, [activeOccurrenceStart, activePassageUuid, replaceOpen]);
+    scrollActiveOccurrenceIntoView();
+  }, [
+    activeOccurrenceStart,
+    activePassageUuid,
+    scrollActiveOccurrenceIntoView,
+    shouldScrollActiveOccurrence,
+  ]);
 
-  const moveActiveOccurrence = (direction: 'next' | 'previous') => {
-    if (passageOccurrences.length === 0) {
-      return;
-    }
-
-    setNextReplaceCursor(null);
-    pendingOccurrenceSelectionRef.current = null;
-    setActiveOccurrenceIndex((current) => {
-      if (direction === 'previous') {
-        return Math.max(current - 1, 0);
-      }
-
-      return Math.min(current + 1, passageOccurrences.length - 1);
-    });
+  const onCardClick = (result: SearchResult) => {
+    setOpen(false);
+    onResultSelected(result);
   };
 
-  useEffect(() => {
-    if (!open || !replaceOpen || passageOccurrences.length === 0) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        moveActiveOccurrence('previous');
-      }
-
-      if (event.key === 'ArrowDown') {
-        event.preventDefault();
-        moveActiveOccurrence('next');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, passageOccurrences.length, replaceOpen]);
-
-  const runReplace = async ({ replaceAll }: { replaceAll: boolean }) => {
-    if (!canRunReplace) {
-      return;
-    }
-
-    const targetUuids = results?.passages.map((passage) => passage.uuid) || [];
-
-    if (targetUuids.length === 0) {
-      return;
-    }
-
-    setReplacing(true);
-
-    try {
-      const replaceRequest = {
-        searchText: searchQuery,
-        replaceText: replaceQuery,
-        targetUuids,
-        occurrenceIndex:
-          replaceAll || hasNextReplaceCursor ? undefined : activeOccurrenceIndex,
-        cursorPassageUuid:
-          replaceAll || !hasNextReplaceCursor
-            ? undefined
-            : nextReplaceCursor?.passageUuid ?? undefined,
-        cursorStart:
-          replaceAll || !hasNextReplaceCursor
-            ? undefined
-            : nextReplaceCursor?.start ?? undefined,
-      };
-
-      const response = await replace({ client, ...replaceRequest });
-
-      if (!response.success) {
-        console.error(`Replace failed: ${response.error ?? 'unknown error'}`);
-        return;
-      }
-
-      await onPassagesReplaced?.(response.passages);
-      if (replaceAll) {
-        setNextReplaceCursor(null);
-        await runSearch({
-          nextOccurrenceIndex: 0,
-        });
-      } else {
-        setNextReplaceCursor(
-          response.nextPassageUuid != null &&
-            response.nextOccurrenceStart != null
-            ? {
-              passageUuid: response.nextPassageUuid,
-              start: response.nextOccurrenceStart,
-            }
-            : null,
-        );
-        pendingOccurrenceSelectionRef.current =
-          response.nextPassageUuid != null &&
-            response.nextOccurrenceStart != null
-            ? {
-              kind: 'cursor',
-              passageUuid: response.nextPassageUuid,
-              start: response.nextOccurrenceStart,
-            }
-            : activeOccurrence
-              ? {
-                kind: 'index',
-                index: Math.min(
-                  activeOccurrenceIndex + 1,
-                  Math.max(passageOccurrences.length - 1, 0),
-                ),
-              }
-              : null;
-        await runSearch({ preservePendingSelection: true });
-      }
-    } catch (error) {
-      console.error('Replace failed:', error);
-    } finally {
-      setReplacing(false);
-    }
-  };
+  const actionContext = useMemo<SearchActionContext>(
+    () => ({
+      activeOccurrence,
+      activeOccurrenceIndex,
+      activePassageLabel,
+      activePassageUuid,
+      moveActiveOccurrence,
+      passageOccurrences,
+      passages: results?.passages || [],
+      refreshSearch,
+      searchQuery,
+      searching,
+      scrollActiveOccurrenceIntoView,
+      setActiveOccurrenceIndex,
+      setShouldScrollActiveOccurrence,
+    }),
+    [
+      activeOccurrence,
+      activeOccurrenceIndex,
+      activePassageLabel,
+      activePassageUuid,
+      moveActiveOccurrence,
+      passageOccurrences,
+      refreshSearch,
+      results?.passages,
+      scrollActiveOccurrenceIntoView,
+      searchQuery,
+      searching,
+      setActiveOccurrenceIndex,
+    ],
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -386,39 +323,12 @@ export const SearchButton = ({
                 if (nextValue === searchQuery) {
                   return;
                 }
-                setActiveOccurrenceIndex(0);
-                setNextReplaceCursor(null);
+                setActiveOccurrenceIndexState(0);
                 pendingOccurrenceSelectionRef.current = null;
                 setSearchQuery(nextValue);
               }}
             />
-            {canReplace && searchQuery && (
-              <SearchReplacePanel
-                activeOccurrenceIndex={activeOccurrenceIndex}
-                activePassageLabel={activePassageLabel}
-                activePassageUuid={activePassageUuid}
-                canRunReplace={canRunReplace}
-                canStepBackward={canStepBackward}
-                canStepForward={canStepForward}
-                passageOccurrencesCount={passageOccurrences.length}
-                replaceDisabledReason={replaceDisabledReason}
-                replaceOpen={replaceOpen}
-                replaceQuery={replaceQuery}
-                replacing={replacing}
-                onMoveNext={() => moveActiveOccurrence('next')}
-                onMovePrevious={() => moveActiveOccurrence('previous')}
-                onReplace={() => runReplace({ replaceAll: false })}
-                onReplaceAll={() => runReplace({ replaceAll: true })}
-                onReplaceOpenChange={setReplaceOpen}
-                onReplaceQueryChange={(nextValue) => {
-                  if (nextValue === replaceQuery) {
-                    return;
-                  }
-                  setNextReplaceCursor(null);
-                  setReplaceQuery(nextValue);
-                }}
-              />
-            )}
+            {searchQuery && renderActions?.(actionContext)}
           </div>
           {searchQuery && (
             <>
@@ -445,7 +355,7 @@ export const SearchButton = ({
                           value={tab}
                         >
                           <SearchResultsList
-                            activeOccurrenceStart={activeOccurrence?.start}
+                            activeOccurrenceStart={activeOccurrenceStart ?? undefined}
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}
