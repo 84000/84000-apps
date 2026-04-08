@@ -1,16 +1,28 @@
 import type { GraphQLContext } from '../../context';
 import {
   ANNOTATIONS_TO_IGNORE,
-  AnnotationDTO,
   DataClient,
   Passage,
   Annotation,
-  annotationsFromDTO,
   findLiteralOccurrences,
   replacePassageText,
   passagesToDTO,
   passagesToRowDTO,
 } from '@eightyfourthousand/data-access';
+import {
+  buildAnnotationsByPassageUuid,
+  buildReplacePassage,
+  buildReplaceResponsePassages,
+  fetchReplaceAnnotations,
+  fetchReplaceRows,
+  findNextReplaceCursor,
+  persistReplaceChanges,
+  replaceFailure,
+  replaceSuccess,
+  type ReplacePassageRow,
+  type ReplaceResult,
+  validateReplaceArgs,
+} from './passage.replace';
 
 const PAGE_SIZE = 500;
 
@@ -117,27 +129,6 @@ interface SavePassagesResult {
   error?: string;
 }
 
-interface ReplaceResult {
-  deletedAnnotationCount: number;
-  error?: string;
-  nextOccurrenceStart?: number | null;
-  nextPassageUuid?: string | null;
-  passages: Array<{
-    content: string;
-    label: string;
-    sort: number;
-    toh: string | null;
-    type: string;
-    uuid: string;
-    workUuid: string;
-    xmlId: string | null;
-  }>;
-  replacedOccurrenceCount: number;
-  success: boolean;
-  updatedAnnotationCount: number;
-  updatedCount: number;
-}
-
 const requireEditorEditPermission = async (ctx: GraphQLContext) => {
   if (!ctx.session) {
     return {
@@ -161,97 +152,6 @@ const requireEditorEditPermission = async (ctx: GraphQLContext) => {
   }
 
   return { ok: true as const };
-};
-
-const findNextReplaceCursor = ({
-  fromPassageUuid,
-  fromStart,
-  passages,
-  searchText,
-  updatedContentByUuid,
-}: {
-  fromPassageUuid: string;
-  fromStart: number;
-  passages: Array<{ content: string; uuid: string }>;
-  searchText: string;
-  updatedContentByUuid: Map<string, string>;
-}): { passageUuid: string; start: number } | null => {
-  const startIndex = passages.findIndex(
-    (passage) => passage.uuid === fromPassageUuid,
-  );
-
-  if (startIndex < 0) {
-    return null;
-  }
-
-  const getContent = (uuid: string, fallback: string) =>
-    updatedContentByUuid.get(uuid) ?? fallback;
-
-  const findMatchInPassage = ({
-    minStart,
-    passage,
-  }: {
-    minStart: number;
-    passage: { content: string; uuid: string };
-  }) => {
-    const content = getContent(passage.uuid, passage.content);
-    const match = findLiteralOccurrences(content, searchText).find(
-      (occurrence) => occurrence.start >= minStart,
-    );
-
-    return match
-      ? {
-          passageUuid: passage.uuid,
-          start: match.start,
-        }
-      : null;
-  };
-
-  const currentPassage = passages[startIndex];
-  const currentPassageMatch = findMatchInPassage({
-    minStart: fromStart,
-    passage: currentPassage,
-  });
-
-  if (currentPassageMatch) {
-    return currentPassageMatch;
-  }
-
-  for (let index = startIndex + 1; index < passages.length; index++) {
-    const match = findMatchInPassage({
-      minStart: 0,
-      passage: passages[index],
-    });
-
-    if (match) {
-      return match;
-    }
-  }
-
-  for (let index = 0; index < startIndex; index++) {
-    const match = findMatchInPassage({
-      minStart: 0,
-      passage: passages[index],
-    });
-
-    if (match) {
-      return match;
-    }
-  }
-
-  const wrappedCurrentPassageMatch = findMatchInPassage({
-    minStart: 0,
-    passage: currentPassage,
-  });
-
-  if (
-    wrappedCurrentPassageMatch &&
-    wrappedCurrentPassageMatch.start < fromStart
-  ) {
-    return wrappedCurrentPassageMatch;
-  }
-
-  return null;
 };
 
 /**
@@ -471,188 +371,34 @@ export const replaceMutation = async (
 ): Promise<ReplaceResult> => {
   const permission = await requireEditorEditPermission(ctx);
   if (!permission.ok) {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: permission.error,
-    };
+    return replaceFailure(permission.error);
   }
 
-  const replaceType = args.type ?? 'PASSAGE';
-  if (replaceType !== 'PASSAGE') {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: `Unsupported replace type: ${replaceType}`,
-    };
+  const validation = validateReplaceArgs(args);
+  if (!validation.ok) {
+    return validation.result;
   }
 
-  const targetUuids = Array.from(new Set(args.targetUuids.filter(Boolean)));
-  if (targetUuids.length === 0) {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: 'At least one target UUID is required',
-    };
-  }
-
-  if (!args.searchText) {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: 'searchText is required',
-    };
-  }
-
-  if (
-    args.occurrenceIndex !== undefined &&
-    (!Number.isInteger(args.occurrenceIndex) || args.occurrenceIndex < 0)
-  ) {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: 'occurrenceIndex must be a non-negative integer',
-    };
-  }
-
-  if (
-    args.cursorStart !== undefined &&
-    (!Number.isInteger(args.cursorStart) || args.cursorStart < 0)
-  ) {
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: 'cursorStart must be a non-negative integer',
-    };
-  }
+  const { targetUuids } = validation;
 
   if (args.searchText === args.replaceText) {
-    return {
-      success: true,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-    };
+    return replaceSuccess({});
   }
 
   try {
-    const { data: rows, error: rowsError } = await ctx.supabase
-      .from('passages')
-      .select('uuid, work_uuid, content, label, sort, type, toh, xmlId')
-      .in('uuid', targetUuids);
-
-    if (rowsError) {
-      console.error('Error fetching replace targets:', rowsError);
-      return {
-        success: false,
-        updatedCount: 0,
-        replacedOccurrenceCount: 0,
-        updatedAnnotationCount: 0,
-        deletedAnnotationCount: 0,
-        nextOccurrenceStart: null,
-        nextPassageUuid: null,
-        passages: [],
-        error: `Failed to fetch replace targets: ${rowsError.message}`,
-      };
+    const rowsResult = await fetchReplaceRows({ ctx, targetUuids });
+    if (!rowsResult.ok) {
+      return rowsResult.result;
     }
 
-    const rowsByUuid = new Map((rows ?? []).map((row) => [row.uuid, row]));
-    const missingUuids = targetUuids.filter((uuid) => !rowsByUuid.has(uuid));
-    if (missingUuids.length > 0) {
-      return {
-        success: false,
-        updatedCount: 0,
-        replacedOccurrenceCount: 0,
-        updatedAnnotationCount: 0,
-        deletedAnnotationCount: 0,
-        nextOccurrenceStart: null,
-        nextPassageUuid: null,
-        passages: [],
-        error: `Unknown target UUIDs: ${missingUuids.join(', ')}`,
-      };
+    const annotationsResult = await fetchReplaceAnnotations({ ctx, targetUuids });
+    if (!annotationsResult.ok) {
+      return annotationsResult.result;
     }
 
-    const orderedRows = targetUuids
-      .map((uuid) => rowsByUuid.get(uuid))
-      .filter(
-        (
-          row,
-        ): row is NonNullable<typeof rows>[number] & {
-          work_uuid: string;
-        } => Boolean(row),
-      );
-
-    const { data: rawAnnotations, error: annotationsError } = await ctx.supabase
-      .from('passage_annotations')
-      .select('uuid, content, end, start, type, passage_uuid, toh')
-      .in('passage_uuid', targetUuids)
-      .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
-
-    if (annotationsError) {
-      console.error('Error fetching annotations for replace:', annotationsError);
-      return {
-        success: false,
-        updatedCount: 0,
-        replacedOccurrenceCount: 0,
-        updatedAnnotationCount: 0,
-        deletedAnnotationCount: 0,
-        nextOccurrenceStart: null,
-        nextPassageUuid: null,
-        passages: [],
-        error: `Failed to fetch annotations: ${annotationsError.message}`,
-      };
-    }
-
-    const annotationsByPassageUuid = new Map<string, AnnotationDTO[]>();
-    for (const annotation of (rawAnnotations ?? []) as AnnotationDTO[]) {
-      const passageUuid = annotation.passage_uuid || annotation.passageUuid;
-      if (!passageUuid) {
-        continue;
-      }
-      const existing = annotationsByPassageUuid.get(passageUuid) || [];
-      existing.push(annotation);
-      annotationsByPassageUuid.set(passageUuid, existing);
-    }
+    const orderedRows = rowsResult.orderedRows;
+    const rawAnnotations = annotationsResult.rawAnnotations;
+    const annotationsByPassageUuid = buildAnnotationsByPassageUuid(rawAnnotations);
 
     const updatedPassages: Passage[] = [];
     let updatedAnnotationCount = 0;
@@ -693,7 +439,7 @@ export const replaceMutation = async (
               ? 0
               : -1;
 
-        if (occurrenceIndex < 0) {
+        if (typeof occurrenceIndex === 'number' && occurrenceIndex < 0) {
           continue;
         }
       } else if (remainingOccurrenceIndex !== undefined) {
@@ -707,20 +453,7 @@ export const replaceMutation = async (
       }
 
       const replacement = replacePassageText({
-        passage: {
-          uuid: row.uuid,
-          workUuid: row.work_uuid,
-          content: row.content,
-          label: row.label ?? '',
-          sort: row.sort,
-          type: row.type as Passage['type'],
-          toh: row.toh ?? undefined,
-          xmlId: row.xmlId ?? undefined,
-          annotations: annotationsFromDTO(
-            annotationsByPassageUuid.get(row.uuid),
-            row.content.length,
-          ) as Annotation[],
-        },
+        passage: buildReplacePassage({ annotationsByPassageUuid, row }),
         searchText: args.searchText,
         replaceText: args.replaceText,
         occurrenceIndex,
@@ -760,134 +493,31 @@ export const replaceMutation = async (
     }
 
     if (updatedPassages.length === 0) {
-      return {
-        success: true,
-        updatedCount: 0,
-        replacedOccurrenceCount: 0,
-        updatedAnnotationCount: 0,
-        deletedAnnotationCount: 0,
-        nextOccurrenceStart: null,
-        nextPassageUuid: null,
-        passages: [],
-      };
+      return replaceSuccess({});
     }
 
-    const passageRowDtos = passagesToRowDTO(updatedPassages);
-    const annotationDtos = passagesToDTO(updatedPassages).flatMap(
-      (passage) => passage.annotations || [],
-    );
-    const updatedPassageUuids = updatedPassages.map((passage) => passage.uuid);
-    const updatedAnnotationUuids = new Set(annotationDtos.map((a) => a.uuid));
-    const annotationsToDelete = ((rawAnnotations ?? []) as AnnotationDTO[]).filter(
-      (annotation) =>
-        updatedPassageUuids.includes(annotation.passage_uuid || '') &&
-        !updatedAnnotationUuids.has(annotation.uuid),
-    );
-
-    const { error: passageError } = await ctx.supabase
-      .from('passages')
-      .upsert(passageRowDtos, { onConflict: 'uuid' });
-
-    if (passageError) {
-      console.error('Error saving replaced passages:', passageError);
-      return {
-        success: false,
-        updatedCount: 0,
-        replacedOccurrenceCount: 0,
-        updatedAnnotationCount: 0,
-        deletedAnnotationCount: 0,
-        nextOccurrenceStart: null,
-        nextPassageUuid: null,
-        passages: [],
-        error: `Failed to save replaced passages: ${passageError.message}`,
-      };
+    const persistResult = await persistReplaceChanges({
+      ctx,
+      rawAnnotations,
+      updatedPassages,
+    });
+    if (!persistResult.ok) {
+      return persistResult.result;
     }
 
-    if (annotationDtos.length > 0) {
-      const { error: annotationError } = await ctx.supabase
-        .from('passage_annotations')
-        .upsert(annotationDtos, { onConflict: 'uuid' });
-
-      if (annotationError) {
-        console.error('Error saving replaced annotations:', annotationError);
-        return {
-          success: false,
-          updatedCount: 0,
-          replacedOccurrenceCount: 0,
-          updatedAnnotationCount: 0,
-          deletedAnnotationCount: 0,
-          nextOccurrenceStart: null,
-          nextPassageUuid: null,
-          passages: [],
-          error: `Failed to save replaced annotations: ${annotationError.message}`,
-        };
-      }
-    }
-
-    if (annotationsToDelete.length > 0) {
-      const { error: deleteError } = await ctx.supabase
-        .from('passage_annotations')
-        .delete()
-        .in(
-          'uuid',
-          annotationsToDelete.map((annotation) => annotation.uuid),
-        );
-
-      if (deleteError) {
-        console.error('Error deleting replaced annotations:', deleteError);
-        return {
-          success: false,
-          updatedCount: 0,
-          replacedOccurrenceCount: 0,
-          updatedAnnotationCount: 0,
-          deletedAnnotationCount: 0,
-          nextOccurrenceStart: null,
-          nextPassageUuid: null,
-          passages: [],
-          error: `Failed to delete replaced annotations: ${deleteError.message}`,
-        };
-      }
-    }
-
-    return {
-      success: true,
+    return replaceSuccess({
       updatedCount: updatedPassages.length,
       replacedOccurrenceCount,
       updatedAnnotationCount,
       deletedAnnotationCount,
       nextOccurrenceStart,
       nextPassageUuid,
-      passages: orderedRows
-        .filter((row) => updatedPassageUuids.includes(row.uuid))
-        .map((row) => {
-          const updatedPassage = updatedPassages.find(
-            (passage) => passage.uuid === row.uuid,
-          );
-
-          return {
-            uuid: row.uuid,
-            workUuid: row.work_uuid,
-            content: updatedPassage?.content ?? row.content,
-            label: row.label ?? '',
-            sort: row.sort,
-            type: row.type,
-            toh: row.toh ?? null,
-            xmlId: row.xmlId ?? null,
-          };
-        }),
-    };
+      passages: buildReplaceResponsePassages({ orderedRows, updatedPassages }),
+    });
   } catch (error) {
     console.error('Unexpected error replacing passages:', error);
-    return {
-      success: false,
-      updatedCount: 0,
-      replacedOccurrenceCount: 0,
-      updatedAnnotationCount: 0,
-      deletedAnnotationCount: 0,
-      nextOccurrenceStart: null,
-      nextPassageUuid: null,
-      passages: [],
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return replaceFailure(
+      error instanceof Error ? error.message : 'Unknown error',
+    );
   }
 };
