@@ -10,6 +10,7 @@ export interface PassageOccurrence {
 
 export interface PassageReplacementResult {
   deletedAnnotationCount: number;
+  nextSearchStart?: number;
   passage: Passage;
   replacementsApplied: number;
   updatedAnnotationCount: number;
@@ -204,6 +205,7 @@ export const replacePassageText = ({
   let cumulativeDelta = 0;
   let updatedAnnotationCount = 0;
   let deletedAnnotationCount = 0;
+  let nextSearchStart: number | undefined;
 
   for (const match of matchesToApply) {
     const editStart = match.start + cumulativeDelta;
@@ -222,6 +224,7 @@ export const replacePassageText = ({
     annotations = remappedAnnotations.annotations;
     updatedAnnotationCount += remappedAnnotations.updatedAnnotationCount;
     deletedAnnotationCount += remappedAnnotations.deletedAnnotationCount;
+    nextSearchStart = editStart + replaceText.length;
     cumulativeDelta += replaceText.length - (match.end - match.start);
   }
 
@@ -231,6 +234,7 @@ export const replacePassageText = ({
       content,
       annotations,
     },
+    nextSearchStart,
     replacementsApplied: matchesToApply.length,
     updatedAnnotationCount,
     deletedAnnotationCount,

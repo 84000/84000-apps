@@ -244,97 +244,97 @@ export const ThreeColumns = ({
 
       {/* Desktop Layout */}
       <div className="hidden md:block overflow-hidden size-full">
-        <ResizablePanelGroup className={className} direction="horizontal">
-          {leftPanelEnabled && (
-            <>
-              <ResizablePanel
-                ref={leftPanelRef}
-                className={cn(
-                  'hidden md:block rounded border border-border/60 bg-background',
-                  !leftPanelOpen && 'border-none',
-                )}
-                collapsible
-                collapsedSize={MinPanelSizes.COLLAPSED}
-                defaultSize={
-                  leftPanelOpen
-                    ? MinPanelSizes.SIDE_DEFAULT
-                    : MinPanelSizes.COLLAPSED
-                }
-                minSize={MinPanelSizes.SIDE_MIN}
-              >
-                {leftPanelChildren}
-              </ResizablePanel>
-              <ResizableHandle
-                withHandle={leftPanelOpen}
-                className={cn(
-                  'text-muted-foreground transparent',
-                  leftPanelOpen && 'w-2',
-                )}
-              />
-            </>
-          )}
-          <ResizablePanel
-            className="hidden md:flex md:flex-col rounded border bg-background"
-            style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
-            defaultSize={MinPanelSizes.FULL}
-            minSize={MinPanelSizes.MAIN_MIN}
-          >
-            <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
-              <Button
-                variant="link"
-                size="icon"
-                className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                onClick={toggleLeftPanel}
-              >
-                <PanelLeftIcon />
-                <span className="sr-only">Toggle Left Panel</span>
-              </Button>
-              <div className="flex items-center gap-1">
-                {mainPanelActions}
-                {rightPanelEnabled && (
-                  <Button
-                    variant="link"
-                    size="icon"
-                    className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                    onClick={toggleRightPanel}
-                  >
-                    <PanelRightIcon />
-                    <span className="sr-only">Toggle Right Panel</span>
-                  </Button>
-                )}
-              </div>
+      <ResizablePanelGroup className={className} direction="horizontal">
+        {leftPanelEnabled && (
+          <>
+            <ResizablePanel
+              ref={leftPanelRef}
+              className={cn(
+                'hidden md:block rounded border border-border/60 bg-background',
+                !leftPanelOpen && 'border-none',
+              )}
+              collapsible
+              collapsedSize={MinPanelSizes.COLLAPSED}
+              defaultSize={
+                leftPanelOpen
+                  ? MinPanelSizes.SIDE_DEFAULT
+                  : MinPanelSizes.COLLAPSED
+              }
+              minSize={MinPanelSizes.SIDE_MIN}
+            >
+              {leftPanelChildren}
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle={leftPanelOpen}
+              className={cn(
+                'text-muted-foreground transparent',
+                leftPanelOpen && 'w-2',
+              )}
+            />
+          </>
+        )}
+        <ResizablePanel
+          className="hidden md:flex md:flex-col rounded border bg-background"
+          style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
+          defaultSize={MinPanelSizes.FULL}
+          minSize={MinPanelSizes.MAIN_MIN}
+        >
+          <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
+            <Button
+              variant="link"
+              size="icon"
+              className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+              onClick={toggleLeftPanel}
+            >
+              <PanelLeftIcon />
+              <span className="sr-only">Toggle Left Panel</span>
+            </Button>
+            <div className="flex items-center gap-1">
+              {mainPanelActions}
+              {rightPanelEnabled && (
+                <Button
+                  variant="link"
+                  size="icon"
+                  className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  onClick={toggleRightPanel}
+                >
+                  <PanelRightIcon />
+                  <span className="sr-only">Toggle Right Panel</span>
+                </Button>
+              )}
             </div>
-            <div className='bg-surface flex-1'>
-              {mainHeaderChildren}
-              {mainPanelChildren}
-            </div>
-          </ResizablePanel>
-          {rightPanelEnabled && (
-            <>
-              <ResizableHandle
-                withHandle={rightPanelOpen}
-                className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
-              />
-              <ResizablePanel
-                ref={rightPanelRef}
-                className={cn(
-                  'hidden md:block rounded border border-border/60 bg-background',
-                  !rightPanelOpen && 'border-none',
-                )}
-                collapsible
-                collapsedSize={MinPanelSizes.COLLAPSED}
-                defaultSize={
-                  rightPanelOpen
-                    ? MinPanelSizes.SIDE_DEFAULT
-                    : MinPanelSizes.COLLAPSED
-                }
-                minSize={MinPanelSizes.SIDE_MIN}
-              >
-                {rightPanelChildren}
-              </ResizablePanel>
-            </>
-          )}
-        </ResizablePanelGroup>
+          </div>
+          <div className='bg-surface flex-1'>
+            {mainHeaderChildren}
+            {mainPanelChildren}
+          </div>
+        </ResizablePanel>
+        {rightPanelEnabled && (
+          <>
+            <ResizableHandle
+              withHandle={rightPanelOpen}
+              className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
+            />
+            <ResizablePanel
+              ref={rightPanelRef}
+              className={cn(
+                'hidden md:block rounded border border-border/60 bg-background',
+                !rightPanelOpen && 'border-none',
+              )}
+              collapsible
+              collapsedSize={MinPanelSizes.COLLAPSED}
+              defaultSize={
+                rightPanelOpen
+                  ? MinPanelSizes.SIDE_DEFAULT
+                  : MinPanelSizes.COLLAPSED
+              }
+              minSize={MinPanelSizes.SIDE_MIN}
+            >
+              {rightPanelChildren}
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
       </div>
     </>
   );

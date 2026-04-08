@@ -48,18 +48,28 @@ export const SearchButton = ({
   const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
-  const [activeOccurrenceIndex, setActiveOccurrenceIndex] = useState<number | undefined>();
-  const pendingOccurrenceIndexRef = useRef<number | null>(null);
+  const [activeOccurrenceIndex, setActiveOccurrenceIndex] = useState(0);
+  const [nextReplaceCursor, setNextReplaceCursor] = useState<{
+    passageUuid?: string | null;
+    start?: number | null;
+  } | null>(null);
+  const pendingOccurrenceSelectionRef = useRef<
+    | { kind: 'index'; index: number }
+    | { kind: 'cursor'; start: number; passageUuid: string }
+    | null
+  >(null);
 
   const passageOccurrences = useMemo(
     () => getPassageOccurrences(results?.passages || [], searchQuery),
     [results?.passages, searchQuery],
   );
-  const activeOccurrence = activeOccurrenceIndex ? passageOccurrences[activeOccurrenceIndex] : undefined;
+  const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
   const activePassageUuid = activeOccurrence?.passageUuid;
   const activePassageLabel = results?.passages.find(
     (passage) => passage.uuid === activePassageUuid,
   )?.label;
+  const hasNextReplaceCursor =
+    nextReplaceCursor?.passageUuid != null && nextReplaceCursor?.start != null;
   const canRunReplace =
     canReplace &&
     !replaceDisabledReason &&
@@ -70,8 +80,10 @@ export const SearchButton = ({
 
   const runSearch = async ({
     nextOccurrenceIndex,
+    preservePendingSelection = false,
   }: {
     nextOccurrenceIndex?: number | null;
+    preservePendingSelection?: boolean;
   } = {}) => {
     if (!searchQuery || !workUuid || !toh) {
       setResults(undefined);
@@ -83,13 +95,18 @@ export const SearchButton = ({
     const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
     setHasResults(
       !!nextResults &&
-      (nextResults.passages.length > 0 ||
-        nextResults.alignments.length > 0 ||
-        nextResults.bibliographies.length > 0 ||
-        nextResults.glossaries.length > 0),
+        (nextResults.passages.length > 0 ||
+          nextResults.alignments.length > 0 ||
+          nextResults.bibliographies.length > 0 ||
+          nextResults.glossaries.length > 0),
     );
     setResults(nextResults);
-    pendingOccurrenceIndexRef.current = nextOccurrenceIndex ?? null;
+    if (!preservePendingSelection) {
+      pendingOccurrenceSelectionRef.current =
+        nextOccurrenceIndex === undefined || nextOccurrenceIndex === null
+          ? null
+          : { kind: 'index', index: nextOccurrenceIndex };
+    }
     setSearching(false);
   };
 
@@ -112,30 +129,50 @@ export const SearchButton = ({
     setSearchQuery('');
     setReplaceQuery('');
     setActiveOccurrenceIndex(0);
-    pendingOccurrenceIndexRef.current = null;
+    setNextReplaceCursor(null);
+    pendingOccurrenceSelectionRef.current = null;
   }, [open]);
 
   useEffect(() => {
     if (passageOccurrences.length === 0) {
       setActiveOccurrenceIndex(0);
-      pendingOccurrenceIndexRef.current = null;
+      pendingOccurrenceSelectionRef.current = null;
       return;
     }
 
-    if (pendingOccurrenceIndexRef.current !== null) {
-      setActiveOccurrenceIndex(
-        Math.min(
-          pendingOccurrenceIndexRef.current,
-          passageOccurrences.length - 1,
-        ),
-      );
-      pendingOccurrenceIndexRef.current = null;
+    const pendingSelection = pendingOccurrenceSelectionRef.current;
+    if (pendingSelection) {
+      if (pendingSelection.kind === 'index') {
+        setActiveOccurrenceIndex(
+          Math.min(pendingSelection.index, passageOccurrences.length - 1),
+        );
+        pendingOccurrenceSelectionRef.current = null;
+        return;
+      }
+
+      const nextIndex = passageOccurrences.findIndex((occurrence) => {
+        if (
+          pendingSelection.kind === 'cursor' &&
+          occurrence.passageUuid === pendingSelection.passageUuid &&
+          occurrence.start >= pendingSelection.start
+        ) {
+          return true;
+        }
+
+        if (pendingSelection.kind !== 'cursor') {
+          return false;
+        }
+
+        return false;
+      });
+
+      setActiveOccurrenceIndex(nextIndex >= 0 ? nextIndex : 0);
+      pendingOccurrenceSelectionRef.current = null;
       return;
     }
 
     setActiveOccurrenceIndex((current) =>
-      current === undefined ? undefined :
-        Math.min(current, passageOccurrences.length - 1),
+      Math.min(current, passageOccurrences.length - 1),
     );
   }, [passageOccurrences]);
 
@@ -144,11 +181,7 @@ export const SearchButton = ({
       return;
     }
 
-    const targetUuids = replaceAll
-      ? results?.passages.map((passage) => passage.uuid) || []
-      : activeOccurrence
-        ? [activeOccurrence.passageUuid]
-        : [];
+    const targetUuids = results?.passages.map((passage) => passage.uuid) || [];
 
     if (targetUuids.length === 0) {
       return;
@@ -157,15 +190,23 @@ export const SearchButton = ({
     setReplacing(true);
 
     try {
-      const response = await replace({
-        client,
+      const replaceRequest = {
         searchText: searchQuery,
         replaceText: replaceQuery,
         targetUuids,
-        occurrenceIndex: replaceAll
-          ? undefined
-          : activeOccurrence?.passageOccurrenceIndex,
-      });
+        occurrenceIndex:
+          replaceAll || hasNextReplaceCursor ? undefined : activeOccurrenceIndex,
+        cursorPassageUuid:
+          replaceAll || !hasNextReplaceCursor
+            ? undefined
+            : nextReplaceCursor?.passageUuid ?? undefined,
+        cursorStart:
+          replaceAll || !hasNextReplaceCursor
+            ? undefined
+            : nextReplaceCursor?.start ?? undefined,
+      };
+
+      const response = await replace({ client, ...replaceRequest });
 
       if (!response.success) {
         console.error(`Replace failed: ${response.error ?? 'unknown error'}`);
@@ -173,9 +214,40 @@ export const SearchButton = ({
       }
 
       await onPassagesReplaced?.(response.passages);
-      await runSearch({
-        nextOccurrenceIndex: replaceAll ? 0 : activeOccurrenceIndex,
-      });
+      if (replaceAll) {
+        setNextReplaceCursor(null);
+        await runSearch({
+          nextOccurrenceIndex: 0,
+        });
+      } else {
+        setNextReplaceCursor(
+          response.nextPassageUuid != null &&
+          response.nextOccurrenceStart != null
+            ? {
+                passageUuid: response.nextPassageUuid,
+                start: response.nextOccurrenceStart,
+              }
+            : null,
+        );
+        pendingOccurrenceSelectionRef.current =
+          response.nextPassageUuid != null &&
+          response.nextOccurrenceStart != null
+            ? {
+                kind: 'cursor',
+                passageUuid: response.nextPassageUuid,
+                start: response.nextOccurrenceStart,
+              }
+            : activeOccurrence
+              ? {
+                  kind: 'index',
+                  index: Math.min(
+                    activeOccurrenceIndex + 1,
+                    Math.max(passageOccurrences.length - 1, 0),
+                  ),
+                }
+              : null;
+        await runSearch({ preservePendingSelection: true });
+      }
     } catch (error) {
       console.error('Replace failed:', error);
     } finally {
@@ -217,11 +289,17 @@ export const SearchButton = ({
             <Input
               autoFocus
               placeholder="Type to search..."
+              value={searchQuery}
               className="w-full text-foreground px-4 py-6"
               onChange={(e) => {
+                const nextValue = e.target.value;
+                if (nextValue === searchQuery) {
+                  return;
+                }
                 setActiveOccurrenceIndex(0);
-                pendingOccurrenceIndexRef.current = null;
-                setSearchQuery(e.target.value);
+                setNextReplaceCursor(null);
+                pendingOccurrenceSelectionRef.current = null;
+                setSearchQuery(nextValue);
               }}
             />
           </div>
@@ -243,7 +321,14 @@ export const SearchButton = ({
                           id="replace-query"
                           placeholder="Type replacement text..."
                           value={replaceQuery}
-                          onChange={(e) => setReplaceQuery(e.target.value)}
+                          onChange={(e) => {
+                            const nextValue = e.target.value;
+                            if (nextValue === replaceQuery) {
+                              return;
+                            }
+                            setNextReplaceCursor(null);
+                            setReplaceQuery(nextValue);
+                          }}
                         />
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-foreground">

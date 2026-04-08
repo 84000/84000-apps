@@ -13,6 +13,8 @@ interface ReplaceResponse {
   replace: {
     deletedAnnotationCount: number;
     error?: string;
+    nextOccurrenceStart?: number | null;
+    nextPassageUuid?: string | null;
     passages: ReplacedPassage[];
     replacedOccurrenceCount: number;
     success: boolean;
@@ -28,6 +30,8 @@ const REPLACE_MUTATION = gql`
     $targetUuids: [ID!]!
     $type: ReplaceType
     $occurrenceIndex: Int
+    $cursorPassageUuid: ID
+    $cursorStart: Int
   ) {
     replace(
       searchText: $searchText
@@ -35,12 +39,16 @@ const REPLACE_MUTATION = gql`
       targetUuids: $targetUuids
       type: $type
       occurrenceIndex: $occurrenceIndex
+      cursorPassageUuid: $cursorPassageUuid
+      cursorStart: $cursorStart
     ) {
       success
       updatedCount
       replacedOccurrenceCount
       updatedAnnotationCount
       deletedAnnotationCount
+      nextPassageUuid
+      nextOccurrenceStart
       error
       passages {
         uuid
@@ -52,6 +60,8 @@ const REPLACE_MUTATION = gql`
 
 export const replace = async ({
   client,
+  cursorPassageUuid,
+  cursorStart,
   occurrenceIndex,
   replaceText,
   searchText,
@@ -62,6 +72,8 @@ export const replace = async ({
   occurrenceIndex?: number;
   replaceText: string;
   searchText: string;
+  cursorPassageUuid?: string;
+  cursorStart?: number;
   targetUuids: string[];
   type?: ReplaceType;
 }) => {
@@ -71,6 +83,8 @@ export const replace = async ({
     targetUuids,
     type,
     occurrenceIndex,
+    cursorPassageUuid,
+    cursorStart,
   });
 
   return response.replace;
