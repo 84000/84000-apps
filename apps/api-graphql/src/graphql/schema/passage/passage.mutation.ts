@@ -163,6 +163,97 @@ const requireEditorEditPermission = async (ctx: GraphQLContext) => {
   return { ok: true as const };
 };
 
+const findNextReplaceCursor = ({
+  fromPassageUuid,
+  fromStart,
+  passages,
+  searchText,
+  updatedContentByUuid,
+}: {
+  fromPassageUuid: string;
+  fromStart: number;
+  passages: Array<{ content: string; uuid: string }>;
+  searchText: string;
+  updatedContentByUuid: Map<string, string>;
+}): { passageUuid: string; start: number } | null => {
+  const startIndex = passages.findIndex(
+    (passage) => passage.uuid === fromPassageUuid,
+  );
+
+  if (startIndex < 0) {
+    return null;
+  }
+
+  const getContent = (uuid: string, fallback: string) =>
+    updatedContentByUuid.get(uuid) ?? fallback;
+
+  const findMatchInPassage = ({
+    minStart,
+    passage,
+  }: {
+    minStart: number;
+    passage: { content: string; uuid: string };
+  }) => {
+    const content = getContent(passage.uuid, passage.content);
+    const match = findLiteralOccurrences(content, searchText).find(
+      (occurrence) => occurrence.start >= minStart,
+    );
+
+    return match
+      ? {
+          passageUuid: passage.uuid,
+          start: match.start,
+        }
+      : null;
+  };
+
+  const currentPassage = passages[startIndex];
+  const currentPassageMatch = findMatchInPassage({
+    minStart: fromStart,
+    passage: currentPassage,
+  });
+
+  if (currentPassageMatch) {
+    return currentPassageMatch;
+  }
+
+  for (let index = startIndex + 1; index < passages.length; index++) {
+    const match = findMatchInPassage({
+      minStart: 0,
+      passage: passages[index],
+    });
+
+    if (match) {
+      return match;
+    }
+  }
+
+  for (let index = 0; index < startIndex; index++) {
+    const match = findMatchInPassage({
+      minStart: 0,
+      passage: passages[index],
+    });
+
+    if (match) {
+      return match;
+    }
+  }
+
+  const wrappedCurrentPassageMatch = findMatchInPassage({
+    minStart: 0,
+    passage: currentPassage,
+  });
+
+  if (
+    wrappedCurrentPassageMatch &&
+    wrappedCurrentPassageMatch.start < fromStart
+  ) {
+    return wrappedCurrentPassageMatch;
+  }
+
+  return null;
+};
+
 /**
  * Mutation resolver for saving passages
  */
@@ -571,6 +662,7 @@ export const replaceMutation = async (
     let singleOccurrenceApplied = false;
     let nextOccurrenceStart: number | null = null;
     let nextPassageUuid: string | null = null;
+    const updatedContentByUuid = new Map<string, string>();
 
     for (const row of orderedRows) {
       if (singleOccurrenceApplied) {
@@ -639,25 +731,33 @@ export const replaceMutation = async (
       }
 
       updatedPassages.push(replacement.passage);
+      updatedContentByUuid.set(row.uuid, replacement.passage.content);
       updatedAnnotationCount += replacement.updatedAnnotationCount;
-        deletedAnnotationCount += replacement.deletedAnnotationCount;
-        replacedOccurrenceCount += replacement.replacementsApplied;
+      deletedAnnotationCount += replacement.deletedAnnotationCount;
+      replacedOccurrenceCount += replacement.replacementsApplied;
 
-        if (args.occurrenceIndex !== undefined && replacement.replacementsApplied > 0) {
-          singleOccurrenceApplied = true;
-        }
+      if (
+        (args.occurrenceIndex !== undefined ||
+          args.cursorPassageUuid !== undefined ||
+          args.cursorStart !== undefined) &&
+        replacement.replacementsApplied > 0
+      ) {
+        const nextCursor = findNextReplaceCursor({
+          fromPassageUuid: row.uuid,
+          fromStart: replacement.nextSearchStart ?? 0,
+          passages: orderedRows.map((orderedRow) => ({
+            uuid: orderedRow.uuid,
+            content: orderedRow.content,
+          })),
+          searchText: args.searchText,
+          updatedContentByUuid,
+        });
 
-        if (
-          (args.occurrenceIndex !== undefined ||
-            args.cursorPassageUuid !== undefined ||
-            args.cursorStart !== undefined) &&
-          replacement.replacementsApplied > 0
-        ) {
-          nextPassageUuid = row.uuid;
-          nextOccurrenceStart = replacement.nextSearchStart ?? null;
-          singleOccurrenceApplied = true;
-        }
+        nextPassageUuid = nextCursor?.passageUuid ?? null;
+        nextOccurrenceStart = nextCursor?.start ?? null;
+        singleOccurrenceApplied = true;
       }
+    }
 
     if (updatedPassages.length === 0) {
       return {

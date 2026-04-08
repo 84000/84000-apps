@@ -20,7 +20,13 @@ import {
   replace,
   type ReplacedPassage,
 } from '@eightyfourthousand/client-graphql';
-import { ChevronRightIcon, Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  Loader2Icon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
 import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
@@ -67,10 +73,18 @@ export const SearchButton = ({
     [results?.passages, searchQuery],
   );
   const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
+  const activeOccurrenceStart = activeOccurrence?.start ?? null;
   const activePassageUuid = activeOccurrence?.passageUuid;
   const activePassageLabel = results?.passages.find(
     (passage) => passage.uuid === activePassageUuid,
   )?.label;
+  const passageOrder = useMemo(
+    () =>
+      new Map(
+        (results?.passages || []).map((passage, index) => [passage.uuid, index]),
+      ),
+    [results?.passages],
+  );
   const hasNextReplaceCursor =
     nextReplaceCursor?.passageUuid != null && nextReplaceCursor?.start != null;
   const canRunReplace =
@@ -80,6 +94,10 @@ export const SearchButton = ({
     !!replaceQuery &&
     passageOccurrences.length > 0 &&
     !replacing;
+  const canStepOccurrences = replaceOpen && passageOccurrences.length > 0;
+  const canStepBackward = canStepOccurrences && activeOccurrenceIndex > 0;
+  const canStepForward =
+    canStepOccurrences && activeOccurrenceIndex < passageOccurrences.length - 1;
 
   const runSearch = async ({
     nextOccurrenceIndex,
@@ -170,7 +188,27 @@ export const SearchButton = ({
         return false;
       });
 
-      setActiveOccurrenceIndex(nextIndex >= 0 ? nextIndex : 0);
+      if (nextIndex >= 0) {
+        setActiveOccurrenceIndex(nextIndex);
+        pendingOccurrenceSelectionRef.current = null;
+        return;
+      }
+
+      const currentPassageOrder =
+        pendingSelection.kind === 'cursor'
+          ? passageOrder.get(pendingSelection.passageUuid)
+          : undefined;
+      const nextPassageIndex =
+        pendingSelection.kind === 'cursor' && currentPassageOrder != null
+          ? passageOccurrences.findIndex((occurrence) => {
+              const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
+              return (
+                occurrenceOrder != null && occurrenceOrder > currentPassageOrder
+              );
+            })
+          : -1;
+
+      setActiveOccurrenceIndex(nextPassageIndex >= 0 ? nextPassageIndex : 0);
       pendingOccurrenceSelectionRef.current = null;
       return;
     }
@@ -181,7 +219,11 @@ export const SearchButton = ({
   }, [passageOccurrences]);
 
   useEffect(() => {
-    if (!replaceQuery || !activePassageUuid) {
+    if (
+      !replaceOpen ||
+      !activePassageUuid ||
+      activeOccurrenceStart == null
+    ) {
       return;
     }
 
@@ -193,7 +235,44 @@ export const SearchButton = ({
           block: 'start',
         });
     });
-  }, [activePassageUuid, replaceQuery]);
+  }, [activeOccurrenceStart, activePassageUuid, replaceOpen]);
+
+  const moveActiveOccurrence = (direction: 'next' | 'previous') => {
+    if (passageOccurrences.length === 0) {
+      return;
+    }
+
+    setNextReplaceCursor(null);
+    pendingOccurrenceSelectionRef.current = null;
+    setActiveOccurrenceIndex((current) => {
+      if (direction === 'previous') {
+        return Math.max(current - 1, 0);
+      }
+
+      return Math.min(current + 1, passageOccurrences.length - 1);
+    });
+  };
+
+  useEffect(() => {
+    if (!open || !replaceOpen || passageOccurrences.length === 0) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveActiveOccurrence('previous');
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveActiveOccurrence('next');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, passageOccurrences.length, replaceOpen]);
 
   const runReplace = async ({ replaceAll }: { replaceAll: boolean }) => {
     if (!canRunReplace) {
@@ -364,7 +443,7 @@ export const SearchButton = ({
                     <div className='text-sm text-muted-foreground pb-4'>
                       Replace is case sensitive and is only applied to passages.
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         size="sm"
                         disabled={!canRunReplace}
@@ -380,6 +459,28 @@ export const SearchButton = ({
                       >
                         Replace all
                       </Button>
+                      <div className="ml-auto flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8"
+                          disabled={!canStepBackward}
+                          onClick={() => moveActiveOccurrence('previous')}
+                        >
+                          <ChevronRightIcon className="size-4 rotate-[-90deg]" />
+                          <span className="sr-only">Previous occurrence</span>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8"
+                          disabled={!canStepForward}
+                          onClick={() => moveActiveOccurrence('next')}
+                        >
+                          <ChevronDownIcon className="size-4" />
+                          <span className="sr-only">Next occurrence</span>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CollapsibleContent>
