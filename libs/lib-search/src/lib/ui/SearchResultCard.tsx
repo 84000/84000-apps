@@ -159,7 +159,7 @@ export const SearchResultCard = ({
       onClick={onClick}
       data-search-result-active={isActive ? 'true' : undefined}
       className={`flex flex-col md:flex-row gap-4 py-6 px-4 md:px-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border transition-colors ${isActive
-        ? 'border-accent border-4 scroll-mt-4'
+        ? 'border-accent border-2 scroll-mt-4'
         : 'border-transparent hover:border-secondary border-2'
         }`}
     >
