@@ -97,8 +97,8 @@ export const SearchResultCard = ({
     <div
       onClick={onClick}
       className={`flex flex-col md:flex-row gap-4 py-6 px-4 md:px-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border transition-colors ${isActive
-        ? 'border-accent'
-        : 'border-transparent hover:border-border'
+        ? 'border-accent border-4'
+        : 'border-transparent hover:border-secondary border-2'
         }`}
     >
       <div className="md:w-28 shrink-0 flex md:flex-col gap-1 md:gap-2 md:text-right text-xs md:text-sm">
