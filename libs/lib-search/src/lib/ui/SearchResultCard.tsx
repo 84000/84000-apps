@@ -56,10 +56,12 @@ export const GlossaryResult = ({
 };
 
 export const SearchResultCard = ({
+  isActive = false,
   match,
   query,
   onClick,
 }: {
+  isActive?: boolean;
   match: SearchResult;
   query: string;
   onClick: () => void;
@@ -94,9 +96,12 @@ export const SearchResultCard = ({
   return (
     <div
       onClick={onClick}
-      className="flex flex-col md:flex-row gap-4 py-6 px-4 md:px-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border border-3 border-transparent hover:border-border transition-colors"
+      className={`flex flex-col md:flex-row gap-4 py-6 px-4 md:px-6 font-serif text-sm text-foreground rounded-lg bg-background cursor-pointer border transition-colors ${isActive
+        ? 'border-accent'
+        : 'border-transparent hover:border-border'
+        }`}
     >
-      <div className="md:w-25 flex-shrink-0 flex md:flex-col gap-1 md:gap-2 md:text-right text-xs md:text-sm">
+      <div className="md:w-28 shrink-0 flex md:flex-col gap-1 md:gap-2 md:text-right text-xs md:text-sm">
         <div className="flex flex-col gap-1">
           <span className="text-secondary capitalize">{passage.type}</span>
           {passage.section && (

@@ -2,12 +2,34 @@
 
 import { PassageMatch, SearchButton, SearchResult } from '@eightyfourthousand/lib-search';
 import { useNavigation } from './NavigationProvider';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { PanelName, PanelState, TabName } from './types';
 import { BodyItemType } from '@eightyfourthousand/data-access';
+import { useEditorState } from '../editor/EditorProvider';
 
 export const ReaderSearchButton = () => {
   const { uuid, toh, updatePanel } = useNavigation();
+  const { applyReplacedPassages, canEdit, dirtyStore } = useEditorState();
+  const [canReplace, setCanReplace] = useState(false);
+  const isDirty = useSyncExternalStore(
+    dirtyStore.subscribe.bind(dirtyStore),
+    dirtyStore.getSnapshot.bind(dirtyStore),
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      const editable = await canEdit();
+      if (active) {
+        setCanReplace(editable);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [canEdit]);
 
   const onResultSelected = useCallback(
     (result: SearchResult) => {
@@ -66,6 +88,11 @@ export const ReaderSearchButton = () => {
     <SearchButton
       workUuid={uuid}
       toh={toh}
+      canReplace={canReplace}
+      replaceDisabledReason={
+        isDirty ? 'Save changes before using search and replace.' : undefined
+      }
+      onPassagesReplaced={applyReplacedPassages}
       onResultSelected={onResultSelected}
     />
   );
