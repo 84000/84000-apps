@@ -2,11 +2,13 @@ import { SearchResult } from '../types';
 import { SearchResultCard } from './SearchResultCard';
 
 export const SearchResultsList = ({
+  activeOccurrenceStart,
   activePassageUuid,
   query,
   results,
   onCardClick,
 }: {
+  activeOccurrenceStart?: number;
   activePassageUuid?: string;
   query: string;
   results: SearchResult[];
@@ -17,6 +19,9 @@ export const SearchResultsList = ({
       {results.map((result, index) => (
         <SearchResultCard
           key={index}
+          activeOccurrenceStart={
+            result.uuid === activePassageUuid ? activeOccurrenceStart : undefined
+          }
           isActive={result.uuid === activePassageUuid}
           match={result}
           query={query}

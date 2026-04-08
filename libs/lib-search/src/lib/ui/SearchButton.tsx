@@ -180,6 +180,21 @@ export const SearchButton = ({
     );
   }, [passageOccurrences]);
 
+  useEffect(() => {
+    if (!replaceQuery || !activePassageUuid) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('[data-search-result-active="true"]')
+        ?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+    });
+  }, [activePassageUuid, replaceQuery]);
+
   const runReplace = async ({ replaceAll }: { replaceAll: boolean }) => {
     if (!canRunReplace) {
       return;
@@ -396,6 +411,7 @@ export const SearchButton = ({
                           value={tab}
                         >
                           <SearchResultsList
+                            activeOccurrenceStart={activeOccurrence?.start}
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}
