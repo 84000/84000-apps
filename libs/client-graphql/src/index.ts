@@ -33,10 +33,13 @@ export {
   getWorkFolios,
   getWorks,
   hasPermission,
+  replace,
   savePassages,
   type TranslationBlocksPage,
   type WorksPage,
   type Permission,
+  type ReplaceType,
+  type ReplacedPassage,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience
