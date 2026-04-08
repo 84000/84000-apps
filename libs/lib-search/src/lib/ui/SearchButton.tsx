@@ -2,13 +2,15 @@
 
 import {
   Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogTitle,
   DialogTrigger,
   Input,
-  Label,
   Tabs,
   TabsContent,
 } from '@eightyfourthousand/design-system';
@@ -18,7 +20,7 @@ import {
   replace,
   type ReplacedPassage,
 } from '@eightyfourthousand/client-graphql';
-import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
+import { ChevronRightIcon, Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
 import { RESULTS_ENTITIES, SearchResult, SearchResults } from '../types';
@@ -42,6 +44,7 @@ export const SearchButton = ({
 }) => {
   const client = useMemo(() => createGraphQLClient(), []);
   const [open, setOpen] = useState(false);
+  const [replaceOpen, setReplaceOpen] = useState(false);
   const [replaceQuery, setReplaceQuery] = useState('');
   const [replacing, setReplacing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -95,10 +98,10 @@ export const SearchButton = ({
     const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
     setHasResults(
       !!nextResults &&
-        (nextResults.passages.length > 0 ||
-          nextResults.alignments.length > 0 ||
-          nextResults.bibliographies.length > 0 ||
-          nextResults.glossaries.length > 0),
+      (nextResults.passages.length > 0 ||
+        nextResults.alignments.length > 0 ||
+        nextResults.bibliographies.length > 0 ||
+        nextResults.glossaries.length > 0),
     );
     setResults(nextResults);
     if (!preservePendingSelection) {
@@ -127,6 +130,7 @@ export const SearchButton = ({
   useEffect(() => {
     setResults(undefined);
     setSearchQuery('');
+    setReplaceOpen(false);
     setReplaceQuery('');
     setActiveOccurrenceIndex(0);
     setNextReplaceCursor(null);
@@ -222,29 +226,29 @@ export const SearchButton = ({
       } else {
         setNextReplaceCursor(
           response.nextPassageUuid != null &&
-          response.nextOccurrenceStart != null
+            response.nextOccurrenceStart != null
             ? {
-                passageUuid: response.nextPassageUuid,
-                start: response.nextOccurrenceStart,
-              }
+              passageUuid: response.nextPassageUuid,
+              start: response.nextOccurrenceStart,
+            }
             : null,
         );
         pendingOccurrenceSelectionRef.current =
           response.nextPassageUuid != null &&
-          response.nextOccurrenceStart != null
+            response.nextOccurrenceStart != null
             ? {
-                kind: 'cursor',
-                passageUuid: response.nextPassageUuid,
-                start: response.nextOccurrenceStart,
-              }
+              kind: 'cursor',
+              passageUuid: response.nextPassageUuid,
+              start: response.nextOccurrenceStart,
+            }
             : activeOccurrence
               ? {
-                  kind: 'index',
-                  index: Math.min(
-                    activeOccurrenceIndex + 1,
-                    Math.max(passageOccurrences.length - 1, 0),
-                  ),
-                }
+                kind: 'index',
+                index: Math.min(
+                  activeOccurrenceIndex + 1,
+                  Math.max(passageOccurrences.length - 1, 0),
+                ),
+              }
               : null;
         await runSearch({ preservePendingSelection: true });
       }
@@ -302,6 +306,70 @@ export const SearchButton = ({
                 setSearchQuery(nextValue);
               }}
             />
+            {canReplace && searchQuery && (
+              <Collapsible
+                open={replaceOpen}
+                onOpenChange={setReplaceOpen}
+                className="bg-background border rounded-lg px-4 py-3 text-foreground"
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="group/collapsible flex w-full items-center justify-start gap-2 text-left text-sm font-medium cursor-pointer"
+                  >
+                    <ChevronRightIcon className="size-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                    <span>Replace</span>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <div className="flex flex-col">
+                    <Input
+                      id="replace-query"
+                      placeholder="Replace with..."
+                      value={replaceQuery}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        if (nextValue === replaceQuery) {
+                          return;
+                        }
+                        setNextReplaceCursor(null);
+                        setReplaceQuery(nextValue);
+                      }}
+                    />
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-foreground">
+                      <span>
+                        {passageOccurrences.length > 0 && activeOccurrence
+                          ? `Occurrence ${(activeOccurrenceIndex || 0) + 1} of ${passageOccurrences.length} in ${activePassageLabel || activePassageUuid}`
+                          : 'No exact passage occurrences available for replacement.'}
+                      </span>
+                      {replaceDisabledReason && (
+                        <span>{replaceDisabledReason}</span>
+                      )}
+                    </div>
+                    <div className='text-sm text-muted-foreground pb-4'>
+                      Replace is case sensitive and is only applied to passages.
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        disabled={!canRunReplace}
+                        onClick={() => runReplace({ replaceAll: false })}
+                      >
+                        {replacing ? 'Replacing…' : 'Replace'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canRunReplace}
+                        onClick={() => runReplace({ replaceAll: true })}
+                      >
+                        Replace all
+                      </Button>
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
           {searchQuery && (
             <>
@@ -312,53 +380,6 @@ export const SearchButton = ({
                     <Loader2Icon className="size-4 ml-2 animate-spin inline-block" />
                   )}
                 </div>
-                {canReplace && (
-                  <div className="bg-background border rounded-lg px-4 py-3 text-foreground">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-col gap-1">
-                        <Label htmlFor="replace-query">Replace with</Label>
-                        <Input
-                          id="replace-query"
-                          placeholder="Type replacement text..."
-                          value={replaceQuery}
-                          onChange={(e) => {
-                            const nextValue = e.target.value;
-                            if (nextValue === replaceQuery) {
-                              return;
-                            }
-                            setNextReplaceCursor(null);
-                            setReplaceQuery(nextValue);
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-secondary-foreground">
-                        <span>
-                          {passageOccurrences.length > 0 && activeOccurrence
-                            ? `Occurrence ${(activeOccurrenceIndex || 0) + 1} of ${passageOccurrences.length} in ${activePassageLabel || activePassageUuid}`
-                            : 'No exact passage occurrences available for replacement.'}
-                        </span>
-                        {replaceDisabledReason && (
-                          <span>{replaceDisabledReason}</span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          disabled={!canRunReplace}
-                          onClick={() => runReplace({ replaceAll: false })}
-                        >
-                          {replacing ? 'Replacing…' : 'Replace'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={!canRunReplace}
-                          onClick={() => runReplace({ replaceAll: true })}
-                        >
-                          Replace all
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
               {results && hasResults ? (
                 <Tabs
