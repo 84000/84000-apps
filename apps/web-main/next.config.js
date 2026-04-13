@@ -34,7 +34,11 @@ async function fetchAndWriteStudioRoutes() {
       return emptyConfig;
     }
 
-    const config = { rewrites: [], publicRoutes: [], restrictedRoutes: {} };
+    const config = {
+      rewrites: [],
+      publicRoutes: payload.publicRoutes || [],
+      restrictedRoutes: {}
+    };
 
     for (const menuItem of payload.items) {
       for (const subItem of menuItem.items || []) {
