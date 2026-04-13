@@ -57,7 +57,7 @@ export const Titles = ({
       const boMain =
         imprint?.mainTitles?.bo ||
         mainTitles.find((t) => t.language === 'bo')?.title;
-      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
+      header = boMain ? `${BO_TITLE_PREFIX}${boMain || ''}` : '';
       break;
     }
     case 'comparison': {
@@ -68,7 +68,7 @@ export const Titles = ({
         imprint?.mainTitles?.en ||
         mainTitles.find((t) => t.language === 'en')?.title ||
         '';
-      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
+      header = boMain ? `${BO_TITLE_PREFIX}${boMain || ''}` : '';
       main = enMain;
       break;
     }
@@ -76,7 +76,7 @@ export const Titles = ({
       const boMain =
         imprint?.mainTitles?.bo ||
         mainTitles.find((t) => t.language === 'bo')?.title;
-      header = `${BO_TITLE_PREFIX}${boMain || ''}`;
+      header = boMain ? `${BO_TITLE_PREFIX}${boMain || ''}` : '';
       main =
         imprint?.mainTitles?.en ||
         mainTitles.find((t) => t.language === 'en')?.title ||
