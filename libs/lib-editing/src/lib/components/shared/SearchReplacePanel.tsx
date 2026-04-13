@@ -16,6 +16,8 @@ import type { SearchActionContext } from '@eightyfourthousand/lib-search';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+const REPLACE_CHUNK_SIZE = 200;
+
 export interface SearchReplacePanelProps {
   canReplace: boolean;
   onPassagesReplaced?: (passages: ReplacedPassage[]) => Promise<void> | void;
@@ -33,13 +35,7 @@ export const SearchReplacePanel = ({
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [replaceQuery, setReplaceQuery] = useState('');
   const [replacing, setReplacing] = useState(false);
-  const [nextReplaceCursor, setNextReplaceCursor] = useState<{
-    passageUuid?: string | null;
-    start?: number | null;
-  } | null>(null);
 
-  const hasNextReplaceCursor =
-    nextReplaceCursor?.passageUuid != null && nextReplaceCursor?.start != null;
   const canRunReplace =
     canReplace &&
     !replaceDisabledReason &&
@@ -70,13 +66,11 @@ export const SearchReplacePanel = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowUp') {
         event.preventDefault();
-        setNextReplaceCursor(null);
         searchContext.moveActiveOccurrence('previous');
       }
 
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        setNextReplaceCursor(null);
         searchContext.moveActiveOccurrence('next');
       }
     };
@@ -94,32 +88,51 @@ export const SearchReplacePanel = ({
       return;
     }
 
-    const targetUuids = searchContext.passages.map((passage) => passage.uuid);
-
-    if (targetUuids.length === 0) {
-      return;
-    }
-
     setReplacing(true);
 
     try {
+      if (replaceAll) {
+        const targetUuids = searchContext.passages.map((passage) => passage.uuid);
+        if (targetUuids.length === 0) {
+          return;
+        }
+
+        const allReplacedPassages: ReplacedPassage[] = [];
+        for (let i = 0; i < targetUuids.length; i += REPLACE_CHUNK_SIZE) {
+          const chunk = targetUuids.slice(i, i + REPLACE_CHUNK_SIZE);
+          const response = await replace({
+            client,
+            searchText: searchContext.searchQuery,
+            replaceText: replaceQuery,
+            targetUuids: chunk,
+          });
+
+          if (!response.success) {
+            console.error(`Replace failed: ${response.error ?? 'unknown error'}`);
+            return;
+          }
+
+          allReplacedPassages.push(...response.passages);
+        }
+
+        await onPassagesReplaced?.(allReplacedPassages);
+        await searchContext.refreshSearch({ nextSelection: { kind: 'index', index: 0 } });
+        return;
+      }
+
+      // Single replace: target only the active passage and use its exact position as the cursor.
+      const activeOccurrence = searchContext.activeOccurrence;
+      if (!activeOccurrence) {
+        return;
+      }
+
       const response = await replace({
         client,
         searchText: searchContext.searchQuery,
         replaceText: replaceQuery,
-        targetUuids,
-        occurrenceIndex:
-          replaceAll || hasNextReplaceCursor
-            ? undefined
-            : searchContext.activeOccurrenceIndex,
-        cursorPassageUuid:
-          replaceAll || !hasNextReplaceCursor
-            ? undefined
-            : nextReplaceCursor?.passageUuid ?? undefined,
-        cursorStart:
-          replaceAll || !hasNextReplaceCursor
-            ? undefined
-            : nextReplaceCursor?.start ?? undefined,
+        targetUuids: [activeOccurrence.passageUuid],
+        cursorPassageUuid: activeOccurrence.passageUuid,
+        cursorStart: activeOccurrence.start,
       });
 
       if (!response.success) {
@@ -129,14 +142,6 @@ export const SearchReplacePanel = ({
 
       await onPassagesReplaced?.(response.passages);
 
-      if (replaceAll) {
-        setNextReplaceCursor(null);
-        await searchContext.refreshSearch({
-          nextSelection: { kind: 'index', index: 0 },
-        });
-        return;
-      }
-
       const nextSelection =
         response.nextPassageUuid != null && response.nextOccurrenceStart != null
           ? {
@@ -144,24 +149,13 @@ export const SearchReplacePanel = ({
               passageUuid: response.nextPassageUuid,
               start: response.nextOccurrenceStart,
             }
-          : searchContext.activeOccurrence
-            ? {
-                kind: 'index' as const,
-                index: Math.min(
-                  searchContext.activeOccurrenceIndex + 1,
-                  Math.max(searchContext.passageOccurrences.length - 1, 0),
-                ),
-              }
-            : null;
-
-      setNextReplaceCursor(
-        nextSelection?.kind === 'cursor'
-          ? {
-              passageUuid: nextSelection.passageUuid,
-              start: nextSelection.start,
-            }
-          : null,
-      );
+          : {
+              kind: 'index' as const,
+              index: Math.min(
+                searchContext.activeOccurrenceIndex + 1,
+                Math.max(searchContext.passageOccurrences.length - 1, 0),
+              ),
+            };
 
       await searchContext.refreshSearch({ nextSelection });
     } catch (error) {
@@ -197,7 +191,6 @@ export const SearchReplacePanel = ({
               if (nextValue === replaceQuery) {
                 return;
               }
-              setNextReplaceCursor(null);
               setReplaceQuery(nextValue);
               if (nextValue) {
                 searchContext.scrollActiveOccurrenceIntoView();
@@ -239,7 +232,6 @@ export const SearchReplacePanel = ({
                 className="size-8"
                 disabled={!canStepBackward}
                 onClick={() => {
-                  setNextReplaceCursor(null);
                   searchContext.moveActiveOccurrence('previous');
                 }}
               >
@@ -252,7 +244,6 @@ export const SearchReplacePanel = ({
                 className="size-8"
                 disabled={!canStepForward}
                 onClick={() => {
-                  setNextReplaceCursor(null);
                   searchContext.moveActiveOccurrence('next');
                 }}
               >
