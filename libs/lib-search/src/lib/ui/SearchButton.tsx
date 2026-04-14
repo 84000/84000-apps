@@ -17,7 +17,12 @@ import { Loader2Icon, SearchIcon, XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
-import type { PassageMatch, SearchResult, SearchResults } from '../types';
+import type {
+  PassageMatch,
+  ResultsEntity,
+  SearchResult,
+  SearchResults,
+} from '../types';
 import { RESULTS_ENTITIES } from '../types';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
@@ -51,6 +56,25 @@ export interface SearchButtonProps {
   workUuid?: string;
 }
 
+const DEFAULT_RESULTS_TAB: ResultsEntity = 'alignments';
+
+const getFirstResultsTab = (results?: SearchResults): ResultsEntity => {
+  return (
+    RESULTS_ENTITIES.find((tab) => (results?.[tab].length ?? 0) > 0) ??
+    DEFAULT_RESULTS_TAB
+  );
+};
+
+const getOccurrenceResultsTab = (
+  occurrence?: PassageOccurrence,
+): ResultsEntity | undefined => {
+  if (!occurrence) {
+    return undefined;
+  }
+
+  return occurrence.type === 'alignment' ? 'alignments' : 'passages';
+};
+
 export const SearchButton = ({
   renderActions,
   workUuid,
@@ -63,14 +87,21 @@ export const SearchButton = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResults>();
   const [activeOccurrenceIndex, setActiveOccurrenceIndexState] = useState(0);
+  const [activeResultsTab, setActiveResultsTab] =
+    useState<ResultsEntity>(DEFAULT_RESULTS_TAB);
   const [shouldScrollActiveOccurrence, setShouldScrollActiveOccurrence] =
     useState(false);
-  const pendingOccurrenceSelectionRef =
-    useRef<SearchPendingSelection | null>(null);
+  const pendingOccurrenceSelectionRef = useRef<SearchPendingSelection | null>(
+    null,
+  );
 
   const passageOccurrences = useMemo(
-    () => getPassageOccurrences([...(results?.passages || []), ...(results?.alignments || [])], searchQuery),
-    [results?.passages, searchQuery],
+    () =>
+      getPassageOccurrences(
+        [...(results?.alignments || []), ...(results?.passages || [])],
+        searchQuery,
+      ),
+    [results?.alignments, results?.passages, searchQuery],
   );
   const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
   const activeOccurrenceStart = activeOccurrence?.start ?? null;
@@ -81,7 +112,10 @@ export const SearchButton = ({
   const passageOrder = useMemo(
     () =>
       new Map(
-        (results?.passages || []).map((passage, index) => [passage.uuid, index]),
+        (results?.passages || []).map((passage, index) => [
+          passage.uuid,
+          index,
+        ]),
       ),
     [results?.passages],
   );
@@ -106,7 +140,11 @@ export const SearchButton = ({
       }
 
       setSearching(true);
-      const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
+      const nextResults = await search({
+        text: searchQuery,
+        uuid: workUuid,
+        toh,
+      });
       setHasResults(
         !!nextResults &&
         (nextResults.passages.length > 0 ||
@@ -129,7 +167,10 @@ export const SearchButton = ({
     (nextIndex: number) => {
       pendingOccurrenceSelectionRef.current = null;
       setActiveOccurrenceIndexState(
-        Math.max(0, Math.min(nextIndex, Math.max(passageOccurrences.length - 1, 0))),
+        Math.max(
+          0,
+          Math.min(nextIndex, Math.max(passageOccurrences.length - 1, 0)),
+        ),
       );
     },
     [passageOccurrences.length],
@@ -168,6 +209,17 @@ export const SearchButton = ({
     setShouldScrollActiveOccurrence(false);
     pendingOccurrenceSelectionRef.current = null;
   }, [open]);
+
+  useEffect(() => {
+    if (!results) {
+      setActiveResultsTab(DEFAULT_RESULTS_TAB);
+      return;
+    }
+
+    setActiveResultsTab((currentTab) =>
+      results[currentTab].length > 0 ? currentTab : getFirstResultsTab(results),
+    );
+  }, [results]);
 
   useEffect(() => {
     if (passageOccurrences.length === 0) {
@@ -218,7 +270,9 @@ export const SearchButton = ({
           })
           : -1;
 
-      setActiveOccurrenceIndexState(nextPassageIndex >= 0 ? nextPassageIndex : 0);
+      setActiveOccurrenceIndexState(
+        nextPassageIndex >= 0 ? nextPassageIndex : 0,
+      );
       pendingOccurrenceSelectionRef.current = null;
       return;
     }
@@ -227,6 +281,17 @@ export const SearchButton = ({
       Math.min(current, passageOccurrences.length - 1),
     );
   }, [passageOccurrences, passageOrder]);
+
+  useEffect(() => {
+    if (!shouldScrollActiveOccurrence || !activeOccurrence || !results) {
+      return;
+    }
+
+    const occurrenceTab = getOccurrenceResultsTab(activeOccurrence);
+    if (occurrenceTab && results[occurrenceTab].length > 0) {
+      setActiveResultsTab(occurrenceTab);
+    }
+  }, [activeOccurrence, results, shouldScrollActiveOccurrence]);
 
   useEffect(() => {
     if (
@@ -240,6 +305,7 @@ export const SearchButton = ({
     scrollActiveOccurrenceIntoView();
   }, [
     activeOccurrenceStart,
+    activeResultsTab,
     activePassageUuid,
     scrollActiveOccurrenceIntoView,
     shouldScrollActiveOccurrence,
@@ -342,7 +408,10 @@ export const SearchButton = ({
               </div>
               {results && hasResults ? (
                 <Tabs
-                  defaultValue="alignments"
+                  value={activeResultsTab}
+                  onValueChange={(tab) => {
+                    setActiveResultsTab(tab as ResultsEntity);
+                  }}
                   className="flex flex-col grow min-h-0 pt-2"
                 >
                   <SearchResultTabs results={results} />
@@ -355,7 +424,12 @@ export const SearchButton = ({
                           value={tab}
                         >
                           <SearchResultsList
-                            activeOccurrenceStart={(activeOccurrenceStart && shouldScrollActiveOccurrence) ? activeOccurrenceStart : undefined}
+                            activeOccurrenceStart={
+                              activeOccurrenceStart != null &&
+                                shouldScrollActiveOccurrence
+                                ? activeOccurrenceStart
+                                : undefined
+                            }
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}

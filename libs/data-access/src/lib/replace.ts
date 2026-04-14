@@ -6,6 +6,7 @@ export interface PassageOccurrence {
   passageOccurrenceIndex: number;
   passageUuid: string;
   start: number;
+  type: 'passage' | 'alignment';
 }
 
 export interface PassageReplacementResult {
@@ -50,7 +51,7 @@ export const findLiteralOccurrences = (
 };
 
 export const getPassageOccurrences = (
-  passages: Pick<Passage, 'content' | 'uuid'>[],
+  passages: { content: string; uuid: string; type: 'passage' | 'alignment' }[],
   searchText: string,
 ): PassageOccurrence[] => {
   let index = 0;
@@ -61,6 +62,7 @@ export const getPassageOccurrences = (
       index: index++,
       passageOccurrenceIndex: passageIndex,
       passageUuid: passage.uuid,
+      type: passage.type,
     })),
   );
 };
