@@ -74,15 +74,23 @@ export const PassageResult = ({
 };
 
 export const AlignmentResult = ({
+  activeOccurrenceStart,
   match,
   query,
 }: {
+  activeOccurrenceStart?: number;
   match: AlignmentMatch;
   query: string;
 }) => {
   return (
     <div className="grid md:grid-cols-2 gap-4">
-      <div>{highlightText(match.content, query)}</div>
+      <div>
+        {renderPassageHighlight({
+          activeOccurrenceStart,
+          query,
+          text: match.content,
+        })}
+      </div>
       <div className="text-lg">{highlightText(match.source, query)}</div>
     </div>
   );
@@ -138,7 +146,11 @@ export const SearchResultCard = ({
         );
       case 'alignment':
         return (
-          <AlignmentResult match={match as AlignmentMatch} query={query} />
+          <AlignmentResult
+            activeOccurrenceStart={isActive ? activeOccurrenceStart : undefined}
+            match={match as AlignmentMatch}
+            query={query}
+          />
         );
       case 'bibliography':
         return (

@@ -16,18 +16,20 @@ export const SearchResultsList = ({
 }) => {
   return (
     <div className="h-full flex flex-col gap-3 pb-4 overflow-y-auto min-h-0">
-      {results.map((result, index) => (
-        <SearchResultCard
-          key={index}
-          activeOccurrenceStart={
-            result.uuid === activePassageUuid ? activeOccurrenceStart : undefined
-          }
-          isActive={result.uuid === activePassageUuid}
-          match={result}
-          query={query}
-          onClick={() => onCardClick(result)}
-        />
-      ))}
+      {results.map((result, index) => {
+        const start = result.uuid === activePassageUuid ? activeOccurrenceStart : undefined;
+        const isActive = !!start;
+        return (
+          <SearchResultCard
+            key={index}
+            activeOccurrenceStart={start}
+            isActive={isActive}
+            match={result}
+            query={query}
+            onClick={() => onCardClick(result)}
+          />
+        )
+      })}
     </div>
   );
 };
