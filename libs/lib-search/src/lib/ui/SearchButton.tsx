@@ -109,10 +109,10 @@ export const SearchButton = ({
       const nextResults = await search({ text: searchQuery, uuid: workUuid, toh });
       setHasResults(
         !!nextResults &&
-          (nextResults.passages.length > 0 ||
-            nextResults.alignments.length > 0 ||
-            nextResults.bibliographies.length > 0 ||
-            nextResults.glossaries.length > 0),
+        (nextResults.passages.length > 0 ||
+          nextResults.alignments.length > 0 ||
+          nextResults.bibliographies.length > 0 ||
+          nextResults.glossaries.length > 0),
       );
       setResults(nextResults);
 
@@ -211,11 +211,11 @@ export const SearchButton = ({
       const nextPassageIndex =
         pendingSelection.kind === 'cursor' && currentPassageOrder != null
           ? passageOccurrences.findIndex((occurrence) => {
-              const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
-              return (
-                occurrenceOrder != null && occurrenceOrder > currentPassageOrder
-              );
-            })
+            const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
+            return (
+              occurrenceOrder != null && occurrenceOrder > currentPassageOrder
+            );
+          })
           : -1;
 
       setActiveOccurrenceIndexState(nextPassageIndex >= 0 ? nextPassageIndex : 0);
@@ -342,7 +342,7 @@ export const SearchButton = ({
               </div>
               {results && hasResults ? (
                 <Tabs
-                  defaultValue="passages"
+                  defaultValue="alignments"
                   className="flex flex-col grow min-h-0 pt-2"
                 >
                   <SearchResultTabs results={results} />
@@ -355,7 +355,7 @@ export const SearchButton = ({
                           value={tab}
                         >
                           <SearchResultsList
-                            activeOccurrenceStart={activeOccurrenceStart ?? undefined}
+                            activeOccurrenceStart={(activeOccurrenceStart && shouldScrollActiveOccurrence) ? activeOccurrenceStart : undefined}
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}

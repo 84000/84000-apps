@@ -1,11 +1,18 @@
 export const RESULTS_ENTITIES = [
-  'passages',
   'alignments',
+  'passages',
   'bibliographies',
   'glossaries',
 ] as const;
 
 export type ResultsEntity = (typeof RESULTS_ENTITIES)[number];
+
+export const RESULTS_ENTITY_LABELS: Record<ResultsEntity, string> = {
+  alignments: 'Translation Passages',
+  passages: 'Other Passages',
+  bibliographies: 'Bibliographies',
+  glossaries: 'Glossaries',
+} as const;
 
 export type BibliographySearchMatchDTO = {
   bibliography_uuid: string;
