@@ -19,6 +19,7 @@ export const ReaderSearchButton = () => {
   const isDirty = useSyncExternalStore(
     dirtyStore.subscribe.bind(dirtyStore),
     dirtyStore.getSnapshot.bind(dirtyStore),
+    () => false,
   );
 
   useEffect(() => {

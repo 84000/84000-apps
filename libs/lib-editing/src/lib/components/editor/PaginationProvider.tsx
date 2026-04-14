@@ -116,7 +116,11 @@ export const PaginationProvider = ({
   // matches — this prevents a PaginationProvider for one tab (e.g. endnotes)
   // from reacting to hashes set by a different tab (e.g. glossary).
   const panelHash =
-    !tab || panels[panel]?.tab === tab ? panels[panel]?.hash : undefined;
+    !tab ||
+      panels[panel]?.tab === tab ||
+      (tab === 'translation' && panels[panel]?.tab === 'compare') ||
+      (tab === 'compare' && panels[panel]?.tab === 'translation')
+      ? panels[panel]?.hash : undefined;
 
   const { extensions } = useTranslationExtensions({
     fragment,

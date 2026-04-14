@@ -9,7 +9,7 @@ import type {
   Work,
 } from '@eightyfourthousand/data-access';
 import { createContext, useContext } from 'react';
-import { PanelName, PanelsState, PanelState, TabName } from './types';
+import { PanelName, PanelsState, PanelState } from './types';
 
 export interface NavigationState {
   uuid: string;
