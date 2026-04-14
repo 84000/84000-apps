@@ -249,7 +249,7 @@ export function A({
   );
 }
 
-export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6';
+export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6 [&_blockquote]:border-l-0';
 export function Blockquote({
   children,
   className,
