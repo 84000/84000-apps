@@ -69,7 +69,7 @@ export const SearchButton = ({
     useRef<SearchPendingSelection | null>(null);
 
   const passageOccurrences = useMemo(
-    () => getPassageOccurrences(results?.passages || [], searchQuery),
+    () => getPassageOccurrences([...(results?.passages || []), ...(results?.alignments || [])], searchQuery),
     [results?.passages, searchQuery],
   );
   const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
