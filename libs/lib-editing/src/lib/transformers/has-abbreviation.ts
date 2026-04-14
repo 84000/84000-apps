@@ -5,7 +5,7 @@ import { Transformer } from './transformer';
 
 export const hasAbbreviation: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { abbreviation, uuid } = annotation as HasAbbreviationAnnotation;
+  const { abbreviation, uuid, start, end } = annotation as HasAbbreviationAnnotation;
 
   recurse({
     until: ['text'],
@@ -25,7 +25,7 @@ export const hasAbbreviation: Transformer = (ctx) => {
               type: 'text',
               text: block.text,
               marks: block.marks,
-              attrs: { ...block.attrs }
+              attrs: { start, end }
             },
           ];
         },
