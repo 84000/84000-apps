@@ -21,7 +21,12 @@ export const hasAbbreviation: Transformer = (ctx) => {
             uuid,
           };
           block.content = [
-            { type: 'text', text: block.text, marks: block.marks },
+            {
+              type: 'text',
+              text: block.text,
+              marks: block.marks,
+              attrs: { ...block.attrs }
+            },
           ];
         },
       });
