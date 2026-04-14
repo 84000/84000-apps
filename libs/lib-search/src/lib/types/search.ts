@@ -1,3 +1,5 @@
+import { GlossaryTermInstance, GlossaryTermInstanceDTO, glossaryTermInstanceFromDTO } from "@eightyfourthousand/data-access";
+
 export const RESULTS_ENTITIES = [
   'alignments',
   'passages',
@@ -20,8 +22,10 @@ export type BibliographySearchMatchDTO = {
 };
 
 export type GlossarySearchMatchDTO = {
+  authority_uuid: string;
   glossary_uuid: string;
   content: string;
+  entry: GlossaryTermInstanceDTO;
 };
 
 export type PassageSearchMatchDTO = {
@@ -67,6 +71,7 @@ export type BibliographyMatch = SearchMatch & {
 
 export type GlossaryMatch = SearchMatch & {
   type: 'glossary';
+  entry: GlossaryTermInstance;
 };
 
 export type SearchResultsDTO = {
@@ -105,8 +110,9 @@ export const glossaryMatchFromDTO = (
 ): GlossaryMatch => {
   return {
     type: 'glossary',
-    uuid: dto.glossary_uuid,
+    uuid: dto.authority_uuid,
     content: dto.content,
+    entry: glossaryTermInstanceFromDTO(dto.entry),
   };
 };
 

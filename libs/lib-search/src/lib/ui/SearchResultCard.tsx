@@ -1,6 +1,6 @@
 'use client';
 
-import { highlightText, removeHtmlTags, useIsMobile } from '@eightyfourthousand/lib-utils';
+import { highlightText, removeDiacritics, removeHtmlTags, useIsMobile } from '@eightyfourthousand/lib-utils';
 import {
   AlignmentMatch,
   BibliographyMatch,
@@ -113,7 +113,20 @@ export const GlossaryResult = ({
   match: GlossaryMatch;
   query: string;
 }) => {
-  return <div>{highlightText(removeHtmlTags(match.content), query)}</div>;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className='text-primary font-bold'>{
+        highlightText(
+          removeDiacritics(match.content),
+          removeDiacritics(query)
+        )
+      }</div>
+      {match.entry.definition && <div
+        className="glossary-instance-definition"
+        dangerouslySetInnerHTML={{ __html: match.entry.definition }}
+      />}
+    </div>
+  );
 };
 
 export const SearchResultCard = ({
