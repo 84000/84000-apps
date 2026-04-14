@@ -11,11 +11,14 @@ export async function GET(
     nextUrl: { searchParams },
   } = request;
 
+  const isEditor = searchParams.get('edit') === 'true';
+  const prefix = isEditor ? '/translations/editor' : '/translations/reader';
+
   const path = await lookupEntity({
     type,
     entity,
     searchParams,
-    prefix: '/translations/reader',
+    prefix,
   });
 
   if (!path) {

@@ -86,7 +86,10 @@ export const Mention = Node.create<MentionOptions>({
         anchor.textContent = item.text || item.displayText || item.entity;
 
         // Compute href from linkType + entity
-        const href = `/entity/${item.linkType}/${item.entity}`;
+        let href = `/entity/${item.linkType}/${item.entity}`;
+        if (isEditable) {
+          href = `${href}?edit=true`;
+        }
 
         if (item.isSameWork) {
           // Same-work links navigate in-place via panel system
