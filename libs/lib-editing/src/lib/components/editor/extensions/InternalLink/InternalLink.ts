@@ -91,7 +91,10 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
         e.preventDefault();
         if (!isSameWork) {
           // Cross-work links open in a new tab
-          const href = props.mark.attrs.href || '#';
+          let href = props.mark.attrs.href || '#';
+          if (isEditable && href) {
+            href = `${href}?edit=true`;
+          }
           window.open(href, '_blank');
           return
         }
