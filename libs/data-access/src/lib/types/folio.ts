@@ -3,7 +3,7 @@ export type FolioSide = (typeof FOLIO_SIDES)[number];
 
 export type FolioDTO = {
   folio_uuid: string;
-  content: string;
+  content?: string;
   volume_number: number;
   folio_number: number;
   side: FolioSide;
@@ -20,7 +20,7 @@ export type Folio = {
 export const folioFromDTO = (dto: FolioDTO): Folio => {
   return {
     uuid: dto.folio_uuid,
-    content: dto.content,
+    content: dto.content || '',
     volume: dto.volume_number,
     folio: dto.folio_number,
     side: dto.side,
