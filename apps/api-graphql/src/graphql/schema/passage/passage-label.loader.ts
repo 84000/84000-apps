@@ -1,5 +1,8 @@
 import DataLoader from 'dataloader';
-import type { DataClient } from '@eightyfourthousand/data-access';
+import {
+  getPassageLabelsByUuids,
+  type DataClient,
+} from '@eightyfourthousand/data-access';
 
 /**
  * Creates a DataLoader for batch-fetching passage labels by UUID.
@@ -7,26 +10,10 @@ import type { DataClient } from '@eightyfourthousand/data-access';
  */
 export function createPassageLabelLoader(supabase: DataClient) {
   return new DataLoader<string, string | null>(async (passageUuids) => {
-    const { data, error } = await supabase
-      .from('passages')
-      .select('uuid, label')
-      .in('uuid', passageUuids as string[]);
-
-    if (error) {
-      console.error('Error batch loading passage labels:', error);
-      // Return null for all keys on error
-      return passageUuids.map(() => null);
-    }
-
-    // Create a map for O(1) lookup
-    const labelsByUuid = new Map<string, string>();
-    for (const passage of data ?? []) {
-      if (passage.label) {
-        labelsByUuid.set(passage.uuid, passage.label);
-      }
-    }
-
-    // Return in same order as input keys
+    const labelsByUuid = await getPassageLabelsByUuids({
+      client: supabase,
+      passageUuids,
+    });
     return passageUuids.map((uuid) => labelsByUuid.get(uuid) ?? null);
   });
 }
