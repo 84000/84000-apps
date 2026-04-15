@@ -7,8 +7,6 @@ export {
 // Functions (same as browser)
 export {
   getPassage,
-  getTranslationPassages,
-  getTranslationPassagesAround,
   getTranslationBlocks,
   getTranslationBlocksAround,
   getTranslationTitles,
@@ -18,19 +16,14 @@ export {
   getTranslationUuids,
   getTranslationToc,
   getTranslationImprint,
-  getGlossaryTerms,
-  getGlossaryEntry,
   getGlossaryInstance,
-  getWorkGlossary,
   getWorkGlossaryTerms,
   getWorkGlossaryTermsAround,
   type GlossaryTermsPage,
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,
-  getWorks,
   type TranslationBlocksPage,
-  type WorksPage,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

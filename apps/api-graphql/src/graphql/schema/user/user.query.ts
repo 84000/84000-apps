@@ -1,4 +1,5 @@
 import type { GraphQLContext } from '../../context';
+import { hasPermission } from '@eightyfourthousand/data-access';
 
 /**
  * Map GraphQL Permission enum to Supabase permission strings
@@ -40,15 +41,9 @@ export const userQueries = {
       return false;
     }
 
-    const { data, error } = await ctx.supabase.rpc('authorize', {
-      requested_permission: supabasePermission,
+    return hasPermission({
+      client: ctx.supabase,
+      permission: supabasePermission,
     });
-
-    if (error) {
-      console.error(`Failed to check permission: ${error.message}`);
-      return false;
-    }
-
-    return data as boolean;
   },
 };

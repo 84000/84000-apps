@@ -1,13 +1,10 @@
-import type { GraphQLContext } from '../../context';
 import {
-  ANNOTATIONS_TO_IGNORE,
   Annotation,
   AnnotationDTO,
   Passage,
   annotationsFromDTO,
   findLiteralOccurrences,
-  passagesToDTO,
-  passagesToRowDTO,
+  type ReplacePassageRow,
 } from '@eightyfourthousand/data-access';
 
 export interface ReplaceResult {
@@ -30,17 +27,6 @@ export interface ReplaceResult {
   updatedAnnotationCount: number;
   updatedCount: number;
 }
-
-export type ReplacePassageRow = {
-  content: string;
-  label: string | null;
-  sort: number;
-  toh: string | null;
-  type: string;
-  uuid: string;
-  work_uuid: string;
-  xmlId: string | null;
-};
 
 const EMPTY_REPLACE_RESULT: Omit<
   ReplaceResult,
@@ -283,148 +269,4 @@ export const buildReplaceResponsePassages = ({
         xmlId: row.xmlId ?? null,
       };
     });
-};
-
-export const fetchReplaceRows = async ({
-  ctx,
-  targetUuids,
-}: {
-  ctx: GraphQLContext;
-  targetUuids: string[];
-}) => {
-  const { data: rows, error: rowsError } = await ctx.supabase
-    .from('passages')
-    .select('uuid, work_uuid, content, label, sort, type, toh, xmlId')
-    .in('uuid', targetUuids);
-
-  if (rowsError) {
-    console.error('Error fetching replace targets:', rowsError);
-    return {
-      ok: false as const,
-      result: replaceFailure(
-        `Failed to fetch replace targets: ${rowsError.message}`,
-      ),
-    };
-  }
-
-  const rowsByUuid = new Map((rows ?? []).map((row) => [row.uuid, row]));
-  const missingUuids = targetUuids.filter((uuid) => !rowsByUuid.has(uuid));
-  if (missingUuids.length > 0) {
-    return {
-      ok: false as const,
-      result: replaceFailure(`Unknown target UUIDs: ${missingUuids.join(', ')}`),
-    };
-  }
-
-  return {
-    ok: true as const,
-    orderedRows: targetUuids
-      .map((uuid) => rowsByUuid.get(uuid))
-      .filter((row): row is ReplacePassageRow => Boolean(row)),
-  };
-};
-
-export const fetchReplaceAnnotations = async ({
-  ctx,
-  targetUuids,
-}: {
-  ctx: GraphQLContext;
-  targetUuids: string[];
-}) => {
-  const { data: rawAnnotations, error: annotationsError } = await ctx.supabase
-    .from('passage_annotations')
-    .select('uuid, content, end, start, type, passage_uuid, toh')
-    .in('passage_uuid', targetUuids)
-    .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
-
-  if (annotationsError) {
-    console.error('Error fetching annotations for replace:', annotationsError);
-    return {
-      ok: false as const,
-      result: replaceFailure(
-        `Failed to fetch annotations: ${annotationsError.message}`,
-      ),
-    };
-  }
-
-  return {
-    ok: true as const,
-    rawAnnotations: (rawAnnotations ?? []) as AnnotationDTO[],
-  };
-};
-
-export const persistReplaceChanges = async ({
-  ctx,
-  rawAnnotations,
-  updatedPassages,
-}: {
-  ctx: GraphQLContext;
-  rawAnnotations: AnnotationDTO[];
-  updatedPassages: Passage[];
-}) => {
-  const passageRowDtos = passagesToRowDTO(updatedPassages);
-  const annotationDtos = passagesToDTO(updatedPassages).flatMap(
-    (passage) => passage.annotations || [],
-  );
-  const updatedPassageUuids = updatedPassages.map((passage) => passage.uuid);
-  const updatedAnnotationUuids = new Set(annotationDtos.map((a) => a.uuid));
-  const annotationsToDelete = rawAnnotations.filter(
-    (annotation) =>
-      updatedPassageUuids.includes(annotation.passage_uuid || '') &&
-      !updatedAnnotationUuids.has(annotation.uuid),
-  );
-
-  const { error: passageError } = await ctx.supabase
-    .from('passages')
-    .upsert(passageRowDtos, { onConflict: 'uuid' });
-
-  if (passageError) {
-    console.error('Error saving replaced passages:', passageError);
-    return {
-      ok: false as const,
-      result: replaceFailure(
-        `Failed to save replaced passages: ${passageError.message}`,
-      ),
-    };
-  }
-
-  if (annotationDtos.length > 0) {
-    const { error: annotationError } = await ctx.supabase
-      .from('passage_annotations')
-      .upsert(annotationDtos, { onConflict: 'uuid' });
-
-    if (annotationError) {
-      console.error('Error saving replaced annotations:', annotationError);
-      return {
-        ok: false as const,
-        result: replaceFailure(
-          `Failed to save replaced annotations: ${annotationError.message}`,
-        ),
-      };
-    }
-  }
-
-  if (annotationsToDelete.length > 0) {
-    const { error: deleteError } = await ctx.supabase
-      .from('passage_annotations')
-      .delete()
-      .in(
-        'uuid',
-        annotationsToDelete.map((annotation) => annotation.uuid),
-      );
-
-    if (deleteError) {
-      console.error('Error deleting replaced annotations:', deleteError);
-      return {
-        ok: false as const,
-        result: replaceFailure(
-          `Failed to delete replaced annotations: ${deleteError.message}`,
-        ),
-      };
-    }
-  }
-
-  return {
-    ok: true as const,
-  };
 };

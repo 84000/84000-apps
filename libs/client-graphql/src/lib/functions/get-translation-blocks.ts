@@ -96,9 +96,7 @@ function mapDirection(
 /**
  * Get paginated translation blocks (TipTap JSON) for a work.
  *
- * Unlike getTranslationPassages which returns Passage objects,
- * this function returns pre-transformed TipTap editor blocks
- * ready for rendering.
+ * Returns pre-transformed TipTap editor blocks ready for rendering.
  */
 export async function getTranslationBlocks({
   client,

@@ -115,94 +115,6 @@ export type FolioSide =
   | 'a'
   | 'b';
 
-/** Related entity for a glossary entry */
-export type GlossaryEntity = {
-  __typename?: 'GlossaryEntity';
-  /** Source entity headword */
-  sourceHeadword: Scalars['String']['output'];
-  /** Source entity UUID */
-  sourceUuid: Scalars['ID']['output'];
-  /** Target entity headword */
-  targetHeadword: Scalars['String']['output'];
-  /** Target entity UUID */
-  targetUuid: Scalars['ID']['output'];
-};
-
-/** Detailed glossary entry for the detail page */
-export type GlossaryEntry = {
-  __typename?: 'GlossaryEntry';
-  /** Authority UUID */
-  authorityUuid: Scalars['ID']['output'];
-  /** Chinese names */
-  chinese: Array<Scalars['String']['output']>;
-  /** Classifications/types */
-  classifications: Array<Scalars['String']['output']>;
-  /** Definition of the term */
-  definition?: Maybe<Scalars['String']['output']>;
-  /** English names/translations */
-  english: Array<Scalars['String']['output']>;
-  /** Primary headword */
-  headword: Scalars['String']['output'];
-  /** Primary language of the headword */
-  language: Scalars['String']['output'];
-  /** Pali names */
-  pali: Array<Scalars['String']['output']>;
-  /** Related entities */
-  relatedEntities: Array<GlossaryEntity>;
-  /** Related instances across works */
-  relatedInstances: Array<GlossaryInstance>;
-  /** Sanskrit names */
-  sanskrit: Array<Scalars['String']['output']>;
-  /** Tibetan names */
-  tibetan: Array<Scalars['String']['output']>;
-  /** XML ID from source */
-  xmlId?: Maybe<Scalars['String']['output']>;
-};
-
-/** A glossary instance appearing in a specific work */
-export type GlossaryInstance = {
-  __typename?: 'GlossaryInstance';
-  /** Canon the work belongs to */
-  canon?: Maybe<Scalars['String']['output']>;
-  /** Chinese names */
-  chinese: Array<Scalars['String']['output']>;
-  /** Creators/translators */
-  creators: Array<Scalars['String']['output']>;
-  /** Definition for this instance */
-  definition?: Maybe<Scalars['String']['output']>;
-  /** English names/translations */
-  english: Array<Scalars['String']['output']>;
-  /** Pali names */
-  pali: Array<Scalars['String']['output']>;
-  /** Sanskrit names */
-  sanskrit: Array<Scalars['String']['output']>;
-  /** Tibetan names */
-  tibetan: Array<Scalars['String']['output']>;
-  /** Tohoku catalog entry */
-  toh: Scalars['String']['output'];
-  /** UUID of the work containing this instance */
-  workUuid: Scalars['ID']['output'];
-};
-
-/** A glossary item for the landing page listing */
-export type GlossaryLandingItem = {
-  __typename?: 'GlossaryLandingItem';
-  /** Definition of the term */
-  definition: Scalars['String']['output'];
-  /** Primary headword for the term */
-  headword: Scalars['String']['output'];
-  /** Primary language of the headword */
-  language: Scalars['String']['output'];
-  /** Name variants for the term */
-  nameVariants: Scalars['String']['output'];
-  /** Number of glossary entries across works */
-  numGlossaryEntries: Scalars['Int']['output'];
-  /** Type/classification of the term */
-  type: Scalars['String']['output'];
-  /** Authority UUID */
-  uuid: Scalars['ID']['output'];
-};
-
 /** Paginated passage references for a glossary term */
 export type GlossaryPassagesPage = {
   __typename?: 'GlossaryPassagesPage';
@@ -323,10 +235,27 @@ export type Mutation = {
   /** Placeholder for schema validation - not used */
   _empty?: Maybe<Scalars['Boolean']['output']>;
   /**
+   * Replace text within one or more targets.
+   * Requires editor.edit permission.
+   */
+  replace: ReplaceResult;
+  /**
    * Save one or more passages.
    * Requires editor.edit permission.
    */
   savePassages: SavePassagesResult;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationReplaceArgs = {
+  cursorPassageUuid?: InputMaybe<Scalars['ID']['input']>;
+  cursorStart?: InputMaybe<Scalars['Int']['input']>;
+  occurrenceIndex?: InputMaybe<Scalars['Int']['input']>;
+  replaceText: Scalars['String']['input'];
+  searchText: Scalars['String']['input'];
+  targetUuids: Array<Scalars['ID']['input']>;
+  type?: InputMaybe<ReplaceType>;
 };
 
 
@@ -392,7 +321,7 @@ export type Passage = {
   uuid: Scalars['ID']['output'];
   /** UUID of the work this passage belongs to */
   workUuid: Scalars['ID']['output'];
-  /** XML ID from the source document */
+  /** The Legacy XML ID from the source document */
   xmlId?: Maybe<Scalars['String']['output']>;
 };
 
@@ -457,7 +386,7 @@ export type PassageInput = {
   uuid: Scalars['ID']['input'];
   /** UUID of the work this passage belongs to */
   workUuid: Scalars['ID']['input'];
-  /** XML ID from the source document */
+  /** The Legacy XML ID from the source document */
   xmlId?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -475,14 +404,10 @@ export type Query = {
   __typename?: 'Query';
   /** Get a single bibliography entry by UUID */
   bibliographyEntry?: Maybe<BibliographyEntryItem>;
-  /** Get a single glossary entry by UUID (for detail page) */
-  glossaryEntry?: Maybe<GlossaryEntry>;
   /** Get a single glossary instance by UUID */
   glossaryInstance?: Maybe<GlossaryTermInstance>;
   /** Get paginated passage references for a glossary term (per-term, on-demand) */
   glossaryTermPassages: GlossaryPassagesPage;
-  /** Get all glossary terms for the landing page */
-  glossaryTerms: Array<GlossaryLandingItem>;
   /**
    * Check if the current user has a specific permission.
    * Returns false if not authenticated.
@@ -494,7 +419,7 @@ export type Query = {
   me?: Maybe<CurrentUser>;
   /**
    * Fetch a single passage by UUID or XML ID.
-   * At least one of uuid or xmlId must be provided. Prefers uuid if both are present.
+   * At least one of uuid or legacy xmlId must be provided. Prefers uuid if both are present.
    */
   passage?: Maybe<Passage>;
   /** Get the current API version */
@@ -517,12 +442,6 @@ export type QueryBibliographyEntryArgs = {
 
 
 /** Root Query type - extend this in other schema files */
-export type QueryGlossaryEntryArgs = {
-  uuid: Scalars['ID']['input'];
-};
-
-
-/** Root Query type - extend this in other schema files */
 export type QueryGlossaryInstanceArgs = {
   uuid: Scalars['ID']['input'];
 };
@@ -533,12 +452,6 @@ export type QueryGlossaryTermPassagesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   uuid: Scalars['ID']['input'];
-};
-
-
-/** Root Query type - extend this in other schema files */
-export type QueryGlossaryTermsArgs = {
-  uuids?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 
@@ -568,6 +481,33 @@ export type QueryWorksArgs = {
   filter?: InputMaybe<WorkFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
+
+/** Result of a replace mutation */
+export type ReplaceResult = {
+  __typename?: 'ReplaceResult';
+  /** Number of annotations deleted because the replacement removed them */
+  deletedAnnotationCount: Scalars['Int']['output'];
+  /** Error message if the replace failed */
+  error?: Maybe<Scalars['String']['output']>;
+  /** Character offset within nextPassageUuid where the next single replace should continue */
+  nextOccurrenceStart?: Maybe<Scalars['Int']['output']>;
+  /** Passage UUID after which the next single replace should continue */
+  nextPassageUuid?: Maybe<Scalars['ID']['output']>;
+  /** Updated target passages for client-side refresh */
+  passages: Array<Passage>;
+  /** Number of occurrences replaced */
+  replacedOccurrenceCount: Scalars['Int']['output'];
+  /** Whether the replace was successful */
+  success: Scalars['Boolean']['output'];
+  /** Number of annotations whose ranges changed */
+  updatedAnnotationCount: Scalars['Int']['output'];
+  /** Number of target records updated */
+  updatedCount: Scalars['Int']['output'];
+};
+
+/** Supported target types for search-and-replace operations */
+export type ReplaceType =
+  | 'PASSAGE';
 
 /** Result of saving passages */
 export type SavePassagesResult = {

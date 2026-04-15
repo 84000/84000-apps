@@ -70,9 +70,7 @@ type GetPassagesAroundWithJsonResponse = {
 /**
  * Get translation blocks (TipTap JSON) around a specific passage UUID.
  *
- * Unlike getTranslationPassagesAround which returns Passage objects,
- * this function returns pre-transformed TipTap editor blocks
- * ready for rendering.
+ * Returns pre-transformed TipTap editor blocks ready for rendering.
  */
 export async function getTranslationBlocksAround({
   client,
