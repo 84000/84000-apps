@@ -1,9 +1,7 @@
 export * from './alignment';
 export * from './annotation';
 export * from './bibliography';
-export * from './canon';
 export * from './client';
-export * from './contributor';
 export * from './editor-content';
 export * from './toh';
 export * from './folio';
@@ -14,7 +12,6 @@ export * from './language';
 export * from './layout';
 export * from './library';
 export * from './passage';
-export * from './project';
 export * from './semver';
 export * from './title';
 export * from './translation';

@@ -2,65 +2,10 @@
 
 Agent coding guidelines for the 84000-apps monorepo.
 
-## Build, Test, and Lint Commands
-
-### Development
-
-```bash
-# Run an app in dev mode
-npx nx dev web-main          # Main app (Studio)
-npx nx dev web-editor        # Editor app
-npx nx dev web-reader        # Reader app
-npx nx dev web-docs          # Documentation
-
-# Build for production
-npx nx build web-main        # Build specific app
-npx nx build <project-name>  # Build any project
-
-# Run multiple targets
-npx nx run-many -t build lint -p web-main design-system
-```
-
-### Testing
-
-```bash
-# Run tests for a project
-npx nx test <project-name>
-
-# Run tests for a specific file
-npx nx test <project-name> --testFile=<filename>
-
-# Run tests for specific projects
-npx nx run-many -t test -p lib-utils design-system
-
-# Watch mode
-npx nx test <project-name> --watch
-```
-
-### Linting
-
-```bash
-# Lint a specific project
-npx nx lint <project-name>
-
-# Lint CSS files
-npm run lint:css             # Lint all CSS
-npm run lint:css:fix         # Auto-fix CSS issues
-
-# Lint multiple projects
-npx nx run-many -t lint -p web-main lib-user
-```
-
-### Storybook
-
-```bash
-# Run Storybook for design system
-npx nx storybook design-system
-```
-
 ## Architecture
 
-This is an **Nx monorepo** with Next.js apps and shared libraries.
+This is an **Nx monorepo** with Next.js apps and shared libraries. Use 
+`npx nx ...` to run commands from the repo root.
 
 ### Key Principle
 
@@ -79,17 +24,6 @@ import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { useProfile } from '@lib-user';
 import { cn } from '@eightyfourthousand/lib-utils';
 ```
-
-### Server-Side Imports
-
-Many libraries export `/ssr` versions for server components:
-
-- `@eightyfourthousand/data-access/ssr`
-- `@lib-user/ssr`
-- `@lib-canon/ssr`
-- `@lib-glossary/ssr`
-- `@lib-explore/ssr`
-- `@eightyfourthousand/lib-instr/ssr`
 
 ## Code Style Guidelines
 
@@ -131,44 +65,6 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 - **Constants**: UPPER_SNAKE_CASE for true constants
 - **Types/Interfaces**: PascalCase (`UserClaims`, `GlossaryTermDTO`)
 
-### React/Next.js
-
-#### Client Components
-
-- Add `'use client'` directive at the top when needed
-- Use for interactivity, hooks, event handlers
-
-```typescript
-'use client';
-
-import { useState } from 'react';
-```
-
-#### Component Structure
-
-- Use `React.forwardRef` for components that need refs
-- Set `displayName` for debugging
-- Destructure props in function parameters
-
-```typescript
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, asChild = false, ...props }, ref) => {
-  // implementation
-});
-Button.displayName = 'Button';
-```
-
-#### Async Server Components
-
-- Use async/await for data fetching in server components
-- Handle errors gracefully
-
-```typescript
-export async function Page() {
-  const data = await fetchData();
-  return <div>{data}</div>;
-}
-```
-
 ### Styling
 
 #### Tailwind CSS
@@ -181,37 +77,6 @@ export async function Page() {
 import { cn } from '@eightyfourthousand/lib-utils';
 
 <div className={cn('flex items-center', className)} />
-```
-
-#### Class Variance Authority (CVA)
-
-- Use CVA for component variants
-- Define variants object with defaults
-
-```typescript
-const buttonVariants = cva('base-classes', {
-  variants: {
-    variant: { default: '...', destructive: '...' },
-    size: { default: '...', sm: '...', lg: '...' },
-  },
-  defaultVariants: { variant: 'default', size: 'default' },
-});
-```
-
-### Error Handling
-
-#### Logging
-
-- Use `console.error()` for errors
-- Use `console.warn()` for warnings
-- Use `console.info()` for info messages
-- Include context in error messages
-
-```typescript
-if (error) {
-  console.error(`Failed to fetch user profile: ${error.message}`);
-  return null;
-}
 ```
 
 #### Async Functions
@@ -240,22 +105,6 @@ export const getUser = async ({ client }: { client: DataClient }) => {
 - Trailing commas (default)
 - Let Prettier handle formatting
 
-#### File Structure
-
-```typescript
-// 1. Imports
-import { ... } from '...';
-
-// 2. Types/Interfaces
-export interface Props { ... }
-
-// 3. Constants
-const CONSTANT = '...';
-
-// 4. Component/Function
-export const Component = () => { ... };
-```
-
 ## Best Practices
 
 1. **DRY**: Extract reusable logic into `libs/lib-utils` or appropriate library
@@ -266,27 +115,9 @@ export const Component = () => { ... };
 6. **Accessibility**: Use Radix UI primitives which are accessible by default
 7. **Testing**: Write tests in `*.spec.ts` or `*.test.tsx` files (when they exist)
 
-## Common Patterns
-
-### Data Fetching (Server-Side)
-
-```typescript
-import { createServerClient } from '@eightyfourthousand/data-access/ssr';
-
-const client = createServerClient();
-const data = await fetchData({ client });
-```
-
-### Data Fetching (Client-Side)
-
-```typescript
-'use client';
-import { createBrowserClient } from '@eightyfourthousand/data-access';
-
-const client = createBrowserClient();
-```
-
 ### Design System Components
+
+Use them before building custom components. They are:
 
 - Built with Radix UI primitives
 - Styled with Tailwind
