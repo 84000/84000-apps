@@ -3,7 +3,10 @@
 import { useInView } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
-import { createGraphQLClient, getWorkFolios } from '@eightyfourthousand/client-graphql';
+import {
+  createGraphQLClient,
+  getWorkFolios,
+} from '@eightyfourthousand/client-graphql';
 import type { Folio } from '@eightyfourthousand/data-access';
 import { LabeledElement } from './LabeledElement';
 import { PassageSkeleton } from './PassageSkeleton';
@@ -61,9 +64,15 @@ export const SourceReader = () => {
           className="mt-0.5"
           contentType="source"
         >
-          <div className="leading-7 font-tibetan text-lg 2xl:whitespace-pre-wrap whitespace-normal">
-            {folio.content}
-          </div>
+          {folio.content ? (
+            <div className="leading-7 min-h-8 font-tibetan text-lg 2xl:whitespace-pre-wrap whitespace-normal">
+              {folio.content}
+            </div>
+          ) : (
+            <div className="h-12 text-center text-muted-foreground">
+              [blank]
+            </div>
+          )}
         </LabeledElement>
       ))}
       <div ref={loadMoreRef} className="h-0" />
