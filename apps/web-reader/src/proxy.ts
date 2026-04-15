@@ -1,3 +1,4 @@
+import { getWorkUuidByToh } from '@eightyfourthousand/data-access';
 import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
@@ -11,20 +12,14 @@ export async function proxy(request: NextRequest) {
 
     if (toh) {
       const client = await createServerClient();
-      const { data, error } = await client
-        .from('work_toh')
-        .select('work_uuid')
-        .eq('toh_clean', toh)
-        .single();
+      const workUuid = await getWorkUuidByToh({ client, toh });
 
-      if (error || !data) {
+      if (!workUuid) {
         return NextResponse.next();
       }
 
-      if (data?.work_uuid) {
-        url.pathname = `/${data.work_uuid}`;
-        url.searchParams.set('toh', toh);
-      }
+      url.pathname = `/${workUuid}`;
+      url.searchParams.set('toh', toh);
       return NextResponse.redirect(url);
     }
   }

@@ -4,7 +4,7 @@ Agent coding guidelines for the 84000-apps monorepo.
 
 ## Architecture
 
-This is an **Nx monorepo** with Next.js apps and shared libraries. Use 
+This is an **Nx monorepo** with Next.js apps and shared libraries. Use
 `npx nx ...` to run commands from the repo root.
 
 ### Key Principle

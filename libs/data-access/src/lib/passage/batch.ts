@@ -16,7 +16,10 @@ export const getAnnotationsByPassageUuids = async ({
   passageUuids: readonly string[];
 }): Promise<Map<string, AnnotationDTO[]>> => {
   const annotationsByPassage = new Map<string, AnnotationDTO[]>();
-  if (passageUuids.length === 0) return annotationsByPassage;
+
+  if (passageUuids.length === 0) {
+    return annotationsByPassage;
+  }
 
   const pageSize = 1000;
   let allData: AnnotationDTO[] = [];
@@ -70,7 +73,10 @@ export const getAlignmentsByPassageUuids = async ({
   passageUuids: readonly string[];
 }): Promise<Map<string, AlignmentDTO[]>> => {
   const alignmentsByPassage = new Map<string, AlignmentDTO[]>();
-  if (passageUuids.length === 0) return alignmentsByPassage;
+
+  if (passageUuids.length === 0) {
+    return alignmentsByPassage;
+  }
 
   const pageSize = 1000;
   let allData: (AlignmentDTO & { passage_uuid: string })[] = [];
@@ -91,9 +97,7 @@ export const getAlignmentsByPassageUuids = async ({
       return new Map();
     }
 
-    allData = allData.concat(
-      (data ?? []) as (AlignmentDTO & { passage_uuid: string })[],
-    );
+    allData = allData.concat((data ?? []) as AlignmentDTO[]);
     hasMore = (data?.length ?? 0) === pageSize;
     offset += pageSize;
   }
@@ -118,7 +122,10 @@ export const getPassageLabelsByUuids = async ({
   passageUuids: readonly string[];
 }): Promise<Map<string, string>> => {
   const labelsByUuid = new Map<string, string>();
-  if (passageUuids.length === 0) return labelsByUuid;
+
+  if (passageUuids.length === 0) {
+    return labelsByUuid;
+  }
 
   const { data, error } = await client
     .from('passages')
@@ -147,7 +154,10 @@ export const getPassageReferencesByTargetUuids = async ({
   passageUuids: readonly string[];
 }): Promise<Map<string, Passages>> => {
   const referencesByTargetUuid = new Map<string, Passages>();
-  if (passageUuids.length === 0) return referencesByTargetUuid;
+
+  if (passageUuids.length === 0) {
+    return referencesByTargetUuid;
+  }
 
   const { data: annotations, error: annotationsError } = await client.rpc(
     'get_passage_annotations_by_content_uuids',

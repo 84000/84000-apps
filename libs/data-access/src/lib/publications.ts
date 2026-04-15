@@ -37,6 +37,29 @@ export const getTranslationUuids = async ({
   return data?.map(({ uuid }: { uuid: string }) => uuid) || [];
 };
 
+export const getWorkUuidByToh = async ({
+  client,
+  toh,
+}: {
+  client: DataClient;
+  toh: string;
+}): Promise<string | null> => {
+  const { data, error } = await client
+    .from('work_toh')
+    .select('work_uuid')
+    .eq('toh_clean', toh)
+    .single();
+
+  if (error || !data) {
+    if (error) {
+      console.error('Error fetching work UUID by TOH:', error);
+    }
+    return null;
+  }
+
+  return data.work_uuid ?? null;
+};
+
 export const getTranslationPassages = async ({
   client,
   uuid,
@@ -340,13 +363,15 @@ export const getWorksPage = async ({
   }
 
   const hasMoreAfter = (data ?? []).length > clampedLimit;
-  const items = hasMoreAfter ? (data ?? []).slice(0, clampedLimit) : data ?? [];
+  const items = hasMoreAfter
+    ? (data ?? []).slice(0, clampedLimit)
+    : (data ?? []);
   const works = items.map((dto) => workFromDTO(dto as WorkDTO));
 
   return {
     items: works,
     pageInfo: {
-      nextCursor: hasMoreAfter ? works[works.length - 1]?.uuid ?? null : null,
+      nextCursor: hasMoreAfter ? (works[works.length - 1]?.uuid ?? null) : null,
       prevCursor: cursor ?? null,
       hasMoreAfter,
       hasMoreBefore: Boolean(cursor),
