@@ -2,101 +2,124 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build and Development Commands
+## Architecture
 
-```bash
-# Install dependencies (run from repo root)
-npm install
+This is an **Nx monorepo** with Next.js apps and shared libraries. Use 
+`npx nx ...` to run commands from the repo root.
 
-# Run an app in dev mode
-npx nx dev web-main          # Main app (Studio)
-npx nx dev web-editor        # Editor app
-npx nx dev web-reader        # Reader app
-npx nx dev web-docs          # Docs app
+### Key Principle
 
-# Build for production
-npx nx build web-main        # Build a specific app
-npx nx build <project-name>  # Build any project
-
-# Run tests
-npx nx test <project-name>   # Run tests for a specific project
-npx nx test design-system    # Example: test design-system
-
-# Lint
-npx nx lint <project-name>   # Lint a specific project
-npm run lint:css             # Lint all CSS files
-npm run lint:css:fix         # Auto-fix CSS lint issues
-
-# Storybook (design system)
-npx nx storybook design-system
-
-# Run multiple targets
-npx nx run-many -t build lint -p web-main design-system  # Multiple projects and targets
-```
-
-## Architecture Overview
-
-This is an **Nx monorepo** containing multiple Next.js applications and shared libraries. Code should be placed in `libs/` and reused across `apps/`. Applications should be thin orchestration layers.
-
-### Apps (`/apps`)
-
-- **web-main**: Main web app (Studio) - Next.js with TipTap collaborative editor
-- **web-editor**: Editor application
-- **web-reader**: Reader application
-- **web-reader-mfe**: Reader micro-frontend
-- **web-docs**: Documentation site (Nextra)
-- **node-scripts**: Node.js utility scripts
-
-### Libraries (`/libs`)
-
-**Core libraries:**
-
-- **data-access**: Supabase client and data layer (auth, canon, glossary, publications, storage, etc.). Has `/ssr` export for server-side use.
-- **design-system**: Shared UI components (Button, Dialog, Card, Table, etc.) built with Radix UI primitives. Run Storybook to explore.
-- **lib-utils**: Utility functions (compare, style helpers, highlight, hooks, string manipulation)
-
-**Feature libraries:**
-
-- **lib-editing**: TipTap editor components, block types, passage and title editing
-- **lib-user**: User authentication components (Login, ProfileDropdown, SessionContext, Library pages)
-- **lib-canon**: Canon navigation context, sidebar, and page components
-- **lib-glossary**: Glossary editor and tables
-- **lib-search**: Search data layer and UI components
-- **lib-explore**: Explore feature configuration and pages
-- **lib-instr**: Instrumentation/analytics (PostHog integration, feature flags)
+- **Code belongs in `libs/`, not `apps/`**
+- Apps should be thin orchestration layers
+- All reusable logic goes into libraries
 
 ### Path Aliases
 
-Import libraries using aliases defined in `tsconfig.base.json`:
+Import libraries using TypeScript path aliases (defined in `tsconfig.base.json`):
 
 ```typescript
-import { Button } from '@eightyfourthousand/design-system';
+import { Button, Dialog } from '@eightyfourthousand/design-system';
 import { createBrowserClient } from '@eightyfourthousand/data-access';
 import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { useProfile } from '@lib-user';
-import { GlossaryEditor } from '@lib-glossary';
+import { cn } from '@eightyfourthousand/lib-utils';
 ```
 
-Many libraries have `/ssr` exports for server-side components.
+## Code Style Guidelines
 
-## Key Technologies
+### TypeScript
 
-- **Next.js 16** with React 19
-- **TipTap** for collaborative rich text editing
-- **Supabase** for backend (auth, database, storage)
-- **Radix UI** primitives for accessible components
-- **Tailwind CSS 4** for styling
-- **PostHog** for analytics and feature flags
-- **Jest** for unit testing
-- **Storybook 10** for component development
+#### Imports
 
-## Environment Setup
+- Use path aliases, not relative imports for libraries
+- Group imports: React/Next, third-party, local components, utils
+- Use named exports, avoid default exports in libraries
 
-For Vercel-deployed apps, pull environment variables from within the app directory:
+```typescript
+// Good
+import { Button } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 
-```bash
-cd apps/web-main
-npx vercel env pull --environment development
+// Avoid
+import { Button } from '../../../libs/design-system/src/lib/Button';
 ```
 
-This creates `.env.local` with required variables.
+#### Types
+
+- Define interfaces for props with `interface` keyword
+- Use `type` for unions, intersections, and utility types
+- Export types alongside components
+- Use TypeScript strict mode - no implicit `any`
+
+```typescript
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
+```
+
+#### Naming Conventions
+
+- **Components**: PascalCase (`ProfileDropdown`, `Button`)
+- **Files**: Match component name (`Button.tsx`, `ProfileDropdown.tsx`)
+- **Functions/variables**: camelCase (`getSession`, `hasPermission`)
+- **Constants**: UPPER_SNAKE_CASE for true constants
+- **Types/Interfaces**: PascalCase (`UserClaims`, `GlossaryTermDTO`)
+
+### Styling
+
+#### Tailwind CSS
+
+- Use Tailwind utility classes
+- Use `cn()` helper from `@eightyfourthousand/lib-utils` to merge classes
+- Follow Tailwind CSS 4 conventions
+
+```typescript
+import { cn } from '@eightyfourthousand/lib-utils';
+
+<div className={cn('flex items-center', className)} />
+```
+
+#### Async Functions
+
+- Always handle errors from async operations
+- Return null or empty arrays on error (with logging)
+- Don't throw unless in exceptional circumstances
+
+```typescript
+export const getUser = async ({ client }: { client: DataClient }) => {
+  const { data, error } = await client.from('users').select();
+  if (error) {
+    console.error(`Failed to fetch user: ${error.message}`);
+    return null;
+  }
+  return data;
+};
+```
+
+### Formatting
+
+#### Prettier
+
+- Single quotes (configured in `.prettierrc`)
+- 2-space indentation (default)
+- Trailing commas (default)
+- Let Prettier handle formatting
+
+## Best Practices
+
+1. **DRY**: Extract reusable logic into `libs/lib-utils` or appropriate library
+2. **Single Responsibility**: One component/function does one thing well
+3. **Composition**: Build complex UIs from small, reusable components
+4. **Type Safety**: Leverage TypeScript, avoid `any`
+5. **Performance**: Use React best practices (memoization, proper deps)
+6. **Accessibility**: Use Radix UI primitives which are accessible by default
+7. **Testing**: Write tests in `*.spec.ts` or `*.test.tsx` files (when they exist)
+
+### Design System Components
+
+Use them before building custom components. They are:
+
+- Built with Radix UI primitives
+- Styled with Tailwind
+- Variants managed with CVA
+- Full TypeScript support
