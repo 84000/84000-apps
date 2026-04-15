@@ -1,8 +1,6 @@
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 import {
-  getAllGlossaryTerms,
-  getGlossaryEntry,
   getGlossaryInstance,
   getGlossaryInstances,
   passageFromDTO,
@@ -407,36 +405,6 @@ export const glossaryTermPassagesResolver = async (
     args.first,
     args.after,
   );
-};
-
-export const glossaryTermsResolver = async (
-  _parent: unknown,
-  args: { uuids?: string[] },
-  ctx: GraphQLContext,
-) => {
-  const terms = await getAllGlossaryTerms({
-    client: ctx.supabase,
-    uuids: args.uuids,
-  });
-
-  return terms;
-};
-
-export const glossaryEntryResolver = async (
-  _parent: unknown,
-  args: { uuid: string },
-  ctx: GraphQLContext,
-) => {
-  const entry = await getGlossaryEntry({
-    client: ctx.supabase,
-    uuid: args.uuid,
-  });
-
-  if (!entry) {
-    return null;
-  }
-
-  return entry;
 };
 
 export const glossaryInstanceResolver = async (

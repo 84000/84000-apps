@@ -5,8 +5,6 @@ import {
 } from './schema/bibliography/bibliography.resolver';
 import { workFoliosResolver } from './schema/folio/folio.resolver';
 import {
-  glossaryTermsResolver,
-  glossaryEntryResolver,
   glossaryInstanceResolver,
   workGlossaryResolver,
   workGlossaryTermsResolver,
@@ -40,8 +38,6 @@ export const resolvers = {
     ...passageQueries,
     ...userQueries,
     ...workQueries,
-    glossaryTerms: glossaryTermsResolver,
-    glossaryEntry: glossaryEntryResolver,
     glossaryInstance: glossaryInstanceResolver,
     glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
