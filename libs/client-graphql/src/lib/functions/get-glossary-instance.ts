@@ -15,6 +15,7 @@ const GET_GLOSSARY_INSTANCE = gql`
         pali
         chinese
         wylie
+        alternatives
       }
     }
   }

@@ -31,6 +31,11 @@ type GlossaryTermNames {
   Wylie transliteration
   """
   wylie: String
+
+  """
+  Alternative names to the main English name (e.g. synonyms, variant translations)
+  """
+  alternatives: String
 }
 
 """
@@ -159,7 +164,8 @@ extend type Work {
     Include attestation information
     """
     withAttestations: Boolean
-  ): [GlossaryTermInstance!]! @deprecated(reason: "Use glossaryTerms for paginated access")
+  ): [GlossaryTermInstance!]!
+    @deprecated(reason: "Use glossaryTerms for paginated access")
 
   """
   Paginated glossary term instances for this work

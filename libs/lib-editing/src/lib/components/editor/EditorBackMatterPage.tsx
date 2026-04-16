@@ -90,6 +90,7 @@ export const EditorBackMatterPage = () => {
       bibliography={bibliography}
       abbreviations={abbreviations}
       renderTranslation={renderTranslation}
+      isEditor={true}
     />
   );
 };

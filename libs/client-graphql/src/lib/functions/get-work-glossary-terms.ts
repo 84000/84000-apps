@@ -1,6 +1,9 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { GlossaryTermInstance, PaginationDirection } from '@eightyfourthousand/data-access';
+import type {
+  GlossaryTermInstance,
+  PaginationDirection,
+} from '@eightyfourthousand/data-access';
 
 const GET_WORK_GLOSSARY_TERMS = gql`
   query GetWorkGlossaryTerms(
@@ -29,6 +32,7 @@ const GET_WORK_GLOSSARY_TERMS = gql`
             pali
             chinese
             wylie
+            alternatives
           }
           passages(first: 10) {
             items {

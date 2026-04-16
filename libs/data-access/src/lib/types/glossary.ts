@@ -1,4 +1,3 @@
-
 export type GlossaryItem = {
   authorityUuid: string;
   definition?: string | null;
@@ -46,12 +45,13 @@ export type GlossaryTermInstance = {
     sanskrit?: string;
     tibetan?: string;
     wylie?: string;
+    alternatives?: string;
   };
   passages?: {
     items: Array<{ uuid: string; type: string; label: string }>;
     nextCursor: string | null;
     hasMore: boolean;
-  }
+  };
 };
 
 export type GlossaryTermInstances = GlossaryTermInstance[];
@@ -68,6 +68,7 @@ export type GlossaryTermInstanceDTO = {
     sanskrit?: string;
     tibetan?: string;
     wylie?: string;
+    alternatives?: string;
   };
 };
 

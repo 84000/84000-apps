@@ -1,6 +1,11 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@eightyfourthousand/design-system';
 import { TranslationEditorContent } from '../editor';
 import { TranslationRenderer } from './types';
 import { BibliographyEntries } from '@eightyfourthousand/data-access';
@@ -18,6 +23,7 @@ export const BackMatterPanel = ({
   glossary,
   bibliography,
   abbreviations,
+  isEditor = false,
   renderTranslation,
 }: {
   workUuid: string;
@@ -25,6 +31,7 @@ export const BackMatterPanel = ({
   glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
+  isEditor?: boolean;
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
@@ -39,8 +46,7 @@ export const BackMatterPanel = ({
     !!panels.right.hash,
   );
 
-  const hasGlossary =
-    glossary.terms.length > 0 || glossary.hasMoreAfter;
+  const hasGlossary = glossary.terms.length > 0 || glossary.hasMoreAfter;
 
   return (
     <Tabs
@@ -66,9 +72,7 @@ export const BackMatterPanel = ({
           {endnotes.length > 0 && (
             <TabsTrigger value="endnotes">Notes</TabsTrigger>
           )}
-          {hasGlossary && (
-            <TabsTrigger value="glossary">Glossary</TabsTrigger>
-          )}
+          {hasGlossary && <TabsTrigger value="glossary">Glossary</TabsTrigger>}
           {bibliography.length > 0 && (
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
@@ -108,7 +112,7 @@ export const BackMatterPanel = ({
                   workUuid={workUuid}
                   initialPage={glossary}
                 >
-                  <GlossaryTermList />
+                  <GlossaryTermList isEditor={isEditor} />
                 </GlossaryPaginationProvider>
               </TabsContent>
             )}
