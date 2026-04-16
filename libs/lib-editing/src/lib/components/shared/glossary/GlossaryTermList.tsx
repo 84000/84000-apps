@@ -11,8 +11,10 @@ const LOADING_SKELETONS_COUNT = 3;
 
 export const GlossaryTermList = ({
   className,
+  isEditor = false,
 }: {
   className?: string;
+  isEditor?: boolean;
 }) => {
   const { terms, startCursor, endIsLoading } = useGlossaryPagination();
   const isNavigationLoading = endIsLoading && terms.length === 0;
@@ -21,11 +23,7 @@ export const GlossaryTermList = ({
 
   return (
     <div className={cn('flex flex-col w-full', className)}>
-      <LabeledElement
-        className="mt-2"
-        id={'glossary'}
-        label="g."
-      >
+      <LabeledElement className="mt-2" id={'glossary'} label="g.">
         <SectionTitle>Glossary</SectionTitle>
       </LabeledElement>
       <div className="mt-3 flex flex-col gap-6">
@@ -48,6 +46,7 @@ export const GlossaryTermList = ({
           >
             <GlossaryInstanceBody
               instance={instance}
+              isEditor={isEditor}
               className="p-0 @c/sidebar:-mt-0.5"
             />
           </LabeledElement>

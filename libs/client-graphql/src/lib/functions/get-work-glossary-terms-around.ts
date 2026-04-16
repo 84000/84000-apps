@@ -29,6 +29,7 @@ const GET_WORK_GLOSSARY_TERMS_AROUND = gql`
             pali
             chinese
             wylie
+            alternatives
           }
           passages(first: 10) {
             items {

@@ -8,16 +8,21 @@ import { useCallback, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
 import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
-import { createGraphQLClient, getTermPassages } from '@eightyfourthousand/client-graphql';
+import {
+  createGraphQLClient,
+  getTermPassages,
+} from '@eightyfourthousand/client-graphql';
 
 type PassageItem = { uuid: string; type: string; label: string };
 
 export const GlossaryInstanceBody = ({
   instance,
   className,
+  isEditor = false,
 }: {
   instance: GlossaryTermInstance;
   className?: string;
+  isEditor?: boolean;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
@@ -70,6 +75,11 @@ export const GlossaryInstanceBody = ({
           {instance.names.english}
         </div>
       )}
+      {isEditor && instance.names.alternatives && (
+        <div className="text-sm text-accent">
+          {`Also: ${instance.names.alternatives}`}
+        </div>
+      )}
       <Ul>
         {instance.names.wylie && (
           <Li className="italic">{instance.names.wylie}</Li>
@@ -103,7 +113,7 @@ export const GlossaryInstanceBody = ({
               {index > 0 && ', '}
               <Button
                 variant="link"
-                className='p-0 h-6 font-normal hover:cursor-pointer'
+                className="p-0 h-6 font-normal hover:cursor-pointer"
                 onClick={() => handlePassageClick(passage)}
               >
                 {passage.label || passage.uuid.slice(0, 6)}
@@ -115,7 +125,7 @@ export const GlossaryInstanceBody = ({
               {', '}
               <Button
                 variant="link"
-                className='p-0 h-6 font-normal hover:cursor-pointer'
+                className="p-0 h-6 font-normal hover:cursor-pointer"
                 onClick={loadMore}
               >
                 more &rsaquo;

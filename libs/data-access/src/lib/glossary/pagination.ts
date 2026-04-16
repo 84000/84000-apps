@@ -14,6 +14,7 @@ type GlossaryTermNode = {
     pali: string | null;
     chinese: string | null;
     wylie: string | null;
+    alternatives: string | null;
   };
 };
 
@@ -29,6 +30,7 @@ type GlossaryTermIndexRow = {
   sanskrit_attested: string | null;
   chinese: string | null;
   pali: string | null;
+  alternatives: string | null;
 };
 
 type GlossaryPageInfo = {
@@ -102,6 +104,7 @@ function rowToGlossaryTermNode(
     | 'sanskrit_attested'
     | 'chinese'
     | 'pali'
+    | 'alternatives'
   > & { withAttestations: boolean },
 ): GlossaryTermNode {
   return {
@@ -111,6 +114,7 @@ function rowToGlossaryTermNode(
     termNumber: parseCount(row.term_number),
     names: {
       english: row.english,
+      alternatives: row.alternatives,
       wylie: row.wylie,
       tibetan: row.tibetan,
       sanskrit: row.withAttestations
@@ -273,7 +277,8 @@ export const getWorkGlossaryTermsPage = async ({
        sanskrit_plain,
        sanskrit_attested,
        chinese,
-       pali`,
+       pali,
+       alternatives`,
     )
     .eq('work_uuid', workUuid);
 
