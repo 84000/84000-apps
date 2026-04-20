@@ -5,6 +5,7 @@ import {
   startImportJob,
 } from '@eightyfourthousand/lib-import';
 
+import { hasPermission } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 
 async function requireEditorEdit(ctx: GraphQLContext) {
@@ -12,14 +13,10 @@ async function requireEditorEdit(ctx: GraphQLContext) {
     throw new Error('Authentication required');
   }
 
-  const { data, error } = await ctx.supabase.rpc('authorize', {
-    requested_permission: 'editor.edit',
+  const data = await hasPermission({
+    client: ctx.supabase,
+    permission: 'editor.edit',
   });
-
-  if (error) {
-    console.error('Failed to authorize editor.edit:', error);
-    throw new Error('Failed to authorize editor.edit');
-  }
 
   if (!data) {
     throw new Error('Permission denied: editor.edit required');

@@ -21,3 +21,62 @@ export const uploadToStorage = async ({
   const { data } = client.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 };
+
+export const createSignedUploadUrl = async ({
+  client,
+  bucket,
+  path,
+}: {
+  client: DataClient;
+  bucket: string;
+  path: string;
+}) => {
+  const { data, error } = await client.storage
+    .from(bucket)
+    .createSignedUploadUrl(path);
+
+  if (error) {
+    console.error('Failed to create signed upload URL:', error);
+    return null;
+  }
+
+  return data;
+};
+
+export const downloadFromStorage = async ({
+  client,
+  bucket,
+  path,
+}: {
+  client: DataClient;
+  bucket: string;
+  path: string;
+}) => {
+  const { data, error } = await client.storage.from(bucket).download(path);
+
+  if (error) {
+    console.error('Failed to download from storage:', error);
+    return null;
+  }
+
+  return data;
+};
+
+export const storageBucketExists = async ({
+  client,
+  bucket,
+}: {
+  client: DataClient;
+  bucket: string;
+}) => {
+  const { error } = await client.storage.from(bucket).list('', {
+    limit: 1,
+  });
+
+  if (error) {
+    console.error(`Failed to access storage bucket "${bucket}":`, error);
+    return false;
+  }
+
+  return true;
+};
