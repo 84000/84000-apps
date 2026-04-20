@@ -15,6 +15,9 @@ const XML_OPTIONS = {
   trimValues: false,
 };
 
+/**
+ * Parsed XML element shape returned by fast-xml-parser for DOCX package files.
+ */
 type XmlNode = Record<string, unknown>;
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -62,15 +65,14 @@ function parseRelationships(xml: string): Record<string, string> {
     };
   };
 
-  return asArray(parsed.Relationships?.Relationship).reduce<Record<string, string>>(
-    (acc, relation) => {
-      if (relation.Id && relation.Target) {
-        acc[relation.Id] = relation.Target;
-      }
-      return acc;
-    },
-    {},
-  );
+  return asArray(parsed.Relationships?.Relationship).reduce<
+    Record<string, string>
+  >((acc, relation) => {
+    if (relation.Id && relation.Target) {
+      acc[relation.Id] = relation.Target;
+    }
+    return acc;
+  }, {});
 }
 
 function extractRunText(run: XmlNode): string {
@@ -114,7 +116,10 @@ function extractRunsFromParagraph(
   }
 
   for (const hyperlink of asArray(paragraph.hyperlink as XmlNode[])) {
-    const href = typeof hyperlink.id === 'string' ? relationships[hyperlink.id] : undefined;
+    const href =
+      typeof hyperlink.id === 'string'
+        ? relationships[hyperlink.id]
+        : undefined;
     for (const run of asArray(hyperlink.r as XmlNode[])) {
       const rPr = (run.rPr || {}) as XmlNode;
       const text = extractRunText(run);
@@ -153,9 +158,10 @@ function parseParagraphs(
   };
 
   return asArray(parsed.document?.body?.p).map((paragraph, index) => {
-    const styleId = typeof (paragraph.pPr as XmlNode | undefined)?.pStyle === 'object'
-      ? ((paragraph.pPr as XmlNode).pStyle as { val?: string }).val
-      : undefined;
+    const styleId =
+      typeof (paragraph.pPr as XmlNode | undefined)?.pStyle === 'object'
+        ? ((paragraph.pPr as XmlNode).pStyle as { val?: string }).val
+        : undefined;
     const styleName = styleId ? styleMap[styleId] || styleId : undefined;
     const runs = extractRunsFromParagraph(paragraph, relationships);
     const text = runs.map((run) => run.text).join('');
@@ -172,11 +178,15 @@ function parseParagraphs(
   });
 }
 
-export async function parseDocxDocument(file: Blob): Promise<NormalizedDocxDocument> {
+export async function parseDocxDocument(
+  file: Blob,
+): Promise<NormalizedDocxDocument> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const documentXml = await zip.file('word/document.xml')?.async('string');
   const stylesXml = await zip.file('word/styles.xml')?.async('string');
-  const relsXml = await zip.file('word/_rels/document.xml.rels')?.async('string');
+  const relsXml = await zip
+    .file('word/_rels/document.xml.rels')
+    ?.async('string');
 
   if (!documentXml) {
     throw new Error('Missing word/document.xml in .docx archive');
@@ -184,9 +194,11 @@ export async function parseDocxDocument(file: Blob): Promise<NormalizedDocxDocum
 
   const styleMap = stylesXml ? parseStyles(stylesXml) : {};
   const relationships = relsXml ? parseRelationships(relsXml) : {};
-  const paragraphs = parseParagraphs(documentXml, styleMap, relationships).filter(
-    (paragraph) => paragraph.text.trim() || paragraph.headingLevel,
-  );
+  const paragraphs = parseParagraphs(
+    documentXml,
+    styleMap,
+    relationships,
+  ).filter((paragraph) => paragraph.text.trim() || paragraph.headingLevel);
 
   return {
     paragraphs,
