@@ -1,57 +1,213 @@
+"""
+Lifecycle state for a DOCX import job.
+"""
 enum DocxImportJobStatus {
+  """
+  Upload URL has been created, but the file has not been queued for processing.
+  """
   QUEUED_UPLOAD
+
+  """
+  Uploaded file is ready for the importer to process.
+  """
   QUEUED
+
+  """
+  Importer is reading the DOCX and preparing changes.
+  """
   PROCESSING
+
+  """
+  Import completed as a dry run and produced reviewable operations.
+  """
   NEEDS_REVIEW
+
+  """
+  Import changes were applied successfully.
+  """
   COMPLETED
+
+  """
+  Import failed before producing a complete result.
+  """
   FAILED
 }
 
+"""
+Structured warning or error produced while importing a DOCX file.
+"""
 type DocxImportDiagnostic {
+  """
+  Stable diagnostic identifier suitable for filtering or grouping messages.
+  """
   code: String!
+
+  """
+  Human-readable diagnostic summary.
+  """
   message: String!
+
+  """
+  Optional contextual detail, such as the paragraph or mapping rule involved.
+  """
   detail: String
 }
 
+"""
+Server-side record for a DOCX import attempt against a translation work.
+"""
 type DocxImportJob {
+  """
+  Unique identifier for the import job.
+  """
   importJobId: ID!
+
+  """
+  Work that the imported DOCX targets.
+  """
   workUuid: ID!
+
+  """
+  Current processing state.
+  """
   status: DocxImportJobStatus!
+
+  """
+  Storage bucket containing the uploaded DOCX.
+  """
   storageBucket: String!
+
+  """
+  Object path for the uploaded DOCX within the storage bucket.
+  """
   storagePath: String!
+
+  """
+  Original filename supplied by the client.
+  """
   originalFilename: String!
+
+  """
+  MIME type supplied for the uploaded file.
+  """
   mimeType: String!
+
+  """
+  Whether the job previews changes instead of applying them.
+  """
   dryRun: Boolean!
+
+  """
+  Structured diagnostics emitted by the importer.
+  """
   diagnostics: [DocxImportDiagnostic!]!
+
+  """
+  Non-blocking warning messages emitted by the importer.
+  """
   warnings: [String!]!
+
+  """
+  Import result payload, including preview operations or persistence counts.
+  """
   result: JSON
+
+  """
+  ISO timestamp for when the job was created.
+  """
   createdAt: String
+
+  """
+  ISO timestamp for the latest job update.
+  """
   updatedAt: String
 }
 
+"""
+Signed upload details for submitting a DOCX file to storage.
+"""
 type DocxImportUploadPayload {
+  """
+  Unique identifier for the import job created for this upload.
+  """
   importJobId: ID!
+
+  """
+  Work that the uploaded DOCX targets.
+  """
   workUuid: ID!
+
+  """
+  Storage bucket that accepts the upload.
+  """
   storageBucket: String!
+
+  """
+  Object path where the upload should be written.
+  """
   storagePath: String!
+
+  """
+  Token required by the storage service to accept the upload.
+  """
   uploadToken: String!
+
+  """
+  Signed URL that accepts the DOCX upload.
+  """
   signedUrl: String!
+
+  """
+  Number of seconds before the signed URL expires.
+  """
   expiresIn: Int!
+
+  """
+  Initial import job state.
+  """
   status: DocxImportJobStatus!
+
+  """
+  Whether this job will preview changes instead of applying them.
+  """
   dryRun: Boolean!
 }
 
 extend type Query {
+  """
+  Get the current state and result payload for a DOCX import job.
+  """
   docxImportJob(importJobId: ID!): DocxImportJob
 }
 
 extend type Mutation {
+  """
+  Create an import job and return signed storage details for uploading a DOCX.
+  """
   createDocxImportUpload(
+    """
+    Work that the uploaded DOCX targets.
+    """
     workUuid: ID!
+
+    """
+    Original filename to store with the import job.
+    """
     filename: String!
+
+    """
+    MIME type for the uploaded DOCX.
+    """
     contentType: String!
+
+    """
+    When true, process the file as a preview without applying changes.
+    """
     dryRun: Boolean
   ): DocxImportUploadPayload!
 
+  """
+  Queue an uploaded DOCX import job for processing.
+  """
   startDocxImport(importJobId: ID!): DocxImportJob!
 }

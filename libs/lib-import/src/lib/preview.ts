@@ -9,11 +9,19 @@ import type {
   PreviewAnnotationOperation,
 } from './types';
 
+/**
+ * Mapping configuration for a recognized import section heading.
+ */
 interface SectionConfig {
+  /** Prefix used when generating passage labels for the section. */
   headerLabel: string;
+  /** Passage type used for the section heading row. */
   headerType: string;
+  /** Passage type used for body paragraphs in the section. */
   bodyType: string;
+  /** Whether the importer can currently emit operations for this section. */
   supported: boolean;
+  /** Whether support is intentionally postponed for a later import pass. */
   deferred?: boolean;
 }
 
@@ -96,7 +104,10 @@ function toSectionKey(text: string) {
   return trimText(text).toLowerCase();
 }
 
-function buildHeadingAnnotation(level: number, type = 'section-title'): PreviewAnnotationOperation {
+function buildHeadingAnnotation(
+  level: number,
+  type = 'section-title',
+): PreviewAnnotationOperation {
   return {
     kind: 'heading',
     start: 0,
@@ -108,7 +119,9 @@ function buildHeadingAnnotation(level: number, type = 'section-title'): PreviewA
   };
 }
 
-function buildStyleAnnotations(paragraph: NormalizedParagraph): PreviewAnnotationOperation[] {
+function buildStyleAnnotations(
+  paragraph: NormalizedParagraph,
+): PreviewAnnotationOperation[] {
   const style = (paragraph.styleName || '').trim().toLowerCase();
   const annotations: PreviewAnnotationOperation[] = [];
 
@@ -278,7 +291,8 @@ export function buildImportPreview({
   const operations: ImportOperation[] = [];
   const paragraphs = document.paragraphs;
 
-  let mode: 'cover' | 'listTitles' | 'additionalTitles' | 'canonical' | 'body' = 'cover';
+  let mode: 'cover' | 'listTitles' | 'additionalTitles' | 'canonical' | 'body' =
+    'cover';
   let listTitleIndex = 0;
   let canonicalIndex = 0;
   let currentSection: SectionConfig | null = null;
@@ -312,7 +326,10 @@ export function buildImportPreview({
 
       if (mode === 'listTitles') {
         listTitleIndex += 1;
-        const titleTypeMap: Record<number, { type: string; language?: string }> = {
+        const titleTypeMap: Record<
+          number,
+          { type: string; language?: string }
+        > = {
           1: { type: 'mainTitle', language: 'Bo-Ltn' },
           2: { type: 'mainTitle', language: 'bo' },
           3: { type: 'mainTitle', language: 'en' },
@@ -359,7 +376,9 @@ export function buildImportPreview({
           operations.push({
             kind: 'update_work',
             patch: {
-              toh: tohMatch ? `toh${tohMatch[1].trim().replace(/^toh/i, '')}` : text,
+              toh: tohMatch
+                ? `toh${tohMatch[1].trim().replace(/^toh/i, '')}`
+                : text,
             },
           });
           continue;
