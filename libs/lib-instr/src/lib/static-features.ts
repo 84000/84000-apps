@@ -5,7 +5,7 @@
 export type StaticFeature = 'glossary-attestations';
 
 const STATIC_FEATURE_FLAGS: Record<StaticFeature, string[]> = {
-  'glossary-attestations': ['scholars-room'],
+  'glossary-attestations': ['scholars-room', 'studio', 'reader-embed'],
 };
 
 export const isStaticFeatureEnabled = (flagKey: StaticFeature) => {

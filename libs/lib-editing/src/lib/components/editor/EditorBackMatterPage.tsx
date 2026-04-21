@@ -18,6 +18,7 @@ import { TranslationBuilder } from '../editor';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 
 export const EditorBackMatterPage = () => {
+  const withAttestations = isStaticFeatureEnabled('glossary-attestations');
   const { work } = useEditorState();
   const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
   const [abbreviations, setAbbreviations] =
@@ -29,7 +30,6 @@ export const EditorBackMatterPage = () => {
     (async () => {
       const { uuid } = work;
       const graphqlClient = createGraphQLClient();
-      const withAttestations = isStaticFeatureEnabled('glossary-attestations');
 
       const [
         { blocks: endnoteBlocks },
@@ -90,6 +90,7 @@ export const EditorBackMatterPage = () => {
       bibliography={bibliography}
       abbreviations={abbreviations}
       renderTranslation={renderTranslation}
+      withAttestations={withAttestations}
       isEditor={true}
     />
   );

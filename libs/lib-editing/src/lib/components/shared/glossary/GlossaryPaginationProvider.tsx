@@ -42,10 +42,12 @@ const GlossaryPaginationContext = createContext<GlossaryPaginationState>({
 export const GlossaryPaginationProvider = ({
   workUuid,
   initialPage,
+  withAttestations = false,
   children,
 }: {
   workUuid: string;
   initialPage: GlossaryTermsPage;
+  withAttestations?: boolean;
   children: ReactNode;
 }) => {
   const [terms, setTerms] = useState(initialPage.terms);
@@ -126,6 +128,7 @@ export const GlossaryPaginationProvider = ({
             client: dataClient,
             uuid: workUuid,
             termUuid: navCursor,
+            withAttestations,
           });
 
           if (page.terms.length === 0) return;
@@ -182,6 +185,7 @@ export const GlossaryPaginationProvider = ({
         uuid: workUuid,
         cursor: endCursor,
         direction: 'forward',
+        withAttestations,
       });
 
       if (page.terms.length > 0) {

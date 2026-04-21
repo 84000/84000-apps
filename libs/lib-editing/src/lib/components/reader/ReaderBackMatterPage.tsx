@@ -57,6 +57,7 @@ export const ReaderBackMatterPage = async ({
       bibliography={bibliography}
       endnotes={endnotes}
       glossary={glossary}
+      withAttestations={withAttestations}
     />
   );
 };
