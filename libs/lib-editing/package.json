@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-editing",
-  "version": "2026.4.2",
+  "version": "2026.4.3",
   "description": "Shared editing and reader components for 84000 translation workflows.",
   "private": false,
   "repository": {
@@ -17,12 +17,12 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/client-graphql": "^2026.4.2",
-    "@eightyfourthousand/data-access": "^2026.4.2",
-    "@eightyfourthousand/design-system": "^2026.4.2",
-    "@eightyfourthousand/lib-instr": "^2026.4.2",
-    "@eightyfourthousand/lib-search": "^2026.4.2",
-    "@eightyfourthousand/lib-utils": "^2026.4.2",
+    "@eightyfourthousand/client-graphql": "^2026.4.3",
+    "@eightyfourthousand/data-access": "^2026.4.3",
+    "@eightyfourthousand/design-system": "^2026.4.3",
+    "@eightyfourthousand/lib-instr": "^2026.4.3",
+    "@eightyfourthousand/lib-search": "^2026.4.3",
+    "@eightyfourthousand/lib-utils": "^2026.4.3",
     "@floating-ui/react": "^0.27.16",
     "@tanstack/react-table": "^8.21.2",
     "@tiptap/core": "^3.13.0",

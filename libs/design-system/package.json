@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/design-system",
-  "version": "2026.4.2",
+  "version": "2026.4.3",
   "description": "Shared React UI components and theme assets for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,7 +17,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/lib-utils": "^2026.4.2",
+    "@eightyfourthousand/lib-utils": "^2026.4.3",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-avatar": "^1.1.3",
     "@radix-ui/react-collapsible": "^1.1.8",
@@ -48,9 +48,7 @@
   "peerDependencies": {
     "next": "^16.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwindcss": "^4.0.0",
-    "tw-animate-css": "^1.2.0"
+    "react-dom": "^19.0.0"
   },
   "type": "module",
   "main": "./index.js",
