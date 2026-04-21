@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-editing",
-  "version": "2026.3.1",
+  "version": "2026.4.0",
   "description": "Shared editing and reader components for 84000 translation workflows.",
   "private": false,
   "repository": {
