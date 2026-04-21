@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/client-graphql",
-  "version": "2026.4.0",
+  "version": "2026.4.1",
   "description": "GraphQL client helpers and typed query functions for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,7 +17,29 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/data-access": "^2026.3.1"
+    "@eightyfourthousand/data-access": "^2026.4.1",
+    "graphql-request": "^7.1.2",
+    "graphql-tag": "^2.12.6"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./ssr": {
+      "types": "./ssr.d.ts",
+      "import": "./ssr.js",
+      "default": "./ssr.js"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "keywords": [],

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   displayName: 'lib-instr',
   preset: '../../jest.preset.js',
   transform: {

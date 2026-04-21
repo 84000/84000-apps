@@ -13,7 +13,7 @@
         "main": "libs/design-system/src/index.ts",
         "tsConfig": "libs/design-system/tsconfig.lib.json",
         "rootDir": "libs/design-system/src",
-        "generateExportsField": true,
+        "generateExportsField": false,
         "additionalEntryPoints": ["libs/design-system/src/ssr.ts"],
         "assets": [
           {

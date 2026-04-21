@@ -13,7 +13,7 @@
         "main": "libs/lib-editing/src/index.ts",
         "tsConfig": "libs/lib-editing/tsconfig.lib.json",
         "rootDir": "libs/lib-editing/src",
-        "generateExportsField": true,
+        "generateExportsField": false,
         "additionalEntryPoints": ["libs/lib-editing/src/ssr.ts"]
       }
     },

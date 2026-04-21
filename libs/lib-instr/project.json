@@ -13,7 +13,7 @@
         "main": "libs/lib-instr/src/index.ts",
         "tsConfig": "libs/lib-instr/tsconfig.lib.json",
         "rootDir": "libs/lib-instr/src",
-        "generateExportsField": true,
+        "generateExportsField": false,
         "additionalEntryPoints": [
           "libs/lib-instr/src/ssr.ts",
           "libs/lib-instr/src/static.ts"

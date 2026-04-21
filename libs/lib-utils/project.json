@@ -13,7 +13,7 @@
         "main": "libs/lib-utils/src/index.ts",
         "tsConfig": "libs/lib-utils/tsconfig.lib.json",
         "rootDir": "libs/lib-utils/src",
-        "generateExportsField": true
+        "generateExportsField": false
       }
     }
   }

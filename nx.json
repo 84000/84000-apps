@@ -109,6 +109,12 @@
     },
     "e2e-ci--**/*": {
       "dependsOn": ["^build"]
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/libs/{projectName}"
+      },
+      "dependsOn": ["build"]
     }
   },
   "release": {

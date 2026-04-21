@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-utils",
-  "version": "2026.4.0",
+  "version": "2026.4.1",
   "description": "Shared utility helpers for 84000 applications.",
   "private": false,
   "repository": {
@@ -16,9 +16,25 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.0.2"
+  },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "keywords": [],
