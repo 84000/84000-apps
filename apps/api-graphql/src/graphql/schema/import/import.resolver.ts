@@ -1,11 +1,10 @@
 import {
   createImportUploadJob,
-  getImportJob,
   runImportJob,
   startImportJob,
 } from '@eightyfourthousand/lib-import';
 
-import { hasPermission } from '@eightyfourthousand/data-access';
+import { getImportJob, hasPermission } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 
 async function requireEditorEdit(ctx: GraphQLContext) {

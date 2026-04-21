@@ -1,5 +1,7 @@
 import { DataClient } from './types';
 
+export const SIGNED_UPLOAD_EXPIRY_SECONDS = 60 * 60 * 2; // 2 hours
+
 export const uploadToStorage = async ({
   client,
   bucket,

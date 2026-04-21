@@ -5,7 +5,7 @@ import type {
   NormalizedDocxDocument,
   NormalizedParagraph,
   NormalizedRun,
-} from './types';
+} from '@eightyfourthousand/data-access';
 
 const XML_OPTIONS = {
   ignoreAttributes: false,
