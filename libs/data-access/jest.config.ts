@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   displayName: 'data-access',
   preset: '../../jest.preset.js',
   transform: {
