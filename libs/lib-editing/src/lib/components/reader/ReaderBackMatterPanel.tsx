@@ -15,12 +15,14 @@ export const ReaderBackMatterPanel = ({
   glossary,
   bibliography,
   abbreviations,
+  withAttestations = false,
 }: {
   workUuid: string;
   endnotes: TranslationEditorContent;
   glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
+  withAttestations?: boolean;
 }) => {
   const { hasTranslationContent } = useNavigation();
   if (!hasTranslationContent) {
@@ -48,6 +50,7 @@ export const ReaderBackMatterPanel = ({
       bibliography={bibliography}
       abbreviations={abbreviations}
       renderTranslation={renderTranslation}
+      withAttestations={withAttestations}
     />
   );
 };

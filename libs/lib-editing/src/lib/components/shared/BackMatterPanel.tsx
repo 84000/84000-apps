@@ -24,6 +24,7 @@ export const BackMatterPanel = ({
   bibliography,
   abbreviations,
   isEditor = false,
+  withAttestations = false,
   renderTranslation,
 }: {
   workUuid: string;
@@ -32,6 +33,7 @@ export const BackMatterPanel = ({
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
   isEditor?: boolean;
+  withAttestations?: boolean;
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
@@ -111,6 +113,7 @@ export const BackMatterPanel = ({
                 <GlossaryPaginationProvider
                   workUuid={workUuid}
                   initialPage={glossary}
+                  withAttestations={withAttestations}
                 >
                   <GlossaryTermList isEditor={isEditor} />
                 </GlossaryPaginationProvider>
