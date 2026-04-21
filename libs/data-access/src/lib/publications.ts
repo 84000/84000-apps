@@ -379,3 +379,23 @@ export const getWorksPage = async ({
     totalCount: count ?? 0,
   };
 };
+
+export const doesWorkExist = async ({
+  client,
+  workUuid,
+}: {
+  client: DataClient;
+  workUuid: string;
+}) => {
+  const { data, error } = await client
+    .from('works')
+    .select('uuid')
+    .eq('uuid', workUuid)
+    .single();
+
+  if (error || !data) {
+    return false;
+  }
+
+  return true;
+};

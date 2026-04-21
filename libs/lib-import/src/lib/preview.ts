@@ -7,7 +7,7 @@ import type {
   NormalizedParagraph,
   PassageInsertOperation,
   PreviewAnnotationOperation,
-} from './types';
+} from '@eightyfourthousand/data-access';
 
 /**
  * Mapping configuration for a recognized import section heading.

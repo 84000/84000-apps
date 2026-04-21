@@ -7,6 +7,7 @@ export * from './toh';
 export * from './folio';
 export * from './glossary';
 export * from './glossary-page';
+export * from './import';
 export * from './imprint';
 export * from './language';
 export * from './layout';

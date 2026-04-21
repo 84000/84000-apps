@@ -1,15 +1,56 @@
-import type { DataClient } from '@eightyfourthousand/data-access';
+import { Annotation } from './annotation';
+import { DataClient } from './client';
+import { BodyItemType, Passage } from './passage';
 
 /**
- * Processing state persisted for a DOCX import job.
+ * Storage bucket used for DOCX import uploads.
  */
-export type DocxImportJobStatus =
+export const DOCX_IMPORT_BUCKET = 'imports';
+
+/**
+ * Database status value for a DOCX import job.
+ */
+export type ImportJobStatus =
   | 'queued_upload'
   | 'queued'
   | 'processing'
   | 'needs_review'
   | 'completed'
   | 'failed';
+
+/**
+ * Raw import_jobs row shape returned by Supabase.
+ */
+export interface ImportJobDTO {
+  /** Unique identifier for the import job. */
+  uuid: string;
+  /** Work targeted by the import. */
+  work_uuid: string;
+  /** Storage bucket containing the uploaded DOCX. */
+  storage_bucket: string;
+  /** Object path for the uploaded DOCX. */
+  storage_path: string;
+  /** Original filename supplied by the client. */
+  original_filename: string;
+  /** MIME type supplied for the uploaded file. */
+  mime_type: string;
+  /** Current database status for the job. */
+  status: ImportJobStatus;
+  /** Whether the job previews changes instead of applying them. */
+  dry_run: boolean;
+  /** User identifier recorded as the requester. */
+  requested_by: string;
+  /** Structured diagnostics JSON persisted by the importer. */
+  diagnostics_json: unknown[] | null;
+  /** Warning messages JSON persisted by the importer. */
+  warnings_json: unknown[] | null;
+  /** Import preview or persistence result JSON. */
+  result_json: Record<string, unknown> | null;
+  /** ISO timestamp for when the job was created. */
+  created_at?: string;
+  /** ISO timestamp for the latest job update. */
+  updated_at?: string;
+}
 
 /**
  * Importer message that can be surfaced to users or stored with the job.
@@ -219,7 +260,7 @@ export interface CreateImportUploadJobResult {
   /** Number of seconds before the signed upload URL expires. */
   expiresIn: number;
   /** Initial status for the created job. */
-  status: DocxImportJobStatus;
+  status: ImportJobStatus;
   /** Whether the job is configured as a dry run. */
   dryRun: boolean;
 }
@@ -243,7 +284,7 @@ export interface ImportJobResult {
   /** Work that the import targets. */
   workUuid: string;
   /** Current processing state. */
-  status: DocxImportJobStatus;
+  status: ImportJobStatus;
   /** Storage bucket containing the uploaded DOCX. */
   storageBucket: string;
   /** Object path for the uploaded DOCX. */
@@ -265,3 +306,159 @@ export interface ImportJobResult {
   /** ISO timestamp for the latest job update. */
   updatedAt?: string;
 }
+
+const HEADING_CLASS_FALLBACK = 'section-title';
+
+export const dtoToImportJobResult = (
+  row: Record<string, unknown>,
+): ImportJobResult => {
+  return {
+    importJobId: String(row.uuid),
+    workUuid: String(row.work_uuid),
+    status: String(row.status) as ImportJobResult['status'],
+    storageBucket: String(row.storage_bucket),
+    storagePath: String(row.storage_path),
+    originalFilename: String(row.original_filename),
+    mimeType: String(row.mime_type),
+    dryRun: Boolean(row.dry_run),
+    diagnostics: Array.isArray(row.diagnostics_json)
+      ? (row.diagnostics_json as ImportDiagnostic[])
+      : [],
+    warnings: Array.isArray(row.warnings_json)
+      ? row.warnings_json.map((item) => String(item))
+      : [],
+    result:
+      row.result_json && typeof row.result_json === 'object'
+        ? (row.result_json as Record<string, unknown>)
+        : null,
+    createdAt: row.created_at ? String(row.created_at) : undefined,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+  };
+};
+
+export const previewAnnotationToAnnotation = ({
+  annotation,
+  passageUuid,
+  passageText,
+}: {
+  annotation: PreviewAnnotationOperation;
+  passageUuid: string;
+  passageText: string;
+}): Annotation | null => {
+  const base = {
+    uuid: `${passageUuid}:${annotation.kind}:${annotation.start}:${annotation.end}`,
+    start: annotation.start,
+    end: annotation.end,
+    passageUuid,
+  };
+
+  if (annotation.kind === 'blockquote') {
+    return { ...base, type: 'blockquote' };
+  }
+
+  if (annotation.kind === 'paragraph') {
+    return { ...base, type: 'paragraph' };
+  }
+
+  if (annotation.kind === 'indent') {
+    return { ...base, type: 'indent' };
+  }
+
+  if (annotation.kind === 'line-group') {
+    return { ...base, type: 'lineGroup' };
+  }
+
+  if (annotation.kind === 'line') {
+    return { ...base, type: 'line' };
+  }
+
+  if (annotation.kind === 'span') {
+    return {
+      ...base,
+      type: 'span',
+      textStyle:
+        typeof annotation.data?.textStyle === 'string'
+          ? annotation.data.textStyle
+          : undefined,
+    };
+  }
+
+  if (annotation.kind === 'link') {
+    const href =
+      typeof annotation.data?.href === 'string'
+        ? annotation.data.href
+        : undefined;
+
+    if (!href) {
+      return null;
+    }
+
+    return {
+      ...base,
+      type: 'link',
+      href,
+      text: passageText.slice(annotation.start, annotation.end),
+    };
+  }
+
+  if (annotation.kind === 'heading') {
+    const level =
+      typeof annotation.data?.level === 'number' ? annotation.data.level : 1;
+    const headingClass =
+      typeof annotation.data?.class === 'string'
+        ? annotation.data.class
+        : HEADING_CLASS_FALLBACK;
+
+    return {
+      ...base,
+      type: 'heading',
+      level,
+      class: headingClass as never,
+    };
+  }
+
+  return null;
+};
+
+export const normalizePassageType = (type: string): BodyItemType => {
+  if (type === 'preface') {
+    return 'prelude';
+  }
+
+  if (type === 'prefaceHeader') {
+    return 'preludeHeader';
+  }
+
+  if (type === 'acknowledgement') {
+    return 'acknowledgment';
+  }
+
+  if (type === 'acknowledgementHeader') {
+    return 'acknowledgmentHeader';
+  }
+
+  return type as BodyItemType;
+};
+
+export const previewDtoToPassage = (
+  operation: PassageInsertOperation,
+): Passage => {
+  return {
+    uuid: operation.passage.uuid,
+    workUuid: operation.passage.workUuid,
+    label: operation.passage.label,
+    sort: operation.passage.sort,
+    type: normalizePassageType(operation.passage.type),
+    content: operation.passage.content,
+    xmlId: operation.passage.xmlId,
+    annotations: operation.annotations
+      .map((annotation) =>
+        previewAnnotationToAnnotation({
+          annotation,
+          passageUuid: operation.passage.uuid,
+          passageText: operation.passage.content,
+        }),
+      )
+      .filter((annotation): annotation is Annotation => annotation !== null),
+  };
+};
