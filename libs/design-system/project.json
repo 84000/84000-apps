@@ -34,6 +34,18 @@
         ]
       }
     },
+    "build-css": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/design-system/lib/theme/global.css"],
+      "dependsOn": ["build"],
+      "options": {
+        "cwd": "{workspaceRoot}",
+        "command": "tailwindcss -i libs/design-system/src/lib/theme/global.css -o dist/libs/design-system/lib/theme/global.css"
+      }
+    },
+    "nx-release-publish": {
+      "dependsOn": ["build", "build-css"]
+    },
     "build-storybook": {
       "executor": "@nx/storybook:build",
       "outputs": ["{options.outputDir}"],
