@@ -13,7 +13,7 @@
         "main": "libs/lib-search/src/index.ts",
         "tsConfig": "libs/lib-search/tsconfig.lib.json",
         "rootDir": "libs/lib-search/src",
-        "generateExportsField": true
+        "generateExportsField": false
       }
     }
   }

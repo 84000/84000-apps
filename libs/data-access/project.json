@@ -13,7 +13,7 @@
         "main": "libs/data-access/src/index.ts",
         "tsConfig": "libs/data-access/tsconfig.lib.json",
         "rootDir": "libs/data-access/src",
-        "generateExportsField": true,
+        "generateExportsField": false,
         "additionalEntryPoints": ["libs/data-access/src/ssr.ts"]
       }
     }

@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-instr",
-  "version": "2026.4.0",
+  "version": "2026.4.1",
   "description": "Feature flag and instrumentation helpers for 84000 applications.",
   "private": false,
   "repository": {
@@ -16,9 +16,36 @@
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@posthog/react": "^1.4.0",
+    "posthog-js": "^1.285.1",
+    "posthog-node": "^5.11.2"
+  },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./ssr": {
+      "types": "./ssr.d.ts",
+      "import": "./ssr.js",
+      "default": "./ssr.js"
+    },
+    "./static": {
+      "types": "./static.d.ts",
+      "import": "./static.js",
+      "default": "./static.js"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "keywords": [],

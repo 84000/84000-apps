@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/data-access",
-  "version": "2026.4.0",
+  "version": "2026.4.1",
   "description": "Shared data access clients, DTO mappers, and domain types for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,12 +17,34 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/lib-utils": "^2026.3.1"
+    "@eightyfourthousand/lib-utils": "^2026.4.1",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.48.1",
+    "@tiptap/core": "^3.13.0",
+    "jwt-decode": "^4.0.0",
+    "resend": "^6.9.2"
   },
   "peerDependencies": {
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./ssr": {
+      "types": "./ssr.d.ts",
+      "import": "./ssr.js",
+      "default": "./ssr.js"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "keywords": [],

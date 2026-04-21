@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-search",
-  "version": "2026.4.0",
+  "version": "2026.4.1",
   "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,15 +17,28 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/client-graphql": "^2026.3.1",
-    "@eightyfourthousand/data-access": "^2026.3.1",
-    "@eightyfourthousand/design-system": "^2026.3.1",
-    "@eightyfourthousand/lib-utils": "^2026.3.1"
+    "@eightyfourthousand/client-graphql": "^2026.4.1",
+    "@eightyfourthousand/data-access": "^2026.4.1",
+    "@eightyfourthousand/design-system": "^2026.4.1",
+    "@eightyfourthousand/lib-utils": "^2026.4.1",
+    "lucide-react": "^0.477.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "keywords": [],

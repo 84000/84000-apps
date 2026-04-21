@@ -13,7 +13,7 @@
         "main": "libs/client-graphql/src/index.ts",
         "tsConfig": "libs/client-graphql/tsconfig.lib.json",
         "rootDir": "libs/client-graphql/src",
-        "generateExportsField": true,
+        "generateExportsField": false,
         "additionalEntryPoints": ["libs/client-graphql/src/ssr.ts"]
       }
     }
