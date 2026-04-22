@@ -73,11 +73,13 @@ export const HoverCardProvider = ({
   openDelay = DEFAULT_HOVER_CARD_OPEN_DELAY,
   closeDelay = DEFAULT_HOVER_CARD_CLOSE_DELAY,
   typeMap = TYPE_ATTRIBUTE_MAP,
+  enabled = true,
   children,
 }: {
   closeDelay?: number;
   openDelay?: number;
   typeMap?: Record<string, string>;
+  enabled?: boolean;
   children: ReactNode;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,6 +129,9 @@ export const HoverCardProvider = ({
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const editorEl = containerRef.current;
     if (!editorEl) {
       return;
@@ -206,6 +211,7 @@ export const HoverCardProvider = ({
       }
     };
   }, [
+    enabled,
     containerRef,
     typeMap,
     openDelay,
@@ -216,6 +222,9 @@ export const HoverCardProvider = ({
   ]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     const handleMouseMove = (evt: MouseEvent) => {
       if (!card) {
         return;
@@ -236,10 +245,10 @@ export const HoverCardProvider = ({
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [card, anchor, closeDelay]);
+  }, [enabled, card, anchor, closeDelay]);
 
   useEffect(() => {
-    if (!card) {
+    if (!enabled || !card) {
       return;
     }
 
@@ -259,9 +268,12 @@ export const HoverCardProvider = ({
         card.removeEventListener(eventType, stopPropagation, true);
       });
     };
-  }, [card]);
+  }, [enabled, card]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -272,10 +284,20 @@ export const HoverCardProvider = ({
     }
 
     closeWithDelay();
-  }, [isEditing, isHoveringAnchor, isHoveringCard, closeDelay, closeWithDelay]);
+  }, [
+    enabled,
+    isEditing,
+    isHoveringAnchor,
+    isHoveringCard,
+    closeDelay,
+    closeWithDelay,
+  ]);
 
   // Handle click outside to dismiss the hover card
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (!card && !anchor) {
       return;
     }
@@ -297,7 +319,7 @@ export const HoverCardProvider = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [card, anchor, closeImmediately]);
+  }, [enabled, card, anchor, closeImmediately]);
 
   const renderCard = (uuid: string, type: string, anchorEl: HTMLElement) => {
     if (!editor) return null;
@@ -365,7 +387,7 @@ export const HoverCardProvider = ({
   };
 
   // Only show hover card when editor is available (editing mode only)
-  const shouldShowCard = anchor && uuid && cardType && editor;
+  const shouldShowCard = enabled && anchor && uuid && cardType && editor;
 
   return (
     <HoverCardContext.Provider
