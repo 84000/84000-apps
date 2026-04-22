@@ -2,7 +2,7 @@ import { Node } from '@tiptap/core';
 import { ReactNodeViewRenderer, mergeAttributes } from '@tiptap/react';
 import { Passage } from './Passage';
 import { Selection, TextSelection } from '@tiptap/pm/state';
-import { ResolvedPos } from '@tiptap/pm/model';
+import { Fragment, ResolvedPos } from '@tiptap/pm/model';
 import { incrementLabel } from './label';
 
 declare module '@tiptap/core' {
@@ -218,6 +218,76 @@ export const PassageNode = Node.create({
             return joined;
           },
         ]),
+      // Enter in an empty textblock that is a direct child of a passage
+      // splits the passage at that block's boundary, dropping the empty
+      // block, so pressing Enter twice at the end of a passage creates a
+      // new one without leaving an empty paragraph behind.
+      Enter: () => {
+        const { state, view } = this.editor;
+        const { selection, schema } = state;
+        if (!selection.empty) return false;
+
+        const { $from } = selection;
+        const passageDepth = currentPassageDepth($from);
+        if (passageDepth === null) return false;
+
+        // Only trigger when the cursor's parent textblock is a direct child
+        // of the passage — not nested inside a list, line group, table, etc.
+        if ($from.depth !== passageDepth + 1) return false;
+        if ($from.parent.content.size !== 0) return false;
+
+        const passageNode = $from.node(passageDepth);
+        // If the empty block is the only child, splitting would just produce
+        // two empty passages — defer to default behavior.
+        if (passageNode.childCount <= 1) return false;
+
+        const passageStart = $from.start(passageDepth) - 1;
+        const passageEnd = $from.end(passageDepth) + 1;
+        const emptyChildIndex = $from.index(passageDepth);
+
+        const beforeChildren = [];
+        const afterChildren = [];
+        for (let i = 0; i < passageNode.childCount; i++) {
+          if (i < emptyChildIndex) beforeChildren.push(passageNode.child(i));
+          if (i > emptyChildIndex) afterChildren.push(passageNode.child(i));
+        }
+
+        const passageType = schema.nodes.passage;
+        const oldAttrs = passageNode.attrs;
+        const newAttrs = {
+          ...oldAttrs,
+          uuid: crypto.randomUUID(),
+          sort: oldAttrs.sort + 1,
+          label: incrementLabel(oldAttrs.label),
+        };
+
+        // createAndFill auto-fills missing required content (e.g. an empty
+        // afterContent gets a default paragraph) so the new passage is valid.
+        const firstPassage = passageType.createAndFill(
+          oldAttrs,
+          Fragment.fromArray(beforeChildren),
+        );
+        const secondPassage = passageType.createAndFill(
+          newAttrs,
+          Fragment.fromArray(afterChildren),
+        );
+        if (!firstPassage || !secondPassage) return false;
+
+        const tr = state.tr.replaceWith(passageStart, passageEnd, [
+          firstPassage,
+          secondPassage,
+        ]);
+
+        const newPassageContentStart = passageStart + firstPassage.nodeSize + 1;
+        const $pos = tr.doc.resolve(newPassageContentStart);
+        const newSelection =
+          TextSelection.findFrom($pos, 1, true) ?? Selection.near($pos, 1);
+        if (newSelection) tr.setSelection(newSelection);
+
+        view.dispatch(tr);
+        this.editor.commands.normalizeLabelsAfter();
+        return true;
+      },
     };
   },
 });
