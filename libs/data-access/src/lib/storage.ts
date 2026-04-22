@@ -64,6 +64,27 @@ export const downloadFromStorage = async ({
   return data;
 };
 
+export const pathExistsInStorage = async ({
+  client,
+  bucket,
+  path,
+}: {
+  client: DataClient;
+  bucket: string;
+  path: string;
+}) => {
+  const { error, data: exists } = await client.storage
+    .from(bucket)
+    .exists(path);
+
+  if (error) {
+    console.error('Error checking file existence in storage:', error);
+    return false;
+  }
+
+  return exists;
+};
+
 export const storageBucketExists = async ({
   client,
   bucket,
