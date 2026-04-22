@@ -191,4 +191,25 @@ extend type Work {
     """
     withAttestations: Boolean
   ): GlossaryTermConnection!
+
+  """
+  Search glossary term instances for this work by English term (ILIKE prefix
+  match, also searching alternatives). Results are ordered by term_number.
+  """
+  searchGlossaryTerms(
+    """
+    Search string matched as a prefix against english and alternatives
+    """
+    query: String!
+
+    """
+    Maximum number of terms to return (default: 20, max: 50)
+    """
+    limit: Int
+
+    """
+    Include attestation information
+    """
+    withAttestations: Boolean
+  ): [GlossaryTermInstance!]!
 }

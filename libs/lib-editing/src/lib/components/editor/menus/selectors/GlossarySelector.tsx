@@ -10,9 +10,11 @@ import {
   PopoverTrigger,
 } from '@eightyfourthousand/design-system';
 import { BookOpenTextIcon } from 'lucide-react';
-import { SelectorInputField } from './SelectorInputField';
+import { useState } from 'react';
+import { GlossarySearch } from '../../extensions/GlossaryInstance/GlossarySearch';
 
 export const GlossarySelector = ({ editor }: { editor: Editor }) => {
+  const [open, setOpen] = useState(false);
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
@@ -21,7 +23,7 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   });
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -40,21 +42,20 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-fit shadow-xl rounded-md border p-1"
+        className="w-72 shadow-xl rounded-md border p-2"
         align="end"
         noPortal
       >
-        <SelectorInputField
-          editor={editor}
-          type="glossaryInstance"
-          attr="glossary"
-          placeholder="Add glossary uuid..."
-          onSubmit={(value) => {
-            if (value) {
-              editor.chain().focus().setGlossaryInstance(value).run();
-            } else {
-              editor.chain().focus().unsetGlossaryInstance().run();
-            }
+        <GlossarySearch
+          onSelect={({ glossary, authority }) => {
+            const { to } = editor.state.selection;
+            editor
+              .chain()
+              .focus()
+              .setGlossaryInstance({ glossary, authority })
+              .setTextSelection(to)
+              .run();
+            setOpen(false);
           }}
         />
       </PopoverContent>

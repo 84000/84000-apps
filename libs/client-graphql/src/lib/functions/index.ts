@@ -19,6 +19,10 @@ export {
   type GlossaryTermsPage,
 } from './get-work-glossary-terms';
 export { getWorkGlossaryTermsAround } from './get-work-glossary-terms-around';
+export {
+  searchWorkGlossaryTerms,
+  type GlossaryTermSearchResult,
+} from './search-work-glossary-terms';
 export { getTermPassages, type GlossaryPassagesPage } from './get-term-passages';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';

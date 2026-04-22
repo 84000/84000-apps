@@ -20,6 +20,8 @@ export {
   getGlossaryInstance,
   getWorkGlossaryTerms,
   getWorkGlossaryTermsAround,
+  searchWorkGlossaryTerms,
+  type GlossaryTermSearchResult,
   type GlossaryTermsPage,
   getTermPassages,
   type GlossaryPassagesPage,

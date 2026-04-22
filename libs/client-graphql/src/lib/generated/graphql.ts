@@ -164,6 +164,8 @@ export type GlossaryTermInstancePassagesArgs = {
 /** Names for a glossary term instance in different languages */
 export type GlossaryTermNames = {
   __typename?: 'GlossaryTermNames';
+  /** Alternative names to the main English name (e.g. synonyms, variant translations) */
+  alternatives?: Maybe<Scalars['String']['output']>;
   /** Chinese name */
   chinese?: Maybe<Scalars['String']['output']>;
   /** English name/translation */
@@ -651,6 +653,11 @@ export type Work = {
   publicationVersion: Scalars['String']['output'];
   /** Whether access to this work is restricted */
   restriction: Scalars['Boolean']['output'];
+  /**
+   * Search glossary term instances for this work by English term (ILIKE prefix
+   * match, also searching alternatives). Results are ordered by term_number.
+   */
+  searchGlossaryTerms: Array<GlossaryTermInstance>;
   /** Section of the canon this work belongs to */
   section: Scalars['String']['output'];
   /** Title of the work */
@@ -699,6 +706,14 @@ export type WorkPassagesArgs = {
   direction?: InputMaybe<PaginationDirection>;
   filter?: InputMaybe<PassageFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** A published translation work from the 84000 canon */
+export type WorkSearchGlossaryTermsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
+  withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 /** Connection type for paginated works */
