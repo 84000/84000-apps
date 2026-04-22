@@ -46,12 +46,12 @@ export const searchWorkGlossaryTerms = async ({
   const pattern = `${escapeIlike(trimmed)}%`;
 
   const { data, error } = await client
-    .from('glossary_term_index')
-    .select(SEARCH_COLUMNS)
-    .eq('work_uuid', workUuid)
-    .or(`english.ilike.${pattern},alternatives.ilike.${pattern}`)
-    .order('term_number', { ascending: true })
-    .limit(clampedLimit);
+    .rpc('search_work_glossary_terms', {
+      p_work_uuid: workUuid,
+      p_pattern: pattern,
+      p_limit: clampedLimit,
+    })
+    .select(SEARCH_COLUMNS);
 
   if (error) {
     console.error(`Failed to search glossary terms: ${error.message}`);
