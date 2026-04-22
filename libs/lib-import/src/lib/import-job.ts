@@ -11,6 +11,7 @@ import {
   getImportJob,
   updateImportJob,
   assertDocxImportBucketReady,
+  pathExistsInStorage,
 } from '@eightyfourthousand/data-access';
 
 import { parseDocxDocument } from './docx';
@@ -76,13 +77,13 @@ export async function startImportJob({
   }
 
   const { storageBucket, storagePath } = job;
-  const file = await downloadFromStorage({
+  const exists = await pathExistsInStorage({
     client,
     bucket: storageBucket,
     path: storagePath,
   });
 
-  if (!file) {
+  if (!exists) {
     throw new Error('Uploaded file not found in storage');
   }
 
