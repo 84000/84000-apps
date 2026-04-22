@@ -193,8 +193,7 @@ extend type Work {
   ): GlossaryTermConnection!
 
   """
-  Search glossary term instances for this work by English term (ILIKE prefix
-  match, also searching alternatives). Results are ordered by term_number.
+  Search glossary term instances for this work by English term. Results are ordered by term_number.
   """
   searchGlossaryTerms(
     """
