@@ -52,24 +52,21 @@ export interface HoverCardState {
   close: () => void;
 }
 
+// Defensive defaults: consumers keep their own local state and already call
+// close() via the mounted provider's own callback, so a no-op here avoids
+// crashing when the context isn't in scope (e.g. feature-flag hydration race).
+const warnNoProvider = (name: string) => () => {
+  console.warn(`HoverCardContext.${name} called outside a HoverCardProvider`);
+};
+
 export const HoverCardContext = createContext<HoverCardState>({
   anchor: null,
   isEditing: false,
-  setAnchor: () => {
-    throw new Error('setAnchor function not implemented');
-  },
-  setCard: () => {
-    throw new Error('setCard function not implemented');
-  },
-  setUuid: () => {
-    throw new Error('setUuid function not implemented');
-  },
-  setIsEditing: () => {
-    throw new Error('setIsEditing function not implemented');
-  },
-  close: () => {
-    throw new Error('close function not implemented');
-  },
+  setAnchor: warnNoProvider('setAnchor'),
+  setCard: warnNoProvider('setCard'),
+  setUuid: warnNoProvider('setUuid'),
+  setIsEditing: warnNoProvider('setIsEditing'),
+  close: warnNoProvider('close'),
 });
 
 export const HoverCardProvider = ({

@@ -18,17 +18,19 @@ export const transformer: AnnotationTransformer = (
     }
 
     if (content.authority) {
-      glossaryInstance.authority = content.authority as string
+      glossaryInstance.authority = content.authority as string;
     }
   });
   return glossaryInstance;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { glossary: uuid } = annotation as GlossaryInstanceAnnotation;
+  const { glossary: uuid, authority } =
+    annotation as GlossaryInstanceAnnotation;
   const dto = baseAnnotationToDto(annotation);
   dto.content.push({
     uuid,
+    authority,
   });
   return dto;
 };

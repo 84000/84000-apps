@@ -5,6 +5,7 @@ import {
   getGlossaryInstances,
   getGlossaryTermPassagesPage,
   getWorkGlossaryTermsPage,
+  searchWorkGlossaryTerms,
 } from '@eightyfourthousand/data-access';
 
 type PaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
@@ -78,6 +79,24 @@ export const workGlossaryTermsResolver = async (
     limit: args.limit,
     cursor: args.cursor ?? null,
     direction: args.direction ?? 'FORWARD',
+    withAttestations: args.withAttestations ?? false,
+  });
+};
+
+export const searchWorkGlossaryTermsResolver = async (
+  parent: WorkParent,
+  args: {
+    query: string;
+    limit?: number;
+    withAttestations?: boolean;
+  },
+  ctx: GraphQLContext,
+) => {
+  return searchWorkGlossaryTerms({
+    client: ctx.supabase,
+    workUuid: parent.uuid,
+    query: args.query,
+    limit: args.limit,
     withAttestations: args.withAttestations ?? false,
   });
 };

@@ -2,7 +2,7 @@ import { DataClient, Passage, PassageDTO, passageFromDTO } from '../types';
 
 type ApiPaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
-type GlossaryTermNode = {
+export type GlossaryTermNode = {
   uuid: string;
   authority: string;
   definition: string | null;
@@ -18,7 +18,7 @@ type GlossaryTermNode = {
   };
 };
 
-type GlossaryTermIndexRow = {
+export type GlossaryTermIndexRow = {
   glossary_uuid: string;
   authority_uuid: string;
   term_number: number | string;
@@ -90,7 +90,7 @@ function parseCount(value: number | string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function rowToGlossaryTermNode(
+export function rowToGlossaryTermNode(
   row: Pick<
     GlossaryTermIndexRow,
     | 'glossary_uuid'

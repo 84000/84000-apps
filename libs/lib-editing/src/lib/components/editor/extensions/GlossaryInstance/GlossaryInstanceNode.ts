@@ -10,7 +10,10 @@ export interface GlossaryInstanceOptions {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     glossaryInstance: {
-      setGlossaryInstance: (glossary: string) => ReturnType;
+      setGlossaryInstance: (args: {
+        glossary: string;
+        authority: string;
+      }) => ReturnType;
       unsetGlossaryInstance: () => ReturnType;
     };
   }
@@ -26,7 +29,7 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
         default: undefined,
         parseHTML(element) {
           return element.getAttribute('authority');
-        }
+        },
       },
       glossary: {
         default: undefined,
@@ -55,7 +58,7 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
   parseHTML() {
     return [
       {
-        tag: 'span[type="gloassaryInstance"]',
+        tag: 'span[type="glossaryInstance"]',
         getAttrs: (dom) => {
           const authority = (dom as HTMLElement).getAttribute('authority');
           const glossary = (dom as HTMLElement).getAttribute('glossary');
@@ -124,25 +127,27 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
   addCommands() {
     return {
       setGlossaryInstance:
-        (glossary) =>
-          ({ chain }) => {
-            return chain()
-              .setMark(this.name)
-              .updateAttributes(this.name, {
-                glossary,
-                uuid: uuidv4(),
-              })
-              .run();
-          },
+        ({ glossary, authority }) =>
+        ({ chain }) => {
+          return chain()
+            .setMark(this.name)
+            .updateAttributes(this.name, {
+              glossary,
+              authority,
+              uuid: uuidv4(),
+            })
+            .run();
+        },
 
       unsetGlossaryInstance:
         () =>
-          ({ chain }) => {
-            return chain()
-              .unsetMark(this.name)
-              .resetAttributes(this.name, 'glossary')
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .unsetMark(this.name)
+            .resetAttributes(this.name, 'glossary')
+            .resetAttributes(this.name, 'authority')
+            .run();
+        },
     };
   },
 });
