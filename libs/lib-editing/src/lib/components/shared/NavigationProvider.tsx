@@ -386,11 +386,7 @@ export const NavigationProvider = ({
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      {hasHoverCards ? (
-        <HoverCardProvider>{children}</HoverCardProvider>
-      ) : (
-        children
-      )}
+      <HoverCardProvider enabled={hasHoverCards}>{children}</HoverCardProvider>
       <GatedFeature flag="show-restriction-warning">
         <RestrictionWarning imprint={imprint} />
       </GatedFeature>

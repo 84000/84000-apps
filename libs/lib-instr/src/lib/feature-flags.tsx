@@ -30,12 +30,17 @@ export type FeatureFlagPayload = {
  * @returns True if the feature flag is enabled for the current application, false otherwise.
  */
 export const useFeatureFlagEnabled = (flagKey: FeatureFlag): boolean => {
-  if (!phUseFeatureFlagEnabled(flagKey)) {
+  const isEnabled = phUseFeatureFlagEnabled(flagKey);
+  const payload = phUseFeatureFlagPayload(flagKey) as
+    | FeatureFlagPayload
+    | undefined;
+
+  if (!isEnabled) {
     return false;
   }
 
   const APPLICATION_NAME = process.env.NEXT_PUBLIC_APPLICATION_NAME || '';
-  const { apps } = phUseFeatureFlagPayload(flagKey) as FeatureFlagPayload;
+  const apps = payload?.apps;
 
   if (!apps?.length) {
     return true;
