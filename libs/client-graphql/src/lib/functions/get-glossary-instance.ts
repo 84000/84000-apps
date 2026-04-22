@@ -8,6 +8,7 @@ const GET_GLOSSARY_INSTANCE = gql`
       uuid
       authority
       definition
+      termNumber
       names {
         english
         tibetan

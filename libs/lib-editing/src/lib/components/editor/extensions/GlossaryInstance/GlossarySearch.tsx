@@ -11,10 +11,9 @@ import { useNavigation } from '../../../shared';
 
 export interface GlossarySearchResult {
   glossary: string;
+  label: string;
   authority: string;
   english: string | null;
-  tibetan: string | null;
-  wylie: string | null;
 }
 
 const DEBOUNCE_MS = 300;
@@ -57,8 +56,7 @@ export const GlossarySearch = ({
           glossary: n.uuid,
           authority: n.authority,
           english: n.names.english,
-          tibetan: n.names.tibetan,
-          wylie: n.names.wylie,
+          label: `g.${n.termNumber}`,
         })),
       );
       setLoading(false);
@@ -106,22 +104,22 @@ export const GlossarySearch = ({
 
       {!loading && results.length > 0 && (
         <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5">
-          {results.map((result) => (
-            <button
-              key={result.glossary}
-              className="flex items-start gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer text-left w-full"
-              onClick={() => onSelect(result)}
-            >
-              <span className="font-medium text-primary shrink-0">
-                {result.english || '(no English)'}
-              </span>
-              {(result.wylie || result.tibetan) && (
-                <span className="text-muted-foreground truncate">
-                  {result.wylie || result.tibetan}
+          {results.map((result) => {
+            return (
+              <button
+                key={result.glossary}
+                className="flex items-start gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer text-left w-full"
+                onClick={() => onSelect(result)}
+              >
+                <span className="text-accent text-xs my-auto">
+                  {result.label}
                 </span>
-              )}
-            </button>
-          ))}
+                <span className="font-medium truncate w-full">
+                  {result.english || '(no English)'}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
 

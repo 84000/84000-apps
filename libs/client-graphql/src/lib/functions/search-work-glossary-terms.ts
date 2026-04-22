@@ -17,10 +17,9 @@ const SEARCH_WORK_GLOSSARY_TERMS = gql`
       ) {
         uuid
         authority
+        termNumber
         names {
           english
-          tibetan
-          wylie
         }
       }
     }
@@ -30,10 +29,9 @@ const SEARCH_WORK_GLOSSARY_TERMS = gql`
 export type GlossaryTermSearchResult = {
   uuid: string;
   authority: string;
+  termNumber: number;
   names: {
     english: string | null;
-    tibetan: string | null;
-    wylie: string | null;
   };
 };
 

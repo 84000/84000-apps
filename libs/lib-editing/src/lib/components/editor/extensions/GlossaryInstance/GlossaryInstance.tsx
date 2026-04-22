@@ -6,10 +6,11 @@ import {
 } from '@eightyfourthousand/design-system';
 import { Editor } from '@tiptap/core';
 import { BookOpenIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GlossarySearch } from './GlossarySearch';
 import { findMarkByUuid } from '../../util';
 import { useHoverCard } from '../../../shared/HoverCardProvider';
+import { useNavigation } from '../../../shared';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
@@ -25,7 +26,29 @@ export const GlossaryInstance = ({
   anchor: HTMLElement;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
+  const [english, setEnglish] = useState<string | null>(null);
+  const [termNumber, setTermNumber] = useState<number | null>(null);
+  const markText = anchor.textContent ?? '';
   const { close, setIsEditing: setIsEditingContext } = useHoverCard();
+  const { fetchGlossaryTerm } = useNavigation();
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!glossary) {
+      setEnglish(null);
+      setTermNumber(null);
+      return;
+    }
+    fetchGlossaryTerm(glossary).then((term) => {
+      if (!cancelled) {
+        setEnglish(term?.names.english ?? null);
+        setTermNumber(term?.termNumber ?? null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [glossary, fetchGlossaryTerm]);
 
   const setIsEditing = useCallback(
     (editing: boolean) => {
@@ -100,21 +123,19 @@ export const GlossaryInstance = ({
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
-      <BookOpenIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
-      <span className="truncate text-muted-foreground text-sm my-auto">
-        {glossary}
+      <BookOpenIcon className="text-primary my-auto size-5 [&_svg]:size-4" />
+      {termNumber !== null && (
+        <span className="text-accent text-xs my-auto shrink-0">
+          g.{termNumber}
+        </span>
+      )}
+      <span className="truncate text-primary text-sm my-auto">
+        {english ?? markText}
       </span>
       <span className="flex-grow" />
-      <Popover
-        open={isEditing}
-        onOpenChange={(next) => setIsEditing(next)}
-      >
+      <Popover open={isEditing} onOpenChange={(next) => setIsEditing(next)}>
         <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-          >
+          <Button variant="ghost" size="icon" className="size-6 [&_svg]:size-4">
             <PencilIcon className="text-primary my-auto" />
           </Button>
         </PopoverTrigger>
@@ -123,7 +144,7 @@ export const GlossaryInstance = ({
           align="end"
           noPortal
         >
-          <GlossarySearch onSelect={updateGlossary} />
+          <GlossarySearch initialQuery={markText} onSelect={updateGlossary} />
         </PopoverContent>
       </Popover>
       <Button
