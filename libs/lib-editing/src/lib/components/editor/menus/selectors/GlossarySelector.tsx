@@ -47,6 +47,11 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
         noPortal
       >
         <GlossarySearch
+          initialQuery={editor.state.doc.textBetween(
+            editor.state.selection.from,
+            editor.state.selection.to,
+            ' ',
+          )}
           onSelect={({ glossary, authority }) => {
             const { to } = editor.state.selection;
             editor

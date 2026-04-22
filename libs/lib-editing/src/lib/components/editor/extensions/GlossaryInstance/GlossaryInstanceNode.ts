@@ -29,7 +29,7 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
         default: undefined,
         parseHTML(element) {
           return element.getAttribute('authority');
-        }
+        },
       },
       glossary: {
         default: undefined,
@@ -128,25 +128,26 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
     return {
       setGlossaryInstance:
         ({ glossary, authority }) =>
-          ({ chain }) => {
-            return chain()
-              .setMark(this.name)
-              .updateAttributes(this.name, {
-                glossary,
-                authority,
-                uuid: uuidv4(),
-              })
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .setMark(this.name)
+            .updateAttributes(this.name, {
+              glossary,
+              authority,
+              uuid: uuidv4(),
+            })
+            .run();
+        },
 
       unsetGlossaryInstance:
         () =>
-          ({ chain }) => {
-            return chain()
-              .unsetMark(this.name)
-              .resetAttributes(this.name, 'glossary')
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .unsetMark(this.name)
+            .resetAttributes(this.name, 'glossary')
+            .resetAttributes(this.name, 'authority')
+            .run();
+        },
     };
   },
 });
