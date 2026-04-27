@@ -21,12 +21,14 @@ import { useNavigation } from './NavigationProvider';
 export const LabeledElement = ({
   label,
   id = undefined,
+  uuid = undefined,
   className,
   contentType,
   children,
 }: {
   label?: string;
   id?: string;
+  uuid?: string;
   className?: string;
   contentType?: PanelContentType;
   children: ReactNode;
@@ -47,7 +49,7 @@ export const LabeledElement = ({
 
     const link = urlForEntity({
       location: window.location,
-      uuid: id,
+      uuid: uuid || id,
       contentType,
     });
     navigator.clipboard.writeText(link);

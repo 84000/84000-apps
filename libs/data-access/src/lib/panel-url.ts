@@ -1,4 +1,5 @@
 import {
+  BODY_ITEM_TYPES,
   PANEL_FOR_CONTENT_SECTION,
   PanelContentType,
   TAB_FOR_CONTENT_SECTION,
@@ -42,6 +43,16 @@ export const urlForPanelContent = ({
   return baseUrl.toString();
 };
 
+export const entityTypeForContentType = (
+  contentType: PanelContentType,
+): string => {
+  if (['compare', 'source', ...BODY_ITEM_TYPES].includes(contentType)) {
+    return 'passage';
+  }
+
+  return contentType;
+};
+
 export const urlForEntity = ({
   location,
   uuid,
@@ -51,6 +62,15 @@ export const urlForEntity = ({
   uuid: string;
   contentType?: PanelContentType;
 }): string => {
+  // TODO: support folios in the entity endpoint
+  if (contentType === 'source') {
+    return urlForPanelContent({
+      location,
+      hash: uuid,
+      contentType,
+    });
+  }
+
   const { href, search, host } = location;
   const searchParams = new URLSearchParams(search);
 
@@ -60,11 +80,16 @@ export const urlForEntity = ({
     return baseUrl.toString();
   }
 
-  const entityType =
-    contentType === 'compare'
-      ? 'translation'
-      : contentType.replace('Header', '');
+  const entityType = entityTypeForContentType(contentType);
   const baseUrl = new URL(`${host}/entity/${entityType}/${uuid}`);
-  baseUrl.search = searchParams.toString();
+  const toh = searchParams.get('toh');
+  const { tab } = panelAndTabForContentType(contentType);
+  const queryParams = new URLSearchParams({
+    tab,
+  });
+  if (toh) {
+    queryParams.set('toh', toh);
+  }
+  baseUrl.search = queryParams.toString();
   return baseUrl.toString();
 };
