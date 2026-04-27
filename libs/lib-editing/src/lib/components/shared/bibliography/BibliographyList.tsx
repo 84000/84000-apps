@@ -25,6 +25,7 @@ export const BibliographyList = ({
         className="mt-2"
         id={'bibliography'}
         label="b."
+        excerpt="Bibliography"
       >
         <SectionTitle>Bibliography</SectionTitle>
       </LabeledElement>
@@ -42,6 +43,7 @@ export const BibliographyList = ({
                 id={`${section.heading}-${i}`}
                 label={`b.${i + 1}`}
                 contentType="bibliography"
+                excerpt={section.heading}
               >
                 <div className="text-primary font-sans text-base font-bold">
                   {section.heading}

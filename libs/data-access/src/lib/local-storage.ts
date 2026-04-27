@@ -3,6 +3,8 @@ export type BookmarkItem = {
   subType?: string;
   tab: string;
   uuid: string;
+  label: string;
+  body: string;
 };
 
 const LIBRARY_KEY = 'library';
