@@ -17,8 +17,7 @@ export function Hero({
   );
 }
 
-export const HEADLINE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-7xl';
+export const HEADLINE_STYLE = 'font-serif mt-8 scroll-m-20 pb-8 text-7xl';
 export function Headline({
   children,
   className,
@@ -31,8 +30,7 @@ export function Headline({
   );
 }
 
-export const TITLE_STYLE =
-  'font-serif mt-8 scroll-m-20 pb-8 text-6xl';
+export const TITLE_STYLE = 'font-serif mt-8 scroll-m-20 pb-8 text-6xl';
 export function Section({
   children,
   className,
@@ -46,7 +44,7 @@ export function Section({
 }
 
 export const SECTION_TITLE_STYLE =
-  'font-serif text-primary scroll-m-20 @c/sidebar:mt-1 mt-2 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
+  'font-serif text-primary scroll-m-20 @c/sidebar:mt-2 mt-4 @c/sidebar:pb-2 pb-3 @c/sidebar:text-left text-center section-title';
 export function SectionTitle({
   children,
   className,
@@ -87,7 +85,8 @@ export function HonorificTitle({
   );
 }
 
-export const H1_STYLE = 'font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2';
+export const H1_STYLE =
+  'font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2';
 export function H1({
   children,
   className,
@@ -129,7 +128,7 @@ export function H3({
 }
 
 export const H4_STYLE =
-  'font-sans font-medium mt-1 scroll-m-20 pb-1 text-lg lg:text-xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-0';
+  'font-sans font-medium mt-2 scroll-m-20 pb-1 text-lg lg:text-xl @c/sidebar:text-md @c/sidebar:pb-1 @c/sidebar:mt-0';
 export function H4({
   children,
   className,
@@ -143,7 +142,7 @@ export function H4({
 }
 
 export const H5_STYLE =
-  'font-serif mt-0 scroll-m-20 pb-1 font-semibold lg:text-lg';
+  'font-serif mt-1 scroll-m-20 pb-1 font-semibold lg:text-lg';
 export function H5({
   children,
   className,
@@ -156,8 +155,7 @@ export function H5({
   );
 }
 
-export const H6_STYLE =
-  'font-serif mt-0 scroll-m-20 pb-1 font-semibold';
+export const H6_STYLE = 'font-serif mt-1 scroll-m-20 pb-1 font-semibold';
 export function H6({
   children,
   className,
@@ -249,7 +247,8 @@ export function A({
   );
 }
 
-export const BLOCKQUOTE_STYLE = 'mt-6 border-l-2 border-l-border pl-6 [&_blockquote]:border-l-0';
+export const BLOCKQUOTE_STYLE =
+  'mt-6 border-l-2 border-l-border pl-6 [&_blockquote]:border-l-0';
 export function Blockquote({
   children,
   className,
