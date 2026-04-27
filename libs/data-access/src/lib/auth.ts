@@ -4,7 +4,6 @@ import { DataClient, UserClaims, UserPermission, UserRole } from './types';
 export const getSession = async ({ client }: { client: DataClient }) => {
   const { data, error } = await client.auth.getSession();
   if (error || !data?.session) {
-    console.info(`Failed to get session data: ${error}`);
     return null;
   }
 

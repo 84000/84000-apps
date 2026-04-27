@@ -1,7 +1,13 @@
 'use client';
 
-import { PanelContentType, urlForPanelContent } from '@eightyfourthousand/data-access';
-import { DropdownMenuItem, DropdownMenuSeparator } from '@eightyfourthousand/design-system';
+import {
+  PanelContentType,
+  urlForEntity,
+} from '@eightyfourthousand/data-access';
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@eightyfourthousand/design-system';
 import { NodeViewProps } from '@tiptap/react';
 import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback } from 'react';
@@ -15,18 +21,19 @@ export const ReaderOptions = (
   },
 ) => {
   const copyLink = useCallback(() => {
-    const hash = props.node.attrs.uuid;
+    const uuid = props.node.attrs.uuid;
     const contentType = props.contentType;
     const location = window.location;
 
-    const link = urlForPanelContent({
+    const link = urlForEntity({
       location,
-      hash,
+      uuid,
       contentType,
     });
 
     navigator.clipboard.writeText(link);
-  }, [props.node, props.contentType]);
+  }, [props.node.attrs.uuid, props.contentType]);
+
   return (
     <>
       <DropdownMenuItem onSelect={props.toggleBookmark}>

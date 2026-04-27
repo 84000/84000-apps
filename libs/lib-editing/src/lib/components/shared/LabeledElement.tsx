@@ -2,7 +2,7 @@
 
 import {
   PanelContentType,
-  urlForPanelContent,
+  urlForEntity,
   useBookmark,
 } from '@eightyfourthousand/data-access';
 import {
@@ -45,9 +45,9 @@ export const LabeledElement = ({
       return;
     }
 
-    const link = urlForPanelContent({
+    const link = urlForEntity({
       location: window.location,
-      hash: id,
+      uuid: id,
       contentType,
     });
     navigator.clipboard.writeText(link);
@@ -111,7 +111,8 @@ export const LabeledElement = ({
                     setShowRevisionForm(true);
                   }}
                 >
-                  <MessageSquareIcon className="text-primary" /> Suggest Revision
+                  <MessageSquareIcon className="text-primary" /> Suggest
+                  Revision
                 </DropdownMenuItem>
               </>
             )}

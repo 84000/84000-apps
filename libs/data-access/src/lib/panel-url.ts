@@ -41,3 +41,30 @@ export const urlForPanelContent = ({
   baseUrl.search = searchParams.toString();
   return baseUrl.toString();
 };
+
+export const urlForEntity = ({
+  location,
+  uuid,
+  contentType,
+}: {
+  location: Location;
+  uuid: string;
+  contentType?: PanelContentType;
+}): string => {
+  const { href, search, host } = location;
+  const searchParams = new URLSearchParams(search);
+
+  if (!contentType) {
+    const baseUrl = new URL(href);
+    baseUrl.hash = `#${uuid}`;
+    return baseUrl.toString();
+  }
+
+  const entityType =
+    contentType === 'compare'
+      ? 'translation'
+      : contentType.replace('Header', '');
+  const baseUrl = new URL(`${host}/entity/${entityType}/${uuid}`);
+  baseUrl.search = searchParams.toString();
+  return baseUrl.toString();
+};
