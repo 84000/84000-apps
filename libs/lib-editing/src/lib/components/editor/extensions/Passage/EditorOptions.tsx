@@ -9,7 +9,7 @@ import {
 import { BracesIcon, CopyIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import {
   PanelContentType,
-  urlForEntity,
+  urlForPanelContent,
 } from '@eightyfourthousand/data-access';
 
 export const EditorOptions = ({
@@ -21,12 +21,12 @@ export const EditorOptions = ({
   onSelection: (item: string) => void;
 }) => {
   const copyLink = useCallback(() => {
-    const uuid = node.attrs.uuid;
+    const hash = node.attrs.uuid;
     const location = window.location;
 
-    const link = urlForEntity({
+    const link = urlForPanelContent({
       location,
-      uuid,
+      hash,
       contentType,
     });
 
@@ -38,6 +38,7 @@ export const EditorOptions = ({
       <DropdownMenuItem onSelect={copyLink}>
         <CopyIcon className="text-primary" /> Copy Link
       </DropdownMenuItem>
+      <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => onSelection('label')}>
         <PencilIcon className="text-Primary" /> Edit Label
       </DropdownMenuItem>
