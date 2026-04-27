@@ -4,7 +4,7 @@ import * as React from 'react';
 
 import { cn } from '@eightyfourthousand/lib-utils';
 
-export const TABLE_STYLE = 'w-full caption-bottom text-sm bg-background';
+export const TABLE_STYLE = 'w-full caption-bottom text-sm bg-surface';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
@@ -83,13 +83,17 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
 }
 
 export const TABLE_CELL_STYLE =
-  'p-4 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]';
+  'p-4 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]';
 
-function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
+function TableCell({
+  className,
+  noWrap = false,
+  ...props
+}: React.ComponentProps<'td'> & { noWrap?: boolean }) {
   return (
     <td
       data-slot="table-cell"
-      className={cn(TABLE_CELL_STYLE, className)}
+      className={cn(TABLE_CELL_STYLE, noWrap && 'whitespace-nowrap', className)}
       {...props}
     />
   );
