@@ -23,7 +23,12 @@ export const GlossaryTermList = ({
 
   return (
     <div className={cn('flex flex-col w-full', className)}>
-      <LabeledElement className="mt-2" id={'glossary'} label="g.">
+      <LabeledElement
+        className="mt-2"
+        id={'glossary'}
+        label="g."
+        excerpt="Glossary"
+      >
         <SectionTitle>Glossary</SectionTitle>
       </LabeledElement>
       <div className="mt-3 flex flex-col gap-6">
@@ -43,6 +48,7 @@ export const GlossaryTermList = ({
             uuid={instance.uuid}
             key={instance.authority || instance.uuid || `glossary-${index}`}
             label={`g.${instance.termNumber}`}
+            excerpt={instance.names.english}
             contentType="glossary"
           >
             <GlossaryInstanceBody

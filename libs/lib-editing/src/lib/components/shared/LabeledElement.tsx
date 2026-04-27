@@ -22,6 +22,7 @@ export const LabeledElement = ({
   label,
   id = undefined,
   uuid = undefined,
+  excerpt = undefined,
   className,
   contentType,
   children,
@@ -29,6 +30,7 @@ export const LabeledElement = ({
   label?: string;
   id?: string;
   uuid?: string;
+  excerpt?: string;
   className?: string;
   contentType?: PanelContentType;
   children: ReactNode;
@@ -36,6 +38,8 @@ export const LabeledElement = ({
   const { isBookmarked, toggle } = useBookmark(id ?? '', {
     type: contentType ?? '',
     tab: contentType ?? '',
+    body: excerpt,
+    label,
   });
 
   const { toh } = useNavigation();

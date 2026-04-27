@@ -63,6 +63,7 @@ export const SourceReader = () => {
           label={`f.${folio.folio}.${folio.side}\nvol.${folio.volume}`}
           className="mt-0.5"
           contentType="source"
+          excerpt={folio.content.slice(0, 100)}
         >
           {folio.content ? (
             <div className="leading-7 min-h-8 font-tibetan text-lg 2xl:whitespace-pre-wrap whitespace-normal">

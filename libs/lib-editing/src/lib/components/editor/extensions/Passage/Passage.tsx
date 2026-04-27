@@ -40,9 +40,19 @@ const PassageComponent = (props: NodeViewProps) => {
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  const textContent = node.textContent || '';
+  const excerpt =
+    textContent.slice(0, 100) + (textContent.length > 100 ? '...' : '');
+
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(
     node.attrs.uuid,
-    { type: 'passage', subType: node.attrs.type, tab: node.attrs.type ?? '' },
+    {
+      type: 'passage',
+      subType: node.attrs.type,
+      tab: node.attrs.type ?? '',
+      label: node.attrs.label,
+      body: excerpt,
+    },
   );
 
   const { panels, toh, updatePanel } = useNavigation();

@@ -7,6 +7,8 @@ type BookmarkOptions = {
   type: string;
   subType?: string;
   tab: string;
+  label?: string;
+  body?: string;
 };
 
 const listeners = new Set<() => void>();
@@ -36,6 +38,8 @@ export function useBookmark(uuid: string, options?: BookmarkOptions) {
         type: options?.type ?? '',
         subType: options?.subType,
         tab: options?.tab ?? '',
+        label: options?.label ?? '',
+        body: options?.body ?? '',
       });
     }
     emitChange();
