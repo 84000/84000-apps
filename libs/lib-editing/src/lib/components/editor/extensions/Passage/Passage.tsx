@@ -150,6 +150,8 @@ const PassageComponent = (props: NodeViewProps) => {
                 />
               ) : editor.isEditable ? (
                 <EditorOptions
+                  {...props}
+                  contentType={source ? 'compare' : node.attrs.type}
                   onSelection={(item) => {
                     setDialogType(item);
                     setIsDialogOpen(true);

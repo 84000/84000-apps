@@ -2,7 +2,7 @@
 
 import {
   PanelContentType,
-  urlForPanelContent,
+  urlForEntity,
   useBookmark,
 } from '@eightyfourthousand/data-access';
 import {
@@ -21,12 +21,14 @@ import { useNavigation } from './NavigationProvider';
 export const LabeledElement = ({
   label,
   id = undefined,
+  uuid = undefined,
   className,
   contentType,
   children,
 }: {
   label?: string;
   id?: string;
+  uuid?: string;
   className?: string;
   contentType?: PanelContentType;
   children: ReactNode;
@@ -45,9 +47,9 @@ export const LabeledElement = ({
       return;
     }
 
-    const link = urlForPanelContent({
+    const link = urlForEntity({
       location: window.location,
-      hash: id,
+      uuid: uuid || id,
       contentType,
     });
     navigator.clipboard.writeText(link);
@@ -111,7 +113,8 @@ export const LabeledElement = ({
                     setShowRevisionForm(true);
                   }}
                 >
-                  <MessageSquareIcon className="text-primary" /> Suggest Revision
+                  <MessageSquareIcon className="text-primary" /> Suggest
+                  Revision
                 </DropdownMenuItem>
               </>
             )}

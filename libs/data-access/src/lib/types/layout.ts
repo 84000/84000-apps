@@ -2,6 +2,7 @@ import { BodyItemType } from './passage';
 
 export type PanelContentType =
   | BodyItemType
+  | 'compare'
   | 'glossary'
   | 'bibliography'
   | 'source';
@@ -13,9 +14,11 @@ export const TAB_FOR_CONTENT_SECTION: Partial<
   abbreviations: 'abbreviations',
   acknowledgment: 'front',
   bibliography: 'bibliography',
+  compare: 'compare',
   glossary: 'glossary',
   endnotes: 'endnotes',
   introduction: 'front',
+  source: 'source',
   summary: 'front',
 } as const;
 
