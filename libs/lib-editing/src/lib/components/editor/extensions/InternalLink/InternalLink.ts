@@ -1,10 +1,7 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
-import {
-  PANEL_FOR_SECTION,
-  TAB_FOR_SECTION,
-} from '../../../shared/types';
+import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
 
@@ -84,8 +81,13 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
         className: cn(LINK_STYLE, props.mark.attrs.toh),
       });
 
-      const { isSameWork, subtype, entity, type: linkType, linkToh } =
-        props.mark.attrs;
+      const {
+        isSameWork,
+        subtype,
+        entity,
+        type: linkType,
+        linkToh,
+      } = props.mark.attrs;
 
       dom.addEventListener('click', (e) => {
         e.preventDefault();
@@ -96,7 +98,7 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
             href = `${href}?edit=true`;
           }
           window.open(href, '_blank');
-          return
+          return;
         }
         const query = new URLSearchParams(window.location.search);
 
@@ -111,13 +113,13 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
           case 'glossary':
             query.set('right', `open:glossary:${entity}`);
             break;
-          case 'passage': {
-            const panel =
-              PANEL_FOR_SECTION[subtype] || 'main';
-            const tab =
-              TAB_FOR_SECTION[subtype] || 'translation';
-            query.set(panel, `open:${tab}:${entity}`);
-          }
+          case 'passage':
+            {
+              const passageType = subtype.replace('Header', '').toLowerCase();
+              const panel = PANEL_FOR_SECTION[passageType] || 'main';
+              const tab = TAB_FOR_SECTION[passageType] || 'translation';
+              query.set(panel, `open:${tab}:${entity}`);
+            }
             break;
           default:
             break;
@@ -153,24 +155,24 @@ export const InternalLink = Mark.create<InternalLinkOptions>({
     return {
       setInternalLink:
         (entity: string, type: string) =>
-          ({ chain }) => {
-            return chain()
-              .setMark(this.name, {
-                entity,
-                type,
-                uuid: uuidv4(),
-                href: `/entity/${type}/${entity}`,
-              })
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .setMark(this.name, {
+              entity,
+              type,
+              uuid: uuidv4(),
+              href: `/entity/${type}/${entity}`,
+            })
+            .run();
+        },
       unsetInternalLink:
         () =>
-          ({ chain }) => {
-            return chain()
-              .unsetMark(this.name)
-              .resetAttributes(this.name, ['entity', 'type'])
-              .run();
-          },
+        ({ chain }) => {
+          return chain()
+            .unsetMark(this.name)
+            .resetAttributes(this.name, ['entity', 'type'])
+            .run();
+        },
     };
   },
 });
