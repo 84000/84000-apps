@@ -1,54 +1,47 @@
 import { computeSavePayload } from './save-filter';
 
 describe('computeSavePayload', () => {
-  it('should return dirty UUIDs as uuidsToSave when no deletions', () => {
+  it('saves dirty UUIDs that still exist in the current editor state', () => {
     const result = computeSavePayload({
-      dirtyUuids: new Set(['a', 'b']),
-      deletedUuids: new Set(),
+      dirtyUuids: new Set(['a']),
+      baseline: {
+        translation: new Set(['a', 'b']),
+      },
+      current: {
+        translation: new Set(['a', 'b']),
+      },
     });
 
-    expect(result.uuidsToSave).toEqual(['a', 'b']);
+    expect(result.uuidsToSave).toEqual(['a']);
     expect(result.uuidsToDelete).toEqual([]);
     expect(result.hasChanges).toBe(true);
   });
 
-  it('should return deleted UUIDs as uuidsToDelete when no dirty', () => {
+  it('deletes baseline UUIDs missing from the current editor state', () => {
     const result = computeSavePayload({
       dirtyUuids: new Set(),
-      deletedUuids: new Set(['x']),
+      baseline: {
+        translation: new Set(['a', 'b']),
+      },
+      current: {
+        translation: new Set(['a']),
+      },
     });
 
     expect(result.uuidsToSave).toEqual([]);
-    expect(result.uuidsToDelete).toEqual(['x']);
-    expect(result.hasChanges).toBe(true);
-  });
-
-  it('should exclude deleted UUIDs from the save list', () => {
-    const result = computeSavePayload({
-      dirtyUuids: new Set(['a', 'b', 'c']),
-      deletedUuids: new Set(['b']),
-    });
-
-    expect(result.uuidsToSave).toEqual(['a', 'c']);
     expect(result.uuidsToDelete).toEqual(['b']);
     expect(result.hasChanges).toBe(true);
   });
 
-  it('should handle a UUID that is both dirty and deleted', () => {
-    const result = computeSavePayload({
-      dirtyUuids: new Set(['a']),
-      deletedUuids: new Set(['a']),
-    });
-
-    expect(result.uuidsToSave).toEqual([]);
-    expect(result.uuidsToDelete).toEqual(['a']);
-    expect(result.hasChanges).toBe(true);
-  });
-
-  it('should report no changes when both sets are empty', () => {
+  it('does not delete a restored baseline UUID', () => {
     const result = computeSavePayload({
       dirtyUuids: new Set(),
-      deletedUuids: new Set(),
+      baseline: {
+        translation: new Set(['a']),
+      },
+      current: {
+        translation: new Set(['a']),
+      },
     });
 
     expect(result.uuidsToSave).toEqual([]);
@@ -56,39 +49,69 @@ describe('computeSavePayload', () => {
     expect(result.hasChanges).toBe(false);
   });
 
-  it('should handle split scenario: original dirty + new dirty, none deleted', () => {
+  it('saves new UUIDs that are not in the baseline', () => {
     const result = computeSavePayload({
-      dirtyUuids: new Set(['original', 'new-split']),
-      deletedUuids: new Set(),
+      dirtyUuids: new Set(),
+      baseline: {
+        translation: new Set(['a']),
+      },
+      current: {
+        translation: new Set(['a', 'b']),
+      },
     });
 
-    expect(result.uuidsToSave).toEqual(
-      expect.arrayContaining(['original', 'new-split']),
-    );
-    expect(result.uuidsToSave).toHaveLength(2);
+    expect(result.uuidsToSave).toEqual(['b']);
     expect(result.uuidsToDelete).toEqual([]);
     expect(result.hasChanges).toBe(true);
   });
 
-  it('should handle merge scenario: merged passage dirty + old passage deleted', () => {
-    const result = computeSavePayload({
-      dirtyUuids: new Set(['passage-a', 'passage-b']),
-      deletedUuids: new Set(['passage-b']),
-    });
-
-    expect(result.uuidsToSave).toEqual(['passage-a']);
-    expect(result.uuidsToDelete).toEqual(['passage-b']);
-    expect(result.hasChanges).toBe(true);
-  });
-
-  it('should handle delete-only scenario: passage deleted without edits', () => {
+  it('does not save unchanged baseline UUIDs without dirty hints', () => {
     const result = computeSavePayload({
       dirtyUuids: new Set(),
-      deletedUuids: new Set(['deleted-passage']),
+      baseline: {
+        translation: new Set(['a']),
+      },
+      current: {
+        translation: new Set(['a']),
+      },
     });
 
     expect(result.uuidsToSave).toEqual([]);
-    expect(result.uuidsToDelete).toEqual(['deleted-passage']);
+    expect(result.uuidsToDelete).toEqual([]);
+    expect(result.hasChanges).toBe(false);
+  });
+
+  it('does not save UUIDs that are also deleted', () => {
+    const result = computeSavePayload({
+      dirtyUuids: new Set(['a']),
+      baseline: {
+        translation: new Set(['a']),
+      },
+      current: {
+        translation: new Set(),
+      },
+    });
+
+    expect(result.uuidsToSave).toEqual([]);
+    expect(result.uuidsToDelete).toEqual(['a']);
+    expect(result.hasChanges).toBe(true);
+  });
+
+  it('tracks independent editor baselines separately', () => {
+    const result = computeSavePayload({
+      dirtyUuids: new Set(['n1']),
+      baseline: {
+        translation: new Set(['a']),
+        endnotes: new Set(['n1', 'n2']),
+      },
+      current: {
+        translation: new Set(['a']),
+        endnotes: new Set(['n1', 'n3']),
+      },
+    });
+
+    expect(result.uuidsToSave).toEqual(['n1', 'n3']);
+    expect(result.uuidsToDelete).toEqual(['n2']);
     expect(result.hasChanges).toBe(true);
   });
 });

@@ -28,6 +28,7 @@ export const TranslationBuilder = ({
     setEditor,
     getEditor,
     startObserving,
+    stopObserving,
     getFragment,
     isNavigating,
   } = useEditorState();
@@ -52,6 +53,16 @@ export const TranslationBuilder = ({
       }
     })();
   }, [name, canEdit, getFragment]);
+
+  useEffect(() => {
+    return () => {
+      if (debouncedSyncRef.current) {
+        clearTimeout(debouncedSyncRef.current);
+      }
+      setEditor(name, undefined);
+      stopObserving(name);
+    };
+  }, [name, setEditor, stopObserving]);
 
   return content && fragment ? (
     <PaginationProvider
@@ -83,7 +94,7 @@ export const TranslationBuilder = ({
           }
           passageUuidsByTypeRef.current = byType;
 
-          editor.on('update', () => {
+          const handleEndnotesUpdate = () => {
             // Collect current passage UUIDs grouped by type (cheap)
             const currentByType: Record<string, Set<string>> = {};
             const doc = editor.state.doc;
@@ -159,6 +170,11 @@ export const TranslationBuilder = ({
                 syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
               }, 150);
             }
+          };
+
+          editor.on('update', handleEndnotesUpdate);
+          editor.on('destroy', () => {
+            editor.off('update', handleEndnotesUpdate);
           });
         }
       }}
