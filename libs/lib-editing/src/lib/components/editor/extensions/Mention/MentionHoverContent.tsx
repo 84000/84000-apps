@@ -3,7 +3,6 @@ import { Editor } from '@tiptap/core';
 import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { InternalLinkInput } from '../InternalLink/InternalLinkInput';
-import { useHoverCard } from '../../../shared/HoverCardProvider';
 import type { MentionItem } from './Mention';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
@@ -14,7 +13,9 @@ const EDITOR_UPDATE_DELAY_MS = 100;
 function findMentionNodeByItemUuid(
   editor: Editor,
   itemUuid: string,
-): { pos: number; node: ReturnType<Editor['state']['doc']['nodeAt']> } | undefined {
+):
+  | { pos: number; node: ReturnType<Editor['state']['doc']['nodeAt']> }
+  | undefined {
   const { doc } = editor.state;
   let result: { pos: number; node: ReturnType<typeof doc.nodeAt> } | undefined;
 
@@ -38,22 +39,25 @@ export const MentionHoverContent = ({
   entityType,
   entity,
   editor,
+  close,
+  setHoverCardEditing,
 }: {
   uuid: string;
   entityType: string;
   entity: string;
   editor: Editor;
   anchor: HTMLElement;
+  close: () => void;
+  setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
-  const { close, setIsEditing: setIsEditingContext } = useHoverCard();
 
   const setIsEditing = useCallback(
     (editing: boolean) => {
       setIsEditingLocal(editing);
-      setIsEditingContext(editing);
+      setHoverCardEditing(editing);
     },
-    [setIsEditingContext],
+    [setHoverCardEditing],
   );
 
   const deleteMention = useCallback(() => {

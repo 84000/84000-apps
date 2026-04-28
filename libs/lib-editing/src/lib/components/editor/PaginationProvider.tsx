@@ -20,9 +20,16 @@ import {
 } from '@eightyfourthousand/client-graphql';
 import type { PanelFilter } from '@eightyfourthousand/data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
-import { isUuid, scrollToElement, useIsMobile } from '@eightyfourthousand/lib-utils';
+import {
+  isUuid,
+  scrollToElement,
+  useIsMobile,
+} from '@eightyfourthousand/lib-utils';
 import { PanelName, TabName, useNavigation } from '../shared';
-import { LotusPond, SHEET_ANIMATION_DURATION } from '@eightyfourthousand/design-system';
+import {
+  LotusPond,
+  SHEET_ANIMATION_DURATION,
+} from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
 
@@ -89,7 +96,7 @@ export const PaginationProvider = ({
     ? content.at(-1)?.attrs?.uuid
     : content?.attrs?.uuid;
 
-  const { setNavigating } = useEditorState();
+  const { refreshEditorBaseline, setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
   const [endCursor, setEndCursor] = useState<string | undefined>(
@@ -116,7 +123,9 @@ export const PaginationProvider = ({
   // matches — this prevents a PaginationProvider for one tab (e.g. endnotes)
   // from reacting to hashes set by a different tab (e.g. glossary).
   const panelHash =
-    !tab || panels[panel]?.tab === tab || (tab === 'translation' && panels[panel]?.tab === 'compare')
+    !tab ||
+    panels[panel]?.tab === tab ||
+    (tab === 'translation' && panels[panel]?.tab === 'compare')
       ? panels[panel]?.hash
       : undefined;
 
@@ -224,6 +233,9 @@ export const PaginationProvider = ({
           });
           setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
           setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
+          if (tab) {
+            refreshEditorBaseline(tab);
+          }
 
           // Wait for React to re-render and update the DOM (remove/add skeletons)
           // by waiting until the element's position stabilizes
@@ -293,6 +305,10 @@ export const PaginationProvider = ({
     dataClient,
     updatePanel,
     isMobile,
+    refreshEditorBaseline,
+    setNavigating,
+    tab,
+    fragment,
   ]);
 
   useEffect(() => {
@@ -333,6 +349,9 @@ export const PaginationProvider = ({
         setNavigating(true);
         await insertContentChunked(editor, pos, blocks);
         setNavigating(false);
+        if (tab) {
+          refreshEditorBaseline(tab);
+        }
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -346,6 +365,9 @@ export const PaginationProvider = ({
     endCursor,
     dataClient,
     endLoadRequest,
+    refreshEditorBaseline,
+    setNavigating,
+    tab,
   ]);
 
   useEffect(() => {
@@ -385,6 +407,9 @@ export const PaginationProvider = ({
         setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
         setNavigating(false);
+        if (tab) {
+          refreshEditorBaseline(tab);
+        }
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;
@@ -398,6 +423,9 @@ export const PaginationProvider = ({
         setNavigating(true);
         editor.commands.insertContentAt(pos, blocks);
         setNavigating(false);
+        if (tab) {
+          refreshEditorBaseline(tab);
+        }
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
@@ -411,6 +439,9 @@ export const PaginationProvider = ({
     startCursor,
     dataClient,
     startLoadRequest,
+    refreshEditorBaseline,
+    setNavigating,
+    tab,
   ]);
 
   return (

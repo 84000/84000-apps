@@ -1,27 +1,49 @@
-/**
- * Compute which passage UUIDs should be saved and which should be deleted.
- * Passages that are both dirty and deleted are excluded from the save list
- * (they no longer exist in the editor).
- */
+export type PassageUuidRecord = Record<string, Set<string>>;
+
 export const computeSavePayload = ({
   dirtyUuids,
-  deletedUuids,
+  baseline,
+  current,
 }: {
   dirtyUuids: Set<string>;
-  deletedUuids: Set<string>;
+  baseline: PassageUuidRecord;
+  current: PassageUuidRecord;
 }): {
   uuidsToSave: string[];
   uuidsToDelete: string[];
   hasChanges: boolean;
 } => {
-  const uuidsToDelete = Array.from(deletedUuids);
-  const uuidsToSave = Array.from(dirtyUuids).filter(
-    (uuid) => !deletedUuids.has(uuid),
-  );
+  const uuidsToDelete = new Set<string>();
+  const uuidsToSave = new Set<string>();
+
+  Object.entries(baseline).forEach(([key, baselineForKey]) => {
+    const currentForKey = current[key] ?? new Set<string>();
+    baselineForKey.forEach((uuid) => {
+      if (!currentForKey.has(uuid)) {
+        uuidsToDelete.add(uuid);
+      }
+    });
+  });
+
+  Object.entries(current).forEach(([key, currentForKey]) => {
+    const baselineForKey = baseline[key] ?? new Set<string>();
+    currentForKey.forEach((uuid) => {
+      if (!baselineForKey.has(uuid)) {
+        uuidsToSave.add(uuid);
+        return;
+      }
+
+      if (dirtyUuids.has(uuid)) {
+        uuidsToSave.add(uuid);
+      }
+    });
+  });
+
+  uuidsToDelete.forEach((uuid) => uuidsToSave.delete(uuid));
 
   return {
-    uuidsToSave,
-    uuidsToDelete,
-    hasChanges: uuidsToSave.length > 0 || uuidsToDelete.length > 0,
+    uuidsToSave: Array.from(uuidsToSave),
+    uuidsToDelete: Array.from(uuidsToDelete),
+    hasChanges: uuidsToSave.size > 0 || uuidsToDelete.size > 0,
   };
 };

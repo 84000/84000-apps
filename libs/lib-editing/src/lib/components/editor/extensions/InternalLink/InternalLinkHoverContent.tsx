@@ -4,7 +4,6 @@ import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { InternalLinkInput } from './InternalLinkInput';
 import { findMarkByUuid } from '../../util';
-import { useHoverCard } from '../../../shared/HoverCardProvider';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
@@ -14,22 +13,25 @@ export const InternalLinkHoverContent = ({
   entity,
   editor,
   anchor,
+  close,
+  setHoverCardEditing,
 }: {
   uuid: string;
   entityType: string;
   entity: string;
   editor: Editor;
   anchor: HTMLElement;
+  close: () => void;
+  setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
-  const { close, setIsEditing: setIsEditingContext } = useHoverCard();
 
   const setIsEditing = useCallback(
     (editing: boolean) => {
       setIsEditingLocal(editing);
-      setIsEditingContext(editing);
+      setHoverCardEditing(editing);
     },
-    [setIsEditingContext],
+    [setHoverCardEditing],
   );
 
   const deleteLink = useCallback(() => {

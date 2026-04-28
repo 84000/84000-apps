@@ -6,10 +6,8 @@ import {
 } from '@eightyfourthousand/design-system';
 import { isInBounds } from '@eightyfourthousand/lib-utils';
 import {
-  createContext,
   ReactNode,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -38,36 +36,6 @@ const TYPE_ATTRIBUTE_MAP: Record<HoverCardType, string> = {
   internalLink: 'uuid',
   mention: 'uuid',
 };
-
-export interface HoverCardState {
-  anchor: HTMLElement | null;
-  uuid?: string;
-  cardType?: HoverCardType;
-  editor?: Editor;
-  isEditing: boolean;
-  setAnchor: (anchor: HTMLElement | null) => void;
-  setUuid: (uuid?: string) => void;
-  setCard: (card: HTMLElement | null) => void;
-  setIsEditing: (isEditing: boolean) => void;
-  close: () => void;
-}
-
-// Defensive defaults: consumers keep their own local state and already call
-// close() via the mounted provider's own callback, so a no-op here avoids
-// crashing when the context isn't in scope (e.g. feature-flag hydration race).
-const warnNoProvider = (name: string) => () => {
-  console.warn(`HoverCardContext.${name} called outside a HoverCardProvider`);
-};
-
-export const HoverCardContext = createContext<HoverCardState>({
-  anchor: null,
-  isEditing: false,
-  setAnchor: warnNoProvider('setAnchor'),
-  setCard: warnNoProvider('setCard'),
-  setUuid: warnNoProvider('setUuid'),
-  setIsEditing: warnNoProvider('setIsEditing'),
-  close: warnNoProvider('close'),
-});
 
 export const HoverCardProvider = ({
   openDelay = DEFAULT_HOVER_CARD_OPEN_DELAY,
@@ -332,6 +300,8 @@ export const HoverCardProvider = ({
           glossary={glossary}
           editor={editor}
           anchor={anchorEl}
+          close={closeImmediately}
+          setHoverCardEditing={setIsEditing}
         />
       );
     }
@@ -343,6 +313,8 @@ export const HoverCardProvider = ({
           endNote={endNote}
           editor={editor}
           anchor={anchorEl}
+          close={closeImmediately}
+          setHoverCardEditing={setIsEditing}
         />
       );
     }
@@ -354,6 +326,8 @@ export const HoverCardProvider = ({
           href={href}
           editor={editor}
           anchor={anchorEl}
+          close={closeImmediately}
+          setHoverCardEditing={setIsEditing}
         />
       );
     }
@@ -367,6 +341,8 @@ export const HoverCardProvider = ({
           entity={entity}
           editor={editor}
           anchor={anchorEl}
+          close={closeImmediately}
+          setHoverCardEditing={setIsEditing}
         />
       );
     }
@@ -380,6 +356,8 @@ export const HoverCardProvider = ({
           entity={entity}
           editor={editor}
           anchor={anchorEl}
+          close={closeImmediately}
+          setHoverCardEditing={setIsEditing}
         />
       );
     }
@@ -390,20 +368,7 @@ export const HoverCardProvider = ({
   const shouldShowCard = enabled && anchor && uuid && cardType && editor;
 
   return (
-    <HoverCardContext.Provider
-      value={{
-        anchor,
-        uuid,
-        cardType,
-        editor,
-        isEditing,
-        setAnchor,
-        setCard,
-        setUuid,
-        setIsEditing,
-        close: closeImmediately,
-      }}
-    >
+    <>
       <div className="size-full" ref={containerRef}>
         {children}
       </div>
@@ -412,15 +377,6 @@ export const HoverCardProvider = ({
           {renderCard(uuid, cardType, anchor)}
         </TranslationHoverCard>
       )}
-    </HoverCardContext.Provider>
+    </>
   );
-};
-
-export const useHoverCard = () => {
-  const context = useContext(HoverCardContext);
-  if (!context) {
-    throw new Error('useHoverCard must be used within a HoverCardProvider');
-  }
-
-  return context;
 };
