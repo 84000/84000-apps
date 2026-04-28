@@ -1,7 +1,9 @@
 import {
   ANNOTATIONS_TO_IGNORE,
+  BodyItemType,
   DataClient,
   Passage,
+  TohokuCatalogEntry,
   passagesToDTO,
   passagesToRowDTO,
 } from '../types';
@@ -160,10 +162,22 @@ async function normalizePassageLabelsAfter({
   }
 }
 
+export type SavedPassageRow = {
+  uuid: string;
+  workUuid: string;
+  content: string;
+  label: string;
+  sort: number;
+  type: BodyItemType;
+  xmlId: string | null;
+  toh: TohokuCatalogEntry | null;
+};
+
 export type SavePassagesWithDeletionsResult = {
   success: boolean;
   savedCount: number;
   deletedCount?: number;
+  passages: SavedPassageRow[];
   error?: string;
 };
 
@@ -249,6 +263,7 @@ export const savePassagesWithDeletions = async ({
         return {
           success: false,
           savedCount: 0,
+          passages: [],
           error: `Failed to delete passages: ${deletePassagesError.message}`,
         };
       }
@@ -283,6 +298,7 @@ export const savePassagesWithDeletions = async ({
     return {
       success: false,
       savedCount: 0,
+      passages: [],
       error: `Failed to save passages: ${passageError.message}`,
     };
   }
@@ -297,6 +313,7 @@ export const savePassagesWithDeletions = async ({
       return {
         success: false,
         savedCount: passages.length,
+        passages: [],
         error: `Passages saved but annotations failed: ${annotationError.message}`,
       };
     }
@@ -316,9 +333,26 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  const { data: savedRows } = await client
+    .from('passages')
+    .select('uuid, work_uuid, content, label, sort, type, xmlId, toh')
+    .in('uuid', inputUuids);
+
+  const savedPassages: SavedPassageRow[] = (savedRows ?? []).map((row) => ({
+    uuid: row.uuid,
+    workUuid: row.work_uuid,
+    content: row.content,
+    label: row.label ?? '',
+    sort: row.sort,
+    type: row.type as BodyItemType,
+    xmlId: row.xmlId ?? null,
+    toh: (row.toh as TohokuCatalogEntry) ?? null,
+  }));
+
   return {
     success: true,
     savedCount: passages.length,
     deletedCount,
+    passages: savedPassages,
   };
 };

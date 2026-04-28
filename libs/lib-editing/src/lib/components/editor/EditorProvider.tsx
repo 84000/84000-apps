@@ -132,72 +132,6 @@ export const EditorContextProvider = ({
     [doc],
   );
 
-  const save = useCallback(async () => {
-    const editors = Object.values(editorCache.current);
-    if (!editors.length) {
-      console.warn('No editor instance found, cannot save.');
-      return;
-    }
-
-    // Use the ref directly for the most up-to-date dirty/deleted UUIDs
-    const {
-      uuidsToSave,
-      uuidsToDelete: deletedUuids,
-      hasChanges,
-    } = computeSavePayload({
-      dirtyUuids: dirtyUuidsRef.current,
-      deletedUuids: deletedUuidsRef.current,
-    });
-
-    if (!hasChanges) {
-      console.log('No changes to save.');
-      return;
-    }
-
-    const passages: Passage[] = [];
-    if (uuidsToSave.length) {
-      editors.forEach((editor) => {
-        // Skip editors whose DOM view has been unmounted (e.g. inactive tabs).
-        // Calling blur()/focus() on a destroyed editor throws a TipTap error
-        // about view['hasFocus'] not being accessible.
-        if (editor.isDestroyed) return;
-        // Ensure all nodes have unique, non-null UUIDs before reading them.
-        // New paragraph nodes created by splitting (e.g. pressing Enter) have
-        // uuid: null until the NodeView mount cycle runs validateAttrs. If we
-        // read the document before that cycle completes, annotationExportsFromNode
-        // silently drops any annotation whose node.attrs.uuid is falsy, producing
-        // missing paragraph annotations. ensureUuids fixes this synchronously.
-        ensureUuids(editor);
-        editor.commands.blur();
-        passages.push(
-          ...passagesFromNodes({
-            uuids: uuidsToSave,
-            workUuid: work.uuid,
-            editor,
-          }),
-        );
-        editor.commands.focus();
-      });
-    }
-    const result = await savePassages({
-      client,
-      passages,
-      deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
-    });
-
-    if (!result?.success) {
-      console.error('Save failed:', result?.error ?? 'unknown error');
-      return;
-    }
-
-    console.log('Document state saved.');
-
-    // Clear both ref and state
-    dirtyUuidsRef.current.clear();
-    deletedUuidsRef.current.clear();
-    dirtyStore.setDirty(false);
-  }, [editorCache, client, work.uuid]);
-
   const observerFunction = useCallback(
     (evts: YEvent<XmlFragment | XmlElement>[], txn: Transaction) => {
       if (!txn.local) {
@@ -447,6 +381,76 @@ export const EditorContextProvider = ({
     },
     [setNavigating],
   );
+
+  const save = useCallback(async () => {
+    const editors = Object.values(editorCache.current);
+    if (!editors.length) {
+      console.warn('No editor instance found, cannot save.');
+      return;
+    }
+
+    // Use the ref directly for the most up-to-date dirty/deleted UUIDs
+    const {
+      uuidsToSave,
+      uuidsToDelete: deletedUuids,
+      hasChanges,
+    } = computeSavePayload({
+      dirtyUuids: dirtyUuidsRef.current,
+      deletedUuids: deletedUuidsRef.current,
+    });
+
+    if (!hasChanges) {
+      console.log('No changes to save.');
+      return;
+    }
+
+    const passages: Passage[] = [];
+    if (uuidsToSave.length) {
+      editors.forEach((editor) => {
+        // Skip editors whose DOM view has been unmounted (e.g. inactive tabs).
+        // Calling blur()/focus() on a destroyed editor throws a TipTap error
+        // about view['hasFocus'] not being accessible.
+        if (editor.isDestroyed) return;
+        // Ensure all nodes have unique, non-null UUIDs before reading them.
+        // New paragraph nodes created by splitting (e.g. pressing Enter) have
+        // uuid: null until the NodeView mount cycle runs validateAttrs. If we
+        // read the document before that cycle completes, annotationExportsFromNode
+        // silently drops any annotation whose node.attrs.uuid is falsy, producing
+        // missing paragraph annotations. ensureUuids fixes this synchronously.
+        ensureUuids(editor);
+        editor.commands.blur();
+        passages.push(
+          ...passagesFromNodes({
+            uuids: uuidsToSave,
+            workUuid: work.uuid,
+            editor,
+          }),
+        );
+        editor.commands.focus();
+      });
+    }
+    const result = await savePassages({
+      client,
+      passages,
+      deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
+    });
+
+    if (!result?.success) {
+      console.error('Save failed:', result?.error ?? 'unknown error');
+      return;
+    }
+
+    console.log('Document state saved.');
+
+    if (result.passages?.length) {
+      await applyReplacedPassages(result.passages);
+    }
+
+    // Clear both ref and state
+    dirtyUuidsRef.current.clear();
+    deletedUuidsRef.current.clear();
+    dirtyStore.setDirty(false);
+  }, [editorCache, client, work.uuid, applyReplacedPassages, dirtyStore]);
 
   return (
     <EditorContext.Provider
