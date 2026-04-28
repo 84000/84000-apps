@@ -10,7 +10,6 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useHoverCard } from '../../../shared/HoverCardProvider';
 import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
@@ -22,17 +21,20 @@ export const EndNoteLinkHoverContent = ({
   uuid,
   endNote,
   editor,
+  close,
+  setHoverCardEditing,
 }: {
   uuid: string;
   endNote: string;
   editor: Editor;
   anchor: HTMLElement;
+  close: () => void;
+  setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [label, setLabel] = useState<string | undefined>();
-  const [labelState, setLabelState] = useState<
-    'loading' | 'loaded' | 'error'
-  >('loading');
-  const { close, setIsEditing } = useHoverCard();
+  const [labelState, setLabelState] = useState<'loading' | 'loaded' | 'error'>(
+    'loading',
+  );
   const { getEditor } = useEditorState();
   const { fetchEndNote } = useNavigation();
 
@@ -66,7 +68,7 @@ export const EndNoteLinkHoverContent = ({
   }, [endNote, fetchEndNote, getEditor]);
 
   const removeLink = useCallback(() => {
-    setIsEditing(false);
+    setHoverCardEditing(false);
     close();
 
     setTimeout(() => {
@@ -87,10 +89,10 @@ export const EndNoteLinkHoverContent = ({
       }
       editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setIsEditing]);
+  }, [editor, uuid, close, setHoverCardEditing]);
 
   const deleteEndnoteAndLink = useCallback(() => {
-    setIsEditing(false);
+    setHoverCardEditing(false);
     close();
 
     setTimeout(() => {
@@ -99,7 +101,7 @@ export const EndNoteLinkHoverContent = ({
         deleteEndnotePassageNode(endnotesEditor, endNote);
       }
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [endNote, getEditor, close, setIsEditing]);
+  }, [endNote, getEditor, close, setHoverCardEditing]);
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">

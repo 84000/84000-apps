@@ -9,7 +9,6 @@ import { BookOpenIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { GlossarySearch } from './GlossarySearch';
 import { findMarkByUuid } from '../../util';
-import { useHoverCard } from '../../../shared/HoverCardProvider';
 import { useNavigation } from '../../../shared';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
@@ -19,17 +18,20 @@ export const GlossaryInstance = ({
   glossary,
   editor,
   anchor,
+  close,
+  setHoverCardEditing,
 }: {
   uuid: string;
   glossary: string;
   editor: Editor;
   anchor: HTMLElement;
+  close: () => void;
+  setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
   const [english, setEnglish] = useState<string | null>(null);
   const [termNumber, setTermNumber] = useState<number | null>(null);
   const markText = anchor.textContent ?? '';
-  const { close, setIsEditing: setIsEditingContext } = useHoverCard();
   const { fetchGlossaryTerm } = useNavigation();
 
   useEffect(() => {
@@ -53,9 +55,9 @@ export const GlossaryInstance = ({
   const setIsEditing = useCallback(
     (editing: boolean) => {
       setIsEditingLocal(editing);
-      setIsEditingContext(editing);
+      setHoverCardEditing(editing);
     },
-    [setIsEditingContext],
+    [setHoverCardEditing],
   );
 
   const deleteLink = useCallback(() => {
