@@ -2,6 +2,11 @@
 
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 import { Editor } from '@tiptap/react';
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
 import { Doc, Transaction, XmlElement, XmlFragment, YEvent } from 'yjs';
 import type { Passage, Work } from '@eightyfourthousand/data-access';
 import {
@@ -10,6 +15,7 @@ import {
   type ReplacedPassage,
   savePassages,
 } from '@eightyfourthousand/client-graphql';
+import { Toaster, toast } from '@eightyfourthousand/design-system';
 import { passagesFromNodes, ensureUuids } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
@@ -77,7 +83,9 @@ export const EditorContext = createContext<EditorContextState>({
     // No-op when outside provider
   },
   save: async () => {
-    // No-op when outside provider
+    toast('Unable to save.', {
+      icon: <TriangleAlertIcon className="size-4 text-warning" />,
+    });
   },
   startObserving: () => {
     throw Error('Not implemented');
@@ -512,10 +520,16 @@ export const EditorContextProvider = ({
 
     if (!result?.success) {
       console.error('Save failed:', result?.error ?? 'unknown error');
+      toast('Error saving content.', {
+        icon: <CircleAlertIcon className="size-4 text-error" />,
+      });
       return;
     }
 
     console.log('Document state saved.');
+    toast('Content saved', {
+      icon: <CircleCheckIcon className="size-4 text-success" />,
+    });
 
     if (result.passages?.length) {
       await applyReplacedPassages(result.passages);
@@ -555,6 +569,7 @@ export const EditorContextProvider = ({
       }}
     >
       <NavigationProvider uuid={work.uuid}>{children}</NavigationProvider>
+      <Toaster />
     </EditorContext.Provider>
   );
 };
