@@ -113,6 +113,7 @@ export const EditorContextProvider = ({
     new Map(),
   );
   const savedBaselineUuidsByEditorRef = useRef<PassageUuidRecord>({});
+  const observedFragmentsByBuilderRef = useRef<Record<string, XmlFragment>>({});
 
   // Store for dirty state with subscription support
   const dirtyStore = useDirtyStore();
@@ -287,6 +288,17 @@ export const EditorContextProvider = ({
     (builder: string) => {
       const fragment = getFragment(builder);
       if (fragment) {
+        const observedFragment = observedFragmentsByBuilderRef.current[builder];
+        if (observedFragment === fragment) {
+          refreshEditorBaseline(builder);
+          return;
+        }
+
+        if (observedFragment) {
+          observedFragment.unobserveDeep(observerFunction);
+          lastObservedUuidsByFragmentRef.current.delete(observedFragment);
+        }
+
         // Pre-populate lastObservedUuidsByFragmentRef so the diff-based
         // deletion detection has a baseline from the very first observer event.
         // Without this, a merge that happens before any other edit would not be
@@ -297,6 +309,7 @@ export const EditorContextProvider = ({
         );
 
         fragment.observeDeep(observerFunction);
+        observedFragmentsByBuilderRef.current[builder] = fragment;
         refreshEditorBaseline(builder);
       }
     },
@@ -305,14 +318,15 @@ export const EditorContextProvider = ({
 
   const stopObserving = useCallback(
     (builder: string) => {
-      const fragment = getFragment(builder);
-      if (fragment && observerFunction) {
-        fragment.unobserveDeep(observerFunction);
-        lastObservedUuidsByFragmentRef.current.delete(fragment);
+      const observedFragment = observedFragmentsByBuilderRef.current[builder];
+      if (observedFragment) {
+        observedFragment.unobserveDeep(observerFunction);
+        lastObservedUuidsByFragmentRef.current.delete(observedFragment);
+        delete observedFragmentsByBuilderRef.current[builder];
       }
       delete savedBaselineUuidsByEditorRef.current[builder];
     },
-    [getFragment, observerFunction],
+    [observerFunction],
   );
 
   const setNavigating = useCallback(
