@@ -9,6 +9,7 @@ import {
   persistReplaceChanges,
   replacePassageText,
   savePassagesWithDeletions,
+  type SavedPassageRow,
 } from '@eightyfourthousand/data-access';
 import {
   buildAnnotationsByPassageUuid,
@@ -38,6 +39,7 @@ interface SavePassagesResult {
   success: boolean;
   savedCount: number;
   deletedCount?: number;
+  passages: SavedPassageRow[];
   error?: string;
 }
 
@@ -77,6 +79,7 @@ export const savePassagesMutation = async (
     return {
       success: false,
       savedCount: 0,
+      passages: [],
       error: permission.error,
     };
   }
@@ -105,6 +108,7 @@ export const savePassagesMutation = async (
     return {
       success: false,
       savedCount: 0,
+      passages: [],
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

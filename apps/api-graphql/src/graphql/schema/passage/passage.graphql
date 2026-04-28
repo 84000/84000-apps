@@ -227,6 +227,11 @@ type SavePassagesResult {
   deletedCount: Int
 
   """
+  Saved passages (after server-side normalization), used for client-side refresh.
+  """
+  passages: [Passage!]!
+
+  """
   Error message if the save failed
   """
   error: String

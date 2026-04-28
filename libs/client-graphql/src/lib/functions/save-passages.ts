@@ -1,6 +1,7 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 import type { Passage } from '@eightyfourthousand/data-access';
+import type { ReplacedPassage } from './replace';
 
 const SAVE_PASSAGES_MUTATION = gql`
   mutation SavePassages($passages: [PassageInput!]!, $deletedUuids: [ID!]) {
@@ -9,6 +10,10 @@ const SAVE_PASSAGES_MUTATION = gql`
       savedCount
       deletedCount
       error
+      passages {
+        uuid
+        json
+      }
     }
   }
 `;
@@ -18,6 +23,7 @@ interface SavePassagesResponse {
     success: boolean;
     savedCount: number;
     deletedCount?: number;
+    passages: ReplacedPassage[];
     error?: string;
   };
 }
@@ -63,6 +69,7 @@ export const savePassages = async ({
   success: boolean;
   savedCount: number;
   deletedCount?: number;
+  passages: ReplacedPassage[];
   error?: string;
 }> => {
   const passageInputs = passages.map(passageToInput);
