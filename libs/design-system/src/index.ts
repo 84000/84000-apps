@@ -35,6 +35,7 @@ export * from './lib/Sheet/Sheet';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Slider/Slider';
+export * from './lib/Sonner/Sonner';
 export * from './lib/Switch/Switch';
 export * from './lib/Table';
 export * from './lib/Tabs/Tabs';
