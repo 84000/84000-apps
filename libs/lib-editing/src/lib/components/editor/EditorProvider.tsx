@@ -116,6 +116,7 @@ export const EditorContextProvider = ({
   // Use ref for immediate tracking to avoid state updates on every keystroke
   const dirtyUuidsRef = useRef<Set<string>>(new Set());
   const isNavigatingRef = useRef(false);
+  const isNormalizingForSaveRef = useRef(false);
   const clearedFragmentRef = useRef<XmlFragment | null>(null);
   const lastObservedUuidsByFragmentRef = useRef<Map<XmlFragment, Set<string>>>(
     new Map(),
@@ -209,7 +210,11 @@ export const EditorContextProvider = ({
       // We intentionally avoid using Yjs `changes.deleted` because operations like
       // splitPassage (replaceWith + insert) cause the binding to delete and re-create
       // XmlElements internally, producing false positives.
-      if (!isNavigatingRef.current && evts.length > 0) {
+      if (
+        !isNavigatingRef.current &&
+        !isNormalizingForSaveRef.current &&
+        evts.length > 0
+      ) {
         let fragment: XmlFragment | null = null;
         let current: XmlFragment | XmlElement | null = evts[0].target;
         while (current) {
@@ -265,7 +270,7 @@ export const EditorContextProvider = ({
         }
       }
 
-      if (!isNavigatingRef.current) {
+      if (!isNavigatingRef.current && !isNormalizingForSaveRef.current) {
         txn.changed.forEach((_change, key) => {
           // Start from key itself (not key.parent) so that structural changes
           // directly on a passage XmlElement (e.g. children moved during merge)
@@ -462,7 +467,6 @@ export const EditorContextProvider = ({
 
     const liveUuidsByEditor: PassageUuidRecord = {};
     editorEntries.forEach(([key, editor]) => {
-      ensureUuids(editor);
       liveUuidsByEditor[key] = getEditorUuids(editor);
     });
     const savedBaselineUuidsByEditor = Object.fromEntries(
@@ -493,6 +497,22 @@ export const EditorContextProvider = ({
     const passages: Passage[] = [];
     if (uuidsToSave.length) {
       const uuidsToSaveSet = new Set(uuidsToSave);
+      isNormalizingForSaveRef.current = true;
+      try {
+        editorEntries.forEach(([, editor]) => {
+          const editorUuids = Array.from(getEditorUuids(editor)).filter(
+            (uuid) => uuidsToSaveSet.has(uuid),
+          );
+          if (editorUuids.length === 0) {
+            return;
+          }
+
+          ensureUuids(editor, { passageUuids: new Set(editorUuids) });
+        });
+      } finally {
+        isNormalizingForSaveRef.current = false;
+      }
+
       editorEntries.forEach(([, editor]) => {
         const editorUuids = Array.from(getEditorUuids(editor)).filter((uuid) =>
           uuidsToSaveSet.has(uuid),
