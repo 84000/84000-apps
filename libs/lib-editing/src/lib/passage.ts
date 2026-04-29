@@ -39,16 +39,37 @@ import { Passage } from '@eightyfourthousand/data-access';
 // and must be deduplicated alongside the main `uuid` attribute.
 const PARAMETER_UUID_ATTRS = ['leadingSpaceUuid', 'indentUuid'] as const;
 
-export const ensureUuids = (editor: Editor): void => {
+export interface EnsureUuidsOptions {
+  passageUuids?: Set<string>;
+}
+
+export const ensureUuids = (
+  editor: Editor,
+  options: EnsureUuidsOptions = {},
+): void => {
   const { state, view } = editor;
   const { doc, tr } = state;
   const seen = new Set<string>();
   let changed = false;
+  let activePassageUuid: string | undefined;
+  const targetPassageUuids = options.passageUuids;
 
   doc.descendants((node, pos) => {
     // text and doc nodes never carry a uuid
     if (node.type.name === 'text' || node.type.name === 'doc') {
       return true;
+    }
+
+    if (node.type.name === 'passage') {
+      activePassageUuid = node.attrs.uuid;
+      if (node.attrs.uuid) {
+        seen.add(node.attrs.uuid);
+      }
+      return !targetPassageUuids || targetPassageUuids.has(node.attrs.uuid);
+    }
+
+    if (targetPassageUuids && !activePassageUuid) {
+      return false;
     }
 
     let newAttrs: Record<string, unknown> | null = null;
@@ -87,6 +108,24 @@ export const ensureUuids = (editor: Editor): void => {
   // marks directly, so we must walk text nodes to find them.
   doc.descendants((node, pos) => {
     if (node.type.name !== 'text' || node.marks.length === 0) return true;
+
+    if (targetPassageUuids) {
+      let nodeInTargetPassage = false;
+      const $pos = doc.resolve(pos);
+      for (let depth = $pos.depth; depth >= 0; depth--) {
+        const parent = $pos.node(depth);
+        if (
+          parent.type.name === 'passage' &&
+          targetPassageUuids.has(parent.attrs.uuid)
+        ) {
+          nodeInTargetPassage = true;
+          break;
+        }
+      }
+      if (!nodeInTargetPassage) {
+        return true;
+      }
+    }
 
     for (const mark of node.marks) {
       const existing: string | null | undefined = mark.attrs.uuid;

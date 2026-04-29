@@ -2,7 +2,9 @@ import {
   ANNOTATIONS_TO_IGNORE,
   BodyItemType,
   DataClient,
+  AnnotationDTO,
   Passage,
+  PassageRowDTO,
   TohokuCatalogEntry,
   passagesToDTO,
   passagesToRowDTO,
@@ -181,6 +183,74 @@ export type SavePassagesWithDeletionsResult = {
   error?: string;
 };
 
+type ExistingPassageRow = PassageRowDTO;
+
+type ExistingAnnotationRow = AnnotationDTO & {
+  passage_uuid: string;
+};
+
+const stableStringify = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(
+        ([key, entryValue]) =>
+          `${JSON.stringify(key)}:${stableStringify(entryValue)}`,
+      )
+      .join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+};
+
+const nullableEqual = (a: unknown, b: unknown) => (a ?? null) === (b ?? null);
+
+const passageRowHasChanged = (
+  incoming: PassageRowDTO,
+  existing?: ExistingPassageRow,
+) => {
+  if (!existing) {
+    return true;
+  }
+
+  return (
+    incoming.content !== existing.content ||
+    incoming.label !== existing.label ||
+    incoming.sort !== existing.sort ||
+    incoming.type !== existing.type ||
+    incoming.work_uuid !== existing.work_uuid ||
+    !nullableEqual(incoming.xmlId, existing.xmlId) ||
+    !nullableEqual(incoming.parent, existing.parent) ||
+    stableStringify(incoming.toh ?? null) !==
+      stableStringify(existing.toh ?? null)
+  );
+};
+
+const annotationHasChanged = (
+  incoming: AnnotationDTO,
+  existing?: ExistingAnnotationRow,
+) => {
+  if (!existing) {
+    return true;
+  }
+
+  return (
+    incoming.start !== existing.start ||
+    incoming.end !== existing.end ||
+    incoming.type !== existing.type ||
+    (incoming.passage_uuid ?? incoming.passageUuid ?? '') !==
+      existing.passage_uuid ||
+    stableStringify(incoming.content ?? []) !==
+      stableStringify(existing.content ?? []) ||
+    stableStringify(incoming.toh ?? null) !==
+      stableStringify(existing.toh ?? null)
+  );
+};
+
 export const savePassagesWithDeletions = async ({
   client,
   passages,
@@ -191,10 +261,15 @@ export const savePassagesWithDeletions = async ({
   deletedUuids?: string[];
 }): Promise<SavePassagesWithDeletionsResult> => {
   const inputUuids = passages.map((p) => p.uuid);
-  const { data: existingRows } = await client
-    .from('passages')
-    .select('uuid')
-    .in('uuid', inputUuids);
+  const { data: existingRows } =
+    inputUuids.length > 0
+      ? await client
+          .from('passages')
+          .select(
+            'uuid, content, label, sort, type, work_uuid, xmlId, parent, toh',
+          )
+          .in('uuid', inputUuids)
+      : { data: [] };
   const existingUuidSet = new Set((existingRows ?? []).map((r) => r.uuid));
   const newPassages = passages.filter((p) => !existingUuidSet.has(p.uuid));
   const sortedNewPassages = [...newPassages].sort((a, b) => b.sort - a.sort);
@@ -276,11 +351,35 @@ export const savePassagesWithDeletions = async ({
   const passageRowDtos = passagesToRowDTO(passages);
   const passageUuids = passages.map((p) => p.uuid);
   const annotations = dtos.flatMap((p) => p.annotations || []);
-  const { data: existingAnnotations } = await client
-    .from('passage_annotations')
-    .select('uuid')
-    .in('passage_uuid', passageUuids)
-    .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
+  const { data: existingAnnotations } =
+    passageUuids.length > 0
+      ? await client
+          .from('passage_annotations')
+          .select('uuid, passage_uuid, start, end, type, content, toh')
+          .in('passage_uuid', passageUuids)
+          .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`)
+      : { data: [] };
+
+  const existingRowsByUuid = new Map(
+    ((existingRows ?? []) as ExistingPassageRow[]).map((row) => [
+      row.uuid,
+      row,
+    ]),
+  );
+  const passageRowsToUpsert = passageRowDtos.filter((row) =>
+    passageRowHasChanged(row, existingRowsByUuid.get(row.uuid)),
+  );
+  const existingAnnotationsByUuid = new Map(
+    ((existingAnnotations ?? []) as ExistingAnnotationRow[]).map(
+      (annotation) => [annotation.uuid, annotation],
+    ),
+  );
+  const annotationsToUpsert = annotations.filter((annotation) =>
+    annotationHasChanged(
+      annotation,
+      existingAnnotationsByUuid.get(annotation.uuid),
+    ),
+  );
 
   const annotationsToDelete = existingAnnotations?.filter(
     (existingAnnotation) =>
@@ -289,24 +388,26 @@ export const savePassagesWithDeletions = async ({
       ),
   );
 
-  const { error: passageError } = await client
-    .from('passages')
-    .upsert(passageRowDtos, { onConflict: 'uuid' });
+  if (passageRowsToUpsert.length > 0) {
+    const { error: passageError } = await client
+      .from('passages')
+      .upsert(passageRowsToUpsert, { onConflict: 'uuid' });
 
-  if (passageError) {
-    console.error('Error saving passages:', passageError);
-    return {
-      success: false,
-      savedCount: 0,
-      passages: [],
-      error: `Failed to save passages: ${passageError.message}`,
-    };
+    if (passageError) {
+      console.error('Error saving passages:', passageError);
+      return {
+        success: false,
+        savedCount: 0,
+        passages: [],
+        error: `Failed to save passages: ${passageError.message}`,
+      };
+    }
   }
 
-  if (annotations.length > 0) {
+  if (annotationsToUpsert.length > 0) {
     const { error: annotationError } = await client
       .from('passage_annotations')
-      .upsert(annotations, { onConflict: 'uuid' });
+      .upsert(annotationsToUpsert, { onConflict: 'uuid' });
 
     if (annotationError) {
       console.error('Error saving annotations:', annotationError);
@@ -333,10 +434,13 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
-  const { data: savedRows } = await client
-    .from('passages')
-    .select('uuid, work_uuid, content, label, sort, type, xmlId, toh')
-    .in('uuid', inputUuids);
+  const { data: savedRows } =
+    inputUuids.length > 0
+      ? await client
+          .from('passages')
+          .select('uuid, work_uuid, content, label, sort, type, xmlId, toh')
+          .in('uuid', inputUuids)
+      : { data: [] };
 
   const savedPassages: SavedPassageRow[] = (savedRows ?? []).map((row) => ({
     uuid: row.uuid,
