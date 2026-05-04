@@ -3,6 +3,7 @@ import {
   Passage,
   Annotation,
   findLiteralOccurrences,
+  findRegexOccurrences,
   fetchReplaceAnnotations,
   fetchReplaceRows,
   hasPermission,
@@ -124,6 +125,7 @@ export const replaceMutation = async (
     searchText: string;
     targetUuids: string[];
     type?: 'PASSAGE';
+    useRegex?: boolean;
   },
   ctx: GraphQLContext,
 ): Promise<ReplaceResult> => {
@@ -195,7 +197,8 @@ export const replaceMutation = async (
           }
         }
 
-        const occurrences = findLiteralOccurrences(row.content, args.searchText);
+        const findOccurrences = args.useRegex ? findRegexOccurrences : findLiteralOccurrences;
+        const occurrences = findOccurrences(row.content, args.searchText);
         occurrenceIndex =
           row.uuid === cursorPassageUuid
             ? occurrences.findIndex((occurrence) => occurrence.start >= cursorStart)
@@ -207,7 +210,8 @@ export const replaceMutation = async (
           continue;
         }
       } else if (remainingOccurrenceIndex !== undefined) {
-        const occurrences = findLiteralOccurrences(row.content, args.searchText);
+        const findOccurrences = args.useRegex ? findRegexOccurrences : findLiteralOccurrences;
+        const occurrences = findOccurrences(row.content, args.searchText);
         if (remainingOccurrenceIndex >= occurrences.length) {
           remainingOccurrenceIndex -= occurrences.length;
           continue;
@@ -221,6 +225,7 @@ export const replaceMutation = async (
         searchText: args.searchText,
         replaceText: args.replaceText,
         occurrenceIndex,
+        useRegex: args.useRegex,
       });
 
       if (replacement.replacementsApplied === 0) {
@@ -248,6 +253,7 @@ export const replaceMutation = async (
           })),
           searchText: args.searchText,
           updatedContentByUuid,
+          useRegex: args.useRegex,
         });
 
         nextPassageUuid = nextCursor?.passageUuid ?? null;

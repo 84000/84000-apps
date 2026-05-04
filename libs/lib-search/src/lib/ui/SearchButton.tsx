@@ -47,6 +47,7 @@ export interface SearchActionContext {
   scrollActiveOccurrenceIntoView: () => void;
   setActiveOccurrenceIndex: (index: number) => void;
   setShouldScrollActiveOccurrence: (shouldScroll: boolean) => void;
+  useRegex: boolean;
 }
 
 export interface SearchButtonProps {
@@ -85,6 +86,7 @@ export const SearchButton = ({
   const [searching, setSearching] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [useRegex, setUseRegex] = useState(false);
   const [results, setResults] = useState<SearchResults>();
   const [activeOccurrenceIndex, setActiveOccurrenceIndexState] = useState(0);
   const [activeResultsTab, setActiveResultsTab] =
@@ -94,14 +96,16 @@ export const SearchButton = ({
   const pendingOccurrenceSelectionRef = useRef<SearchPendingSelection | null>(
     null,
   );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const passageOccurrences = useMemo(
     () =>
       getPassageOccurrences(
         [...(results?.alignments || []), ...(results?.passages || [])],
         searchQuery,
+        useRegex,
       ),
-    [results?.alignments, results?.passages, searchQuery],
+    [results?.alignments, results?.passages, searchQuery, useRegex],
   );
   const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
   const activeOccurrenceStart = activeOccurrence?.start ?? null;
@@ -144,6 +148,7 @@ export const SearchButton = ({
         text: searchQuery,
         uuid: workUuid,
         toh,
+        useRegex,
       });
       setHasResults(
         !!nextResults &&
@@ -160,7 +165,7 @@ export const SearchButton = ({
 
       setSearching(false);
     },
-    [searchQuery, toh, workUuid],
+    [searchQuery, toh, useRegex, workUuid],
   );
 
   const setActiveOccurrenceIndex = useCallback(
@@ -205,6 +210,7 @@ export const SearchButton = ({
   useEffect(() => {
     setResults(undefined);
     setSearchQuery('');
+    setUseRegex(false);
     setActiveOccurrenceIndexState(0);
     setShouldScrollActiveOccurrence(false);
     pendingOccurrenceSelectionRef.current = null;
@@ -331,6 +337,7 @@ export const SearchButton = ({
       scrollActiveOccurrenceIntoView,
       setActiveOccurrenceIndex,
       setShouldScrollActiveOccurrence,
+      useRegex,
     }),
     [
       activeOccurrence,
@@ -345,6 +352,7 @@ export const SearchButton = ({
       searchQuery,
       searching,
       setActiveOccurrenceIndex,
+      useRegex,
     ],
   );
 
@@ -379,21 +387,39 @@ export const SearchButton = ({
                 <XIcon className="size-3 my-auto" />
               </Button>
             </div>
-            <Input
-              autoFocus
-              placeholder="Type to search..."
-              value={searchQuery}
-              className="w-full text-foreground px-4 py-6"
-              onChange={(e) => {
-                const nextValue = e.target.value;
-                if (nextValue === searchQuery) {
-                  return;
-                }
-                setActiveOccurrenceIndexState(0);
-                pendingOccurrenceSelectionRef.current = null;
-                setSearchQuery(nextValue);
-              }}
-            />
+            <div className="relative flex items-center">
+              <Input
+                autoFocus
+                ref={searchInputRef}
+                placeholder="Type to search..."
+                value={searchQuery}
+                className="w-full text-foreground px-4 py-6 pr-16"
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  if (nextValue === searchQuery) {
+                    return;
+                  }
+                  setActiveOccurrenceIndexState(0);
+                  pendingOccurrenceSelectionRef.current = null;
+                  setSearchQuery(nextValue);
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title={useRegex ? 'Regex mode on' : 'Regex mode off'}
+                className={`absolute right-2 font-mono text-xs px-2 h-7 ${useRegex ? 'bg-accent text-accent-foreground hover:bg-accent/80' : 'text-muted-foreground'}`}
+                onClick={() => {
+                  setUseRegex((prev) => !prev);
+                  setActiveOccurrenceIndexState(0);
+                  pendingOccurrenceSelectionRef.current = null;
+                  searchInputRef.current?.focus();
+                }}
+              >
+                .*
+              </Button>
+            </div>
             {searchQuery && renderActions?.(actionContext)}
           </div>
           {searchQuery && (
@@ -433,6 +459,7 @@ export const SearchButton = ({
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
                             results={results[tab]}
+                            useRegex={useRegex}
                             onCardClick={onCardClick}
                           />
                         </TabsContent>

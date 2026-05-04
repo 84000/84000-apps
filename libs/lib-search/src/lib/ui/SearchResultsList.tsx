@@ -6,12 +6,14 @@ export const SearchResultsList = ({
   activePassageUuid,
   query,
   results,
+  useRegex,
   onCardClick,
 }: {
   activeOccurrenceStart?: number;
   activePassageUuid?: string;
   query: string;
   results: SearchResult[];
+  useRegex?: boolean;
   onCardClick: (result: SearchResult) => void;
 }) => {
   return (
@@ -26,6 +28,7 @@ export const SearchResultsList = ({
             isActive={isActive}
             match={result}
             query={query}
+            useRegex={useRegex}
             onClick={() => onCardClick(result)}
           />
         )

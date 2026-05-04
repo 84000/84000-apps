@@ -40,7 +40,6 @@ export const SearchReplacePanel = ({
     canReplace &&
     !replaceDisabledReason &&
     !!searchContext.searchQuery &&
-    !!replaceQuery &&
     searchContext.passageOccurrences.length > 0 &&
     !replacing;
   const canStepBackward =
@@ -105,6 +104,7 @@ export const SearchReplacePanel = ({
             searchText: searchContext.searchQuery,
             replaceText: replaceQuery,
             targetUuids: chunk,
+            useRegex: searchContext.useRegex,
           });
 
           if (!response.success) {
@@ -133,6 +133,7 @@ export const SearchReplacePanel = ({
         targetUuids: [activeOccurrence.passageUuid],
         cursorPassageUuid: activeOccurrence.passageUuid,
         cursorStart: activeOccurrence.start,
+        useRegex: searchContext.useRegex,
       });
 
       if (!response.success) {
@@ -207,7 +208,9 @@ export const SearchReplacePanel = ({
             {replaceDisabledReason && <span>{replaceDisabledReason}</span>}
           </div>
           <div className="text-sm text-muted-foreground pb-4">
-            Replace is case sensitive and is only applied to passages.
+            {searchContext.useRegex
+              ? 'Regex replace is applied to passages only.'
+              : 'Replace is case sensitive and is only applied to passages.'}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
