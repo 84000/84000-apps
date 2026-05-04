@@ -4,6 +4,7 @@ import {
   Passage,
   annotationsFromDTO,
   findLiteralOccurrences,
+  findRegexOccurrences,
   type ReplacePassageRow,
 } from '@eightyfourthousand/data-access';
 
@@ -61,6 +62,7 @@ export const validateReplaceArgs = (args: {
   searchText: string;
   targetUuids: string[];
   type?: 'PASSAGE';
+  useRegex?: boolean;
 }) => {
   const replaceType = args.type ?? 'PASSAGE';
   if (replaceType !== 'PASSAGE') {
@@ -117,12 +119,14 @@ export const findNextReplaceCursor = ({
   passages,
   searchText,
   updatedContentByUuid,
+  useRegex = false,
 }: {
   fromPassageUuid: string;
   fromStart: number;
   passages: Array<{ content: string; uuid: string }>;
   searchText: string;
   updatedContentByUuid: Map<string, string>;
+  useRegex?: boolean;
 }): { passageUuid: string; start: number } | null => {
   const startIndex = passages.findIndex(
     (passage) => passage.uuid === fromPassageUuid,
@@ -135,6 +139,8 @@ export const findNextReplaceCursor = ({
   const getContent = (uuid: string, fallback: string) =>
     updatedContentByUuid.get(uuid) ?? fallback;
 
+  const findOccurrences = useRegex ? findRegexOccurrences : findLiteralOccurrences;
+
   const findMatchInPassage = ({
     minStart,
     passage,
@@ -143,7 +149,7 @@ export const findNextReplaceCursor = ({
     passage: { content: string; uuid: string };
   }) => {
     const content = getContent(passage.uuid, passage.content);
-    const match = findLiteralOccurrences(content, searchText).find(
+    const match = findOccurrences(content, searchText).find(
       (occurrence) => occurrence.start >= minStart,
     );
 

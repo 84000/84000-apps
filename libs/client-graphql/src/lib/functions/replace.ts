@@ -32,6 +32,7 @@ const REPLACE_MUTATION = gql`
     $occurrenceIndex: Int
     $cursorPassageUuid: ID
     $cursorStart: Int
+    $useRegex: Boolean
   ) {
     replace(
       searchText: $searchText
@@ -41,6 +42,7 @@ const REPLACE_MUTATION = gql`
       occurrenceIndex: $occurrenceIndex
       cursorPassageUuid: $cursorPassageUuid
       cursorStart: $cursorStart
+      useRegex: $useRegex
     ) {
       success
       updatedCount
@@ -67,6 +69,7 @@ export const replace = async ({
   searchText,
   targetUuids,
   type = 'PASSAGE',
+  useRegex,
 }: {
   client: GraphQLClient;
   occurrenceIndex?: number;
@@ -76,6 +79,7 @@ export const replace = async ({
   cursorStart?: number;
   targetUuids: string[];
   type?: ReplaceType;
+  useRegex?: boolean;
 }) => {
   const response = await client.request<ReplaceResponse>(REPLACE_MUTATION, {
     searchText,
@@ -85,6 +89,7 @@ export const replace = async ({
     occurrenceIndex,
     cursorPassageUuid,
     cursorStart,
+    useRegex,
   });
 
   return response.replace;

@@ -50,14 +50,45 @@ export const findLiteralOccurrences = (
   return matches;
 };
 
+export const findRegexOccurrences = (
+  content: string,
+  pattern: string,
+): Array<{ end: number; start: number }> => {
+  if (!pattern) {
+    return [];
+  }
+
+  let regex: RegExp;
+  try {
+    regex = new RegExp(pattern, 'gi');
+  } catch {
+    return [];
+  }
+
+  const matches: Array<{ end: number; start: number }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match[0].length === 0) {
+      regex.lastIndex++;
+      continue;
+    }
+    matches.push({ start: match.index, end: match.index + match[0].length });
+  }
+
+  return matches;
+};
+
 export const getPassageOccurrences = (
   passages: { content: string; uuid: string; type: 'passage' | 'alignment' }[],
   searchText: string,
+  useRegex = false,
 ): PassageOccurrence[] => {
   let index = 0;
+  const findOccurrences = useRegex ? findRegexOccurrences : findLiteralOccurrences;
 
   return passages.flatMap((passage) =>
-    findLiteralOccurrences(passage.content, searchText).map((match, passageIndex) => ({
+    findOccurrences(passage.content, searchText).map((match, passageIndex) => ({
       ...match,
       index: index++,
       passageOccurrenceIndex: passageIndex,
@@ -172,11 +203,13 @@ export const replacePassageText = ({
   passage,
   replaceText,
   searchText,
+  useRegex = false,
 }: {
   occurrenceIndex?: number;
   passage: Passage;
   replaceText: string;
   searchText: string;
+  useRegex?: boolean;
 }): PassageReplacementResult => {
   if (!searchText || occurrenceIndex === null) {
     return {
@@ -187,7 +220,8 @@ export const replacePassageText = ({
     };
   }
 
-  const matches = findLiteralOccurrences(passage.content, searchText);
+  const findOccurrences = useRegex ? findRegexOccurrences : findLiteralOccurrences;
+  const matches = findOccurrences(passage.content, searchText);
   const matchesToApply =
     occurrenceIndex === undefined
       ? matches
