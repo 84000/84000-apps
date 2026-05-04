@@ -96,6 +96,7 @@ export const SearchButton = ({
   const pendingOccurrenceSelectionRef = useRef<SearchPendingSelection | null>(
     null,
   );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const passageOccurrences = useMemo(
     () =>
@@ -389,6 +390,7 @@ export const SearchButton = ({
             <div className="relative flex items-center">
               <Input
                 autoFocus
+                ref={searchInputRef}
                 placeholder="Type to search..."
                 value={searchQuery}
                 className="w-full text-foreground px-4 py-6 pr-16"
@@ -412,6 +414,7 @@ export const SearchButton = ({
                   setUseRegex((prev) => !prev);
                   setActiveOccurrenceIndexState(0);
                   pendingOccurrenceSelectionRef.current = null;
+                  searchInputRef.current?.focus();
                 }}
               >
                 .*
