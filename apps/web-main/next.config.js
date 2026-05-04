@@ -92,7 +92,17 @@ const nextConfig = {
   },
   async rewrites() {
     const studioRoutes = await studioRoutesPromise;
-    return studioRoutes.rewrites || [];
+    return [
+      ...(studioRoutes.rewrites || []),
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ];
   },
 };
 
