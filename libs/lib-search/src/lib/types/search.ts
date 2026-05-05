@@ -1,4 +1,8 @@
-import { GlossaryTermInstance, GlossaryTermInstanceDTO, glossaryTermInstanceFromDTO } from "@eightyfourthousand/data-access";
+import {
+  GlossaryTermInstance,
+  GlossaryTermInstanceDTO,
+  glossaryTermInstanceFromDTO,
+} from '@eightyfourthousand/data-access';
 
 export const RESULTS_ENTITIES = [
   'alignments',
@@ -110,7 +114,7 @@ export const glossaryMatchFromDTO = (
 ): GlossaryMatch => {
   return {
     type: 'glossary',
-    uuid: dto.authority_uuid,
+    uuid: dto.glossary_uuid,
     content: dto.content,
     entry: glossaryTermInstanceFromDTO(dto.entry),
   };
