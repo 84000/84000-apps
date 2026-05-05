@@ -77,6 +77,9 @@
       ],
       "@lib-user/ssr": [
         "libs/lib-user/src/ssr.ts"
+      ],
+      "@eightyfourthousand/lib-mcp": [
+        "libs/lib-mcp/src/index.ts"
       ]
     }
   },
