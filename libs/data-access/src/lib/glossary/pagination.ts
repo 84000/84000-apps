@@ -218,14 +218,14 @@ export const getWorkGlossaryTermsPage = async ({
   ] = await Promise.all([
     client
       .from('glossary_term_index')
-      .select('authority_uuid', { count: 'exact', head: true })
+      .select('glossary_uuid', { count: 'exact', head: true })
       .eq('work_uuid', workUuid),
     cursor
       ? client
           .from('glossary_term_index')
-          .select('authority_uuid, term_number')
+          .select('glossary_uuid, term_number')
           .eq('work_uuid', workUuid)
-          .eq('authority_uuid', cursor)
+          .eq('glossary_uuid', cursor)
           .limit(1)
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -247,7 +247,7 @@ export const getWorkGlossaryTermsPage = async ({
 
   const cursorRow = cursor
     ? ((cursorRows ?? [])[0] as
-        | { authority_uuid: string; term_number: number | string }
+        | { glossary_uuid: string; term_number: number | string }
         | undefined)
     : undefined;
 
@@ -329,8 +329,8 @@ export const getWorkGlossaryTermsPage = async ({
 
   return buildGlossaryTermConnection(
     nodes,
-    hasMoreAfter ? lastRow.authority_uuid : null,
-    hasMoreBefore ? firstRow.authority_uuid : null,
+    hasMoreAfter ? lastRow.glossary_uuid : null,
+    hasMoreBefore ? firstRow.glossary_uuid : null,
     hasMoreAfter,
     hasMoreBefore,
     totalCount,
@@ -367,13 +367,13 @@ export const getWorkGlossaryTermsAround = async ({
   ] = await Promise.all([
     client
       .from('glossary_term_index')
-      .select('authority_uuid', { count: 'exact', head: true })
+      .select('glossary_uuid', { count: 'exact', head: true })
       .eq('work_uuid', workUuid),
     client
       .from('glossary_term_index')
-      .select('authority_uuid, term_number')
+      .select('glossary_uuid, term_number')
       .eq('work_uuid', workUuid)
-      .eq('authority_uuid', cursor)
+      .eq('glossary_uuid', cursor)
       .limit(1),
   ]);
 
@@ -396,7 +396,7 @@ export const getWorkGlossaryTermsAround = async ({
 
   const totalCount = count ?? 0;
   const cursorRow = (cursorRows ?? [])[0] as
-    | { authority_uuid: string; term_number: number | string }
+    | { glossary_uuid: string; term_number: number | string }
     | undefined;
 
   if (!cursorRow) {
@@ -462,8 +462,8 @@ export const getWorkGlossaryTermsAround = async ({
 
   return buildGlossaryTermConnection(
     nodes,
-    hasMoreAfter && lastRow ? lastRow.authority_uuid : null,
-    hasMoreBefore && firstRow ? firstRow.authority_uuid : null,
+    hasMoreAfter && lastRow ? lastRow.glossary_uuid : null,
+    hasMoreBefore && firstRow ? firstRow.glossary_uuid : null,
     hasMoreAfter,
     hasMoreBefore,
     totalCount,

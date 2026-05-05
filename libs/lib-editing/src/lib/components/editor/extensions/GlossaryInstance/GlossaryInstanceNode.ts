@@ -107,13 +107,13 @@ export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
       }
 
       dom.addEventListener('click', () => {
-        const { authority } = props.mark.attrs;
-        if (!authority) {
+        const { glossary } = props.mark.attrs;
+        if (!glossary) {
           return;
         }
 
         const query = new URLSearchParams(window.location.search);
-        query.set('right', `open:glossary:${authority}`);
+        query.set('right', `open:glossary:${glossary}`);
         window.history.pushState({}, '', `?${query.toString()}`);
       });
 

@@ -45,11 +45,11 @@ export const lookupEntity = async ({
     case 'glossary':
       {
         const item = await getGlossaryInstance({ client, uuid: entity });
-        if (!item?.workUuid || !item.authority) {
+        if (!item?.workUuid || !item.uuid) {
           return;
         }
 
-        query.set('right', `open:glossary:${item.authority}`);
+        query.set('right', `open:glossary:${item.uuid}`);
         path = `${prefix}/${item.workUuid}?${query.toString()}`;
       }
       break;
