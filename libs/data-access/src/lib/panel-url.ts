@@ -71,7 +71,7 @@ export const urlForEntity = ({
     });
   }
 
-  const { href, search, host } = location;
+  const { origin, href, search } = location;
   const searchParams = new URLSearchParams(search);
 
   if (!contentType) {
@@ -81,7 +81,7 @@ export const urlForEntity = ({
   }
 
   const entityType = entityTypeForContentType(contentType);
-  const baseUrl = new URL(`${host}/entity/${entityType}/${uuid}`);
+  const baseUrl = new URL(`/entity/${entityType}/${uuid}`, origin);
   const toh = searchParams.get('toh');
   const { tab } = panelAndTabForContentType(contentType);
   const queryParams = new URLSearchParams({
