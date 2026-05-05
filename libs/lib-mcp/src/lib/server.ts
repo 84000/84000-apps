@@ -5,23 +5,56 @@ import type { McpHandlerOptions } from './types';
 export function createMcpHandler(options: McpHandlerOptions) {
   const { name = '84000-mcp', version = '1.0.0', tools } = options;
 
+  function buildServer(): McpServer {
+    const server = new McpServer({ name, version });
+
+    for (const tool of tools) {
+      const {
+        name,
+        description,
+        inputSchema,
+        outputSchema,
+        annotations,
+        handler,
+      } = tool;
+      server.registerTool(
+        name,
+        {
+          description,
+          inputSchema,
+          outputSchema,
+          annotations,
+        },
+        handler,
+      );
+    }
+
+    if (tools.length === 0) {
+      const placeholder = server.registerTool(
+        '_init',
+        { description: 'placeholder' },
+        async () => ({
+          content: [],
+        }),
+      );
+      placeholder.remove();
+    }
+
+    return server;
+  }
+
   async function GET(): Promise<Response> {
     return new Response('Method not allowed', { status: 405 });
   }
 
   async function POST(req: Request): Promise<Response> {
     try {
-      const server = new McpServer({ name, version });
-
-      for (const tool of tools) {
-        server.tool(tool.name, tool.description, tool.schema, tool.handler);
-      }
-
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
       });
 
+      const server = buildServer();
       await server.connect(transport);
 
       return await transport.handleRequest(req);
