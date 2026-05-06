@@ -17,5 +17,7 @@ export interface McpToolDefinition<
 export interface McpHandlerOptions {
   name?: string;
   version?: string;
+  description?: string;
+  instructions?: string;
   tools: McpToolDefinition[];
 }

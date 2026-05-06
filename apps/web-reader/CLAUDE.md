@@ -8,7 +8,7 @@ Public-facing reader for published translations. Minimal authentication (optiona
 - `/entity/[type]/[slug]` — glossary terms, authorities, and other entity detail pages
 - `/translation/[slug]` — translation-specific route
 - `/api/feedback` — user feedback endpoint
-- `/api/mcp` — Model Context Protocol endpoint for AI tool access
+- `/mcp` — Model Context Protocol endpoint for AI tool access (public, anonymous)
 
 ## Layout
 
