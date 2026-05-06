@@ -3,10 +3,19 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import type { McpHandlerOptions } from './types';
 
 export function createMcpHandler(options: McpHandlerOptions) {
-  const { name = '84000-mcp', version = '2026.5.0', tools } = options;
+  const {
+    name = '84000-mcp',
+    version = '2026.5.0',
+    description,
+    instructions,
+    tools,
+  } = options;
 
   function buildServer(): McpServer {
-    const server = new McpServer({ name, version });
+    const server = new McpServer(
+      { name, version, description },
+      { instructions },
+    );
 
     for (const tool of tools) {
       const {
