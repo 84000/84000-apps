@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-agent",
-  "version": "2026.4.3",
+  "version": "2026.5.0",
   "description": "Shared MCP server factory for 84000 Next.js applications.",
   "private": false,
   "repository": {
