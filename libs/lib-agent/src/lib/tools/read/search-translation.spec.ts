@@ -2,11 +2,11 @@ import { createSearchTranslationTool } from './search-translation';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/lib-search', () => ({
-  search: jest.fn(),
+  searchWithClient: jest.fn(),
 }));
 
-import { search } from '@eightyfourthousand/lib-search';
-const mockedSearch = jest.mocked(search);
+import { searchWithClient } from '@eightyfourthousand/lib-search';
+const mockedSearch = jest.mocked(searchWithClient);
 
 describe('search-translation tool', () => {
   const client = {} as DataClient;
@@ -30,6 +30,7 @@ describe('search-translation tool', () => {
     );
 
     expect(mockedSearch).toHaveBeenCalledWith({
+      client,
       text: 'dharma',
       uuid: 'work-1',
       toh: '1',

@@ -2,11 +2,11 @@ import { createLookupEntityTool } from './lookup-entity';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access/ssr', () => ({
-  lookupEntity: jest.fn(),
+  lookupEntityWithClient: jest.fn(),
 }));
 
-import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
-const mocked = jest.mocked(lookupEntity);
+import { lookupEntityWithClient } from '@eightyfourthousand/data-access/ssr';
+const mocked = jest.mocked(lookupEntityWithClient);
 
 describe('lookup-entity tool', () => {
   const client = {} as DataClient;
@@ -28,9 +28,9 @@ describe('lookup-entity tool', () => {
     );
 
     expect(mocked).toHaveBeenCalledWith({
+      client,
       type: 'translation',
       entity: '1',
-      prefix: undefined,
       xmlId: undefined,
     });
     expect(result.content[0]).toEqual({
