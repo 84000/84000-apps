@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { searchResultsFromDTO } from '../types';
+import { DataClient } from '@eightyfourthousand/data-access';
 
 export const search = async ({
   text,
@@ -15,6 +16,22 @@ export const search = async ({
   useRegex?: boolean;
 }) => {
   const client = await createServerClient();
+  return await searchWithClient({ client, text, uuid, toh, useRegex });
+};
+
+export const searchWithClient = async ({
+  client,
+  text,
+  uuid,
+  toh,
+  useRegex = false,
+}: {
+  client: DataClient;
+  text: string;
+  uuid: string;
+  toh: string;
+  useRegex?: boolean;
+}) => {
   const { data, error } = await client.rpc('translation_search', {
     search_term: text,
     work_uuid: uuid,

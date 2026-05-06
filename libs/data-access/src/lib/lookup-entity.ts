@@ -7,8 +7,15 @@ import {
 } from './publications';
 import { panelAndTabForContentType } from './panel-url';
 import { getGlossaryInstance } from './glossary';
+import { DataClient } from './types';
 
-const ALLOWED_TYPES = ['bibliography', 'glossary', 'passage', 'translation', 'work'];
+const ALLOWED_TYPES = [
+  'bibliography',
+  'glossary',
+  'passage',
+  'translation',
+  'work',
+];
 
 export const lookupEntity = async ({
   type,
@@ -27,6 +34,31 @@ export const lookupEntity = async ({
     return;
   }
   const client = await createServerClient();
+  return await lookupEntityWithClient({
+    client,
+    type,
+    entity,
+    prefix,
+    xmlId,
+    searchParams,
+  });
+};
+
+export const lookupEntityWithClient = async ({
+  client,
+  type,
+  entity,
+  prefix = '',
+  xmlId,
+  searchParams,
+}: {
+  client: DataClient;
+  type: string;
+  entity: string;
+  prefix?: string;
+  xmlId?: string;
+  searchParams?: URLSearchParams;
+}) => {
   let path = '';
   const query = searchParams || new URLSearchParams();
 
