@@ -12,7 +12,9 @@ Internal application for translation management, editing, and research.
   - `translation/[slug]/` — translation detail page
   - `entity/[type]/[slug]/` — glossary, authority, and other entity pages
   - `research/explore/` — AI-powered exploration interface
-- `api/` — feedback and MCP endpoints
+- `api/` — feedback endpoint
+- `mcp/` — authenticated MCP endpoint (bearer token via Supabase JWT)
+- `.well-known/` — OAuth 2.1 discovery (protected resource + authorization server metadata)
 
 ## Provider Stack
 
