@@ -78,8 +78,8 @@
       "@lib-user/ssr": [
         "libs/lib-user/src/ssr.ts"
       ],
-      "@eightyfourthousand/lib-mcp": [
-        "libs/lib-mcp/src/index.ts"
+      "@eightyfourthousand/lib-agent": [
+        "libs/lib-agent/src/index.ts"
       ]
     }
   },

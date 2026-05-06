@@ -46,7 +46,7 @@ CLI scripts for one-time data migrations (endnote processing, glossary instance 
 | **lib-explore** | `@lib-explore` | Chat-based exploration interface. Lamatic API integration for AI workflows. |
 | **lib-search** | `@lib-search` | Search functionality. Server actions calling Supabase RPC. UI components for results. |
 | **lib-user** | `@lib-user` | User profile management, login components, session context, library pages. |
-| **lib-mcp** | `@eightyfourthousand/lib-mcp` | Model Context Protocol server factory. Creates MCP tool handlers for Next.js API routes. |
+| **lib-agent** | `@eightyfourthousand/lib-agent` | Model Context Protocol server factory. Creates MCP tool handlers for Next.js API routes. |
 | **lib-instr** | `@eightyfourthousand/lib-instr` | PostHog analytics integration. Browser client, feature flags, provider, hooks. |
 | **lib-utils** | `@eightyfourthousand/lib-utils` | Shared utilities: `cn()` class merging, comparison helpers, text highlighting, React hooks, string manipulation. |
 
