@@ -1,125 +1,29 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## What This Repo Is
 
-## Architecture
+84000 translates the Tibetan Buddhist canon into modern languages. This Nx monorepo is the web platform: a public reader (`web-reader`), an internal translation studio (`web-main`), a rich text editor (`web-editor`), a GraphQL API (`api-graphql`), and shared libraries. Core domain entities: works, passages, folios, glossaries, annotations, alignments, bibliographies, authorities, and imprints — each identified by UUID and often keyed by Tohoku catalog number (`toh1`, `toh123`, etc.).
 
-This is an **Nx monorepo** with Next.js apps and shared libraries. Use 
-`npx nx ...` to run commands from the repo root.
+## How to Find Things
 
-### Key Principle
+- **Project targets**: `npx nx show project <name>` lists available commands for any app or lib
+- **Import paths**: `tsconfig.base.json` is the canonical map of all path aliases (`@eightyfourthousand/*`, `@lib-*`)
+- **Client vs. server exports**: Libraries export from `src/index.ts` (client-safe) and often `src/ssr.ts` (server-only). Use the `/ssr` sub-path for server components, server actions, and route handlers
+- **Domain types and DTOs**: `libs/data-access/src/lib/types/` — every entity has a domain type, a DTO (database shape), and `fromDTO`/`toDTO` mappers
+- **GraphQL schema**: `apps/api-graphql/src/graphql/schema/` (`.graphql` type definitions, one folder per domain entity)
+- **GraphQL client queries**: `libs/client-graphql/src/lib/graphql/` (queries, fragments, mutations)
+- **Design system components**: `libs/design-system/src/lib/<ComponentName>/` — check these before building custom UI. Preview with `npx nx storybook design-system`
+- **Deeper documentation**: `docs/` folder at the repo root — domain model, data flow, app guide, common tasks
 
-- **Code belongs in `libs/`, not `apps/`**
-- Apps should be thin orchestration layers
-- All reusable logic goes into libraries
+## Architectural Constraints
 
-### Path Aliases
+- **Code belongs in `libs/`, not `apps/`**. Apps are thin orchestration layers (routing, layouts, providers).
+- Use **path aliases** from `tsconfig.base.json`. Never use relative imports across project boundaries.
+- Use the **`/ssr` sub-path** for server contexts, the bare import for client contexts.
+- **Error handling**: return `null` or empty arrays on error with `console.error`. Don't throw.
+- **Design system first**: components use Radix UI + Tailwind + CVA. Use `cn()` from `@eightyfourthousand/lib-utils` for class merging.
+- **Named exports** only in libraries. No default exports.
 
-Import libraries using TypeScript path aliases (defined in `tsconfig.base.json`):
+## Code Style
 
-```typescript
-import { Button, Dialog } from '@eightyfourthousand/design-system';
-import { createBrowserClient } from '@eightyfourthousand/data-access';
-import { createServerClient } from '@eightyfourthousand/data-access/ssr';
-import { useProfile } from '@lib-user';
-import { cn } from '@eightyfourthousand/lib-utils';
-```
-
-## Code Style Guidelines
-
-### TypeScript
-
-#### Imports
-
-- Use path aliases, not relative imports for libraries
-- Group imports: React/Next, third-party, local components, utils
-- Use named exports, avoid default exports in libraries
-
-```typescript
-// Good
-import { Button } from '@eightyfourthousand/design-system';
-import { cn } from '@eightyfourthousand/lib-utils';
-
-// Avoid
-import { Button } from '../../../libs/design-system/src/lib/Button';
-```
-
-#### Types
-
-- Define interfaces for props with `interface` keyword
-- Use `type` for unions, intersections, and utility types
-- Export types alongside components
-- Use TypeScript strict mode - no implicit `any`
-
-```typescript
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
-```
-
-#### Naming Conventions
-
-- **Components**: PascalCase (`ProfileDropdown`, `Button`)
-- **Files**: Match component name (`Button.tsx`, `ProfileDropdown.tsx`)
-- **Functions/variables**: camelCase (`getSession`, `hasPermission`)
-- **Constants**: UPPER_SNAKE_CASE for true constants
-- **Types/Interfaces**: PascalCase (`UserClaims`, `GlossaryTermDTO`)
-
-### Styling
-
-#### Tailwind CSS
-
-- Use Tailwind utility classes
-- Use `cn()` helper from `@eightyfourthousand/lib-utils` to merge classes
-- Follow Tailwind CSS 4 conventions
-
-```typescript
-import { cn } from '@eightyfourthousand/lib-utils';
-
-<div className={cn('flex items-center', className)} />
-```
-
-#### Async Functions
-
-- Always handle errors from async operations
-- Return null or empty arrays on error (with logging)
-- Don't throw unless in exceptional circumstances
-
-```typescript
-export const getUser = async ({ client }: { client: DataClient }) => {
-  const { data, error } = await client.from('users').select();
-  if (error) {
-    console.error(`Failed to fetch user: ${error.message}`);
-    return null;
-  }
-  return data;
-};
-```
-
-### Formatting
-
-#### Prettier
-
-- Single quotes (configured in `.prettierrc`)
-- 2-space indentation (default)
-- Trailing commas (default)
-- Let Prettier handle formatting
-
-## Best Practices
-
-1. **DRY**: Extract reusable logic into `libs/lib-utils` or appropriate library
-2. **Single Responsibility**: One component/function does one thing well
-3. **Composition**: Build complex UIs from small, reusable components
-4. **Type Safety**: Leverage TypeScript, avoid `any`
-5. **Performance**: Use React best practices (memoization, proper deps)
-6. **Accessibility**: Use Radix UI primitives which are accessible by default
-7. **Testing**: Write tests in `*.spec.ts` or `*.test.tsx` files (when they exist)
-
-### Design System Components
-
-Use them before building custom components. They are:
-
-- Built with Radix UI primitives
-- Styled with Tailwind
-- Variants managed with CVA
-- Full TypeScript support
+Single quotes, 2-space indent, trailing commas — enforced by Prettier (see `.prettierrc`). ESLint config handles the rest. Follow existing patterns in the file you're editing.
