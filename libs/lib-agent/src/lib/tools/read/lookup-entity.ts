@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { DataClient } from '@eightyfourthousand/data-access';
-import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
+import { lookupEntityWithClient } from '@eightyfourthousand/data-access/ssr';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from './util';
 
@@ -10,17 +10,16 @@ const inputSchema = {
     .describe('The entity type'),
   entity: z
     .string()
-    .describe('Entity identifier — UUID for most types, or toh number for translations'),
-  prefix: z.string().optional().describe('URL path prefix'),
+    .describe(
+      'Entity identifier — UUID for most types, or toh number for translations',
+    ),
   xmlId: z
     .string()
     .optional()
     .describe('XML ID for passage lookup within a translation'),
 };
 
-export function createLookupEntityTool(
-  _client: DataClient,
-): McpToolDefinition {
+export function createLookupEntityTool(client: DataClient): McpToolDefinition {
   return {
     name: 'lookup-entity',
     description:
@@ -31,12 +30,15 @@ export function createLookupEntityTool(
       readOnlyHint: true,
       openWorldHint: false,
     },
-    handler: async ({ type, entity, prefix, xmlId }) => {
-      const path = await lookupEntity({ type, entity, prefix, xmlId });
+    handler: async ({ type, entity, xmlId }) => {
+      const path = await lookupEntityWithClient({
+        client,
+        type,
+        entity,
+        xmlId,
+      });
       if (!path) {
-        return errorResult(
-          `Could not resolve ${type} entity: ${entity}`,
-        );
+        return errorResult(`Could not resolve ${type} entity: ${entity}`);
       }
       return jsonResult({ path });
     },

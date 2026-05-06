@@ -10,13 +10,14 @@ import { jsonResult, errorResult } from './util';
 const inputSchema = {
   uuid: z
     .string()
-    .uuid()
     .optional()
     .describe('Work UUID — provide this or toh, not both'),
   toh: z
     .string()
     .optional()
-    .describe('Tohoku catalog number (e.g. "1", "123") — provide this or uuid, not both'),
+    .describe(
+      'Tohoku catalog number (e.g. "toh1", "toh123") — provide this or uuid, not both',
+    ),
 };
 
 export function createGetTranslationTool(
@@ -43,7 +44,7 @@ export function createGetTranslationTool(
       try {
         const work = uuid
           ? await getTranslationMetadataByUuid({ client, uuid })
-          : await getTranslationMetadataByToh({ client, toh: toh! });
+          : await getTranslationMetadataByToh({ client, toh });
 
         if (!work) {
           return errorResult(

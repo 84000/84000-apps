@@ -5,7 +5,7 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The work UUID'),
+  uuid: z.uuid().describe('The work UUID'),
   withAttestations: z
     .boolean()
     .optional()

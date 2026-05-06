@@ -5,7 +5,7 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The UUID of the bibliography entry'),
+  uuid: z.uuid().describe('The UUID of the bibliography entry'),
 };
 
 export function createGetBibliographyEntryTool(

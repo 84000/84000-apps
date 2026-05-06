@@ -5,9 +5,14 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult } from './util';
 
 const inputSchema = {
-  workUuid: z.string().uuid().describe('The work UUID'),
+  workUuid: z.string().describe('The work UUID'),
   query: z.string().describe('Search query — matches against term names'),
-  limit: z.number().int().positive().optional().describe('Max results (default 20, max 50)'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Max results (default 20, max 50)'),
   withAttestations: z
     .boolean()
     .optional()

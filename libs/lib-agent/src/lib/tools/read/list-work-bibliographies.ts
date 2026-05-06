@@ -5,7 +5,7 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The work UUID'),
+  uuid: z.string().describe('The work UUID'),
 };
 
 export function createListWorkBibliographiesTool(

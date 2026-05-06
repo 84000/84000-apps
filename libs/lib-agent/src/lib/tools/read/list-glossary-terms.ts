@@ -5,8 +5,13 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult } from './util';
 
 const inputSchema = {
-  workUuid: z.string().uuid().describe('The work UUID'),
-  limit: z.number().int().positive().optional().describe('Page size (default 50, max 200)'),
+  workUuid: z.string().describe('The work UUID'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe('Page size (default 50, max 200)'),
   cursor: z.string().optional().describe('Pagination cursor'),
   direction: z
     .enum(['FORWARD', 'BACKWARD', 'AROUND'])
@@ -31,7 +36,13 @@ export function createListGlossaryTermsTool(
       readOnlyHint: true,
       openWorldHint: false,
     },
-    handler: async ({ workUuid, limit, cursor, direction, withAttestations }) => {
+    handler: async ({
+      workUuid,
+      limit,
+      cursor,
+      direction,
+      withAttestations,
+    }) => {
       const page = await getWorkGlossaryTermsPage({
         client,
         workUuid,

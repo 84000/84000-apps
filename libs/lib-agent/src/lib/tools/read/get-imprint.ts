@@ -5,8 +5,8 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The work UUID'),
-  toh: z.string().describe('Tohoku catalog number (e.g. "1", "123")'),
+  uuid: z.uuid().describe('The work UUID'),
+  toh: z.string().describe('Tohoku catalog number (e.g. "toh1", "toh123")'),
 };
 
 export function createGetImprintTool(client: DataClient): McpToolDefinition {
@@ -23,7 +23,7 @@ export function createGetImprintTool(client: DataClient): McpToolDefinition {
     handler: async ({ uuid, toh }) => {
       const imprint = await getTranslationImprint({ client, uuid, toh });
       if (!imprint) {
-        return errorResult(`No imprint found for work ${uuid}, toh ${toh}`);
+        return errorResult(`No imprint found for work ${uuid}, ${toh}`);
       }
       return jsonResult(imprint);
     },

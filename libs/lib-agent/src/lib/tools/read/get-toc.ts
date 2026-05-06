@@ -5,7 +5,7 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The work UUID'),
+  uuid: z.uuid().describe('The work UUID'),
 };
 
 export function createGetTocTool(client: DataClient): McpToolDefinition {

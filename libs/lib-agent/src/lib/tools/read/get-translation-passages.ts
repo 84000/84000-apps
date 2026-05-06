@@ -8,20 +8,23 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult } from './util';
 
 const inputSchema = {
-  uuid: z.string().uuid().describe('The work UUID'),
+  uuid: z.uuid().describe('The work UUID'),
   type: z
     .string()
     .optional()
-    .describe('Passage type filter (e.g. "translation", "introduction")'),
+    .describe(
+      'Passage type filter (e.g. "translation", "introduction", "(translation|introduction)")',
+    ),
   cursor: z
     .string()
     .optional()
     .describe('Pagination cursor for sequential browsing'),
   passageUuid: z
     .string()
-    .uuid()
     .optional()
-    .describe('Center results around this passage UUID instead of paginating sequentially'),
+    .describe(
+      'Center results around this passage UUID instead of paginating sequentially',
+    ),
   maxPassages: z
     .number()
     .int()
@@ -33,7 +36,9 @@ const inputSchema = {
     .int()
     .positive()
     .optional()
-    .describe('Character budget — stop returning passages once this limit is reached'),
+    .describe(
+      'Character budget — stop returning passages once this limit is reached. Passage can vary widely in length.',
+    ),
   direction: z
     .enum(['forward', 'backward'])
     .optional()
