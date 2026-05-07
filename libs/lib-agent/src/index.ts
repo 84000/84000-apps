@@ -13,3 +13,13 @@ export type {
   AuthFailure,
   PermissionResult,
 } from './lib/auth';
+export type { AgentDefinition } from './lib/agents';
+export {
+  AgentDefinitionSchema,
+  registerAgent,
+  getAgent,
+  listAgents,
+  clearAgents,
+  resolveAgentTools,
+  resolveAgentHandlerOptions,
+} from './lib/agents';
