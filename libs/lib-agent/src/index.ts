@@ -22,4 +22,5 @@ export {
   clearAgents,
   resolveAgentTools,
   resolveAgentHandlerOptions,
+  createAgentTools,
 } from './lib/agents';
