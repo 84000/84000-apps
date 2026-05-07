@@ -20,7 +20,8 @@
         "main": "libs/lib-agent/src/index.ts",
         "tsConfig": "libs/lib-agent/tsconfig.lib.json",
         "rootDir": "libs/lib-agent/src",
-        "generateExportsField": false
+        "generateExportsField": false,
+        "assets": ["libs/lib-agent/src/lib/agents/*/prompt.md"]
       }
     }
   }

@@ -12,6 +12,6 @@ export {
 } from './resolve';
 
 import { registerAgent } from './registry';
-import { libraryAssistant } from './definitions/library-assistant';
+import { libraryAssistant } from './library-assistant/definition';
 
 registerAgent(libraryAssistant);
