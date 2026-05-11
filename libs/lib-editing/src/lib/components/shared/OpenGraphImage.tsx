@@ -45,7 +45,7 @@ export const OpenGraphImage = async ({
         padding: '60px',
       }}
     >
-      <MainLogoSvg width={332} height={200} />
+      <MainLogoSvg width={333} height={128} fill="#ffffff" />
       <div
         style={{
           color: 'white',

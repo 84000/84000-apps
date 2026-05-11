@@ -4,15 +4,22 @@ import Link from 'next/link';
 import { MainLogoSvg } from './MainLogoSvg';
 
 export const MainLogo = ({
-  width = 166,
-  height = 100,
+  width = 247,
+  height = 95,
+  fill = '#004570',
 }: {
   width?: number;
   height?: number;
+  fill?: string;
 }) => {
   return (
     <Link href={'/'}>
-      <MainLogoSvg width={width} height={height} className="block" />
+      <MainLogoSvg
+        width={width}
+        height={height}
+        fill={fill}
+        className="block"
+      />
     </Link>
   );
 };

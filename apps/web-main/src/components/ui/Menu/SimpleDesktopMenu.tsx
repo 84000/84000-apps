@@ -39,7 +39,7 @@ export const DesktopMenuItem = ({
             isActive ? active : isOpen ? open : inactive,
           )}
         >
-          <span className="flex pt-3 gap-1 font-semibold leading-6">
+          <span className="flex pt-1 gap-1 font-semibold leading-6">
             {item.title}
             <ChevronDownIcon className="size-3 my-auto" />
           </span>

@@ -76,7 +76,7 @@ export const SimpleMobileMenu = ({
         <SheetContent side="left">
           <SheetHeader>
             <SheetTitle className="hidden">Main Navigation</SheetTitle>
-            <MainLogo width={80} />
+            <MainLogo width={80} height={32} />
           </SheetHeader>
           <ScrollArea className="h-full overflow-y-auto">
             {items.map((item) => (
