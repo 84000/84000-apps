@@ -12,11 +12,13 @@ type Story = StoryObj<typeof MainLogo>;
 
 export const Primary: Story = {
   args: {
-    width: 166,
-    height: 100,
+    width: 247,
+    height: 95,
+    fill: '#004570',
   },
   argTypes: {
     width: { control: 'number' },
     height: { control: 'number' },
+    fill: { control: 'color' },
   },
 };
