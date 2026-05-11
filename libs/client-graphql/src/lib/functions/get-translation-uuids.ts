@@ -47,15 +47,29 @@ export async function getTranslationUuids({
   limit?: number;
 }): Promise<string[]> {
   try {
-    // Single request - no pagination needed for static params
-    const response: GetWorkUuidsResponse =
-      await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
-        cursor: null,
-        limit: limit ?? DEFAULT_PAGE_SIZE,
-        filter,
-      });
+    const uuids: string[] = [];
+    let cursor: string | null = null;
 
-    return response.works.items.map((w) => w.uuid);
+    do {
+      const pageLimit = limit
+        ? Math.min(DEFAULT_PAGE_SIZE, limit - uuids.length)
+        : DEFAULT_PAGE_SIZE;
+
+      const response: GetWorkUuidsResponse =
+        await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
+          cursor,
+          limit: pageLimit,
+          filter,
+        });
+
+      uuids.push(...response.works.items.map((w) => w.uuid));
+
+      cursor = response.works.pageInfo.hasMoreAfter
+        ? response.works.pageInfo.nextCursor
+        : null;
+    } while (cursor && (!limit || uuids.length < limit));
+
+    return limit ? uuids.slice(0, limit) : uuids;
   } catch (error) {
     console.error('Error fetching translation UUIDs:', error);
     return [];
