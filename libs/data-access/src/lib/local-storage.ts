@@ -5,6 +5,8 @@ export type BookmarkItem = {
   uuid: string;
   label: string;
   body: string;
+  workTitle?: string;
+  toh?: string;
 };
 
 const LIBRARY_KEY = 'library';
