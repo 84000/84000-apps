@@ -128,5 +128,8 @@
       "lib-editing"
     ]
   },
-  "neverConnectToCloud": true
+  "neverConnectToCloud": true,
+  "sync": {
+    "disabledTaskSyncGenerators": ["@nx/js:typescript-sync"]
+  }
 }
