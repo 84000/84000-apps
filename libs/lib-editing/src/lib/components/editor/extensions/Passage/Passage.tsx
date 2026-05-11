@@ -44,6 +44,9 @@ const PassageComponent = (props: NodeViewProps) => {
   const excerpt =
     textContent.slice(0, 100) + (textContent.length > 100 ? '...' : '');
 
+  const { panels, toh, updatePanel, imprint } = useNavigation();
+  const workTitle = imprint?.mainTitles?.en ?? toh;
+
   const { isBookmarked, toggle: toggleBookmark } = useBookmark(
     node.attrs.uuid,
     {
@@ -52,10 +55,10 @@ const PassageComponent = (props: NodeViewProps) => {
       tab: node.attrs.type ?? '',
       label: node.attrs.label,
       body: excerpt,
+      workTitle,
+      toh,
     },
   );
-
-  const { panels, toh, updatePanel } = useNavigation();
 
   // Compute values directly instead of using effects to avoid re-render loops
   const isCompare = panels.main.open && panels.main.tab === 'compare';

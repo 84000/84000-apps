@@ -35,14 +35,17 @@ export const LabeledElement = ({
   contentType?: PanelContentType;
   children: ReactNode;
 }) => {
+  const { toh, imprint } = useNavigation();
+  const workTitle = imprint?.mainTitles?.en ?? toh;
   const { isBookmarked, toggle } = useBookmark(id ?? '', {
     type: contentType ?? '',
     tab: contentType ?? '',
     body: excerpt,
     label,
+    workTitle,
+    toh,
   });
 
-  const { toh } = useNavigation();
   const [showRevisionForm, setShowRevisionForm] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 

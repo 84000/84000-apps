@@ -9,6 +9,8 @@ type BookmarkOptions = {
   tab: string;
   label?: string;
   body?: string;
+  workTitle?: string;
+  toh?: string;
 };
 
 const listeners = new Set<() => void>();
@@ -40,10 +42,19 @@ export function useBookmark(uuid: string, options?: BookmarkOptions) {
         tab: options?.tab ?? '',
         label: options?.label ?? '',
         body: options?.body ?? '',
+        workTitle: options?.workTitle,
+        toh: options?.toh,
       });
     }
     emitChange();
-  }, [uuid, options?.type, options?.subType, options?.tab]);
+  }, [
+    uuid,
+    options?.type,
+    options?.subType,
+    options?.tab,
+    options?.workTitle,
+    options?.toh,
+  ]);
 
   return { isBookmarked: bookmarked, toggle };
 }
