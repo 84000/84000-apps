@@ -1,5 +1,4 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
-import { cn } from '@eightyfourthousand/lib-utils';
 
 export interface GlossaryInstanceSSROptions {
   HTMLAttributes: Record<string, unknown>;
@@ -30,10 +29,6 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
         default: undefined,
         parseHTML: (element) => element.getAttribute('uuid'),
       },
-      toh: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('data-toh'),
-      },
       isInline: { default: true },
     };
   },
@@ -43,13 +38,13 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
   },
 
   renderHTML({ mark, HTMLAttributes }) {
-    const { authority, glossary, uuid, toh } = mark.attrs as Record<
+    const { authority, glossary, uuid } = mark.attrs as Record<
       string,
       string | undefined
     >;
 
     const attrs: Record<string, string> = {
-      class: cn('glossary-instance', typeof toh === 'string' ? toh : undefined),
+      class: 'glossary-instance',
       type: 'glossaryInstance',
     };
     if (authority) attrs['authority'] = authority;

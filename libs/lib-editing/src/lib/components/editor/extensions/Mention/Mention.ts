@@ -1,11 +1,7 @@
-import { Node, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
-
-export interface MentionOptions {
-  HTMLAttributes: Record<string, unknown>;
-}
+import { MentionSSR } from './Mention.ssr';
 
 export interface MentionItem {
   uuid: string;
@@ -26,50 +22,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const Mention = Node.create<MentionOptions>({
-  name: 'mention',
-  group: 'inline',
-  inline: true,
-  atom: true,
-
-  addOptions() {
-    return {
-      HTMLAttributes: {},
-    };
-  },
-
-  addAttributes() {
-    return {
-      items: {
-        default: [],
-        parseHTML: (element) => {
-          const itemsAttr = element.getAttribute('data-items');
-          if (itemsAttr) {
-            try {
-              return JSON.parse(itemsAttr);
-            } catch {
-              return [];
-            }
-          }
-          return [];
-        },
-      },
-    };
-  },
-
-  parseHTML() {
-    return [{ tag: 'span[data-type="mention"]' }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        'data-type': 'mention',
-      }),
-    ];
-  },
-
+export const Mention = MentionSSR.extend({
   addNodeView() {
     return (props) => {
       const isEditable = props.editor.isEditable;

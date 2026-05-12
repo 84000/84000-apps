@@ -1,11 +1,7 @@
-import { Mark } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
-import { createMarkViewDom, registerEditorElement } from '../../util';
 import { cn } from '@eightyfourthousand/lib-utils';
-
-export interface GlossaryInstanceOptions {
-  HTMLAttributes: Record<string, unknown>;
-}
+import { createMarkViewDom, registerEditorElement } from '../../util';
+import { GlossaryInstanceNodeSSR } from './GlossaryInstanceNode.ssr';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -19,67 +15,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const GlossaryInstanceNode = Mark.create<GlossaryInstanceOptions>({
-  name: 'glossaryInstance',
-
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      authority: {
-        default: undefined,
-        parseHTML(element) {
-          return element.getAttribute('authority');
-        },
-      },
-      glossary: {
-        default: undefined,
-        parseHTML(element) {
-          return element.getAttribute('glossary');
-        },
-      },
-      uuid: {
-        default: undefined,
-        parseHTML(element) {
-          return element.getAttribute('uuid');
-        },
-      },
-      isInline: { default: true },
-    };
-  },
-
-  addOptions() {
-    return {
-      HTMLAttributes: {
-        className: 'glossary-instance',
-      },
-    };
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'span[type="glossaryInstance"]',
-        getAttrs: (dom) => {
-          const authority = (dom as HTMLElement).getAttribute('authority');
-          const glossary = (dom as HTMLElement).getAttribute('glossary');
-
-          if (!authority || !glossary) {
-            return false;
-          }
-          return null;
-        },
-      },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'span',
-      { class: HTMLAttributes.className, type: 'glossaryInstance' },
-      0,
-    ];
-  },
-
+export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
   addMarkView() {
     return (props) => {
       const isEditable = props.editor.isEditable;

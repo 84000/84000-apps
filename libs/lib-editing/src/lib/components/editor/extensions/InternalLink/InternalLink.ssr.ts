@@ -46,10 +46,6 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-link-toh'),
       },
-      toh: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('data-toh'),
-      },
     };
   },
 
@@ -66,11 +62,10 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
       isSameWork,
       subtype,
       linkToh,
-      toh,
     } = mark.attrs as Record<string, string | boolean | undefined>;
 
     const attrs: Record<string, string> = {
-      class: cn(LINK_STYLE, typeof toh === 'string' ? toh : undefined),
+      class: cn(LINK_STYLE),
       type: 'internalLink',
     };
     if (entity) attrs['entity'] = String(entity);

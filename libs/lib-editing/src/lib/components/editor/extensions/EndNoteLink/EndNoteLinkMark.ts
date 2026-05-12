@@ -1,11 +1,8 @@
-import { Mark, mergeAttributes } from '@tiptap/core';
+import { mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { createUpdateAttributes, registerEditorElement } from '../../util';
-
-export interface EndNoteLinkOptions {
-  HTMLAttributes: Record<string, unknown>;
-}
+import { EndNoteLinkMarkSSR } from './EndNoteLinkMark.ssr';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -16,25 +13,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const EndNoteLinkMark = Mark.create<EndNoteLinkOptions>({
-  name: 'endNoteLink',
-
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      notes: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('notes'),
-      },
-    };
-  },
-
-  addOptions() {
-    return {
-      HTMLAttributes: {},
-    };
-  },
-
+export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
   addMarkView() {
     return (props) => {
       const isEditable = props.editor.isEditable;

@@ -14,10 +14,6 @@ export const LinkSSR = TipTapLink.extend({
   },
 
   addMarkView: undefined,
-  addCommands: undefined,
-  addProseMirrorPlugins: undefined,
-  addPasteRules: undefined,
-  addInputRules: undefined,
 
   renderHTML({ mark, HTMLAttributes }) {
     const href = safeHref(mark.attrs.href as string | null | undefined);

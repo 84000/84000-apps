@@ -1,17 +1,8 @@
-import { Link as TipTapLink } from '@tiptap/extension-link';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
+import { LinkSSR } from './Link.ssr';
 
-export const Link = TipTapLink.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      uuid: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('uuid'),
-      },
-    };
-  },
+export const Link = LinkSSR.extend({
   addCommands() {
     const name = this.name;
     return {
