@@ -1,6 +1,6 @@
-import { Node } from '@tiptap/core';
-import { mergeAttributes, wrappingInputRule } from '@tiptap/react';
+import { wrappingInputRule } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
+import { LineGroupNodeSSR } from './LineGroupNode.ssr';
 
 export interface LineGroupOptions {
   iitemTypeName: string;
@@ -22,40 +22,7 @@ declare module '@tiptap/core' {
  */
 export const inputRegex = /^\s*([~])\s$/;
 
-export const LineGroupNode = Node.create({
-  name: 'lineGroup',
-
-  addOptions() {
-    return {
-      itemTypeName: 'line',
-      HTMLAttributes: {},
-      keepMarks: false,
-      keepAttributes: false,
-    };
-  },
-
-  group: 'block list',
-
-  content() {
-    return `${this.options.itemTypeName}+`;
-  },
-
-  parseHTML() {
-    return [
-      {
-        tag: 'ul[type="line-group"]',
-      },
-    ];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'ul',
-      mergeAttributes({ type: 'line-group', class: 'my-4' }, HTMLAttributes),
-      0,
-    ];
-  },
-
+export const LineGroupNode = LineGroupNodeSSR.extend({
   addCommands() {
     return {
       toggleLineGroup:
@@ -83,15 +50,6 @@ export const LineGroupNode = Node.create({
             },
           );
         },
-    };
-  },
-
-  addAttributes() {
-    return {
-      type: {
-        default: 'line-group',
-        parseHTML: (element) => element.getAttribute('type'),
-      },
     };
   },
 
