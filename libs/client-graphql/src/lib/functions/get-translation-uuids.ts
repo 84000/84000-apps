@@ -2,6 +2,7 @@ import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 
 const DEFAULT_PAGE_SIZE = 200;
+const MAX_PAGE_SIZE = 1000;
 
 const GET_WORK_UUIDS = gql`
   query GetWorkUuids($cursor: String, $limit: Int, $filter: WorkFilter) {
@@ -48,11 +49,14 @@ export async function getTranslationUuids({
 }): Promise<string[]> {
   try {
     const uuids: string[] = [];
+    const effectiveLimit = limit
+      ? Math.min(limit, MAX_PAGE_SIZE)
+      : MAX_PAGE_SIZE;
     let cursor: string | null = null;
 
     do {
       const pageLimit = limit
-        ? Math.min(DEFAULT_PAGE_SIZE, limit - uuids.length)
+        ? Math.min(DEFAULT_PAGE_SIZE, effectiveLimit - uuids.length)
         : DEFAULT_PAGE_SIZE;
 
       const response: GetWorkUuidsResponse =
@@ -67,9 +71,9 @@ export async function getTranslationUuids({
       cursor = response.works.pageInfo.hasMoreAfter
         ? response.works.pageInfo.nextCursor
         : null;
-    } while (cursor && (!limit || uuids.length < limit));
+    } while (cursor && uuids.length < effectiveLimit);
 
-    return limit ? uuids.slice(0, limit) : uuids;
+    return uuids.slice(0, effectiveLimit);
   } catch (error) {
     console.error('Error fetching translation UUIDs:', error);
     return [];
