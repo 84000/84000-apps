@@ -1,4 +1,5 @@
 import type { Level } from '@tiptap/extension-heading';
+import { cn } from '@eightyfourthousand/lib-utils';
 import {
   BODY_TITLE_STYLE,
   H1_STYLE,
@@ -24,4 +25,22 @@ export const CLASS_FOR_CLASS: Record<string, string> = {
   'section-title': SECTION_TITLE_STYLE,
   'body-title-main': BODY_TITLE_STYLE,
   'body-title-honorific': HONORIFIC_TITLE_STYLE,
+};
+
+export const resolveHeadingPresentation = ({
+  rawLevel,
+  classAttr,
+  levels,
+}: {
+  rawLevel: unknown;
+  classAttr: string | null | undefined;
+  levels: Level[];
+}) => {
+  const nodeLevel = parseInt(String(rawLevel), 10) as Level;
+  const level = levels.includes(nodeLevel) ? nodeLevel : levels.at(-1);
+  const className = cn(
+    CLASS_FOR_LEVEL[nodeLevel],
+    classAttr ? CLASS_FOR_CLASS[classAttr] : undefined,
+  );
+  return { level, tag: `h${level}`, className };
 };

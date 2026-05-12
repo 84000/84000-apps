@@ -1,9 +1,7 @@
 import TiptapHeading from '@tiptap/extension-heading';
-import type { Level } from '@tiptap/extension-heading';
 import { createNodeViewDom } from '../../util';
 import { HTMLElementType } from 'react';
-import { cn } from '@eightyfourthousand/lib-utils';
-import { CLASS_FOR_CLASS, CLASS_FOR_LEVEL } from './classes';
+import { resolveHeadingPresentation } from './classes';
 
 export const Heading = TiptapHeading.extend({
   addAttributes() {
@@ -20,11 +18,11 @@ export const Heading = TiptapHeading.extend({
 
   addNodeView() {
     return ({ node, editor, extension, getPos, HTMLAttributes }) => {
-      const nodeLevel = parseInt(node.attrs.level, 10) as Level;
-      const hasLevel = this.options.levels.includes(nodeLevel);
-      const level = hasLevel ? nodeLevel : this.options.levels.at(-1);
-      const element = `h${level}` as HTMLElementType;
-      const className = cn(CLASS_FOR_LEVEL[nodeLevel], CLASS_FOR_CLASS[node.attrs.class]);
+      const { tag, className } = resolveHeadingPresentation({
+        rawLevel: node.attrs.level,
+        classAttr: node.attrs.class,
+        levels: this.options.levels,
+      });
 
       const { dom } = createNodeViewDom({
         editor,
@@ -32,7 +30,7 @@ export const Heading = TiptapHeading.extend({
         node,
         extension,
         HTMLAttributes,
-        element,
+        element: tag as HTMLElementType,
         className,
       });
 

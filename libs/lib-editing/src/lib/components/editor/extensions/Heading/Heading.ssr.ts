@@ -1,8 +1,6 @@
 import TiptapHeading from '@tiptap/extension-heading';
-import type { Level } from '@tiptap/extension-heading';
 import { mergeAttributes } from '@tiptap/core';
-import { cn } from '@eightyfourthousand/lib-utils';
-import { CLASS_FOR_CLASS, CLASS_FOR_LEVEL } from './classes';
+import { resolveHeadingPresentation } from './classes';
 
 export const HeadingSSR = TiptapHeading.extend({
   addAttributes() {
@@ -20,16 +18,14 @@ export const HeadingSSR = TiptapHeading.extend({
   addNodeView: undefined,
 
   renderHTML({ node, HTMLAttributes }) {
-    const nodeLevel = parseInt(node.attrs.level, 10) as Level;
-    const hasLevel = this.options.levels.includes(nodeLevel);
-    const level = hasLevel ? nodeLevel : this.options.levels.at(-1);
-    const className = cn(
-      CLASS_FOR_LEVEL[nodeLevel],
-      CLASS_FOR_CLASS[node.attrs.class as string],
-    );
+    const { tag, className } = resolveHeadingPresentation({
+      rawLevel: node.attrs.level,
+      classAttr: node.attrs.class as string | null,
+      levels: this.options.levels,
+    });
 
     return [
-      `h${level}`,
+      tag,
       mergeAttributes(HTMLAttributes, {
         class: className,
         type: 'heading',
