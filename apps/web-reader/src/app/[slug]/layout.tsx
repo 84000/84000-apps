@@ -1,5 +1,8 @@
 import { ReaderLayout, TranslationSkeleton } from '@eightyfourthousand/lib-editing';
-import { generateMetadata } from '@eightyfourthousand/lib-editing/ssr';
+import {
+  generateMetadata,
+  TranslationStructuredData,
+} from '@eightyfourthousand/lib-editing/ssr';
 import { ReactNode, Suspense } from 'react';
 
 export { generateMetadata };
@@ -11,9 +14,12 @@ const Layout = (props: {
   params: Promise<{ slug: string }>;
 }) => {
   return (
-    <Suspense fallback={<TranslationSkeleton />}>
-      <ReaderLayout {...props} />
-    </Suspense>
+    <>
+      <TranslationStructuredData params={props.params} />
+      <Suspense fallback={<TranslationSkeleton />}>
+        <ReaderLayout {...props} />
+      </Suspense>
+    </>
   );
 };
 
