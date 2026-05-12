@@ -31,6 +31,13 @@ import {
 import { Alignment, useBookmark } from '@eightyfourthousand/data-access';
 import { BookmarkIcon } from 'lucide-react';
 import { deleteEndnotePassageNode } from '../EndNoteLink/endnote-utils';
+import {
+  PASSAGE_CONTENT_CLASS,
+  PASSAGE_INNER_CLASS,
+  PASSAGE_LABEL_CLASS,
+  PASSAGE_REFERENCES_CLASS,
+  PASSAGE_WRAPPER_CLASS,
+} from './classes';
 
 const PassageComponent = (props: NodeViewProps) => {
   const { node, editor } = props;
@@ -105,8 +112,7 @@ const PassageComponent = (props: NodeViewProps) => {
     setIsDialogOpen(false);
   }, [node.attrs.uuid, editor]);
 
-  const className =
-    'absolute labeled -left-16 w-16 text-end hover:cursor-pointer';
+  const className = PASSAGE_LABEL_CLASS;
   const borderClassName =
     editor.storage.globalConfig.debug && node.attrs.invalid
       ? 'after:content-["⚠️"] after:absolute after:top-0 after:-right-5'
@@ -116,17 +122,11 @@ const PassageComponent = (props: NodeViewProps) => {
     <NodeViewWrapper
       id={node.attrs.uuid}
       as="div"
-      className={cn(
-        'flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20',
-        node.attrs.toh,
-      )}
+      className={cn(PASSAGE_WRAPPER_CLASS, node.attrs.toh)}
     >
       <div className="w-full">
         <div
-          className={cn(
-            'relative scroll-m-20 w-full self-start',
-            borderClassName,
-          )}
+          className={cn(PASSAGE_INNER_CLASS, borderClassName)}
         >
           <DropdownMenu
             open={dropdownOpen}
@@ -181,9 +181,9 @@ const PassageComponent = (props: NodeViewProps) => {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <NodeViewContent className="passage is-editable pl-6 @c/sidebar:pl-4" />
+          <NodeViewContent className={PASSAGE_CONTENT_CLASS} />
           {references && references.length > 0 && (
-            <div className="pl-6 @c/sidebar:pl-4 mt-1" contentEditable={false}>
+            <div className={PASSAGE_REFERENCES_CLASS} contentEditable={false}>
               {references.map((ref, index) => (
                 <span key={ref.uuid}>
                   {index > 0 && ', '}
