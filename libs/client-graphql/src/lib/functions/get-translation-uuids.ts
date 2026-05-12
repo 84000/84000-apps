@@ -2,7 +2,6 @@ import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 
 const DEFAULT_PAGE_SIZE = 200;
-const MAX_PAGE_SIZE = 1000;
 
 const GET_WORK_UUIDS = gql`
   query GetWorkUuids($cursor: String, $limit: Int, $filter: WorkFilter) {
@@ -48,32 +47,15 @@ export async function getTranslationUuids({
   limit?: number;
 }): Promise<string[]> {
   try {
-    const uuids: string[] = [];
-    const effectiveLimit = limit
-      ? Math.min(limit, MAX_PAGE_SIZE)
-      : MAX_PAGE_SIZE;
-    let cursor: string | null = null;
+    // Single request - no pagination needed for static params
+    const response: GetWorkUuidsResponse =
+      await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
+        cursor: null,
+        limit: limit ?? DEFAULT_PAGE_SIZE,
+        filter,
+      });
 
-    do {
-      const pageLimit = limit
-        ? Math.min(DEFAULT_PAGE_SIZE, effectiveLimit - uuids.length)
-        : DEFAULT_PAGE_SIZE;
-
-      const response: GetWorkUuidsResponse =
-        await client.request<GetWorkUuidsResponse>(GET_WORK_UUIDS, {
-          cursor,
-          limit: pageLimit,
-          filter,
-        });
-
-      uuids.push(...response.works.items.map((w) => w.uuid));
-
-      cursor = response.works.pageInfo.hasMoreAfter
-        ? response.works.pageInfo.nextCursor
-        : null;
-    } while (cursor && uuids.length < effectiveLimit);
-
-    return uuids.slice(0, effectiveLimit);
+    return response.works.items.map((w) => w.uuid);
   } catch (error) {
     console.error('Error fetching translation UUIDs:', error);
     return [];
