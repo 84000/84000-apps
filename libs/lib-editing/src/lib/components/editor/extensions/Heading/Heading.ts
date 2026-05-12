@@ -1,34 +1,7 @@
 import TiptapHeading from '@tiptap/extension-heading';
-import type { Level } from '@tiptap/extension-heading';
-import {
-  BODY_TITLE_STYLE,
-  H1_STYLE,
-  H2_STYLE,
-  H3_STYLE,
-  H4_STYLE,
-  H5_STYLE,
-  H6_STYLE,
-  HONORIFIC_TITLE_STYLE,
-  SECTION_TITLE_STYLE,
-} from '@eightyfourthousand/design-system';
 import { createNodeViewDom } from '../../util';
 import { HTMLElementType } from 'react';
-import { cn } from '@eightyfourthousand/lib-utils';
-
-const CLASS_FOR_LEVEL: Record<Level, string> = {
-  1: H1_STYLE,
-  2: H2_STYLE,
-  3: H3_STYLE,
-  4: H4_STYLE,
-  5: H5_STYLE,
-  6: H6_STYLE,
-};
-
-const CLASS_FOR_CLASS: Record<string, string> = {
-  'section-title': SECTION_TITLE_STYLE,
-  'body-title-main': BODY_TITLE_STYLE,
-  'body-title-honorific': HONORIFIC_TITLE_STYLE,
-};
+import { resolveHeadingPresentation } from './classes';
 
 export const Heading = TiptapHeading.extend({
   addAttributes() {
@@ -45,11 +18,11 @@ export const Heading = TiptapHeading.extend({
 
   addNodeView() {
     return ({ node, editor, extension, getPos, HTMLAttributes }) => {
-      const nodeLevel = parseInt(node.attrs.level, 10) as Level;
-      const hasLevel = this.options.levels.includes(nodeLevel);
-      const level = hasLevel ? nodeLevel : this.options.levels.at(-1);
-      const element = `h${level}` as HTMLElementType;
-      const className = cn(CLASS_FOR_LEVEL[nodeLevel], CLASS_FOR_CLASS[node.attrs.class]);
+      const { tag, className } = resolveHeadingPresentation({
+        rawLevel: node.attrs.level,
+        classAttr: node.attrs.class,
+        levels: this.options.levels,
+      });
 
       const { dom } = createNodeViewDom({
         editor,
@@ -57,7 +30,7 @@ export const Heading = TiptapHeading.extend({
         node,
         extension,
         HTMLAttributes,
-        element,
+        element: tag as HTMLElementType,
         className,
       });
 

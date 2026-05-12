@@ -1,5 +1,5 @@
 import { BulletList, ListItem as TipTapListItem } from '@tiptap/extension-list';
-import { mergeAttributes } from '@tiptap/react';
+import { mergeAttributes } from '@tiptap/core';
 
 const ITEM_STYLE_TO_CLASS: { [key: string]: string } = {
   none: 'list-none',
