@@ -1,13 +1,9 @@
-import { Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
-
-export interface InternalLinkOptions {
-  HTMLAttributes: Record<string, unknown>;
-}
+import { InternalLinkSSR } from './InternalLink.ssr';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -18,60 +14,7 @@ declare module '@tiptap/core' {
   }
 }
 
-export const InternalLink = Mark.create<InternalLinkOptions>({
-  name: 'internalLink',
-  addAttributes() {
-    return {
-      entity: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('entity'),
-      },
-      type: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('entity-type'),
-      },
-      href: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('href'),
-      },
-      uuid: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('uuid'),
-      },
-      isSameWork: {
-        default: undefined,
-        parseHTML: (element) =>
-          element.getAttribute('data-same-work') === 'true',
-      },
-      subtype: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('data-subtype'),
-      },
-      linkToh: {
-        default: undefined,
-        parseHTML: (element) => element.getAttribute('data-link-toh'),
-      },
-    };
-  },
-  addOptions() {
-    return {
-      HTMLAttributes: {},
-    };
-  },
-  parseHTML() {
-    return [
-      {
-        tag: 'a[type="internalLink"]',
-      },
-    ];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'a',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
-      0,
-    ];
-  },
+export const InternalLink = InternalLinkSSR.extend({
   addMarkView() {
     return (props) => {
       const isEditable = props.editor.isEditable;
