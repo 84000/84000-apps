@@ -2,7 +2,10 @@
 
 import { cn } from '@eightyfourthousand/lib-utils';
 import { TranslationEditor } from '../editor';
-import { PaginationProvider, usePagination } from '../editor/PaginationProvider';
+import {
+  PaginationProvider,
+  usePagination,
+} from '../editor/PaginationProvider';
 import { TranslationRenderer, useNavigation } from '../shared';
 import { TranslationSSRContent } from './TranslationSSRContent';
 import type { TranslationEditorContent } from '../editor';
