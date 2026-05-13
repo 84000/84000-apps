@@ -26,11 +26,9 @@ import { Subscript } from './Subscript';
 import { Superscript } from './Superscript';
 import TextAlign from './TextAlign';
 import { Trailer } from './Trailer';
-import TranslationDocument from './TranslationDocument';
 import { Underline } from './Underline';
 
 export const translationSSRExtensions: Extensions = [
-  TranslationDocument,
   Abbreviation,
   Audio,
   Bold,

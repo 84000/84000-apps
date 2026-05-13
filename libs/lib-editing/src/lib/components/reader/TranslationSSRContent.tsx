@@ -11,8 +11,9 @@ type Props = {
   extensions?: Extensions;
 };
 
-const TOP_NODE_NAME = 'translation';
-const TOP_NODE_ALIASES = new Set([TOP_NODE_NAME, 'doc']);
+const TOP_NODE_NAME = 'doc';
+const TOP_NODE_ALIASES = new Set([TOP_NODE_NAME, 'translation']);
+const BUILTIN_TYPES = new Set([TOP_NODE_NAME, 'text']);
 
 const wrapAsDoc = (content: Content): JSONContent => {
   if (Array.isArray(content)) {
@@ -45,7 +46,7 @@ const assertCoverage = (doc: JSONContent, extensions: Extensions) => {
   collectTypes(doc, nodeTypes, markTypes);
 
   const missing = [...nodeTypes, ...markTypes].filter(
-    (t) => t !== 'text' && !known.has(t),
+    (t) => !BUILTIN_TYPES.has(t) && !known.has(t),
   );
 
   if (missing.length > 0) {
