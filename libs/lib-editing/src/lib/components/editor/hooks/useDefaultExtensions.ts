@@ -2,6 +2,7 @@
 
 import Image from '@tiptap/extension-image';
 import Document from '../extensions/Document';
+import { EnsureUniqueUuids } from '../extensions/EnsureUniqueUuids';
 import Heading from '../extensions/Heading/Heading';
 import Paragraph from '../extensions/Paragraph/Paragraph';
 import { SlashCommand } from '../extensions/SlashCommand/SlashCommand';
@@ -20,6 +21,7 @@ export const useDefaultExtensions = () => {
     extensions: [
       Bold,
       Document,
+      EnsureUniqueUuids,
       Heading,
       Image,
       Italic,

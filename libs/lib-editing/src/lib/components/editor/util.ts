@@ -1,12 +1,6 @@
-import {
-  MarkViewProps,
-  mergeAttributes,
-  NodeViewProps,
-  NodeViewRendererProps,
-} from '@tiptap/react';
+import { MarkViewProps, mergeAttributes } from '@tiptap/react';
 import { Editor } from '@tiptap/core';
 import { HTMLElementType } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * WeakMap to associate DOM elements with their editor instances.
@@ -29,68 +23,6 @@ export const getEditorForElement = (
   element: HTMLElement,
 ): Editor | undefined => {
   return editorElementMap.get(element);
-};
-
-/**
- * Validates and updates the attributes of a Node.
- * Specifically, it ensures that the node has a unique 'uuid' attribute.
- * If the 'uuid' is missing or duplicates the previous node's 'uuid',
- * a new UUID is generated and assigned. In the case of duplication, all
- * global attributes are set to their default values.
- */
-export const validateAttrs = ({
-  node,
-  editor,
-  getPos,
-  updateAttributes,
-}: Partial<NodeViewProps>) => {
-  if (!node?.attrs.uuid) {
-    updateAttributes?.({ uuid: uuidv4() });
-    return;
-  }
-
-  const pos = getPos?.();
-  if (pos === null || pos === undefined) {
-    return;
-  }
-
-  // check if previous node has same uuid, if so, set a new one
-  const $pos = editor?.state.doc.resolve(pos);
-  const parent = $pos?.parent;
-  const index = $pos?.index();
-  if (!parent || index === null || index === undefined) {
-    return;
-  }
-
-  if (index > 0 && parent.child(index - 1).attrs.uuid === node.attrs.uuid) {
-    const attrs: { [attr: string]: unknown } = {
-      ...node.attrs,
-      uuid: uuidv4(),
-    };
-
-    // reset all global attributes to default values
-    if (attrs.leadingSpaceUuid) {
-      attrs.leadSpaceUuid = undefined;
-    }
-
-    if (attrs.hasLeadingSpace) {
-      attrs.hasLeadingSpace = false;
-    }
-
-    if (attrs.indentUuid) {
-      attrs.indentUuid = undefined;
-    }
-
-    if (attrs.hasIndent) {
-      attrs.hasIndent = false;
-    }
-
-    if (attrs.hasParagraphIndent) {
-      attrs.hasParagraphIndent = false;
-    }
-
-    updateAttributes?.(attrs);
-  }
 };
 
 /**
@@ -228,47 +160,6 @@ export const createUpdateAttributes = (element: HTMLElement) => {
       element.setAttribute(key, attrs[key] as string);
     });
   };
-};
-
-/**
- * Creates a NodeView DOM element for a given node and extension.
- * It sets up the element with merged attributes and validates them.
- */
-export const createNodeViewDom = ({
-  editor,
-  getPos,
-  node,
-  extension,
-  HTMLAttributes,
-  element,
-  className,
-}: Partial<NodeViewRendererProps> & {
-  element: HTMLElementType;
-  className?: string;
-}) => {
-  const dom = document.createElement(element);
-  const updateAttributes = createUpdateAttributes(dom);
-
-  const attributes = mergeAttributes(
-    node?.attrs || {},
-    extension?.options.HTMLAttributes,
-    HTMLAttributes || {},
-    {
-      class: className,
-      type: extension?.name,
-    },
-  );
-
-  updateAttributes(attributes);
-
-  validateAttrs({
-    node,
-    editor,
-    getPos,
-    updateAttributes,
-  });
-
-  return { dom, updateAttributes };
 };
 
 /**

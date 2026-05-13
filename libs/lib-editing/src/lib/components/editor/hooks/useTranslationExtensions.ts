@@ -3,6 +3,7 @@
 import type { XmlFragment } from 'yjs';
 import { Collaboration } from '@tiptap/extension-collaboration';
 import { Audio } from '../extensions/Audio/Audio';
+import { EnsureUniqueUuids } from '../extensions/EnsureUniqueUuids';
 import Heading from '../extensions/Heading/Heading';
 import Image from '../extensions/Image';
 import Paragraph from '../extensions/Paragraph/Paragraph';
@@ -94,6 +95,7 @@ export const useTranslationExtensions = ({
     AbbreviationCommand,
     Bold,
     EndNoteLinkMark,
+    EnsureUniqueUuids,
     GlobalConfig,
     GlossaryInstanceNode,
     Heading,
