@@ -1,5 +1,5 @@
 import type { Extensions, JSONContent } from '@tiptap/core';
-import { generateHTML } from '@tiptap/html/server';
+import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { extractPlainText } from './ssr-text-fallback';
 
@@ -64,7 +64,7 @@ export const TranslationSSRContent = ({
     if (process.env.NODE_ENV !== 'production') {
       assertCoverage(doc, exts);
     }
-    const html = generateHTML(doc, exts);
+    const html = renderToHTMLString({ content: doc, extensions: exts });
     return (
       <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
     );
