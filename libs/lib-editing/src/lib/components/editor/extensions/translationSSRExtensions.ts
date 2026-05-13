@@ -1,4 +1,5 @@
 import type { Extensions } from '@tiptap/core';
+import { Document } from '@tiptap/extension-document';
 
 import { Abbreviation, HasAbbreviation } from './Abbreviation/Abbreviation';
 import { Audio } from './Audio/Audio';
@@ -29,6 +30,7 @@ import { Trailer } from './Trailer';
 import { Underline } from './Underline';
 
 export const translationSSRExtensions: Extensions = [
+  Document,
   Abbreviation,
   Audio,
   Bold,

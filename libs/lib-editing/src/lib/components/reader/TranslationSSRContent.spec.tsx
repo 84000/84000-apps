@@ -70,7 +70,7 @@ describe('TranslationSSRContent', () => {
     const html = renderedHtml(el);
     expect(html).toContain('passage');
     expect(html).toContain('Hello');
-    expect(html).toContain('<strong>world</strong>');
+    expect(html).toMatch(/<strong[^>]*>world<\/strong>/);
   });
 
   it('accepts an array of nodes and wraps them as a doc', () => {
