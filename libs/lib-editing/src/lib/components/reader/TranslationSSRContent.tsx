@@ -1,4 +1,5 @@
 import type { Extensions, JSONContent } from '@tiptap/core';
+import { getSchema } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { extractPlainText } from './ssr-text-fallback';
@@ -40,7 +41,14 @@ const collectTypes = (
 };
 
 const assertCoverage = (doc: JSONContent, extensions: Extensions) => {
-  const known = new Set(extensions.map((e) => e.name));
+  // Resolve bundles like StarterKit into their constituent node/mark specs so
+  // the coverage check sees blockquote, code, hardBreak, etc. that are
+  // registered indirectly.
+  const schema = getSchema(extensions);
+  const known = new Set([
+    ...Object.keys(schema.nodes),
+    ...Object.keys(schema.marks),
+  ]);
   const nodeTypes = new Set<string>();
   const markTypes = new Set<string>();
   collectTypes(doc, nodeTypes, markTypes);

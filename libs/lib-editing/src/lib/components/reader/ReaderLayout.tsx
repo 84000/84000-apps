@@ -16,16 +16,21 @@ export const ReaderLayout = ({
   main,
   right,
   params,
+  initialHasTranslationContent,
 }: {
   withHeader?: boolean;
   left: ReactNode;
   main: ReactNode;
   right: ReactNode;
   params: Promise<{ slug: string }>;
+  initialHasTranslationContent?: boolean;
 }) => {
   const { slug } = use(params);
   return (
-    <NavigationProvider uuid={slug}>
+    <NavigationProvider
+      uuid={slug}
+      initialHasTranslationContent={initialHasTranslationContent}
+    >
       <ThreeColumnRenderer withHeader={withHeader}>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>

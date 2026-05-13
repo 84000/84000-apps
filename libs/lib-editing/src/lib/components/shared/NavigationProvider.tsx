@@ -74,9 +74,11 @@ const parsePanelParams = (
 
 export const NavigationProvider = ({
   uuid,
+  initialHasTranslationContent = true,
   children,
 }: {
   uuid: string;
+  initialHasTranslationContent?: boolean;
   children: ReactNode;
 }) => {
   const graphqlClient = createGraphQLClient();
@@ -88,7 +90,9 @@ export const NavigationProvider = ({
   const isPanelTransitioning = useRef(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
-  const [hasTranslationContent, setHasTranslationContent] = useState(true);
+  const [hasTranslationContent, setHasTranslationContent] = useState(
+    initialHasTranslationContent,
+  );
   const [imprint, setImprint] = useState<Imprint | undefined>();
   const bibliographyCache = useRef<{ [uuid: string]: BibliographyEntryItem }>(
     {},
