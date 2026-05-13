@@ -13,13 +13,13 @@ import { Passage } from '@eightyfourthousand/data-access';
 /**
  * Ensures every node in the editor document has a unique, non-null UUID.
  *
- * UUID assignment normally happens asynchronously in NodeView lifecycle hooks
- * (validateAttrs / createNodeViewDom). When save() is called shortly after a
- * structural edit (e.g. pressing Enter to create a new paragraph, or splitting
- * a passage), some nodes may still carry uuid: null or a UUID duplicated from
- * the node they were split from.  passagesFromNodes() then reads those nodes
- * synchronously, and annotationExportsFromNode silently skips any node whose
- * uuid is falsy — producing missing paragraph annotations.
+ * UUID de-duplication normally happens asynchronously in the
+ * EnsureUniqueUuids ProseMirror plugin (appendTransaction). When save() is
+ * called shortly after a structural edit (e.g. pressing Enter to create a new
+ * paragraph, or splitting a passage), some nodes may still carry uuid: null
+ * or a UUID duplicated from the node they were split from. passagesFromNodes()
+ * then reads those nodes synchronously, and annotationExportsFromNode silently
+ * skips any node whose uuid is falsy — producing missing paragraph annotations.
  *
  * This function walks the document synchronously and dispatches a single
  * transaction that stamps a fresh UUID onto every node or mark that either:
