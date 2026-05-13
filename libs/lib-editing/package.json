@@ -44,6 +44,7 @@
     "@tiptap/pm": "^3.13.0",
     "@tiptap/react": "^3.13.0",
     "@tiptap/starter-kit": "^3.13.0",
+    "@tiptap/static-renderer": "^3.13.0",
     "@tiptap/suggestion": "^3.13.0",
     "class-variance-authority": "^0.7.1",
     "graphql-request": "^7.1.2",
