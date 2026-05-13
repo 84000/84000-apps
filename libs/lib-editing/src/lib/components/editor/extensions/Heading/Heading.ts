@@ -1,6 +1,5 @@
 import TiptapHeading from '@tiptap/extension-heading';
-import { createNodeViewDom } from '../../util';
-import { HTMLElementType } from 'react';
+import { mergeAttributes } from '@tiptap/core';
 import { resolveHeadingPresentation } from './classes';
 
 export const Heading = TiptapHeading.extend({
@@ -16,29 +15,21 @@ export const Heading = TiptapHeading.extend({
     };
   },
 
-  addNodeView() {
-    return ({ node, editor, extension, getPos, HTMLAttributes }) => {
-      const { tag, className } = resolveHeadingPresentation({
-        rawLevel: node.attrs.level,
-        classAttr: node.attrs.class,
-        levels: this.options.levels,
-      });
+  renderHTML({ node, HTMLAttributes }) {
+    const { tag, className } = resolveHeadingPresentation({
+      rawLevel: node.attrs.level,
+      classAttr: node.attrs.class as string | null,
+      levels: this.options.levels,
+    });
 
-      const { dom } = createNodeViewDom({
-        editor,
-        getPos,
-        node,
-        extension,
-        HTMLAttributes,
-        element: tag as HTMLElementType,
-        className,
-      });
-
-      return {
-        dom,
-        contentDOM: dom,
-      };
-    };
+    return [
+      tag,
+      mergeAttributes(HTMLAttributes, {
+        class: className,
+        type: 'heading',
+      }),
+      0,
+    ];
   },
 });
 

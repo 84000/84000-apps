@@ -1,24 +1,16 @@
 import TiptapParagraph from '@tiptap/extension-paragraph';
-import { createNodeViewDom } from '../../util';
+import { mergeAttributes } from '@tiptap/core';
 
 export const Paragraph = TiptapParagraph.extend({
-  addNodeView() {
-    return ({ node, extension, editor, getPos, HTMLAttributes }) => {
-      const { dom } = createNodeViewDom({
-        editor,
-        getPos,
-        node,
-        extension,
-        HTMLAttributes,
-        element: 'p',
-        className: 'paragraph',
-      });
-
-      return {
-        dom,
-        contentDOM: dom,
-      };
-    };
+  renderHTML({ HTMLAttributes }) {
+    return [
+      'p',
+      mergeAttributes(HTMLAttributes, {
+        class: 'paragraph',
+        type: 'paragraph',
+      }),
+      0,
+    ];
   },
 });
 
