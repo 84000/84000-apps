@@ -11,14 +11,17 @@ type Props = {
   extensions?: Extensions;
 };
 
+const TOP_NODE_NAME = 'translation';
+const TOP_NODE_ALIASES = new Set([TOP_NODE_NAME, 'doc']);
+
 const wrapAsDoc = (content: Content): JSONContent => {
   if (Array.isArray(content)) {
-    return { type: 'doc', content };
+    return { type: TOP_NODE_NAME, content };
   }
-  if (content?.type === 'doc') {
-    return content;
+  if (content?.type && TOP_NODE_ALIASES.has(content.type)) {
+    return { type: TOP_NODE_NAME, content: content.content ?? [] };
   }
-  return { type: 'doc', content: [content] };
+  return { type: TOP_NODE_NAME, content: [content] };
 };
 
 const collectTypes = (
