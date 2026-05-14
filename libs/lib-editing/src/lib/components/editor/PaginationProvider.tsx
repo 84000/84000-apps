@@ -67,6 +67,7 @@ interface PaginationContextState {
   endCursor?: string;
   startCursor?: string;
   editor?: Editor;
+  isEditorReady?: boolean;
 }
 
 export const PaginationContext = createContext<PaginationContextState>({});
@@ -450,6 +451,7 @@ export const PaginationProvider = ({
         startCursor,
         endCursor,
         editor,
+        isEditorReady,
       }}
     >
       {startCursor && (

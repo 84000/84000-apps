@@ -17,9 +17,9 @@ const ReaderBody = ({
   content: TranslationEditorContent;
   className?: string;
 }) => {
-  const { editor } = usePagination();
+  const { editor, isEditorReady } = usePagination();
 
-  if (!editor) {
+  if (!editor || !isEditorReady) {
     return (
       <div className={cn('flex h-full', className)}>
         <div className="relative flex flex-col flex-1 h-full">
