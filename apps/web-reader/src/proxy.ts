@@ -1,27 +1,22 @@
-import { getWorkUuidByToh } from '@eightyfourthousand/data-access';
-import { createServerClient } from '@eightyfourthousand/data-access/ssr';
+import {
+  isTohRequest,
+  isXmlidRequest,
+  redirectOnToh,
+  redirectOnXmlid,
+} from '@eightyfourthousand/lib-editing';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // match tohoku catalog shortlinks like /toh1234
-  if (pathname.match(/^\/toh\d+/)) {
-    const url = request.nextUrl.clone();
-    const toh = pathname.split('/')[1]?.split('.')[0];
+  if (isTohRequest(pathname)) {
+    return redirectOnToh(pathname, request);
+  }
 
-    if (toh) {
-      const client = await createServerClient();
-      const workUuid = await getWorkUuidByToh({ client, toh });
-
-      if (!workUuid) {
-        return NextResponse.next();
-      }
-
-      url.pathname = `/${workUuid}`;
-      url.searchParams.set('toh', toh);
-      return NextResponse.redirect(url);
-    }
+  // match xmlid shortlinks like /UT22084-001-001
+  if (isXmlidRequest(pathname)) {
+    return redirectOnXmlid(pathname, request);
   }
 
   const isKnowledgeBase = pathname.startsWith('/knowledgebase');
