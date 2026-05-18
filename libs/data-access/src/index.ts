@@ -15,3 +15,4 @@ export * from './lib/storage';
 export * from './lib/types';
 export * from './lib/local-storage';
 export * from './lib/use-bookmark';
+export * from './lib/lookup';

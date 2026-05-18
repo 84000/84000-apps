@@ -13,6 +13,7 @@ import {
   glossaryTermPassagesPageResolver,
 } from './schema/glossary/glossary.resolver';
 import { healthQueries } from './schema/health/health.query';
+import { lookupQueries } from './schema/lookup/lookup.query';
 import { passageQueries } from './schema/passage/passage.query';
 import {
   replaceMutation,
@@ -36,6 +37,7 @@ export const resolvers = {
 
   Query: {
     ...healthQueries,
+    ...lookupQueries,
     ...passageQueries,
     ...userQueries,
     ...workQueries,
