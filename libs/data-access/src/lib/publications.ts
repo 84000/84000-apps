@@ -60,6 +60,29 @@ export const getWorkUuidByToh = async ({
   return data.work_uuid ?? null;
 };
 
+export const getWorkUuidByXmlid = async ({
+  client,
+  xmlid,
+}: {
+  client: DataClient;
+  xmlid: string;
+}): Promise<string | null> => {
+  const { data, error } = await client
+    .from('works')
+    .select('uuid')
+    .eq('xmlId', xmlid)
+    .single();
+
+  if (error || !data) {
+    if (error) {
+      console.error('Error fetching work UUID by XMLID:', error);
+    }
+    return null;
+  }
+
+  return data.uuid ?? null;
+};
+
 export const getTranslationPassages = async ({
   client,
   uuid,
