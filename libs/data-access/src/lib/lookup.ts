@@ -78,11 +78,13 @@ const lookupXmlIdInTable = async ({
   type: LookupEntityType;
   xmlId: string;
 }): Promise<LookupResult | null> => {
-  const { data, error } = await client
-    .from(table)
-    .select('uuid')
-    .eq(column, xmlId)
-    .maybeSingle();
+  let query = client.from(table).select('uuid').eq(column, xmlId);
+
+  if (type === 'glossary') {
+    query = query.eq('termType', 'translationMain');
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     console.error(`Error looking up ${type} by xmlId ${xmlId}:`, error);

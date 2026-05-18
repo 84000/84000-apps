@@ -22,18 +22,31 @@ const createClient = ({
     glossaries,
     bibliographies,
   };
-  const queries: Array<{ table: string; column: string; value: string }> = [];
+  const queries: Array<{
+    table: string;
+    filters: Array<{ column: string; value: string }>;
+  }> = [];
 
   const client = {
     from: jest.fn((table: string) => ({
       select: jest.fn(() => ({
-        eq: jest.fn((column: string, value: string) => ({
-          maybeSingle: jest.fn(async () => {
-            queries.push({ table, column, value });
-            const data = tables[table]?.find((row) => row[column] === value);
-            return { data: data ?? null, error: null };
-          }),
-        })),
+        eq: jest.fn(function eq(column: string, value: string) {
+          const filters = [{ column, value }];
+          const query = {
+            eq: jest.fn((nextColumn: string, nextValue: string) => {
+              filters.push({ column: nextColumn, value: nextValue });
+              return query;
+            }),
+            maybeSingle: jest.fn(async () => {
+              queries.push({ table, filters: [...filters] });
+              const data = tables[table]?.find((row) =>
+                filters.every(({ column, value }) => row[column] === value),
+              );
+              return { data: data ?? null, error: null };
+            }),
+          };
+          return query;
+        }),
       })),
     })),
   };
@@ -58,7 +71,10 @@ describe('lookup', () => {
     ).resolves.toEqual({ uuid: 'work-uuid', type: 'work' });
 
     expect(queries).toEqual([
-      { table: 'work_toh', column: 'toh_clean', value: 'toh1' },
+      {
+        table: 'work_toh',
+        filters: [{ column: 'toh_clean', value: 'toh1' }],
+      },
     ]);
   });
 
@@ -86,13 +102,22 @@ describe('lookup', () => {
     ).resolves.toEqual({ uuid: 'glossary-uuid', type: 'glossary' });
 
     expect(queries).toEqual([
-      { table: 'glossaries', column: 'uuid', value: 'glossary-uuid' },
+      {
+        table: 'glossaries',
+        filters: [{ column: 'uuid', value: 'glossary-uuid' }],
+      },
     ]);
   });
 
   it('looks up untyped xml IDs in entity order', async () => {
     const { client, queries } = createClient({
-      glossaries: [{ uuid: 'glossary-uuid', glossary_xmlId: 'xml-id' }],
+      glossaries: [
+        {
+          uuid: 'glossary-uuid',
+          glossary_xmlId: 'xml-id',
+          termType: 'translationMain',
+        },
+      ],
       bibliographies: [{ uuid: 'bibliography-uuid', xmlId: 'xml-id' }],
     });
 
@@ -106,6 +131,29 @@ describe('lookup', () => {
       'passages',
       'glossaries',
     ]);
+    expect(queries[2]).toEqual({
+      table: 'glossaries',
+      filters: [
+        { column: 'glossary_xmlId', value: 'xml-id' },
+        { column: 'termType', value: 'translationMain' },
+      ],
+    });
+  });
+
+  it('does not return non-translation main glossary xml IDs', async () => {
+    const { client } = createClient({
+      glossaries: [
+        {
+          uuid: 'glossary-uuid',
+          glossary_xmlId: 'xml-id',
+          termType: 'other',
+        },
+      ],
+    });
+
+    await expect(
+      lookup({ client, xmlId: 'xml-id', type: 'glossary' }),
+    ).resolves.toBeNull();
   });
 
   it('returns null when no identifier is provided', async () => {
