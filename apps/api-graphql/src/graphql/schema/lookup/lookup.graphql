@@ -1,0 +1,24 @@
+enum LookupEntityType {
+  work
+  passage
+  glossary
+  bibliography
+}
+
+type LookupResult {
+  uuid: ID!
+  type: LookupEntityType!
+}
+
+extend type Query {
+  """
+  Resolve a known entity identifier to its canonical UUID and type.
+  Identifier precedence is toh, uuid, then xmlId.
+  """
+  lookup(
+    toh: String
+    uuid: ID
+    xmlId: String
+    type: LookupEntityType
+  ): LookupResult
+}

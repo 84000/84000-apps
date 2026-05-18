@@ -1,4 +1,5 @@
 export { getPassage } from './get-passage';
+export { lookup, type LookupEntityType, type LookupResult } from './lookup';
 export {
   getTranslationBlocks,
   type TranslationBlocksPage,
@@ -23,7 +24,10 @@ export {
   searchWorkGlossaryTerms,
   type GlossaryTermSearchResult,
 } from './search-work-glossary-terms';
-export { getTermPassages, type GlossaryPassagesPage } from './get-term-passages';
+export {
+  getTermPassages,
+  type GlossaryPassagesPage,
+} from './get-term-passages';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';

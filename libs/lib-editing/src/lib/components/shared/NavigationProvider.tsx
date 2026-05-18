@@ -4,6 +4,7 @@ import {
   createGraphQLClient,
   getBibliographyEntry,
   getGlossaryInstance,
+  lookup,
   getPassage,
   getTranslationImprint,
   getTranslationMetadataByUuid,
@@ -35,7 +36,10 @@ import {
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
-import { GatedFeature, useFeatureFlagEnabled } from '@eightyfourthousand/lib-instr';
+import {
+  GatedFeature,
+  useFeatureFlagEnabled,
+} from '@eightyfourthousand/lib-instr';
 import { isXmlId, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
 import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
@@ -273,35 +277,59 @@ export const NavigationProvider = ({
     window.history.replaceState(null, '', newUrl);
   }, [toh, panels]);
 
-  // On initial load, check for an XML ID in the URL hash and resolve it to a passage UUID
+  // On initial load, check for an XML ID in the URL hash and resolve it to an entity UUID.
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '');
     if (!hash || !isXmlId(hash)) {
       return;
     }
 
-    // Remove hash from URL immediately
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${window.location.search}`,
-    );
-
     (async () => {
-      const passage = await getPassage({ client: graphqlClient, xmlId: hash });
-      if (!passage) {
+      const result = await lookup({ client: graphqlClient, xmlId: hash });
+      if (!result || result.type === 'work') {
         return;
       }
 
-      const panel = PANEL_FOR_SECTION[passage.type] ?? 'main';
-      const tab = TAB_FOR_SECTION[passage.type] ?? 'translation';
+      let panel: PanelName | undefined;
+      let tab: TabName | undefined;
+      let uuid = result.uuid;
+
+      if (result.type === 'passage') {
+        const passage = await getPassage({
+          client: graphqlClient,
+          uuid: result.uuid,
+        });
+        if (!passage) {
+          return;
+        }
+
+        panel = PANEL_FOR_SECTION[passage.type] ?? 'main';
+        tab = TAB_FOR_SECTION[passage.type] ?? 'translation';
+        uuid = passage.uuid;
+      } else if (result.type === 'glossary') {
+        panel = 'right';
+        tab = 'glossary';
+      } else if (result.type === 'bibliography') {
+        panel = 'right';
+        tab = 'bibliography';
+      }
+
+      if (!panel || !tab) {
+        return;
+      }
+
+      window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${window.location.search}`,
+      );
 
       updatePanel({
         name: panel,
-        state: { open: true, tab, hash: passage.uuid },
+        state: { open: true, tab, hash: uuid },
       });
     })();
-  }, []);
+  }, [graphqlClient, updatePanel]);
 
   useEffect(() => {
     if (!uuid || !toh) {
@@ -397,4 +425,3 @@ export const NavigationProvider = ({
     </NavigationContext.Provider>
   );
 };
-

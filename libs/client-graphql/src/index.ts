@@ -8,6 +8,9 @@ export {
 // Functions
 export {
   getPassage,
+  lookup,
+  type LookupEntityType,
+  type LookupResult,
   getTranslationBlocks,
   getTranslationBlocksAround,
   getTranslationTitles,

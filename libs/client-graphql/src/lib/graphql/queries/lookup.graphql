@@ -1,0 +1,6 @@
+query Lookup($toh: String, $uuid: ID, $xmlId: String, $type: LookupEntityType) {
+  lookup(toh: $toh, uuid: $uuid, xmlId: $xmlId, type: $type) {
+    uuid
+    type
+  }
+}

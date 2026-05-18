@@ -231,6 +231,18 @@ export type License = {
   name?: Maybe<Scalars['String']['output']>;
 };
 
+export type LookupEntityType =
+  | 'bibliography'
+  | 'glossary'
+  | 'passage'
+  | 'work';
+
+export type LookupResult = {
+  __typename?: 'LookupResult';
+  type: LookupEntityType;
+  uuid: Scalars['ID']['output'];
+};
+
 /** Root Mutation type - extend this in other schema files */
 export type Mutation = {
   __typename?: 'Mutation';
@@ -258,6 +270,7 @@ export type MutationReplaceArgs = {
   searchText: Scalars['String']['input'];
   targetUuids: Array<Scalars['ID']['input']>;
   type?: InputMaybe<ReplaceType>;
+  useRegex?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
@@ -417,6 +430,11 @@ export type Query = {
   hasPermission: Scalars['Boolean']['output'];
   /** Health check query */
   health: HealthStatus;
+  /**
+   * Resolve a known entity identifier to its canonical UUID and type.
+   * Identifier precedence is toh, uuid, then xmlId.
+   */
+  lookup?: Maybe<LookupResult>;
   /** Get the currently authenticated user (null if not authenticated) */
   me?: Maybe<CurrentUser>;
   /**
@@ -460,6 +478,15 @@ export type QueryGlossaryTermPassagesArgs = {
 /** Root Query type - extend this in other schema files */
 export type QueryHasPermissionArgs = {
   permission: Permission;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryLookupArgs = {
+  toh?: InputMaybe<Scalars['String']['input']>;
+  type?: InputMaybe<LookupEntityType>;
+  uuid?: InputMaybe<Scalars['ID']['input']>;
+  xmlId?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -518,6 +545,8 @@ export type SavePassagesResult = {
   deletedCount?: Maybe<Scalars['Int']['output']>;
   /** Error message if the save failed */
   error?: Maybe<Scalars['String']['output']>;
+  /** Saved passages (after server-side normalization), used for client-side refresh. */
+  passages: Array<Passage>;
   /** Number of passages saved */
   savedCount: Scalars['Int']['output'];
   /** Whether the save was successful */
@@ -653,10 +682,7 @@ export type Work = {
   publicationVersion: Scalars['String']['output'];
   /** Whether access to this work is restricted */
   restriction: Scalars['Boolean']['output'];
-  /**
-   * Search glossary term instances for this work by English term (ILIKE prefix
-   * match, also searching alternatives). Results are ordered by term_number.
-   */
+  /** Search glossary term instances for this work by English term. Results are ordered by term_number. */
   searchGlossaryTerms: Array<GlossaryTermInstance>;
   /** Section of the canon this work belongs to */
   section: Scalars['String']['output'];
@@ -803,6 +829,16 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
   )> };
 
 export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, pages: number, restriction: boolean, section: string };
+
+export type LookupQueryVariables = Exact<{
+  toh?: InputMaybe<Scalars['String']['input']>;
+  uuid?: InputMaybe<Scalars['ID']['input']>;
+  xmlId?: InputMaybe<Scalars['String']['input']>;
+  type?: InputMaybe<LookupEntityType>;
+}>;
+
+
+export type LookupQuery = { __typename?: 'Query', lookup?: { __typename?: 'LookupResult', uuid: string, type: LookupEntityType } | null };
 
 export type GetPassagesQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -1101,6 +1137,14 @@ export const WorkFieldsFragmentDoc = gql`
   section
 }
     `;
+export const LookupDocument = gql`
+    query Lookup($toh: String, $uuid: ID, $xmlId: String, $type: LookupEntityType) {
+  lookup(toh: $toh, uuid: $uuid, xmlId: $xmlId, type: $type) {
+    uuid
+    type
+  }
+}
+    `;
 export const GetPassagesDocument = gql`
     query GetPassages($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
   work(uuid: $uuid) {
@@ -1271,6 +1315,9 @@ const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationTy
 
 export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
+    Lookup(variables?: LookupQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<LookupQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<LookupQuery>({ document: LookupDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'Lookup', 'query', variables);
+    },
     GetPassages(variables: GetPassagesQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesQuery>({ document: GetPassagesDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassages', 'query', variables);
     },
