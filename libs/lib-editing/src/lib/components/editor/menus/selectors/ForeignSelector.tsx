@@ -111,14 +111,17 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
           </div>
         ))}
         {isActive && (
-          <div
-            className="flex items-center text-sm rounded-md hover:bg-muted text-muted-foreground px-2 py-1.5 cursor-pointer border-t mt-1 pt-1.5"
-            onClick={handleRemove}
-          >
-            <span>Remove</span>
-            <div className="flex-1"></div>
-            <XIcon className="size-3.5 ms-4" />
-          </div>
+          <>
+            <div className="h-px bg-border my-1" />
+            <div
+              className="flex items-center text-sm rounded-md hover:bg-muted text-foreground px-2 py-1.5 cursor-pointer"
+              onClick={handleRemove}
+            >
+              <span>Remove</span>
+              <div className="flex-1"></div>
+              <XIcon className="size-3.5 ms-4" />
+            </div>
+          </>
         )}
       </PopoverContent>
     </Popover>
