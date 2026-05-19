@@ -12,6 +12,7 @@ import {
   UnderlineIcon,
 } from 'lucide-react';
 import { Button, Separator } from '@eightyfourthousand/design-system';
+import { ForeignSelector } from './ForeignSelector';
 import { LinkSelector } from './LinkSelector';
 import { MantraSelector } from './MantraSelector';
 import { EndNoteSelector } from './EndNoteSelector';
@@ -115,6 +116,7 @@ export const TranslationTextButtons = ({ editor }: { editor: Editor }) => {
           </Button>
         );
       })}
+      <ForeignSelector editor={editor} />
       <MantraSelector editor={editor} />
       <Separator orientation="vertical" className="h-10" />
       <GlossarySelector editor={editor} />
