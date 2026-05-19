@@ -38,6 +38,7 @@ import { SmallCaps } from '../extensions/SmallCaps';
 import { Italic } from '../extensions/Italic';
 import { Indent } from '../extensions/Indent';
 import { InternalLink } from '../extensions/InternalLink';
+import { ForeignMark } from '../extensions/Foreign/Foreign';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { Mention } from '../extensions/Mention/Mention';
 import { EndNoteLinkMark } from '../extensions/EndNoteLink/EndNoteLinkMark';
@@ -96,6 +97,7 @@ export const useTranslationExtensions = ({
     Bold,
     EndNoteLinkMark,
     EnsureUniqueUuids,
+    ForeignMark,
     GlobalConfig,
     GlossaryInstanceNode,
     Heading,

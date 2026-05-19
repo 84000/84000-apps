@@ -18,6 +18,10 @@ export default Extension.create({
             default: null,
             parseHTML: (element) => element.getAttribute('uuid') || uuidv4(),
             renderHTML: (attributes) => {
+              if (!attributes.uuid) {
+                return attributes;
+              }
+
               return mergeAttributes(attributes, {
                 uuid: attributes.uuid || uuidv4(),
               });
@@ -27,6 +31,10 @@ export default Extension.create({
             default: null,
             parseHTML: (element) => element.getAttribute('type'),
             renderHTML: (attributes) => {
+              if (!attributes.type) {
+                return attributes;
+              }
+
               return mergeAttributes(attributes, {
                 type: attributes.type,
               });
@@ -36,6 +44,10 @@ export default Extension.create({
             default: undefined,
             parseHTML: (element) => element.getAttribute('toh'),
             renderHTML: (attributes) => {
+              if (!attributes.toh) {
+                return attributes;
+              }
+
               return mergeAttributes(attributes, {
                 toh: attributes.toh,
               });
@@ -46,6 +58,10 @@ export default Extension.create({
             parseHTML: (element) =>
               element.getAttribute('invalid') === 'true' ? true : false,
             renderHTML: (attributes) => {
+              if (attributes.invalid === null) {
+                return attributes;
+              }
+
               return mergeAttributes(attributes, {
                 invalid: attributes.invalid,
               });

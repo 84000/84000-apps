@@ -1,4 +1,7 @@
-import { ExtendedTranslationLanguage, SpanAnnotation } from '@eightyfourthousand/data-access';
+import {
+  ExtendedTranslationLanguage,
+  SpanAnnotation,
+} from '@eightyfourthousand/data-access';
 import { Exporter, ExporterContext } from './export';
 import { SpanMarkType } from '../types';
 
@@ -6,6 +9,7 @@ const SPAN_TYPE_FOR_MARK_TYPE: {
   [key in SpanMarkType]: string;
 } = {
   bold: 'text-bold',
+  foreign: 'foreign',
   smallCaps: 'small-caps',
   subscript: 'subscript',
   superscript: 'superscript',

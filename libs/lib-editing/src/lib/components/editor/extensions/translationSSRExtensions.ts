@@ -5,6 +5,7 @@ import { Abbreviation, HasAbbreviation } from './Abbreviation/Abbreviation';
 import { Audio } from './Audio/Audio';
 import { Bold } from './Bold';
 import { EndNoteLinkMarkSSR } from './EndNoteLink/EndNoteLinkMark.ssr';
+import { ForeignMark } from './Foreign/Foreign';
 import { GlossaryInstanceNodeSSR } from './GlossaryInstance/GlossaryInstanceNode.ssr';
 import Heading from './Heading/Heading';
 import Image from './Image';
@@ -35,6 +36,7 @@ export const translationSSRExtensions: Extensions = [
   Audio,
   Bold,
   EndNoteLinkMarkSSR,
+  ForeignMark,
   GlossaryInstanceNodeSSR,
   HasAbbreviation,
   Heading,

@@ -1,5 +1,6 @@
 export const MARK_TYPES = [
   'bold',
+  'foreign',
   'italic',
   'smallCaps',
   'subscript',

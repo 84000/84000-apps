@@ -2,7 +2,6 @@ import { ExtendedTranslationLanguage, SpanAnnotation } from '@eightyfourthousand
 import type { Transformer } from './transformer';
 import { type SpanMarkType, MARK_TYPES } from '../types';
 import { splitContent } from './split-content';
-import { ITALIC_LANGUAGES } from './annotate';
 import { recurse } from './recurse';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
@@ -12,12 +11,7 @@ const MARK_TYPE_FOR_SPAN_TYPE: {
 } = {
   distinct: () => 'italic',
   emphasis: () => 'italic',
-  foreign: (lang) => {
-    if (lang && ITALIC_LANGUAGES.includes(lang)) {
-      return 'italic';
-    }
-    return undefined;
-  },
+  foreign: () => 'foreign',
   'small-caps': () => 'smallCaps',
   subscript: () => 'subscript',
   superscript: () => 'superscript',

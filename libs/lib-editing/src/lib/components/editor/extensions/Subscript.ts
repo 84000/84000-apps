@@ -22,6 +22,16 @@ export const Subscript = TipTapSubscript.extend({
           });
         },
       },
+      lang: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-lang'),
+        renderHTML(attributes) {
+          if (!attributes.lang) {
+            return attributes;
+          }
+          return mergeAttributes(attributes, { 'data-lang': attributes.lang });
+        },
+      },
     };
   },
   addCommands() {
@@ -29,13 +39,17 @@ export const Subscript = TipTapSubscript.extend({
     return {
       ...this.parent?.(),
       setSubscript() {
-        return ({ commands }) => {
-          return commands.setMark(name, { uuid: uuidv4() });
+        return ({ commands, tr }) => {
+          const lang = tr.selection.$from.parent.attrs.lang;
+          const textStyle = tr.selection.$from.parent.attrs.textStyle;
+          return commands.setMark(name, { uuid: uuidv4(), lang, textStyle });
         };
       },
       toggleSubscript() {
-        return ({ commands }) => {
-          return commands.toggleMark(name, { uuid: uuidv4() });
+        return ({ commands, tr }) => {
+          const lang = tr.selection.$from.parent.attrs.lang;
+          const textStyle = tr.selection.$from.parent.attrs.textStyle;
+          return commands.toggleMark(name, { uuid: uuidv4(), lang, textStyle });
         };
       },
     };
