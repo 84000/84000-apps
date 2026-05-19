@@ -115,6 +115,98 @@ describe('TranslationSSRContent', () => {
     errorSpy.mockRestore();
   });
 
+  it('renders endNoteLink marks with start-positioned sups before the content', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'marked',
+                  marks: [
+                    {
+                      type: 'endNoteLink',
+                      attrs: {
+                        notes: [
+                          {
+                            uuid: 'n-start',
+                            endNote: 'en-1',
+                            location: 'start',
+                            label: '1.a',
+                            toh: 'toh1',
+                          },
+                          {
+                            uuid: 'n-end',
+                            endNote: 'en-2',
+                            label: '1.b',
+                            toh: 'toh1',
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).toContain('marked');
+    expect(html).toMatch(/<sup[^>]*me-0\.75[^>]*endNote="en-1"[^>]*>a<\/sup>marked/);
+    expect(html).toMatch(/marked<sup[^>]*endNote="en-2"[^>]*>b<\/sup>/);
+  });
+
+  it('renders endNoteLink marks with only end-positioned sups', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'marked',
+                  marks: [
+                    {
+                      type: 'endNoteLink',
+                      attrs: {
+                        notes: [
+                          {
+                            uuid: 'n-end',
+                            endNote: 'en-only',
+                            label: '1.c',
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).toMatch(/marked<sup[^>]*endNote="en-only"[^>]*>c<\/sup>/);
+  });
+
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));
