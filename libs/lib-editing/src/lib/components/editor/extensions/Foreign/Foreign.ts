@@ -43,19 +43,16 @@ export const ForeignMark = Mark.create<ForeignOptions>({
   },
 
   parseHTML() {
-    return [
-      { tag: 'span[data-text-style="foreign"]' },
-      { tag: 'i[data-text-style="foreign"]' },
-    ];
+    return [{ tag: 'span[data-text-style="foreign"]' }];
   },
 
   renderHTML({ HTMLAttributes, mark }) {
     const lang = mark.attrs.lang;
     return [
-      'i',
+      'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-text-style': 'foreign',
-        ...(lang ? { lang, 'data-lang': lang } : {}),
+        ...(lang ? { lang } : {}),
       }),
       0,
     ];
