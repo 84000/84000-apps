@@ -62,33 +62,25 @@ export const ForeignMark = Mark.create<ForeignOptions>({
   },
 
   addCommands() {
+    const name = this.name;
     return {
       setForeign:
         (lang?: ExtendedTranslationLanguage) =>
-        ({ chain }) => {
-          return chain()
-            .setMark(this.name)
-            .updateAttributes(this.name, {
-              lang,
-              uuid: uuidv4(),
-            })
-            .run();
+        ({ commands }) => {
+          return commands.setMark(name, { lang, uuid: uuidv4() });
         },
       toggleForeign:
         (lang?: ExtendedTranslationLanguage) =>
-        ({ commands }) => {
-          if (this.editor.isActive(this.name, { lang })) {
-            return commands.unsetForeign();
+        ({ commands, editor }) => {
+          if (editor.isActive(name, { lang })) {
+            return commands.unsetMark(name);
           }
-          return commands.setForeign(lang);
+          return commands.setMark(name, { lang, uuid: uuidv4() });
         },
       unsetForeign:
         () =>
-        ({ chain }) => {
-          return chain()
-            .unsetMark(this.name)
-            .resetAttributes(this.name, 'lang')
-            .run();
+        ({ commands }) => {
+          return commands.unsetMark(name);
         },
     };
   },
