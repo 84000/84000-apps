@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { ExtendedTranslationLanguage } from '@eightyfourthousand/data-access';
 import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import {
@@ -21,49 +23,21 @@ interface SelectorResult {
 
 interface MenuItem {
   name: string;
-  onClick: (editor: Editor) => void;
+  lang?: ExtendedTranslationLanguage;
   isActive: (state: SelectorResult) => boolean;
 }
 
 const items: MenuItem[] = [
-  {
-    name: 'English',
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleForeign('en').run();
-    },
-    isActive: (state: SelectorResult) => state.isEnglish,
-  },
-  {
-    name: 'Sanskrit',
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleForeign('Sa-Ltn').run();
-    },
-    isActive: (state: SelectorResult) => state.isSanskrit,
-  },
-  {
-    name: 'Wylie',
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleForeign('Bo-Ltn').run();
-    },
-    isActive: (state: SelectorResult) => state.isWylie,
-  },
-  {
-    name: 'Tibetan',
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleForeign('bo').run();
-    },
-    isActive: (state: SelectorResult) => state.isTibetan,
-  },
-  {
-    name: 'Mixed',
-    onClick: (editor: Editor) => {
-      editor.chain().focus().toggleForeign().run();
-    },
-    isActive: (state: SelectorResult) => state.isMixed,
-  },
+  { name: 'English', lang: 'en', isActive: (s) => s.isEnglish },
+  { name: 'Sanskrit', lang: 'Sa-Ltn', isActive: (s) => s.isSanskrit },
+  { name: 'Wylie', lang: 'Bo-Ltn', isActive: (s) => s.isWylie },
+  { name: 'Tibetan', lang: 'bo', isActive: (s) => s.isTibetan },
+  { name: 'Mixed', lang: undefined, isActive: (s) => s.isMixed },
 ];
 
 export const ForeignSelector = ({ editor }: { editor: Editor }) => {
+  const [open, setOpen] = useState(false);
+
   const editorState = useEditorState({
     editor,
     selector: (instance) => ({
@@ -75,8 +49,19 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
     }),
   });
 
+  const handleSelect = (lang?: ExtendedTranslationLanguage) => {
+    const to = editor.state.selection.to;
+    editor
+      .chain()
+      .toggleForeign(lang)
+      .setTextSelection(to)
+      .blur()
+      .run();
+    setOpen(false);
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" className="rounded-none">
           <LanguagesIcon
@@ -104,7 +89,7 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
           <div
             key={item.name}
             className="flex items-center text-sm rounded-md hover:bg-muted text-foreground px-2 py-1.5 cursor-pointer"
-            onClick={() => item.onClick(editor)}
+            onClick={() => handleSelect(item.lang)}
           >
             <span>{item.name}</span>
             <div className="flex-1"></div>
