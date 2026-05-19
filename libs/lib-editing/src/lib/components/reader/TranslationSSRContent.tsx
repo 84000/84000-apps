@@ -1,8 +1,64 @@
 import type { Extensions, JSONContent } from '@tiptap/core';
 import { getSchema } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { extractPlainText } from './ssr-text-fallback';
+
+type EndNoteItem = {
+  uuid: string;
+  endNote: string;
+  location?: string;
+  toh?: string;
+  label?: string;
+};
+
+const isEndNoteItem = (value: unknown): value is EndNoteItem => {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.uuid === 'string' && typeof v.endNote === 'string';
+};
+
+const escapeHTML = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escapeHTMLAttribute = (value: string) =>
+  escapeHTML(value).replace(/"/g, '&quot;');
+
+const renderEndNoteLinkMark = ({
+  mark,
+  children,
+}: {
+  mark: { attrs: Record<string, unknown> };
+  children?: string | string[];
+}): string => {
+  const raw = mark.attrs.notes;
+  const notes: EndNoteItem[] = Array.isArray(raw) ? raw.filter(isEndNoteItem) : [];
+  notes.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+
+  const supHtml = (n: EndNoteItem, marginClass: string) => {
+    const cls = cn('end-note-link', n.toh, marginClass);
+    const itemLabel = n.label?.split('.').pop() || '';
+    return (
+      `<sup class="${escapeHTMLAttribute(cls)}"` +
+      ` type="endNoteLink"` +
+      ` endNote="${escapeHTMLAttribute(n.endNote)}"` +
+      ` uuid="${escapeHTMLAttribute(n.uuid)}">` +
+      `${escapeHTML(itemLabel)}</sup>`
+    );
+  };
+
+  const start = notes
+    .filter((n) => n.location === 'start')
+    .map((n) => supHtml(n, 'me-0.75'))
+    .join('');
+  const end = notes
+    .filter((n) => n.location !== 'start')
+    .map((n) => supHtml(n, ''))
+    .join('');
+  const body = ([] as unknown[]).concat(children ?? '').filter(Boolean).join('');
+
+  return `<span>${start}${body}${end}</span>`;
+};
 
 type Content = JSONContent | JSONContent[];
 
@@ -76,7 +132,11 @@ export const TranslationSSRContent = ({
     if (process.env.NODE_ENV !== 'production') {
       assertCoverage(doc, exts);
     }
-    const html = renderToHTMLString({ content: doc, extensions: exts });
+    const html = renderToHTMLString({
+      content: doc,
+      extensions: exts,
+      options: { markMapping: { endNoteLink: renderEndNoteLinkMark } },
+    });
     return (
       <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
     );
