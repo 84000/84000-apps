@@ -50,6 +50,7 @@ const EXPORTERS: Partial<
   bulletList: list,
   code,
   endNoteLink,
+  foreign: span,
   glossaryInstance,
   hasAbbreviation,
   heading,
