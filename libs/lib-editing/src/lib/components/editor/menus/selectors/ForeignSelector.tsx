@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@eightyfourthousand/design-system';
-import { CheckIcon, ChevronDownIcon, LanguagesIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, LanguagesIcon, XIcon } from 'lucide-react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
 interface SelectorResult {
@@ -49,11 +49,29 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
     }),
   });
 
+  const isActive =
+    editorState.isEnglish ||
+    editorState.isSanskrit ||
+    editorState.isTibetan ||
+    editorState.isWylie ||
+    editorState.isMixed;
+
   const handleSelect = (lang?: ExtendedTranslationLanguage) => {
     const to = editor.state.selection.to;
     editor
       .chain()
       .toggleForeign(lang)
+      .setTextSelection(to)
+      .blur()
+      .run();
+    setOpen(false);
+  };
+
+  const handleRemove = () => {
+    const to = editor.state.selection.to;
+    editor
+      .chain()
+      .unsetForeign()
       .setTextSelection(to)
       .blur()
       .run();
@@ -67,13 +85,7 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
           <LanguagesIcon
             className={cn(
               'size-3',
-              editorState.isEnglish ||
-                editorState.isSanskrit ||
-                editorState.isTibetan ||
-                editorState.isWylie ||
-                editorState.isMixed
-                ? 'text-primary'
-                : 'text-muted-foreground',
+              isActive ? 'text-primary' : 'text-muted-foreground',
             )}
             strokeWidth={2.5}
           />
@@ -98,6 +110,16 @@ export const ForeignSelector = ({ editor }: { editor: Editor }) => {
             )}
           </div>
         ))}
+        {isActive && (
+          <div
+            className="flex items-center text-sm rounded-md hover:bg-muted text-muted-foreground px-2 py-1.5 cursor-pointer border-t mt-1 pt-1.5"
+            onClick={handleRemove}
+          >
+            <span>Remove</span>
+            <div className="flex-1"></div>
+            <XIcon className="size-3.5 ms-4" />
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
