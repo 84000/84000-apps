@@ -55,6 +55,16 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
           });
         },
       },
+      lang: {
+        default: undefined,
+        parseHTML: (element) => element.getAttribute('data-lang'),
+        renderHTML(attributes) {
+          if (!attributes.lang) {
+            return attributes;
+          }
+          return mergeAttributes(attributes, { 'data-lang': attributes.lang });
+        },
+      },
     };
   },
 
@@ -83,16 +93,21 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
   },
 
   addCommands() {
+    const name = this.name;
     return {
       setSmallCaps:
         () =>
-        ({ commands }) => {
-          return commands.setMark(this.name, { uuid: uuidv4() });
+        ({ commands, tr }) => {
+          const lang = tr.selection.$from.parent.attrs.lang;
+          const textStyle = tr.selection.$from.parent.attrs.textStyle;
+          return commands.setMark(name, { uuid: uuidv4(), lang, textStyle });
         },
       toggleSmallCaps:
         () =>
-        ({ commands }) => {
-          return commands.toggleMark(this.name, { uuid: uuidv4() });
+        ({ commands, tr }) => {
+          const lang = tr.selection.$from.parent.attrs.lang;
+          const textStyle = tr.selection.$from.parent.attrs.textStyle;
+          return commands.toggleMark(name, { uuid: uuidv4(), lang, textStyle });
         },
       unsetSmallCaps:
         () =>
