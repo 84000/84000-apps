@@ -17,6 +17,13 @@ const ALLOWED_TYPES = [
   'work',
 ];
 
+export interface LookupEntityReturnType {
+  path?: string;
+  uuid?: string;
+  workUuid?: string;
+  query?: URLSearchParams;
+}
+
 export const lookupEntity = async ({
   type,
   entity,
@@ -29,9 +36,9 @@ export const lookupEntity = async ({
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
-}) => {
+}): Promise<LookupEntityReturnType> => {
   if (!ALLOWED_TYPES.includes(type)) {
-    return;
+    return {};
   }
   const client = await createServerClient();
   return await lookupEntityWithClient({
@@ -58,8 +65,11 @@ export const lookupEntityWithClient = async ({
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
-}) => {
-  let path = '';
+}): Promise<LookupEntityReturnType> => {
+  let path: string | undefined;
+  let workUuid: string | undefined;
+  let uuid: string | undefined;
+
   const query = searchParams || new URLSearchParams();
 
   switch (type) {
@@ -67,41 +77,47 @@ export const lookupEntityWithClient = async ({
       {
         const item = await getBibliographyEntry({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
-        query.set('right', `open:bibliography:${item.uuid}`);
-        path = `${prefix}/${item.workUuid}?${query.toString()}`;
+        workUuid = item.workUuid;
+        uuid = item.uuid;
+        query.set('right', `open:bibliography:${uuid}`);
+        path = `${prefix}/${workUuid}?${query.toString()}`;
       }
       break;
     case 'glossary':
       {
         const item = await getGlossaryInstance({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
-        query.set('right', `open:glossary:${item.uuid}`);
-        path = `${prefix}/${item.workUuid}?${query.toString()}`;
+        workUuid = item.workUuid;
+        uuid = item.uuid;
+        query.set('right', `open:glossary:${uuid}`);
+        path = `${prefix}/${workUuid}?${query.toString()}`;
       }
       break;
     case 'passage':
       {
         const item = await getPassage({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
+        workUuid = item.workUuid;
+        uuid = item.uuid;
         const queryTab = query.get('tab') || undefined;
         const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
 
         query.delete('tab');
-        query.set(panel, `open:${tab}:${item.uuid}`);
+        query.set(panel, `open:${tab}:${uuid}`);
         if (item.toh) {
           query.set('toh', item.toh);
         }
 
-        path = `${prefix}/${item.workUuid}?${query.toString()}`;
+        path = `${prefix}/${workUuid}?${query.toString()}`;
       }
       break;
     case 'translation':
@@ -114,22 +130,27 @@ export const lookupEntityWithClient = async ({
           const queryTab = query.get('tab') || undefined;
           const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
 
-          if (item?.uuid && item?.workUuid) {
-            const { uuid, workUuid } = item;
+          uuid = item?.uuid;
+          workUuid = item?.workUuid;
+
+          if (uuid && workUuid) {
             query.delete('tab');
             query.set(panel, `open:${tab}:${uuid}`);
 
             path = `${prefix}/${workUuid}?${query.toString()}`;
-            return path;
+            return { path, uuid, workUuid, query };
           }
         }
 
         const item = await getTranslationMetadataByToh({ client, toh });
+
         if (!item?.uuid) {
-          return;
+          return {};
         }
 
-        path = `${prefix}/${item.uuid}?${query.toString()}`;
+        uuid = item.uuid;
+        workUuid = item.uuid;
+        path = `${prefix}/${uuid}?${query.toString()}`;
       }
       break;
     case 'work':
@@ -139,16 +160,18 @@ export const lookupEntityWithClient = async ({
           uuid: entity,
         });
         if (!item?.uuid) {
-          return;
+          return {};
         }
 
+        uuid = item.uuid;
+        workUuid = item.uuid;
         path = `${prefix}/${item.uuid}?${query.toString()}`;
       }
       break;
     default: {
-      return;
+      return {};
     }
   }
 
-  return path;
+  return { path, uuid, workUuid, query };
 };
