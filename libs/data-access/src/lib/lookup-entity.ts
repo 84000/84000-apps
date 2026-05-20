@@ -106,6 +106,8 @@ export const lookupEntityWithClient = async ({
           return;
         }
 
+        workUuid = item.workUuid;
+        uuid = item.uuid;
         const queryTab = query.get('tab') || undefined;
         const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
 
