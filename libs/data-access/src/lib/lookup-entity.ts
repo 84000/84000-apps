@@ -18,10 +18,10 @@ const ALLOWED_TYPES = [
 ];
 
 export interface LookupEntityReturnType {
-  path: string;
-  uuid: string;
-  workUuid: string;
-  query: URLSearchParams;
+  path?: string;
+  uuid?: string;
+  workUuid?: string;
+  query?: URLSearchParams;
 }
 
 export const lookupEntity = async ({
@@ -36,9 +36,9 @@ export const lookupEntity = async ({
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
-}): Promise<LookupEntityReturnType | undefined> => {
+}): Promise<LookupEntityReturnType> => {
   if (!ALLOWED_TYPES.includes(type)) {
-    return;
+    return {};
   }
   const client = await createServerClient();
   return await lookupEntityWithClient({
@@ -65,7 +65,7 @@ export const lookupEntityWithClient = async ({
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
-}): Promise<LookupEntityReturnType | undefined> => {
+}): Promise<LookupEntityReturnType> => {
   let path: string | undefined;
   let workUuid: string | undefined;
   let uuid: string | undefined;
@@ -77,7 +77,7 @@ export const lookupEntityWithClient = async ({
       {
         const item = await getBibliographyEntry({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
         workUuid = item.workUuid;
@@ -90,7 +90,7 @@ export const lookupEntityWithClient = async ({
       {
         const item = await getGlossaryInstance({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
         workUuid = item.workUuid;
@@ -103,7 +103,7 @@ export const lookupEntityWithClient = async ({
       {
         const item = await getPassage({ client, uuid: entity });
         if (!item?.workUuid || !item.uuid) {
-          return;
+          return {};
         }
 
         workUuid = item.workUuid;
@@ -145,7 +145,7 @@ export const lookupEntityWithClient = async ({
         const item = await getTranslationMetadataByToh({ client, toh });
 
         if (!item?.uuid) {
-          return;
+          return {};
         }
 
         uuid = item.uuid;
@@ -160,7 +160,7 @@ export const lookupEntityWithClient = async ({
           uuid: entity,
         });
         if (!item?.uuid) {
-          return;
+          return {};
         }
 
         uuid = item.uuid;
@@ -169,12 +169,8 @@ export const lookupEntityWithClient = async ({
       }
       break;
     default: {
-      return;
+      return {};
     }
-  }
-
-  if (!path || !uuid || !workUuid) {
-    return;
   }
 
   return { path, uuid, workUuid, query };

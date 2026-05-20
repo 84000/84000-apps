@@ -11,7 +11,7 @@ export async function GET(
     nextUrl: { searchParams },
   } = request;
 
-  const { path } = (await lookupEntity({ type, entity, searchParams })) || {};
+  const { path } = await lookupEntity({ type, entity, searchParams });
 
   if (!path) {
     return notFound();
