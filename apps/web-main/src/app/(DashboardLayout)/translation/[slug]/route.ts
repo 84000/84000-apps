@@ -10,13 +10,14 @@ export async function GET(
   const query = request.nextUrl.searchParams;
   const xmlId = query.get('xmlId') || undefined;
   query.delete('xmlId');
-  const path = await lookupEntity({
-    type: 'translation',
-    entity,
-    prefix: '/publications/reader',
-    xmlId,
-    searchParams: query,
-  });
+  const { path } =
+    (await lookupEntity({
+      type: 'translation',
+      entity,
+      prefix: '/publications/reader',
+      xmlId,
+      searchParams: query,
+    })) || {};
 
   if (!path) {
     return notFound();

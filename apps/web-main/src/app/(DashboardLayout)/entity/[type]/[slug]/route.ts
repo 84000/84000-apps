@@ -14,12 +14,13 @@ export async function GET(
   const isEditor = searchParams.get('edit') === 'true';
   const prefix = isEditor ? '/translations/editor' : '/translations/reader';
 
-  const path = await lookupEntity({
-    type,
-    entity,
-    searchParams,
-    prefix,
-  });
+  const { path } =
+    (await lookupEntity({
+      type,
+      entity,
+      searchParams,
+      prefix,
+    })) || {};
 
   if (!path) {
     return notFound();
