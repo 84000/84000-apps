@@ -20,6 +20,9 @@ export const MantraMark = Mark.create<MantraOptions>({
   name: 'mantra',
   addAttributes() {
     return {
+      uuid: {
+        default: undefined,
+      },
       type: {
         default: 'mantra',
       },
@@ -55,33 +58,25 @@ export const MantraMark = Mark.create<MantraOptions>({
   },
 
   addCommands() {
+    const name = this.name;
     return {
       setMantra:
         (lang?: TranslationLanguage) =>
-        ({ chain }) => {
-          return chain()
-            .setMark(this.name)
-            .updateAttributes(this.name, {
-              lang,
-              uuid: uuidv4(),
-            })
-            .run();
+        ({ commands }) => {
+          return commands.setMark(name, { lang, uuid: uuidv4() });
         },
       toggleMantra:
         (lang?: TranslationLanguage) =>
-        ({ commands }) => {
-          if (this.editor.isActive(this.name, { lang })) {
-            return commands.unsetMantra();
+        ({ commands, editor }) => {
+          if (editor.isActive(name, { lang })) {
+            return commands.unsetMark(name);
           }
-          return commands.setMantra(lang);
+          return commands.setMark(name, { lang, uuid: uuidv4() });
         },
       unsetMantra:
         () =>
-        ({ chain }) => {
-          return chain()
-            .unsetMark(this.name)
-            .resetAttributes(this.name, 'lang')
-            .run();
+        ({ commands }) => {
+          return commands.unsetMark(name);
         },
     };
   },

@@ -2,11 +2,17 @@ import { MantraAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const mantra: Exporter<MantraAnnotation> = ({
+  mark,
   node,
   start,
   passageUuid,
 }): MantraAnnotation | undefined => {
-  const { uuid, lang } = node.attrs;
+  if (!mark) {
+    console.warn('Mantra exporter called without mark');
+    return undefined;
+  }
+
+  const { uuid, lang } = mark.attrs;
 
   const textContent = node.textContent || '';
   if (!textContent) {
