@@ -1,17 +1,22 @@
-import type { Node } from '@tiptap/pm/model';
+import type { Mark, Node } from '@tiptap/pm/model';
 import { mantra } from './mantra';
 
 describe('mantra exporter', () => {
   it('should export mantra annotation correctly', () => {
     const node = {
+      attrs: {},
+      textContent: 'oṃ maṇi padme hūṃ',
+    } as unknown as Node;
+
+    const mark = {
       attrs: {
         uuid: 'mantra-uuid-1234',
         lang: 'sa-Latn',
       },
-      textContent: 'oṃ maṇi padme hūṃ',
-    } as unknown as Node;
+    } as unknown as Mark;
 
     const result = mantra({
+      mark,
       node,
       parent: node,
       root: node,
@@ -31,14 +36,19 @@ describe('mantra exporter', () => {
 
   it('should return undefined when textContent is empty', () => {
     const node = {
+      attrs: {},
+      textContent: '',
+    } as unknown as Node;
+
+    const mark = {
       attrs: {
         uuid: 'mantra-uuid-empty',
         lang: 'sa-Latn',
       },
-      textContent: '',
-    } as unknown as Node;
+    } as unknown as Mark;
 
     const result = mantra({
+      mark,
       node,
       parent: node,
       root: node,
