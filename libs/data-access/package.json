@@ -19,10 +19,10 @@
   "dependencies": {
     "@eightyfourthousand/lib-utils": "^2026.5.5",
     "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.48.1",
-    "@tiptap/core": "^3.13.0",
+    "@supabase/supabase-js": "^2.106.2",
+    "@tiptap/core": "^3.23.6",
     "jwt-decode": "^4.0.0",
-    "resend": "^6.9.2"
+    "resend": "^6.12.4"
   },
   "peerDependencies": {
     "next": "^16.0.0",
