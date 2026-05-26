@@ -172,8 +172,7 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
             }
           });
 
-          const toIsInMark =
-            existingMark && to > markFrom && to <= markTo;
+          const toIsInMark = existingMark && to > markFrom && to <= markTo;
 
           if (!toIsInMark) {
             // No existing mark at the end of the selection: create new
@@ -193,11 +192,7 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
             // (up to `to`) gets only the new note, right side keeps
             // the original mark unchanged.
             tr.removeMark(markFrom, markTo, markType);
-            tr.addMark(
-              markFrom,
-              to,
-              markType.create({ notes: [newNote] }),
-            );
+            tr.addMark(markFrom, to, markType.create({ notes: [newNote] }));
             tr.addMark(to, markTo, existingMark);
           }
 
@@ -231,7 +226,8 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
             return null;
           }
 
-          const markType: MarkType | undefined = newState.schema.marks[markName];
+          const markType: MarkType | undefined =
+            newState.schema.marks[markName];
           if (!markType) return null;
 
           // Collect textblock start positions impacted by any transaction.
@@ -255,7 +251,11 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
               e = originMaps[j].map(e, 1);
             }
             // Map through subsequent transactions.
-            for (let later = startTrIdx + 1; later < transactions.length; later++) {
+            for (
+              let later = startTrIdx + 1;
+              later < transactions.length;
+              later++
+            ) {
               s = transactions[later].mapping.map(s, -1);
               e = transactions[later].mapping.map(e, 1);
             }
@@ -315,50 +315,43 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
             const block = newState.doc.nodeAt(blockPos);
             if (!block || !block.isTextblock) return;
 
-            // Walk direct children, grouping consecutive text nodes that share
-            // an .eq() endNoteLink mark. For each run of length > 1, remove the
-            // mark from all but the last fragment.
-            let runStart = -1;
-            let runEnd = -1;
-            let runMark: PMMark | null = null;
-
-            const flushRun = () => {
-              if (runStart === -1 || runMark === null) return;
-              if (runEnd <= runStart) return;
-              let offset = blockPos + 1;
-              for (let i = 0; i < runStart; i++) {
-                offset += block.child(i).nodeSize;
-              }
-              for (let i = runStart; i < runEnd; i++) {
-                const child = block.child(i);
-                tr.removeMark(offset, offset + child.nodeSize, markType);
-                offset += child.nodeSize;
-                changed = true;
-              }
-            };
+            // Walk all direct text children of the block and group them by
+            // `endNoteLink` mark equality. For each group, the mark stays on
+            // the LAST occurrence in document order and is stripped from every
+            // earlier occurrence — even when those occurrences are separated
+            // by other inline content.
+            const groups: Array<{
+              mark: PMMark;
+              indices: number[];
+            }> = [];
 
             for (let i = 0; i < block.childCount; i++) {
               const child = block.child(i);
-              const mark = child.isText
-                ? child.marks.find((m) => m.type === markType) ?? null
-                : null;
-
-              if (mark && runMark && mark.eq(runMark)) {
-                runEnd = i;
+              if (!child.isText) continue;
+              const mark = child.marks.find((m) => m.type === markType);
+              if (!mark) continue;
+              const existing = groups.find((g) => g.mark.eq(mark));
+              if (existing) {
+                existing.indices.push(i);
               } else {
-                flushRun();
-                if (mark) {
-                  runStart = i;
-                  runEnd = i;
-                  runMark = mark;
-                } else {
-                  runStart = -1;
-                  runEnd = -1;
-                  runMark = null;
-                }
+                groups.push({ mark, indices: [i] });
               }
             }
-            flushRun();
+
+            for (const group of groups) {
+              if (group.indices.length <= 1) continue;
+              // Keep the mark on the last occurrence; remove from the rest.
+              const earlier = group.indices.slice(0, -1);
+              for (const idx of earlier) {
+                let offset = blockPos + 1;
+                for (let j = 0; j < idx; j++) {
+                  offset += block.child(j).nodeSize;
+                }
+                const child = block.child(idx);
+                tr.removeMark(offset, offset + child.nodeSize, markType);
+                changed = true;
+              }
+            }
           });
 
           return changed ? tr : null;
