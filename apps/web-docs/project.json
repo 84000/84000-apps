@@ -5,5 +5,17 @@
   "projectType": "application",
   "tags": [],
   "// targets": "to see all targets run: nx show project web-docs --web",
-  "targets": {}
+  "// build": "nextra 4.2.x injects its page map via a webpack loader, which Turbopack (the Next 16.1 build default) does not run. Force webpack here.",
+  "targets": {
+    "build": {
+      "options": {
+        "command": "next build --webpack"
+      }
+    },
+    "dev": {
+      "options": {
+        "command": "next dev --webpack"
+      }
+    }
+  }
 }
