@@ -64,7 +64,7 @@ export const BodyPanel = ({
     panels.main.tab || (hasTranslationContent ? 'translation' : 'source');
   const safeTab =
     !hasTranslationContent &&
-      (activeTab === 'translation' || activeTab === 'compare')
+    (activeTab === 'translation' || activeTab === 'compare')
       ? 'source'
       : activeTab;
 
@@ -92,10 +92,7 @@ export const BodyPanel = ({
       node && node.offsetParent !== null ? findScrollParent(node) : null;
   }, []);
 
-  const passageAnchorRef = usePassageAnchorRestore(
-    scrollContainerRef,
-    safeTab,
-  );
+  const passageAnchorRef = usePassageAnchorRestore(scrollContainerRef, safeTab);
 
   useScrollPositionRestore(
     'main',
@@ -141,7 +138,7 @@ export const BodyPanel = ({
       defaultValue={hasTranslationContent ? 'translation' : 'source'}
       className="px-12 w-full"
     >
-      <div className="sticky top-0.75 -mt-28 z-10 w-full overflow-x-auto text-center pointer-events-none">
+      <div className="sticky top-0.75 -mt-28 z-10 overflow-x-auto text-center pointer-events-none me-8 sm:me-0 md:w-full">
         <TabsList className="w-fit inline-flex pointer-events-auto">
           <TabsTrigger value="front">Front</TabsTrigger>
           {hasTranslationContent && (
