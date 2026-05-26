@@ -3,14 +3,20 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, ScrollBar } from '@eightyfourthousand/design-system';
+import { useRef } from 'react';
+import { useDismissBubbleMenu } from './useDismissBubbleMenu';
 
 export const EmptyBubbleMenu = ({ editor }: { editor: Editor | null }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  useDismissBubbleMenu(editor, menuRef);
+
   if (!editor) {
     return null;
   }
 
   return (
     <BubbleMenu
+      ref={menuRef}
       editor={editor}
       appendTo={() => document.body}
       options={{

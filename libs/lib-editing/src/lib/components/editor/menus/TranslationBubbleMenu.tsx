@@ -3,21 +3,27 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { ScrollArea, Separator, ScrollBar } from '@eightyfourthousand/design-system';
+import { useRef } from 'react';
 import { TranslationTextButtons } from './selectors/TranslationTextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { TranslationNodeSelector } from './selectors/TranslationNodeSelector';
+import { useDismissBubbleMenu } from './useDismissBubbleMenu';
 
 export const TranslationBubbleMenu = ({
   editor,
 }: {
   editor: Editor | null;
 }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  useDismissBubbleMenu(editor, menuRef);
+
   if (!editor) {
     return null;
   }
 
   return (
     <BubbleMenu
+      ref={menuRef}
       editor={editor}
       appendTo={() => document.body}
       options={{
