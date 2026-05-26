@@ -13,6 +13,7 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
   return (
     <BubbleMenu
       editor={editor}
+      appendTo={() => document.body}
       options={{
         placement: 'top',
         offset: 6,
@@ -36,7 +37,7 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
         return true;
       }}
     >
-      <ScrollArea className="max-w-[90vw] rounded-md border bg-popover shadow-xl">
+      <ScrollArea className="max-w-[90vw] rounded-md border bg-popover shadow-xl z-50">
         <div className="flex">
           <NodeSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
