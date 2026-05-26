@@ -109,6 +109,91 @@ describe('EndNoteLink dedup plugin', () => {
     expect(last.marks.find((m) => m.type === endNoteLink)).toBeDefined();
   });
 
+  it('removes the endNoteLink mark from a non-adjacent earlier text node when the same mark appears later in the same block', () => {
+    // Two text nodes carrying the SAME endNoteLink mark, separated by an
+    // unmarked text node — the layout produced when paste plain-text into a
+    // position inside an existing endNote span, splitting it.
+    const notes = [{ uuid: 'n1', endNote: 'e1', location: 'end' }];
+    const endMark = endNoteLink.create({ notes });
+    const initialDoc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('abc', [endMark]),
+        schema.text(' between '),
+        schema.text('def', [endMark]),
+      ]),
+    ]);
+
+    const plugin = getPlugin();
+    const state = EditorState.create({
+      schema,
+      doc: initialDoc,
+      plugins: [plugin],
+    });
+
+    // Any docChanged transaction within the block triggers the dedup pass.
+    const tr = state.tr.addMark(5, 6, other.create()).removeMark(5, 6, other);
+    const nextState = state.apply(tr);
+
+    const paragraph = nextState.doc.firstChild!;
+    // After dedup the leading "abc" loses its endNoteLink mark and is
+    // auto-merged with the unmarked " between " by ProseMirror's text
+    // normalization.
+    expect(paragraph.childCount).toBe(2);
+
+    expect(paragraph.child(0).text).toBe('abc between ');
+    expect(
+      paragraph.child(0).marks.find((m) => m.type === endNoteLink),
+    ).toBeUndefined();
+
+    expect(paragraph.child(1).text).toBe('def');
+    expect(
+      paragraph.child(1).marks.find((m) => m.type === endNoteLink),
+    ).toBeDefined();
+  });
+
+  it('simulated paste inside an endnote-linked word dedupes the split mark', () => {
+    // Reproduces the DEV-661 paste-inside-marked-text case: a single
+    // endNoteLink-marked word is split by inserting unmarked text in the
+    // middle, leaving two non-adjacent text nodes with the same mark.
+    const notes = [{ uuid: 'n1', endNote: 'e1', location: 'end' }];
+    const endMark = endNoteLink.create({ notes });
+    const initialDoc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('wordWithEndNote', [endMark])]),
+    ]);
+
+    const plugin = getPlugin();
+    const state = EditorState.create({
+      schema,
+      doc: initialDoc,
+      plugins: [plugin],
+    });
+
+    // Insert "PASTED" (no marks) at position 5 — inside "wordWithEndNote",
+    // right after "word". Use a Slice with no marks via `tr.replaceWith`.
+    const insertPos = 5;
+    const pastedNode = schema.text('PASTED');
+    const tr = state.tr.replaceWith(insertPos, insertPos, pastedNode);
+    const nextState = state.apply(tr);
+
+    const paragraph = nextState.doc.firstChild!;
+    // Expect the dedup to have removed the mark from the leading fragment
+    // ("word") and left it only on the trailing fragment ("WithEndNote").
+    // ProseMirror then auto-merges the now-unmarked "word" with the unmarked
+    // pasted text into a single text node.
+    let bearers = 0;
+    let lastBearerText: string | undefined;
+    for (let i = 0; i < paragraph.childCount; i++) {
+      const child = paragraph.child(i);
+      const m = child.marks.find((mk) => mk.type === endNoteLink);
+      if (m) {
+        bearers += 1;
+        lastBearerText = child.text ?? undefined;
+      }
+    }
+    expect(bearers).toBe(1);
+    expect(lastBearerText).toBe('WithEndNote');
+  });
+
   it('preserves distinct endNoteLink marks on adjacent text nodes (different notes)', () => {
     // Build a paragraph already containing two adjacent text nodes carrying
     // DIFFERENT endNoteLink marks (different notes). The plugin should leave
