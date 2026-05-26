@@ -7,7 +7,7 @@ import {
   PostHogFeatureProps,
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 
 export type FeatureFlag =
   | 'authority-pages'
@@ -61,8 +61,9 @@ export const useFeatureFlagVariantKey = (
   return phUseFeatureFlagVariantKey(flagKey);
 };
 
-export type GatedFeatureProps = PostHogFeatureProps & {
+export type GatedFeatureProps = Omit<PostHogFeatureProps, 'flag' | 'children'> & {
   flag: FeatureFlag;
+  children: ReactNode;
 };
 
 export const GatedFeature = ({ children, flag }: GatedFeatureProps) => {
