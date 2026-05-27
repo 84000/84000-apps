@@ -1,6 +1,12 @@
 import { lookup } from './lookup';
+import type { DataClient } from './types/client';
 
 type Row = Record<string, string | null>;
+
+type QueryChain = {
+  eq: jest.Mock<QueryChain, [string, string]>;
+  maybeSingle: jest.Mock<Promise<{ data: Row | null; error: null }>, []>;
+};
 
 const createClient = ({
   works = [],
@@ -32,7 +38,7 @@ const createClient = ({
       select: jest.fn(() => ({
         eq: jest.fn(function eq(column: string, value: string) {
           const filters = [{ column, value }];
-          const query = {
+          const query: QueryChain = {
             eq: jest.fn((nextColumn: string, nextValue: string) => {
               filters.push({ column: nextColumn, value: nextValue });
               return query;
@@ -51,7 +57,7 @@ const createClient = ({
     })),
   };
 
-  return { client, queries };
+  return { client: client as unknown as DataClient, queries };
 };
 
 describe('lookup', () => {
