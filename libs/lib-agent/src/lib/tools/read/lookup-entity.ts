@@ -31,7 +31,7 @@ export function createLookupEntityTool(client: DataClient): McpToolDefinition {
       openWorldHint: false,
     },
     handler: async ({ type, entity, xmlId }) => {
-      const path = await lookupEntityWithClient({
+      const { path } = await lookupEntityWithClient({
         client,
         type,
         entity,

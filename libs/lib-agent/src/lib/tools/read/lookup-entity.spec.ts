@@ -20,7 +20,7 @@ describe('lookup-entity tool', () => {
   });
 
   it('returns path when entity is found', async () => {
-    mocked.mockResolvedValue('/abc-uuid?toh=1');
+    mocked.mockResolvedValue({ path: '/abc-uuid?toh=1' });
 
     const result = await tool.handler(
       { type: 'translation', entity: '1' },
@@ -40,7 +40,7 @@ describe('lookup-entity tool', () => {
   });
 
   it('returns error when entity not resolved', async () => {
-    mocked.mockResolvedValue(undefined);
+    mocked.mockResolvedValue({});
 
     const result = await tool.handler(
       { type: 'work', entity: 'missing' },
