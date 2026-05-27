@@ -19,7 +19,8 @@
   "dependencies": {
     "@eightyfourthousand/data-access": "^2026.5.5",
     "graphql-request": "^7.1.2",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "server-only": "^0.0.1"
   },
   "peerDependencies": {
     "next": "^16.0.0"
