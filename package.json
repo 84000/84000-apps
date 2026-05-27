@@ -89,7 +89,7 @@
     "react-dom": "^19.2.6",
     "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0",
-    "react-resizable-panels": "^2.1.7",
+    "react-resizable-panels": "^4.11.2",
     "react-simple-typewriter": "^5.0.1",
     "resend": "^6.12.4",
     "server-only": "^0.0.1",
