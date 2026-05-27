@@ -21,7 +21,7 @@
     "@eightyfourthousand/data-access": "^2026.5.5",
     "@eightyfourthousand/design-system": "^2026.5.5",
     "@eightyfourthousand/lib-utils": "^2026.5.5",
-    "lucide-react": "^0.477.0"
+    "lucide-react": "^1.16.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",
