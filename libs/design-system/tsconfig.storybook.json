@@ -1,6 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "declaration": true,
     "emitDecoratorMetadata": true
   },
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
