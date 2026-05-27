@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@eightyfourthousand/lib-utils": "^2026.5.5",
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "@tiptap/core": "^3.23.6",
     "jwt-decode": "^4.0.0",

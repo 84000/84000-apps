@@ -18,7 +18,7 @@ type ResizableStoryProps = {
   minSize: number;
   defaultSize: number;
   maxSize: number;
-  direction: 'horizontal' | 'vertical';
+  orientation: 'horizontal' | 'vertical';
 };
 
 type Story = StoryObj<ResizableStoryProps>;
@@ -31,7 +31,7 @@ export const Default: Story = {
     minSize: 10,
     defaultSize: 25,
     maxSize: 50,
-    direction: 'horizontal',
+    orientation: 'horizontal',
   },
   argTypes: {
     withHandle: { control: 'boolean' },
@@ -40,7 +40,7 @@ export const Default: Story = {
     minSize: { control: 'number' },
     defaultSize: { control: 'number' },
     maxSize: { control: 'number' },
-    direction: { control: 'radio', options: ['horizontal', 'vertical'] },
+    orientation: { control: 'radio', options: ['horizontal', 'vertical'] },
   },
   render: ({
     withHandle,
@@ -49,32 +49,32 @@ export const Default: Story = {
     minSize,
     defaultSize,
     maxSize,
-    direction,
+    orientation,
   }) => (
     <ResizablePanelGroup
-      direction={direction}
-      className="min-h-[200px] rounded-md border"
+      orientation={orientation}
+      className="min-h-50 rounded-md border"
     >
       <ResizablePanel
         collapsible={collapsible}
         collapsedSize={collapsedSize}
-        minSize={minSize}
-        defaultSize={defaultSize}
-        maxSize={maxSize}
+        minSize={`${minSize}%`}
+        defaultSize={`${defaultSize}%`}
+        maxSize={`${maxSize}%`}
       >
         <div className="text-center p-4">Col 1</div>
       </ResizablePanel>
       <ResizableHandle withHandle={withHandle} />
-      <ResizablePanel minSize={20}>
+      <ResizablePanel minSize="20%">
         <div className="text-center p-4">Col 2</div>
       </ResizablePanel>
       <ResizableHandle withHandle={withHandle} />
       <ResizablePanel
         collapsible={collapsible}
         collapsedSize={collapsedSize}
-        minSize={minSize}
-        defaultSize={defaultSize}
-        maxSize={maxSize}
+        minSize={`${minSize}%`}
+        defaultSize={`${defaultSize}%`}
+        maxSize={`${maxSize}%`}
       >
         <div className="text-center p-4">Col 3</div>
       </ResizablePanel>

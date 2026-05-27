@@ -9,7 +9,7 @@ import {
   useEffect,
   useMemo,
 } from 'react';
-import type { ImperativePanelHandle as RRImperativePanelHandle } from 'react-resizable-panels';
+import type { PanelImperativeHandle as RRImperativePanelHandle } from 'react-resizable-panels';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -35,6 +35,10 @@ export enum MinPanelSizes {
 }
 
 export type ImperativePanelHandle = RRImperativePanelHandle;
+
+// react-resizable-panels v4 treats numeric sizes as pixels and string sizes
+// as percentages. MinPanelSizes are percentages, so render them as strings.
+const pct = (size: MinPanelSizes) => `${size}%`;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
   return <div className='size-full'>{children}</div>;
@@ -116,7 +120,7 @@ export const ThreeColumns = ({
   useEffect(() => {
     if (!isMobile) {
       if (leftPanelOpen) {
-        leftPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+        leftPanelRef.current?.resize(pct(MinPanelSizes.SIDE_DEFAULT));
       } else {
         leftPanelRef.current?.collapse();
       }
@@ -126,7 +130,7 @@ export const ThreeColumns = ({
   useEffect(() => {
     if (!isMobile) {
       if (rightPanelOpen) {
-        rightPanelRef.current?.expand(MinPanelSizes.SIDE_DEFAULT);
+        rightPanelRef.current?.resize(pct(MinPanelSizes.SIDE_DEFAULT));
       } else {
         rightPanelRef.current?.collapse();
       }
@@ -244,23 +248,23 @@ export const ThreeColumns = ({
 
       {/* Desktop Layout */}
       <div className="hidden md:block overflow-hidden size-full">
-        <ResizablePanelGroup className={className} direction="horizontal">
+        <ResizablePanelGroup className={className} orientation="horizontal">
           {leftPanelEnabled && (
             <>
               <ResizablePanel
-                ref={leftPanelRef}
+                panelRef={leftPanelRef}
                 className={cn(
                   'hidden md:block rounded border border-border/60 bg-background',
                   !leftPanelOpen && 'border-none',
                 )}
                 collapsible
-                collapsedSize={MinPanelSizes.COLLAPSED}
+                collapsedSize={pct(MinPanelSizes.COLLAPSED)}
                 defaultSize={
                   leftPanelOpen
-                    ? MinPanelSizes.SIDE_DEFAULT
-                    : MinPanelSizes.COLLAPSED
+                    ? pct(MinPanelSizes.SIDE_DEFAULT)
+                    : pct(MinPanelSizes.COLLAPSED)
                 }
-                minSize={MinPanelSizes.SIDE_MIN}
+                minSize={pct(MinPanelSizes.SIDE_MIN)}
               >
                 {leftPanelChildren}
               </ResizablePanel>
@@ -276,8 +280,8 @@ export const ThreeColumns = ({
           <ResizablePanel
             className="hidden md:flex md:flex-col rounded border bg-background"
             style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
-            defaultSize={MinPanelSizes.FULL}
-            minSize={MinPanelSizes.MAIN_MIN}
+            defaultSize={pct(MinPanelSizes.FULL)}
+            minSize={pct(MinPanelSizes.MAIN_MIN)}
           >
             <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
               <Button
@@ -316,19 +320,19 @@ export const ThreeColumns = ({
                 className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
               />
               <ResizablePanel
-                ref={rightPanelRef}
+                panelRef={rightPanelRef}
                 className={cn(
                   'hidden md:block rounded border border-border/60 bg-background',
                   !rightPanelOpen && 'border-none',
                 )}
                 collapsible
-                collapsedSize={MinPanelSizes.COLLAPSED}
+                collapsedSize={pct(MinPanelSizes.COLLAPSED)}
                 defaultSize={
                   rightPanelOpen
-                    ? MinPanelSizes.SIDE_DEFAULT
-                    : MinPanelSizes.COLLAPSED
+                    ? pct(MinPanelSizes.SIDE_DEFAULT)
+                    : pct(MinPanelSizes.COLLAPSED)
                 }
-                minSize={MinPanelSizes.SIDE_MIN}
+                minSize={pct(MinPanelSizes.SIDE_MIN)}
               >
                 {rightPanelChildren}
               </ResizablePanel>
