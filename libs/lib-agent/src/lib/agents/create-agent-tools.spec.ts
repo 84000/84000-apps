@@ -60,7 +60,11 @@ describe('createAgentTools', () => {
 
   it('handler returns agent config without requiredRole', async () => {
     const tools = createAgentTools('reader');
-    const result = await tools[0].handler({});
+    const tool = tools[0];
+    const result = await tool.handler(
+      {},
+      {} as Parameters<typeof tool.handler>[1],
+    );
     const content = result.content as { type: string; text: string }[];
     const config = JSON.parse(content[0].text);
 
@@ -77,7 +81,10 @@ describe('createAgentTools', () => {
   it('handler omits model when undefined', async () => {
     const tools = createAgentTools('admin');
     const editorTool = tools.find((t) => t.name === 'ask_test_editor')!;
-    const result = await editorTool.handler({});
+    const result = await editorTool.handler(
+      {},
+      {} as Parameters<typeof editorTool.handler>[1],
+    );
     const content = result.content as { type: string; text: string }[];
     const config = JSON.parse(content[0].text);
 
