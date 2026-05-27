@@ -9,21 +9,20 @@ import { VerticalEllipsis } from '../VerticalEllipsis/VerticalEllipsis';
 export function ResizablePanelGroup({
   className,
   ...props
-}: React.ComponentProps<typeof ResizablePrimitive.Group>) {
-  // Group manages its own display/flex-direction (cannot be overridden), so
-  // orientation-based flex hacks are no longer needed.
+}: ResizablePrimitive.GroupProps) {
   return (
     <ResizablePrimitive.Group
       data-slot="resizable-panel-group"
-      className={cn('h-full w-full', className)}
+      className={cn(
+        'flex h-full w-full aria-[orientation=vertical]:flex-col',
+        className,
+      )}
       {...props}
     />
   );
 }
 
-export function ResizablePanel({
-  ...props
-}: React.ComponentProps<typeof ResizablePrimitive.Panel>) {
+export function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
   return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />;
 }
 

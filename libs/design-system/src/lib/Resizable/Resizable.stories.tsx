@@ -53,28 +53,28 @@ export const Default: Story = {
   }) => (
     <ResizablePanelGroup
       orientation={orientation}
-      className="min-h-[200px] rounded-md border"
+      className="min-h-50 rounded-md border"
     >
       <ResizablePanel
         collapsible={collapsible}
         collapsedSize={collapsedSize}
-        minSize={minSize}
-        defaultSize={defaultSize}
-        maxSize={maxSize}
+        minSize={`${minSize}%`}
+        defaultSize={`${defaultSize}%`}
+        maxSize={`${maxSize}%`}
       >
         <div className="text-center p-4">Col 1</div>
       </ResizablePanel>
       <ResizableHandle withHandle={withHandle} />
-      <ResizablePanel minSize={20}>
+      <ResizablePanel minSize="20%">
         <div className="text-center p-4">Col 2</div>
       </ResizablePanel>
       <ResizableHandle withHandle={withHandle} />
       <ResizablePanel
         collapsible={collapsible}
         collapsedSize={collapsedSize}
-        minSize={minSize}
-        defaultSize={defaultSize}
-        maxSize={maxSize}
+        minSize={`${minSize}%`}
+        defaultSize={`${defaultSize}%`}
+        maxSize={`${maxSize}%`}
       >
         <div className="text-center p-4">Col 3</div>
       </ResizablePanel>
