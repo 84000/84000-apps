@@ -40,12 +40,14 @@ describe('lookupEntity', () => {
       names: {},
     });
 
-    await expect(
-      lookupEntity({
-        type: 'glossary',
-        entity: 'glossary-uuid',
-      }),
-    ).resolves.toBe('/work-uuid?right=open%3Aglossary%3Aglossary-uuid');
+    const result = await lookupEntity({
+      type: 'glossary',
+      entity: 'glossary-uuid',
+    });
+
+    expect(result.path).toBe(
+      '/work-uuid?right=open%3Aglossary%3Aglossary-uuid',
+    );
 
     expect(mockedGetGlossaryInstance).toHaveBeenCalledWith({
       client: {},

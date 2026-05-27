@@ -1,10 +1,8 @@
 import {
-  Annotation,
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
 } from '@eightyfourthousand/data-access';
-import { indent } from './indent';
 import { blockFromPassage } from '../block';
 
 const dto: PassageDTO = {

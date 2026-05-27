@@ -53,15 +53,15 @@ describe('getPassageOccurrences', () => {
     expect(
       getPassageOccurrences(
         [
-          { uuid: 'p1', content: 'foo foo' },
-          { uuid: 'p2', content: 'foo' },
+          { uuid: 'p1', content: 'foo foo', type: 'passage' as const },
+          { uuid: 'p2', content: 'foo', type: 'passage' as const },
         ],
         'foo',
       ),
     ).toEqual([
-      { passageUuid: 'p1', start: 0, end: 3, index: 0, passageOccurrenceIndex: 0 },
-      { passageUuid: 'p1', start: 4, end: 7, index: 1, passageOccurrenceIndex: 1 },
-      { passageUuid: 'p2', start: 0, end: 3, index: 2, passageOccurrenceIndex: 0 },
+      { passageUuid: 'p1', start: 0, end: 3, index: 0, passageOccurrenceIndex: 0, type: 'passage' },
+      { passageUuid: 'p1', start: 4, end: 7, index: 1, passageOccurrenceIndex: 1, type: 'passage' },
+      { passageUuid: 'p2', start: 0, end: 3, index: 2, passageOccurrenceIndex: 0, type: 'passage' },
     ]);
   });
 });

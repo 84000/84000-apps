@@ -402,7 +402,7 @@ export const DragHandlePlugin = (
   });
 };
 
-export const DragHandle = Extension.create({
+export const DragHandle = Extension.create<DragHandleOptions>({
   name: 'dragHandle',
 
   addOptions() {

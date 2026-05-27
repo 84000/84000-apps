@@ -1,9 +1,16 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "declaration": true,
     "emitDecoratorMetadata": true
   },
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "files": [
+    "../../node_modules/@nx/react/typings/image.d.ts",
+    "../../node_modules/@nx/react/typings/cssmodule.d.ts",
+    "./css.d.ts"
+  ],
   "include": [
     "src/**/*.stories.ts",
     "src/**/*.stories.js",

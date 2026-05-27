@@ -2,8 +2,8 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
+    "declaration": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
     "esModuleInterop": true,
     "types": ["node"]
   },
