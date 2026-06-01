@@ -2,7 +2,7 @@
 
 ## Overview
 
-Data moves through three main paths depending on the context: the public reader, the internal studio, and the GraphQL API. All paths ultimately reach Supabase (PostgreSQL) as the data store.
+Data moves through three main paths depending on the context: the public MCP API, the internal studio, and the GraphQL API. All paths ultimately reach Supabase (PostgreSQL) as the data store.
 
 ## Supabase Client Types
 
@@ -18,18 +18,16 @@ All clients require `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KE
 
 The SSR variant (`@eightyfourthousand/data-access/ssr`) re-exports `createServerClient` with cookies pre-wired for Next.js — use this in server components and actions to avoid boilerplate.
 
-## Path 1: Public Reader (web-reader)
+## Path 1: Public MCP API (api-mcp)
 
 ```
-Browser → web-reader (Next.js) → client-graphql → api-graphql → Supabase
+MCP client → api-mcp /v1 (Next.js) → lib-agent + data-access → Supabase
 ```
 
-1. `web-reader` routes render server components that call functions from `@eightyfourthousand/client-graphql`
-2. `client-graphql` uses `graphql-request` to send typed queries to `api-graphql`
-3. `api-graphql` resolvers create a Supabase client (from cookie or Bearer token) and query the database
-4. Responses flow back through the GraphQL layer, with DTOs transformed to domain types at the client-graphql boundary
-
-The reader is unauthenticated for public content but supports logged-in features (library, bookmarks).
+1. The `/v1` route handler builds an MCP server via `createMcpHandler` + `createReadTools` from `@eightyfourthousand/lib-agent`
+2. The tools run against an anonymous Supabase client (`createAnonServerClient` from `@eightyfourthousand/data-access/ssr`)
+3. Read-only queries reach Supabase directly and return translations, glossary terms, bibliographies, imprints, and tables of contents
+4. Access is public and anonymous — works are looked up by UUID or Tohoku catalog number
 
 ## Path 2: Internal Studio (web-main)
 

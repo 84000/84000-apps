@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-84000 translates the Tibetan Buddhist canon into modern languages. This Nx monorepo is the web platform: a public reader (`web-reader`), an internal translation studio (`web-main`), a rich text editor (`web-editor`), a GraphQL API (`api-graphql`), and shared libraries. Core domain entities: works, passages, folios, glossaries, annotations, alignments, bibliographies, authorities, and imprints — each identified by UUID and often keyed by Tohoku catalog number (`toh1`, `toh123`, etc.).
+84000 translates the Tibetan Buddhist canon into modern languages. This Nx monorepo is the web platform: an internal translation studio (`web-main`), a rich text editor (`web-editor`), a GraphQL API (`api-graphql`), a public MCP API (`api-mcp`), and shared libraries. Core domain entities: works, passages, folios, glossaries, annotations, alignments, bibliographies, authorities, and imprints — each identified by UUID and often keyed by Tohoku catalog number (`toh1`, `toh123`, etc.).
 
 ## How to Find Things
 
