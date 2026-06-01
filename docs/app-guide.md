@@ -11,13 +11,11 @@ The internal application for translation management. Authenticated via Supabase 
 - **Providers**: `InterfaceContextProvider` > `SessionProvider` > `GraphQLAuthProvider` (see `layout.tsx`)
 - **API routes**: `/api/feedback` and `/api/mcp`
 
-### web-reader — Public Translation Reader
+### api-mcp — Public MCP API
 
-The public-facing reader for published translations. Minimal auth (optional sign-in for library features).
+A minimal Next.js app exposing the 84000 library as a Model Context Protocol (MCP) endpoint. Public, anonymous, read-only — no UI.
 
-- **Primary route**: `/[slug]` with parallel routes (`@left`, `@main`, `@right`) for the reading layout
-- **Entity pages**: `/entity/[type]/[slug]` for glossary terms, authorities, etc.
-- **API routes**: `/api/feedback` and `/api/mcp`
+- **Single route**: `/v1` (`GET`/`POST`/`DELETE`), built with `createMcpHandler` + `createReadTools` from `@eightyfourthousand/lib-agent`, backed by an anonymous Supabase client. Exposes read-only tools over translations, glossary, bibliographies, imprints, and tables of contents.
 
 ### web-editor — Translation Editor
 
@@ -53,7 +51,7 @@ CLI scripts for one-time data migrations (endnote processing, glossary instance 
 ## Dependency Flow
 
 ```
-Apps (web-main, web-reader, web-editor)
+Apps (web-main, web-editor, api-mcp)
   ├── lib-user (auth UI, session)
   ├── lib-editing (editor, reader components)
   ├── lib-search (search UI and server actions)

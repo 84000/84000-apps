@@ -21,7 +21,7 @@ cd apps/web-main
 npx vercel env pull --environment development
 ```
 
-Repeat for any app you're working on (`web-reader`, `api-graphql`, etc.). Key variables include:
+Repeat for any app you're working on (`api-mcp`, `api-graphql`, etc.). Key variables include:
 
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anonymous key
@@ -35,8 +35,8 @@ Repeat for any app you're working on (`web-reader`, `api-graphql`, etc.). Key va
 # Main studio app (default port 4200)
 npx nx dev web-main
 
-# Public reader
-npx nx dev web-reader
+# Public MCP API
+npx nx dev api-mcp
 
 # GraphQL API (default port 3001)
 npx nx dev api-graphql
