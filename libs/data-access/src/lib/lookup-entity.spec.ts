@@ -1,5 +1,6 @@
 import { lookupEntity } from './lookup-entity';
 import { getGlossaryInstance } from './glossary';
+import { getFolioLocation } from './folio';
 
 jest.mock('./client-ssr', () => ({
   createServerClient: jest.fn().mockResolvedValue({}),
@@ -7,6 +8,10 @@ jest.mock('./client-ssr', () => ({
 
 jest.mock('./bibliography', () => ({
   getBibliographyEntry: jest.fn(),
+}));
+
+jest.mock('./folio', () => ({
+  getFolioLocation: jest.fn(),
 }));
 
 jest.mock('./passage', () => ({
@@ -24,6 +29,7 @@ jest.mock('./glossary', () => ({
 }));
 
 const mockedGetGlossaryInstance = jest.mocked(getGlossaryInstance);
+const mockedGetFolioLocation = jest.mocked(getFolioLocation);
 
 describe('lookupEntity', () => {
   beforeEach(() => {
@@ -52,6 +58,28 @@ describe('lookupEntity', () => {
     expect(mockedGetGlossaryInstance).toHaveBeenCalledWith({
       client: {},
       uuid: 'glossary-uuid',
+    });
+  });
+
+  it('routes folio entities to the source tab in the main panel', async () => {
+    mockedGetFolioLocation.mockResolvedValue({
+      workUuid: 'work-uuid',
+      folioUuid: 'folio-uuid',
+      toh: 'toh1',
+    });
+
+    const result = await lookupEntity({
+      type: 'folio',
+      entity: 'folio-uuid',
+    });
+
+    expect(result.path).toBe(
+      '/work-uuid?main=open%3Asource%3Afolio-uuid&toh=toh1',
+    );
+
+    expect(mockedGetFolioLocation).toHaveBeenCalledWith({
+      client: {},
+      uuid: 'folio-uuid',
     });
   });
 });

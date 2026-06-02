@@ -7,10 +7,12 @@ import {
 } from './publications';
 import { panelAndTabForContentType } from './panel-url';
 import { getGlossaryInstance } from './glossary';
+import { getFolioLocation } from './folio';
 import { DataClient } from './types';
 
 const ALLOWED_TYPES = [
   'bibliography',
+  'folio',
   'glossary',
   'passage',
   'translation',
@@ -83,6 +85,25 @@ export const lookupEntityWithClient = async ({
         workUuid = item.workUuid;
         uuid = item.uuid;
         query.set('right', `open:bibliography:${uuid}`);
+        path = `${prefix}/${workUuid}?${query.toString()}`;
+      }
+      break;
+    case 'folio':
+      {
+        const item = await getFolioLocation({ client, uuid: entity });
+        if (!item?.workUuid || !item.folioUuid) {
+          return {};
+        }
+
+        workUuid = item.workUuid;
+        uuid = item.folioUuid;
+        const { panel, tab } = panelAndTabForContentType('source');
+
+        query.set(panel, `open:${tab}:${uuid}`);
+        if (item.toh) {
+          query.set('toh', item.toh);
+        }
+
         path = `${prefix}/${workUuid}?${query.toString()}`;
       }
       break;

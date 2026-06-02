@@ -115,6 +115,41 @@ export const getWorkFoliosAround = async ({
   };
 };
 
+type FolioLocation = {
+  workUuid: string;
+  folioUuid: string;
+  toh: TohokuCatalogEntry;
+};
+
+/**
+ * Resolve a single folio by its UUID to its parent work + toh. Used by entity
+ * lookup to build a deep link into the work's source tab.
+ */
+export const getFolioLocation = async ({
+  client,
+  uuid,
+}: {
+  client: DataClient;
+  uuid: string;
+}): Promise<FolioLocation | null> => {
+  const { data, error } = await client
+    .from('tibetan_works_folios')
+    .select('work_uuid, folio_uuid, toh')
+    .eq('folio_uuid', uuid)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching folio location:', error);
+    return null;
+  }
+
+  return {
+    workUuid: data.work_uuid as string,
+    folioUuid: data.folio_uuid as string,
+    toh: data.toh as TohokuCatalogEntry,
+  };
+};
+
 export const getFolios = async ({
   uuid,
   toh,

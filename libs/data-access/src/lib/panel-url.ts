@@ -46,7 +46,10 @@ export const urlForPanelContent = ({
 export const entityTypeForContentType = (
   contentType: PanelContentType,
 ): string => {
-  if (['compare', 'source', ...BODY_ITEM_TYPES].includes(contentType)) {
+  if (contentType === 'source') {
+    return 'folio';
+  }
+  if (['compare', ...BODY_ITEM_TYPES].includes(contentType)) {
     return 'passage';
   }
 
@@ -62,15 +65,6 @@ export const urlForEntity = ({
   uuid: string;
   contentType?: PanelContentType;
 }): string => {
-  // TODO: support folios in the entity endpoint
-  if (contentType === 'source') {
-    return urlForPanelContent({
-      location,
-      hash: uuid,
-      contentType,
-    });
-  }
-
   const { origin, href, search } = location;
   const searchParams = new URLSearchParams(search);
 
