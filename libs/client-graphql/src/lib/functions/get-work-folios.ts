@@ -3,9 +3,15 @@ import { gql } from 'graphql-request';
 import type { Folio } from '@eightyfourthousand/data-access';
 
 const GET_WORK_FOLIOS = gql`
-  query GetWorkFolios($uuid: ID!, $toh: String!, $page: Int, $size: Int) {
+  query GetWorkFolios(
+    $uuid: ID!
+    $toh: String!
+    $page: Int
+    $size: Int
+    $offset: Int
+  ) {
     work(uuid: $uuid) {
-      folios(toh: $toh, page: $page, size: $size) {
+      folios(toh: $toh, page: $page, size: $size, offset: $offset) {
         uuid
         content
         volume
@@ -31,17 +37,19 @@ export async function getWorkFolios({
   toh,
   page = 0,
   size = 10,
+  offset,
 }: {
   client: GraphQLClient;
   uuid: string;
   toh: string;
   page?: number;
   size?: number;
+  offset?: number;
 }): Promise<Folio[]> {
   try {
     const response = await client.request<GetWorkFoliosResponse>(
       GET_WORK_FOLIOS,
-      { uuid, toh, page, size },
+      { uuid, toh, page, size, offset },
     );
 
     return response.work?.folios ?? [];

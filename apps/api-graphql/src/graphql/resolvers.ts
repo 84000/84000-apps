@@ -3,7 +3,10 @@ import {
   bibliographyEntryResolver,
   workBibliographyResolver,
 } from './schema/bibliography/bibliography.resolver';
-import { workFoliosResolver } from './schema/folio/folio.resolver';
+import {
+  workFoliosResolver,
+  workFoliosAroundResolver,
+} from './schema/folio/folio.resolver';
 import {
   glossaryInstanceResolver,
   workGlossaryResolver,
@@ -61,6 +64,7 @@ export const resolvers = {
     searchGlossaryTerms: searchWorkGlossaryTermsResolver,
     bibliography: workBibliographyResolver,
     folios: workFoliosResolver,
+    foliosAround: workFoliosAroundResolver,
   },
 
   GlossaryTermInstance: {

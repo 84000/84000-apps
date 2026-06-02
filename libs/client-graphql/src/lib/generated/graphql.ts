@@ -115,6 +115,19 @@ export type FolioSide =
   | 'a'
   | 'b';
 
+/** A window of folios centered on a target folio, with flags for further loading */
+export type FoliosAround = {
+  __typename?: 'FoliosAround';
+  /** The folios in the window, in reading order */
+  folios: Array<Folio>;
+  /** Whether folios exist after the window */
+  hasMoreAfter: Scalars['Boolean']['output'];
+  /** Whether folios exist before the window */
+  hasMoreBefore: Scalars['Boolean']['output'];
+  /** Absolute 0-indexed position of the first folio in the window */
+  startIndex: Scalars['Int']['output'];
+};
+
 /** Paginated passage references for a glossary term */
 export type GlossaryPassagesPage = {
   __typename?: 'GlossaryPassagesPage';
@@ -659,6 +672,8 @@ export type Work = {
   bibliography: Array<BibliographyEntry>;
   /** Folios for this work, filtered by toh and paginated */
   folios: Array<Folio>;
+  /** A window of folios centered on a target folio, for deep-linking */
+  foliosAround?: Maybe<FoliosAround>;
   /**
    * Glossary term instances for this work
    * @deprecated Use glossaryTerms for paginated access
@@ -705,8 +720,18 @@ export type Work = {
 
 /** A published translation work from the 84000 canon */
 export type WorkFoliosArgs = {
+  offset?: InputMaybe<Scalars['Int']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
   size?: InputMaybe<Scalars['Int']['input']>;
+  toh: Scalars['String']['input'];
+};
+
+
+/** A published translation work from the 84000 canon */
+export type WorkFoliosAroundArgs = {
+  after?: InputMaybe<Scalars['Int']['input']>;
+  before?: InputMaybe<Scalars['Int']['input']>;
+  folioUuid: Scalars['ID']['input'];
   toh: Scalars['String']['input'];
 };
 

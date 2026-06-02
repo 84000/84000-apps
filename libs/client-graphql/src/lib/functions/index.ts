@@ -31,6 +31,7 @@ export {
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';
+export { getWorkFoliosAround } from './get-work-folios-around';
 export { hasPermission, type Permission } from './has-permission';
 export { replace, type ReplaceType, type ReplacedPassage } from './replace';
 export { savePassages } from './save-passages';
