@@ -32,6 +32,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
+import { findScrollParent } from '../shared/hooks/useScrollPositionRestore';
 
 const LOADING_SKELETONS_COUNT = 3;
 const CHUNK_SIZE = 25;
@@ -407,8 +408,13 @@ export const PaginationProvider = ({
 
       if (blocks.length && editor?.view?.dom) {
         const editorEl = editor.view.dom;
-        const scrollContainer =
-          editorEl.closest('[data-panel]') || editorEl.parentElement;
+        // Anchor against the real scrollable ancestor. The main translation
+        // panel has no `[data-panel]` element (only the back-matter panel does),
+        // so the old `closest('[data-panel]') || parentElement` fell back to the
+        // editor's non-scrollable parent — making the scroll adjustment below a
+        // no-op, which left the sentinel in view and the viewport jumping on
+        // prepend. `findScrollParent` is the same lookup BodyPanel/SourceReader use.
+        const scrollContainer = findScrollParent(editorEl);
         const previousScrollHeight = scrollContainer?.scrollHeight || 0;
         const previousScrollTop = scrollContainer?.scrollTop || 0;
 
