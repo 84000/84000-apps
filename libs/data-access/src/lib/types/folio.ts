@@ -17,6 +17,13 @@ export type Folio = {
   side: FolioSide;
 };
 
+export type FoliosAround = {
+  folios: Folio[];
+  startIndex: number;
+  hasMoreBefore: boolean;
+  hasMoreAfter: boolean;
+};
+
 export const folioFromDTO = (dto: FolioDTO): Folio => {
   return {
     uuid: dto.folio_uuid,
