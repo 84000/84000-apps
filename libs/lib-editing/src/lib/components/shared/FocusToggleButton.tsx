@@ -14,8 +14,10 @@ export const FocusToggleButton = () => {
       size="icon"
       aria-pressed={focusMode}
       className={cn(
-        'cursor-pointer [&_svg]:size-5 [&_svg]:stroke-1 transition-all',
-        focusMode ? 'text-accent' : 'text-accent/60 hover:text-accent',
+        'cursor-pointer rounded-full [&_svg]:size-5 [&_svg]:stroke-1 transition-all',
+        focusMode
+          ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+          : 'text-accent/60 hover:text-accent hover:bg-muted',
       )}
       onClick={() => setFocusMode(!focusMode)}
     >
