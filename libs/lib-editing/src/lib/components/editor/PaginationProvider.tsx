@@ -222,16 +222,15 @@ export const PaginationProvider = ({
             return;
           }
 
-          // Wait for editor to finish updating
-          await new Promise<void>((resolve) => {
-            const handleUpdate = () => {
-              editor?.off('update', handleUpdate);
-              requestAnimationFrame(() => resolve());
-            };
-
-            editor?.on('update', handleUpdate);
-            editor?.chain().clearContent().setContent(blocks).run();
-          });
+          // Replace the window synchronously. We intentionally do NOT await a
+          // TipTap 'update' event here: under the Collaboration (Yjs) extension
+          // — loaded only in the editor — TipTap v3 does not reliably emit
+          // 'update' for this programmatic clearContent/setContent (core
+          // suppresses it when the change arrives via the y-sync plugin or the
+          // doc compares equal). Awaiting it would hang navigation indefinitely,
+          // leaving isNavigatingRef stuck true and the view locked. The
+          // DOM-stability poll below is an event-independent readiness signal.
+          editor?.chain().clearContent().setContent(blocks).run();
           setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
           setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
           if (tab) {
@@ -243,8 +242,18 @@ export const PaginationProvider = ({
           await new Promise<void>((resolve) => {
             let stabilityCount = 0;
             let lastTop = -1;
+            let frames = 0;
+            // Cap the wait so a target that never renders can't hang
+            // navigation; ~2s at 60fps. On timeout we resolve and the
+            // element lookup + `if (!element) return` below bails cleanly.
+            const MAX_FRAMES = 120;
 
             const checkStability = () => {
+              if (frames++ > MAX_FRAMES) {
+                resolve();
+                return;
+              }
+
               const el = div.querySelector<HTMLElement>(
                 `#${CSS.escape(navCursor)}`,
               );
