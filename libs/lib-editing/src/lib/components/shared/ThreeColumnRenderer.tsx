@@ -25,8 +25,8 @@ export const ThreeColumnRenderer = ({
   const mainPanelActions = useMemo(
     () => (
       <>
-        {withFocusToggle && <FocusToggleButton />}
         <ReaderSearchButton />
+        {withFocusToggle && <FocusToggleButton />}
       </>
     ),
     [withFocusToggle],
@@ -40,7 +40,7 @@ export const ThreeColumnRenderer = ({
         withFocusToggle && focusMode && 'focus-mode',
       )}
     >
-      <GatedFeature flag='show-reader-header'>
+      <GatedFeature flag="show-reader-header">
         <div className="pb-2.5">
           <TranslationHeader className="rounded-full shadow-lg" />
         </div>
@@ -59,11 +59,11 @@ export const ThreeColumnRenderer = ({
         onRightPanelOpenChange={
           rightPanelEnabled
             ? (open) => {
-              updatePanel({
-                name: 'right',
-                state: { open, tab: panels.right.tab },
-              });
-            }
+                updatePanel({
+                  name: 'right',
+                  state: { open, tab: panels.right.tab },
+                });
+              }
             : undefined
         }
       >

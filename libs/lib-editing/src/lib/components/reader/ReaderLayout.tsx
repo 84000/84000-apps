@@ -34,7 +34,7 @@ export const ReaderLayout = ({
       <ThreeColumnRenderer withHeader={withHeader} withFocusToggle>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>
-          <EditorHeader />
+          <div className="h-12" />
         </MainPanelHeader>
         <MainPanel>{main}</MainPanel>
         <RightPanel>{right}</RightPanel>
