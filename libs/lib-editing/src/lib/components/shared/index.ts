@@ -1,4 +1,5 @@
 export * from './AiSummarizerPage';
+export * from './FocusToggleButton';
 export * from './NavigationProvider';
 export * from './LabeledElement';
 export * from './SuggestRevisionForm';

@@ -31,7 +31,7 @@ export const ReaderLayout = ({
       uuid={slug}
       initialHasTranslationContent={initialHasTranslationContent}
     >
-      <ThreeColumnRenderer withHeader={withHeader}>
+      <ThreeColumnRenderer withHeader={withHeader} withFocusToggle>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>
           <EditorHeader />
