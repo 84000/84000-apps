@@ -41,7 +41,7 @@ export type ImperativePanelHandle = RRImperativePanelHandle;
 const pct = (size: MinPanelSizes) => `${size}%`;
 
 export const LeftPanel = ({ children }: { children: ReactNode }) => {
-  return <div className='size-full'>{children}</div>;
+  return <div className="size-full">{children}</div>;
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
@@ -49,12 +49,14 @@ export const MainPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {
-  return <div className='size-full'>{children}</div>;
+  return <div className="size-full">{children}</div>;
 };
 
 export const MainPanelHeader = ({ children }: { children?: ReactNode }) => {
   return (
-    <div className="sticky top-16 flex justify-end z-10 pointer-events-none">{children}</div>
+    <div className="sticky top-16 flex justify-end z-10 pointer-events-none">
+      {children}
+    </div>
   );
 };
 
@@ -205,7 +207,7 @@ export const ThreeColumns = ({
               )}
             </div>
           </div>
-          <div className='bg-surface flex-1'>
+          <div className="bg-surface flex-1">
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
@@ -221,7 +223,9 @@ export const ThreeColumns = ({
             >
               <SheetHeader className="sr-only">
                 <SheetTitle>Left Panel</SheetTitle>
-                <SheetDescription>Navigation and content panel</SheetDescription>
+                <SheetDescription>
+                  Navigation and content panel
+                </SheetDescription>
               </SheetHeader>
               {leftPanelChildren}
             </SheetContent>
@@ -293,7 +297,7 @@ export const ThreeColumns = ({
                 <PanelLeftIcon />
                 <span className="sr-only">Toggle Left Panel</span>
               </Button>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {mainPanelActions}
                 {rightPanelEnabled && (
                   <Button
@@ -308,7 +312,7 @@ export const ThreeColumns = ({
                 )}
               </div>
             </div>
-            <div className='bg-surface flex-1'>
+            <div className="bg-surface flex-1">
               {mainHeaderChildren}
               {mainPanelChildren}
             </div>

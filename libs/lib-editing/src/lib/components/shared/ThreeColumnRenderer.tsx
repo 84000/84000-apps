@@ -6,28 +6,41 @@ import { useNavigation } from './NavigationProvider';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { TranslationHeader } from './TranslationHeader';
 import { ReaderSearchButton } from './ReaderSearchButton';
+import { FocusToggleButton } from './FocusToggleButton';
 import { GatedFeature } from '@eightyfourthousand/lib-instr';
 
 export const ThreeColumnRenderer = ({
   withHeader = false,
+  withFocusToggle = false,
   children,
 }: {
   withHeader?: boolean;
+  withFocusToggle?: boolean;
   children: ReactNode;
 }) => {
-  const { panels, updatePanel, hasTranslationContent } = useNavigation();
+  const { panels, updatePanel, hasTranslationContent, focusMode } =
+    useNavigation();
   const rightPanelEnabled = hasTranslationContent;
 
-  const searchButton = useMemo(() => <ReaderSearchButton />, []);
+  const mainPanelActions = useMemo(
+    () => (
+      <>
+        <ReaderSearchButton />
+        {withFocusToggle && <FocusToggleButton />}
+      </>
+    ),
+    [withFocusToggle],
+  );
 
   return (
     <div
       className={cn(
         'fixed flex flex-col size-full p-2 bg-canvas',
         withHeader ? 'pb-20' : '',
+        withFocusToggle && focusMode && 'focus-mode',
       )}
     >
-      <GatedFeature flag='show-reader-header'>
+      <GatedFeature flag="show-reader-header">
         <div className="pb-2.5">
           <TranslationHeader className="rounded-full shadow-lg" />
         </div>
@@ -36,7 +49,7 @@ export const ThreeColumnRenderer = ({
         leftPanelOpen={panels.left.open}
         rightPanelOpen={rightPanelEnabled ? panels.right.open : false}
         rightPanelEnabled={rightPanelEnabled}
-        mainPanelActions={searchButton}
+        mainPanelActions={mainPanelActions}
         onLeftPanelOpenChange={(open) => {
           updatePanel({
             name: 'left',
@@ -46,11 +59,11 @@ export const ThreeColumnRenderer = ({
         onRightPanelOpenChange={
           rightPanelEnabled
             ? (open) => {
-              updatePanel({
-                name: 'right',
-                state: { open, tab: panels.right.tab },
-              });
-            }
+                updatePanel({
+                  name: 'right',
+                  state: { open, tab: panels.right.tab },
+                });
+              }
             : undefined
         }
       >

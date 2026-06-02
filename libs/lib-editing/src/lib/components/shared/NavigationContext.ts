@@ -18,9 +18,11 @@ export interface NavigationState {
   toh?: TohokuCatalogEntry;
   showOuterContent: boolean;
   hasTranslationContent: boolean;
+  focusMode: boolean;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
+  setFocusMode: (focusMode: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   fetchBibliographyEntry: (
     uuid: string,
@@ -44,10 +46,12 @@ export const NavigationContext = createContext<NavigationState>({
   panels: DEFAULT_PANELS,
   showOuterContent: true,
   hasTranslationContent: true,
+  focusMode: false,
   updatePanel: () => { throw new Error('Not implemented'); },
   setToh: () => { throw new Error('Not implemented'); },
   setShowOuterContent: () => { throw new Error('Not implemented'); },
   setHasTranslationContent: () => { throw new Error('Not implemented'); },
+  setFocusMode: () => { throw new Error('Not implemented'); },
   fetchBibliographyEntry: async () => { throw new Error('Not implemented'); },
   fetchEndNote: async () => { throw new Error('Not implemented'); },
   fetchGlossaryTerm: async () => { throw new Error('Not implemented'); },

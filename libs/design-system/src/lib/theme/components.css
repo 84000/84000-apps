@@ -31,6 +31,20 @@
     @apply ml-0.75;
   }
 
+  /* Non-distracted view: hide endnote markers, neutralize glossary and
+     mention affordances while keeping their underlying text readable. */
+  .focus-mode .end-note-link {
+    @apply hidden;
+  }
+
+  .focus-mode .glossary-instance {
+    @apply text-foreground no-underline cursor-auto;
+  }
+
+  .focus-mode .mention-link {
+    @apply text-foreground no-underline cursor-auto;
+  }
+
   .glossary-instance-definition {
     p {
       @apply mb-1 mt-2 @c/sidebar:pt-1;

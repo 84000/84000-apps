@@ -94,6 +94,7 @@ export const NavigationProvider = ({
   const isPanelTransitioning = useRef(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
   const [showOuterContent, setShowOuterContent] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
   const [hasTranslationContent, setHasTranslationContent] = useState(
     initialHasTranslationContent,
   );
@@ -387,9 +388,11 @@ export const NavigationProvider = ({
       toh,
       showOuterContent,
       hasTranslationContent,
+      focusMode,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
+      setFocusMode,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
@@ -404,9 +407,11 @@ export const NavigationProvider = ({
       toh,
       showOuterContent,
       hasTranslationContent,
+      focusMode,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
+      setFocusMode,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,

@@ -152,10 +152,10 @@ export const SearchButton = ({
       });
       setHasResults(
         !!nextResults &&
-        (nextResults.passages.length > 0 ||
-          nextResults.alignments.length > 0 ||
-          nextResults.bibliographies.length > 0 ||
-          nextResults.glossaries.length > 0),
+          (nextResults.passages.length > 0 ||
+            nextResults.alignments.length > 0 ||
+            nextResults.bibliographies.length > 0 ||
+            nextResults.glossaries.length > 0),
       );
       setResults(nextResults);
 
@@ -269,11 +269,11 @@ export const SearchButton = ({
       const nextPassageIndex =
         pendingSelection.kind === 'cursor' && currentPassageOrder != null
           ? passageOccurrences.findIndex((occurrence) => {
-            const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
-            return (
-              occurrenceOrder != null && occurrenceOrder > currentPassageOrder
-            );
-          })
+              const occurrenceOrder = passageOrder.get(occurrence.passageUuid);
+              return (
+                occurrenceOrder != null && occurrenceOrder > currentPassageOrder
+              );
+            })
           : -1;
 
       setActiveOccurrenceIndexState(
@@ -362,7 +362,7 @@ export const SearchButton = ({
         <Button
           variant="ghost"
           size="icon"
-          className="bg-background my-auto [&_svg]:size-6 [&_svg]:stroke-1 hover:bg-background cursor-pointer text-base text-accent hover:text-accent/80"
+          className="bg-background my-auto [&_svg]:size-5 md:[&_svg]:size-6 size-6 [&_svg]:stroke-1 hover:bg-muted cursor-pointer text-base text-accent hover:text-accent/80"
         >
           <SearchIcon />
         </Button>
@@ -452,7 +452,7 @@ export const SearchButton = ({
                           <SearchResultsList
                             activeOccurrenceStart={
                               activeOccurrenceStart != null &&
-                                shouldScrollActiveOccurrence
+                              shouldScrollActiveOccurrence
                                 ? activeOccurrenceStart
                                 : undefined
                             }
