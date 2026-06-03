@@ -162,8 +162,12 @@ describe('TranslationSSRContent', () => {
     const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
     expect(html).toContain('marked');
-    expect(html).toMatch(/<sup[^>]*me-0\.75[^>]*endNote="en-1"[^>]*>a<\/sup>marked/);
-    expect(html).toMatch(/marked<sup[^>]*endNote="en-2"[^>]*>b<\/sup>/);
+    // Start sup carries a trailing word joiner (U+2060); end sup a leading one,
+    // gluing each marker to the content it's attached to.
+    expect(html).toMatch(
+      /<sup[^>]*me-0\.75[^>]*endNote="en-1"[^>]*>a⁠<\/sup>marked/,
+    );
+    expect(html).toMatch(/marked<sup[^>]*endNote="en-2"[^>]*>⁠b<\/sup>/);
   });
 
   it('renders endNoteLink marks with only end-positioned sups', () => {
@@ -204,7 +208,7 @@ describe('TranslationSSRContent', () => {
 
     const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
-    expect(html).toMatch(/marked<sup[^>]*endNote="en-only"[^>]*>c<\/sup>/);
+    expect(html).toMatch(/marked<sup[^>]*endNote="en-only"[^>]*>⁠c<\/sup>/);
   });
 
   it('exposes the default SSR extension set including passage and bold', () => {

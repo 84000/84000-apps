@@ -37,13 +37,18 @@ const renderEndNoteLinkMark = ({
 
   const supHtml = (n: EndNoteItem, marginClass: string) => {
     const cls = cn('end-note-link', n.toh, marginClass);
-    const itemLabel = n.label?.split('.').pop() || '';
+    const itemLabel = escapeHTML(n.label?.split('.').pop() || '');
+    // Glue the marker to the text it's attached to with a word joiner (U+2060)
+    // so it never wraps to a new line away from its content: after the text for
+    // start notes, before it for end notes.
+    const joined =
+      n.location === 'start' ? `${itemLabel}⁠` : `⁠${itemLabel}`;
     return (
       `<sup class="${escapeHTMLAttribute(cls)}"` +
       ` type="endNoteLink"` +
       ` endNote="${escapeHTMLAttribute(n.endNote)}"` +
       ` uuid="${escapeHTMLAttribute(n.uuid)}">` +
-      `${escapeHTML(itemLabel)}</sup>`
+      `${joined}</sup>`
     );
   };
 
