@@ -55,17 +55,19 @@ export const MentionSSR = Node.create<MentionSSROptions>({
 
   renderHTML({ node, HTMLAttributes }) {
     const raw = node.attrs.items;
-    const items: MentionItem[] = Array.isArray(raw) ? raw.filter(isMentionItem) : [];
+    const items: MentionItem[] = Array.isArray(raw)
+      ? raw.filter(isMentionItem)
+      : [];
 
     const children = items.map((item) => {
       const label = item.text || item.displayText || item.entity || '';
 
       if (!item.entity || !item.linkType) {
-        return ['span', { class: 'mention-link pe-1' }, label] as unknown;
+        return ['span', { class: 'mention-link px-1' }, label] as unknown;
       }
 
       const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
-      const attrs: Record<string, string> = { class: 'mention-link pe-1' };
+      const attrs: Record<string, string> = { class: 'mention-link px-1' };
       if (item.uuid) attrs['uuid'] = item.uuid;
       if (item.entity) attrs['entity'] = item.entity;
       if (item.linkType) attrs['entity-type'] = item.linkType;
@@ -80,7 +82,7 @@ export const MentionSSR = Node.create<MentionSSROptions>({
         attrs['target'] = '_blank';
         attrs['rel'] = 'noreferrer noopener';
       } else {
-        return ['span', { class: 'mention-link pe-1' }, label] as unknown;
+        return ['span', { class: 'mention-link px-1' }, label] as unknown;
       }
 
       return ['a', attrs, label] as unknown;

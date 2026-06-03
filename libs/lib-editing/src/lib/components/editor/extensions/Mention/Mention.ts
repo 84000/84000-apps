@@ -33,7 +33,7 @@ export const Mention = MentionSSR.extend({
 
       items.forEach((item) => {
         const anchor = document.createElement('a');
-        anchor.classList.add('mention-link', 'pe-1');
+        anchor.classList.add('mention-link', 'px-1');
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
         anchor.textContent = item.text || item.displayText || item.entity;
@@ -73,11 +73,14 @@ export const Mention = MentionSSR.extend({
                   query.set('right', `open:glossary:${item.entity}`);
                   break;
                 case 'passage': {
-                  const panel =
-                    PANEL_FOR_SECTION[item.subtype || ''] || 'main';
+                  const panel = PANEL_FOR_SECTION[item.subtype || ''] || 'main';
                   const tab =
                     TAB_FOR_SECTION[item.subtype || ''] || 'translation';
                   query.set(panel, `open:${tab}:${item.entity}`);
+                  break;
+                }
+                case 'folio': {
+                  query.set('main', `open:source:${item.entity}`);
                   break;
                 }
                 default:
@@ -121,20 +124,20 @@ export const Mention = MentionSSR.extend({
     return {
       setMention:
         (entity: string, linkType: string) =>
-          ({ commands }) => {
-            return commands.insertContent({
-              type: this.name,
-              attrs: {
-                items: [
-                  {
-                    uuid: uuidv4(),
-                    entity,
-                    linkType,
-                  },
-                ],
-              },
-            });
-          },
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: {
+              items: [
+                {
+                  uuid: uuidv4(),
+                  entity,
+                  linkType,
+                },
+              ],
+            },
+          });
+        },
     };
   },
 });
