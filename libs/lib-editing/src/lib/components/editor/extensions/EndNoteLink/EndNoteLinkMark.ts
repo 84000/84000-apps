@@ -76,7 +76,11 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
           }
 
           const itemLabel = label?.split('.').pop() || defaultLabel;
-          endnoteDOM.textContent = itemLabel || defaultLabel;
+          const text = itemLabel || defaultLabel;
+          // Glue the marker to the text it's attached to with a word joiner
+          // (U+2060) so it never wraps to a new line away from its content:
+          // after the text for start notes, before it for end notes.
+          endnoteDOM.textContent = isStart ? `${text}⁠` : `⁠${text}`;
 
           endnoteDOM.addEventListener('click', () => {
             if (!endNote) {
