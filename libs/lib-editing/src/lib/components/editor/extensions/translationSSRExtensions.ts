@@ -22,6 +22,7 @@ import { MentionSSR } from './Mention/Mention.ssr';
 import Paragraph from './Paragraph/Paragraph';
 import { ParagraphIndent } from './ParagraphIndent';
 import { PassageNodeSSR } from './Passage/PassageNode.ssr';
+import { PipeNotItalic } from './PipeNotItalic';
 import { SmallCaps } from './SmallCaps';
 import { STARTER_KIT_CONFIG, StarterKit } from './StarterKit';
 import { Subscript } from './Subscript';
@@ -55,6 +56,7 @@ export const translationSSRExtensions: Extensions = [
   Paragraph,
   ParagraphIndent,
   PassageNodeSSR,
+  PipeNotItalic,
   SmallCaps,
   StarterKit.configure({
     ...STARTER_KIT_CONFIG,
