@@ -50,6 +50,7 @@ import {
   HasAbbreviation,
 } from '../extensions/Abbreviation/Abbreviation';
 import { ParagraphIndent } from '../extensions/ParagraphIndent';
+import { PipeNotItalic } from '../extensions/PipeNotItalic';
 import { Bold } from '../extensions/Bold';
 import { List, ListItem } from '../extensions/List';
 import { Underline } from '../extensions/Underline';
@@ -116,6 +117,7 @@ export const useTranslationExtensions = ({
     Paragraph,
     ParagraphIndent,
     PassageNode,
+    PipeNotItalic,
     Placeholder,
     SlashCommand.configure({
       suggestion: getSuggestion(suggestions),
