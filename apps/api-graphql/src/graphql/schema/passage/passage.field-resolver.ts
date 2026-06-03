@@ -124,6 +124,25 @@ async function resolveMentionTexts(
     );
   }
 
+  const folioMentions = byType.get('folio');
+  if (folioMentions) {
+    fetchPromises.push(
+      ctx.loaders.foliosByUuid
+        .loadMany(folioMentions.map((m) => m.entityUuid))
+        .then((folios) => {
+          folioMentions.forEach((m, i) => {
+            const folio = folios[i];
+            if (folio && typeof folio === 'object' && 'side' in folio) {
+              mentionTexts.set(
+                m.annotationUuid,
+                `[F.${folio.folio}.${folio.side}]`,
+              );
+            }
+          });
+        }),
+    );
+  }
+
   // Bibliography gets a static label
   const bibMentions = byType.get('bibliography');
   if (bibMentions) {

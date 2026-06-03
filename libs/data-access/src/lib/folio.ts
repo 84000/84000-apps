@@ -2,7 +2,7 @@
 
 import { createServerClient } from './client-ssr';
 import { DataClient, TohokuCatalogEntry } from './types';
-import { FolioDTO, FoliosAround, folioFromDTO } from './types/folio';
+import { Folio, FolioDTO, FoliosAround, folioFromDTO } from './types/folio';
 
 type GetWorkFoliosArgs = {
   client: DataClient;
@@ -148,6 +148,48 @@ export const getFolioLocation = async ({
     folioUuid: data.folio_uuid as string,
     toh: data.toh as TohokuCatalogEntry,
   };
+};
+
+/**
+ * Batch-fetch folios by their UUIDs, returning a map keyed by folio UUID.
+ * Used by the GraphQL folio DataLoader to resolve folio mention display text.
+ */
+export const getFoliosByUuids = async ({
+  client,
+  uuids,
+}: {
+  client: DataClient;
+  uuids: readonly string[];
+}): Promise<Map<string, Folio>> => {
+  const foliosByUuid = new Map<string, Folio>();
+
+  if (uuids.length === 0) {
+    return foliosByUuid;
+  }
+
+  const { data, error } = await client
+    .from('tibetan_works_folios')
+    .select(
+      `
+      folio_uuid,
+      content::text,
+      volume_number::int4,
+      folio_number::int4,
+      side::text`,
+    )
+    .in('folio_uuid', uuids);
+
+  if (error) {
+    console.error('Error fetching folios by uuids:', error);
+    return foliosByUuid;
+  }
+
+  for (const dto of data) {
+    const folio = folioFromDTO(dto as FolioDTO);
+    foliosByUuid.set(folio.uuid, folio);
+  }
+
+  return foliosByUuid;
 };
 
 export const getFolios = async ({

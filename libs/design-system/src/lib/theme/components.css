@@ -41,6 +41,10 @@
     @apply text-foreground no-underline cursor-auto;
   }
 
+  .focus-mode .mention-link[entity-type='folio'] {
+    @apply hidden;
+  }
+
   .focus-mode .mention-link {
     @apply text-foreground no-underline cursor-auto;
   }
