@@ -3,6 +3,7 @@ import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
+import { createFolioLoader } from './schema/folio/folio.loader';
 
 export interface Loaders {
   /**
@@ -47,6 +48,12 @@ export interface Loaders {
    * Used to enrich mention annotations with display text from target glossary entries.
    */
   glossaryNamesByUuid: ReturnType<typeof createGlossaryNameLoader>;
+
+  /**
+   * Load folios by UUID.
+   * Used to enrich mention annotations with display text from target folios.
+   */
+  foliosByUuid: ReturnType<typeof createFolioLoader>;
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
@@ -55,5 +62,6 @@ export function createLoaders(supabase: DataClient): Loaders {
     passageReferencesByPassageUuid: createPassageReferencesLoader(supabase),
     workTitlesByUuid: createWorkTitleLoader(supabase),
     glossaryNamesByUuid: createGlossaryNameLoader(supabase),
+    foliosByUuid: createFolioLoader(supabase),
   };
 }
