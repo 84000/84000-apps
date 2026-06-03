@@ -36,6 +36,31 @@ type Folio {
   side: FolioSide!
 }
 
+"""
+A window of folios centered on a target folio, with flags for further loading
+"""
+type FoliosAround {
+  """
+  The folios in the window, in reading order
+  """
+  folios: [Folio!]!
+
+  """
+  Absolute 0-indexed position of the first folio in the window
+  """
+  startIndex: Int!
+
+  """
+  Whether folios exist before the window
+  """
+  hasMoreBefore: Boolean!
+
+  """
+  Whether folios exist after the window
+  """
+  hasMoreAfter: Boolean!
+}
+
 extend type Work {
   """
   Folios for this work, filtered by toh and paginated
@@ -55,5 +80,35 @@ extend type Work {
     Number of folios per page
     """
     size: Int
+
+    """
+    Absolute offset into the ordered folio list (takes precedence over page)
+    """
+    offset: Int
   ): [Folio!]!
+
+  """
+  A window of folios centered on a target folio, for deep-linking
+  """
+  foliosAround(
+    """
+    Tohoku catalog entry (e.g., "toh94")
+    """
+    toh: String!
+
+    """
+    UUID of the folio to center the window on
+    """
+    folioUuid: ID!
+
+    """
+    Number of folios to include before the target
+    """
+    before: Int
+
+    """
+    Number of folios to include after the target
+    """
+    after: Int
+  ): FoliosAround
 }

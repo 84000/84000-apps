@@ -32,6 +32,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
+import { findScrollParent } from '../shared/hooks/useScrollPositionRestore';
 
 const LOADING_SKELETONS_COUNT = 3;
 const CHUNK_SIZE = 25;
@@ -80,6 +81,7 @@ export const PaginationProvider = ({
   content,
   fragment,
   isEditable = true,
+  hasMoreAfter,
   onCreate,
   children,
 }: {
@@ -90,6 +92,7 @@ export const PaginationProvider = ({
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
+  hasMoreAfter?: boolean;
   onCreate?: (params: { editor: Editor }) => void;
   children: ReactNode;
 }) => {
@@ -100,8 +103,11 @@ export const PaginationProvider = ({
   const { refreshEditorBaseline, setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
+  // When the caller knows the initial window already contains everything
+  // (`hasMoreAfter === false`), start with no end cursor so the bottom
+  // skeleton isn't shown. Otherwise fall back to the last passage's UUID.
   const [endCursor, setEndCursor] = useState<string | undefined>(
-    initialEndCursor || undefined,
+    hasMoreAfter === false ? undefined : initialEndCursor || undefined,
   );
   const [navCursor, setNavCursor] = useState<string | undefined>();
   const processedNavCursorRef = useRef<string | undefined>(undefined);
@@ -158,8 +164,16 @@ export const PaginationProvider = ({
   });
 
   useEffect(() => {
+    // `showOuterContent` is a single shared flag but only gates front-matter
+    // outer content (imprint/titles), so only the front provider should drive
+    // it. Otherwise another tab's provider (e.g. the body tab after a deep-link
+    // navigation sets its startCursor) would stomp the flag and hide the
+    // imprint even when the front matter is at its top.
+    if (tab !== 'front') {
+      return;
+    }
     setShowOuterContent(!startCursor);
-  }, [startCursor, setShowOuterContent]);
+  }, [tab, startCursor, setShowOuterContent]);
 
   useEffect(() => {
     const div = childrenDivRef.current;
@@ -222,16 +236,15 @@ export const PaginationProvider = ({
             return;
           }
 
-          // Wait for editor to finish updating
-          await new Promise<void>((resolve) => {
-            const handleUpdate = () => {
-              editor?.off('update', handleUpdate);
-              requestAnimationFrame(() => resolve());
-            };
-
-            editor?.on('update', handleUpdate);
-            editor?.chain().clearContent().setContent(blocks).run();
-          });
+          // Replace the window synchronously. We intentionally do NOT await a
+          // TipTap 'update' event here: under the Collaboration (Yjs) extension
+          // — loaded only in the editor — TipTap v3 does not reliably emit
+          // 'update' for this programmatic clearContent/setContent (core
+          // suppresses it when the change arrives via the y-sync plugin or the
+          // doc compares equal). Awaiting it would hang navigation indefinitely,
+          // leaving isNavigatingRef stuck true and the view locked. The
+          // DOM-stability poll below is an event-independent readiness signal.
+          editor?.chain().clearContent().setContent(blocks).run();
           setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
           setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
           if (tab) {
@@ -243,8 +256,18 @@ export const PaginationProvider = ({
           await new Promise<void>((resolve) => {
             let stabilityCount = 0;
             let lastTop = -1;
+            let frames = 0;
+            // Cap the wait so a target that never renders can't hang
+            // navigation; ~2s at 60fps. On timeout we resolve and the
+            // element lookup + `if (!element) return` below bails cleanly.
+            const MAX_FRAMES = 120;
 
             const checkStability = () => {
+              if (frames++ > MAX_FRAMES) {
+                resolve();
+                return;
+              }
+
               const el = div.querySelector<HTMLElement>(
                 `#${CSS.escape(navCursor)}`,
               );
@@ -398,8 +421,13 @@ export const PaginationProvider = ({
 
       if (blocks.length && editor?.view?.dom) {
         const editorEl = editor.view.dom;
-        const scrollContainer =
-          editorEl.closest('[data-panel]') || editorEl.parentElement;
+        // Anchor against the real scrollable ancestor. The main translation
+        // panel has no `[data-panel]` element (only the back-matter panel does),
+        // so the old `closest('[data-panel]') || parentElement` fell back to the
+        // editor's non-scrollable parent — making the scroll adjustment below a
+        // no-op, which left the sentinel in view and the viewport jumping on
+        // prepend. `findScrollParent` is the same lookup BodyPanel/SourceReader use.
+        const scrollContainer = findScrollParent(editorEl);
         const previousScrollHeight = scrollContainer?.scrollHeight || 0;
         const previousScrollTop = scrollContainer?.scrollTop || 0;
 

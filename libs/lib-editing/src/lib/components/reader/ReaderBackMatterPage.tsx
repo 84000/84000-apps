@@ -24,8 +24,8 @@ export const ReaderBackMatterPage = async ({
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
 
   const [
-    { blocks: endnotes },
-    { blocks: abbreviations },
+    { blocks: endnotes, hasMoreAfter: endnotesHasMore },
+    { blocks: abbreviations, hasMoreAfter: abbreviationsHasMore },
     glossary,
     bibliography,
   ] = await Promise.all([
@@ -57,6 +57,8 @@ export const ReaderBackMatterPage = async ({
       bibliography={bibliography}
       endnotes={endnotes}
       glossary={glossary}
+      endnotesHasMore={endnotesHasMore}
+      abbreviationsHasMore={abbreviationsHasMore}
       withAttestations={withAttestations}
     />
   );

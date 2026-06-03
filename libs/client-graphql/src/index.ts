@@ -31,6 +31,7 @@ export {
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,
+  getWorkFoliosAround,
   hasPermission,
   replace,
   savePassages,

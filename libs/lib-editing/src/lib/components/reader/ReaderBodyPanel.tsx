@@ -23,10 +23,14 @@ export const ReaderBodyPanel = ({
   titles,
   frontMatter,
   body,
+  frontMatterHasMore,
+  bodyHasMore,
 }: {
   titles: TitlesData;
   frontMatter: TranslationEditorContent;
   body: TranslationEditorContent;
+  frontMatterHasMore?: boolean;
+  bodyHasMore?: boolean;
   cursor?: string;
 }) => {
   const renderTitles = useCallback(
@@ -43,13 +47,14 @@ export const ReaderBodyPanel = ({
   );
 
   const renderTranslation = useCallback(
-    ({ content, name, className }: TranslationRenderer) => (
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
       <TranslationReader
         content={content}
         name={name}
         className={className}
         filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
         panel="main"
+        hasMoreAfter={hasMoreAfter}
       />
     ),
     [],
@@ -60,6 +65,8 @@ export const ReaderBodyPanel = ({
       titles={titles}
       frontMatter={frontMatter}
       body={body}
+      frontMatterHasMore={frontMatterHasMore}
+      bodyHasMore={bodyHasMore}
       renderTitles={renderTitles}
       renderTranslation={renderTranslation}
       limitWhenNoTranslation={true}

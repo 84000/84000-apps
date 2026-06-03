@@ -18,6 +18,7 @@ export const TranslationBuilder = ({
   className,
   filter,
   panel,
+  hasMoreAfter,
 }: TranslationRenderer) => {
   const [fragment, setFragment] = useState<XmlFragment>();
   const [isObserving, setIsObserving] = useState(false);
@@ -73,6 +74,7 @@ export const TranslationBuilder = ({
       content={content}
       fragment={fragment}
       isEditable={isEditable}
+      hasMoreAfter={hasMoreAfter}
       onCreate={({ editor }) => {
         editor.commands.setDebug(true);
         setEditor(name, editor);

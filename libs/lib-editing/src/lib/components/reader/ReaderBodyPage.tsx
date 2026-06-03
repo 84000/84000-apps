@@ -24,23 +24,32 @@ export const ReaderBodyPage = async ({
 
   const client = createBuildGraphQLClient();
 
-  const { blocks: frontMatter } = await getTranslationBlocks({
-    client,
-    uuid: slug,
-    type: FRONT_MATTER_FILTER,
-    maxPassages: INITIAL_PASSAGES,
-  });
+  const { blocks: frontMatter, hasMoreAfter: frontMatterHasMore } =
+    await getTranslationBlocks({
+      client,
+      uuid: slug,
+      type: FRONT_MATTER_FILTER,
+      maxPassages: INITIAL_PASSAGES,
+    });
 
-  const { blocks: body } = await getTranslationBlocks({
-    client,
-    uuid: slug,
-    type: BODY_MATTER_FILTER,
-    maxPassages: INITIAL_PASSAGES,
-  });
+  const { blocks: body, hasMoreAfter: bodyHasMore } = await getTranslationBlocks(
+    {
+      client,
+      uuid: slug,
+      type: BODY_MATTER_FILTER,
+      maxPassages: INITIAL_PASSAGES,
+    },
+  );
 
   const titles = await getTranslationTitles({ client, uuid: slug });
 
   return (
-    <ReaderBodyPanel titles={titles} frontMatter={frontMatter} body={body} />
+    <ReaderBodyPanel
+      titles={titles}
+      frontMatter={frontMatter}
+      body={body}
+      frontMatterHasMore={frontMatterHasMore}
+      bodyHasMore={bodyHasMore}
+    />
   );
 };

@@ -38,6 +38,7 @@ export const TranslationReader = ({
   filter,
   panel,
   name,
+  hasMoreAfter,
 }: TranslationRenderer) => {
   const { uuid } = useNavigation();
 
@@ -49,6 +50,7 @@ export const TranslationReader = ({
       filter={filter}
       content={content}
       isEditable={false}
+      hasMoreAfter={hasMoreAfter}
     >
       <ReaderBody content={content} className={className} />
     </PaginationProvider>
