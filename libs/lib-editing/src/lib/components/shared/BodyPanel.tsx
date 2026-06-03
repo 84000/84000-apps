@@ -29,6 +29,8 @@ export const BodyPanel = ({
   titles,
   frontMatter,
   body,
+  frontMatterHasMore,
+  bodyHasMore,
   renderTitles,
   renderTranslation,
   limitWhenNoTranslation = false,
@@ -36,6 +38,8 @@ export const BodyPanel = ({
   titles: Title[];
   frontMatter: TranslationEditorContent;
   body: TranslationEditorContent;
+  frontMatterHasMore?: boolean;
+  bodyHasMore?: boolean;
   renderTitles: (params: TitlesRenderer) => ReactElement<TitlesRenderer>;
   renderTranslation: (
     params: TranslationRenderer,
@@ -168,6 +172,7 @@ export const BodyPanel = ({
             className: 'block',
             name: 'front',
             panel: 'main',
+            hasMoreAfter: frontMatterHasMore,
           })}
         </div>
       </TabsContent>
@@ -195,6 +200,7 @@ export const BodyPanel = ({
               className: 'block',
               name: 'translation',
               panel: 'main',
+              hasMoreAfter: bodyHasMore,
             })}
           </div>
         </TabsContent>

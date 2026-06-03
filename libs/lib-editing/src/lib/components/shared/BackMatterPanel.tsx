@@ -23,6 +23,8 @@ export const BackMatterPanel = ({
   glossary,
   bibliography,
   abbreviations,
+  endnotesHasMore,
+  abbreviationsHasMore,
   isEditor = false,
   withAttestations = false,
   renderTranslation,
@@ -32,6 +34,8 @@ export const BackMatterPanel = ({
   glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
+  endnotesHasMore?: boolean;
+  abbreviationsHasMore?: boolean;
   isEditor?: boolean;
   withAttestations?: boolean;
   renderTranslation: (
@@ -101,6 +105,7 @@ export const BackMatterPanel = ({
                   className: 'block',
                   name: 'endnotes',
                   panel: 'right',
+                  hasMoreAfter: endnotesHasMore,
                 })}
               </TabsContent>
             )}
@@ -139,6 +144,7 @@ export const BackMatterPanel = ({
                   className: 'block',
                   name: 'abbreviations',
                   panel: 'right',
+                  hasMoreAfter: abbreviationsHasMore,
                 })}
               </TabsContent>
             )}

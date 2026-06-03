@@ -14,6 +14,8 @@ export const ReaderBackMatterPanel = ({
   glossary,
   bibliography,
   abbreviations,
+  endnotesHasMore,
+  abbreviationsHasMore,
   withAttestations = false,
 }: {
   workUuid: string;
@@ -21,16 +23,19 @@ export const ReaderBackMatterPanel = ({
   glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
   abbreviations: TranslationEditorContent;
+  endnotesHasMore?: boolean;
+  abbreviationsHasMore?: boolean;
   withAttestations?: boolean;
 }) => {
   const renderTranslation = useCallback(
-    ({ content, name, className }: TranslationRenderer) => (
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
       <TranslationReader
         content={content}
         name={name}
         className={className}
         filter={name}
         panel="right"
+        hasMoreAfter={hasMoreAfter}
       />
     ),
     [],
@@ -43,6 +48,8 @@ export const ReaderBackMatterPanel = ({
       glossary={glossary}
       bibliography={bibliography}
       abbreviations={abbreviations}
+      endnotesHasMore={endnotesHasMore}
+      abbreviationsHasMore={abbreviationsHasMore}
       renderTranslation={renderTranslation}
       withAttestations={withAttestations}
     />

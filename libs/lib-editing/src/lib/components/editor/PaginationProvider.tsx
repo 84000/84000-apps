@@ -81,6 +81,7 @@ export const PaginationProvider = ({
   content,
   fragment,
   isEditable = true,
+  hasMoreAfter,
   onCreate,
   children,
 }: {
@@ -91,6 +92,7 @@ export const PaginationProvider = ({
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
+  hasMoreAfter?: boolean;
   onCreate?: (params: { editor: Editor }) => void;
   children: ReactNode;
 }) => {
@@ -101,8 +103,11 @@ export const PaginationProvider = ({
   const { refreshEditorBaseline, setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
+  // When the caller knows the initial window already contains everything
+  // (`hasMoreAfter === false`), start with no end cursor so the bottom
+  // skeleton isn't shown. Otherwise fall back to the last passage's UUID.
   const [endCursor, setEndCursor] = useState<string | undefined>(
-    initialEndCursor || undefined,
+    hasMoreAfter === false ? undefined : initialEndCursor || undefined,
   );
   const [navCursor, setNavCursor] = useState<string | undefined>();
   const processedNavCursorRef = useRef<string | undefined>(undefined);
@@ -159,8 +164,16 @@ export const PaginationProvider = ({
   });
 
   useEffect(() => {
+    // `showOuterContent` is a single shared flag but only gates front-matter
+    // outer content (imprint/titles), so only the front provider should drive
+    // it. Otherwise another tab's provider (e.g. the body tab after a deep-link
+    // navigation sets its startCursor) would stomp the flag and hide the
+    // imprint even when the front matter is at its top.
+    if (tab !== 'front') {
+      return;
+    }
     setShowOuterContent(!startCursor);
-  }, [startCursor, setShowOuterContent]);
+  }, [tab, startCursor, setShowOuterContent]);
 
   useEffect(() => {
     const div = childrenDivRef.current;

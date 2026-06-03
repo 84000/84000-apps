@@ -22,32 +22,39 @@ export const EditorBodyPage = () => {
   const { work } = useEditorState();
   const [body, setBody] = useState<TranslationEditorContent>();
   const [frontMatter, setFrontMatter] = useState<TranslationEditorContent>();
+  const [frontMatterHasMore, setFrontMatterHasMore] = useState<boolean>();
+  const [bodyHasMore, setBodyHasMore] = useState<boolean>();
   const [titles, setTitles] = useState<Title[]>();
 
   useEffect(() => {
     (async () => {
       const client = createGraphQLClient();
 
-      const [{ blocks: frontBlocks }, { blocks: bodyBlocks }, titlesData] =
-        await Promise.all([
-          getTranslationBlocks({
-            client,
-            uuid: work.uuid,
-            type: FRONT_MATTER_FILTER,
-            maxPassages: INITIAL_PASSAGES,
-          }),
-          getTranslationBlocks({
-            client,
-            uuid: work.uuid,
-            type: BODY_MATTER_FILTER,
-            maxPassages: INITIAL_PASSAGES,
-          }),
-          getTranslationTitles({ client, uuid: work.uuid }),
-        ]);
+      const [
+        { blocks: frontBlocks, hasMoreAfter: frontHasMore },
+        { blocks: bodyBlocks, hasMoreAfter: bodyHasMoreAfter },
+        titlesData,
+      ] = await Promise.all([
+        getTranslationBlocks({
+          client,
+          uuid: work.uuid,
+          type: FRONT_MATTER_FILTER,
+          maxPassages: INITIAL_PASSAGES,
+        }),
+        getTranslationBlocks({
+          client,
+          uuid: work.uuid,
+          type: BODY_MATTER_FILTER,
+          maxPassages: INITIAL_PASSAGES,
+        }),
+        getTranslationTitles({ client, uuid: work.uuid }),
+      ]);
 
       setTitles(titlesData);
       setFrontMatter(frontBlocks);
+      setFrontMatterHasMore(frontHasMore);
       setBody(bodyBlocks);
+      setBodyHasMore(bodyHasMoreAfter);
     })();
   }, [work.uuid]);
 
@@ -59,13 +66,14 @@ export const EditorBodyPage = () => {
   );
 
   const renderTranslation = useCallback(
-    ({ content, name, className }: TranslationRenderer) => (
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
       <TranslationBuilder
         content={content}
         name={name}
         className={className}
         filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
         panel="main"
+        hasMoreAfter={hasMoreAfter}
       />
     ),
     [],
@@ -80,6 +88,8 @@ export const EditorBodyPage = () => {
       titles={titles}
       frontMatter={frontMatter}
       body={body}
+      frontMatterHasMore={frontMatterHasMore}
+      bodyHasMore={bodyHasMore}
       renderTitles={renderTitles}
       renderTranslation={renderTranslation}
     />

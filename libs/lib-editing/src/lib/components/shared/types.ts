@@ -32,6 +32,13 @@ export interface TranslationRenderer {
   className?: string;
   filter?: PanelFilter;
   panel: PanelName;
+  /**
+   * Whether more passages exist after the initial `content` window. When
+   * `false`, pagination starts with no end cursor so the bottom loading
+   * skeleton isn't shown for fully-loaded short texts. Omitted/undefined
+   * preserves the legacy behavior (treat as "maybe more").
+   */
+  hasMoreAfter?: boolean;
 }
 
 export const TAB_FOR_SECTION: Record<string, TabName> = {

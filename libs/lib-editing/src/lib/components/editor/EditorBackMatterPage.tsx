@@ -23,6 +23,8 @@ export const EditorBackMatterPage = () => {
   const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
   const [abbreviations, setAbbreviations] =
     useState<TranslationEditorContent>();
+  const [endnotesHasMore, setEndnotesHasMore] = useState<boolean>();
+  const [abbreviationsHasMore, setAbbreviationsHasMore] = useState<boolean>();
   const [glossary, setGlossary] = useState<GlossaryTermsPage>();
   const [bibliography, setBibliography] = useState<BibliographyEntries>();
 
@@ -32,8 +34,8 @@ export const EditorBackMatterPage = () => {
       const graphqlClient = createGraphQLClient();
 
       const [
-        { blocks: endnoteBlocks },
-        { blocks: abbreviationBlocks },
+        { blocks: endnoteBlocks, hasMoreAfter: endnoteHasMore },
+        { blocks: abbreviationBlocks, hasMoreAfter: abbreviationHasMore },
         glossaryData,
         bibliographyData,
       ] = await Promise.all([
@@ -59,20 +61,23 @@ export const EditorBackMatterPage = () => {
       ]);
 
       setEndnotes(endnoteBlocks);
+      setEndnotesHasMore(endnoteHasMore);
       setAbbreviations(abbreviationBlocks);
+      setAbbreviationsHasMore(abbreviationHasMore);
       setGlossary(glossaryData);
       setBibliography(bibliographyData);
     })();
   }, [work]);
 
   const renderTranslation = useCallback(
-    ({ content, name, className }: TranslationRenderer) => (
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
       <TranslationBuilder
         content={content}
         name={name}
         className={className}
         filter={name}
         panel="right"
+        hasMoreAfter={hasMoreAfter}
       />
     ),
     [],
@@ -89,6 +94,8 @@ export const EditorBackMatterPage = () => {
       glossary={glossary}
       bibliography={bibliography}
       abbreviations={abbreviations}
+      endnotesHasMore={endnotesHasMore}
+      abbreviationsHasMore={abbreviationsHasMore}
       renderTranslation={renderTranslation}
       withAttestations={withAttestations}
       isEditor={true}
