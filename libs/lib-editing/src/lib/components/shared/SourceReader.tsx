@@ -61,9 +61,10 @@ export const SourceReader = () => {
   // When prepending, the scroll position must be anchored so the viewport
   // doesn't jump. We capture the pre-prepend metrics here and restore in a
   // layout effect once the new folios have rendered.
-  const pendingAnchorRef = useRef<{ prevHeight: number; prevTop: number } | null>(
-    null,
-  );
+  const pendingAnchorRef = useRef<{
+    prevHeight: number;
+    prevTop: number;
+  } | null>(null);
 
   // Only react to a source-tab hash (the deep-link target folio uuid).
   const panelHash =
@@ -325,7 +326,6 @@ export const SourceReader = () => {
     // `panels` is intentionally excluded: we only read its current value when
     // clearing the hash. Including it would loop, since updatePanel() creates a
     // new panels object on every call.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panelHash, toh, uuid, isMobile, client, updatePanel]);
 
   return (

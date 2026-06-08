@@ -3,6 +3,7 @@ import {
   createBuildGraphQLClient,
   FRONT_MATTER_FILTER,
   getTranslationBlocks,
+  getTranslationMetadataByUuid,
   getTranslationTitles,
 } from '@eightyfourthousand/client-graphql/ssr';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
@@ -43,6 +44,8 @@ export const ReaderBodyPage = async ({
 
   const titles = await getTranslationTitles({ client, uuid: slug });
 
+  const work = await getTranslationMetadataByUuid({ client, uuid: slug });
+
   return (
     <ReaderBodyPanel
       titles={titles}
@@ -50,6 +53,7 @@ export const ReaderBodyPage = async ({
       body={body}
       frontMatterHasMore={frontMatterHasMore}
       bodyHasMore={bodyHasMore}
+      publicationVersion={work?.publicationVersion}
     />
   );
 };

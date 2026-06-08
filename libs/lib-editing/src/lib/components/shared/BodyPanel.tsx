@@ -11,12 +11,13 @@ import {
   TranslationEditorContentItem,
 } from '../editor';
 import { Title } from '@eightyfourthousand/data-access';
-import { TitlesRenderer, TranslationRenderer } from './types';
+import { TitlesRenderer, TranslationRenderer, TranslationState } from './types';
 import { ReactElement, useCallback, useEffect, useMemo, useRef } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { useNavigation } from './NavigationProvider';
 import { SourceReader } from './SourceReader';
 import { Imprint } from './Imprint';
+import { TranslationPlaceholder } from './TranslationPlaceholder';
 import { TitleDetails } from './titles';
 import {
   capturePassageAnchor,
@@ -33,7 +34,7 @@ export const BodyPanel = ({
   bodyHasMore,
   renderTitles,
   renderTranslation,
-  limitWhenNoTranslation = false,
+  translationState = 'content',
 }: {
   titles: Title[];
   frontMatter: TranslationEditorContent;
@@ -44,7 +45,7 @@ export const BodyPanel = ({
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
-  limitWhenNoTranslation?: boolean;
+  translationState?: TranslationState;
 }) => {
   const {
     panels,
@@ -55,39 +56,27 @@ export const BodyPanel = ({
   } = useNavigation();
   const tabsRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
-  const hasTranslationContent = useMemo(() => {
-    if (!limitWhenNoTranslation) {
-      return true;
-    }
-    if (Array.isArray(body)) {
-      return body.length > 0;
-    }
-    return Boolean(body);
-  }, [body, limitWhenNoTranslation]);
-  const activeTab =
-    panels.main.tab || (hasTranslationContent ? 'translation' : 'source');
+  const hasContent = translationState === 'content';
+  const activeTab = panels.main.tab || 'translation';
+  // The translation tab is always available (it shows a placeholder message
+  // when there's no content); only redirect away from the compare tab when
+  // there's nothing to compare against.
   const safeTab =
-    !hasTranslationContent &&
-    (activeTab === 'translation' || activeTab === 'compare')
-      ? 'source'
-      : activeTab;
+    !hasContent && activeTab === 'compare' ? 'translation' : activeTab;
 
   const hasAlignments = useMemo(() => {
-    if (!hasTranslationContent) {
+    if (!hasContent) {
       return false;
     }
     const passages = body as TranslationEditorContentItem[];
     return passages.some(
       (item) => Object.keys(item.attrs?.alignments || {}).length > 0,
     );
-  }, [body, hasTranslationContent]);
+  }, [body, hasContent]);
 
   useEffect(() => {
-    if (!limitWhenNoTranslation) {
-      return;
-    }
-    setHasTranslationContent(hasTranslationContent);
-  }, [hasTranslationContent, limitWhenNoTranslation, setHasTranslationContent]);
+    setHasTranslationContent(hasContent);
+  }, [hasContent, setHasTranslationContent]);
 
   const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
     tabsRef.current = node;
@@ -139,16 +128,14 @@ export const BodyPanel = ({
         }
         updatePanel({ name: 'main', state: { open: true, tab } });
       }}
-      defaultValue={hasTranslationContent ? 'translation' : 'source'}
+      defaultValue="translation"
       className="px-12 w-full"
     >
       <div className="sticky top-0.75 -mt-28 z-10 overflow-x-auto text-center pointer-events-none me-12 sm:me-0 md:w-full">
         <TabsList className="w-fit inline-flex pointer-events-auto">
           <TabsTrigger value="front">Front</TabsTrigger>
-          {hasTranslationContent && (
-            <TabsTrigger value="translation">Translation</TabsTrigger>
-          )}
-          {hasTranslationContent && hasAlignments && (
+          <TabsTrigger value="translation">Translation</TabsTrigger>
+          {hasAlignments && (
             <TabsTrigger value="compare">Compare</TabsTrigger>
           )}
           <TabsTrigger value="source">Source</TabsTrigger>
@@ -179,14 +166,14 @@ export const BodyPanel = ({
       {/* Single editor instance shared between Translation and Compare tabs.
          Passage node views reactively show/hide the Tibetan source column
          based on the active tab from NavigationContext. */}
-      {hasTranslationContent && (
-        <TabsContent
-          value="translation"
-          forceMount
-          className={cn(
-            safeTab !== 'translation' && safeTab !== 'compare' && 'hidden',
-          )}
-        >
+      <TabsContent
+        value="translation"
+        forceMount
+        className={cn(
+          safeTab !== 'translation' && safeTab !== 'compare' && 'hidden',
+        )}
+      >
+        {hasContent ? (
           <div
             className={cn(
               'w-full mx-auto mt-8',
@@ -203,8 +190,10 @@ export const BodyPanel = ({
               hasMoreAfter: bodyHasMore,
             })}
           </div>
-        </TabsContent>
-      )}
+        ) : (
+          <TranslationPlaceholder state={translationState} />
+        )}
+      </TabsContent>
       <TabsContent
         value="source"
         forceMount

@@ -20,6 +20,14 @@ export type TabName =
   | 'glossary'
   | 'abbreviations';
 
+/**
+ * Display state for the translation tab body:
+ * - `content`: render the translation passages
+ * - `unpublished`: work is pre-1.0 and the viewer (a reader) may not view it yet
+ * - `empty`: viewer may see content, but there are no body passages
+ */
+export type TranslationState = 'content' | 'unpublished' | 'empty';
+
 export interface TitlesRenderer {
   titles: Titles;
   imprint?: Imprint;

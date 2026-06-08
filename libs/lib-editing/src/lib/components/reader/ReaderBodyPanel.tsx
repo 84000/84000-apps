@@ -1,14 +1,23 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BODY_MATTER_FILTER,
+  createBrowserClient,
   FRONT_MATTER_FILTER,
+  getSession,
+  isPublishedVersion,
+  SemVer,
   Titles as TitlesData,
+  UserRole,
 } from '@eightyfourthousand/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
 import { Titles, TitlesVariant } from '../shared/titles';
-import { TitlesRenderer, TranslationRenderer } from '../shared/types';
+import {
+  TitlesRenderer,
+  TranslationRenderer,
+  TranslationState,
+} from '../shared/types';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from './TranslationReader';
 
@@ -25,6 +34,7 @@ export const ReaderBodyPanel = ({
   body,
   frontMatterHasMore,
   bodyHasMore,
+  publicationVersion,
 }: {
   titles: TitlesData;
   frontMatter: TranslationEditorContent;
@@ -32,15 +42,36 @@ export const ReaderBodyPanel = ({
   frontMatterHasMore?: boolean;
   bodyHasMore?: boolean;
   cursor?: string;
+  publicationVersion?: SemVer;
 }) => {
+  // `undefined` while the role resolves. Gate as a reader until then so
+  // unpublished content never flashes before the role is known.
+  const [role, setRole] = useState<UserRole | undefined>(undefined);
+
+  useEffect(() => {
+    (async () => {
+      const session = await getSession({ client: createBrowserClient() });
+      // Unauthenticated visitors are treated as readers.
+      setRole(session?.claims.role ?? 'reader');
+    })();
+  }, []);
+
+  const translationState = useMemo<TranslationState>(() => {
+    const isReader = role === undefined || role === 'reader';
+    const unpublished = !isPublishedVersion(publicationVersion);
+    if (isReader && unpublished) {
+      return 'unpublished';
+    }
+    const bodyEmpty = Array.isArray(body) ? body.length === 0 : !body;
+    return bodyEmpty ? 'empty' : 'content';
+  }, [role, publicationVersion, body]);
+
   const renderTitles = useCallback(
     ({ titles, imprint, name }: TitlesRenderer) => (
       <Titles
         titles={titles}
         imprint={imprint}
-        variant={
-          (TITLE_VARIANTS_FOR_TABS[name] || 'english') as TitlesVariant
-        }
+        variant={(TITLE_VARIANTS_FOR_TABS[name] || 'english') as TitlesVariant}
       />
     ),
     [],
@@ -69,7 +100,7 @@ export const ReaderBodyPanel = ({
       bodyHasMore={bodyHasMore}
       renderTitles={renderTitles}
       renderTranslation={renderTranslation}
-      limitWhenNoTranslation={true}
+      translationState={translationState}
     />
   );
 };
