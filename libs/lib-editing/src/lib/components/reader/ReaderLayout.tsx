@@ -9,6 +9,7 @@ import {
   RightPanel,
 } from '@eightyfourthousand/design-system';
 import { EditorHeader } from '../editor/EditorHeader';
+import type { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 
 export const ReaderLayout = ({
   withHeader = false,
@@ -16,6 +17,7 @@ export const ReaderLayout = ({
   main,
   right,
   params,
+  initialToh,
   initialHasTranslationContent,
 }: {
   withHeader?: boolean;
@@ -23,12 +25,14 @@ export const ReaderLayout = ({
   main: ReactNode;
   right: ReactNode;
   params: Promise<{ slug: string }>;
+  initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
 }) => {
   const { slug } = use(params);
   return (
     <NavigationProvider
       uuid={slug}
+      initialToh={initialToh}
       initialHasTranslationContent={initialHasTranslationContent}
     >
       <ThreeColumnRenderer withHeader={withHeader} withFocusToggle>

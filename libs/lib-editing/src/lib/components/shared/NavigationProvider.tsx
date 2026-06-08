@@ -78,10 +78,12 @@ const parsePanelParams = (
 
 export const NavigationProvider = ({
   uuid,
+  initialToh,
   initialHasTranslationContent = true,
   children,
 }: {
   uuid: string;
+  initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
   children: ReactNode;
 }) => {
@@ -92,7 +94,9 @@ export const NavigationProvider = ({
     parsePanelParams(query).panels || DEFAULT_PANELS,
   );
   const isPanelTransitioning = useRef(false);
-  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>();
+  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(
+    parsePanelParams(query).toh || initialToh,
+  );
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [hasTranslationContent, setHasTranslationContent] = useState(
