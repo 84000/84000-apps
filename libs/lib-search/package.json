@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-search",
-  "version": "2026.5.5",
+  "version": "2026.6.0",
   "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
   "repository": {

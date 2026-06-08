@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/design-system",
-  "version": "2026.5.5",
+  "version": "2026.6.0",
   "description": "Shared React UI components and theme assets for 84000 applications.",
   "private": false,
   "repository": {
