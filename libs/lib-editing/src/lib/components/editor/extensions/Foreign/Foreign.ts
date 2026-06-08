@@ -31,7 +31,7 @@ export const ForeignMark = Mark.create<ForeignOptions>({
         default: 'foreign',
       },
       lang: {
-        default: undefined,
+        default: 'foreign',
       },
     };
   },
