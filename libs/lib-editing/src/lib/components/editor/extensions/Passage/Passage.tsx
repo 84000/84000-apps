@@ -237,6 +237,8 @@ const PassageComponent = (props: NodeViewProps) => {
       </div>
       <div
         className={cn('w-full', source ? '' : 'hidden', compareLeadingSpace)}
+        contentEditable={false}
+        data-compare-source
       >
         <LabeledElement className="mt-0.5">
           <div className="leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2">
