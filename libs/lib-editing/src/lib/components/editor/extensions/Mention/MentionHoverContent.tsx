@@ -3,7 +3,7 @@ import { Editor } from '@tiptap/core';
 import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { InternalLinkInput } from '../InternalLink/InternalLinkInput';
-import type { MentionItem } from './Mention';
+import type { MentionItem } from './Mention.ssr';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
