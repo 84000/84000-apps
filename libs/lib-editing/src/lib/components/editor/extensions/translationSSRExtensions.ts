@@ -30,6 +30,7 @@ import { Superscript } from './Superscript';
 import TextAlign from './TextAlign';
 import { Trailer } from './Trailer';
 import { Underline } from './Underline';
+import { TableKit } from './Table';
 
 export const translationSSRExtensions: Extensions = [
   Document,
@@ -65,6 +66,7 @@ export const translationSSRExtensions: Extensions = [
   }),
   Subscript,
   Superscript,
+  TableKit,
   TextAlign,
   Trailer,
   Underline,
