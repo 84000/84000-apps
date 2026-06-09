@@ -28,7 +28,7 @@ export const getPassage = async ({
   const dto = data as PassageDTO;
   return passageFromDTO(
     dto,
-    annotationsFromDTO(dto?.annotations || [], dto?.content.length || 0),
+    annotationsFromDTO(dto?.annotations || [], dto?.content?.length || 0),
   );
 };
 
