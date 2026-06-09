@@ -16,6 +16,7 @@ export const mention: Transformer = (ctx) => {
     isSameWork,
     subtype,
     linkToh,
+    toh,
   } = annotation as MentionAnnotation;
 
   const item = {
@@ -27,6 +28,7 @@ export const mention: Transformer = (ctx) => {
     isSameWork,
     subtype,
     linkToh,
+    toh,
   };
   recurse({
     ...ctx,

@@ -1,19 +1,20 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { safeHref } from '@eightyfourthousand/lib-utils';
+import { cn, safeHref } from '@eightyfourthousand/lib-utils';
 
 export interface MentionSSROptions {
   HTMLAttributes: Record<string, unknown>;
 }
 
-interface MentionItem {
-  uuid?: string;
-  entity?: string;
-  linkType?: string;
+export interface MentionItem {
+  uuid: string;
+  entity: string;
+  linkType: string;
   text?: string;
   displayText?: string;
   isSameWork?: boolean;
   subtype?: string;
   linkToh?: string;
+  toh?: string;
 }
 
 const isMentionItem = (value: unknown): value is MentionItem => {
@@ -63,7 +64,11 @@ export const MentionSSR = Node.create<MentionSSROptions>({
       const label = item.text || item.displayText || item.entity || '';
 
       if (!item.entity || !item.linkType) {
-        return ['span', { class: 'mention-link px-1' }, label] as unknown;
+        return [
+          'span',
+          { class: cn('mention-link px-1', item.toh) },
+          label,
+        ] as unknown;
       }
 
       const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
