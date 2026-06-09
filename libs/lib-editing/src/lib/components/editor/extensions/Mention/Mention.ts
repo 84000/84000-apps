@@ -1,18 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
-import { MentionSSR } from './Mention.ssr';
-
-export interface MentionItem {
-  uuid: string;
-  entity: string;
-  linkType: string;
-  text?: string;
-  displayText?: string;
-  isSameWork?: boolean;
-  subtype?: string;
-  linkToh?: string;
-}
+import { MentionSSR, MentionItem } from './Mention.ssr';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -34,6 +23,9 @@ export const Mention = MentionSSR.extend({
       items.forEach((item) => {
         const anchor = document.createElement('a');
         anchor.classList.add('mention-link', 'px-1');
+        if (item.toh) {
+          anchor.classList.add(item.toh);
+        }
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
         anchor.textContent = item.text || item.displayText || item.entity;
