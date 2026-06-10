@@ -1,52 +1,46 @@
 'use client';
 
-import { TohokuCatalogEntry, Work } from '@eightyfourthousand/data-access';
+import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 import { useEffect } from 'react';
 
-export const useTohToggle = ({
-  toh,
-  work,
-}: {
-  toh?: TohokuCatalogEntry;
-  work: Work;
-}) => {
+export const useTohToggle = ({ toh }: { toh?: TohokuCatalogEntry }) => {
   useEffect(() => {
-    (async () => {
-      const sheets = Array.from(document.styleSheets);
-      let sheet: CSSStyleSheet | null | undefined = [...sheets].find((s) => {
-        const node = s.ownerNode as HTMLElement | null;
-        return node?.id === 'dynamic-visibility-rules';
-      });
+    let styleEl = document.getElementById(
+      'dynamic-visibility-rules',
+    ) as HTMLStyleElement | null;
 
-      if (!sheet) {
-        const styleEl = document.createElement('style');
-        styleEl.id = 'dynamic-visibility-rules';
-        document.head.appendChild(styleEl);
-        sheet = styleEl.sheet;
-      }
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = 'dynamic-visibility-rules';
+      document.head.appendChild(styleEl);
+    }
 
-      if (!sheet) {
-        console.warn(
-          'Could not find or create stylesheet for dynamic class toggling.',
-        );
-        return;
-      }
+    const sheet = styleEl.sheet;
 
-      // Clear existing rules
-      while (sheet.cssRules.length > 0) {
-        sheet.deleteRule(0);
-      }
+    if (!sheet) {
+      console.warn(
+        'Could not find or create stylesheet for dynamic class toggling.',
+      );
+      return;
+    }
 
-      // Add new rules
-      const tohs = work.toh;
-      tohs
-        .filter((cls) => cls !== toh)
-        .forEach((cls) => {
-          sheet.insertRule(
-            `.${cls} { display: none !important; }`,
-            sheet.cssRules.length,
-          );
-        });
-    })();
-  }, [toh, work.toh]);
+    // Clear existing rules
+    while (sheet.cssRules.length > 0) {
+      sheet.deleteRule(0);
+    }
+
+    // A single rule hides every toh-scoped element that doesn't match the
+    // active toh. Attribute selectors take a quoted string, so any toh value
+    // is safe — unlike class selectors, which require valid CSS identifiers.
+    // Only quotes and backslashes need escaping inside the quoted value.
+    const escaped = toh?.replace(/["\\]/g, '\\$&');
+    const selector = escaped
+      ? `[data-toh]:not([data-toh="${escaped}"])`
+      : '[data-toh]';
+    try {
+      sheet.insertRule(`${selector} { display: none; }`, 0);
+    } catch (e) {
+      console.error('Failed to insert toh visibility rule:', e);
+    }
+  }, [toh]);
 };

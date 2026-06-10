@@ -62,17 +62,21 @@ export const MentionSSR = Node.create<MentionSSROptions>({
 
     const children = items.map((item) => {
       const label = item.text || item.displayText || item.entity || '';
+      const tohAttr = item.toh ? { 'data-toh': item.toh } : {};
 
       if (!item.entity || !item.linkType) {
         return [
           'span',
-          { class: cn('mention-link px-1', item.toh) },
+          { class: cn('mention-link px-1'), ...tohAttr },
           label,
         ] as unknown;
       }
 
       const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
-      const attrs: Record<string, string> = { class: 'mention-link px-1' };
+      const attrs: Record<string, string> = {
+        class: 'mention-link px-1',
+        ...tohAttr,
+      };
       if (item.uuid) attrs['uuid'] = item.uuid;
       if (item.entity) attrs['entity'] = item.entity;
       if (item.linkType) attrs['entity-type'] = item.linkType;
@@ -87,7 +91,11 @@ export const MentionSSR = Node.create<MentionSSROptions>({
         attrs['target'] = '_blank';
         attrs['rel'] = 'noreferrer noopener';
       } else {
-        return ['span', { class: 'mention-link px-1' }, label] as unknown;
+        return [
+          'span',
+          { class: 'mention-link px-1', ...tohAttr },
+          label,
+        ] as unknown;
       }
 
       return ['a', attrs, label] as unknown;

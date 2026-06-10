@@ -21,8 +21,12 @@ export const InternalLink = InternalLinkSSR.extend({
       const { dom } = createMarkViewDom({
         ...props,
         element: 'span',
-        className: cn(LINK_STYLE, props.mark.attrs.toh),
+        className: cn(LINK_STYLE),
       });
+
+      if (props.mark.attrs.toh) {
+        dom.setAttribute('data-toh', props.mark.attrs.toh);
+      }
 
       const {
         isSameWork,

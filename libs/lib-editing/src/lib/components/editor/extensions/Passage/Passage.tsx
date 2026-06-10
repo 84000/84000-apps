@@ -122,7 +122,8 @@ const PassageComponent = (props: NodeViewProps) => {
     <NodeViewWrapper
       id={node.attrs.uuid}
       as="div"
-      className={cn(PASSAGE_WRAPPER_CLASS, node.attrs.toh)}
+      className={cn(PASSAGE_WRAPPER_CLASS)}
+      data-toh={node.attrs.toh || undefined}
     >
       <div className="w-full">
         <div

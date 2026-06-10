@@ -53,7 +53,8 @@ export const PassageNodeSSR = Node.create({
     const references = (node.attrs.references ?? []) as PassageReference[];
 
     const wrapperAttrs = mergeAttributes(HTMLAttributes, {
-      class: [PASSAGE_WRAPPER_CLASS, toh].filter(Boolean).join(' '),
+      class: PASSAGE_WRAPPER_CLASS,
+      ...(toh ? { 'data-toh': toh } : {}),
       ...(uuid ? { id: uuid } : {}),
     });
 

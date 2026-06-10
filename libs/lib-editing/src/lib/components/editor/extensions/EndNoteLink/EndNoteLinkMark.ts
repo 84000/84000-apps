@@ -56,10 +56,11 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
           const endnoteDOM = document.createElement('sup');
           const updateAttributes = createUpdateAttributes(endnoteDOM);
           const attributes = mergeAttributes(this.options.HTMLAttributes, {
-            class: cn(className, toh, isStart ? 'me-0.75' : ''),
+            class: cn(className, isStart ? 'me-0.75' : ''),
             type: this.name,
             endNote,
             uuid,
+            ...(toh ? { 'data-toh': toh } : {}),
           });
 
           updateAttributes(attributes);
