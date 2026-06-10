@@ -8,10 +8,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@eightyfourthousand/design-system';
-import { NodeViewProps } from '@tiptap/react';
+import type { Editor } from '@tiptap/core';
 import { useNavigation } from '../../../shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Passage } from '@eightyfourthousand/data-access';
+import { findPassageNode } from '../../util';
 
 const CodeBlock = ({ code }: { code: string }) => {
   return (
@@ -23,19 +24,32 @@ const CodeBlock = ({ code }: { code: string }) => {
   );
 };
 
-export const ShowAnnotations = (props: NodeViewProps) => {
+export const ShowAnnotations = ({
+  editor,
+  uuid,
+  label,
+  type,
+}: {
+  editor: Editor;
+  uuid: string;
+  label: string;
+  type: string;
+}) => {
   const [passage, setPassage] = useState<Passage>();
   const [toggleValue, setToggleValue] = useState<string[]>(['db', 'editor']);
 
-  const { node } = props;
   const { fetchPassage } = useNavigation();
+
+  const nodeJson = useMemo(() => {
+    const found = findPassageNode(editor, uuid);
+    return found ? found.node.toJSON() : null;
+  }, [editor, uuid]);
 
   useEffect(() => {
     if (passage) {
       return;
     }
 
-    const uuid = node.attrs.uuid;
     if (!uuid) {
       return;
     }
@@ -44,7 +58,7 @@ export const ShowAnnotations = (props: NodeViewProps) => {
       const fetchedPassage = await fetchPassage(uuid);
       setPassage(fetchedPassage);
     })();
-  }, [node, passage, fetchPassage]);
+  }, [uuid, passage, fetchPassage]);
 
   return (
     <DialogContent className="size-full flex flex-col gap-4 max-h-[calc(100vh-2rem)]">
@@ -55,13 +69,13 @@ export const ShowAnnotations = (props: NodeViewProps) => {
 
       <div className="text-sm flex gap-1">
         <span className="text-primary">UUID: </span>
-        <span>{node.attrs.uuid}</span>
+        <span>{uuid}</span>
         <span className="text-muted-foreground px-2">{'|'}</span>
         <span className="text-primary">Label:</span>
-        <span>{node.attrs.label}</span>
+        <span>{label}</span>
         <span className="text-muted-foreground px-2">{'|'}</span>
         <span className="text-primary">Type:</span>
-        <span>{node.attrs.type}</span>
+        <span>{type}</span>
       </div>
 
       <ToggleGroup
@@ -84,7 +98,7 @@ export const ShowAnnotations = (props: NodeViewProps) => {
           ))}
 
         {toggleValue.includes('editor') && (
-          <CodeBlock code={JSON.stringify(node, null, 2)} />
+          <CodeBlock code={JSON.stringify(nodeJson, null, 2)} />
         )}
       </div>
     </DialogContent>

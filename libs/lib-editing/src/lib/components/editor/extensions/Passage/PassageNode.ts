@@ -1,16 +1,68 @@
-import { Node } from '@tiptap/core';
-import { ReactNodeViewRenderer, mergeAttributes } from '@tiptap/react';
-import { Passage } from './Passage';
+import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
-import { Fragment, ResolvedPos } from '@tiptap/pm/model';
+import type { EditorView } from '@tiptap/pm/view';
+import { Fragment, type Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
 import { incrementLabel } from './label';
+import { PassageNodeSSR } from './PassageNode.ssr';
+import {
+  PASSAGE_CONTENT_CLASS,
+  PASSAGE_INNER_CLASS,
+  PASSAGE_LABEL_CLASS,
+  PASSAGE_REFERENCES_CLASS,
+  PASSAGE_WRAPPER_CLASS,
+} from './classes';
+
+type PassageReference = {
+  uuid: string;
+  label: string | null;
+  sort: number;
+  type: string;
+};
+
+const BOOKMARK_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     passage: {
       normalizeLabelsAfter: () => ReturnType;
       splitPassage: () => ReturnType;
+      setPassageLabel: (uuid: string, label: string) => ReturnType;
     };
+  }
+}
+
+export type PassageMenuPayload = {
+  uuid: string;
+  rect: {
+    top: number;
+    left: number;
+    bottom: number;
+    right: number;
+    width: number;
+    height: number;
+  };
+};
+
+export type PassageChrome = {
+  toh?: string;
+  isCompare: boolean;
+  bookmarkedUuids: Set<string>;
+};
+
+export type PassageStorage = {
+  // Registered by the stable PassageMenuOverlay so the click plugin can open it.
+  openMenu?: (payload: PassageMenuPayload) => void;
+  navigateRef?: (ref: { uuid: string; type: string }) => void;
+  // Navigation-derived state used to populate the compare-source / bookmark
+  // chrome, plus a function (installed by the view plugin) to re-sync on demand.
+  chrome?: PassageChrome;
+  refreshChrome?: () => void;
+};
+
+declare module '@tiptap/core' {
+  interface Storage {
+    passage: PassageStorage;
   }
 }
 
@@ -43,93 +95,210 @@ const selectionInCompareSource = () => {
 // copies the selected Tibetan text.
 const handleCompareSourceClipboard = () => selectionInCompareSource();
 
-export const PassageNode = Node.create({
-  name: 'passage',
-  group: 'block',
-  content: 'block+',
-  parseHTML() {
-    return [
-      {
-        tag: 'passage',
-      },
-    ];
-  },
-  addAttributes() {
+const compareLeadingSpaceClass = (node: PMNode): string => {
+  const firstChild = node.content.firstChild;
+  if (firstChild?.attrs.hasLeadingSpace) return 'md:mt-5';
+  if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
+    return 'md:mt-2';
+  }
+  return 'md:mt-1';
+};
+
+// Imperatively populates the per-passage chrome (compare-mode Tibetan source and
+// the reader bookmark icon) that lives outside ProseMirror's editable content.
+// Driven by editor.storage.passage.chrome, refreshed on transactions and on
+// explicit navigation changes (via refreshChrome).
+const syncPassageChrome = (view: EditorView, editor: Editor, force = false) => {
+  const chrome = editor.storage.passage?.chrome;
+  const toh = chrome?.toh;
+  const isCompare = !!chrome?.isCompare;
+  const bookmarked = chrome?.bookmarkedUuids ?? new Set<string>();
+  const editable = editor.isEditable;
+
+  const needsWork = isCompare || (!editable && bookmarked.size > 0);
+  if (!needsWork && !force) return;
+
+  view.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'passage') return true;
+    const dom = view.nodeDOM(pos);
+    if (!dom || dom.nodeType !== 1) return false;
+    const el = dom as HTMLElement;
+
+    // Writes here mutate the node's DOM, which ProseMirror's mutation observer
+    // watches — so only touch the DOM when the desired state actually differs,
+    // otherwise redundant writes trigger an update→mutate→update feedback loop.
+    const csDiv = el.querySelector<HTMLElement>(
+      ':scope > .passage-compare-source',
+    );
+    const csText = csDiv?.querySelector<HTMLElement>('.passage-compare-text');
+    if (csDiv && csText) {
+      const alignment = node.attrs.alignments?.[toh ?? ''] as
+        | { tibetan?: string }
+        | undefined;
+      const tibetan = isCompare && toh ? (alignment?.tibetan ?? '').trim() : '';
+      if (csText.textContent !== tibetan) csText.textContent = tibetan;
+      const shouldHide = !tibetan;
+      if (csDiv.classList.contains('hidden') !== shouldHide) {
+        csDiv.classList.toggle('hidden', shouldHide);
+      }
+      const leading = tibetan ? compareLeadingSpaceClass(node) : 'md:mt-1';
+      for (const cls of ['md:mt-1', 'md:mt-2', 'md:mt-5']) {
+        const want = cls === leading;
+        if (csDiv.classList.contains(cls) !== want) {
+          csDiv.classList.toggle(cls, want);
+        }
+      }
+    }
+
+    const bm = el.querySelector<HTMLElement>(':scope .passage-bookmark');
+    if (bm) {
+      const uuid = node.attrs.uuid as string | undefined;
+      const show = !editable && !!uuid && bookmarked.has(uuid);
+      if (bm.classList.contains('hidden') === show) {
+        bm.classList.toggle('hidden', !show);
+      }
+    }
+
+    return false;
+  });
+};
+
+export const PassageNode = PassageNodeSSR.extend({
+  addStorage(): PassageStorage {
     return {
-      label: {
-        default: null,
-        parseHTML: (element) => element.getAttribute('label'),
-        renderHTML: (attributes) => {
-          return mergeAttributes(attributes, {
-            label: attributes.label,
-          });
-        },
-      },
-      sort: {
-        default: 0,
-        parseHTML: (element) => element.getAttribute('sort'),
-        renderHTML: (attributes) => {
-          return mergeAttributes(attributes, {
-            sort: attributes.sort,
-          });
-        },
-      },
-      alignments: {
-        default: {},
-      },
-      references: {
-        default: [],
-      },
+      openMenu: undefined,
+      navigateRef: undefined,
+      chrome: undefined,
+      refreshChrome: undefined,
     };
   },
-  renderHTML({ HTMLAttributes }) {
-    return ['passage', mergeAttributes(HTMLAttributes), 0];
-  },
+
+  // A plain DOM node view (no React) — so interacting with a passage never
+  // remounts a React tree the way the old ReactNodeViewRenderer did. The
+  // interactive menu/dialogs live in the stable PassageMenuOverlay; the
+  // compare-source / bookmark chrome is built here and populated by the view
+  // plugin in addProseMirrorPlugins. ignoreMutation shields that chrome from
+  // ProseMirror's mutation observer so syncing it never triggers a reparse loop.
   addNodeView() {
-    return ReactNodeViewRenderer(Passage, {
-      ignoreMutation: ({ mutation }) => {
-        const target = mutation.target;
-        // nodeType 3 === text node; resolve to its parent element so we can
-        // match against the surrounding DOM.
-        const el =
-          target.nodeType === 3
-            ? target.parentElement
-            : (target as HTMLElement);
+    return ({ node }) => {
+      let current = node;
 
-        // The read-only Tibetan source shown in compare mode lives outside the
-        // content DOM. Let the browser keep its native selection there (and
-        // ignore React-driven DOM updates in that region) so the text can be
-        // selected and copied; ProseMirror otherwise resets the selection back
-        // into the editable content.
-        if (el?.closest('[data-compare-source]')) {
+      const wrapper = document.createElement('div');
+      wrapper.className = PASSAGE_WRAPPER_CLASS;
+
+      const applyWrapperAttrs = (n: PMNode) => {
+        if (n.attrs.uuid) wrapper.id = n.attrs.uuid;
+        if (n.attrs.toh) wrapper.setAttribute('data-toh', n.attrs.toh);
+        else wrapper.removeAttribute('data-toh');
+        if (n.attrs.type) wrapper.setAttribute('data-passage-type', n.attrs.type);
+        else wrapper.removeAttribute('data-passage-type');
+        if (n.attrs.invalid) wrapper.setAttribute('data-invalid', 'true');
+        else wrapper.removeAttribute('data-invalid');
+      };
+      applyWrapperAttrs(node);
+
+      const column = document.createElement('div');
+      column.className = 'w-full';
+      const inner = document.createElement('div');
+      inner.className = PASSAGE_INNER_CLASS;
+
+      // Label doubles as the dropdown trigger (handled by the click plugin).
+      const label = document.createElement('div');
+      label.className = PASSAGE_LABEL_CLASS;
+      label.setAttribute('contenteditable', 'false');
+      label.setAttribute('data-passage-label', '');
+      if (node.attrs.uuid) label.setAttribute('data-uuid', node.attrs.uuid);
+      label.textContent = node.attrs.label || '';
+
+      const bookmark = document.createElement('div');
+      bookmark.className =
+        'passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end';
+      bookmark.setAttribute('contenteditable', 'false');
+      bookmark.innerHTML = BOOKMARK_SVG;
+
+      const content = document.createElement('div');
+      content.className = PASSAGE_CONTENT_CLASS;
+
+      inner.append(label, bookmark, content);
+
+      const buildReferences = (n: PMNode): HTMLElement | null => {
+        const references = (n.attrs.references ?? []) as PassageReference[];
+        if (!references.length) return null;
+        const div = document.createElement('div');
+        div.className = PASSAGE_REFERENCES_CLASS;
+        div.setAttribute('contenteditable', 'false');
+        references.forEach((ref, index) => {
+          if (index > 0) div.append(document.createTextNode(', '));
+          const a = document.createElement('a');
+          a.href = `#${ref.uuid}`;
+          a.setAttribute('data-passage-reference', '');
+          a.setAttribute('data-ref-uuid', ref.uuid);
+          a.setAttribute('data-ref-type', ref.type);
+          a.textContent = ref.label || ref.uuid.slice(0, 6);
+          div.append(a);
+        });
+        return div;
+      };
+      let referencesEl = buildReferences(node);
+      if (referencesEl) inner.append(referencesEl);
+
+      column.append(inner);
+
+      // Second flex column: compare-mode Tibetan source (hidden until synced).
+      const compare = document.createElement('div');
+      compare.className = 'passage-compare-source w-full hidden md:mt-1';
+      compare.setAttribute('contenteditable', 'false');
+      compare.setAttribute('data-compare-source', '');
+      const compareInner = document.createElement('div');
+      compareInner.className = 'passage pl-6 @c/sidebar:pl-4';
+      const compareText = document.createElement('div');
+      compareText.className =
+        'passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2';
+      compareInner.append(compareText);
+      compare.append(compareInner);
+
+      wrapper.append(column, compare);
+
+      return {
+        dom: wrapper,
+        contentDOM: content,
+        update: (updated: PMNode) => {
+          if (updated.type.name !== 'passage') return false;
+          applyWrapperAttrs(updated);
+
+          const nextLabel = updated.attrs.label || '';
+          if (label.textContent !== nextLabel) label.textContent = nextLabel;
+          const nextUuid = (updated.attrs.uuid as string) || '';
+          if (label.getAttribute('data-uuid') !== nextUuid) {
+            label.setAttribute('data-uuid', nextUuid);
+          }
+
+          const prevRefs = JSON.stringify(current.attrs.references ?? []);
+          const nextRefs = JSON.stringify(updated.attrs.references ?? []);
+          if (prevRefs !== nextRefs) {
+            referencesEl?.remove();
+            referencesEl = buildReferences(updated);
+            if (referencesEl) inner.append(referencesEl);
+          }
+
+          current = updated;
           return true;
-        }
-
-        // Defer to ProseMirror for everything inside the editable content.
-        return false;
-      },
-    });
-  },
-  addProseMirrorPlugins() {
-    return [
-      new Plugin({
-        key: new PluginKey('passageCompareSourceClipboard'),
-        props: {
-          handleDOMEvents: {
-            // The Tibetan source in compare mode lives outside the document
-            // (it is not part of ProseMirror's content). ProseMirror's built-in
-            // copy/cut handler would otherwise overwrite the clipboard with the
-            // serialized document selection. When the native selection sits
-            // inside the compare source, return true so ProseMirror skips its
-            // handler without preventing default — letting the browser perform
-            // its native copy of the selected Tibetan text.
-            copy: handleCompareSourceClipboard,
-            cut: handleCompareSourceClipboard,
-          },
         },
-      }),
-    ];
+        // Ignore everything in the non-editable chrome (label/bookmark/compare
+        // source) and defer to ProseMirror only for the editable content hole.
+        // This must include selection-type records: ignoring them leaves the
+        // browser's native selection in place so the Tibetan compare source can
+        // be selected/copied, instead of ProseMirror pulling the selection back
+        // into the editable content. It also keeps the view plugin's chrome
+        // writes from triggering a mutation→reparse loop.
+        ignoreMutation: (mutation: MutationRecord | { type: string }) => {
+          const target = (mutation as MutationRecord).target as Node | null;
+          return !target || !content.contains(target);
+        },
+      };
+    };
   },
+
   addCommands() {
     return {
       normalizeLabelsAfter:
@@ -137,8 +306,6 @@ export const PassageNode = Node.create({
         ({ dispatch, tr }) => {
           if (!dispatch) return true;
 
-          // Use tr.selection so this works correctly when chained after commands
-          // like joinBackward that have already modified the document.
           const { $from } = tr.selection;
           const passageDepth = currentPassageDepth($from);
           if (passageDepth === null) return false;
@@ -178,15 +345,14 @@ export const PassageNode = Node.create({
             }
 
             const targetParts = targetLabel.split('.');
-            if (targetParts.length < numParts) break; // shallower → out of scope
+            if (targetParts.length < numParts) break;
             if (targetParts.length > numParts) {
-              // deeper → skip sub-passage
               pos += child.nodeSize;
               continue;
             }
-            if (!targetLabel.startsWith(currentPrefixWithDot)) break; // different prefix
+            if (!targetLabel.startsWith(currentPrefixWithDot)) break;
 
-            if (targetLabel === expectedNext) break; // already contiguous
+            if (targetLabel === expectedNext) break;
 
             tr.setNodeMarkup(pos, null, {
               ...child.attrs,
@@ -200,26 +366,24 @@ export const PassageNode = Node.create({
           if (changed) dispatch(tr);
           return true;
         },
+
       splitPassage:
         () =>
         ({ state, dispatch }) => {
           const { selection } = state;
           const { $from } = selection;
 
-          // Find the passage node that contains the current selection
           const passageDepth = currentPassageDepth($from);
           if (passageDepth === null) {
             return false;
           }
 
           const passageNode = $from.node(passageDepth);
-          const passageStart = $from.start(passageDepth) - 1; // -1 to include the passage node itself
-          const passageEnd = $from.end(passageDepth) + 1; // +1 to include the passage node itself
+          const passageStart = $from.start(passageDepth) - 1;
+          const passageEnd = $from.end(passageDepth) + 1;
 
-          // Get the position within the passage content
           const posInPassage = $from.pos - $from.start(passageDepth);
 
-          // Split the passage content
           const beforeContent = passageNode.content.cut(0, posInPassage);
           const afterContent = passageNode.content.cut(posInPassage);
 
@@ -227,15 +391,13 @@ export const PassageNode = Node.create({
 
           const tr = state.tr;
 
-          // Replace current passage with first part
           tr.replaceWith(
             passageStart,
             passageEnd,
             state.schema.nodes.passage.create(passageNode.attrs, beforeContent),
           );
 
-          // Calculate where to insert the new passage
-          const newPassagePos = passageStart + beforeContent.size + 2; // +2 for passage wrapper
+          const newPassagePos = passageStart + beforeContent.size + 2;
           const oldAttrs = passageNode.attrs;
           const attrs = {
             ...oldAttrs,
@@ -243,13 +405,11 @@ export const PassageNode = Node.create({
             sort: oldAttrs.sort + 1,
             label: incrementLabel(oldAttrs.label),
           };
-          // Insert new passage with remaining content
           tr.insert(
             newPassagePos,
             state.schema.nodes.passage.create(attrs, afterContent),
           );
 
-          // move the cursor to the new paragraph
           const $pos = tr.doc.resolve(newPassagePos + 1);
           const newSelection =
             TextSelection.findFrom($pos, 1, true) || Selection.near($pos, 1);
@@ -260,15 +420,122 @@ export const PassageNode = Node.create({
           dispatch(tr);
           return true;
         },
+
+      setPassageLabel:
+        (uuid: string, label: string) =>
+        ({ tr, state, dispatch }) => {
+          let target: { pos: number; node: PMNode } | undefined;
+          state.doc.descendants((node, pos) => {
+            if (target) return false;
+            if (node.type.name === 'passage' && node.attrs.uuid === uuid) {
+              target = { pos, node };
+              return false;
+            }
+            return true;
+          });
+          if (!target) return false;
+          if (!dispatch) return true;
+          tr.setNodeMarkup(target.pos, undefined, {
+            ...target.node.attrs,
+            label,
+          });
+          dispatch(tr);
+          return true;
+        },
     };
   },
+
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+
+    return [
+      new Plugin({
+        key: new PluginKey('passageCompareSourceClipboard'),
+        props: {
+          handleDOMEvents: {
+            copy: handleCompareSourceClipboard,
+            cut: handleCompareSourceClipboard,
+          },
+        },
+      }),
+
+      // Opens the stable menu overlay when a passage label is pressed, and
+      // routes reference-link clicks to navigation — without letting
+      // ProseMirror move the selection (which previously remounted the view).
+      new Plugin({
+        key: new PluginKey('passageMenuClick'),
+        props: {
+          handleDOMEvents: {
+            mousedown: (_view, event) => {
+              const target = event.target as HTMLElement | null;
+              if (!target) return false;
+
+              const refEl = target.closest<HTMLElement>(
+                '[data-passage-reference]',
+              );
+              if (refEl) {
+                event.preventDefault();
+                editor.storage.passage?.navigateRef?.({
+                  uuid: refEl.getAttribute('data-ref-uuid') || '',
+                  type: refEl.getAttribute('data-ref-type') || '',
+                });
+                return true;
+              }
+
+              const labelEl = target.closest<HTMLElement>(
+                '[data-passage-label]',
+              );
+              if (labelEl) {
+                event.preventDefault();
+                const rect = labelEl.getBoundingClientRect();
+                editor.storage.passage?.openMenu?.({
+                  uuid: labelEl.getAttribute('data-uuid') || '',
+                  rect: {
+                    top: rect.top,
+                    left: rect.left,
+                    bottom: rect.bottom,
+                    right: rect.right,
+                    width: rect.width,
+                    height: rect.height,
+                  },
+                });
+                return true;
+              }
+
+              return false;
+            },
+          },
+        },
+      }),
+
+      // Syncs the compare-source text and bookmark icon (chrome that lives
+      // outside the editable content) from navigation state.
+      new Plugin({
+        key: new PluginKey('passageChrome'),
+        view: (editorView) => {
+          const run = (force: boolean) =>
+            syncPassageChrome(editorView, editor, force);
+          run(true);
+          editor.storage.passage.refreshChrome = () => run(true);
+          return {
+            update: () => run(false),
+            destroy: () => {
+              if (editor.storage.passage) {
+                editor.storage.passage.refreshChrome = undefined;
+              }
+            },
+          };
+        },
+      }),
+    ];
+  },
+
   addKeyboardShortcuts() {
     return {
       Backspace: () =>
         this.editor.commands.first(({ commands }) => [
           () => commands.undoInputRule(),
           () => {
-            // Only intercept at the very start of a passage's content
             const { $from } = this.editor.state.selection;
             const passageDepth = currentPassageDepth($from);
             if (passageDepth === null) return false;
@@ -280,10 +547,6 @@ export const PassageNode = Node.create({
             return joined;
           },
         ]),
-      // Enter in an empty textblock that is a direct child of a passage
-      // splits the passage at that block's boundary, dropping the empty
-      // block, so pressing Enter twice at the end of a passage creates a
-      // new one without leaving an empty paragraph behind.
       Enter: () => {
         const { state, view } = this.editor;
         const { selection, schema } = state;
@@ -293,14 +556,10 @@ export const PassageNode = Node.create({
         const passageDepth = currentPassageDepth($from);
         if (passageDepth === null) return false;
 
-        // Only trigger when the cursor's parent textblock is a direct child
-        // of the passage — not nested inside a list, line group, table, etc.
         if ($from.depth !== passageDepth + 1) return false;
         if ($from.parent.content.size !== 0) return false;
 
         const passageNode = $from.node(passageDepth);
-        // If the empty block is the only child, splitting would just produce
-        // two empty passages — defer to default behavior.
         if (passageNode.childCount <= 1) return false;
 
         const passageStart = $from.start(passageDepth) - 1;
@@ -323,8 +582,6 @@ export const PassageNode = Node.create({
           label: incrementLabel(oldAttrs.label),
         };
 
-        // createAndFill auto-fills missing required content (e.g. an empty
-        // afterContent gets a default paragraph) so the new passage is valid.
         const firstPassage = passageType.createAndFill(
           oldAttrs,
           Fragment.fromArray(beforeChildren),
@@ -353,3 +610,5 @@ export const PassageNode = Node.create({
     };
   },
 });
+
+export default PassageNode;
