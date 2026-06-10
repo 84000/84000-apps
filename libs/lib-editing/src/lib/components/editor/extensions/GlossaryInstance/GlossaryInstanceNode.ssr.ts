@@ -38,7 +38,7 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
   },
 
   renderHTML({ mark, HTMLAttributes }) {
-    const { authority, glossary, uuid } = mark.attrs as Record<
+    const { authority, glossary, uuid, toh } = mark.attrs as Record<
       string,
       string | undefined
     >;
@@ -47,6 +47,7 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
       class: 'glossary-instance',
       type: 'glossaryInstance',
     };
+    if (toh) attrs['data-toh'] = toh;
     if (authority) attrs['authority'] = authority;
     if (glossary) attrs['glossary'] = glossary;
     if (uuid) attrs['uuid'] = uuid;

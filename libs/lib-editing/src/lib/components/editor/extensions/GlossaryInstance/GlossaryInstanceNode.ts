@@ -22,8 +22,12 @@ export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
       const { dom } = createMarkViewDom({
         ...props,
         element: 'span',
-        className: cn('glossary-instance', props.mark.attrs.toh),
+        className: cn('glossary-instance'),
       });
+
+      if (props.mark.attrs.toh) {
+        dom.setAttribute('data-toh', props.mark.attrs.toh);
+      }
 
       // Set attributes for HoverCardProvider identification
       if (props.mark.attrs.uuid) {

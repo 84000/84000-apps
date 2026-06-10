@@ -24,7 +24,7 @@ export const Mention = MentionSSR.extend({
         const anchor = document.createElement('a');
         anchor.classList.add('mention-link', 'px-1');
         if (item.toh) {
-          anchor.classList.add(item.toh);
+          anchor.setAttribute('data-toh', item.toh);
         }
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)

@@ -36,7 +36,8 @@ const renderEndNoteLinkMark = ({
   notes.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
 
   const supHtml = (n: EndNoteItem, marginClass: string) => {
-    const cls = cn('end-note-link', n.toh, marginClass);
+    const cls = cn('end-note-link', marginClass);
+    const tohAttr = n.toh ? ` data-toh="${escapeHTMLAttribute(n.toh)}"` : '';
     const itemLabel = escapeHTML(n.label?.split('.').pop() || '');
     // Glue the marker to the text it's attached to with a word joiner (U+2060)
     // so it never wraps to a new line away from its content: after the text for
@@ -45,6 +46,7 @@ const renderEndNoteLinkMark = ({
       n.location === 'start' ? `${itemLabel}⁠` : `⁠${itemLabel}`;
     return (
       `<sup class="${escapeHTMLAttribute(cls)}"` +
+      tohAttr +
       ` type="endNoteLink"` +
       ` endNote="${escapeHTMLAttribute(n.endNote)}"` +
       ` uuid="${escapeHTMLAttribute(n.uuid)}">` +

@@ -20,7 +20,7 @@ export const LeftPanel = ({
 }) => {
   const { panels, toh, updatePanel, setToh } = useNavigation();
   const isMobile = useIsMobile();
-  useTohToggle({ work, toh });
+  useTohToggle({ toh });
 
   useEffect(() => {
     const currentToh = toh || work.toh[0] || '';

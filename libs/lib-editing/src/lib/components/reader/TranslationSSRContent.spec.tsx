@@ -168,6 +168,10 @@ describe('TranslationSSRContent', () => {
       /<sup[^>]*me-0\.75[^>]*endNote="en-1"[^>]*>a⁠<\/sup>marked/,
     );
     expect(html).toMatch(/marked<sup[^>]*endNote="en-2"[^>]*>⁠b<\/sup>/);
+    // Toh-scoped sups carry a data-toh attribute so the reader's visibility
+    // rule can hide markers belonging to inactive toh variants.
+    expect(html).toMatch(/<sup[^>]*data-toh="toh1"[^>]*endNote="en-1"/);
+    expect(html).toMatch(/<sup[^>]*data-toh="toh1"[^>]*endNote="en-2"/);
   });
 
   it('renders endNoteLink marks with only end-positioned sups', () => {

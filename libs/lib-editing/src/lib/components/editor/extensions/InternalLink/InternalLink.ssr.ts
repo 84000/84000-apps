@@ -62,12 +62,14 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
       isSameWork,
       subtype,
       linkToh,
+      toh,
     } = mark.attrs as Record<string, string | boolean | undefined>;
 
     const attrs: Record<string, string> = {
       class: cn(LINK_STYLE),
       type: 'internalLink',
     };
+    if (toh) attrs['data-toh'] = String(toh);
     if (entity) attrs['entity'] = String(entity);
     if (entityType) attrs['entity-type'] = String(entityType);
     if (uuid) attrs['uuid'] = String(uuid);
