@@ -588,7 +588,9 @@ export const EditorContextProvider = ({
         isNavigating,
       }}
     >
-      <NavigationProvider uuid={work.uuid}>{children}</NavigationProvider>
+      <NavigationProvider uuid={work.uuid} initialToh={work.toh[0]}>
+        {children}
+      </NavigationProvider>
       <Toaster />
     </EditorContext.Provider>
   );

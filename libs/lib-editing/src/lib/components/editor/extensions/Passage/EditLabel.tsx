@@ -7,28 +7,34 @@ import {
   DialogTitle,
   Input,
 } from '@eightyfourthousand/design-system';
-import { NodeViewProps } from '@tiptap/react';
+import type { Editor } from '@tiptap/core';
 import { ChangeEvent, useCallback, useState } from 'react';
 
 export const EditLabel = ({
-  node,
-  updateAttributes,
+  editor,
+  uuid,
+  label,
   close,
-}: NodeViewProps & { close: () => void }) => {
-  const [newLabel, setNewLabel] = useState(node.attrs.label || '');
+}: {
+  editor: Editor;
+  uuid: string;
+  label: string;
+  close: () => void;
+}) => {
+  const [newLabel, setNewLabel] = useState(label || '');
   const updateNewLabel = (event: ChangeEvent<HTMLInputElement>) => {
     setNewLabel(event.target.value);
   };
 
   const save = useCallback(() => {
-    updateAttributes({ label: newLabel });
+    editor.commands.setPassageLabel(uuid, newLabel);
     close();
-  }, [newLabel, updateAttributes, close]);
+  }, [editor, uuid, newLabel, close]);
 
   return (
     <DialogContent className="sm:max-w-lg">
       <DialogTitle>Edit Passage Label</DialogTitle>
-      <DialogDescription>{`Update the label for passage ${node.attrs.label}`}</DialogDescription>
+      <DialogDescription>{`Update the label for passage ${label}`}</DialogDescription>
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback } from 'react';
-import { NodeViewProps } from '@tiptap/react';
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -13,25 +12,23 @@ import {
 } from '@eightyfourthousand/data-access';
 
 export const EditorOptions = ({
-  node,
+  uuid,
   contentType,
   onSelection,
-}: NodeViewProps & {
+}: {
+  uuid: string;
   contentType: PanelContentType;
   onSelection: (item: string) => void;
 }) => {
   const copyLink = useCallback(() => {
-    const hash = node.attrs.uuid;
-    const location = window.location;
-
     const link = urlForPanelContent({
-      location,
-      hash,
+      location: window.location,
+      hash: uuid,
       contentType,
     });
 
     navigator.clipboard.writeText(link);
-  }, [node.attrs.uuid, contentType]);
+  }, [uuid, contentType]);
 
   return (
     <>

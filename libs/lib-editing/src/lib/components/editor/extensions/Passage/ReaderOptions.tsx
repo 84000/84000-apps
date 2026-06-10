@@ -8,31 +8,25 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@eightyfourthousand/design-system';
-import { NodeViewProps } from '@tiptap/react';
 import { BookmarkIcon, CopyIcon, MessageSquareIcon } from 'lucide-react';
 import { useCallback } from 'react';
 
-export const ReaderOptions = (
-  props: NodeViewProps & {
-    contentType: PanelContentType;
-    isBookmarked?: boolean;
-    toggleBookmark?: () => void;
-    onSuggestRevision?: () => void;
-  },
-) => {
+export const ReaderOptions = (props: {
+  uuid: string;
+  contentType: PanelContentType;
+  isBookmarked?: boolean;
+  toggleBookmark?: () => void;
+  onSuggestRevision?: () => void;
+}) => {
   const copyLink = useCallback(() => {
-    const uuid = props.node.attrs.uuid;
-    const contentType = props.contentType;
-    const location = window.location;
-
     const link = urlForEntity({
-      location,
-      uuid,
-      contentType,
+      location: window.location,
+      uuid: props.uuid,
+      contentType: props.contentType,
     });
 
     navigator.clipboard.writeText(link);
-  }, [props.node.attrs.uuid, props.contentType]);
+  }, [props.uuid, props.contentType]);
 
   return (
     <>
