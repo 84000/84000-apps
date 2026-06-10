@@ -284,11 +284,14 @@ export const PassageNode = PassageNodeSSR.extend({
           current = updated;
           return true;
         },
-        // Ignore mutations to the non-editable chrome (label/bookmark/compare),
-        // which the view plugin mutates; only defer to ProseMirror for the
-        // editable content hole.
+        // Ignore everything in the non-editable chrome (label/bookmark/compare
+        // source) and defer to ProseMirror only for the editable content hole.
+        // This must include selection-type records: ignoring them leaves the
+        // browser's native selection in place so the Tibetan compare source can
+        // be selected/copied, instead of ProseMirror pulling the selection back
+        // into the editable content. It also keeps the view plugin's chrome
+        // writes from triggering a mutation→reparse loop.
         ignoreMutation: (mutation: MutationRecord | { type: string }) => {
-          if (mutation.type === 'selection') return false;
           const target = (mutation as MutationRecord).target as Node | null;
           return !target || !content.contains(target);
         },
