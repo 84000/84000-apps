@@ -52,10 +52,29 @@ export type HeadingClass =
   | 'supplementary'
   | 'table-label';
 
+export type TextAlignValue = 'left' | 'right' | 'center' | 'justify';
+
+const TEXT_ALIGN_VALUES: TextAlignValue[] = [
+  'left',
+  'right',
+  'center',
+  'justify',
+];
+
+// Normalizes a raw alignment value (e.g. TipTap's `textAlign` node attr or a
+// jsonb `align` content value). Returns undefined for the default `left` and any
+// missing/unrecognized value, so we never persist redundant alignment.
+export const normalizeAlign = (value: unknown): TextAlignValue | undefined => {
+  return TEXT_ALIGN_VALUES.includes(value as TextAlignValue)
+    ? (value as TextAlignValue)
+    : undefined;
+};
+
 export type HeadingAnnotation = AnnotationBase & {
   type: 'heading';
   level: number;
   class?: HeadingClass;
+  align?: TextAlignValue;
 };
 
 export type ImageAnnotation = AnnotationBase & {
@@ -131,6 +150,7 @@ export type MentionAnnotation = AnnotationBase & {
 
 export type ParagraphAnnotation = AnnotationBase & {
   type: 'paragraph';
+  align?: TextAlignValue;
 };
 
 export type QuoteAnnotation = AnnotationBase & {

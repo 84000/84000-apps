@@ -1,4 +1,7 @@
-import { ParagraphAnnotation } from '@eightyfourthousand/data-access';
+import {
+  ParagraphAnnotation,
+  normalizeAlign,
+} from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const paragraph: Exporter<ParagraphAnnotation> = ({
@@ -22,11 +25,14 @@ export const paragraph: Exporter<ParagraphAnnotation> = ({
     return undefined;
   }
 
+  const align = normalizeAlign(node.attrs.textAlign);
+
   return {
     uuid,
     type: 'paragraph',
     passageUuid,
     start,
     end: start + textContent.length,
+    ...(align ? { align } : {}),
   };
 };

@@ -6,6 +6,7 @@ import {
   HeadingClass,
   baseAnnotationFromDTO,
   baseAnnotationToDto,
+  normalizeAlign,
 } from './annotation';
 
 export const transformer: AnnotationTransformer = (dto): HeadingAnnotation => {
@@ -21,6 +22,11 @@ export const transformer: AnnotationTransformer = (dto): HeadingAnnotation => {
     if (content['heading-type']) {
       heading.class = content['heading-type'] as HeadingClass;
     }
+
+    const align = normalizeAlign(content['align']);
+    if (align) {
+      heading.align = align;
+    }
   });
 
   return heading;
@@ -33,5 +39,10 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     'heading-level': `h${level}`,
     ...(headingClass ? { 'heading-type': headingClass } : {}),
   });
+
+  const align = normalizeAlign((annotation as HeadingAnnotation).align);
+  if (align) {
+    dto.content.push({ align });
+  }
   return dto;
 };

@@ -1,4 +1,7 @@
-import { HeadingAnnotation } from '@eightyfourthousand/data-access';
+import {
+  HeadingAnnotation,
+  normalizeAlign,
+} from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const heading: Exporter<HeadingAnnotation> = ({
@@ -10,6 +13,7 @@ export const heading: Exporter<HeadingAnnotation> = ({
   const uuid = node.attrs.uuid;
   const level = (node.attrs.level as number) || 1;
   const cls = node.attrs.class;
+  const align = normalizeAlign(node.attrs.textAlign);
 
   if (!textContent) {
     console.warn(`Heading node ${uuid} is incomplete`);
@@ -24,5 +28,6 @@ export const heading: Exporter<HeadingAnnotation> = ({
     end: start + textContent.length,
     level,
     class: cls,
+    ...(align ? { align } : {}),
   };
 };
