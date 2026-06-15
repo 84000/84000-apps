@@ -175,7 +175,8 @@ export type AnnotationDTOContentKey =
   | 'uuid'
   | 'same_work'
   | 'subtype'
-  | 'toh';
+  | 'toh'
+  | 'whitespace';
 
 export type AnnotationDTOContent = Partial<
   Record<AnnotationDTOContentKey, unknown>

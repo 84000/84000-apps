@@ -12,7 +12,7 @@ import { TranslationTextButtons } from './selectors/TranslationTextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { TranslationNodeSelector } from './selectors/TranslationNodeSelector';
 import { useDismissBubbleMenu } from './useDismissBubbleMenu';
-import { TextAlignSelector } from './selectors';
+import { TextAlignSelector, WhitespaceSelector } from './selectors';
 
 export const TranslationBubbleMenu = ({
   editor,
@@ -58,6 +58,7 @@ export const TranslationBubbleMenu = ({
         <div className="flex">
           <TranslationNodeSelector editor={editor} />
           <TextAlignSelector editor={editor} />
+          <WhitespaceSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
           <ParagraphButtons editor={editor} />
           <Separator orientation="vertical" className="h-10" />

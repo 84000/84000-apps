@@ -70,6 +70,34 @@ export const normalizeAlign = (value: unknown): TextAlignValue | undefined => {
     : undefined;
 };
 
+export type WhitespaceValue =
+  | 'normal'
+  | 'nowrap'
+  | 'pre'
+  | 'pre-wrap'
+  | 'pre-line'
+  | 'break-spaces';
+
+const WHITESPACE_VALUES: WhitespaceValue[] = [
+  'normal',
+  'nowrap',
+  'pre',
+  'pre-wrap',
+  'pre-line',
+  'break-spaces',
+];
+
+// Normalizes a raw white-space value (e.g. TipTap's `whitespace` node attr or a
+// jsonb `whitespace` content value). Returns undefined for any missing/unrecognized
+// value, so we never persist a redundant white-space.
+export const normalizeWhitespace = (
+  value: unknown,
+): WhitespaceValue | undefined => {
+  return WHITESPACE_VALUES.includes(value as WhitespaceValue)
+    ? (value as WhitespaceValue)
+    : undefined;
+};
+
 export type HeadingAnnotation = AnnotationBase & {
   type: 'heading';
   level: number;
@@ -151,6 +179,7 @@ export type MentionAnnotation = AnnotationBase & {
 export type ParagraphAnnotation = AnnotationBase & {
   type: 'paragraph';
   align?: TextAlignValue;
+  whitespace?: WhitespaceValue;
 };
 
 export type QuoteAnnotation = AnnotationBase & {

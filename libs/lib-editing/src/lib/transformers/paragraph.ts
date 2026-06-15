@@ -5,7 +5,7 @@ import { recurse } from './recurse';
 
 export const paragraph: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { start, end, uuid, align } =
+  const { start, end, uuid, align, whitespace } =
     (annotation as ParagraphAnnotation) || {};
 
   recurse({
@@ -22,6 +22,7 @@ export const paragraph: Transformer = (ctx) => {
             end,
             uuid,
             ...(align ? { textAlign: align } : {}),
+            ...(whitespace ? { whitespace } : {}),
           };
         },
       }),

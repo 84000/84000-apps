@@ -80,7 +80,7 @@ export const TextAlignSelector = ({ editor }: { editor: Editor }) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className="rounded-none">
+        <Button variant="ghost" className="rounded-none w-12">
           <activeItem.icon className="size-4" strokeWidth={2.5} />
           <ChevronDownIcon className="size-3" />
         </Button>

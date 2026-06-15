@@ -6,6 +6,7 @@ import {
   baseAnnotationFromDTO,
   baseAnnotationToDto,
   normalizeAlign,
+  normalizeWhitespace,
 } from './annotation';
 
 export const transformer: AnnotationTransformer = (
@@ -17,15 +18,27 @@ export const transformer: AnnotationTransformer = (
     if (align) {
       paragraph.align = align;
     }
+
+    const whitespace = normalizeWhitespace(content['whitespace']);
+    if (whitespace) {
+      paragraph.whitespace = whitespace;
+    }
   });
   return paragraph;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   const dto = baseAnnotationToDto(annotation);
-  const align = normalizeAlign((annotation as ParagraphAnnotation).align);
-  if (align) {
-    dto.content.push({ align });
+  const { align, whitespace } = annotation as ParagraphAnnotation;
+
+  const normalizedAlign = normalizeAlign(align);
+  if (normalizedAlign) {
+    dto.content.push({ align: normalizedAlign });
+  }
+
+  const normalizedWhitespace = normalizeWhitespace(whitespace);
+  if (normalizedWhitespace) {
+    dto.content.push({ whitespace: normalizedWhitespace });
   }
   return dto;
 };
