@@ -10,7 +10,7 @@ import { getSuggestion } from '../extensions/SlashCommand/Suggestions';
 import { Link } from '../extensions/Link';
 import Placeholder from '../extensions/Placeholder';
 import TextAlign from '../extensions/TextAlign';
-import Whitespace from '../extensions/Whitespace';
+import WordBreak from '../extensions/WordBreak';
 import StarterKit from '../extensions/StarterKit';
 import { Italic } from '../extensions/Italic';
 import { Underline } from '../extensions/Underline';
@@ -37,7 +37,7 @@ export const useDefaultExtensions = () => {
       StarterKit,
       TextAlign,
       Underline,
-      Whitespace,
+      WordBreak,
     ],
   };
 };

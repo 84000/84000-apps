@@ -6,7 +6,7 @@ import {
   baseAnnotationFromDTO,
   baseAnnotationToDto,
   normalizeAlign,
-  normalizeWhitespace,
+  normalizeWordBreak,
 } from './annotation';
 
 export const transformer: AnnotationTransformer = (
@@ -19,9 +19,9 @@ export const transformer: AnnotationTransformer = (
       paragraph.align = align;
     }
 
-    const whitespace = normalizeWhitespace(content['whitespace']);
-    if (whitespace) {
-      paragraph.whitespace = whitespace;
+    const wordBreak = normalizeWordBreak(content['word-break']);
+    if (wordBreak) {
+      paragraph.wordBreak = wordBreak;
     }
   });
   return paragraph;
@@ -29,16 +29,16 @@ export const transformer: AnnotationTransformer = (
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   const dto = baseAnnotationToDto(annotation);
-  const { align, whitespace } = annotation as ParagraphAnnotation;
+  const { align, wordBreak } = annotation as ParagraphAnnotation;
 
   const normalizedAlign = normalizeAlign(align);
   if (normalizedAlign) {
     dto.content.push({ align: normalizedAlign });
   }
 
-  const normalizedWhitespace = normalizeWhitespace(whitespace);
-  if (normalizedWhitespace) {
-    dto.content.push({ whitespace: normalizedWhitespace });
+  const normalizedWordBreak = normalizeWordBreak(wordBreak);
+  if (normalizedWordBreak) {
+    dto.content.push({ 'word-break': normalizedWordBreak });
   }
   return dto;
 };

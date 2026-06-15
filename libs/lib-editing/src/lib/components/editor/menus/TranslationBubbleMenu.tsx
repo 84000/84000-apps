@@ -12,7 +12,7 @@ import { TranslationTextButtons } from './selectors/TranslationTextButtons';
 import { ParagraphButtons } from './selectors/ParagraphButtons';
 import { TranslationNodeSelector } from './selectors/TranslationNodeSelector';
 import { useDismissBubbleMenu } from './useDismissBubbleMenu';
-import { TextAlignSelector, WhitespaceSelector } from './selectors';
+import { TextAlignSelector, WordBreakSelector } from './selectors';
 
 export const TranslationBubbleMenu = ({
   editor,
@@ -57,8 +57,9 @@ export const TranslationBubbleMenu = ({
       <ScrollArea className="max-w-[90vw] rounded-md border bg-popover shadow-xl z-50">
         <div className="flex">
           <TranslationNodeSelector editor={editor} />
+          <Separator orientation="vertical" className="h-10 me-2" />
           <TextAlignSelector editor={editor} />
-          <WhitespaceSelector editor={editor} />
+          <WordBreakSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
           <ParagraphButtons editor={editor} />
           <Separator orientation="vertical" className="h-10" />

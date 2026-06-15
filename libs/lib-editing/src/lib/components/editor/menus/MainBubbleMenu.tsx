@@ -3,13 +3,17 @@
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useEditorState } from '@tiptap/react';
-import { ScrollArea, Separator, ScrollBar } from '@eightyfourthousand/design-system';
+import {
+  ScrollArea,
+  Separator,
+  ScrollBar,
+} from '@eightyfourthousand/design-system';
 import { useRef } from 'react';
 import {
   NodeSelector,
   TextAlignSelector,
   TextButtons,
-  WhitespaceSelector,
+  WordBreakSelector,
 } from './selectors';
 import { useDismissBubbleMenu } from './useDismissBubbleMenu';
 
@@ -26,10 +30,11 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
         instance.editor.isActive('heading')),
   });
 
-  // White-space controls only apply to paragraph blocks.
-  const showWhitespace = useEditorState({
+  // Word-break controls only apply to paragraph blocks.
+  const isParagraph = useEditorState({
     editor,
-    selector: (instance) => !!instance.editor && instance.editor.isActive('paragraph'),
+    selector: (instance) =>
+      !!instance.editor && instance.editor.isActive('paragraph'),
   });
 
   if (!editor) {
@@ -75,10 +80,10 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
               <TextAlignSelector editor={editor} />
             </>
           )}
-          {showWhitespace && (
+          {isParagraph && (
             <>
               <Separator orientation="vertical" className="h-10" />
-              <WhitespaceSelector editor={editor} />
+              <WordBreakSelector editor={editor} />
             </>
           )}
         </div>

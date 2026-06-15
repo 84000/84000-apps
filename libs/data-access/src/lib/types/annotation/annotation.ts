@@ -70,31 +70,18 @@ export const normalizeAlign = (value: unknown): TextAlignValue | undefined => {
     : undefined;
 };
 
-export type WhitespaceValue =
-  | 'normal'
-  | 'nowrap'
-  | 'pre'
-  | 'pre-wrap'
-  | 'pre-line'
-  | 'break-spaces';
+export type WordBreakValue = 'normal' | 'break-all';
 
-const WHITESPACE_VALUES: WhitespaceValue[] = [
-  'normal',
-  'nowrap',
-  'pre',
-  'pre-wrap',
-  'pre-line',
-  'break-spaces',
-];
+const WORD_BREAK_VALUES: WordBreakValue[] = ['normal', 'break-all'];
 
-// Normalizes a raw white-space value (e.g. TipTap's `whitespace` node attr or a
-// jsonb `whitespace` content value). Returns undefined for any missing/unrecognized
-// value, so we never persist a redundant white-space.
-export const normalizeWhitespace = (
+// Normalizes a raw word-break value (e.g. TipTap's `wordBreak` node attr or a
+// jsonb `word-break` content value). Returns undefined for any missing/unrecognized
+// value, so we never persist a redundant word-break.
+export const normalizeWordBreak = (
   value: unknown,
-): WhitespaceValue | undefined => {
-  return WHITESPACE_VALUES.includes(value as WhitespaceValue)
-    ? (value as WhitespaceValue)
+): WordBreakValue | undefined => {
+  return WORD_BREAK_VALUES.includes(value as WordBreakValue)
+    ? (value as WordBreakValue)
     : undefined;
 };
 
@@ -179,7 +166,7 @@ export type MentionAnnotation = AnnotationBase & {
 export type ParagraphAnnotation = AnnotationBase & {
   type: 'paragraph';
   align?: TextAlignValue;
-  whitespace?: WhitespaceValue;
+  wordBreak?: WordBreakValue;
 };
 
 export type QuoteAnnotation = AnnotationBase & {

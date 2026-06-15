@@ -176,7 +176,7 @@ export type AnnotationDTOContentKey =
   | 'same_work'
   | 'subtype'
   | 'toh'
-  | 'whitespace';
+  | 'word-break';
 
 export type AnnotationDTOContent = Partial<
   Record<AnnotationDTOContentKey, unknown>

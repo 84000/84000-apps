@@ -1,7 +1,7 @@
 import {
   ParagraphAnnotation,
   normalizeAlign,
-  normalizeWhitespace,
+  normalizeWordBreak,
 } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
@@ -27,7 +27,7 @@ export const paragraph: Exporter<ParagraphAnnotation> = ({
   }
 
   const align = normalizeAlign(node.attrs.textAlign);
-  const whitespace = normalizeWhitespace(node.attrs.whitespace);
+  const wordBreak = normalizeWordBreak(node.attrs.wordBreak);
 
   return {
     uuid,
@@ -36,6 +36,6 @@ export const paragraph: Exporter<ParagraphAnnotation> = ({
     start,
     end: start + textContent.length,
     ...(align ? { align } : {}),
-    ...(whitespace ? { whitespace } : {}),
+    ...(wordBreak ? { wordBreak } : {}),
   };
 };
