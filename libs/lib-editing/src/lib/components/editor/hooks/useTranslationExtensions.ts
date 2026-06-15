@@ -22,6 +22,7 @@ import {
 import { Link } from '../extensions/Link';
 import Placeholder from '../extensions/Placeholder';
 import TextAlign from '../extensions/TextAlign';
+import WordBreak from '../extensions/WordBreak';
 import { STARTER_KIT_CONFIG, StarterKit } from '../extensions/StarterKit';
 import TranslationMetadata from '../extensions/TranslationMetadata';
 import TranslationDocument from '../extensions/TranslationDocument';
@@ -130,6 +131,7 @@ export const useTranslationExtensions = ({
     TranslationMetadata,
     TextAlign,
     Underline,
+    WordBreak,
   ];
 
   if (fragment) {

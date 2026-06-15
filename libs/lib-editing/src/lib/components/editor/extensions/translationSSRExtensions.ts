@@ -30,6 +30,7 @@ import { Superscript } from './Superscript';
 import TextAlign from './TextAlign';
 import { Trailer } from './Trailer';
 import { Underline } from './Underline';
+import WordBreak from './WordBreak';
 import { TableKit } from './Table';
 
 export const translationSSRExtensions: Extensions = [
@@ -70,4 +71,5 @@ export const translationSSRExtensions: Extensions = [
   TextAlign,
   Trailer,
   Underline,
+  WordBreak,
 ];

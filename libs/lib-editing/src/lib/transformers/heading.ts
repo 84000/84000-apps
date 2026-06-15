@@ -7,6 +7,7 @@ export const heading: Transformer = ({ root, parent, block, annotation }) => {
   const heading = annotation as HeadingAnnotation;
   const level = heading.level || 3;
   const cls = heading.class;
+  const align = heading.align;
 
   recurse({
     until: ['heading', 'paragraph'],
@@ -23,6 +24,7 @@ export const heading: Transformer = ({ root, parent, block, annotation }) => {
             ...item.attrs,
             level,
             class: cls,
+            ...(align ? { textAlign: align } : {}),
           };
         },
       }),

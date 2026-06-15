@@ -149,6 +149,7 @@ export const ANNOTATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> =
   } as const;
 
 export type AnnotationDTOContentKey =
+  | 'align'
   | 'authority'
   | 'endnote_xmlId'
   | 'glossary_xmlId'
@@ -174,7 +175,8 @@ export type AnnotationDTOContentKey =
   | 'uuid'
   | 'same_work'
   | 'subtype'
-  | 'toh';
+  | 'toh'
+  | 'word-break';
 
 export type AnnotationDTOContent = Partial<
   Record<AnnotationDTOContentKey, unknown>

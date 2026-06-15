@@ -2,14 +2,40 @@
 
 import { Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
-import { ScrollArea, Separator, ScrollBar } from '@eightyfourthousand/design-system';
+import { useEditorState } from '@tiptap/react';
+import {
+  ScrollArea,
+  Separator,
+  ScrollBar,
+} from '@eightyfourthousand/design-system';
 import { useRef } from 'react';
-import { NodeSelector, TextAlignSelector, TextButtons } from './selectors';
+import {
+  NodeSelector,
+  TextAlignSelector,
+  TextButtons,
+  WordBreakSelector,
+} from './selectors';
 import { useDismissBubbleMenu } from './useDismissBubbleMenu';
 
 export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   useDismissBubbleMenu(editor, menuRef);
+
+  // Alignment controls only apply to paragraph and heading blocks.
+  const showTextAlign = useEditorState({
+    editor,
+    selector: (instance) =>
+      !!instance.editor &&
+      (instance.editor.isActive('paragraph') ||
+        instance.editor.isActive('heading')),
+  });
+
+  // Word-break controls only apply to paragraph blocks.
+  const isParagraph = useEditorState({
+    editor,
+    selector: (instance) =>
+      !!instance.editor && instance.editor.isActive('paragraph'),
+  });
 
   if (!editor) {
     return null;
@@ -48,8 +74,18 @@ export const MainBubbleMenu = ({ editor }: { editor: Editor | null }) => {
           <NodeSelector editor={editor} />
           <Separator orientation="vertical" className="h-10" />
           <TextButtons editor={editor} />
-          <Separator orientation="vertical" className="h-10" />
-          <TextAlignSelector editor={editor} />
+          {showTextAlign && (
+            <>
+              <Separator orientation="vertical" className="h-10" />
+              <TextAlignSelector editor={editor} />
+            </>
+          )}
+          {isParagraph && (
+            <>
+              <Separator orientation="vertical" className="h-10" />
+              <WordBreakSelector editor={editor} />
+            </>
+          )}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

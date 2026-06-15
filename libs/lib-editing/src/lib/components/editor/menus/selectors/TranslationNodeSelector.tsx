@@ -116,7 +116,7 @@ export const TranslationNodeSelector = ({ editor }: { editor: Editor }) => {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" className="rounded-none">
-          <span className="whitespace-nowrap text-sm me-2">{name}</span>
+          <span className="whitespace-nowrap text-sm">{name}</span>
           <ChevronDownIcon className="size-3" />
         </Button>
       </PopoverTrigger>
