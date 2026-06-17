@@ -1,4 +1,7 @@
-import { InternalLinkAnnotation } from '@eightyfourthousand/data-access';
+import {
+  InternalLinkAnnotation,
+  serializeTohList,
+} from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { recurse } from './recurse';
@@ -52,7 +55,7 @@ export const internalLink: Transformer = (ctx) => {
                 href: path,
                 entity,
                 type,
-                toh,
+                toh: serializeTohList(toh),
                 isSameWork,
                 subtype,
                 linkToh,

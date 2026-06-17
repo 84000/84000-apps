@@ -1,4 +1,5 @@
 import { ExtendedTranslationLanguage } from '../language';
+import { parseTohList, serializeTohList } from '../toh';
 import {
   AnnotationBase,
   AnnotationDTO,
@@ -259,7 +260,7 @@ export const baseAnnotationFromDTO = (dto: AnnotationDTO): AnnotationBase => {
     start: dto.start,
     end: dto.end,
     type: annotationTypeFromDTO(dto.type),
-    toh: dto.toh,
+    toh: parseTohList(dto.toh),
     passageUuid,
     validated: true,
   };
@@ -275,6 +276,6 @@ export const baseAnnotationToDto = (
   type: annotationTypeToDTO(annotation.type),
   uuid: annotation.uuid,
   passage_uuid: annotation.passageUuid,
-  toh: annotation.toh,
+  toh: serializeTohList(annotation.toh),
   content: [],
 });
