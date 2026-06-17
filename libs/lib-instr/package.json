@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-instr",
-  "version": "2026.6.2",
+  "version": "2026.6.3",
   "description": "Feature flag and instrumentation helpers for 84000 applications.",
   "private": false,
   "repository": {
