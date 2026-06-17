@@ -215,6 +215,48 @@ describe('TranslationSSRContent', () => {
     expect(html).toMatch(/marked<sup[^>]*endNote="en-only"[^>]*>⁠c<\/sup>/);
   });
 
+  it('omits orphaned endNoteLink notes with no resolvable label', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'marked',
+                  marks: [
+                    {
+                      type: 'endNoteLink',
+                      attrs: {
+                        notes: [
+                          // Orphaned: target endnote deleted, no label resolved.
+                          { uuid: 'n-orphan', endNote: 'en-gone' },
+                          { uuid: 'n-ok', endNote: 'en-2', label: '1.b' },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).toContain('marked');
+    // The valid note still renders; the orphaned one is dropped entirely.
+    expect(html).toMatch(/endNote="en-2"[^>]*>⁠b<\/sup>/);
+    expect(html).not.toContain('en-gone');
+  });
+
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));

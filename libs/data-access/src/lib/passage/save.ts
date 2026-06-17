@@ -328,6 +328,48 @@ export const savePassagesWithDeletions = async ({
         );
       }
 
+      // Cascade: remove `endNoteLink` annotations on OTHER passages that
+      // reference any deleted endnote passage. These live on the referencing
+      // (translation/front) passages, not on the deleted note itself, so the
+      // delete-by-passage_uuid above never reaches them. Left behind, they
+      // become orphaned references that render as a stray "*". Doing this
+      // server-side fixes the case where the referencing passage is not loaded
+      // in the editor (so client-side cleanup can't reach it).
+      for (const deletedUuid of deletedUuids) {
+        const { data: referencingAnnotations, error: findReferencesError } =
+          await client
+            .from('passage_annotations')
+            .select('uuid')
+            .eq('type', 'end-note-link')
+            .filter('content', 'cs', JSON.stringify([{ uuid: deletedUuid }]));
+
+        if (findReferencesError) {
+          console.error(
+            'Error finding endnote-link references to deleted passage:',
+            findReferencesError,
+          );
+          continue;
+        }
+
+        const referenceUuids = (referencingAnnotations ?? []).map(
+          (annotation) => annotation.uuid,
+        );
+
+        if (referenceUuids.length > 0) {
+          const { error: deleteReferencesError } = await client
+            .from('passage_annotations')
+            .delete()
+            .in('uuid', referenceUuids);
+
+          if (deleteReferencesError) {
+            console.error(
+              'Error deleting endnote-link references to deleted passage:',
+              deleteReferencesError,
+            );
+          }
+        }
+      }
+
       const { error: deletePassagesError } = await client
         .from('passages')
         .delete()

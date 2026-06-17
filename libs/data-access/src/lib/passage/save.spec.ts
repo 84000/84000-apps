@@ -16,6 +16,8 @@ class FakeQueryBuilder {
   private action?: 'select' | 'delete';
   private inColumn?: string;
   private inValues: string[] = [];
+  private eqType?: string;
+  private filterContentUuid?: string;
 
   constructor(
     private readonly state: FakeState,
@@ -51,7 +53,22 @@ class FakeQueryBuilder {
     return this;
   }
 
-  eq() {
+  eq(column: string, value: string) {
+    if (column === 'type') {
+      this.eqType = value;
+    }
+    return this;
+  }
+
+  filter(column: string, op: string, value: string) {
+    if (column === 'content' && op === 'cs') {
+      try {
+        const parsed = JSON.parse(value) as Array<{ uuid?: string }>;
+        this.filterContentUuid = parsed[0]?.uuid;
+      } catch {
+        // ignore malformed filter values in the fake client
+      }
+    }
     return this;
   }
 
@@ -100,6 +117,20 @@ class FakeQueryBuilder {
     }
 
     if (this.table === 'passage_annotations') {
+      if (this.filterContentUuid) {
+        return {
+          data: this.state.annotations.filter(
+            (annotation) =>
+              (!this.eqType || annotation.type === this.eqType) &&
+              Array.isArray(annotation.content) &&
+              annotation.content.some(
+                (entry) =>
+                  (entry as { uuid?: string })?.uuid === this.filterContentUuid,
+              ),
+          ),
+          error: null,
+        };
+      }
       return {
         data: this.state.annotations.filter((annotation) =>
           this.inValues.includes(annotation.passage_uuid ?? ''),
@@ -248,5 +279,43 @@ describe('savePassagesWithDeletions', () => {
     expect(state.annotationUpserts).toEqual([]);
     expect(state.deletedAnnotationUuids).toEqual(['annotation-1']);
     expect(state.deletedPassageUuids).toEqual(['passage-1']);
+  });
+
+  it('cascades deletion of endnote-link references on other passages', async () => {
+    const referencingAnnotation: AnnotationDTO = {
+      uuid: 'ref-1',
+      passage_uuid: 'passage-translation',
+      start: 9,
+      end: 9,
+      type: 'end-note-link',
+      content: [{ uuid: 'endnote-1' }],
+    };
+
+    const endnoteRow: PassageRowDTO = {
+      uuid: 'endnote-1',
+      work_uuid: 'work-1',
+      content: 'Note text',
+      label: '1',
+      sort: 5,
+      type: 'endnotes',
+    };
+
+    const state = createState({
+      annotations: [referencingAnnotation],
+      passages: [endnoteRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [],
+      deletedUuids: ['endnote-1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.deletedCount).toBe(1);
+    expect(state.deletedPassageUuids).toEqual(['endnote-1']);
+    // The reference lives on a different passage, so it is only removed via
+    // the content-containment cascade, not the delete-by-passage_uuid pass.
+    expect(state.deletedAnnotationUuids).toEqual(['ref-1']);
   });
 });
