@@ -1,4 +1,7 @@
-import { EndNoteLinkAnnotation } from '@eightyfourthousand/data-access';
+import {
+  EndNoteLinkAnnotation,
+  serializeTohList,
+} from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitContentAt } from './split-at';
@@ -17,7 +20,7 @@ const innerTransform: Transformer = ({ block, annotation }) => {
     start,
     end,
     location: end === 0 ? 'start' : 'end',
-    toh,
+    toh: serializeTohList(toh),
   });
 
   if (endnoteMark) {

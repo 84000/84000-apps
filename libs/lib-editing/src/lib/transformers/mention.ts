@@ -1,4 +1,7 @@
-import { MentionAnnotation } from '@eightyfourthousand/data-access';
+import {
+  MentionAnnotation,
+  serializeTohList,
+} from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';
@@ -28,7 +31,7 @@ export const mention: Transformer = (ctx) => {
     isSameWork,
     subtype,
     linkToh,
-    toh,
+    toh: serializeTohList(toh),
   };
   recurse({
     ...ctx,

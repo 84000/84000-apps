@@ -45,6 +45,41 @@ describe('useTohToggle', () => {
     expect(sheet?.cssRules[0].cssText).toContain('[data-toh="toh2"]');
   });
 
+  it('matches the active toh as a member of a comma-separated list', () => {
+    renderHook(() => useTohToggle({ toh: 'toh417' }));
+
+    const cssText = getSheet()?.cssRules[0].cssText ?? '';
+    // Keeps elements whose data-toh equals, starts with, contains, or ends
+    // with the active toh as a comma-delimited token.
+    expect(cssText).toContain(':not([data-toh="toh417"])');
+    expect(cssText).toContain(':not([data-toh^="toh417,"])');
+    expect(cssText).toContain(':not([data-toh*=",toh417,"])');
+    expect(cssText).toContain(':not([data-toh$=",toh417"])');
+  });
+
+  it('hides only non-member tohs for multi-toh elements', () => {
+    renderHook(() => useTohToggle({ toh: 'toh417' }));
+
+    // Extract the selector (everything before the declaration block).
+    const cssText = getSheet()?.cssRules[0].cssText ?? '';
+    const selector = cssText.slice(0, cssText.indexOf('{')).trim();
+
+    document.body.innerHTML = `
+      <span id="multi" data-toh="toh417,toh418">visible</span>
+      <span id="other" data-toh="toh418">hidden</span>
+      <span id="prefix" data-toh="toh4170">hidden</span>
+      <span id="plain">always visible</span>
+    `;
+
+    // The injected rule hides anything the selector matches.
+    expect(document.getElementById('multi')?.matches(selector)).toBe(false);
+    expect(document.getElementById('other')?.matches(selector)).toBe(true);
+    expect(document.getElementById('prefix')?.matches(selector)).toBe(true);
+    expect(document.getElementById('plain')?.matches(selector)).toBe(false);
+
+    document.body.innerHTML = '';
+  });
+
   it('does not throw on toh values that are not valid CSS identifiers', () => {
     expect(() =>
       renderHook(() => useTohToggle({ toh: 'toh4.1' as TohokuCatalogEntry })),

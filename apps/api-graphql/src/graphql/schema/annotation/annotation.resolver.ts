@@ -210,7 +210,9 @@ export function transformAnnotation(
     type: annotation.type,
     start: annotation.start,
     end: annotation.end,
-    toh: annotation.toh ?? null,
+    // GraphQL exposes the raw DB shape (a single toh or comma-separated list);
+    // the domain model parses it into an array, so read from the DTO here.
+    toh: dto.toh ?? null,
     metadata: extractMetadata(annotation, enrichment),
   };
 }

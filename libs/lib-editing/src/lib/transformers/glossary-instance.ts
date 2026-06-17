@@ -1,4 +1,7 @@
-import { GlossaryInstanceAnnotation } from '@eightyfourthousand/data-access';
+import {
+  GlossaryInstanceAnnotation,
+  serializeTohList,
+} from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitContent } from './split-content';
@@ -29,7 +32,7 @@ export const glossaryInstance: Transformer = (ctx) => {
                 authority,
                 glossary,
                 uuid,
-                toh,
+                toh: serializeTohList(toh),
               },
             },
           ];

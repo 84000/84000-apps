@@ -190,7 +190,8 @@ export type AnnotationDTO = {
   uuid: string;
   passage_uuid?: string;
   passageUuid?: string;
-  toh?: TohokuCatalogEntry;
+  // DB shape: a single toh or a comma-separated list, e.g. "toh417,toh418".
+  toh?: string;
 };
 
 export type AnnotationsDTO = AnnotationDTO[];
@@ -217,5 +218,7 @@ export type AnnotationBase = {
   uuid: string;
   passageUuid: string;
   validated?: boolean;
-  toh?: TohokuCatalogEntry;
+  // Tohs this annotation is scoped to; parsed from the DB's comma-separated
+  // `toh` column. Empty when the annotation applies to every toh.
+  toh?: TohokuCatalogEntry[];
 };
