@@ -22,6 +22,7 @@ import {
 import { Link } from '../extensions/Link';
 import Placeholder from '../extensions/Placeholder';
 import TextAlign from '../extensions/TextAlign';
+import { Typography } from '../extensions/Typography';
 import WordBreak from '../extensions/WordBreak';
 import { STARTER_KIT_CONFIG, StarterKit } from '../extensions/StarterKit';
 import TranslationMetadata from '../extensions/TranslationMetadata';
@@ -130,6 +131,7 @@ export const useTranslationExtensions = ({
     Trailer,
     TranslationMetadata,
     TextAlign,
+    Typography,
     Underline,
     WordBreak,
   ];
