@@ -32,7 +32,12 @@ const renderEndNoteLinkMark = ({
   children?: string | string[];
 }): string => {
   const raw = mark.attrs.notes;
-  const notes: EndNoteItem[] = Array.isArray(raw) ? raw.filter(isEndNoteItem) : [];
+  const notes: EndNoteItem[] = Array.isArray(raw)
+    ? // Skip orphaned references: an endnote-link whose target passage no
+      // longer exists has no resolvable label. Rendering it would leave a
+      // stray marker in the reader, so drop it. The editor keeps showing "*".
+      raw.filter(isEndNoteItem).filter((note) => note.label)
+    : [];
   notes.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
 
   const supHtml = (n: EndNoteItem, marginClass: string) => {

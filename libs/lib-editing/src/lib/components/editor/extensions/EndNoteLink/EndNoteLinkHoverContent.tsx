@@ -13,7 +13,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
-import { deleteEndnotePassageNode } from './endnote-utils';
+import {
+  deleteEndnotePassageNode,
+  removeAllEndnoteLinksForPassage,
+} from './endnote-utils';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
@@ -99,6 +102,19 @@ export const EndNoteLinkHoverContent = ({
       const endnotesEditor = getEditor('endnotes');
       if (endnotesEditor) {
         deleteEndnotePassageNode(endnotesEditor, endNote);
+      }
+
+      // Remove the referencing links directly rather than relying solely on
+      // the debounced observer in TranslationBuilder, which can miss the
+      // deletion if it races a save/navigation. The observer still backstops
+      // other deletion paths (backspace, merge) and renumbers labels.
+      const frontEditor = getEditor('front');
+      const translationEditor = getEditor('translation');
+      if (frontEditor) {
+        removeAllEndnoteLinksForPassage(frontEditor, endNote);
+      }
+      if (translationEditor) {
+        removeAllEndnoteLinksForPassage(translationEditor, endNote);
       }
     }, EDITOR_UPDATE_DELAY_MS);
   }, [endNote, getEditor, close, setHoverCardEditing]);
