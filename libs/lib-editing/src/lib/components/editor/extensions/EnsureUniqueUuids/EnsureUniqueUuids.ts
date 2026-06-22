@@ -75,10 +75,21 @@ export const EnsureUniqueUuids = Extension.create({
           }
 
           const tr = newState.tr;
-          for (const { pos, attrs } of updates) {
+          // Apply in reverse document order so an earlier (lower) position is
+          // never invalidated by a later edit that changes document size — e.g.
+          // rebuilding a leaf node (an inline atom such as a mention) whose new
+          // markup does not "fit trivially" and shifts subsequent positions.
+          // Re-resolve each node at apply time and skip it if the position no
+          // longer points at a uuid-bearing, non-text node; the plugin must
+          // never throw, and a skipped node is reconciled on the next cycle.
+          for (const { pos, attrs } of [...updates].reverse()) {
+            const node = tr.doc.nodeAt(pos);
+            if (!node || node.isText || !hasUuidAttr(node)) {
+              continue;
+            }
             tr.setNodeMarkup(pos, undefined, attrs);
           }
-          return tr;
+          return tr.docChanged ? tr : null;
         },
       }),
     ];

@@ -42,7 +42,12 @@ export const splitAndInsert: Transformer = (ctx) => {
       end,
     },
   };
-  transform?.({ root, parent, block: newBlock, annotation });
+  // A transform may batch into an existing node and signal that it handled the
+  // context, in which case the freshly created `newBlock` must not be inserted.
+  const handled = transform?.({ root, parent, block: newBlock, annotation });
+  if (handled) {
+    return;
+  }
 
   if (start <= block.attrs?.start || start >= block.attrs?.end) {
     parent.content = insert(newBlock, parent.content || []);
