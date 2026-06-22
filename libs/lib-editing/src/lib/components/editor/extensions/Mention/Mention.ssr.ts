@@ -26,6 +26,12 @@ export const MentionSSR = Node.create<MentionSSROptions>({
   group: 'inline',
   inline: true,
   atom: true,
+  // Mentions never carry marks. Without this, an inline mark whose range
+  // coincides with the mention's position (e.g. an end-location endNoteLink,
+  // which is a zero-length annotation at the same start/end) gets stored on
+  // the mention node, producing a duplicate <sup>. Disallowing marks here
+  // keeps the endnote on the adjacent text, so the mention renders after it.
+  marks: '',
 
   addOptions() {
     return {
