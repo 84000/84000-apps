@@ -34,21 +34,25 @@ export type BibliographyEntryItemDTO = {
   uuid: string;
   bibl_html: string;
   work_uuid?: string;
+  label?: string;
 };
 
 export type BibliographyEntryItem = {
   uuid: string;
   html: string;
   workUuid?: string;
+  label?: string;
 };
 
 export type BlibliographyEntryDTO = {
   heading?: string;
+  label?: string;
   entries: BibliographyEntryItemDTO[];
 };
 
 export type BibliographyEntry = {
   heading?: string;
+  label?: string;
   entries: BibliographyEntryItem[];
 };
 
@@ -61,6 +65,7 @@ export const bibliographyEntryItemFromDTO = (
 ): BibliographyEntryItem => {
   return {
     uuid: dto.uuid,
+    label: dto.label,
     html: dto.bibl_html,
     workUuid: dto.work_uuid,
   };
@@ -71,6 +76,7 @@ export const bibliographyEntryFromDTO = (
 ): BibliographyEntry => {
   return {
     heading: dto.heading,
+    label: dto.label,
     entries: dto.entries?.map(bibliographyEntryItemFromDTO) || [],
   };
 };
