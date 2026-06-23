@@ -37,21 +37,52 @@ export const splitContentAt: Transformer = (ctx) => {
   const currentContent = parent.content || [];
   const newContent = [];
 
+  let anchored = false;
+  // Whether any node ended exactly at this position, even one we skipped
+  // because it wasn't text (e.g. a mention). Distinguishes "nothing was here"
+  // from "the only thing here was a non-text node".
+  let boundaryNonTextOnly = false;
+
   for (const item of currentContent) {
     const { prefix, middle, suffix } = splitNode(item, start, end);
 
     const lastPrefix = prefix.at(-1);
     const firstSuffix = suffix[0];
 
+    // An end-location insertion point (e.g. an endNoteLink) attaches to the
+    // text node that ends at this position. Atomic inline nodes such as
+    // mentions are also zero-length and can share the boundary, but they must
+    // not receive the mark — the adjacent text carries it, so the marker
+    // renders before the mention rather than duplicating onto it.
     if (annotationEnd === lastPrefix?.attrs?.end) {
-      transform?.({ root, parent, block: lastPrefix, annotation });
+      if (typeof lastPrefix?.text === 'string') {
+        transform?.({ root, parent, block: lastPrefix, annotation });
+        anchored = true;
+      } else {
+        boundaryNonTextOnly = true;
+      }
     } else if (annotationEnd === firstSuffix?.attrs?.end) {
-      transform?.({ root, parent, block: firstSuffix, annotation });
+      if (typeof firstSuffix?.text === 'string') {
+        transform?.({ root, parent, block: firstSuffix, annotation });
+        anchored = true;
+      } else {
+        boundaryNonTextOnly = true;
+      }
     }
 
     newContent.push(...prefix);
     newContent.push(...middle);
     newContent.push(...suffix);
+  }
+
+  // An end-location insertion point that only ever lined up with non-text
+  // nodes (and no text node) has nowhere valid to attach. This is malformed
+  // data — an end marker with no preceding text in the passage — so the
+  // annotation is dropped rather than rendered onto a mention.
+  if (transform && !anchored && boundaryNonTextOnly) {
+    console.warn(
+      `splitContentAt: insertion point ${annotation.uuid} (${annotation.type}) at position ${annotationEnd} found no text node to attach to; annotation dropped.`,
+    );
   }
 
   parent.content = newContent;

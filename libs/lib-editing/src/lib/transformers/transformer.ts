@@ -15,7 +15,9 @@ export type TransformationContext = {
 };
 
 export type TransformationContextWithCallback = TransformationContext & {
-  transform?: (ctx: TransformationContext) => void;
+  // A callback may return `true` to signal it fully handled the context and the
+  // caller should not perform its default insertion (e.g. mention batching).
+  transform?: (ctx: TransformationContext) => void | boolean;
 };
 
 export type Transformer = (ctx: TransformationContextWithCallback) => void;

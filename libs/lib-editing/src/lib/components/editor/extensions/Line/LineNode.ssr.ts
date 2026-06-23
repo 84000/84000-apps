@@ -9,7 +9,7 @@ export const LineNodeSSR = Node.create({
     };
   },
 
-  content: 'text*',
+  content: 'inline*',
 
   defining: true,
 

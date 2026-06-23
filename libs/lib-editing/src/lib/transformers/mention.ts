@@ -59,7 +59,9 @@ export const mention: Transformer = (ctx) => {
             const items = mention.attrs?.items || [];
             items.push(item);
             mention.attrs = { ...mention.attrs, items };
-            return;
+            // Item was batched into the existing mention; signal that no new
+            // mention block should be inserted for this annotation.
+            return true;
           }
 
           block.type = 'mention';
@@ -68,6 +70,7 @@ export const mention: Transformer = (ctx) => {
             end,
             items: [item],
           };
+          block.marks = [];
         },
       });
     },

@@ -28,7 +28,10 @@ export const Mention = MentionSSR.extend({
         }
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
-        anchor.textContent = item.text || item.displayText || item.entity;
+        const displayText = item.text || item.displayText;
+        anchor.textContent =
+          displayText ||
+          (props.editor.isEditable ? `[${item.entity || 'Unknown'}]` : '');
 
         // Compute href from linkType + entity
         let href = `/entity/${item.linkType}/${item.entity}`;
