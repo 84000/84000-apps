@@ -67,12 +67,12 @@ export const MentionSSR = Node.create<MentionSSROptions>({
       : [];
 
     const children = items.map((item) => {
-      const label = item.text || item.displayText || item.entity || '';
+      const label = item.text || item.displayText || '';
       const tohAttr: Record<string, string> = item.toh
         ? { 'data-toh': item.toh }
         : {};
 
-      if (!item.entity || !item.linkType) {
+      if (!label || !item.entity || !item.linkType) {
         return [
           'span',
           { class: cn('mention-link px-1'), ...tohAttr },
