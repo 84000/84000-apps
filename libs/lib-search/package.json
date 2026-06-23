@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-search",
-  "version": "2026.6.3",
+  "version": "2026.6.4",
   "description": "Shared translation search UI and server helpers for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,10 +17,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/client-graphql": "^2026.6.3",
-    "@eightyfourthousand/data-access": "^2026.6.3",
-    "@eightyfourthousand/design-system": "^2026.6.3",
-    "@eightyfourthousand/lib-utils": "^2026.6.3",
+    "@eightyfourthousand/client-graphql": "^2026.6.4",
+    "@eightyfourthousand/data-access": "^2026.6.4",
+    "@eightyfourthousand/design-system": "^2026.6.4",
+    "@eightyfourthousand/lib-utils": "^2026.6.4",
     "lucide-react": "^1.16.0"
   },
   "peerDependencies": {
