@@ -67,6 +67,10 @@ export const Abbreviation = Node.create<AbbreviationOptions>({
         parseHTML(element: HTMLElement) {
           return element.getAttribute('abbreviation');
         },
+        renderHTML: (attributes) =>
+          attributes.abbreviation
+            ? { abbreviation: attributes.abbreviation }
+            : {},
       },
     };
   },
@@ -107,6 +111,10 @@ export const HasAbbreviation = Node.create<AbbreviationOptions>({
         parseHTML(element: HTMLElement) {
           return element.getAttribute('abbreviation');
         },
+        renderHTML: (attributes) =>
+          attributes.abbreviation
+            ? { abbreviation: attributes.abbreviation }
+            : {},
       },
     };
   },

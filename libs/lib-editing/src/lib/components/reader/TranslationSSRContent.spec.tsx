@@ -217,6 +217,53 @@ describe('TranslationSSRContent', () => {
     );
   });
 
+  it('omits optional attrs instead of serializing them as "undefined"', () => {
+    // Regression for DEV-648: foreign/mantra marks and abbreviation nodes
+    // declare optional attrs (lang, uuid, abbreviation, …) with no value in
+    // real content. The static renderer serializes a missing attr as the
+    // literal string "undefined", so each extension must omit absent attrs.
+    // The richDoc fixture above populates every optional attr, so it can't
+    // catch this — exercise the omitted path explicitly here.
+    const sparseDoc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                // foreign with no lang / uuid set
+                { type: 'text', text: 'fo', marks: [{ type: 'foreign' }] },
+                // mantra with no lang / uuid set
+                { type: 'text', text: 'ma', marks: [{ type: 'mantra' }] },
+              ],
+            },
+            {
+              type: 'paragraph',
+              content: [
+                // abbreviation / hasAbbreviation with no abbreviation attr
+                { type: 'abbreviation', content: [{ type: 'text', text: 'A' }] },
+                {
+                  type: 'hasAbbreviation',
+                  content: [{ type: 'text', text: 'Abbr' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const el = TranslationSSRContent({
+      content: sparseDoc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('lang="undefined"');
+    expect(html).not.toContain('abbreviation="undefined"');
+  });
+
   it('accepts an array of nodes and wraps them as a doc', () => {
     const el = TranslationSSRContent({
       content: passageDoc.content as JSONContent[],

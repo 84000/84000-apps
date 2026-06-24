@@ -23,15 +23,23 @@ export const ForeignMark = Mark.create<ForeignOptions>({
     return {
       uuid: {
         default: undefined,
+        renderHTML: (attributes) =>
+          attributes.uuid ? { uuid: attributes.uuid } : {},
       },
       type: {
         default: 'span',
+        renderHTML: (attributes) =>
+          attributes.type ? { type: attributes.type } : {},
       },
       textStyle: {
         default: 'foreign',
+        renderHTML: (attributes) =>
+          attributes.textStyle ? { textStyle: attributes.textStyle } : {},
       },
       lang: {
         default: 'foreign',
+        renderHTML: (attributes) =>
+          attributes.lang ? { lang: attributes.lang } : {},
       },
     };
   },
@@ -46,13 +54,11 @@ export const ForeignMark = Mark.create<ForeignOptions>({
     return [{ tag: 'span[data-text-style="foreign"]' }];
   },
 
-  renderHTML({ HTMLAttributes, mark }) {
-    const lang = mark.attrs.lang;
+  renderHTML({ HTMLAttributes }) {
     return [
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-text-style': 'foreign',
-        ...(lang ? { lang } : {}),
       }),
       0,
     ];
