@@ -41,7 +41,7 @@ export const BibliographyList = ({
               <LabeledElement
                 className="@c/sidebar:mt-0.5 mt-4"
                 id={`${section.heading}-${i}`}
-                label={section.label || `b.${i + 1}`}
+                label={`b.${section.label || i + 1}`}
                 contentType="bibliography"
                 excerpt={section.heading}
               >
@@ -53,7 +53,7 @@ export const BibliographyList = ({
             {section.entries.map((entry, j) => (
               <BibliographyBody
                 entry={entry}
-                label={entry.label || `b.${i + 1}.${j + 1}`}
+                label={`b.${entry.label || `${i + 1}.${j + 1}`}`}
                 key={entry.uuid}
               />
             ))}

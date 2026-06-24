@@ -71,6 +71,8 @@ export type BibliographyEntry = {
   entries: Array<BibliographyEntryItem>;
   /** Section heading */
   heading?: Maybe<Scalars['String']['output']>;
+  /** Label of the bibliography entry (e.g., 1, 2, etc.) */
+  label?: Maybe<Scalars['String']['output']>;
 };
 
 /** A single bibliography entry item */
@@ -78,6 +80,8 @@ export type BibliographyEntryItem = {
   __typename?: 'BibliographyEntryItem';
   /** HTML content of the bibliography entry */
   html: Scalars['String']['output'];
+  /** Label of the bibliography entry (e.g., 1.1, 1.2, etc.) */
+  label?: Maybe<Scalars['String']['output']>;
   /** Unique identifier */
   uuid: Scalars['ID']['output'];
   /** UUID of the work this entry belongs to */

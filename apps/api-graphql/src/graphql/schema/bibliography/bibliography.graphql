@@ -13,6 +13,11 @@ type BibliographyEntryItem {
   html: String!
 
   """
+  Label of the bibliography entry (e.g., 1.1, 1.2, etc.)
+  """
+  label: String
+
+  """
   UUID of the work this entry belongs to
   """
   workUuid: ID
@@ -26,6 +31,11 @@ type BibliographyEntry {
   Section heading
   """
   heading: String
+
+  """
+  Label of the bibliography entry (e.g., 1, 2, etc.)
+  """
+  label: String
 
   """
   Bibliography entries in this section
