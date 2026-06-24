@@ -10,7 +10,7 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        className: 'glossary-instance',
+        class: 'glossary-instance',
       },
     };
   },
