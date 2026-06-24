@@ -24,6 +24,7 @@ import {
   isUuid,
   scrollToElement,
   useIsMobile,
+  waitForStableElement,
 } from '@eightyfourthousand/lib-utils';
 import { PanelName, TabName, useNavigation } from '../shared';
 import {
@@ -251,52 +252,12 @@ export const PaginationProvider = ({
             refreshEditorBaseline(tab);
           }
 
-          // Wait for React to re-render and update the DOM (remove/add skeletons)
-          // by waiting until the element's position stabilizes
-          await new Promise<void>((resolve) => {
-            let stabilityCount = 0;
-            let lastTop = -1;
-            let frames = 0;
-            // Cap the wait so a target that never renders can't hang
-            // navigation; ~2s at 60fps. On timeout we resolve and the
-            // element lookup + `if (!element) return` below bails cleanly.
-            const MAX_FRAMES = 120;
-
-            const checkStability = () => {
-              if (frames++ > MAX_FRAMES) {
-                resolve();
-                return;
-              }
-
-              const el = div.querySelector<HTMLElement>(
-                `#${CSS.escape(navCursor)}`,
-              );
-              if (!el) {
-                requestAnimationFrame(checkStability);
-                return;
-              }
-
-              const currentTop = el.getBoundingClientRect().top;
-
-              // Check if position has stabilized (same for 2 consecutive frames)
-              if (currentTop === lastTop) {
-                stabilityCount++;
-                if (stabilityCount >= 2) {
-                  resolve();
-                  return;
-                }
-              } else {
-                stabilityCount = 0;
-              }
-
-              lastTop = currentTop;
-              requestAnimationFrame(checkStability);
-            };
-
-            requestAnimationFrame(checkStability);
-          });
-
-          element = div.querySelector<HTMLElement>(`#${CSS.escape(navCursor)}`);
+          // Wait for React to re-render and update the DOM (remove/add
+          // skeletons) by waiting until the element's position stabilizes. The
+          // wait is capped so a target that never renders can't hang
+          // navigation; on timeout the `if (!element) return` below bails
+          // cleanly.
+          element = await waitForStableElement(div, navCursor);
         }
 
         if (!element) {

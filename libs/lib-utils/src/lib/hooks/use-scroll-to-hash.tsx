@@ -56,6 +56,66 @@ export const scrollToElement = async ({
   });
 };
 
+/**
+ * Waits for the element with the given id to appear inside `container` and for
+ * its vertical position to stabilize before resolving with it.
+ *
+ * When content is replaced (e.g. a page of paginated terms/passages fetched
+ * around a navigation target), the target element's layout keeps shifting for a
+ * few frames as skeletons are removed and real content hydrates. Scrolling
+ * before it settles lands on a pre-settle position. This polls
+ * `getBoundingClientRect().top` and resolves once it is identical across two
+ * consecutive frames, capping the wait so a target that never renders can't hang
+ * navigation.
+ *
+ * @param container The scope to query within.
+ * @param id The element id to wait for (raw — it is `CSS.escape`d internally).
+ * @param maxFrames Maximum frames to wait before giving up (~2s at 60fps).
+ * @returns The settled element, or null if it never rendered within the cap.
+ */
+export const waitForStableElement = (
+  container: HTMLElement,
+  id: string,
+  maxFrames = 120,
+): Promise<HTMLElement | null> => {
+  return new Promise<HTMLElement | null>((resolve) => {
+    let stabilityCount = 0;
+    let lastTop = -1;
+    let frames = 0;
+
+    const checkStability = () => {
+      if (frames++ > maxFrames) {
+        resolve(container.querySelector<HTMLElement>(`#${CSS.escape(id)}`));
+        return;
+      }
+
+      const el = container.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+      if (!el) {
+        requestAnimationFrame(checkStability);
+        return;
+      }
+
+      const currentTop = el.getBoundingClientRect().top;
+
+      // Resolve once the position has been identical for 2 consecutive frames.
+      if (currentTop === lastTop) {
+        stabilityCount++;
+        if (stabilityCount >= 2) {
+          resolve(el);
+          return;
+        }
+      } else {
+        stabilityCount = 0;
+      }
+
+      lastTop = currentTop;
+      requestAnimationFrame(checkStability);
+    };
+
+    requestAnimationFrame(checkStability);
+  });
+};
+
 /** Scrolls to an element matching the URL hash.
  * @param delay Optional delay in milliseconds before scrolling.
  * @param behavior Scroll behavior, either 'auto' or 'smooth'.

@@ -16,7 +16,11 @@ import {
   getWorkGlossaryTerms,
   getWorkGlossaryTermsAround,
 } from '@eightyfourthousand/client-graphql';
-import { isUuid, scrollToElement } from '@eightyfourthousand/lib-utils';
+import {
+  isUuid,
+  scrollToElement,
+  waitForStableElement,
+} from '@eightyfourthousand/lib-utils';
 import { useNavigation } from '../NavigationProvider';
 import { GlossarySkeleton } from './GlossarySkeleton';
 import { usePaginationLoadTriggers } from '../hooks/usePaginationLoadTriggers';
@@ -138,16 +142,10 @@ export const GlossaryPaginationProvider = ({
           setEndCursor(page.nextCursor);
           setTotalCount(page.totalCount);
 
-          // Wait for DOM update
-          await new Promise<void>((resolve) => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve());
-            });
-          });
-
-          element = container.querySelector<HTMLElement>(
-            `#${CSS.escape(navCursor)}`,
-          );
+          // Wait for the freshly-rendered term to settle (skeletons removed,
+          // content hydrated) before scrolling, so we don't land on a
+          // pre-settle position.
+          element = await waitForStableElement(container, navCursor);
         }
 
         if (element) {
