@@ -1,7 +1,37 @@
-'use client';
-
 import { EditorLayout } from '@eightyfourthousand/lib-editing';
+import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
+import { isUuid } from '@eightyfourthousand/lib-utils';
+import { notFound, redirect } from 'next/navigation';
+import { ReactNode } from 'react';
 
-const Layout = EditorLayout;
+const Layout = async ({
+  left,
+  main,
+  right,
+  params,
+}: {
+  left: ReactNode;
+  main: ReactNode;
+  right: ReactNode;
+  params: Promise<{ slug: string }>;
+}) => {
+  const { slug } = await params;
+
+  if (!isUuid(slug)) {
+    const { path } = await lookupEntity({
+      type: 'translation',
+      entity: slug,
+      prefix: '/translations/editor',
+    });
+
+    if (path) {
+      redirect(path);
+    }
+
+    notFound();
+  }
+
+  return <EditorLayout left={left} main={main} right={right} params={params} />;
+};
 
 export default Layout;
