@@ -1,5 +1,6 @@
 import { EditorLayout } from '@eightyfourthousand/lib-editing';
-import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
+import { createBrowserClient } from '@eightyfourthousand/data-access';
+import { lookupEntityWithClient } from '@eightyfourthousand/data-access/ssr';
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound, redirect } from 'next/navigation';
 import { ReactNode } from 'react';
@@ -18,7 +19,8 @@ const Layout = async ({
   const { slug } = await params;
 
   if (!isUuid(slug)) {
-    const { path } = await lookupEntity({
+    const { path } = await lookupEntityWithClient({
+      client: createBrowserClient(),
       type: 'translation',
       entity: slug,
       prefix: '/translations/editor',
