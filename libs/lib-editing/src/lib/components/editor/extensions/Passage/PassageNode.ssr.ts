@@ -50,19 +50,21 @@ export const PassageNodeSSR = Node.create({
         default: null,
         parseHTML: (element) => element.getAttribute('label'),
         renderHTML: (attributes) =>
-          mergeAttributes(attributes, { label: attributes.label }),
+          attributes.label ? { label: attributes.label } : {},
       },
       sort: {
         default: 0,
         parseHTML: (element) => element.getAttribute('sort'),
-        renderHTML: (attributes) =>
-          mergeAttributes(attributes, { sort: attributes.sort }),
+        renderHTML: (attributes) => ({ sort: attributes.sort }),
       },
+      // Internal editor state — never serialize to the public SSR markup.
       alignments: {
         default: {},
+        renderHTML: () => ({}),
       },
       references: {
         default: [],
+        renderHTML: () => ({}),
       },
     };
   },

@@ -42,28 +42,22 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
       type: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-type'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, { 'data-type': attributes.type });
-        },
+        renderHTML: (attributes) =>
+          attributes.type ? { 'data-type': attributes.type } : {},
       },
       textStyle: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-text-style'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, {
-            'data-text-style': attributes.textStyle,
-          });
-        },
+        renderHTML: (attributes) =>
+          attributes.textStyle
+            ? { 'data-text-style': attributes.textStyle }
+            : {},
       },
       lang: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-lang'),
-        renderHTML(attributes) {
-          if (!attributes.lang) {
-            return attributes;
-          }
-          return mergeAttributes(attributes, { 'data-lang': attributes.lang });
-        },
+        renderHTML: (attributes) =>
+          attributes.lang ? { 'data-lang': attributes.lang } : {},
       },
     };
   },

@@ -73,6 +73,22 @@ describe('TranslationSSRContent', () => {
     expect(html).toMatch(/<strong[^>]*>world<\/strong>/);
   });
 
+  it('emits no undefined/null/object attribute values in SSR output', () => {
+    // The static string renderer serializes attribute values literally, so any
+    // extension renderHTML that returns undefined/null/an object leaks it onto
+    // crawler-facing markup. Lock the cleaned output (see DEV-644).
+    const el = TranslationSSRContent({
+      content: passageDoc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).not.toContain('undefined');
+    expect(html).not.toContain('"null"');
+    expect(html).not.toContain('[object Object]');
+    expect(html).toMatchInlineSnapshot(
+      `"<div label="1.1" sort="0" class="flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20"><div class="w-full"><div class="relative scroll-m-20 w-full self-start"><div class="absolute labeled -left-16 w-16 text-end hover:cursor-pointer" contenteditable="false" data-passage-label="">1.1</div><div class="passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end" contenteditable="false"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="passage is-editable pl-6 @c/sidebar:pl-4"><p class="no-indent paragraph" type="paragraph">Hello <strong>world</strong></p></div></div></div><div class="passage-compare-source w-full hidden md:mt-1" contenteditable="false" data-compare-source=""><div class="passage pl-6 @c/sidebar:pl-4"><div class="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2"></div></div></div></div>"`,
+    );
+  });
+
   it('accepts an array of nodes and wraps them as a doc', () => {
     const el = TranslationSSRContent({
       content: passageDoc.content as JSONContent[],
@@ -159,7 +175,9 @@ describe('TranslationSSRContent', () => {
       ],
     };
 
-    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
     expect(html).toContain('marked');
     // Start sup carries a trailing word joiner (U+2060); end sup a leading one,
@@ -210,7 +228,9 @@ describe('TranslationSSRContent', () => {
       ],
     };
 
-    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
     expect(html).toMatch(/marked<sup[^>]*endNote="en-only"[^>]*>⁠c<\/sup>/);
   });
@@ -249,7 +269,9 @@ describe('TranslationSSRContent', () => {
       ],
     };
 
-    const el = TranslationSSRContent({ content: doc }) as ReactElement<DangerousProps>;
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
     expect(html).toContain('marked');
     // The valid note still renders; the orphaned one is dropped entirely.

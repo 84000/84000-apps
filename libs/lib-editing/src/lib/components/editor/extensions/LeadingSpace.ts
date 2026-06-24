@@ -1,4 +1,4 @@
-import { Extension, mergeAttributes } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface LeadingSpaceOptions {
@@ -42,12 +42,8 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
           hasLeadingSpace: {
             default: this.options.defaultHasLeadingSpace,
             parseHTML: (element) => element.className.includes('mt-6'),
-            renderHTML: (attributes) => {
-              if (attributes.hasLeadingSpace) {
-                return mergeAttributes(attributes, { class: 'mt-6 no-indent' });
-              }
-              return {};
-            },
+            renderHTML: (attributes) =>
+              attributes.hasLeadingSpace ? { class: 'mt-6 no-indent' } : {},
           },
           leadingSpaceUuid: {
             default: undefined,

@@ -1,4 +1,4 @@
-import { Extension, mergeAttributes } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface IndentOptions {
@@ -42,12 +42,8 @@ export const Indent = Extension.create<IndentOptions>({
           hasIndent: {
             default: this.options.defaultHasIndent,
             parseHTML: (element) => element.className.includes('pl-8'),
-            renderHTML: (attributes) => {
-              if (!attributes.hasIndent) {
-                return {};
-              }
-              return mergeAttributes(attributes, { class: 'pl-8' });
-            },
+            renderHTML: (attributes) =>
+              attributes.hasIndent ? { class: 'pl-8' } : {},
           },
           indentUuid: {
             default: undefined,
