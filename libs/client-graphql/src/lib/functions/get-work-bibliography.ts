@@ -7,8 +7,10 @@ const GET_WORK_BIBLIOGRAPHY = gql`
     work(uuid: $uuid) {
       bibliography {
         heading
+        label
         entries {
           uuid
+          label
           html
           workUuid
         }
