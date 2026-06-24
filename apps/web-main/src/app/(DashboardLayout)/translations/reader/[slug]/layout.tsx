@@ -1,7 +1,10 @@
 import { ReaderLayout } from '@eightyfourthousand/lib-editing';
+import { lookupEntity } from '@eightyfourthousand/data-access/ssr';
+import { isUuid } from '@eightyfourthousand/lib-utils';
+import { notFound, redirect } from 'next/navigation';
 import { ReactNode } from 'react';
 
-const Layout = ({
+const Layout = async ({
   left,
   main,
   right,
@@ -12,6 +15,22 @@ const Layout = ({
   right: ReactNode;
   params: Promise<{ slug: string }>;
 }) => {
+  const { slug } = await params;
+
+  if (!isUuid(slug)) {
+    const { path } = await lookupEntity({
+      type: 'translation',
+      entity: slug,
+      prefix: '/translations/reader',
+    });
+
+    if (path) {
+      redirect(path);
+    }
+
+    notFound();
+  }
+
   return (
     <ReaderLayout
       withHeader={true}
