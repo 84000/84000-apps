@@ -22,12 +22,18 @@ export const MantraMark = Mark.create<MantraOptions>({
     return {
       uuid: {
         default: undefined,
+        renderHTML: (attributes) =>
+          attributes.uuid ? { uuid: attributes.uuid } : {},
       },
       type: {
         default: 'mantra',
+        renderHTML: (attributes) =>
+          attributes.type ? { type: attributes.type } : {},
       },
       lang: {
         default: 'Sa-Ltn',
+        renderHTML: (attributes) =>
+          attributes.lang ? { lang: attributes.lang } : {},
       },
     };
   },
@@ -46,13 +52,10 @@ export const MantraMark = Mark.create<MantraOptions>({
     ];
   },
 
-  renderHTML({ HTMLAttributes, mark }) {
-    const lang = mark.attrs.lang;
+  renderHTML({ HTMLAttributes }) {
     return [
       'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        lang,
-      }),
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       0,
     ];
   },
