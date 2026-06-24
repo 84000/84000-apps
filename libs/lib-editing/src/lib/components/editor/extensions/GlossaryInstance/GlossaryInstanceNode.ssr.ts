@@ -15,21 +15,28 @@ export const GlossaryInstanceNodeSSR = Mark.create<GlossaryInstanceSSROptions>({
     };
   },
 
+  // `renderHTML` below emits authority/glossary/uuid itself from `mark.attrs`,
+  // so these are `rendered: false` to stop the static SSR renderer also
+  // auto-emitting them (duplicates, plus `isInline="true"` is internal-only
+  // state). Storage and parseHTML are unaffected.
   addAttributes() {
     return {
       authority: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('authority'),
       },
       glossary: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('glossary'),
       },
       uuid: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('uuid'),
       },
-      isInline: { default: true },
+      isInline: { default: true, rendered: false },
     };
   },
 
