@@ -15,35 +15,47 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
     };
   },
 
+  // `renderHTML` below constructs every output attribute itself from
+  // `mark.attrs`, so each stored attribute is marked `rendered: false` to keep
+  // the static SSR renderer from also auto-emitting it (which would leak raw
+  // `undefined` values for the optional ones). Storage and parseHTML are
+  // unaffected.
   addAttributes() {
     return {
       entity: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('entity'),
       },
       type: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('entity-type'),
       },
       href: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('href'),
       },
       uuid: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('uuid'),
       },
       isSameWork: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) =>
           element.getAttribute('data-same-work') === 'true',
       },
       subtype: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('data-subtype'),
       },
       linkToh: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('data-link-toh'),
       },
     };

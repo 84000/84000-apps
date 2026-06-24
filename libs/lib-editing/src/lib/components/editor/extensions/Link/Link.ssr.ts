@@ -3,11 +3,23 @@ import { mergeAttributes } from '@tiptap/core';
 import { safeHref } from '@eightyfourthousand/lib-utils';
 
 export const LinkSSR = TipTapLink.extend({
+  // `renderHTML` below builds the anchor's href/target/rel/uuid itself from
+  // `mark.attrs`, so the inherited link attributes (href, class, title, …) and
+  // uuid are marked `rendered: false` to stop the static SSR renderer from
+  // auto-emitting them (which leaked `class="null"`, `title="null"`,
+  // `uuid="undefined"`). Storage and parseHTML are unaffected.
   addAttributes() {
+    const parentAttributes = this.parent?.() ?? {};
     return {
-      ...this.parent?.(),
+      ...Object.fromEntries(
+        Object.entries(parentAttributes).map(([key, value]) => [
+          key,
+          { ...(value as Record<string, unknown>), rendered: false },
+        ]),
+      ),
       uuid: {
         default: undefined,
+        rendered: false,
         parseHTML: (element) => element.getAttribute('uuid'),
       },
     };

@@ -43,6 +43,10 @@ export const MentionSSR = Node.create<MentionSSROptions>({
     return {
       items: {
         default: [],
+        // `renderHTML` builds the mention's children from `node.attrs.items`;
+        // `rendered: false` stops the static SSR renderer from also serializing
+        // the raw array as `items="[object Object]"`. parseHTML is unaffected.
+        rendered: false,
         parseHTML: (element) => {
           const itemsAttr = element.getAttribute('data-items');
           if (!itemsAttr) return [];

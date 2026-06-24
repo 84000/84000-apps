@@ -1,5 +1,4 @@
 import { BulletList, ListItem as TipTapListItem } from '@tiptap/extension-list';
-import { mergeAttributes } from '@tiptap/core';
 
 const ITEM_STYLE_TO_CLASS: { [key: string]: string } = {
   none: 'list-none',
@@ -34,14 +33,11 @@ export const List = BulletList.extend({
       spacing: {
         default: 'horizontal',
         parseHTML: (element) => element.getAttribute('data-spacing'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, {
-            'data-spacing': attributes.spacing,
-            class:
-              LIST_SPACING_TO_CLASS[attributes.spacing || 'horizontal'] ||
-              'ml-4',
-          });
-        },
+        renderHTML: (attributes) => ({
+          'data-spacing': attributes.spacing,
+          class:
+            LIST_SPACING_TO_CLASS[attributes.spacing || 'horizontal'] || 'ml-4',
+        }),
       },
       nesting: {
         default: undefined,
@@ -49,23 +45,19 @@ export const List = BulletList.extend({
           const nesting = element.getAttribute('data-nesting');
           return nesting ? parseInt(nesting, 10) : 0;
         },
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, {
-            'data-nesting': `${attributes.nesting}`,
-          });
-        },
+        renderHTML: (attributes) =>
+          attributes.nesting != null
+            ? { 'data-nesting': `${attributes.nesting}` }
+            : {},
       },
       itemStyle: {
         default: 'none',
         parseHTML: (element) => element.getAttribute('data-item-style'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, {
-            'data-item-style': attributes.itemStyle,
-            class:
-              ITEM_STYLE_TO_CLASS[attributes.itemStyle || 'none'] ||
-              'list-none',
-          });
-        },
+        renderHTML: (attributes) => ({
+          'data-item-style': attributes.itemStyle,
+          class:
+            ITEM_STYLE_TO_CLASS[attributes.itemStyle || 'none'] || 'list-none',
+        }),
       },
     };
   },

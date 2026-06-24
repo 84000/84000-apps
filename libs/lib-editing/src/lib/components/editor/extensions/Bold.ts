@@ -1,4 +1,3 @@
-import { mergeAttributes } from '@tiptap/react';
 import { Bold as TipTapBold } from '@tiptap/extension-bold';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,28 +8,22 @@ export const Bold = TipTapBold.extend({
       type: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-type'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, { 'data-type': attributes.type });
-        },
+        renderHTML: (attributes) =>
+          attributes.type ? { 'data-type': attributes.type } : {},
       },
       textStyle: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-text-style'),
-        renderHTML(attributes) {
-          return mergeAttributes(attributes, {
-            'data-text-style': attributes.textStyle,
-          });
-        },
+        renderHTML: (attributes) =>
+          attributes.textStyle
+            ? { 'data-text-style': attributes.textStyle }
+            : {},
       },
       lang: {
         default: undefined,
         parseHTML: (element) => element.getAttribute('data-lang'),
-        renderHTML(attributes) {
-          if (!attributes.lang) {
-            return attributes;
-          }
-          return mergeAttributes(attributes, { 'data-lang': attributes.lang });
-        },
+        renderHTML: (attributes) =>
+          attributes.lang ? { 'data-lang': attributes.lang } : {},
       },
     };
   },

@@ -1,4 +1,4 @@
-import { Extension, mergeAttributes } from '@tiptap/core';
+import { Extension } from '@tiptap/core';
 
 export interface ParagraphIndentOptions {
   types: string[];
@@ -42,14 +42,10 @@ export const ParagraphIndent = Extension.create<ParagraphIndentOptions>({
             default: this.options.defaultHasParagraphIndent,
             parseHTML: (element) =>
               element.className.includes('conditional-indent'),
-            renderHTML: (attributes) => {
-              if (attributes.hasParagraphIndent) {
-                return mergeAttributes(attributes, {
-                  class: 'conditional-indent',
-                });
-              }
-              return mergeAttributes(attributes, { class: 'no-indent' });
-            },
+            renderHTML: (attributes) =>
+              attributes.hasParagraphIndent
+                ? { class: 'conditional-indent' }
+                : { class: 'no-indent' },
           },
         },
       },
