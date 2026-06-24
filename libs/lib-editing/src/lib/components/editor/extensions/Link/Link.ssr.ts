@@ -14,7 +14,7 @@ export const LinkSSR = TipTapLink.extend({
       ...Object.fromEntries(
         Object.entries(parentAttributes).map(([key, value]) => [
           key,
-          { ...value, rendered: false },
+          { ...(value as Record<string, unknown>), rendered: false },
         ]),
       ),
       uuid: {
