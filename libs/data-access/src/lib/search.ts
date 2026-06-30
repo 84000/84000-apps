@@ -44,6 +44,12 @@ export const searchEntities = async ({
   types?: EntitySearchResultType[];
   limit?: number;
 }): Promise<EntitySearchResult[]> => {
+  // TODO: support general search without work uuuid
+  if (!workUuid) {
+    console.error('searchEntities: workUuid must be provided');
+    return [];
+  }
+
   const trimmed = query.trim();
   if (!trimmed) {
     return [];
