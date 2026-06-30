@@ -1,0 +1,64 @@
+"""
+A lightweight reference to a searchable entity, used by the editor's mention
+picker.
+"""
+type EntitySearchResult {
+  """
+  UUID of the matched entity.
+  """
+  uuid: ID!
+
+  """
+  Entity kind: "work", "passage", "folio", "bibliography", or "glossary".
+  """
+  type: String!
+
+  """
+  Short identifier (toh, passage/folio label, g.<term_number>, or bibliography
+  entry label).
+  """
+  label: String!
+
+  """
+  Secondary descriptive text (work title, content excerpt, English glossary
+  term, or bibliography excerpt).
+  """
+  text: String!
+}
+
+extend type Query {
+  """
+  Generic entity search for mention authoring. Accent- and case-insensitive.
+
+  `work` results are always global. `workUuid` and `toh` are optional scoping
+  filters for the work-internal types (passage, folio, bibliography, glossary):
+  when provided they scope the search, when omitted those types are searched
+  globally. `types` restricts the search to specific entity kinds.
+  """
+  search(
+    """
+    The search query.
+    """
+    query: String!
+
+    """
+    Optional: scope work-internal entity types to this work.
+    """
+    workUuid: ID
+
+    """
+    Optional: scope folio results to this Tohoku catalog number.
+    """
+    toh: String
+
+    """
+    Restrict to these entity kinds (e.g. ["work"]); omit for all.
+    """
+    types: [String!]
+
+    """
+    Maximum matches per entity type (default 20, max 50).
+    """
+    limit: Int
+  ): [EntitySearchResult!]!
+}
