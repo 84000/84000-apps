@@ -63,10 +63,19 @@ export const groupMentionResults = (
  * Debounced entity search backed by the top-level GraphQL `search` query
  * (data-access `search_entities`). Returns mention candidates: other works
  * (global) plus passages, folios, bibliographies, and glossary terms scoped to
- * the current work.
+ * a work.
+ *
+ * The searched work defaults to the current work but can be re-targeted with a
+ * `toh` override. When the toh differs from the current work's, the known
+ * workUuid is dropped so the server resolves the work from the toh.
  */
-export const useMentionSearch = (query: string) => {
-  const { uuid: workUuid, toh } = useNavigation();
+export const useMentionSearch = (query: string, toh?: string) => {
+  const { uuid: navWorkUuid, toh: navToh } = useNavigation();
+  const effectiveToh = (toh ?? navToh ?? '').trim() || undefined;
+  // Fast path: only pass the known workUuid when searching the current work.
+  // Otherwise let the toh resolve the target work server-side.
+  const workUuid = effectiveToh === navToh ? navWorkUuid : undefined;
+
   const [results, setResults] = useState<MentionSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -87,7 +96,7 @@ export const useMentionSearch = (query: string) => {
         client,
         query: text.trim(),
         workUuid,
-        toh,
+        toh: effectiveToh,
         // Top 5 per category (the SQL applies the limit per entity type).
         limit: 5,
       });
@@ -106,7 +115,7 @@ export const useMentionSearch = (query: string) => {
       );
       setLoading(false);
     },
-    [workUuid, toh],
+    [workUuid, effectiveToh],
   );
 
   useEffect(() => {

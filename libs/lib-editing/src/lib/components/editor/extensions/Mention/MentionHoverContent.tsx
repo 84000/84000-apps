@@ -1,19 +1,13 @@
 import { Button } from '@eightyfourthousand/design-system';
 import { Editor } from '@tiptap/core';
-import {
-  ChevronRightIcon,
-  PencilIcon,
-  Trash2Icon,
-  TypeIcon,
-} from 'lucide-react';
+import { ChevronRightIcon, Trash2Icon, TypeIcon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
-import { MentionSearch } from './MentionSearch';
 import type { MentionItem } from './Mention.ssr';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
 
-type Mode = 'view' | 'pick' | 'rename';
+type Mode = 'view' | 'rename';
 
 /**
  * Find a mention node in the document that contains an item with the given UUID.
@@ -42,6 +36,12 @@ function findMentionNodeByItemUuid(
   return result;
 }
 
+/**
+ * Hover card for an existing mention. Editing is intentionally limited to two
+ * actions: overriding the display text (the persisted `text` property) and
+ * deleting. Re-pointing a mention at a different entity is not supported —
+ * delete and re-insert instead.
+ */
 export const MentionHoverContent = ({
   uuid,
   entityType,
@@ -60,13 +60,16 @@ export const MentionHoverContent = ({
 }) => {
   const [mode, setModeLocal] = useState<Mode>('view');
 
-  // The current custom override (`text`), read once when the card opens so the
-  // rename field can be pre-filled.
-  const [currentText] = useState(() => {
+  // Snapshot the item once when the card opens — the custom override (`text`)
+  // pre-fills the rename field, and text/displayText drive the label shown.
+  const [item] = useState<MentionItem | undefined>(() => {
     const found = findMentionNodeByItemUuid(editor, uuid);
     const items: MentionItem[] = found?.node?.attrs.items || [];
-    return items.find((item) => item.uuid === uuid)?.text ?? '';
+    return items.find((i) => i.uuid === uuid);
   });
+  const currentText = item?.text ?? '';
+  // Prefer the display text; fall back to the entity UUID only when unresolved.
+  const displayLabel = item?.text || item?.displayText || entity;
 
   const setMode = useCallback(
     (next: Mode) => {
@@ -129,22 +132,6 @@ export const MentionHoverContent = ({
     }, EDITOR_UPDATE_DELAY_MS);
   }, [editor, uuid, close, setMode]);
 
-  // Re-point the mention at a different entity. Clears the persisted custom
-  // override (`text`) and seeds the transient `displayText` with the picker
-  // label for immediate display; the canonical label resolves on load.
-  const updateMention = useCallback(
-    (newType: string, newEntity: string, displayText?: string) => {
-      mutateItem((item) => ({
-        ...item,
-        entity: newEntity,
-        linkType: newType,
-        text: undefined,
-        displayText,
-      }));
-    },
-    [mutateItem],
-  );
-
   // Set or clear the custom override label. Passing no value clears `text`,
   // returning the mention to its dynamically resolved label.
   const renameMention = useCallback(
@@ -153,18 +140,6 @@ export const MentionHoverContent = ({
     },
     [mutateItem],
   );
-
-  if (mode === 'pick') {
-    return (
-      <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
-        <MentionSearch
-          onSelect={({ entity: newEntity, linkType, label }) => {
-            updateMention(linkType, newEntity, label);
-          }}
-        />
-      </div>
-    );
-  }
 
   if (mode === 'rename') {
     return (
@@ -185,26 +160,17 @@ export const MentionHoverContent = ({
       <span className="text-primary text-sm my-auto">{entityType}</span>
       <ChevronRightIcon className="my-auto size-4" />
       <span className="truncate text-muted-foreground text-sm my-auto">
-        {entity}
+        {displayLabel}
       </span>
       <span className="flex-grow" />
       <Button
         variant="ghost"
         size="icon"
         className="size-6 [&_svg]:size-4"
-        title="Set custom label"
+        title="Edit display text"
         onClick={() => setMode('rename')}
       >
         <TypeIcon className="text-primary my-auto" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        title="Change reference"
-        onClick={() => setMode('pick')}
-      >
-        <PencilIcon className="text-primary my-auto" />
       </Button>
       <Button
         variant="ghost"

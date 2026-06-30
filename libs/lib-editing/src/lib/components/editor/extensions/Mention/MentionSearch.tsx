@@ -3,6 +3,7 @@
 import { Input } from '@eightyfourthousand/design-system';
 import { Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigation } from '../../../shared';
 import {
   MentionLinkType,
   groupMentionResults,
@@ -11,9 +12,10 @@ import {
 
 /**
  * Entity picker used inside the mention hover card (edit mode). Mirrors
- * GlossarySearch: a debounced search input over the entity search, scoped to
- * the current work. Results are grouped by entity type; selecting a result
- * reports its entity UUID, link type, and label.
+ * GlossarySearch: a debounced search input over the entity search. Results are
+ * grouped by entity type and scoped to a work (defaults to the current work,
+ * re-targetable via the toh field). Selecting a result reports its entity UUID,
+ * link type, and label.
  */
 export const MentionSearch = ({
   initialQuery = '',
@@ -26,11 +28,18 @@ export const MentionSearch = ({
     entity: string;
     linkType: MentionLinkType;
     label: string;
+    isSameWork: boolean;
   }) => void;
 }) => {
+  const { toh: navToh } = useNavigation();
   const [query, setQuery] = useState(initialQuery);
-  const { results, loading } = useMentionSearch(query);
+  const [toh, setToh] = useState(navToh ?? '');
+  const { results, loading } = useMentionSearch(query, toh);
   const groups = groupMentionResults(results);
+
+  // A result is "same work" (in-panel navigation) only when it is a
+  // work-internal type AND the searched work is the current document's work.
+  const searchingCurrentWork = (toh.trim() || navToh) === navToh;
 
   return (
     <div className="flex flex-col gap-2 w-72">
@@ -44,6 +53,15 @@ export const MentionSearch = ({
         {loading && (
           <Loader2Icon className="absolute right-2 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
         )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-xs text-muted-foreground">Work</span>
+        <Input
+          placeholder="toh…"
+          className="h-7 text-xs"
+          value={toh}
+          onChange={(e) => setToh(e.target.value)}
+        />
       </div>
       <div className="flex flex-col max-h-64 overflow-y-auto">
         {groups.length > 0
@@ -61,6 +79,8 @@ export const MentionSearch = ({
                         entity: item.entity,
                         linkType: item.linkType,
                         label: item.label,
+                        isSameWork:
+                          item.linkType !== 'work' && searchingCurrentWork,
                       })
                     }
                   >

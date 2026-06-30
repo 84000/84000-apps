@@ -2,7 +2,7 @@
 
 import { cn } from '@eightyfourthousand/lib-utils';
 import { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
-import { Loader2Icon } from 'lucide-react';
+import { Loader2Icon, SlidersHorizontalIcon } from 'lucide-react';
 import {
   forwardRef,
   useEffect,
@@ -10,6 +10,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import type { MentionStorage } from './Mention';
 import {
   MentionSearchResult,
   groupMentionResults,
@@ -22,9 +23,11 @@ export interface MentionListHandle {
 
 /**
  * The `@` mention dropdown. The suggestion plugin supplies the typed `query`;
- * this component owns the debounced lib-search lookup, keyboard navigation, and
- * selection. Results are grouped by entity type (Notion-style); keyboard
- * navigation runs across the flattened, grouped order.
+ * this component owns the debounced search, keyboard navigation, and selection.
+ * Results are grouped by entity type (Notion-style) and scoped to the current
+ * work; keyboard navigation runs across the flattened, grouped order. The
+ * "Advanced" button hands off to a dedicated dialog that can search any work
+ * (a focusable field cannot live in this suggestion popup without closing it).
  */
 const MentionList = forwardRef<
   MentionListHandle,
@@ -32,6 +35,16 @@ const MentionList = forwardRef<
 >((props, ref) => {
   const { results, loading } = useMentionSearch(props.query);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const openAdvanced = () => {
+    const { editor, range, query } = props;
+    const pos = range.from;
+    const storage = editor.storage.mention as MentionStorage | undefined;
+    // Remove the `@…` trigger so the suggestion exits, then hand off to the
+    // stable overlay (which owns its own focus and work scope).
+    editor.chain().focus().deleteRange(range).run();
+    storage?.openAdvanced?.({ pos, query });
+  };
 
   const groups = useMemo(() => groupMentionResults(results), [results]);
   // Flattened, grouped order — what selectedIndex and the arrow keys index into.
@@ -75,7 +88,8 @@ const MentionList = forwardRef<
   }));
 
   return (
-    <div className="z-50 bg-popover flex flex-col rounded-md border shadow-md p-1 max-h-[320px] w-80 overflow-y-auto">
+    <div className="z-50 bg-popover flex flex-col rounded-md border shadow-md p-1 w-80">
+      <div className="flex flex-col max-h-[280px] overflow-y-auto">
       {ordered.length > 0 ? (
         groups.map((group) => (
           <div key={group.type} className="flex flex-col">
@@ -120,6 +134,17 @@ const MentionList = forwardRef<
           )}
         </div>
       )}
+      </div>
+      <div className="border-t mt-1 pt-1">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={openAdvanced}
+        >
+          <SlidersHorizontalIcon className="size-4" />
+          Advanced search…
+        </button>
+      </div>
     </div>
   );
 });

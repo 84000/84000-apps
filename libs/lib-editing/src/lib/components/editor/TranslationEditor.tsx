@@ -5,6 +5,7 @@ import { TranslationBubbleMenu } from './menus';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { usePagination } from './PaginationProvider';
 import { PassageMenuOverlay } from './extensions/Passage/PassageMenuOverlay';
+import { MentionAdvancedOverlay } from './extensions/Mention/MentionAdvancedOverlay';
 import type {
   TranslationEditorContentItem,
   TranslationEditorContent,
@@ -26,6 +27,7 @@ export const TranslationEditor = ({ className }: { className?: string }) => {
         <EditorContent className="flex-1" editor={editor} />
         {editor.isEditable && <TranslationBubbleMenu editor={editor} />}
         <PassageMenuOverlay editor={editor} />
+        {editor.isEditable && <MentionAdvancedOverlay editor={editor} />}
       </div>
     </div>
   );
