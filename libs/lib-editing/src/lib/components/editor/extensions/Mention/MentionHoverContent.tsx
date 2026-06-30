@@ -1,11 +1,13 @@
 import { Button } from '@eightyfourthousand/design-system';
 import { Editor } from '@tiptap/core';
-import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import { ChevronRightIcon, Trash2Icon, TypeIcon } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { InternalLinkInput } from '../InternalLink/InternalLinkInput';
+import { HoverInputField } from '../HoverInputField';
 import type { MentionItem } from './Mention.ssr';
 
 const EDITOR_UPDATE_DELAY_MS = 100;
+
+type Mode = 'view' | 'rename';
 
 /**
  * Find a mention node in the document that contains an item with the given UUID.
@@ -34,6 +36,12 @@ function findMentionNodeByItemUuid(
   return result;
 }
 
+/**
+ * Hover card for an existing mention. Editing is intentionally limited to two
+ * actions: overriding the display text (the persisted `text` property) and
+ * deleting. Re-pointing a mention at a different entity is not supported —
+ * delete and re-insert instead.
+ */
 export const MentionHoverContent = ({
   uuid,
   entityType,
@@ -50,18 +58,54 @@ export const MentionHoverContent = ({
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
-  const [isEditing, setIsEditingLocal] = useState(false);
+  const [mode, setModeLocal] = useState<Mode>('view');
 
-  const setIsEditing = useCallback(
-    (editing: boolean) => {
-      setIsEditingLocal(editing);
-      setHoverCardEditing(editing);
+  // Snapshot the item once when the card opens — the custom override (`text`)
+  // pre-fills the rename field, and text/displayText drive the label shown.
+  const [item] = useState<MentionItem | undefined>(() => {
+    const found = findMentionNodeByItemUuid(editor, uuid);
+    const items: MentionItem[] = found?.node?.attrs.items || [];
+    return items.find((i) => i.uuid === uuid);
+  });
+  const currentText = item?.text ?? '';
+  // Prefer the display text; fall back to the entity UUID only when unresolved.
+  const displayLabel = item?.text || item?.displayText || entity;
+
+  const setMode = useCallback(
+    (next: Mode) => {
+      setModeLocal(next);
+      setHoverCardEditing(next !== 'view');
     },
     [setHoverCardEditing],
   );
 
+  const mutateItem = useCallback(
+    (updater: (item: MentionItem) => MentionItem) => {
+      setMode('view');
+      close();
+
+      setTimeout(() => {
+        const found = findMentionNodeByItemUuid(editor, uuid);
+        if (!found || !found.node) {
+          console.warn('Mention node not found in the document.');
+          return;
+        }
+
+        const { pos, node } = found;
+        const items: MentionItem[] = (node.attrs.items || []).map(
+          (item: MentionItem) => (item.uuid === uuid ? updater(item) : item),
+        );
+
+        const { tr } = editor.state;
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
+        editor.view.dispatch(tr);
+      }, EDITOR_UPDATE_DELAY_MS);
+    },
+    [editor, uuid, close, setMode],
+  );
+
   const deleteMention = useCallback(() => {
-    setIsEditing(false);
+    setMode('view');
     close();
 
     setTimeout(() => {
@@ -86,77 +130,57 @@ export const MentionHoverContent = ({
       }
       editor.view.dispatch(tr);
     }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setIsEditing]);
+  }, [editor, uuid, close, setMode]);
 
-  const updateMention = useCallback(
-    (newType: string, newEntity: string) => {
-      setIsEditing(false);
-      close();
-
-      setTimeout(() => {
-        const found = findMentionNodeByItemUuid(editor, uuid);
-        if (!found || !found.node) {
-          console.warn('Mention node not found in the document.');
-          return;
-        }
-
-        const { pos, node } = found;
-        const items: MentionItem[] = (node.attrs.items || []).map(
-          (item: MentionItem) =>
-            item.uuid === uuid
-              ? { ...item, entity: newEntity, linkType: newType }
-              : item,
-        );
-
-        const { tr } = editor.state;
-        tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
-        editor.view.dispatch(tr);
-      }, EDITOR_UPDATE_DELAY_MS);
+  // Set or clear the custom override label. Passing no value clears `text`,
+  // returning the mention to its dynamically resolved label.
+  const renameMention = useCallback(
+    (value?: string) => {
+      mutateItem((item) => ({ ...item, text: value || undefined }));
     },
-    [editor, uuid, close, setIsEditing],
+    [mutateItem],
   );
+
+  if (mode === 'rename') {
+    return (
+      <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
+        <HoverInputField
+          type="mention"
+          attr="text"
+          valueRef={currentText}
+          placeholder="Custom label (leave empty to reset)…"
+          onSubmit={(value) => renameMention(value)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
-      {isEditing ? (
-        <InternalLinkInput
-          type={entityType}
-          uuid={entity}
-          onSubmit={(type, entityVal) => {
-            if (type && entityVal) {
-              updateMention(type, entityVal);
-            } else {
-              deleteMention();
-            }
-            setIsEditing(false);
-          }}
-        />
-      ) : (
-        <>
-          <span className="text-primary text-sm my-auto">{entityType}</span>
-          <ChevronRightIcon className="my-auto size-4" />
-          <span className="truncate text-muted-foreground text-sm my-auto">
-            {entity}
-          </span>
-          <span className="flex-grow" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-            onClick={() => setIsEditing(true)}
-          >
-            <PencilIcon className="text-primary my-auto" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-            onClick={deleteMention}
-          >
-            <Trash2Icon className="text-destructive my-auto" />
-          </Button>
-        </>
-      )}
+      <span className="text-primary text-sm my-auto">{entityType}</span>
+      <ChevronRightIcon className="my-auto size-4" />
+      <span className="truncate text-muted-foreground text-sm my-auto">
+        {displayLabel}
+      </span>
+      <span className="flex-grow" />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 [&_svg]:size-4"
+        title="Edit display text"
+        onClick={() => setMode('rename')}
+      >
+        <TypeIcon className="text-primary my-auto" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-6 [&_svg]:size-4"
+        title="Remove mention"
+        onClick={deleteMention}
+      >
+        <Trash2Icon className="text-destructive my-auto" />
+      </Button>
     </div>
   );
 };

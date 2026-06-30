@@ -1,17 +1,62 @@
 import { v4 as uuidv4 } from 'uuid';
+import Suggestion from '@tiptap/suggestion';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { MentionSSR, MentionItem } from './Mention.ssr';
+import { mentionSuggestion } from './MentionSuggestion';
+
+/** Payload handed to the advanced mention picker overlay. */
+export interface MentionAdvancedPayload {
+  /** Document position where the mention should be inserted. */
+  pos: number;
+  /** The text typed after `@`, used to seed the advanced search. */
+  query: string;
+}
+
+export interface MentionStorage {
+  /**
+   * Registered by the stable MentionAdvancedOverlay; invoked by the `@`
+   * suggestion list's "Advanced" button to open the dedicated picker.
+   */
+  openAdvanced?: (payload: MentionAdvancedPayload) => void;
+}
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     mention: {
-      setMention: (entity: string, linkType: string) => ReturnType;
+      setMention: (
+        entity: string,
+        linkType: string,
+        displayText?: string,
+        isSameWork?: boolean,
+      ) => ReturnType;
     };
+  }
+
+  interface Storage {
+    mention: MentionStorage;
   }
 }
 
-export const Mention = MentionSSR.extend({
+export const Mention = MentionSSR.extend<unknown, MentionStorage>({
+  addStorage(): MentionStorage {
+    return {
+      openAdvanced: undefined,
+    };
+  },
+
+  // `@`-triggered authoring lives only on the client extension so the SSR
+  // node (MentionSSR) stays free of editor-only plugins.
+  addProseMirrorPlugins() {
+    return [
+      ...(this.parent?.() ?? []),
+      Suggestion({
+        editor: this.editor,
+        ...mentionSuggestion,
+      }),
+    ];
+  },
+
   addNodeView() {
     return (props) => {
       const isEditable = props.editor.isEditable;
@@ -118,8 +163,16 @@ export const Mention = MentionSSR.extend({
   addCommands() {
     return {
       setMention:
-        (entity: string, linkType: string) =>
+        (
+          entity: string,
+          linkType: string,
+          displayText?: string,
+          isSameWork?: boolean,
+        ) =>
         ({ commands }) => {
+          // `displayText` is a transient label for immediate in-session display
+          // — it is never persisted, so the canonical value resolves on load.
+          // A persisted override lives in `text` (set via the hover card).
           return commands.insertContent({
             type: this.name,
             attrs: {
@@ -128,6 +181,8 @@ export const Mention = MentionSSR.extend({
                   uuid: uuidv4(),
                   entity,
                   linkType,
+                  ...(isSameWork ? { isSameWork: true } : {}),
+                  ...(displayText ? { displayText } : {}),
                 },
               ],
             },

@@ -34,6 +34,7 @@ import {
 } from './schema/passage/passage.field-resolver';
 import { tocResolver } from './schema/toc/toc.resolver';
 import { titlesResolver } from './schema/work/title.resolver';
+import { searchResolver } from './schema/search/search.resolver';
 
 export const resolvers = {
   JSON: JSONResolver,
@@ -47,6 +48,7 @@ export const resolvers = {
     glossaryInstance: glossaryInstanceResolver,
     glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
+    search: searchResolver,
   },
 
   Mutation: {
