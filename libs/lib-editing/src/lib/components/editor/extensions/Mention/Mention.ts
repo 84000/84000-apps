@@ -1,17 +1,36 @@
 import { v4 as uuidv4 } from 'uuid';
+import Suggestion from '@tiptap/suggestion';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { MentionSSR, MentionItem } from './Mention.ssr';
+import { mentionSuggestion } from './MentionSuggestion';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     mention: {
-      setMention: (entity: string, linkType: string) => ReturnType;
+      setMention: (
+        entity: string,
+        linkType: string,
+        displayText?: string,
+        isSameWork?: boolean,
+      ) => ReturnType;
     };
   }
 }
 
 export const Mention = MentionSSR.extend({
+  // `@`-triggered authoring lives only on the client extension so the SSR
+  // node (MentionSSR) stays free of editor-only plugins.
+  addProseMirrorPlugins() {
+    return [
+      ...(this.parent?.() ?? []),
+      Suggestion({
+        editor: this.editor,
+        ...mentionSuggestion,
+      }),
+    ];
+  },
+
   addNodeView() {
     return (props) => {
       const isEditable = props.editor.isEditable;
@@ -118,8 +137,16 @@ export const Mention = MentionSSR.extend({
   addCommands() {
     return {
       setMention:
-        (entity: string, linkType: string) =>
+        (
+          entity: string,
+          linkType: string,
+          displayText?: string,
+          isSameWork?: boolean,
+        ) =>
         ({ commands }) => {
+          // `displayText` is a transient label for immediate in-session display
+          // — it is never persisted, so the canonical value resolves on load.
+          // A persisted override lives in `text` (set via the hover card).
           return commands.insertContent({
             type: this.name,
             attrs: {
@@ -128,6 +155,8 @@ export const Mention = MentionSSR.extend({
                   uuid: uuidv4(),
                   entity,
                   linkType,
+                  ...(isSameWork ? { isSameWork: true } : {}),
+                  ...(displayText ? { displayText } : {}),
                 },
               ],
             },

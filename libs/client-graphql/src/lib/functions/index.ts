@@ -25,6 +25,11 @@ export {
   type GlossaryTermSearchResult,
 } from './search-work-glossary-terms';
 export {
+  searchEntities,
+  type EntitySearchResult,
+  type EntitySearchResultType,
+} from './search-entities';
+export {
   getTermPassages,
   type GlossaryPassagesPage,
 } from './get-term-passages';
