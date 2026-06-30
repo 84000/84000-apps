@@ -32,6 +32,10 @@ declare module '@tiptap/core' {
       ) => ReturnType;
     };
   }
+
+  interface Storage {
+    mention: MentionStorage;
+  }
 }
 
 export const Mention = MentionSSR.extend<unknown, MentionStorage>({

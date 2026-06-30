@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@eightyfourthousand/design-system';
 import { MentionSearch } from './MentionSearch';
-import type { MentionAdvancedPayload, MentionStorage } from './Mention';
+import type { MentionAdvancedPayload } from './Mention';
 
 const EDITOR_UPDATE_DELAY_MS = 50;
 
@@ -27,10 +27,7 @@ export const MentionAdvancedOverlay = ({ editor }: { editor: Editor }) => {
 
   // Register the openAdvanced callback the suggestion list calls.
   useEffect(() => {
-    const storage = editor.storage.mention as MentionStorage | undefined;
-    if (!storage) {
-      return;
-    }
+    const storage = editor.storage.mention;
     storage.openAdvanced = (next) => setPayload(next);
     return () => {
       storage.openAdvanced = undefined;

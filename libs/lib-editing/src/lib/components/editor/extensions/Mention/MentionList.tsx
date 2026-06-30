@@ -10,7 +10,6 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type { MentionStorage } from './Mention';
 import {
   MentionSearchResult,
   groupMentionResults,
@@ -39,11 +38,10 @@ const MentionList = forwardRef<
   const openAdvanced = () => {
     const { editor, range, query } = props;
     const pos = range.from;
-    const storage = editor.storage.mention as MentionStorage | undefined;
     // Remove the `@…` trigger so the suggestion exits, then hand off to the
     // stable overlay (which owns its own focus and work scope).
     editor.chain().focus().deleteRange(range).run();
-    storage?.openAdvanced?.({ pos, query });
+    editor.storage.mention.openAdvanced?.({ pos, query });
   };
 
   const groups = useMemo(() => groupMentionResults(results), [results]);
