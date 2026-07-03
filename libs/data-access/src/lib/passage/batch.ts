@@ -32,6 +32,11 @@ export const getAnnotationsByPassageUuids = async ({
       .select('uuid, passage_uuid, type, start, end, content, toh')
       .in('passage_uuid', passageUuids as string[])
       .not('type', 'like', 'deprecated%')
+      // deterministic order is required for stable pagination; without it
+      // postgres may return rows in a different order per page, skipping or
+      // duplicating annotations
+      .order('passage_uuid', { ascending: true })
+      .order('uuid', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
     if (error) {
@@ -90,6 +95,12 @@ export const getAlignmentsByPassageUuids = async ({
         'passage_uuid, folio_uuid, toh, tibetan, folio_number, volume_number',
       )
       .in('passage_uuid', passageUuids as string[])
+      // passage_alignments has no primary key (materialized view), but
+      // (passage_uuid, folio_uuid, toh) is unique; deterministic order is
+      // required for stable pagination
+      .order('passage_uuid', { ascending: true })
+      .order('folio_uuid', { ascending: true })
+      .order('toh', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
     if (error) {
