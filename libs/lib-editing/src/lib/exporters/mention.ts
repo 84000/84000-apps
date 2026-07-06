@@ -22,6 +22,7 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       isSameWork?: boolean;
       subtype?: string;
       linkToh?: string;
+      lang?: MentionAnnotation['lang'];
     }): MentionAnnotation => ({
       uuid: item.uuid,
       type: 'mention',
@@ -33,6 +34,7 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       ...(item.isSameWork !== undefined && { isSameWork: item.isSameWork }),
       ...(item.subtype && { subtype: item.subtype }),
       ...(item.linkToh && { linkToh: item.linkToh }),
+      ...(item.lang && { lang: item.lang }),
       // Zero-length annotation: start === end
       start,
       end: start,

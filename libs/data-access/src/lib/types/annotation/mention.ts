@@ -7,9 +7,7 @@ import {
   baseAnnotationToDto,
 } from './annotation';
 
-export const transformer: AnnotationTransformer = (
-  dto,
-): MentionAnnotation => {
+export const transformer: AnnotationTransformer = (dto): MentionAnnotation => {
   const mention = baseAnnotationFromDTO(dto) as MentionAnnotation;
   dto.content.forEach((content) => {
     if (content.uuid) {
@@ -30,13 +28,16 @@ export const transformer: AnnotationTransformer = (
     if (content.toh) {
       mention.linkToh = content.toh as string;
     }
+    if (content.lang) {
+      mention.lang = content.lang as MentionAnnotation['lang'];
+    }
   });
 
   return mention;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { entity, linkType, text, isSameWork, subtype, linkToh } =
+  const { entity, linkType, text, isSameWork, subtype, linkToh, lang } =
     annotation as MentionAnnotation;
   const dto = baseAnnotationToDto(annotation);
 
@@ -58,6 +59,9 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   }
   if (linkToh) {
     dto.content.push({ toh: linkToh });
+  }
+  if (lang) {
+    dto.content.push({ lang });
   }
 
   return dto;

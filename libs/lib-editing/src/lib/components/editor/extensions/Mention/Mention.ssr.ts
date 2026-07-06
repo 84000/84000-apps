@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { cn, safeHref } from '@eightyfourthousand/lib-utils';
+import { safeHref } from '@eightyfourthousand/lib-utils';
 
 export interface MentionSSROptions {
   HTMLAttributes: Record<string, unknown>;
@@ -15,6 +15,7 @@ export interface MentionItem {
   subtype?: string;
   linkToh?: string;
   toh?: string;
+  lang?: string;
 }
 
 const isMentionItem = (value: unknown): value is MentionItem => {
@@ -72,22 +73,25 @@ export const MentionSSR = Node.create<MentionSSROptions>({
 
     const children = items.map((item) => {
       const label = item.text || item.displayText || '';
-      const tohAttr: Record<string, string> = item.toh
-        ? { 'data-toh': item.toh }
-        : {};
+      // Shared presentational attrs applied to every rendered variant. `lang`
+      // drives the `[lang]` typography rules (e.g. italic work titles).
+      const extraAttrs: Record<string, string> = {
+        ...(item.toh ? { 'data-toh': item.toh } : {}),
+        ...(item.lang ? { lang: item.lang } : {}),
+      };
 
       if (!label || !item.entity || !item.linkType) {
         return [
           'span',
-          { class: cn('mention-link px-1'), ...tohAttr },
+          { class: 'mention-link', ...extraAttrs },
           label,
         ] as unknown;
       }
 
       const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
       const attrs: Record<string, string> = {
-        class: 'mention-link px-1',
-        ...tohAttr,
+        class: 'mention-link',
+        ...extraAttrs,
       };
       if (item.uuid) attrs['uuid'] = item.uuid;
       if (item.entity) attrs['entity'] = item.entity;
@@ -105,7 +109,7 @@ export const MentionSSR = Node.create<MentionSSROptions>({
       } else {
         return [
           'span',
-          { class: 'mention-link px-1', ...tohAttr },
+          { class: 'mention-link', ...extraAttrs },
           label,
         ] as unknown;
       }
