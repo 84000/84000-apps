@@ -4,6 +4,7 @@ import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
 import { createFolioLoader } from './schema/folio/folio.loader';
+import { createBibliographyLabelLoader } from './schema/bibliography/bibliography-label.loader';
 
 export interface Loaders {
   /**
@@ -54,6 +55,13 @@ export interface Loaders {
    * Used to enrich mention annotations with display text from target folios.
    */
   foliosByUuid: ReturnType<typeof createFolioLoader>;
+
+  /**
+   * Load bibliography reference labels by UUID.
+   * Used to enrich mention annotations with display text from target
+   * bibliography entries.
+   */
+  bibliographyLabelsByUuid: ReturnType<typeof createBibliographyLabelLoader>;
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
@@ -63,5 +71,6 @@ export function createLoaders(supabase: DataClient): Loaders {
     workTitlesByUuid: createWorkTitleLoader(supabase),
     glossaryNamesByUuid: createGlossaryNameLoader(supabase),
     foliosByUuid: createFolioLoader(supabase),
+    bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase),
   };
 }
