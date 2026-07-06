@@ -67,9 +67,13 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
 
       items.forEach((item) => {
         const anchor = document.createElement('a');
-        anchor.classList.add('mention-link', 'px-1');
+        anchor.classList.add('mention-link');
         if (item.toh) {
           anchor.setAttribute('data-toh', item.toh);
+        }
+        // `lang` drives the `[lang]` typography rules (e.g. italic work titles).
+        if (item.lang) {
+          anchor.setAttribute('lang', item.lang);
         }
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)

@@ -143,12 +143,26 @@ async function resolveMentionTexts(
     );
   }
 
-  // Bibliography gets a static label
   const bibMentions = byType.get('bibliography');
   if (bibMentions) {
-    for (const m of bibMentions) {
-      mentionTexts.set(m.annotationUuid, 'Bibliography');
-    }
+    fetchPromises.push(
+      ctx.loaders.bibliographyLabelsByUuid
+        .loadMany(bibMentions.map((m) => m.entityUuid))
+        .then((labels) => {
+          bibMentions.forEach((m, i) => {
+            const resolved = labels[i];
+            if (!resolved || resolved instanceof Error) return;
+            // Prefer the positional reference label (e.g. "b.1.2"), falling
+            // back to the plain-text citation when no label can be derived.
+            const text = resolved.label
+              ? `b.${resolved.label}`
+              : resolved.citation;
+            if (text) {
+              mentionTexts.set(m.annotationUuid, text);
+            }
+          });
+        }),
+    );
   }
 
   await Promise.all(fetchPromises);
@@ -347,7 +361,7 @@ export const passageJsonResolver = async (
     xmlId: parent.xmlId ?? undefined,
     annotations,
     alignments: alignmentsFromDTO(rawAlignments),
-    references: references
+    references: references,
   };
 
   return blockFromPassage(passage);

@@ -162,6 +162,7 @@ export type MentionAnnotation = AnnotationBase & {
   isSameWork?: boolean;
   subtype?: string;
   linkToh?: string;
+  lang?: ExtendedTranslationLanguage;
 };
 
 export type ParagraphAnnotation = AnnotationBase & {
