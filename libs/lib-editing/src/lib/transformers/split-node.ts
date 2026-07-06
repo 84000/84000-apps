@@ -95,6 +95,7 @@ export function splitNode(
         marks,
         start: midStart,
         end: midEnd,
+        isLast: postStartIdx >= text.length,
       });
 
       if (midMarks?.length) {
@@ -124,6 +125,7 @@ export function splitNode(
         marks,
         start: postStart,
         end: postEnd,
+        isLast: true,
       });
 
       if (postMarks?.length) {
