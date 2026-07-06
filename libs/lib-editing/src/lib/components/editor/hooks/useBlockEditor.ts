@@ -37,6 +37,7 @@ export const useBlockEditor = ({
         autocorrect: 'off',
         autocapitalize: 'off',
         class: 'min-h-full focus:outline-none',
+        translate: isEditable ? 'no' : 'yes',
       },
     },
     onCreate: (ctx) => {
