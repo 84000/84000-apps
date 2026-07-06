@@ -49,6 +49,18 @@
     @apply text-foreground no-underline cursor-auto;
   }
 
+  .mention-link[entity-type='folio'] {
+    @apply ps-px pe-1;
+  }
+
+  .mention-link[entity-type='work'][lang]:not(
+      [lang='bo'],
+      [lang='ja'],
+      [lang='zh']
+    ) {
+    @apply italic;
+  }
+
   .glossary-instance-definition {
     p {
       @apply mb-1 mt-2 @c/sidebar:pt-1;
