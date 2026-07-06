@@ -3,7 +3,7 @@ import {
   serializeTohList,
 } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 import { splitContent } from './split-content';
 
 export const glossaryInstance: Transformer = (ctx) => {
@@ -16,7 +16,7 @@ export const glossaryInstance: Transformer = (ctx) => {
     return;
   }
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) => {
@@ -40,4 +40,8 @@ export const glossaryInstance: Transformer = (ctx) => {
       });
     },
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

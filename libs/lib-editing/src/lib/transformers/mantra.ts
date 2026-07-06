@@ -1,7 +1,7 @@
 import { MantraAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 export const mantra: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -11,7 +11,7 @@ export const mantra: Transformer = (ctx) => {
     return;
   }
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) =>
@@ -25,4 +25,8 @@ export const mantra: Transformer = (ctx) => {
         },
       }),
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

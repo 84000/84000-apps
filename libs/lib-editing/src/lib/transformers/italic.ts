@@ -1,9 +1,9 @@
 import type { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 export const italic: Transformer = (ctx) => {
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) =>
@@ -19,4 +19,8 @@ export const italic: Transformer = (ctx) => {
         },
       }),
   });
+
+  if (!matched) {
+    markUnplaceable(ctx.annotation);
+  }
 };

@@ -3,7 +3,7 @@ import {
   serializeTohList,
 } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 import { splitAndInsert } from './split-insert';
 
 export const mention: Transformer = (ctx) => {
@@ -35,7 +35,7 @@ export const mention: Transformer = (ctx) => {
     toh: serializeTohList(toh),
     lang,
   };
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) => {
@@ -77,4 +77,8 @@ export const mention: Transformer = (ctx) => {
       });
     },
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

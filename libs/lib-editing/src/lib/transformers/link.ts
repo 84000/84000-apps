@@ -1,13 +1,13 @@
 import { LinkAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 export const link: Transformer = (ctx) => {
   const { annotation } = ctx;
   const { uuid, href = '#', type } = annotation as LinkAnnotation;
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) =>
@@ -24,4 +24,8 @@ export const link: Transformer = (ctx) => {
         },
       }),
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

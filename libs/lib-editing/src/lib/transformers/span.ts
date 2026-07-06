@@ -2,7 +2,7 @@ import { ExtendedTranslationLanguage, SpanAnnotation } from '@eightyfourthousand
 import type { Transformer } from './transformer';
 import { type SpanMarkType, MARK_TYPES } from '../types';
 import { splitContent } from './split-content';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
   [key: string]: (
@@ -33,7 +33,7 @@ export const span: Transformer = (ctx) => {
     return;
   }
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text', 'glossaryInstance'],
     transform: (ctx) => {
@@ -69,4 +69,8 @@ export const span: Transformer = (ctx) => {
       });
     },
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

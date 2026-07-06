@@ -167,6 +167,141 @@ describe('blockFromPassage', () => {
   });
 });
 
+describe('blockFromPassage with annotations straddling split boundaries', () => {
+  it('applies a span that straddles an earlier link boundary', () => {
+    const dto = passageDTO({
+      annotations: [
+        {
+          uuid: 'link-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'link',
+          start: 0,
+          end: 15,
+          content: [{ href: 'https://example.com' }],
+        },
+        {
+          uuid: 'span-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'span',
+          start: 4,
+          end: 19,
+          content: [{ 'text-style': 'underline' }],
+        },
+      ],
+    });
+
+    const block = blockFromPassage(buildPassage(dto));
+    const textNodes = collectTextNodes(block);
+    const underlined = textNodes
+      .filter((node) => node.marks?.some((mark) => mark.type === 'underline'))
+      .map((node) => node.text)
+      .join('');
+
+    // "The quick brown fox ..." — the span covers [4, 19] even though the
+    // link split the text at 15.
+    expect(underlined).toBe('quick brown fox');
+    expect(collectText(block)).toBe(dto.content);
+    expect(block.attrs?.invalid).toBeUndefined();
+    assertNoInvertedRanges(block);
+  });
+
+  it('keeps an atomic mention inside a straddling mark range', () => {
+    const dto = passageDTO({
+      annotations: [
+        {
+          uuid: 'mention-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'mention',
+          start: 10,
+          end: 10,
+          content: [{ uuid: 'entity-1' }, { type: 'glossary' }],
+        },
+        {
+          uuid: 'link-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'link',
+          start: 5,
+          end: 15,
+          content: [{ href: 'https://example.com' }],
+        },
+      ],
+    });
+
+    const block = blockFromPassage(buildPassage(dto));
+    const mentions: TranslationEditorContentItem[] = [];
+    const walk = (item: TranslationEditorContentItem) => {
+      if (item.type === 'mention') mentions.push(item);
+      (item.content ?? []).forEach(walk);
+    };
+    walk(block);
+
+    const linked = collectTextNodes(block)
+      .filter((node) => node.marks?.some((mark) => mark.type === 'link'))
+      .map((node) => node.text)
+      .join('');
+
+    expect(mentions).toHaveLength(1);
+    expect(linked).toBe(dto.content.slice(5, 15));
+    expect(collectText(block)).toBe(dto.content);
+  });
+
+  it('drops and flags a span that straddles a line boundary', () => {
+    const consoleWarn = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    const dto = passageDTO({
+      content: 'first verse line and the second line',
+      annotations: [
+        {
+          uuid: 'lg-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'line-group',
+          start: 0,
+          end: 36,
+          content: [],
+        },
+        {
+          uuid: 'line-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'line',
+          start: 0,
+          end: 16,
+          content: [],
+        },
+        {
+          uuid: 'line-2',
+          passage_uuid: 'passage-uuid-1',
+          type: 'line',
+          start: 16,
+          end: 36,
+          content: [],
+        },
+        {
+          uuid: 'span-1',
+          passage_uuid: 'passage-uuid-1',
+          type: 'span',
+          start: 10,
+          end: 25,
+          content: [{ 'text-style': 'emphasis' }],
+        },
+      ],
+    });
+
+    const block = blockFromPassage(buildPassage(dto));
+    const marked = collectTextNodes(block).filter(
+      (node) => node.marks?.length,
+    );
+
+    // The span crosses a block boundary, which stays unplaceable — but now
+    // loudly, with the passage flagged instead of a silent drop.
+    expect(marked).toEqual([]);
+    expect(block.attrs?.invalid).toBe(true);
+    expect(collectText(block)).toBe(dto.content);
+    consoleWarn.mockRestore();
+  });
+});
+
 describe('blockFromPassage with invalid annotations', () => {
   it('skips out-of-range annotations and flags the passage', () => {
     const consoleWarn = jest
