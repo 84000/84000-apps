@@ -53,11 +53,7 @@
     @apply ps-px pe-1;
   }
 
-  .mention-link[entity-type='work'][lang]:not(
-      [lang='bo'],
-      [lang='ja'],
-      [lang='zh']
-    ) {
+  .mention-link[entity-type='work']:not([lang='bo'], [lang='ja'], [lang='zh']) {
     @apply italic;
   }
 
