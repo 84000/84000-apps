@@ -168,16 +168,16 @@ export const getFoliosByUuids = async ({
   }
 
   const { data, error } = await client
-    .from('tibetan_works_folios')
+    .from('folios')
     .select(
       `
-      folio_uuid,
+      folio_uuid:uuid::uuid,
       content::text,
       volume_number::int4,
       folio_number::int4,
       side::text`,
     )
-    .in('folio_uuid', uuids);
+    .in('uuid', uuids);
 
   if (error) {
     console.error('Error fetching folios by uuids:', error);
