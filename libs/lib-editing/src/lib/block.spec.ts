@@ -167,6 +167,48 @@ describe('blockFromPassage', () => {
   });
 });
 
+describe('blockFromPassage with invalid annotations', () => {
+  it('skips out-of-range annotations and flags the passage', () => {
+    const consoleWarn = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    const dto = passageDTO({
+      annotations: [
+        {
+          uuid: 'span-invalid',
+          passage_uuid: 'passage-uuid-1',
+          type: 'span',
+          start: 0,
+          end: 999,
+          content: [{ 'text-style': 'emphasis' }],
+        },
+        {
+          uuid: 'span-valid',
+          passage_uuid: 'passage-uuid-1',
+          type: 'span',
+          start: 4,
+          end: 9,
+          content: [{ 'text-style': 'underline' }],
+        },
+      ],
+    });
+
+    const block = blockFromPassage(buildPassage(dto));
+    const textNodes = collectTextNodes(block);
+    const markTypes = textNodes.flatMap(
+      (node) => node.marks?.map((mark) => mark.type) ?? [],
+    );
+
+    expect(block.attrs?.invalid).toBe(true);
+    // The invalid emphasis span must not render anywhere; the valid
+    // underline span still applies.
+    expect(markTypes).toEqual(['underline']);
+    expect(collectText(block)).toBe(dto.content);
+    consoleWarn.mockRestore();
+  });
+});
+
 describe('blocksFromTranslationBody', () => {
   it('keeps empty passages and drops only passages with missing content', () => {
     const consoleWarn = jest
