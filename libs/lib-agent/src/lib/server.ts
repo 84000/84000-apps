@@ -5,7 +5,7 @@ import type { McpHandlerOptions } from './types';
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
-    version = '2026.6.5',
+    version = '2026.7.0',
     description,
     instructions,
     tools,
