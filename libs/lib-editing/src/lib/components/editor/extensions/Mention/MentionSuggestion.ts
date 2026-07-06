@@ -63,8 +63,11 @@ export const mentionSuggestion: Omit<
           editor: props.editor,
         });
 
-        const clientRect = props.clientRect?.();
-        const getReferenceClientRect = clientRect ? () => clientRect : null;
+        // Use the live clientRect function so the popup tracks the caret from
+        // the first frame instead of anchoring to a stale snapshot.
+        const getReferenceClientRect = props.clientRect
+          ? () => props.clientRect?.() ?? new DOMRect()
+          : null;
         popup = tippy('body', {
           getReferenceClientRect,
           content: component.element,

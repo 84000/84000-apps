@@ -5,8 +5,6 @@ import { useCallback, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
 import type { MentionItem } from './Mention.ssr';
 
-const EDITOR_UPDATE_DELAY_MS = 100;
-
 type Mode = 'view' | 'rename';
 
 /**
@@ -34,6 +32,32 @@ function findMentionNodeByItemUuid(
   });
 
   return result;
+}
+
+/**
+ * Locate the mention node containing the item and apply an edit to it. The
+ * node is re-found by uuid at dispatch time, so positions are always fresh —
+ * no need to defer past the hover card closing.
+ */
+function withMentionNode(
+  editor: Editor,
+  itemUuid: string,
+  fn: (
+    pos: number,
+    node: NonNullable<ReturnType<Editor['state']['doc']['nodeAt']>>,
+  ) => void,
+) {
+  if (editor.isDestroyed) {
+    return;
+  }
+
+  const found = findMentionNodeByItemUuid(editor, itemUuid);
+  if (!found?.node) {
+    console.warn('Mention node not found in the document.');
+    return;
+  }
+
+  fn(found.pos, found.node);
 }
 
 /**
@@ -84,14 +108,7 @@ export const MentionHoverContent = ({
       setMode('view');
       close();
 
-      setTimeout(() => {
-        const found = findMentionNodeByItemUuid(editor, uuid);
-        if (!found || !found.node) {
-          console.warn('Mention node not found in the document.');
-          return;
-        }
-
-        const { pos, node } = found;
+      withMentionNode(editor, uuid, (pos, node) => {
         const items: MentionItem[] = (node.attrs.items || []).map(
           (item: MentionItem) => (item.uuid === uuid ? updater(item) : item),
         );
@@ -99,7 +116,7 @@ export const MentionHoverContent = ({
         const { tr } = editor.state;
         tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
         editor.view.dispatch(tr);
-      }, EDITOR_UPDATE_DELAY_MS);
+      });
     },
     [editor, uuid, close, setMode],
   );
@@ -108,14 +125,7 @@ export const MentionHoverContent = ({
     setMode('view');
     close();
 
-    setTimeout(() => {
-      const found = findMentionNodeByItemUuid(editor, uuid);
-      if (!found || !found.node) {
-        console.warn('Mention node not found in the document.');
-        return;
-      }
-
-      const { pos, node } = found;
+    withMentionNode(editor, uuid, (pos, node) => {
       const items: MentionItem[] = (node.attrs.items || []).filter(
         (item: MentionItem) => item.uuid !== uuid,
       );
@@ -129,7 +139,7 @@ export const MentionHoverContent = ({
         tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
       }
       editor.view.dispatch(tr);
-    }, EDITOR_UPDATE_DELAY_MS);
+    });
   }, [editor, uuid, close, setMode]);
 
   // Set or clear the custom override label. Passing no value clears `text`,

@@ -38,6 +38,9 @@ export const GlobalConfig = Extension.create({
       setDebug:
         (enabled) =>
         ({ editor }) => {
+          if (this.storage.debug === enabled) {
+            return true;
+          }
           this.storage.debug = enabled;
           // Force re-render if needed
           editor.view.updateState(editor.state);

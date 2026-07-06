@@ -76,7 +76,6 @@ export const TranslationBuilder = ({
       isEditable={isEditable}
       hasMoreAfter={hasMoreAfter}
       onCreate={({ editor }) => {
-        editor.commands.setDebug(true);
         setEditor(name, editor);
         if (!isObserving) {
           setIsObserving(true);
