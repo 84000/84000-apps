@@ -79,8 +79,15 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
         const displayText = item.text || item.displayText;
         anchor.textContent =
-          displayText ||
-          (props.editor.isEditable ? `[${item.entity || 'Unknown'}]` : '');
+          displayText || (props.editor.isEditable ? '[Not Found]' : '');
+        const hasDisplayText = !!displayText;
+        if (!hasDisplayText && isEditable) {
+          anchor.classList.add(
+            'text-error',
+            'decoration-wavy',
+            'decoration-error',
+          );
+        }
 
         // Compute href from linkType + entity
         let href = `/entity/${item.linkType}/${item.entity}`;
@@ -88,7 +95,11 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
           href = `${href}?edit=true`;
         }
 
-        if (item.isSameWork) {
+        if (isEditable || !item.isSameWork) {
+          anchor.setAttribute('href', href);
+          anchor.setAttribute('target', '_blank');
+          anchor.setAttribute('rel', 'noreferrer');
+        } else {
           // Same-work links navigate in-place via panel system
           anchor.setAttribute('href', '#');
           anchor.setAttribute('data-same-work', 'true');
@@ -100,45 +111,38 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
             anchor.setAttribute('data-link-toh', item.linkToh);
           }
 
-          if (!isEditable) {
-            anchor.addEventListener('click', (e) => {
-              e.preventDefault();
-              const query = new URLSearchParams(window.location.search);
+          anchor.addEventListener('click', (e) => {
+            e.preventDefault();
+            const query = new URLSearchParams(window.location.search);
 
-              if (item.linkToh) {
-                query.set('toh', item.linkToh);
+            if (item.linkToh) {
+              query.set('toh', item.linkToh);
+            }
+
+            switch (item.linkType) {
+              case 'bibliography':
+                query.set('right', `open:bibliography:${item.entity}`);
+                break;
+              case 'glossary':
+                query.set('right', `open:glossary:${item.entity}`);
+                break;
+              case 'passage': {
+                const panel = PANEL_FOR_SECTION[item.subtype || ''] || 'main';
+                const tab =
+                  TAB_FOR_SECTION[item.subtype || ''] || 'translation';
+                query.set(panel, `open:${tab}:${item.entity}`);
+                break;
               }
-
-              switch (item.linkType) {
-                case 'bibliography':
-                  query.set('right', `open:bibliography:${item.entity}`);
-                  break;
-                case 'glossary':
-                  query.set('right', `open:glossary:${item.entity}`);
-                  break;
-                case 'passage': {
-                  const panel = PANEL_FOR_SECTION[item.subtype || ''] || 'main';
-                  const tab =
-                    TAB_FOR_SECTION[item.subtype || ''] || 'translation';
-                  query.set(panel, `open:${tab}:${item.entity}`);
-                  break;
-                }
-                case 'folio': {
-                  query.set('main', `open:source:${item.entity}`);
-                  break;
-                }
-                default:
-                  break;
+              case 'folio': {
+                query.set('main', `open:source:${item.entity}`);
+                break;
               }
+              default:
+                break;
+            }
 
-              window.history.pushState({}, '', `?${query.toString()}`);
-            });
-          }
-        } else {
-          // Cross-work links open in a new tab
-          anchor.setAttribute('href', href);
-          anchor.setAttribute('target', '_blank');
-          anchor.setAttribute('rel', 'noreferrer');
+            window.history.pushState({}, '', `?${query.toString()}`);
+          });
         }
 
         // Set DOM attrs for HoverCardProvider identification
