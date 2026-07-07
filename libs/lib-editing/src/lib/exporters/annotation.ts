@@ -131,7 +131,7 @@ export const markAnnotationFromNode = (ctx: ExporterContext): Annotation[] => {
   node.marks.forEach((mark) => {
     const start = findNodePosition(ctx.root, mark.attrs.uuid, mark.type.name);
     if (start === undefined) {
-      return nodeNotFound(mark);
+      return nodeNotFound(mark, ctx.skipped);
     }
     const type = mark.type.name as AnnotationType;
     const annotation = EXPORTERS[type]?.({ ...ctx, mark, start });
@@ -163,10 +163,13 @@ export const annotationExportsFromNode = (
   // annotation. Ignore nodes without a uuid.
   if (!node.attrs.uuid) {
     if (blockAnnotation) {
-      console.warn(
+      console.error(
         `Node "${node.type.name}" is missing a uuid — its annotation was skipped. ` +
           'This is likely a timing issue where ensureUuids() was not called before export.',
       );
+      if (ctx.skipped) {
+        ctx.skipped.count++;
+      }
     }
   } else if (blockAnnotation) {
     if (Array.isArray(blockAnnotation)) {
@@ -179,7 +182,7 @@ export const annotationExportsFromNode = (
   node.content.forEach((child) => {
     const start = findNodePosition(root, child.attrs.uuid, child.type.name);
     if (start === undefined) {
-      return nodeNotFound(child);
+      return nodeNotFound(child, ctx.skipped);
     }
     annotations.push(
       ...annotationExportsFromNode({

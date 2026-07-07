@@ -86,9 +86,9 @@ describe('paragraph exporter', () => {
 });
 
 describe('annotationExportsFromNode — null UUID guard', () => {
-  it('should produce no annotation and emit a warning when a paragraph node has no uuid', () => {
-    const warnSpy = jest
-      .spyOn(console, 'warn')
+  it('should produce no annotation and emit an error when a paragraph node has no uuid', () => {
+    const errorSpy = jest
+      .spyOn(console, 'error')
       .mockImplementation(() => undefined);
 
     const parent = {
@@ -119,12 +119,12 @@ describe('annotationExportsFromNode — null UUID guard', () => {
     // The paragraph annotation must be absent — no annotation for a uuid-less node.
     expect(annotations.filter((a) => a.type === 'paragraph')).toHaveLength(0);
 
-    // A warning must be emitted so the issue is visible in development.
-    expect(warnSpy).toHaveBeenCalledWith(
+    // An error must be emitted so the issue is visible in development.
+    expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('missing a uuid'),
     );
 
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it('should produce a paragraph annotation when the paragraph node has a valid uuid', () => {

@@ -76,6 +76,14 @@ export type Passage = {
   parent?: string;
   toh?: TohokuCatalogEntry;
   references?: Passages;
+  /**
+   * True when the exporters could not serialize every annotation on this
+   * passage (missing uuid, unlocatable node, or the passage was flagged
+   * invalid on load). The save path must not delete DB annotations absent
+   * from an incomplete set — the omission is a serialization gap, not an
+   * editor deletion.
+   */
+  annotationsIncomplete?: boolean;
 };
 
 export type Passages = Passage[];

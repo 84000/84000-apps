@@ -99,6 +99,28 @@ export type CurrentUser = {
   role: UserRole;
 };
 
+/**
+ * A lightweight reference to a searchable entity, used by the editor's mention
+ * picker.
+ */
+export type EntitySearchResult = {
+  __typename?: 'EntitySearchResult';
+  /**
+   * Short identifier (toh, passage/folio label, g.<term_number>, or bibliography
+   * entry label).
+   */
+  label: Scalars['String']['output'];
+  /**
+   * Secondary descriptive text (work title, content excerpt, English glossary
+   * term, or bibliography excerpt).
+   */
+  text: Scalars['String']['output'];
+  /** Entity kind: "work", "passage", "folio", "bibliography", or "glossary". */
+  type: Scalars['String']['output'];
+  /** UUID of the matched entity. */
+  uuid: Scalars['ID']['output'];
+};
+
 /** A folio page from a Tibetan work */
 export type Folio = {
   __typename?: 'Folio';
@@ -406,6 +428,12 @@ export type PassageFilter = {
 export type PassageInput = {
   /** Annotations as JSON array */
   annotations: Scalars['JSON']['input'];
+  /**
+   * True when the client could not serialize every annotation on this passage.
+   * The server must not delete stored annotations missing from an incomplete
+   * set — the omission is a serialization gap, not an editor deletion.
+   */
+  annotationsIncomplete?: InputMaybe<Scalars['Boolean']['input']>;
   /** Text content of the passage */
   content: Scalars['String']['input'];
   /** Display label for the passage */
@@ -459,6 +487,15 @@ export type Query = {
    * At least one of uuid or legacy xmlId must be provided. Prefers uuid if both are present.
    */
   passage?: Maybe<Passage>;
+  /**
+   * Generic entity search for mention authoring. Accent- and case-insensitive.
+   *
+   * `work` results are always global. `workUuid` and `toh` are optional scoping
+   * filters for the work-internal types (passage, folio, bibliography, glossary):
+   * when provided they scope the search, when omitted those types are searched
+   * globally. `types` restricts the search to specific entity kinds.
+   */
+  search: Array<EntitySearchResult>;
   /** Get the current API version */
   version: Scalars['String']['output'];
   /**
@@ -511,6 +548,16 @@ export type QueryLookupArgs = {
 export type QueryPassageArgs = {
   uuid?: InputMaybe<Scalars['ID']['input']>;
   xmlId?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QuerySearchArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
+  toh?: InputMaybe<Scalars['String']['input']>;
+  types?: InputMaybe<Array<Scalars['String']['input']>>;
+  workUuid?: InputMaybe<Scalars['ID']['input']>;
 };
 
 

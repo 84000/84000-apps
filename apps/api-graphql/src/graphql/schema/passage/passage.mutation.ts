@@ -34,6 +34,7 @@ interface PassageInput {
   // Annotations come as JSON from GraphQL
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   annotations: any[];
+  annotationsIncomplete?: boolean | null;
 }
 
 interface SavePassagesResult {
@@ -97,6 +98,7 @@ export const savePassagesMutation = async (
       type: input.type as Passage['type'],
       xmlId: input.xmlId ?? undefined,
       annotations: input.annotations as Annotation[],
+      annotationsIncomplete: input.annotationsIncomplete ?? undefined,
     }));
 
     return savePassagesWithDeletions({

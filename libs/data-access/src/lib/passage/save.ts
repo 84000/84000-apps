@@ -24,7 +24,7 @@ async function normalizePassageLabelsAfter({
   fromSort: number;
   fromLabel: string;
   delta: number;
-}): Promise<void> {
+}): Promise<{ error?: string }> {
   const parts = fromLabel.split('.');
   const depth = parts.length;
   const prefix = depth > 1 ? `${parts.slice(0, -1).join('.')}.` : '';
@@ -41,7 +41,11 @@ async function normalizePassageLabelsAfter({
       .order('sort', { ascending: true })
       .limit(SAVE_PAGE_SIZE);
 
-    if (error || !data || data.length === 0) break;
+    if (error) {
+      console.error('Error fetching passages for label normalization:', error);
+      return { error: error.message };
+    }
+    if (!data || data.length === 0) break;
 
     const labelUpdates: { uuid: string; label: string }[] = [];
     const prefixRenames: { oldPrefix: string; newPrefix: string }[] = [];
@@ -76,6 +80,7 @@ async function normalizePassageLabelsAfter({
         .upsert(labelUpdates, { onConflict: 'uuid' });
       if (upsertError) {
         console.error('Error normalizing passage labels:', upsertError);
+        return { error: upsertError.message };
       }
 
       for (const { oldPrefix, newPrefix } of prefixRenames) {
@@ -89,6 +94,7 @@ async function normalizePassageLabelsAfter({
         );
         if (prefixError) {
           console.error('Error renaming passage label prefix:', prefixError);
+          return { error: prefixError.message };
         }
       }
     }
@@ -96,6 +102,8 @@ async function normalizePassageLabelsAfter({
     if (done || data.length < SAVE_PAGE_SIZE) break;
     lastSort = data[data.length - 1].sort;
   }
+
+  return {};
 }
 
 export type SavedPassageRow = {
@@ -185,6 +193,28 @@ const annotationHasChanged = (
   );
 };
 
+const failure = (
+  error: string,
+  savedCount = 0,
+): SavePassagesWithDeletionsResult => ({
+  success: false,
+  savedCount,
+  passages: [],
+  error,
+});
+
+/**
+ * Persists edited passages and their annotations, and removes deleted
+ * passages.
+ *
+ * supabase-js provides no transactions, so this runs as a sequence of
+ * independent writes ordered to keep the partial-failure window small: sort
+ * shifts, then core content upserts, then cosmetic label renumbering, then
+ * deletions (labels renumbered only after the delete succeeds), then orphaned
+ * annotation cleanup. Every write is an idempotent upsert/delete keyed by
+ * uuid, so any failure reported to the client converges when the client
+ * retries the same save.
+ */
 export const savePassagesWithDeletions = async ({
   client,
   passages,
@@ -208,6 +238,8 @@ export const savePassagesWithDeletions = async ({
   const newPassages = passages.filter((p) => !existingUuidSet.has(p.uuid));
   const sortedNewPassages = [...newPassages].sort((a, b) => b.sort - a.sort);
 
+  // Make room for new passages before their rows are inserted; a sort
+  // collision here would corrupt ordering, so abort on failure.
   for (const passage of sortedNewPassages) {
     const { error } = await client.rpc('shift_passage_sorts', {
       p_work_uuid: passage.workUuid,
@@ -216,113 +248,12 @@ export const savePassagesWithDeletions = async ({
     });
     if (error) {
       console.error('Error shifting passage sorts:', error);
+      return failure(`Failed to shift passage sorts: ${error.message}`);
     }
   }
 
-  for (const passage of sortedNewPassages) {
-    await normalizePassageLabelsAfter({
-      client,
-      workUuid: passage.workUuid,
-      fromSort: passage.sort,
-      fromLabel: passage.label,
-      delta: 1,
-    });
-  }
-
-  let deletedCount = 0;
-  if (deletedUuids.length > 0) {
-    const { data: deletedPassages } = await client
-      .from('passages')
-      .select('uuid, sort, label, work_uuid')
-      .in('uuid', deletedUuids);
-
-    if (deletedPassages && deletedPassages.length > 0) {
-      const sortedDeleted = [...deletedPassages].sort(
-        (a, b) => b.sort - a.sort,
-      );
-      for (const deletedPassage of sortedDeleted) {
-        await normalizePassageLabelsAfter({
-          client,
-          workUuid: deletedPassage.work_uuid,
-          fromSort: deletedPassage.sort,
-          fromLabel: deletedPassage.label,
-          delta: -1,
-        });
-      }
-
-      const { error: deleteAnnotationsError } = await client
-        .from('passage_annotations')
-        .delete()
-        .in('passage_uuid', deletedUuids);
-
-      if (deleteAnnotationsError) {
-        console.error(
-          'Error deleting annotations for deleted passages:',
-          deleteAnnotationsError,
-        );
-      }
-
-      // Cascade: remove `endNoteLink` annotations on OTHER passages that
-      // reference any deleted endnote passage. These live on the referencing
-      // (translation/front) passages, not on the deleted note itself, so the
-      // delete-by-passage_uuid above never reaches them. Left behind, they
-      // become orphaned references that render as a stray "*". Doing this
-      // server-side fixes the case where the referencing passage is not loaded
-      // in the editor (so client-side cleanup can't reach it).
-      for (const deletedUuid of deletedUuids) {
-        const { data: referencingAnnotations, error: findReferencesError } =
-          await client
-            .from('passage_annotations')
-            .select('uuid')
-            .eq('type', 'end-note-link')
-            .filter('content', 'cs', JSON.stringify([{ uuid: deletedUuid }]));
-
-        if (findReferencesError) {
-          console.error(
-            'Error finding endnote-link references to deleted passage:',
-            findReferencesError,
-          );
-          continue;
-        }
-
-        const referenceUuids = (referencingAnnotations ?? []).map(
-          (annotation) => annotation.uuid,
-        );
-
-        if (referenceUuids.length > 0) {
-          const { error: deleteReferencesError } = await client
-            .from('passage_annotations')
-            .delete()
-            .in('uuid', referenceUuids);
-
-          if (deleteReferencesError) {
-            console.error(
-              'Error deleting endnote-link references to deleted passage:',
-              deleteReferencesError,
-            );
-          }
-        }
-      }
-
-      const { error: deletePassagesError } = await client
-        .from('passages')
-        .delete()
-        .in('uuid', deletedUuids);
-
-      if (deletePassagesError) {
-        console.error('Error deleting passages:', deletePassagesError);
-        return {
-          success: false,
-          savedCount: 0,
-          passages: [],
-          error: `Failed to delete passages: ${deletePassagesError.message}`,
-        };
-      }
-
-      deletedCount = deletedPassages.length;
-    }
-  }
-
+  // Compute row/annotation diffs against the pre-save state before any
+  // content writes happen.
   const dtos = passagesToDTO(passages);
   const passageRowDtos = passagesToRowDTO(passages);
   const passageUuids = passages.map((p) => p.uuid);
@@ -357,13 +288,25 @@ export const savePassagesWithDeletions = async ({
     ),
   );
 
+  // A passage whose annotation set is incomplete (serialization gap on the
+  // client) must not have its stored annotations treated as deletions —
+  // deleting them would turn a transient export failure into permanent data
+  // loss. They are cleaned up by the next complete export.
+  const incompletePassageUuids = new Set(
+    passages
+      .filter((passage) => passage.annotationsIncomplete)
+      .map((passage) => passage.uuid),
+  );
   const annotationsToDelete = existingAnnotations?.filter(
     (existingAnnotation) =>
+      !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
       !annotations.find(
         (annotation) => annotation.uuid === existingAnnotation.uuid,
       ),
   );
 
+  // Core content commits first — everything after this point is cosmetic
+  // renumbering or cleanup.
   if (passageRowsToUpsert.length > 0) {
     const { error: passageError } = await client
       .from('passages')
@@ -371,12 +314,7 @@ export const savePassagesWithDeletions = async ({
 
     if (passageError) {
       console.error('Error saving passages:', passageError);
-      return {
-        success: false,
-        savedCount: 0,
-        passages: [],
-        error: `Failed to save passages: ${passageError.message}`,
-      };
+      return failure(`Failed to save passages: ${passageError.message}`);
     }
   }
 
@@ -387,15 +325,160 @@ export const savePassagesWithDeletions = async ({
 
     if (annotationError) {
       console.error('Error saving annotations:', annotationError);
-      return {
-        success: false,
-        savedCount: passages.length,
-        passages: [],
-        error: `Passages saved but annotations failed: ${annotationError.message}`,
-      };
+      return failure(
+        `Passages saved but annotations failed: ${annotationError.message}`,
+        passages.length,
+      );
     }
   }
 
+  // Renumber neighbors of inserted passages now that the content is safe.
+  for (const passage of sortedNewPassages) {
+    const { error } = await normalizePassageLabelsAfter({
+      client,
+      workUuid: passage.workUuid,
+      fromSort: passage.sort,
+      fromLabel: passage.label,
+      delta: 1,
+    });
+    if (error) {
+      return failure(
+        `Content saved but passage labels were not renumbered: ${error}`,
+        passages.length,
+      );
+    }
+  }
+
+  let deletedCount = 0;
+  if (deletedUuids.length > 0) {
+    const { data: deletedPassages, error: deletedFetchError } = await client
+      .from('passages')
+      .select('uuid, sort, label, work_uuid')
+      .in('uuid', deletedUuids);
+
+    if (deletedFetchError) {
+      console.error(
+        'Error fetching passages marked for deletion:',
+        deletedFetchError,
+      );
+      return failure(
+        `Failed to fetch passages marked for deletion: ${deletedFetchError.message}`,
+        passages.length,
+      );
+    }
+
+    if (deletedPassages && deletedPassages.length > 0) {
+      const sortedDeleted = [...deletedPassages].sort(
+        (a, b) => b.sort - a.sort,
+      );
+
+      // All annotation cleanup runs before the passage delete: if any step
+      // fails we abort while the passage rows still exist, so a retry can
+      // redo the whole sequence.
+      const { error: deleteAnnotationsError } = await client
+        .from('passage_annotations')
+        .delete()
+        .in('passage_uuid', deletedUuids);
+
+      if (deleteAnnotationsError) {
+        console.error(
+          'Error deleting annotations for deleted passages:',
+          deleteAnnotationsError,
+        );
+        return failure(
+          `Failed to delete annotations for deleted passages: ${deleteAnnotationsError.message}`,
+          passages.length,
+        );
+      }
+
+      // Cascade: remove `endNoteLink` annotations on OTHER passages that
+      // reference any deleted endnote passage. These live on the referencing
+      // (translation/front) passages, not on the deleted note itself, so the
+      // delete-by-passage_uuid above never reaches them. Left behind, they
+      // become orphaned references that render as a stray "*". Doing this
+      // server-side fixes the case where the referencing passage is not loaded
+      // in the editor (so client-side cleanup can't reach it).
+      for (const deletedUuid of deletedUuids) {
+        const { data: referencingAnnotations, error: findReferencesError } =
+          await client
+            .from('passage_annotations')
+            .select('uuid')
+            .eq('type', 'end-note-link')
+            .filter('content', 'cs', JSON.stringify([{ uuid: deletedUuid }]));
+
+        if (findReferencesError) {
+          console.error(
+            'Error finding endnote-link references to deleted passage:',
+            findReferencesError,
+          );
+          return failure(
+            `Failed to find endnote-link references to deleted passage: ${findReferencesError.message}`,
+            passages.length,
+          );
+        }
+
+        const referenceUuids = (referencingAnnotations ?? []).map(
+          (annotation) => annotation.uuid,
+        );
+
+        if (referenceUuids.length > 0) {
+          const { error: deleteReferencesError } = await client
+            .from('passage_annotations')
+            .delete()
+            .in('uuid', referenceUuids);
+
+          if (deleteReferencesError) {
+            console.error(
+              'Error deleting endnote-link references to deleted passage:',
+              deleteReferencesError,
+            );
+            return failure(
+              `Failed to delete endnote-link references to deleted passage: ${deleteReferencesError.message}`,
+              passages.length,
+            );
+          }
+        }
+      }
+
+      const { error: deletePassagesError } = await client
+        .from('passages')
+        .delete()
+        .in('uuid', deletedUuids);
+
+      if (deletePassagesError) {
+        console.error('Error deleting passages:', deletePassagesError);
+        return failure(
+          `Failed to delete passages: ${deletePassagesError.message}`,
+          passages.length,
+        );
+      }
+
+      deletedCount = deletedPassages.length;
+
+      // Renumber neighbors only after the delete succeeded — renumbering
+      // first would leave labels shifted while the passage still exists if
+      // the delete failed. The deleted rows' sort/label were captured above.
+      for (const deletedPassage of sortedDeleted) {
+        const { error } = await normalizePassageLabelsAfter({
+          client,
+          workUuid: deletedPassage.work_uuid,
+          fromSort: deletedPassage.sort,
+          fromLabel: deletedPassage.label,
+          delta: -1,
+        });
+        if (error) {
+          return failure(
+            `Passages deleted but labels were not renumbered: ${error}`,
+            passages.length,
+          );
+        }
+      }
+    }
+  }
+
+  // Stale rows left behind here resurrect deleted markup on the next load,
+  // so a failure must reach the client even though the content upserts
+  // already committed.
   if (annotationsToDelete && annotationsToDelete.length > 0) {
     const { error: deleteError } = await client
       .from('passage_annotations')
@@ -407,6 +490,10 @@ export const savePassagesWithDeletions = async ({
 
     if (deleteError) {
       console.error('Error deleting annotations:', deleteError);
+      return failure(
+        `Passages saved but stale annotations could not be removed: ${deleteError.message}`,
+        passages.length,
+      );
     }
   }
 
