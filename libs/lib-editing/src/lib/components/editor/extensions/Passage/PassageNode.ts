@@ -190,7 +190,8 @@ export const PassageNode = PassageNodeSSR.extend({
         if (n.attrs.uuid) wrapper.id = n.attrs.uuid;
         if (n.attrs.toh) wrapper.setAttribute('data-toh', n.attrs.toh);
         else wrapper.removeAttribute('data-toh');
-        if (n.attrs.type) wrapper.setAttribute('data-passage-type', n.attrs.type);
+        if (n.attrs.type)
+          wrapper.setAttribute('data-passage-type', n.attrs.type);
         else wrapper.removeAttribute('data-passage-type');
         if (n.attrs.invalid) wrapper.setAttribute('data-invalid', 'true');
         else wrapper.removeAttribute('data-invalid');
@@ -218,16 +219,13 @@ export const PassageNode = PassageNodeSSR.extend({
 
       const content = document.createElement('div');
       content.className = PASSAGE_CONTENT_CLASS;
-      // Off-screen passage content skips layout and paint entirely; the
-      // ProseMirror data model is untouched, so Yjs sync, dirty tracking,
-      // and save are unaffected. `auto` intrinsic sizing remembers the last
-      // rendered height (with a pre-first-render estimate) so scroll
-      // position stays stable as passages enter and leave the viewport.
-      // Applied to the content hole rather than the wrapper: the label and
-      // bookmark hang in the left gutter via negative offsets, and the paint
-      // containment content-visibility implies would clip them.
-      content.style.contentVisibility = 'auto';
-      content.style.containIntrinsicSize = 'auto 8rem';
+      // NOTE: do not add content-visibility here (or on the wrapper) as a
+      // rendering shortcut. Its implied paint containment clips the
+      // label/bookmark gutter chrome (negative offsets), and its layout
+      // containment stops the first child's top margin collapsing out,
+      // shifting the gutter chrome relative to the text. Off-screen
+      // rendering cost is addressed by windowed mounting in the
+      // editor-per-passage model (Local Persistence project) instead.
 
       inner.append(label, bookmark, content);
 
