@@ -25,6 +25,14 @@ import {
   filterReplacements,
   restoreFailedSave,
 } from './save-bookkeeping';
+import {
+  captureFragmentBaseline,
+  collectPassageUuids,
+  diffPassageUuids,
+  findObservedFragment,
+  shouldRescanFragment,
+  type FragmentBaseline,
+} from './observer-utils';
 
 interface EditorContextState {
   doc?: Doc;
@@ -124,7 +132,7 @@ export const EditorContextProvider = ({
   const isNavigatingRef = useRef(false);
   const isNormalizingForSaveRef = useRef(false);
   const clearedFragmentRef = useRef<XmlFragment | null>(null);
-  const lastObservedUuidsByFragmentRef = useRef<Map<XmlFragment, Set<string>>>(
+  const fragmentBaselinesRef = useRef<Map<XmlFragment, FragmentBaseline>>(
     new Map(),
   );
   const savedBaselineUuidsByEditorRef = useRef<PassageUuidRecord>({});
@@ -155,20 +163,6 @@ export const EditorContextProvider = ({
     [doc],
   );
 
-  const getFragmentUuids = useCallback((fragment: XmlFragment) => {
-    const uuids = new Set<string>();
-    for (let i = 0; i < fragment.length; i++) {
-      const child = fragment.get(i);
-      if (child instanceof XmlElement && child.nodeName === 'passage') {
-        const uuid = child.getAttribute('uuid');
-        if (uuid) {
-          uuids.add(uuid);
-        }
-      }
-    }
-    return uuids;
-  }, []);
-
   const getEditorUuids = useCallback((editor: Editor) => {
     const uuids = new Set<string>();
     editor.state.doc.descendants((node) => {
@@ -193,13 +187,13 @@ export const EditorContextProvider = ({
 
       const fragment = getFragment(key);
       if (fragment) {
-        lastObservedUuidsByFragmentRef.current.set(
+        fragmentBaselinesRef.current.set(
           fragment,
-          getFragmentUuids(fragment),
+          captureFragmentBaseline(fragment),
         );
       }
     },
-    [getEditorUuids, getFragment, getFragmentUuids],
+    [getEditorUuids, getFragment],
   );
 
   const observerFunction = useCallback(
@@ -207,100 +201,71 @@ export const EditorContextProvider = ({
       if (!txn.local) {
         return;
       }
+      if (isNavigatingRef.current || isNormalizingForSaveRef.current) {
+        return;
+      }
 
-      // Detect passage deletions by diffing the last observed UUIDs against
-      // the current fragment state.
-      // We walk up from any event target to find the observed XmlFragment rather than
-      // checking each event's target, because merge operations may only produce events
-      // targeting passage-level XmlElements (not the fragment itself).
-      // We intentionally avoid using Yjs `changes.deleted` because operations like
-      // splitPassage (replaceWith + insert) cause the binding to delete and re-create
-      // XmlElements internally, producing false positives.
-      if (
-        !isNavigatingRef.current &&
-        !isNormalizingForSaveRef.current &&
-        evts.length > 0
-      ) {
-        let fragment: XmlFragment | null = null;
-        let current: XmlFragment | XmlElement | null = evts[0].target;
-        while (current) {
-          if (
-            current instanceof XmlFragment &&
-            !(current instanceof XmlElement)
-          ) {
-            fragment = current;
-            break;
-          }
-          current = current.parent as XmlFragment | XmlElement | null;
-        }
-
+      // Detect passage additions/deletions by diffing the baseline UUIDs
+      // against the current fragment state — but only when the cheap gate
+      // says the passage set could have changed. Plain typing previously
+      // paid this O(passages) scan on every keystroke.
+      // We intentionally avoid deriving additions/deletions from Yjs
+      // `changes.deleted` directly because operations like splitPassage
+      // (replaceWith + insert) cause the binding to delete and re-create
+      // XmlElements internally, producing false positives; the deltas are
+      // only used as a rescan trigger, where a false positive is harmless.
+      // Additions must come from the scan because splitPassage creates
+      // XmlElements with attributes set pre-integration, so txn.changed
+      // never includes them.
+      if (evts.length > 0) {
+        const fragment = findObservedFragment(evts);
         if (fragment) {
-          const liveUuids = new Set<string>();
-          for (let i = 0; i < fragment.length; i++) {
-            const child = fragment.get(i);
-            if (child instanceof XmlElement && child.nodeName === 'passage') {
-              const uuid = child.getAttribute('uuid');
-              if (uuid) {
-                liveUuids.add(uuid);
+          const baseline = fragmentBaselinesRef.current.get(fragment);
+          if (shouldRescanFragment(evts, fragment, baseline)) {
+            const liveUuids = collectPassageUuids(fragment);
+
+            if (baseline && baseline.uuids.size > 0) {
+              const { added, hasDeleted } = diffPassageUuids(
+                baseline.uuids,
+                liveUuids,
+              );
+              added.forEach((uuid) => dirtyUuidsRef.current.add(uuid));
+              if (hasDeleted && !dirtyStore.isDirty) {
+                dirtyStore.setDirty(true);
               }
             }
-          }
 
-          const lastObservedUuidsForFragment =
-            lastObservedUuidsByFragmentRef.current.get(fragment);
-          if (
-            lastObservedUuidsForFragment &&
-            lastObservedUuidsForFragment.size > 0
-          ) {
-            const hasDeleted = Array.from(lastObservedUuidsForFragment).some(
-              (uuid) => !liveUuids.has(uuid),
-            );
-
-            // Detect new passages: UUIDs in the current fragment but not in
-            // the last observed fragment state.
-            // This catches passages created by splitPassage, where the Yjs
-            // binding creates XmlElements with attributes set during construction
-            // (pre-integration), so txn.changed never includes them.
-            liveUuids.forEach((uuid) => {
-              if (!lastObservedUuidsForFragment.has(uuid)) {
-                dirtyUuidsRef.current.add(uuid);
-              }
+            fragmentBaselinesRef.current.set(fragment, {
+              uuids: liveUuids,
+              length: fragment.length,
             });
-
-            if (hasDeleted && !dirtyStore.isDirty) {
-              dirtyStore.setDirty(true);
-            }
           }
-
-          lastObservedUuidsByFragmentRef.current.set(fragment, liveUuids);
         }
       }
 
-      if (!isNavigatingRef.current && !isNormalizingForSaveRef.current) {
-        txn.changed.forEach((_change, key) => {
-          // Start from key itself (not key.parent) so that structural changes
-          // directly on a passage XmlElement (e.g. children moved during merge)
-          // are detected. For leaf types like XmlText, nodeName is undefined so
-          // the walk-up proceeds to the parent as before.
-          let node = key as unknown as XmlElement;
-          while (node?.nodeName !== 'passage' && node?.parent) {
-            node = node.parent as XmlElement;
-          }
+      txn.changed.forEach((_change, key) => {
+        // Start from key itself (not key.parent) so that structural changes
+        // directly on a passage XmlElement (e.g. children moved during merge)
+        // are detected. For leaf types like XmlText, nodeName is undefined so
+        // the walk-up proceeds to the parent as before.
+        let node = key as unknown as XmlElement;
+        while (node?.nodeName !== 'passage' && node?.parent) {
+          node = node.parent as XmlElement;
+        }
 
-          const uuid = node?.getAttribute?.('uuid');
-          if (uuid) {
-            // Add directly to ref - no state update on every keystroke
-            dirtyUuidsRef.current.add(uuid);
-            // Only update dirty state if it's not already dirty
-            // This prevents re-renders on every keystroke after the first one
-            if (!dirtyStore.isDirty) {
-              dirtyStore.setDirty(true);
-            }
+        const uuid = node?.getAttribute?.('uuid');
+        if (uuid) {
+          // Add directly to ref - no state update on every keystroke
+          dirtyUuidsRef.current.add(uuid);
+          // Only update dirty state if it's not already dirty
+          // This prevents re-renders on every keystroke after the first one
+          if (!dirtyStore.isDirty) {
+            dirtyStore.setDirty(true);
           }
-        });
-      }
+        }
+      });
     },
-    [dirtyStore, getFragmentUuids],
+    [dirtyStore],
   );
 
   const startObserving = useCallback(
@@ -315,16 +280,16 @@ export const EditorContextProvider = ({
 
         if (observedFragment) {
           observedFragment.unobserveDeep(observerFunction);
-          lastObservedUuidsByFragmentRef.current.delete(observedFragment);
+          fragmentBaselinesRef.current.delete(observedFragment);
         }
 
-        // Pre-populate lastObservedUuidsByFragmentRef so the diff-based
-        // deletion detection has a baseline from the very first observer event.
+        // Pre-populate the fragment baseline so the diff-based deletion
+        // detection has a baseline from the very first observer event.
         // Without this, a merge that happens before any other edit would not be
         // detected because the ref would be empty and the diff would be skipped.
-        lastObservedUuidsByFragmentRef.current.set(
+        fragmentBaselinesRef.current.set(
           fragment,
-          getFragmentUuids(fragment),
+          captureFragmentBaseline(fragment),
         );
 
         fragment.observeDeep(observerFunction);
@@ -332,7 +297,7 @@ export const EditorContextProvider = ({
         refreshEditorBaseline(builder);
       }
     },
-    [getFragment, getFragmentUuids, observerFunction, refreshEditorBaseline],
+    [getFragment, observerFunction, refreshEditorBaseline],
   );
 
   const stopObserving = useCallback(
@@ -340,7 +305,7 @@ export const EditorContextProvider = ({
       const observedFragment = observedFragmentsByBuilderRef.current[builder];
       if (observedFragment) {
         observedFragment.unobserveDeep(observerFunction);
-        lastObservedUuidsByFragmentRef.current.delete(observedFragment);
+        fragmentBaselinesRef.current.delete(observedFragment);
         delete observedFragmentsByBuilderRef.current[builder];
       }
       delete savedBaselineUuidsByEditorRef.current[builder];
@@ -364,10 +329,10 @@ export const EditorContextProvider = ({
         // entry so other editors (e.g. endnotes) retain their baseline and
         // can still detect deletions.
         if (fragment) {
-          lastObservedUuidsByFragmentRef.current.delete(fragment);
+          fragmentBaselinesRef.current.delete(fragment);
           clearedFragmentRef.current = fragment;
         } else {
-          lastObservedUuidsByFragmentRef.current.clear();
+          fragmentBaselinesRef.current.clear();
         }
       }
 
@@ -377,10 +342,10 @@ export const EditorContextProvider = ({
       if (!navigating && clearedFragmentRef.current) {
         const f = clearedFragmentRef.current;
         clearedFragmentRef.current = null;
-        lastObservedUuidsByFragmentRef.current.set(f, getFragmentUuids(f));
+        fragmentBaselinesRef.current.set(f, captureFragmentBaseline(f));
       }
     },
-    [getFragmentUuids],
+    [],
   );
 
   const isNavigating = useCallback(() => isNavigatingRef.current, []);
