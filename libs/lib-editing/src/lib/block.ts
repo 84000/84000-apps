@@ -59,7 +59,9 @@ const headingTemplate = (passage: Passage): TranslationEditorContentItem => {
     },
     content: [],
   };
-  block.content = [textTemplate(passage.content)];
+  // TipTap rejects empty text nodes, so an empty passage renders as an
+  // empty block instead.
+  block.content = passage.content ? [textTemplate(passage.content)] : [];
   return block;
 };
 
@@ -74,7 +76,7 @@ const paragraphTemplate = (passage: Passage): TranslationEditorContentItem => {
     content: [],
   };
 
-  block.content = [textTemplate(passage.content)];
+  block.content = passage.content ? [textTemplate(passage.content)] : [];
   return block;
 };
 
@@ -92,7 +94,7 @@ const abbreviationTemplate = (
     content: [],
   };
 
-  block.content = [textTemplate(passage.content)];
+  block.content = passage.content ? [textTemplate(passage.content)] : [];
   return block;
 };
 
@@ -175,7 +177,10 @@ export const blocksFromTranslationBody = (
 ): TranslationEditorContent => {
   const blocks: TranslationEditorContent = [];
   passages.forEach((passage) => {
-    if (!passage.content) {
+    // Only drop passages with malformed (missing) content; an empty string is
+    // a legitimate empty passage and must still render so it can be edited or
+    // deleted in the editor.
+    if (passage.content == null) {
       console.warn('passage has no content');
       console.warn(passage);
       return;
@@ -203,8 +208,8 @@ export const blockFromPassage = (
   // Sort annotations by start position, then by end position in descending
   // order to ensure that the longest annotations are processed first. If two
   // annotations have the same start and end positions, sort by processing
-  // priority.
-  passage.annotations?.sort((a, b) => {
+  // priority. Sort a copy — the caller's array order must not change.
+  const annotations = [...(passage.annotations ?? [])].sort((a, b) => {
     if (a.start !== b.start) {
       return a.start - b.start;
     }
@@ -220,7 +225,7 @@ export const blockFromPassage = (
     return aPriority - bPriority;
   });
 
-  annotateBlock(block, passage.annotations);
+  annotateBlock(block, annotations);
 
   return block;
 };

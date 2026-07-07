@@ -1,5 +1,5 @@
 import { AbbreviationAnnotation } from '@eightyfourthousand/data-access';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 
@@ -7,7 +7,7 @@ export const abbreviation: Transformer = (ctx) => {
   const { annotation } = ctx;
   const { abbreviation, uuid } = annotation as AbbreviationAnnotation;
 
-  recurse({
+  const matched = recurse({
     until: ['text'],
     ...ctx,
     transform: (ctx) => {
@@ -27,4 +27,8 @@ export const abbreviation: Transformer = (ctx) => {
       });
     },
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

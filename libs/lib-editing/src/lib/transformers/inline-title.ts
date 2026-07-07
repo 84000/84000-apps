@@ -2,7 +2,7 @@ import { InlineTitleAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 export const inlineTitle: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -17,7 +17,7 @@ export const inlineTitle: Transformer = (ctx) => {
     return;
   }
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) =>
@@ -31,4 +31,8 @@ export const inlineTitle: Transformer = (ctx) => {
         },
       }),
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

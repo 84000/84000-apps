@@ -4,7 +4,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 
 // NOTE: over time, internal links become just regular links.
 export const internalLink: Transformer = (ctx) => {
@@ -39,7 +39,7 @@ export const internalLink: Transformer = (ctx) => {
     path = `/entity/${type}/${entity}`;
   }
 
-  recurse({
+  const matched = recurse({
     ...ctx,
     until: ['text'],
     transform: (ctx) =>
@@ -65,4 +65,8 @@ export const internalLink: Transformer = (ctx) => {
         },
       }),
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

@@ -113,12 +113,13 @@ export const annotationFromDTO = (
 };
 
 export const annotationsFromDTO = (
-  dto?: AnnotationsDTO,
-  passageLength?: number,
+  dto: AnnotationsDTO | undefined,
+  // Required: defaulting to 0 would silently mark every annotation invalid.
+  passageLength: number,
 ): Annotations => {
   const filtered =
     dto?.filter((a) => !ANNOTATIONS_TO_IGNORE.includes(a.type)) || [];
-  return filtered.map((a) => annotationFromDTO(a, passageLength || 0));
+  return filtered.map((a) => annotationFromDTO(a, passageLength));
 };
 
 export const annotationToDTO = (

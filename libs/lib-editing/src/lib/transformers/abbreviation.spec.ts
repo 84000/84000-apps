@@ -48,7 +48,7 @@ const dto: PassageDTO = {
 describe('abbreviation transformer', () => {
   const passage = passageFromDTO(
     dto,
-    annotationsFromDTO(dto.annotations || []),
+    annotationsFromDTO(dto.annotations || [], dto.content.length),
   );
   const block = blockFromPassage(passage);
 

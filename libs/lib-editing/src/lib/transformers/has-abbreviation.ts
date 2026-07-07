@@ -1,5 +1,5 @@
 import { HasAbbreviationAnnotation } from '@eightyfourthousand/data-access';
-import { recurse } from './recurse';
+import { markUnplaceable, recurse } from './recurse';
 import { splitContent } from './split-content';
 import { Transformer } from './transformer';
 
@@ -7,7 +7,7 @@ export const hasAbbreviation: Transformer = (ctx) => {
   const { annotation } = ctx;
   const { abbreviation, uuid, start, end } = annotation as HasAbbreviationAnnotation;
 
-  recurse({
+  const matched = recurse({
     until: ['text'],
     ...ctx,
     transform: (ctx) => {
@@ -32,4 +32,8 @@ export const hasAbbreviation: Transformer = (ctx) => {
       });
     },
   });
+
+  if (!matched) {
+    markUnplaceable(annotation);
+  }
 };

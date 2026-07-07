@@ -36,14 +36,17 @@ export const splitContent: Transformer = ({
     const { prefix, middle, suffix } = splitNode(item, annStartAbs, annEndAbs);
 
     newContent.push(...prefix);
-    // Only transform the middle segments
+    // Only transform the middle segments. Atomic textless nodes (mentions,
+    // images) inside the range are kept but must not receive marks.
     for (const midItem of middle) {
-      transform?.({
-        root,
-        parent,
-        block: midItem,
-        annotation,
-      });
+      if (typeof midItem.text === 'string') {
+        transform?.({
+          root,
+          parent,
+          block: midItem,
+          annotation,
+        });
+      }
       newContent.push(midItem);
     }
     newContent.push(...suffix);

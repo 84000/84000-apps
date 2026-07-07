@@ -134,8 +134,19 @@ export const annotateBlock = (
   annotations: Annotations,
 ) => {
   for (const annotation of annotations) {
-    const transformer = TRANSFORMERS[annotation.type] || TRANSFORMERS.unknown;
-    transformer?.({ root: block, block, annotation });
+    if (annotation.validated) {
+      const transformer = TRANSFORMERS[annotation.type] || TRANSFORMERS.unknown;
+      transformer?.({ root: block, block, annotation });
+    } else {
+      // Applying an out-of-range annotation would clamp its markup onto the
+      // wrong text and then persist the fabricated range on the next save.
+      console.warn(
+        `skipping invalid annotation ${annotation.uuid} (${annotation.type}) on passage ${annotation.passageUuid}`,
+      );
+    }
+
+    // Checked again (not folded into the else) so a transformer that flips
+    // validated to false mid-flight still flags the passage.
     if (!annotation.validated) {
       if (!block.attrs) {
         block.attrs = {};

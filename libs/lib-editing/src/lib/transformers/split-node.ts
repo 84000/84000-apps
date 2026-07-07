@@ -34,6 +34,13 @@ export function splitNode(
     return { prefix: [], middle: [], suffix: [item] };
   }
 
+  // Atomic textless nodes (mentions, images, inserted zero-width annotations)
+  // overlapping the range cannot be split; keep them whole in the middle so
+  // they survive the split instead of vanishing.
+  if (typeof item.text !== 'string') {
+    return { prefix: [], middle: [item], suffix: [] };
+  }
+
   const preLen = Math.max(rangeStart - itemStart, 0);
   const midLen = Math.max(
     Math.min(itemEnd, rangeEnd) - Math.max(itemStart, rangeStart),
@@ -95,6 +102,7 @@ export function splitNode(
         marks,
         start: midStart,
         end: midEnd,
+        isLast: postStartIdx >= text.length,
       });
 
       if (midMarks?.length) {
@@ -124,6 +132,7 @@ export function splitNode(
         marks,
         start: postStart,
         end: postEnd,
+        isLast: true,
       });
 
       if (postMarks?.length) {
