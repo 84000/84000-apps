@@ -185,6 +185,13 @@ export const PassageNode = PassageNodeSSR.extend({
 
       const wrapper = document.createElement('div');
       wrapper.className = PASSAGE_WRAPPER_CLASS;
+      // Off-screen passages skip layout and paint entirely; the ProseMirror
+      // data model is untouched, so Yjs sync, dirty tracking, and save are
+      // unaffected. `auto` intrinsic sizing remembers the last rendered
+      // height (with a pre-first-render estimate) so scroll position stays
+      // stable as passages enter and leave the viewport.
+      wrapper.style.contentVisibility = 'auto';
+      wrapper.style.containIntrinsicSize = 'auto 8rem';
 
       const applyWrapperAttrs = (n: PMNode) => {
         if (n.attrs.uuid) wrapper.id = n.attrs.uuid;
