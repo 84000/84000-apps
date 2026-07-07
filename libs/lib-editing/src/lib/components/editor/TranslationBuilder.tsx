@@ -80,6 +80,7 @@ export const TranslationBuilder = ({
       content={content}
       fragment={fragment}
       isEditable={isEditable}
+      autofocus={panel === 'main' && name === 'translation'}
       hasMoreAfter={hasMoreAfter}
       onCreate={({ editor }) => {
         setEditor(name, editor);

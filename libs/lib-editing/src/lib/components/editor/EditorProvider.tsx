@@ -534,6 +534,16 @@ export const EditorContextProvider = ({
           isNormalizingForSaveRef.current = false;
         }
 
+        // Blur only the focused editor, once, to flush any pending IME
+        // composition into ProseMirror state before the docs are read —
+        // blurring editors that never had focus accomplishes nothing, and
+        // the old per-editor blur/focus pair stole focus across panels and
+        // scrolled the viewport on every save.
+        const focusedEntry = editorEntries.find(
+          ([, editor]) => editor.isFocused,
+        );
+        focusedEntry?.[1].commands.blur();
+
         editorEntries.forEach(([, editor]) => {
           const editorUuids = Array.from(getEditorUuids(editor)).filter(
             (uuid) => uuidsToSaveSet.has(uuid),
@@ -542,7 +552,6 @@ export const EditorContextProvider = ({
             return;
           }
 
-          editor.commands.blur();
           passages.push(
             ...passagesFromNodes({
               uuids: editorUuids,
@@ -550,8 +559,12 @@ export const EditorContextProvider = ({
               editor,
             }),
           );
-          editor.commands.focus();
         });
+
+        // Restore focus where it was, keeping the existing selection and
+        // without scrolling, before the network await so focus is never
+        // visibly lost.
+        focusedEntry?.[1].commands.focus(null, { scrollIntoView: false });
       }
       const result = await savePassages({
         client,

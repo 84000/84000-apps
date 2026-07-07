@@ -82,6 +82,7 @@ export const PaginationProvider = ({
   content,
   fragment,
   isEditable = true,
+  autofocus = false,
   hasMoreAfter,
   onCreate,
   children,
@@ -93,6 +94,7 @@ export const PaginationProvider = ({
   content: TranslationEditorContent;
   fragment?: XmlFragment;
   isEditable?: boolean;
+  autofocus?: boolean;
   hasMoreAfter?: boolean;
   onCreate?: (params: { editor: Editor }) => void;
   children: ReactNode;
@@ -145,6 +147,7 @@ export const PaginationProvider = ({
     extensions,
     content,
     isEditable,
+    autofocus,
     onCreate: ({ editor }) => {
       setEndIsLoading(false);
       setIsEditorReady(true);
