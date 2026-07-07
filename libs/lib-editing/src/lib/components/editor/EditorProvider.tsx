@@ -20,6 +20,11 @@ import { passagesFromNodes, ensureUuids } from '../../passage';
 import { NavigationProvider } from '../shared';
 import { useDirtyStore, type DirtyStore } from './hooks/useDirtyStore';
 import { computeSavePayload, type PassageUuidRecord } from './save-filter';
+import {
+  beginSave,
+  filterReplacements,
+  restoreFailedSave,
+} from './save-bookkeeping';
 
 interface EditorContextState {
   doc?: Doc;
@@ -115,6 +120,7 @@ export const EditorContextProvider = ({
   const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
   // Use ref for immediate tracking to avoid state updates on every keystroke
   const dirtyUuidsRef = useRef<Set<string>>(new Set());
+  const isSavingRef = useRef(false);
   const isNavigatingRef = useRef(false);
   const isNormalizingForSaveRef = useRef(false);
   const clearedFragmentRef = useRef<XmlFragment | null>(null);
@@ -457,6 +463,11 @@ export const EditorContextProvider = ({
   );
 
   const save = useCallback(async () => {
+    if (isSavingRef.current) {
+      console.warn('Save already in progress; skipping.');
+      return;
+    }
+
     const editorEntries = Object.entries(editorCache.current).filter(
       ([, editor]) => !editor.isDestroyed,
     );
@@ -494,11 +505,35 @@ export const EditorContextProvider = ({
       return;
     }
 
-    const passages: Passage[] = [];
-    if (uuidsToSave.length) {
-      const uuidsToSaveSet = new Set(uuidsToSave);
-      isNormalizingForSaveRef.current = true;
-      try {
+    // Swap in a fresh dirty set before any await: keystrokes made while the
+    // network round-trip is pending land in the new set and survive the
+    // post-save bookkeeping instead of being silently cleared.
+    const { inFlight: inFlightDirty, next } = beginSave(dirtyUuidsRef.current);
+    dirtyUuidsRef.current = next;
+    isSavingRef.current = true;
+
+    try {
+      // Everything up to the await is synchronous, so the serialized payload
+      // is consistent with the uuid sets captured above.
+      const passages: Passage[] = [];
+      if (uuidsToSave.length) {
+        const uuidsToSaveSet = new Set(uuidsToSave);
+        isNormalizingForSaveRef.current = true;
+        try {
+          editorEntries.forEach(([, editor]) => {
+            const editorUuids = Array.from(getEditorUuids(editor)).filter(
+              (uuid) => uuidsToSaveSet.has(uuid),
+            );
+            if (editorUuids.length === 0) {
+              return;
+            }
+
+            ensureUuids(editor, { passageUuids: new Set(editorUuids) });
+          });
+        } finally {
+          isNormalizingForSaveRef.current = false;
+        }
+
         editorEntries.forEach(([, editor]) => {
           const editorUuids = Array.from(getEditorUuids(editor)).filter(
             (uuid) => uuidsToSaveSet.has(uuid),
@@ -507,64 +542,84 @@ export const EditorContextProvider = ({
             return;
           }
 
-          ensureUuids(editor, { passageUuids: new Set(editorUuids) });
+          editor.commands.blur();
+          passages.push(
+            ...passagesFromNodes({
+              uuids: editorUuids,
+              workUuid: work.uuid,
+              editor,
+            }),
+          );
+          editor.commands.focus();
         });
-      } finally {
-        isNormalizingForSaveRef.current = false;
+      }
+      const result = await savePassages({
+        client,
+        passages,
+        deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
+      });
+
+      if (!result?.success) {
+        // Nothing was durably confirmed; restore the attempted set so the
+        // next save retries it alongside any mid-flight edits.
+        dirtyUuidsRef.current = restoreFailedSave(
+          inFlightDirty,
+          dirtyUuidsRef.current,
+        );
+        console.error('Save failed:', result?.error ?? 'unknown error');
+        toast('Error saving content.', {
+          icon: <CircleAlertIcon className="size-4 text-error" />,
+        });
+        return;
       }
 
-      editorEntries.forEach(([, editor]) => {
-        const editorUuids = Array.from(getEditorUuids(editor)).filter((uuid) =>
-          uuidsToSaveSet.has(uuid),
-        );
-        if (editorUuids.length === 0) {
-          return;
+      console.log('Document state saved.');
+      toast('Content saved', {
+        icon: <CircleCheckIcon className="size-4 text-success" />,
+      });
+
+      // Baselines become the uuid sets captured at save start — not the live
+      // editor — so passages added or deleted during the flight are still
+      // detected by the next save. Skip editors swapped out mid-flight.
+      editorEntries.forEach(([key, editor]) => {
+        if (editorCache.current[key] === editor && !editor.isDestroyed) {
+          savedBaselineUuidsByEditorRef.current[key] = liveUuidsByEditor[key];
         }
-
-        editor.commands.blur();
-        passages.push(
-          ...passagesFromNodes({
-            uuids: editorUuids,
-            workUuid: work.uuid,
-            editor,
-          }),
-        );
-        editor.commands.focus();
       });
-    }
-    const result = await savePassages({
-      client,
-      passages,
-      deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
-    });
 
-    if (!result?.success) {
-      console.error('Save failed:', result?.error ?? 'unknown error');
-      toast('Error saving content.', {
-        icon: <CircleAlertIcon className="size-4 text-error" />,
+      // Server replacements must not overwrite passages the user re-edited
+      // during the flight — their newer local content wins and is saved on
+      // the next save.
+      const replacements = filterReplacements(
+        result.passages ?? [],
+        dirtyUuidsRef.current,
+      );
+      if (replacements.length) {
+        await applyReplacedPassages(replacements);
+      }
+
+      // The dirty flag reflects what is left: mid-flight edits plus any
+      // structural changes that have not been saved yet.
+      const residualLive: PassageUuidRecord = {};
+      Object.entries(editorCache.current)
+        .filter(([, editor]) => !editor.isDestroyed)
+        .forEach(([key, editor]) => {
+          residualLive[key] = getEditorUuids(editor);
+        });
+      const residual = computeSavePayload({
+        dirtyUuids: dirtyUuidsRef.current,
+        baseline: savedBaselineUuidsByEditorRef.current,
+        current: residualLive,
       });
-      return;
+      dirtyStore.setDirty(residual.hasChanges);
+    } finally {
+      isSavingRef.current = false;
     }
-
-    console.log('Document state saved.');
-    toast('Content saved', {
-      icon: <CircleCheckIcon className="size-4 text-success" />,
-    });
-
-    if (result.passages?.length) {
-      await applyReplacedPassages(result.passages);
-    }
-
-    // Clear both ref and state
-    dirtyUuidsRef.current.clear();
-    editorEntries.forEach(([key]) => refreshEditorBaseline(key));
-    dirtyStore.setDirty(false);
   }, [
     client,
     work.uuid,
     getEditorUuids,
     applyReplacedPassages,
-    refreshEditorBaseline,
     dirtyStore,
   ]);
 
