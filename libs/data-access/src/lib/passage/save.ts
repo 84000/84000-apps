@@ -288,8 +288,18 @@ export const savePassagesWithDeletions = async ({
     ),
   );
 
+  // A passage whose annotation set is incomplete (serialization gap on the
+  // client) must not have its stored annotations treated as deletions —
+  // deleting them would turn a transient export failure into permanent data
+  // loss. They are cleaned up by the next complete export.
+  const incompletePassageUuids = new Set(
+    passages
+      .filter((passage) => passage.annotationsIncomplete)
+      .map((passage) => passage.uuid),
+  );
   const annotationsToDelete = existingAnnotations?.filter(
     (existingAnnotation) =>
+      !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
       !annotations.find(
         (annotation) => annotation.uuid === existingAnnotation.uuid,
       ),

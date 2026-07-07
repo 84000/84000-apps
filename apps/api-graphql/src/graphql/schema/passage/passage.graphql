@@ -205,6 +205,13 @@ input PassageInput {
   Annotations as JSON array
   """
   annotations: JSON!
+
+  """
+  True when the client could not serialize every annotation on this passage.
+  The server must not delete stored annotations missing from an incomplete
+  set — the omission is a serialization gap, not an editor deletion.
+  """
+  annotationsIncomplete: Boolean
 }
 
 """

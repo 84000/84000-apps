@@ -7,6 +7,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import { blockFromPassage } from './block';
 import { annotationExportsFromNode } from './exporters/annotation';
+import { passageFromNode } from './passage';
 import type { TranslationEditorContentItem } from './components/editor';
 
 /**
@@ -176,5 +177,73 @@ describe('annotation round-trip', () => {
     for (const annotation of exported) {
       expect(knownTypes).toContain(annotation.type);
     }
+  });
+});
+
+describe('passageFromNode annotationsIncomplete flag', () => {
+  const buildBlock = (annotations: PassageDTO['annotations'] = []) => {
+    const passageDto = { ...dto, annotations };
+    const passage = passageFromDTO(
+      passageDto,
+      annotationsFromDTO(
+        passageDto.annotations || [],
+        passageDto.content.length,
+      ),
+    );
+    return JSON.parse(
+      JSON.stringify(blockFromPassage(passage)),
+    ) as TranslationEditorContentItem;
+  };
+
+  it('leaves the flag unset when every annotation exports', () => {
+    const block = buildBlock(dto.annotations);
+    dedupeMarkUuids(block);
+    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+
+    expect(passage.annotationsIncomplete).toBeUndefined();
+    expect(passage.annotations.length).toBeGreaterThan(0);
+  });
+
+  it('sets the flag when a node with an exportable annotation lacks a uuid', () => {
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    const block = buildBlock([]);
+    // Simulate the ensureUuids timing gap: the paragraph's uuid is missing at
+    // export time, so its block annotation cannot be exported.
+    delete block.content?.[0]?.attrs?.uuid;
+    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+
+    expect(passage.annotationsIncomplete).toBe(true);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('sets the flag for passages flagged invalid on load', () => {
+    const consoleWarn = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    // An out-of-range annotation is skipped on load and marks the passage
+    // invalid; the export set is incomplete by construction.
+    const block = buildBlock([
+      {
+        uuid: 'span-invalid',
+        passage_uuid: 'passage-uuid-1',
+        type: 'span',
+        start: 0,
+        end: 999,
+        content: [{ 'text-style': 'emphasis' }],
+      },
+    ]);
+    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+
+    expect(passage.annotationsIncomplete).toBe(true);
+    consoleWarn.mockRestore();
+    consoleError.mockRestore();
   });
 });

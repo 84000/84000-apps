@@ -541,6 +541,67 @@ describe('savePassagesWithDeletions failure propagation', () => {
     expect(renumberIndex).toBeGreaterThan(deleteIndex);
   });
 
+  it('preserves stored annotations for passages with an incomplete export', async () => {
+    const state = createState({
+      annotations: [
+        annotationRow,
+        { ...annotationRow, uuid: 'annotation-2', start: 5, end: 9 },
+      ],
+      passages: [passageRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      // annotation-2 is absent from the payload, but the export is flagged
+      // incomplete — the omission is a serialization gap, not a deletion.
+      passages: [{ ...passage, annotationsIncomplete: true }],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  it('still deletes omitted annotations of complete sibling passages', async () => {
+    const completeSibling: Passage = {
+      ...passage,
+      uuid: 'passage-2',
+      sort: 2,
+      label: '2',
+      annotations: [],
+    };
+    const siblingRow: PassageRowDTO = {
+      ...passageRow,
+      uuid: 'passage-2',
+      sort: 2,
+      label: '2',
+    };
+
+    const state = createState({
+      annotations: [
+        annotationRow,
+        {
+          ...annotationRow,
+          uuid: 'annotation-sibling',
+          passage_uuid: 'passage-2',
+        },
+      ],
+      passages: [passageRow, siblingRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        { ...passage, annotationsIncomplete: true },
+        completeSibling,
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    // The incomplete passage's annotation survives; the complete sibling's
+    // omitted annotation is deleted as a real removal.
+    expect(state.deletedAnnotationUuids).toEqual(['annotation-sibling']);
+  });
+
   it('reports failure when the orphaned annotation delete fails', async () => {
     const state = createState({
       annotations: [

@@ -37,6 +37,7 @@ interface PassageInput {
   type: string;
   xmlId?: string;
   annotations: unknown[];
+  annotationsIncomplete?: boolean;
 }
 
 /**
@@ -51,6 +52,7 @@ const passageToInput = (passage: Passage): PassageInput => ({
   type: passage.type,
   xmlId: passage.xmlId,
   annotations: passage.annotations,
+  annotationsIncomplete: passage.annotationsIncomplete,
 });
 
 /**

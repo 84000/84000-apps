@@ -55,8 +55,14 @@ export const findNodePosition = (
   return targetFound ? textOffset : undefined;
 };
 
-export const nodeNotFound = (node: Node | Mark) => {
-  console.warn(
-    `Could not find position of node with uuid ${node.attrs.uuid} and type ${node.type.name}`,
+export const nodeNotFound = (
+  node: Node | Mark,
+  skipped?: { count: number },
+) => {
+  console.error(
+    `Could not find position of node with uuid ${node.attrs.uuid} and type ${node.type.name}; its annotation was not exported`,
   );
+  if (skipped) {
+    skipped.count++;
+  }
 };
