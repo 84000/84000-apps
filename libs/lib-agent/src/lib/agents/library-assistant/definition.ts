@@ -22,6 +22,5 @@ export const libraryAssistant: AgentDefinition = {
     'lookup-entity',
     'get-work-titles',
   ],
-  requiredRole: 'reader',
-  model: 'claude-sonnet-4-20250514',
+  requiredRole: 'translator',
 };

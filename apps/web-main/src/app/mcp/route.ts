@@ -1,6 +1,8 @@
 import {
   MCP_CORS_HEADERS,
   corsPreflightResponse,
+  createAgentPrompts,
+  createAgentTools,
   createMcpHandler,
   createReadTools,
   validateBearerToken,
@@ -49,8 +51,17 @@ export async function POST(req: Request) {
     return auth.response;
   }
 
-  const tools = createReadTools(auth.client);
-  const handler = createMcpHandler({ description, instructions, tools });
+  const tools = [
+    ...createReadTools(auth.client),
+    ...createAgentTools(auth.role),
+  ];
+  const prompts = createAgentPrompts(auth.role);
+  const handler = createMcpHandler({
+    description,
+    instructions,
+    tools,
+    prompts,
+  });
   return withCorsHeaders(await handler.POST(req));
 }
 

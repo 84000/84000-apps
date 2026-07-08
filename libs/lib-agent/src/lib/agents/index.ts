@@ -11,6 +11,8 @@ export {
   resolveAgentHandlerOptions,
 } from './resolve';
 export { createAgentTools } from './create-agent-tools';
+export { createAgentPrompts } from './create-agent-prompts';
+export { buildAgentInstructions } from './invocation';
 
 import { registerAgent } from './registry';
 import { libraryAssistant } from './library-assistant/definition';

@@ -9,6 +9,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
     description,
     instructions,
     tools,
+    prompts = [],
   } = options;
 
   function buildServer(): McpServer {
@@ -38,7 +39,12 @@ export function createMcpHandler(options: McpHandlerOptions) {
       );
     }
 
-    if (tools.length === 0) {
+    for (const prompt of prompts) {
+      const { name, title, description, argsSchema, handler } = prompt;
+      server.registerPrompt(name, { title, description, argsSchema }, handler);
+    }
+
+    if (tools.length === 0 && prompts.length === 0) {
       const placeholder = server.registerTool(
         '_init',
         { description: 'placeholder' },
