@@ -1,10 +1,14 @@
 import { jwtDecode } from 'jwt-decode';
-import { createTokenClient, hasPermission } from '@eightyfourthousand/data-access';
+import {
+  createTokenClient,
+  hasPermission,
+} from '@eightyfourthousand/data-access';
 import type {
   DataClient,
   UserRole,
   UserPermission,
 } from '@eightyfourthousand/data-access';
+import { MCP_CORS_HEADERS } from './cors';
 
 export type AuthSuccess = {
   ok: true;
@@ -32,14 +36,15 @@ export const ROLE_HIERARCHY: UserRole[] = [
 ];
 
 const createUnauthorizedResponse = (
+  resourceMetadataUrl: string,
   message = 'Authentication required',
 ): Response =>
   new Response(JSON.stringify({ error: 'unauthorized', message }), {
     status: 401,
     headers: {
+      ...MCP_CORS_HEADERS,
       'Content-Type': 'application/json',
-      'WWW-Authenticate':
-        'Bearer realm="84000-mcp", resource_metadata="/.well-known/oauth-protected-resource"',
+      'WWW-Authenticate': `Bearer realm="84000-mcp", resource_metadata="${resourceMetadataUrl}"`,
     },
   });
 
@@ -48,38 +53,58 @@ const createForbiddenResponse = (
 ): Response =>
   new Response(JSON.stringify({ error: 'forbidden', message }), {
     status: 403,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...MCP_CORS_HEADERS, 'Content-Type': 'application/json' },
   });
 
-export const validateBearerToken = (req: Request): AuthResult => {
+export const validateBearerToken = async (
+  req: Request,
+): Promise<AuthResult> => {
+  // RFC 9728 requires resource_metadata to be an absolute URI
+  const resourceMetadataUrl = new URL(
+    '/.well-known/oauth-protected-resource',
+    req.url,
+  ).toString();
+
   const authHeader = req.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return { ok: false, response: createUnauthorizedResponse() };
+    return {
+      ok: false,
+      response: createUnauthorizedResponse(resourceMetadataUrl),
+    };
   }
 
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwtDecode<{
-      sub: string;
-      email?: string;
-      user_role?: UserRole;
-    }>(token);
-
     const client = createTokenClient(token);
-    const role = decoded.user_role ?? 'reader';
+
+    // Verify the token server-side; jwtDecode alone would accept forged or
+    // expired tokens.
+    const { data, error } = await client.auth.getUser(token);
+    if (error || !data?.user) {
+      return {
+        ok: false,
+        response: createUnauthorizedResponse(
+          resourceMetadataUrl,
+          'Invalid token',
+        ),
+      };
+    }
 
     return {
       ok: true,
       client,
-      userId: decoded.sub,
-      email: decoded.email ?? '',
-      role: ROLE_HIERARCHY.includes(role) ? role : 'reader',
+      userId: data.user.id,
+      email: data.user.email ?? '',
+      role: decodeRole(token),
     };
   } catch {
     return {
       ok: false,
-      response: createUnauthorizedResponse('Invalid token'),
+      response: createUnauthorizedResponse(
+        resourceMetadataUrl,
+        'Invalid token',
+      ),
     };
   }
 };

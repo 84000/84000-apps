@@ -29,16 +29,19 @@ const mockedCreateTokenClient = jest.mocked(createTokenClient);
 const mockedHasPermission = jest.mocked(hasPermission);
 
 const makeRequest = (authHeader?: string) =>
-  new Request('http://localhost/api/mcp', {
+  new Request('http://localhost/mcp', {
     method: 'POST',
     headers: authHeader ? { Authorization: authHeader } : {},
   });
 
+const makeClient = (getUser: jest.Mock) =>
+  ({ auth: { getUser } }) as unknown as DataClient;
+
 describe('validateBearerToken', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns 401 when Authorization header is missing', () => {
-    const result = validateBearerToken(makeRequest());
+  it('returns 401 when Authorization header is missing', async () => {
+    const result = await validateBearerToken(makeRequest());
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -47,13 +50,13 @@ describe('validateBearerToken', () => {
         'Bearer',
       );
       expect(result.response.headers.get('WWW-Authenticate')).toContain(
-        'resource_metadata',
+        'resource_metadata="http://localhost/.well-known/oauth-protected-resource"',
       );
     }
   });
 
-  it('returns 401 for non-Bearer auth scheme', () => {
-    const result = validateBearerToken(makeRequest('Basic dXNlcjpwYXNz'));
+  it('returns 401 for non-Bearer auth scheme', async () => {
+    const result = await validateBearerToken(makeRequest('Basic dXNlcjpwYXNz'));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -64,12 +67,29 @@ describe('validateBearerToken', () => {
     }
   });
 
-  it('returns 401 when JWT is invalid', () => {
-    mockedJwtDecode.mockImplementation(() => {
-      throw new Error('Invalid token');
+  it('returns 401 when the token fails server-side verification', async () => {
+    const getUser = jest.fn().mockResolvedValue({
+      data: { user: null },
+      error: { message: 'invalid JWT' },
     });
+    mockedCreateTokenClient.mockReturnValue(makeClient(getUser));
 
-    const result = validateBearerToken(makeRequest('Bearer bad.token.here'));
+    const result = await validateBearerToken(
+      makeRequest('Bearer forged.jwt.token'),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.response.status).toBe(401);
+    }
+    expect(getUser).toHaveBeenCalledWith('forged.jwt.token');
+  });
+
+  it('returns 401 when verification throws', async () => {
+    const getUser = jest.fn().mockRejectedValue(new Error('network error'));
+    mockedCreateTokenClient.mockReturnValue(makeClient(getUser));
+
+    const result = await validateBearerToken(makeRequest('Bearer bad.token'));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -77,16 +97,18 @@ describe('validateBearerToken', () => {
     }
   });
 
-  it('returns auth context for valid JWT', () => {
-    mockedJwtDecode.mockReturnValue({
-      sub: 'user-123',
-      email: 'test@84000.co',
-      user_role: 'editor',
+  it('returns auth context for a verified token', async () => {
+    const getUser = jest.fn().mockResolvedValue({
+      data: { user: { id: 'user-123', email: 'test@84000.co' } },
+      error: null,
     });
-    const mockClient = {} as DataClient;
+    const mockClient = makeClient(getUser);
     mockedCreateTokenClient.mockReturnValue(mockClient);
+    mockedJwtDecode.mockReturnValue({ user_role: 'editor' });
 
-    const result = validateBearerToken(makeRequest('Bearer valid.jwt.token'));
+    const result = await validateBearerToken(
+      makeRequest('Bearer valid.jwt.token'),
+    );
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -96,13 +118,20 @@ describe('validateBearerToken', () => {
       expect(result.role).toBe('editor');
     }
     expect(mockedCreateTokenClient).toHaveBeenCalledWith('valid.jwt.token');
+    expect(getUser).toHaveBeenCalledWith('valid.jwt.token');
   });
 
-  it('defaults role to reader when user_role is missing', () => {
-    mockedJwtDecode.mockReturnValue({ sub: 'user-456' });
-    mockedCreateTokenClient.mockReturnValue({} as DataClient);
+  it('defaults role to reader when user_role is missing', async () => {
+    const getUser = jest.fn().mockResolvedValue({
+      data: { user: { id: 'user-456' } },
+      error: null,
+    });
+    mockedCreateTokenClient.mockReturnValue(makeClient(getUser));
+    mockedJwtDecode.mockReturnValue({});
 
-    const result = validateBearerToken(makeRequest('Bearer valid.jwt.token'));
+    const result = await validateBearerToken(
+      makeRequest('Bearer valid.jwt.token'),
+    );
 
     expect(result.ok).toBe(true);
     if (result.ok) {

@@ -7,6 +7,11 @@ export {
   decodeRole,
   ROLE_HIERARCHY,
 } from './lib/auth';
+export {
+  MCP_CORS_HEADERS,
+  corsPreflightResponse,
+  withCorsHeaders,
+} from './lib/cors';
 export type {
   AuthResult,
   AuthSuccess,

@@ -7,6 +7,7 @@ export * from './lib/LibraryPassagesPage';
 export * from './lib/LibraryPublicationsPage';
 export * from './lib/LibrarySearchesPage';
 export * from './lib/Login';
+export * from './lib/OAuthConsent';
 export * from './lib/ProfileDropdown';
 export * from './lib/ProfileLayout';
 export * from './lib/ProfilePage';
