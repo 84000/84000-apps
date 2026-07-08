@@ -1,4 +1,10 @@
-import { DataClient, imprintFromDTO, tocFromDTO } from './types';
+import {
+  DataClient,
+  Imprint,
+  ImprintDTO,
+  imprintFromDTO,
+  tocFromDTO,
+} from './types';
 
 export const getTranslationToc = async ({
   client,
@@ -39,4 +45,47 @@ export const getTranslationImprint = async ({
   }
 
   return imprintFromDTO(data);
+};
+
+export type ImprintKey = { uuid: string; toh: string };
+
+export const imprintKey = ({ uuid, toh }: ImprintKey) => `${uuid}:${toh}`;
+
+export const getTranslationImprints = async ({
+  client,
+  keys,
+}: {
+  client: DataClient;
+  keys: readonly ImprintKey[];
+}): Promise<Map<string, Imprint>> => {
+  const imprintsByKey = new Map<string, Imprint>();
+  if (keys.length === 0) {
+    return imprintsByKey;
+  }
+
+  const { data, error } = await client.rpc('get_imprints', {
+    work_uuids: keys.map(({ uuid }) => uuid),
+    tohs: keys.map(({ toh }) => toh),
+  });
+
+  if (error || !data) {
+    console.error('Error batch fetching imprints:', error);
+    return imprintsByKey;
+  }
+
+  const rows = data as {
+    work_uuid: string;
+    toh: string;
+    imprint: ImprintDTO | null;
+  }[];
+  for (const row of rows) {
+    if (row.imprint) {
+      imprintsByKey.set(
+        imprintKey({ uuid: row.work_uuid, toh: row.toh }),
+        imprintFromDTO(row.imprint),
+      );
+    }
+  }
+
+  return imprintsByKey;
 };

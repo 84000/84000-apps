@@ -1,4 +1,3 @@
-import { getTranslationImprint } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 import { parseToh } from '@eightyfourthousand/lib-utils';
@@ -15,8 +14,7 @@ export const imprintResolver = async (
     return null;
   }
 
-  const imprint = await getTranslationImprint({
-    client: ctx.supabase,
+  const imprint = await ctx.loaders.imprintsByWorkToh.load({
     uuid: parent.uuid,
     toh,
   });
