@@ -3,10 +3,18 @@ import { TooltipProvider } from '@eightyfourthousand/design-system';
 import { Work } from '@eightyfourthousand/data-access';
 import { TranslationsTable } from './TranslationTable';
 
+let mockSearchParams: URLSearchParams;
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
   usePathname: () => '/translations/reader',
+  useSearchParams: () => mockSearchParams,
 }));
+
+beforeEach(() => {
+  mockSearchParams = new URLSearchParams();
+  window.history.replaceState(null, '', '/translations/reader');
+});
 
 const work = (overrides: Partial<Work>): Work => ({
   uuid: crypto.randomUUID(),
@@ -145,6 +153,27 @@ describe('TranslationsTable', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Published only' }));
     await waitFor(() => {
       expect(bodyRowTitles()).toHaveLength(4);
+    });
+  });
+
+  it('initializes search and filter state from the URL', () => {
+    mockSearchParams = new URLSearchParams('q=toh95&published=1');
+    renderTable();
+
+    expect(bodyRowTitles()).toEqual([
+      expect.stringContaining('The Play in Full'),
+    ]);
+  });
+
+  it('writes search and filter state back to the URL', async () => {
+    renderTable();
+    search('toh95');
+    fireEvent.click(screen.getByRole('switch', { name: 'Published only' }));
+
+    await waitFor(() => {
+      const params = new URLSearchParams(window.location.search);
+      expect(params.get('q')).toBe('toh95');
+      expect(params.get('published')).toBe('1');
     });
   });
 });

@@ -2,6 +2,7 @@
 
 import {
   Cell,
+  ColumnFiltersState,
   Table as HeadlessTable,
   PaginationState,
   SortingState,
@@ -10,7 +11,12 @@ import {
 } from '@tanstack/react-table';
 import { ReactElement, useEffect, useState } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { DataTableColumn, DataTableRow, useDataTable } from '../hooks';
+import {
+  DataTableColumn,
+  DataTableRow,
+  DataTableState,
+  useDataTable,
+} from '../hooks';
 import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
 import { InfiniteScrollFooter } from '../InfiniteScrollFooter/InfiniteScrollFooter';
 import {
@@ -31,6 +37,8 @@ export const DataTable = <T extends DataTableRow>({
   sorting,
   pagination,
   globalFilter,
+  columnFilters,
+  onStateChange,
   className,
   filters,
   infiniteScroll = false,
@@ -42,6 +50,8 @@ export const DataTable = <T extends DataTableRow>({
   sorting?: SortingState;
   pagination?: PaginationState;
   globalFilter?: string;
+  columnFilters?: ColumnFiltersState;
+  onStateChange?: (state: DataTableState) => void;
   className?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
   infiniteScroll?: boolean;
@@ -78,6 +88,8 @@ export const DataTable = <T extends DataTableRow>({
       pagination ??
       (infiniteScroll ? { pageIndex: 0, pageSize: 50 } : undefined),
     globalFilter,
+    columnFilters,
+    onStateChange,
   });
 
   return (

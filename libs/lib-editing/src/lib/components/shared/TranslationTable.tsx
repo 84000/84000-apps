@@ -1,11 +1,12 @@
 'use client';
 
-import { Cell, SortingFn } from '@tanstack/react-table';
+import { Cell, SortingFn, SortingState } from '@tanstack/react-table';
 import {
   SortableHeader,
   TooltipCell,
   DataTableColumn,
   DataTable,
+  DataTableState,
   FuzzyGlobalFilter,
   DebounceLevel,
   Label,
@@ -17,9 +18,9 @@ import {
   compareIgnoringArticles,
   parseToh,
 } from '@eightyfourthousand/lib-utils';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const CLASSNAME_FOR_COL: { [key: string]: string } = {
   title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',
@@ -70,12 +71,83 @@ const tohSort: SortingFn<TableWork> = (rowA, rowB) =>
   firstTohNumber(rowA.original.tohSearch) -
   firstTohNumber(rowB.original.tohSearch);
 
+const DEFAULT_SORT: SortingState = [{ id: 'title', desc: false }];
+const SORTABLE_COLUMNS = [
+  'title',
+  'toh',
+  'pages',
+  'publicationDate',
+  'publicationVersion',
+];
+
+const sortFromParam = (param: string | null): SortingState => {
+  const [id, direction] = param?.split('.') ?? [];
+  if (!id || !SORTABLE_COLUMNS.includes(id)) {
+    return DEFAULT_SORT;
+  }
+  return [{ id, desc: direction === 'desc' }];
+};
+
 export const TranslationsTable = ({ works }: { works: Work[] }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const onCellClick = (cell: Cell<TableWork, unknown>) => {
     router.push(`${pathname}/${cell.row.original.uuid}`);
   };
+
+  // search, filter, and sort state initialize from — and write back to — the
+  // URL so they survive opening a work and navigating back
+  const initialState: DataTableState = useMemo(
+    () => ({
+      globalFilter: searchParams.get('q') || '',
+      columnFilters:
+        searchParams.get('published') === '1'
+          ? [{ id: 'publicationDate', value: true }]
+          : [],
+      sorting: sortFromParam(searchParams.get('sort')),
+    }),
+    [searchParams],
+  );
+
+  const onStateChange = useCallback(
+    ({ globalFilter, sorting, columnFilters }: DataTableState) => {
+      const params = new URLSearchParams(window.location.search);
+
+      if (globalFilter) {
+        params.set('q', globalFilter);
+      } else {
+        params.delete('q');
+      }
+
+      const publishedOnly = columnFilters.some(
+        (filter) => filter.id === 'publicationDate' && filter.value,
+      );
+      if (publishedOnly) {
+        params.set('published', '1');
+      } else {
+        params.delete('published');
+      }
+
+      const [sort] = sorting;
+      if (sort && !(sort.id === 'title' && !sort.desc)) {
+        params.set('sort', `${sort.id}.${sort.desc ? 'desc' : 'asc'}`);
+      } else {
+        params.delete('sort');
+      }
+
+      const query = params.toString();
+      const url = query
+        ? `${window.location.pathname}?${query}`
+        : window.location.pathname;
+      if (`${window.location.pathname}${window.location.search}` !== url) {
+        // replaceState instead of router.replace to skip a server round-trip
+        // on every debounced keystroke
+        window.history.replaceState(null, '', url);
+      }
+    },
+    [],
+  );
 
   const data: TableWork[] = useMemo(
     () =>
@@ -208,7 +280,10 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         wylieTitle: false,
         sanskritTitle: false,
       }}
-      sorting={[{ id: 'title', desc: false }]}
+      sorting={initialState.sorting}
+      globalFilter={initialState.globalFilter}
+      columnFilters={initialState.columnFilters}
+      onStateChange={onStateChange}
       infiniteScroll
       filters={(table) => (
         <div className="flex items-center gap-6 py-4">
