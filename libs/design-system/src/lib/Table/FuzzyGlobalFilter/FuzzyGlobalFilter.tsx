@@ -1,5 +1,5 @@
 import { removeDiacritics } from '@eightyfourthousand/lib-utils';
-import { rankItem } from '@tanstack/match-sorter-utils';
+import { rankItem, RankingInfo } from '@tanstack/match-sorter-utils';
 import { FilterMeta, Row, RowData, Table } from '@tanstack/react-table';
 import { DebounceLevel, Input } from '../../Input/Input';
 
@@ -37,3 +37,16 @@ export const fuzzyFilterFn = <T extends RowData>(
   addMeta({ itemRank });
   return itemRank.passed && itemRank.rank > 2;
 };
+
+/**
+ * The best match rank `fuzzyFilterFn` recorded for a row across its columns.
+ * Only ranks up to the first passing column are recorded, since global
+ * filtering stops evaluating a row's columns once one passes.
+ */
+export const globalFilterRank = <T extends RowData>(row: Row<T>): number =>
+  Math.max(
+    0,
+    ...Object.values(row.columnFiltersMeta).map(
+      (meta) => (meta as { itemRank?: RankingInfo }).itemRank?.rank ?? 0,
+    ),
+  );

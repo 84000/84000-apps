@@ -12,6 +12,7 @@ import { ReactElement, useEffect, useState } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { DataTableColumn, DataTableRow, useDataTable } from '../hooks';
 import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
+import { InfiniteScrollFooter } from '../InfiniteScrollFooter/InfiniteScrollFooter';
 import {
   Table,
   TableBody,
@@ -32,6 +33,7 @@ export const DataTable = <T extends DataTableRow>({
   globalFilter,
   className,
   filters,
+  infiniteScroll = false,
 }: {
   name: string;
   data: T[];
@@ -42,6 +44,7 @@ export const DataTable = <T extends DataTableRow>({
   globalFilter?: string;
   className?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
+  infiniteScroll?: boolean;
 }) => {
   const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
     {},
@@ -71,7 +74,9 @@ export const DataTable = <T extends DataTableRow>({
     columns,
     visibility,
     sorting,
-    pagination,
+    pagination:
+      pagination ??
+      (infiniteScroll ? { pageIndex: 0, pageSize: 50 } : undefined),
     globalFilter,
   });
 
@@ -145,7 +150,11 @@ export const DataTable = <T extends DataTableRow>({
           </TableBody>
         </Table>
       </div>
-      <TablePagination table={table} />
+      {infiniteScroll ? (
+        <InfiniteScrollFooter table={table} />
+      ) : (
+        <TablePagination table={table} />
+      )}
     </div>
   );
 };
