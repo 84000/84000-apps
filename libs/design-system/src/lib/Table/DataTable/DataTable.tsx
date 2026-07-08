@@ -2,6 +2,7 @@
 
 import {
   Cell,
+  ColumnFiltersState,
   Table as HeadlessTable,
   PaginationState,
   SortingState,
@@ -10,8 +11,14 @@ import {
 } from '@tanstack/react-table';
 import { ReactElement, useEffect, useState } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { DataTableColumn, DataTableRow, useDataTable } from '../hooks';
+import {
+  DataTableColumn,
+  DataTableRow,
+  DataTableState,
+  useDataTable,
+} from '../hooks';
 import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
+import { InfiniteScrollFooter } from '../InfiniteScrollFooter/InfiniteScrollFooter';
 import {
   Table,
   TableBody,
@@ -30,8 +37,11 @@ export const DataTable = <T extends DataTableRow>({
   sorting,
   pagination,
   globalFilter,
+  columnFilters,
+  onStateChange,
   className,
   filters,
+  infiniteScroll = false,
 }: {
   name: string;
   data: T[];
@@ -40,8 +50,11 @@ export const DataTable = <T extends DataTableRow>({
   sorting?: SortingState;
   pagination?: PaginationState;
   globalFilter?: string;
+  columnFilters?: ColumnFiltersState;
+  onStateChange?: (state: DataTableState) => void;
   className?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
+  infiniteScroll?: boolean;
 }) => {
   const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
     {},
@@ -71,8 +84,12 @@ export const DataTable = <T extends DataTableRow>({
     columns,
     visibility,
     sorting,
-    pagination,
+    pagination:
+      pagination ??
+      (infiniteScroll ? { pageIndex: 0, pageSize: 50 } : undefined),
     globalFilter,
+    columnFilters,
+    onStateChange,
   });
 
   return (
@@ -89,7 +106,7 @@ export const DataTable = <T extends DataTableRow>({
           className,
         )}
       >
-        <Table>
+        <Table className="bg-background">
           <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -145,7 +162,11 @@ export const DataTable = <T extends DataTableRow>({
           </TableBody>
         </Table>
       </div>
-      <TablePagination table={table} />
+      {infiniteScroll ? (
+        <InfiniteScrollFooter table={table} />
+      ) : (
+        <TablePagination table={table} />
+      )}
     </div>
   );
 };

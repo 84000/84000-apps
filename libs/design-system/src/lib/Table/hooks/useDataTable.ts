@@ -3,6 +3,7 @@
 import {
   Cell,
   ColumnDef,
+  ColumnFiltersState,
   PaginationState,
   RowData,
   SortingState,
@@ -15,13 +16,18 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fuzzyFilterFn } from '../FuzzyGlobalFilter/FuzzyGlobalFilter';
 
 export type DataTableRow = RowData & { uuid: string };
 export type DataTableColumn<T extends DataTableRow> = ColumnDef<T> & {
   className?: string;
   onCellClick?: (row: Cell<T, unknown>) => void;
+};
+export type DataTableState = {
+  globalFilter: string;
+  sorting: SortingState;
+  columnFilters: ColumnFiltersState;
 };
 
 export const useDataTable = <T extends DataTableRow>({
@@ -31,6 +37,8 @@ export const useDataTable = <T extends DataTableRow>({
   sorting: sortingInput = [],
   pagination: paginationInput = { pageIndex: 0, pageSize: 12 },
   globalFilter: globalFilterInput = '',
+  columnFilters: columnFiltersInput = [],
+  onStateChange,
 }: {
   data: T[];
   columns: DataTableColumn<T>[];
@@ -38,6 +46,8 @@ export const useDataTable = <T extends DataTableRow>({
   sorting?: SortingState;
   pagination?: PaginationState;
   globalFilter?: string;
+  columnFilters?: ColumnFiltersState;
+  onStateChange?: (state: DataTableState) => void;
 }) => {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -45,6 +55,12 @@ export const useDataTable = <T extends DataTableRow>({
   const [globalFilter, setGlobalFilter] = useState(globalFilterInput);
   const [sorting, setSorting] = useState<SortingState>(sortingInput);
   const [pagination, setPagination] = useState(paginationInput);
+  const [columnFilters, setColumnFilters] =
+    useState<ColumnFiltersState>(columnFiltersInput);
+
+  useEffect(() => {
+    onStateChange?.({ globalFilter, sorting, columnFilters });
+  }, [onStateChange, globalFilter, sorting, columnFilters]);
 
   const table = useReactTable({
     data,
@@ -55,6 +71,7 @@ export const useDataTable = <T extends DataTableRow>({
       globalFilter,
       rowSelection,
       pagination,
+      columnFilters,
     },
     getRowId: (row) => row.uuid,
     enableRowSelection: true,
@@ -63,6 +80,7 @@ export const useDataTable = <T extends DataTableRow>({
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

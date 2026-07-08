@@ -137,4 +137,29 @@ export const Default: Story = {
   ),
 };
 
+const MANY_ROWS: InvoiceRow[] = Array.from({ length: 200 }, (_, i) => ({
+  uuid: `${i + 1}`,
+  invoice: `INV${`${i + 1}`.padStart(3, '0')}`,
+  status: i % 3 === 0 ? 'Unpaid' : 'Paid',
+  method: (['Credit Card', 'Transfer', 'Cash'] as const)[i % 3],
+  amount: 100 + (i % 17) * 25,
+}));
+
+export const InfiniteScroll: Story = {
+  render: (_props) => (
+    <DataTable
+      name="invoices"
+      data={MANY_ROWS}
+      columns={COLUMNS}
+      visibility={{ uuid: false }}
+      infiniteScroll
+      filters={(table) => (
+        <div className="flex gap-2">
+          <FuzzyGlobalFilter table={table} placeholder="Search invoices..." />
+        </div>
+      )}
+    />
+  ),
+};
+
 export default meta;

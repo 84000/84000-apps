@@ -5,6 +5,7 @@ export * from './PaginationEllipsis/PaginationEllipsis';
 export * from './FilterDropdown/FilterDropdown';
 export * from './FilterPopover/FilterPopover';
 export * from './FilterResultsBanner/FilterResultsBanner';
+export * from './InfiniteScrollFooter/InfiniteScrollFooter';
 export * from './SortableHeader/SortableHeader';
 export * from './SortIcon/SortIcon';
 export * from './Table';

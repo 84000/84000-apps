@@ -1,7 +1,7 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 import type { Work } from '@eightyfourthousand/data-access';
-import { worksFromGraphQL } from '../mappers';
+import { worksFromGraphQL, type GraphQLWork } from '../mappers';
 
 const GET_ALL_WORKS = gql`
   query GetAllWorks($cursor: String, $limit: Int) {
@@ -15,6 +15,13 @@ const GET_ALL_WORKS = gql`
         pages
         restriction
         section
+        imprint {
+          mainTitles {
+            tibetan
+            wylie
+            sanskrit
+          }
+        }
       }
       pageInfo {
         nextCursor
@@ -23,17 +30,6 @@ const GET_ALL_WORKS = gql`
     }
   }
 `;
-
-type GraphQLWork = {
-  uuid: string;
-  title: string;
-  toh: string[];
-  publicationDate: string;
-  publicationVersion: string;
-  pages: number;
-  restriction: boolean;
-  section: string;
-};
 
 type GetAllWorksResponse = {
   works: {

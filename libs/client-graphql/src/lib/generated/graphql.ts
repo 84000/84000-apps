@@ -904,7 +904,7 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
     & TocEntryNestedFragment
   )> };
 
-export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, pages: number, restriction: boolean, section: string };
+export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
 
 export type LookupQueryVariables = Exact<{
   toh?: InputMaybe<Scalars['String']['input']>;
@@ -1211,6 +1211,13 @@ export const WorkFieldsFragmentDoc = gql`
   pages
   restriction
   section
+  imprint {
+    mainTitles {
+      tibetan
+      wylie
+      sanskrit
+    }
+  }
 }
     `;
 export const LookupDocument = gql`
