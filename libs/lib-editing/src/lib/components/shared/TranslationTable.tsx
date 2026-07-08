@@ -79,6 +79,8 @@ const SORTABLE_COLUMNS = [
   'publicationDate',
   'publicationVersion',
 ];
+const STATE_KEYS = ['q', 'published', 'sort'];
+const STORAGE_PREFIX = 'translations-table:';
 
 const sortFromParam = (param: string | null): SortingState => {
   const [id, direction] = param?.split('.') ?? [];
@@ -86,6 +88,40 @@ const sortFromParam = (param: string | null): SortingState => {
     return DEFAULT_SORT;
   }
   return [{ id, desc: direction === 'desc' }];
+};
+
+// table state serializes to `q`/`published`/`sort` params, shared by the
+// URL query string and localStorage
+const stateFromParams = (params: URLSearchParams): DataTableState => ({
+  globalFilter: params.get('q') || '',
+  columnFilters:
+    params.get('published') === '1'
+      ? [{ id: 'publicationDate', value: true }]
+      : [],
+  sorting: sortFromParam(params.get('sort')),
+});
+
+const stateToParams = ({
+  globalFilter,
+  sorting,
+  columnFilters,
+}: DataTableState): URLSearchParams => {
+  const params = new URLSearchParams();
+  if (globalFilter) {
+    params.set('q', globalFilter);
+  }
+  if (
+    columnFilters.some(
+      (filter) => filter.id === 'publicationDate' && filter.value,
+    )
+  ) {
+    params.set('published', '1');
+  }
+  const [sort] = sorting;
+  if (sort && !(sort.id === 'title' && !sort.desc)) {
+    params.set('sort', `${sort.id}.${sort.desc ? 'desc' : 'asc'}`);
+  }
+  return params;
 };
 
 export const TranslationsTable = ({ works }: { works: Work[] }) => {
@@ -96,47 +132,36 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     router.push(`${pathname}/${cell.row.original.uuid}`);
   };
 
-  // search, filter, and sort state initialize from — and write back to — the
-  // URL so they survive opening a work and navigating back
-  const initialState: DataTableState = useMemo(
-    () => ({
-      globalFilter: searchParams.get('q') || '',
-      columnFilters:
-        searchParams.get('published') === '1'
-          ? [{ id: 'publicationDate', value: true }]
-          : [],
-      sorting: sortFromParam(searchParams.get('sort')),
-    }),
-    [searchParams],
-  );
+  // search, filter, and sort state initialize from the URL, then
+  // localStorage, and write back to both — so they survive opening a work
+  // and navigating back, or leaving the page entirely
+  const initialState: DataTableState = useMemo(() => {
+    if (STATE_KEYS.some((key) => searchParams.has(key))) {
+      return stateFromParams(new URLSearchParams(searchParams));
+    }
+    const stored =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(`${STORAGE_PREFIX}${pathname}`)
+        : null;
+    return stateFromParams(new URLSearchParams(stored || ''));
+  }, [searchParams, pathname]);
 
   const onStateChange = useCallback(
-    ({ globalFilter, sorting, columnFilters }: DataTableState) => {
-      const params = new URLSearchParams(window.location.search);
+    (state: DataTableState) => {
+      const stateParams = stateToParams(state);
+      const serialized = stateParams.toString();
 
-      if (globalFilter) {
-        params.set('q', globalFilter);
+      if (serialized) {
+        window.localStorage.setItem(`${STORAGE_PREFIX}${pathname}`, serialized);
       } else {
-        params.delete('q');
+        window.localStorage.removeItem(`${STORAGE_PREFIX}${pathname}`);
       }
 
-      const publishedOnly = columnFilters.some(
-        (filter) => filter.id === 'publicationDate' && filter.value,
-      );
-      if (publishedOnly) {
-        params.set('published', '1');
-      } else {
-        params.delete('published');
-      }
+      const urlParams = new URLSearchParams(window.location.search);
+      STATE_KEYS.forEach((key) => urlParams.delete(key));
+      stateParams.forEach((value, key) => urlParams.set(key, value));
 
-      const [sort] = sorting;
-      if (sort && !(sort.id === 'title' && !sort.desc)) {
-        params.set('sort', `${sort.id}.${sort.desc ? 'desc' : 'asc'}`);
-      } else {
-        params.delete('sort');
-      }
-
-      const query = params.toString();
+      const query = urlParams.toString();
       const url = query
         ? `${window.location.pathname}?${query}`
         : window.location.pathname;
@@ -146,7 +171,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         window.history.replaceState(null, '', url);
       }
     },
-    [],
+    [pathname],
   );
 
   const data: TableWork[] = useMemo(

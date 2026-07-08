@@ -14,6 +14,7 @@ jest.mock('next/navigation', () => ({
 beforeEach(() => {
   mockSearchParams = new URLSearchParams();
   window.history.replaceState(null, '', '/translations/reader');
+  window.localStorage.clear();
 });
 
 const work = (overrides: Partial<Work>): Work => ({
@@ -165,7 +166,7 @@ describe('TranslationsTable', () => {
     ]);
   });
 
-  it('writes search and filter state back to the URL', async () => {
+  it('writes search and filter state back to the URL and localStorage', async () => {
     renderTable();
     search('toh95');
     fireEvent.click(screen.getByRole('switch', { name: 'Published only' }));
@@ -174,6 +175,59 @@ describe('TranslationsTable', () => {
       const params = new URLSearchParams(window.location.search);
       expect(params.get('q')).toBe('toh95');
       expect(params.get('published')).toBe('1');
+    });
+    expect(
+      window.localStorage.getItem('translations-table:/translations/reader'),
+    ).toBe('q=toh95&published=1');
+  });
+
+  it('restores state from localStorage when the URL has none', () => {
+    window.localStorage.setItem(
+      'translations-table:/translations/reader',
+      'q=toh95&published=1',
+    );
+    renderTable();
+
+    expect(bodyRowTitles()).toEqual([
+      expect.stringContaining('The Play in Full'),
+    ]);
+  });
+
+  it('prefers URL state over localStorage', () => {
+    window.localStorage.setItem(
+      'translations-table:/translations/reader',
+      'q=toh95',
+    );
+    mockSearchParams = new URLSearchParams('q=toh12');
+    renderTable();
+
+    expect(bodyRowTitles()).toEqual([
+      expect.stringContaining('A Multitude of Buddhas'),
+      expect.stringContaining('Ornament of the Light of Awareness'),
+    ]);
+  });
+
+  it('clears the search when the clear button is clicked', async () => {
+    renderTable();
+    search('toh95');
+
+    await waitFor(() => {
+      expect(bodyRowTitles()).toHaveLength(1);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+
+    await waitFor(() => {
+      expect(bodyRowTitles()).toHaveLength(4);
+    });
+    const input = screen.getByPlaceholderText(
+      'Search translations...',
+    ) as HTMLInputElement;
+    expect(input.value).toBe('');
+    await waitFor(() => {
+      expect(
+        window.localStorage.getItem('translations-table:/translations/reader'),
+      ).toBeNull();
     });
   });
 });
