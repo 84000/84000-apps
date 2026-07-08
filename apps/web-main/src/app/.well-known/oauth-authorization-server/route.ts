@@ -1,7 +1,17 @@
+import {
+  MCP_CORS_HEADERS,
+  corsPreflightResponse,
+} from '@eightyfourthousand/lib-agent';
+
 const headers = {
+  ...MCP_CORS_HEADERS,
   'Content-Type': 'application/json',
   'Cache-Control': 'public, max-age=3600',
 };
+
+export async function OPTIONS() {
+  return corsPreflightResponse();
+}
 
 // Older MCP clients look for authorization-server metadata on the resource
 // origin, so mirror Supabase's discovery document rather than hardcoding

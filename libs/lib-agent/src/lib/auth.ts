@@ -8,6 +8,7 @@ import type {
   UserRole,
   UserPermission,
 } from '@eightyfourthousand/data-access';
+import { MCP_CORS_HEADERS } from './cors';
 
 export type AuthSuccess = {
   ok: true;
@@ -41,6 +42,7 @@ const createUnauthorizedResponse = (
   new Response(JSON.stringify({ error: 'unauthorized', message }), {
     status: 401,
     headers: {
+      ...MCP_CORS_HEADERS,
       'Content-Type': 'application/json',
       'WWW-Authenticate': `Bearer realm="84000-mcp", resource_metadata="${resourceMetadataUrl}"`,
     },
@@ -51,7 +53,7 @@ const createForbiddenResponse = (
 ): Response =>
   new Response(JSON.stringify({ error: 'forbidden', message }), {
     status: 403,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...MCP_CORS_HEADERS, 'Content-Type': 'application/json' },
   });
 
 export const validateBearerToken = async (

@@ -1,7 +1,10 @@
 import {
+  MCP_CORS_HEADERS,
+  corsPreflightResponse,
   createMcpHandler,
   createReadTools,
   validateBearerToken,
+  withCorsHeaders,
 } from '@eightyfourthousand/lib-agent';
 
 const description =
@@ -29,8 +32,15 @@ Works can be looked up by **UUID** or **Tohoku catalog number** (e.g. "toh1", "t
 
 Start with \`get-translation\` to retrieve metadata for a work, then drill into passages, glossary terms, or bibliographies. Use \`search-translation\` for full-text search within a specific work. Use \`search-glossary-terms\` to find terms across the entire library.`;
 
+export async function OPTIONS() {
+  return corsPreflightResponse();
+}
+
 export async function GET() {
-  return new Response('Method not allowed', { status: 405 });
+  return new Response('Method not allowed', {
+    status: 405,
+    headers: MCP_CORS_HEADERS,
+  });
 }
 
 export async function POST(req: Request) {
@@ -41,9 +51,12 @@ export async function POST(req: Request) {
 
   const tools = createReadTools(auth.client);
   const handler = createMcpHandler({ description, instructions, tools });
-  return handler.POST(req);
+  return withCorsHeaders(await handler.POST(req));
 }
 
 export async function DELETE() {
-  return new Response('Method not allowed', { status: 405 });
+  return new Response('Method not allowed', {
+    status: 405,
+    headers: MCP_CORS_HEADERS,
+  });
 }
