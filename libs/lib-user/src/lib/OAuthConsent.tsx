@@ -114,7 +114,7 @@ export const OAuthConsent = () => {
   );
 
   return (
-    <div className="w-full max-w-100 m-auto p-8 flex flex-col items-center gap-4 text-center bg-background rounded-lg border border-border shadow-sm">
+    <div className="w-full max-w-100 m-auto p-8 flex flex-col items-center gap-4 text-center">
       <MainLogo width={140} />
       {state.status === 'loading' && (
         <p className="text-sm text-muted-foreground">
