@@ -3,6 +3,8 @@
 import {
   Cell,
   ColumnFiltersState,
+  ColumnSizingState,
+  Header,
   Table as HeadlessTable,
   PaginationState,
   SortingState,
@@ -17,6 +19,7 @@ import {
   DataTableState,
   useDataTable,
 } from '../hooks';
+import { ColumnResizeHandle } from '../ColumnResizeHandle/ColumnResizeHandle';
 import { FilterResultsBanner } from '../FilterResultsBanner/FilterResultsBanner';
 import { InfiniteScrollFooter } from '../InfiniteScrollFooter/InfiniteScrollFooter';
 import {
@@ -38,10 +41,12 @@ export const DataTable = <T extends DataTableRow>({
   pagination,
   globalFilter,
   columnFilters,
+  columnSizing,
   onStateChange,
   className,
   filters,
   infiniteScroll = false,
+  resizableColumns = false,
 }: {
   name: string;
   data: T[];
@@ -51,10 +56,12 @@ export const DataTable = <T extends DataTableRow>({
   pagination?: PaginationState;
   globalFilter?: string;
   columnFilters?: ColumnFiltersState;
+  columnSizing?: ColumnSizingState;
   onStateChange?: (state: DataTableState) => void;
   className?: string;
   filters?: (table: HeadlessTable<T>) => ReactElement;
   infiniteScroll?: boolean;
+  resizableColumns?: boolean;
 }) => {
   const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
     {},
@@ -89,8 +96,25 @@ export const DataTable = <T extends DataTableRow>({
       (infiniteScroll ? { pageIndex: 0, pageSize: 50 } : undefined),
     globalFilter,
     columnFilters,
+    columnSizing,
     onStateChange,
   });
+
+  // percentage widths keep the resizable table filling — and never
+  // overflowing — its container at any viewport size
+  const headerWidth = (header: Header<T, unknown>) =>
+    resizableColumns
+      ? { width: `${(header.getSize() / table.getTotalSize()) * 100}%` }
+      : undefined;
+
+  const resizeNeighbor = (header: Header<T, unknown>) => {
+    if (!resizableColumns || !header.column.getCanResize()) {
+      return undefined;
+    }
+    const headers = header.headerGroup.headers;
+    const neighbor = headers[header.index + 1];
+    return neighbor?.column.getCanResize() ? neighbor.column.id : undefined;
+  };
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -106,23 +130,37 @@ export const DataTable = <T extends DataTableRow>({
           className,
         )}
       >
-        <Table className="bg-background">
+        <Table className={cn('bg-background', resizableColumns && 'table-fixed')}>
           <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    className={columnClasses[header.id]}
-                    key={header.id}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const neighborId = resizeNeighbor(header);
+                  return (
+                    <TableHead
+                      className={cn(
+                        columnClasses[header.id],
+                        resizableColumns && 'relative',
+                      )}
+                      style={headerWidth(header)}
+                      key={header.id}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                      {neighborId && (
+                        <ColumnResizeHandle
+                          table={table}
+                          header={header}
+                          neighborId={neighborId}
+                        />
+                      )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -137,6 +175,7 @@ export const DataTable = <T extends DataTableRow>({
                         className={cn(
                           'py-3 hover:cursor-pointer',
                           columnClasses[cell.column.id],
+                          resizableColumns && 'overflow-hidden',
                         )}
                         onClick={() => columnActions[cell.column.id]?.(cell)}
                       >

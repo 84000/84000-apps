@@ -4,6 +4,7 @@ import {
   Cell,
   ColumnDef,
   ColumnFiltersState,
+  ColumnSizingState,
   PaginationState,
   RowData,
   SortingState,
@@ -28,6 +29,7 @@ export type DataTableState = {
   globalFilter: string;
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
+  columnSizing: ColumnSizingState;
 };
 
 export const useDataTable = <T extends DataTableRow>({
@@ -38,6 +40,7 @@ export const useDataTable = <T extends DataTableRow>({
   pagination: paginationInput = { pageIndex: 0, pageSize: 12 },
   globalFilter: globalFilterInput = '',
   columnFilters: columnFiltersInput = [],
+  columnSizing: columnSizingInput = {},
   onStateChange,
 }: {
   data: T[];
@@ -47,6 +50,7 @@ export const useDataTable = <T extends DataTableRow>({
   pagination?: PaginationState;
   globalFilter?: string;
   columnFilters?: ColumnFiltersState;
+  columnSizing?: ColumnSizingState;
   onStateChange?: (state: DataTableState) => void;
 }) => {
   const [rowSelection, setRowSelection] = useState({});
@@ -57,10 +61,12 @@ export const useDataTable = <T extends DataTableRow>({
   const [pagination, setPagination] = useState(paginationInput);
   const [columnFilters, setColumnFilters] =
     useState<ColumnFiltersState>(columnFiltersInput);
+  const [columnSizing, setColumnSizing] =
+    useState<ColumnSizingState>(columnSizingInput);
 
   useEffect(() => {
-    onStateChange?.({ globalFilter, sorting, columnFilters });
-  }, [onStateChange, globalFilter, sorting, columnFilters]);
+    onStateChange?.({ globalFilter, sorting, columnFilters, columnSizing });
+  }, [onStateChange, globalFilter, sorting, columnFilters, columnSizing]);
 
   const table = useReactTable({
     data,
@@ -72,15 +78,21 @@ export const useDataTable = <T extends DataTableRow>({
       rowSelection,
       pagination,
       columnFilters,
+      columnSizing,
     },
     getRowId: (row) => row.uuid,
     enableRowSelection: true,
+    enableColumnResizing: true,
+    // column sizes are relative share units, not pixels; without this,
+    // TanStack's default 20px minimum inflates small columns
+    defaultColumn: { minSize: 1 },
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
+    onColumnSizingChange: setColumnSizing,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
