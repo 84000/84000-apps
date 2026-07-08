@@ -219,13 +219,6 @@ export const PassageNode = PassageNodeSSR.extend({
 
       const content = document.createElement('div');
       content.className = PASSAGE_CONTENT_CLASS;
-      // NOTE: do not add content-visibility here (or on the wrapper) as a
-      // rendering shortcut. Its implied paint containment clips the
-      // label/bookmark gutter chrome (negative offsets), and its layout
-      // containment stops the first child's top margin collapsing out,
-      // shifting the gutter chrome relative to the text. Off-screen
-      // rendering cost is addressed by windowed mounting in the
-      // editor-per-passage model (Local Persistence project) instead.
 
       inner.append(label, bookmark, content);
 
