@@ -102,11 +102,11 @@ export const DataTable = <T extends DataTableRow>({
       )}
       <div
         className={cn(
-          'overflow-hidden rounded-2xl border shadow-md bg-background',
+          'overflow-hidden rounded-2xl border shadow-md',
           className,
         )}
       >
-        <Table>
+        <Table className="bg-background">
           <TableHeader className="sticky top-0">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
