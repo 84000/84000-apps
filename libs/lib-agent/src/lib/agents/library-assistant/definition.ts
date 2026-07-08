@@ -23,5 +23,4 @@ export const libraryAssistant: AgentDefinition = {
     'get-work-titles',
   ],
   requiredRole: 'translator',
-  model: 'claude-sonnet-4-20250514',
 };
