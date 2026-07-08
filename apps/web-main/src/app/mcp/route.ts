@@ -34,7 +34,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const auth = validateBearerToken(req);
+  const auth = await validateBearerToken(req);
   if (!auth.ok) {
     return auth.response;
   }
