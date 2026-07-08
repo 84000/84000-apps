@@ -207,6 +207,37 @@ describe('TranslationsTable', () => {
     ]);
   });
 
+  it('restores column widths from localStorage', () => {
+    window.localStorage.setItem(
+      'translations-table:/translations/reader',
+      'widths=title:40,toh:28',
+    );
+    renderTable();
+
+    const headers = screen.getAllByRole('columnheader');
+    // 40 + 28 + pages 7 + date 10 + version 7 + restriction 4 = 96 shares
+    expect((headers[0] as HTMLElement).style.width).toBe(
+      `${(40 / 96) * 100}%`,
+    );
+    expect((headers[1] as HTMLElement).style.width).toBe(
+      `${(28 / 96) * 100}%`,
+    );
+  });
+
+  it('ignores unknown columns in stored widths', () => {
+    window.localStorage.setItem(
+      'translations-table:/translations/reader',
+      'widths=bogus:40,title:junk',
+    );
+    renderTable();
+
+    const headers = screen.getAllByRole('columnheader');
+    // defaults: title 58 of 96 total shares
+    expect((headers[0] as HTMLElement).style.width).toBe(
+      `${(58 / 96) * 100}%`,
+    );
+  });
+
   it('clears the search when the clear button is clicked', async () => {
     renderTable();
     search('toh95');

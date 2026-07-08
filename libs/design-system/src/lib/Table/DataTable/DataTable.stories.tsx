@@ -162,4 +162,19 @@ export const InfiniteScroll: Story = {
   ),
 };
 
+export const ResizableColumns: Story = {
+  render: (_props) => (
+    <DataTable
+      name="invoices"
+      data={DATA}
+      columns={COLUMNS.map((column) => ({
+        ...column,
+        size: column.id === 'invoice' ? 40 : 20,
+      }))}
+      visibility={{ uuid: false }}
+      resizableColumns
+    />
+  ),
+};
+
 export default meta;

@@ -1,4 +1,5 @@
 export * from './hooks';
+export * from './ColumnResizeHandle/ColumnResizeHandle';
 export * from './DataTable/DataTable';
 export * from './FuzzyGlobalFilter/FuzzyGlobalFilter';
 export * from './PaginationEllipsis/PaginationEllipsis';

@@ -1,6 +1,11 @@
 'use client';
 
-import { Cell, SortingFn, SortingState } from '@tanstack/react-table';
+import {
+  Cell,
+  ColumnSizingState,
+  SortingFn,
+  SortingState,
+} from '@tanstack/react-table';
 import {
   SortableHeader,
   TooltipCell,
@@ -22,13 +27,15 @@ import { useCallback, useMemo } from 'react';
 import { TriangleAlertIcon } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-const CLASSNAME_FOR_COL: { [key: string]: string } = {
-  title: 'xl:w-[920px] lg:w-[740px] md:w-[490px] w-[246px]',
-  toh: 'xl:w-[100px] md:w-[60px] w-[40px]',
-  pages: 'w-[60px]',
-  publicationVersion: 'w-[40px]',
-  publicationDate: 'w-[80px]',
-  restriction: 'w-5 h-6',
+// relative column width shares; the table renders them as percentages of
+// its container, so they scale with the viewport
+const SIZE_FOR_COL: { [key: string]: number } = {
+  title: 58,
+  toh: 10,
+  pages: 7,
+  publicationDate: 10,
+  publicationVersion: 7,
+  restriction: 4,
 };
 
 const UNPUBLISHED = 'Unpublished';
@@ -90,8 +97,25 @@ const sortFromParam = (param: string | null): SortingState => {
   return [{ id, desc: direction === 'desc' }];
 };
 
-// table state serializes to `q`/`published`/`sort` params, shared by the
-// URL query string and localStorage
+const sizingFromParam = (param: string | null): ColumnSizingState => {
+  const sizing: ColumnSizingState = {};
+  param?.split(',').forEach((entry) => {
+    const [id, share] = entry.split(':');
+    const size = parseFloat(share);
+    if (id in SIZE_FOR_COL && size > 0) {
+      sizing[id] = size;
+    }
+  });
+  return sizing;
+};
+
+const sizingToParam = (sizing: ColumnSizingState): string =>
+  Object.entries(sizing)
+    .map(([id, share]) => `${id}:${Math.round(share * 10) / 10}`)
+    .join(',');
+
+// table state serializes to `q`/`published`/`sort`/`widths` params; all are
+// stored in localStorage, and all but `widths` mirror to the URL
 const stateFromParams = (params: URLSearchParams): DataTableState => ({
   globalFilter: params.get('q') || '',
   columnFilters:
@@ -99,12 +123,14 @@ const stateFromParams = (params: URLSearchParams): DataTableState => ({
       ? [{ id: 'publicationDate', value: true }]
       : [],
   sorting: sortFromParam(params.get('sort')),
+  columnSizing: sizingFromParam(params.get('widths')),
 });
 
 const stateToParams = ({
   globalFilter,
   sorting,
   columnFilters,
+  columnSizing,
 }: DataTableState): URLSearchParams => {
   const params = new URLSearchParams();
   if (globalFilter) {
@@ -121,6 +147,9 @@ const stateToParams = ({
   if (sort && !(sort.id === 'title' && !sort.desc)) {
     params.set('sort', `${sort.id}.${sort.desc ? 'desc' : 'asc'}`);
   }
+  if (Object.keys(columnSizing).length > 0) {
+    params.set('widths', sizingToParam(columnSizing));
+  }
   return params;
 };
 
@@ -134,16 +163,21 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
 
   // search, filter, and sort state initialize from the URL, then
   // localStorage, and write back to both — so they survive opening a work
-  // and navigating back, or leaving the page entirely
+  // and navigating back, or leaving the page entirely. Column widths only
+  // round-trip through localStorage.
   const initialState: DataTableState = useMemo(() => {
-    if (STATE_KEYS.some((key) => searchParams.has(key))) {
-      return stateFromParams(new URLSearchParams(searchParams));
-    }
     const stored =
       typeof window !== 'undefined'
         ? window.localStorage.getItem(`${STORAGE_PREFIX}${pathname}`)
         : null;
-    return stateFromParams(new URLSearchParams(stored || ''));
+    const storedParams = new URLSearchParams(stored || '');
+    const state = STATE_KEYS.some((key) => searchParams.has(key))
+      ? stateFromParams(new URLSearchParams(searchParams))
+      : stateFromParams(storedParams);
+    return {
+      ...state,
+      columnSizing: sizingFromParam(storedParams.get('widths')),
+    };
   }, [searchParams, pathname]);
 
   const onStateChange = useCallback(
@@ -159,6 +193,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
 
       const urlParams = new URLSearchParams(window.location.search);
       STATE_KEYS.forEach((key) => urlParams.delete(key));
+      stateParams.delete('widths');
       stateParams.forEach((value, key) => urlParams.set(key, value));
 
       const query = urlParams.toString();
@@ -192,11 +227,12 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
     {
       id: 'title',
       accessorKey: 'title',
+      size: SIZE_FOR_COL.title,
       header: ({ column }) => (
         <TranslationHeader column={column} name="Work Title" />
       ),
       cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.title}>
+        <div>
           <TooltipCell content={row.original.title} />
           {(row.original.tibetanTitle || row.original.sanskritTitle) && (
             <TooltipCell
@@ -208,40 +244,33 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           )}
         </div>
       ),
-      className: CLASSNAME_FOR_COL.title,
       sortingFn: titleSort,
       onCellClick,
     },
     {
       id: 'toh',
       accessorKey: 'toh',
+      size: SIZE_FOR_COL.toh,
       header: ({ column }) => <TranslationHeader column={column} name="Toh" />,
-      cell: ({ row }) => (
-        <TooltipCell
-          className={CLASSNAME_FOR_COL.toh}
-          content={row.original.toh}
-        />
-      ),
-      className: CLASSNAME_FOR_COL.toh,
+      cell: ({ row }) => <TooltipCell content={row.original.toh} />,
       sortingFn: tohSort,
       onCellClick,
     },
     {
       id: 'pages',
       accessorKey: 'pages',
+      size: SIZE_FOR_COL.pages,
       enableGlobalFilter: false,
       header: ({ column }) => (
         <TranslationHeader column={column} name="Pages" />
       ),
-      cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.pages}>{row.original.pages}</div>
-      ),
-      className: CLASSNAME_FOR_COL.pages,
+      cell: ({ row }) => <div>{row.original.pages}</div>,
       onCellClick,
     },
     {
       id: 'publicationDate',
       accessorKey: 'publicationDate',
+      size: SIZE_FOR_COL.publicationDate,
       enableGlobalFilter: false,
       filterFn: (row, _columnId, publishedOnly: boolean) =>
         !publishedOnly || row.original.publicationDate !== UNPUBLISHED,
@@ -249,41 +278,35 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         <TranslationHeader column={column} name="Published" />
       ),
       cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.publicationDate}>
-          {row.original.publicationDate}
-        </div>
+        <div className="truncate">{row.original.publicationDate}</div>
       ),
-      className: CLASSNAME_FOR_COL.publicationDate,
       onCellClick,
     },
     {
       id: 'publicationVersion',
       accessorKey: 'publicationVersion',
+      size: SIZE_FOR_COL.publicationVersion,
       enableGlobalFilter: false,
       header: ({ column }) => (
         <TranslationHeader column={column} name="Version" />
       ),
-      cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.publicationVersion}>
-          {row.original.publicationVersion}
-        </div>
-      ),
-      className: CLASSNAME_FOR_COL.publicationVersion,
+      cell: ({ row }) => <div>{row.original.publicationVersion}</div>,
       onCellClick,
     },
     {
       id: 'restriction',
       accessorKey: 'restriction',
+      size: SIZE_FOR_COL.restriction,
       enableGlobalFilter: false,
+      enableResizing: false,
       header: () => '',
       cell: ({ row }) => (
-        <div className={CLASSNAME_FOR_COL.restriction}>
+        <div className="w-5 h-6">
           {row.original.restriction ? (
             <TriangleAlertIcon className="text-warning" />
           ) : null}
         </div>
       ),
-      className: CLASSNAME_FOR_COL.restriction,
       onCellClick,
     },
     // search-only columns; kept after the visible ones so a visible match is
@@ -308,8 +331,10 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
       sorting={initialState.sorting}
       globalFilter={initialState.globalFilter}
       columnFilters={initialState.columnFilters}
+      columnSizing={initialState.columnSizing}
       onStateChange={onStateChange}
       infiniteScroll
+      resizableColumns
       filters={(table) => (
         <div className="flex items-center gap-6 py-4">
           <FuzzyGlobalFilter
