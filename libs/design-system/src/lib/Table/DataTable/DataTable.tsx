@@ -102,7 +102,7 @@ export const DataTable = <T extends DataTableRow>({
       )}
       <div
         className={cn(
-          'overflow-hidden rounded-2xl border shadow-md',
+          'overflow-hidden rounded-2xl border shadow-md bg-background',
           className,
         )}
       >
