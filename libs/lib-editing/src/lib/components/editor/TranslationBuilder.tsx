@@ -11,6 +11,12 @@ import {
   removeAllEndnoteLinksForPassage,
   syncEndnoteLinkLabelsAcrossEditors,
 } from './extensions/EndNoteLink/endnote-utils';
+import {
+  collectPassageUuidsByType,
+  diffPassageUuidsByType,
+} from './endnote-tracking';
+
+const ENDNOTE_SYNC_DEBOUNCE_MS = 150;
 
 export const TranslationBuilder = ({
   content,
@@ -42,7 +48,7 @@ export const TranslationBuilder = ({
   // can be cleared during navigation.
   const passageUuidsByTypeRef = useRef<Record<string, Set<string>>>({});
   const debouncedSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const pendingDeletedByTypeRef = useRef<Record<string, Set<string>>>({});
+  const baselineInvalidatedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -74,6 +80,7 @@ export const TranslationBuilder = ({
       content={content}
       fragment={fragment}
       isEditable={isEditable}
+      autofocus={panel === 'main' && name === 'translation'}
       hasMoreAfter={hasMoreAfter}
       onCreate={({ editor }) => {
         setEditor(name, editor);
@@ -84,93 +91,76 @@ export const TranslationBuilder = ({
 
         if (name === 'endnotes') {
           // Initialize known passage UUIDs grouped by type
-          const byType: Record<string, Set<string>> = {};
-          const doc = editor.state.doc;
-          for (let i = 0; i < doc.childCount; i++) {
-            const child = doc.child(i);
-            if (child.type.name === 'passage' && child.attrs.uuid) {
-              const pType = (child.attrs.type as string) || 'unknown';
-              (byType[pType] ??= new Set()).add(child.attrs.uuid);
-            }
-          }
-          passageUuidsByTypeRef.current = byType;
+          passageUuidsByTypeRef.current = collectPassageUuidsByType(
+            editor.state.doc,
+          );
 
-          const handleEndnotesUpdate = () => {
-            // Collect current passage UUIDs grouped by type (cheap)
-            const currentByType: Record<string, Set<string>> = {};
-            const doc = editor.state.doc;
-            for (let i = 0; i < doc.childCount; i++) {
-              const child = doc.child(i);
-              if (child.type.name === 'passage' && child.attrs.uuid) {
-                const pType = (child.attrs.type as string) || 'unknown';
-                (currentByType[pType] ??= new Set()).add(child.attrs.uuid);
-              }
+          // All traversal and diffing happens here, at most once per debounce
+          // window — a burst of keystrokes collapses to one diff against the
+          // pre-burst baseline, which by construction accumulates every
+          // addition and deletion since the last flush.
+          const flushEndnotesSync = () => {
+            debouncedSyncRef.current = undefined;
+            if (editor.isDestroyed) {
+              return;
             }
 
-            // Detect deleted and added passages per type (skip during
-            // navigation to avoid false positives from content replacement)
-            const deletedByType: Record<string, string[]> = {};
-            let hasAdded = false;
-            if (!isNavigating()) {
-              const prevByType = passageUuidsByTypeRef.current;
-              for (const pType of Object.keys(prevByType)) {
-                const prev = prevByType[pType];
-                const curr = currentByType[pType];
-                prev.forEach((uuid) => {
-                  if (!curr?.has(uuid)) {
-                    (deletedByType[pType] ??= []).push(uuid);
-                  }
-                });
-              }
-              if (!hasAdded) {
-                outer: for (const pType of Object.keys(currentByType)) {
-                  const prev = prevByType[pType];
-                  for (const uuid of currentByType[pType]) {
-                    if (!prev?.has(uuid)) {
-                      hasAdded = true;
-                      break outer;
-                    }
-                  }
-                }
-              }
+            // Diffing a half-replaced doc would report mass false deletions
+            // and strip endnote links from the other editors; retry after
+            // navigation settles and refresh the baseline without diffing.
+            if (isNavigating()) {
+              baselineInvalidatedRef.current = true;
+              debouncedSyncRef.current = setTimeout(
+                flushEndnotesSync,
+                ENDNOTE_SYNC_DEBOUNCE_MS,
+              );
+              return;
             }
 
-            // Always update the baseline so the next diff is accurate
+            const currentByType = collectPassageUuidsByType(editor.state.doc);
+            const skipDiff = baselineInvalidatedRef.current;
+            baselineInvalidatedRef.current = false;
+            const prevByType = passageUuidsByTypeRef.current;
             passageUuidsByTypeRef.current = currentByType;
+            if (skipDiff) {
+              return;
+            }
 
-            const hasDeleted = Object.keys(deletedByType).length > 0;
+            const { deletedByType, hasAdded } = diffPassageUuidsByType(
+              prevByType,
+              currentByType,
+            );
 
-            // Accumulate deletions and debounce the expensive sync work
-            // so rapid keystrokes don't trigger multiple full traversals
-            for (const [pType, uuids] of Object.entries(deletedByType)) {
-              const pending = (pendingDeletedByTypeRef.current[pType] ??=
-                new Set());
-              for (const uuid of uuids) {
-                pending.add(uuid);
+            const deletedEndnotes = deletedByType['endnotes'] ?? [];
+            if (deletedEndnotes.length) {
+              const frontEditor = getEditor('front');
+              const translationEditor = getEditor('translation');
+              for (const uuid of deletedEndnotes) {
+                if (frontEditor)
+                  removeAllEndnoteLinksForPassage(frontEditor, uuid);
+                if (translationEditor)
+                  removeAllEndnoteLinksForPassage(translationEditor, uuid);
               }
             }
 
-            if (hasDeleted || hasAdded) {
-              if (debouncedSyncRef.current) {
-                clearTimeout(debouncedSyncRef.current);
-              }
-              debouncedSyncRef.current = setTimeout(() => {
-                const pendingEndnotes =
-                  pendingDeletedByTypeRef.current['endnotes'];
-                if (pendingEndnotes?.size) {
-                  const frontEditor = getEditor('front');
-                  const translationEditor = getEditor('translation');
-                  for (const uuid of pendingEndnotes) {
-                    if (frontEditor)
-                      removeAllEndnoteLinksForPassage(frontEditor, uuid);
-                    if (translationEditor)
-                      removeAllEndnoteLinksForPassage(translationEditor, uuid);
-                  }
-                }
-                pendingDeletedByTypeRef.current = {};
-                syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
-              }, 150);
+            if (Object.keys(deletedByType).length > 0 || hasAdded) {
+              syncEndnoteLinkLabelsAcrossEditors(editor, getEditor);
             }
+          };
+
+          // O(1) per keystroke: record whether the baseline went stale and
+          // (re)arm the timer; the doc traversals run in the flush.
+          const handleEndnotesUpdate = () => {
+            if (isNavigating()) {
+              baselineInvalidatedRef.current = true;
+            }
+            if (debouncedSyncRef.current) {
+              clearTimeout(debouncedSyncRef.current);
+            }
+            debouncedSyncRef.current = setTimeout(
+              flushEndnotesSync,
+              ENDNOTE_SYNC_DEBOUNCE_MS,
+            );
           };
 
           editor.on('update', handleEndnotesUpdate);

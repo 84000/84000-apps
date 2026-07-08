@@ -17,18 +17,24 @@ export const useBlockEditor = ({
   content,
   extensions = [],
   isEditable = true,
+  // Off by default: multiple editors mount simultaneously (front,
+  // translation, endnotes, abbreviations) and each grabbing focus scrolls
+  // its container — last mount wins and the viewport jumps. Only the
+  // primary editor should opt in.
+  autofocus = false,
   onCreate,
   ...rest
 }: UseEditorOptions & {
   content: Content;
   extensions?: Extensions;
   isEditable?: boolean;
+  autofocus?: boolean;
 }) => {
   const editor = useEditor({
     extensions,
     immediatelyRender: false,
     shouldRerenderOnTransaction: false,
-    autofocus: true,
+    autofocus: autofocus ? 'start' : false,
     editable: isEditable,
     editorProps: {
       attributes: {
@@ -43,7 +49,9 @@ export const useBlockEditor = ({
     onCreate: (ctx) => {
       if (ctx.editor.isEmpty) {
         ctx.editor.commands.setContent(content);
-        ctx.editor.commands.focus('start', { scrollIntoView: true });
+        if (autofocus) {
+          ctx.editor.commands.focus('start', { scrollIntoView: true });
+        }
       }
       onCreate?.(ctx);
     },

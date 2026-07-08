@@ -190,7 +190,8 @@ export const PassageNode = PassageNodeSSR.extend({
         if (n.attrs.uuid) wrapper.id = n.attrs.uuid;
         if (n.attrs.toh) wrapper.setAttribute('data-toh', n.attrs.toh);
         else wrapper.removeAttribute('data-toh');
-        if (n.attrs.type) wrapper.setAttribute('data-passage-type', n.attrs.type);
+        if (n.attrs.type)
+          wrapper.setAttribute('data-passage-type', n.attrs.type);
         else wrapper.removeAttribute('data-passage-type');
         if (n.attrs.invalid) wrapper.setAttribute('data-invalid', 'true');
         else wrapper.removeAttribute('data-invalid');
