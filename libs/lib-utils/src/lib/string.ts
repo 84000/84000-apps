@@ -23,6 +23,14 @@ export const toSlug = (str: string) =>
 export const parseToh = (toh: string) =>
   toh.replace(/,/g, ', ').replace(/toh/g, 'Toh ');
 
+export const stripLeadingArticles = (str: string) =>
+  str.replace(/^(?:a|an|and|the)\s+/i, '');
+
+export const compareIgnoringArticles = (a: string, b: string) =>
+  stripLeadingArticles(a).localeCompare(stripLeadingArticles(b), 'en', {
+    sensitivity: 'base',
+  });
+
 export const isUuid = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(str);
 

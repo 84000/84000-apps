@@ -6,6 +6,9 @@ export type Work = {
   title: string;
   description?: string;
   toh: TohokuCatalogEntry[];
+  tibetanTitle?: string;
+  wylieTitle?: string;
+  sanskritTitle?: string;
   publicationDate?: Date;
   publicationVersion: SemVer;
   pages: number;
