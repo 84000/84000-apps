@@ -3,7 +3,7 @@ import { OAuthConsent } from '@lib-user';
 
 const OAuthAuthorizePage = () => {
   return (
-    <div className="w-screen h-screen flex bg-surface">
+    <div className="w-screen h-screen flex">
       <Suspense>
         <OAuthConsent />
       </Suspense>
