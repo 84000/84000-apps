@@ -22,6 +22,14 @@ export const InfiniteScrollFooter = <T extends RowData>({
   const { pageSize } = table.getState().pagination;
   const hasMore = pageSize < totalRows;
 
+  // shrink back to one page whenever the filters change: the user wants the
+  // top matches, and re-rendering hundreds of grown rows on every keystroke
+  // makes search feel sluggish
+  const { globalFilter, columnFilters } = table.getState();
+  useEffect(() => {
+    table.setPageSize(step);
+  }, [table, step, globalFilter, columnFilters]);
+
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !hasMore || typeof IntersectionObserver === 'undefined') {

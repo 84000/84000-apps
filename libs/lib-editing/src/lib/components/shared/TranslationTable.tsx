@@ -340,7 +340,7 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
           <FuzzyGlobalFilter
             table={table}
             placeholder="Search translations..."
-            delay={DebounceLevel.LOW}
+            delay={DebounceLevel.MEDIUM}
           />
           <div className="flex items-center gap-2">
             <Switch
