@@ -20,7 +20,10 @@ try {
   // File doesn't exist - use empty defaults
 }
 
-const BASE_PUBLIC_ROUTES = ['/login', '/auth'];
+// /mcp does its own bearer-token auth; /.well-known serves public OAuth
+// discovery metadata. Neither uses cookie sessions, so both must bypass the
+// login redirect.
+const BASE_PUBLIC_ROUTES = ['/login', '/auth', '/mcp', '/.well-known'];
 const BASE_RESTRICTED_ROUTES: Record<string, string[]> = {
   '/publications/editor': ['admin', 'editor', 'translator'],
   '/project': ['admin', 'editor', 'translator'],
