@@ -6,6 +6,12 @@ export function jsonResult(data: unknown): CallToolResult {
   };
 }
 
+export function textResult(text: string): CallToolResult {
+  return {
+    content: [{ type: 'text', text }],
+  };
+}
+
 export function errorResult(message: string): CallToolResult {
   return {
     content: [{ type: 'text', text: message }],

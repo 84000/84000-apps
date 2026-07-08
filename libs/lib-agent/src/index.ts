@@ -1,10 +1,15 @@
 export { createMcpHandler } from './lib/server';
-export type { McpToolDefinition, McpHandlerOptions } from './lib/types';
+export type {
+  McpToolDefinition,
+  McpPromptDefinition,
+  McpHandlerOptions,
+} from './lib/types';
 export { createReadTools } from './lib/tools/read';
 export {
   validateBearerToken,
   requirePermission,
   decodeRole,
+  hasRole,
   ROLE_HIERARCHY,
 } from './lib/auth';
 export {
@@ -28,4 +33,6 @@ export {
   resolveAgentTools,
   resolveAgentHandlerOptions,
   createAgentTools,
+  createAgentPrompts,
+  buildAgentInstructions,
 } from './lib/agents';

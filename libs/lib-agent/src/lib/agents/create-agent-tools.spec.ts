@@ -58,7 +58,7 @@ describe('createAgentTools', () => {
     expect(tools[0].name).toBe('ask_my_hyphenated_agent');
   });
 
-  it('handler returns agent config without requiredRole', async () => {
+  it('handler returns activation text with the agent system prompt', async () => {
     const tools = createAgentTools('reader');
     const tool = tools[0];
     const result = await tool.handler(
@@ -66,28 +66,23 @@ describe('createAgentTools', () => {
       {} as Parameters<typeof tool.handler>[1],
     );
     const content = result.content as { type: string; text: string }[];
-    const config = JSON.parse(content[0].text);
 
-    expect(config).toEqual({
-      name: 'test-reader',
-      description: 'A reader-level agent',
-      systemPrompt: 'You are a test agent.',
-      tools: ['tool-a', 'tool-b'],
-      model: 'claude-sonnet-4-20250514',
-    });
-    expect(config).not.toHaveProperty('requiredRole');
+    expect(content[0].text).toContain('Adopt the following role');
+    expect(content[0].text).toContain('You are a test agent.');
+    expect(result.isError).toBeUndefined();
   });
 
-  it('handler omits model when undefined', async () => {
-    const tools = createAgentTools('admin');
-    const editorTool = tools.find((t) => t.name === 'ask_test_editor')!;
-    const result = await editorTool.handler(
-      {},
-      {} as Parameters<typeof editorTool.handler>[1],
+  it('handler appends the query when provided', async () => {
+    const tools = createAgentTools('reader');
+    const tool = tools[0];
+    const result = await tool.handler(
+      { query: 'What is toh1?' },
+      {} as Parameters<typeof tool.handler>[1],
     );
     const content = result.content as { type: string; text: string }[];
-    const config = JSON.parse(content[0].text);
 
-    expect(config.model).toBeUndefined();
+    expect(content[0].text).toContain('You are a test agent.');
+    expect(content[0].text).toContain('Current request');
+    expect(content[0].text).toContain('What is toh1?');
   });
 });

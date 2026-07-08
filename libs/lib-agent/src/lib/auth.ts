@@ -35,6 +35,9 @@ export const ROLE_HIERARCHY: UserRole[] = [
   'admin',
 ];
 
+export const hasRole = (userRole: UserRole, requiredRole: UserRole): boolean =>
+  ROLE_HIERARCHY.indexOf(userRole) >= ROLE_HIERARCHY.indexOf(requiredRole);
+
 const createUnauthorizedResponse = (
   resourceMetadataUrl: string,
   message = 'Authentication required',
