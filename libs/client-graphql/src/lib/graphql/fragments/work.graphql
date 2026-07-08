@@ -7,4 +7,11 @@ fragment WorkFields on Work {
   pages
   restriction
   section
+  imprint {
+    mainTitles {
+      tibetan
+      wylie
+      sanskrit
+    }
+  }
 }
