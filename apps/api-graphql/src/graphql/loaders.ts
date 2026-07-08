@@ -5,6 +5,7 @@ import { createPassageReferencesLoader } from './schema/passage/passage-referenc
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
 import { createFolioLoader } from './schema/folio/folio.loader';
 import { createBibliographyLabelLoader } from './schema/bibliography/bibliography-label.loader';
+import { createImprintLoader } from './schema/imprint/imprint.loader';
 
 export interface Loaders {
   /**
@@ -62,6 +63,12 @@ export interface Loaders {
    * bibliography entries.
    */
   bibliographyLabelsByUuid: ReturnType<typeof createBibliographyLabelLoader>;
+
+  /**
+   * Load imprints by (work uuid, toh) pair.
+   * Batches the per-work imprint RPC into a single query for list results.
+   */
+  imprintsByWorkToh: ReturnType<typeof createImprintLoader>;
 }
 
 export function createLoaders(supabase: DataClient): Loaders {
@@ -72,5 +79,6 @@ export function createLoaders(supabase: DataClient): Loaders {
     glossaryNamesByUuid: createGlossaryNameLoader(supabase),
     foliosByUuid: createFolioLoader(supabase),
     bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase),
+    imprintsByWorkToh: createImprintLoader(supabase),
   };
 }
