@@ -21,9 +21,16 @@ try {
 }
 
 // /mcp does its own bearer-token auth; /.well-known serves public OAuth
-// discovery metadata. Neither uses cookie sessions, so both must bypass the
-// login redirect.
-const BASE_PUBLIC_ROUTES = ['/login', '/auth', '/mcp', '/.well-known'];
+// discovery metadata; /oauth/authorize is the consent screen, which handles
+// the signed-out state itself so the authorization_id survives login.
+// None of these use cookie sessions, so all must bypass the login redirect.
+const BASE_PUBLIC_ROUTES = [
+  '/login',
+  '/auth',
+  '/mcp',
+  '/.well-known',
+  '/oauth/authorize',
+];
 const BASE_RESTRICTED_ROUTES: Record<string, string[]> = {
   '/publications/editor': ['admin', 'editor', 'translator'],
   '/project': ['admin', 'editor', 'translator'],
