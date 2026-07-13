@@ -34,27 +34,40 @@ function isValidConfig(config: unknown): config is StudioHeaderConfig {
 }
 
 /**
- * Determines whether a sub-item is visible for the current user's role.
- * - `public` items require no auth and are always visible.
- * - Items with no `roles` list are visible to any logged-in user.
+ * Determines whether a `roles` gate grants access to the current user's role.
+ * - No `roles` list (missing or empty) is open to any logged-in user.
  * - Otherwise the user's role must be included in the `roles` list.
+ */
+function hasRoleAccess(roles?: string[], role?: UserRole): boolean {
+  if (!roles || roles.length === 0) return true;
+  return role ? roles.includes(role) : false;
+}
+
+/**
+ * Determines whether a sub-item is visible for the current user's role.
+ * `public` items require no auth and are always visible; otherwise the sub-item's
+ * `roles` gate applies.
  */
 function isSubItemVisible(sub: MenuSubItemConfig, role?: UserRole): boolean {
   if (sub.public) return true;
-  if (!sub.roles || sub.roles.length === 0) return true;
-  return role ? sub.roles.includes(role) : false;
+  return hasRoleAccess(sub.roles, role);
 }
 
 /**
  * Transforms a remote config item to the component props format, filtering out
  * sub-items the current role cannot access. Wraps the visible items in a single
- * section for component compatibility. Returns null when no sub-items are
- * visible so empty menu entries can be dropped.
+ * section for component compatibility. Returns null when the top-level `roles`
+ * gate excludes the user or no sub-items are visible, so inaccessible/empty menu
+ * entries can be dropped.
  */
 function transformConfigItem(
   item: MenuItemConfig,
   role?: UserRole,
 ): NavigationMenuItemProps | null {
+  if (!hasRoleAccess(item.roles, role)) {
+    return null;
+  }
+
   const visibleItems = item.items.filter((subItem) =>
     isSubItemVisible(subItem, role),
   );
