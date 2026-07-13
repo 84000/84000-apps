@@ -24,9 +24,11 @@ const MEASURED_KEYS = new Set([
 export const PassageStack = ({
   controller,
   className,
+  overscan = OVERSCAN,
 }: {
   controller: PassageStackController;
   className?: string;
+  overscan?: number;
 }) => {
   useSyncExternalStore(
     controller.subscribe,
@@ -40,7 +42,7 @@ export const PassageStack = ({
     count: order.length,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => controller.estimateHeight(order[index]),
-    overscan: OVERSCAN,
+    overscan,
     getItemKey: (index) => order[index],
   });
 

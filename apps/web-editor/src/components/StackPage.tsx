@@ -113,9 +113,11 @@ const repeatPassages = (passages: Passage[], repeat: number): Passage[] => {
 export const StackPage = ({
   toh,
   repeat = 1,
+  overscan,
 }: {
   toh: string;
   repeat?: number;
+  overscan?: number;
 }) => {
   const [seeds, setSeeds] = useState<StackPassageSeed[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -170,7 +172,11 @@ export const StackPage = ({
 
   return (
     <div className="h-[calc(100dvh-5rem)] w-full">
-      <PassageStack controller={controller} className="h-full" />
+      <PassageStack
+        controller={controller}
+        className="h-full"
+        overscan={overscan}
+      />
       <PerfHUD controller={controller} />
     </div>
   );
