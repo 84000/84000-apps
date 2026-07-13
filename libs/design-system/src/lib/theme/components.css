@@ -15,6 +15,10 @@
     @apply mb-1 mt-2 @c/sidebar:pt-1;
   }
 
+  .paragraph:has(> [type='abbreviation']) {
+    @apply grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-2;
+  }
+
   a {
     @apply text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer;
   }

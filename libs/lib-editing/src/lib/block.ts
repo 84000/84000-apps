@@ -83,10 +83,11 @@ const paragraphTemplate = (passage: Passage): TranslationEditorContentItem => {
 const abbreviationTemplate = (
   passage: Passage,
 ): TranslationEditorContentItem => {
+  // The two-column key | explanation layout is applied at render time via the
+  // `.paragraph:has(> [type='abbreviation'])` rule in the design-system.
   const block: TranslationEditorContentItem = {
     type: 'paragraph',
     attrs: {
-      class: 'flex flex-row gap-2',
       start: 0,
       end: passage.content.length,
       uuid: passage.uuid,

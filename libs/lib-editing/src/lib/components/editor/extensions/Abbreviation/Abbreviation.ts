@@ -78,7 +78,7 @@ export const Abbreviation = Node.create<AbbreviationOptions>({
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'italic min-w-8',
+        class: 'italic break-words',
       },
     };
   },
@@ -121,7 +121,11 @@ export const HasAbbreviation = Node.create<AbbreviationOptions>({
 
   addOptions() {
     return {
-      HTMLAttributes: {},
+      // break-words lets long, unbreakable tokens in the explanation wrap
+      // rather than overflow the column and force horizontal scroll.
+      HTMLAttributes: {
+        class: 'break-words',
+      },
     };
   },
 
