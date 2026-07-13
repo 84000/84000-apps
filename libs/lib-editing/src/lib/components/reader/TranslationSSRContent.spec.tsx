@@ -267,6 +267,47 @@ describe('TranslationSSRContent', () => {
     expect(html).not.toContain('abbreviation="undefined"');
   });
 
+  it('renders the abbreviation key as a direct child of the paragraph so the two-column layout applies', () => {
+    // The Abbreviations tab renders each entry as a two-column grid via the
+    // `.paragraph:has(> [type='abbreviation'])` rule in the design-system
+    // stylesheet. That selector requires the key span to be an immediate child
+    // of the `.paragraph`, and it keys off the `type="abbreviation"` attribute.
+    // Pin both here (ED-1340).
+    const abbrDoc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'abbreviation', content: [{ type: 'text', text: 'Mvy' }] },
+                {
+                  type: 'hasAbbreviation',
+                  content: [{ type: 'text', text: 'Mahāvyutpatti' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const el = TranslationSSRContent({
+      content: abbrDoc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+
+    // Key span is styled and immediately follows the opening paragraph tag
+    // (the paragraph carries the `paragraph` class among others).
+    expect(html).toMatch(
+      /<p[^>]*class="[^"]*\bparagraph\b[^"]*"[^>]*>\s*<span[^>]*type="abbreviation"/,
+    );
+    expect(html).toContain('class="italic break-words"');
+    expect(html).toContain('type="hasAbbreviation"');
+  });
+
   it('accepts an array of nodes and wraps them as a doc', () => {
     const el = TranslationSSRContent({
       content: passageDoc.content as JSONContent[],
