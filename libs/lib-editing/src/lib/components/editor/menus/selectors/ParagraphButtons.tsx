@@ -32,10 +32,14 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState<SelectorResult>({
     editor,
     selector: (instance) => {
+      // isActive with an attributes-only argument checks whichever block type
+      // holds the cursor (paragraph, heading, lineGroup, blockquote, list), so
+      // the toggles light up on every host type — not just paragraphs. This
+      // mirrors the check inside toggleLeadingSpace/toggleIndent, keeping the
+      // button state and the commands in sync.
       const atts = {
-        hasIndent: !!instance.editor.getAttributes('paragraph')['hasIndent'],
-        hasLeadingSpace:
-          !!instance.editor.getAttributes('paragraph')['hasLeadingSpace'],
+        hasIndent: instance.editor.isActive({ hasIndent: true }),
+        hasLeadingSpace: instance.editor.isActive({ hasLeadingSpace: true }),
       };
       return atts;
     },

@@ -30,7 +30,7 @@ export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
   name: 'leadingSpace',
   addOptions() {
     return {
-      types: ['paragraph', 'heading', 'lineGroup'],
+      types: ['paragraph', 'heading', 'lineGroup', 'blockquote'],
       defaultHasLeadingSpace: false,
     };
   },
