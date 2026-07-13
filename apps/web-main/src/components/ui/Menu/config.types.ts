@@ -10,6 +10,7 @@ export interface MenuItemConfig {
   color: BrandColor;
   body?: string; // Optional - can be used in hero section
   href?: string; // Optional - only needed if no items
+  roles?: string[]; // Required roles (empty = just login required)
   items: MenuSubItemConfig[];
 }
 
