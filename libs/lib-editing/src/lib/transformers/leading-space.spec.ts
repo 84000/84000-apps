@@ -1,10 +1,8 @@
 import {
-  Annotation,
   annotationsFromDTO,
   PassageDTO,
   passageFromDTO,
 } from '@eightyfourthousand/data-access';
-import { leadingSpace } from './leading-space';
 import { blockFromPassage } from '../block';
 
 const dto: PassageDTO = {
@@ -50,6 +48,73 @@ describe('leadingSpace transformer', () => {
     expect(paragraphBlock?.attrs?.hasLeadingSpace).toBe(true);
     expect(paragraphBlock?.attrs?.leadingSpaceUuid).toBe(
       'leading-space-uuid-1',
+    );
+  });
+});
+
+describe('leadingSpace transformer at a paragraph boundary', () => {
+  // "First paragraph." is 16 chars; the second paragraph and the leading-space
+  // both start at 16, in the middle of the passage.
+  const boundaryDto: PassageDTO = {
+    sort: 1,
+    type: 'root',
+    uuid: 'passage-uuid-1234',
+    label: '',
+    xmlId: 'test-passage',
+    parent: 'test-parent',
+    content: 'First paragraph.Second paragraph.',
+    work_uuid: 'work-uuid-5678',
+    annotations: [
+      {
+        end: 16,
+        type: 'paragraph',
+        uuid: 'paragraph-uuid-1',
+        start: 0,
+        content: [],
+        passage_uuid: 'passage-uuid-1234',
+      },
+      {
+        end: 33,
+        type: 'paragraph',
+        uuid: 'paragraph-uuid-2',
+        start: 16,
+        content: [],
+        passage_uuid: 'passage-uuid-1234',
+      },
+      {
+        end: 16,
+        type: 'leading-space',
+        uuid: 'leading-space-uuid-2',
+        start: 16,
+        content: [],
+        passage_uuid: 'passage-uuid-1234',
+      },
+    ],
+  };
+
+  const passage = passageFromDTO(
+    boundaryDto,
+    annotationsFromDTO(
+      boundaryDto.annotations || [],
+      boundaryDto.content.length,
+    ),
+  );
+  const block = blockFromPassage(passage);
+
+  if (!block?.content) {
+    throw new Error('Block conversion failed');
+  }
+
+  it('applies the leading space to the block at the insertion point, not the preceding block', () => {
+    const [firstParagraph, secondParagraph] = block.content ?? [];
+
+    expect(firstParagraph?.attrs?.uuid).toBe('paragraph-uuid-1');
+    expect(firstParagraph?.attrs?.hasLeadingSpace).toBeFalsy();
+
+    expect(secondParagraph?.attrs?.uuid).toBe('paragraph-uuid-2');
+    expect(secondParagraph?.attrs?.hasLeadingSpace).toBe(true);
+    expect(secondParagraph?.attrs?.leadingSpaceUuid).toBe(
+      'leading-space-uuid-2',
     );
   });
 });
