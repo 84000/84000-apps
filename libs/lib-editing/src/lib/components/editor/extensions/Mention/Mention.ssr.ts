@@ -32,6 +32,7 @@ export const MentionSSR = Node.create<MentionSSROptions>({
   // should be a single navigation step. Mentions remain atomic, but the caret
   // now moves directly from one side to the other.
   selectable: false,
+  draggable: true,
   // Mentions never carry marks. Without this, an inline mark whose range
   // coincides with the mention's position (e.g. an end-location endNoteLink,
   // which is a zero-length annotation at the same start/end) gets stored on

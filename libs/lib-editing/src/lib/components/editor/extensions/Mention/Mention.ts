@@ -62,11 +62,13 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
       const isEditable = props.editor.isEditable;
       const dom = document.createElement('span');
       dom.classList.add('mention-container');
+      dom.draggable = isEditable;
 
       const items: MentionItem[] = props.node.attrs.items || [];
 
       items.forEach((item) => {
         const anchor = document.createElement('a');
+        anchor.draggable = false;
         anchor.classList.add('mention-link');
         if (item.toh) {
           anchor.setAttribute('data-toh', item.toh);

@@ -20,11 +20,12 @@ const Text = Node.create({
 });
 
 describe('MentionSSR', () => {
-  it('does not turn arrow-key caret navigation into a node selection', () => {
+  it('is draggable without turning caret navigation into a node selection', () => {
     const schema = getSchema([Document, Paragraph, Text, MentionSSR]);
     const mention = schema.nodes['mention'].create();
 
     expect(mention.isAtom).toBe(true);
+    expect(schema.nodes['mention'].spec.draggable).toBe(true);
     expect(NodeSelection.isSelectable(mention)).toBe(false);
   });
 });
