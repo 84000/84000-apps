@@ -6,6 +6,7 @@ import {
 } from '@tiptap/core';
 import { Node as PMNode, Schema } from '@tiptap/pm/model';
 import { Selection } from '@tiptap/pm/state';
+import { Transform } from '@tiptap/pm/transform';
 import { Doc, UndoManager, XmlFragment, transact } from 'yjs';
 import {
   prosemirrorToYXmlFragment,
@@ -437,7 +438,10 @@ export class PassageStackController {
 
   hasCrossSelection = () => this.crossSelection !== null;
 
-  deleteCrossSelection = () => {
+  /** Replace the cross-passage selection with pasted plain text. */
+  pasteCrossSelection = (text: string) => this.deleteCrossSelection(text);
+
+  deleteCrossSelection = (replaceWith?: string) => {
     const selection = this.crossSelection;
     if (!selection) return false;
     this.crossSelection = null;
@@ -458,10 +462,20 @@ export class PassageStackController {
 
     const fromDoc = this.pmDoc(this.getDocJSON(fromUuid));
     const toDoc = this.pmDoc(this.getDocJSON(toUuid));
-    this.setDocContent(
-      fromUuid,
-      this.docJSONFromFragment(fromDoc.content.cut(0, fromPos)),
-    );
+    let fromJSON = this.docJSONFromFragment(fromDoc.content.cut(0, fromPos));
+    if (replaceWith) {
+      // Pasted text lands at the cut point — the end of the trimmed head.
+      const trimmed = this.pmDoc(fromJSON);
+      const transform = new Transform(trimmed);
+      const insertPos = Selection.atEnd(trimmed).from;
+      transform.replaceWith(
+        insertPos,
+        insertPos,
+        this.schema.text(replaceWith),
+      );
+      fromJSON = transform.doc.toJSON();
+    }
+    this.setDocContent(fromUuid, fromJSON);
     this.setDocContent(
       toUuid,
       this.docJSONFromFragment(toDoc.content.cut(toPos)),

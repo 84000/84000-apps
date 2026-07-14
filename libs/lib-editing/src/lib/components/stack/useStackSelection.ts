@@ -64,22 +64,80 @@ export const useStackSelection = (controller: PassageStackController) => {
       });
     };
 
+    const serializeSelection = () => {
+      const selection = document.getSelection();
+      if (!selection || selection.isCollapsed) return null;
+      const container = document.createElement('div');
+      for (let i = 0; i < selection.rangeCount; i++) {
+        container.appendChild(selection.getRangeAt(i).cloneContents());
+      }
+      return { text: selection.toString(), html: container.innerHTML };
+    };
+
+    const writeClipboard = async ({
+      text,
+      html,
+    }: {
+      text: string;
+      html: string;
+    }) => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+            'text/html': new Blob([html], { type: 'text/html' }),
+          }),
+        ]);
+      } catch {
+        // rich write unavailable (permissions/browser) — plain text will do
+        await navigator.clipboard.writeText(text).catch((error) => {
+          console.error('failed to write clipboard', error);
+        });
+      }
+    };
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
       if (!controller.hasCrossSelection()) return;
+
+      // Cut: the browser won't mutate a selection that spans non-editable
+      // rows, so serialize + orchestrated delete ourselves.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x') {
+        const serialized = serializeSelection();
+        if (!serialized) return;
+        event.preventDefault();
+        event.stopPropagation();
+        writeClipboard(serialized).then(() =>
+          controller.deleteCrossSelection(),
+        );
+        return;
+      }
+
+      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
       event.preventDefault();
       event.stopPropagation();
       controller.deleteCrossSelection();
     };
 
+    // Paste over a cross-passage selection: orchestrated delete, then the
+    // clipboard text lands at the cut point in the first passage.
+    const onPaste = (event: ClipboardEvent) => {
+      if (!controller.hasCrossSelection()) return;
+      const text = event.clipboardData?.getData('text/plain') ?? '';
+      event.preventDefault();
+      event.stopPropagation();
+      controller.pasteCrossSelection(text);
+    };
+
     // Document-level: with static rows the selection can exist while focus
-    // sits on <body>, so a container listener would never hear the key.
+    // sits on <body>, so a container listener would never hear these.
     document.addEventListener('selectionchange', onSelectionChange);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('paste', onPaste, true);
 
     return () => {
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('paste', onPaste, true);
     };
   }, [controller]);
 };
