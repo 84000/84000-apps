@@ -18,11 +18,7 @@ export const StaticPassageRow = memo(
     controller: PassageStackController;
     meta: StackPassageMeta;
   }) => (
-    <div
-      className="flex gap-4 py-1"
-      data-stack-passage={meta.uuid}
-      onMouseDown={() => controller.focusPassage(meta.uuid, 'start')}
-    >
+    <div className="flex gap-4 py-1" data-stack-passage={meta.uuid}>
       <div className="w-14 shrink-0 select-none pt-1 text-right font-sans text-xs text-muted-foreground">
         {meta.label}
       </div>

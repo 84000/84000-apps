@@ -21,7 +21,7 @@ export type StackPassageSeed = {
 
 export type StackFocusTarget = {
   uuid: string;
-  where: 'start' | 'end' | number;
+  where: 'start' | 'end' | number | { x: number; y: number };
 };
 
 export type StackCrossSelection = {

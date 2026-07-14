@@ -89,7 +89,10 @@ export const buildStackSchemaExtensions = (): Extensions => [
   WordBreak,
   StarterKit.configure({
     ...STARTER_KIT_CONFIG,
-    trailingNode: { notAfter: ['paragraph'] },
+    // No trailing node: it exists only in live editors, so it would make a
+    // passage grow on focus and shift the rows below it. Gap cursor still
+    // allows insertion after a trailing table or line group.
+    trailingNode: false,
     undoRedo: false,
   }),
 ];

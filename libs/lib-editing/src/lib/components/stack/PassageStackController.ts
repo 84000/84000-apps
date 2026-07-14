@@ -83,7 +83,16 @@ export class PassageStackController {
   private staticHTML = new Map<string, string>();
   private crossSelection: StackCrossSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
+  private keyBuffer = '';
   private scrollToIndex: ((index: number) => void) | null = null;
+
+  /**
+   * Passages carrying a live editor: the focused passage and its neighbors
+   * (so boundary arrow keys land in an already-mounted editor). Everything
+   * else renders as static HTML — editors mount on focus, never on scroll.
+   */
+  private liveUuids = new Set<string>();
+  private focusedUuid: string | null = null;
 
   private listeners = new Set<() => void>();
   private version = 0;
@@ -199,6 +208,10 @@ export class PassageStackController {
       const { where } = this.pendingFocus;
       this.pendingFocus = null;
       this.focusEditor(editor, where);
+      if (this.keyBuffer) {
+        editor.commands.insertContent(this.keyBuffer);
+        this.keyBuffer = '';
+      }
     }
   }
 
@@ -220,10 +233,31 @@ export class PassageStackController {
 
   // --------------------------------------------------------------- focus
 
+  isLive = (uuid: string) => this.liveUuids.has(uuid);
+
+  hasPendingFocus = () => this.pendingFocus !== null;
+
+  /**
+   * Buffer keys typed between a focus request and the editor mounting, so a
+   * click-and-immediately-type never drops characters.
+   */
+  bufferKey(key: string) {
+    if (this.pendingFocus) this.keyBuffer += key;
+  }
+
+  /** Recenter the live window when an editor gains focus by any means. */
+  notifyFocused(uuid: string) {
+    this.focusedUuid = uuid;
+    this.recenterLive(uuid);
+  }
+
   focusPassage(uuid: string, where: StackFocusTarget['where'] = 'start') {
     const entry = this.entries.get(uuid);
     const index = this.order.indexOf(uuid);
     if (!entry || index < 0) return false;
+
+    this.focusedUuid = uuid;
+    this.recenterLive(uuid);
 
     if (entry.editor) {
       this.focusEditor(entry.editor, where);
@@ -232,11 +266,26 @@ export class PassageStackController {
     }
 
     this.pendingFocus = { uuid, where };
+    this.keyBuffer = '';
     this.scrollToIndex?.(index);
-    // The target row may be static with no scroll movement coming (e.g. a
-    // click during the settle window) — re-render so it swaps to an editor.
+    // The row is currently static — re-render so it swaps to an editor.
     this.bump();
     return true;
+  }
+
+  private recenterLive(uuid: string) {
+    const index = this.order.indexOf(uuid);
+    if (index < 0) return;
+    const next = new Set<string>();
+    [this.order[index - 1], uuid, this.order[index + 1]].forEach((u) => {
+      if (u) next.add(u);
+    });
+    const changed =
+      next.size !== this.liveUuids.size ||
+      [...next].some((u) => !this.liveUuids.has(u));
+    if (!changed) return;
+    this.liveUuids = next;
+    this.bump();
   }
 
   focusRelative = (
@@ -251,6 +300,12 @@ export class PassageStackController {
   };
 
   private focusEditor(editor: Editor, where: StackFocusTarget['where']) {
+    if (typeof where === 'object') {
+      // A click on a static row: land the caret where the user clicked.
+      const coords = editor.view.posAtCoords({ left: where.x, top: where.y });
+      editor.commands.focus(coords ? Math.max(1, coords.pos) : 'start');
+      return;
+    }
     if (typeof where === 'number') {
       const max = Selection.atEnd(editor.state.doc).from;
       editor.commands.focus(Math.max(1, Math.min(where, max)));
@@ -341,6 +396,54 @@ export class PassageStackController {
     this.focusPassage(prevUuid, boundary);
     return true;
   };
+
+  /**
+   * Map a DOM point to a ProseMirror position, whether the passage is a
+   * live editor (exact, via posAtDOM) or a static row (approximate, via the
+   * text offset from the row start — inline atoms can skew it by a char).
+   */
+  resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
+    const editor = this.entries.get(uuid)?.editor;
+    if (editor) {
+      try {
+        return editor.view.posAtDOM(node, offset);
+      } catch {
+        return null;
+      }
+    }
+
+    const row = document.querySelector(
+      `[data-stack-passage="${uuid}"] .tiptap`,
+    );
+    if (!row) return null;
+    const range = document.createRange();
+    try {
+      range.setStart(row, 0);
+      range.setEnd(node, offset);
+    } catch {
+      return null;
+    }
+    return this.posFromTextOffset(uuid, range.toString().length);
+  };
+
+  private posFromTextOffset(uuid: string, textOffset: number): number {
+    const doc = this.pmDoc(this.getDocJSON(uuid));
+    let remaining = textOffset;
+    let pos: number | null = null;
+    doc.descendants((node, nodePos) => {
+      if (pos !== null) return false;
+      if (node.isText) {
+        const length = node.text?.length ?? 0;
+        if (remaining <= length) {
+          pos = nodePos + remaining;
+          return false;
+        }
+        remaining -= length;
+      }
+      return true;
+    });
+    return pos ?? doc.content.size;
+  }
 
   // ---------------------------------------------------- cross selection
 

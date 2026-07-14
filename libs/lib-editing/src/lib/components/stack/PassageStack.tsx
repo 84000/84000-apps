@@ -12,15 +12,10 @@ import { useStackSelection } from './useStackSelection';
 
 /**
  * Rows rendered in the virtualized window (cheap static HTML tier).
+ * Live editors are focus-driven, not scroll-driven — see the controller's
+ * live set — so scrolling never mounts or swaps anything.
  */
 const OVERSCAN = 20;
-
-/**
- * Rows around the viewport that get live editors once scrolling settles.
- * Live editors are the expensive tier — mounting them during a fast scroll
- * is what makes rows blank out, so new ones only mount at rest.
- */
-const EDITOR_OVERSCAN = 8;
 
 const MEASURED_KEYS = new Set([
   'Enter',
@@ -75,7 +70,61 @@ export const PassageStack = ({
     return () => controller.setScrollHandler(null);
   }, [controller, virtualizer]);
 
-  useStackSelection(controller, parentRef);
+  useStackSelection(controller);
+
+  // Click-to-focus on static rows, via delegation so text drags across
+  // static content stay plain selections instead of mounting editors.
+  useEffect(() => {
+    const container = parentRef.current;
+    if (!container) return;
+
+    const uuidAt = (target: EventTarget | null) =>
+      (target instanceof Element ? target : null)?.closest<HTMLElement>(
+        '[data-stack-passage]',
+      )?.dataset['stackPassage'] ?? null;
+
+    let down: { x: number; y: number; uuid: string | null } | null = null;
+    const onMouseDown = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.('[contenteditable="true"]')) {
+        down = null; // live editors handle their own caret
+        return;
+      }
+      down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
+    };
+    const onMouseUp = (event: MouseEvent) => {
+      const start = down;
+      down = null;
+      if (!start?.uuid) return;
+      const moved =
+        Math.abs(event.clientX - start.x) > 5 ||
+        Math.abs(event.clientY - start.y) > 5;
+      if (moved || !document.getSelection()?.isCollapsed) return;
+      if (uuidAt(event.target) !== start.uuid) return;
+      controller.focusPassage(start.uuid, { x: event.clientX, y: event.clientY });
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    container.addEventListener('mouseup', onMouseUp);
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown);
+      container.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [controller]);
+
+  // Keys typed between click and editor mount are buffered and replayed.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!controller.hasPendingFocus()) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.key.length === 1) {
+        controller.bufferKey(event.key);
+        event.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [controller]);
 
   // Keystroke-to-paint latency: stamp on keydown, sample after the next
   // frame has painted (double rAF).
@@ -117,17 +166,7 @@ export const PassageStack = ({
           const uuid = order[item.index];
           const meta = controller.getMeta(uuid);
           if (!meta) return null;
-          const range = virtualizer.range;
-          const nearViewport =
-            !!range &&
-            item.index >= range.startIndex - EDITOR_OVERSCAN &&
-            item.index <= range.endIndex + EDITOR_OVERSCAN;
-          // Editors already alive stay alive (their content and focus must
-          // survive small scrolls); new ones mount only near the viewport
-          // and only once scrolling has settled.
-          const asEditor =
-            controller.getEditor(uuid) !== null ||
-            (nearViewport && !virtualizer.isScrolling);
+          const asEditor = controller.isLive(uuid);
           return (
             <div
               key={item.key}

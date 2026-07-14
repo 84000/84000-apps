@@ -46,6 +46,11 @@ export const StackPassageEditor = memo(
           controller.registerEditor(uuid, created);
           stackPerf.recordMount(performance.now() - mountStart.current);
         },
+        onFocus: () => {
+          // Clicks land directly in premounted neighbors — keep the live
+          // window centered on wherever focus actually is.
+          controller.notifyFocused(uuid);
+        },
         onDestroy: () => {
           controller.unregisterEditor(uuid);
         },
