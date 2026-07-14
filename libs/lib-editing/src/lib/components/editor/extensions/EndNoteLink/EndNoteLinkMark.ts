@@ -1,10 +1,66 @@
 import { mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import type { Mark as PMMark, MarkType } from '@tiptap/pm/model';
+import type {
+  Mark as PMMark,
+  MarkType,
+  Node as PMNode,
+} from '@tiptap/pm/model';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { createUpdateAttributes, registerEditorElement } from '../../util';
 import { EndNoteLinkMarkSSR } from './EndNoteLinkMark.ssr';
+
+interface EndNoteLinkNote {
+  uuid: string;
+  location?: string;
+  toh?: string;
+  endNote: string;
+  label?: string;
+}
+
+export const createEndNoteLinkDecorations = (
+  doc: PMNode,
+  markName: string,
+  renderMarker: (note: EndNoteLinkNote) => HTMLElement,
+  keySuffix = '',
+) => {
+  const decorations: Decoration[] = [];
+
+  doc.descendants((node, pos) => {
+    if (!node.isText) return true;
+
+    const mark = node.marks.find(
+      (candidate) => candidate.type.name === markName,
+    );
+    if (!mark) return false;
+
+    const notes = [...((mark.attrs.notes || []) as EndNoteLinkNote[])].sort(
+      (a, b) => (a.label || '').localeCompare(b.label || ''),
+    );
+
+    notes.forEach((note, index) => {
+      const isStart = note.location === 'start';
+      // End markers sit before the cursor at the mark's final document
+      // position; start markers sit after it. This gives the zero-width UI a
+      // defined side instead of leaving the browser to enter untracked DOM.
+      const side = isStart ? index + 1 : index - notes.length;
+      const markerPos = isStart ? pos : pos + node.nodeSize;
+
+      decorations.push(
+        Decoration.widget(markerPos, () => renderMarker(note), {
+          key: `end-note-link:${JSON.stringify(note)}:${keySuffix}`,
+          marks: [],
+          side,
+        }),
+      );
+    });
+
+    return false;
+  });
+
+  return decorations;
+};
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -16,92 +72,6 @@ declare module '@tiptap/core' {
 }
 
 export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
-  addMarkView() {
-    return (props) => {
-      const isEditable = props.editor.isEditable;
-      const className = isEditable
-        ? 'end-note-link select-text'
-        : 'end-note-link select-none';
-
-      const dom = document.createElement('span');
-      const contentDOM = document.createElement('span');
-      dom.appendChild(contentDOM);
-
-      // Define a visible default label when editable to indicate something
-      // _should_ be there.
-      const defaultLabel = isEditable ? '*' : '';
-      const notes: [
-        {
-          uuid: string;
-          location: string;
-          toh?: string;
-          endNote: string;
-          label?: string;
-        },
-      ] = props.mark.attrs.notes || [];
-      notes.sort((a, b) =>
-        (a.label || defaultLabel).localeCompare(b.label || defaultLabel),
-      );
-      notes.forEach(
-        (note: {
-          uuid: string;
-          location: string;
-          toh?: string;
-          endNote: string;
-          label?: string;
-        }) => {
-          const { uuid, location, toh, endNote, label } = note;
-          const isStart = location === 'start';
-
-          const endnoteDOM = document.createElement('sup');
-          const updateAttributes = createUpdateAttributes(endnoteDOM);
-          const attributes = mergeAttributes(this.options.HTMLAttributes, {
-            class: cn(className, isStart ? 'me-0.75' : ''),
-            type: this.name,
-            endNote,
-            uuid,
-            ...(toh ? { 'data-toh': toh } : {}),
-          });
-
-          updateAttributes(attributes);
-
-          // Register editor element for hover card detection in edit mode
-          if (isEditable) {
-            registerEditorElement(endnoteDOM, props.editor);
-          }
-
-          if (isStart) {
-            dom.insertBefore(endnoteDOM, dom.firstChild);
-          } else {
-            dom.appendChild(endnoteDOM);
-          }
-
-          const itemLabel = label?.split('.').pop() || defaultLabel;
-          const text = itemLabel || defaultLabel;
-          // Glue the marker to the text it's attached to with a word joiner
-          // (U+2060) so it never wraps to a new line away from its content:
-          // after the text for start notes, before it for end notes.
-          endnoteDOM.textContent = isStart ? `${text}⁠` : `⁠${text}`;
-
-          endnoteDOM.addEventListener('click', () => {
-            if (!endNote) {
-              return;
-            }
-
-            const query = new URLSearchParams(window.location.search);
-            query.set('right', `open:endnotes:${endNote}`);
-            window.history.pushState({}, '', `?${query.toString()}`);
-          });
-        },
-      );
-
-      return {
-        dom,
-        contentDOM,
-      };
-    };
-  },
-
   addCommands() {
     return {
       setEndNoteLink:
@@ -215,15 +185,74 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
     };
   },
 
-  // When another inline mark (e.g. glossaryInstance) is applied to a sub-range
-  // of an existing endNoteLink span, ProseMirror splits the text node and
-  // preserves the endNoteLink mark on every resulting fragment. That causes
-  // duplicate <sup> renders and duplicate exported annotations on save. This
-  // plugin normalizes adjacent text fragments that carry the same endNoteLink
-  // mark by keeping the mark only on the last fragment in each contiguous run.
   addProseMirrorPlugins() {
+    const editor = this.editor;
     const markName = this.name;
+    const HTMLAttributes = this.options.HTMLAttributes;
+
+    const renderMarker = (note: EndNoteLinkNote) => {
+      const isEditable = editor.isEditable;
+      const className = isEditable
+        ? 'end-note-link select-text'
+        : 'end-note-link select-none';
+      const defaultLabel = isEditable ? '*' : '';
+      const { uuid, location, toh, endNote, label } = note;
+      const isStart = location === 'start';
+      const endnoteDOM = document.createElement('sup');
+      const updateAttributes = createUpdateAttributes(endnoteDOM);
+      const attributes = mergeAttributes(HTMLAttributes, {
+        class: cn(className, isStart ? 'me-0.75' : ''),
+        type: markName,
+        endNote,
+        uuid,
+        ...(toh ? { 'data-toh': toh } : {}),
+      });
+
+      updateAttributes(attributes);
+
+      if (isEditable) {
+        registerEditorElement(endnoteDOM, editor);
+      }
+
+      const itemLabel = label?.split('.').pop() || defaultLabel;
+      const text = itemLabel || defaultLabel;
+      // Glue the marker to the text it's attached to with a word joiner
+      // (U+2060) so it never wraps to a new line away from its content.
+      endnoteDOM.textContent = isStart ? `${text}⁠` : `⁠${text}`;
+
+      endnoteDOM.addEventListener('click', () => {
+        if (!endNote) return;
+
+        const query = new URLSearchParams(window.location.search);
+        query.set('right', `open:endnotes:${endNote}`);
+        window.history.pushState({}, '', `?${query.toString()}`);
+      });
+
+      return endnoteDOM;
+    };
+
+    // When another inline mark (e.g. glossaryInstance) is applied to a sub-range
+    // of an existing endNoteLink span, ProseMirror splits the text node and
+    // preserves the endNoteLink mark on every resulting fragment. That causes
+    // duplicate <sup> renders and duplicate exported annotations on save. This
+    // plugin normalizes adjacent text fragments that carry the same endNoteLink
+    // mark by keeping the mark only on the last fragment in each contiguous run.
     return [
+      new Plugin({
+        key: new PluginKey('endNoteLinkDecorations'),
+        props: {
+          decorations: (state) =>
+            DecorationSet.create(
+              state.doc,
+              createEndNoteLinkDecorations(
+                state.doc,
+                markName,
+                renderMarker,
+                String(editor.isEditable),
+              ),
+            ),
+        },
+      }),
       new Plugin({
         key: new PluginKey('endNoteLinkDedup'),
         appendTransaction(transactions, _oldState, newState) {

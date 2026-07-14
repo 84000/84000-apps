@@ -1,12 +1,20 @@
 import { Schema } from '@tiptap/pm/model';
 import { EditorState, Plugin } from '@tiptap/pm/state';
-import { EndNoteLinkMark } from './EndNoteLinkMark';
+import { DecorationSet, EditorView } from '@tiptap/pm/view';
+import {
+  createEndNoteLinkDecorations,
+  EndNoteLinkMark,
+} from './EndNoteLinkMark';
 
 // Minimal schema containing just what we need to exercise the dedup plugin.
 const schema = new Schema({
   nodes: {
     doc: { content: 'paragraph+' },
-    paragraph: { content: 'text*', group: 'block' },
+    paragraph: {
+      content: 'text*',
+      group: 'block',
+      toDOM: () => ['p', 0],
+    },
     text: { group: 'inline' },
   },
   marks: {
@@ -27,12 +35,98 @@ const other = schema.marks['other'];
 
 const getPlugin = (): Plugin => {
   const ext = EndNoteLinkMark as unknown as {
-    config: { addProseMirrorPlugins?: (this: { name: string }) => Plugin[] };
+    config: {
+      addProseMirrorPlugins?: (this: {
+        name: string;
+        options: { HTMLAttributes: Record<string, unknown> };
+        editor: { isEditable: boolean };
+      }) => Plugin[];
+    };
   };
   const plugins =
-    ext.config.addProseMirrorPlugins?.call({ name: 'endNoteLink' }) ?? [];
-  return plugins[0];
+    ext.config.addProseMirrorPlugins?.call({
+      name: 'endNoteLink',
+      options: { HTMLAttributes: {} },
+      editor: { isEditable: true },
+    }) ?? [];
+  const dedupPlugin = plugins.find((plugin) => plugin.spec.appendTransaction);
+  if (!dedupPlugin) {
+    throw new Error('EndNoteLink did not register its dedup plugin');
+  }
+  return dedupPlugin;
 };
+
+describe('EndNoteLink decorations', () => {
+  it('places an end marker before the cursor at the mark boundary', () => {
+    const mark = endNoteLink.create({
+      notes: [{ uuid: 'n1', endNote: 'e1', location: 'end', label: '1.1' }],
+    });
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('word', [mark]),
+        schema.text(' next'),
+      ]),
+    ]);
+
+    const decorations = createEndNoteLinkDecorations(doc, 'endNoteLink', () =>
+      document.createElement('sup'),
+    );
+
+    expect(decorations).toHaveLength(1);
+    expect(decorations[0].from).toBe(5);
+    expect(decorations[0].spec.side).toBeLessThan(0);
+    expect(decorations[0].spec.marks).toEqual([]);
+  });
+
+  it('maps the mark boundary to the right of the end marker DOM', () => {
+    const mark = endNoteLink.create({
+      notes: [{ uuid: 'n1', endNote: 'e1', location: 'end', label: '1.1' }],
+    });
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [
+        schema.text('word', [mark]),
+        schema.text(' next'),
+      ]),
+    ]);
+    const marker = document.createElement('sup');
+    const decorations = createEndNoteLinkDecorations(
+      doc,
+      'endNoteLink',
+      () => marker,
+    );
+    const decorationSet = DecorationSet.create(doc, decorations);
+    const state = EditorState.create({
+      schema,
+      doc,
+      plugins: [new Plugin({ props: { decorations: () => decorationSet } })],
+    });
+    const view = new EditorView(document.createElement('div'), { state });
+
+    const caret = view.domAtPos(5, -1);
+
+    expect(caret.node.childNodes[caret.offset - 1]).toBe(marker);
+    expect(marker.contentEditable).toBe('false');
+    view.destroy();
+  });
+
+  it('places a start marker after the cursor at the mark boundary', () => {
+    const mark = endNoteLink.create({
+      notes: [{ uuid: 'n1', endNote: 'e1', location: 'start', label: '1.1' }],
+    });
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('word', [mark])]),
+    ]);
+
+    const decorations = createEndNoteLinkDecorations(doc, 'endNoteLink', () =>
+      document.createElement('sup'),
+    );
+
+    expect(decorations).toHaveLength(1);
+    expect(decorations[0].from).toBe(1);
+    expect(decorations[0].spec.side).toBeGreaterThan(0);
+    expect(decorations[0].spec.marks).toEqual([]);
+  });
+});
 
 describe('EndNoteLink dedup plugin', () => {
   it('removes the endNoteLink mark from all but the last fragment after a sub-range mark splits the text node', () => {
@@ -45,7 +139,11 @@ describe('EndNoteLink dedup plugin', () => {
     ]);
 
     const plugin = getPlugin();
-    const state = EditorState.create({ schema, doc: initialDoc, plugins: [plugin] });
+    const state = EditorState.create({
+      schema,
+      doc: initialDoc,
+      plugins: [plugin],
+    });
 
     // Apply "other" mark to "def" (positions 4..7 inside the paragraph; doc
     // positions 4..7 because paragraph open tag is at 0). This splits the
@@ -158,7 +256,9 @@ describe('EndNoteLink dedup plugin', () => {
     const notes = [{ uuid: 'n1', endNote: 'e1', location: 'end' }];
     const endMark = endNoteLink.create({ notes });
     const initialDoc = schema.node('doc', null, [
-      schema.node('paragraph', null, [schema.text('wordWithEndNote', [endMark])]),
+      schema.node('paragraph', null, [
+        schema.text('wordWithEndNote', [endMark]),
+      ]),
     ]);
 
     const plugin = getPlugin();
@@ -212,7 +312,11 @@ describe('EndNoteLink dedup plugin', () => {
     ]);
 
     const plugin = getPlugin();
-    const state = EditorState.create({ schema, doc: initialDoc, plugins: [plugin] });
+    const state = EditorState.create({
+      schema,
+      doc: initialDoc,
+      plugins: [plugin],
+    });
 
     // Trigger an appendTransaction by dispatching a no-content-changing edit:
     // insert and then remove a marker. We use addMark/removeMark on `other`
