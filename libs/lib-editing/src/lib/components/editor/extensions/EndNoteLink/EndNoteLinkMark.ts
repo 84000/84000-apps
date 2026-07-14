@@ -9,15 +9,11 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { v4 as uuidv4 } from 'uuid';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { createUpdateAttributes, registerEditorElement } from '../../util';
+import {
+  createEndNoteCursorPlugin,
+  type EndNoteLinkNote,
+} from './EndNoteCursor';
 import { EndNoteLinkMarkSSR } from './EndNoteLinkMark.ssr';
-
-interface EndNoteLinkNote {
-  uuid: string;
-  location?: string;
-  toh?: string;
-  endNote: string;
-  label?: string;
-}
 
 export const createEndNoteLinkDecorations = (
   doc: PMNode,
@@ -39,18 +35,24 @@ export const createEndNoteLinkDecorations = (
       (a, b) => (a.label || '').localeCompare(b.label || ''),
     );
 
-    notes.forEach((note, index) => {
+    const endNotes = notes.filter((note) => note.location !== 'start');
+    const startNotes = notes.filter((note) => note.location === 'start');
+
+    notes.forEach((note) => {
       const isStart = note.location === 'start';
+      const noteIndex = (isStart ? startNotes : endNotes).indexOf(note);
       // End markers sit before the cursor at the mark's final document
       // position; start markers sit after it. This gives the zero-width UI a
       // defined side instead of leaving the browser to enter untracked DOM.
-      const side = isStart ? index + 1 : index - notes.length;
+      const side = isStart ? noteIndex + 1 : noteIndex - endNotes.length;
       const markerPos = isStart ? pos : pos + node.nodeSize;
 
       decorations.push(
         Decoration.widget(markerPos, () => renderMarker(note), {
           key: `end-note-link:${JSON.stringify(note)}:${keySuffix}`,
+          ignoreSelection: true,
           marks: [],
+          relaxedSide: true,
           side,
         }),
       );
@@ -202,6 +204,7 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
       const updateAttributes = createUpdateAttributes(endnoteDOM);
       const attributes = mergeAttributes(HTMLAttributes, {
         class: cn(className, isStart ? 'me-0.75' : ''),
+        'data-end-note-marker': '',
         type: markName,
         endNote,
         uuid,
@@ -238,6 +241,7 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
     // plugin normalizes adjacent text fragments that carry the same endNoteLink
     // mark by keeping the mark only on the last fragment in each contiguous run.
     return [
+      createEndNoteCursorPlugin(markName),
       new Plugin({
         key: new PluginKey('endNoteLinkDecorations'),
         props: {
