@@ -45,6 +45,9 @@
       "@eightyfourthousand/lib-editing/ssr": [
         "./libs/lib-editing/src/ssr.ts"
       ],
+      "@eightyfourthousand/lib-editing/stack": [
+        "./libs/lib-editing/src/stack.ts"
+      ],
       "@eightyfourthousand/lib-editing/fixtures/*": [
         "./libs/lib-editing/src/fixtures/*"
       ],
