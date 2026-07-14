@@ -6,14 +6,21 @@ import { cn } from '@eightyfourthousand/lib-utils';
 
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
+import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackSelection } from './useStackSelection';
 
 /**
- * Overscan on each side of the viewport. With ~8-12 passages visible this
- * keeps roughly 50 editors mounted, per the spike's target window.
+ * Rows rendered in the virtualized window (cheap static HTML tier).
  */
 const OVERSCAN = 20;
+
+/**
+ * Rows around the viewport that get live editors once scrolling settles.
+ * Live editors are the expensive tier — mounting them during a fast scroll
+ * is what makes rows blank out, so new ones only mount at rest.
+ */
+const EDITOR_OVERSCAN = 8;
 
 const MEASURED_KEYS = new Set([
   'Enter',
@@ -45,6 +52,21 @@ export const PassageStack = ({
     overscan,
     getItemKey: (index) => order[index],
   });
+
+  // Default behavior compensates scrollTop for every first measurement of an
+  // above-viewport row. After a deep scrollbar jump the whole overscan is
+  // unmeasured, so each compensation scrolls the window onto more unmeasured
+  // rows — an endless drift that also pins isScrolling on, which blocks
+  // editor mounting. Only adjust while genuinely scrolling upward, where
+  // skipping it would make content visibly jump. NOTE: this must be set on
+  // the instance — virtual-core reads it as a property, not an option.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (
+    item,
+    _delta,
+    instance,
+  ) =>
+    item.start < instance.getScrollOffset() &&
+    instance.scrollDirection === 'backward';
 
   useEffect(() => {
     controller.setScrollHandler((index) =>
@@ -79,7 +101,13 @@ export const PassageStack = ({
   return (
     <div
       ref={parentRef}
-      className={cn('h-full overflow-y-auto', className)}
+      // overflow-anchor off: Chrome's scroll anchoring chases re-rendering
+      // virtual rows after a scrollbar jump, compounding with the
+      // virtualizer's own offset math into an endless scroll drift.
+      className={cn(
+        'h-full overflow-y-auto [overflow-anchor:none]',
+        className,
+      )}
     >
       <div
         className="relative mx-auto w-full max-w-readable px-8"
@@ -89,6 +117,17 @@ export const PassageStack = ({
           const uuid = order[item.index];
           const meta = controller.getMeta(uuid);
           if (!meta) return null;
+          const range = virtualizer.range;
+          const nearViewport =
+            !!range &&
+            item.index >= range.startIndex - EDITOR_OVERSCAN &&
+            item.index <= range.endIndex + EDITOR_OVERSCAN;
+          // Editors already alive stay alive (their content and focus must
+          // survive small scrolls); new ones mount only near the viewport
+          // and only once scrolling has settled.
+          const asEditor =
+            controller.getEditor(uuid) !== null ||
+            (nearViewport && !virtualizer.isScrolling);
           return (
             <div
               key={item.key}
@@ -97,7 +136,11 @@ export const PassageStack = ({
               className="absolute left-0 top-0 w-full px-8"
               style={{ transform: `translateY(${item.start}px)` }}
             >
-              <StackPassageEditor controller={controller} meta={meta} />
+              {asEditor ? (
+                <StackPassageEditor controller={controller} meta={meta} />
+              ) : (
+                <StaticPassageRow controller={controller} meta={meta} />
+              )}
             </div>
           );
         })}

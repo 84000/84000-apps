@@ -11,6 +11,7 @@ import {
   prosemirrorToYXmlFragment,
   yXmlFragmentToProseMirrorRootNode,
 } from 'y-prosemirror';
+import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { yUndoPluginKey } from '@tiptap/y-tiptap';
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
@@ -79,6 +80,7 @@ export class PassageStackController {
   private redoLog: LogEntry[] = [];
   private suppressTextLog = false;
 
+  private staticHTML = new Map<string, string>();
   private crossSelection: StackCrossSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
   private scrollToIndex: ((index: number) => void) | null = null;
@@ -126,6 +128,29 @@ export class PassageStackController {
     return 48 + Math.ceil(entry.charCount / 85) * 28;
   };
 
+  /**
+   * Static HTML for rows that don't carry a live editor — cheap enough to
+   * render during fast scrolling, so the stack never shows blank rows.
+   * Cached per passage; invalidated by edits and structural ops.
+   */
+  getStaticHTML = (uuid: string) => {
+    const cached = this.staticHTML.get(uuid);
+    if (cached !== undefined) return cached;
+
+    let html = '';
+    try {
+      html = renderToHTMLString({
+        content: this.getDocJSON(uuid),
+        extensions: buildStackSchemaExtensions(),
+      });
+    } catch (error) {
+      console.error('failed to statically render passage', error);
+      html = `<p>${this.pmDoc(this.getDocJSON(uuid)).textContent}</p>`;
+    }
+    this.staticHTML.set(uuid, html);
+    return html;
+  };
+
   // ------------------------------------------------------------- editors
 
   buildEditorExtensions(uuid: string): Extensions {
@@ -142,6 +167,10 @@ export class PassageStackController {
     if (!entry) return;
 
     entry.editor = editor;
+
+    // Invalidate eagerly on each edit — a row can swap from editor to static
+    // within a single commit, and the swap must never render stale HTML.
+    editor.on('update', () => this.staticHTML.delete(uuid));
 
     const undoManager = yUndoPluginKey.getState(editor.state)?.undoManager;
     if (undoManager) {
@@ -179,6 +208,8 @@ export class PassageStackController {
     entry.unsubscribeUndo?.();
     entry.unsubscribeUndo = null;
     entry.editor = null;
+    // The editor may have changed the doc; regenerate on next static render.
+    this.staticHTML.delete(uuid);
   }
 
   getEditor = (uuid: string) => this.entries.get(uuid)?.editor ?? null;
@@ -202,6 +233,9 @@ export class PassageStackController {
 
     this.pendingFocus = { uuid, where };
     this.scrollToIndex?.(index);
+    // The target row may be static with no scroll movement coming (e.g. a
+    // click during the settle window) — re-render so it swaps to an editor.
+    this.bump();
     return true;
   }
 
@@ -506,6 +540,7 @@ export class PassageStackController {
   private setDocContent(uuid: string, json: JSONContent) {
     const entry = this.entries.get(uuid);
     if (!entry) return;
+    this.staticHTML.delete(uuid);
 
     if (!entry.ydoc || !entry.fragment) {
       entry.seedContent = (json.content ?? []) as TranslationEditorContentItem[];
