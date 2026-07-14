@@ -75,6 +75,11 @@
       "import": "./ssr.js",
       "default": "./ssr.js"
     },
+    "./stack": {
+      "types": "./stack.d.ts",
+      "import": "./stack.js",
+      "default": "./stack.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,

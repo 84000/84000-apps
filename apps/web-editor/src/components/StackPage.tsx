@@ -16,7 +16,7 @@ import {
   PerfHUD,
   StackPassageSeed,
   stackSeedFromPassage,
-} from '@eightyfourthousand/lib-editing';
+} from '@eightyfourthousand/lib-editing/stack';
 import { useEffect, useMemo, useState } from 'react';
 
 const PAGE_SIZE = 1000;
