@@ -54,7 +54,7 @@
   }
 
   .mention-link[entity-type='folio'] {
-    @apply ps-px pe-1;
+    @apply px-px;
   }
 
   .mention-link[entity-type='work']:not([lang='bo'], [lang='ja'], [lang='zh']) {
