@@ -60,7 +60,7 @@ export const PassageStack = ({
     _delta,
     instance,
   ) =>
-    item.start < instance.getScrollOffset() &&
+    item.start < (instance.scrollOffset ?? 0) &&
     instance.scrollDirection === 'backward';
 
   useEffect(() => {
@@ -176,7 +176,11 @@ export const PassageStack = ({
               style={{ transform: `translateY(${item.start}px)` }}
             >
               {asEditor ? (
-                <StackPassageEditor controller={controller} meta={meta} />
+                <StackPassageEditor
+                  controller={controller}
+                  meta={meta}
+                  focused={controller.getFocusedUuid() === uuid}
+                />
               ) : (
                 <StaticPassageRow controller={controller} meta={meta} />
               )}

@@ -1,6 +1,6 @@
 import { Extensions } from '@tiptap/core';
 import { Collaboration } from '@tiptap/extension-collaboration';
-import type { XmlFragment } from 'yjs';
+import type { UndoManager, XmlFragment } from 'yjs';
 
 import { STARTER_KIT_CONFIG, StarterKit } from '../editor/extensions/StarterKit';
 import TranslationMetadata from '../editor/extensions/TranslationMetadata';
@@ -100,13 +100,18 @@ export const buildStackSchemaExtensions = (): Extensions => [
 export const buildStackEditorExtensions = ({
   uuid,
   fragment,
+  undoManager,
   delegate,
 }: {
   uuid: string;
   fragment: XmlFragment;
+  undoManager: UndoManager;
   delegate: StackKeyboardDelegate;
 }): Extensions => [
   ...buildStackSchemaExtensions(),
-  Collaboration.configure({ fragment }),
+  // The controller's persistent per-passage UndoManager is handed to the
+  // undo plugin so history accumulates across mounts (its destroy is
+  // neutered — the plugin destroys whatever manager it is given).
+  Collaboration.configure({ fragment, yUndoOptions: { undoManager } }),
   BoundaryKeymap.configure({ uuid, delegate }),
 ];

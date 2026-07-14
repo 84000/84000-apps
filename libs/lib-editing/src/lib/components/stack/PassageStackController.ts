@@ -6,13 +6,17 @@ import {
 } from '@tiptap/core';
 import { Node as PMNode, Schema } from '@tiptap/pm/model';
 import { Selection } from '@tiptap/pm/state';
-import { Doc, XmlFragment, transact } from 'yjs';
+import { Doc, UndoManager, XmlFragment, transact } from 'yjs';
 import {
   prosemirrorToYXmlFragment,
   yXmlFragmentToProseMirrorRootNode,
 } from 'y-prosemirror';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
-import { yUndoPluginKey } from '@tiptap/y-tiptap';
+import {
+  defaultDeleteFilter,
+  defaultProtectedNodes,
+  ySyncPluginKey,
+} from '@tiptap/y-tiptap';
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
 import { incrementLabel } from '../editor/extensions/Passage/label';
@@ -45,7 +49,12 @@ type StackEntry = {
   ydoc: Doc | null;
   fragment: XmlFragment | null;
   editor: Editor | null;
-  unsubscribeUndo: (() => void) | null;
+  /**
+   * Owned by the controller and shared with every editor mounted for this
+   * passage, so text-undo history survives focus moving elsewhere. Works
+   * headless — undoing an unmounted passage mutates its fragment directly.
+   */
+  undoManager: UndoManager | null;
 };
 
 type StructuralState = {
@@ -107,7 +116,7 @@ export class PassageStackController {
         ydoc: null,
         fragment: null,
         editor: null,
-        unsubscribeUndo: null,
+        undoManager: null,
       });
       this.order.push(seed.meta.uuid);
     });
@@ -167,6 +176,7 @@ export class PassageStackController {
     return buildStackEditorExtensions({
       uuid,
       fragment: entry.fragment as XmlFragment,
+      undoManager: entry.undoManager as UndoManager,
       delegate: this,
     });
   }
@@ -176,33 +186,6 @@ export class PassageStackController {
     if (!entry) return;
 
     entry.editor = editor;
-
-    // Invalidate eagerly on each edit — a row can swap from editor to static
-    // within a single commit, and the swap must never render stale HTML.
-    editor.on('update', () => this.staticHTML.delete(uuid));
-
-    const undoManager = yUndoPluginKey.getState(editor.state)?.undoManager;
-    if (undoManager) {
-      // Init-time normalization transactions (trailing node, uuid dedupe)
-      // land in the fresh UndoManager during mount. They aren't user edits;
-      // left in place they become phantom undo entries that Mod-Z replays.
-      // Some fire a tick after onCreate, so clear again and only then start
-      // feeding the command log.
-      undoManager.clear();
-      const onStackItemAdded = ({ type }: { type: 'undo' | 'redo' }) => {
-        if (this.suppressTextLog || type !== 'undo') return;
-        this.undoLog.push({ kind: 'text', uuid });
-        this.redoLog = [];
-      };
-      const timer = setTimeout(() => {
-        undoManager.clear();
-        undoManager.on('stack-item-added', onStackItemAdded);
-      }, 0);
-      entry.unsubscribeUndo = () => {
-        clearTimeout(timer);
-        undoManager.off('stack-item-added', onStackItemAdded);
-      };
-    }
 
     if (this.pendingFocus?.uuid === uuid) {
       const { where } = this.pendingFocus;
@@ -218,11 +201,7 @@ export class PassageStackController {
   unregisterEditor(uuid: string) {
     const entry = this.entries.get(uuid);
     if (!entry) return;
-    entry.unsubscribeUndo?.();
-    entry.unsubscribeUndo = null;
     entry.editor = null;
-    // The editor may have changed the doc; regenerate on next static render.
-    this.staticHTML.delete(uuid);
   }
 
   getEditor = (uuid: string) => this.entries.get(uuid)?.editor ?? null;
@@ -234,6 +213,8 @@ export class PassageStackController {
   // --------------------------------------------------------------- focus
 
   isLive = (uuid: string) => this.liveUuids.has(uuid);
+
+  getFocusedUuid = () => this.focusedUuid;
 
   hasPendingFocus = () => this.pendingFocus !== null;
 
@@ -300,6 +281,9 @@ export class PassageStackController {
   };
 
   private focusEditor(editor: Editor, where: StackFocusTarget['where']) {
+    // Premounted neighbors are non-editable (so at most one contenteditable
+    // exists and native selection works everywhere else) — flip on focus.
+    if (!editor.isEditable) editor.setEditable(true);
     if (typeof where === 'object') {
       // A click on a static row: land the caret where the user clicked.
       const coords = editor.view.posAtCoords({ left: where.x, top: where.y });
@@ -515,10 +499,7 @@ export class PassageStackController {
         return true;
       }
 
-      const editor = this.entries.get(entry.uuid)?.editor;
-      const undoManager = editor
-        ? yUndoPluginKey.getState(editor.state)?.undoManager
-        : null;
+      const undoManager = this.entries.get(entry.uuid)?.undoManager;
       if (undoManager?.undoStack.length) {
         this.withSuppressedTextLog(() => undoManager.undo());
         this.redoLog.push(entry);
@@ -526,8 +507,8 @@ export class PassageStackController {
         return true;
       }
 
-      // The passage's editor unmounted and took its text history with it —
-      // drop the entry and surface the loss in the HUD.
+      // Shouldn't happen now that managers outlive their editors; count it
+      // in the HUD if it does.
       stackPerf.recordSkippedUndo();
     }
     return false;
@@ -543,10 +524,7 @@ export class PassageStackController {
         return true;
       }
 
-      const editor = this.entries.get(entry.uuid)?.editor;
-      const undoManager = editor
-        ? yUndoPluginKey.getState(editor.state)?.undoManager
-        : null;
+      const undoManager = this.entries.get(entry.uuid)?.undoManager;
       if (undoManager?.redoStack.length) {
         this.withSuppressedTextLog(() => undoManager.redo());
         this.undoLog.push(entry);
@@ -578,6 +556,31 @@ export class PassageStackController {
       entry.fragment,
     );
     entry.seedContent = null;
+
+    // Any fragment change — editor edits, structural ops, headless undo —
+    // invalidates the passage's cached static HTML.
+    entry.fragment.observeDeep(() => this.staticHTML.delete(uuid));
+
+    // Created after seeding so the seed isn't undoable. Tracks only the
+    // sync-plugin origin (user edits through a mounted editor); structural
+    // ops use STRUCTURAL_ORIGIN and stay out of text history.
+    const undoManager = new UndoManager(entry.fragment, {
+      trackedOrigins: new Set([ySyncPluginKey]),
+      deleteFilter: (item) => defaultDeleteFilter(item, defaultProtectedNodes),
+      captureTransaction: (tr) => tr.meta.get('addToHistory') !== false,
+    });
+    // The undo plugin destroys whatever manager it is handed when its editor
+    // unmounts; this one must outlive every mount, so neuter destroy.
+    undoManager.destroy = () => undefined;
+    undoManager.on(
+      'stack-item-added',
+      ({ type }: { type: 'undo' | 'redo' }) => {
+        if (this.suppressTextLog || type !== 'undo') return;
+        this.undoLog.push({ kind: 'text', uuid });
+        this.redoLog = [];
+      },
+    );
+    entry.undoManager = undoManager;
     return entry;
   }
 
@@ -592,7 +595,7 @@ export class PassageStackController {
       ydoc: null,
       fragment: null,
       editor: null,
-      unsubscribeUndo: null,
+      undoManager: null,
     });
   }
 
@@ -643,6 +646,8 @@ export class PassageStackController {
   private setDocContent(uuid: string, json: JSONContent) {
     const entry = this.entries.get(uuid);
     if (!entry) return;
+    // Materialized docs invalidate via the fragment observer; seed-only
+    // entries have no observer yet.
     this.staticHTML.delete(uuid);
 
     if (!entry.ydoc || !entry.fragment) {

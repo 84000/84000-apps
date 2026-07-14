@@ -1,7 +1,7 @@
 'use client';
 
 import { EditorContent, useEditor } from '@tiptap/react';
-import { memo, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 import { PassageStackController } from './PassageStackController';
 import { stackPerf } from './perf';
@@ -16,9 +16,11 @@ export const StackPassageEditor = memo(
   ({
     controller,
     meta,
+    focused,
   }: {
     controller: PassageStackController;
     meta: StackPassageMeta;
+    focused: boolean;
   }) => {
     const mountStart = useRef(0);
     const uuid = meta.uuid;
@@ -33,6 +35,9 @@ export const StackPassageEditor = memo(
         extensions,
         immediatelyRender: false,
         shouldRerenderOnTransaction: false,
+        // Neighbors premount non-editable so only the focused passage is a
+        // contenteditable; the controller flips this on focus.
+        editable: focused,
         editorProps: {
           attributes: {
             spellcheck: 'false',
@@ -57,6 +62,12 @@ export const StackPassageEditor = memo(
       },
       [controller, uuid],
     );
+
+    useEffect(() => {
+      if (editor && editor.isEditable !== focused) {
+        editor.setEditable(focused);
+      }
+    }, [editor, focused]);
 
     return (
       <div className="flex gap-4 py-1" data-stack-passage={uuid}>
