@@ -3,6 +3,7 @@ import Suggestion from '@tiptap/suggestion';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { MentionSSR, MentionItem } from './Mention.ssr';
+import { mentionDropSelectionPlugin } from './MentionDropSelection';
 import { mentionSuggestion } from './MentionSuggestion';
 
 /** Payload handed to the advanced mention picker overlay. */
@@ -54,6 +55,7 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
         editor: this.editor,
         ...mentionSuggestion,
       }),
+      mentionDropSelectionPlugin(this.name),
     ];
   },
 
