@@ -27,6 +27,11 @@ export const MentionSSR = Node.create<MentionSSROptions>({
   group: 'inline',
   inline: true,
   atom: true,
+  // A selectable inline atom becomes a NodeSelection when the caret reaches
+  // it with an arrow key. That hides the caret and opens selection UI for what
+  // should be a single navigation step. Mentions remain atomic, but the caret
+  // now moves directly from one side to the other.
+  selectable: false,
   // Mentions never carry marks. Without this, an inline mark whose range
   // coincides with the mention's position (e.g. an end-location endNoteLink,
   // which is a zero-length annotation at the same start/end) gets stored on
