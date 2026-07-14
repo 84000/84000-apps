@@ -36,6 +36,19 @@ description: Build, launch, and drive the web-editor sandbox app to verify edito
 - The perf HUD (bottom-right, text starts with "passage stack") reports
   keystroke latency / mount cost / mounted count; read it via textContent.
 
+## Before pushing lib-editing changes
+
+- `npx nx build web-main` — its Next build typechecks all of lib-editing's
+  sources AND evaluates server bundles (dev-mode web-editor does neither, so
+  type errors and SSR import crashes slip through it silently).
+- Anything importing y-prosemirror/@tiptap/y-tiptap must stay out of the
+  main lib-editing barrel — those imports crash web-main's SSR module
+  evaluation (yjs ESM/CJS dual-load). The stack spike lives on the
+  `@eightyfourthousand/lib-editing/stack` subpath for this reason.
+- `npx nx build web-editor` fails on a PRE-EXISTING JsonComparePage type
+  error (ResizablePanelGroup `direction` prop) — not a signal about your
+  change.
+
 ## Local data
 
 Local Supabase (port 54321/54322) has toh251 (50 passages) and
