@@ -166,13 +166,19 @@ export const HoverCardProvider = ({
       }
     };
 
+    const handleDragStart = () => {
+      closeImmediately();
+    };
+
     editorEl.addEventListener('mouseenter', handleMouseOver, true);
     editorEl.addEventListener('mouseleave', handleMouseLeave, true);
+    editorEl.addEventListener('dragstart', handleDragStart, true);
     document.addEventListener('keydown', handleEscape, true);
 
     return () => {
       editorEl.removeEventListener('mouseenter', handleMouseOver, true);
       editorEl.removeEventListener('mouseleave', handleMouseLeave, true);
+      editorEl.removeEventListener('dragstart', handleDragStart, true);
       document.removeEventListener('keydown', handleEscape, true);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
