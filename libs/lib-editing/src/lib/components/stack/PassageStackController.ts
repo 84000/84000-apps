@@ -21,6 +21,7 @@ import {
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
 import { incrementLabel } from '../editor/extensions/Passage/label';
+import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
 import {
   buildStackEditorExtensions,
   buildStackSchemaExtensions,
@@ -161,6 +162,7 @@ export class PassageStackController {
       html = renderToHTMLString({
         content: this.getDocJSON(uuid),
         extensions: buildStackSchemaExtensions(),
+        options: { nodeMapping: { mention: renderMentionToHTMLString } },
       });
     } catch (error) {
       console.error('failed to statically render passage', error);
