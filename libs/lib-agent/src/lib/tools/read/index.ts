@@ -5,6 +5,7 @@ import { createGetTranslationTool } from './get-translation';
 import { createGetPassageTool } from './get-passage';
 import { createGetTranslationPassagesTool } from './get-translation-passages';
 import { createSearchTranslationTool } from './search-translation';
+import { createSearchEntitiesTool } from './search-entities';
 import { createGetGlossaryTermTool } from './get-glossary-term';
 import { createListGlossaryTermsTool } from './list-glossary-terms';
 import { createSearchGlossaryTermsTool } from './search-glossary-terms';
@@ -22,6 +23,7 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
     createGetPassageTool(client),
     createGetTranslationPassagesTool(client),
     createSearchTranslationTool(client),
+    createSearchEntitiesTool(client),
     createGetGlossaryTermTool(client),
     createListGlossaryTermsTool(client),
     createSearchGlossaryTermsTool(client),
@@ -39,6 +41,7 @@ export { createGetTranslationTool } from './get-translation';
 export { createGetPassageTool } from './get-passage';
 export { createGetTranslationPassagesTool } from './get-translation-passages';
 export { createSearchTranslationTool } from './search-translation';
+export { createSearchEntitiesTool } from './search-entities';
 export { createGetGlossaryTermTool } from './get-glossary-term';
 export { createListGlossaryTermsTool } from './list-glossary-terms';
 export { createSearchGlossaryTermsTool } from './search-glossary-terms';
