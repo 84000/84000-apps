@@ -4,6 +4,7 @@ import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
 import { MentionSSR, MentionItem } from './Mention.ssr';
 import { mentionDropSelectionPlugin } from './MentionDropSelection';
+import { mentionSpacingPlugin } from './MentionSpacingPlugin';
 import { mentionSuggestion } from './MentionSuggestion';
 
 /** Payload handed to the advanced mention picker overlay. */
@@ -56,6 +57,7 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
         ...mentionSuggestion,
       }),
       mentionDropSelectionPlugin(this.name),
+      mentionSpacingPlugin(),
     ];
   },
 
@@ -64,6 +66,11 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
       const isEditable = props.editor.isEditable;
       const dom = document.createElement('span');
       dom.classList.add('mention-container');
+
+      if (isEditable) {
+        dom.classList.add('bg-primary/10', 'rounded-sm');
+      }
+
       dom.draggable = isEditable;
 
       const items: MentionItem[] = props.node.attrs.items || [];

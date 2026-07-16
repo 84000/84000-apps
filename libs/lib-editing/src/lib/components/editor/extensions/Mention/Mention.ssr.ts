@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import type { DOMOutputSpec, Node as PMNode } from '@tiptap/pm/model';
 import { safeHref } from '@eightyfourthousand/lib-utils';
 
 export interface MentionSSROptions {
@@ -20,6 +21,70 @@ export interface MentionItem {
 
 const isMentionItem = (value: unknown): value is MentionItem => {
   return !!value && typeof value === 'object';
+};
+
+/**
+ * Builds the mention's DOMOutputSpec from a ProseMirror node. Shared by the
+ * node's `renderHTML` and by the static-renderer `nodeMapping.mention`
+ * override (which needs sibling context to add conditional spacing classes).
+ * `HTMLAttributes` are merged onto the outer `span.mention-container` — extra
+ * `class` values (e.g. spacing) concatenate rather than replace.
+ */
+export const mentionDOMOutputSpec = (
+  node: PMNode,
+  HTMLAttributes: Record<string, unknown> = {},
+): DOMOutputSpec => {
+  const raw = node.attrs.items;
+  const items: MentionItem[] = Array.isArray(raw)
+    ? raw.filter(isMentionItem)
+    : [];
+
+  const children = items.map((item) => {
+    const label = item.text || item.displayText || '';
+    // Shared presentational attrs applied to every rendered variant. `lang`
+    // drives the `[lang]` typography rules (e.g. italic work titles).
+    const extraAttrs: Record<string, string> = {
+      ...(item.toh ? { 'data-toh': item.toh } : {}),
+      ...(item.lang ? { lang: item.lang } : {}),
+    };
+
+    if (!label || !item.entity || !item.linkType) {
+      return ['span', { class: 'mention-link', ...extraAttrs }, label] as unknown;
+    }
+
+    const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
+    const attrs: Record<string, string> = {
+      class: 'mention-link',
+      ...extraAttrs,
+    };
+    if (item.uuid) attrs['uuid'] = item.uuid;
+    if (item.entity) attrs['entity'] = item.entity;
+    if (item.linkType) attrs['entity-type'] = item.linkType;
+
+    if (item.isSameWork) {
+      attrs['href'] = '#';
+      attrs['data-same-work'] = 'true';
+      if (item.subtype) attrs['data-subtype'] = item.subtype;
+      if (item.linkToh) attrs['data-link-toh'] = item.linkToh;
+    } else if (href) {
+      attrs['href'] = href;
+      attrs['target'] = '_blank';
+      attrs['rel'] = 'noreferrer noopener';
+    } else {
+      return ['span', { class: 'mention-link', ...extraAttrs }, label] as unknown;
+    }
+
+    return ['a', attrs, label] as unknown;
+  });
+
+  return [
+    'span',
+    mergeAttributes(HTMLAttributes, {
+      class: 'mention-container',
+      'data-type': 'mention',
+    }),
+    ...children,
+  ] as DOMOutputSpec;
 };
 
 export const MentionSSR = Node.create<MentionSSROptions>({
@@ -72,65 +137,10 @@ export const MentionSSR = Node.create<MentionSSROptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
-    const raw = node.attrs.items;
-    const items: MentionItem[] = Array.isArray(raw)
-      ? raw.filter(isMentionItem)
-      : [];
-
-    const children = items.map((item) => {
-      const label = item.text || item.displayText || '';
-      // Shared presentational attrs applied to every rendered variant. `lang`
-      // drives the `[lang]` typography rules (e.g. italic work titles).
-      const extraAttrs: Record<string, string> = {
-        ...(item.toh ? { 'data-toh': item.toh } : {}),
-        ...(item.lang ? { lang: item.lang } : {}),
-      };
-
-      if (!label || !item.entity || !item.linkType) {
-        return [
-          'span',
-          { class: 'mention-link', ...extraAttrs },
-          label,
-        ] as unknown;
-      }
-
-      const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
-      const attrs: Record<string, string> = {
-        class: 'mention-link',
-        ...extraAttrs,
-      };
-      if (item.uuid) attrs['uuid'] = item.uuid;
-      if (item.entity) attrs['entity'] = item.entity;
-      if (item.linkType) attrs['entity-type'] = item.linkType;
-
-      if (item.isSameWork) {
-        attrs['href'] = '#';
-        attrs['data-same-work'] = 'true';
-        if (item.subtype) attrs['data-subtype'] = item.subtype;
-        if (item.linkToh) attrs['data-link-toh'] = item.linkToh;
-      } else if (href) {
-        attrs['href'] = href;
-        attrs['target'] = '_blank';
-        attrs['rel'] = 'noreferrer noopener';
-      } else {
-        return [
-          'span',
-          { class: 'mention-link', ...extraAttrs },
-          label,
-        ] as unknown;
-      }
-
-      return ['a', attrs, label] as unknown;
-    });
-
-    return [
-      'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-        class: 'mention-container',
-        'data-type': 'mention',
-      }),
-      ...children,
-    ];
+    return mentionDOMOutputSpec(
+      node,
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+    );
   },
 });
 

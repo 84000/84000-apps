@@ -3,6 +3,7 @@ import { getSchema } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
+import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
 import { extractPlainText } from './ssr-text-fallback';
 
 type EndNoteItem = {
@@ -147,7 +148,10 @@ export const TranslationSSRContent = ({
     const html = renderToHTMLString({
       content: doc,
       extensions: exts,
-      options: { markMapping: { endNoteLink: renderEndNoteLinkMark } },
+      options: {
+        markMapping: { endNoteLink: renderEndNoteLinkMark },
+        nodeMapping: { mention: renderMentionToHTMLString },
+      },
     });
     return (
       <div className={className} dangerouslySetInnerHTML={{ __html: html }} />

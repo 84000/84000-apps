@@ -53,6 +53,25 @@
     @apply text-foreground no-underline cursor-auto;
   }
 
+  /* Conditional visual spacing around mentions: a real space rendered in the
+     current font, added only when an adjacent non-space, non-punctuation
+     character is present (classes set by mentionSpacing logic). `break-spaces`
+     keeps the exact space width while preserving the line-wrap opportunity. */
+  .mention-container.mention-space-before::before,
+  .mention-container.mention-space-after::after {
+    content: ' ';
+    white-space: break-spaces;
+  }
+
+  /* In focus mode, folio links are hidden. When a container holds only folio
+     links, drop its spacing so no orphaned whitespace remains. */
+  .focus-mode
+    .mention-container:not(:has(.mention-link:not([entity-type='folio'])))::before,
+  .focus-mode
+    .mention-container:not(:has(.mention-link:not([entity-type='folio'])))::after {
+    content: none;
+  }
+
   .mention-link[entity-type='folio'] {
     @apply px-px;
   }

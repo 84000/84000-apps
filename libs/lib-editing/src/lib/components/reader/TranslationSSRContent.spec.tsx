@@ -498,6 +498,92 @@ describe('TranslationSSRContent', () => {
     expect(html).not.toContain('en-gone');
   });
 
+  it('adds conditional spacing classes to a mention flanked by letters', () => {
+    // The static renderer has no siblings in a node's own renderHTML, so the
+    // nodeMapping.mention override computes adjacency from the resolved parent.
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: 'see' },
+                {
+                  type: 'mention',
+                  attrs: {
+                    items: [
+                      {
+                        text: 'Sutra',
+                        entity: 'me-1',
+                        linkType: 'work',
+                        uuid: 'mi-1',
+                      },
+                    ],
+                  },
+                },
+                { type: 'text', text: 'here' },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).toMatch(
+      /<span class="mention-space-before mention-space-after mention-container"[^>]*data-type="mention"/,
+    );
+  });
+
+  it('adds no spacing class to a mention adjacent to punctuation', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: '(' },
+                {
+                  type: 'mention',
+                  attrs: {
+                    items: [
+                      {
+                        text: 'Sutra',
+                        entity: 'me-1',
+                        linkType: 'work',
+                        uuid: 'mi-1',
+                      },
+                    ],
+                  },
+                },
+                { type: 'text', text: ').' },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    expect(html).toContain('<span class="mention-container" data-type="mention"');
+    expect(html).not.toContain('mention-space-before');
+    expect(html).not.toContain('mention-space-after');
+  });
+
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));
