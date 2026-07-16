@@ -74,14 +74,24 @@ describe('mentionSpacingPlugin', () => {
     ]);
   });
 
-  it('removes the before-class when punctuation is typed before a mention', () => {
+  it('keeps the before-class when punctuation is typed before a mention', () => {
+    const { plugin, state } = stateFor(doc(para(schema.text('foo'), mention())));
+    // Insert '.' at pos 4, immediately before the mention. Punctuation still
+    // gets a leading gap.
+    const next = state.apply(state.tr.insertText('.', 4));
+    expect(decoClasses(plugin.getState(next) as DecorationSet)).toEqual([
+      MENTION_SPACE_BEFORE_CLASS,
+    ]);
+  });
+
+  it('removes the before-class when whitespace is typed before a mention', () => {
     const { plugin, state } = stateFor(doc(para(schema.text('foo'), mention())));
     expect(decoClasses(plugin.getState(state) as DecorationSet)).toEqual([
       MENTION_SPACE_BEFORE_CLASS,
     ]);
 
-    // Insert '.' at pos 4, immediately before the mention.
-    const next = state.apply(state.tr.insertText('.', 4));
+    // Insert a space at pos 4, immediately before the mention.
+    const next = state.apply(state.tr.insertText(' ', 4));
     expect(decoClasses(plugin.getState(next) as DecorationSet)).toEqual([]);
   });
 

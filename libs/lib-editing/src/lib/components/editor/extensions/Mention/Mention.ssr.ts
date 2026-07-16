@@ -24,6 +24,30 @@ const isMentionItem = (value: unknown): value is MentionItem => {
 };
 
 /**
+ * The `data-toh` value for the mention *container* — the union of every item's
+ * toh tokens. The runtime toh-visibility rule (`useTohToggle`) sets
+ * `display: none` on any `[data-toh]` whose tokens exclude the active toh, so
+ * placing the union on the container hides the whole mention (and its spacing
+ * pseudo-elements) exactly when every item would be hidden. Returns undefined
+ * — leaving the container always-visible — if any item is unscoped (no toh),
+ * since an unscoped item must always show. Individual anchors keep their own
+ * `data-toh` for the partial case where some, but not all, items hide.
+ */
+export const mentionContainerToh = (
+  items: MentionItem[],
+): string | undefined => {
+  if (items.length === 0 || !items.every((item) => item.toh)) return undefined;
+  const tohs = new Set<string>();
+  items.forEach((item) => {
+    (item.toh as string).split(',').forEach((token) => {
+      const trimmed = token.trim();
+      if (trimmed) tohs.add(trimmed);
+    });
+  });
+  return tohs.size ? [...tohs].join(',') : undefined;
+};
+
+/**
  * Builds the mention's DOMOutputSpec from a ProseMirror node. Shared by the
  * node's `renderHTML` and by the static-renderer `nodeMapping.mention`
  * override (which needs sibling context to add conditional spacing classes).
@@ -77,12 +101,18 @@ export const mentionDOMOutputSpec = (
     return ['a', attrs, label] as unknown;
   });
 
+  const containerToh = mentionContainerToh(items);
+
   return [
     'span',
-    mergeAttributes(HTMLAttributes, {
-      class: 'mention-container',
-      'data-type': 'mention',
-    }),
+    mergeAttributes(
+      HTMLAttributes,
+      containerToh ? { 'data-toh': containerToh } : {},
+      {
+        class: 'mention-container',
+        'data-type': 'mention',
+      },
+    ),
     ...children,
   ] as DOMOutputSpec;
 };

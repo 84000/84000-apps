@@ -5,18 +5,24 @@ import type { Node as PMNode } from '@tiptap/pm/model';
  * when it sits flush against a letter it reads as cramped. These helpers decide
  * whether to render the visual equivalent of a single space on either side.
  *
- * Rule: add a gap on a side only when the adjacent character exists and is
- * neither whitespace nor punctuation. Two directly adjacent mentions get
- * exactly one gap between them. The gap is purely presentational (a CSS
- * pseudo-element renders a real space) — the document content is untouched.
+ * Rules (asymmetric by design):
+ *  - Leading side: add a gap when preceded by any visible character —
+ *    punctuation included. Only whitespace (or the block start) suppresses it.
+ *  - Trailing side: add a gap only when followed by a non-whitespace,
+ *    non-punctuation character.
+ * Two directly adjacent mentions get exactly one gap between them. The gap is
+ * purely presentational (a CSS pseudo-element renders a real space) — the
+ * document content is untouched.
  */
 
 export const MENTION_SPACE_BEFORE_CLASS = 'mention-space-before';
 export const MENTION_SPACE_AFTER_CLASS = 'mention-space-after';
 
 // `\p{P}` covers Latin punctuation, CJK marks, quotes/brackets, and the Tibetan
-// tsheg (U+0F0B) and shad (U+0F0D) — all of which should suppress the gap.
+// tsheg (U+0F0B) and shad (U+0F0D). Punctuation suppresses only the trailing
+// gap; the leading gap keys off whitespace alone.
 const BOUNDARY_CHAR = /[\s\p{P}]/u;
+const WHITESPACE_CHAR = /\s/u;
 
 /** A mention with no resolvable label renders empty; it needs no spacing. */
 const hasVisibleText = (node: PMNode): boolean =>
@@ -38,15 +44,16 @@ const lastCodePoint = (text: string): string => {
   return points[points.length - 1] ?? '';
 };
 
-const isGapChar = (char: string): boolean => !!char && !BOUNDARY_CHAR.test(char);
-
 /** Should the mention render a gap toward the node preceding it? */
 const gapBefore = (prev: PMNode | null | undefined): boolean => {
   if (!prev) return false;
   // The preceding mention owns the single gap between the two (via its
   // `after` side), so this mention adds nothing on its `before` side.
   if (prev.type.name === 'mention') return false;
-  return isGapChar(lastCodePoint(siblingText(prev)));
+  // Leading gap keys off whitespace only — punctuation before a mention still
+  // gets a space.
+  const char = lastCodePoint(siblingText(prev));
+  return !!char && !WHITESPACE_CHAR.test(char);
 };
 
 /** Should the mention render a gap toward the node following it? */
@@ -54,7 +61,9 @@ const gapAfter = (next: PMNode | null | undefined): boolean => {
   if (!next) return false;
   // Emit the single gap between two adjacent mentions from the earlier one.
   if (next.type.name === 'mention') return true;
-  return isGapChar(firstCodePoint(siblingText(next)));
+  // Trailing gap suppressed next to both whitespace and punctuation.
+  const char = firstCodePoint(siblingText(next));
+  return !!char && !BOUNDARY_CHAR.test(char);
 };
 
 /**

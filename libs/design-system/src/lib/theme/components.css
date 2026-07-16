@@ -54,8 +54,9 @@
   }
 
   /* Conditional visual spacing around mentions: a real space rendered in the
-     current font, added only when an adjacent non-space, non-punctuation
-     character is present (classes set by mentionSpacing logic). `break-spaces`
+     current font (classes set by mentionSpacing logic). The leading gap applies
+     after any non-whitespace character including punctuation; the trailing gap
+     only before a non-whitespace, non-punctuation character. `break-spaces`
      keeps the exact space width while preserving the line-wrap opportunity. */
   .mention-container.mention-space-before::before,
   .mention-container.mention-space-after::after {
@@ -66,9 +67,13 @@
   /* In focus mode, folio links are hidden. When a container holds only folio
      links, drop its spacing so no orphaned whitespace remains. */
   .focus-mode
-    .mention-container:not(:has(.mention-link:not([entity-type='folio'])))::before,
+    .mention-container:not(
+      :has(.mention-link:not([entity-type='folio']))
+    )::before,
   .focus-mode
-    .mention-container:not(:has(.mention-link:not([entity-type='folio'])))::after {
+    .mention-container:not(
+      :has(.mention-link:not([entity-type='folio']))
+    )::after {
     content: none;
   }
 

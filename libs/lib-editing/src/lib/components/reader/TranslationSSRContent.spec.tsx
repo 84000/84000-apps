@@ -542,7 +542,7 @@ describe('TranslationSSRContent', () => {
     );
   });
 
-  it('adds no spacing class to a mention adjacent to punctuation', () => {
+  it('adds a leading gap after punctuation but no trailing gap before it', () => {
     const doc: JSONContent = {
       type: 'doc',
       content: [
@@ -553,7 +553,7 @@ describe('TranslationSSRContent', () => {
             {
               type: 'paragraph',
               content: [
-                { type: 'text', text: '(' },
+                { type: 'text', text: 'foo:' },
                 {
                   type: 'mention',
                   attrs: {
@@ -579,9 +579,99 @@ describe('TranslationSSRContent', () => {
       content: doc,
     }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
+    // Leading `:` gets a gap; trailing `)` does not.
+    expect(html).toContain(
+      '<span class="mention-space-before mention-container" data-type="mention"',
+    );
+    expect(html).not.toContain('mention-space-after');
+  });
+
+  it('adds no spacing class to a mention flanked by whitespace', () => {
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: 'see ' },
+                {
+                  type: 'mention',
+                  attrs: {
+                    items: [
+                      {
+                        text: 'Sutra',
+                        entity: 'me-1',
+                        linkType: 'work',
+                        uuid: 'mi-1',
+                      },
+                    ],
+                  },
+                },
+                { type: 'text', text: ' here' },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
     expect(html).toContain('<span class="mention-container" data-type="mention"');
     expect(html).not.toContain('mention-space-before');
     expect(html).not.toContain('mention-space-after');
+  });
+
+  it('sets data-toh on the mention container so toh-hiding removes its spacing', () => {
+    // The container's data-toh drives the runtime toh-visibility rule; hiding
+    // the container also removes its ::before/::after spacing.
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                { type: 'text', text: 'see' },
+                {
+                  type: 'mention',
+                  attrs: {
+                    items: [
+                      {
+                        text: 'Sutra',
+                        entity: 'me-1',
+                        linkType: 'work',
+                        uuid: 'mi-1',
+                        toh: 'toh1',
+                      },
+                    ],
+                  },
+                },
+                { type: 'text', text: 'here' },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    // Spacing classes and the toh union both land on the container span.
+    expect(html).toMatch(
+      /<span class="mention-space-before mention-space-after mention-container" data-toh="toh1" data-type="mention"/,
+    );
   });
 
   it('exposes the default SSR extension set including passage and bold', () => {

@@ -65,23 +65,24 @@ describe('mentionSpacingClass', () => {
     ).toBe('');
   });
 
-  it('adds no gap next to ASCII punctuation', () => {
+  it('adds a leading gap after punctuation but no trailing gap before it', () => {
+    // Leading side gets a gap even after punctuation; trailing side does not.
     expect(
       classFor([schema.text('foo.'), mention(), schema.text(',bar')], 1),
-    ).toBe('');
+    ).toBe(MENTION_SPACE_BEFORE_CLASS);
   });
 
-  it('adds no gap next to a quote or bracket', () => {
+  it('adds a leading gap after a quote or bracket', () => {
     expect(
       classFor([schema.text('(foo“'), mention(), schema.text('”bar)')], 1),
-    ).toBe('');
+    ).toBe(MENTION_SPACE_BEFORE_CLASS);
   });
 
-  it('treats the Tibetan tsheg and shad as punctuation', () => {
-    // tsheg U+0F0B before, shad U+0F0D after
+  it('adds a leading gap after a Tibetan tsheg but none before a shad', () => {
+    // tsheg U+0F0B before (leading gap), shad U+0F0D after (no trailing gap)
     expect(
       classFor([schema.text('foo་'), mention(), schema.text('།bar')], 1),
-    ).toBe('');
+    ).toBe(MENTION_SPACE_BEFORE_CLASS);
   });
 
   it('adds no gap at the start or end of a block', () => {
