@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type SpanAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 import type { ExtendedTranslationLanguage } from '../language';
@@ -36,4 +38,15 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     });
   }
   return dto;
+};
+
+export const importer: AnnotationImporter = (input): SpanAnnotation => {
+  const span = baseAnnotationFromImport(input, 'span') as SpanAnnotation;
+  if (typeof input.data?.textStyle === 'string') {
+    span.textStyle = input.data.textStyle;
+  }
+  if (typeof input.data?.lang === 'string') {
+    span.lang = input.data.lang as ExtendedTranslationLanguage;
+  }
+  return span;
 };

@@ -3,6 +3,7 @@ import { parseTohList, serializeTohList } from '../toh';
 import {
   AnnotationBase,
   AnnotationDTO,
+  AnnotationType,
   annotationTypeFromDTO,
   annotationTypeToDTO,
 } from './annotation-type';
@@ -279,4 +280,33 @@ export const baseAnnotationToDto = (
   passage_uuid: annotation.passageUuid,
   toh: serializeTohList(annotation.toh),
   content: [],
+});
+
+// Import: source-agnostic input for building an annotation from a mapped
+// document (e.g. docx import), symmetric with the DTO transformer/exporter.
+export type ImportAnnotationInput = {
+  start: number;
+  end: number;
+  passageUuid: string;
+  // Full passage content, so importers that carry text (e.g. link) can slice it.
+  passageText: string;
+  // Kind-specific attributes, e.g. { textStyle }, { href }, { level, class }.
+  data?: Record<string, unknown>;
+};
+
+// Returns null when the input cannot form a valid annotation (e.g. a link with
+// no href), so the caller drops it.
+export type AnnotationImporter = (
+  input: ImportAnnotationInput,
+) => Annotation | null;
+
+export const baseAnnotationFromImport = (
+  input: ImportAnnotationInput,
+  type: AnnotationType,
+): AnnotationBase => ({
+  uuid: `${input.passageUuid}:${type}:${input.start}:${input.end}`,
+  start: input.start,
+  end: input.end,
+  type,
+  passageUuid: input.passageUuid,
 });

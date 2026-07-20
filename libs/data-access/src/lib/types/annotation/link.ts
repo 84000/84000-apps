@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type LinkAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 
@@ -35,4 +37,16 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     });
   }
   return dto;
+};
+
+export const importer: AnnotationImporter = (input): LinkAnnotation | null => {
+  const href = input.data?.href;
+  if (typeof href !== 'string' || !href) {
+    // A link with no target cannot be represented; drop it.
+    return null;
+  }
+  const link = baseAnnotationFromImport(input, 'link') as LinkAnnotation;
+  link.href = href;
+  link.text = input.passageText.slice(input.start, input.end);
+  return link;
 };

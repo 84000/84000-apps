@@ -1,4 +1,4 @@
-import { Annotation } from './annotation';
+import { Annotation, annotationFromImport } from './annotation';
 import { BodyItemType, Passage } from './passage';
 
 /**
@@ -149,92 +149,6 @@ export interface ImportPreview {
   };
 }
 
-const HEADING_CLASS_FALLBACK = 'section-title';
-
-export const previewAnnotationToAnnotation = ({
-  annotation,
-  passageUuid,
-  passageText,
-}: {
-  annotation: PreviewAnnotationOperation;
-  passageUuid: string;
-  passageText: string;
-}): Annotation | null => {
-  const base = {
-    uuid: `${passageUuid}:${annotation.kind}:${annotation.start}:${annotation.end}`,
-    start: annotation.start,
-    end: annotation.end,
-    passageUuid,
-  };
-
-  if (annotation.kind === 'blockquote') {
-    return { ...base, type: 'blockquote' };
-  }
-
-  if (annotation.kind === 'paragraph') {
-    return { ...base, type: 'paragraph' };
-  }
-
-  if (annotation.kind === 'indent') {
-    return { ...base, type: 'indent' };
-  }
-
-  if (annotation.kind === 'line-group') {
-    return { ...base, type: 'lineGroup' };
-  }
-
-  if (annotation.kind === 'line') {
-    return { ...base, type: 'line' };
-  }
-
-  if (annotation.kind === 'span') {
-    return {
-      ...base,
-      type: 'span',
-      textStyle:
-        typeof annotation.data?.textStyle === 'string'
-          ? annotation.data.textStyle
-          : undefined,
-    };
-  }
-
-  if (annotation.kind === 'link') {
-    const href =
-      typeof annotation.data?.href === 'string'
-        ? annotation.data.href
-        : undefined;
-
-    if (!href) {
-      return null;
-    }
-
-    return {
-      ...base,
-      type: 'link',
-      href,
-      text: passageText.slice(annotation.start, annotation.end),
-    };
-  }
-
-  if (annotation.kind === 'heading') {
-    const level =
-      typeof annotation.data?.level === 'number' ? annotation.data.level : 1;
-    const headingClass =
-      typeof annotation.data?.class === 'string'
-        ? annotation.data.class
-        : HEADING_CLASS_FALLBACK;
-
-    return {
-      ...base,
-      type: 'heading',
-      level,
-      class: headingClass as never,
-    };
-  }
-
-  return null;
-};
-
 export const normalizePassageType = (type: string): BodyItemType => {
   if (type === 'preface') {
     return 'prelude';
@@ -268,8 +182,10 @@ export const previewDtoToPassage = (
     xmlId: operation.passage.xmlId,
     annotations: operation.annotations
       .map((annotation) =>
-        previewAnnotationToAnnotation({
-          annotation,
+        annotationFromImport(annotation.kind, {
+          start: annotation.start,
+          end: annotation.end,
+          data: annotation.data,
           passageUuid: operation.passage.uuid,
           passageText: operation.passage.content,
         }),
