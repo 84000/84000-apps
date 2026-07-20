@@ -1,13 +1,17 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type HeadingAnnotation,
   HeadingClass,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
   normalizeAlign,
 } from './annotation';
+
+const HEADING_CLASS_FALLBACK: HeadingClass = 'section-title';
 
 export const transformer: AnnotationTransformer = (dto): HeadingAnnotation => {
   const heading = baseAnnotationFromDTO(dto) as HeadingAnnotation;
@@ -45,4 +49,14 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     dto.content.push({ align });
   }
   return dto;
+};
+
+export const importer: AnnotationImporter = (input): HeadingAnnotation => {
+  const heading = baseAnnotationFromImport(input, 'heading') as HeadingAnnotation;
+  heading.level = typeof input.data?.level === 'number' ? input.data.level : 1;
+  heading.class =
+    typeof input.data?.class === 'string'
+      ? (input.data.class as HeadingClass)
+      : HEADING_CLASS_FALLBACK;
+  return heading;
 };

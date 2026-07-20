@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type ParagraphAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
   normalizeAlign,
   normalizeWordBreak,
@@ -41,4 +43,8 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     dto.content.push({ 'word-break': normalizedWordBreak });
   }
   return dto;
+};
+
+export const importer: AnnotationImporter = (input): ParagraphAnnotation => {
+  return baseAnnotationFromImport(input, 'paragraph') as ParagraphAnnotation;
 };

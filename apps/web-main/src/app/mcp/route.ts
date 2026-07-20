@@ -5,6 +5,8 @@ import {
   createAgentTools,
   createMcpHandler,
   createReadTools,
+  createWriteTools,
+  hasRole,
   validateBearerToken,
   withCorsHeaders,
 } from '@eightyfourthousand/lib-agent';
@@ -51,8 +53,12 @@ export async function POST(req: Request) {
     return auth.response;
   }
 
+  // Read tools are always available. Write tools are listed only for editor+
+  // roles; each write handler still performs its own `hasPermission` check as
+  // the authoritative gate.
   const tools = [
     ...createReadTools(auth.client),
+    ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
     ...createAgentTools(auth.role),
   ];
   const prompts = createAgentPrompts(auth.role);
