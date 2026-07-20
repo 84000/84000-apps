@@ -1,6 +1,6 @@
-This file defines the global rules for mapping the current [copy editor template, version 23.1](https://drive.google.com/file/d/1jAaza-WFHmtQsSGIxYvRQtP22YVCMpuk/view?usp=sharing) to database rows.
+This file defines the global rules for mapping the current copy editor template, version 23.1 to database rows.
 
-The mappings are based on [the sample text](https://docs.google.com/document/d/1-frC21K5AGGIsk3Gv_KEDQ23YUPj3iXT/edit?usp=sharing&ouid=108496186515648739610&rtpof=true&sd=true), which can be used to test the transformation.
+The mappings are based on [the sample text](./84000-sample-text.docx), which can be used to test the transformation.
 
 # Purpose
 
