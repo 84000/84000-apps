@@ -4,9 +4,16 @@ The mappings are based on [the sample text](https://docs.google.com/document/d/1
 
 # Purpose
 
-An agent should be able to convert a `.docx` file into database rows using this spec set without making product or schema decisions.
+This spec set describes how a well-formed document maps to import operations
+(`update_work`, `insert_title`, `upsert_folio_annotation`, `insert_passage`) —
+the input to the `apply-docx-import` tool.
 
-This file is the canonical source for:
+It is **guidance, not a rulebook.** The template is loosely enforced and revised
+often, and files vary. Recognize sections and styles by meaning, map deviations
+to the closest sensible structure, note them in your preview, and ask when
+genuinely ambiguous. See `../SKILL.md` for the end-to-end workflow.
+
+This file is the primary source for:
 
 - processing order
 - section state

@@ -5,6 +5,7 @@ export type {
   McpHandlerOptions,
 } from './lib/types';
 export { createReadTools } from './lib/tools/read';
+export { createWriteTools } from './lib/tools/write';
 export {
   validateBearerToken,
   requirePermission,
