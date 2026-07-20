@@ -1,11 +1,11 @@
 ---
 name: docx-import
-description: Import a legacy 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-docx-import` tool.
+description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-docx-import` tool.
 ---
 
 # Docx import
 
-Turn a legacy 84000 translation `.docx` into database rows: `titles`, `works`
+Turn a 84000 translation `.docx` into database rows: `titles`, `works`
 metadata, folio source description, and `passages` (with their
 `passage_annotations`).
 
@@ -16,10 +16,10 @@ document backlog spans many years.** Real files will deviate: reworded section
 headings, missing or extra title lines, styles applied inconsistently, content
 that predates the current template.
 
-The reference files describe how a *well-formed* document maps to the schema.
+The reference files describe how a _well-formed_ document maps to the schema.
 Treat them as **strong guidance you reason around**, not exact-match rules:
 
-- Recognize a section by its *meaning*, not a literal string. "Translator's
+- Recognize a section by its _meaning_, not a literal string. "Translator's
   Introduction" is the introduction; a heading with no matching entry is still
   probably one of the known sections.
 - When the document deviates, map it to the closest sensible structure and
