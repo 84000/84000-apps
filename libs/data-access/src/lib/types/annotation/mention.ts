@@ -31,13 +31,16 @@ export const transformer: AnnotationTransformer = (dto): MentionAnnotation => {
     if (content.lang) {
       mention.lang = content.lang as MentionAnnotation['lang'];
     }
+    if (content.style) {
+      mention.style = content.style as MentionAnnotation['style'];
+    }
   });
 
   return mention;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { entity, linkType, text, isSameWork, subtype, linkToh, lang } =
+  const { entity, linkType, text, isSameWork, subtype, linkToh, lang, style } =
     annotation as MentionAnnotation;
   const dto = baseAnnotationToDto(annotation);
 
@@ -62,6 +65,9 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   }
   if (lang) {
     dto.content.push({ lang });
+  }
+  if (style) {
+    dto.content.push({ style });
   }
 
   return dto;

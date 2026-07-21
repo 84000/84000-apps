@@ -21,6 +21,7 @@ export const mention: Transformer = (ctx) => {
     linkToh,
     toh,
     lang,
+    style,
   } = annotation as MentionAnnotation;
 
   const item = {
@@ -34,6 +35,7 @@ export const mention: Transformer = (ctx) => {
     linkToh,
     toh: serializeTohList(toh),
     lang,
+    style,
   };
   const matched = recurse({
     ...ctx,

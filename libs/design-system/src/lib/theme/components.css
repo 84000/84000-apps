@@ -85,6 +85,12 @@
     @apply italic;
   }
 
+  /* Quote-style mentions render as a superscript with a little extra padding
+     at the end, separating them from the following text. */
+  .mention-link[data-style='quote'] {
+    @apply align-super pe-0.5 text-[0.75em];
+  }
+
   .glossary-instance-definition {
     p {
       @apply mb-1 mt-2 @c/sidebar:pt-1;
