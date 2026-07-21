@@ -168,6 +168,8 @@ export type AnnotationDTOContentKey =
   | 'paragraph'
   | 'quote_xmlId'
   | 'src'
+  | 'start'
+  | 'end'
   | 'style'
   | 'text-style'
   | 'text'

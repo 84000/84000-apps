@@ -65,6 +65,8 @@
     --warning-foreground: var(--foreground);
     --error: var(--destructive);
     --error-foreground: var(--destructive-foreground);
+
+    --highlight: color-mix(in oklab, var(--ochre) 45%, transparent);
   }
 
   /* TODO: dark mode is temporarily disabled */
@@ -220,4 +222,5 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-highlight: var(--highlight);
 }

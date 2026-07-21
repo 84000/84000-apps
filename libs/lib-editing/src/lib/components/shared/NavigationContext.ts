@@ -9,7 +9,7 @@ import type {
   Work,
 } from '@eightyfourthousand/data-access';
 import { createContext, useContext } from 'react';
-import { PanelName, PanelsState, PanelState } from './types';
+import { HighlightRange, PanelName, PanelsState, PanelState } from './types';
 
 export interface NavigationState {
   uuid: string;
@@ -19,6 +19,11 @@ export interface NavigationState {
   showOuterContent: boolean;
   hasTranslationContent: boolean;
   focusMode: boolean;
+  /**
+   * Character range within the navigation-target passage to highlight, parsed
+   * from the `start`/`end` query parameters.
+   */
+  highlight?: HighlightRange;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;

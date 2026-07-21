@@ -1,4 +1,4 @@
-import { Button } from '@eightyfourthousand/design-system';
+import { Button, Input } from '@eightyfourthousand/design-system';
 import { ExtendedTranslationLanguage } from '@eightyfourthousand/data-access';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { Editor } from '@tiptap/core';
@@ -6,17 +6,19 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  HighlighterIcon,
   LanguagesIcon,
   QuoteIcon,
   Trash2Icon,
   TypeIcon,
   XIcon,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
+import { useNavigation } from '../../../shared';
 import type { MentionItem } from './Mention.ssr';
 
-type Mode = 'view' | 'rename' | 'lang';
+type Mode = 'view' | 'rename' | 'lang' | 'range';
 
 /**
  * Language options offered when tagging a `work` mention. The `lang` attribute
@@ -112,6 +114,7 @@ export const MentionHoverContent = ({
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [mode, setModeLocal] = useState<Mode>('view');
+  const { fetchPassage } = useNavigation();
 
   // Snapshot the item once when the card opens — the custom override (`text`)
   // pre-fills the rename field, and text/displayText drive the label shown.
@@ -200,6 +203,52 @@ export const MentionHoverContent = ({
     }));
   }, [mutateItem]);
 
+  // Highlight-range editing (only offered for `quote`-styled passage mentions).
+  // The range highlights text in the *linked* passage, so its text is fetched
+  // to preview the selection.
+  const [rangeStart, setRangeStart] = useState(
+    item?.highlightStart != null ? String(item.highlightStart) : '',
+  );
+  const [rangeEnd, setRangeEnd] = useState(
+    item?.highlightEnd != null ? String(item.highlightEnd) : '',
+  );
+  const [passageText, setPassageText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'range' || !entity) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const passage = await fetchPassage(entity);
+      if (!cancelled) {
+        setPassageText(passage?.content ?? '');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, entity, fetchPassage]);
+
+  const start = Number(rangeStart);
+  const end = Number(rangeEnd);
+  const hasValidRange =
+    rangeStart !== '' &&
+    rangeEnd !== '' &&
+    Number.isFinite(start) &&
+    Number.isFinite(end) &&
+    start >= 0 &&
+    end > start;
+
+  // Persist the range, or clear it when the inputs don't describe a valid one.
+  const saveRange = useCallback(() => {
+    mutateItem((item) => ({
+      ...item,
+      highlightStart: hasValidRange ? start : undefined,
+      highlightEnd: hasValidRange ? end : undefined,
+    }));
+  }, [mutateItem, hasValidRange, start, end]);
+
   if (mode === 'rename') {
     return (
       <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
@@ -259,6 +308,93 @@ export const MentionHoverContent = ({
     );
   }
 
+  if (mode === 'range') {
+    // Clamp for the preview so an over-long end still shows a sensible slice.
+    const previewEnd =
+      passageText != null ? Math.min(end, passageText.length) : end;
+
+    return (
+      <div className="flex flex-col gap-2 p-2 w-80">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Back"
+            onClick={() => setMode('view')}
+          >
+            <ChevronLeftIcon className="text-primary" />
+          </Button>
+          <span className="text-primary text-sm my-auto">Highlight range</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="flex flex-col gap-0.5 flex-1">
+            <span className="text-xs text-muted-foreground">Start</span>
+            <Input
+              type="number"
+              min={0}
+              value={rangeStart}
+              onChange={(e) => setRangeStart(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 flex-1">
+            <span className="text-xs text-muted-foreground">End</span>
+            <Input
+              type="number"
+              min={0}
+              value={rangeEnd}
+              onChange={(e) => setRangeEnd(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="max-h-32 overflow-auto rounded-md border border-border p-2 text-sm leading-relaxed">
+          {passageText == null ? (
+            <span className="text-muted-foreground">Loading…</span>
+          ) : !hasValidRange ? (
+            <span className="text-muted-foreground">
+              Enter a start and end offset (end after start) to preview the
+              highlighted text.
+            </span>
+          ) : (
+            <span className="text-foreground/70">
+              {passageText.slice(0, start)}
+              <mark className="bg-highlight text-foreground rounded-sm">
+                {passageText.slice(start, previewEnd)}
+              </mark>
+              {passageText.slice(previewEnd)}
+            </span>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Clear range"
+            onClick={() => {
+              setRangeStart('');
+              setRangeEnd('');
+            }}
+          >
+            <Trash2Icon className="text-destructive" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Save range"
+            onClick={saveRange}
+          >
+            <CheckIcon className="text-primary" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
       <span className="text-primary text-sm my-auto">{entityType}</span>
@@ -290,6 +426,24 @@ export const MentionHoverContent = ({
             className={cn(
               'my-auto',
               item?.style === 'quote' ? 'text-primary' : 'text-foreground/50',
+            )}
+          />
+        </Button>
+      )}
+      {isPassage && item?.style === 'quote' && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 [&_svg]:size-4"
+          title="Set highlight range"
+          onClick={() => setMode('range')}
+        >
+          <HighlighterIcon
+            className={cn(
+              'my-auto',
+              item?.highlightStart != null
+                ? 'text-primary'
+                : 'text-foreground/50',
             )}
           />
         </Button>

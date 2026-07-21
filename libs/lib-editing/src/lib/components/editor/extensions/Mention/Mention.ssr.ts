@@ -18,10 +18,31 @@ export interface MentionItem {
   toh?: string;
   lang?: string;
   style?: 'quote';
+  // Character range to highlight in the linked target passage, surfaced as the
+  // `start`/`end` navigation query parameters when the link is followed.
+  highlightStart?: number;
+  highlightEnd?: number;
 }
 
 const isMentionItem = (value: unknown): value is MentionItem => {
   return !!value && typeof value === 'object';
+};
+
+/**
+ * Adds the `start`/`end` highlight query parameters to `params` when the item
+ * carries a highlight range, so following the link highlights that character
+ * range in the target passage (see the deep-link highlight in NavigationProvider).
+ */
+export const applyMentionHighlightParams = (
+  params: URLSearchParams,
+  item: MentionItem,
+) => {
+  if (item.highlightStart !== undefined) {
+    params.set('start', String(item.highlightStart));
+  }
+  if (item.highlightEnd !== undefined) {
+    params.set('end', String(item.highlightEnd));
+  }
 };
 
 /**
@@ -80,7 +101,12 @@ export const mentionDOMOutputSpec = (
       return ['span', { class: 'mention-link', ...extraAttrs }, label] as unknown;
     }
 
-    const href = safeHref(`/entity/${item.linkType}/${item.entity}`);
+    const hrefParams = new URLSearchParams();
+    applyMentionHighlightParams(hrefParams, item);
+    const hrefQuery = hrefParams.toString();
+    const href = safeHref(
+      `/entity/${item.linkType}/${item.entity}${hrefQuery ? `?${hrefQuery}` : ''}`,
+    );
     const attrs: Record<string, string> = {
       class: 'mention-link',
       ...extraAttrs,

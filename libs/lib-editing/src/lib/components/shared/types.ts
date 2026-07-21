@@ -89,6 +89,12 @@ export type PanelState = {
   hash?: string;
 };
 
+/** Character offsets `[start, end)` into a passage's text content to highlight. */
+export type HighlightRange = {
+  start: number;
+  end: number;
+};
+
 export type PanelsState = {
   [key in PanelName]: PanelState;
 };
