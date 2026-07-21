@@ -27,6 +27,7 @@ import {
 } from 'react';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import {
+  HighlightRange,
   PANEL_NAMES,
   PANEL_FOR_SECTION,
   PanelName,
@@ -76,6 +77,27 @@ const parsePanelParams = (
   return { toh, panels };
 };
 
+/**
+ * Parses the `start`/`end` query parameters into a highlight range. Both must
+ * be present and numeric with `end > start`; otherwise no highlight is applied.
+ */
+const parseHighlight = (
+  params: ReadonlyURLSearchParams,
+): HighlightRange | undefined => {
+  const start = Number(params.get('start'));
+  const end = Number(params.get('end'));
+  if (
+    !params.has('start') ||
+    !params.has('end') ||
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    end <= start
+  ) {
+    return undefined;
+  }
+  return { start, end };
+};
+
 export const NavigationProvider = ({
   uuid,
   initialToh,
@@ -99,6 +121,9 @@ export const NavigationProvider = ({
   );
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
+  const [highlight, setHighlight] = useState<HighlightRange | undefined>(() =>
+    parseHighlight(query),
+  );
   const [hasTranslationContent, setHasTranslationContent] = useState(
     initialHasTranslationContent,
   );
@@ -255,6 +280,22 @@ export const NavigationProvider = ({
     [isMobile, hasTranslationContent],
   );
 
+  const clearHighlight = useCallback(() => {
+    setHighlight(undefined);
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('start') && !params.has('end')) {
+      return;
+    }
+    params.delete('start');
+    params.delete('end');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+  }, []);
+
   useEffect(() => {
     if (!toh && !panels) {
       return;
@@ -393,6 +434,8 @@ export const NavigationProvider = ({
       showOuterContent,
       hasTranslationContent,
       focusMode,
+      highlight,
+      clearHighlight,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
@@ -412,6 +455,8 @@ export const NavigationProvider = ({
       showOuterContent,
       hasTranslationContent,
       focusMode,
+      highlight,
+      clearHighlight,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,

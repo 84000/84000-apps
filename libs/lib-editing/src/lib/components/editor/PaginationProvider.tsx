@@ -21,6 +21,7 @@ import {
 import type { PanelFilter } from '@eightyfourthousand/data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import {
+  highlightTextRange,
   isUuid,
   scrollToElement,
   useIsMobile,
@@ -124,7 +125,8 @@ export const PaginationProvider = ({
   const handledEndLoadRequestRef = useRef(0);
   const dataClient = useMemo(() => createGraphQLClient(), []);
 
-  const { panels, updatePanel, setShowOuterContent } = useNavigation();
+  const { panels, updatePanel, setShowOuterContent, highlight, clearHighlight } =
+    useNavigation();
   const isMobile = useIsMobile();
 
   // Extract hash as a primitive value so we only react to actual hash changes,
@@ -269,6 +271,21 @@ export const PaginationProvider = ({
 
         await scrollToElement({ element });
 
+        // Paint the requested character range within the target passage's
+        // content column (excludes the label and the compare-source column,
+        // so offsets align with the passage's own text). Cleared once applied.
+        if (highlight) {
+          const content =
+            element.querySelector<HTMLElement>('.passage.is-editable') ??
+            element;
+          highlightTextRange({
+            container: content,
+            start: highlight.start,
+            end: highlight.end,
+          });
+          clearHighlight();
+        }
+
         updatePanel({
           name: panel,
           state: { ...panels[panel], hash: undefined },
@@ -297,6 +314,8 @@ export const PaginationProvider = ({
     setNavigating,
     tab,
     fragment,
+    highlight,
+    clearHighlight,
   ]);
 
   useEffect(() => {
