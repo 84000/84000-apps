@@ -280,22 +280,6 @@ export const NavigationProvider = ({
     [isMobile, hasTranslationContent],
   );
 
-  const clearHighlight = useCallback(() => {
-    setHighlight(undefined);
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has('start') && !params.has('end')) {
-      return;
-    }
-    params.delete('start');
-    params.delete('end');
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
-    );
-  }, []);
-
   useEffect(() => {
     if (!toh && !panels) {
       return;
@@ -407,6 +391,11 @@ export const NavigationProvider = ({
     if (newToh) {
       setToh(newToh);
     }
+
+    // Re-read the highlight range so an in-session navigation (e.g. a
+    // same-work mention link that pushes `start`/`end`) triggers a highlight,
+    // and navigating away (no range) clears it.
+    setHighlight(parseHighlight(query));
   }, [query, parsePanelParams]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
@@ -435,7 +424,6 @@ export const NavigationProvider = ({
       hasTranslationContent,
       focusMode,
       highlight,
-      clearHighlight,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
@@ -456,7 +444,6 @@ export const NavigationProvider = ({
       hasTranslationContent,
       focusMode,
       highlight,
-      clearHighlight,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,

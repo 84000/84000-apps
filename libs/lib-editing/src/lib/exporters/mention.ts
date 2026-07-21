@@ -24,6 +24,8 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       linkToh?: string;
       lang?: MentionAnnotation['lang'];
       style?: MentionAnnotation['style'];
+      highlightStart?: number;
+      highlightEnd?: number;
     }): MentionAnnotation => ({
       uuid: item.uuid,
       type: 'mention',
@@ -37,6 +39,12 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       ...(item.linkToh && { linkToh: item.linkToh }),
       ...(item.lang && { lang: item.lang }),
       ...(item.style && { style: item.style }),
+      ...(item.highlightStart !== undefined && {
+        highlightStart: item.highlightStart,
+      }),
+      ...(item.highlightEnd !== undefined && {
+        highlightEnd: item.highlightEnd,
+      }),
       // Zero-length annotation: start === end
       start,
       end: start,

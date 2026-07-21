@@ -21,10 +21,9 @@ export interface NavigationState {
   focusMode: boolean;
   /**
    * Character range within the navigation-target passage to highlight, parsed
-   * from the `start`/`end` query parameters. Cleared once applied.
+   * from the `start`/`end` query parameters.
    */
   highlight?: HighlightRange;
-  clearHighlight: () => void;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
@@ -53,7 +52,6 @@ export const NavigationContext = createContext<NavigationState>({
   showOuterContent: true,
   hasTranslationContent: true,
   focusMode: false,
-  clearHighlight: () => { throw new Error('Not implemented'); },
   updatePanel: () => { throw new Error('Not implemented'); },
   setToh: () => { throw new Error('Not implemented'); },
   setShowOuterContent: () => { throw new Error('Not implemented'); },

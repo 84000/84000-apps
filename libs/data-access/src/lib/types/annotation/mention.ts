@@ -34,14 +34,30 @@ export const transformer: AnnotationTransformer = (dto): MentionAnnotation => {
     if (content.style) {
       mention.style = content.style as MentionAnnotation['style'];
     }
+    if (content.start !== undefined) {
+      mention.highlightStart = Number(content.start);
+    }
+    if (content.end !== undefined) {
+      mention.highlightEnd = Number(content.end);
+    }
   });
 
   return mention;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { entity, linkType, text, isSameWork, subtype, linkToh, lang, style } =
-    annotation as MentionAnnotation;
+  const {
+    entity,
+    linkType,
+    text,
+    isSameWork,
+    subtype,
+    linkToh,
+    lang,
+    style,
+    highlightStart,
+    highlightEnd,
+  } = annotation as MentionAnnotation;
   const dto = baseAnnotationToDto(annotation);
 
   if (entity) {
@@ -68,6 +84,12 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   }
   if (style) {
     dto.content.push({ style });
+  }
+  if (highlightStart !== undefined) {
+    dto.content.push({ start: highlightStart });
+  }
+  if (highlightEnd !== undefined) {
+    dto.content.push({ end: highlightEnd });
   }
 
   return dto;

@@ -2,7 +2,12 @@ import { v4 as uuidv4 } from 'uuid';
 import Suggestion from '@tiptap/suggestion';
 import { registerEditorElement } from '../../util';
 import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
-import { MentionSSR, MentionItem, mentionContainerToh } from './Mention.ssr';
+import {
+  MentionSSR,
+  MentionItem,
+  mentionContainerToh,
+  applyMentionHighlightParams,
+} from './Mention.ssr';
 import { mentionDropSelectionPlugin } from './MentionDropSelection';
 import { mentionSpacingPlugin } from './MentionSpacingPlugin';
 import { mentionSuggestion } from './MentionSuggestion';
@@ -113,11 +118,17 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
           );
         }
 
-        // Compute href from linkType + entity
-        let href = `/entity/${item.linkType}/${item.entity}`;
+        // Compute href from linkType + entity, carrying the edit flag and any
+        // highlight range through as query parameters.
+        const hrefParams = new URLSearchParams();
         if (isEditable) {
-          href = `${href}?edit=true`;
+          hrefParams.set('edit', 'true');
         }
+        applyMentionHighlightParams(hrefParams, item);
+        const hrefQuery = hrefParams.toString();
+        const href = `/entity/${item.linkType}/${item.entity}${
+          hrefQuery ? `?${hrefQuery}` : ''
+        }`;
 
         if (isEditable || !item.isSameWork) {
           anchor.setAttribute('href', href);
@@ -143,6 +154,11 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
               query.set('toh', item.linkToh);
             }
 
+            // Drop any highlight range from a previous navigation; only a
+            // passage link with its own range re-adds it below.
+            query.delete('start');
+            query.delete('end');
+
             switch (item.linkType) {
               case 'bibliography':
                 query.set('right', `open:bibliography:${item.entity}`);
@@ -155,6 +171,7 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
                 const tab =
                   TAB_FOR_SECTION[item.subtype || ''] || 'translation';
                 query.set(panel, `open:${tab}:${item.entity}`);
+                applyMentionHighlightParams(query, item);
                 break;
               }
               case 'folio': {

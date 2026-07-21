@@ -22,6 +22,8 @@ export const mention: Transformer = (ctx) => {
     toh,
     lang,
     style,
+    highlightStart,
+    highlightEnd,
   } = annotation as MentionAnnotation;
 
   const item = {
@@ -36,6 +38,8 @@ export const mention: Transformer = (ctx) => {
     toh: serializeTohList(toh),
     lang,
     style,
+    highlightStart,
+    highlightEnd,
   };
   const matched = recurse({
     ...ctx,

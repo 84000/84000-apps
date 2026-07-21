@@ -21,6 +21,7 @@ import {
 import type { PanelFilter } from '@eightyfourthousand/data-access';
 import { PassageSkeleton } from '../shared/PassageSkeleton';
 import {
+  clearTextRangeHighlight,
   highlightTextRange,
   isUuid,
   scrollToElement,
@@ -125,9 +126,18 @@ export const PaginationProvider = ({
   const handledEndLoadRequestRef = useRef(0);
   const dataClient = useMemo(() => createGraphQLClient(), []);
 
-  const { panels, updatePanel, setShowOuterContent, highlight, clearHighlight } =
+  const { panels, updatePanel, setShowOuterContent, highlight } =
     useNavigation();
   const isMobile = useIsMobile();
+
+  // The passage + range currently painted by the deep-link highlight. Held
+  // locally (not in nav state / the URL) so it survives the DOM churn from
+  // post-navigation editor transactions and is re-applied by the effect below.
+  const [activeHighlight, setActiveHighlight] = useState<{
+    target: string;
+    start: number;
+    end: number;
+  } | null>(null);
 
   // Extract hash as a primitive value so we only react to actual hash changes,
   // not to every panels object reference change.
@@ -271,19 +281,32 @@ export const PaginationProvider = ({
 
         await scrollToElement({ element });
 
-        // Paint the requested character range within the target passage's
-        // content column (excludes the label and the compare-source column,
-        // so offsets align with the passage's own text). Cleared once applied.
+        // Claim this passage as the highlight target when a range is pending,
+        // else clear any prior highlight now that we've navigated elsewhere.
+        // Painting happens in the effect below (which re-applies after editor
+        // DOM churn); a one-shot paint here would be lost to that race.
+        setActiveHighlight(
+          highlight
+            ? { target: navCursor, start: highlight.start, end: highlight.end }
+            : null,
+        );
+
+        // Now that the range is captured locally, strip it from the URL so it
+        // can't re-apply to a different passage on refresh or a later
+        // navigation. Done here (the consumption point) rather than in the
+        // URL-writing effect, which runs on mount before the range is claimed.
         if (highlight) {
-          const content =
-            element.querySelector<HTMLElement>('.passage.is-editable') ??
-            element;
-          highlightTextRange({
-            container: content,
-            start: highlight.start,
-            end: highlight.end,
-          });
-          clearHighlight();
+          const stripped = new URLSearchParams(window.location.search);
+          stripped.delete('start');
+          stripped.delete('end');
+          const strippedQuery = stripped.toString();
+          window.history.replaceState(
+            null,
+            '',
+            `${window.location.pathname}${
+              strippedQuery ? `?${strippedQuery}` : ''
+            }${window.location.hash}`,
+          );
         }
 
         updatePanel({
@@ -315,8 +338,37 @@ export const PaginationProvider = ({
     tab,
     fragment,
     highlight,
-    clearHighlight,
   ]);
+
+  // Paints the deep-link highlight and re-applies it on every editor
+  // transaction. The CSS Custom Highlight API paints a live Range; ProseMirror
+  // transactions that fire after navigation (chrome sync, pagination,
+  // decorations) rebuild the passage's text nodes and detach the Range, so a
+  // one-shot paint is racy. Re-applying on each `update` keeps it painted; the
+  // cleanup clears it when the target changes or the provider unmounts.
+  useEffect(() => {
+    const div = childrenDivRef.current;
+    if (!activeHighlight || !editor || !div) {
+      return;
+    }
+
+    const { target, start, end } = activeHighlight;
+    const apply = () => {
+      const passage = div.querySelector<HTMLElement>(`#${CSS.escape(target)}`);
+      const content =
+        passage?.querySelector<HTMLElement>('.passage.is-editable') ?? passage;
+      if (content) {
+        highlightTextRange({ container: content, start, end });
+      }
+    };
+
+    apply();
+    editor.on('update', apply);
+    return () => {
+      editor.off('update', apply);
+      clearTextRangeHighlight();
+    };
+  }, [activeHighlight, editor]);
 
   useEffect(() => {
     return () => {

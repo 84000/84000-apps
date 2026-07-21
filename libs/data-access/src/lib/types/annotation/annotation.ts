@@ -167,6 +167,12 @@ export type MentionAnnotation = AnnotationBase & {
   linkToh?: string;
   lang?: ExtendedTranslationLanguage;
   style?: MentionStyle;
+  // Character range to highlight in the linked target (e.g. the root-text
+  // passage a commentary quote points to). Parsed from the `start`/`end`
+  // key/value pairs in the annotation's `content` — distinct from the
+  // annotation's own `start`/`end` span within its host passage.
+  highlightStart?: number;
+  highlightEnd?: number;
 };
 
 export type ParagraphAnnotation = AnnotationBase & {
