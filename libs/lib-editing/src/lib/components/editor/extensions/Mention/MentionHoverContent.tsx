@@ -1,11 +1,13 @@
 import { Button } from '@eightyfourthousand/design-system';
 import { ExtendedTranslationLanguage } from '@eightyfourthousand/data-access';
+import { cn } from '@eightyfourthousand/lib-utils';
 import { Editor } from '@tiptap/core';
 import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   LanguagesIcon,
+  QuoteIcon,
   Trash2Icon,
   TypeIcon,
   XIcon,
@@ -123,6 +125,8 @@ export const MentionHoverContent = ({
   const displayLabel = item?.text || item?.displayText || entity;
   // Language tagging is only meaningful for work titles.
   const isWork = entityType === 'work';
+  // Quote styling (superscript label) is only offered for passage mentions.
+  const isPassage = entityType === 'passage';
 
   const setMode = useCallback(
     (next: Mode) => {
@@ -187,6 +191,14 @@ export const MentionHoverContent = ({
     },
     [mutateItem],
   );
+
+  // Toggle the `quote` style on/off, clearing it back to the default label.
+  const toggleQuoteStyle = useCallback(() => {
+    mutateItem((item) => ({
+      ...item,
+      style: item.style === 'quote' ? undefined : 'quote',
+    }));
+  }, [mutateItem]);
 
   if (mode === 'rename') {
     return (
@@ -264,6 +276,22 @@ export const MentionHoverContent = ({
           onClick={() => setMode('lang')}
         >
           <LanguagesIcon className="text-primary my-auto" />
+        </Button>
+      )}
+      {isPassage && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 [&_svg]:size-4"
+          title="Toggle quote style"
+          onClick={toggleQuoteStyle}
+        >
+          <QuoteIcon
+            className={cn(
+              'my-auto',
+              item?.style === 'quote' ? 'text-primary' : 'text-foreground/50',
+            )}
+          />
         </Button>
       )}
       <Button
