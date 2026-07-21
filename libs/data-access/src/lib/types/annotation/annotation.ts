@@ -154,6 +154,8 @@ export type MantraAnnotation = AnnotationBase & {
   lang: ExtendedTranslationLanguage;
 };
 
+export type MentionStyle = 'quote';
+
 export type MentionAnnotation = AnnotationBase & {
   type: 'mention';
   entity: string;
@@ -164,6 +166,7 @@ export type MentionAnnotation = AnnotationBase & {
   subtype?: string;
   linkToh?: string;
   lang?: ExtendedTranslationLanguage;
+  style?: MentionStyle;
 };
 
 export type ParagraphAnnotation = AnnotationBase & {

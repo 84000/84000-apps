@@ -94,6 +94,11 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
         if (item.lang) {
           anchor.setAttribute('lang', item.lang);
         }
+        // `data-style` drives presentational rules (e.g. quote mentions render
+        // as a superscript with trailing padding).
+        if (item.style) {
+          anchor.setAttribute('data-style', item.style);
+        }
 
         // Display priority: text (custom override) > displayText (dynamic) > entity UUID (fallback)
         const displayText = item.text || item.displayText;

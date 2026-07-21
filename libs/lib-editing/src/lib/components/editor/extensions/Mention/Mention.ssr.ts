@@ -17,6 +17,7 @@ export interface MentionItem {
   linkToh?: string;
   toh?: string;
   lang?: string;
+  style?: 'quote';
 }
 
 const isMentionItem = (value: unknown): value is MentionItem => {
@@ -70,6 +71,9 @@ export const mentionDOMOutputSpec = (
     const extraAttrs: Record<string, string> = {
       ...(item.toh ? { 'data-toh': item.toh } : {}),
       ...(item.lang ? { lang: item.lang } : {}),
+      // `data-style` drives presentational rules (e.g. quote mentions render
+      // as a superscript with trailing padding).
+      ...(item.style ? { 'data-style': item.style } : {}),
     };
 
     if (!label || !item.entity || !item.linkType) {
