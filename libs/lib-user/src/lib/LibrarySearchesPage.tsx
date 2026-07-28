@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DataTable,
   DataTableColumn,
@@ -60,16 +60,14 @@ const COLUMNS: DataTableColumn<RowType>[] = [
 
 export const LibrarySearchesPage = () => {
   const { cache, refreshCache, setPageTitle } = useProfile();
-  const [data, setData] = useState<RowType[]>([]);
+  const data = useMemo(
+    () => (cache.searches as RowType[]) ?? [],
+    [cache.searches],
+  );
 
   useEffect(() => {
     refreshCache('searches');
   }, [refreshCache]);
-
-  useEffect(() => {
-    const data = cache.searches as RowType[];
-    setData(data || []);
-  }, [cache.searches]);
 
   useEffect(() => {
     setPageTitle('My Saved Searches');

@@ -96,6 +96,18 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const [activeMenu, setActiveMenu] = useState<MenuItem>(
     (pathname.split('/').pop() as MenuItem) || 'profile',
   );
+  const [prevPathname, setPrevPathname] = useState(pathname);
+
+  // Follow the route, but keep the last real menu when the path does not end
+  // in one. Adjusting state during render is React's recommended alternative
+  // to a sync effect.
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    const currentMenu = pathname.split('/').pop() as MenuItem;
+    if (MENU_ITEMS.includes(currentMenu)) {
+      setActiveMenu(currentMenu);
+    }
+  }
   const [pageTitle, setPageTitle] = useState('My Profile');
   const [user, setUser] = useState<ScholarUser>();
   const [library, setLibrary] = useState<UserLibraryItem[]>([]);
@@ -264,20 +276,18 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     [dataClient, user, refreshProfile],
   );
 
+  // These two fetch on mount and set state only after awaiting the network.
+  // The rule cannot distinguish that from a synchronous setState, so it
+  // reports a cascading render that does not happen here.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch; setState runs after await
     refreshProfile();
   }, [refreshProfile]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async fetch; setState runs after await
     refreshCache();
   }, [refreshCache]);
-
-  useEffect(() => {
-    const currentMenu = pathname.split('/').pop() as MenuItem;
-    if (MENU_ITEMS.includes(currentMenu)) {
-      setActiveMenu(currentMenu);
-    }
-  }, [pathname]);
 
   return (
     <ProfileContext.Provider

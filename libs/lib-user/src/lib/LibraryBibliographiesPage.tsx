@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DataTable,
   DataTableColumn,
@@ -62,16 +62,14 @@ const COLUMNS: DataTableColumn<RowType>[] = [
 
 export const LibraryBibliographiesPage = () => {
   const { cache, refreshCache, setPageTitle } = useProfile();
-  const [data, setData] = useState<RowType[]>([]);
+  const data = useMemo(
+    () => (cache.bibliographies as RowType[]) ?? [],
+    [cache.bibliographies],
+  );
 
   useEffect(() => {
     refreshCache('bibliographies');
   }, [refreshCache]);
-
-  useEffect(() => {
-    const data = cache.bibliographies as RowType[];
-    setData(data || []);
-  }, [cache.bibliographies]);
 
   useEffect(() => {
     setPageTitle('My Saved Bibliographies');

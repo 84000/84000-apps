@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DataTable,
   DataTableColumn,
@@ -73,16 +73,14 @@ const COLUMNS: DataTableColumn<RowType>[] = [
 
 export const LibraryPassagesPage = () => {
   const { cache, refreshCache, setPageTitle } = useProfile();
-  const [data, setData] = useState<RowType[]>([]);
+  const data = useMemo(
+    () => (cache.passages as RowType[]) ?? [],
+    [cache.passages],
+  );
 
   useEffect(() => {
     refreshCache('passages');
   }, [refreshCache]);
-
-  useEffect(() => {
-    const data = cache.passages as RowType[];
-    setData(data || []);
-  }, [cache.passages]);
 
   useEffect(() => {
     setPageTitle('My Saved Passages');

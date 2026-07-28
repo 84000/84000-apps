@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { SocialLogin } from './SocialLogin';
 import { Button, H4, MainLogo, Separator } from '@eightyfourthousand/design-system';
 import { EmailLogin } from './EmailLogin';
@@ -32,19 +32,10 @@ const LINK_TEXT = {
 
 export const Login = () => {
   const [variation, setVariation] = useState<LoginVariation>('login');
-  const [header, setHeader] = useState<string>(HEADER.login);
-  const [welcomeLines, setWelcomeLines] = useState<string[]>(
-    WELCOME_LINES.login,
-  );
-  const [footerText, setFooterText] = useState<string>(FOOTER_TEXT.login);
-  const [linkText, setLinkText] = useState<string>(LINK_TEXT.login);
-
-  useEffect(() => {
-    setHeader(HEADER[variation]);
-    setWelcomeLines(WELCOME_LINES[variation]);
-    setFooterText(FOOTER_TEXT[variation]);
-    setLinkText(LINK_TEXT[variation]);
-  }, [variation]);
+  const header = HEADER[variation];
+  const welcomeLines = WELCOME_LINES[variation];
+  const footerText = FOOTER_TEXT[variation];
+  const linkText = LINK_TEXT[variation];
 
   const toggleVariation = useCallback(() => {
     setVariation((prev) => (prev === 'login' ? 'create' : 'login'));
