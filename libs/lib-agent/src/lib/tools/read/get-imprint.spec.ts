@@ -1,11 +1,11 @@
 import { createGetImprintTool } from './get-imprint';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getTranslationImprint } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getTranslationImprint: jest.fn(),
 }));
-
-import { getTranslationImprint } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getTranslationImprint);
 
 describe('get-imprint tool', () => {

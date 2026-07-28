@@ -1,15 +1,15 @@
 import { createGetTranslationPassagesTool } from './get-translation-passages';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
-jest.mock('@eightyfourthousand/data-access', () => ({
-  getTranslationPassages: jest.fn(),
-  getTranslationPassagesAround: jest.fn(),
-}));
-
 import {
   getTranslationPassages,
   getTranslationPassagesAround,
 } from '@eightyfourthousand/data-access';
+
+jest.mock('@eightyfourthousand/data-access', () => ({
+  getTranslationPassages: jest.fn(),
+  getTranslationPassagesAround: jest.fn(),
+}));
 
 const mockedSequential = jest.mocked(getTranslationPassages);
 const mockedAround = jest.mocked(getTranslationPassagesAround);

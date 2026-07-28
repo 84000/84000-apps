@@ -1,11 +1,11 @@
 import { createGetWorkTitlesTool } from './get-work-titles';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getWorkTitles } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getWorkTitles: jest.fn(),
 }));
-
-import { getWorkTitles } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getWorkTitles);
 
 describe('get-work-titles tool', () => {

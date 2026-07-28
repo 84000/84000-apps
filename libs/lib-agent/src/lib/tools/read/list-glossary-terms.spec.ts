@@ -1,11 +1,11 @@
 import { createListGlossaryTermsTool } from './list-glossary-terms';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getWorkGlossaryTermsPage } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getWorkGlossaryTermsPage: jest.fn(),
 }));
-
-import { getWorkGlossaryTermsPage } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getWorkGlossaryTermsPage);
 
 describe('list-glossary-terms tool', () => {

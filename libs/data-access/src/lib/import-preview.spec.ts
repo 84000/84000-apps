@@ -1,7 +1,3 @@
-jest.mock('./passage', () => ({
-  savePassagesWithDeletions: jest.fn(),
-}));
-
 import {
   applyImportPreview,
   normalizeImportOperations,
@@ -9,6 +5,10 @@ import {
 } from './import-preview';
 import { savePassagesWithDeletions } from './passage';
 import type { DataClient, ImportOperationInput } from './types';
+
+jest.mock('./passage', () => ({
+  savePassagesWithDeletions: jest.fn(),
+}));
 
 const mockedSavePassages = jest.mocked(savePassagesWithDeletions);
 

@@ -3,15 +3,6 @@
  */
 import type { DataClient } from '@eightyfourthousand/data-access';
 
-jest.mock('jwt-decode', () => ({
-  jwtDecode: jest.fn(),
-}));
-
-jest.mock('@eightyfourthousand/data-access', () => ({
-  createTokenClient: jest.fn(),
-  hasPermission: jest.fn(),
-}));
-
 import { jwtDecode } from 'jwt-decode';
 import {
   createTokenClient,
@@ -23,6 +14,15 @@ import {
   decodeRole,
   ROLE_HIERARCHY,
 } from './auth';
+
+jest.mock('jwt-decode', () => ({
+  jwtDecode: jest.fn(),
+}));
+
+jest.mock('@eightyfourthousand/data-access', () => ({
+  createTokenClient: jest.fn(),
+  hasPermission: jest.fn(),
+}));
 
 const mockedJwtDecode = jest.mocked(jwtDecode);
 const mockedCreateTokenClient = jest.mocked(createTokenClient);

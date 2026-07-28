@@ -1,11 +1,11 @@
 import { createLookupEntityTool } from './lookup-entity';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { lookupEntityWithClient } from '@eightyfourthousand/data-access/ssr';
+
 jest.mock('@eightyfourthousand/data-access/ssr', () => ({
   lookupEntityWithClient: jest.fn(),
 }));
-
-import { lookupEntityWithClient } from '@eightyfourthousand/data-access/ssr';
 const mocked = jest.mocked(lookupEntityWithClient);
 
 describe('lookup-entity tool', () => {

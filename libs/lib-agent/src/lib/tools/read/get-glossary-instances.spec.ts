@@ -1,11 +1,11 @@
 import { createGetGlossaryInstancesTool } from './get-glossary-instances';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getGlossaryInstances } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getGlossaryInstances: jest.fn(),
 }));
-
-import { getGlossaryInstances } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getGlossaryInstances);
 
 describe('get-glossary-instances tool', () => {

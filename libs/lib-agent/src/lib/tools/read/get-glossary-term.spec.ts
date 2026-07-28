@@ -1,11 +1,11 @@
 import { createGetGlossaryTermTool } from './get-glossary-term';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getGlossaryInstance } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getGlossaryInstance: jest.fn(),
 }));
-
-import { getGlossaryInstance } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getGlossaryInstance);
 
 describe('get-glossary-term tool', () => {
