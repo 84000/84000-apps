@@ -1,25 +1,26 @@
 /**
- * Publish a work.
+ * Publish a work from the command line.
  *
- * Thin wrapper: all pipeline logic lives in `@eightyfourthousand/lib-publishing/ssr` so
- * that the phase 5 publish UI can call exactly the same code path. This script only
- * parses arguments, supplies a service_role client, and turns the result into output and
- * an exit code.
- *
- * A service_role client is required, not a convenience: the `translation-versions`
- * bucket has no storage.objects policy at all, so no user-scoped client can write
- * artifacts.
+ * Thin wrapper over the same pipeline the `publishWork` GraphQL mutation calls, so there
+ * is one implementation and the CLI cannot drift from what the editor UI does. Useful for
+ * bulk work (DEV-559's initial publish) and for driving a large work to completion without
+ * waiting on the cron sweep.
  *
  * Run:
- *   npx ts-node apps/node-scripts/src/publish-work.ts toh251
- *   npx ts-node apps/node-scripts/src/publish-work.ts toh251 --version 1.0.0
- *   npx ts-node apps/node-scripts/src/publish-work.ts toh251 --dry-run
- *   npx ts-node apps/node-scripts/src/publish-work.ts toh251 --notes "Revised chapter 3"
+ *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251
+ *   ... toh251 --version 1.0.0 --notes "Revised chapter 3"
+ *   ... toh251 --check        # validate only, publish nothing
  */
 
-import { publishWork } from '@eightyfourthousand/lib-publishing/ssr';
+import {
+  createServiceRoleClient,
+  getJob,
+  resolveWork,
+  startPublish,
+  tickJob,
+  validateWork,
+} from '@eightyfourthousand/lib-publishing/ssr';
 import { formatFindings } from '@eightyfourthousand/lib-publishing';
-import { loadConfig } from './config';
 
 const flag = (args: string[], name: string): string | undefined => {
   const index = args.indexOf(`--${name}`);
@@ -34,66 +35,118 @@ const main = async () => {
 
   if (!work) {
     console.error(
-      'Usage: publish-work <toh|work-uuid> [--version X.Y.Z] [--notes "..."] [--dry-run]',
+      'Usage: publish-work <toh|work-uuid> [--version X.Y.Z] [--notes "..."] [--check]',
     );
     process.exit(2);
   }
 
-  const { supabase } = loadConfig();
+  const client = createServiceRoleClient();
 
-  const result = await publishWork({
-    client: supabase,
+  // --check runs the same SQL rule set the pipeline gates on, writing nothing.
+  if (args.includes('--check')) {
+    const resolved = await resolveWork({ client, work });
+    if (!resolved) {
+      console.error(`No work found for "${work}".`);
+      process.exit(1);
+    }
+    const validation = await validateWork({ client, workUuid: resolved.uuid });
+    if (validation.warnings.length) {
+      console.warn(`${formatFindings(validation.warnings)}\n`);
+    }
+    if (!validation.ok) {
+      console.error(`${work} cannot be published:\n`);
+      console.error(formatFindings(validation.errors));
+      process.exit(1);
+    }
+    console.log(`${work} is publishable.`);
+    return;
+  }
+
+  const started = await startPublish({
+    client,
     options: {
       work,
       version: flag(args, 'version'),
       notes: flag(args, 'notes'),
-      dryRun: args.includes('--dry-run'),
     },
   });
 
-  if (result.validation.warnings.length) {
-    console.warn(`\n${formatFindings(result.validation.warnings)}\n`);
+  if (!started.ok) {
+    if (started.reason === 'work-not-found') {
+      console.error(`No work found for "${work}".`);
+    } else {
+      console.error(
+        `A publish is already running for "${work}"` +
+          (started.job ? ` (job ${started.job.uuid}, phase ${started.job.phase}).` : '.'),
+      );
+    }
+    process.exit(1);
   }
 
-  switch (result.status) {
-    case 'validation-failed':
-      console.error('Validation failed. Nothing was written.\n');
-      console.error(formatFindings(result.validation.errors));
-      process.exit(1);
-      break;
+  let { job, done } = started.result;
 
-    case 'dry-run':
-      console.log(
-        `Dry run for ${work}: would publish ${result.version} to ${result.artifactRoot}`,
-      );
-      console.log(`Manifest hash: ${result.manifestHash}`);
-      console.log(`Counts: ${JSON.stringify(result.counts)}`);
-      break;
+  if (job.warnings.length) {
+    console.warn(`\n${formatFindings(job.warnings)}\n`);
+  }
 
-    case 'published':
-      console.log(`Published ${work} as ${result.version}.`);
-      console.log(`Version uuid:  ${result.versionUuid}`);
-      console.log(`Artifact root: ${result.artifactRoot}`);
-      console.log(`Manifest hash: ${result.manifestHash}`);
-      console.log(`Counts: ${JSON.stringify(result.counts)}`);
-      break;
+  // Unlike the UI, the CLI has no timeout to respect, so it drives the job to completion
+  // rather than leaving the remainder to the cron sweep.
+  //
+  // The stall guard is not paranoia: a tick that cannot claim the job (someone else holds
+  // the lease) legitimately returns `done: false` having done nothing, and without this the
+  // loop becomes a hot spin. Progress is measured by the phase/cursor actually moving.
+  const MAX_STALLED_TICKS = 3;
+  let stalled = 0;
+  let signature = '';
 
-    case 'failed':
-      console.error(`Publish failed: ${result.error}`);
-      if (result.recoveryError) {
-        // The one case that needs a human: the failed version could not be cleaned up.
+  while (!done) {
+    const next = `${job.phase}:${JSON.stringify(job.cursor)}:${job.files.length}`;
+    if (next === signature) {
+      stalled += 1;
+      if (stalled >= MAX_STALLED_TICKS) {
         console.error(
-          `\nCLEANUP FAILED — manual intervention required: ${result.recoveryError}`,
+          `Publish job ${job.uuid} made no progress across ${MAX_STALLED_TICKS} ticks ` +
+            `(phase ${job.phase}). Another process may hold its lease; re-run to resume.`,
         );
-      } else if (result.versionUuid) {
+        process.exit(1);
+      }
+      // Wait out a lease held by a concurrent tick rather than spinning against it.
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+    } else {
+      stalled = 0;
+      signature = next;
+      console.log(`  ... ${job.phase} (job ${job.uuid})`);
+    }
+
+    const result = await tickJob({ client, jobUuid: job.uuid });
+    job = result.job;
+    done = result.done;
+  }
+
+  const final = (await getJob({ client, jobUuid: job.uuid })) ?? job;
+
+  if (final.status === 'failed') {
+    if (final.errors.length) {
+      console.error('Validation failed. Nothing was written.\n');
+      console.error(formatFindings(final.errors));
+    } else {
+      console.error(`Publish failed: ${final.error}`);
+      if (final.error?.includes('CLEANUP FAILED')) {
         console.error(
-          `Rolled back version ${result.versionUuid}; the previously live version is ` +
-            `untouched and still serving.`,
+          '\nThe failed version could not be cleaned up automatically — needs review.',
+        );
+      } else {
+        console.error(
+          'The previously published version is untouched and still serving.',
         );
       }
-      process.exit(1);
-      break;
+    }
+    process.exit(1);
   }
+
+  console.log(`Published ${work} as ${final.version}.`);
+  console.log(`Version uuid:  ${final.versionUuid}`);
+  console.log(`Counts: ${JSON.stringify(final.counts)}`);
 };
 
 main().catch((error) => {

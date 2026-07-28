@@ -19,6 +19,10 @@ import { healthQueries } from './schema/health/health.query';
 import { lookupQueries } from './schema/lookup/lookup.query';
 import { passageQueries } from './schema/passage/passage.query';
 import {
+  publishMutations,
+  publishQueries,
+} from './schema/publish/publish.resolver';
+import {
   replaceMutation,
   savePassagesMutation,
 } from './schema/passage/passage.mutation';
@@ -43,6 +47,7 @@ export const resolvers = {
     ...healthQueries,
     ...lookupQueries,
     ...passageQueries,
+    ...publishQueries,
     ...userQueries,
     ...workQueries,
     glossaryInstance: glossaryInstanceResolver,
@@ -52,6 +57,7 @@ export const resolvers = {
   },
 
   Mutation: {
+    ...publishMutations,
     replace: replaceMutation,
     savePassages: savePassagesMutation,
   },

@@ -18,7 +18,7 @@ import {
   verifyMaterialized,
   type MaterializeCounts,
 } from './materialize';
-import { resolveWork } from './read-draft';
+import { resolveWork } from './read-published';
 
 export interface RebuildOptions {
   /** Tohoku number or work uuid. */

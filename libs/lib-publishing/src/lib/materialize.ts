@@ -1,14 +1,20 @@
 /**
- * Materializing `published_*` rows FROM a version artifact.
+ * Materializing `published_*` rows FROM a version artifact — the REPAIR path.
  *
- * Rows are read back out of Storage rather than reused from the in-memory draft, so the
- * artifact is genuinely the source and a publish exercises exactly the same path a
- * rebuild does. Drift between artifact and tables is therefore not possible by
- * construction.
+ * Publishing no longer comes through here: `snapshot_work_version` copies draft rows
+ * inside Postgres, because shipping ~390k rows through a serverless function is not
+ * viable. This module is what makes the artifact canonical for *reconstruction*: given
+ * any version's artifact it rebuilds that version's rows exactly, verifying each chunk
+ * against the manifest checksum on the way in.
  *
- * Nothing here touches the live version. `published_*` are keyed on
- * (version_uuid, <domain uuid>), so a new version's rows sit alongside the current
- * ones; the only thing that makes them live is the pointer flip in publish.ts.
+ * Nothing here touches the live version by itself. `published_*` are keyed on
+ * (version_uuid, <domain uuid>), so rows written for one version sit alongside whatever
+ * is serving; only a pointer flip makes them live.
+ *
+ * Scale note: for a large work this inserts ~390k rows in batches, which is CLI-scale
+ * work rather than something to run inside one Vercel invocation. Rebuild is an
+ * engineer-initiated repair, so it is driven from `node-scripts` rather than the publish
+ * job machinery; ticking it would be a follow-up if it ever needs to run from the UI.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
@@ -19,10 +25,10 @@ import {
 import { readArtifactFile, sectionPaths } from './artifact-storage';
 import type {
   ArtifactManifest,
-  DraftAnnotation,
-  DraftBibliography,
-  DraftGlossaryTerm,
-  DraftPassage,
+  PublishedAnnotation,
+  PublishedBibliography,
+  PublishedGlossaryTerm,
+  PublishedPassage,
 } from './types';
 
 /** Rows per insert. Keeps request bodies well inside PostgREST limits. */
@@ -90,7 +96,7 @@ export const materializeVersion = async ({
 
   // Passages first: annotations carry a foreign key to (version_uuid, passage_uuid).
   for (const path of sectionPaths(manifest, 'passages')) {
-    const chunk = await readArtifactFile<{ passages: DraftPassage[] }>({
+    const chunk = await readArtifactFile<{ passages: PublishedPassage[] }>({
       client,
       root,
       path,
@@ -117,7 +123,7 @@ export const materializeVersion = async ({
   }
 
   for (const path of sectionPaths(manifest, 'annotations')) {
-    const chunk = await readArtifactFile<{ annotations: DraftAnnotation[] }>({
+    const chunk = await readArtifactFile<{ annotations: PublishedAnnotation[] }>({
       client,
       root,
       path,
@@ -142,7 +148,7 @@ export const materializeVersion = async ({
   }
 
   for (const path of sectionPaths(manifest, 'glossary')) {
-    const chunk = await readArtifactFile<{ glossary: DraftGlossaryTerm[] }>({
+    const chunk = await readArtifactFile<{ glossary: PublishedGlossaryTerm[] }>({
       client,
       root,
       path,
@@ -179,7 +185,7 @@ export const materializeVersion = async ({
   }
 
   const bibliography = await readArtifactFile<{
-    bibliographies: DraftBibliography[];
+    bibliographies: PublishedBibliography[];
   }>({ client, root, path: BIBLIOGRAPHY_PATH, manifest });
 
   counts.bibliographies += await insertBatches({

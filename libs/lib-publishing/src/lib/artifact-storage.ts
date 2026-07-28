@@ -2,74 +2,47 @@
  * Reading and writing version artifacts in Supabase Storage.
  *
  * The bucket is private and carries no `storage.objects` policy at all, so only
- * `service_role` can reach these objects — it bypasses RLS. A client built from a user
- * JWT will fail here, by design.
+ * `service_role` can reach these objects — it bypasses RLS. A client built from a user JWT
+ * will fail here, by design.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
 import { MANIFEST_PATH, objectKey } from './artifact-keys';
-import { sha256 } from './build-artifact';
-import {
-  ARTIFACT_BUCKET,
-  type ArtifactFile,
-  type ArtifactManifest,
-} from './types';
+import { sha256 } from './serialize';
+import { ARTIFACT_BUCKET, type ArtifactManifest } from './types';
 
-/** Concurrent uploads. Enough to hide latency without exhausting sockets. */
-const UPLOAD_CONCURRENCY = 6;
-
-const upload = async ({
+/**
+ * Uploads one artifact file.
+ *
+ * `upsert: true` is deliberate. A tick that crashes between uploading a chunk and
+ * checkpointing its cursor will re-upload the same key on retry; refusing to overwrite
+ * would wedge the job on its own partial write. Immutability of published artifacts is
+ * guaranteed by the version uuid being unique to this attempt and by the pointer flip
+ * being the only thing that makes a version live — not by refusing to overwrite keys
+ * belonging to a version that is still in progress.
+ */
+export const uploadArtifactFile = async ({
   client,
   root,
-  file,
+  path,
+  body,
 }: {
   client: DataClient;
   root: string;
-  file: ArtifactFile;
+  path: string;
+  body: string;
 }): Promise<void> => {
-  const key = objectKey({ root, path: file.path });
+  const key = objectKey({ root, path });
 
-  // upsert stays false: artifact keys are immutable, so an existing object at this key
-  // means the version uuid collided or a previous attempt half-wrote it. Either way
-  // that must surface rather than be silently overwritten.
   const { error } = await client.storage
     .from(ARTIFACT_BUCKET)
-    .upload(key, new Blob([file.body], { type: 'application/json' }), {
+    .upload(key, new Blob([body], { type: 'application/json' }), {
       contentType: 'application/json',
-      upsert: false,
+      upsert: true,
     });
 
   if (error) {
     throw new Error(`Failed uploading ${key}: ${error.message}`);
-  }
-};
-
-/**
- * Writes every artifact file, manifest last.
- *
- * Manifest-last matters for reads: the manifest is the artifact's completeness marker,
- * so its presence means every file it lists was already written. A crash mid-write
- * leaves a manifest-less prefix, which `readManifest` treats as absent.
- */
-export const writeArtifact = async ({
-  client,
-  root,
-  files,
-}: {
-  client: DataClient;
-  root: string;
-  files: ArtifactFile[];
-}): Promise<void> => {
-  const payload = files.filter((file) => file.path !== MANIFEST_PATH);
-  const manifest = files.find((file) => file.path === MANIFEST_PATH);
-
-  for (let index = 0; index < payload.length; index += UPLOAD_CONCURRENCY) {
-    const batch = payload.slice(index, index + UPLOAD_CONCURRENCY);
-    await Promise.all(batch.map((file) => upload({ client, root, file })));
-  }
-
-  if (manifest) {
-    await upload({ client, root, file: manifest });
   }
 };
 
@@ -108,9 +81,9 @@ export const readManifest = async ({
 /**
  * Downloads one artifact file and verifies it against the manifest checksum.
  *
- * Verifying on read is what makes the artifact trustworthy as the canonical source: a
- * rebuild that silently materialized a corrupted chunk would defeat the whole point of
- * storing per-file hashes.
+ * Verifying on read is what keeps the artifact trustworthy as the rebuild source: a
+ * rebuild that silently materialized a corrupted chunk would defeat the point of storing
+ * per-file hashes.
  */
 export const readArtifactFile = async <T>({
   client,

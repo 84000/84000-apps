@@ -1,301 +1,949 @@
 /**
- * The publish pipeline.
+ * The publish pipeline, as a resumable phase machine.
  *
- * Order is the safety property. The pointer flip is the ONLY commit point:
+ *   validate  run the SQL rule set; a hard fail ends the job having written nothing
+ *   snapshot  one transaction in Postgres copies draft -> version-scoped published_* rows
+ *   artifact  serialize those frozen rows to Storage, chunk by chunk
+ *   index     write passages/index.json and glossary/index.json
+ *   manifest  write manifest.json, record its hash on work_versions
+ *   flip      update works.published_version_uuid, retire the previous version's rows
  *
- *   0. refresh glossary_term_index      (else an immutable artifact bakes in stale terms)
- *   1. read draft state
- *   2. validate                          (hard-fail leaves Storage and tables untouched)
- *   3. build the artifact
- *   4. write it to Storage under an immutable key
- *   5. insert work_versions              (inert: nothing points at it yet)
- *   6. materialize published_* FROM the artifact, alongside the live version
- *   7. verify the materialized rows against the artifact
- *   8. flip works.published_version_uuid  <- the new version becomes live, atomically
- *   9. delete the previous version's rows
+ * The pointer flip is the ONLY commit point. Everything before it is invisible to
+ * readers: version-scoped keys mean the new version's rows sit alongside whatever is
+ * currently serving, so a publish abandoned at any earlier phase leaves the previous
+ * version live and is cleaned up by deleting its work_versions row.
  *
- * Note that step 5 must precede step 6, contrary to the issue text: every published_*
- * table has a composite foreign key to work_versions(uuid, work_uuid), so the version
- * row has to exist before its snapshot rows can. The safety the issue asked for comes
- * from step 8 being last, not from step 5 being late — a work_versions row nothing
- * points at is invisible to readers.
- *
- * Any failure before step 8 is invisible: the failed version's rows are deleted and the
- * previous version was never touched. A failure between 8 and 9 leaves the old version's
- * rows orphaned but harmless (the pointer is already correct and reads are
- * version-scoped); `gcOrphanedVersions` clears them.
+ * Ticks are bounded by a time budget rather than a row count. The median work (~510 rows)
+ * completes every phase in the first tick, so a caller can await it; the handful of large
+ * works checkpoint and continue on a later tick.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
-import { artifactRoot } from './artifact-keys';
-import { readManifest, writeArtifact } from './artifact-storage';
-import { buildArtifact } from './build-artifact';
 import {
-  deleteVersionRows,
-  materializeVersion,
-  verifyMaterialized,
-} from './materialize';
+  BIBLIOGRAPHY_PATH,
+  GLOSSARY_INDEX_PATH,
+  MANIFEST_PATH,
+  METADATA_PATH,
+  PASSAGE_INDEX_PATH,
+  artifactRoot,
+  chunkPath,
+} from './artifact-keys';
 import {
-  readDraftWork,
+  checkpointJob,
+  claimJob,
+  createJob,
+  finishJob,
+  getJob,
+  releaseJob,
+} from './jobs';
+import { deleteVersionRows } from './materialize';
+import {
+  PAGE_SIZE,
+  readAlignmentPage,
+  readAnnotationPage,
+  readBibliographyPage,
+  readGlossaryPage,
+  readPassageIndexPage,
+  readPassagePage,
   readVersionLabels,
   refreshGlossaryTermIndex,
   resolveWork,
-} from './read-draft';
-import { ARTIFACT_BUCKET, type PublishOptions, type PublishResult } from './types';
-import { validateDraftWork } from './validate';
+  snapshotWorkVersion,
+  validateWork,
+} from './read-published';
+import {
+  ALIGNMENT_CHUNK_ROWS,
+  ANNOTATION_CHUNK_ROWS,
+  GLOSSARY_CHUNK_ROWS,
+  alignmentChunkBody,
+  annotationChunkBody,
+  bibliographyChunkBody,
+  buildPassageIndex,
+  chunkRangeFor,
+  fileEntry,
+  glossaryChunkBody,
+  glossaryIndexBody,
+  metadataBody,
+  passageChunkBody,
+  passageIndexBody,
+  sha256,
+  splitPassagesIntoChunks,
+} from './serialize';
+import { uploadArtifactFile } from './artifact-storage';
+import {
+  ARTIFACT_BUCKET,
+  ARTIFACT_FORMAT_VERSION,
+  type ArtifactCursor,
+  type ArtifactFileEntry,
+  type ArtifactManifest,
+  type ChunkRange,
+  type GlossaryIndexEntry,
+  type PublishJob,
+  type PublishOptions,
+  type SectionCounts,
+  type TickResult,
+} from './types';
 import { nextVersion } from './version-label';
 
-const emptyValidation = { ok: true, errors: [], warnings: [] };
+/**
+ * How long a tick will keep working before checkpointing and returning.
+ *
+ * Well inside a conservative serverless ceiling, leaving room for the current phase step
+ * to finish after the budget is noticed — the check is between steps, not inside one.
+ */
+export const DEFAULT_TICK_BUDGET_MS = 20_000;
 
-export const publishWork = async ({
+const SECTION_ORDER: ArtifactCursor['section'][] = [
+  'passages',
+  'annotations',
+  'glossary',
+  'bibliography',
+  'alignments',
+];
+
+export type StartPublishResult =
+  | { ok: true; result: TickResult }
+  | { ok: false; reason: 'work-not-found' | 'already-running'; job?: PublishJob | null };
+
+/**
+ * Starts a publish and runs the first tick.
+ *
+ * Returns as soon as the budget is spent, so the caller can distinguish "finished" from
+ * "in progress" by `result.done` and poll the job if needed.
+ */
+export const startPublish = async ({
   client,
   options,
+  budgetMs = DEFAULT_TICK_BUDGET_MS,
   now,
   newUuid,
 }: {
   client: DataClient;
   options: PublishOptions;
-  /** Injectable for deterministic tests. */
+  budgetMs?: number;
   now?: () => Date;
   newUuid?: () => string;
-}): Promise<PublishResult> => {
-  const timestamp = (now ?? (() => new Date()))().toISOString();
-  const makeUuid = newUuid ?? (() => crypto.randomUUID());
-
+}): Promise<StartPublishResult> => {
   const work = await resolveWork({ client, work: options.work });
   if (!work) {
-    return {
-      status: 'failed',
-      workUuid: null,
-      versionUuid: null,
-      version: null,
-      artifactRoot: null,
-      manifestHash: null,
-      validation: emptyValidation,
-      error: `No work found for "${options.work}".`,
-    };
+    return { ok: false, reason: 'work-not-found' };
   }
 
-  const previousVersionUuid = work.publishedVersionUuid;
-
-  // Step 0. Must happen before reading, not after: the glossary snapshot is permanent.
-  await refreshGlossaryTermIndex({ client });
-
-  // Step 1.
-  const draft = await readDraftWork({ client, work });
-
-  // Step 2.
-  const validation = validateDraftWork(draft);
-  if (!validation.ok) {
-    return {
-      status: 'validation-failed',
-      workUuid: work.uuid,
-      versionUuid: null,
-      version: null,
-      artifactRoot: null,
-      manifestHash: null,
-      validation,
-    };
-  }
-
-  const existingVersions = await readVersionLabels({
+  const created = await createJob({
     client,
     workUuid: work.uuid,
+    notes: options.notes,
+    requestedBy: options.publishedBy ?? null,
   });
-  const label = nextVersion({
-    existingVersions,
-    publicationVersion: work.publicationVersion,
-    explicit: options.version,
+
+  if (!created.ok) {
+    return { ok: false, reason: 'already-running', job: created.job };
+  }
+
+  const result = await tickJob({
+    client,
+    jobUuid: created.job.uuid,
+    budgetMs,
+    now,
+    newUuid,
+    explicitVersion: options.version,
+    publishedBy: options.publishedBy ?? null,
+    notes: options.notes ?? null,
   });
-  if (!label.ok) {
+
+  return { ok: true, result };
+};
+
+/**
+ * Advances one job as far as the budget allows.
+ *
+ * Claiming is what makes this safe to call from both a self-chained request and the cron
+ * sweep: the loser of the claim gets null and does nothing.
+ */
+export const tickJob = async ({
+  client,
+  jobUuid,
+  budgetMs = DEFAULT_TICK_BUDGET_MS,
+  now,
+  newUuid,
+  explicitVersion,
+  publishedBy,
+  notes,
+}: {
+  client: DataClient;
+  jobUuid: string;
+  budgetMs?: number;
+  now?: () => Date;
+  newUuid?: () => string;
+  explicitVersion?: string;
+  publishedBy?: string | null;
+  notes?: string | null;
+}): Promise<TickResult> => {
+  const clock = now ?? (() => new Date());
+  const makeUuid = newUuid ?? (() => crypto.randomUUID());
+  const startedAt = clock().getTime();
+  const advanced: TickResult['advanced'] = [];
+
+  let job = await claimJob({ client, jobUuid });
+  if (!job) {
+    const existing = await getJob({ client, jobUuid });
+    if (!existing) {
+      throw new Error(`Publish job ${jobUuid} not found.`);
+    }
+    // Another tick holds the lease, or the job already finished. Either way this
+    // invocation has nothing to do and must not touch it.
     return {
-      status: 'failed',
-      workUuid: work.uuid,
-      versionUuid: null,
-      version: null,
-      artifactRoot: null,
-      manifestHash: null,
-      validation,
-      error: label.error,
+      job: existing,
+      done: existing.status === 'succeeded' || existing.status === 'failed',
+      advanced,
     };
   }
 
-  // The version uuid is minted here, before anything is written, so the immutable
-  // object key is known up front and matches work_versions.uuid exactly.
-  const versionUuid = makeUuid();
-  const root = artifactRoot({ workUuid: work.uuid, versionUuid });
-
-  // Step 3.
-  const built = buildArtifact({
-    draft,
-    versionUuid,
-    version: label.version,
-    createdAt: timestamp,
-    warnings: validation.warnings,
-  });
-
-  if (options.dryRun) {
-    return {
-      status: 'dry-run',
-      workUuid: work.uuid,
-      versionUuid,
-      version: label.version,
-      artifactRoot: root,
-      manifestHash: built.manifestHash,
-      validation,
-      counts: built.counts,
-    };
-  }
+  const outOfBudget = () => clock().getTime() - startedAt >= budgetMs;
 
   try {
-    // Step 4.
-    await writeArtifact({ client, root, files: built.files });
+    // The budget is checked AFTER each phase, never before the first. A tick that returns
+    // without advancing anything is a livelock: the caller ticks again, finds the same
+    // state, and nothing ever progresses. Guaranteeing one phase per tick means a budget
+    // too small for a phase costs an overrun, which is recoverable, rather than a job that
+    // can never finish.
+    let steppedOnce = false;
 
-    // Step 5. Inert until step 8.
-    const { error: versionError } = await client.from('work_versions').insert({
-      uuid: versionUuid,
-      work_uuid: work.uuid,
-      version: label.version,
-      published_at: timestamp,
-      published_by: options.publishedBy ?? null,
-      notes: options.notes ?? null,
-      artifact_bucket: ARTIFACT_BUCKET,
-      artifact_root: root,
-      artifact_manifest_hash: built.manifestHash,
-    });
-    if (versionError) {
-      throw new Error(
-        `Failed inserting work_versions row: ${JSON.stringify(versionError)}`,
-      );
-    }
+    while (job.status === 'running' && job.phase !== 'done') {
+      if (steppedOnce && outOfBudget()) {
+        await releaseJob({ client, jobUuid });
+        const latest = await getJob({ client, jobUuid });
+        return { job: latest ?? job, done: false, advanced };
+      }
 
-    // Step 6. Read back from Storage so the artifact really is the source.
-    const manifest = await readManifest({ client, root });
-    await materializeVersion({
-      client,
-      root,
-      manifest,
-      workUuid: work.uuid,
-      versionUuid,
-    });
+      const before = job.phase;
+      job = await runPhase({
+        client,
+        job,
+        clock,
+        makeUuid,
+        explicitVersion,
+        publishedBy,
+        notes,
+        outOfBudget,
+      });
+      steppedOnce = true;
+      if (job.phase !== before) {
+        advanced.push(before);
+      }
 
-    // Step 7.
-    const verified = await verifyMaterialized({ client, manifest, versionUuid });
-    if (!verified.ok) {
-      throw new Error(
-        `Materialized rows do not match the artifact: ${verified.mismatches.join('; ')}`,
-      );
-    }
-
-    // Step 8. The commit point.
-    const { error: pointerError } = await client
-      .from('works')
-      .update({ published_version_uuid: versionUuid })
-      .eq('uuid', work.uuid);
-    if (pointerError) {
-      throw new Error(
-        `Failed flipping published_version_uuid: ${JSON.stringify(pointerError)}`,
-      );
-    }
-
-    // Step 9. Past the commit point, so a failure here is reported but not fatal: the
-    // new version is already live and correct, and the leftovers are collectable.
-    if (previousVersionUuid && previousVersionUuid !== versionUuid) {
-      try {
-        await deleteVersionRows({ client, versionUuid: previousVersionUuid });
-      } catch (error) {
-        console.error(
-          `Published ${label.version} successfully, but failed to retire the previous ` +
-            `version's rows (${previousVersionUuid}). Run verify --gc to clean up.`,
-          error,
-        );
+      // A phase may have ended the job (validation failure, or a successful flip).
+      if (job.status !== 'running') {
+        return { job, done: true, advanced };
       }
     }
 
-    return {
-      status: 'published',
-      workUuid: work.uuid,
-      versionUuid,
-      version: label.version,
-      artifactRoot: root,
-      manifestHash: built.manifestHash,
-      validation,
-      counts: built.counts,
-    };
+    if (job.phase === 'done') {
+      await finishJob({ client, jobUuid, status: 'succeeded' });
+      const finished = await getJob({ client, jobUuid });
+      return { job: finished ?? job, done: true, advanced };
+    }
+
+    return { job, done: false, advanced };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const recoveryError = await rollbackFailedPublish({
-      client,
-      versionUuid,
-      workUuid: work.uuid,
-    });
+    await failPublish({ client, job, message });
+    const failed = await getJob({ client, jobUuid });
+    return { job: failed ?? job, done: true, advanced };
+  } finally {
+    const settled = await getJob({ client, jobUuid });
+    if (settled && settled.status === 'running') {
+      await releaseJob({ client, jobUuid });
+    }
+  }
+};
 
-    return {
-      status: 'failed',
-      workUuid: work.uuid,
-      versionUuid,
-      version: label.version,
-      artifactRoot: root,
-      manifestHash: built.manifestHash,
-      validation,
-      error: message,
-      recoveryError,
-    };
+const runPhase = async ({
+  client,
+  job,
+  clock,
+  makeUuid,
+  explicitVersion,
+  publishedBy,
+  notes,
+  outOfBudget,
+}: {
+  client: DataClient;
+  job: PublishJob;
+  clock: () => Date;
+  makeUuid: () => string;
+  explicitVersion?: string;
+  publishedBy?: string | null;
+  notes?: string | null;
+  outOfBudget: () => boolean;
+}): Promise<PublishJob> => {
+  switch (job.phase) {
+    case 'validate':
+      return await phaseValidate({ client, job });
+    case 'snapshot':
+      return await phaseSnapshot({
+        client,
+        job,
+        clock,
+        makeUuid,
+        explicitVersion,
+        publishedBy,
+        notes,
+      });
+    case 'artifact':
+      return await phaseArtifact({ client, job, outOfBudget });
+    case 'index':
+      return await phaseIndex({ client, job });
+    case 'manifest':
+      return await phaseManifest({ client, job, clock });
+    case 'flip':
+      return await phaseFlip({ client, job });
+    default:
+      return job;
   }
 };
 
 /**
- * Undoes a publish that failed before the pointer flip.
+ * Validation runs before anything is written, so a hard fail costs nothing to undo.
  *
- * The live version needs no restoration — it was never modified — so this only removes
- * the failed version's rows and its work_versions row. The artifact objects are left in
- * place: keys are immutable and version-scoped, so an orphaned artifact is inert, and
- * deleting objects on a failure path risks removing something a retry could have reused.
- *
- * Returns an error message when cleanup itself failed, which is the one case a human
- * must look at.
+ * Warnings are carried onto the job and later into the manifest, as the audit trail of
+ * what was known at publish time.
  */
-const rollbackFailedPublish = async ({
+const phaseValidate = async ({
   client,
-  versionUuid,
-  workUuid,
+  job,
 }: {
   client: DataClient;
+  job: PublishJob;
+}): Promise<PublishJob> => {
+  // Before validating, not after: published_glossaries snapshots the output of a
+  // materialized view refreshed hourly by cron, and the artifact is immutable, so a stale
+  // read would be baked in permanently.
+  await refreshGlossaryTermIndex({ client });
+
+  const validation = await validateWork({ client, workUuid: job.workUuid });
+
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: { warnings: validation.warnings },
+  });
+
+  if (!validation.ok) {
+    await finishJob({
+      client,
+      jobUuid: job.uuid,
+      status: 'failed',
+      error: 'Validation failed. Nothing was written.',
+      errors: validation.errors,
+    });
+    return {
+      ...job,
+      status: 'failed',
+      warnings: validation.warnings,
+      errors: validation.errors,
+      error: 'Validation failed. Nothing was written.',
+    };
+  }
+
+  await checkpointJob({ client, jobUuid: job.uuid, patch: { phase: 'snapshot' } });
+  return { ...job, phase: 'snapshot', warnings: validation.warnings };
+};
+
+const phaseSnapshot = async ({
+  client,
+  job,
+  clock,
+  makeUuid,
+  explicitVersion,
+  publishedBy,
+  notes,
+}: {
+  client: DataClient;
+  job: PublishJob;
+  clock: () => Date;
+  makeUuid: () => string;
+  explicitVersion?: string;
+  publishedBy?: string | null;
+  notes?: string | null;
+}): Promise<PublishJob> => {
+  const work = await resolveWork({ client, work: job.workUuid });
+  if (!work) {
+    throw new Error(`Work ${job.workUuid} disappeared mid-publish.`);
+  }
+
+  const existingVersions = await readVersionLabels({
+    client,
+    workUuid: job.workUuid,
+  });
+  const label = nextVersion({
+    existingVersions,
+    publicationVersion: work.publicationVersion,
+    explicit: explicitVersion,
+  });
+  if (!label.ok) {
+    throw new Error(label.error);
+  }
+
+  // Minted before the snapshot so the immutable object key is known up front and
+  // work_versions.uuid matches it exactly.
+  const versionUuid = makeUuid();
+  const root = artifactRoot({ workUuid: job.workUuid, versionUuid });
+
+  const { counts } = await snapshotWorkVersion({
+    client,
+    workUuid: job.workUuid,
+    versionUuid,
+    version: label.version,
+    artifactBucket: ARTIFACT_BUCKET,
+    artifactRoot: root,
+    publishedBy,
+    notes,
+  });
+
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: {
+      phase: 'artifact',
+      versionUuid,
+      version: label.version,
+      counts: counts as Partial<SectionCounts>,
+      cursor: { section: 'passages', offset: 0, chunk: 1 },
+    },
+  });
+
+  void clock;
+  return {
+    ...job,
+    phase: 'artifact',
+    versionUuid,
+    version: label.version,
+    counts: counts as Partial<SectionCounts>,
+    cursor: { section: 'passages', offset: 0, chunk: 1 },
+  };
+};
+
+/**
+ * Serializes one section at a time, checkpointing after each chunk.
+ *
+ * Only the chunk being written is held in memory, so peak usage is a few hundred KB
+ * regardless of work size. Uploads use upsert because a retry after a crash between
+ * upload and checkpoint would otherwise collide with its own partial write — immutability
+ * is guaranteed by the version uuid being unique to this attempt and by the pointer flip,
+ * not by refusing to overwrite an in-progress version's keys.
+ */
+const phaseArtifact = async ({
+  client,
+  job,
+  outOfBudget,
+}: {
+  client: DataClient;
+  job: PublishJob;
+  outOfBudget: () => boolean;
+}): Promise<PublishJob> => {
+  const versionUuid = job.versionUuid;
+  if (!versionUuid) {
+    throw new Error('Artifact phase reached without a version uuid.');
+  }
+
+  const root = artifactRoot({ workUuid: job.workUuid, versionUuid });
+  let cursor: ArtifactCursor =
+    'section' in job.cursor
+      ? (job.cursor as ArtifactCursor)
+      : { section: 'passages', offset: 0, chunk: 1 };
+
+  let files: ArtifactFileEntry[] = [...job.files];
+  let ranges: ChunkRange[] = [...job.chunks];
+  // Passage chunks are cut by character budget, which does not align with the 1000-row
+  // read page, so a partial chunk carries across page boundaries within this tick.
+  let carried: Awaited<ReturnType<typeof readPassagePage>> = [];
+  // As in tickJob: at least one section step per call, so a budget smaller than one step
+  // costs an overrun rather than a job that never advances.
+  let steppedOnce = false;
+
+  const persist = async (nextCursor: ArtifactCursor) => {
+    cursor = nextCursor;
+    await checkpointJob({
+      client,
+      jobUuid: job.uuid,
+      patch: { cursor, files, chunks: ranges },
+    });
+  };
+
+  while (true) {
+    if (steppedOnce && outOfBudget() && carried.length === 0) {
+      return { ...job, cursor, files, chunks: ranges };
+    }
+
+    if (cursor.section === 'passages') {
+      const page = await readPassagePage({
+        client,
+        versionUuid,
+        offset: cursor.offset,
+        limit: PAGE_SIZE,
+      });
+
+      const { chunks, remainder } = splitPassagesIntoChunks([...carried, ...page]);
+      let chunkNumber = cursor.chunk;
+
+      for (const chunk of chunks) {
+        const path = chunkPath('passages', chunkNumber);
+        const body = passageChunkBody({ versionUuid, passages: chunk });
+        await uploadArtifactFile({ client, root, path, body });
+        files = [...files, fileEntry({ path, body, rowCount: chunk.length })];
+        ranges = [...ranges, chunkRangeFor({ path, passages: chunk })];
+        chunkNumber += 1;
+      }
+
+      const exhausted = page.length < PAGE_SIZE;
+      if (exhausted && remainder.length) {
+        // Final partial chunk: nothing more is coming, so flush it.
+        const path = chunkPath('passages', chunkNumber);
+        const body = passageChunkBody({ versionUuid, passages: remainder });
+        await uploadArtifactFile({ client, root, path, body });
+        files = [...files, fileEntry({ path, body, rowCount: remainder.length })];
+        ranges = [...ranges, chunkRangeFor({ path, passages: remainder })];
+        chunkNumber += 1;
+        carried = [];
+      } else {
+        carried = remainder;
+      }
+
+      if (exhausted) {
+        steppedOnce = true;
+        await persist({ section: 'annotations', offset: 0, chunk: 1 });
+        continue;
+      }
+
+      // Only the rows actually written are counted as consumed; the carried remainder is
+      // re-derived next iteration, so a checkpoint here cannot lose or duplicate rows.
+      const consumed = cursor.offset + page.length - carried.length;
+      await persist({ section: 'passages', offset: consumed, chunk: chunkNumber });
+      steppedOnce = true;
+      // The carried remainder lives only in memory, so it must be dropped when a
+      // checkpoint boundary ends the tick; the next tick re-reads from `consumed`.
+      if (outOfBudget()) {
+        carried = [];
+        return { ...job, cursor, files, chunks: ranges };
+      }
+      continue;
+    }
+
+    const written = await writeRowSection({
+      client,
+      root,
+      versionUuid,
+      workUuid: job.workUuid,
+      cursor,
+    });
+
+    files = [...files, ...written.files];
+    steppedOnce = true;
+
+    if (written.exhausted) {
+      const nextSection = SECTION_ORDER[SECTION_ORDER.indexOf(cursor.section) + 1];
+      if (!nextSection) {
+        await checkpointJob({
+          client,
+          jobUuid: job.uuid,
+          patch: { phase: 'index', files, chunks: ranges, cursor: {} },
+        });
+        return { ...job, phase: 'index', files, chunks: ranges, cursor: {} };
+      }
+      await persist({ section: nextSection, offset: 0, chunk: 1 });
+      continue;
+    }
+
+    await persist({
+      section: cursor.section,
+      offset: written.offset,
+      chunk: written.chunk,
+    });
+  }
+};
+
+/** One page-sized chunk of a row-count-chunked section. */
+const writeRowSection = async ({
+  client,
+  root,
+  versionUuid,
+  workUuid,
+  cursor,
+}: {
+  client: DataClient;
+  root: string;
   versionUuid: string;
   workUuid: string;
-}): Promise<string | undefined> => {
-  try {
-    // Guard against the pointer having been flipped: if it somehow points at this
-    // version, deleting its rows would empty a live work.
-    const { data, error } = await client
-      .from('works')
-      .select('published_version_uuid')
-      .eq('uuid', workUuid)
-      .maybeSingle();
+  cursor: ArtifactCursor;
+}): Promise<{
+  files: ArtifactFileEntry[];
+  exhausted: boolean;
+  offset: number;
+  chunk: number;
+}> => {
+  const files: ArtifactFileEntry[] = [];
 
-    if (error) {
-      return `Could not read the live pointer while rolling back: ${JSON.stringify(error)}`;
+  if (cursor.section === 'annotations') {
+    const rows = await readAnnotationPage({
+      client,
+      versionUuid,
+      offset: cursor.offset,
+      limit: ANNOTATION_CHUNK_ROWS,
+    });
+    if (rows.length) {
+      const path = chunkPath('annotations', cursor.chunk);
+      const body = annotationChunkBody({ versionUuid, annotations: rows });
+      await uploadArtifactFile({ client, root, path, body });
+      files.push(fileEntry({ path, body, rowCount: rows.length }));
     }
-    if (data?.published_version_uuid === versionUuid) {
-      return (
-        `Version ${versionUuid} is live despite the publish failing. Left in place ` +
-        `rather than deleting rows out from under readers — needs manual review.`
+    return {
+      files,
+      exhausted: rows.length < ANNOTATION_CHUNK_ROWS,
+      offset: cursor.offset + rows.length,
+      chunk: cursor.chunk + 1,
+    };
+  }
+
+  if (cursor.section === 'glossary') {
+    const rows = await readGlossaryPage({
+      client,
+      versionUuid,
+      offset: cursor.offset,
+      limit: GLOSSARY_CHUNK_ROWS,
+    });
+    if (rows.length) {
+      const path = chunkPath('glossary', cursor.chunk);
+      const body = glossaryChunkBody({ versionUuid, glossary: rows });
+      await uploadArtifactFile({ client, root, path, body });
+      files.push(fileEntry({ path, body, rowCount: rows.length }));
+    }
+    return {
+      files,
+      exhausted: rows.length < GLOSSARY_CHUNK_ROWS,
+      offset: cursor.offset + rows.length,
+      chunk: cursor.chunk + 1,
+    };
+  }
+
+  if (cursor.section === 'bibliography') {
+    // Bibliographies are small enough to be a single object rather than chunks, matching
+    // the artifact layout the project specified.
+    const rows = await readBibliographyPage({
+      client,
+      versionUuid,
+      offset: 0,
+      limit: PAGE_SIZE,
+    });
+    const body = bibliographyChunkBody({ versionUuid, bibliographies: rows });
+    await uploadArtifactFile({ client, root, path: BIBLIOGRAPHY_PATH, body });
+    files.push(
+      fileEntry({ path: BIBLIOGRAPHY_PATH, body, rowCount: rows.length }),
+    );
+    return { files, exhausted: true, offset: rows.length, chunk: cursor.chunk };
+  }
+
+  // Alignments: archival only, and absent entirely when the source view is unpopulated.
+  const rows = await readAlignmentPage({
+    client,
+    workUuid,
+    offset: cursor.offset,
+    limit: ALIGNMENT_CHUNK_ROWS,
+  });
+  if (rows.length) {
+    const path = chunkPath('alignments', cursor.chunk);
+    const body = alignmentChunkBody({ versionUuid, alignments: rows });
+    await uploadArtifactFile({ client, root, path, body });
+    files.push(fileEntry({ path, body, rowCount: rows.length }));
+  }
+  return {
+    files,
+    exhausted: rows.length < ALIGNMENT_CHUNK_ROWS,
+    offset: cursor.offset + rows.length,
+    chunk: cursor.chunk + 1,
+  };
+};
+
+/**
+ * Writes the indexes.
+ *
+ * Separate from the artifact phase because a passage's `chunkRef` is only known once its
+ * chunk has been written. Index inputs exclude passage text (a dedicated RPC computes
+ * character counts server-side), so even toh8's ~16k entries stay small enough to build
+ * in one pass.
+ */
+const phaseIndex = async ({
+  client,
+  job,
+}: {
+  client: DataClient;
+  job: PublishJob;
+}): Promise<PublishJob> => {
+  const versionUuid = job.versionUuid;
+  if (!versionUuid) {
+    throw new Error('Index phase reached without a version uuid.');
+  }
+
+  const root = artifactRoot({ workUuid: job.workUuid, versionUuid });
+
+  const rows: Awaited<ReturnType<typeof readPassageIndexPage>> = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await readPassageIndexPage({
+      client,
+      versionUuid,
+      offset,
+      limit: PAGE_SIZE,
+    });
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  const entries = buildPassageIndex({ rows, ranges: job.chunks });
+  const indexBody = passageIndexBody({ versionUuid, entries });
+  await uploadArtifactFile({
+    client,
+    root,
+    path: PASSAGE_INDEX_PATH,
+    body: indexBody,
+  });
+
+  // Glossary index: term -> chunk, derived from the chunk row counts already recorded in
+  // `files` so it needs no second read of the terms themselves.
+  const glossaryFiles = job.files
+    .filter((file) => file.path.startsWith('glossary/chunk-'))
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  const glossaryEntries: GlossaryIndexEntry[] = [];
+  let glossaryOffset = 0;
+  for (const file of glossaryFiles) {
+    const terms = await readGlossaryPage({
+      client,
+      versionUuid,
+      offset: glossaryOffset,
+      limit: file.rowCount,
+    });
+    for (const term of terms) {
+      glossaryEntries.push({
+        glossaryUuid: term.glossary_uuid,
+        termNumber: term.term_number,
+        chunkRef: file.path,
+      });
+    }
+    glossaryOffset += file.rowCount;
+  }
+
+  const glossaryBody = glossaryIndexBody({
+    versionUuid,
+    entries: glossaryEntries,
+  });
+  await uploadArtifactFile({
+    client,
+    root,
+    path: GLOSSARY_INDEX_PATH,
+    body: glossaryBody,
+  });
+
+  const files = [
+    ...job.files,
+    fileEntry({
+      path: PASSAGE_INDEX_PATH,
+      body: indexBody,
+      rowCount: entries.length,
+    }),
+    fileEntry({
+      path: GLOSSARY_INDEX_PATH,
+      body: glossaryBody,
+      rowCount: glossaryEntries.length,
+    }),
+  ];
+
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: { phase: 'manifest', files },
+  });
+  return { ...job, phase: 'manifest', files };
+};
+
+/**
+ * Writes metadata and the manifest, and records the manifest hash.
+ *
+ * The manifest is written last of all objects because it is the artifact's completeness
+ * marker: its presence means every file it lists is already in Storage, so a reader that
+ * finds no manifest knows it is looking at an abandoned attempt.
+ */
+const phaseManifest = async ({
+  client,
+  job,
+  clock,
+}: {
+  client: DataClient;
+  job: PublishJob;
+  clock: () => Date;
+}): Promise<PublishJob> => {
+  const versionUuid = job.versionUuid;
+  const version = job.version;
+  if (!versionUuid || !version) {
+    throw new Error('Manifest phase reached without a version.');
+  }
+
+  const work = await resolveWork({ client, work: job.workUuid });
+  const root = artifactRoot({ workUuid: job.workUuid, versionUuid });
+  const createdAt = clock().toISOString();
+
+  const metaBody = metadataBody({
+    versionUuid,
+    version,
+    workUuid: job.workUuid,
+    toh: work?.toh ?? null,
+    title: work?.title ?? null,
+    createdAt,
+  });
+  await uploadArtifactFile({ client, root, path: METADATA_PATH, body: metaBody });
+
+  const files = [
+    ...job.files,
+    fileEntry({ path: METADATA_PATH, body: metaBody, rowCount: 1 }),
+  ].sort((a, b) => a.path.localeCompare(b.path));
+
+  const counts = {
+    passages: job.counts.passages ?? 0,
+    annotations: job.counts.annotations ?? 0,
+    glossary: job.counts.glossary ?? 0,
+    bibliography: job.counts.bibliography ?? 0,
+    alignments: job.counts.alignments ?? 0,
+    metadata: 1,
+  } satisfies SectionCounts;
+
+  const manifest: ArtifactManifest = {
+    formatVersion: ARTIFACT_FORMAT_VERSION,
+    workUuid: job.workUuid,
+    toh: work?.toh ?? null,
+    versionUuid,
+    version,
+    createdAt,
+    files,
+    counts,
+    warnings: job.warnings,
+  };
+
+  const manifestBody = JSON.stringify(manifest, null, 2);
+  await uploadArtifactFile({
+    client,
+    root,
+    path: MANIFEST_PATH,
+    body: manifestBody,
+  });
+
+  const { error } = await client
+    .from('work_versions')
+    .update({ artifact_manifest_hash: sha256(manifestBody) })
+    .eq('uuid', versionUuid);
+  if (error) {
+    throw new Error(`Failed recording manifest hash: ${JSON.stringify(error)}`);
+  }
+
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: { phase: 'flip', files },
+  });
+  return { ...job, phase: 'flip', files };
+};
+
+/**
+ * Makes the version live, then retires the previous one.
+ *
+ * The flip is a single update, so there is no window in which a reader sees a partial
+ * work. Retiring the old rows happens after and is deliberately non-fatal: the new version
+ * is already correct and serving, and leftovers are collectable by `verify --gc`.
+ */
+const phaseFlip = async ({
+  client,
+  job,
+}: {
+  client: DataClient;
+  job: PublishJob;
+}): Promise<PublishJob> => {
+  const versionUuid = job.versionUuid;
+  if (!versionUuid) {
+    throw new Error('Flip phase reached without a version uuid.');
+  }
+
+  const work = await resolveWork({ client, work: job.workUuid });
+  const previousVersionUuid = work?.publishedVersionUuid ?? null;
+
+  const { error } = await client
+    .from('works')
+    .update({ published_version_uuid: versionUuid })
+    .eq('uuid', job.workUuid);
+  if (error) {
+    throw new Error(`Failed flipping published_version_uuid: ${JSON.stringify(error)}`);
+  }
+
+  if (previousVersionUuid && previousVersionUuid !== versionUuid) {
+    try {
+      await deleteVersionRows({ client, versionUuid: previousVersionUuid });
+    } catch (retireError) {
+      console.error(
+        `Published ${job.version} successfully, but failed to retire the previous ` +
+          `version's rows (${previousVersionUuid}). Run verify --gc to clean up.`,
+        retireError,
       );
     }
-
-    await deleteVersionRows({ client, versionUuid });
-
-    // Deleting the work_versions row also cascades any rows missed above.
-    const { error: versionError } = await client
-      .from('work_versions')
-      .delete()
-      .eq('uuid', versionUuid);
-    if (versionError) {
-      return `Failed deleting work_versions row ${versionUuid}: ${JSON.stringify(versionError)}`;
-    }
-
-    return undefined;
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
   }
+
+  await checkpointJob({ client, jobUuid: job.uuid, patch: { phase: 'done' } });
+  return { ...job, phase: 'done' };
+};
+
+/**
+ * Cleans up a publish that failed before the pointer flip.
+ *
+ * The live version needs no restoration — it was never modified — so this only removes the
+ * failed version, whose work_versions row cascades to its snapshot rows. Artifact objects
+ * are left in place: keys are version-scoped, so an orphaned artifact is inert, and
+ * deleting objects on a failure path risks removing something a retry could reuse.
+ */
+const failPublish = async ({
+  client,
+  job,
+  message,
+}: {
+  client: DataClient;
+  job: PublishJob;
+  message: string;
+}): Promise<void> => {
+  let recoveryError: string | undefined;
+
+  if (job.versionUuid) {
+    try {
+      const work = await resolveWork({ client, work: job.workUuid });
+      if (work?.publishedVersionUuid === job.versionUuid) {
+        // The flip succeeded but a later step threw. The version is live and correct;
+        // deleting its rows would empty a served work.
+        recoveryError =
+          `Version ${job.versionUuid} is already live despite the failure, so its rows ` +
+          `were left in place. Needs manual review.`;
+      } else {
+        const { error } = await client
+          .from('work_versions')
+          .delete()
+          .eq('uuid', job.versionUuid);
+        if (error) {
+          recoveryError = `Failed deleting work_versions row ${job.versionUuid}: ${JSON.stringify(error)}`;
+        }
+      }
+    } catch (cleanupError) {
+      recoveryError =
+        cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+    }
+  }
+
+  await finishJob({
+    client,
+    jobUuid: job.uuid,
+    status: 'failed',
+    error: recoveryError ? `${message} | CLEANUP FAILED: ${recoveryError}` : message,
+  });
 };

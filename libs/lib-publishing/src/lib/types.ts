@@ -1,9 +1,14 @@
 /**
  * Types for the work-level publishing pipeline.
  *
- * The version artifact is canonical: `published_*` rows are materialized from it,
- * never directly from draft tables, so the artifact shape below is the contract
- * between publishing (DEV-714) and the reader (DEV-558).
+ * Publishing runs inside a Vercel function, so it is a resumable state machine rather
+ * than one long call: each tick advances a phase within a time budget and checkpoints to
+ * a `publish_jobs` row. The median work (~510 rows) finishes in the first tick; the
+ * handful of large works continue across ticks.
+ *
+ * Row copying and validation happen in Postgres (`snapshot_work_version`,
+ * `validate_work_for_publish`) because shipping ~390k rows through a function is what
+ * made the previous design impossible to run serverless.
  */
 
 /** Storage bucket holding immutable version artifacts. */
@@ -20,13 +25,57 @@ export type ArtifactSection =
   | 'alignments'
   | 'metadata';
 
+export type SectionCounts = Record<ArtifactSection, number>;
+
 /**
- * One passage's entry in `passages/index.json`.
- *
- * `charCount` is what lets the reader reproduce its current pagination (a passage
- * count plus a character budget) from the index alone, and `chunkRef` tells it which
- * chunk objects a page spans so it fetches only those.
+ * Phases, in order. The pointer flip in `flip` is the only commit point: everything
+ * before it is invisible to readers, so a publish abandoned at any earlier phase leaves
+ * the previously published version live and serving.
  */
+export const PUBLISH_PHASES = [
+  'validate',
+  'snapshot',
+  'artifact',
+  'index',
+  'manifest',
+  'flip',
+  'done',
+] as const;
+
+export type PublishPhase = (typeof PUBLISH_PHASES)[number];
+
+export type PublishJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
+
+/** Which artifact section the `artifact` phase is serializing, and how far it got. */
+export interface ArtifactCursor {
+  section: 'passages' | 'annotations' | 'glossary' | 'bibliography' | 'alignments';
+  /** Rows already written for this section. */
+  offset: number;
+  /** Next chunk number for this section (1-based). */
+  chunk: number;
+}
+
+/**
+ * Sort range covered by one passage chunk.
+ *
+ * The passage index must name the chunk holding each passage. Recording ranges as chunks
+ * are written means the index phase can assign `chunkRef` by range lookup instead of
+ * re-reading chunk bodies.
+ */
+export interface ChunkRange {
+  path: string;
+  firstSort: number;
+  lastSort: number;
+  rowCount: number;
+}
+
+export interface ArtifactFileEntry {
+  path: string;
+  sha256: string;
+  byteLength: number;
+  rowCount: number;
+}
+
 export interface PassageIndexEntry {
   sequence: number;
   uuid: string;
@@ -42,13 +91,6 @@ export interface GlossaryIndexEntry {
   chunkRef: string;
 }
 
-export interface ArtifactFileEntry {
-  path: string;
-  sha256: string;
-  byteLength: number;
-  rowCount: number;
-}
-
 export interface ArtifactManifest {
   formatVersion: number;
   workUuid: string;
@@ -58,17 +100,9 @@ export interface ArtifactManifest {
   createdAt: string;
   /** Per-file checksums. The manifest's own sha256 is stored on work_versions. */
   files: ArtifactFileEntry[];
-  counts: Record<ArtifactSection, number>;
+  counts: SectionCounts;
   /** Non-blocking validation findings, recorded for the audit trail. */
   warnings: ValidationFinding[];
-}
-
-/** A file to be written to Storage under the artifact root. */
-export interface ArtifactFile {
-  /** Path relative to the artifact root, e.g. `passages/chunk-0001.json`. */
-  path: string;
-  body: string;
-  rowCount: number;
 }
 
 export type ValidationSeverity = 'error' | 'warning';
@@ -78,7 +112,7 @@ export interface ValidationFinding {
   /** Stable machine-readable rule id, e.g. `glossary-instance-unresolved`. */
   rule: string;
   message: string;
-  /** Offending entity uuids, capped when a rule fires in bulk. */
+  /** Offending entity uuids, capped at 20 by the SQL rule set. */
   subjects?: string[];
   /** Total occurrences, which may exceed `subjects.length`. */
   count?: number;
@@ -90,23 +124,34 @@ export interface ValidationResult {
   warnings: ValidationFinding[];
 }
 
-/** Draft state for one work, read once and reused for validation and building. */
-export interface DraftWork {
+/** The `publish_jobs` row, as the pipeline sees it. */
+export interface PublishJob {
+  uuid: string;
   workUuid: string;
-  toh: string | null;
-  title: string | null;
-  publicationVersion: string | null;
-  publishedVersionUuid: string | null;
-  passages: DraftPassage[];
-  annotations: DraftAnnotation[];
-  glossary: DraftGlossaryTerm[];
-  bibliographies: DraftBibliography[];
-  alignments: DraftAlignment[];
-  /** Findings raised while reading, merged into the validation warnings. */
-  readWarnings?: ValidationFinding[];
+  versionUuid: string | null;
+  version: string | null;
+  status: PublishJobStatus;
+  phase: PublishPhase;
+  cursor: ArtifactCursor | Record<string, never>;
+  chunks: ChunkRange[];
+  files: ArtifactFileEntry[];
+  counts: Partial<SectionCounts>;
+  warnings: ValidationFinding[];
+  errors: ValidationFinding[];
+  error: string | null;
+  attempts: number;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
 }
 
-export interface DraftPassage {
+/**
+ * Rows read back out of the version-scoped published_* tables to serialize.
+ *
+ * These mirror the published table shapes, which is also what the artifact carries, so
+ * `rebuild` can insert them straight back.
+ */
+export interface PublishedPassage {
   uuid: string;
   work_uuid: string;
   content: string | null;
@@ -117,14 +162,10 @@ export interface DraftPassage {
   toh: string | null;
 }
 
-/**
- * Note there is no `work_uuid`: the draft `passage_annotations` table does not carry one
- * (it reaches the work through `passage_uuid`). DEV-557 denormalized `work_uuid` onto
- * `published_passage_annotations`, so the pipeline supplies it at materialize time.
- */
-export interface DraftAnnotation {
+export interface PublishedAnnotation {
   uuid: string;
   passage_uuid: string;
+  work_uuid: string;
   type: string;
   start: number;
   end: number;
@@ -132,7 +173,7 @@ export interface DraftAnnotation {
   toh: string | null;
 }
 
-export interface DraftGlossaryTerm {
+export interface PublishedGlossaryTerm {
   glossary_uuid: string;
   authority_uuid: string;
   work_uuid: string;
@@ -153,7 +194,7 @@ export interface DraftGlossaryTerm {
   search_text: string | null;
 }
 
-export interface DraftBibliography {
+export interface PublishedBibliography {
   uuid: string;
   work_uuid: string;
   bibl_html: string | null;
@@ -164,12 +205,12 @@ export interface DraftBibliography {
   toh: string | null;
 }
 
-export interface DraftAlignment {
+export interface AlignmentRow {
   passage_uuid: string;
   folio_uuid: string;
   toh: string | null;
   tibetan: string | null;
-  folio_number: string | null;
+  folio_number: number | null;
   volume_number: number | null;
 }
 
@@ -180,27 +221,12 @@ export interface PublishOptions {
   version?: string;
   notes?: string;
   publishedBy?: string | null;
-  /** Validate and build, but write nothing. */
-  dryRun?: boolean;
 }
 
-export type PublishStatus =
-  | 'published'
-  | 'validation-failed'
-  | 'dry-run'
-  | 'failed';
-
-export interface PublishResult {
-  status: PublishStatus;
-  workUuid: string | null;
-  versionUuid: string | null;
-  version: string | null;
-  artifactRoot: string | null;
-  manifestHash: string | null;
-  validation: ValidationResult;
-  counts?: Record<ArtifactSection, number>;
-  /** Set when status is `failed`. */
-  error?: string;
-  /** Set when a failed publish could not be cleaned up — needs a human. */
-  recoveryError?: string;
+export interface TickResult {
+  job: PublishJob;
+  /** False when the job needs another tick. */
+  done: boolean;
+  /** Phases advanced during this tick, for logging. */
+  advanced: PublishPhase[];
 }

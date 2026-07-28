@@ -6,23 +6,23 @@
  *
  * Run:
  *   # re-materialize the live version from its artifact
- *   npx ts-node apps/node-scripts/src/rebuild-published-version.ts toh251
+ *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-version.ts toh251
  *
  *   # roll back to an older version (rebuild it AND re-point the work at it)
- *   npx ts-node apps/node-scripts/src/rebuild-published-version.ts toh251 \
+ *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-version.ts toh251 \
  *     --version-uuid <uuid> --repoint
  *
  *   # report versions holding rows while not live
- *   npx ts-node apps/node-scripts/src/rebuild-published-version.ts --verify
- *   npx ts-node apps/node-scripts/src/rebuild-published-version.ts --verify --gc
+ *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-version.ts --verify
+ *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-version.ts --verify --gc
  */
 
 import {
+  createServiceRoleClient,
   rebuildPublishedVersion,
   resolveWork,
   verifyPublished,
 } from '@eightyfourthousand/lib-publishing/ssr';
-import { loadConfig } from './config';
 
 const flag = (args: string[], name: string): string | undefined => {
   const index = args.indexOf(`--${name}`);
@@ -38,7 +38,7 @@ const runVerify = async ({
   args: string[];
   work?: string;
 }) => {
-  const { supabase } = loadConfig();
+  const supabase = createServiceRoleClient();
   const gc = args.includes('--gc');
 
   let workUuid: string | undefined;
@@ -98,7 +98,7 @@ const main = async () => {
     process.exit(2);
   }
 
-  const { supabase } = loadConfig();
+  const supabase = createServiceRoleClient();
 
   const result = await rebuildPublishedVersion({
     client: supabase,
