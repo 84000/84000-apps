@@ -1,0 +1,29 @@
+{
+  "name": "lib-publishing",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/lib-publishing/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/lib-publishing",
+        "main": "libs/lib-publishing/src/index.ts",
+        "tsConfig": "libs/lib-publishing/tsconfig.lib.json",
+        "rootDir": "libs/lib-publishing/src",
+        "generateExportsField": false,
+        "additionalEntryPoints": ["libs/lib-publishing/src/ssr.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/lib-publishing/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  }
+}
