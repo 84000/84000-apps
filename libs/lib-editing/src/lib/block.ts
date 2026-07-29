@@ -173,10 +173,14 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     unknown: BlockPriority.Unknown,
   };
 
+// Returns the array member of `TranslationEditorContent` rather than the union.
+// It always builds an array, and declaring the union meant `push` and `map`
+// resolved through `JSONContent`'s index signature as `any`, which hid the
+// element type from callers. An array is still assignable to the union.
 export const blocksFromTranslationBody = (
   passages: Passage[],
-): TranslationEditorContent => {
-  const blocks: TranslationEditorContent = [];
+): TranslationEditorContentItem[] => {
+  const blocks: TranslationEditorContentItem[] = [];
   passages.forEach((passage) => {
     // Only drop passages with malformed (missing) content; an empty string is
     // a legitimate empty passage and must still render so it can be edited or

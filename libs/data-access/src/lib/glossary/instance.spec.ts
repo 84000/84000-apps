@@ -4,6 +4,18 @@ import { DataClient } from '../types';
 type QueryResult = { data: unknown; error: unknown };
 
 /**
+ * The chainable methods return the builder itself, so the type has to be
+ * declared rather than inferred — TypeScript cannot infer a type that refers to
+ * itself in its own initializer.
+ */
+type MockQueryBuilder = {
+  select: () => MockQueryBuilder;
+  eq: (column: string, value: unknown) => MockQueryBuilder;
+  limit: () => MockQueryBuilder;
+  maybeSingle: () => Promise<QueryResult>;
+};
+
+/**
  * Builds a chainable Supabase-like query builder where `.from('table')`
  * resolves (via `maybeSingle()`) to the result registered for that table.
  * `eq` calls are recorded so tests can assert which column/value was queried.
@@ -15,7 +27,7 @@ const createMockClient = (resultsByTable: Record<string, QueryResult>) => {
   const client = {
     from: jest.fn((table: string) => {
       fromCalls.push(table);
-      const builder = {
+      const builder: MockQueryBuilder = {
         select: jest.fn(() => builder),
         eq: jest.fn((column: string, value: unknown) => {
           eqCalls.push({ table, column, value });
@@ -90,7 +102,7 @@ describe('getGlossaryInstance', () => {
 
     const client = {
       from: jest.fn((table: string) => {
-        const builder = {
+        const builder: MockQueryBuilder = {
           select: jest.fn(() => builder),
           eq: jest.fn(() => builder),
           limit: jest.fn(() => builder),

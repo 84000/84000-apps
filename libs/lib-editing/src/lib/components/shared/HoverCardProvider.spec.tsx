@@ -27,6 +27,8 @@ jest.mock('../editor/extensions/Mention/MentionHoverContent', () => ({
   MentionHoverContent: () => <div>Mention hover card</div>,
 }));
 
+const MENTION_UUID_ATTR = { uuid: 'mention-id' } as Record<string, string>;
+
 describe('HoverCardProvider', () => {
   afterEach(() => {
     jest.useRealTimers();
@@ -37,7 +39,11 @@ describe('HoverCardProvider', () => {
     const { container } = render(
       <HoverCardProvider openDelay={0} closeDelay={0}>
         <span className="mention-container" draggable>
-          <a href="/mention" type="mention" uuid="mention-id">
+          {/* The editor renders mention anchors with a bare `uuid` attribute,
+              which HoverCardProvider reads back with getAttribute. React
+              forwards unknown lowercase attributes to the DOM; only the JSX
+              types object, hence the spread. */}
+          <a href="/mention" type="mention" {...MENTION_UUID_ATTR}>
             Mention
           </a>
         </span>

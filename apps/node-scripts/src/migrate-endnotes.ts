@@ -120,7 +120,8 @@ const main = async () => {
         start,
         end,
         toh,
-        passage_xmlId,
+        // Optional upstream, but the column is nullable rather than optional.
+        passage_xmlId: passage_xmlId ?? null,
         content: [
           {
             endnote_xmlId: xmlId,
