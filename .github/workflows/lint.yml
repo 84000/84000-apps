@@ -1,0 +1,53 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Superseded runs on the same PR are not worth finishing.
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Run Lint
+    runs-on: ubuntu-latest
+
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # `nx affected` diffs against the base branch, so it needs real history.
+          fetch-depth: 0
+
+      # `fetch-depth: 0` already brings the base branch down, but naming it here
+      # keeps the diff working if that ever gets trimmed to speed the job up.
+      - name: Fetch base branch
+        run: git fetch --no-tags origin ${{ github.base_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # No `paths:` filter, for the same reason as test.yml: those are
+      # workflow-level and cannot scope to a project. Nx works it out from the
+      # project graph instead.
+      - name: List affected projects
+        run: npx nx show projects --affected --base=$NX_BASE --with-target lint
+
+      # `--max-warnings=0` is deliberately not set. Every project is at zero
+      # errors, but ~79 pre-existing warnings remain across the workspace
+      # (mostly no-explicit-any, no-unused-vars, exhaustive-deps). Failing on
+      # warnings today would block every PR.
+      - name: Lint affected projects
+        run: npx nx affected -t lint --base=$NX_BASE
