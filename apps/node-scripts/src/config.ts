@@ -21,6 +21,19 @@ export const loadConfig = () => {
   const SUPABASE_URL = process.env['SUPABASE_URL'];
   const SUPABASE_SERVICE_KEY = process.env['SUPABASE_SERVICE_KEY'];
 
+  // Fail with something readable rather than handing undefined to createClient,
+  // which otherwise surfaces much later as an opaque request error.
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    const missing = [
+      !SUPABASE_URL && 'SUPABASE_URL',
+      !SUPABASE_SERVICE_KEY && 'SUPABASE_SERVICE_KEY',
+    ].filter(Boolean);
+    throw new Error(
+      `Missing required environment variable(s): ${missing.join(', ')}. ` +
+        'Set them in apps/node-scripts/.env or the environment.',
+    );
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   return {
     supabase,

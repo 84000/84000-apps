@@ -41,7 +41,12 @@ const schema = new Schema({
 });
 
 const getPlugin = (): Plugin => {
-  const plugins = EnsureUniqueUuids.config.addProseMirrorPlugins?.call({});
+  // `addProseMirrorPlugins` does not touch `this`, so an empty stub is enough;
+  // it just has to be typed as the context TipTap would otherwise bind.
+  const context = {} as ThisParameterType<
+    NonNullable<typeof EnsureUniqueUuids.config.addProseMirrorPlugins>
+  >;
+  const plugins = EnsureUniqueUuids.config.addProseMirrorPlugins?.call(context);
   if (!plugins?.length) {
     throw new Error('EnsureUniqueUuids did not register a plugin');
   }

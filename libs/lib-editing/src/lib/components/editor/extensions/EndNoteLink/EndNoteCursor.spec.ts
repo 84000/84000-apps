@@ -72,13 +72,17 @@ const press = (
   cursorPlugin: Plugin,
   key: 'ArrowLeft' | 'ArrowRight' | 'Backspace' | 'Delete',
 ) =>
-  cursorPlugin.props.handleKeyDown?.(
+  // ProseMirror invokes prop handlers with the plugin as `this`, so call them
+  // the same way rather than as plain methods on `props`.
+  cursorPlugin.props.handleKeyDown?.call(
+    cursorPlugin,
     view,
     new KeyboardEvent('keydown', { key }),
   ) || false;
 
 const typeText = (view: EditorView, cursorPlugin: Plugin, text: string) =>
-  cursorPlugin.props.handleTextInput?.(
+  cursorPlugin.props.handleTextInput?.call(
+    cursorPlugin,
     view,
     view.state.selection.from,
     view.state.selection.to,

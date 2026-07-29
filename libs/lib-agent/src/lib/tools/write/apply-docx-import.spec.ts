@@ -58,6 +58,7 @@ describe('apply-docx-import tool', () => {
       counts: {
         workUpdates: 1,
         titles: 1,
+        titlesUpdated: 0,
         folioUpdates: 0,
         passages: 1,
         annotations: 0,

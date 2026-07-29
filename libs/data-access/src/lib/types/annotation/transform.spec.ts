@@ -1,5 +1,5 @@
 import { annotationsFromDTO } from './transform';
-import type { AnnotationDTO } from './dto';
+import type { AnnotationDTO } from './annotation-type';
 
 const spanDTO = (start: number, end: number): AnnotationDTO => ({
   uuid: 'span-1',

@@ -5,6 +5,9 @@
     "declaration": true,
     "module": "ESNext",
     "esModuleInterop": true,
+    // These scripts import lib-utils, whose barrel pulls in .tsx modules.
+    // Without a jsx setting tsc refuses to resolve them.
+    "jsx": "react-jsx",
     "types": ["node"]
   },
   "ts-node": {

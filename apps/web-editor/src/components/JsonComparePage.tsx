@@ -306,7 +306,7 @@ export const JsonComparePage = () => {
           />
         </div>
       </div>
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
+      <ResizablePanelGroup orientation="horizontal" className="flex-1">
         <ResizablePanel defaultSize={50} minSize={20}>
           <div className="flex flex-col h-full bg-white">
             <div ref={containerRef} className="flex-1 overflow-hidden" />

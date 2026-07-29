@@ -4,62 +4,14 @@
   "sourceRoot": "apps/node-scripts/src",
   "projectType": "application",
   "tags": [],
-  "// typecheck": "node-scripts is a collection of standalone one-off migration scripts (its build entry main.ts is already absent). It is excluded from typecheck rather than maintained against strict app-level type rules.",
+  "// targets": "node-scripts is a collection of standalone one-off scripts, run directly with ts-node. It has no single entry point, so it has no build or serve target — those previously pointed at an absent main.ts and could never succeed. typecheck is a real tsc --noEmit and is the type-safety net for these files.",
   "targets": {
     "typecheck": {
-      "executor": "nx:run-commands",
+      "command": "tsc --noEmit -p tsconfig.app.json",
       "options": {
-        "command": "echo 'node-scripts: typecheck skipped (standalone scripts project)'"
-      }
-    },
-    "build": {
-      "executor": "@nx/esbuild:esbuild",
-      "outputs": ["{options.outputPath}"],
-      "defaultConfiguration": "production",
-      "options": {
-        "platform": "node",
-        "outputPath": "dist/apps/node-scripts",
-        "format": ["cjs"],
-        "bundle": false,
-        "main": "apps/node-scripts/src/main.ts",
-        "tsConfig": "apps/node-scripts/tsconfig.app.json",
-        "assets": ["apps/node-scripts/src/assets"],
-        "generatePackageJson": true,
-        "esbuildOptions": {
-          "sourcemap": true,
-          "outExtension": {
-            ".js": ".js"
-          }
-        }
+        "cwd": "apps/node-scripts"
       },
-      "configurations": {
-        "development": {},
-        "production": {
-          "esbuildOptions": {
-            "sourcemap": false,
-            "outExtension": {
-              ".js": ".js"
-            }
-          }
-        }
-      }
-    },
-    "serve": {
-      "executor": "@nx/js:node",
-      "defaultConfiguration": "development",
-      "dependsOn": ["build"],
-      "options": {
-        "buildTarget": "node-scripts:build",
-        "runBuildTargetDependencies": false
-      },
-      "configurations": {
-        "development": {
-          "buildTarget": "node-scripts:build:development"
-        },
-        "production": {
-          "buildTarget": "node-scripts:build:production"
-        }
-      }
+      "cache": true
     }
   }
 }
