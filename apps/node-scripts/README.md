@@ -20,10 +20,12 @@ Create a `.env` file with:
 
 ```env
 SUPABASE_URL=<your-supabase-url>
-SUPABASE_SERVICE_KEY=<your-service-key>
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 ```
 
-`SUPABASE_SERVICE_KEY` must be the **service role** key. Publishing writes to a private
+The publishing scripts also accept `SUPABASE_SERVICE_KEY` as a fallback, which is the name
+the older `migrate-*` scripts use, so an existing `.env` keeps working. Either way it must
+be the **service role** key. Publishing writes to a private
 Storage bucket that has no `storage.objects` policy at all, so only `service_role` can
 reach it — an anon or user-scoped key cannot publish.
 
@@ -44,25 +46,36 @@ The older `migrate-*.ts` scripts use only relative imports and still run under
 
 ### publish-work.ts
 
-Publishes a work: validates draft state, writes an immutable chunked artifact to Storage,
-materializes `published_*` rows **from that artifact**, then flips
-`works.published_version_uuid`. The pointer flip is the only commit point, so any earlier
-failure leaves the previously published version live and serving.
+Publishes a work: validates draft state, snapshots it into version-scoped `published_*`
+rows inside Postgres, serializes an immutable chunked artifact from those frozen rows, then
+flips `works.published_version_uuid`. The pointer flip is the only commit point, so any
+earlier failure leaves the previously published version live and serving.
 
 ```bash
 # publish, auto-selecting the next patch version
 npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251
 
-# validate and build without writing anything
-npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251 --dry-run
+# validate only, writing nothing
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251 --check
 
 # pin the version label, and record why
 npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251 \
   --version 1.1.0 --notes "Revised chapter 3"
 ```
 
+`--check` runs the same SQL rule set the pipeline gates on, so it is a trustworthy
+pre-flight rather than an approximation.
+
 Exits non-zero on validation failure, printing every offending entity. Validation has no
 override: unresolved reader-critical references must be fixed in the data, not bypassed.
+
+### Recovery, and why there is no scheduler
+
+Publishing has no cron job. Most works finish inside the request; a large one continues in
+the background of the same invocation. If that is cut short, the job is left resumable and
+**publishing the work again adopts the abandoned job** and continues from its checkpoint —
+so recovery is just retrying, whether from this CLI or the editor. Nothing needs to run on a
+timer to babysit it.
 
 ### rebuild-published-version.ts
 

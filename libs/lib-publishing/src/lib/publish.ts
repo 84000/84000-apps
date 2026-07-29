@@ -31,10 +31,10 @@ import {
 import {
   checkpointJob,
   claimJob,
-  createJob,
   finishJob,
   getJob,
   releaseJob,
+  startJob,
 } from './jobs';
 import { deleteVersionRows } from './materialize';
 import {
@@ -102,14 +102,19 @@ const SECTION_ORDER: ArtifactCursor['section'][] = [
 ];
 
 export type StartPublishResult =
-  | { ok: true; result: TickResult }
-  | { ok: false; reason: 'work-not-found' | 'already-running'; job?: PublishJob | null };
+  | { ok: true; result: TickResult; adopted: boolean }
+  | { ok: false; reason: 'work-not-found' }
+  | { ok: false; reason: 'already-running'; job: PublishJob };
 
 /**
  * Starts a publish and runs the first tick.
  *
  * Returns as soon as the budget is spent, so the caller can distinguish "finished" from
  * "in progress" by `result.done` and poll the job if needed.
+ *
+ * `adopted` means this call took over a job abandoned mid-flight and resumed it from its
+ * checkpoint rather than starting fresh — worth surfacing, because the version label and
+ * artifact root will be the abandoned attempt's, not new ones.
  */
 export const startPublish = async ({
   client,
@@ -129,20 +134,20 @@ export const startPublish = async ({
     return { ok: false, reason: 'work-not-found' };
   }
 
-  const created = await createJob({
+  const started = await startJob({
     client,
     workUuid: work.uuid,
     notes: options.notes,
     requestedBy: options.publishedBy ?? null,
   });
 
-  if (!created.ok) {
-    return { ok: false, reason: 'already-running', job: created.job };
+  if (started.outcome === 'busy') {
+    return { ok: false, reason: 'already-running', job: started.job };
   }
 
   const result = await tickJob({
     client,
-    jobUuid: created.job.uuid,
+    jobUuid: started.job.uuid,
     budgetMs,
     now,
     newUuid,
@@ -151,14 +156,15 @@ export const startPublish = async ({
     notes: options.notes ?? null,
   });
 
-  return { ok: true, result };
+  return { ok: true, result, adopted: started.outcome === 'adopted' };
 };
 
 /**
  * Advances one job as far as the budget allows.
  *
- * Claiming is what makes this safe to call from both a self-chained request and the cron
- * sweep: the loser of the claim gets null and does nothing.
+ * Claiming is what makes this safe to call from several places at once — an after()
+ * continuation, a manual advancePublishJob, a CLI run: the loser of the claim gets null and
+ * does nothing.
  */
 export const tickJob = async ({
   client,

@@ -119,13 +119,22 @@ extend type Mutation {
   pointer. The pointer flip is the only commit point, so a failure at any earlier stage
   leaves the previously published version live and serving.
 
-  Requires editor.admin. Returns as soon as the tick budget is spent — check `done`.
+  Requires editor.admin. Returns as soon as the tick budget is spent — check `done`. Most
+  works finish before returning; a large one keeps going after the response is sent, so
+  poll `publishJob` until `done`.
+
+  There is no background scheduler. If that continuation is cut short (function timeout,
+  deploy), the job stays resumable and calling this again for the same work adopts it from
+  its checkpoint rather than being refused. Calling it while a publish is genuinely in
+  flight returns that job instead of erroring, so a double-clicked button is harmless.
   """
   publishWork(work: String!, version: String, notes: String): PublishJob!
 
   """
   Advance an in-progress publish job by one tick. Idempotent and safe to call
   concurrently: ticks take a short lease, and a caller that loses the claim does nothing.
+
+  Useful for nudging a job along explicitly; routine continuation is automatic.
   Requires editor.admin.
   """
   advancePublishJob(uuid: ID!): PublishJob!

@@ -3,8 +3,8 @@
  *
  * Thin wrapper over the same pipeline the `publishWork` GraphQL mutation calls, so there
  * is one implementation and the CLI cannot drift from what the editor UI does. Useful for
- * bulk work (DEV-559's initial publish) and for driving a large work to completion without
- * waiting on the cron sweep.
+ * bulk work (DEV-559's initial publish) and for driving a large work to completion in one
+ * go, with no function time limit to respect.
  *
  * Run:
  *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251
@@ -89,8 +89,8 @@ const main = async () => {
     console.warn(`\n${formatFindings(job.warnings)}\n`);
   }
 
-  // Unlike the UI, the CLI has no timeout to respect, so it drives the job to completion
-  // rather than leaving the remainder to the cron sweep.
+  // Unlike a serverless invocation, the CLI has no time limit, so it drives the job all the
+  // way to completion rather than relying on an after() continuation.
   //
   // The stall guard is not paranoia: a tick that cannot claim the job (someone else holds
   // the lease) legitimately returns `done: false` having done nothing, and without this the

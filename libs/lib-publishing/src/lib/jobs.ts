@@ -1,9 +1,9 @@
 /**
  * publish_jobs row access.
  *
- * A job is the unit of resumability. Ticks claim it with a short lease so a self-chained
- * request and the cron sweep cannot advance the same job at once, then checkpoint after
- * each phase.
+ * A job is the unit of resumability. Ticks claim it with a short lease so two callers
+ * cannot advance the same job at once — a continuation running via after(), a manual
+ * advancePublishJob, and a CLI run can all coexist — then checkpoint after each phase.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
@@ -21,7 +21,8 @@ import type {
 /**
  * How long a tick holds its claim. Comfortably longer than a tick's own time budget so a
  * slow invocation does not have its job stolen mid-write, but short enough that a job
- * killed by a timeout becomes available to the next cron sweep rather than wedging.
+ * killed by a timeout looks abandoned soon after, so the next publish attempt adopts it
+ * rather than being blocked by it.
  */
 export const LEASE_MS = 120_000;
 
@@ -69,18 +70,29 @@ export const jobFromRow = (row: PublishJobRow): PublishJob => ({
   finishedAt: row.finished_at,
 });
 
-export type CreateJobResult =
-  | { ok: true; job: PublishJob }
-  | { ok: false; reason: 'already-running'; job: PublishJob | null };
+export type StartJobOutcome = 'created' | 'adopted' | 'busy';
+
+export interface StartJobResult {
+  outcome: StartJobOutcome;
+  job: PublishJob;
+}
 
 /**
- * Creates a job, or reports the one already running for this work.
+ * Starts a publish job, or adopts one abandoned mid-flight.
  *
- * A unique partial index enforces one live job per work, so a concurrent second publish
- * request loses the insert rather than racing. That is surfaced as `already-running`
- * instead of an error, since it is a normal outcome of a double-clicked publish button.
+ * A unique partial index allows one live job per work. Without adoption that index turns a
+ * job abandoned by a function timeout into a permanent block on republishing that work —
+ * which is the only reason a scheduled sweep looked necessary. Instead, a second attempt
+ * takes over a job whose tick lease has expired beyond a grace period, resuming from its
+ * checkpoint. Recovery is therefore "publish again", the action a person already takes when
+ * something looks hung.
+ *
+ * `busy` is a normal outcome, not an error: a double-clicked publish button lands there.
+ *
+ * The decision is made inside SQL under `for update` so two simultaneous requests cannot
+ * both adopt.
  */
-export const createJob = async ({
+export const startJob = async ({
   client,
   workUuid,
   notes,
@@ -90,35 +102,22 @@ export const createJob = async ({
   workUuid: string;
   notes?: string;
   requestedBy?: string | null;
-}): Promise<CreateJobResult> => {
-  const { data, error } = await client
-    .from('publish_jobs')
-    .insert({
-      work_uuid: workUuid,
-      notes: notes ?? null,
-      requested_by: requestedBy ?? null,
-      status: 'running',
-      phase: 'validate',
-    })
-    .select(JOB_COLUMNS)
-    .maybeSingle();
+}): Promise<StartJobResult> => {
+  const { data, error } = await client.rpc('start_publish_job', {
+    p_work_uuid: workUuid,
+    p_notes: notes ?? null,
+    p_requested_by: requestedBy ?? null,
+  });
 
   if (error) {
-    // 23505 is unique_violation: the partial index already has a live job for this work.
-    if ((error as { code?: string }).code === '23505') {
-      return {
-        ok: false,
-        reason: 'already-running',
-        job: await activeJobForWork({ client, workUuid }),
-      };
-    }
-    throw new Error(`Failed creating publish job: ${JSON.stringify(error)}`);
-  }
-  if (!data) {
-    throw new Error('Failed creating publish job: no row returned.');
+    throw new Error(`Failed starting publish job: ${JSON.stringify(error)}`);
   }
 
-  return { ok: true, job: jobFromRow(data as unknown as PublishJobRow) };
+  const result = data as { outcome: StartJobOutcome; job: PublishJobRow };
+  return {
+    outcome: result.outcome,
+    job: jobFromRow(result.job as unknown as PublishJobRow),
+  };
 };
 
 export const activeJobForWork = async ({
@@ -283,7 +282,11 @@ export const releaseJob = async ({
 };
 
 /**
- * Jobs the cron sweep should advance: unfinished and not currently leased.
+ * Unfinished, unleased jobs — i.e. abandoned ones.
+ *
+ * Nothing sweeps these automatically: recovery happens when someone publishes that work
+ * again, which adopts the abandoned job. This exists for operational visibility (a CLI or
+ * an editor view listing what is stuck) rather than for a scheduler.
  *
  * Ordered oldest first so a stalled job cannot be starved by newer ones.
  */
