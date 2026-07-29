@@ -1,6 +1,8 @@
-import { TranslationsTable } from '@eightyfourthousand/lib-editing';
-import { H2 } from '@eightyfourthousand/design-system';
-import { createBuildGraphQLClient, getTranslationsMetadata } from '@eightyfourthousand/client-graphql/ssr';
+import { EditorLandingTabs } from '@eightyfourthousand/lib-editing';
+import {
+  createBuildGraphQLClient,
+  getTranslationsMetadata,
+} from '@eightyfourthousand/client-graphql/ssr';
 import React, { Suspense } from 'react';
 
 export const revalidate = 60;
@@ -12,9 +14,8 @@ const page = async () => {
   return (
     <div className="flex flex-row justify-center pt-0 pb-8 px-4 w-full bg-surface">
       <div className="w-full max-w-feed">
-        <H2 className="text-primary">{'Translation Editor'}</H2>
         <Suspense>
-          <TranslationsTable works={works} />
+          <EditorLandingTabs works={works} />
         </Suspense>
       </div>
     </div>

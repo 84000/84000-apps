@@ -18,7 +18,9 @@ export type TabName =
   | 'endnotes'
   | 'bibliography'
   | 'glossary'
-  | 'abbreviations';
+  | 'abbreviations'
+  /** Publish validation findings. Editor-only; readers never see this tab. */
+  | 'checks';
 
 /**
  * Display state for the translation tab body:
