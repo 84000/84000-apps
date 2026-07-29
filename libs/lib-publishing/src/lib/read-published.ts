@@ -19,6 +19,7 @@ import type {
   ValidationFinding,
   ValidationResult,
 } from './types';
+import { isUuid } from '@eightyfourthousand/lib-utils';
 
 export const PAGE_SIZE = 1000;
 
@@ -38,13 +39,12 @@ export const resolveWork = async ({
   client: DataClient;
   work: string;
 }): Promise<WorkIdentity | null> => {
-  const isUuid =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(work);
+  const workIsUuid = isUuid(work);
 
   const { data, error } = await client
     .from('works')
     .select('uuid, toh, title, publicationVersion, published_version_uuid')
-    .eq(isUuid ? 'uuid' : 'toh', work)
+    .eq(workIsUuid ? 'uuid' : 'toh', work)
     .maybeSingle();
 
   if (error) {
@@ -67,7 +67,7 @@ export const resolveWork = async ({
  *
  * The rules live in SQL (`validate_work_for_publish`) because they are anti-joins: one
  * round trip instead of reading the entire draft into the function. The same function
- * backs DEV-718's per-work publishable status, so there is exactly one implementation and
+ * backs per-work publishable status, so there is exactly one implementation and
  * the view cannot disagree with the gate.
  */
 export const validateWork = async ({
@@ -131,7 +131,9 @@ export const readVersionLabels = async ({
       .range(from, from + PAGE_SIZE - 1);
 
     if (error) {
-      throw new Error(`Failed reading version labels: ${JSON.stringify(error)}`);
+      throw new Error(
+        `Failed reading version labels: ${JSON.stringify(error)}`,
+      );
     }
     const batch = (data ?? []) as { version: string }[];
     labels.push(...batch.map((row) => row.version));
@@ -262,7 +264,11 @@ export const readAnnotationPage = ({
     table: 'published_passage_annotations',
     columns: 'uuid, passage_uuid, work_uuid, type, start, end, content, toh',
     versionUuid,
-    order: [{ column: 'passage_uuid' }, { column: 'start' }, { column: 'uuid' }],
+    order: [
+      { column: 'passage_uuid' },
+      { column: 'start' },
+      { column: 'uuid' },
+    ],
     offset,
     limit,
   });
@@ -334,7 +340,9 @@ export const readAlignmentPage = async ({
 }): Promise<AlignmentRow[]> => {
   const { data, error } = await client
     .from('passage_alignments')
-    .select('passage_uuid, folio_uuid, toh, tibetan, folio_number, volume_number')
+    .select(
+      'passage_uuid, folio_uuid, toh, tibetan, folio_number, volume_number',
+    )
     .eq('work_uuid', workUuid)
     .order('passage_uuid', { ascending: true })
     .order('folio_uuid', { ascending: true })
@@ -362,7 +370,12 @@ export const readPassageIndexPage = async ({
   offset: number;
   limit: number;
 }): Promise<
-  { uuid: string; sort: number | null; type: string | null; charCount: number }[]
+  {
+    uuid: string;
+    sort: number | null;
+    type: string | null;
+    charCount: number;
+  }[]
 > => {
   // Via an RPC rather than a table select so char_length is computed server-side and the
   // index pass never transfers passage text: for toh8 that is 16MB avoided.
@@ -371,7 +384,9 @@ export const readPassageIndexPage = async ({
     .range(offset, offset + limit - 1);
 
   if (error) {
-    throw new Error(`Failed reading passage index page: ${JSON.stringify(error)}`);
+    throw new Error(
+      `Failed reading passage index page: ${JSON.stringify(error)}`,
+    );
   }
 
   return (

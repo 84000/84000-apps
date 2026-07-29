@@ -1,10 +1,8 @@
 /**
  * Materializing `published_*` rows FROM a version artifact — the REPAIR path.
  *
- * Publishing no longer comes through here: `snapshot_work_version` copies draft rows
- * inside Postgres, because shipping ~390k rows through a serverless function is not
- * viable. This module is what makes the artifact canonical for *reconstruction*: given
- * any version's artifact it rebuilds that version's rows exactly, verifying each chunk
+ * This module makes the artifact canonical for reconstruction: given any version's
+ * artifact it rebuilds that version's rows exactly, verifying each chunk
  * against the manifest checksum on the way in.
  *
  * Nothing here touches the live version by itself. `published_*` are keyed on
@@ -18,10 +16,7 @@
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
-import {
-  BIBLIOGRAPHY_PATH,
-  PASSAGE_INDEX_PATH,
-} from './artifact-keys';
+import { BIBLIOGRAPHY_PATH, PASSAGE_INDEX_PATH } from './artifact-keys';
 import { readArtifactFile, sectionPaths } from './artifact-storage';
 import type {
   ArtifactManifest,
@@ -123,7 +118,9 @@ export const materializeVersion = async ({
   }
 
   for (const path of sectionPaths(manifest, 'annotations')) {
-    const chunk = await readArtifactFile<{ annotations: PublishedAnnotation[] }>({
+    const chunk = await readArtifactFile<{
+      annotations: PublishedAnnotation[];
+    }>({
       client,
       root,
       path,
@@ -148,12 +145,14 @@ export const materializeVersion = async ({
   }
 
   for (const path of sectionPaths(manifest, 'glossary')) {
-    const chunk = await readArtifactFile<{ glossary: PublishedGlossaryTerm[] }>({
-      client,
-      root,
-      path,
-      manifest,
-    });
+    const chunk = await readArtifactFile<{ glossary: PublishedGlossaryTerm[] }>(
+      {
+        client,
+        root,
+        path,
+        manifest,
+      },
+    );
 
     // search_tsv is generated; search_text / *_sort are plain snapshotted columns
     // because the view builds them with STABLE functions.

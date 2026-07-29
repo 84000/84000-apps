@@ -2,7 +2,7 @@
  * Rendering validation findings.
  *
  * The rules themselves live in SQL; this is only presentation, and is client-safe so
- * DEV-718's editor view can share it with the CLI.
+ * the editor can share it with the CLI.
  */
 
 import type { ValidationFinding } from './types';
