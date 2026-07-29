@@ -37,35 +37,43 @@ export const setCookie = (name: string, value: string, days = 365) => {
 
 export const useRestrictionWarning = ({ imprint }: { imprint?: Imprint }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [shouldIgnore, setShouldIgnore] = useState(true);
-  const [toIgnore, setToIgnore] = useState<string[]>([]);
+  // `null` means the cookie has not been read yet. Distinguishing that from an
+  // empty list matters: until we know, we must not decide that a restricted
+  // imprint has not been dismissed, or the dialog flashes open for a reader
+  // who already dismissed it.
+  const [toIgnore, setToIgnore] = useState<string[] | null>(null);
 
+  // Cookies are only readable on the client, so this has to happen after
+  // hydration rather than during render.
   useEffect(() => {
     const toIgnoreStr = getCookie(RESTRICTION_COOKIE_NAME) || '[]';
-    const toIgnore = JSON.parse(toIgnoreStr) || [];
-    setToIgnore(toIgnore);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- client-only cookie read, unavailable during SSR
+    setToIgnore(JSON.parse(toIgnoreStr) || []);
   }, []);
 
-  useEffect(() => {
-    if (!imprint?.uuid) {
-      return;
-    }
+  const shouldIgnore =
+    toIgnore === null || !imprint?.uuid
+      ? true
+      : toIgnore.includes(imprint.uuid);
 
-    setShouldIgnore(toIgnore.includes(imprint.uuid));
-  }, [toIgnore, imprint]);
-
-  useEffect(() => {
-    if (!shouldIgnore && imprint?.restriction) {
+  // Open once, when we know the imprint is restricted and not dismissed.
+  // `prevShouldWarn` starts false so a first render that already warrants the
+  // dialog still opens it.
+  const shouldWarn = !shouldIgnore && !!imprint?.restriction;
+  const [prevShouldWarn, setPrevShouldWarn] = useState(false);
+  if (shouldWarn !== prevShouldWarn) {
+    setPrevShouldWarn(shouldWarn);
+    if (shouldWarn) {
       setIsOpen(true);
     }
-  }, [shouldIgnore, imprint]);
+  }
 
   const ignore = () => {
     if (!imprint?.uuid) {
       return;
     }
 
-    const newToIgnore = [...toIgnore, imprint.uuid];
+    const newToIgnore = [...(toIgnore ?? []), imprint.uuid];
     setToIgnore(newToIgnore);
     setCookie(RESTRICTION_COOKIE_NAME, JSON.stringify(newToIgnore));
   };

@@ -31,7 +31,6 @@ export const HoverInputField = ({
       <Button
         size="icon"
         variant="ghost"
-        disabled={!!inputRef.current}
         onClick={() => onSubmit(inputRef.current?.value)}
       >
         <CheckIcon />

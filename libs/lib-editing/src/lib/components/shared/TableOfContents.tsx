@@ -14,7 +14,7 @@ import {
   Separator,
 } from '@eightyfourthousand/design-system';
 import { cn, parseToh } from '@eightyfourthousand/lib-utils';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useNavigation } from './NavigationProvider';
 import {
   PanelName,
@@ -126,16 +126,10 @@ export const TableOfContents = ({
     hasTranslationContent,
     setHasTranslationContent,
   } = useNavigation();
-  const [localToh, setLocalToh] = useState<TohokuCatalogEntry>(
-    work.toh[0] || '',
-  );
+  // Purely derived from navigation state; nothing else assigns it.
+  const localToh: TohokuCatalogEntry = toh || work.toh[0] || '';
 
   const title = imprint?.mainTitles?.en || work.title;
-
-  useEffect(() => {
-    const currentToh = toh || work.toh[0] || '';
-    setLocalToh(currentToh);
-  }, [toh, work.toh, setToh]);
 
   const baseStyle = 'w-full py-2 leading-6 text-sm font-light text-foreground';
   const inferredHasTranslationContent = useMemo(() => {

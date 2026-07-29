@@ -126,13 +126,22 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     [workUuid],
   );
 
+  // Clearing an emptied query happens during render. Non-empty queries keep
+  // showing the previous results until the debounced search returns, as before.
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  if (searchQuery !== prevSearchQuery) {
+    setPrevSearchQuery(searchQuery);
+    if (!searchQuery.trim()) {
+      setResults([]);
+    }
+  }
+
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
     if (!searchQuery.trim()) {
-      setResults([]);
       return;
     }
 

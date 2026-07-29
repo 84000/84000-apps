@@ -78,7 +78,12 @@ export const SourceReader = () => {
   }, []);
 
   // Reset when the work changes; the initialization effect will repopulate.
-  useEffect(() => {
+  // The state half runs during render, which is where React wants it; the ref
+  // half has to stay in an effect, since refs cannot be written during render.
+  const workKey = `${toh}|${uuid}`;
+  const [prevWorkKey, setPrevWorkKey] = useState(workKey);
+  if (workKey !== prevWorkKey) {
+    setPrevWorkKey(workKey);
     setFolios([]);
     setLoadedStart(0);
     setHasMoreBefore(false);
@@ -86,6 +91,9 @@ export const SourceReader = () => {
     setLoadingBefore(false);
     setLoadingAfter(false);
     setInitialized(false);
+  }
+
+  useEffect(() => {
     processedHashRef.current = undefined;
     scrollParentRef.current = null;
   }, [toh, uuid]);
