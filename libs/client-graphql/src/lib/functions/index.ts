@@ -40,3 +40,19 @@ export { getWorkFoliosAround } from './get-work-folios-around';
 export { hasPermission, type Permission } from './has-permission';
 export { replace, type ReplaceType, type ReplacedPassage } from './replace';
 export { savePassages } from './save-passages';
+export {
+  getPublishReadiness,
+  isReadinessUndetermined,
+  type PublishFinding,
+  type PublishReadiness,
+} from './get-publish-readiness';
+export {
+  getPublishStatuses,
+  publishStatusKind,
+  type PublishStatusKind,
+  type WorkPublishStatus,
+} from './get-publish-statuses';
+export {
+  getFindingLocations,
+  type FindingLocation,
+} from './get-finding-locations';

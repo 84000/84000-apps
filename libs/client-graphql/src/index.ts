@@ -38,10 +38,20 @@ export {
   hasPermission,
   replace,
   savePassages,
+  getPublishReadiness,
+  getPublishStatuses,
+  isReadinessUndetermined,
+  publishStatusKind,
+  getFindingLocations,
   type TranslationBlocksPage,
   type Permission,
   type ReplaceType,
   type ReplacedPassage,
+  type PublishFinding,
+  type PublishReadiness,
+  type PublishStatusKind,
+  type WorkPublishStatus,
+  type FindingLocation,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience
