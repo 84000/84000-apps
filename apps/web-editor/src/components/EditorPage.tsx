@@ -1,7 +1,6 @@
 'use client';
 
-import { H3 } from '@eightyfourthousand/design-system';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import {
   BlockEditor,
   blocksFromTranslationBody,
@@ -19,14 +18,12 @@ export const EditorPage = ({
   slug?: Slug;
   format?: Format;
 }) => {
-  const [content, setContent] = useState<TranslationEditorContent>();
-  const [editorType, setEditorType] = useState<EditorType>('block');
-
-  useEffect(() => {
+  const { content, editorType } = useMemo((): {
+    content: TranslationEditorContent;
+    editorType: EditorType;
+  } => {
     if (!slug || !format) {
-      setContent(EMPTY_DOCUMENT);
-      setEditorType('block');
-      return;
+      return { content: EMPTY_DOCUMENT, editorType: 'block' };
     }
 
     const { type, content } = SLUG_PATHS[slug]?.[format] || {
@@ -34,24 +31,14 @@ export const EditorPage = ({
       type: 'block',
     };
 
-    let parsedContent = content;
     if (format === 'passages') {
       const dtos = content as PassageDTO[];
       const passages = passagesFromDTO(dtos);
-      parsedContent = blocksFromTranslationBody(passages);
+      return { content: blocksFromTranslationBody(passages), editorType: type };
     }
 
-    setContent(parsedContent);
-    setEditorType(type);
+    return { content, editorType: type };
   }, [slug, format]);
-
-  if (!content) {
-    return (
-      <div className="w-full overflow-auto px-8 max-w-readable mx-auto">
-        <H3 className="text-muted-foreground px-12 py-2">Loading...</H3>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full overflow-auto px-8 max-w-readable mx-auto">

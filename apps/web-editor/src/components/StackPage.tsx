@@ -122,10 +122,19 @@ export const StackPage = ({
   const [seeds, setSeeds] = useState<StackPassageSeed[] | null>(null);
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Clear the previous stack as soon as the inputs change, rather than in the
+  // fetch effect below. Adjusting state during render is React's recommended
+  // alternative, and on mount there is nothing to clear.
+  const loadKey = `${toh}|${repeat}`;
+  const [prevLoadKey, setPrevLoadKey] = useState(loadKey);
+  if (loadKey !== prevLoadKey) {
+    setPrevLoadKey(loadKey);
     setSeeds(null);
     setFailed(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
 
     loadPassages(toh).then((passages) => {
       if (cancelled) return;
