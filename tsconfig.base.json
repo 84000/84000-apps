@@ -60,6 +60,12 @@
       "@eightyfourthousand/lib-instr/static": [
         "./libs/lib-instr/src/static.ts"
       ],
+      "@eightyfourthousand/lib-publishing": [
+        "./libs/lib-publishing/src/index.ts"
+      ],
+      "@eightyfourthousand/lib-publishing/ssr": [
+        "./libs/lib-publishing/src/ssr.ts"
+      ],
       "@eightyfourthousand/lib-search": [
         "./libs/lib-search/src/index.ts"
       ],

@@ -4,8 +4,13 @@ on:
   pull_request:
     branches:
       - main
+    # Workflow-level path filters apply to the whole workflow, not per job, so both
+    # libraries' tests run whenever either one changes. That is deliberate: the suites are
+    # seconds, and the alternative (per-job filtering) needs a third-party action or a
+    # changed-files job for no real benefit.
     paths:
       - 'libs/lib-editing/**'
+      - 'libs/lib-publishing/**'
 
 jobs:
   test:
@@ -27,5 +32,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lib-editing tests
-        run: npx nx test lib-editing --passWithNoTests
+      # Both suites are pure unit tests and need no Supabase credentials — lib-publishing's
+      # cover chunk splitting, index mapping, version labels, and checksums, all of which
+      # take rows as input rather than reading a database.
+      - name: Run tests
+        run: npx nx run-many -t test -p lib-editing,lib-publishing --passWithNoTests

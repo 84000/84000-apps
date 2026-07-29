@@ -1,0 +1,141 @@
+"""
+A publish attempt.
+
+Publishing is a resumable job rather than a single call: it has to fit inside serverless
+invocations, and the largest work snapshots ~390k rows. Most works finish during the
+`publishWork` mutation itself, so `done` is already true when it returns. Large works
+return `done: false` and are advanced by later ticks; poll `publishJob` for progress.
+"""
+type PublishJob {
+  uuid: ID!
+  workUuid: ID!
+
+  """
+  The version this attempt created. Null until the snapshot phase runs.
+  """
+  versionUuid: ID
+
+  """
+  SemVer label, patch-bumped from the work's history unless one was given.
+  """
+  version: String
+
+  status: PublishJobStatus!
+  phase: PublishPhase!
+
+  """
+  Whether the job has reached a terminal state. False means another tick is needed.
+  """
+  done: Boolean!
+
+  """
+  Rows captured per artifact section. Populated from the snapshot phase onward.
+  """
+  counts: JSON
+
+  """
+  Non-blocking findings, also recorded in the artifact manifest as the audit trail.
+  """
+  warnings: [ValidationFinding!]!
+
+  """
+  Blocking findings. Non-empty only when the job failed validation, in which case
+  nothing was written: no artifact, no rows, and the previous version is still live.
+  """
+  errors: [ValidationFinding!]!
+
+  """
+  Failure message, including any cleanup problem that needs human attention.
+  """
+  error: String
+
+  createdAt: String!
+  updatedAt: String!
+  finishedAt: String
+}
+
+enum PublishJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum PublishPhase {
+  VALIDATE
+  SNAPSHOT
+  ARTIFACT
+  INDEX
+  MANIFEST
+  FLIP
+  DONE
+}
+
+"""
+One validation finding. Rules live in SQL so this and the publish gate cannot disagree.
+"""
+type ValidationFinding {
+  """
+  Stable machine-readable rule id, e.g. `glossary-instance-unresolved`.
+  """
+  rule: String!
+  severity: String!
+  message: String!
+
+  """
+  Offending entity uuids, capped at 20. Use `count` for the true total.
+  """
+  subjects: [ID!]!
+  count: Int!
+}
+
+"""
+Whether a work can currently be published, without publishing it.
+
+Runs the same SQL rule set the pipeline uses, so it is a trustworthy pre-check.
+"""
+type PublishReadiness {
+  ok: Boolean!
+  errors: [ValidationFinding!]!
+  warnings: [ValidationFinding!]!
+}
+
+extend type Query {
+  """
+  A publish job by uuid, for polling progress. Requires editor.admin.
+  """
+  publishJob(uuid: ID!): PublishJob
+
+  """
+  Validate a work against the publish rules without publishing it.
+  Requires editor.admin.
+  """
+  publishReadiness(work: String!): PublishReadiness
+}
+
+extend type Mutation {
+  """
+  Publish a work: validate, snapshot, write the immutable artifact, then flip the live
+  pointer. The pointer flip is the only commit point, so a failure at any earlier stage
+  leaves the previously published version live and serving.
+
+  Requires editor.admin. Returns as soon as the tick budget is spent — check `done`. Most
+  works finish before returning; a large one keeps going after the response is sent, so
+  poll `publishJob` until `done`.
+
+  There is no background scheduler. If that continuation is cut short (function timeout,
+  deploy), the job stays resumable and calling this again for the same work adopts it from
+  its checkpoint rather than being refused. Calling it while a publish is genuinely in
+  flight returns that job instead of erroring, so a double-clicked button is harmless.
+  """
+  publishWork(work: String!, version: String, notes: String): PublishJob!
+
+  """
+  Advance an in-progress publish job by one tick. Idempotent and safe to call
+  concurrently: ticks take a short lease, and a caller that loses the claim does nothing.
+
+  Useful for nudging a job along explicitly; routine continuation is automatic.
+  Requires editor.admin.
+  """
+  advancePublishJob(uuid: ID!): PublishJob!
+}
