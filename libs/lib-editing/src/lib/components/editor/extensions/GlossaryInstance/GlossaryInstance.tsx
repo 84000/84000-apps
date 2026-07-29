@@ -34,11 +34,18 @@ export const GlossaryInstance = ({
   const markText = anchor.textContent ?? '';
   const { fetchGlossaryTerm } = useNavigation();
 
+  // Drop the previously fetched term as soon as the mark points elsewhere,
+  // rather than inside the fetch effect below.
+  const [prevGlossary, setPrevGlossary] = useState(glossary);
+  if (glossary !== prevGlossary) {
+    setPrevGlossary(glossary);
+    setEnglish(null);
+    setTermNumber(null);
+  }
+
   useEffect(() => {
     let cancelled = false;
     if (!glossary) {
-      setEnglish(null);
-      setTermNumber(null);
       return;
     }
     fetchGlossaryTerm(glossary).then((term) => {

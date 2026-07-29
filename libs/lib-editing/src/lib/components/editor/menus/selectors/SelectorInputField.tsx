@@ -44,7 +44,6 @@ export const SelectorInputField = ({
       <Button
         size="icon"
         variant="ghost"
-        disabled={!!inputRef.current}
         onClick={() => onSubmit(inputRef.current?.value)}
       >
         <CheckIcon className="size-4" />

@@ -384,7 +384,12 @@ export const NavigationProvider = ({
 
     const { panels: newPanels, toh: newToh } = parsePanelParams(query);
 
+    // Router state is the external system here, and `isPanelTransitioning`
+    // above guards against the feedback loop where our own panel writes push a
+    // new query which then reads back. Both the guard and the ordering depend
+    // on this staying an effect.
     if (newPanels) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from router state behind a transition guard
       setPanels(newPanels);
     }
 
@@ -400,7 +405,13 @@ export const NavigationProvider = ({
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
 
-  useEffect(() => {
+  // Close the right panel when there is no translation to show. `prev` starts
+  // true so a first render that already lacks translation content still closes
+  // it, matching the effect this replaced.
+  const [prevHasTranslationContent, setPrevHasTranslationContent] =
+    useState(true);
+  if (hasTranslationContent !== prevHasTranslationContent) {
+    setPrevHasTranslationContent(hasTranslationContent);
     if (!hasTranslationContent) {
       setPanels((prev) => {
         if (!prev.right.open) {
@@ -412,7 +423,7 @@ export const NavigationProvider = ({
         };
       });
     }
-  }, [hasTranslationContent]);
+  }
 
   const contextValue = useMemo(
     () => ({

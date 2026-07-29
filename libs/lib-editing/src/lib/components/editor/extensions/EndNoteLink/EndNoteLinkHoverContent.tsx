@@ -35,15 +35,18 @@ export const EndNoteLinkHoverContent = ({
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [label, setLabel] = useState<string | undefined>();
-  const [labelState, setLabelState] = useState<'loading' | 'loaded' | 'error'>(
+  const [fetchState, setFetchState] = useState<'loading' | 'loaded' | 'error'>(
     'loading',
   );
   const { getEditor } = useEditorState();
   const { fetchEndNote } = useNavigation();
 
+  // With no endnote to resolve there is nothing to load, so this is derived
+  // rather than pushed into state from the effect below.
+  const labelState = !endNote ? 'error' : fetchState;
+
   useEffect(() => {
     if (!endNote) {
-      setLabelState('error');
       return;
     }
 
@@ -52,20 +55,24 @@ export const EndNoteLinkHoverContent = ({
     if (endnotesEditor) {
       const found = findPassageNode(endnotesEditor, endNote);
       if (found?.node.attrs.label) {
+        // A synchronous read of live TipTap document state, which cannot be
+        // derived during render without reading the editor impurely. The other
+        // branch resolves over the network, so both paths land in state here.
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronous read of external editor state
         setLabel(found.node.attrs.label);
-        setLabelState('loaded');
+        setFetchState('loaded');
         return;
       }
     }
 
     // Fall back to network fetch
-    setLabelState('loading');
+    setFetchState('loading');
     fetchEndNote(endNote).then((passage) => {
       if (passage?.label) {
         setLabel(passage.label);
-        setLabelState('loaded');
+        setFetchState('loaded');
       } else {
-        setLabelState('error');
+        setFetchState('error');
       }
     });
   }, [endNote, fetchEndNote, getEditor]);

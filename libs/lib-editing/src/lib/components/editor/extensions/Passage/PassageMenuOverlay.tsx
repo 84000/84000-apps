@@ -93,6 +93,10 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
   useEffect(() => {
     const storage = editor.storage.passage;
     if (!storage) return;
+    // `editor.storage` is TipTap's documented channel for handing callbacks to
+    // a ProseMirror plugin. The rule objects because `editor` arrives as a
+    // prop, but this is an effect updating an external system.
+    // eslint-disable-next-line react-hooks/immutability -- TipTap extension storage handoff
     storage.openMenu = (payload: PassageMenuPayload) => {
       setMenu({ uuid: payload.uuid, rect: payload.rect });
       setShowRevisionForm(false);
@@ -119,6 +123,7 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
   useEffect(() => {
     const storage = editor.storage.passage;
     if (!storage) return;
+    // eslint-disable-next-line react-hooks/immutability -- TipTap extension storage handoff
     storage.chrome = {
       toh,
       isCompare,

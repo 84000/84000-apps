@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useState } from 'react';
 
 export interface DirtyStore {
   isDirty: boolean;
@@ -11,7 +11,10 @@ export interface DirtyStore {
 }
 
 export const useDirtyStore = (): DirtyStore => {
-  const storeRef = useRef<DirtyStore>({
+  // A lazy useState initialiser gives the same one-per-component instance as a
+  // ref, but is safe to read during render. It also avoids rebuilding the
+  // object literal on every render, which `useRef` did.
+  const [store] = useState<DirtyStore>(() => ({
     isDirty: false,
     listeners: new Set<() => void>(),
     subscribe(listener: () => void) {
@@ -27,7 +30,7 @@ export const useDirtyStore = (): DirtyStore => {
     getSnapshot() {
       return this.isDirty;
     },
-  });
+  }));
 
-  return storeRef.current;
+  return store;
 };

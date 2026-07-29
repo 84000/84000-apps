@@ -81,6 +81,12 @@ const JsonCompareEditor = ({
 
   useEffect(() => {
     if (editor && jsonData) {
+      // `isExternalUpdate` is a ref owned by the parent, which reads it in
+      // `handleTiptapUpdate` to ignore the echo from this programmatic
+      // setContent. The rule objects to writing through a prop; replacing the
+      // handshake with callbacks would mean reworking the parent's API, so it
+      // is left as-is for now.
+      // eslint-disable-next-line react-hooks/immutability -- deliberate cross-component ref handshake
       isExternalUpdate.current = true;
       editor.commands.setContent(jsonData);
       isExternalUpdate.current = false;
@@ -107,7 +113,12 @@ const useCodeMirror = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+
+  // Keep the latest callback without re-creating the CodeMirror view below.
+  // Writing the ref in an effect rather than during render.
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -206,6 +217,10 @@ export const JsonComparePage = () => {
       });
     }
 
+    // `content` is a one-shot handoff from the sandbox context: it is consumed
+    // here and immediately cleared, so there is no value to derive during
+    // render instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consuming a one-shot context handoff
     setParsedJson(content as object);
     if (content.type === 'doc') setEditorType('block');
     setContent(undefined as never);

@@ -65,7 +65,6 @@ export const GlossaryPaginationProvider = ({
 
   const [startIsLoading, setStartIsLoading] = useState(false);
   const [endIsLoading, setEndIsLoading] = useState(false);
-  const [navCursor, setNavCursor] = useState<string | undefined>();
   const processedNavCursorRef = useRef<string | undefined>(undefined);
   const isNavigatingRef = useRef(false);
 
@@ -92,10 +91,8 @@ export const GlossaryPaginationProvider = ({
   const panelHash =
     panels.right?.tab === 'glossary' ? panels.right?.hash : undefined;
 
-  // Track hash changes
-  useEffect(() => {
-    setNavCursor(panelHash);
-  }, [panelHash]);
+  // Nothing else assigned this, so it is simply the hash itself.
+  const navCursor = panelHash;
 
   useEffect(() => {
     if (!panelHash) {

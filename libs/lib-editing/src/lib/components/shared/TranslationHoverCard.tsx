@@ -64,6 +64,10 @@ export const TranslationHoverCard = ({
 
   return (
     <div
+      // `refs.setFloating` is floating-ui's ref *setter*, which is how the
+      // floating element is attached. Nothing reads `.current` here, but the
+      // rule treats any property of a refs object as a ref access.
+      // eslint-disable-next-line react-hooks/refs -- floating-ui ref setter, not a ref read
       ref={refs.setFloating}
       style={{ ...floatingStyles, pointerEvents: 'auto', cursor: 'default' }}
       className="z-100"

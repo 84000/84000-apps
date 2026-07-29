@@ -9,7 +9,7 @@ import {
   H4,
 } from '@eightyfourthousand/design-system';
 import { SLUG_PATHS } from './constants';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useSandbox } from './SandboxProvider';
 import { Format, Slug } from '@eightyfourthousand/lib-editing/fixtures/types';
 import { useRouter } from 'next/navigation';
@@ -22,27 +22,15 @@ export const SandboxHeader = () => {
     )
     .flat();
 
-  const [selectedItem, setSelectedItem] = useState<string>();
-  const [didSelect, setDidSelect] = useState(false);
-
   const { slug, format, setFormat, setSlug, editor, setContent } = useSandbox();
   const router = useRouter();
 
-  useEffect(() => {
-    const dropdownItem = slug && format ? `${slug} - ${format}` : undefined;
-    const path = slug && format ? `/${slug}/${format}` : '/';
-
-    setSelectedItem(dropdownItem);
-
-    if (didSelect) {
-      setDidSelect(false);
-      router.push(path);
-    }
-  }, [slug, format, router, didSelect]);
+  const selectedItem = slug && format ? `${slug} - ${format}` : undefined;
 
   const onHandleSelect = useCallback(
     (item: string, checked: boolean) => {
       if (!checked || !item) {
+        // Clearing the selection deliberately does not navigate.
         setSlug(undefined);
         setFormat(undefined);
         return;
@@ -51,9 +39,9 @@ export const SandboxHeader = () => {
       const [newSlug, newFormat] = item.split(' - ');
       setSlug(newSlug as Slug);
       setFormat(newFormat as Format);
-      setDidSelect(true);
+      router.push(`/${newSlug}/${newFormat}`);
     },
-    [setFormat, setSlug],
+    [setFormat, setSlug, router],
   );
 
   return (

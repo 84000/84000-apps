@@ -141,11 +141,15 @@ export const TranslationSSRContent = ({
   const exts = extensions ?? translationSSRExtensions;
   const doc = wrapAsDoc(content);
 
+  // Only the serialization can fail, so that is all the try covers. Keeping the
+  // JSX outside it satisfies the rule and is more honest besides: constructing
+  // an element never throws, so wrapping it never caught anything.
+  let html: string;
   try {
     if (process.env.NODE_ENV !== 'production') {
       assertCoverage(doc, exts);
     }
-    const html = renderToHTMLString({
+    html = renderToHTMLString({
       content: doc,
       extensions: exts,
       options: {
@@ -153,9 +157,6 @@ export const TranslationSSRContent = ({
         nodeMapping: { mention: renderMentionToHTMLString },
       },
     });
-    return (
-      <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
-    );
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
       throw err;
@@ -166,4 +167,8 @@ export const TranslationSSRContent = ({
     );
     return <div className={className}>{extractPlainText(doc)}</div>;
   }
+
+  return (
+    <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+  );
 };

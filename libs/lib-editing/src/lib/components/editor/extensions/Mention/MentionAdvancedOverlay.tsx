@@ -28,6 +28,11 @@ export const MentionAdvancedOverlay = ({ editor }: { editor: Editor }) => {
   // Register the openAdvanced callback the suggestion list calls.
   useEffect(() => {
     const storage = editor.storage.mention;
+    // `editor.storage` is TipTap's documented channel for handing callbacks to
+    // a ProseMirror plugin. The rule objects because `editor` arrives as a
+    // prop, but this is an effect updating an external system, which is what
+    // effects are for.
+    // eslint-disable-next-line react-hooks/immutability -- TipTap extension storage handoff
     storage.openAdvanced = (next) => setPayload(next);
     return () => {
       storage.openAdvanced = undefined;

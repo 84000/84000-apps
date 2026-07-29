@@ -45,7 +45,6 @@ export const InternalLinkInput = ({
       <Button
         size="icon"
         variant="ghost"
-        disabled={!!uuidRef.current && !!typeRef.current}
         onClick={submit}
       >
         <CheckIcon />
