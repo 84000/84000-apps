@@ -4,24 +4,31 @@ on:
   pull_request:
     branches:
       - main
-    # Workflow-level path filters apply to the whole workflow, not per job, so both
-    # libraries' tests run whenever either one changes. That is deliberate: the suites are
-    # seconds, and the alternative (per-job filtering) needs a third-party action or a
-    # changed-files job for no real benefit.
-    paths:
-      - 'libs/lib-editing/**'
-      - 'libs/lib-publishing/**'
+
+# Superseded runs on the same PR are not worth finishing.
+concurrency:
+  group: unit-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
 
+    env:
+      NX_BASE: origin/${{ github.base_ref }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # `nx affected` diffs against the base branch, so it needs real history.
           fetch-depth: 0
+
+      # `fetch-depth: 0` already brings the base branch down, but naming it here
+      # keeps the diff working if that ever gets trimmed to speed the job up.
+      - name: Fetch base branch
+        run: git fetch --no-tags origin ${{ github.base_ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,8 +39,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Both suites are pure unit tests and need no Supabase credentials — lib-publishing's
-      # cover chunk splitting, index mapping, version labels, and checksums, all of which
-      # take rows as input rather than reading a database.
-      - name: Run tests
-        run: npx nx run-many -t test -p lib-editing,lib-publishing --passWithNoTests
+      # Deliberately no `paths:` filter on the trigger. Those are workflow-level,
+      # so they cannot express "run a project's tests when that project changes".
+      # Nx derives it from the project graph instead: a change under
+      # libs/lib-utils runs its own tests plus every project that depends on it,
+      # a change under libs/lib-agent runs only lib-agent, and a docs-only change
+      # runs nothing at all.
+      #
+      # Listed as its own step so the selection is visible in the log, separately
+      # from the test output.
+      - name: List affected projects
+        run: npx nx show projects --affected --base=$NX_BASE --with-target test
+
+      # Every suite here is a pure unit test and needs no Supabase credentials.
+      - name: Run tests for affected projects
+        run: npx nx affected -t test --base=$NX_BASE
