@@ -17,7 +17,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { UploadIcon, UserIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { v4 } from 'uuid';
 import { useProfile } from './ProfileProvider';
 import { updateUserProfile, uploadToStorage } from '@eightyfourthousand/data-access';
@@ -26,7 +26,15 @@ export const UserCard = () => {
   const { user, dataClient, refreshProfile } = useProfile();
   const [avatar, setAvatar] = useState<string | undefined>(user?.avatar);
   const [localFile, setLocalFile] = useState<File>();
+  const [prevUserAvatar, setPrevUserAvatar] = useState(user?.avatar);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Drop any local preview once the saved avatar changes. Adjusting state
+  // during render is React's recommended alternative to a sync effect.
+  if (user?.avatar !== prevUserAvatar) {
+    setPrevUserAvatar(user?.avatar);
+    setAvatar(user?.avatar);
+  }
 
   const clearFile = useCallback(() => {
     setLocalFile(undefined);
@@ -66,10 +74,6 @@ export const UserCard = () => {
     await refreshProfile();
     setLocalFile(undefined);
   }, [localFile, user, dataClient, clearFile, refreshProfile]);
-
-  useEffect(() => {
-    setAvatar(user?.avatar);
-  }, [user?.avatar]);
 
   return (
     <Card>

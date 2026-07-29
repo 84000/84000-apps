@@ -1,11 +1,11 @@
 import { createGetTocTool } from './get-toc';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getTranslationToc } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getTranslationToc: jest.fn(),
 }));
-
-import { getTranslationToc } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getTranslationToc);
 
 describe('get-toc tool', () => {

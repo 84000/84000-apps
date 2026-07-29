@@ -1,12 +1,12 @@
 import { createApplyDocxImportTool } from './apply-docx-import';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { applyImportPreview, hasPermission } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   applyImportPreview: jest.fn(),
   hasPermission: jest.fn(),
 }));
-
-import { applyImportPreview, hasPermission } from '@eightyfourthousand/data-access';
 
 const mockedApply = jest.mocked(applyImportPreview);
 const mockedHasPermission = jest.mocked(hasPermission);

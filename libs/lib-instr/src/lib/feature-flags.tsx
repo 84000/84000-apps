@@ -7,7 +7,7 @@ import {
   PostHogFeatureProps,
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useSyncExternalStore } from 'react';
 
 export type FeatureFlag =
   | 'authority-pages'
@@ -66,13 +66,20 @@ export type GatedFeatureProps = Omit<PostHogFeatureProps, 'flag' | 'children'> &
   children: ReactNode;
 };
 
-export const GatedFeature = ({ children, flag }: GatedFeatureProps) => {
-  const [isClient, setIsClient] = useState(false);
-  const enabled = useFeatureFlagEnabled(flag);
+// Never changes, so the store never notifies. `getSnapshot` reports true on the
+// client and `getServerSnapshot` false during SSR and the hydration render,
+// which is the flag this component needs to avoid a hydration mismatch.
+const subscribeToNothing = () => () => undefined;
+const useIsHydrated = () =>
+  useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+export const GatedFeature = ({ children, flag }: GatedFeatureProps) => {
+  const isClient = useIsHydrated();
+  const enabled = useFeatureFlagEnabled(flag);
 
   if (!isClient) {
     return null;

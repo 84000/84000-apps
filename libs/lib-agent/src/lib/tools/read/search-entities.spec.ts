@@ -1,11 +1,11 @@
 import { createSearchEntitiesTool } from './search-entities';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { searchEntities } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   searchEntities: jest.fn(),
 }));
-
-import { searchEntities } from '@eightyfourthousand/data-access';
 const mockedSearch = jest.mocked(searchEntities);
 
 describe('search-entities tool', () => {

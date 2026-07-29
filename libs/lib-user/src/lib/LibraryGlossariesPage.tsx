@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DataTable,
   DataTableColumn,
@@ -82,16 +82,14 @@ const COLUMNS: DataTableColumn<RowType>[] = [
 
 export const LibraryGlossariesPage = () => {
   const { cache, refreshCache, setPageTitle } = useProfile();
-  const [data, setData] = useState<RowType[]>([]);
+  const data = useMemo(
+    () => (cache.glossaries as RowType[]) ?? [],
+    [cache.glossaries],
+  );
 
   useEffect(() => {
     refreshCache('glossaries');
   }, [refreshCache]);
-
-  useEffect(() => {
-    const data = cache.glossaries as RowType[];
-    setData(data || []);
-  }, [cache.glossaries]);
 
   useEffect(() => {
     setPageTitle('My Saved Glossaries');

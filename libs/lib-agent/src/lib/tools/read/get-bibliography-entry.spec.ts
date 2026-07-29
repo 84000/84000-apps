@@ -1,11 +1,11 @@
 import { createGetBibliographyEntryTool } from './get-bibliography-entry';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getBibliographyEntry } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getBibliographyEntry: jest.fn(),
 }));
-
-import { getBibliographyEntry } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getBibliographyEntry);
 
 describe('get-bibliography-entry tool', () => {

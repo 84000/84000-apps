@@ -1,3 +1,6 @@
+import { registerAgent } from './registry';
+import { libraryAssistant } from './library-assistant/definition';
+
 export type { AgentDefinition } from './types';
 export { AgentDefinitionSchema } from './types';
 export {
@@ -13,8 +16,5 @@ export {
 export { createAgentTools } from './create-agent-tools';
 export { createAgentPrompts } from './create-agent-prompts';
 export { buildAgentInstructions } from './invocation';
-
-import { registerAgent } from './registry';
-import { libraryAssistant } from './library-assistant/definition';
 
 registerAgent(libraryAssistant);

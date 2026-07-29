@@ -9,7 +9,7 @@ import {
   Switch,
 } from '@eightyfourthousand/design-system';
 import { SUBSCRIPTION_TYPES, SubscriptionType } from './types';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useProfile } from './ProfileProvider';
 
 const NOTIFICATION_LABELS: Record<SubscriptionType, string> = {
@@ -19,10 +19,16 @@ const NOTIFICATION_LABELS: Record<SubscriptionType, string> = {
 export const UserSubscriptionsCard = () => {
   const { user, saveProfile } = useProfile();
   const [subscriptions, setSubscriptions] = useState(user?.subscriptions || []);
+  const [prevUserSubscriptions, setPrevUserSubscriptions] = useState(
+    user?.subscriptions,
+  );
 
-  useEffect(() => {
+  // Reset the local toggles whenever the saved profile changes. Adjusting
+  // state during render is React's recommended alternative to a sync effect.
+  if (user?.subscriptions !== prevUserSubscriptions) {
+    setPrevUserSubscriptions(user?.subscriptions);
     setSubscriptions(user?.subscriptions || []);
-  }, [user?.subscriptions]);
+  }
 
   const toggleSubscription = useCallback(
     (type: SubscriptionType, isOn: boolean) => {

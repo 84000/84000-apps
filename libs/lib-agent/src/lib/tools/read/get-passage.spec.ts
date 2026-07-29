@@ -1,11 +1,11 @@
 import { createGetPassageTool } from './get-passage';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getPassage } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getPassage: jest.fn(),
 }));
-
-import { getPassage } from '@eightyfourthousand/data-access';
 const mockedGetPassage = jest.mocked(getPassage);
 
 describe('get-passage tool', () => {

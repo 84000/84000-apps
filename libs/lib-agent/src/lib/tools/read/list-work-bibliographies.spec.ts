@@ -1,11 +1,11 @@
 import { createListWorkBibliographiesTool } from './list-work-bibliographies';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
+import { getBibliographyEntries } from '@eightyfourthousand/data-access';
+
 jest.mock('@eightyfourthousand/data-access', () => ({
   getBibliographyEntries: jest.fn(),
 }));
-
-import { getBibliographyEntries } from '@eightyfourthousand/data-access';
 const mocked = jest.mocked(getBibliographyEntries);
 
 describe('list-work-bibliographies tool', () => {

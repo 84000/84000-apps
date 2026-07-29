@@ -1,15 +1,15 @@
 import { createGetTranslationTool } from './get-translation';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
-jest.mock('@eightyfourthousand/data-access', () => ({
-  getTranslationMetadataByUuid: jest.fn(),
-  getTranslationMetadataByToh: jest.fn(),
-}));
-
 import {
   getTranslationMetadataByUuid,
   getTranslationMetadataByToh,
 } from '@eightyfourthousand/data-access';
+
+jest.mock('@eightyfourthousand/data-access', () => ({
+  getTranslationMetadataByUuid: jest.fn(),
+  getTranslationMetadataByToh: jest.fn(),
+}));
 
 const mockedByUuid = jest.mocked(getTranslationMetadataByUuid);
 const mockedByToh = jest.mocked(getTranslationMetadataByToh);
