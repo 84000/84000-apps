@@ -93,6 +93,14 @@ export const SearchButton = ({
     useState<ResultsEntity>(DEFAULT_RESULTS_TAB);
   const [shouldScrollActiveOccurrence, setShouldScrollActiveOccurrence] =
     useState(false);
+  // `pendingOccurrenceSelectionRef` is a coordination channel, not rendered
+  // state: handlers record which occurrence should become active, and the
+  // effect below resolves it once the derived occurrence list has caught up.
+  // Writing it must not trigger a render, so it cannot become state, and refs
+  // cannot be written during render. Several react-hooks reports in this file
+  // follow from that and are suppressed individually with a pointer here.
+  // A proper rework of this state machine wants test coverage first — this
+  // component currently has none.
   const pendingOccurrenceSelectionRef = useRef<SearchPendingSelection | null>(
     null,
   );
@@ -207,28 +215,44 @@ export const SearchButton = ({
     return () => clearTimeout(debounce);
   }, [refreshSearch]);
 
-  useEffect(() => {
+  // Clear the dialog's search state whenever it opens or closes.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     setResults(undefined);
     setSearchQuery('');
     setUseRegex(false);
     setActiveOccurrenceIndexState(0);
     setShouldScrollActiveOccurrence(false);
+  }
+
+  // The ref half of that reset, which cannot happen during render.
+  useEffect(() => {
     pendingOccurrenceSelectionRef.current = null;
   }, [open]);
 
-  useEffect(() => {
+  // Keep the visible tab on something that actually has results.
+  const [prevResults, setPrevResults] = useState(results);
+  if (results !== prevResults) {
+    setPrevResults(results);
     if (!results) {
       setActiveResultsTab(DEFAULT_RESULTS_TAB);
-      return;
+    } else {
+      setActiveResultsTab((currentTab) =>
+        results[currentTab].length > 0
+          ? currentTab
+          : getFirstResultsTab(results),
+      );
     }
+  }
 
-    setActiveResultsTab((currentTab) =>
-      results[currentTab].length > 0 ? currentTab : getFirstResultsTab(results),
-    );
-  }, [results]);
-
+  // Resolves the pending selection recorded by the handlers above against the
+  // freshly derived occurrence list. Both the read and the clear of
+  // `pendingOccurrenceSelectionRef` have to happen here, so this cannot move
+  // into render. See the note at the ref declaration.
   useEffect(() => {
     if (passageOccurrences.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resolves a ref-held pending selection
       setActiveOccurrenceIndexState(0);
       pendingOccurrenceSelectionRef.current = null;
       return;
@@ -295,6 +319,10 @@ export const SearchButton = ({
 
     const occurrenceTab = getOccurrenceResultsTab(activeOccurrence);
     if (occurrenceTab && results[occurrenceTab].length > 0) {
+      // Must stay an effect: the scroll effect below depends on
+      // `activeResultsTab`, so it has to observe this switch before scrolling.
+      // Moving it into render would reorder the two.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- ordered before the scroll effect below
       setActiveResultsTab(occurrenceTab);
     }
   }, [activeOccurrence, results, shouldScrollActiveOccurrence]);
@@ -420,6 +448,10 @@ export const SearchButton = ({
                 .*
               </Button>
             </div>
+            {/* `actionContext` bundles handlers that close over
+                `pendingOccurrenceSelectionRef`. They only touch it when
+                invoked from an event, never during this render. */}
+            {/* eslint-disable-next-line react-hooks/refs -- handlers read the ref only when invoked */}
             {searchQuery && renderActions?.(actionContext)}
           </div>
           {searchQuery && (
