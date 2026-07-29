@@ -11,7 +11,7 @@ import {
   VisibilityState,
   flexRender,
 } from '@tanstack/react-table';
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useMemo } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 import {
   DataTableColumn,
@@ -63,14 +63,7 @@ export const DataTable = <T extends DataTableRow>({
   infiniteScroll?: boolean;
   resizableColumns?: boolean;
 }) => {
-  const [columnClasses, setColumnClasses] = useState<{ [key: string]: string }>(
-    {},
-  );
-  const [columnActions, setColumnActions] = useState<{
-    [key: string]: (row: Cell<T, unknown>) => void;
-  }>({});
-
-  useEffect(() => {
+  const { columnClasses, columnActions } = useMemo(() => {
     const classes: { [key: string]: string } = {};
     const actions: { [key: string]: (row: Cell<T, unknown>) => void } = {};
     columns.forEach((column) => {
@@ -83,8 +76,7 @@ export const DataTable = <T extends DataTableRow>({
         }
       }
     });
-    setColumnClasses(classes);
-    setColumnActions(actions);
+    return { columnClasses: classes, columnActions: actions };
   }, [columns]);
   const { table } = useDataTable({
     data,

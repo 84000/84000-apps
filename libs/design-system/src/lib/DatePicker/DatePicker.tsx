@@ -6,7 +6,7 @@ import { Button } from '../Button/Button';
 import { Calendar } from '../Calendar/Calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../Popover/Popover';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const YEAR_RANGE = 10;
 
@@ -26,12 +26,17 @@ export function DatePicker({
 
   const [open, setOpen] = useState(false);
   const [nextDate, setDate] = useState<Date | undefined>(date);
+  const [prevDate, setPrevDate] = useState(date);
 
-  useEffect(() => {
+  // Track the controlled `date` prop while keeping the in-popover selection as
+  // local state. Adjusting state during render is React's recommended
+  // alternative to a sync effect.
+  if (date !== prevDate) {
+    setPrevDate(date);
     if (date) {
       setDate(date);
     }
-  }, [date]);
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
