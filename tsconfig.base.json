@@ -60,6 +60,12 @@
       "@eightyfourthousand/lib-instr/static": [
         "./libs/lib-instr/src/static.ts"
       ],
+      "@eightyfourthousand/lib-persistence": [
+        "./libs/lib-persistence/src/index.ts"
+      ],
+      "@eightyfourthousand/lib-persistence/harness": [
+        "./libs/lib-persistence/src/harness.ts"
+      ],
       "@eightyfourthousand/lib-publishing": [
         "./libs/lib-publishing/src/index.ts"
       ],

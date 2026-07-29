@@ -1,0 +1,40 @@
+{
+  "name": "@eightyfourthousand/lib-persistence",
+  "version": "2026.7.1",
+  "description": "Browser-local storage stack for 84000 editing: WASM SQLite on OPFS in a worker, with a SharedWorker tab coordinator.",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/lib-persistence"
+  },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "comlink": "^4.4.2"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./harness": {
+      "types": "./harness.d.ts",
+      "import": "./harness.js",
+      "default": "./harness.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": ""
+}
