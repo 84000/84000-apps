@@ -128,12 +128,6 @@ export const StoragePage = () => {
   const [status, setStatus] = useState<ClientStatus | null>(null);
   const [tick, setTick] = useState(0);
 
-  const [kill, setKill] = useState<KillVerdict | null>(null);
-  const [quota, setQuota] = useState<QuotaResult | null>(null);
-  const [corruption, setCorruption] = useState<CorruptionResult[]>([]);
-  const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null);
-  const [search, setSearch] = useState<SearchReport | null>(null);
-
   useEffect(() => {
     let unsubscribe = () => undefined as void;
 
@@ -176,6 +170,16 @@ export const StoragePage = () => {
   const ready = harness !== null;
   const writeLoad = harness?.writeLoad ?? null;
   const queryLoad = harness?.queryLoad ?? null;
+
+  // Every panel renders straight from the harness's own report rather than a
+  // React copy of it. Mirroring into state meant a scenario driven from the
+  // console — which is how Firefox and Safari get driven — updated the report
+  // but left the page blank, looking like nothing had happened.
+  const kill = harness?.report.killVerdict ?? null;
+  const quota = harness?.report.quota ?? null;
+  const corruption = harness?.report.corruption ?? [];
+  const benchmark = harness?.report.benchmark ?? null;
+  const search = harness?.report.search ?? null;
 
   if (error && !ready) {
     return (
@@ -271,7 +275,9 @@ export const StoragePage = () => {
         <Button
           testId="verify-after-kill"
           onClick={() =>
-            run('verify', async (h) => setKill(await h.verifyAfterKill()))
+            run('verify', async (h) => {
+              await h.verifyAfterKill();
+            })
           }
           disabled={!ready || busy !== null}
         >
@@ -357,7 +363,9 @@ export const StoragePage = () => {
         <Button
           testId="run-quota"
           onClick={() =>
-            run('quota', async (h) => setQuota(await h.runQuotaPressure()))
+            run('quota', async (h) => {
+              await h.runQuotaPressure();
+            })
           }
           disabled={!ready || busy !== null}
         >
@@ -393,7 +401,6 @@ export const StoragePage = () => {
           onClick={() =>
             run('corrupt-journal', async (h) => {
               await h.injectJournalCorruption();
-              setCorruption([...h.report.corruption]);
             })
           }
           disabled={!ready || busy !== null}
@@ -405,7 +412,6 @@ export const StoragePage = () => {
           onClick={() =>
             run('corrupt-db', async (h) => {
               await h.injectDatabaseCorruption();
-              setCorruption([...h.report.corruption]);
             })
           }
           disabled={!ready || busy !== null}
@@ -430,7 +436,9 @@ export const StoragePage = () => {
         <Button
           testId="run-search"
           onClick={() =>
-            run('search', async (h) => setSearch(await h.runSearch()))
+            run('search', async (h) => {
+              await h.runSearch();
+            })
           }
           disabled={!ready || busy !== null}
         >
@@ -502,7 +510,9 @@ export const StoragePage = () => {
         <Button
           testId="run-benchmark"
           onClick={() =>
-            run('benchmark', async (h) => setBenchmark(await h.runBenchmark()))
+            run('benchmark', async (h) => {
+              await h.runBenchmark();
+            })
           }
           disabled={!ready || busy !== null}
         >
@@ -513,11 +523,6 @@ export const StoragePage = () => {
           onClick={() =>
             run('reset', async (h) => {
               await h.reset();
-              setKill(null);
-              setQuota(null);
-              setCorruption([]);
-              setBenchmark(null);
-              setSearch(null);
             })
           }
           disabled={!ready || busy !== null}

@@ -73,6 +73,12 @@ export class StorageHarness {
   constructor(client: StorageClient) {
     this.#client = client;
     this.report.openReport = client.status.openReport;
+    // Ownership is won *after* the client resolves, so capturing once at
+    // construction leaves `openReport` null in the exported report even for a
+    // tab that went on to own the database. Track it instead.
+    client.subscribe((status) => {
+      if (status.openReport) this.report.openReport = status.openReport;
+    });
   }
 
   get api(): StorageApi {

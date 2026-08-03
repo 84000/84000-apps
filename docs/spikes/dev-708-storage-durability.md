@@ -3,9 +3,11 @@
 **Verdict: proceed with the single-engine SQLite design. The journal-in-IndexedDB
 fallback is not required.**
 
-Two caveats gate that verdict: **Safari is untested** (see
-[Not tested](#not-tested)), and **the reason for choosing SQLite is not the one
-the spike set out to test.**
+Two caveats gate that verdict, neither of them the one expected. Safari has been
+run and passes. But **the reason for choosing SQLite is not the one the spike set
+out to test**, and **corruption detection is weaker than the early results
+suggested** — `integrity_check` does not cover BLOB content, so `passage_docs`
+and `cache` need the checksums the journal already has.
 
 The spike asked whether the architecture is durable enough to hold the
 unsynced-edit journal, which during offline editing is the only copy of a
@@ -37,15 +39,17 @@ index is a harness scenario like the others.
 
 ## How it was tested
 
-|                  | Chromium 151                         | Firefox 153                  | Safari      |
-| ---------------- | ------------------------------------ | ---------------------------- | ----------- |
-| Driver           | Playwright + CDP                     | Playwright (genuine Gecko)   | **not run** |
-| Tab kill         | real renderer crash (`Page.crash`)   | graceful close only — no CDP | —           |
-| Quota exhaustion | real, quota lowered to 48 MB via CDP | not forceable                | —           |
+|                  | Chromium 151                         | Firefox 153                  | Safari 26.5.2         |
+| ---------------- | ------------------------------------ | ---------------------------- | --------------------- |
+| Driver           | Playwright + CDP                     | Playwright (genuine Gecko)   | by hand, real browser |
+| Tab kill         | real renderer crash (`Page.crash`)   | graceful close only — no CDP | WebContent kill       |
+| Quota exhaustion | real, quota lowered to 48 MB via CDP | not forceable                | ~500 MB fill, no cap  |
 
 Playwright's WebKit was deliberately **not** used. Its OPFS and SharedWorker
 implementations are not Safari's, so a green WebKit run would be a false pass on
-the engine most likely to fail.
+the engine most likely to fail. Safari was therefore driven by hand against the
+same harness — which is why every scenario has a button as well as a programmatic
+entry point.
 
 Firefox's kill test is weaker than Chromium's: a graceful `close()` lets teardown
 code run, so it does not prove what a crash proves. It is reported as the weaker
@@ -112,7 +116,7 @@ which headless has none of; Firefox prompts. This needs confirming in a real
 profile — it is the difference between "the journal survives quota pressure" and
 "the journal survives, unless the browser deletes the origin".
 
-### 4 · Corruption injection — PASS
+### 4 · Corruption injection — PASS for the journal, GAP for blobs
 
 Two injection points, because they exercise different defences.
 
@@ -123,8 +127,11 @@ which is the property that matters — replaying a corrupt Yjs update would pois
 the document it applied to.
 
 **Database file** (768 bytes flipped across 12 sites in the OPFS file, VFS
-paused): detected by `PRAGMA integrity_check` on re-open in both engines, with
-concrete page-level errors. Never served as plausible garbage.
+paused): detected by `PRAGMA integrity_check` on re-open in Chromium and Firefox,
+with concrete page-level errors — but **not** in Safari, and the reason turned
+out to have nothing to do with Safari. See
+[integrity_check does not cover blob content](#integrity_check-does-not-cover-blob-content);
+this scenario's Chromium and Firefox passes do not mean what they appear to.
 
 > A methodology note worth keeping. Earlier runs reported Firefox _failing_ to
 > detect file corruption. That was the harness, not Firefox: a single 64-byte
@@ -133,28 +140,6 @@ concrete page-level errors. Never served as plausible garbage.
 > unallocated pages. Spreading damage across 12 sites inside the live database
 > fixed it. The injector now also reports `injected: false` when it fails to
 > inflict damage, so a broken injector can never again read as a clean pass.
-
-### 6 · Offline reader search — PASS
-
-The reader was not in the original scope and has no journal, so nothing above
-applies to them. What they need is search.
-
-Indexing 5,000 passages took **2,132 ms** (0.43 ms each) in Chromium, and queries
-returned in 1.3–3.3 ms with BM25-ranked, delimited snippets:
-
-```
-equipoise             3.30 ms   They rest in [equipoise] within the bodies of…
-perfection of wisdom  2.00 ms   Thus did the Tathāgata proclaim the [perfection] [of] [wisdom]…
-```
-
-All six ASCII probes matched their IAST spellings — `manjusri`, `sariputra`,
-`dharani`, `sangha`, `bhagavan`, `tathagata`. For a canon written in
-transliteration and read by people on ordinary keyboards, that is a correctness
-requirement rather than a nicety, and it is one tokenizer option
-(`unicode61 remove_diacritics 2`) rather than a subsystem.
-
-`node:sqlite` ships FTS5 with the same folding, so search works identically in an
-agent process.
 
 ### 5 · Cost
 
@@ -200,6 +185,90 @@ insurance against power loss.
 
 Batching collapses the gap anyway: the same 2,000 writes cost 18.5× per row
 one-at-a-time and 1.8× in a single transaction.
+
+### 6 · Offline reader search — PASS
+
+The reader was not in the original scope and has no journal, so nothing above
+applies to them. What they need is search.
+
+Indexing 5,000 passages took **2,132 ms** (0.43 ms each) in Chromium, and queries
+returned in 1.3–3.3 ms with BM25-ranked, delimited snippets:
+
+```
+equipoise             3.30 ms   They rest in [equipoise] within the bodies of…
+perfection of wisdom  2.00 ms   Thus did the Tathāgata proclaim the [perfection] [of] [wisdom]…
+```
+
+All six ASCII probes matched their IAST spellings — `manjusri`, `sariputra`,
+`dharani`, `sangha`, `bhagavan`, `tathagata`. For a canon written in
+transliteration and read by people on ordinary keyboards, that is a correctness
+requirement rather than a nicety, and it is one tokenizer option
+(`unicode61 remove_diacritics 2`) rather than a subsystem.
+
+`node:sqlite` ships FTS5 with the same folding, so search works identically in an
+agent process.
+
+### Safari 26.5.2
+
+Safari runs the whole stack: `opfs-sahpool` installs, a tab wins ownership,
+integrity is clean, and search works with full diacritic folding. Cold open is
+**454 ms**, about 4× Chromium.
+
+Kill-mid-write and ownership migration were both run by hand and passed.
+Corruption injection behaved differently, and that turned out to be the most
+important result of the whole spike — see
+[integrity_check does not cover blob content](#integrity_check-does-not-cover-blob-content).
+
+The performance profile is markedly different from Chromium, and better for the
+writes that matter:
+
+| Access pattern                | Safari SQLite | Safari IDB | ratio | Chromium ratio |
+| ----------------------------- | ------------- | ---------- | ----- | -------------- |
+| Bulk write 2,000 docs (1 txn) | 0.551         | 0.035      | 16.0× | 1.9×           |
+| Write 200 docs (1 txn each)   | 0.480         | 0.755      | 0.6×  | 19.7×          |
+| Windowed read, 40 passages    | 0.200         | 0.125      | 1.6×  | 4.1×           |
+| Journal append                | 0.900         | 0.615      | 1.5×  | 32.7×          |
+
+Two things worth carrying forward. Single durable writes — the offline editing
+path — are **faster than IndexedDB** in Safari, and journal appends cost only
+1.5× rather than 33×. The 33× figure is a Chromium OPFS characteristic, not an
+inherent cost of SQLite. Conversely Safari is much worse at one large batched
+transaction, so a bulk cache fill should be chunked rather than done in one
+commit.
+
+## integrity_check does not cover blob content
+
+The Safari run flipped 768 bytes across 12 sites in a 437 MB database and
+`PRAGMA integrity_check` reported **ok** — the corruption was served as valid
+data. That looked like a Safari defect. It is not. Reproduced in Node with no
+browser involved:
+
+| Database shape             | `integrity_check` | Rows actually corrupted |
+| -------------------------- | ----------------- | ----------------------- |
+| 20,000 × 64 B rows, 1.4 MB | **FAILED**        | —                       |
+| 100 × 4 MB blobs, 420 MB   | ok                | **12**                  |
+| 400 × 1 MB blobs, 420 MB   | ok                | **12**                  |
+
+`integrity_check` verifies b-tree structure, page linkage and freelist
+consistency. It does **not** verify BLOB payload bytes. Flip bytes inside an
+overflow page and the database is structurally perfect while the content is
+garbage.
+
+The earlier Chromium and Firefox passes on this scenario were an artefact of
+database shape, not a property of the design: those databases were a few hundred
+kilobytes and journal-dominated, so the flips hit b-tree structure and were
+caught. Safari's was 437 MB dominated by 4 MB cache blobs, so every flip landed
+in overflow pages.
+
+This matters because it is precisely the failure mode the spike existed to rule
+out — plausible garbage, served as valid, then synced to the server. The
+`journal` is safe: it carries per-entry CRC-32s, and Safari correctly withheld
+the corrupted entry. **`passage_docs` and `cache` carry no checksums and are
+unprotected.**
+
+The fix is to extend the journal's existing pattern to doc and cache records.
+Until that is done, "corruption is always detected" is true only of the journal,
+and only accidentally true of everything else.
 
 ## Durability, head to head
 
@@ -287,11 +356,13 @@ local-first, and offline reader search is dropped or moved server-side, then
 IndexedDB is the better engineering choice — less code, fewer failure modes,
 broader support — and the coordinator becomes pure cost.
 
-### Still contingent on Safari
+### The remaining gap
 
-Safari is where OPFS and SharedWorker are most likely to behave differently, and
-it is the one browser this spike could not exercise. Phase 0 should not be
-declared passed until it is run.
+Safari has now been run and passes, so the cross-browser criterion is met. What
+is left is not a browser question: `passage_docs` and `cache` carry no
+checksums, so corruption in a blob-dominated database is served as valid data.
+That is a design gap, and it should close before the journal-adjacent stores are
+trusted.
 
 ## Not tested
 
@@ -300,11 +371,12 @@ declared passed until it is run.
   remain unseparated. This is the only durability question still open, and the
   only one where the engines might still differ.
 
-- **Safari ≥ 16.4 — the significant gap.** No automatable real Safari was
-  available. `playwright-webkit` is not evidence. The harness is fully
-  hand-drivable for exactly this reason; the verify skill has the steps. Note the
-  Safari 16.4 floor is not arbitrary: it is the first Safari with module workers
-  and SharedWorker together, and both are load-bearing here.
+- **Safari under automation.** Safari 26.5.2 was driven by hand and passed every
+  scenario; there is no automated Safari run, and `playwright-webkit` is not a
+  substitute. Re-verification is manual.
+- **Quota exhaustion in Safari.** ~500 MB was written, but Safari's quota is
+  ~82 GB and cannot be lowered, so the wall was never reached. The journal was
+  unchanged across the fill (54,728 entries before and after).
 - **`navigator.storage.persist()` actually granted.** Returned `false` in both
   headless engines. Eviction protection is unverified.
 - **Firefox under a real crash**, and Firefox ownership migration.
@@ -316,32 +388,37 @@ declared passed until it is run.
 
 ## Issues for Phase 1 (DEV-562)
 
-1. **10 s worst-case stall on ownership migration.** `CALL_TIMEOUT_MS` is the
+1. **Checksum `passage_docs` and `cache`.** `integrity_check` does not verify
+   BLOB payloads, so today a corrupted passage doc opens clean, reads as valid,
+   and syncs to the server. Extend the journal's per-record CRC-32 to the other
+   blob stores and verify on read. This is the largest correctness gap the spike
+   found and it was invisible until a 437 MB database was tested.
+2. **10 s worst-case stall on ownership migration.** `CALL_TIMEOUT_MS` is the
    floor for noticing a dead owner. Either lower it, or add a liveness ping so a
    dead owner is detected without waiting for a call to time out.
-2. **No recovery path when `open()` fails.** If the new owner cannot open the
+3. **No recovery path when `open()` fails.** If the new owner cannot open the
    database it rejects inside the lock callback, the lock is released, no owner is
    ever elected, and every tab waits forever with no error. During development one
    run stalled in exactly this shape (not reproduced with the final code). This
    would present to a user as a silently frozen editor and needs an explicit
    failure path.
-3. **One transient `SQLITE_CORRUPT` during an early migration run.** Seen once
+4. **One transient `SQLITE_CORRUPT` during an early migration run.** Seen once
    during a crash-under-load run, not reproduced afterwards. It surfaced as a
    thrown error, not bad data, so the loud-failure property held — but it is worth
    watching.
-4. **`DebugApi` must not ship.** Destructive test-only operations; they are off
+5. **`DebugApi` must not ship.** Destructive test-only operations; they are off
    `StorageApi` deliberately, and should be dropped or gated unless the torture
    scenarios become a permanent regression suite.
-5. **Schema version skew across peers.** A browser tab refreshes instantly; a
+6. **Schema version skew across peers.** A browser tab refreshes instantly; a
    desktop agent updates on its own cadence. Two processes will run different
    schema versions against the same sync substrate, so the journal format and
    migrations need cross-process versioning. This constraint does not exist in a
    browser-only design and appeared only once the agent was treated as a
    local-first peer.
-6. **Three-peer merge topology.** DEV-707 / DEV-709 are scoped browser↔server. A
+7. **Three-peer merge topology.** DEV-707 / DEV-709 are scoped browser↔server. A
    local agent makes conflict review N-peer: "yours / theirs" becomes "yours /
    theirs / the agent's". Not a storage decision, but it lands in the same phase.
-7. **Bundler workarounds are inherited cost.** Neither the SQLite WASM package nor
+8. **Bundler workarounds are inherited cost.** Neither the SQLite WASM package nor
    the SharedWorker entry can go through Turbopack; both are pre-built into
    `public/` by `tools/build-storage-assets.mjs`, which is a manual step that
    `nx dev` does not run. Worth wiring into the app's build target.
