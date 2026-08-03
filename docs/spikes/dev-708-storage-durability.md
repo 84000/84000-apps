@@ -23,6 +23,8 @@ On Chromium and Firefox, it is.
 this. The harness lives at `/storage` in `web-editor` and on
 `window.__storageHarness`.
 
+![The torture harness with scenarios 1, 4 and 5 run](./dev-708-harness.png)
+
 ## How it was tested
 
 |                  | Chromium 151                         | Firefox 153                  | Safari      |
