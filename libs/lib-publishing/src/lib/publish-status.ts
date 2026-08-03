@@ -16,6 +16,7 @@ import type {
   ValidationResult,
   WorkPublishStatus,
 } from './types';
+import { isStale } from './types';
 import { PAGE_SIZE } from './read-published';
 
 interface WorkPublishStatusRow {
@@ -48,7 +49,7 @@ const fromRow = (row: WorkPublishStatusRow): WorkPublishStatus => ({
   // A verdict recorded before the most recent draft edit describes a state of the work
   // that no longer exists. Callers must render this as unchecked rather than showing the
   // old answer, which is the whole reason draft_touched_at is tracked.
-  stale: row.checked_at !== null && row.draft_touched_at > row.checked_at,
+  stale: isStale(row.checked_at, row.draft_touched_at),
 });
 
 /**

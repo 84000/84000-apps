@@ -151,6 +151,31 @@ export interface WorkPublishStatus {
   stale: boolean;
 }
 
+/**
+ * Whether a recorded verdict has been superseded by a later draft edit.
+ *
+ * Compares parsed instants rather than the raw strings. Lexicographic comparison happens to
+ * work for the UTC ISO form PostgREST returns, but only by accident of that format — it
+ * breaks the moment an offset or a differing fractional precision enters, and getting this
+ * backwards would show a stale verdict as current, which is the one failure the cache must
+ * not have.
+ */
+export const isStale = (
+  checkedAt: string | null,
+  draftTouchedAt: string | null,
+): boolean => {
+  if (!checkedAt || !draftTouchedAt) {
+    return false;
+  }
+  const checked = Date.parse(checkedAt);
+  const touched = Date.parse(draftTouchedAt);
+  // An unparseable timestamp must not silently read as "current".
+  if (Number.isNaN(checked) || Number.isNaN(touched)) {
+    return true;
+  }
+  return touched > checked;
+};
+
 /** A cached verdict is only usable when the work was checked and has not changed since. */
 export const isPublishStatusKnown = (
   status: WorkPublishStatus | undefined,
