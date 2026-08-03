@@ -52,6 +52,7 @@ Key handles on `window.__storageHarness`:
 | `runQuotaPressure(fraction)` | fills the cache table |
 | `injectJournalCorruption()` / `injectDatabaseCorruption()` | damage injection |
 | `runBenchmark(passageCount)` | SQLite vs IndexedDB |
+| `runSearch(passages)` | FTS5 index build, ranked queries, diacritic folding |
 | `reset()` | wipe all stores and the ack ledger |
 
 Wait on `status.ownerId !== null` before driving anything — the page is ready
@@ -99,6 +100,13 @@ honest substitute, and should be recorded as such.
 `navigator.storage.persist()` behaves differently per engine: Chromium grants it
 based on site engagement (so headless reports `persisted: false`), Firefox
 prompts, Safari decides heuristically. A `false` here is a finding, not a bug.
+
+## Outside the browser
+
+The same `LocalDatabase` runs on `node:sqlite` for a local agent process. That
+path needs no harness — `nx test lib-persistence` drives it directly
+(`src/lib/node/node-parity.spec.ts`), covering the shared schema, journal
+checksums, transaction rollback and FTS5.
 
 ## Findings
 

@@ -56,12 +56,29 @@ reader and studio apps.
 
 ## Layers
 
-| Layer        | File                                          | Runs in                           |
-| ------------ | --------------------------------------------- | --------------------------------- |
-| Database     | `lib/worker/database.ts`                      | dedicated worker (owner tab only) |
-| Worker entry | `lib/worker/sqlite.worker.ts`                 | dedicated worker                  |
-| Coordinator  | `lib/coordinator/coordinator.sharedworker.ts` | SharedWorker                      |
-| Client       | `lib/client/storage-client.ts`                | every tab's main thread           |
+| Layer          | File                                          | Runs in                            |
+| -------------- | --------------------------------------------- | ---------------------------------- |
+| Storage logic  | `lib/worker/database.ts`                      | anywhere — engine-agnostic         |
+| Browser driver | `lib/worker/opfs-driver.ts`                   | dedicated worker (owner tab only)  |
+| Node driver    | `lib/node/node-driver.ts`                     | agent process, outside the browser |
+| Worker entry   | `lib/worker/sqlite.worker.ts`                 | dedicated worker                   |
+| Coordinator    | `lib/coordinator/coordinator.sharedworker.ts` | SharedWorker                       |
+| Client         | `lib/client/storage-client.ts`                | every tab's main thread            |
+
+`database.ts` holds the schema and every statement and knows nothing about which
+engine is underneath. `driver.ts` is the seam — deliberately tiny, because if it
+grows the two environments have started to diverge and the one-library claim
+stops being true. `src/node.ts` is the entry point for an agent process:
+
+```ts
+import { openLocalDatabase } from '@eightyfourthousand/lib-persistence/node';
+
+const db = await openLocalDatabase('./agent-store.db');
+await db.appendJournal({ passageUuid, workUuid, update });
+```
+
+`src/lib/node/node-parity.spec.ts` runs the real `LocalDatabase` against the Node
+driver, and is the check that keeps this honest.
 
 Ownership is decided by a Web Lock held in the tabs, **not** by the coordinator.
 A lock is released by the browser even when a tab is killed without running
@@ -103,6 +120,21 @@ Output is gitignored. Re-run it after changing the coordinator.
 how to run the scenarios, and `docs/spikes/dev-708-storage-durability.md` for
 what they found.
 
+## Full-text search
+
+`indexPassageText` / `searchPassages` maintain an FTS5 index over rendered
+passage text, for offline readers. The tokenizer is
+`unicode61 remove_diacritics 2`, which matters for this corpus specifically: the
+translations are dense with IAST transliteration, and a reader on an ASCII
+keyboard searching `manjusri` or `sariputra` must still match `Mañjuśrī` and
+`Śāriputra`. Results carry BM25 rank and a delimited snippet.
+
+The index is separate from `passage_docs` because a doc blob is opaque CRDT
+state; the index needs rendered text.
+
 ## Running unit tests
 
 Run `nx test lib-persistence` to execute the unit tests via [Jest](https://jestjs.io).
+They cover what is not a browser-runtime fact — the shared schema, journal
+checksums, transaction rollback and FTS5 — by driving the same `LocalDatabase`
+against `node:sqlite`. Everything else needs the torture harness.

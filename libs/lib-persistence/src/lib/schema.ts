@@ -43,6 +43,16 @@ export const SQLITE_MODULE_URL = '/sqlite-wasm/index.mjs';
  */
 export const COORDINATOR_URL = '/storage-workers/coordinator.js';
 
+/**
+ * FTS5 tokenizer for the passage text index.
+ *
+ * `remove_diacritics 2` folds combining marks across the full Unicode range,
+ * which matters disproportionately for this corpus: the translations are dense
+ * with IAST transliteration, and a reader on an ASCII keyboard searching
+ * `manjusri` or `sariputra` must still match `Mañjuśrī` and `Śāriputra`.
+ */
+export const FTS_TOKENIZER = 'unicode61 remove_diacritics 2';
+
 export const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS passage_docs (
      uuid       TEXT PRIMARY KEY,

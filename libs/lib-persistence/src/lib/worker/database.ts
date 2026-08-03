@@ -1,24 +1,24 @@
 /**
- * The SQLite database itself, running inside a dedicated worker.
+ * The storage logic, independent of which SQLite engine is underneath.
  *
- * This module is worker-only: it touches OPFS synchronous access handles and
- * must never be imported from the main thread. It implements `StorageApi`
- * against `@sqlite.org/sqlite-wasm` on the `opfs-sahpool` VFS, which is chosen
- * over the plain `opfs` VFS because it needs no COOP/COEP headers — the reader
- * and studio apps embed third-party content that cross-origin isolation breaks.
+ * Every statement here — the schema, the journal checksums, the integrity
+ * sweep, the full-text index — runs unchanged in a browser worker on
+ * `opfs-sahpool` and in a Node process on a file. That is what lets one
+ * persistence library serve browser tabs and a local agent process; see
+ * `driver.ts` for the seam and why it is kept narrow.
+ *
+ * This module itself is environment-agnostic. Only the driver handed to it is
+ * not, so importing it does not drag OPFS or `node:sqlite` into a bundle.
  */
 
-import type { SAHPoolUtil, Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import { crc32, verifyChecksum } from '../checksum';
 import {
-  DATABASE_FILE,
+  FTS_TOKENIZER,
   PRAGMAS,
   SCHEMA_STATEMENTS,
   SCHEMA_VERSION,
-  SQLITE_MODULE_URL,
-  VFS_DIRECTORY,
-  VFS_NAME,
 } from '../schema';
+import type { SqlDriver } from '../driver';
 import type {
   CacheRecord,
   DebugApi,
@@ -27,32 +27,12 @@ import type {
   JournalEntry,
   OpenReport,
   PassageDocRecord,
+  PassageTextRecord,
   QuotaReport,
+  SearchHit,
   SpineRecord,
   StorageApi,
 } from '../types';
-
-type Db = {
-  exec: (opts: unknown) => unknown;
-  close: () => void;
-  transaction: (fn: () => void) => void;
-};
-
-/**
- * Load the SQLite WASM runtime from `public/`, outside the bundler graph.
- *
- * The comment pragmas stop webpack and Turbopack from following the import;
- * see `SQLITE_MODULE_URL` for why the package cannot be bundled at all. The
- * specifier is held in a variable because a literal would be resolved
- * statically despite the pragmas.
- */
-const loadSqlite = async (): Promise<Sqlite3Static> => {
-  const moduleUrl = SQLITE_MODULE_URL;
-  const module = (await import(
-    /* webpackIgnore: true */ /* turbopackIgnore: true */ moduleUrl
-  )) as { default: () => Promise<Sqlite3Static> };
-  return module.default();
-};
 
 const asBytes = (value: unknown): Uint8Array => {
   if (value instanceof Uint8Array) return value;
@@ -86,26 +66,33 @@ const requestPersistence = async (): Promise<boolean> => {
  * database open; other tabs proxy to it through the coordinator.
  */
 export class LocalDatabase implements StorageApi, DebugApi {
-  #pool: SAHPoolUtil | null = null;
-  #db: Db | null = null;
+  #driver: SqlDriver | null = null;
+  #connect: () => Promise<SqlDriver>;
 
-  #requireDb(): Db {
-    if (!this.#db) throw new Error('lib-persistence: database is not open');
-    return this.#db;
+  /**
+   * @param connect opens the underlying database. Supplying it rather than
+   * constructing one here is what keeps this class free of engine specifics.
+   */
+  constructor(connect: () => Promise<SqlDriver>) {
+    this.#connect = connect;
   }
 
-  /** Run a statement, returning rows as arrays. */
+  #require(): SqlDriver {
+    if (!this.#driver) throw new Error('lib-persistence: database is not open');
+    return this.#driver;
+  }
+
+  /** The live driver, for callers that need engine specifics (the harness). */
+  get driver(): SqlDriver | null {
+    return this.#driver;
+  }
+
   #rows(sql: string, bind: unknown[] = []): unknown[][] {
-    return this.#requireDb().exec({
-      sql,
-      bind,
-      rowMode: 'array',
-      returnValue: 'resultRows',
-    }) as unknown[][];
+    return this.#require().rows(sql, bind) as unknown[][];
   }
 
   #run(sql: string, bind: unknown[] = []): void {
-    this.#requireDb().exec({ sql, bind });
+    this.#require().run(sql, bind);
   }
 
   /**
@@ -117,21 +104,20 @@ export class LocalDatabase implements StorageApi, DebugApi {
   async open(): Promise<OpenReport> {
     const started = performance.now();
 
-    const sqlite3 = await loadSqlite();
-
-    const pool = await sqlite3.installOpfsSAHPoolVfs({
-      name: VFS_NAME,
-      directory: VFS_DIRECTORY,
-      // Each database needs slots for itself plus its rollback journal and temp
-      // files; the default of 6 is too tight once the harness imports copies.
-      initialCapacity: 12,
-    });
-    this.#pool = pool;
-
-    this.#db = new pool.OpfsSAHPoolDb(DATABASE_FILE) as unknown as Db;
+    this.#driver = await this.#connect();
 
     for (const pragma of PRAGMAS) this.#run(pragma);
     for (const statement of SCHEMA_STATEMENTS) this.#run(statement);
+    // The FTS5 table is created separately because its tokenizer is
+    // interpolated rather than bound, and it is a virtual table.
+    this.#run(
+      `CREATE VIRTUAL TABLE IF NOT EXISTS passage_text USING fts5(
+         passage_uuid UNINDEXED,
+         work_uuid UNINDEXED,
+         text,
+         tokenize="${FTS_TOKENIZER}"
+       )`,
+    );
     this.#run(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 
     const integrity = await this.integrityCheck();
@@ -140,14 +126,14 @@ export class LocalDatabase implements StorageApi, DebugApi {
     return {
       coldOpenMs: performance.now() - started,
       persisted,
-      vfsName: pool.vfsName,
+      vfsName: this.#driver.name,
       integrity,
     };
   }
 
   async close(): Promise<void> {
-    this.#db?.close();
-    this.#db = null;
+    this.#driver?.close();
+    this.#driver = null;
   }
 
   async putPassageDoc(
@@ -167,9 +153,9 @@ export class LocalDatabase implements StorageApi, DebugApi {
   async putPassageDocs(
     records: Omit<PassageDocRecord, 'updatedAt'>[],
   ): Promise<void> {
-    const db = this.#requireDb();
+    const driver = this.#require();
     const now = Date.now();
-    db.transaction(() => {
+    driver.transaction(() => {
       for (const record of records) {
         this.#run(
           `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
@@ -332,8 +318,8 @@ export class LocalDatabase implements StorageApi, DebugApi {
     record: Omit<PassageDocRecord, 'updatedAt'>,
     clearJournalUpToId: number,
   ): Promise<void> {
-    const db = this.#requireDb();
-    db.transaction(() => {
+    const driver = this.#require();
+    driver.transaction(() => {
       this.#run(
         `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
          VALUES (?, ?, ?, ?, ?)
@@ -345,6 +331,57 @@ export class LocalDatabase implements StorageApi, DebugApi {
       );
       this.#run(`DELETE FROM journal WHERE id <= ?`, [clearJournalUpToId]);
     });
+  }
+
+  async indexPassageText(records: PassageTextRecord[]): Promise<void> {
+    const driver = this.#require();
+    driver.transaction(() => {
+      for (const record of records) {
+        // FTS5 has no upsert, so replace by key.
+        this.#run(`DELETE FROM passage_text WHERE passage_uuid = ?`, [
+          record.passageUuid,
+        ]);
+        this.#run(
+          `INSERT INTO passage_text (passage_uuid, work_uuid, text)
+           VALUES (?, ?, ?)`,
+          [record.passageUuid, record.workUuid, record.text],
+        );
+      }
+    });
+  }
+
+  async searchPassages(query: string, limit = 20): Promise<SearchHit[]> {
+    // A bare user string is not valid FTS5 syntax — a stray quote or hyphen
+    // raises a parse error — so quote each token and let FTS5 treat the whole
+    // thing as a phrase-or-terms query.
+    const terms = query
+      .split(/\s+/)
+      .map((t) => t.replace(/"/g, ''))
+      .filter(Boolean)
+      .map((t) => `"${t}"`);
+    if (!terms.length) return [];
+
+    const rows = this.#rows(
+      `SELECT passage_uuid, work_uuid,
+              snippet(passage_text, 2, '[', ']', '…', 12),
+              bm25(passage_text)
+         FROM passage_text
+        WHERE passage_text MATCH ?
+        ORDER BY bm25(passage_text)
+        LIMIT ?`,
+      [terms.join(' '), limit],
+    );
+
+    return rows.map(([passageUuid, workUuid, snippet, rank]) => ({
+      passageUuid: passageUuid as string,
+      workUuid: workUuid as string,
+      snippet: snippet as string,
+      rank: rank as number,
+    }));
+  }
+
+  async indexedPassageCount(): Promise<number> {
+    return this.#rows(`SELECT count(*) FROM passage_text`)[0][0] as number;
   }
 
   async quota(): Promise<QuotaReport> {
@@ -397,9 +434,7 @@ export class LocalDatabase implements StorageApi, DebugApi {
   }
 
   async databaseSize(): Promise<number> {
-    if (!this.#pool) return 0;
-    const bytes = await this.#pool.exportFile(DATABASE_FILE);
-    return bytes.byteLength;
+    return this.#driver ? this.#driver.size() : 0;
   }
 
   // --- DebugApi: destructive, spike-only. See the note on `DebugApi`. ---
@@ -410,18 +445,28 @@ export class LocalDatabase implements StorageApi, DebugApi {
   }
 
   async pauseVfs(): Promise<void> {
-    if (!this.#pool) throw new Error('lib-persistence: no VFS installed');
-    this.#db?.close();
-    this.#db = null;
-    this.#pool.pauseVfs();
+    const driver = this.#require() as SqlDriver & {
+      pool?: { pauseVfs: () => unknown };
+    };
+    if (!driver.pool) {
+      throw new Error('lib-persistence: pauseVfs is only available on OPFS');
+    }
+    driver.close();
+    driver.pool.pauseVfs();
   }
 
   async unpauseVfs(): Promise<IntegrityReport> {
-    if (!this.#pool) throw new Error('lib-persistence: no VFS installed');
-    this.#pool = await this.#pool.unpauseVfs();
+    const driver = this.#require() as SqlDriver & {
+      pool?: { unpauseVfs: () => Promise<unknown> };
+      reopen?: () => void;
+    };
+    if (!driver.pool || !driver.reopen) {
+      throw new Error('lib-persistence: unpauseVfs is only available on OPFS');
+    }
+    await driver.pool.unpauseVfs();
 
     try {
-      this.#db = new this.#pool.OpfsSAHPoolDb(DATABASE_FILE) as unknown as Db;
+      driver.reopen();
     } catch (error) {
       // Failing to open is itself a loud, correct outcome for a damaged file.
       return {
@@ -438,7 +483,13 @@ export class LocalDatabase implements StorageApi, DebugApi {
   }
 
   async wipe(): Promise<void> {
-    for (const table of ['passage_docs', 'spine', 'journal', 'cache']) {
+    for (const table of [
+      'passage_docs',
+      'spine',
+      'journal',
+      'cache',
+      'passage_text',
+    ]) {
       this.#run(`DELETE FROM ${table}`);
     }
   }

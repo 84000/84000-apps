@@ -80,6 +80,23 @@ export type OpenReport = {
   integrity: IntegrityReport;
 };
 
+/** Rendered passage text, for the offline full-text index. */
+export type PassageTextRecord = {
+  passageUuid: string;
+  workUuid: string;
+  text: string;
+};
+
+/** One full-text search result. */
+export type SearchHit = {
+  passageUuid: string;
+  workUuid: string;
+  /** Matched text with the hit delimited, from FTS5 `snippet()`. */
+  snippet: string;
+  /** FTS5 `bm25()` relevance. Lower is more relevant. */
+  rank: number;
+};
+
 /** Storage usage as reported by the Storage Manager API. */
 export type QuotaReport = {
   usage: number;
@@ -138,6 +155,26 @@ export type StorageApi = {
     record: Omit<PassageDocRecord, 'updatedAt'>,
     clearJournalUpToId: number,
   ): Promise<void>;
+
+  /**
+   * Add or replace passage text in the full-text index.
+   *
+   * Separate from `putPassageDoc` because the doc blob is opaque CRDT state and
+   * the index needs rendered text. Readers populate this when caching a work.
+   */
+  indexPassageText(records: PassageTextRecord[]): Promise<void>;
+
+  /**
+   * Full-text search across indexed passages.
+   *
+   * This is the offline reader's core need, and the capability with no
+   * IndexedDB equivalent — ranking, snippets and diacritic folding would all
+   * have to be hand-built there.
+   */
+  searchPassages(query: string, limit?: number): Promise<SearchHit[]>;
+
+  /** Number of passages in the full-text index. */
+  indexedPassageCount(): Promise<number>;
 
   quota(): Promise<QuotaReport>;
   integrityCheck(): Promise<IntegrityReport>;

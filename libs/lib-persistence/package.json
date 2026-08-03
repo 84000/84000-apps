@@ -27,6 +27,11 @@
       "import": "./index.js",
       "default": "./index.js"
     },
+    "./node": {
+      "types": "./node.d.ts",
+      "import": "./node.js",
+      "default": "./node.js"
+    },
     "./harness": {
       "types": "./harness.d.ts",
       "import": "./harness.js",

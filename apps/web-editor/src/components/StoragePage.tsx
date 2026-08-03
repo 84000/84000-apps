@@ -16,6 +16,7 @@ import {
   type CorruptionResult,
   type KillVerdict,
   type QuotaResult,
+  type SearchReport,
   type StorageHarness,
 } from '@eightyfourthousand/lib-persistence/harness';
 import type { ClientStatus } from '@eightyfourthousand/lib-persistence';
@@ -131,6 +132,7 @@ export const StoragePage = () => {
   const [quota, setQuota] = useState<QuotaResult | null>(null);
   const [corruption, setCorruption] = useState<CorruptionResult[]>([]);
   const [benchmark, setBenchmark] = useState<BenchmarkResult | null>(null);
+  const [search, setSearch] = useState<SearchReport | null>(null);
 
   useEffect(() => {
     let unsubscribe = () => undefined as void;
@@ -422,6 +424,78 @@ export const StoragePage = () => {
       </Panel>
 
       <Panel
+        title="6 · Offline reader search (FTS5)"
+        note="The reader has no journal, so durability is irrelevant to them — search is what they need. This is the capability with no IndexedDB equivalent."
+      >
+        <Button
+          testId="run-search"
+          onClick={() =>
+            run('search', async (h) => setSearch(await h.runSearch()))
+          }
+          disabled={!ready || busy !== null}
+        >
+          Index and search
+        </Button>
+
+        {search ? (
+          <div style={{ marginTop: 8 }}>
+            <Verdict
+              passed={search.diacriticFolding.every((p) => p.matched)}
+              label={
+                `indexed ${search.passagesIndexed} passages in ` +
+                `${ms(search.indexBuildMs)} (${search.perPassageMs.toFixed(3)} ms each)`
+              }
+            />
+            <table
+              style={{
+                fontSize: 12,
+                borderCollapse: 'collapse',
+                marginTop: 8,
+                width: '100%',
+              }}
+            >
+              <thead>
+                <tr
+                  style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}
+                >
+                  <th style={{ padding: '4px 6px' }}>query</th>
+                  <th style={{ padding: '4px 6px' }}>time</th>
+                  <th style={{ padding: '4px 6px' }}>hits</th>
+                  <th style={{ padding: '4px 6px' }}>top snippet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {search.queries.map((q) => (
+                  <tr key={q.query} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '4px 6px' }}>{q.query}</td>
+                    <td style={{ padding: '4px 6px' }}>{ms(q.ms)}</td>
+                    <td style={{ padding: '4px 6px' }}>{q.hits}</td>
+                    <td style={{ padding: '4px 6px', color: '#555' }}>
+                      {q.topSnippet ?? '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}>
+              ASCII → IAST folding:{' '}
+              {search.diacriticFolding.map((p) => (
+                <span
+                  key={p.query}
+                  style={{
+                    marginRight: 8,
+                    color: p.matched ? '#0a7d34' : '#b00020',
+                  }}
+                >
+                  {p.query} {p.matched ? '✓' : '✗'}
+                </span>
+              ))}
+            </p>
+          </div>
+        ) : null}
+      </Panel>
+
+      <Panel
         title="5 · Throughput vs IndexedDB"
         note="Editor access patterns, not microbenchmarks: bulk load of a work, a 40-passage scroll window, and single journal appends."
       >
@@ -443,6 +517,7 @@ export const StoragePage = () => {
               setQuota(null);
               setCorruption([]);
               setBenchmark(null);
+              setSearch(null);
             })
           }
           disabled={!ready || busy !== null}

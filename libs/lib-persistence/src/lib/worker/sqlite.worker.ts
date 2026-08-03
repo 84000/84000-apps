@@ -19,11 +19,12 @@
 
 import * as Comlink from 'comlink';
 import { LocalDatabase } from './database';
+import { createOpfsDriver } from './opfs-driver';
 
 /** Message asking the worker to serve a client over `port`. */
 export type AttachMessage = { type: 'attach'; port: MessagePort };
 
-const database = new LocalDatabase();
+const database = new LocalDatabase(createOpfsDriver);
 
 self.addEventListener('message', (event: MessageEvent<AttachMessage>) => {
   if (event.data?.type !== 'attach') return;

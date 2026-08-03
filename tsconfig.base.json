@@ -63,6 +63,9 @@
       "@eightyfourthousand/lib-persistence": [
         "./libs/lib-persistence/src/index.ts"
       ],
+      "@eightyfourthousand/lib-persistence/node": [
+        "./libs/lib-persistence/src/node.ts"
+      ],
       "@eightyfourthousand/lib-persistence/harness": [
         "./libs/lib-persistence/src/harness.ts"
       ],

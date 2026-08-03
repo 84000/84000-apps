@@ -27,6 +27,7 @@ import {
 } from './durability';
 import { startQueryLoad, type QueryLoadStats } from './migration';
 import { clearQuotaFill, runQuotaPressure, type QuotaResult } from './quota';
+import { runSearchScenario, type SearchReport } from './search';
 import type {
   DebugApi,
   IntegrityReport,
@@ -43,6 +44,7 @@ export type HarnessReport = {
   quota: QuotaResult | null;
   corruption: CorruptionResult[];
   benchmark: BenchmarkResult | null;
+  search: SearchReport | null;
 };
 
 /**
@@ -65,6 +67,7 @@ export class StorageHarness {
     quota: null,
     corruption: [],
     benchmark: null,
+    search: null,
   };
 
   constructor(client: StorageClient) {
@@ -218,6 +221,14 @@ export class StorageHarness {
     return result;
   }
 
+  // --- Scenario 6: offline reader search ---
+
+  async runSearch(passages?: number): Promise<SearchReport> {
+    const result = await runSearchScenario(this.#client.api, passages);
+    this.report.search = result;
+    return result;
+  }
+
   // --- Scenario 5: measurements ---
 
   async runBenchmark(passageCount?: number): Promise<BenchmarkResult> {
@@ -246,6 +257,7 @@ export class StorageHarness {
     this.report.quota = null;
     this.report.corruption = [];
     this.report.benchmark = null;
+    this.report.search = null;
   }
 }
 

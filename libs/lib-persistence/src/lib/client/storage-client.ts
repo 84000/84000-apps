@@ -353,6 +353,11 @@ export class StorageClient {
     evictExpiredCache: (now) => this.#invoke((a) => a.evictExpiredCache(now)),
     commitSynced: (record, upToId) =>
       this.#invoke((a) => a.commitSynced(record, upToId)),
+    indexPassageText: (records) =>
+      this.#invoke((a) => a.indexPassageText(records)),
+    searchPassages: (query, limit) =>
+      this.#invoke((a) => a.searchPassages(query, limit)),
+    indexedPassageCount: () => this.#invoke((a) => a.indexedPassageCount()),
     quota: () => this.#invoke((a) => a.quota()),
     integrityCheck: () => this.#invoke((a) => a.integrityCheck()),
     databaseSize: () => this.#invoke((a) => a.databaseSize()),

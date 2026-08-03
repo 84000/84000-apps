@@ -28,6 +28,11 @@ original framing. See [Why SQLite, given that](#why-sqlite-given-that).
 this. The harness lives at `/storage` in `web-editor` and on
 `window.__storageHarness`.
 
+The two capabilities the recommendation rests on are demonstrated rather than
+asserted: the storage logic sits behind a driver seam with a `node:sqlite`
+implementation (`src/node.ts`, exercised by `node-parity.spec.ts`), and the FTS5
+index is a harness scenario like the others.
+
 ![The torture harness with scenarios 1, 4 and 5 run](./dev-708-harness.png)
 
 ## How it was tested
@@ -129,10 +134,35 @@ concrete page-level errors. Never served as plausible garbage.
 > fixed it. The injector now also reports `injected: false` when it fails to
 > inflict damage, so a broken injector can never again read as a clean pass.
 
+### 6 · Offline reader search — PASS
+
+The reader was not in the original scope and has no journal, so nothing above
+applies to them. What they need is search.
+
+Indexing 5,000 passages took **2,132 ms** (0.43 ms each) in Chromium, and queries
+returned in 1.3–3.3 ms with BM25-ranked, delimited snippets:
+
+```
+equipoise             3.30 ms   They rest in [equipoise] within the bodies of…
+perfection of wisdom  2.00 ms   Thus did the Tathāgata proclaim the [perfection] [of] [wisdom]…
+```
+
+All six ASCII probes matched their IAST spellings — `manjusri`, `sariputra`,
+`dharani`, `sangha`, `bhagavan`, `tathagata`. For a canon written in
+transliteration and read by people on ordinary keyboards, that is a correctness
+requirement rather than a nicety, and it is one tokenizer option
+(`unicode61 remove_diacritics 2`) rather than a subsystem.
+
+`node:sqlite` ships FTS5 with the same folding, so search works identically in an
+agent process.
+
 ### 5 · Cost
 
 Mean milliseconds per operation, 2,000 synthetic passage docs sized from the real
-local database (mean 273 B content, 5.7 annotations/passage).
+local database (mean 273 B content, 5.7 annotations/passage). The IndexedDB
+baseline uses `durability: 'strict'`; switching it from the relaxed default
+changed its figures by under 3%, so the gap below is not an artefact of comparing
+a durable write against a non-durable one.
 
 | Access pattern                      | Chromium SQLite | Chromium IDB | Firefox SQLite | Firefox IDB |
 | ----------------------------------- | --------------- | ------------ | -------------- | ----------- |
@@ -146,8 +176,8 @@ Cold open: **109 ms** Chromium, **106 ms** Firefox.
 WASM payload, 1.44 MB uncompressed across `sqlite3.wasm`, the glue module and the
 coordinator:
 
-| | gzip | brotli |
-| --- | --- | --- |
+|                     | gzip   | brotli     |
+| ------------------- | ------ | ---------- |
 | Total over the wire | 543 KB | **463 KB** |
 
 It is fetched _by the worker_, not the page, so it is off the critical path for

@@ -13,4 +13,5 @@ export type { QueryLoadStats } from './lib/harness/migration';
 export type { QuotaResult } from './lib/harness/quota';
 export type { CorruptionResult } from './lib/harness/corruption';
 export type { BenchmarkResult, Measurement } from './lib/harness/benchmark';
+export type { SearchReport } from './lib/harness/search';
 export { PASSAGE_PROFILE } from './lib/harness/fixtures';
