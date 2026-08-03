@@ -9,7 +9,7 @@
  */
 
 /** Bumped whenever `SCHEMA_STATEMENTS` changes in a way that needs migration. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** The database file name inside the SAH pool VFS. */
 export const DATABASE_FILE = '/84000-local.sqlite3';
@@ -58,6 +58,7 @@ export const SCHEMA_STATEMENTS = [
      uuid       TEXT PRIMARY KEY,
      work_uuid  TEXT NOT NULL,
      doc        BLOB NOT NULL,
+     checksum   INTEGER NOT NULL,
      version    INTEGER NOT NULL,
      updated_at INTEGER NOT NULL
    )`,
@@ -67,11 +68,19 @@ export const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS spine (
      work_uuid  TEXT PRIMARY KEY,
      doc        BLOB NOT NULL,
+     checksum   INTEGER NOT NULL,
      version    INTEGER NOT NULL,
      updated_at INTEGER NOT NULL
    )`,
 
-  // The durability-critical table. `checksum` covers `update_blob` only.
+  // `checksum` covers `update_blob` only.
+  //
+  // Every blob store carries one, for the same reason: `PRAGMA integrity_check`
+  // verifies b-tree structure, page linkage and freelist consistency, but *not*
+  // BLOB payload bytes. Corruption inside an overflow page leaves the database
+  // structurally perfect and the content garbage — measured, and the reason
+  // these columns exist. Without them a damaged passage doc opens clean, reads
+  // as valid, and syncs to the server.
   `CREATE TABLE IF NOT EXISTS journal (
      id           INTEGER PRIMARY KEY AUTOINCREMENT,
      passage_uuid TEXT NOT NULL,
@@ -86,6 +95,7 @@ export const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS cache (
      key        TEXT PRIMARY KEY,
      body       BLOB NOT NULL,
+     checksum   INTEGER NOT NULL,
      expires_at INTEGER NOT NULL,
      updated_at INTEGER NOT NULL
    )`,

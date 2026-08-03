@@ -21,7 +21,6 @@ import {
 import type { SqlDriver } from '../driver';
 import type {
   CacheRecord,
-  DebugApi,
   IntegrityReport,
   JournalAppend,
   JournalEntry,
@@ -65,7 +64,7 @@ const requestPersistence = async (): Promise<boolean> => {
  * One instance per dedicated worker. Only the active tab's instance has the
  * database open; other tabs proxy to it through the coordinator.
  */
-export class LocalDatabase implements StorageApi, DebugApi {
+export class LocalDatabase implements StorageApi {
   #driver: SqlDriver | null = null;
   #connect: () => Promise<SqlDriver>;
 
@@ -140,13 +139,21 @@ export class LocalDatabase implements StorageApi, DebugApi {
     record: Omit<PassageDocRecord, 'updatedAt'>,
   ): Promise<void> {
     this.#run(
-      `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO passage_docs (uuid, work_uuid, doc, checksum, version, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(uuid) DO UPDATE SET
          doc = excluded.doc,
+         checksum = excluded.checksum,
          version = excluded.version,
          updated_at = excluded.updated_at`,
-      [record.uuid, record.workUuid, record.doc, record.version, Date.now()],
+      [
+        record.uuid,
+        record.workUuid,
+        record.doc,
+        crc32(record.doc),
+        record.version,
+        Date.now(),
+      ],
     );
   }
 
@@ -158,13 +165,21 @@ export class LocalDatabase implements StorageApi, DebugApi {
     driver.transaction(() => {
       for (const record of records) {
         this.#run(
-          `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
-           VALUES (?, ?, ?, ?, ?)
+          `INSERT INTO passage_docs (uuid, work_uuid, doc, checksum, version, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(uuid) DO UPDATE SET
              doc = excluded.doc,
+             checksum = excluded.checksum,
              version = excluded.version,
              updated_at = excluded.updated_at`,
-          [record.uuid, record.workUuid, record.doc, record.version, now],
+          [
+            record.uuid,
+            record.workUuid,
+            record.doc,
+            crc32(record.doc),
+            record.version,
+            now,
+          ],
         );
       }
     });
@@ -172,16 +187,25 @@ export class LocalDatabase implements StorageApi, DebugApi {
 
   async getPassageDoc(uuid: string): Promise<PassageDocRecord | null> {
     const rows = this.#rows(
-      `SELECT uuid, work_uuid, doc, version, updated_at
+      `SELECT uuid, work_uuid, doc, checksum, version, updated_at
          FROM passage_docs WHERE uuid = ?`,
       [uuid],
     );
     if (!rows.length) return null;
-    const [id, workUuid, doc, version, updatedAt] = rows[0];
+    const [id, workUuid, doc, checksum, version, updatedAt] = rows[0];
+    const bytes = asBytes(doc);
+    if (!verifyChecksum(bytes, checksum as number)) {
+      // Withheld rather than returned, exactly as for a journal entry: a
+      // corrupt doc that reads as valid would be applied to the editor and
+      // synced to the server. Null means "not available locally", which the
+      // caller already has to handle by re-fetching.
+      console.error(`lib-persistence: passage doc ${uuid} failed its checksum`);
+      return null;
+    }
     return {
       uuid: id as string,
       workUuid: workUuid as string,
-      doc: asBytes(doc),
+      doc: bytes,
       version: version as number,
       updatedAt: updatedAt as number,
     };
@@ -189,26 +213,39 @@ export class LocalDatabase implements StorageApi, DebugApi {
 
   async putSpine(record: Omit<SpineRecord, 'updatedAt'>): Promise<void> {
     this.#run(
-      `INSERT INTO spine (work_uuid, doc, version, updated_at)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO spine (work_uuid, doc, checksum, version, updated_at)
+       VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(work_uuid) DO UPDATE SET
          doc = excluded.doc,
+         checksum = excluded.checksum,
          version = excluded.version,
          updated_at = excluded.updated_at`,
-      [record.workUuid, record.doc, record.version, Date.now()],
+      [
+        record.workUuid,
+        record.doc,
+        crc32(record.doc),
+        record.version,
+        Date.now(),
+      ],
     );
   }
 
   async getSpine(workUuid: string): Promise<SpineRecord | null> {
     const rows = this.#rows(
-      `SELECT work_uuid, doc, version, updated_at FROM spine WHERE work_uuid = ?`,
+      `SELECT work_uuid, doc, checksum, version, updated_at
+         FROM spine WHERE work_uuid = ?`,
       [workUuid],
     );
     if (!rows.length) return null;
-    const [id, doc, version, updatedAt] = rows[0];
+    const [id, doc, checksum, version, updatedAt] = rows[0];
+    const bytes = asBytes(doc);
+    if (!verifyChecksum(bytes, checksum as number)) {
+      console.error(`lib-persistence: spine ${workUuid} failed its checksum`);
+      return null;
+    }
     return {
       workUuid: id as string,
-      doc: asBytes(doc),
+      doc: bytes,
       version: version as number,
       updatedAt: updatedAt as number,
     };
@@ -274,26 +311,39 @@ export class LocalDatabase implements StorageApi, DebugApi {
 
   async putCache(record: Omit<CacheRecord, 'updatedAt'>): Promise<void> {
     this.#run(
-      `INSERT INTO cache (key, body, expires_at, updated_at)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO cache (key, body, checksum, expires_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET
          body = excluded.body,
+         checksum = excluded.checksum,
          expires_at = excluded.expires_at,
          updated_at = excluded.updated_at`,
-      [record.key, record.body, record.expiresAt, Date.now()],
+      [
+        record.key,
+        record.body,
+        crc32(record.body),
+        record.expiresAt,
+        Date.now(),
+      ],
     );
   }
 
   async getCache(key: string): Promise<CacheRecord | null> {
     const rows = this.#rows(
-      `SELECT key, body, expires_at, updated_at FROM cache WHERE key = ?`,
+      `SELECT key, body, checksum, expires_at, updated_at
+         FROM cache WHERE key = ?`,
       [key],
     );
     if (!rows.length) return null;
-    const [id, body, expiresAt, updatedAt] = rows[0];
+    const [id, body, checksum, expiresAt, updatedAt] = rows[0];
+    const bytes = asBytes(body);
+    if (!verifyChecksum(bytes, checksum as number)) {
+      console.error(`lib-persistence: cache entry ${key} failed its checksum`);
+      return null;
+    }
     return {
       key: id as string,
-      body: asBytes(body),
+      body: bytes,
       expiresAt: expiresAt as number,
       updatedAt: updatedAt as number,
     };
@@ -321,13 +371,21 @@ export class LocalDatabase implements StorageApi, DebugApi {
     const driver = this.#require();
     driver.transaction(() => {
       this.#run(
-        `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO passage_docs (uuid, work_uuid, doc, checksum, version, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(uuid) DO UPDATE SET
            doc = excluded.doc,
+           checksum = excluded.checksum,
            version = excluded.version,
            updated_at = excluded.updated_at`,
-        [record.uuid, record.workUuid, record.doc, record.version, Date.now()],
+        [
+          record.uuid,
+          record.workUuid,
+          record.doc,
+          crc32(record.doc),
+          record.version,
+          Date.now(),
+        ],
       );
       this.#run(`DELETE FROM journal WHERE id <= ?`, [clearJournalUpToId]);
     });
@@ -412,15 +470,37 @@ export class LocalDatabase implements StorageApi, DebugApi {
 
     const corruptJournalIds: number[] = [];
     let journalEntriesChecked = 0;
+    const corruptBlobs: IntegrityReport['corruptBlobs'] = [];
+    let blobRecordsChecked = 0;
 
     if (!databaseErrors.length) {
-      const rows = this.#rows(
+      const journalRows = this.#rows(
         `SELECT id, update_blob, checksum FROM journal ORDER BY id ASC`,
       );
-      journalEntriesChecked = rows.length;
-      for (const [id, update, checksum] of rows) {
+      journalEntriesChecked = journalRows.length;
+      for (const [id, update, checksum] of journalRows) {
         if (!verifyChecksum(asBytes(update), checksum as number)) {
           corruptJournalIds.push(id as number);
+        }
+      }
+
+      // The blob stores need their own sweep for the same reason they need
+      // checksums at all — integrity_check does not read payload bytes.
+      const blobStores = [
+        ['passage_docs', 'uuid', 'doc'],
+        ['spine', 'work_uuid', 'doc'],
+        ['cache', 'key', 'body'],
+      ] as const;
+
+      for (const [store, keyColumn, blobColumn] of blobStores) {
+        const rows = this.#rows(
+          `SELECT ${keyColumn}, ${blobColumn}, checksum FROM ${store}`,
+        );
+        blobRecordsChecked += rows.length;
+        for (const [key, blob, checksum] of rows) {
+          if (!verifyChecksum(asBytes(blob), checksum as number)) {
+            corruptBlobs.push({ store, key: String(key) });
+          }
         }
       }
     }
@@ -430,67 +510,12 @@ export class LocalDatabase implements StorageApi, DebugApi {
       databaseErrors,
       corruptJournalIds,
       journalEntriesChecked,
+      corruptBlobs,
+      blobRecordsChecked,
     };
   }
 
   async databaseSize(): Promise<number> {
     return this.#driver ? this.#driver.size() : 0;
-  }
-
-  // --- DebugApi: destructive, spike-only. See the note on `DebugApi`. ---
-
-  async corruptJournalEntry(id: number, payload: Uint8Array): Promise<void> {
-    // Deliberately does not recompute the checksum — that is the point.
-    this.#run(`UPDATE journal SET update_blob = ? WHERE id = ?`, [payload, id]);
-  }
-
-  async pauseVfs(): Promise<void> {
-    const driver = this.#require() as SqlDriver & {
-      pool?: { pauseVfs: () => unknown };
-    };
-    if (!driver.pool) {
-      throw new Error('lib-persistence: pauseVfs is only available on OPFS');
-    }
-    driver.close();
-    driver.pool.pauseVfs();
-  }
-
-  async unpauseVfs(): Promise<IntegrityReport> {
-    const driver = this.#require() as SqlDriver & {
-      pool?: { unpauseVfs: () => Promise<unknown> };
-      reopen?: () => void;
-    };
-    if (!driver.pool || !driver.reopen) {
-      throw new Error('lib-persistence: unpauseVfs is only available on OPFS');
-    }
-    await driver.pool.unpauseVfs();
-
-    try {
-      driver.reopen();
-    } catch (error) {
-      // Failing to open is itself a loud, correct outcome for a damaged file.
-      return {
-        databaseOk: false,
-        databaseErrors: [
-          error instanceof Error ? error.message : String(error),
-        ],
-        corruptJournalIds: [],
-        journalEntriesChecked: 0,
-      };
-    }
-
-    return this.integrityCheck();
-  }
-
-  async wipe(): Promise<void> {
-    for (const table of [
-      'passage_docs',
-      'spine',
-      'journal',
-      'cache',
-      'passage_text',
-    ]) {
-      this.#run(`DELETE FROM ${table}`);
-    }
   }
 }

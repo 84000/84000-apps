@@ -8,8 +8,9 @@
  * `LocalDatabase` against the Node driver: same class, same schema, same
  * statements as the browser worker, different driver underneath.
  *
- * These are also the library's first unit tests. Everything else about the
- * stack is a browser-runtime fact that only the torture harness can reach.
+ * These are the library's unit tests. What is not covered here is
+ * browser-runtime behaviour — OPFS, Web Locks, tab crashes — which no Node test
+ * can express.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -21,6 +22,13 @@ import { LocalDatabase } from '../worker/database';
 import { createNodeDriver } from './node-driver';
 
 const bytes = (...values: number[]) => new Uint8Array(values);
+
+/** Damage a stored payload without touching its checksum. */
+const corrupt = (db: LocalDatabase, sql: string, bind: unknown[]) => {
+  const driver = db.driver;
+  if (!driver) throw new Error('database is not open');
+  driver.run(sql, bind);
+};
 
 describe('lib-persistence on node:sqlite', () => {
   let dir: string;
@@ -92,9 +100,10 @@ describe('lib-persistence on node:sqlite', () => {
         workUuid: 'w1',
         update: bytes(1, 2, 3),
       });
-      // Same corruption the browser harness injects: change the payload,
-      // leave the stored checksum alone.
-      await db.corruptJournalEntry(id, bytes(1, 9, 3));
+      corrupt(db, 'UPDATE journal SET update_blob = ? WHERE id = ?', [
+        bytes(1, 9, 3),
+        id,
+      ]);
 
       const { entries, corruptIds } = await db.readJournal();
       expect(corruptIds).toContain(id);
@@ -108,11 +117,106 @@ describe('lib-persistence on node:sqlite', () => {
         workUuid: 'w1',
         update: bytes(4, 4, 4),
       });
-      await db.corruptJournalEntry(id, bytes(4, 5, 4));
+      corrupt(db, 'UPDATE journal SET update_blob = ? WHERE id = ?', [
+        bytes(4, 5, 4),
+        id,
+      ]);
 
       const report = await db.integrityCheck();
       expect(report.databaseOk).toBe(true); // structurally fine
       expect(report.corruptJournalIds).toEqual([id]); // payload is not
+    });
+  });
+
+  describe('blob checksums', () => {
+    // PRAGMA integrity_check verifies b-tree structure, not BLOB payload bytes,
+    // so a corrupted doc inside an overflow page leaves the database
+    // structurally perfect. Measured on a 420 MB database: 12 rows silently
+    // corrupted, integrity_check "ok". These per-record checksums are the only
+    // thing standing between that and a garbage doc being synced to the server.
+
+    it('withholds a passage doc whose payload no longer matches', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3, 4),
+        version: 1,
+      });
+      corrupt(db, 'UPDATE passage_docs SET doc = ? WHERE uuid = ?', [
+        bytes(1, 2, 9, 4),
+        'p1',
+      ]);
+
+      expect(await db.getPassageDoc('p1')).toBeNull();
+    });
+
+    it('withholds a spine whose payload no longer matches', async () => {
+      await db.putSpine({ workUuid: 'w1', doc: bytes(7, 7, 7), version: 1 });
+      corrupt(db, 'UPDATE spine SET doc = ? WHERE work_uuid = ?', [
+        bytes(7, 8, 7),
+        'w1',
+      ]);
+
+      expect(await db.getSpine('w1')).toBeNull();
+    });
+
+    it('withholds a cache entry whose payload no longer matches', async () => {
+      await db.putCache({
+        key: 'k1',
+        body: bytes(5, 5, 5),
+        expiresAt: Date.now() + 60_000,
+      });
+      corrupt(db, 'UPDATE cache SET body = ? WHERE key = ?', [
+        bytes(5, 6, 5),
+        'k1',
+      ]);
+
+      expect(await db.getCache('k1')).toBeNull();
+    });
+
+    it('reports corrupt blobs from the integrity sweep, which integrity_check cannot', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3),
+        version: 1,
+      });
+      await db.putCache({
+        key: 'k1',
+        body: bytes(4, 5, 6),
+        expiresAt: Date.now() + 60_000,
+      });
+      corrupt(db, 'UPDATE passage_docs SET doc = ? WHERE uuid = ?', [
+        bytes(1, 9, 3),
+        'p1',
+      ]);
+      corrupt(db, 'UPDATE cache SET body = ? WHERE key = ?', [
+        bytes(4, 9, 6),
+        'k1',
+      ]);
+
+      const report = await db.integrityCheck();
+      expect(report.databaseOk).toBe(true); // structurally perfect
+      expect(report.corruptBlobs).toEqual(
+        expect.arrayContaining([
+          { store: 'passage_docs', key: 'p1' },
+          { store: 'cache', key: 'k1' },
+        ]),
+      );
+      expect(report.blobRecordsChecked).toBeGreaterThanOrEqual(2);
+    });
+
+    it('passes a clean sweep when nothing is damaged', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3),
+        version: 1,
+      });
+      await db.putSpine({ workUuid: 'w1', doc: bytes(4), version: 1 });
+      const report = await db.integrityCheck();
+      expect(report.corruptBlobs).toEqual([]);
+      expect(report.blobRecordsChecked).toBe(2);
     });
   });
 
@@ -156,9 +260,10 @@ describe('lib-persistence on node:sqlite', () => {
       expect(() =>
         driver?.transaction(() => {
           driver.run(
-            `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
-             VALUES (?, ?, ?, ?, ?)`,
-            ['rollback-probe', 'w1', bytes(1), 1, Date.now()],
+            `INSERT INTO passage_docs
+               (uuid, work_uuid, doc, checksum, version, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            ['rollback-probe', 'w1', bytes(1), crc32(bytes(1)), 1, Date.now()],
           );
           driver.run(`DELETE FROM journal`);
           throw new Error('deliberate failure mid-transaction');

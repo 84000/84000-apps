@@ -67,6 +67,16 @@ export type IntegrityReport = {
   corruptJournalIds: number[];
   /** Total journal entries examined. */
   journalEntriesChecked: number;
+  /**
+   * Blob records whose stored checksum did not match their payload.
+   *
+   * Separate from `databaseOk` because `PRAGMA integrity_check` cannot see
+   * this: it verifies b-tree structure, not BLOB payload bytes, so a database
+   * can be structurally perfect and still hold garbage in an overflow page.
+   */
+  corruptBlobs: { store: 'passage_docs' | 'spine' | 'cache'; key: string }[];
+  /** Total blob records examined. */
+  blobRecordsChecked: number;
 };
 
 /** Outcome of opening the database. */
@@ -180,34 +190,4 @@ export type StorageApi = {
   integrityCheck(): Promise<IntegrityReport>;
   /** Raw byte size of the database file, via the SAH pool. */
   databaseSize(): Promise<number>;
-};
-
-/**
- * Destructive operations that exist only to attack the storage layer.
- *
- * Kept off `StorageApi` so nothing in the editor can reach them by accident,
- * and so the production surface stays honest about what it offers. This is
- * spike scaffolding (DEV-708) and should not survive into DEV-562's lib unless
- * the torture tests become a permanent regression suite.
- */
-export type DebugApi = {
-  /**
-   * Overwrite a journal entry's payload without updating its checksum.
-   *
-   * Simulates corruption that leaves the database structurally valid, which
-   * `PRAGMA integrity_check` cannot see.
-   */
-  corruptJournalEntry(id: number, payload: Uint8Array): Promise<void>;
-
-  /**
-   * Release the SAH pool's access handles so OPFS files can be opened writable
-   * from outside SQLite. The database is closed first.
-   */
-  pauseVfs(): Promise<void>;
-
-  /** Re-acquire access handles and re-open the database after `pauseVfs`. */
-  unpauseVfs(): Promise<IntegrityReport>;
-
-  /** Delete every row in every store. */
-  wipe(): Promise<void>;
 };

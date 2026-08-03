@@ -4,10 +4,10 @@ Browser-local storage for the translation editor: WASM SQLite on the
 `opfs-sahpool` VFS, in a dedicated worker owned by whichever tab currently holds
 the ownership lock, with other tabs proxying through a SharedWorker coordinator.
 
-**This is spike scaffolding for DEV-708, not a shipping package.** It exists to
-find out whether the architecture is durable enough to hold unsynced offline
-edits. DEV-562 turns whatever survives into the real library. `package.json` is
-marked `private` so it cannot be published by accident.
+Built for DEV-708 and hardened by DEV-562. It has no `package.json` because it
+is not published — it is consumed inside this monorepo via the
+`@eightyfourthousand/lib-persistence` path alias. Add one if and when it needs to
+go to npm.
 
 ## Why this shape
 
@@ -39,12 +39,15 @@ The reasons that survived measurement:
   "record the sync and drop the journal entries it covers" a single transaction.
   (IndexedDB also has multi-store transactions, so this argues for one engine,
   not specifically for SQLite.)
-- **Per-entry checksums on the journal.** SQLite's page integrity catches a
-  damaged page. It does not catch a payload written correctly into a page that
-  was later rewritten with partial bytes. `readJournal` withholds entries that
-  fail verification rather than returning them, because replaying a corrupt Yjs
-  update poisons the document it is applied to. This is engine-independent and
-  would be worth doing on IndexedDB too.
+- **Per-record checksums on every blob store.** `PRAGMA integrity_check`
+  verifies b-tree structure, page linkage and freelist consistency — but _not_
+  BLOB payload bytes. Measured on a 420 MB database, 12 rows were silently
+  corrupted while the check reported `ok`, because the damage landed in overflow
+  pages. So `journal`, `passage_docs`, `spine` and `cache` each carry a CRC-32
+  over their payload, verified on read; a record that fails is withheld rather
+  than returned, because a corrupt doc that reads as valid gets applied to the
+  editor and synced to the server. This is engine-independent and would be worth
+  doing on IndexedDB too.
 
 The cost being accepted: a SharedWorker coordinator that exists **only** because
 `opfs-sahpool` requires single-writer access, and ~475 KB brotli of WASM.
@@ -113,28 +116,26 @@ node tools/build-storage-assets.mjs apps/web-editor
 
 Output is gitignored. Re-run it after changing the coordinator.
 
-## Torture harness
+## Verifying browser behaviour
 
-`@eightyfourthousand/lib-persistence/harness` and the `/storage` route in
-`web-editor`. See `apps/web-editor/.claude/skills/verify-storage/SKILL.md` for
-how to run the scenarios, and `docs/spikes/dev-708-storage-durability.md` for
-what they found.
+Most of what matters here — OPFS, Web Locks, ownership handoff across a tab
+crash — cannot be tested from Node. DEV-708 validated it with a throwaway
+in-page harness driven by Playwright in Chromium, Playwright in Firefox, and by
+hand in Safari. That harness is not in this tree; recover it from the DEV-708
+branch history if a change needs the same scrutiny.
 
-## Full-text search
+Two things to know if you do:
 
-`indexPassageText` / `searchPassages` maintain an FTS5 index over rendered
-passage text, for offline readers. The tokenizer is
-`unicode61 remove_diacritics 2`, which matters for this corpus specifically: the
-translations are dense with IAST transliteration, and a reader on an ASCII
-keyboard searching `manjusri` or `sariputra` must still match `Mañjuśrī` and
-`Śāriputra`. Results carry BM25 rank and a delimited snippet.
-
-The index is separate from `passage_docs` because a doc blob is opaque CRDT
-state; the index needs rendered text.
+- Turbopack serves the SharedWorker entry as raw TypeScript, so cross-tab
+  proxying fails silently unless `tools/build-storage-assets.mjs` has been run.
+  A tab still becomes `owner`, but `ownerId` stays null.
+- `playwright-webkit` is not Safari. Its OPFS and SharedWorker implementations
+  differ from the shipping engine, so a green WebKit run is not evidence.
+  Playwright's Firefox _is_ genuine Gecko and does count.
 
 ## Running unit tests
 
 Run `nx test lib-persistence` to execute the unit tests via [Jest](https://jestjs.io).
-They cover what is not a browser-runtime fact — the shared schema, journal
+They cover what is not a browser-runtime fact — the shared schema, per-record
 checksums, transaction rollback and FTS5 — by driving the same `LocalDatabase`
-against `node:sqlite`. Everything else needs the torture harness.
+against `node:sqlite`.
