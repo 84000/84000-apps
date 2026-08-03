@@ -20,6 +20,29 @@ export const VFS_DIRECTORY = '.84000-sahpool';
 /** The SQLite VFS name to register the pool under. */
 export const VFS_NAME = 'opfs-sahpool';
 
+/**
+ * Where the SQLite WASM runtime is served from.
+ *
+ * Loaded at runtime rather than bundled: the package's ESM build contains a
+ * dynamic `new Worker(new URL(proxyUri, import.meta.url))` for the plain OPFS
+ * VFS's async proxy, which neither Turbopack nor webpack can resolve
+ * statically. We never execute it — the SAH pool VFS has no async proxy — but
+ * the bundler fails on it anyway.
+ *
+ * Populate the directory with `node tools/build-storage-assets.mjs <app-dir>`.
+ */
+export const SQLITE_MODULE_URL = '/sqlite-wasm/index.mjs';
+
+/**
+ * Where the bundled SharedWorker coordinator is served from.
+ *
+ * Turbopack compiles `new Worker(new URL('./x.ts', import.meta.url))` but not
+ * the `SharedWorker` form — it emits the entry into `_next/static/media` as a
+ * raw file, so the browser receives TypeScript and fails to parse it. The
+ * coordinator is therefore pre-bundled by `tools/build-storage-assets.mjs`.
+ */
+export const COORDINATOR_URL = '/storage-workers/coordinator.js';
+
 export const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS passage_docs (
      uuid       TEXT PRIMARY KEY,

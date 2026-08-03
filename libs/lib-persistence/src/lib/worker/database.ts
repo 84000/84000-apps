@@ -8,18 +8,20 @@
  * and studio apps embed third-party content that cross-origin isolation breaks.
  */
 
-import sqlite3InitModule, { type SAHPoolUtil } from '@sqlite.org/sqlite-wasm';
+import type { SAHPoolUtil, Sqlite3Static } from '@sqlite.org/sqlite-wasm';
 import { crc32, verifyChecksum } from '../checksum';
 import {
   DATABASE_FILE,
   PRAGMAS,
   SCHEMA_STATEMENTS,
   SCHEMA_VERSION,
+  SQLITE_MODULE_URL,
   VFS_DIRECTORY,
   VFS_NAME,
 } from '../schema';
 import type {
   CacheRecord,
+  DebugApi,
   IntegrityReport,
   JournalAppend,
   JournalEntry,
@@ -34,6 +36,22 @@ type Db = {
   exec: (opts: unknown) => unknown;
   close: () => void;
   transaction: (fn: () => void) => void;
+};
+
+/**
+ * Load the SQLite WASM runtime from `public/`, outside the bundler graph.
+ *
+ * The comment pragmas stop webpack and Turbopack from following the import;
+ * see `SQLITE_MODULE_URL` for why the package cannot be bundled at all. The
+ * specifier is held in a variable because a literal would be resolved
+ * statically despite the pragmas.
+ */
+const loadSqlite = async (): Promise<Sqlite3Static> => {
+  const moduleUrl = SQLITE_MODULE_URL;
+  const module = (await import(
+    /* webpackIgnore: true */ /* turbopackIgnore: true */ moduleUrl
+  )) as { default: () => Promise<Sqlite3Static> };
+  return module.default();
 };
 
 const asBytes = (value: unknown): Uint8Array => {
@@ -67,7 +85,7 @@ const requestPersistence = async (): Promise<boolean> => {
  * One instance per dedicated worker. Only the active tab's instance has the
  * database open; other tabs proxy to it through the coordinator.
  */
-export class LocalDatabase implements StorageApi {
+export class LocalDatabase implements StorageApi, DebugApi {
   #pool: SAHPoolUtil | null = null;
   #db: Db | null = null;
 
@@ -99,7 +117,7 @@ export class LocalDatabase implements StorageApi {
   async open(): Promise<OpenReport> {
     const started = performance.now();
 
-    const sqlite3 = await sqlite3InitModule();
+    const sqlite3 = await loadSqlite();
 
     const pool = await sqlite3.installOpfsSAHPoolVfs({
       name: VFS_NAME,
@@ -144,6 +162,26 @@ export class LocalDatabase implements StorageApi {
          updated_at = excluded.updated_at`,
       [record.uuid, record.workUuid, record.doc, record.version, Date.now()],
     );
+  }
+
+  async putPassageDocs(
+    records: Omit<PassageDocRecord, 'updatedAt'>[],
+  ): Promise<void> {
+    const db = this.#requireDb();
+    const now = Date.now();
+    db.transaction(() => {
+      for (const record of records) {
+        this.#run(
+          `INSERT INTO passage_docs (uuid, work_uuid, doc, version, updated_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(uuid) DO UPDATE SET
+             doc = excluded.doc,
+             version = excluded.version,
+             updated_at = excluded.updated_at`,
+          [record.uuid, record.workUuid, record.doc, record.version, now],
+        );
+      }
+    });
   }
 
   async getPassageDoc(uuid: string): Promise<PassageDocRecord | null> {
@@ -362,5 +400,46 @@ export class LocalDatabase implements StorageApi {
     if (!this.#pool) return 0;
     const bytes = await this.#pool.exportFile(DATABASE_FILE);
     return bytes.byteLength;
+  }
+
+  // --- DebugApi: destructive, spike-only. See the note on `DebugApi`. ---
+
+  async corruptJournalEntry(id: number, payload: Uint8Array): Promise<void> {
+    // Deliberately does not recompute the checksum — that is the point.
+    this.#run(`UPDATE journal SET update_blob = ? WHERE id = ?`, [payload, id]);
+  }
+
+  async pauseVfs(): Promise<void> {
+    if (!this.#pool) throw new Error('lib-persistence: no VFS installed');
+    this.#db?.close();
+    this.#db = null;
+    this.#pool.pauseVfs();
+  }
+
+  async unpauseVfs(): Promise<IntegrityReport> {
+    if (!this.#pool) throw new Error('lib-persistence: no VFS installed');
+    this.#pool = await this.#pool.unpauseVfs();
+
+    try {
+      this.#db = new this.#pool.OpfsSAHPoolDb(DATABASE_FILE) as unknown as Db;
+    } catch (error) {
+      // Failing to open is itself a loud, correct outcome for a damaged file.
+      return {
+        databaseOk: false,
+        databaseErrors: [
+          error instanceof Error ? error.message : String(error),
+        ],
+        corruptJournalIds: [],
+        journalEntriesChecked: 0,
+      };
+    }
+
+    return this.integrityCheck();
+  }
+
+  async wipe(): Promise<void> {
+    for (const table of ['passage_docs', 'spine', 'journal', 'cache']) {
+      this.#run(`DELETE FROM ${table}`);
+    }
   }
 }

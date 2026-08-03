@@ -19,7 +19,7 @@ import {
   type CoordinatorMessage,
 } from '../coordinator/protocol';
 import type { AttachMessage } from '../worker/sqlite.worker';
-import type { OpenReport, StorageApi } from '../types';
+import type { DebugApi, OpenReport, StorageApi } from '../types';
 
 /** How long a single call may hang before the owner is presumed dead. */
 const CALL_TIMEOUT_MS = 10_000;
@@ -340,6 +340,7 @@ export class StorageClient {
     open: () => this.#invoke((a) => a.open()),
     close: () => this.#invoke((a) => a.close()),
     putPassageDoc: (record) => this.#invoke((a) => a.putPassageDoc(record)),
+    putPassageDocs: (records) => this.#invoke((a) => a.putPassageDocs(records)),
     getPassageDoc: (uuid) => this.#invoke((a) => a.getPassageDoc(uuid)),
     putSpine: (record) => this.#invoke((a) => a.putSpine(record)),
     getSpine: (workUuid) => this.#invoke((a) => a.getSpine(workUuid)),
@@ -355,5 +356,22 @@ export class StorageClient {
     quota: () => this.#invoke((a) => a.quota()),
     integrityCheck: () => this.#invoke((a) => a.integrityCheck()),
     databaseSize: () => this.#invoke((a) => a.databaseSize()),
+  };
+
+  /**
+   * Destructive operations used by the torture harness.
+   *
+   * Separate from `api` so the editor cannot reach them by accident. See the
+   * note on `DebugApi` — this is spike scaffolding, not a shipping surface.
+   */
+  readonly debug: DebugApi = {
+    corruptJournalEntry: (id, payload) =>
+      this.#invoke((a) =>
+        (a as unknown as DebugApi).corruptJournalEntry(id, payload),
+      ),
+    pauseVfs: () => this.#invoke((a) => (a as unknown as DebugApi).pauseVfs()),
+    unpauseVfs: () =>
+      this.#invoke((a) => (a as unknown as DebugApi).unpauseVfs()),
+    wipe: () => this.#invoke((a) => (a as unknown as DebugApi).wipe()),
   };
 }

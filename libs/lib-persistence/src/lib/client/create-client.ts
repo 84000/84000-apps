@@ -1,12 +1,17 @@
 /**
  * Default wiring of the storage client to its two worker scripts.
  *
- * The `new URL(..., import.meta.url)` form is what lets webpack (and therefore
- * Next) discover the worker entry points and emit them as separate bundles.
- * Both are module workers, which is the reason for the Safari 16.4 floor: it is
- * the first Safari that supports module workers and SharedWorker together.
+ * The dedicated worker uses the `new URL(..., import.meta.url)` form, which
+ * Turbopack recognises and emits as its own bundle. The coordinator cannot:
+ * Turbopack does not compile the `SharedWorker` form and serves the raw
+ * TypeScript instead, so it is pre-bundled to `public/` by
+ * `tools/build-storage-assets.mjs` and loaded by plain URL.
+ *
+ * Both are module workers, which is the reason for the Safari 16.4 floor — the
+ * first Safari supporting module workers and SharedWorker together.
  */
 
+import { COORDINATOR_URL } from '../schema';
 import { StorageClient } from './storage-client';
 
 /**
@@ -22,10 +27,10 @@ export const createStorageClient = async (): Promise<StorageClient> => {
         name: '84000-sqlite',
       }),
     createSharedWorker: () =>
-      new SharedWorker(
-        new URL('../coordinator/coordinator.sharedworker.ts', import.meta.url),
-        { type: 'module', name: '84000-storage-coordinator' },
-      ),
+      new SharedWorker(COORDINATOR_URL, {
+        type: 'module',
+        name: '84000-storage-coordinator',
+      }),
   });
 
   await client.start();

@@ -23,6 +23,12 @@ export default [
     rules: {},
   },
   {
-    ignores: ['.next/**/*'],
+    ignores: [
+      '.next/**/*',
+      // Vendored SQLite WASM glue and the pre-bundled storage coordinator,
+      // emitted by tools/build-storage-assets.mjs. Build output, not source.
+      'public/sqlite-wasm/**/*',
+      'public/storage-workers/**/*',
+    ],
   },
 ];
