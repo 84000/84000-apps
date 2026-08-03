@@ -3,16 +3,21 @@
 **Verdict: proceed with the single-engine SQLite design. The journal-in-IndexedDB
 fallback is not required.**
 
-One caveat gates that verdict: **Safari is untested.** See [Not tested](#not-tested).
+Two caveats gate that verdict: **Safari is untested** (see
+[Not tested](#not-tested)), and **the reason for choosing SQLite is not the one
+the spike set out to test.**
 
-The spike asked whether the Notion-pattern storage architecture is durable enough
-to hold the unsynced-edit journal, which during offline editing is the only copy
-of a translator's work. Notion can treat its browser database as a cache; we
-cannot. So the question was never throughput — it was whether an edit the storage
-layer acknowledged is still there after the tab dies, and whether damage is
-detected rather than served.
+The spike asked whether the architecture is durable enough to hold the
+unsynced-edit journal, which during offline editing is the only copy of a
+translator's work. It is — but so is IndexedDB. Measured head-to-head over
+renderer-crash trials, SQLite, IndexedDB with `durability: 'strict'`, and
+IndexedDB with the relaxed default **all lost zero acknowledged writes**.
 
-On Chromium and Firefox, it is.
+So durability does not decide this. What does is that three _local-first_ peers
+need the same store — browser editor tabs, browser reader tabs, and a local agent
+process running in Claude Desktop or Codex — and that offline readers need
+full-text search. On both counts SQLite wins outright, and neither was in the
+original framing. See [Why SQLite, given that](#why-sqlite-given-that).
 
 ---
 
@@ -137,9 +142,17 @@ local database (mean 273 B content, 5.7 annotations/passage).
 | Journal append (`synchronous=FULL`) | 3.637           | 0.110        | 1.030          | 0.115       |
 
 Cold open: **109 ms** Chromium, **106 ms** Firefox.
-WASM payload: **1.44 MB uncompressed** (865 KB `sqlite3.wasm`, 579 KB glue, 2 KB
-coordinator), fetched _by the worker_, so it is off the critical path for first
-paint — it delays the first query, not the first render.
+
+WASM payload, 1.44 MB uncompressed across `sqlite3.wasm`, the glue module and the
+coordinator:
+
+| | gzip | brotli |
+| --- | --- | --- |
+| Total over the wire | 543 KB | **463 KB** |
+
+It is fetched _by the worker_, not the page, so it is off the critical path for
+first paint — it delays the first query, not the first render, and can be
+lazy-loaded behind an explicit "make available offline" action.
 
 In terms the product cares about:
 
@@ -147,42 +160,115 @@ In terms the product cares about:
 - A 40-passage scroll window: **~10 ms** / ~5 ms.
 - One offline edit: **~3.6 ms** / ~1.0 ms.
 
-**On the 33× ratio for journal appends.** It is real, and it is mostly not a
-SQLite tax — it is the price of durability. `synchronous = FULL` fsyncs at each
-commit, which is the entire reason an acknowledged edit survives a crash.
-IndexedDB is faster here because it promises less: browsers expose no durable
-commit mode, so the baseline is measuring un-fsynced writes. The comparison is
-durable against non-durable, not slow against fast. At 3.6 ms per debounced edit
-the absolute cost is irrelevant.
+**On the 33× ratio for journal appends.** It is real, and it is _not_ the price
+of durability — that was my first assumption and it is wrong. Rebuilding with
+`synchronous = NORMAL` gives 3.71 ms per append against FULL's 3.64 ms: identical
+within noise. The cost on this VFS is the OPFS `SyncAccessHandle` write path plus
+the worker `postMessage` round trip, which the main-thread IndexedDB baseline
+does not pay. `synchronous = FULL` is therefore free here, and is kept as no-cost
+insurance against power loss.
 
-Two further reasons the ratio overstates the gap: SQLite runs in a worker and
-pays a `postMessage` round trip per call that the main-thread IndexedDB baseline
-does not, and batching collapses it anyway — the same 2,000 writes cost 18.5× per
-row one-at-a-time and 1.8× in a single transaction.
+Batching collapses the gap anyway: the same 2,000 writes cost 18.5× per row
+one-at-a-time and 1.8× in a single transaction.
 
-## Recommendation
+## Durability, head to head
 
-**Proceed with one SQLite engine. Do not adopt the journal-in-IndexedDB
-fallback.**
+The spike originally measured only SQLite, so it could show SQLite _clears the
+bar_ but not that it beats IndexedDB. This closes that gap: five real
+renderer-crash trials per configuration, identical discipline (append → await
+commit → record ack in `localStorage`), with the IndexedDB side written
+independently of `lib-persistence` so a shared harness bug could not mask a
+difference.
 
-The fallback exists to buy durability that SQLite was feared not to provide. The
-measurements say SQLite provides it: acknowledged writes survived real renderer
-crashes with zero gaps, corruption is caught in both modes on both engines, and
-quota exhaustion is a clean error. Adopting the fallback would trade away atomic
-multi-store commits — the ability to record a sync and drop the journal entries
-it covers in one transaction — in exchange for a write-ordering protocol that
-either loses edits or replays them, and it would buy nothing that has been shown
-to be missing.
+| Configuration                               | Trials losing acked data | Entries lost |
+| ------------------------------------------- | ------------------------ | ------------ |
+| SQLite `synchronous = FULL`                 | 0 / 5                    | 0            |
+| SQLite `synchronous = NORMAL`               | 0 / 5                    | 0            |
+| IndexedDB `durability: 'strict'`            | 0 / 5                    | 0            |
+| IndexedDB `durability: 'relaxed'` (default) | 0 / 5                    | 0            |
 
-The performance case is not close either: the durability-critical path costs
-1–4 ms per edit, and bulk loads are within 2× of IndexedDB.
+**No configuration lost anything.** The durability premise does not distinguish
+the engines.
 
-**This recommendation is contingent on the Safari run.** Safari is the engine
-where OPFS and SharedWorker are most likely to behave differently, and it is the
-one browser this spike could not exercise. Phase 0 should not be declared passed
-until it is.
+The limit of this result: `Page.crash` kills the renderer, not the machine. The
+browser process and OS page cache survive — which is exactly what relaxed
+durability relies on. This covers tab crashes and OOM kills, the common real
+failures, but **not power loss**. Separating strict from relaxed needs a VM
+hard-reset harness, which nobody has run.
+
+## Why SQLite, given that
+
+Durability having washed out, three things decide it. Two of them were not in the
+original framing, because they come from users the spike did not consider: a
+local agent process, and the offline reader.
+
+**1. Three local-first peers, one library.** Browser editor tabs, browser reader
+tabs, and a local agent (Claude Desktop / Codex) all need a durable local store,
+and the agent cannot reach the browser's OPFS. `node:sqlite` — built into Node 24
+— runs the same schema, queries and migrations outside the browser. There is no
+production IndexedDB for Node: `fake-indexeddb` describes itself as _"a pure JS
+in-memory implementation"_ and loses everything on process restart. IndexedDB
+therefore means two storage layers and two implementations of the
+durability-critical journal.
+
+**2. Offline readers need search.** Over 17,440 real 84000 passages:
+
+|                                | SQLite FTS5                | Hand-rolled IndexedDB index |
+| ------------------------------ | -------------------------- | --------------------------- |
+| Index build                    | **111 ms**                 | 2,592 ms                    |
+| Query latency                  | 0.0–2.1 ms                 | 0.1–2.1 ms                  |
+| Implementation                 | one `CREATE VIRTUAL TABLE` | ~70 lines                   |
+| BM25 ranking, snippets, prefix | built in                   | not implemented             |
+| Diacritic folding              | one tokenizer option       | not implemented             |
+
+Query latency is a wash; everything else is not. The folding matters
+disproportionately for this corpus — with `unicode61 remove_diacritics 2`, a
+reader on an ASCII keyboard searching `manjusri`, `sariputra`, `dharani`,
+`sangha` or `bhagavan` matches `Mañjuśrī`, `Śāriputra`, `dhāraṇī`, `saṅgha`,
+`Bhagavān`. Hand-rolling correct Unicode folding plus BM25 plus snippet
+highlighting is a project in itself.
+
+Note the reader has **no journal at all**, so the durability question that
+motivated this spike is irrelevant to them. Search is what they need.
+
+**3. SQL for things that are queries.** Phase 3 eviction — TTL plus size-capped
+LRU that never evicts a work with unsynced edits — is ~10 lines of SQL against
+~55 lines of IndexedDB cursor walking that loads all survivors into memory to
+sort (measured: 320 ms for 5,000 entries, invariant upheld). Conflict detection
+and cache stats trend the same way, and IndexedDB has no `ALTER`, so migrations
+are manual data rewrites forever.
+
+### What this costs
+
+A SharedWorker coordinator that exists **only** because `opfs-sahpool` demands
+single-writer access, plus ~475 KB brotli of WASM. IndexedDB is natively
+multi-tab and would need neither. The coordinator is where both defects found by
+this spike live.
+
+Two things make that acceptable rather than damning: the coordinator is written
+once and shared by editor and reader rather than paid per surface, and the WASM
+is fetched by the worker, so it can be lazy-loaded behind an explicit "make
+available offline" action and charged only to users who opt in.
+
+### What would reverse this
+
+If the agent turns out to be server-side against Postgres rather than
+local-first, and offline reader search is dropped or moved server-side, then
+IndexedDB is the better engineering choice — less code, fewer failure modes,
+broader support — and the coordinator becomes pure cost.
+
+### Still contingent on Safari
+
+Safari is where OPFS and SharedWorker are most likely to behave differently, and
+it is the one browser this spike could not exercise. Phase 0 should not be
+declared passed until it is run.
 
 ## Not tested
+
+- **Power loss.** The crash trials kill the renderer, not the machine, so
+  `synchronous = FULL` versus `NORMAL` — and IndexedDB strict versus relaxed —
+  remain unseparated. This is the only durability question still open, and the
+  only one where the engines might still differ.
 
 - **Safari ≥ 16.4 — the significant gap.** No automatable real Safari was
   available. `playwright-webkit` is not evidence. The harness is fully
@@ -216,7 +302,16 @@ until it is.
 4. **`DebugApi` must not ship.** Destructive test-only operations; they are off
    `StorageApi` deliberately, and should be dropped or gated unless the torture
    scenarios become a permanent regression suite.
-5. **Bundler workarounds are inherited cost.** Neither the SQLite WASM package nor
+5. **Schema version skew across peers.** A browser tab refreshes instantly; a
+   desktop agent updates on its own cadence. Two processes will run different
+   schema versions against the same sync substrate, so the journal format and
+   migrations need cross-process versioning. This constraint does not exist in a
+   browser-only design and appeared only once the agent was treated as a
+   local-first peer.
+6. **Three-peer merge topology.** DEV-707 / DEV-709 are scoped browser↔server. A
+   local agent makes conflict review N-peer: "yours / theirs" becomes "yours /
+   theirs / the agent's". Not a storage decision, but it lands in the same phase.
+7. **Bundler workarounds are inherited cost.** Neither the SQLite WASM package nor
    the SharedWorker entry can go through Turbopack; both are pre-built into
    `public/` by `tools/build-storage-assets.mjs`, which is a manual step that
    `nx dev` does not run. Worth wiring into the app's build target.

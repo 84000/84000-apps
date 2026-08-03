@@ -11,25 +11,44 @@ marked `private` so it cannot be published by accident.
 
 ## Why this shape
 
-The design follows Notion's browser-SQLite writeup, with one difference that
-changes the engineering: Notion's local database is a cache, so losing it costs
-a slow reload. Ours holds the unsynced-edit journal, which during offline
-editing is the **only** copy of a translator's work. So the bar is durability,
-not throughput.
+The design follows Notion's browser-SQLite writeup. The spike set out to prove
+that SQLite was _more durable_ than IndexedDB for the unsynced-edit journal —
+and **it is not**. Measured over renderer-crash trials, SQLite, IndexedDB with
+`durability: 'strict'`, and IndexedDB with the relaxed default all lost zero
+acknowledged writes. Durability is not why this package uses SQLite. See
+`docs/spikes/dev-708-storage-durability.md`.
 
-That difference drives three decisions:
+The reasons that survived measurement:
 
-- **One engine, not two.** Passage docs, spine, journal, and cache live in one
-  SQLite database so that "record the sync and drop the journal entries it
-  covers" is a single transaction. Split across two engines it becomes a
-  write-ordering protocol that either loses edits or replays them.
-- **`synchronous = FULL`.** Costs throughput, and buys the property that a
-  commit which returned has actually survived.
+- **One library across three local-first peers.** Browser editor tabs, browser
+  reader tabs, and a local agent process (Claude Desktop / Codex) all need a
+  durable local store. `node:sqlite` runs the same schema, queries, and
+  migrations outside the browser. There is no production IndexedDB for Node —
+  `fake-indexeddb` is in-memory and loses everything on process restart — so
+  IndexedDB would mean two storage layers and two implementations of the
+  durability-critical journal.
+- **FTS5 for offline reading.** Readers need search over cached works. FTS5
+  indexes 17k passages in 111 ms against 2.6 s for a hand-rolled IndexedDB
+  inverted index, and supplies BM25 ranking, snippets, prefix queries, and — for
+  a canon written in IAST transliteration — diacritic folding, so `manjusri`
+  finds `Mañjuśrī`.
+- **SQL for everything that is a query.** Cache eviction, conflict detection and
+  cache stats are statements rather than hand-rolled cursor walks, and schema
+  migrations are ordinary SQL rather than manual data rewrites.
+- **One engine, not two.** Docs, spine, journal, and cache in one database makes
+  "record the sync and drop the journal entries it covers" a single transaction.
+  (IndexedDB also has multi-store transactions, so this argues for one engine,
+  not specifically for SQLite.)
 - **Per-entry checksums on the journal.** SQLite's page integrity catches a
   damaged page. It does not catch a payload written correctly into a page that
   was later rewritten with partial bytes. `readJournal` withholds entries that
   fail verification rather than returning them, because replaying a corrupt Yjs
-  update poisons the document it is applied to.
+  update poisons the document it is applied to. This is engine-independent and
+  would be worth doing on IndexedDB too.
+
+The cost being accepted: a SharedWorker coordinator that exists **only** because
+`opfs-sahpool` requires single-writer access, and ~475 KB brotli of WASM.
+IndexedDB is natively multi-tab and would need neither.
 
 `opfs-sahpool` is used rather than the plain `opfs` VFS because it needs no
 COOP/COEP headers; cross-origin isolation breaks third-party embeds in the

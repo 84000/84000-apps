@@ -1,11 +1,16 @@
 /**
  * An IndexedDB store shaped like the SQLite one, for comparison.
  *
- * This is the baseline the spike measures against, and it is also the fallback
- * design's journal engine — so it is written the way we would actually ship it,
- * not as a strawman. In particular each journal append is its own transaction,
- * because that is what "the edit is durable now" requires; batching appends
- * would make IndexedDB look faster while measuring something we could not use.
+ * IndexedDB is a serious rejected alternative, not a strawman, so this is
+ * written the way we would actually ship it. Two choices follow from that:
+ *
+ * 1. Each journal append is its own transaction, because that is what "the edit
+ *    is durable now" requires. Batching would make IndexedDB look faster while
+ *    measuring something we could not use.
+ * 2. Durability-sensitive writes use `durability: 'strict'`, which asks the
+ *    browser to flush before reporting the transaction complete. The default is
+ *    relaxed, and benchmarking relaxed IndexedDB against `synchronous = FULL`
+ *    SQLite would be comparing a durable write to a non-durable one.
  */
 
 const DB_NAME = '84000-baseline';
@@ -58,7 +63,9 @@ export class IdbBaseline {
   }
 
   async putPassageDoc(uuid: string, doc: Uint8Array): Promise<void> {
-    const tx = this.#require().transaction(DOCS, 'readwrite');
+    const tx = this.#require().transaction(DOCS, 'readwrite', {
+      durability: 'strict',
+    });
     tx.objectStore(DOCS).put({ uuid, doc });
     await done(tx);
   }
@@ -67,7 +74,9 @@ export class IdbBaseline {
   async putPassageDocs(
     records: { uuid: string; doc: Uint8Array }[],
   ): Promise<void> {
-    const tx = this.#require().transaction(DOCS, 'readwrite');
+    const tx = this.#require().transaction(DOCS, 'readwrite', {
+      durability: 'strict',
+    });
     const store = tx.objectStore(DOCS);
     for (const record of records) store.put(record);
     await done(tx);
@@ -81,9 +90,11 @@ export class IdbBaseline {
     return record?.doc ?? null;
   }
 
-  /** One transaction per append — see the note at the top of this file. */
+  /** One strict transaction per append — see the note at the top of this file. */
   async appendJournal(update: Uint8Array): Promise<void> {
-    const tx = this.#require().transaction(JOURNAL, 'readwrite');
+    const tx = this.#require().transaction(JOURNAL, 'readwrite', {
+      durability: 'strict',
+    });
     tx.objectStore(JOURNAL).add({ update });
     await done(tx);
   }
