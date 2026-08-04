@@ -14,9 +14,23 @@ const SAVE_PASSAGES_MUTATION = gql`
         uuid
         json
       }
+      renumberedPassages {
+        uuid
+        label
+      }
     }
   }
 `;
+
+/**
+ * A passage the server relabelled while renumbering a series. Not part of the
+ * submitted payload — the editor uses these to refresh labels it is showing
+ * for passages outside its loaded window.
+ */
+export interface RenumberedPassage {
+  uuid: string;
+  label: string;
+}
 
 interface SavePassagesResponse {
   savePassages: {
@@ -24,6 +38,7 @@ interface SavePassagesResponse {
     savedCount: number;
     deletedCount?: number;
     passages: ReplacedPassage[];
+    renumberedPassages: RenumberedPassage[];
     error?: string;
   };
 }
@@ -72,6 +87,7 @@ export const savePassages = async ({
   savedCount: number;
   deletedCount?: number;
   passages: ReplacedPassage[];
+  renumberedPassages: RenumberedPassage[];
   error?: string;
 }> => {
   const passageInputs = passages.map(passageToInput);

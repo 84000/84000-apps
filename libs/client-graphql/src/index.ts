@@ -51,6 +51,7 @@ export {
   type PublishFinding,
   type PublishReadiness,
   type PublishStatusKind,
+  type RenumberedPassage,
   type WorkPublishStatus,
   type FindingLocation,
 } from './lib/functions';

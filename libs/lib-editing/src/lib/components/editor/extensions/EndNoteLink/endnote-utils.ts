@@ -114,33 +114,6 @@ export function removeAllEndnoteLinksForPassage(
 export { findPassageNode } from '../../util';
 
 /**
- * Get the last passage node in the endnotes editor.
- * Returns { label, sort, uuid } or undefined if no passages exist.
- */
-export function getLastEndnoteInEditor(
-  editor: Editor,
-): { label: string; sort: number; uuid: string } | undefined {
-  const { doc } = editor.state;
-  let last: { label: string; sort: number; uuid: string; pos: number } | undefined;
-
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'passage') {
-      last = {
-        label: node.attrs.label || '',
-        sort: node.attrs.sort ?? 0,
-        uuid: node.attrs.uuid,
-        pos,
-      };
-    }
-    return true;
-  });
-
-  return last
-    ? { label: last.label, sort: last.sort, uuid: last.uuid }
-    : undefined;
-}
-
-/**
  * Get the first endnotes-type passage node in the endnotes editor.
  * Skips endnotesHeader passages.
  * Returns { label, sort, uuid } or undefined if no passages exist.
@@ -169,8 +142,18 @@ export function getFirstEndnoteInEditor(
 /**
  * Insert a new empty endnote passage into the endnotes editor at the correct
  * position. Use `afterPassageUuid` to insert after a passage, or
- * `beforePassageUuid` to insert before one. Falls back to end of doc.
- * Increments labels and sort values of all subsequent passages.
+ * `beforePassageUuid` to insert before one. With neither, the passage is
+ * appended to the end of the doc.
+ *
+ * Increments labels and sort values of all subsequent passages **that are
+ * loaded in this editor**. The endnotes panel is paginated (a window of
+ * passages, not the whole series), so callers must guarantee the anchor
+ * passage is loaded before calling — see `waitForPassageNode`. When an anchor
+ * is named but absent, this returns `false` without touching the doc rather
+ * than appending to the end of the loaded window: a misplaced insert leaves
+ * the new note with a label that duplicates a note further down the series.
+ *
+ * Returns whether the passage was inserted.
  */
 export function insertEndnotePassage(
   editor: Editor,
@@ -187,7 +170,7 @@ export function insertEndnotePassage(
     afterPassageUuid?: string;
     beforePassageUuid?: string;
   },
-): void {
+): boolean {
   const { state } = editor;
   const { tr, schema } = state;
   const passageType = schema.nodes.passage;
@@ -195,7 +178,7 @@ export function insertEndnotePassage(
 
   if (!passageType || !paragraphType) {
     console.warn('Required node types not found in schema');
-    return;
+    return false;
   }
 
   const newPassage = passageType.create(
@@ -203,30 +186,29 @@ export function insertEndnotePassage(
     paragraphType.create(),
   );
 
-  // Find insertion position
-  let insertPos = state.doc.content.size;
-  if (beforePassageUuid) {
+  // Find insertion position. An anchor that isn't in the loaded window is a
+  // hard failure, not a reason to append — see the doc comment above.
+  const anchorUuid = beforePassageUuid ?? afterPassageUuid;
+  let insertPos = anchorUuid ? -1 : state.doc.content.size;
+  if (anchorUuid) {
     state.doc.descendants((node, pos) => {
-      if (
-        node.type.name === 'passage' &&
-        node.attrs.uuid === beforePassageUuid
-      ) {
-        insertPos = pos;
+      if (insertPos !== -1) {
+        return false;
+      }
+      if (node.type.name === 'passage' && node.attrs.uuid === anchorUuid) {
+        insertPos =
+          anchorUuid === beforePassageUuid ? pos : pos + node.nodeSize;
         return false;
       }
       return true;
     });
-  } else if (afterPassageUuid) {
-    state.doc.descendants((node, pos) => {
-      if (
-        node.type.name === 'passage' &&
-        node.attrs.uuid === afterPassageUuid
-      ) {
-        insertPos = pos + node.nodeSize;
-        return false;
-      }
-      return true;
-    });
+  }
+
+  if (insertPos === -1) {
+    console.warn(
+      `Endnote anchor passage ${anchorUuid} is not loaded in the endnotes editor; refusing to insert ${label} at the wrong position.`,
+    );
+    return false;
   }
 
   tr.insert(insertPos, newPassage);
@@ -240,6 +222,16 @@ export function insertEndnotePassage(
   const prefixWithDot = prefix ? prefix + '.' : '';
   const depth = parts.length;
   let expectedNext = incrementLabel(label);
+
+  // A label is a slot, not a passage. A work covering several Tohoku texts can
+  // hold per-text variants of one note — same label, distinguished by a
+  // non-null `toh` — and every variant of a slot must land on the same new
+  // number. Advancing per passage would fan one slot out across several
+  // numbers and cascade through the rest of the sequence. A `toh`-less passage
+  // always stands alone in its slot.
+  let previousLabel: string | undefined;
+  let previousToh: unknown = null;
+  let previousAssignedLabel: string | undefined;
 
   tr.doc.descendants((child, childPos) => {
     if (childPos < afterNewPos) return true;
@@ -256,17 +248,73 @@ export function insertEndnotePassage(
         sort: (child.attrs.sort ?? 0) + 1,
       });
     } else {
+      const childToh = child.attrs.toh ?? null;
+      const isSameSlot =
+        previousLabel !== undefined &&
+        childLabel === previousLabel &&
+        childToh !== null &&
+        previousToh !== null;
+      const assignedLabel = isSameSlot
+        ? (previousAssignedLabel as string)
+        : expectedNext;
+
       tr.setNodeMarkup(childPos, null, {
         ...child.attrs,
-        label: expectedNext,
+        label: assignedLabel,
         sort: (child.attrs.sort ?? 0) + 1,
       });
-      expectedNext = incrementLabel(expectedNext);
+
+      previousLabel = childLabel;
+      previousToh = childToh;
+      previousAssignedLabel = assignedLabel;
+      if (!isSameSlot) {
+        expectedNext = incrementLabel(expectedNext);
+      }
     }
     return true;
   });
 
   editor.view.dispatch(tr);
+  return true;
+}
+
+/**
+ * Poll `predicate` until it holds. Resolves `true` on the first pass, or
+ * `false` once the attempts are exhausted — callers treat the timeout as
+ * "it never became ready" rather than waiting indefinitely.
+ */
+export async function waitFor(
+  predicate: () => boolean,
+  {
+    timeoutMs = 5000,
+    intervalMs = 50,
+  }: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<boolean> {
+  const attempts = Math.max(1, Math.ceil(timeoutMs / intervalMs));
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (predicate()) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  return predicate();
+}
+
+/**
+ * Wait until `passageUuid` is a passage node in `editor`, e.g. while a
+ * paginated panel loads the window that contains it.
+ */
+export function waitForPassageNode(
+  editor: Editor,
+  passageUuid: string,
+  options?: { timeoutMs?: number; intervalMs?: number },
+): Promise<boolean> {
+  return waitFor(
+    () => !editor.isDestroyed && Boolean(findPassageNode(editor, passageUuid)),
+    options,
+  );
 }
 
 /**
@@ -299,6 +347,13 @@ export function deleteEndnotePassageNode(
     const prefixWithDot = prefix ? prefix + '.' : '';
     const depth = parts.length;
 
+    // Per-slot, not per-passage — see `insertEndnotePassage`. This also makes
+    // deleting one per-text variant of a slot a no-op for the numbering: the
+    // remaining variants keep the label, so nothing after them moves.
+    let previousLabel: string | undefined;
+    let previousToh: unknown = null;
+    let previousAssignedLabel: string | undefined;
+
     tr.doc.descendants((child, childPos) => {
       // Only process passages at or after the deletion point
       if (childPos < pos) return true;
@@ -314,13 +369,30 @@ export function deleteEndnotePassageNode(
         // Never change header labels
         return true;
       }
-      if (childLabel !== expectedNext) {
+
+      const childToh = child.attrs.toh ?? null;
+      const isSameSlot =
+        previousLabel !== undefined &&
+        childLabel === previousLabel &&
+        childToh !== null &&
+        previousToh !== null;
+      const assignedLabel = isSameSlot
+        ? (previousAssignedLabel as string)
+        : expectedNext;
+
+      if (childLabel !== assignedLabel) {
         tr.setNodeMarkup(childPos, null, {
           ...child.attrs,
-          label: expectedNext,
+          label: assignedLabel,
         });
       }
-      expectedNext = incrementLabel(expectedNext);
+
+      previousLabel = childLabel;
+      previousToh = childToh;
+      previousAssignedLabel = assignedLabel;
+      if (!isSameSlot) {
+        expectedNext = incrementLabel(expectedNext);
+      }
       return true;
     });
   }
@@ -388,6 +460,65 @@ export function syncEndnoteLinkLabels(
 
   if (changed) {
     editor.view.dispatch(tr);
+  }
+}
+
+/**
+ * Update the `label` attribute of loaded passage nodes to match `labelMap`.
+ * Only nodes whose label actually differs are touched, so a no-op call
+ * dispatches nothing.
+ */
+export function syncPassageLabels(
+  editor: Editor,
+  labelMap: Map<string, string>,
+): void {
+  const { tr } = editor.state;
+  let changed = false;
+
+  editor.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'passage' || !node.attrs.uuid) {
+      return true;
+    }
+
+    const newLabel = labelMap.get(node.attrs.uuid);
+    if (newLabel !== undefined && newLabel !== node.attrs.label) {
+      tr.setNodeMarkup(pos, null, { ...node.attrs, label: newLabel });
+      changed = true;
+    }
+    return true;
+  });
+
+  if (changed) {
+    editor.view.dispatch(tr);
+  }
+}
+
+/**
+ * Apply labels the server assigned while renumbering a series to every editor
+ * that could be displaying them: the passage nodes themselves and the labels
+ * cached inside `endNoteLink` marks.
+ *
+ * A save only sends the passages the editor has loaded, but the server
+ * renumbers the whole series — so links to notes outside the loaded window keep
+ * showing their pre-save number until this runs. Callers must suppress dirty
+ * tracking around it; these labels come from the server, and marking the
+ * touched passages dirty would queue an immediate redundant save.
+ */
+export function applyRenumberedLabels(
+  editors: Editor[],
+  renumbered: { uuid: string; label: string }[],
+): void {
+  if (renumbered.length === 0) {
+    return;
+  }
+
+  const labelMap = new Map(renumbered.map(({ uuid, label }) => [uuid, label]));
+  for (const editor of editors) {
+    if (editor.isDestroyed) {
+      continue;
+    }
+    syncPassageLabels(editor, labelMap);
+    syncEndnoteLinkLabels(editor, labelMap);
   }
 }
 

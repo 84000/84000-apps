@@ -18,24 +18,47 @@ async function normalizePassageLabelsAfter({
   fromSort,
   fromLabel,
   delta,
+  clientRenumberedUuids,
 }: {
   client: DataClient;
   workUuid: string;
   fromSort: number;
   fromLabel: string;
   delta: number;
-}): Promise<{ error?: string }> {
+  /**
+   * Passages in this save's payload. The editor renumbers the passages it has
+   * loaded before saving, so those rows already carry their expected label —
+   * which must not be read as "the rest of the series is already correct".
+   * See the `expectedLabel` check below.
+   */
+  clientRenumberedUuids?: Set<string>;
+}): Promise<{ error?: string; renumbered: RenumberedPassageRow[] }> {
   const parts = fromLabel.split('.');
   const depth = parts.length;
   const prefix = depth > 1 ? `${parts.slice(0, -1).join('.')}.` : '';
   let nextInt = Number.parseInt(parts[depth - 1], 10) + Math.max(delta, 0);
   let lastSort = fromSort;
   let done = false;
+  const renumbered: RenumberedPassageRow[] = [];
+
+  // A label is a slot, not a row. A work covering several Tohoku texts can hold
+  // per-text variants of one note — same label, distinguished by a non-null
+  // `toh` — so those rows must all land on the same new number. Advancing per
+  // row instead of per slot fans one slot out across several numbers and
+  // cascades through the rest of the sequence.
+  //
+  // `toh` is what makes variants identifiable, and it is load-bearing here:
+  // matching on the label alone would also group the row the client just
+  // renumbered with the stale row behind it, which transiently share a label
+  // mid-save. A `toh`-less row always stands alone in its slot.
+  let previousLabel: string | undefined;
+  let previousToh: unknown = null;
+  let previousAssignedLabel: string | undefined;
 
   while (!done) {
     const { data, error } = await client
       .from('passages')
-      .select('uuid, label, sort')
+      .select('uuid, label, sort, toh')
       .eq('work_uuid', workUuid)
       .gt('sort', lastSort)
       .order('sort', { ascending: true })
@@ -43,7 +66,7 @@ async function normalizePassageLabelsAfter({
 
     if (error) {
       console.error('Error fetching passages for label normalization:', error);
-      return { error: error.message };
+      return { error: error.message, renumbered };
     }
     if (!data || data.length === 0) break;
 
@@ -60,18 +83,51 @@ async function normalizePassageLabelsAfter({
 
       if (rowParts.length > depth) continue;
 
-      const expectedLabel = prefix + nextInt;
-      if (row.label === expectedLabel) {
+      // Another per-text variant of the slot the previous row belonged to.
+      const rowToh = (row as { toh?: unknown }).toh ?? null;
+      const isSameSlot =
+        previousLabel !== undefined &&
+        row.label === previousLabel &&
+        rowToh !== null &&
+        previousToh !== null;
+      const expectedLabel = isSameSlot
+        ? (previousAssignedLabel as string)
+        : prefix + nextInt;
+
+      if (!isSameSlot && row.label === expectedLabel) {
+        // Normally a row already holding its expected label means the tail of
+        // the sequence is contiguous and there is nothing left to do. That does
+        // not hold for a row the client renumbered in this same save: the
+        // editor only holds a window of the sequence, so rows past that window
+        // are still stale. Step over it and keep walking.
+        if (clientRenumberedUuids?.has(row.uuid)) {
+          previousLabel = row.label;
+          previousToh = rowToh;
+          previousAssignedLabel = expectedLabel;
+          nextInt++;
+          continue;
+        }
         done = true;
         break;
       }
 
-      labelUpdates.push({ uuid: row.uuid, label: expectedLabel });
-      prefixRenames.push({
-        oldPrefix: `${row.label}.`,
-        newPrefix: `${expectedLabel}.`,
-      });
-      nextInt++;
+      if (row.label !== expectedLabel) {
+        labelUpdates.push({ uuid: row.uuid, label: expectedLabel });
+        // One rename per slot — the variants share both prefixes.
+        if (!isSameSlot) {
+          prefixRenames.push({
+            oldPrefix: `${row.label}.`,
+            newPrefix: `${expectedLabel}.`,
+          });
+        }
+      }
+
+      previousLabel = row.label;
+      previousToh = rowToh;
+      previousAssignedLabel = expectedLabel;
+      if (!isSameSlot) {
+        nextInt++;
+      }
     }
 
     if (labelUpdates.length > 0) {
@@ -80,8 +136,10 @@ async function normalizePassageLabelsAfter({
         .upsert(labelUpdates, { onConflict: 'uuid' });
       if (upsertError) {
         console.error('Error normalizing passage labels:', upsertError);
-        return { error: upsertError.message };
+        return { error: upsertError.message, renumbered };
       }
+
+      renumbered.push(...labelUpdates);
 
       for (const { oldPrefix, newPrefix } of prefixRenames) {
         const { error: prefixError } = await client.rpc(
@@ -94,7 +152,7 @@ async function normalizePassageLabelsAfter({
         );
         if (prefixError) {
           console.error('Error renaming passage label prefix:', prefixError);
-          return { error: prefixError.message };
+          return { error: prefixError.message, renumbered };
         }
       }
     }
@@ -103,8 +161,19 @@ async function normalizePassageLabelsAfter({
     lastSort = data[data.length - 1].sort;
   }
 
-  return {};
+  return { renumbered };
 }
+
+/**
+ * A passage whose label the server changed while renumbering a series, rather
+ * than because the client sent new content for it. The editor holds only a
+ * window of a series, so these are mostly passages it never loaded; it needs
+ * them to refresh the labels cached in `endNoteLink` marks without a reload.
+ */
+export type RenumberedPassageRow = {
+  uuid: string;
+  label: string;
+};
 
 export type SavedPassageRow = {
   uuid: string;
@@ -122,6 +191,7 @@ export type SavePassagesWithDeletionsResult = {
   savedCount: number;
   deletedCount?: number;
   passages: SavedPassageRow[];
+  renumberedPassages: RenumberedPassageRow[];
   error?: string;
 };
 
@@ -200,6 +270,7 @@ const failure = (
   success: false,
   savedCount,
   passages: [],
+  renumberedPassages: [],
   error,
 });
 
@@ -333,14 +404,18 @@ export const savePassagesWithDeletions = async ({
   }
 
   // Renumber neighbors of inserted passages now that the content is safe.
+  const renumberedByUuid = new Map<string, string>();
+  const clientRenumberedUuids = new Set(inputUuids);
   for (const passage of sortedNewPassages) {
-    const { error } = await normalizePassageLabelsAfter({
+    const { error, renumbered } = await normalizePassageLabelsAfter({
       client,
       workUuid: passage.workUuid,
       fromSort: passage.sort,
       fromLabel: passage.label,
       delta: 1,
+      clientRenumberedUuids,
     });
+    renumbered.forEach((row) => renumberedByUuid.set(row.uuid, row.label));
     if (error) {
       return failure(
         `Content saved but passage labels were not renumbered: ${error}`,
@@ -459,13 +534,15 @@ export const savePassagesWithDeletions = async ({
       // first would leave labels shifted while the passage still exists if
       // the delete failed. The deleted rows' sort/label were captured above.
       for (const deletedPassage of sortedDeleted) {
-        const { error } = await normalizePassageLabelsAfter({
+        const { error, renumbered } = await normalizePassageLabelsAfter({
           client,
           workUuid: deletedPassage.work_uuid,
           fromSort: deletedPassage.sort,
           fromLabel: deletedPassage.label,
           delta: -1,
+          clientRenumberedUuids,
         });
+        renumbered.forEach((row) => renumberedByUuid.set(row.uuid, row.label));
         if (error) {
           return failure(
             `Passages deleted but labels were not renumbered: ${error}`,
@@ -516,10 +593,20 @@ export const savePassagesWithDeletions = async ({
     toh: (row.toh as TohokuCatalogEntry) ?? null,
   }));
 
+  // Rows returned in `passages` already carry their final label, so reporting
+  // them again as renumbered would be redundant.
+  const savedUuidSet = new Set(savedPassages.map((row) => row.uuid));
+  const renumberedPassages: RenumberedPassageRow[] = Array.from(
+    renumberedByUuid.entries(),
+  )
+    .filter(([uuid]) => !savedUuidSet.has(uuid))
+    .map(([uuid, label]) => ({ uuid, label }));
+
   return {
     success: true,
     savedCount: passages.length,
     deletedCount,
     passages: savedPassages,
+    renumberedPassages,
   };
 };
