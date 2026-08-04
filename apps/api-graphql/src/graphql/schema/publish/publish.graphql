@@ -100,6 +100,91 @@ type PublishReadiness {
   warnings: [ValidationFinding!]!
 }
 
+"""
+A work's cached publish readiness.
+
+Exists because validating is not free — roughly 0.8 ms per passage, so checking the whole
+corpus on demand is minutes of database time. Reading cached verdicts makes a corpus-wide
+view possible; it does not make them authoritative. The publish pipeline revalidates.
+"""
+type WorkPublishStatus {
+  workUuid: ID!
+
+  """
+  Whether the work passed when last checked. Null means never checked, which is NOT the
+  same as publishable and must not be rendered as such.
+  """
+  ok: Boolean
+
+  """
+  Number of error findings, i.e. distinct rules that fired.
+  """
+  errorCount: Int!
+  warningCount: Int!
+
+  """
+  Total error occurrences. Exceeds the summed length of `subjects`, which is capped at 20
+  per finding.
+  """
+  errorOccurrences: Int!
+  warningOccurrences: Int!
+
+  errors: [ValidationFinding!]!
+  warnings: [ValidationFinding!]!
+
+  """
+  When the validation behind this verdict started. Null when never checked.
+  """
+  checkedAt: String
+
+  """
+  Last write to any draft table this work's snapshot draws from.
+  """
+  draftTouchedAt: String!
+
+  """
+  The draft changed after the verdict was recorded, so it describes a state of the work
+  that no longer exists. Present it as unchecked, not as the old answer.
+  """
+  stale: Boolean!
+}
+
+"""
+Where a validation finding's subject sits, so a view can link to it.
+
+Findings report subject uuids without saying what they are — passage rules report passages,
+annotation rules report annotations, the bibliography rule reports bibliography entries.
+Resolving that here keeps the SQL rule set, which is the publish gate, free of presentation
+concerns.
+"""
+type FindingLocation {
+  uuid: ID!
+
+  """
+  One of `annotation`, `passage`, `bibliography`, or `unknown`. `unknown` means the subject
+  is not in this work — most often because it has since been deleted.
+  """
+  kind: String!
+
+  """
+  The passage to navigate to. Null for bibliography entries and unknown subjects.
+  """
+  passageUuid: ID
+  passageLabel: String
+
+  """
+  The passage's `type`, e.g. `endnotes` or `introductionHeader`, which decides the panel
+  and tab it is displayed in. Without it a client can only assume the body, which is wrong
+  for end notes, abbreviations, and front matter.
+  """
+  passageType: String
+
+  """
+  The annotation's type, e.g. `glossary-instance`. Null for other kinds.
+  """
+  annotationType: String
+}
+
 extend type Query {
   """
   A publish job by uuid, for polling progress. Requires editor.admin.
@@ -107,10 +192,23 @@ extend type Query {
   publishJob(uuid: ID!): PublishJob
 
   """
-  Validate a work against the publish rules without publishing it.
-  Requires editor.admin.
+  Validate a work against the publish rules without publishing it, and cache the result
+  for `publishStatuses`. Requires editor.admin.
   """
   publishReadiness(work: String!): PublishReadiness
+
+  """
+  Cached readiness for every work that has one, for the corpus diagnostics view.
+
+  Works absent from this list have never been checked. Requires editor.admin.
+  """
+  publishStatuses: [WorkPublishStatus!]!
+
+  """
+  Resolve finding subject uuids to the passages they sit in, scoped to one work.
+  Requires editor.admin.
+  """
+  findingLocations(work: String!, uuids: [ID!]!): [FindingLocation!]!
 }
 
 extend type Mutation {

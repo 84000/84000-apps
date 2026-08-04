@@ -23,7 +23,17 @@ export {
   getBibliographyEntry,
   getWorkBibliography,
   getWorkFolios,
+  getPublishReadiness,
+  getPublishStatuses,
+  isReadinessUndetermined,
+  publishStatusKind,
+  getFindingLocations,
   type TranslationBlocksPage,
+  type PublishFinding,
+  type PublishReadiness,
+  type PublishStatusKind,
+  type WorkPublishStatus,
+  type FindingLocation,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

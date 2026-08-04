@@ -1,6 +1,11 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@eightyfourthousand/design-system';
 import { TabName } from './types';
 import { useEffect } from 'react';
 import { useNavigation } from './NavigationProvider';
@@ -8,15 +13,22 @@ import { Toc, Work } from '@eightyfourthousand/data-access';
 import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
+import { PublishChecksPanel } from './PublishChecksPanel';
 
 export const LeftPanel = ({
   toc,
   work,
   limitWhenNoTranslation = false,
+  isEditor = false,
 }: {
   toc?: Toc;
   work: Work;
   limitWhenNoTranslation?: boolean;
+  /**
+   * Editors only: readers have no use for publish validation, and the query behind it
+   * requires editor.admin.
+   */
+  isEditor?: boolean;
 }) => {
   const { panels, toh, updatePanel, setToh } = useNavigation();
   const isMobile = useIsMobile();
@@ -45,6 +57,7 @@ export const LeftPanel = ({
           )}
         >
           <TabsTrigger value="toc">Table of Contents</TabsTrigger>
+          {isEditor && <TabsTrigger value="publishing">Publishing</TabsTrigger>}
         </TabsList>
       </div>
       <div className="flex-1 min-h-0">
@@ -57,6 +70,14 @@ export const LeftPanel = ({
                 limitWhenNoTranslation={limitWhenNoTranslation}
               />
             </TabsContent>
+            {/* Deliberately not forceMount, unlike the table of contents. Validation is a
+                live query costing roughly 0.8 ms per passage, so it must not run for every
+                editor who opens a work — only for one who asks. */}
+            {isEditor && (
+              <TabsContent value="publishing" className="px-2 mt-1.5">
+                <PublishChecksPanel workUuid={work.uuid} />
+              </TabsContent>
+            )}
           </div>
         </div>
       </div>

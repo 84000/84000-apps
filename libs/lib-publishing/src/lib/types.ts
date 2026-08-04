@@ -124,6 +124,63 @@ export interface ValidationResult {
   warnings: ValidationFinding[];
 }
 
+/**
+ * A work's cached publish readiness, from `work_publish_status`.
+ *
+ * Advisory: the publish pipeline revalidates, so this says where cleanup is needed, never
+ * that a publish will succeed. A work with no cached row has simply never been checked,
+ * which is not the same as being publishable.
+ */
+export interface WorkPublishStatus {
+  workUuid: string;
+  /** Null when never checked. Callers must not read null as "fine". */
+  ok: boolean | null;
+  /** Number of error findings, i.e. distinct rules that fired. */
+  errorCount: number;
+  warningCount: number;
+  /** Total error occurrences, which exceed the capped `subjects` arrays. */
+  errorOccurrences: number;
+  warningOccurrences: number;
+  errors: ValidationFinding[];
+  warnings: ValidationFinding[];
+  /** When the validation behind this verdict started; null when never checked. */
+  checkedAt: string | null;
+  /** Last write to any draft table this work's snapshot draws from. */
+  draftTouchedAt: string;
+  /** The draft changed after the verdict was recorded, so it describes an old state. */
+  stale: boolean;
+}
+
+/**
+ * Whether a recorded verdict has been superseded by a later draft edit.
+ *
+ * Compares parsed instants rather than the raw strings. Lexicographic comparison happens to
+ * work for the UTC ISO form PostgREST returns, but only by accident of that format — it
+ * breaks the moment an offset or a differing fractional precision enters, and getting this
+ * backwards would show a stale verdict as current, which is the one failure the cache must
+ * not have.
+ */
+export const isStale = (
+  checkedAt: string | null,
+  draftTouchedAt: string | null,
+): boolean => {
+  if (!checkedAt || !draftTouchedAt) {
+    return false;
+  }
+  const checked = Date.parse(checkedAt);
+  const touched = Date.parse(draftTouchedAt);
+  // An unparseable timestamp must not silently read as "current".
+  if (Number.isNaN(checked) || Number.isNaN(touched)) {
+    return true;
+  }
+  return touched > checked;
+};
+
+/** A cached verdict is only usable when the work was checked and has not changed since. */
+export const isPublishStatusKnown = (
+  status: WorkPublishStatus | undefined,
+): boolean => !!status && status.checkedAt !== null && !status.stale;
+
 /** The `publish_jobs` row, as the pipeline sees it. */
 export interface PublishJob {
   uuid: string;

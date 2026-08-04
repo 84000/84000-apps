@@ -23,5 +23,5 @@ export const EditorLeftPanelPage = () => {
     return <TranslationSkeleton />;
   }
 
-  return <LeftPanel toc={toc} work={work} />;
+  return <LeftPanel toc={toc} work={work} isEditor={true} />;
 };

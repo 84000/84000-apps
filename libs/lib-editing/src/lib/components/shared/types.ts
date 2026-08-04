@@ -1,4 +1,9 @@
-import { BodyItemType, Imprint, PanelFilter, Titles } from '@eightyfourthousand/data-access';
+import {
+  BodyItemType,
+  Imprint,
+  PanelFilter,
+  Titles,
+} from '@eightyfourthousand/data-access';
 import { TranslationEditorContent } from '../editor';
 
 export type EditorBuilderType = BodyItemType | 'titles';
@@ -18,7 +23,9 @@ export type TabName =
   | 'endnotes'
   | 'bibliography'
   | 'glossary'
-  | 'abbreviations';
+  | 'abbreviations'
+  /** Publish validation findings. Editor-only; readers never see this tab. */
+  | 'publishing';
 
 /**
  * Display state for the translation tab body:
@@ -81,6 +88,32 @@ export const PANEL_FOR_SECTION: Record<string, PanelName> = {
   prologue: 'main',
   summary: 'main',
   translation: 'main',
+};
+
+/**
+ * The section a passage belongs to, from its `type`.
+ *
+ * Each section's heading row carries a `Header` suffix (`endnotesHeader`), and it belongs
+ * to the same section as the body it heads. Production also holds a couple of types with
+ * trailing whitespace, which would otherwise miss the lookup tables entirely.
+ */
+export const sectionForPassageType = (type?: string | null): string =>
+  (type ?? '').trim().replace(/Header$/, '');
+
+/**
+ * Which panel and tab a passage is displayed in.
+ *
+ * Falls back to the body, which is where most passages live and the least surprising
+ * place to land when a type is unrecognized.
+ */
+export const locationForPassageType = (
+  type?: string | null,
+): { panel: PanelName; tab: TabName } => {
+  const section = sectionForPassageType(type);
+  return {
+    panel: PANEL_FOR_SECTION[section] ?? 'main',
+    tab: TAB_FOR_SECTION[section] ?? 'translation',
+  };
 };
 
 export type PanelState = {

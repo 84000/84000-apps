@@ -7,8 +7,10 @@
 
 import {
   getJob,
+  readFindingLocations,
+  readPublishStatuses,
   resolveWork,
-  validateWork,
+  validateAndRecordWork,
 } from '@eightyfourthousand/lib-publishing/ssr';
 import type { GraphQLContext } from '../../context';
 import {
@@ -44,8 +46,11 @@ export const publishQueries = {
       return null;
     }
 
-    // validate_work_for_publish is granted to authenticated, so this runs as the user.
-    const validation = await validateWork({
+    // validate_and_record_work is granted to authenticated, so this runs as the user. It
+    // wraps validate_work_for_publish — the same function the publish mutation calls —
+    // and additionally caches the verdict, which is what lets the corpus view read
+    // statuses instead of revalidating 456 works.
+    const validation = await validateAndRecordWork({
       client: ctx.supabase,
       workUuid: work.uuid,
     });
@@ -55,5 +60,42 @@ export const publishQueries = {
       errors: validation.errors.map(findingToGraphQL),
       warnings: validation.warnings.map(findingToGraphQL),
     };
+  },
+
+  publishStatuses: async (
+    _parent: unknown,
+    _args: unknown,
+    ctx: GraphQLContext,
+  ) => {
+    await requirePublishPermission(ctx);
+
+    // Read through the user's client so the select policy applies; work_publish_status is
+    // granted to authenticated only, not to anon.
+    const statuses = await readPublishStatuses({ client: ctx.supabase });
+
+    return statuses.map((status) => ({
+      ...status,
+      errors: status.errors.map(findingToGraphQL),
+      warnings: status.warnings.map(findingToGraphQL),
+    }));
+  },
+
+  findingLocations: async (
+    _parent: unknown,
+    args: { work: string; uuids: string[] },
+    ctx: GraphQLContext,
+  ) => {
+    await requirePublishPermission(ctx);
+
+    const work = await resolveWork({ client: ctx.supabase, work: args.work });
+    if (!work) {
+      return [];
+    }
+
+    return readFindingLocations({
+      client: ctx.supabase,
+      workUuid: work.uuid,
+      uuids: args.uuids,
+    });
   },
 };

@@ -13,6 +13,7 @@ export * from './lib/findings';
 export * from './lib/serialize';
 export * from './lib/artifact-storage';
 export * from './lib/read-published';
+export * from './lib/publish-status';
 export * from './lib/jobs';
 export * from './lib/service-client';
 export * from './lib/materialize';
