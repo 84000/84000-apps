@@ -8,6 +8,7 @@
 import {
   getJob,
   readFindingLocations,
+  readPublishStatus,
   readPublishStatuses,
   resolveWork,
   validateAndRecordWork,
@@ -78,6 +79,35 @@ export const publishQueries = {
       errors: status.errors.map(findingToGraphQL),
       warnings: status.warnings.map(findingToGraphQL),
     }));
+  },
+
+  publishStatus: async (
+    _parent: unknown,
+    args: { work: string },
+    ctx: GraphQLContext,
+  ) => {
+    await requirePublishPermission(ctx);
+
+    const work = await resolveWork({ client: ctx.supabase, work: args.work });
+    if (!work) {
+      return null;
+    }
+
+    // A read, deliberately: unlike publishReadiness this never validates, so opening the
+    // publishing tab costs one indexed row lookup.
+    const status = await readPublishStatus({
+      client: ctx.supabase,
+      workUuid: work.uuid,
+    });
+    if (!status) {
+      return null;
+    }
+
+    return {
+      ...status,
+      errors: status.errors.map(findingToGraphQL),
+      warnings: status.warnings.map(findingToGraphQL),
+    };
   },
 
   findingLocations: async (

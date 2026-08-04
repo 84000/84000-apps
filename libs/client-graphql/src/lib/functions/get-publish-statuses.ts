@@ -100,3 +100,61 @@ export const publishStatusKind = (
   }
   return status.ok ? 'publishable' : 'blocked';
 };
+
+const GET_PUBLISH_STATUS = gql`
+  query PublishStatus($work: String!) {
+    publishStatus(work: $work) {
+      workUuid
+      ok
+      errorCount
+      warningCount
+      errorOccurrences
+      warningOccurrences
+      checkedAt
+      draftTouchedAt
+      stale
+      errors { rule severity message subjects count }
+      warnings { rule severity message subjects count }
+    }
+  }
+`;
+
+interface GetPublishStatusResponse {
+  publishStatus: WorkPublishStatus | null;
+}
+
+/**
+ * One work's cached verdict, findings included, without validating.
+ *
+ * Read this before considering a live check: validation costs roughly 0.8 ms per passage
+ * and seconds on the largest works, so it should happen when an editor asks for it, not
+ * because a tab was opened.
+ *
+ * Null means the work has never been written to, which — like a stale row — is "no verdict"
+ * rather than "publishable".
+ */
+export async function getPublishStatus({
+  client,
+  work,
+}: {
+  client: GraphQLClient;
+  work: string;
+}): Promise<WorkPublishStatus | null> {
+  try {
+    const response = await client.request<GetPublishStatusResponse>(
+      GET_PUBLISH_STATUS,
+      { work },
+    );
+    const status = response.publishStatus;
+    return status
+      ? {
+          ...status,
+          errors: status.errors ?? [],
+          warnings: status.warnings ?? [],
+        }
+      : null;
+  } catch (error) {
+    console.error('Error fetching publish status:', error);
+    return null;
+  }
+}

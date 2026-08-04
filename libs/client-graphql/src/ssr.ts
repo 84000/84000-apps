@@ -24,6 +24,7 @@ export {
   getWorkBibliography,
   getWorkFolios,
   getPublishReadiness,
+  getPublishStatus,
   getPublishStatuses,
   isReadinessUndetermined,
   publishStatusKind,

@@ -39,6 +39,7 @@ export {
   replace,
   savePassages,
   getPublishReadiness,
+  getPublishStatus,
   getPublishStatuses,
   isReadinessUndetermined,
   publishStatusKind,

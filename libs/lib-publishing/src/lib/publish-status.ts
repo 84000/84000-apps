@@ -90,6 +90,35 @@ export const readPublishStatuses = async ({
 };
 
 /**
+ * One work's cached status, or null if it has never been written to.
+ *
+ * Unlike `readPublishStatuses` this carries the findings themselves, because the per-work
+ * view renders them. It is what the editor's publishing tab reads on open: validating costs
+ * roughly 0.8 ms per passage and up to several seconds on the largest works, which is not a
+ * price to pay for merely looking at a tab.
+ */
+export const readPublishStatus = async ({
+  client,
+  workUuid,
+}: {
+  client: DataClient;
+  workUuid: string;
+}): Promise<WorkPublishStatus | null> => {
+  const { data, error } = await client
+    .from('work_publish_status')
+    .select(STATUS_COLUMNS)
+    .eq('work_uuid', workUuid)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error reading publish status:', error);
+    return null;
+  }
+
+  return data ? fromRow(data as WorkPublishStatusRow) : null;
+};
+
+/**
  * Validates a work and caches the result, returning the live result.
  *
  * This is `validateWork` plus a write: the rules are still `validate_work_for_publish`, so
