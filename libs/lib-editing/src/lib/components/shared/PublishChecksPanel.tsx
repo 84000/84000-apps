@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   MutedText,
+  Separator,
   Skeleton,
 } from '@eightyfourthousand/design-system';
 import {
@@ -24,6 +25,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   CircleHelpIcon,
+  RotateCwIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -43,11 +45,13 @@ const RULE_TITLES: Record<string, string> = {
   'passage-sort-duplicate': 'Passages sharing a sort value',
   'glossary-instance-unresolved': 'Glossary references that do not resolve',
   'inline-marker-unresolved': 'Inline markers that do not resolve',
-  'xmlid-strip-orphan': 'References that exist only as a deprecated xmlId',
-  'bibliography-heading-unresolved': 'Bibliography headings that do not resolve',
+  'xmlid-strip-orphan':
+    'References that exist only as an xmlId with no resolved uuid',
+  'bibliography-heading-unresolved':
+    'Bibliography headings that do not resolve',
   'glossary-index-unavailable': 'Glossary index unavailable',
   'work-not-found': 'Work not found',
-  'xmlid-stripped': 'Deprecated xmlIds removed',
+  'xmlid-stripped': 'Deprecated xmlIds',
   'alignments-unavailable': 'Alignments unavailable',
   'bibliography-empty': 'No bibliography entries',
   'glossary-empty': 'No glossary terms',
@@ -58,17 +62,13 @@ const RULE_TITLES: Record<string, string> = {
 
 /**
  * Extra explanation for rules whose plain reading is misleading.
- *
- * Only glossary resolution gets one, because DEV-714 established that the obvious
- * explanation is wrong: a reference can point at a `translationAlternative`, which resolves
- * through `glossary_edges` to its `translationMain` term. Telling an editor "the term does
- * not exist" would send them looking for the wrong thing.
  */
 const RULE_NOTES: Record<string, string> = {
   'glossary-instance-unresolved':
     'A reference resolves either directly or, for a translation alternative, through its main term. These did neither — the term is missing from this work’s glossary, or the link to its main term is.',
   'inline-marker-unresolved':
     'Only markers that are always local are checked: end notes, abbreviations, and mentions or internal links explicitly flagged as same-work. Cross-work links are valid and not reported here.',
+  'xmlid-stripped': 'XML ID values are not retained when a work is published.',
 };
 
 const findingKey = (finding: PublishFinding) => finding.rule;
@@ -138,7 +138,9 @@ const SubjectLink = ({
     location.kind === 'bibliography'
       ? 'Bibliography entry'
       : location.passageLabel?.trim() || 'Untitled passage';
-  const detail = location.annotationType ? `${location.annotationType} in ` : '';
+  const detail = location.annotationType
+    ? `${location.annotationType} in `
+    : '';
 
   return (
     <li className="py-1">
@@ -190,11 +192,10 @@ const FindingGroup = ({
         </Badge>
       </AccordionTrigger>
       <AccordionContent className="ps-6 pe-2">
-        <MutedText className="text-xs">{finding.message}</MutedText>
-        {RULE_NOTES[finding.rule] && (
-          <MutedText className="mt-2 block text-xs italic">
-            {RULE_NOTES[finding.rule]}
-          </MutedText>
+        {RULE_NOTES[finding.rule] ? (
+          <MutedText className="text-xs">{RULE_NOTES[finding.rule]}</MutedText>
+        ) : (
+          <MutedText className="text-xs">{finding.message}</MutedText>
         )}
         {subjects.length > 0 && (
           <>
@@ -375,7 +376,7 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
   );
 
   return (
-    <div className="py-4">
+    <div className="py-4 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {errors.length === 0 ? (
@@ -389,10 +390,12 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
               : `${errors.length} ${errors.length === 1 ? 'rule' : 'rules'}, ${errorOccurrences} blocking publication`}
           </span>
         </div>
-        <Button size="sm" variant="ghost" onClick={runCheck}>
-          {'Re-check'}
+        <Button size="icon" variant="ghost" onClick={runCheck}>
+          <RotateCwIcon />
         </Button>
       </div>
+
+      <Separator className="bg-border" />
 
       {errors.length > 0 && (
         <Accordion type="multiple" className="mt-3">

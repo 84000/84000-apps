@@ -62,7 +62,11 @@ const status = (
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetPublishStatuses.mockResolvedValue([]);
-  mockGetPublishReadiness.mockResolvedValue({ ok: true, errors: [], warnings: [] });
+  mockGetPublishReadiness.mockResolvedValue({
+    ok: true,
+    errors: [],
+    warnings: [],
+  });
 });
 
 const renderTable = async () => {
@@ -74,7 +78,8 @@ const renderTable = async () => {
   await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalled());
 };
 
-const bulkButton = () => screen.getByRole('button', { name: /^Check \d+ works?$/ });
+const bulkButton = () =>
+  screen.getByRole('button', { name: /^Check \d+ works?$/ });
 
 describe('DiagnosticsTable bulk check', () => {
   it('counts every work when nothing is filtered', async () => {
@@ -96,7 +101,9 @@ describe('DiagnosticsTable bulk check', () => {
 
     await userEvent.click(bulkButton());
 
-    await waitFor(() => expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
+    );
     expect(mockGetPublishReadiness).toHaveBeenCalledWith(
       expect.objectContaining({ work: 'w3' }),
     );
@@ -118,7 +125,9 @@ describe('DiagnosticsTable bulk check', () => {
 
     await userEvent.click(bulkButton());
 
-    await waitFor(() => expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
+    );
     expect(mockGetPublishReadiness).toHaveBeenCalledWith(
       expect.objectContaining({ work: 'w1' }),
     );
@@ -137,7 +146,9 @@ describe('DiagnosticsTable bulk check', () => {
 
     await userEvent.click(await screen.findByText('Check 3 works'));
 
-    await waitFor(() => expect(mockGetPublishReadiness).toHaveBeenCalledTimes(3));
+    await waitFor(() =>
+      expect(mockGetPublishReadiness).toHaveBeenCalledTimes(3),
+    );
   });
 
   it('refreshes the cached verdicts once the run finishes', async () => {
@@ -146,7 +157,9 @@ describe('DiagnosticsTable bulk check', () => {
 
     await userEvent.click(await screen.findByText('Check 3 works'));
 
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2),
+    );
   });
 });
 
@@ -170,11 +183,15 @@ describe('DiagnosticsTable per-row check', () => {
   it('checks only the work whose button was clicked', async () => {
     await renderTable();
 
-    await userEvent.click(await screen.findByRole('button', {
-      name: 'Check A Multitude of Buddhas',
-    }));
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Check A Multitude of Buddhas',
+      }),
+    );
 
-    await waitFor(() => expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
+    );
     expect(mockGetPublishReadiness).toHaveBeenCalledWith(
       expect.objectContaining({ work: 'w2' }),
     );
@@ -184,11 +201,15 @@ describe('DiagnosticsTable per-row check', () => {
     await renderTable();
     expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(await screen.findByRole('button', {
-      name: 'Check The Play in Full',
-    }));
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Check The Play in Full',
+      }),
+    );
 
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2),
+    );
   });
 
   it('disables a row button while that work is in flight', async () => {
@@ -213,7 +234,9 @@ describe('DiagnosticsTable per-row check', () => {
     );
 
     release?.();
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2),
+    );
   });
 
   it('does not navigate when the row button is clicked', async () => {
@@ -238,13 +261,13 @@ describe('DiagnosticsTable per-row check', () => {
 describe('DiagnosticsTable navigation', () => {
   it('opens the work with the Checks tab already showing', async () => {
     // The Checks tab lives in the left panel, so the deep link has to name that panel —
-    // `right=open:checks` would open the back matter on a tab that is not there.
+    // `right=open:publishing` would open the back matter on a tab that is not there.
     await renderTable();
 
     await userEvent.click(await screen.findByText('The Play in Full'));
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/translations/editor/w1?left=open:checks',
+      '/translations/editor/w1?left=open:publishing',
     );
   });
 });

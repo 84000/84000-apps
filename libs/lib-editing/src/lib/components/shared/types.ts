@@ -1,4 +1,9 @@
-import { BodyItemType, Imprint, PanelFilter, Titles } from '@eightyfourthousand/data-access';
+import {
+  BodyItemType,
+  Imprint,
+  PanelFilter,
+  Titles,
+} from '@eightyfourthousand/data-access';
 import { TranslationEditorContent } from '../editor';
 
 export type EditorBuilderType = BodyItemType | 'titles';
@@ -20,7 +25,7 @@ export type TabName =
   | 'glossary'
   | 'abbreviations'
   /** Publish validation findings. Editor-only; readers never see this tab. */
-  | 'checks';
+  | 'publishing';
 
 /**
  * Display state for the translation tab body:

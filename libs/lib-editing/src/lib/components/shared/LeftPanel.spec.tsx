@@ -46,18 +46,18 @@ beforeEach(() => {
 });
 
 describe('LeftPanel', () => {
-  it('offers the Checks tab to editors', () => {
+  it('offers the Publishing tab to editors', () => {
     render(<LeftPanel work={WORK} isEditor />);
 
-    expect(screen.getByRole('tab', { name: 'Checks' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Publishing' })).toBeTruthy();
   });
 
-  it('hides the Checks tab from readers', () => {
+  it('hides the Publishing tab from readers', () => {
     // Publish validation is editor-only, and the query behind it requires editor.admin —
     // a reader would just see it fail.
     render(<LeftPanel work={WORK} />);
 
-    expect(screen.queryByRole('tab', { name: 'Checks' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Publishing' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Table of Contents' })).toBeTruthy();
   });
 

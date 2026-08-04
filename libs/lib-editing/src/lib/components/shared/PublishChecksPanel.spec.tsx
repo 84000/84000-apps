@@ -109,7 +109,8 @@ describe('PublishChecksPanel', () => {
           {
             rule: 'inline-marker-unresolved',
             severity: 'error',
-            message: 'Inline markers reference passages that are not in this snapshot.',
+            message:
+              'Inline markers reference passages that are not in this snapshot.',
             subjects: ['c'],
             count: 2,
           },
@@ -120,7 +121,9 @@ describe('PublishChecksPanel', () => {
     await renderPanel();
 
     // 2 rules, 27 occurrences — not "3 subjects", which is all the capped lists contain.
-    expect(await screen.findByText('2 rules, 27 blocking publication')).toBeTruthy();
+    expect(
+      await screen.findByText('2 rules, 27 blocking publication'),
+    ).toBeTruthy();
   });
 
   it('reports the true occurrence total when the rule set capped the subject list', async () => {
@@ -145,13 +148,11 @@ describe('PublishChecksPanel', () => {
 
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /References that exist only as a deprecated xmlId/i,
+        name: /References that exist only as an xmlId with no resolved uuid/i,
       }),
     );
 
-    expect(
-      await screen.findByText(/Showing 20 of 415/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Showing 20 of 415/i)).toBeTruthy();
   });
 
   it('paginates subjects rather than truncating them', async () => {
@@ -233,7 +234,9 @@ describe('PublishChecksPanel', () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole('button', { name: /glossary-instance in 1\.24/i }),
+      await screen.findByRole('button', {
+        name: /glossary-instance in 1\.24/i,
+      }),
     );
 
     expect(mockUpdatePanel).toHaveBeenCalledWith({
@@ -250,7 +253,8 @@ describe('PublishChecksPanel', () => {
           {
             rule: 'inline-marker-unresolved',
             severity: 'error',
-            message: 'Inline markers reference passages that are not in this snapshot.',
+            message:
+              'Inline markers reference passages that are not in this snapshot.',
             subjects: ['gone-1'],
             count: 1,
           },
@@ -276,9 +280,7 @@ describe('PublishChecksPanel', () => {
       }),
     );
 
-    expect(
-      await screen.findByText(/no longer in this work/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/no longer in this work/i)).toBeTruthy();
   });
 
   describe('routes each subject to the panel it actually lives in', () => {
@@ -305,9 +307,7 @@ describe('PublishChecksPanel', () => {
           name: /Inline markers that do not resolve/i,
         }),
       );
-      await userEvent.click(
-        await screen.findByRole('button', { name: /in / }),
-      );
+      await userEvent.click(await screen.findByRole('button', { name: /in / }));
     };
 
     const passageAt = (passageType: string | null) => [

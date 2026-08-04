@@ -1,6 +1,11 @@
 'use client';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@eightyfourthousand/design-system';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@eightyfourthousand/design-system';
 import { TabName } from './types';
 import { useEffect } from 'react';
 import { useNavigation } from './NavigationProvider';
@@ -52,7 +57,7 @@ export const LeftPanel = ({
           )}
         >
           <TabsTrigger value="toc">Table of Contents</TabsTrigger>
-          {isEditor && <TabsTrigger value="checks">Checks</TabsTrigger>}
+          {isEditor && <TabsTrigger value="publishing">Publishing</TabsTrigger>}
         </TabsList>
       </div>
       <div className="flex-1 min-h-0">
@@ -69,7 +74,7 @@ export const LeftPanel = ({
                 live query costing roughly 0.8 ms per passage, so it must not run for every
                 editor who opens a work — only for one who asks. */}
             {isEditor && (
-              <TabsContent value="checks" className="px-2 mt-1.5">
+              <TabsContent value="publishing" className="px-2 mt-1.5">
                 <PublishChecksPanel workUuid={work.uuid} />
               </TabsContent>
             )}

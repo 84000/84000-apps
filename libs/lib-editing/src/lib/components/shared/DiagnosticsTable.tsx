@@ -247,9 +247,9 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
   );
 
   const onCellClick = (cell: Cell<DiagnosticsRow, unknown>) => {
-    // Land on the work with the Checks tab already open, so the corpus view and the
+    // Land on the work with the Publishing tab already open, so the corpus view and the
     // per-work view are one click apart.
-    router.push(`${pathname}/${cell.row.original.uuid}?left=open:checks`);
+    router.push(`${pathname}/${cell.row.original.uuid}?left=open:publishing`);
   };
 
   const columns: DataTableColumn<DiagnosticsRow>[] = [
