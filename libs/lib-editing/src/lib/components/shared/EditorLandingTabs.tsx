@@ -8,7 +8,7 @@ import {
   TabsTrigger,
 } from '@eightyfourthousand/design-system';
 import { Work } from '@eightyfourthousand/data-access';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { TranslationsTable } from './TranslationTable';
 import { DiagnosticsTable } from './DiagnosticsTable';
@@ -33,16 +33,40 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const activeTab: LandingTab =
+  // The URL seeds the tab and records it, but does not drive it. Reading `activeTab`
+  // straight from useSearchParams would make the switch depend on a replaceState being
+  // reflected back through the router — true in Next today, but a fragile thing for a
+  // click to rely on. Local state keeps the interaction self-contained.
+  const initialTab: LandingTab =
     searchParams.get(TAB_PARAM) === 'diagnostics'
       ? 'diagnostics'
       : 'translations';
 
+  const [activeTab, setActiveTab] = useState<LandingTab>(initialTab);
+
+  // Radix unmounts inactive tab content by default, so without forceMount every switch
+  // tears down one DataTable over ~1000 works and builds the other from scratch — and
+  // remounting Diagnostics refires its status fetch. That is the whole cost of switching
+  // tabs, and it is entirely avoidable: once a table exists, hiding it is free.
+  //
+  // Mounted lazily rather than both up front, so opening the page still only pays for the
+  // table being shown. A tab joins this set the first time it is opened and stays.
+  const [mounted, setMounted] = useState<Set<LandingTab>>(
+    () => new Set([initialTab]),
+  );
+
   const onValueChange = useCallback(
     (value: string) => {
+      const tab: LandingTab =
+        value === 'diagnostics' ? 'diagnostics' : 'translations';
+      setActiveTab(tab);
+      setMounted((current) =>
+        current.has(tab) ? current : new Set(current).add(tab),
+      );
+
       const params = new URLSearchParams(window.location.search);
-      if (value === 'diagnostics') {
-        params.set(TAB_PARAM, value);
+      if (tab === 'diagnostics') {
+        params.set(TAB_PARAM, tab);
       } else {
         params.delete(TAB_PARAM);
       }
@@ -58,16 +82,6 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
     [pathname],
   );
 
-  // The tables keep their own search/sort state in the URL, and remounting them on every
-  // tab switch would discard it, so both stay mounted once rendered.
-  const tables = useMemo(
-    () => ({
-      translations: <TranslationsTable works={works} />,
-      diagnostics: <DiagnosticsTable works={works} />,
-    }),
-    [works],
-  );
-
   return (
     <Tabs
       value={activeTab}
@@ -76,13 +90,33 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
     >
       <div className="flex flex-wrap items-baseline justify-between gap-4 pt-8 pb-4">
         <H2 className="text-primary m-0 p-0">{'Translation Editor'}</H2>
-        <TabsList>
-          <TabsTrigger value="translations">Translations</TabsTrigger>
-          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+        <TabsList className="bg-surface">
+          <TabsTrigger className="bg-surface" value="translations">
+            Translations
+          </TabsTrigger>
+          <TabsTrigger className="bg-surface" value="diagnostics">
+            Diagnostics
+          </TabsTrigger>
         </TabsList>
       </div>
-      <TabsContent value="translations">{tables.translations}</TabsContent>
-      <TabsContent value="diagnostics">{tables.diagnostics}</TabsContent>
+      {mounted.has('translations') && (
+        <TabsContent
+          value="translations"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <TranslationsTable works={works} />
+        </TabsContent>
+      )}
+      {mounted.has('diagnostics') && (
+        <TabsContent
+          value="diagnostics"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <DiagnosticsTable works={works} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 };
