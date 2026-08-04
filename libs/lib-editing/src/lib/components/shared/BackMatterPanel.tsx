@@ -16,7 +16,6 @@ import { GlossaryTermList, GlossaryPaginationProvider } from './glossary';
 import { BibliographyList } from './bibliography';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { useScrollPositionRestore } from './hooks/useScrollPositionRestore';
-import { PublishChecksPanel } from './PublishChecksPanel';
 
 export const BackMatterPanel = ({
   workUuid,
@@ -63,8 +62,7 @@ export const BackMatterPanel = ({
           | 'endnotes'
           | 'glossary'
           | 'bibliography'
-          | 'abbreviations'
-          | 'checks';
+          | 'abbreviations';
         updatePanel({ name: 'right', state: { open: true, tab } });
       }}
       defaultValue="endnotes"
@@ -87,9 +85,6 @@ export const BackMatterPanel = ({
           {abbreviations.length > 0 && (
             <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
           )}
-          {/* Editors only: readers have nothing to do with publish validation, and the
-              underlying query requires editor.admin. */}
-          {isEditor && <TabsTrigger value="checks">Checks</TabsTrigger>}
         </TabsList>
       </div>
       <div className="flex-1 min-h-0">
@@ -151,14 +146,6 @@ export const BackMatterPanel = ({
                   panel: 'right',
                   hasMoreAfter: abbreviationsHasMore,
                 })}
-              </TabsContent>
-            )}
-            {/* Deliberately not forceMount, unlike the tabs above. Validation is a live
-                query costing roughly 0.8 ms per passage, so it must not run for every
-                editor who opens a work — only for one who asks. */}
-            {isEditor && (
-              <TabsContent value="checks" className="pb-8">
-                <PublishChecksPanel workUuid={workUuid} />
               </TabsContent>
             )}
           </div>

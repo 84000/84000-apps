@@ -17,8 +17,9 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPublishReadiness: (args: unknown) => mockGetPublishReadiness(args),
 }));
 
+const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
   usePathname: () => '/translations/editor',
 }));
 
@@ -230,6 +231,20 @@ describe('DiagnosticsTable per-row check', () => {
     await waitFor(() => expect(mockGetPublishReadiness).toHaveBeenCalled());
     expect(mockGetPublishReadiness).toHaveBeenCalledWith(
       expect.objectContaining({ work: 'w1' }),
+    );
+  });
+});
+
+describe('DiagnosticsTable navigation', () => {
+  it('opens the work with the Checks tab already showing', async () => {
+    // The Checks tab lives in the left panel, so the deep link has to name that panel —
+    // `right=open:checks` would open the back matter on a tab that is not there.
+    await renderTable();
+
+    await userEvent.click(await screen.findByText('The Play in Full'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/translations/editor/w1?left=open:checks',
     );
   });
 });

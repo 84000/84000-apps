@@ -39,9 +39,9 @@ import { usePathname, useRouter } from 'next/navigation';
 const CHECK_CONCURRENCY = 3;
 
 const SIZE_FOR_COL: { [key: string]: number } = {
-  title: 57,
+  title: 56,
   toh: 10,
-  status: 9,
+  status: 10,
   errors: 8,
   warnings: 8,
   check: 4,
@@ -249,7 +249,7 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
   const onCellClick = (cell: Cell<DiagnosticsRow, unknown>) => {
     // Land on the work with the Checks tab already open, so the corpus view and the
     // per-work view are one click apart.
-    router.push(`${pathname}/${cell.row.original.uuid}?right=open:checks`);
+    router.push(`${pathname}/${cell.row.original.uuid}?left=open:checks`);
   };
 
   const columns: DataTableColumn<DiagnosticsRow>[] = [
