@@ -205,6 +205,16 @@ extend type Query {
   publishStatuses: [WorkPublishStatus!]!
 
   """
+  One work's cached readiness, including its findings, without validating.
+
+  This is what the editor's publishing view reads on open, so that looking at a tab does
+  not trigger a validation costing seconds on a large work. Null means the work has never
+  been written to; a row whose `stale` is true has a verdict that predates the latest edit
+  and must be presented as unchecked. Requires editor.admin.
+  """
+  publishStatus(work: String!): WorkPublishStatus
+
+  """
   Resolve finding subject uuids to the passages they sit in, scoped to one work.
   Requires editor.admin.
   """

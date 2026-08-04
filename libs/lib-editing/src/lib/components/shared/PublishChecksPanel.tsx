@@ -15,6 +15,7 @@ import {
   createGraphQLClient,
   getFindingLocations,
   getPublishReadiness,
+  getPublishStatus,
   isReadinessUndetermined,
   type FindingLocation,
   type PublishFinding,
@@ -24,11 +25,12 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import {
   CircleAlertIcon,
   CircleCheckIcon,
+  CircleDashedIcon,
   CircleHelpIcon,
   RotateCwIcon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
 import { locationForPassageType, type PanelName, type TabName } from './types';
 
@@ -265,40 +267,61 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
   );
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  // Bumping this re-runs the effect. The check lives entirely inside the effect so it can
-  // be cancelled: validation of a large work takes tens of seconds, easily long enough for
-  // the editor to switch works first, and a late response must not overwrite the new one.
-  const [checkNonce, setCheckNonce] = useState(0);
+  const [checking, setChecking] = useState(false);
+  // When the displayed verdict was recorded, and whether it came from the cache. Null while
+  // there is no verdict to show.
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
 
-  const runCheck = useCallback(() => setCheckNonce((n) => n + 1), []);
+  const applyFindings = useCallback(
+    async (findings: PublishFinding[], cancelled: () => boolean) => {
+      const subjects = findings.flatMap((finding) => finding.subjects ?? []);
+      const resolved = await getFindingLocations({
+        client,
+        work: workUuid,
+        uuids: subjects,
+      });
+      if (cancelled()) {
+        return;
+      }
+      setLocations(new Map(resolved.map((entry) => [entry.uuid, entry])));
+    },
+    [client, workUuid],
+  );
 
+  // Opening the tab reads the cached verdict and stops there. Validating costs roughly
+  // 0.8 ms per passage — seconds on a large work — so it happens when an editor asks for
+  // it, not because a tab was opened.
+  //
+  // A row that is absent, or whose verdict predates the latest edit, yields no readiness at
+  // all rather than a stale one. Showing a superseded answer as though it still held is the
+  // failure this whole feature is built to avoid.
   useEffect(() => {
     let cancelled = false;
+    const isCancelled = () => cancelled;
 
     (async () => {
       setLoading(true);
       setFailed(false);
+      setReadiness(null);
+      setCheckedAt(null);
+      setLocations(new Map());
 
-      const result = await getPublishReadiness({ client, work: workUuid });
+      const status = await getPublishStatus({ client, work: workUuid });
       if (cancelled) {
         return;
       }
-      setReadiness(result);
-      setFailed(!result);
 
-      if (result) {
-        const subjects = [...result.errors, ...result.warnings].flatMap(
-          (finding) => finding.subjects ?? [],
-        );
-        const resolved = await getFindingLocations({
-          client,
-          work: workUuid,
-          uuids: subjects,
+      if (status && status.checkedAt !== null && !status.stale) {
+        setReadiness({
+          ok: !!status.ok,
+          errors: status.errors,
+          warnings: status.warnings,
         });
+        setCheckedAt(status.checkedAt);
+        await applyFindings([...status.errors, ...status.warnings], isCancelled);
         if (cancelled) {
           return;
         }
-        setLocations(new Map(resolved.map((entry) => [entry.uuid, entry])));
       }
 
       setLoading(false);
@@ -307,7 +330,40 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
     return () => {
       cancelled = true;
     };
-  }, [client, workUuid, checkNonce]);
+  }, [client, workUuid, applyFindings]);
+
+  // The live check, run only on request. Kept cancellable because validating a large work
+  // takes seconds, easily long enough for the editor to move on first, and a late response
+  // must not overwrite whatever they moved to.
+  const cancelledRef = useRef(false);
+  useEffect(() => {
+    cancelledRef.current = false;
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, [workUuid]);
+
+  const runCheck = useCallback(async () => {
+    setChecking(true);
+    setFailed(false);
+
+    const result = await getPublishReadiness({ client, work: workUuid });
+    if (cancelledRef.current) {
+      return;
+    }
+    setReadiness(result);
+    setFailed(!result);
+    setCheckedAt(result ? new Date().toISOString() : null);
+
+    if (result) {
+      await applyFindings(
+        [...result.errors, ...result.warnings],
+        () => cancelledRef.current,
+      );
+    }
+
+    setChecking(false);
+  }, [client, workUuid, applyFindings]);
 
   const onNavigate = useCallback(
     (location: FindingLocation) => {
@@ -339,8 +395,42 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
         <MutedText className="text-sm">
           {'The publish check could not be run for this work.'}
         </MutedText>
-        <Button size="sm" variant="outline" className="mt-3" onClick={runCheck}>
-          {'Try again'}
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          disabled={checking}
+          onClick={runCheck}
+        >
+          {checking ? 'Checking…' : 'Try again'}
+        </Button>
+      </div>
+    );
+  }
+
+  // No verdict that describes the work as it stands: either never checked, or checked and
+  // then edited. Both are offered a check rather than shown an answer, because a superseded
+  // verdict presented as current is the one failure this view must not have.
+  if (!readiness) {
+    return (
+      <div className="py-4">
+        <div className="flex items-center gap-2">
+          <CircleDashedIcon className="size-4 text-muted-foreground" />
+          <span className="text-sm font-semibold">{'Not checked'}</span>
+        </div>
+        <MutedText className="mt-2 block text-sm">
+          {
+            'Nothing has been checked for this work since it was last edited. Running the check reads every annotation, so it can take a few seconds on a long text.'
+          }
+        </MutedText>
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          disabled={checking}
+          onClick={runCheck}
+        >
+          {checking ? 'Checking…' : 'Run check'}
         </Button>
       </div>
     );
@@ -361,8 +451,14 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
             'The glossary index is not populated, so glossary references cannot be verified. This says nothing about whether the work is publishable — it is the check that is unavailable, not the work that is broken.'
           }
         </MutedText>
-        <Button size="sm" variant="outline" className="mt-3" onClick={runCheck}>
-          {'Check again'}
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          disabled={checking}
+          onClick={runCheck}
+        >
+          {checking ? 'Checking…' : 'Check again'}
         </Button>
       </div>
     );
@@ -390,10 +486,24 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
               : `${errors.length} ${errors.length === 1 ? 'rule' : 'rules'}, ${errorOccurrences} blocking publication`}
           </span>
         </div>
-        <Button size="icon" variant="ghost" onClick={runCheck}>
-          <RotateCwIcon />
+        <Button
+          size="icon"
+          variant="ghost"
+          disabled={checking}
+          aria-label={checking ? 'Checking' : 'Re-check'}
+          onClick={runCheck}
+        >
+          <RotateCwIcon className={cn(checking && 'animate-spin')} />
         </Button>
       </div>
+
+      {/* Says when, because this verdict is usually read from cache rather than produced
+          just now — and a reader who assumes it is live would misjudge how current it is. */}
+      {checkedAt && (
+        <MutedText className="-mt-2 text-xs">
+          {`Checked ${new Date(checkedAt).toLocaleString()}`}
+        </MutedText>
+      )}
 
       <Separator className="bg-border" />
 

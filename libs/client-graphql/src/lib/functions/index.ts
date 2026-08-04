@@ -47,6 +47,7 @@ export {
   type PublishReadiness,
 } from './get-publish-readiness';
 export {
+  getPublishStatus,
   getPublishStatuses,
   publishStatusKind,
   type PublishStatusKind,
