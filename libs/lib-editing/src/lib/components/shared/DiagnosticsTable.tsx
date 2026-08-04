@@ -26,9 +26,10 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
+  LoaderCircleIcon,
   RotateCwIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -38,11 +39,12 @@ import { usePathname, useRouter } from 'next/navigation';
 const CHECK_CONCURRENCY = 3;
 
 const SIZE_FOR_COL: { [key: string]: number } = {
-  title: 46,
+  title: 42,
   toh: 10,
   status: 16,
-  errors: 12,
-  warnings: 12,
+  errors: 11,
+  warnings: 11,
+  check: 6,
 };
 
 type DiagnosticsRow = {
@@ -127,8 +129,13 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
     new Map(),
   );
   const [loading, setLoading] = useState(true);
-  const [checking, setChecking] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  // Which works are being checked right now, so each row can show its own state. The ref
+  // is the source of truth the async workers read and mutate; the state mirrors it for
+  // rendering, because concurrent workers finishing together would otherwise each compute
+  // their next set from the same stale snapshot.
+  const checkingRef = useRef<Set<string>>(new Set());
+  const [checkingUuids, setCheckingUuids] = useState<Set<string>>(new Set());
 
   // Bumping this reloads the cached statuses. Kept in state rather than called directly so
   // the fetch lives inside the effect and can be cancelled on unmount.
@@ -173,49 +180,71 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
     [works, statuses],
   );
 
-  const pending = useMemo(
-    () => data.filter((row) => row.kind === 'unchecked' || row.kind === 'outdated'),
-    [data],
-  );
-
   /**
-   * Check every work without a current verdict.
+   * Check the given works, then refresh the cached verdicts.
    *
    * Deliberately incremental and interruptible-by-navigation rather than a single bulk
    * call: the work is unbounded (minutes), and an editor watching a progress count is
    * better served than one watching a request hang. Each check caches its own result, so a
    * run that stops halfway has still made durable progress.
+   *
+   * Shared by the bulk action and the per-row buttons so a single re-check goes through
+   * exactly the same path — including the concurrency limit, which is what keeps a
+   * click-happy editor from flooding the database.
    */
-  const checkPending = useCallback(async () => {
-    if (pending.length === 0) {
-      return;
-    }
-
-    setChecking(true);
-    setProgress({ done: 0, total: pending.length });
-
-    const queue = [...pending];
-    let done = 0;
-
-    const worker = async () => {
-      for (;;) {
-        const next = queue.shift();
-        if (!next) {
-          return;
-        }
-        await getPublishReadiness({ client, work: next.uuid });
-        done += 1;
-        setProgress({ done, total: pending.length });
+  const checkWorks = useCallback(
+    async (uuids: string[]) => {
+      if (uuids.length === 0) {
+        return;
       }
-    };
 
-    await Promise.all(
-      Array.from({ length: Math.min(CHECK_CONCURRENCY, queue.length) }, worker),
-    );
+      // Whatever is already in flight stays in flight; re-requesting it would just spend
+      // database time recomputing an answer that is already on its way.
+      const queue = uuids.filter((uuid) => !checkingRef.current.has(uuid));
+      if (queue.length === 0) {
+        return;
+      }
 
-    reloadStatuses();
-    setChecking(false);
-  }, [client, reloadStatuses, pending]);
+      queue.forEach((uuid) => checkingRef.current.add(uuid));
+      setCheckingUuids(new Set(checkingRef.current));
+      // Extend the run rather than restart it: a row button clicked while a sweep is going
+      // adds to the total, and zeroing `done` here would throw away the sweep's progress.
+      setProgress((current) => ({
+        done: current.done,
+        total: current.total + queue.length,
+      }));
+
+      const pending = [...queue];
+
+      const worker = async () => {
+        for (;;) {
+          const next = pending.shift();
+          if (!next) {
+            return;
+          }
+          await getPublishReadiness({ client, work: next });
+          checkingRef.current.delete(next);
+          setCheckingUuids(new Set(checkingRef.current));
+          setProgress((current) => ({ ...current, done: current.done + 1 }));
+        }
+      };
+
+      await Promise.all(
+        Array.from(
+          { length: Math.min(CHECK_CONCURRENCY, pending.length) },
+          worker,
+        ),
+      );
+
+      reloadStatuses();
+      // Only reset the counter once nothing is left running, so two overlapping runs do not
+      // reset each other's progress mid-flight.
+      if (checkingRef.current.size === 0) {
+        setProgress({ done: 0, total: 0 });
+      }
+    },
+    [client, reloadStatuses],
+  );
 
   const onCellClick = (cell: Cell<DiagnosticsRow, unknown>) => {
     // Land on the work with the Checks tab already open, so the corpus view and the
@@ -296,6 +325,35 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
         ) : null,
       onCellClick,
     },
+    {
+      id: 'check',
+      size: SIZE_FOR_COL.check,
+      enableGlobalFilter: false,
+      enableSorting: false,
+      enableResizing: false,
+      header: () => '',
+      // No onCellClick: this cell owns its own button, and inheriting the row's
+      // navigate-on-click would send the editor to the work instead of checking it.
+      cell: ({ row }) => {
+        const isChecking = checkingUuids.has(row.original.uuid);
+        const hasVerdict = row.original.kind !== 'unchecked';
+        return (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={isChecking}
+            aria-label={`${hasVerdict ? 'Re-check' : 'Check'} ${row.original.title}`}
+            onClick={() => checkWorks([row.original.uuid])}
+          >
+            {isChecking ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <RotateCwIcon className="size-4" />
+            )}
+          </Button>
+        );
+      },
+    },
     { id: 'tohSearch', accessorKey: 'tohSearch' },
   ];
 
@@ -313,42 +371,54 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
       sorting={[{ id: 'status', desc: false }]}
       infiniteScroll
       resizableColumns
-      filters={(table) => (
-        <div className="flex flex-wrap items-center gap-6 py-4">
-          <FuzzyGlobalFilter
-            table={table}
-            placeholder="Search translations..."
-            delay={DebounceLevel.MEDIUM}
-          />
-          <div className="flex items-center gap-2">
-            <Switch
-              id="blocked-only"
-              checked={!!table.getColumn('status')?.getFilterValue()}
-              onCheckedChange={(value) =>
-                table.getColumn('status')?.setFilterValue(value || undefined)
-              }
+      filters={(table) => {
+        // The filtered row model, not `data`: the search box and the toggle are how an
+        // editor narrows to the works they mean to check, so the button acts on exactly
+        // what the table is showing. Note this re-checks works that already have a
+        // verdict — with the filter as the selection, skipping them would make the count
+        // on the button disagree with the rows on screen.
+        const shown = table
+          .getFilteredRowModel()
+          .rows.map((row) => row.original.uuid);
+        const running = progress.total > 0;
+
+        return (
+          <div className="flex flex-wrap items-center gap-6 py-4">
+            <FuzzyGlobalFilter
+              table={table}
+              placeholder="Search translations..."
+              delay={DebounceLevel.MEDIUM}
             />
-            <Label htmlFor="blocked-only">Cannot publish only</Label>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="blocked-only"
+                checked={!!table.getColumn('status')?.getFilterValue()}
+                onCheckedChange={(value) =>
+                  table.getColumn('status')?.setFilterValue(value || undefined)
+                }
+              />
+              <Label htmlFor="blocked-only">Cannot publish only</Label>
+            </div>
+            <div className="flex items-center gap-3 ms-auto">
+              <MutedText className="text-xs">
+                {loading
+                  ? 'Loading statuses…'
+                  : `${blocked} cannot publish · ${checked} of ${data.length} checked`}
+              </MutedText>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={running || loading || shown.length === 0}
+                onClick={() => checkWorks(shown)}
+              >
+                {running
+                  ? `Checking ${progress.done} / ${progress.total}…`
+                  : `Check ${shown.length} ${shown.length === 1 ? 'work' : 'works'}`}
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-3 ms-auto">
-            <MutedText className="text-xs">
-              {loading
-                ? 'Loading statuses…'
-                : `${blocked} cannot publish · ${checked} of ${data.length} checked`}
-            </MutedText>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={checking || loading || pending.length === 0}
-              onClick={checkPending}
-            >
-              {checking
-                ? `Checking ${progress.done} / ${progress.total}…`
-                : `Check ${pending.length} unchecked`}
-            </Button>
-          </div>
-        </div>
-      )}
+        );
+      }}
     />
   );
 };
