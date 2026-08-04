@@ -39,12 +39,12 @@ import { usePathname, useRouter } from 'next/navigation';
 const CHECK_CONCURRENCY = 3;
 
 const SIZE_FOR_COL: { [key: string]: number } = {
-  title: 42,
+  title: 57,
   toh: 10,
-  status: 16,
-  errors: 11,
-  warnings: 11,
-  check: 6,
+  status: 9,
+  errors: 8,
+  warnings: 8,
+  check: 4,
 };
 
 type DiagnosticsRow = {
@@ -249,9 +249,7 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
   const onCellClick = (cell: Cell<DiagnosticsRow, unknown>) => {
     // Land on the work with the Checks tab already open, so the corpus view and the
     // per-work view are one click apart.
-    router.push(
-      `${pathname}/${cell.row.original.uuid}?right=open:checks`,
-    );
+    router.push(`${pathname}/${cell.row.original.uuid}?right=open:checks`);
   };
 
   const columns: DataTableColumn<DiagnosticsRow>[] = [
@@ -318,7 +316,8 @@ export const DiagnosticsTable = ({ works }: { works: Work[] }) => {
         <DiagnosticsHeader column={column} name="Warnings" />
       ),
       cell: ({ row }) =>
-        row.original.kind === 'blocked' || row.original.kind === 'publishable' ? (
+        row.original.kind === 'blocked' ||
+        row.original.kind === 'publishable' ? (
           <div className="text-sm text-muted-foreground">
             {`${row.original.warningCount} × ${row.original.warningOccurrences}`}
           </div>
