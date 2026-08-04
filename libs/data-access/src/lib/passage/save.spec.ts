@@ -35,6 +35,8 @@ class FakeQueryBuilder {
   private eqType?: string;
   private eqWorkUuid?: string;
   private gtSort?: number;
+  private gteSort?: number;
+  private rowLimit?: number;
   private filterContentUuid?: string;
 
   constructor(
@@ -123,11 +125,19 @@ class FakeQueryBuilder {
     return this;
   }
 
+  gte(column: string, value: number) {
+    if (column === 'sort') {
+      this.gteSort = value;
+    }
+    return this;
+  }
+
   order() {
     return this;
   }
 
-  limit() {
+  limit(value?: number) {
+    this.rowLimit = value;
     return this;
   }
 
@@ -142,7 +152,7 @@ class FakeQueryBuilder {
     }
 
     if (this.table === 'passages') {
-      return this.gtSort !== undefined
+      return this.gtSort !== undefined || this.gteSort !== undefined
         ? 'select:passages:renumber'
         : 'select:passages';
     }
@@ -213,15 +223,26 @@ class FakeQueryBuilder {
       };
     }
 
-    if (this.eqWorkUuid !== undefined && this.gtSort !== undefined) {
+    if (
+      this.eqWorkUuid !== undefined &&
+      (this.gtSort !== undefined || this.gteSort !== undefined)
+    ) {
       const gtSort = this.gtSort;
+      const gteSort = this.gteSort;
+      const matching = this.state.passages
+        .filter(
+          (passage) =>
+            passage.work_uuid === this.eqWorkUuid &&
+            (gtSort !== undefined
+              ? passage.sort > gtSort
+              : passage.sort >= (gteSort as number)),
+        )
+        .sort((a, b) => a.sort - b.sort);
       return {
-        data: this.state.passages
-          .filter(
-            (passage) =>
-              passage.work_uuid === this.eqWorkUuid && passage.sort > gtSort,
-          )
-          .sort((a, b) => a.sort - b.sort),
+        data:
+          this.rowLimit === undefined
+            ? matching
+            : matching.slice(0, this.rowLimit),
         error: null,
       };
     }
@@ -733,6 +754,54 @@ describe('savePassagesWithDeletions failure propagation', () => {
         { uuid: 'n4-141', label: 'n.5' },
         { uuid: 'n5', label: 'n.6' },
       ]);
+    });
+
+    // Paging read the next page with `sort > lastSort`, which drops any row
+    // sharing the last row's sort — and per-text variants of one label routinely
+    // share a sort. Only reachable past a full page, so this fills one exactly.
+    it('does not skip passages sharing the sort of the last paged row', async () => {
+      const pageSize = 500;
+      const passages: PassageRowDTO[] = [];
+
+      // A full page of notes each holding the label of the note before it, so
+      // every one of them needs renumbering and the walk cannot exit early.
+      for (let i = 0; i < pageSize; i++) {
+        passages.push(endnoteRow(`bulk-${i}`, `n.${843 + i}`, 844 + i));
+      }
+      const lastPagedSort = 844 + pageSize - 1;
+      const lastPagedLabel = `n.${843 + pageSize - 1}`;
+      // The final row of the page and a per-text variant of it share a sort, so
+      // the variant falls on page two.
+      passages[pageSize - 1] = {
+        ...passages[pageSize - 1],
+        toh: 'toh526',
+      };
+      passages.push({
+        ...endnoteRow('variant-sharing-sort', lastPagedLabel, lastPagedSort),
+        toh: 'toh916',
+      });
+
+      const state = createState({ passages });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [insertedNote],
+      });
+
+      expect(result.success).toBe(true);
+      const renumbered = new Map(
+        result.renumberedPassages.map((row) => [row.uuid, row.label]),
+      );
+
+      // It took more than one page to get there...
+      expect(
+        state.ops.filter((op) => op === 'select:passages:renumber').length,
+      ).toBeGreaterThan(1);
+      // ...and the variant landed on the same number as the sibling it shares a
+      // slot with, rather than being read past and left stale.
+      const siblingLabel = renumbered.get(`bulk-${pageSize - 1}`);
+      expect(siblingLabel).toBe(`n.${844 + pageSize - 1}`);
+      expect(renumbered.get('variant-sharing-sort')).toBe(siblingLabel);
     });
 
     it('omits passages returned in `passages` from `renumberedPassages`', async () => {

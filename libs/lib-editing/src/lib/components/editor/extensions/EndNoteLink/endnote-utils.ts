@@ -1,4 +1,5 @@
 import { Editor } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { incrementLabel } from '../Passage/label';
 import { findPassageNode } from '../../util';
 
@@ -139,6 +140,79 @@ export function getFirstEndnoteInEditor(
   return first;
 }
 
+/** A passage node paired with its position, in document order. */
+type PositionedPassage = {
+  pos: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  node: any;
+};
+
+/** Every passage node in `doc`, in document order. */
+function collectPassages(doc: ProseMirrorNode): PositionedPassage[] {
+  const passages: PositionedPassage[] = [];
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'passage') {
+      passages.push({ pos, node });
+    }
+    return true;
+  });
+  return passages;
+}
+
+/**
+ * Whether two passages are per-text variants of the same numbered slot: they
+ * share a label and both name a Tohoku text. A passage with no `toh` applies to
+ * every text in the work and so always stands alone in its slot — which is also
+ * what keeps a transiently duplicated label from being mistaken for a variant
+ * (a passage the client has just renumbered briefly shares a label with the
+ * stale passage behind it).
+ *
+ * The single definition of slot membership: positioning and both renumber loops
+ * go through it so they cannot drift apart.
+ */
+export function inSameSlot(
+  label: unknown,
+  toh: unknown,
+  otherLabel: unknown,
+  otherToh: unknown,
+): boolean {
+  return (
+    label === otherLabel && (toh ?? null) !== null && (otherToh ?? null) !== null
+  );
+}
+
+const isSameSlot = (a: PositionedPassage, b: PositionedPassage): boolean =>
+  inSameSlot(
+    a.node.attrs.label,
+    a.node.attrs.toh,
+    b.node.attrs.label,
+    b.node.attrs.toh,
+  );
+
+/**
+ * The run of passages around `index` that all belong to its slot, in document
+ * order. A passage that shares no slot returns just itself.
+ */
+function slotMembers(
+  passages: PositionedPassage[],
+  index: number,
+): PositionedPassage[] {
+  let start = index;
+  while (start > 0 && isSameSlot(passages[start - 1], passages[index])) {
+    start--;
+  }
+
+  let end = index;
+  while (
+    end < passages.length - 1 &&
+    isSameSlot(passages[end + 1], passages[index])
+  ) {
+    end++;
+  }
+
+  return passages.slice(start, end + 1);
+}
+
 /**
  * Insert a new empty endnote passage into the endnotes editor at the correct
  * position. Use `afterPassageUuid` to insert after a passage, or
@@ -152,6 +226,12 @@ export function getFirstEndnoteInEditor(
  * is named but absent, this returns `false` without touching the doc rather
  * than appending to the end of the loaded window: a misplaced insert leaves
  * the new note with a label that duplicates a note further down the series.
+ *
+ * An anchor may be one of several per-text variants sharing a label (see
+ * `slotMembers`). The insert lands outside the whole slot — after its last
+ * member, or before its first — never between two variants of one number, and
+ * `sort` is advanced past the slot when needed so the new passage sorts outside
+ * it too.
  *
  * Returns whether the passage was inserted.
  */
@@ -181,27 +261,31 @@ export function insertEndnotePassage(
     return false;
   }
 
-  const newPassage = passageType.create(
-    { label, sort, uuid, type: 'endnotes' },
-    paragraphType.create(),
-  );
-
   // Find insertion position. An anchor that isn't in the loaded window is a
   // hard failure, not a reason to append — see the doc comment above.
   const anchorUuid = beforePassageUuid ?? afterPassageUuid;
   let insertPos = anchorUuid ? -1 : state.doc.content.size;
+  let insertSort = sort;
+
   if (anchorUuid) {
-    state.doc.descendants((node, pos) => {
-      if (insertPos !== -1) {
-        return false;
+    const passages = collectPassages(state.doc);
+    const anchorIndex = passages.findIndex(
+      (passage) => passage.node.attrs.uuid === anchorUuid,
+    );
+
+    if (anchorIndex !== -1) {
+      const slot = slotMembers(passages, anchorIndex);
+
+      if (anchorUuid === beforePassageUuid) {
+        const first = slot[0];
+        insertPos = first.pos;
+        insertSort = Math.min(insertSort, first.node.attrs.sort ?? insertSort);
+      } else {
+        const last = slot[slot.length - 1];
+        insertPos = last.pos + last.node.nodeSize;
+        insertSort = Math.max(insertSort, (last.node.attrs.sort ?? 0) + 1);
       }
-      if (node.type.name === 'passage' && node.attrs.uuid === anchorUuid) {
-        insertPos =
-          anchorUuid === beforePassageUuid ? pos : pos + node.nodeSize;
-        return false;
-      }
-      return true;
-    });
+    }
   }
 
   if (insertPos === -1) {
@@ -210,6 +294,11 @@ export function insertEndnotePassage(
     );
     return false;
   }
+
+  const newPassage = passageType.create(
+    { label, sort: insertSort, uuid, type: 'endnotes' },
+    paragraphType.create(),
+  );
 
   tr.insert(insertPos, newPassage);
 
@@ -249,12 +338,10 @@ export function insertEndnotePassage(
       });
     } else {
       const childToh = child.attrs.toh ?? null;
-      const isSameSlot =
+      const sameSlot =
         previousLabel !== undefined &&
-        childLabel === previousLabel &&
-        childToh !== null &&
-        previousToh !== null;
-      const assignedLabel = isSameSlot
+        inSameSlot(childLabel, childToh, previousLabel, previousToh);
+      const assignedLabel = sameSlot
         ? (previousAssignedLabel as string)
         : expectedNext;
 
@@ -267,7 +354,7 @@ export function insertEndnotePassage(
       previousLabel = childLabel;
       previousToh = childToh;
       previousAssignedLabel = assignedLabel;
-      if (!isSameSlot) {
+      if (!sameSlot) {
         expectedNext = incrementLabel(expectedNext);
       }
     }
@@ -371,12 +458,10 @@ export function deleteEndnotePassageNode(
       }
 
       const childToh = child.attrs.toh ?? null;
-      const isSameSlot =
+      const sameSlot =
         previousLabel !== undefined &&
-        childLabel === previousLabel &&
-        childToh !== null &&
-        previousToh !== null;
-      const assignedLabel = isSameSlot
+        inSameSlot(childLabel, childToh, previousLabel, previousToh);
+      const assignedLabel = sameSlot
         ? (previousAssignedLabel as string)
         : expectedNext;
 
@@ -390,7 +475,7 @@ export function deleteEndnotePassageNode(
       previousLabel = childLabel;
       previousToh = childToh;
       previousAssignedLabel = assignedLabel;
-      if (!isSameSlot) {
+      if (!sameSlot) {
         expectedNext = incrementLabel(expectedNext);
       }
       return true;

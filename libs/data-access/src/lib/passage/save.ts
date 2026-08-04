@@ -55,12 +55,22 @@ async function normalizePassageLabelsAfter({
   let previousToh: unknown = null;
   let previousAssignedLabel: string | undefined;
 
+  // Passages can share a sort — per-text variants of one label routinely do —
+  // so paging with `sort > lastSort` silently drops the ones that share the
+  // last row of a page. Pages after the first are fetched with `>=` and the
+  // rows already handled are skipped by uuid instead.
+  const processedUuids = new Set<string>();
+  let isFirstPage = true;
+
   while (!done) {
-    const { data, error } = await client
+    const query = client
       .from('passages')
       .select('uuid, label, sort, toh')
-      .eq('work_uuid', workUuid)
-      .gt('sort', lastSort)
+      .eq('work_uuid', workUuid);
+
+    const { data, error } = await (
+      isFirstPage ? query.gt('sort', lastSort) : query.gte('sort', lastSort)
+    )
       .order('sort', { ascending: true })
       .limit(SAVE_PAGE_SIZE);
 
@@ -73,7 +83,15 @@ async function normalizePassageLabelsAfter({
     const labelUpdates: { uuid: string; label: string }[] = [];
     const prefixRenames: { oldPrefix: string; newPrefix: string }[] = [];
 
+    let newRowsThisPage = 0;
+
     for (const row of data) {
+      if (processedUuids.has(row.uuid)) {
+        continue;
+      }
+      processedUuids.add(row.uuid);
+      newRowsThisPage++;
+
       const rowParts = (row.label ?? '').split('.');
 
       if (rowParts.length < depth || !row.label?.startsWith(prefix)) {
@@ -158,7 +176,19 @@ async function normalizePassageLabelsAfter({
     }
 
     if (done || data.length < SAVE_PAGE_SIZE) break;
+
+    // A full page of rows already handled means every row shares one sort and
+    // the `>=` re-read cannot advance. Stop rather than loop forever; a single
+    // sort holding 500+ passages is malformed data, not a case to page through.
+    if (newRowsThisPage === 0) {
+      console.error(
+        `Passage label normalization stalled at sort ${lastSort} for work ${workUuid}: a full page of passages shares one sort.`,
+      );
+      break;
+    }
+
     lastSort = data[data.length - 1].sort;
+    isFirstPage = false;
   }
 
   return { renumbered };
