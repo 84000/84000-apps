@@ -33,6 +33,7 @@ import {
   shouldRescanFragment,
   type FragmentBaseline,
 } from './observer-utils';
+import { applyRenumberedLabels } from './extensions/EndNoteLink/endnote-utils';
 
 interface EditorContextState {
   doc?: Doc;
@@ -576,6 +577,25 @@ export const EditorContextProvider = ({
         await applyReplacedPassages(replacements);
       }
 
+      // Inserting or deleting a passage renumbers the rest of its series
+      // server-side, including passages this client never loaded. Adopt those
+      // labels so endnote links stop showing stale numbers without a reload.
+      // `setNavigating` keeps the resulting transactions out of dirty tracking:
+      // the labels came from the server, so saving them back is pointless and
+      // would leave the editor permanently dirty.
+      const renumbered = result.renumberedPassages ?? [];
+      if (renumbered.length) {
+        setNavigating(true);
+        try {
+          applyRenumberedLabels(
+            Object.values(editorCache.current),
+            renumbered,
+          );
+        } finally {
+          setNavigating(false);
+        }
+      }
+
       // The dirty flag reflects what is left: mid-flight edits plus any
       // structural changes that have not been saved yet.
       const residualLive: PassageUuidRecord = {};
@@ -599,6 +619,7 @@ export const EditorContextProvider = ({
     getEditorUuids,
     applyReplacedPassages,
     dirtyStore,
+    setNavigating,
   ]);
 
   return (

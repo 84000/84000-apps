@@ -239,9 +239,24 @@ type SavePassagesResult {
   passages: [Passage!]!
 
   """
+  Passages whose label the server changed while renumbering a series, excluding
+  those returned in `passages`. Mostly passages the editor never loaded — it
+  uses these to refresh the labels cached in endnote links without a reload.
+  """
+  renumberedPassages: [RenumberedPassage!]!
+
+  """
   Error message if the save failed
   """
   error: String
+}
+
+"""
+A passage renumbered by the server during a save
+"""
+type RenumberedPassage {
+  uuid: ID!
+  label: String!
 }
 
 """

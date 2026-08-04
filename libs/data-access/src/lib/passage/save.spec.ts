@@ -620,4 +620,144 @@ describe('savePassagesWithDeletions failure propagation', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('stale annotations');
   });
+
+  // DEV-720. The editor holds a window of a series, not all of it, so it can
+  // only renumber the notes it has loaded. Those arrive already carrying their
+  // expected label; treating that as "the rest of the series is contiguous"
+  // stopped the walk at the edge of the window and left every note beyond it
+  // sharing a number with its neighbour.
+  describe('renumbering past the editor window', () => {
+    /** n.843 inserted after n.842; the editor had n.843–n.844 loaded. */
+    const insertedNote: Passage = {
+      uuid: 'note-new',
+      workUuid: 'work-1',
+      content: '',
+      label: 'n.843',
+      sort: 843,
+      type: 'endnotes',
+      annotations: [],
+    };
+
+    /** The old n.843, renumbered by the client and sent in the payload. */
+    const clientRenumbered: Passage = {
+      ...insertedNote,
+      uuid: 'note-843',
+      content: 'Was n.843',
+      label: 'n.844',
+      sort: 844,
+    };
+
+    const endnoteRow = (
+      uuid: string,
+      label: string,
+      sort: number,
+    ): PassageRowDTO => ({
+      uuid,
+      work_uuid: 'work-1',
+      content: label,
+      label,
+      sort,
+      type: 'endnotes',
+    });
+
+    it('renumbers notes past the window and reports their new labels', async () => {
+      const state = createState({
+        passages: [
+          // Already upserted with the label the client computed.
+          endnoteRow('note-843', 'n.844', 844),
+          // Never loaded by the editor, so still holding pre-insert labels.
+          endnoteRow('note-844', 'n.844', 845),
+          endnoteRow('note-845', 'n.845', 846),
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [insertedNote, clientRenumbered],
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.labelUpserts.flat()).toEqual([
+        { uuid: 'note-844', label: 'n.845' },
+        { uuid: 'note-845', label: 'n.846' },
+      ]);
+      expect(result.renumberedPassages).toEqual([
+        { uuid: 'note-844', label: 'n.845' },
+        { uuid: 'note-845', label: 'n.846' },
+      ]);
+    });
+
+    it('still stops at a note that was already contiguous on its own', async () => {
+      const state = createState({
+        passages: [
+          // Not in the payload: its label is authoritative evidence that the
+          // tail of the series needs no renumbering.
+          endnoteRow('note-untouched', 'n.844', 844),
+          endnoteRow('note-845', 'n.845', 845),
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [insertedNote],
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.labelUpserts).toEqual([]);
+      expect(result.renumberedPassages).toEqual([]);
+    });
+
+    // A work spanning several Tohoku texts holds per-text variants of one note:
+    // same label, distinguished by a non-null `toh`. Advancing the number once
+    // per row fans a single slot out across several numbers and cascades
+    // through the rest of the sequence.
+    it('moves every per-text variant of a slot to the same new number', async () => {
+      const state = createState({
+        passages: [
+          { ...endnoteRow('n4-916', 'n.4', 844), toh: 'toh916' },
+          { ...endnoteRow('n4-526', 'n.4', 845), toh: 'toh526' },
+          { ...endnoteRow('n4-141', 'n.4', 846), toh: 'toh141' },
+          endnoteRow('n5', 'n.5', 847),
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [{ ...insertedNote, label: 'n.4' }],
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.labelUpserts.flat()).toEqual([
+        { uuid: 'n4-916', label: 'n.5' },
+        { uuid: 'n4-526', label: 'n.5' },
+        { uuid: 'n4-141', label: 'n.5' },
+        { uuid: 'n5', label: 'n.6' },
+      ]);
+    });
+
+    it('omits passages returned in `passages` from `renumberedPassages`', async () => {
+      const state = createState({
+        passages: [
+          endnoteRow('note-843', 'n.844', 844),
+          endnoteRow('note-844', 'n.844', 845),
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        // note-844 is both in the payload and renumbered by the walk; it comes
+        // back in `passages` with its final label, so reporting it twice would
+        // be redundant.
+        passages: [
+          insertedNote,
+          clientRenumbered,
+          { ...clientRenumbered, uuid: 'note-844', label: 'n.845', sort: 845 },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.renumberedPassages).toEqual([]);
+      expect(result.passages.map((row) => row.uuid)).toContain('note-844');
+    });
+  });
 });

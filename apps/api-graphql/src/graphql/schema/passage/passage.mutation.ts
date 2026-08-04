@@ -10,6 +10,7 @@ import {
   persistReplaceChanges,
   replacePassageText,
   savePassagesWithDeletions,
+  type RenumberedPassageRow,
   type SavedPassageRow,
 } from '@eightyfourthousand/data-access';
 import {
@@ -42,6 +43,7 @@ interface SavePassagesResult {
   savedCount: number;
   deletedCount?: number;
   passages: SavedPassageRow[];
+  renumberedPassages: RenumberedPassageRow[];
   error?: string;
 }
 
@@ -82,6 +84,7 @@ export const savePassagesMutation = async (
       success: false,
       savedCount: 0,
       passages: [],
+      renumberedPassages: [],
       error: permission.error,
     };
   }
@@ -112,6 +115,7 @@ export const savePassagesMutation = async (
       success: false,
       savedCount: 0,
       passages: [],
+      renumberedPassages: [],
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
