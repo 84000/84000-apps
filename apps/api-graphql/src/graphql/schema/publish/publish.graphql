@@ -173,6 +173,13 @@ type FindingLocation {
   passageLabel: String
 
   """
+  The passage's `type`, e.g. `endnotes` or `introductionHeader`, which decides the panel
+  and tab it is displayed in. Without it a client can only assume the body, which is wrong
+  for end notes, abbreviations, and front matter.
+  """
+  passageType: String
+
+  """
   The annotation's type, e.g. `glossary-instance`. Null for other kinds.
   """
   annotationType: String

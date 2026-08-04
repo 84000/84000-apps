@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from './NavigationProvider';
+import { locationForPassageType, type PanelName, type TabName } from './types';
 
 // Findings cap their subject list at 20 while reporting the true count, and the issue is
 // explicit that the UI must paginate rather than truncate. This is the page size within
@@ -79,6 +80,36 @@ const FindingIcon = ({ severity }: { severity: string }) =>
     <TriangleAlertIcon className="size-4 shrink-0 text-warning" />
   );
 
+/**
+ * Where clicking a subject should take the editor.
+ *
+ * A passage's `type` determines which panel and tab shows it, so end notes, abbreviations,
+ * and front matter each live somewhere other than the body. Assuming the body — as this
+ * did originally — silently fails for all of them: the main panel opens and the passage is
+ * not there. Bibliography entries have no passage at all and are addressed by their own
+ * uuid in the bibliography tab.
+ *
+ * Returns null when there is nowhere to go, which is only the `unknown` case.
+ */
+const targetForSubject = (
+  location?: FindingLocation,
+): { panel: PanelName; tab: TabName; hash: string } | null => {
+  if (!location) {
+    return null;
+  }
+
+  if (location.kind === 'bibliography') {
+    return { panel: 'right', tab: 'bibliography', hash: location.uuid };
+  }
+
+  if (!location.passageUuid) {
+    return null;
+  }
+
+  const { panel, tab } = locationForPassageType(location.passageType);
+  return { panel, tab, hash: location.passageUuid };
+};
+
 const SubjectLink = ({
   uuid,
   location,
@@ -86,35 +117,35 @@ const SubjectLink = ({
 }: {
   uuid: string;
   location?: FindingLocation;
-  onNavigate: (passageUuid: string) => void;
+  onNavigate: (location: FindingLocation) => void;
 }) => {
-  const label =
-    location?.passageLabel?.trim() ||
-    (location?.passageUuid ? 'Untitled passage' : null);
-  const detail = location?.annotationType
-    ? `${location.annotationType} in `
-    : '';
+  const target = targetForSubject(location);
 
-  if (!location?.passageUuid) {
-    // Either the subject is a bibliography entry, which has no passage to scroll to, or it
-    // no longer exists in this work. Showing the uuid is still useful for a manual lookup.
+  if (!target || !location) {
+    // The subject is not in this work — usually because it has since been deleted. Showing
+    // the uuid is still useful for a manual lookup.
     return (
       <li className="py-1">
         <MutedText className="text-xs font-mono">
           {uuid}
-          {location?.kind === 'bibliography' ? ' (bibliography entry)' : ''}
           {location?.kind === 'unknown' ? ' (no longer in this work)' : ''}
         </MutedText>
       </li>
     );
   }
 
+  const label =
+    location.kind === 'bibliography'
+      ? 'Bibliography entry'
+      : location.passageLabel?.trim() || 'Untitled passage';
+  const detail = location.annotationType ? `${location.annotationType} in ` : '';
+
   return (
     <li className="py-1">
       <button
         type="button"
         className="text-left text-xs text-primary hover:underline"
-        onClick={() => onNavigate(location.passageUuid as string)}
+        onClick={() => onNavigate(location)}
       >
         {detail}
         {label}
@@ -130,7 +161,7 @@ const FindingGroup = ({
 }: {
   finding: PublishFinding;
   locations: Map<string, FindingLocation>;
-  onNavigate: (passageUuid: string) => void;
+  onNavigate: (location: FindingLocation) => void;
 }) => {
   const [page, setPage] = useState(0);
   const subjects = finding.subjects ?? [];
@@ -278,10 +309,14 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
   }, [client, workUuid, checkNonce]);
 
   const onNavigate = useCallback(
-    (passageUuid: string) => {
+    (location: FindingLocation) => {
+      const target = targetForSubject(location);
+      if (!target) {
+        return;
+      }
       updatePanel({
-        name: 'main',
-        state: { open: true, tab: 'translation', hash: passageUuid },
+        name: target.panel,
+        state: { open: true, tab: target.tab, hash: target.hash },
       });
     },
     [updatePanel],

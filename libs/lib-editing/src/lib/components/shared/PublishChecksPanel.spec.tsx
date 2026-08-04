@@ -175,6 +175,7 @@ describe('PublishChecksPanel', () => {
         kind: 'passage' as const,
         passageUuid: `uuid-${i}`,
         passageLabel: `Passage ${i}`,
+        passageType: 'translation',
         annotationType: null,
       })),
     );
@@ -219,6 +220,7 @@ describe('PublishChecksPanel', () => {
         kind: 'annotation' as const,
         passageUuid: 'passage-9',
         passageLabel: '1.24',
+        passageType: 'translation',
         annotationType: 'glossary-instance',
       },
     ]);
@@ -261,6 +263,7 @@ describe('PublishChecksPanel', () => {
         kind: 'unknown' as const,
         passageUuid: null,
         passageLabel: null,
+        passageType: null,
         annotationType: null,
       },
     ]);
@@ -276,5 +279,138 @@ describe('PublishChecksPanel', () => {
     expect(
       await screen.findByText(/no longer in this work/i),
     ).toBeTruthy();
+  });
+
+  describe('routes each subject to the panel it actually lives in', () => {
+    const openFinding = async (locations: unknown[]) => {
+      mockGetPublishReadiness.mockResolvedValue(
+        readiness({
+          ok: false,
+          errors: [
+            {
+              rule: 'inline-marker-unresolved',
+              severity: 'error',
+              message: 'Inline markers reference targets not in this snapshot.',
+              subjects: ['s1'],
+              count: 1,
+            },
+          ],
+        }),
+      );
+      mockGetFindingLocations.mockResolvedValue(locations);
+
+      await renderPanel();
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: /Inline markers that do not resolve/i,
+        }),
+      );
+      await userEvent.click(
+        await screen.findByRole('button', { name: /in / }),
+      );
+    };
+
+    const passageAt = (passageType: string | null) => [
+      {
+        uuid: 's1',
+        kind: 'annotation' as const,
+        passageUuid: 'p1',
+        passageLabel: 'n.12',
+        passageType,
+        annotationType: 'end-note-link',
+      },
+    ];
+
+    // The original implementation sent every one of these to main/translation, so the
+    // panel opened and the passage simply was not there.
+    it.each([
+      ['endnotes', 'right', 'endnotes'],
+      ['abbreviations', 'right', 'abbreviations'],
+      ['introduction', 'main', 'front'],
+      ['summary', 'main', 'front'],
+      ['acknowledgment', 'main', 'front'],
+      ['colophon', 'main', 'translation'],
+      ['appendix', 'main', 'translation'],
+      ['translation', 'main', 'translation'],
+    ])('sends a %s passage to %s/%s', async (type, panel, tab) => {
+      await openFinding(passageAt(type));
+
+      expect(mockUpdatePanel).toHaveBeenCalledWith({
+        name: panel,
+        state: { open: true, tab, hash: 'p1' },
+      });
+    });
+
+    it('treats a section header as part of its section', async () => {
+      // Every section has a *Header passage for its heading row, and none of them appear
+      // in the lookup tables.
+      await openFinding(passageAt('endnotesHeader'));
+
+      expect(mockUpdatePanel).toHaveBeenCalledWith({
+        name: 'right',
+        state: { open: true, tab: 'endnotes', hash: 'p1' },
+      });
+    });
+
+    it('tolerates the stray whitespace present in production types', async () => {
+      await openFinding(passageAt('abbreviations\n'));
+
+      expect(mockUpdatePanel).toHaveBeenCalledWith({
+        name: 'right',
+        state: { open: true, tab: 'abbreviations', hash: 'p1' },
+      });
+    });
+
+    it('falls back to the body for an unrecognized type', async () => {
+      await openFinding(passageAt('somethingNew'));
+
+      expect(mockUpdatePanel).toHaveBeenCalledWith({
+        name: 'main',
+        state: { open: true, tab: 'translation', hash: 'p1' },
+      });
+    });
+
+    it('opens a bibliography entry in the bibliography tab, keyed by its own uuid', async () => {
+      // These have no passage at all, and were previously rendered as dead text.
+      mockGetPublishReadiness.mockResolvedValue(
+        readiness({
+          ok: false,
+          errors: [
+            {
+              rule: 'bibliography-heading-unresolved',
+              severity: 'error',
+              message: 'Bibliography entries point at missing heading rows.',
+              subjects: ['b1'],
+              count: 1,
+            },
+          ],
+        }),
+      );
+      mockGetFindingLocations.mockResolvedValue([
+        {
+          uuid: 'b1',
+          kind: 'bibliography' as const,
+          passageUuid: null,
+          passageLabel: null,
+          passageType: null,
+          annotationType: null,
+        },
+      ]);
+
+      await renderPanel();
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: /Bibliography headings that do not resolve/i,
+        }),
+      );
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Bibliography entry' }),
+      );
+
+      expect(mockUpdatePanel).toHaveBeenCalledWith({
+        name: 'right',
+        state: { open: true, tab: 'bibliography', hash: 'b1' },
+      });
+    });
   });
 });

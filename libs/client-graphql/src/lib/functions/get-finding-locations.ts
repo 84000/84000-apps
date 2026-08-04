@@ -13,6 +13,8 @@ export interface FindingLocation {
   kind: 'annotation' | 'passage' | 'bibliography' | 'unknown';
   passageUuid: string | null;
   passageLabel: string | null;
+  /** The passage's `type`, which decides the panel and tab it is displayed in. */
+  passageType: string | null;
   annotationType: string | null;
 }
 
@@ -23,6 +25,7 @@ const GET_FINDING_LOCATIONS = gql`
       kind
       passageUuid
       passageLabel
+      passageType
       annotationType
     }
   }

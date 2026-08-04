@@ -142,6 +142,12 @@ export interface FindingLocation {
   /** The passage to navigate to. Null for bibliography entries, which have no passage. */
   passageUuid: string | null;
   passageLabel: string | null;
+  /**
+   * The passage's `type`, e.g. `endnotes` or `introductionHeader`. This is what decides
+   * which panel and tab the passage is displayed in, so without it a caller can only guess
+   * at the body — which is wrong for end notes, abbreviations, and front matter.
+   */
+  passageType: string | null;
   /** The annotation's type, e.g. `glossary-instance`. Null for other kinds. */
   annotationType: string | null;
 }
@@ -177,7 +183,7 @@ export const readFindingLocations = async ({
   }
 
   const annotations = new Map<string, { passageUuid: string; type: string }>();
-  const passages = new Map<string, string | null>();
+  const passages = new Map<string, { label: string | null; type: string | null }>();
   const bibliographies = new Set<string>();
 
   try {
@@ -188,12 +194,14 @@ export const readFindingLocations = async ({
         [
           client
             .from('passage_annotations')
-            .select('uuid, type, passage_uuid, passages!inner(work_uuid, label)')
+            .select(
+              'uuid, type, passage_uuid, passages!inner(work_uuid, label, type)',
+            )
             .in('uuid', batch)
             .eq('passages.work_uuid', workUuid),
           client
             .from('passages')
-            .select('uuid, label')
+            .select('uuid, label, type')
             .in('uuid', batch)
             .eq('work_uuid', workUuid),
           client
@@ -217,7 +225,9 @@ export const readFindingLocations = async ({
           uuid: string;
           type: string;
           passage_uuid: string;
-          passages: { label: string | null } | { label: string | null }[];
+          passages:
+            | { label: string | null; type: string | null }
+            | { label: string | null; type: string | null }[];
         };
         const passage = Array.isArray(record.passages)
           ? record.passages[0]
@@ -227,13 +237,20 @@ export const readFindingLocations = async ({
           type: record.type,
         });
         if (!passages.has(record.passage_uuid)) {
-          passages.set(record.passage_uuid, passage?.label ?? null);
+          passages.set(record.passage_uuid, {
+            label: passage?.label ?? null,
+            type: passage?.type ?? null,
+          });
         }
       });
 
       (passageRows.data ?? []).forEach((row) => {
-        const record = row as { uuid: string; label: string | null };
-        passages.set(record.uuid, record.label);
+        const record = row as {
+          uuid: string;
+          label: string | null;
+          type: string | null;
+        };
+        passages.set(record.uuid, { label: record.label, type: record.type });
       });
 
       (bibliographyRows.data ?? []).forEach((row) => {
@@ -248,20 +265,24 @@ export const readFindingLocations = async ({
   return unique.map((uuid) => {
     const annotation = annotations.get(uuid);
     if (annotation) {
+      const host = passages.get(annotation.passageUuid);
       return {
         uuid,
         kind: 'annotation' as const,
         passageUuid: annotation.passageUuid,
-        passageLabel: passages.get(annotation.passageUuid) ?? null,
+        passageLabel: host?.label ?? null,
+        passageType: host?.type ?? null,
         annotationType: annotation.type,
       };
     }
     if (passages.has(uuid)) {
+      const passage = passages.get(uuid);
       return {
         uuid,
         kind: 'passage' as const,
         passageUuid: uuid,
-        passageLabel: passages.get(uuid) ?? null,
+        passageLabel: passage?.label ?? null,
+        passageType: passage?.type ?? null,
         annotationType: null,
       };
     }
@@ -271,6 +292,7 @@ export const readFindingLocations = async ({
         kind: 'bibliography' as const,
         passageUuid: null,
         passageLabel: null,
+        passageType: null,
         annotationType: null,
       };
     }
@@ -279,6 +301,7 @@ export const readFindingLocations = async ({
       kind: 'unknown' as const,
       passageUuid: null,
       passageLabel: null,
+      passageType: null,
       annotationType: null,
     };
   });
