@@ -114,7 +114,7 @@ export interface PublishWorkResult {
  * Requires `editor.admin`. Returns a result object rather than throwing, because every
  * refusal here is something the editor needs to read: a duplicate or malformed version
  * label, a missing work, or a validation hard-fail. On a hard-fail the returned job carries
- * `errors` and nothing was written — the previous version is still live and serving.
+ * `errors` and nothing was written — the previous version is still the live one.
  *
  * Check `job.done`. A job that is not done is still running server-side; poll
  * `getPublishJob` rather than re-issuing this. Re-issuing is nonetheless safe: a second

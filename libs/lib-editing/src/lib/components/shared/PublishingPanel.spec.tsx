@@ -31,8 +31,31 @@ beforeEach(() => {
     versions: [],
     suggestedVersion: '0.0.4',
     suggestedVersionError: null,
+    draftTouchedAt: null,
+    draftChangedSincePublish: null,
   });
 });
+
+const liveVersion = {
+  uuid: 'v1',
+  version: '0.0.3',
+  publishedAt: '2026-08-01T10:00:00.000Z',
+  publishedBy: 'user-1',
+  publisher: 'Dawa Lhamo',
+  notes: null,
+  isLive: true,
+  warnings: [],
+};
+
+const withLiveVersion = (draftChangedSincePublish: boolean | null) =>
+  mockGetPublishHistory.mockResolvedValue({
+    workUuid: WORK,
+    versions: [liveVersion],
+    suggestedVersion: '0.0.4',
+    suggestedVersionError: null,
+    draftTouchedAt: '2026-08-02T10:00:00.000Z',
+    draftChangedSincePublish,
+  });
 
 describe('PublishingPanel', () => {
   it('offers the publish action to an editor.admin', async () => {
@@ -83,6 +106,58 @@ describe('PublishingPanel', () => {
     await waitFor(() =>
       expect(screen.getByText('Dialog suggesting 0.0.4')).toBeTruthy(),
     );
+  });
+
+  describe('the current version summary', () => {
+    it('names the live version and its publish date', async () => {
+      withLiveVersion(false);
+
+      render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
+
+      expect(await screen.findByText(/Published 0\.0\.3/)).toBeTruthy();
+    });
+
+    it('flags a draft that has changed since the live version', async () => {
+      withLiveVersion(true);
+
+      render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
+
+      expect(
+        await screen.findByText('Draft has changed since this version'),
+      ).toBeTruthy();
+      expect(screen.queryByText('Draft matches this version')).toBeNull();
+    });
+
+    it('reports a draft that matches the live version', async () => {
+      withLiveVersion(false);
+
+      render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
+
+      expect(await screen.findByText('Draft matches this version')).toBeTruthy();
+      expect(
+        screen.queryByText('Draft has changed since this version'),
+      ).toBeNull();
+    });
+
+    it('claims neither when there is nothing to compare', async () => {
+      // null is not a third rendering of "up to date" — it is the absence of a comparison,
+      // and asserting either way would be unsupported.
+      withLiveVersion(null);
+
+      render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
+
+      await screen.findByText(/Published 0\.0\.3/);
+      expect(screen.queryByText('Draft matches this version')).toBeNull();
+      expect(
+        screen.queryByText('Draft has changed since this version'),
+      ).toBeNull();
+    });
+
+    it('says so plainly when nothing has been published', async () => {
+      render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
+
+      expect(await screen.findByText('No published version')).toBeTruthy();
+    });
   });
 
   it('reports an unreadable history as unavailable, not as never published', async () => {

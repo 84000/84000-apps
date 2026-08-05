@@ -2,11 +2,19 @@
 
 import {
   Badge,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   MutedText,
   Separator,
 } from '@eightyfourthousand/design-system';
 import type { WorkVersion } from '@eightyfourthousand/client-graphql';
-import { CircleCheckIcon, TriangleAlertIcon } from 'lucide-react';
+import {
+  ChevronRightIcon,
+  CircleCheckIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
+import { useState } from 'react';
 
 /**
  * The validation status recorded for a published version.
@@ -69,7 +77,12 @@ const VersionRow = ({ version }: { version: WorkVersion }) => (
 );
 
 /**
- * A work's published versions, newest first.
+ * A work's published versions, newest first, collapsed behind a summary.
+ *
+ * Collapsed by default only when there is a list to hide. A work with no versions, or one
+ * whose history failed to load, has a single line of content, and putting that behind a click
+ * would hide the answer rather than tidy anything away — so those open. The count sits in the
+ * header either way, so the closed state still says how many versions exist.
  *
  * Read-only by design: viewing or restoring a historical version is separate work, and
  * restoring in particular has to go through the passage write service rather than writing
@@ -85,24 +98,44 @@ export const VersionHistory = ({
    * published" is a fact about the work and "could not load" is a fact about the request.
    */
   unavailable?: boolean;
-}) => (
-  <div>
-    <span className="text-sm font-semibold">{'Version history'}</span>
-    <Separator className="mt-2 bg-border" />
-    {unavailable ? (
-      <MutedText className="mt-3 block text-sm">
-        {'The version history could not be loaded.'}
-      </MutedText>
-    ) : versions.length === 0 ? (
-      <MutedText className="mt-3 block text-sm">
-        {'This work has not been published yet.'}
-      </MutedText>
-    ) : (
-      <ul className="divide-y divide-border">
-        {versions.map((version) => (
-          <VersionRow key={version.uuid} version={version} />
-        ))}
-      </ul>
-    )}
-  </div>
-);
+}) => {
+  const hasList = !unavailable && versions.length > 0;
+  const [open, setOpen] = useState(!hasList);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="group/collapsible flex w-full items-center gap-2 text-left text-sm font-semibold cursor-pointer"
+        >
+          <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+          <span>{'Version history'}</span>
+          {versions.length > 0 && (
+            <MutedText className="ms-auto shrink-0 font-light">
+              ({versions.length})
+            </MutedText>
+          )}
+        </button>
+      </CollapsibleTrigger>
+      <Separator className="mt-2 bg-border" />
+      <CollapsibleContent>
+        {unavailable ? (
+          <MutedText className="mt-3 block text-sm">
+            {'The version history could not be loaded.'}
+          </MutedText>
+        ) : versions.length === 0 ? (
+          <MutedText className="mt-3 block text-sm">
+            {'This work has not been published yet.'}
+          </MutedText>
+        ) : (
+          <ul className="divide-y divide-border">
+            {versions.map((version) => (
+              <VersionRow key={version.uuid} version={version} />
+            ))}
+          </ul>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};

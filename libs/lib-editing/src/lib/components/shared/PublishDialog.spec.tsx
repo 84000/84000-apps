@@ -69,6 +69,18 @@ beforeEach(() => {
 });
 
 describe('PublishDialog', () => {
+  it('says the reader does not serve published versions yet, in every state', async () => {
+    // True until DEV-558 switches the reader to the published_* tables. It must survive to
+    // the success state especially: "Published 0.0.3" otherwise reads as "it is live now".
+    renderDialog();
+    expect(screen.getByText(/does not read published versions yet/)).toBeTruthy();
+
+    await userEvent.click(publishButton());
+
+    await waitFor(() => expect(screen.getByText('Published 0.0.3')).toBeTruthy());
+    expect(screen.getByText(/does not read published versions yet/)).toBeTruthy();
+  });
+
   it('pre-fills the version the pipeline would choose', () => {
     renderDialog();
 
@@ -178,7 +190,7 @@ describe('PublishDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
     await waitFor(() => expect(screen.getByText('Publish failed')).toBeTruthy());
-    expect(screen.getByText(/still live and serving/)).toBeTruthy();
+    expect(screen.getByText(/still the live one/)).toBeTruthy();
     expect(onPublished).not.toHaveBeenCalled();
   });
 
@@ -252,7 +264,7 @@ describe('PublishDialog', () => {
     expect(screen.queryByLabelText('Version')).toBeNull();
     // Dismissal only. ("Close" also matches the dialog's own X, hence getAll.)
     expect(screen.getAllByRole('button', { name: 'Close' }).length).toBeGreaterThan(0);
-    expect(screen.getByText(/still live and serving/)).toBeTruthy();
+    expect(screen.getByText(/still the live one/)).toBeTruthy();
   });
 
   it('reports success and refreshes history once', async () => {

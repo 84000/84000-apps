@@ -21,6 +21,7 @@ import type {
   PublishedVersion,
   ValidationFinding,
 } from './types';
+import { isDraftChangedSincePublish } from './types';
 import { PAGE_SIZE, type WorkIdentity } from './read-published';
 import { nextVersion } from './version-label';
 
@@ -111,6 +112,34 @@ const readPublisherNames = async ({
 };
 
 /**
+ * When any draft table this work's snapshot draws from was last written.
+ *
+ * Trigger-maintained on `work_publish_status`, so it exists for any work that has ever been
+ * edited and is absent for one that has not. Absent is reported as null rather than as "never
+ * touched", because the two are only the same if the triggers have always been in place.
+ */
+const readDraftTouchedAt = async ({
+  client,
+  workUuid,
+}: {
+  client: DataClient;
+  workUuid: string;
+}): Promise<string | null> => {
+  const { data, error } = await client
+    .from('work_publish_status')
+    .select('draft_touched_at')
+    .eq('work_uuid', workUuid)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error reading draft touch time:', error);
+    return null;
+  }
+
+  return (data as { draft_touched_at: string } | null)?.draft_touched_at ?? null;
+};
+
+/**
  * Warnings recorded by the job that created each version, keyed by version uuid.
  *
  * `publish_jobs` deliberately has no foreign key to `work_versions`, so this is a plain
@@ -181,9 +210,10 @@ export const readPublishHistory = async ({
     ),
   ];
 
-  const [names, warnings] = await Promise.all([
+  const [names, warnings, draftTouchedAt] = await Promise.all([
     readPublisherNames({ client, ids: publisherIds }),
     readVersionWarnings({ client, workUuid: work.uuid }),
+    readDraftTouchedAt({ client, workUuid: work.uuid }),
   ]);
 
   const versions: PublishedVersion[] = rows.map((row) => ({
@@ -204,10 +234,20 @@ export const readPublishHistory = async ({
     publicationVersion: work.publicationVersion,
   });
 
+  // Compared against the LIVE version rather than the newest row. They are normally the same,
+  // but a pointer left on an older version is exactly the case where "has the draft moved on"
+  // must be answered about what is actually being served, not about the latest publish.
+  const live = versions.find((version) => version.isLive) ?? null;
+
   return {
     workUuid: work.uuid,
     versions,
     suggestedVersion: suggestion.ok ? suggestion.version : null,
     suggestedVersionError: suggestion.ok ? null : suggestion.error,
+    draftTouchedAt,
+    draftChangedSincePublish:
+      live && draftTouchedAt
+        ? isDraftChangedSincePublish(live.publishedAt, draftTouchedAt)
+        : null,
   };
 };

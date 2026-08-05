@@ -37,6 +37,15 @@ export interface PublishHistory {
   suggestedVersion: string | null;
   /** Why no label could be suggested. Present only when `suggestedVersion` is null. */
   suggestedVersionError: string | null;
+  /** Last write to any draft table this work's snapshot draws from. */
+  draftTouchedAt: string | null;
+  /**
+   * Whether the draft has moved on since the live version was published.
+   *
+   * Null when there is nothing to compare — never published, or no draft write recorded.
+   * Must not be rendered as "up to date". Tracks draft writes, not a content diff.
+   */
+  draftChangedSincePublish: boolean | null;
 }
 
 const GET_PUBLISH_HISTORY = gql`
@@ -45,6 +54,8 @@ const GET_PUBLISH_HISTORY = gql`
       workUuid
       suggestedVersion
       suggestedVersionError
+      draftTouchedAt
+      draftChangedSincePublish
       versions {
         uuid
         version

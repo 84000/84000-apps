@@ -162,7 +162,10 @@ export const PublishDialog = ({
         return;
       }
 
-      if (next.phase === lastSeen.phase && next.updatedAt === lastSeen.updatedAt) {
+      if (
+        next.phase === lastSeen.phase &&
+        next.updatedAt === lastSeen.updatedAt
+      ) {
         noProgressRef.current += 1;
         if (noProgressRef.current >= STALL_POLLS) {
           setStalled(true);
@@ -243,7 +246,8 @@ export const PublishDialog = ({
         ? 'This work has findings that block publication. Fix them and re-check.'
         : null;
 
-  const canSubmit = !blockedReason && !submitting && !running && (!job || retryable);
+  const canSubmit =
+    !blockedReason && !submitting && !running && (!job || retryable);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -252,7 +256,7 @@ export const PublishDialog = ({
           <DialogTitle>{`Publish ${workLabel}`}</DialogTitle>
           <DialogDescription>
             {
-              'Publishing writes an immutable version artifact and replaces what readers see. It captures the work as the server has it now; edits that have not synced yet land in the next version.'
+              'Publishing validates the work, writes an immutable version artifact, and materializes the published snapshot. It captures the work as the server has it now; edits that have not synced yet land in the next version.'
             }
           </DialogDescription>
         </DialogHeader>
@@ -283,7 +287,9 @@ export const PublishDialog = ({
                 </MutedText>
               ) : (
                 <MutedText className="text-xs">
-                  {'SemVer, unique to this work. Leave as suggested to continue the sequence.'}
+                  {
+                    'SemVer, unique to this work. Leave as suggested to continue the sequence.'
+                  }
                 </MutedText>
               )}
             </div>
@@ -330,7 +336,9 @@ export const PublishDialog = ({
               <span>{`${PHASE_LABELS[job.phase] ?? job.phase}…`}</span>
             </div>
             <MutedText className="text-xs">
-              {'Publishing continues on the server, so you can close this and come back.'}
+              {
+                'Publishing continues on the server, so you can close this and come back.'
+              }
             </MutedText>
             {stalled && (
               <div className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3">
@@ -353,11 +361,11 @@ export const PublishDialog = ({
               <CircleAlertIcon className="size-4 shrink-0 text-destructive" />
               <span>{'Publish failed'}</span>
             </div>
-            {/* Stated plainly, because the alternative reading — that readers are now seeing
-                a half-published work — is the one thing an editor will fear here. */}
+            {/* Stated plainly, because the alternative reading — that a half-published work
+                is now the live version — is the one thing an editor will fear here. */}
             <MutedText className="text-xs">
               {
-                'Nothing was published. The previously published version is still live and serving.'
+                'Nothing was published. The previously published version is still the live one.'
               }
             </MutedText>
             {job.error && <span className="text-xs">{job.error}</span>}
@@ -383,6 +391,18 @@ export const PublishDialog = ({
             )}
           </div>
         )}
+
+        {/* Shown in every state, including after a successful publish, because the wrong
+            belief this corrects — that publishing has just changed the public site — is one an
+            editor is most likely to hold at exactly that moment. Remove this when the reader
+            reads from the published_* tables. */}
+        <div className="rounded-md border border-border bg-warning/10 p-3">
+          <MutedText className="text-xs">
+            {
+              'The public reader does not read published versions yet — it still serves draft content. Publishing records the version and materializes the snapshot in the database, but published versions are not "live" until the reader is switched over.'
+            }
+          </MutedText>
+        </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

@@ -7,6 +7,9 @@ import {
   AccordionTrigger,
   Badge,
   Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   MutedText,
   Separator,
   Skeleton,
@@ -23,6 +26,7 @@ import {
 } from '@eightyfourthousand/client-graphql';
 import { cn } from '@eightyfourthousand/lib-utils';
 import {
+  ChevronRightIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
@@ -301,6 +305,15 @@ export const PublishChecksPanel = ({
   // When the displayed verdict was recorded, and whether it came from the cache. Null while
   // there is no verdict to show.
   const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  /**
+   * Open by default, deliberately.
+   *
+   * Collapsing is offered because the findings list is long in a narrow column, but the
+   * default must not be one that hides blocking errors from an editor who is about to reach
+   * for the publish button above. Starting clean-and-collapsed would also mean re-syncing
+   * this from an async verdict, which is the cascading-render pattern the lint rule forbids.
+   */
+  const [open, setOpen] = useState(true);
 
   const applyFindings = useCallback(
     async (findings: PublishFinding[], cancelled: () => boolean) => {
@@ -427,168 +440,186 @@ export const PublishChecksPanel = ({
     [updatePanel],
   );
 
-  if (loading) {
-    return (
-      <div className="py-4">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="mt-3 h-4 w-full" />
-        <Skeleton className="mt-2 h-4 w-3/4" />
-      </div>
-    );
-  }
-
-  if (failed) {
-    return (
-      <div className="py-4">
-        <MutedText className="text-sm">
-          {'The publish check could not be run for this work.'}
-        </MutedText>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          disabled={checking}
-          onClick={runCheck}
-        >
-          {checking ? 'Checking…' : 'Try again'}
-        </Button>
-      </div>
-    );
-  }
-
-  // No verdict that describes the work as it stands: either never checked, or checked and
-  // then edited. Both are offered a check rather than shown an answer, because a superseded
-  // verdict presented as current is the one failure this view must not have.
-  if (!readiness) {
-    return (
-      <div className="py-4">
-        <div className="flex items-center gap-2">
-          <CircleDashedIcon className="size-4 text-muted-foreground" />
-          <span className="text-sm font-semibold">{'Not checked'}</span>
-        </div>
-        <MutedText className="mt-2 block text-sm">
-          {
-            'Nothing has been checked for this work since it was last edited. Running the check reads every annotation, so it can take a few seconds on a long text.'
-          }
-        </MutedText>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          disabled={checking}
-          onClick={runCheck}
-        >
-          {checking ? 'Checking…' : 'Run check'}
-        </Button>
-      </div>
-    );
-  }
-
-  // Not "this work is invalid": two glossary rules could not be evaluated because the
-  // glossary index is unpopulated, which is the normal state of a fresh local stack and of
-  // every preview branch. Only the publish path can refresh it.
-  if (isReadinessUndetermined(readiness)) {
-    return (
-      <div className="py-4">
-        <div className="flex items-center gap-2">
-          <CircleHelpIcon className="size-4 text-muted-foreground" />
-          <span className="text-sm font-semibold">{'Could not check'}</span>
-        </div>
-        <MutedText className="mt-2 block text-sm">
-          {
-            'The glossary index is not populated, so glossary references cannot be verified. This says nothing about whether the work is publishable — it is the check that is unavailable, not the work that is broken.'
-          }
-        </MutedText>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          disabled={checking}
-          onClick={runCheck}
-        >
-          {checking ? 'Checking…' : 'Check again'}
-        </Button>
-      </div>
-    );
-  }
-
   const errors = readiness?.errors ?? [];
   const warnings = readiness?.warnings ?? [];
   const errorOccurrences = errors.reduce(
     (total, finding) => total + finding.count,
     0,
   );
+  const undetermined = !!readiness && isReadinessUndetermined(readiness);
+
+  /**
+   * The at-a-glance verdict, shown on the header so it survives collapsing.
+   *
+   * Five outcomes, and the three that are not verdicts stay visibly distinct from the two
+   * that are: "could not run" (the request failed), "not checked" (nothing has been looked
+   * at), and "could not check" (the rules could not be evaluated) are all muted, because
+   * none of them says anything about the work. Only a real pass or a real block is coloured.
+   */
+  const statusIcon = loading ? null : failed ? (
+    <CircleHelpIcon className="size-4 shrink-0 text-muted-foreground" />
+  ) : !readiness ? (
+    <CircleDashedIcon className="size-4 shrink-0 text-muted-foreground" />
+  ) : undetermined ? (
+    <CircleHelpIcon className="size-4 shrink-0 text-muted-foreground" />
+  ) : errors.length === 0 ? (
+    <CircleCheckIcon className="size-4 shrink-0 text-success" />
+  ) : (
+    <CircleAlertIcon className="size-4 shrink-0 text-destructive" />
+  );
+
+  // Only where a verdict exists to re-check. The other states carry their own labelled button
+  // in the body, next to the sentence explaining why a check is needed, so putting an icon
+  // here as well would be two controls for one action.
+  const showRecheck = !loading && !failed && !!readiness;
 
   return (
-    <div className="py-4 flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {errors.length === 0 ? (
-            <CircleCheckIcon className="size-4 text-success" />
-          ) : (
-            <CircleAlertIcon className="size-4 text-destructive" />
-          )}
-          <span className="text-sm font-semibold">
-            {errors.length === 0
-              ? 'No problems blocking publication'
-              : `${errors.length} ${errors.length === 1 ? 'rule' : 'rules'}, ${errorOccurrences} blocking publication`}
-          </span>
-        </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          disabled={checking}
-          aria-label={checking ? 'Checking' : 'Re-check'}
-          onClick={runCheck}
-        >
-          <RotateCwIcon className={cn(checking && 'animate-spin')} />
-        </Button>
+    <Collapsible open={open} onOpenChange={setOpen} className="py-4">
+      <div className="flex items-center gap-2">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="group/collapsible flex flex-1 items-center gap-2 text-left text-sm font-semibold cursor-pointer"
+          >
+            <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+            <span>{'Diagnostics'}</span>
+          </button>
+        </CollapsibleTrigger>
+        {/* Right-aligned, and outside the trigger: re-checking must not also toggle the
+            section, and toggling must not fire a check that costs seconds on a long work. */}
+        {statusIcon}
+        {showRecheck && (
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={checking}
+            aria-label={checking ? 'Checking' : 'Re-check'}
+            onClick={runCheck}
+          >
+            <RotateCwIcon className={cn(checking && 'animate-spin')} />
+          </Button>
+        )}
       </div>
 
-      {/* Says when, because this verdict is usually read from cache rather than produced
-          just now — and a reader who assumes it is live would misjudge how current it is. */}
-      {checkedAt && (
-        <MutedText className="-mt-2 text-xs">
-          {`Checked ${new Date(checkedAt).toLocaleString()}`}
-        </MutedText>
-      )}
+      <Separator className="mt-2 bg-border" />
 
-      <Separator className="bg-border" />
-
-      {errors.length > 0 && (
-        <Accordion type="multiple" className="mt-3">
-          {errors.map((finding) => (
-            <FindingGroup
-              key={findingKey(finding)}
-              finding={finding}
-              locations={locations}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </Accordion>
-      )}
-
-      {warnings.length > 0 && (
-        <div className={cn(errors.length > 0 && 'mt-6')}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">{'Warnings'}</span>
-            {/* Stated rather than implied: the pipeline publishes regardless of these. */}
-            <MutedText className="text-xs">
-              {'do not block publishing'}
-            </MutedText>
+      <CollapsibleContent>
+        {loading ? (
+          <div className="mt-3">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="mt-3 h-4 w-full" />
+            <Skeleton className="mt-2 h-4 w-3/4" />
           </div>
-          <Accordion type="multiple" className="mt-1">
-            {warnings.map((finding) => (
-              <FindingGroup
-                key={findingKey(finding)}
-                finding={finding}
-                locations={locations}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </Accordion>
-        </div>
-      )}
-    </div>
+        ) : failed ? (
+          <div className="mt-3">
+            <MutedText className="text-sm">
+              {'The publish check could not be run for this work.'}
+            </MutedText>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              disabled={checking}
+              onClick={runCheck}
+            >
+              {checking ? 'Checking…' : 'Try again'}
+            </Button>
+          </div>
+        ) : !readiness ? (
+          // No verdict that describes the work as it stands: either never checked, or checked
+          // and then edited. Both are offered a check rather than shown an answer, because a
+          // superseded verdict presented as current is the one failure this view must not have.
+          <div className="mt-3">
+            <span className="text-sm font-semibold">{'Not checked'}</span>
+            <MutedText className="mt-2 block text-sm">
+              {
+                'Nothing has been checked for this work since it was last edited. Running the check reads every annotation, so it can take a few seconds on a long text.'
+              }
+            </MutedText>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              disabled={checking}
+              onClick={runCheck}
+            >
+              {checking ? 'Checking…' : 'Run check'}
+            </Button>
+          </div>
+        ) : undetermined ? (
+          // Not "this work is invalid": two glossary rules could not be evaluated because the
+          // glossary index is unpopulated, which is the normal state of a fresh local stack and
+          // of every preview branch. Only the publish path can refresh it.
+          <div className="mt-3">
+            <span className="text-sm font-semibold">{'Could not check'}</span>
+            <MutedText className="mt-2 block text-sm">
+              {
+                'The glossary index is not populated, so glossary references cannot be verified. This says nothing about whether the work is publishable — it is the check that is unavailable, not the work that is broken.'
+              }
+            </MutedText>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              disabled={checking}
+              onClick={runCheck}
+            >
+              {checking ? 'Checking…' : 'Check again'}
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-4">
+            <span className="text-sm font-semibold">
+              {errors.length === 0
+                ? 'No problems blocking publication'
+                : `${errors.length} ${errors.length === 1 ? 'rule' : 'rules'}, ${errorOccurrences} blocking publication`}
+            </span>
+
+            {/* Says when, because this verdict is usually read from cache rather than produced
+                just now — and a reader who assumes it is live would misjudge how current it is. */}
+            {checkedAt && (
+              <MutedText className="-mt-3 text-xs">
+                {`Checked ${new Date(checkedAt).toLocaleString()}`}
+              </MutedText>
+            )}
+
+            {errors.length > 0 && (
+              <Accordion type="multiple">
+                {errors.map((finding) => (
+                  <FindingGroup
+                    key={findingKey(finding)}
+                    finding={finding}
+                    locations={locations}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </Accordion>
+            )}
+
+            {warnings.length > 0 && (
+              <div className={cn(errors.length > 0 && 'mt-2')}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold">{'Warnings'}</span>
+                  {/* Stated rather than implied: the pipeline publishes regardless of these. */}
+                  <MutedText className="text-xs">
+                    {'do not block publishing'}
+                  </MutedText>
+                </div>
+                <Accordion type="multiple" className="mt-1">
+                  {warnings.map((finding) => (
+                    <FindingGroup
+                      key={findingKey(finding)}
+                      finding={finding}
+                      locations={locations}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </Accordion>
+              </div>
+            )}
+          </div>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 };

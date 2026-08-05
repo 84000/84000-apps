@@ -11,6 +11,10 @@ interface FakeTables {
     data?: Record<string, unknown>[];
     error?: { message: string };
   };
+  work_publish_status?: {
+    data?: Record<string, unknown> | null;
+    error?: { message: string };
+  };
 }
 
 /**
@@ -44,7 +48,14 @@ const fakeClient = (
             error: result.error ?? null,
           }).then(resolve),
       };
-      for (const method of ['select', 'eq', 'order', 'range', 'not']) {
+      for (const method of [
+        'select',
+        'eq',
+        'order',
+        'range',
+        'not',
+        'maybeSingle',
+      ]) {
         builder[method] = (...args: unknown[]) => {
           entry.filters.push([method, ...args]);
           return builder;
@@ -225,6 +236,122 @@ describe('readPublishHistory', () => {
 
     expect(history?.suggestedVersion).toBeNull();
     expect(history?.suggestedVersionError).toContain('1.0');
+  });
+
+  describe('draftChangedSincePublish', () => {
+    const publishedAt = '2026-08-01T10:00:00+00:00';
+
+    const historyWith = (draftTouchedAt: string | null, isLive = true) =>
+      fakeClient({
+        work_versions: {
+          data: [
+            versionRow({
+              uuid: isLive ? 'v2' : 'other',
+              published_at: publishedAt,
+            }),
+          ],
+        },
+        work_publish_status: {
+          data: draftTouchedAt ? { draft_touched_at: draftTouchedAt } : null,
+        },
+      });
+
+    it('is true when the draft was written after the live version was published', async () => {
+      const { client } = historyWith('2026-08-02T10:00:00+00:00');
+
+      const history = await readPublishHistory({ client, work: WORK });
+
+      expect(history?.draftChangedSincePublish).toBe(true);
+      expect(history?.draftTouchedAt).toBe('2026-08-02T10:00:00+00:00');
+    });
+
+    it('is false when the last draft write predates the publish', async () => {
+      const { client } = historyWith('2026-07-30T10:00:00+00:00');
+
+      expect(
+        (await readPublishHistory({ client, work: WORK }))
+          ?.draftChangedSincePublish,
+      ).toBe(false);
+    });
+
+    it('compares instants, not strings, across differing UTC offsets', async () => {
+      // Touched at 11:00+02:00, i.e. 09:00Z — an hour BEFORE the publish, so unchanged. The
+      // touch sorts later as a string ('11' > '10'), which is what a naive compare gets wrong.
+      const { client } = historyWith('2026-08-01T11:00:00+02:00');
+
+      expect(
+        (await readPublishHistory({ client, work: WORK }))
+          ?.draftChangedSincePublish,
+      ).toBe(false);
+    });
+
+    it('is null when no draft write is on record', async () => {
+      // Not "unchanged": there is simply nothing to compare, and a caller must not read this
+      // as an assurance that the live version matches the draft.
+      const { client } = historyWith(null);
+
+      const history = await readPublishHistory({ client, work: WORK });
+
+      expect(history?.draftChangedSincePublish).toBeNull();
+      expect(history?.draftTouchedAt).toBeNull();
+    });
+
+    it('is null when the work has never been published', async () => {
+      const { client } = fakeClient({
+        work_versions: { data: [] },
+        work_publish_status: {
+          data: { draft_touched_at: '2026-08-02T10:00:00+00:00' },
+        },
+      });
+
+      const history = await readPublishHistory({ client, work: WORK });
+
+      expect(history?.versions).toEqual([]);
+      expect(history?.draftChangedSincePublish).toBeNull();
+      // The draft touch time is still reported; only the comparison is unavailable.
+      expect(history?.draftTouchedAt).toBe('2026-08-02T10:00:00+00:00');
+    });
+
+    it('compares against the live version, not the newest one', async () => {
+      // A pointer left on an older version is exactly when this must answer about what is
+      // actually being served. Newest row published after the draft write; live one before.
+      const { client } = fakeClient({
+        work_versions: {
+          data: [
+            versionRow({
+              uuid: 'newest',
+              version: '0.0.3',
+              published_at: '2026-08-05T10:00:00+00:00',
+            }),
+            versionRow({
+              uuid: 'v2',
+              version: '0.0.2',
+              published_at: '2026-08-01T10:00:00+00:00',
+            }),
+          ],
+        },
+        work_publish_status: {
+          data: { draft_touched_at: '2026-08-02T10:00:00+00:00' },
+        },
+      });
+
+      // WORK.publishedVersionUuid is 'v2', the older row.
+      const history = await readPublishHistory({ client, work: WORK });
+
+      expect(history?.draftChangedSincePublish).toBe(true);
+    });
+
+    it('still returns the history when the draft touch read fails', async () => {
+      const { client } = fakeClient({
+        work_versions: { data: [versionRow({ uuid: 'v2' })] },
+        work_publish_status: { error: { message: 'boom' } },
+      });
+
+      const history = await readPublishHistory({ client, work: WORK });
+
+      expect(history?.versions).toHaveLength(1);
+      expect(history?.draftChangedSincePublish).toBeNull();
+    });
   });
 
   it('returns null when the version read itself fails', async () => {

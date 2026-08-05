@@ -217,7 +217,11 @@ type WorkVersion {
   notes: String
 
   """
-  Whether this is the version readers are currently being served.
+  Whether this is the version `works.published_version_uuid` points at — the one the
+  published_* snapshot tables hold.
+
+  Not yet the same as "what readers see": the public reader still serves draft content until
+  DEV-558 switches it to the snapshot tables.
   """
   isLive: Boolean!
 
@@ -252,6 +256,22 @@ type PublishHistory {
   instead of `suggestedVersion`, never alongside it; ask for an explicit label.
   """
   suggestedVersionError: String
+
+  """
+  Last write to any draft table this work's snapshot draws from. Null when the work has
+  never been written to, which is not the same as "unchanged".
+  """
+  draftTouchedAt: String
+
+  """
+  Whether the draft has moved on since the live version was published, so publishing again
+  would produce different content.
+
+  Null when there is nothing to compare — never published, or no draft write recorded. Do
+  not render null as "up to date". Note this tracks draft WRITES, not a content diff: a save
+  that changed nothing still counts as a change.
+  """
+  draftChangedSincePublish: Boolean
 }
 
 extend type Query {
