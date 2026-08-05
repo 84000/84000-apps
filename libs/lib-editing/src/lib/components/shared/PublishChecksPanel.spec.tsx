@@ -535,4 +535,90 @@ describe('PublishChecksPanel', () => {
       );
     });
   });
+
+  describe('the Diagnostics section', () => {
+    const toggle = () =>
+      userEvent.click(screen.getByRole('button', { name: /Diagnostics/ }));
+
+    const blocked = () =>
+      readiness({
+        ok: false,
+        errors: [
+          {
+            rule: 'passage-sort-missing',
+            severity: 'error',
+            message: 'Passages have no sort value.',
+            subjects: ['p1'],
+            count: 1,
+          },
+        ],
+      });
+
+    it('starts open, so blocking findings are not hidden by default', async () => {
+      // The publish button sits above this in the panel. A default that concealed the
+      // reasons a work cannot be published would be actively misleading there.
+      seed(blocked());
+
+      await renderPanel();
+
+      expect(
+        await screen.findByText('1 rule, 1 blocking publication'),
+      ).toBeTruthy();
+    });
+
+    it('collapses and reopens the findings', async () => {
+      seed(blocked());
+
+      await renderPanel();
+      await screen.findByText('1 rule, 1 blocking publication');
+
+      await toggle();
+      expect(screen.queryByText('1 rule, 1 blocking publication')).toBeNull();
+
+      await toggle();
+      expect(
+        await screen.findByText('1 rule, 1 blocking publication'),
+      ).toBeTruthy();
+    });
+
+    it('does not run a check when toggled', async () => {
+      // Validation costs roughly 0.8 ms per passage, so seconds on a long work. Tying it to
+      // a disclosure control would charge that price for tidying the panel.
+      seed(blocked());
+
+      await renderPanel();
+      await screen.findByText('1 rule, 1 blocking publication');
+
+      await toggle();
+      await toggle();
+
+      expect(mockGetPublishReadiness).not.toHaveBeenCalled();
+    });
+
+    it('keeps the re-check control reachable while collapsed', async () => {
+      seed(blocked());
+
+      await renderPanel();
+      await screen.findByText('1 rule, 1 blocking publication');
+      await toggle();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Re-check' }));
+
+      await waitFor(() =>
+        expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
+      );
+    });
+
+    it('offers no re-check icon before a verdict exists', async () => {
+      // The unchecked state carries its own labelled "Run check" button next to the sentence
+      // explaining why, so an icon here would be a second control for the same action.
+      mockGetPublishStatus.mockResolvedValue(null);
+
+      await renderPanel();
+
+      expect(await screen.findByText('Not checked')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Re-check' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Run check' })).toBeTruthy();
+    });
+  });
 });

@@ -152,34 +152,130 @@ export interface WorkPublishStatus {
 }
 
 /**
- * Whether a recorded verdict has been superseded by a later draft edit.
+ * Whether a draft edit landed strictly after some reference instant.
  *
  * Compares parsed instants rather than the raw strings. Lexicographic comparison happens to
  * work for the UTC ISO form PostgREST returns, but only by accident of that format — it
- * breaks the moment an offset or a differing fractional precision enters, and getting this
- * backwards would show a stale verdict as current, which is the one failure the cache must
- * not have.
+ * breaks the moment an offset or a differing fractional precision enters.
+ *
+ * Fails closed: an unparseable timestamp reports "yes, it changed". Both callers would rather
+ * over-report a change (a needless re-check, a needless republish) than assure someone that
+ * something is current when it cannot be established.
+ */
+const isTouchedAfter = (
+  reference: string | null,
+  draftTouchedAt: string | null,
+): boolean => {
+  if (!reference || !draftTouchedAt) {
+    return false;
+  }
+  const referencePoint = Date.parse(reference);
+  const touched = Date.parse(draftTouchedAt);
+  if (Number.isNaN(referencePoint) || Number.isNaN(touched)) {
+    return true;
+  }
+  return touched > referencePoint;
+};
+
+/**
+ * Whether a recorded verdict has been superseded by a later draft edit.
+ *
+ * Getting this backwards would show a stale verdict as current, which is the one failure the
+ * cache must not have.
  */
 export const isStale = (
   checkedAt: string | null,
   draftTouchedAt: string | null,
-): boolean => {
-  if (!checkedAt || !draftTouchedAt) {
-    return false;
-  }
-  const checked = Date.parse(checkedAt);
-  const touched = Date.parse(draftTouchedAt);
-  // An unparseable timestamp must not silently read as "current".
-  if (Number.isNaN(checked) || Number.isNaN(touched)) {
-    return true;
-  }
-  return touched > checked;
-};
+): boolean => isTouchedAfter(checkedAt, draftTouchedAt);
+
+/**
+ * Whether the draft has moved on since a version was published.
+ *
+ * The same comparison as `isStale`, against a different reference: publishing again would
+ * produce different content from the version currently live. Deliberately not a content
+ * diff — `draft_touched_at` is trigger-maintained on every draft write, so a save that
+ * changed nothing still counts. Over-reporting a change is the safe direction; claiming the
+ * live version matches a draft that has since moved is not.
+ */
+export const isDraftChangedSincePublish = (
+  publishedAt: string | null,
+  draftTouchedAt: string | null,
+): boolean => isTouchedAfter(publishedAt, draftTouchedAt);
 
 /** A cached verdict is only usable when the work was checked and has not changed since. */
 export const isPublishStatusKnown = (
   status: WorkPublishStatus | undefined,
 ): boolean => !!status && status.checkedAt !== null && !status.stale;
+
+/**
+ * One published version of a work, as version history renders it.
+ *
+ * Sourced from `work_versions`, which is one row per publish event. Rows are only ever
+ * inserted, so this is an append-only record — a failed publish deletes its own row and
+ * therefore never appears here.
+ */
+export interface PublishedVersion {
+  uuid: string;
+  version: string;
+  publishedAt: string;
+  /** `auth.users` id. Null for a service-account or pipeline publish. */
+  publishedBy: string | null;
+  /**
+   * The publisher's display name, resolved through `publisher_display_names`.
+   *
+   * Null when there is no name to show: a service-account publish, a publisher with no
+   * profile row, or an account deleted since (the foreign key nulls `publishedBy`). Callers
+   * should render an unattributed publish rather than falling back to the raw uuid.
+   */
+  publisher: string | null;
+  notes: string | null;
+  /**
+   * Matches `works.published_version_uuid` — the version the published_* tables hold.
+   *
+   * Not "what readers see": the public reader still serves draft content until DEV-558
+   * switches it over to the snapshot tables.
+   */
+  isLive: boolean;
+  /**
+   * Non-blocking findings recorded by the publish job that produced this version.
+   *
+   * `null` and `[]` mean different things and must not be collapsed: `[]` is a job that
+   * recorded no warnings, while `null` is no job row to read — the audit trail was pruned,
+   * or the version predates the job-tracked pipeline. Only the first is "published clean".
+   */
+  warnings: ValidationFinding[] | null;
+}
+
+/**
+ * A work's publish history, plus the label a new publish would take.
+ *
+ * The suggestion is computed with the same `nextVersion` call the snapshot phase makes, over
+ * the same label set, so the value offered in the publish dialog is the value the pipeline
+ * would pick on its own. `suggestedVersionError` carries the cases it refuses to guess at —
+ * chiefly a legacy label that is not SemVer — so a client can ask for an explicit label
+ * instead of pre-filling something wrong.
+ */
+export interface PublishHistory {
+  workUuid: string;
+  /** Newest first. */
+  versions: PublishedVersion[];
+  suggestedVersion: string | null;
+  suggestedVersionError: string | null;
+  /**
+   * Last write to any draft table this work's snapshot draws from.
+   *
+   * Null when the work has never been written to, which is not the same as "unchanged".
+   */
+  draftTouchedAt: string | null;
+  /**
+   * Whether the draft has moved on since the live version was published, so publishing again
+   * would produce different content.
+   *
+   * Null when there is nothing to compare against — the work has never been published, or no
+   * draft write has ever been recorded. A caller must not render null as "up to date".
+   */
+  draftChangedSincePublish: boolean | null;
+}
 
 /** The `publish_jobs` row, as the pipeline sees it. */
 export interface PublishJob {

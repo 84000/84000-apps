@@ -8,6 +8,7 @@
 import {
   getJob,
   readFindingLocations,
+  readPublishHistory,
   readPublishStatus,
   readPublishStatuses,
   resolveWork,
@@ -107,6 +108,37 @@ export const publishQueries = {
       ...status,
       errors: status.errors.map(findingToGraphQL),
       warnings: status.warnings.map(findingToGraphQL),
+    };
+  },
+
+  publishHistory: async (
+    _parent: unknown,
+    args: { work: string },
+    ctx: GraphQLContext,
+  ) => {
+    await requirePublishPermission(ctx);
+
+    const work = await resolveWork({ client: ctx.supabase, work: args.work });
+    if (!work) {
+      return null;
+    }
+
+    // The user's client, not a service-role one: work_versions is readable by policy, and
+    // the publisher-name lookup is a definer function that makes its own editor.admin
+    // check. Nothing here needs to read around RLS.
+    const history = await readPublishHistory({ client: ctx.supabase, work });
+    if (!history) {
+      return null;
+    }
+
+    return {
+      ...history,
+      versions: history.versions.map((version) => ({
+        ...version,
+        // Mapped only when recorded. Null passes through as null, which the schema
+        // documents as "not recorded" rather than "no warnings".
+        warnings: version.warnings?.map(findingToGraphQL) ?? null,
+      })),
     };
   },
 
