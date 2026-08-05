@@ -99,13 +99,17 @@ describe('VersionHistory', () => {
     // Both are a single line, so both start expanded — hiding the answer behind a click
     // would not be tidying anything away.
     const { rerender } = render(<VersionHistory versions={[]} />);
-    expect(screen.getByText('This work has not been published yet.')).toBeTruthy();
+    expect(
+      screen.getByText('This work has not been published yet.'),
+    ).toBeTruthy();
 
     rerender(<VersionHistory versions={[]} unavailable />);
     expect(
       screen.getByText('The version history could not be loaded.'),
     ).toBeTruthy();
-    expect(screen.queryByText('This work has not been published yet.')).toBeNull();
+    expect(
+      screen.queryByText('This work has not been published yet.'),
+    ).toBeNull();
   });
 
   it('leaves a service-account publish unattributed', async () => {
@@ -132,7 +136,7 @@ describe('VersionHistory', () => {
     );
 
     // The count is readable while closed, so collapsing costs no information.
-    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('(2)')).toBeTruthy();
     expect(screen.queryByText('0.0.2')).toBeNull();
 
     await expand();

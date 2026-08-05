@@ -16,9 +16,11 @@ jest.mock('./PublishChecksPanel', () => ({
   PublishChecksPanel: () => <div>Checks</div>,
 }));
 jest.mock('./PublishDialog', () => ({
-  PublishDialog: ({ suggestedVersion }: { suggestedVersion: string | null }) => (
-    <div>{`Dialog suggesting ${suggestedVersion}`}</div>
-  ),
+  PublishDialog: ({
+    suggestedVersion,
+  }: {
+    suggestedVersion: string | null;
+  }) => <div>{`Dialog suggesting ${suggestedVersion}`}</div>,
 }));
 
 const WORK = '11111111-1111-1111-1111-111111111111';
@@ -114,7 +116,7 @@ describe('PublishingPanel', () => {
 
       render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
 
-      expect(await screen.findByText(/Published 0\.0\.3/)).toBeTruthy();
+      expect(await screen.findByText(/Current Version: 0\.0\.3/)).toBeTruthy();
     });
 
     it('flags a draft that has changed since the live version', async () => {
@@ -133,7 +135,9 @@ describe('PublishingPanel', () => {
 
       render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
 
-      expect(await screen.findByText('Draft matches this version')).toBeTruthy();
+      expect(
+        await screen.findByText('Draft matches this version'),
+      ).toBeTruthy();
       expect(
         screen.queryByText('Draft has changed since this version'),
       ).toBeNull();
@@ -146,7 +150,7 @@ describe('PublishingPanel', () => {
 
       render(<PublishingPanel workUuid={WORK} workLabel="toh251" />);
 
-      await screen.findByText(/Published 0\.0\.3/);
+      await screen.findByText(/Current Version: 0\.0\.3/);
       expect(screen.queryByText('Draft matches this version')).toBeNull();
       expect(
         screen.queryByText('Draft has changed since this version'),
