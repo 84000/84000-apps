@@ -238,6 +238,87 @@ describe('insertEndnotePassage', () => {
     ]);
   });
 
+  // The anchor is whichever variant the preceding link happened to point at, so
+  // it can be any member of its slot. The new note has to land outside the whole
+  // slot, never between two variants of one number.
+  it('inserts after every variant when the anchor is the first of its slot', () => {
+    const { editor, passages } = createEditor([
+      { uuid: 'n3', label: 'n.3', sort: 3 },
+      { uuid: 'n4-916', label: 'n.4', sort: 4, toh: 'toh916' },
+      { uuid: 'n4-526', label: 'n.4', sort: 5, toh: 'toh526' },
+      { uuid: 'n5', label: 'n.5', sort: 6 },
+    ]);
+
+    expect(
+      insertEndnotePassage(editor, {
+        label: 'n.5',
+        // What the caller derives from the anchor alone — one short of clearing
+        // the slot.
+        sort: 5,
+        uuid: 'new',
+        afterPassageUuid: 'n4-916',
+      }),
+    ).toBe(true);
+
+    expect(passages()).toEqual([
+      ['n.3', 3, 'n3'],
+      ['n.4', 4, 'n4-916'],
+      ['n.4', 5, 'n4-526'],
+      ['n.5', 6, 'new'],
+      ['n.6', 7, 'n5'],
+    ]);
+  });
+
+  it('inserts before every variant when the anchor is later in its slot', () => {
+    const { editor, passages } = createEditor([
+      { uuid: 'n3', label: 'n.3', sort: 3 },
+      { uuid: 'n4-916', label: 'n.4', sort: 4, toh: 'toh916' },
+      { uuid: 'n4-526', label: 'n.4', sort: 5, toh: 'toh526' },
+      { uuid: 'n5', label: 'n.5', sort: 6 },
+    ]);
+
+    expect(
+      insertEndnotePassage(editor, {
+        label: 'n.4',
+        sort: 5,
+        uuid: 'new',
+        beforePassageUuid: 'n4-526',
+      }),
+    ).toBe(true);
+
+    expect(passages()).toEqual([
+      ['n.3', 3, 'n3'],
+      ['n.4', 4, 'new'],
+      ['n.5', 5, 'n4-916'],
+      ['n.5', 6, 'n4-526'],
+      ['n.6', 7, 'n5'],
+    ]);
+  });
+
+  // Two `toh`-less notes sharing a label are not a slot — that is a transient
+  // duplicate, e.g. one the client has renumbered while the next is still
+  // stale. Treating it as a slot would place the new note past a note that
+  // ought to follow it.
+  it('does not treat two toh-less notes sharing a label as one slot', () => {
+    const { editor, passages } = createEditor([
+      { uuid: 'n842', label: 'n.842', sort: 842 },
+      { uuid: 'renumbered', label: 'n.843', sort: 843 },
+      { uuid: 'stale', label: 'n.843', sort: 844 },
+    ]);
+
+    expect(
+      insertEndnotePassage(editor, {
+        label: 'n.844',
+        sort: 844,
+        uuid: 'new',
+        afterPassageUuid: 'renumbered',
+      }),
+    ).toBe(true);
+
+    const order = passages().map(([, , uuid]) => uuid);
+    expect(order).toEqual(['n842', 'renumbered', 'new', 'stale']);
+  });
+
   it('leaves endnotesHeader labels alone while still shifting their sort', () => {
     const { editor, passages } = createEditor([
       { uuid: 'a', label: 'n.1', sort: 1 },
