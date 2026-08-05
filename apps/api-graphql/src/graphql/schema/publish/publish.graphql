@@ -185,11 +185,88 @@ type FindingLocation {
   annotationType: String
 }
 
+"""
+One published version of a work.
+
+Sourced from `work_versions`, which holds one row per publish event and is only ever
+appended to — a failed publish removes its own row, so every version listed here was
+actually served.
+"""
+type WorkVersion {
+  uuid: ID!
+
+  """
+  Version label, SemVer by convention and unique per work.
+  """
+  version: String!
+
+  publishedAt: String!
+
+  """
+  Auth user id of the publisher. Null for a service-account or pipeline publish.
+  """
+  publishedBy: ID
+
+  """
+  The publisher's display name. Null when there is no name to show — a service-account
+  publish, a publisher with no profile, or an account since deleted. Render an
+  unattributed publish rather than falling back to the uuid.
+  """
+  publisher: String
+
+  notes: String
+
+  """
+  Whether this is the version readers are currently being served.
+  """
+  isLive: Boolean!
+
+  """
+  Non-blocking findings recorded when this version was published.
+
+  Null and `[]` are different: `[]` is a publish that recorded no warnings, null is no
+  surviving job row to read. Do not present null as a clean publish.
+  """
+  warnings: [ValidationFinding!]
+}
+
+"""
+A work's publish history, plus the label a new publish would take.
+"""
+type PublishHistory {
+  workUuid: ID!
+
+  """
+  Published versions, newest first.
+  """
+  versions: [WorkVersion!]!
+
+  """
+  What `publishWork` would label the next version if given no explicit one — the same
+  computation the pipeline makes, so a dialog can pre-fill it truthfully.
+  """
+  suggestedVersion: String
+
+  """
+  Why no label could be suggested, chiefly a legacy label that is not SemVer. Present
+  instead of `suggestedVersion`, never alongside it; ask for an explicit label.
+  """
+  suggestedVersionError: String
+}
+
 extend type Query {
   """
   A publish job by uuid, for polling progress. Requires editor.admin.
   """
   publishJob(uuid: ID!): PublishJob
+
+  """
+  A work's published version history and next suggested version label.
+
+  Null means the work does not exist. A work that has never been published is not null:
+  it returns an empty `versions` list. Requires editor.admin.
+  """
+  publishHistory(work: String!): PublishHistory
 
   """
   Validate a work against the publish rules without publishing it, and cache the result

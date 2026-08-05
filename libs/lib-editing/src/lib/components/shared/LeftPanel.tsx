@@ -13,7 +13,7 @@ import { Toc, Work } from '@eightyfourthousand/data-access';
 import { TableOfContents } from './TableOfContents';
 import { useTohToggle } from './hooks/useTohToggle';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
-import { PublishChecksPanel } from './PublishChecksPanel';
+import { PublishingPanel } from './PublishingPanel';
 
 export const LeftPanel = ({
   toc,
@@ -75,7 +75,10 @@ export const LeftPanel = ({
                 editor who opens a work — only for one who asks. */}
             {isEditor && (
               <TabsContent value="publishing" className="px-2 mt-1.5">
-                <PublishChecksPanel workUuid={work.uuid} />
+                <PublishingPanel
+                  workUuid={work.uuid}
+                  workLabel={work.toh[0] || work.title || 'this work'}
+                />
               </TabsContent>
             )}
           </div>

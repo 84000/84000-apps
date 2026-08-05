@@ -6,8 +6,8 @@ import { LeftPanel } from './LeftPanel';
 jest.mock('./TableOfContents', () => ({
   TableOfContents: () => <div>Table of contents body</div>,
 }));
-jest.mock('./PublishChecksPanel', () => ({
-  PublishChecksPanel: ({ workUuid }: { workUuid: string }) => (
+jest.mock('./PublishingPanel', () => ({
+  PublishingPanel: ({ workUuid }: { workUuid: string }) => (
     <div>{`Checks for ${workUuid}`}</div>
   ),
 }));

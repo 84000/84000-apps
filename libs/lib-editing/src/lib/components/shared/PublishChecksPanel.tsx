@@ -75,6 +75,26 @@ const RULE_NOTES: Record<string, string> = {
 
 const findingKey = (finding: PublishFinding) => finding.rule;
 
+/**
+ * The current verdict, for a parent that gates the publish action on it.
+ *
+ * Absence of a verdict is expressed as `null` rather than as a value with `ok: false`: never
+ * checked, checked-then-edited, and check-failed are all "we do not know", and a gate that
+ * cannot tell them apart from a genuine failure would tell an editor their work is broken
+ * when nothing has been looked at.
+ */
+export interface PublishVerdict {
+  /** No blocking findings, so validation would not refuse a publish. */
+  ok: boolean;
+  /**
+   * The rules could not be evaluated — the glossary index is unpopulated — so `ok` carries
+   * no information about the work. Treat as unknown, not as failure.
+   */
+  undetermined: boolean;
+  /** When the verdict was recorded. */
+  checkedAt: string | null;
+}
+
 const FindingIcon = ({ severity }: { severity: string }) =>
   severity === 'error' ? (
     <CircleAlertIcon className="size-4 shrink-0 text-destructive" />
@@ -258,7 +278,17 @@ const FindingGroup = ({
  * the work; and occurrence counts are the true totals, with subject lists paginated rather
  * than silently cut off.
  */
-export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
+export const PublishChecksPanel = ({
+  workUuid,
+  onVerdictChange,
+}: {
+  workUuid: string;
+  /**
+   * Called whenever the displayed verdict changes, so a parent can gate a publish action on
+   * it. Null means there is no verdict describing the work as it stands.
+   */
+  onVerdictChange?: (verdict: PublishVerdict | null) => void;
+}) => {
   const { updatePanel } = useNavigation();
   const client = useMemo(() => createGraphQLClient(), []);
   const [readiness, setReadiness] = useState<PublishReadiness | null>(null);
@@ -364,6 +394,24 @@ export const PublishChecksPanel = ({ workUuid }: { workUuid: string }) => {
 
     setChecking(false);
   }, [client, workUuid, applyFindings]);
+
+  // Publishing to the parent, which gates the publish action on it. Reported from the same
+  // `readiness` this component renders, so the button and the findings list can never
+  // disagree about whether the work is currently blocked.
+  useEffect(() => {
+    if (!onVerdictChange) {
+      return;
+    }
+    onVerdictChange(
+      readiness
+        ? {
+            ok: readiness.errors.length === 0,
+            undetermined: isReadinessUndetermined(readiness),
+            checkedAt,
+          }
+        : null,
+    );
+  }, [readiness, checkedAt, onVerdictChange]);
 
   const onNavigate = useCallback(
     (location: FindingLocation) => {

@@ -57,3 +57,17 @@ export {
   getFindingLocations,
   type FindingLocation,
 } from './get-finding-locations';
+export {
+  getPublishHistory,
+  type PublishHistory,
+  type WorkVersion,
+} from './get-publish-history';
+export {
+  advancePublishJob,
+  getPublishJob,
+  publishWork,
+  type PublishJob,
+  type PublishJobStatus,
+  type PublishPhase,
+  type PublishWorkResult,
+} from './publish-work';

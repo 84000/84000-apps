@@ -181,6 +181,57 @@ export const isPublishStatusKnown = (
   status: WorkPublishStatus | undefined,
 ): boolean => !!status && status.checkedAt !== null && !status.stale;
 
+/**
+ * One published version of a work, as version history renders it.
+ *
+ * Sourced from `work_versions`, which is one row per publish event. Rows are only ever
+ * inserted, so this is an append-only record — a failed publish deletes its own row and
+ * therefore never appears here.
+ */
+export interface PublishedVersion {
+  uuid: string;
+  version: string;
+  publishedAt: string;
+  /** `auth.users` id. Null for a service-account or pipeline publish. */
+  publishedBy: string | null;
+  /**
+   * The publisher's display name, resolved through `publisher_display_names`.
+   *
+   * Null when there is no name to show: a service-account publish, a publisher with no
+   * profile row, or an account deleted since (the foreign key nulls `publishedBy`). Callers
+   * should render an unattributed publish rather than falling back to the raw uuid.
+   */
+  publisher: string | null;
+  notes: string | null;
+  /** Matches `works.published_version_uuid` — the version readers are being served. */
+  isLive: boolean;
+  /**
+   * Non-blocking findings recorded by the publish job that produced this version.
+   *
+   * `null` and `[]` mean different things and must not be collapsed: `[]` is a job that
+   * recorded no warnings, while `null` is no job row to read — the audit trail was pruned,
+   * or the version predates the job-tracked pipeline. Only the first is "published clean".
+   */
+  warnings: ValidationFinding[] | null;
+}
+
+/**
+ * A work's publish history, plus the label a new publish would take.
+ *
+ * The suggestion is computed with the same `nextVersion` call the snapshot phase makes, over
+ * the same label set, so the value offered in the publish dialog is the value the pipeline
+ * would pick on its own. `suggestedVersionError` carries the cases it refuses to guess at —
+ * chiefly a legacy label that is not SemVer — so a client can ask for an explicit label
+ * instead of pre-filling something wrong.
+ */
+export interface PublishHistory {
+  workUuid: string;
+  /** Newest first. */
+  versions: PublishedVersion[];
+  suggestedVersion: string | null;
+  suggestedVersionError: string | null;
+}
+
 /** The `publish_jobs` row, as the pipeline sees it. */
 export interface PublishJob {
   uuid: string;
