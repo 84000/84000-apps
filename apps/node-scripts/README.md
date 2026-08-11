@@ -16,12 +16,18 @@ backfills used to live here and was removed in DEV-719.
 
 ## Prerequisites
 
-Create a `.env` file with:
+Create `apps/node-scripts/.env` with:
 
 ```env
 SUPABASE_URL=<your-supabase-url>
 SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
 ```
+
+`src/load-env.ts` loads it, resolving the path relative to itself rather than to the
+working directory — these scripts are run from the repo root, so dotenv's default lookup
+would miss the file and, because a missing file is a returned error rather than a throw,
+would do it silently. Exported environment variables still win over the file, which is how
+you point a single run at a different project without editing it.
 
 `SUPABASE_SERVICE_KEY` is also accepted as a fallback, so an existing `.env` that predates
 the rename keeps working. Either way it must

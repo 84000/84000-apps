@@ -17,6 +17,7 @@
  *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-version.ts --verify --gc
  */
 
+import './load-env';
 import {
   createServiceRoleClient,
   rebuildPublishedVersion,

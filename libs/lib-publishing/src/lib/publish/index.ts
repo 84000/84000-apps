@@ -24,3 +24,4 @@
 export type { PhaseContext, PhaseRunner } from './context';
 export { DEFAULT_TICK_BUDGET_MS, tickJob } from './tick';
 export { startPublish, type StartPublishResult } from './start';
+export { drivePublish, type DrivePublishResult } from './drive';
