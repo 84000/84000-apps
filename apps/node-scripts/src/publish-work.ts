@@ -12,6 +12,7 @@
  *   ... toh251 --check        # validate only, publish nothing
  */
 
+import './load-env';
 import {
   createServiceRoleClient,
   drivePublish,
