@@ -36,3 +36,39 @@ export type {
   SpineRecord,
   StorageApi,
 } from './lib/types';
+
+/**
+ * Server sync (DEV-707 spike).
+ *
+ * Lives alongside local storage rather than in its own package because the two
+ * meet: "record the sync and drop the journal entries it covers" is one
+ * transaction against one database. `SupabaseSyncTransport` is the only piece
+ * that knows about Supabase — everything else is driven through `SyncTransport`,
+ * the same way the storage layer is driven through `driver.ts`.
+ */
+export { PassageSyncProvider, encodeDoc } from './lib/sync/provider';
+export type {
+  LatencySample,
+  PassageSyncOptions,
+  PassageSyncStatus,
+} from './lib/sync/provider';
+export {
+  SupabaseSyncTransport,
+  DOC_UPDATE_EVENT,
+  passageTopic,
+} from './lib/sync/supabase-transport';
+export { compactPassageDoc } from './lib/sync/compaction';
+export type { CompactionResult } from './lib/sync/compaction';
+export type {
+  EditorPresence,
+  PresenceConfig,
+  PresenceHandle,
+} from './lib/sync/presence';
+export { fromBase64, toBase64 } from './lib/sync/encoding';
+export type {
+  EncodedUpdate,
+  PassageDocState,
+  SyncMode,
+  SyncSubscription,
+  SyncTransport,
+} from './lib/sync/types';
