@@ -11,6 +11,21 @@
 /** Bumped whenever `SCHEMA_STATEMENTS` changes in a way that needs migration. */
 export const SCHEMA_VERSION = 2;
 
+/**
+ * The version at which the `journal` table's own definition last changed.
+ *
+ * This is the pivot for the migration strategy. Every other table is a cache of
+ * server state, so a stale schema is recoverable by dropping and re-fetching.
+ * The journal is not — while offline it is the only copy of the user's work — so
+ * a step that alters the journal itself cannot be resolved that way and needs a
+ * hand-written migration instead.
+ *
+ * The journal was introduced at version 1 and unchanged by version 2, which only
+ * added checksum columns to the other stores. Raise this when the journal's
+ * columns change, and register the migration that carries its rows across.
+ */
+export const JOURNAL_LAST_CHANGED_AT = 1;
+
 /** The database file name inside the SAH pool VFS. */
 export const DATABASE_FILE = '/84000-local.sqlite3';
 
@@ -53,7 +68,34 @@ export const COORDINATOR_URL = '/storage-workers/coordinator.js';
  */
 export const FTS_TOKENIZER = 'unicode61 remove_diacritics 2';
 
-export const SCHEMA_STATEMENTS = [
+/**
+ * The full-text index over rendered passage text.
+ *
+ * Kept here beside the other tables, though it cannot go in the same list: FTS5
+ * is a virtual table and its tokenizer is interpolated rather than bound.
+ */
+export const FTS_STATEMENT = `CREATE VIRTUAL TABLE IF NOT EXISTS passage_text USING fts5(
+     passage_uuid UNINDEXED,
+     work_uuid UNINDEXED,
+     text,
+     tokenize="${FTS_TOKENIZER}"
+   )`;
+
+/**
+ * Tables holding nothing but a local copy of server state.
+ *
+ * Everything here is re-fetchable, which is what makes "drop it and rebuild"
+ * a safe answer to a stale schema. `passage_text` belongs to this set too and is
+ * listed separately only because of the FTS5 quirk above.
+ */
+export const REBUILDABLE_TABLES = [
+  'passage_docs',
+  'spine',
+  'cache',
+  'passage_text',
+];
+
+const REBUILDABLE_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS passage_docs (
      uuid       TEXT PRIMARY KEY,
      work_uuid  TEXT NOT NULL,
@@ -73,25 +115,6 @@ export const SCHEMA_STATEMENTS = [
      updated_at INTEGER NOT NULL
    )`,
 
-  // `checksum` covers `update_blob` only.
-  //
-  // Every blob store carries one, for the same reason: `PRAGMA integrity_check`
-  // verifies b-tree structure, page linkage and freelist consistency, but *not*
-  // BLOB payload bytes. Corruption inside an overflow page leaves the database
-  // structurally perfect and the content garbage — measured, and the reason
-  // these columns exist. Without them a damaged passage doc opens clean, reads
-  // as valid, and syncs to the server.
-  `CREATE TABLE IF NOT EXISTS journal (
-     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-     passage_uuid TEXT NOT NULL,
-     work_uuid    TEXT NOT NULL,
-     update_blob  BLOB NOT NULL,
-     checksum     INTEGER NOT NULL,
-     created_at   INTEGER NOT NULL
-   )`,
-  `CREATE INDEX IF NOT EXISTS journal_passage
-     ON journal (passage_uuid)`,
-
   `CREATE TABLE IF NOT EXISTS cache (
      key        TEXT PRIMARY KEY,
      body       BLOB NOT NULL,
@@ -102,6 +125,75 @@ export const SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS cache_expiry
      ON cache (expires_at)`,
 ];
+
+/**
+ * The unsynced-edit journal, which is not a cache of anything.
+ *
+ * Separated from the rebuildable statements because the difference is load
+ * bearing: this table is never dropped by any path in this library. See
+ * `JOURNAL_LAST_CHANGED_AT`.
+ *
+ * `checksum` covers `update_blob` only.
+ *
+ * Every blob store carries one, for the same reason: `PRAGMA integrity_check`
+ * verifies b-tree structure, page linkage and freelist consistency, but *not*
+ * BLOB payload bytes. Corruption inside an overflow page leaves the database
+ * structurally perfect and the content garbage — measured, and the reason
+ * these columns exist. Without them a damaged passage doc opens clean, reads
+ * as valid, and syncs to the server.
+ */
+export const JOURNAL_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS journal (
+     id           INTEGER PRIMARY KEY AUTOINCREMENT,
+     passage_uuid TEXT NOT NULL,
+     work_uuid    TEXT NOT NULL,
+     update_blob  BLOB NOT NULL,
+     checksum     INTEGER NOT NULL,
+     created_at   INTEGER NOT NULL
+   )`,
+  `CREATE INDEX IF NOT EXISTS journal_passage
+     ON journal (passage_uuid)`,
+];
+
+export const SCHEMA_STATEMENTS = [
+  ...REBUILDABLE_STATEMENTS,
+  ...JOURNAL_STATEMENTS,
+];
+
+/** Statements that recreate the re-fetchable tables after a rebuild. */
+export const REBUILD_STATEMENTS = [...REBUILDABLE_STATEMENTS, FTS_STATEMENT];
+
+/** What to do with a file stamped at a given `user_version`. */
+export type SchemaPlan =
+  /** Never written by this library: create everything and stamp it. */
+  | { action: 'fresh' }
+  /** Already at `SCHEMA_VERSION`: nothing to do. */
+  | { action: 'current' }
+  /** Older, and only caches are stale: drop and recreate those. */
+  | { action: 'rebuild' }
+  /** Written by a newer build: this one cannot safely read it. */
+  | { action: 'reject-too-new' }
+  /** Older than the journal's last change: needs a hand-written migration. */
+  | { action: 'reject-journal-migration' };
+
+/**
+ * Decide what an open should do about the version it found.
+ *
+ * Pure and separate from the database so the decision table can be read in one
+ * place and tested at every version, including the ones that cannot exist yet.
+ */
+export const planSchemaReconciliation = (
+  foundVersion: number,
+): SchemaPlan['action'] => {
+  if (foundVersion > SCHEMA_VERSION) return 'reject-too-new';
+  if (foundVersion === SCHEMA_VERSION) return 'current';
+  // Zero is the SQLite default, i.e. a file this library has never stamped.
+  if (foundVersion === 0) return 'fresh';
+  // Older. Dropping the caches fixes any change confined to them, but cannot fix
+  // a change to the journal, which is the only copy of unsynced work.
+  if (foundVersion < JOURNAL_LAST_CHANGED_AT) return 'reject-journal-migration';
+  return 'rebuild';
+};
 
 /**
  * Pragmas applied on every open.
