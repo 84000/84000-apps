@@ -19,5 +19,9 @@ export default {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   testEnvironment: 'node',
+  // Decides synchronously, before `describe` runs, whether a local Supabase
+  // stack is reachable — so the DEV-707 convergence suite can report as
+  // *skipped* rather than as eleven passing tests that asserted nothing.
+  globalSetup: '<rootDir>/src/lib/sync/testing/global-setup.ts',
   coverageDirectory: '../../coverage/libs/lib-persistence',
 };

@@ -14,6 +14,10 @@
   },
   "exclude": [
     "jest.config.ts",
+    // Test-only: mints local JWTs from the well-known local secret and imports
+    // node:crypto. Nothing here belongs in a browser bundle or a published
+    // build, so it is kept out of the library's compilation entirely.
+    "src/lib/sync/testing/**",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
     "src/**/*.spec.tsx",
