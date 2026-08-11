@@ -10,6 +10,7 @@ export const libraryAssistant: AgentDefinition = {
     'get-translation',
     'get-passage',
     'get-translation-passages',
+    'get-translation-folios',
     'search-translation',
     'get-glossary-term',
     'list-glossary-terms',
