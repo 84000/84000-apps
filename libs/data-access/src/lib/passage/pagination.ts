@@ -1,4 +1,10 @@
 import { DataClient, PassageRowDTO } from '../types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  passageColumnsFor,
+  relationFor,
+  type ContentSource,
+} from '../content-source';
 
 type ApiPaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -71,6 +77,7 @@ export const getWorkPassagesConnection = async ({
   limit = DEFAULT_PASSAGE_CONNECTION_LIMIT,
   filter,
   direction = 'FORWARD',
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   workUuid: string;
@@ -78,11 +85,13 @@ export const getWorkPassagesConnection = async ({
   limit?: number;
   filter?: { type?: string; types?: string[]; label?: string };
   direction?: ApiPaginationDirection;
+  source?: ContentSource;
 }): Promise<PassageConnectionPage> => {
   const clampedLimit = Math.min(
     Math.max(limit, 1),
     MAX_PASSAGE_CONNECTION_LIMIT,
   );
+  const relation = relationFor('passages', source);
 
   if (direction === 'AROUND') {
     return getWorkPassagesAround({
@@ -91,6 +100,7 @@ export const getWorkPassagesConnection = async ({
       cursor,
       limit: clampedLimit,
       filter,
+      source,
     });
   }
 
@@ -98,7 +108,7 @@ export const getWorkPassagesConnection = async ({
   let cursorSort: number | null = null;
   if (cursor) {
     const { data: cursorPassage } = await client
-      .from('passages')
+      .from(relation)
       .select('sort')
       .eq('uuid', cursor)
       .single();
@@ -109,8 +119,8 @@ export const getWorkPassagesConnection = async ({
   }
 
   let query = client
-    .from('passages')
-    .select('uuid, content, label, sort, type, toh, xmlId, work_uuid')
+    .from(relation)
+    .select<string, PassageRowDTO>(passageColumnsFor(source))
     .eq('work_uuid', workUuid)
     .order('sort', { ascending: isForward })
     .limit(clampedLimit + 1);
@@ -138,7 +148,7 @@ export const getWorkPassagesConnection = async ({
     return EMPTY_PASSAGE_CONNECTION;
   }
 
-  const passages = (data ?? []) as PassageRowDTO[];
+  const passages = data ?? [];
   const hasMore = passages.length > clampedLimit;
   let resultPassages = hasMore ? passages.slice(0, clampedLimit) : passages;
 
@@ -174,20 +184,24 @@ export const getWorkPassagesAround = async ({
   cursor,
   limit,
   filter,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   workUuid: string;
   cursor?: string;
   limit: number;
   filter?: { type?: string; types?: string[]; label?: string };
+  source?: ContentSource;
 }): Promise<PassageConnectionPage> => {
   if (!cursor) {
     console.error('AROUND direction requires a cursor');
     return EMPTY_PASSAGE_CONNECTION;
   }
 
+  const relation = relationFor('passages', source);
+
   const { data: cursorPassage } = await client
-    .from('passages')
+    .from(relation)
     .select('sort')
     .eq('uuid', cursor)
     .single();
@@ -200,19 +214,19 @@ export const getWorkPassagesAround = async ({
   const cursorSort = cursorPassage.sort;
   const limitBefore = Math.floor(limit / 2);
   const limitAfter = limit - limitBefore;
-  const baseSelect = 'uuid, content, label, sort, type, toh, xmlId, work_uuid';
+  const baseSelect = passageColumnsFor(source);
 
   let beforeQuery = client
-    .from('passages')
-    .select(baseSelect)
+    .from(relation)
+    .select<string, PassageRowDTO>(baseSelect)
     .eq('work_uuid', workUuid)
     .lt('sort', cursorSort)
     .order('sort', { ascending: false })
     .limit(limitBefore + 1);
 
   let afterQuery = client
-    .from('passages')
-    .select(baseSelect)
+    .from(relation)
+    .select<string, PassageRowDTO>(baseSelect)
     .eq('work_uuid', workUuid)
     .gte('sort', cursorSort)
     .order('sort', { ascending: true })
@@ -245,8 +259,8 @@ export const getWorkPassagesAround = async ({
     return EMPTY_PASSAGE_CONNECTION;
   }
 
-  const passagesBefore = (beforeResult.data ?? []) as PassageRowDTO[];
-  const passagesAfter = (afterResult.data ?? []) as PassageRowDTO[];
+  const passagesBefore = beforeResult.data ?? [];
+  const passagesAfter = afterResult.data ?? [];
   const hasMoreBefore = passagesBefore.length > limitBefore;
   const hasMoreAfter = passagesAfter.length > limitAfter;
   const trimmedBefore = hasMoreBefore

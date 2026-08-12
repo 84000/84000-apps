@@ -1,4 +1,10 @@
 import { DataClient, Passage, PassageDTO, passageFromDTO } from '../types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  passageColumnsFor,
+  relationFor,
+  type ContentSource,
+} from '../content-source';
 
 type ApiPaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -131,17 +137,22 @@ export const getGlossaryTermPassagesPage = async ({
   uuid,
   first,
   after,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid: string;
   first?: number;
   after?: string;
+  source?: ContentSource;
 }): Promise<GlossaryPassagesPage> => {
   const limit = Math.max(first ?? DEFAULT_GLOSSARY_PASSAGES_LIMIT, 1);
   const offset = parseOffsetCursor(after);
 
+  // Attestations span works: a term published in one work is cited from others,
+  // so neither query has a single work to scope by. The published relations are
+  // the pointer-resolving views for exactly this reason.
   const { data: annotations, error: annotationsError } = await client
-    .from('passage_annotations')
+    .from(relationFor('passageAnnotations', source))
     .select('passage_uuid')
     .eq('type', 'glossary-instance')
     .filter('content', 'cs', JSON.stringify([{ uuid }]));
@@ -163,8 +174,8 @@ export const getGlossaryTermPassagesPage = async ({
   }
 
   const { data: passages, error: passagesError } = await client
-    .from('passages')
-    .select('uuid, content, label, sort, type, xmlId, work_uuid, toh')
+    .from(relationFor('passages', source))
+    .select<string, PassageDTO>(passageColumnsFor(source))
     .in('uuid', passageUuids)
     .order('sort', { ascending: true })
     .range(offset, offset + limit);
@@ -179,7 +190,7 @@ export const getGlossaryTermPassagesPage = async ({
   const items = hasMore ? rows.slice(0, limit) : rows;
 
   return {
-    items: items.map((passage: PassageDTO) => passageFromDTO(passage)),
+    items: items.map((passage) => passageFromDTO(passage)),
     nextCursor: hasMore ? String(offset + limit) : null,
     hasMore,
   };
@@ -192,6 +203,7 @@ export const getWorkGlossaryTermsPage = async ({
   cursor,
   direction = 'FORWARD',
   withAttestations = false,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   workUuid: string;
@@ -199,8 +211,10 @@ export const getWorkGlossaryTermsPage = async ({
   cursor?: string | null;
   direction?: ApiPaginationDirection;
   withAttestations?: boolean;
+  source?: ContentSource;
 }): Promise<GlossaryTermConnection> => {
   const clampedLimit = Math.min(Math.max(limit, 1), MAX_GLOSSARY_LIMIT);
+  const relation = relationFor('glossaryTerms', source);
 
   if (direction === 'AROUND') {
     return getWorkGlossaryTermsAround({
@@ -209,6 +223,7 @@ export const getWorkGlossaryTermsPage = async ({
       limit: clampedLimit,
       cursor,
       withAttestations,
+      source,
     });
   }
 
@@ -217,12 +232,12 @@ export const getWorkGlossaryTermsPage = async ({
     { data: cursorRows, error: cursorError },
   ] = await Promise.all([
     client
-      .from('glossary_term_index')
+      .from(relation)
       .select('glossary_uuid', { count: 'exact', head: true })
       .eq('work_uuid', workUuid),
     cursor
       ? client
-          .from('glossary_term_index')
+          .from(relation)
           .select('glossary_uuid, term_number')
           .eq('work_uuid', workUuid)
           .eq('glossary_uuid', cursor)
@@ -265,7 +280,7 @@ export const getWorkGlossaryTermsPage = async ({
   const cursorTermNumber =
     cursorRow !== undefined ? parseCount(cursorRow.term_number) : null;
   let query = client
-    .from('glossary_term_index')
+    .from(relation)
     .select(
       `glossary_uuid,
        authority_uuid,
@@ -343,13 +358,17 @@ export const getWorkGlossaryTermsAround = async ({
   limit,
   cursor,
   withAttestations,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   workUuid: string;
   limit: number;
   cursor?: string | null;
   withAttestations: boolean;
+  source?: ContentSource;
 }): Promise<GlossaryTermConnection> => {
+  const relation = relationFor('glossaryTerms', source);
+
   if (!cursor) {
     return getWorkGlossaryTermsPage({
       client,
@@ -358,6 +377,7 @@ export const getWorkGlossaryTermsAround = async ({
       cursor: null,
       direction: 'FORWARD',
       withAttestations,
+      source,
     });
   }
 
@@ -366,11 +386,11 @@ export const getWorkGlossaryTermsAround = async ({
     { data: cursorRows, error: cursorError },
   ] = await Promise.all([
     client
-      .from('glossary_term_index')
+      .from(relation)
       .select('glossary_uuid', { count: 'exact', head: true })
       .eq('work_uuid', workUuid),
     client
-      .from('glossary_term_index')
+      .from(relation)
       .select('glossary_uuid, term_number')
       .eq('work_uuid', workUuid)
       .eq('glossary_uuid', cursor)
@@ -420,7 +440,7 @@ export const getWorkGlossaryTermsAround = async ({
   }
 
   const { data, error } = await client
-    .from('glossary_term_index')
+    .from(relation)
     .select(
       `glossary_uuid,
        authority_uuid,

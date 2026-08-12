@@ -7,13 +7,22 @@ import {
   Passages,
   passageFromDTO,
 } from '../types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  passageColumnsFor,
+  relationFor,
+  rpcFor,
+  type ContentSource,
+} from '../content-source';
 
 export const getAnnotationsByPassageUuids = async ({
   client,
   passageUuids,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   passageUuids: readonly string[];
+  source?: ContentSource;
 }): Promise<Map<string, AnnotationDTO[]>> => {
   const annotationsByPassage = new Map<string, AnnotationDTO[]>();
 
@@ -28,9 +37,11 @@ export const getAnnotationsByPassageUuids = async ({
 
   while (hasMore) {
     const { data, error } = await client
-      .from('passage_annotations')
+      .from(relationFor('passageAnnotations', source))
       .select('uuid, passage_uuid, type, start, end, content, toh')
       .in('passage_uuid', passageUuids as string[])
+      // The published snapshot already excludes `deprecated%` types, so this is
+      // a no-op there; it stays unconditional to keep one code path.
       .not('type', 'like', 'deprecated%')
       // deterministic order is required for stable pagination; without it
       // postgres may return rows in a different order per page, skipping or
@@ -128,9 +139,11 @@ export const getAlignmentsByPassageUuids = async ({
 export const getPassageLabelsByUuids = async ({
   client,
   passageUuids,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   passageUuids: readonly string[];
+  source?: ContentSource;
 }): Promise<Map<string, string>> => {
   const labelsByUuid = new Map<string, string>();
 
@@ -138,8 +151,10 @@ export const getPassageLabelsByUuids = async ({
     return labelsByUuid;
   }
 
+  // Cross-work by nature: endnote and mention targets may live in another work,
+  // which is why the published relation resolves the version pointer itself.
   const { data, error } = await client
-    .from('passages')
+    .from(relationFor('passages', source))
     .select('uuid, label')
     .in('uuid', passageUuids as string[]);
 
@@ -160,9 +175,11 @@ export const getPassageLabelsByUuids = async ({
 export const getPassageReferencesByTargetUuids = async ({
   client,
   passageUuids,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   passageUuids: readonly string[];
+  source?: ContentSource;
 }): Promise<Map<string, Passages>> => {
   const referencesByTargetUuid = new Map<string, Passages>();
 
@@ -171,7 +188,7 @@ export const getPassageReferencesByTargetUuids = async ({
   }
 
   const { data: annotations, error: annotationsError } = await client.rpc(
-    'get_passage_annotations_by_content_uuids',
+    rpcFor('passageReferences', source),
     {
       annotation_type: 'end-note-link',
       target_uuids: passageUuids as string[],
@@ -208,8 +225,8 @@ export const getPassageReferencesByTargetUuids = async ({
   for (let i = 0; i < sourceUuidArray.length; i += inBatchSize) {
     const batch = sourceUuidArray.slice(i, i + inBatchSize);
     const { data, error } = await client
-      .from('passages')
-      .select('uuid, content, label, sort, type, toh, xmlId, work_uuid')
+      .from(relationFor('passages', source))
+      .select<string, PassageDTO>(passageColumnsFor(source))
       .in('uuid', batch);
 
     if (error) {
@@ -217,7 +234,7 @@ export const getPassageReferencesByTargetUuids = async ({
       return new Map();
     }
 
-    for (const row of (data ?? []) as PassageDTO[]) {
+    for (const row of data ?? []) {
       passageMap.set(row.uuid, passageFromDTO(row));
     }
   }

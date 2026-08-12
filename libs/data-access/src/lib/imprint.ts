@@ -5,15 +5,22 @@ import {
   imprintFromDTO,
   tocFromDTO,
 } from './types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  rpcFor,
+  type ContentSource,
+} from './content-source';
 
 export const getTranslationToc = async ({
   client,
   uuid,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid: string;
+  source?: ContentSource;
 }) => {
-  const { data, error } = await client.rpc('get_work_toc', {
+  const { data, error } = await client.rpc(rpcFor('workToc', source), {
     work_uuid_input: uuid,
   });
 

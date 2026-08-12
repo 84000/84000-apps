@@ -237,7 +237,8 @@ export const getTranslationMetadataByUuid = async ({
       publicationVersion,
       pages:source_pages,
       restriction,
-      breadcrumb
+      breadcrumb,
+      published_version_uuid
     `,
     )
     .eq('uuid', uuid)
@@ -307,7 +308,8 @@ export const getTranslationsMetadata = async ({
       publicationVersion,
       pages:source_pages,
       restriction,
-      breadcrumb
+      breadcrumb,
+      published_version_uuid
     `,
     )
     .not('toh', 'like', 'toh00%');
@@ -345,7 +347,8 @@ export const getWorksPage = async ({
       publicationVersion,
       pages:source_pages,
       restriction,
-      breadcrumb
+      breadcrumb,
+      published_version_uuid
     `,
       { count: 'exact' },
     )

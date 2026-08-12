@@ -4,6 +4,11 @@ import {
   GlossaryTermInstancesDTO,
   glossaryTermInstanceFromDTO,
 } from '../types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  relationFor,
+  type ContentSource,
+} from '../content-source';
 
 export const getGlossaryInstances = async ({
   client,
@@ -69,9 +74,13 @@ const indexRowToDTO = (
   },
 });
 
-const fetchIndexRow = async (client: DataClient, uuid: string) => {
+const fetchIndexRow = async (
+  client: DataClient,
+  uuid: string,
+  source: ContentSource,
+) => {
   const { data, error } = await client
-    .from('glossary_term_index')
+    .from(relationFor('glossaryTerms', source))
     .select(GLOSSARY_INDEX_COLUMNS)
     .eq('glossary_uuid', uuid)
     .limit(1)
@@ -86,16 +95,23 @@ const fetchIndexRow = async (client: DataClient, uuid: string) => {
 export const getGlossaryInstance = async ({
   client,
   uuid,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid: string;
+  source?: ContentSource;
 }) => {
-  // 1) Direct lookup in the glossary_term_index view.
-  let row = await fetchIndexRow(client, uuid);
+  // 1) Direct lookup in the term index (the published snapshot mirrors its shape).
+  let row = await fetchIndexRow(client, uuid, source);
 
   // 2) Fallback: the uuid may be a non-translationMain child that isn't
   //    represented in the index. Resolve its parent via glossary_edges and
   //    retry the index lookup with the parent uuid.
+  //
+  //    glossary_edges stays on the draft table in both sources: it is an
+  //    unversioned child→parent map, and the UUIDs it returns are stable across
+  //    the draft and published copies, so the retry below still resolves against
+  //    whichever source was asked for.
   if (!row) {
     const { data: edge, error: edgeError } = await client
       .from('glossary_edges')
@@ -106,7 +122,7 @@ export const getGlossaryInstance = async ({
     if (edgeError) {
       console.error(`Error fetching glossary edge: ${uuid} `, edgeError);
     } else if (edge?.parent_uuid) {
-      row = await fetchIndexRow(client, edge.parent_uuid);
+      row = await fetchIndexRow(client, edge.parent_uuid, source);
     }
   }
 
