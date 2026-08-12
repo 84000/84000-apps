@@ -14,6 +14,7 @@ export const passageQueries = {
       client: ctx.supabase,
       uuid: args.uuid,
       xmlId: args.xmlId,
+      source: ctx.source,
     });
   },
 };

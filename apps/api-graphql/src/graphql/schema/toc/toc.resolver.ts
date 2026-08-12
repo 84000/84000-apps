@@ -10,6 +10,7 @@ export const tocResolver = async (
   const toc = await getTranslationToc({
     client: ctx.supabase,
     uuid: parent.uuid,
+    source: ctx.source,
   });
 
   if (!toc) {

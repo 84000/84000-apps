@@ -13,6 +13,7 @@ export const bibliographyEntryResolver = async (
   const entry = await getBibliographyEntry({
     client: ctx.supabase,
     uuid: args.uuid,
+    source: ctx.source,
   });
 
   return entry;
@@ -29,6 +30,7 @@ export const workBibliographyResolver = async (
   const entries = await getBibliographyEntries({
     client: ctx.supabase,
     uuid: parent.uuid,
+    source: ctx.source,
   });
 
   return entries;

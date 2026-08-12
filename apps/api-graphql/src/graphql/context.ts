@@ -4,7 +4,14 @@ import {
   createTokenClient,
   getSession,
 } from '@eightyfourthousand/data-access';
-import type { DataClient, UserClaims, UserRole } from '@eightyfourthousand/data-access';
+import {
+  CONTENT_SOURCE_HEADER,
+  contentSourceFromHeader,
+  type ContentSource,
+  type DataClient,
+  type UserClaims,
+  type UserRole,
+} from '@eightyfourthousand/data-access';
 import { jwtDecode } from 'jwt-decode';
 import { createLoaders, type Loaders } from './loaders';
 
@@ -12,6 +19,12 @@ export interface GraphQLContext {
   req: NextRequest;
   supabase: DataClient;
   loaders: Loaders;
+  /**
+   * Which copy of the content this request resolves against, taken from the
+   * `x-84000-content-source` header the calling app sets. Absent means
+   * published: a caller that does not ask is treated as public.
+   */
+  source: ContentSource;
   session: {
     claims: UserClaims;
     userId: string;
@@ -19,7 +32,11 @@ export interface GraphQLContext {
   } | null;
 }
 
+
+
 export async function createContext(req: NextRequest): Promise<GraphQLContext> {
+  const source = contentSourceFromHeader(req.headers.get(CONTENT_SOURCE_HEADER));
+
   // First, try to get session from Authorization header (for cross-domain requests)
   const authHeader = req.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
@@ -43,7 +60,8 @@ export async function createContext(req: NextRequest): Promise<GraphQLContext> {
       return {
         req,
         supabase,
-        loaders: createLoaders(supabase),
+        loaders: createLoaders(supabase, source),
+        source,
         session,
       };
     } catch (error) {
@@ -79,7 +97,8 @@ export async function createContext(req: NextRequest): Promise<GraphQLContext> {
   return {
     req,
     supabase,
-    loaders: createLoaders(supabase),
+    loaders: createLoaders(supabase, source),
+    source,
     session,
   };
 }

@@ -3,6 +3,7 @@ JSON scalar for arbitrary JSON data
 """
 scalar JSON
 
+
 """
 Pagination information for connections.
 Used consistently across all paginated queries.
