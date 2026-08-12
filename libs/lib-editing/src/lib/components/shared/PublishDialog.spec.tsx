@@ -333,6 +333,14 @@ describe('PublishDialog', () => {
     renderDialog();
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    // The poll is registered by an effect that only runs once the publish
+    // mutation has resolved and the job is in state. Advancing the clock before
+    // that commit schedules nothing, so wait for the phase to render first —
+    // the same barrier 'keeps watching a job that is still running' uses.
+    await waitFor(() =>
+      expect(screen.getByText('Copying the draft…')).toBeTruthy(),
+    );
+
     jest.advanceTimersByTime(4000);
 
     await waitFor(() => expect(mockGetPublishJob).toHaveBeenCalled());
