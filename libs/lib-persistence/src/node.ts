@@ -20,7 +20,18 @@ export { createNodeDriver } from './lib/node/node-driver';
 export { LocalDatabase } from './lib/worker/database';
 export type { SqlDriver } from './lib/driver';
 export { crc32, verifyChecksum } from './lib/checksum';
-export { FTS_TOKENIZER, SCHEMA_STATEMENTS, SCHEMA_VERSION } from './lib/schema';
+export {
+  DatabaseNotOpenError,
+  JournalMigrationRequiredError,
+  PersistenceError,
+  SchemaTooNewError,
+} from './lib/errors';
+export {
+  FTS_TOKENIZER,
+  JOURNAL_LAST_CHANGED_AT,
+  SCHEMA_STATEMENTS,
+  SCHEMA_VERSION,
+} from './lib/schema';
 export type * from './lib/types';
 
 /**

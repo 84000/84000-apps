@@ -15,8 +15,11 @@ The design follows Notion's browser-SQLite writeup. The spike set out to prove
 that SQLite was _more durable_ than IndexedDB for the unsynced-edit journal —
 and **it is not**. Measured over renderer-crash trials, SQLite, IndexedDB with
 `durability: 'strict'`, and IndexedDB with the relaxed default all lost zero
-acknowledged writes. Durability is not why this package uses SQLite. See
-`docs/spikes/dev-708-storage-durability.md`.
+acknowledged writes. Durability is not why this package uses SQLite. The full
+findings are recorded on
+[DEV-708](https://linear.app/84000/issue/DEV-708/spike-wasm-sqlite-storage-stack-durability-torture-test) —
+the spike's findings markdown was deliberately removed along with its harness, so
+the Linear issue is the record.
 
 The reasons that survived measurement:
 
@@ -95,6 +98,71 @@ payloads are: writes are last-write-wins upserts, and journal payloads are Yjs
 updates, which are idempotent on apply. A duplicated append replays harmlessly;
 a dropped one loses work.
 
+One known gap: if the browser restarts the SharedWorker, no tab re-announces
+itself, because a `MessagePort` fires no close event for a tab to notice. The
+owner tab is unaffected — its ownership comes from the Web Lock and its queries go
+to its own worker — but proxy tabs stop being introduced until they reload.
+Closing that needs a heartbeat on the coordinator port.
+
+## The journal is never swept up
+
+Two rules follow from the journal being the only copy of unsynced work, and both
+are load bearing:
+
+- **Deletes name their ids.** `clearJournal(ids)` and
+  `commitSynced(record, syncedJournalIds)` take explicit ids, never a high-water
+  mark. `journal.id` is one `AUTOINCREMENT` sequence shared by every passage, so
+  "clear everything through id N" silently deletes whatever other passages wrote
+  below N. Naming the ids makes it impossible to remove an entry the caller did
+  not just sync.
+- **No path drops the table.** The schema is split into `JOURNAL_STATEMENTS` and
+  the rebuildable rest precisely so that the recovery path below cannot touch it.
+
+## Schema versions
+
+`open()` reads `PRAGMA user_version` before writing it, and acts on what it finds:
+
+| Found                    | What happens                                          |
+| ------------------------ | ----------------------------------------------------- |
+| `0`                      | Fresh file. Create everything, stamp the version.     |
+| `SCHEMA_VERSION`         | Nothing to do.                                        |
+| Older                    | Drop and recreate the re-fetchable tables. Journal untouched. |
+| Older than `JOURNAL_LAST_CHANGED_AT` | `JournalMigrationRequiredError`.          |
+| Newer                    | `SchemaTooNewError`.                                  |
+
+The rebuild works because every table except `journal` is a local copy of server
+state, so a stale schema is fixed by re-fetching. That is why there is no
+per-version migration list: it would be dead code for tables that can always be
+thrown away. The seam that _does_ need hand-written migrations is the journal, and
+`JOURNAL_LAST_CHANGED_AT` is what forces the issue — raise it when the journal's
+columns change and the open refuses rather than guessing.
+
+Refusing a newer file matters more than it looks: a tab left open across a deploy
+would otherwise discard a cache written by newer code and reinterpret a journal
+whose shape it may not understand.
+
+## What integrity checking covers
+
+`open()` runs `PRAGMA integrity_check` and sweeps **the whole journal** against its
+per-entry checksums. It does **not** sweep the blob stores.
+
+That is a deliberate trade. The journal is bounded by how much has been written
+since the last sync and cannot be re-fetched, so it earns the cost every time. The
+blob stores are unbounded — they hold every cached work — and sweeping them means
+reading and CRC-ing the entire database. Doing that on open made cold-open time and
+peak worker memory scale with total cache size: on the 437 MB database DEV-708
+tested, seconds of work and roughly half a gigabyte of transient allocation, which
+is an OOM risk on mobile Safari.
+
+What actually protects a blob is `getPassageDoc` / `getSpine` / `getCache`
+verifying it on the way out and withholding anything that fails. Sweeping at open
+buys earlier notice, not more safety.
+
+`sweepAllBlobs()` runs the full sweep deliberately. It is the only way to find
+overflow-page corruption _before_ the affected record is read, since that damage
+leaves `integrity_check` reporting `ok` — check `blobsSwept` on the report before
+reading an empty `corruptBlobs` as a clean bill of health.
+
 ## Build step
 
 Two things cannot go through Next's bundler, so
@@ -121,8 +189,15 @@ Output is gitignored. Re-run it after changing the coordinator.
 Most of what matters here — OPFS, Web Locks, ownership handoff across a tab
 crash — cannot be tested from Node. DEV-708 validated it with a throwaway
 in-page harness driven by Playwright in Chromium, Playwright in Firefox, and by
-hand in Safari. That harness is not in this tree; recover it from the DEV-708
-branch history if a change needs the same scrutiny.
+hand in Safari (all three passed; Safari was confirmed manually). That harness is
+not in this tree; recover it from the DEV-708 branch history if a change needs the
+same scrutiny.
+
+There is no Playwright setup in this monorepo, so wiring the harness into CI is
+its own piece of work rather than something this library can carry. Until then,
+**a change to `storage-client.ts`, `opfs-driver.ts` or the coordinator's transport
+needs driving by hand in a browser** — the unit tests will not catch a regression
+in any of it.
 
 Two things to know if you do:
 
@@ -136,6 +211,20 @@ Two things to know if you do:
 ## Running unit tests
 
 Run `nx test lib-persistence` to execute the unit tests via [Jest](https://jestjs.io).
-They cover what is not a browser-runtime fact — the shared schema, per-record
-checksums, transaction rollback and FTS5 — by driving the same `LocalDatabase`
-against `node:sqlite`.
+They cover what is not a browser-runtime fact, in two files:
+
+- `lib/node/node-parity.spec.ts` drives the real `LocalDatabase` against
+  `node:sqlite`: the shared schema, per-record checksums, transaction rollback,
+  FTS5, the journal-id contract, and the schema-version decision table.
+- `lib/coordinator/coordinator.spec.ts` drives the coordinator's routing against
+  fake ports: owner announcements, the pending-port queue, and what the directory
+  does when a tab dies.
+
+Note that the coordinator's liveness detection is injectable
+(`setLivenessWatcher`) purely so it can be tested. Node implements Web Locks, and
+in a test nothing holds a tab's liveness lock, so the real watcher would be granted
+immediately and evict every client the moment it connected.
+
+Still not covered by anything in CI: the Web Lock election itself, Comlink
+proxying over real `MessagePort`s, OPFS, and ownership migration across a real tab
+crash. See below.

@@ -6,9 +6,13 @@
  * currently holds the ownership lock, with other tabs proxying through a
  * SharedWorker coordinator.
  *
- * Spike status (DEV-708): this package exists to prove the architecture's
- * durability, not yet to serve production traffic. See `README.md` for what has
- * been validated and what has not.
+ * Consumers work through `StorageApi`, which names passages, spines, journal
+ * entries and cache records — not tables, statements, workers or VFSs. That is
+ * deliberate: the backend is meant to stay replaceable, so nothing above this
+ * barrel should be able to tell what is underneath it.
+ *
+ * See `README.md` for the architecture and what has been verified in which
+ * browser, and `errors.ts` for the failures that throw rather than return null.
  */
 
 export { StorageClient } from './lib/client/storage-client';
@@ -20,19 +24,24 @@ export type {
 export { createStorageClient } from './lib/client/create-client';
 export { crc32, verifyChecksum } from './lib/checksum';
 export {
-  DATABASE_FILE,
-  SCHEMA_VERSION,
-  VFS_DIRECTORY,
-  VFS_NAME,
-} from './lib/schema';
+  DatabaseNotOpenError,
+  JournalMigrationRequiredError,
+  PersistenceError,
+  SchemaTooNewError,
+} from './lib/errors';
+export { SCHEMA_VERSION } from './lib/schema';
 export type {
+  BlobSweepMode,
   CacheRecord,
   IntegrityReport,
   JournalAppend,
   JournalEntry,
+  MigrationReport,
   OpenReport,
   PassageDocRecord,
+  PassageTextRecord,
   QuotaReport,
+  SearchHit,
   SpineRecord,
   StorageApi,
 } from './lib/types';

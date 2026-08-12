@@ -24,6 +24,17 @@ import type { OpenReport, StorageApi } from '../types';
 /** How long a single call may hang before the owner is presumed dead. */
 const CALL_TIMEOUT_MS = 10_000;
 
+/**
+ * Timeout for calls whose cost scales with the size of the database.
+ *
+ * A full blob sweep reads and checksums every row, which on a large cache runs
+ * for seconds. Under the normal timeout the client would give up on a worker that
+ * is in fact working, presume it dead, and retry — starting the same expensive
+ * sweep again. These calls get a budget generous enough that a timeout still
+ * means "dead" rather than "busy".
+ */
+const SWEEP_TIMEOUT_MS = 120_000;
+
 /** How many times a call is retried across ownership changes. */
 const MAX_ATTEMPTS = 3;
 
@@ -72,7 +83,16 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
     );
   });
 
-/** Factory for the two worker scripts, overridable so apps can bundle them. */
+/**
+ * Factory for the two worker scripts, overridable so apps can bundle them.
+ *
+ * This is the one place where a worker type reaches the public surface, and it
+ * has to: a bundler only rewrites `new Worker(new URL('./x.ts', import.meta.url))`
+ * when that expression appears literally in the app's own source, so the
+ * construction cannot be hidden inside this library for apps that need to
+ * override it. `createStorageClient()` supplies the defaults, and an app that is
+ * happy with them never sees this type.
+ */
 export type WorkerFactories = {
   createDedicatedWorker: () => Worker;
   createSharedWorker: () => SharedWorker;
@@ -305,16 +325,16 @@ export class StorageClient {
    * append therefore replays harmlessly, while a dropped one loses work — so
    * this retries rather than surfacing the error.
    */
-  async #invoke<T>(fn: (api: StorageApi) => Promise<T>): Promise<T> {
+  async #invoke<T>(
+    fn: (api: StorageApi) => Promise<T>,
+    timeoutMs = CALL_TIMEOUT_MS,
+  ): Promise<T> {
     let lastError: unknown;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const session = await this.#ready();
       try {
-        return await withTimeout(
-          fn(session.api as StorageApi),
-          CALL_TIMEOUT_MS,
-        );
+        return await withTimeout(fn(session.api as StorageApi), timeoutMs);
       } catch (error) {
         lastError = error;
 
@@ -346,20 +366,28 @@ export class StorageClient {
     getSpine: (workUuid) => this.#invoke((a) => a.getSpine(workUuid)),
     appendJournal: (entry) => this.#invoke((a) => a.appendJournal(entry)),
     readJournal: (limit) => this.#invoke((a) => a.readJournal(limit)),
-    clearJournal: (upToId) => this.#invoke((a) => a.clearJournal(upToId)),
+    clearJournal: (ids) => this.#invoke((a) => a.clearJournal(ids)),
     journalCount: () => this.#invoke((a) => a.journalCount()),
     putCache: (record) => this.#invoke((a) => a.putCache(record)),
     getCache: (key) => this.#invoke((a) => a.getCache(key)),
     evictExpiredCache: (now) => this.#invoke((a) => a.evictExpiredCache(now)),
-    commitSynced: (record, upToId) =>
-      this.#invoke((a) => a.commitSynced(record, upToId)),
+    commitSynced: (record, syncedJournalIds) =>
+      this.#invoke((a) => a.commitSynced(record, syncedJournalIds)),
     indexPassageText: (records) =>
       this.#invoke((a) => a.indexPassageText(records)),
     searchPassages: (query, limit) =>
       this.#invoke((a) => a.searchPassages(query, limit)),
     indexedPassageCount: () => this.#invoke((a) => a.indexedPassageCount()),
     quota: () => this.#invoke((a) => a.quota()),
-    integrityCheck: () => this.#invoke((a) => a.integrityCheck()),
+    integrityCheck: (blobs) =>
+      this.#invoke(
+        (a) => a.integrityCheck(blobs),
+        // Only an explicit 'always' makes this scale with database size; the
+        // default and 'never' stay on the normal budget.
+        blobs === 'always' ? SWEEP_TIMEOUT_MS : CALL_TIMEOUT_MS,
+      ),
+    sweepAllBlobs: () =>
+      this.#invoke((a) => a.sweepAllBlobs(), SWEEP_TIMEOUT_MS),
     databaseSize: () => this.#invoke((a) => a.databaseSize()),
   };
 }

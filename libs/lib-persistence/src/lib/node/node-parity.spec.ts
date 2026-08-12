@@ -17,7 +17,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { crc32 } from '../checksum';
-import { SCHEMA_VERSION } from '../schema';
+import { DatabaseNotOpenError, SchemaTooNewError } from '../errors';
+import {
+  JOURNAL_LAST_CHANGED_AT,
+  planSchemaReconciliation,
+  SCHEMA_VERSION,
+} from '../schema';
 import { LocalDatabase } from '../worker/database';
 import { createNodeDriver } from './node-driver';
 
@@ -50,6 +55,26 @@ describe('lib-persistence on node:sqlite', () => {
     expect(report.vfsName).toBe('node');
     expect(report.integrity.databaseOk).toBe(true);
     expect(report.integrity.corruptJournalIds).toEqual([]);
+    expect(report.integrity.sweepErrors).toEqual([]);
+  });
+
+  it('records an unreadable store as a finding rather than throwing', async () => {
+    await db.putPassageDoc({
+      uuid: 'p1',
+      workUuid: 'w1',
+      doc: bytes(1, 2, 3),
+      version: 1,
+    });
+    // Make one store unreadable. A sweep that threw here would lose the results
+    // for every other store along with it.
+    corrupt(db, 'DROP TABLE passage_docs', []);
+
+    const report = await db.sweepAllBlobs();
+    expect(report.sweepErrors).toHaveLength(1);
+    expect(report.sweepErrors[0]).toContain('passage_docs');
+    // The journal and the other stores were still assessed.
+    expect(report.blobsSwept).toBe(true);
+    expect(report.journalEntriesChecked).toBe(0);
   });
 
   it('round-trips passage docs and the spine', async () => {
@@ -174,7 +199,7 @@ describe('lib-persistence on node:sqlite', () => {
       expect(await db.getCache('k1')).toBeNull();
     });
 
-    it('reports corrupt blobs from the integrity sweep, which integrity_check cannot', async () => {
+    it('reports corrupt blobs from the explicit sweep, which integrity_check cannot', async () => {
       await db.putPassageDoc({
         uuid: 'p1',
         workUuid: 'w1',
@@ -195,8 +220,9 @@ describe('lib-persistence on node:sqlite', () => {
         'k1',
       ]);
 
-      const report = await db.integrityCheck();
+      const report = await db.sweepAllBlobs();
       expect(report.databaseOk).toBe(true); // structurally perfect
+      expect(report.blobsSwept).toBe(true);
       expect(report.corruptBlobs).toEqual(
         expect.arrayContaining([
           { store: 'passage_docs', key: 'p1' },
@@ -214,9 +240,77 @@ describe('lib-persistence on node:sqlite', () => {
         version: 1,
       });
       await db.putSpine({ workUuid: 'w1', doc: bytes(4), version: 1 });
-      const report = await db.integrityCheck();
+      const report = await db.sweepAllBlobs();
       expect(report.corruptBlobs).toEqual([]);
       expect(report.blobRecordsChecked).toBe(2);
+    });
+  });
+
+  describe('sweep cost', () => {
+    // The blob sweep reads and CRCs every row, so on a large cache it costs
+    // seconds and hundreds of megabytes of transient allocation. It used to run
+    // unconditionally on open, which made cold-open time scale with total
+    // database size. What actually protects a blob is verify-on-read.
+
+    it('does not sweep blobs on open', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3),
+        version: 1,
+      });
+      await db.close();
+
+      db = new LocalDatabase(async () => createNodeDriver(join(dir, 'test.db')));
+      const report = await db.open();
+
+      expect(report.integrity.blobsSwept).toBe(false);
+      expect(report.integrity.blobRecordsChecked).toBe(0);
+    });
+
+    it('still sweeps the whole journal on open, which is never re-fetchable', async () => {
+      await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(1),
+      });
+      await db.appendJournal({
+        passageUuid: 'p2',
+        workUuid: 'w1',
+        update: bytes(2),
+      });
+      await db.close();
+
+      db = new LocalDatabase(async () => createNodeDriver(join(dir, 'test.db')));
+      const report = await db.open();
+
+      expect(report.integrity.journalEntriesChecked).toBe(2);
+      expect(report.integrity.corruptJournalIds).toEqual([]);
+    });
+
+    it('reports blobs as unswept rather than clean when asked not to sweep', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3),
+        version: 1,
+      });
+      corrupt(db, 'UPDATE passage_docs SET doc = ? WHERE uuid = ?', [
+        bytes(1, 9, 3),
+        'p1',
+      ]);
+
+      const skipped = await db.integrityCheck('never');
+      // An empty corruptBlobs must not read as a clean bill of health when the
+      // sweep never ran — this record *is* damaged.
+      expect(skipped.blobsSwept).toBe(false);
+      expect(skipped.corruptBlobs).toEqual([]);
+
+      const swept = await db.integrityCheck('always');
+      expect(swept.blobsSwept).toBe(true);
+      expect(swept.corruptBlobs).toEqual([
+        { store: 'passage_docs', key: 'p1' },
+      ]);
     });
   });
 
@@ -235,10 +329,70 @@ describe('lib-persistence on node:sqlite', () => {
 
       await db.commitSynced(
         { uuid: 'p1', workUuid: 'w1', doc: bytes(8, 8), version: 5 },
-        first,
+        [first],
       );
 
       expect((await db.getPassageDoc('p1'))?.version).toBe(5);
+      expect(await db.journalCount()).toBe(1);
+    });
+
+    it('leaves another passage’s interleaved edits alone', async () => {
+      // The regression this signature exists for. `journal.id` is one
+      // AUTOINCREMENT sequence shared by every passage, so clearing "everything
+      // through id N" after syncing one passage silently deleted whatever else
+      // had been written below N. Here p2's edit sits between p1's two, and it is
+      // the only copy of that work.
+      const p1First = await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(1),
+      });
+      const p2Only = await db.appendJournal({
+        passageUuid: 'p2',
+        workUuid: 'w1',
+        update: bytes(2),
+      });
+      const p1Second = await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(3),
+      });
+
+      expect(p2Only).toBeGreaterThan(p1First);
+      expect(p1Second).toBeGreaterThan(p2Only);
+
+      await db.commitSynced(
+        { uuid: 'p1', workUuid: 'w1', doc: bytes(8, 8), version: 5 },
+        [p1First, p1Second],
+      );
+
+      const { entries } = await db.readJournal();
+      expect(entries.map((entry) => entry.id)).toEqual([p2Only]);
+      expect(entries[0].passageUuid).toBe('p2');
+      expect(entries[0].update).toEqual(bytes(2));
+    });
+
+    it('rolls the journal deletes back with the doc write', async () => {
+      const id = await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(1),
+      });
+
+      // A doc whose version violates NOT NULL fails mid-transaction, after the
+      // delete would have been issued.
+      await expect(
+        db.commitSynced(
+          {
+            uuid: 'p1',
+            workUuid: 'w1',
+            doc: bytes(8),
+            version: null as unknown as number,
+          },
+          [id],
+        ),
+      ).rejects.toThrow();
+
       expect(await db.journalCount()).toBe(1);
     });
 
@@ -361,11 +515,225 @@ describe('lib-persistence on node:sqlite', () => {
     });
   });
 
-  it('records the schema version and reports a real file size', async () => {
-    const driver = db.driver;
-    expect(driver?.name).toBe('node');
-    expect(driver?.rows('PRAGMA user_version')[0][0]).toBe(SCHEMA_VERSION);
-    expect(await db.databaseSize()).toBeGreaterThan(0);
+  describe('clearJournal', () => {
+    it('deletes only the ids it is given', async () => {
+      const ids = [];
+      for (const passage of ['p1', 'p2', 'p3']) {
+        ids.push(
+          await db.appendJournal({
+            passageUuid: passage,
+            workUuid: 'w1',
+            update: bytes(1),
+          }),
+        );
+      }
+
+      expect(await db.clearJournal([ids[0], ids[2]])).toBe(2);
+
+      const { entries } = await db.readJournal();
+      expect(entries.map((entry) => entry.passageUuid)).toEqual(['p2']);
+    });
+
+    it('is a no-op for an empty list rather than clearing everything', async () => {
+      await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(1),
+      });
+
+      expect(await db.clearJournal([])).toBe(0);
+      expect(await db.journalCount()).toBe(1);
+    });
+
+    it('reports only rows actually removed when ids are already gone', async () => {
+      const id = await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(1),
+      });
+
+      expect(await db.clearJournal([id])).toBe(1);
+      expect(await db.clearJournal([id])).toBe(0);
+    });
+
+    it('deletes more ids than fit in one statement', async () => {
+      // The delete is chunked because SQLite caps bound parameters per statement
+      // and a long offline session can outrun that cap.
+      const ids: number[] = [];
+      for (let i = 0; i < 1200; i++) {
+        ids.push(
+          await db.appendJournal({
+            passageUuid: `p${i}`,
+            workUuid: 'w1',
+            update: bytes(i % 256),
+          }),
+        );
+      }
+      const keep = ids.pop() as number;
+
+      expect(await db.clearJournal(ids)).toBe(1199);
+      expect(await db.journalCount()).toBe(1);
+      const { entries } = await db.readJournal();
+      expect(entries[0].id).toBe(keep);
+    });
+  });
+
+  describe('schema version', () => {
+    /** Reopen the same file with a fresh LocalDatabase. */
+    const reopen = async () => {
+      const next = new LocalDatabase(async () =>
+        createNodeDriver(join(dir, 'test.db')),
+      );
+      const report = await next.open();
+      return { db: next, report };
+    };
+
+    it('records the schema version and reports a real file size', async () => {
+      const driver = db.driver;
+      expect(driver?.name).toBe('node');
+      expect(driver?.rows('PRAGMA user_version')[0][0]).toBe(SCHEMA_VERSION);
+      expect(await db.databaseSize()).toBeGreaterThan(0);
+    });
+
+    it('reports a fresh database as version 0 and stamps it', async () => {
+      // `db` in beforeEach opened the file for the first time.
+      const driver = db.driver;
+      expect(driver?.rows('PRAGMA user_version')[0][0]).toBe(SCHEMA_VERSION);
+      await db.close();
+
+      const { db: again, report } = await reopen();
+      // Second open finds the stamp rather than treating it as new.
+      expect(report.migration.fromVersion).toBe(SCHEMA_VERSION);
+      expect(report.migration.rebuilt).toBe(false);
+      await again.close();
+    });
+
+    it('refuses to open a file written by a newer build', async () => {
+      corrupt(db, `PRAGMA user_version = ${SCHEMA_VERSION + 1}`, []);
+      await db.close();
+
+      const next = new LocalDatabase(async () =>
+        createNodeDriver(join(dir, 'test.db')),
+      );
+      // Rebuilding here would discard a cache written by newer code, and would be
+      // restoring a journal whose shape this build may not understand.
+      await expect(next.open()).rejects.toThrow(SchemaTooNewError);
+    });
+
+    it('leaves nothing usable behind when it refuses an open', async () => {
+      corrupt(db, `PRAGMA user_version = ${SCHEMA_VERSION + 1}`, []);
+      await db.close();
+
+      const next = new LocalDatabase(async () =>
+        createNodeDriver(join(dir, 'test.db')),
+      );
+      await expect(next.open()).rejects.toThrow(SchemaTooNewError);
+
+      // A refused open must not leave the driver attached, or every later call
+      // would run against a database this build just said it cannot read.
+      expect(next.driver).toBeNull();
+      await expect(next.journalCount()).rejects.toThrow(DatabaseNotOpenError);
+    });
+
+    it('rebuilds the re-fetchable tables on an older file but keeps the journal', async () => {
+      await db.putPassageDoc({
+        uuid: 'p1',
+        workUuid: 'w1',
+        doc: bytes(1, 2, 3),
+        version: 1,
+      });
+      await db.putSpine({ workUuid: 'w1', doc: bytes(4), version: 1 });
+      await db.putCache({
+        key: 'k1',
+        body: bytes(5),
+        expiresAt: Date.now() + 60_000,
+      });
+      await db.indexPassageText([
+        { passageUuid: 'p1', workUuid: 'w1', text: 'indexed text' },
+      ]);
+      await db.appendJournal({
+        passageUuid: 'p1',
+        workUuid: 'w1',
+        update: bytes(9, 9),
+      });
+
+      // Pose as an older file.
+      corrupt(db, 'PRAGMA user_version = 1', []);
+      await db.close();
+
+      const { db: migrated, report } = await reopen();
+      expect(report.migration.fromVersion).toBe(1);
+      expect(report.migration.toVersion).toBe(SCHEMA_VERSION);
+      expect(report.migration.rebuilt).toBe(true);
+
+      // Everything re-fetchable is gone...
+      expect(await migrated.getPassageDoc('p1')).toBeNull();
+      expect(await migrated.getSpine('w1')).toBeNull();
+      expect(await migrated.getCache('k1')).toBeNull();
+      expect(await migrated.indexedPassageCount()).toBe(0);
+
+      // ...and the one thing that is not re-fetchable survived intact.
+      const { entries } = await migrated.readJournal();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].passageUuid).toBe('p1');
+      expect(entries[0].update).toEqual(bytes(9, 9));
+
+      // And the file is now stamped current, so the next open is a no-op.
+      await migrated.close();
+      const { db: again, report: second } = await reopen();
+      expect(second.migration.rebuilt).toBe(false);
+      expect(await again.journalCount()).toBe(1);
+      await again.close();
+    });
+
+  });
+
+  describe('planSchemaReconciliation', () => {
+    // The decision table, tested directly rather than through a file, so that
+    // versions which cannot exist yet are still covered.
+
+    it('treats an unstamped file as fresh', () => {
+      expect(planSchemaReconciliation(0)).toBe('fresh');
+    });
+
+    it('treats the current version as nothing to do', () => {
+      expect(planSchemaReconciliation(SCHEMA_VERSION)).toBe('current');
+    });
+
+    it('rejects anything newer than this build', () => {
+      expect(planSchemaReconciliation(SCHEMA_VERSION + 1)).toBe(
+        'reject-too-new',
+      );
+      expect(planSchemaReconciliation(SCHEMA_VERSION + 99)).toBe(
+        'reject-too-new',
+      );
+    });
+
+    it('rebuilds an older version whose journal is unchanged', () => {
+      for (let v = JOURNAL_LAST_CHANGED_AT; v < SCHEMA_VERSION; v++) {
+        expect(planSchemaReconciliation(v)).toBe('rebuild');
+      }
+    });
+
+    it('refuses a version older than the journal’s last change', () => {
+      // Guards the case that arrives the first time the journal's own columns
+      // change: dropping caches cannot fix it, and the journal must not be
+      // reinterpreted or discarded to make the open succeed.
+      const older = JOURNAL_LAST_CHANGED_AT - 1;
+      // Only meaningful once the journal has changed at least once past v1.
+      if (older > 0) {
+        expect(planSchemaReconciliation(older)).toBe(
+          'reject-journal-migration',
+        );
+      }
+      // Whatever JOURNAL_LAST_CHANGED_AT becomes, a stamped file below it never
+      // rebuilds.
+      expect(
+        ['reject-journal-migration', 'fresh'].includes(
+          planSchemaReconciliation(older),
+        ),
+      ).toBe(true);
+    });
   });
 
   it('survives being closed and reopened, as a restarted agent would', async () => {
