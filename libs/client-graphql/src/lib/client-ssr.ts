@@ -1,6 +1,10 @@
 import 'server-only';
 import { GraphQLClient } from 'graphql-request';
 import { cookies } from 'next/headers';
+import {
+  CONTENT_SOURCE_HEADER,
+  contentSourceFromEnv,
+} from '@eightyfourthousand/data-access';
 import { getGraphQLUrl } from './config';
 
 /**
@@ -26,6 +30,7 @@ export async function createServerGraphQLClient(): Promise<GraphQLClient> {
     headers: {
       // Forward cookies for authentication
       ...(cookieHeader ? { cookie: cookieHeader } : {}),
+      [CONTENT_SOURCE_HEADER]: contentSourceFromEnv(),
     },
   });
 
@@ -40,5 +45,7 @@ export async function createServerGraphQLClient(): Promise<GraphQLClient> {
  */
 export function createBuildGraphQLClient(): GraphQLClient {
   const url = getGraphQLUrl();
-  return new GraphQLClient(url);
+  return new GraphQLClient(url, {
+    headers: { [CONTENT_SOURCE_HEADER]: contentSourceFromEnv() },
+  });
 }
