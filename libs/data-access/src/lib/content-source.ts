@@ -15,32 +15,45 @@
  * at each call site also lets the cross-work reads express it at all — PostgREST
  * cannot compare two columns.
  *
- * Every function taking a `source` defaults it to `draft`, so adding the
- * parameter changes no existing caller. Reader contexts opt in explicitly.
+ * Every default funnels through DEFAULT_CONTENT_SOURCE, which is `draft`, so
+ * adding this changes no caller's behaviour. A surface reads the published
+ * snapshot only by declaring so.
  */
 export const CONTENT_SOURCES = ['draft', 'published'] as const;
 
 export type ContentSource = (typeof CONTENT_SOURCES)[number];
 
+/**
+ * What a caller gets when it does not choose: the draft tables, which is what
+ * every read did before there was a choice. Every default in this module funnels
+ * through here, so switching a surface to the published snapshot is a deliberate
+ * act at that surface rather than a side effect of this constant.
+ */
 export const DEFAULT_CONTENT_SOURCE: ContentSource = 'draft';
 
 /**
  * The header carrying the source across an API boundary.
  *
  * A request, not a query, chooses the source: an app reads one copy throughout —
- * the studio and editor draft, the reading room and the public MCP API
- * published — so the choice belongs to the caller rather than to each call site.
- * Threading it through every query variable, data function and component prop
- * bought nothing that this does not.
+ * the studio and editor draft, the reading room and the public MCP API published
+ * once each is switched — so the choice belongs to the caller rather than to each
+ * call site. Threading it through every query variable, data function and
+ * component prop bought nothing that this does not.
  */
 export const CONTENT_SOURCE_HEADER = 'x-84000-content-source';
 
 /**
  * How an app declares which copy it serves. Set in `next.config.js` rather than
- * an env file so it is version-controlled and visible in review; apps that do
- * not set it get `published`, which is the safe direction — a studio showing
- * published content is a visible annoyance, a reading room showing drafts is a
- * leak.
+ * an env file so it is version-controlled and visible in review.
+ *
+ * An app that declares nothing gets DEFAULT_CONTENT_SOURCE, which is `draft` —
+ * what every app reads today — so adding this machinery changes no behaviour on
+ * its own. Each surface opts into `published` explicitly when it is ready, which
+ * makes the reader switch a one-line change that can be reverted on its own.
+ *
+ * The cost of that choice: a *new* public surface that forgets to declare gets
+ * draft, so anything reader-facing must declare `published` deliberately rather
+ * than inherit it.
  */
 export const CONTENT_SOURCE_ENV_VAR = 'NEXT_PUBLIC_CONTENT_SOURCE';
 
@@ -51,16 +64,17 @@ export const CONTENT_SOURCE_ENV_VAR = 'NEXT_PUBLIC_CONTENT_SOURCE';
  */
 export const contentSourceFromEnv = (): ContentSource => {
   const declared = process.env[CONTENT_SOURCE_ENV_VAR];
-  return isContentSource(declared) ? declared : 'published';
+  return isContentSource(declared) ? declared : DEFAULT_CONTENT_SOURCE;
 };
 
 /**
- * Narrows a header value. Absent or unrecognised resolves to `published`: a
- * caller that does not ask is treated as public.
+ * Narrows a header value. Absent or unrecognised resolves to
+ * DEFAULT_CONTENT_SOURCE, so a caller that does not ask gets what it would have
+ * got before this header existed.
  */
 export const contentSourceFromHeader = (
   value: string | null | undefined,
-): ContentSource => (isContentSource(value) ? value : 'published');
+): ContentSource => (isContentSource(value) ? value : DEFAULT_CONTENT_SOURCE);
 
 /** Narrows arbitrary input (a GraphQL argument, a query param) to a ContentSource. */
 export const isContentSource = (value: unknown): value is ContentSource =>

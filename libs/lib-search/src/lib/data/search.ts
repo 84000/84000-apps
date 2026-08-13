@@ -15,8 +15,8 @@ export const search = async ({
   uuid,
   toh,
   useRegex = false,
-  // Follows the app this action runs in: draft in the studio, published in the
-  // reading room.
+  // Follows the app this action runs in, so public search tracks whatever that
+  // app serves rather than needing its own decision.
   source = contentSourceFromEnv(),
 }: {
   text: string;
