@@ -7,6 +7,7 @@ import {
   getTranslationTitles,
 } from '@eightyfourthousand/client-graphql/ssr';
 import { ReaderBodyPanel } from './ReaderBodyPanel';
+import { isPublishedStatus } from '@eightyfourthousand/data-access';
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 
@@ -53,7 +54,11 @@ export const ReaderBodyPage = async ({
       body={body}
       frontMatterHasMore={frontMatterHasMore}
       bodyHasMore={bodyHasMore}
-      publicationVersion={work?.publicationVersion}
+      // Publication status is the authority here, not the version number and not the
+      // presence of a snapshot: two public works have no snapshot because their legacy
+      // label is not SemVer, and they are published all the same. Absent work is not a
+      // judgement about publication, so it stays undefined.
+      isPublished={work ? isPublishedStatus(work.publicationStatus) : undefined}
     />
   );
 };

@@ -9,6 +9,8 @@ export type GraphQLWork = {
   toh: string[];
   publicationDate: string | null;
   publicationVersion: string;
+  publishedVersion?: string | null;
+  publicationStatus?: string | null;
   pages: number;
   restriction: boolean;
   section: string;
@@ -36,6 +38,10 @@ export function workFromGraphQL(gqlWork: GraphQLWork): Work {
       ? new Date(gqlWork.publicationDate)
       : undefined,
     publicationVersion: gqlWork.publicationVersion as SemVer,
+    publishedVersion: (gqlWork.publishedVersion ?? undefined) as
+      | SemVer
+      | undefined,
+    publicationStatus: gqlWork.publicationStatus ?? undefined,
     pages: gqlWork.pages,
     restriction: gqlWork.restriction,
     section: gqlWork.section,

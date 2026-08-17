@@ -8,6 +8,11 @@ export interface WorkParent {
   title: string;
   publicationDate: string;
   publicationVersion: string;
+  /**
+   * The live version's uuid, or undefined for a work never published. Work.publishedVersion
+   * resolves the label from it; the label itself lives on work_versions.
+   */
+  publishedVersionUuid?: string;
   pages: number;
   restriction: boolean;
   section: string;

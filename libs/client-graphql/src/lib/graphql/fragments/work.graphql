@@ -4,6 +4,8 @@ fragment WorkFields on Work {
   toh
   publicationDate
   publicationVersion
+  publishedVersion
+  publicationStatus
   pages
   restriction
   section

@@ -11,6 +11,8 @@ const GET_WORK_BY_UUID = gql`
       toh
       publicationDate
       publicationVersion
+      publishedVersion
+      publicationStatus
       pages
       restriction
       section
@@ -26,6 +28,8 @@ const GET_WORK_BY_TOH = gql`
       toh
       publicationDate
       publicationVersion
+      publishedVersion
+      publicationStatus
       pages
       restriction
       section

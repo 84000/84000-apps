@@ -6,8 +6,6 @@ import {
   createBrowserClient,
   FRONT_MATTER_FILTER,
   getSession,
-  isPublishedVersion,
-  SemVer,
   Titles as TitlesData,
   UserRole,
 } from '@eightyfourthousand/data-access';
@@ -34,7 +32,7 @@ export const ReaderBodyPanel = ({
   body,
   frontMatterHasMore,
   bodyHasMore,
-  publicationVersion,
+  isPublished,
 }: {
   titles: TitlesData;
   frontMatter: TranslationEditorContent;
@@ -42,7 +40,15 @@ export const ReaderBodyPanel = ({
   frontMatterHasMore?: boolean;
   bodyHasMore?: boolean;
   cursor?: string;
-  publicationVersion?: SemVer;
+  /**
+   * Whether the work is published, decided by the caller from `publicationStatus`.
+   *
+   * Replaces a heuristic on the version number — major >= 1 counted as published, an
+   * absent version counted as published too — which read three works wrongly, since a
+   * published work can sit below 1.0.0 and an unpublished one can carry a legacy label
+   * above it. Undefined while unknown, so nothing is gated on a guess.
+   */
+  isPublished?: boolean;
 }) => {
   // `undefined` while the role resolves. Gate as a reader until then so
   // unpublished content never flashes before the role is known.
@@ -58,13 +64,12 @@ export const ReaderBodyPanel = ({
 
   const translationState = useMemo<TranslationState>(() => {
     const isReader = role === undefined || role === 'reader';
-    const unpublished = !isPublishedVersion(publicationVersion);
-    if (isReader && unpublished) {
+    if (isReader && isPublished === false) {
       return 'unpublished';
     }
     const bodyEmpty = Array.isArray(body) ? body.length === 0 : !body;
     return bodyEmpty ? 'empty' : 'content';
-  }, [role, publicationVersion, body]);
+  }, [role, isPublished, body]);
 
   const renderTitles = useCallback(
     ({ titles, imprint, name }: TitlesRenderer) => (
