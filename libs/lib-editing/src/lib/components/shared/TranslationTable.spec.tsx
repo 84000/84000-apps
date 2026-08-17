@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TooltipProvider } from '@eightyfourthousand/design-system';
-import { Work } from '@eightyfourthousand/data-access';
+import { SemVer, Work } from '@eightyfourthousand/data-access';
 import { TranslationsTable } from './TranslationTable';
 
 let mockSearchParams: URLSearchParams;
@@ -140,24 +140,40 @@ describe('TranslationsTable', () => {
     });
   });
 
-  // The column shows the version being served, from work_versions, not the legacy
-  // works.publicationVersion the publish pipeline never writes.
-  it('shows the live published version, and a dash when there is none', async () => {
+  // The column prefers the version being served, from work_versions, over the legacy
+  // works.publicationVersion the publish pipeline never writes — but falls back to it
+  // while works are still being brought onto the pipeline, since a work with no snapshot
+  // yet has only that number and users know the text by it.
+  it('prefers the live version, falls back to the legacy one, then a dash', async () => {
     render(
       <TooltipProvider>
         <TranslationsTable
           works={[
-            work({ title: 'Has a live version', publishedVersion: '2.1.0' }),
-            work({ title: 'Never published', publishedVersion: undefined }),
+            work({
+              title: 'Live version wins',
+              publishedVersion: '2.1.0',
+              publicationVersion: '1.4.0',
+            }),
+            work({
+              title: 'No snapshot yet',
+              publishedVersion: undefined,
+              publicationVersion: '1.4.1',
+            }),
+            work({
+              title: 'Neither',
+              publishedVersion: undefined,
+              publicationVersion: undefined as unknown as SemVer,
+            }),
           ]}
         />
       </TooltipProvider>,
     );
 
     expect(screen.getByText('2.1.0')).toBeTruthy();
-    // The legacy value is 1.0.0 on every fixture, so its absence proves the column
-    // switched rather than coincidentally agreeing.
-    expect(screen.queryByText('1.0.0')).toBeNull();
+    // The live version wins over a legacy value that is present and different, which is
+    // what proves the preference rather than a coincidence.
+    expect(screen.queryByText('1.4.0')).toBeNull();
+    expect(screen.getByText('1.4.1')).toBeTruthy();
     expect(screen.getByText('—')).toBeTruthy();
   });
 

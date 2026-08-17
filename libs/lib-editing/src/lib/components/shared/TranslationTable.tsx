@@ -39,10 +39,10 @@ const SIZE_FOR_COL: { [key: string]: number } = {
 };
 
 const UNPUBLISHED = 'Unpublished';
-// A work with no live version. Deliberately not UNPUBLISHED: the "Published only" switch
-// filters on publicationDate, so a work can pass that filter and still have no published
-// version, and two cells in one row reading "Unpublished" for different reasons would not
-// tell an editor which fact was missing.
+// A work with neither a live version nor a legacy one. Deliberately not UNPUBLISHED: the
+// "Published only" switch filters on publicationDate, so a work can pass that filter and
+// still have no version, and two cells in one row reading "Unpublished" for different
+// reasons would not tell an editor which fact was missing.
 const NO_VERSION = '—';
 
 type TableWork = {
@@ -224,10 +224,13 @@ export const TranslationsTable = ({ works }: { works: Work[] }) => {
         toh: parseToh(w.toh.join(',')),
         tohSearch: w.toh.join(' '),
         publicationDate: w.publicationDate?.toLocaleDateString() || UNPUBLISHED,
-        // The live version, not works.publicationVersion — the publish pipeline
-        // never writes that column, so it can name a version no longer served. A
-        // work with no published version has no live version to show.
-        publicationVersion: w.publishedVersion || NO_VERSION,
+        // The live version where there is one, falling back to the legacy column.
+        // The pipeline never writes publicationVersion, so it can name a version
+        // that is not being served — but while works are still being brought onto
+        // the pipeline, a work with no snapshot yet has only that number, and it is
+        // still the one users know the text by.
+        publicationVersion:
+          w.publishedVersion || w.publicationVersion || NO_VERSION,
       })),
     [works],
   );
