@@ -56,6 +56,13 @@ export const workQueries = {
       throw new Error('Either uuid or toh must be provided');
     }
 
+    // A work with no published version is not public: the studio can open it,
+    // but the reading room shows its not-yet-published state rather than the
+    // draft. Resolving to null here is what produces that.
+    if (ctx.source === 'published' && !work?.publishedVersionUuid) {
+      return null;
+    }
+
     if (!work) return null;
     return {
       ...work,

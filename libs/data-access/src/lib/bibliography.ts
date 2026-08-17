@@ -5,15 +5,23 @@ import {
   bibliographyEntryItemFromDTO,
   DataClient,
 } from './types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  relationFor,
+  rpcFor,
+  type ContentSource,
+} from './content-source';
 
 export const getBibliographyEntries = async ({
   client,
   uuid,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid: string;
+  source?: ContentSource;
 }) => {
-  const { data, error } = await client.rpc('show_bibliographies', {
+  const { data, error } = await client.rpc(rpcFor('showBibliographies', source), {
     v_work_uuid: uuid,
   });
   if (error) {
@@ -31,12 +39,14 @@ export const getBibliographyEntries = async ({
 export const getBibliographyEntry = async ({
   client,
   uuid,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid: string;
+  source?: ContentSource;
 }) => {
   const { data, error } = await client
-    .from('bibliographies')
+    .from(relationFor('bibliographies', source))
     .select(
       `
       uuid::uuid,
@@ -75,9 +85,11 @@ export type BibliographyLabel = {
 export const getBibliographyLabelsByUuids = async ({
   client,
   uuids,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuids: readonly string[];
+  source?: ContentSource;
 }): Promise<Map<string, BibliographyLabel>> => {
   const labelsByUuid = new Map<string, BibliographyLabel>();
 
@@ -85,7 +97,7 @@ export const getBibliographyLabelsByUuids = async ({
     return labelsByUuid;
   }
 
-  const { data, error } = await client.rpc('bibliography_labels', {
+  const { data, error } = await client.rpc(rpcFor('bibliographyLabels', source), {
     v_uuids: uuids as string[],
   });
 

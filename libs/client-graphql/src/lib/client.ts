@@ -1,4 +1,8 @@
 import { GraphQLClient } from 'graphql-request';
+import {
+  CONTENT_SOURCE_HEADER,
+  contentSourceFromEnv,
+} from '@eightyfourthousand/data-access';
 import { getGraphQLUrl } from './config';
 
 let clientInstance: GraphQLClient | null = null;
@@ -31,6 +35,10 @@ export function createGraphQLClient(): GraphQLClient {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'apollo-require-preflight': 'true',
+        // Which copy of the content this app reads. Declared once per app in
+        // next.config.js; every query in the request inherits it, so no query,
+        // data function or component has to carry it.
+        [CONTENT_SOURCE_HEADER]: contentSourceFromEnv(),
       };
 
       if (getAccessToken) {

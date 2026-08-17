@@ -83,6 +83,12 @@ const studioRoutesPromise = fetchAndWriteStudioRoutes();
  **/
 const nextConfig = {
   nx: {},
+  // This app edits translations, so every read it makes resolves against the
+  // draft tables. That is also the default today, so this is a pin rather than a
+  // change: it keeps the editor on draft if the default is ever flipped to
+  // published. Declared here rather than in .env.local so it is
+  // version-controlled and visible in review.
+  env: { NEXT_PUBLIC_CONTENT_SOURCE: 'draft' },
   images: {
     remotePatterns: [
       { hostname: 'lh3.googleusercontent.com' },

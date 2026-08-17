@@ -20,6 +20,7 @@ export const glossaryTermPassagesResolver = async (
     uuid: parent.uuid,
     first: args.first,
     after: args.after,
+    source: ctx.source,
   });
 };
 
@@ -31,6 +32,7 @@ export const glossaryInstanceResolver = async (
   const instance = await getGlossaryInstance({
     client: ctx.supabase,
     uuid: args.uuid,
+    source: ctx.source,
   });
 
   return instance ?? null;
@@ -46,6 +48,7 @@ export const glossaryTermPassagesPageResolver = async (
     uuid: args.uuid,
     first: args.first,
     after: args.after,
+    source: ctx.source,
   });
 };
 
@@ -54,6 +57,10 @@ export const workGlossaryResolver = async (
   args: { withAttestations?: boolean },
   ctx: GraphQLContext,
 ) => {
+  // NOTE: draft-only. `show_glossary_entries` has no published variant because
+  // no client selects this field — only `Work.glossaryTerms` is used — and it is
+  // slated for deletion rather than a published path. Do not select it from a
+  // reader context.
   const instances = await getGlossaryInstances({
     client: ctx.supabase,
     uuid: parent.uuid,
@@ -80,6 +87,7 @@ export const workGlossaryTermsResolver = async (
     cursor: args.cursor ?? null,
     direction: args.direction ?? 'FORWARD',
     withAttestations: args.withAttestations ?? false,
+    source: ctx.source,
   });
 };
 
@@ -98,5 +106,6 @@ export const searchWorkGlossaryTermsResolver = async (
     query: args.query,
     limit: args.limit,
     withAttestations: args.withAttestations ?? false,
+    source: ctx.source,
   });
 };

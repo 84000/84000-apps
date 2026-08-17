@@ -2,8 +2,25 @@ import { ApolloServer, HeaderMap } from '@apollo/server';
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default';
 import { NextRequest, NextResponse } from 'next/server';
 import depthLimit from 'graphql-depth-limit';
+import { CONTENT_SOURCE_HEADER } from '@eightyfourthousand/data-access';
 
 import { typeDefs, resolvers, createContext } from '../../../graphql';
+
+/**
+ * Headers a browser may send to this endpoint cross-origin.
+ *
+ * The reading room and the studio are on different origins to this API, so every
+ * request is preflighted and anything not listed here is rejected before the
+ * query runs. `CONTENT_SOURCE_HEADER` is spelled from the constant rather than
+ * written out, because a mismatch between the two fails only cross-origin —
+ * same-origin local work would keep passing while the reading room broke.
+ */
+const ALLOWED_REQUEST_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'apollo-require-preflight',
+  CONTENT_SOURCE_HEADER,
+].join(', ');
 
 function getCorsHeaders(req: NextRequest): Record<string, string> {
   const origin = req.headers.get('origin') || '*';
@@ -11,8 +28,7 @@ function getCorsHeaders(req: NextRequest): Record<string, string> {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers':
-      'Content-Type, Authorization, apollo-require-preflight',
+    'Access-Control-Allow-Headers': ALLOWED_REQUEST_HEADERS,
   };
 }
 

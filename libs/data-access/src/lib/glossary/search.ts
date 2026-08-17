@@ -1,5 +1,10 @@
 import { DataClient } from '../types';
 import {
+  DEFAULT_CONTENT_SOURCE,
+  rpcFor,
+  type ContentSource,
+} from '../content-source';
+import {
   GlossaryTermIndexRow,
   GlossaryTermNode,
   rowToGlossaryTermNode,
@@ -30,12 +35,14 @@ export const searchWorkGlossaryTerms = async ({
   query,
   limit = DEFAULT_SEARCH_LIMIT,
   withAttestations = false,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   workUuid: string;
   query: string;
   limit?: number;
   withAttestations?: boolean;
+  source?: ContentSource;
 }): Promise<GlossaryTermNode[]> => {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -46,7 +53,7 @@ export const searchWorkGlossaryTerms = async ({
   const pattern = `${escapeIlike(trimmed)}%`;
 
   const { data, error } = await client
-    .rpc('search_work_glossary_terms', {
+    .rpc(rpcFor('workGlossarySearch', source), {
       p_work_uuid: workUuid,
       p_pattern: pattern,
       p_limit: clampedLimit,

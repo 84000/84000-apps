@@ -14,6 +14,12 @@ export type Work = {
   pages: number;
   restriction: boolean;
   section: string;
+  /**
+   * The live published version, or undefined for a work that has never been
+   * published. The reader uses it to tell "not yet published" apart from
+   * "does not exist"; it is the same pointer the published_*_live views join on.
+   */
+  publishedVersionUuid?: string;
 };
 
 export type WorkDTO = {
@@ -26,6 +32,7 @@ export type WorkDTO = {
   pages: number;
   restriction: boolean;
   breadcrumb?: string;
+  published_version_uuid?: string | null;
 };
 
 export const workFromDTO = (dto: WorkDTO) => ({
@@ -38,4 +45,5 @@ export const workFromDTO = (dto: WorkDTO) => ({
   pages: dto.pages || 0,
   restriction: dto.restriction,
   section: dto.breadcrumb?.split('>').at(-2)?.trim() || '',
+  publishedVersionUuid: dto.published_version_uuid ?? undefined,
 });

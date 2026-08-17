@@ -1,9 +1,16 @@
 import {
   DataClient,
   PassageDTO,
+  PassageRowDTO,
   annotationsFromDTO,
   passageFromDTO,
 } from '../types';
+import {
+  DEFAULT_CONTENT_SOURCE,
+  passageColumnsFor,
+  relationFor,
+  type ContentSource,
+} from '../content-source';
 
 import { PassageConnectionNode } from './pagination';
 
@@ -36,18 +43,27 @@ export const getPassageByUuidOrXmlId = async ({
   client,
   uuid,
   xmlId,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   uuid?: string;
   xmlId?: string;
+  source?: ContentSource;
 }): Promise<PassageConnectionNode | null> => {
   if (!uuid && !xmlId) {
     return null;
   }
 
+  // The published snapshot carries no xmlIds, so an xmlId lookup can only be
+  // answered from draft. Callers resolving a hash deep link go through
+  // `lookup()` for the same reason: it maps the xmlId to a UUID, which is
+  // stable across both copies and then resolves in whichever source was asked
+  // for.
+  const effectiveSource = xmlId && !uuid ? 'draft' : source;
+
   let query = client
-    .from('passages')
-    .select('uuid, content, label, sort, type, xmlId, toh, work_uuid');
+    .from(relationFor('passages', effectiveSource))
+    .select<string, PassageRowDTO>(passageColumnsFor(effectiveSource));
 
   if (uuid) {
     query = query.eq('uuid', uuid);

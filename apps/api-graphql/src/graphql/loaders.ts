@@ -1,4 +1,7 @@
-import type { DataClient } from '@eightyfourthousand/data-access';
+import type {
+  ContentSource,
+  DataClient,
+} from '@eightyfourthousand/data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
@@ -71,14 +74,27 @@ export interface Loaders {
   imprintsByWorkToh: ReturnType<typeof createImprintLoader>;
 }
 
-export function createLoaders(supabase: DataClient): Loaders {
+/**
+ * The request's loaders, all reading the one source the request asked for.
+ *
+ * A DataLoader caches by key alone, so a set can only ever serve one source —
+ * the same passage UUID means a different row in each. That is fine here
+ * because the source is fixed for the whole request.
+ */
+export function createLoaders(
+  supabase: DataClient,
+  source: ContentSource,
+): Loaders {
   return {
-    ...createPassageLoaders(supabase),
-    passageReferencesByPassageUuid: createPassageReferencesLoader(supabase),
+    ...createPassageLoaders(supabase, source),
+    passageReferencesByPassageUuid: createPassageReferencesLoader(
+      supabase,
+      source,
+    ),
     workTitlesByUuid: createWorkTitleLoader(supabase),
-    glossaryNamesByUuid: createGlossaryNameLoader(supabase),
+    glossaryNamesByUuid: createGlossaryNameLoader(supabase, source),
     foliosByUuid: createFolioLoader(supabase),
-    bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase),
+    bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase, source),
     imprintsByWorkToh: createImprintLoader(supabase),
   };
 }

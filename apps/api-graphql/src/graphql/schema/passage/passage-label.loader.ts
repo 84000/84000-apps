@@ -1,6 +1,7 @@
 import DataLoader from 'dataloader';
 import {
   getPassageLabelsByUuids,
+  type ContentSource,
   type DataClient,
 } from '@eightyfourthousand/data-access';
 
@@ -8,11 +9,15 @@ import {
  * Creates a DataLoader for batch-fetching passage labels by UUID.
  * Used to enrich endNoteLink annotations with labels from target passages.
  */
-export function createPassageLabelLoader(supabase: DataClient) {
+export function createPassageLabelLoader(
+  supabase: DataClient,
+  source: ContentSource,
+) {
   return new DataLoader<string, string | null>(async (passageUuids) => {
     const labelsByUuid = await getPassageLabelsByUuids({
       client: supabase,
       passageUuids,
+      source,
     });
     return passageUuids.map((uuid) => labelsByUuid.get(uuid) ?? null);
   });

@@ -55,6 +55,7 @@ export const passagesResolver = async (
     limit: args.limit,
     filter: args.filter,
     direction: args.direction ?? 'FORWARD',
+    source: ctx.source,
   });
 
   return buildPassageConnection(
