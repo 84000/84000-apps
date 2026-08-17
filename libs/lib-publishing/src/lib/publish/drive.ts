@@ -86,7 +86,14 @@ export const drivePublish = async ({
       onProgress?.(job);
     }
 
-    const result = await tickJob({ client, jobUuid: job.uuid });
+    // The option is repeated here, not just on the first tick: a job adopted
+    // mid-flight can re-enter validate, and it should honour the caller's choice
+    // rather than fall back to refreshing.
+    const result = await tickJob({
+      client,
+      jobUuid: job.uuid,
+      refreshGlossaryIndex: options.refreshGlossaryIndex,
+    });
     job = result.job;
     done = result.done;
   }

@@ -18,11 +18,17 @@ import type { PhaseRunner } from './context';
 export const runValidatePhase: PhaseRunner = async ({
   client,
   job,
+  refreshGlossaryIndex,
 }) => {
   // Before validating, not after: published_glossaries snapshots the output of a
   // materialized view refreshed hourly by cron, and the artifact is immutable, so a stale
   // read would be baked in permanently.
-  await refreshGlossaryTermIndex({ client });
+  //
+  // A bulk caller that has already refreshed once opts out, because this is a corpus-wide
+  // derivation and repeating it per work dominates the run. Anything else leaves it on.
+  if (refreshGlossaryIndex !== false) {
+    await refreshGlossaryTermIndex({ client });
+  }
 
   const validation = await validateWork({ client, workUuid: job.workUuid });
 

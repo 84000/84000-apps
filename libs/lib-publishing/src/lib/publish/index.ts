@@ -25,3 +25,12 @@ export type { PhaseContext, PhaseRunner } from './context';
 export { DEFAULT_TICK_BUDGET_MS, tickJob } from './tick';
 export { startPublish, type StartPublishResult } from './start';
 export { drivePublish, type DrivePublishResult } from './drive';
+export {
+  dedupeRequests,
+  parseWorkList,
+  partitionBySince,
+  runBatch,
+  type BatchOutcome,
+  type BatchSummary,
+  type WorkRequest,
+} from './batch';
