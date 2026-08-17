@@ -100,6 +100,43 @@ describe('PublishChecksPanel', () => {
     expect(screen.queryByText(/blocking publication/i)).toBeNull();
   });
 
+  // The rule id falls back to itself when unlabelled, so a new SQL rule that reaches the UI
+  // without an entry here shows as raw kebab-case. This is the guard for that.
+  it('gives bibliography-entry-unheaded a readable title and an explanation', async () => {
+    seed(
+      readiness({
+        ok: false,
+        errors: [
+          {
+            rule: 'bibliography-entry-unheaded',
+            severity: 'error',
+            message:
+              'Bibliography entries have no heading in a work that has headings, so they would appear in no section.',
+            // No subjects: this test is about the label and the note, and subjects would
+            // pull in the finding-location lookup that other tests cover.
+            subjects: [],
+            count: 0,
+          },
+        ],
+      }),
+    );
+
+    await renderPanel();
+
+    // The title is the accordion trigger; the note lives in its content, so it only exists
+    // once expanded.
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: /Bibliography entries with no heading/i,
+      }),
+    );
+
+    expect(screen.queryByText('bibliography-entry-unheaded')).toBeNull();
+    expect(
+      screen.getByText(/would be published but shown nowhere/),
+    ).toBeTruthy();
+  });
+
   it('labels warnings as non-blocking and keeps them out of the blocking count', async () => {
     seed(
       readiness({
