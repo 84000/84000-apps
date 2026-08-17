@@ -374,6 +374,16 @@ export interface PublishOptions {
   version?: string;
   notes?: string;
   publishedBy?: string | null;
+  /**
+   * Whether to refresh `glossary_term_index` before validating. Defaults to true.
+   *
+   * Only a caller publishing many works in one pass should set this false, and
+   * only having refreshed once itself: the view is a corpus-wide derivation, so
+   * refreshing it per work is redundant when nothing is being edited between
+   * them. A single publish must leave it true — the snapshot copies the view's
+   * output into an immutable artifact, so a stale read is permanent.
+   */
+  refreshGlossaryIndex?: boolean;
 }
 
 export interface TickResult {

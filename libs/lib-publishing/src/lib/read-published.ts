@@ -62,6 +62,98 @@ export const resolveWork = async ({
   };
 };
 
+export interface PublishedWorkRef extends WorkIdentity {
+  /** The live version's label, or null if its row has gone missing. */
+  version: string | null;
+  /** When the live version was published. The resume guard reads this. */
+  publishedAt: string | null;
+}
+
+/**
+ * Every work with a live published version, newest publish first.
+ *
+ * Two queries joined in memory rather than a PostgREST embed: the pointer's foreign key is
+ * composite (`published_version_uuid, uuid` -> `uuid, work_uuid`), which embedding does not
+ * express cleanly, and both sides are small enough that it is not worth the fragility.
+ *
+ * Throws rather than returning `[]` on error, unlike the data-access convention and like
+ * `readPage` below. An empty list is a meaningful answer here — "nothing is published" — and
+ * a caller cannot tell it apart from a failed query. That distinction is load-bearing: the
+ * bulk driver's resume guard skips works it finds already published, so a swallowed error
+ * would skip nothing and republish everything, and every superfluous version and artifact it
+ * created would be unremovable.
+ */
+export const listPublishedWorks = async ({
+  client,
+}: {
+  client: DataClient;
+}): Promise<PublishedWorkRef[]> => {
+  const works: WorkIdentity[] = [];
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await client
+      .from('works')
+      .select('uuid, toh, title, publicationVersion, published_version_uuid')
+      .not('published_version_uuid', 'is', null)
+      .order('uuid', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(
+        `Failed listing published works: ${JSON.stringify(error)}`,
+      );
+    }
+
+    for (const row of data ?? []) {
+      works.push({
+        uuid: row.uuid,
+        toh: row.toh ?? null,
+        title: row.title ?? null,
+        publicationVersion: row.publicationVersion ?? null,
+        publishedVersionUuid: row.published_version_uuid ?? null,
+      });
+    }
+
+    if ((data?.length ?? 0) < PAGE_SIZE) break;
+  }
+
+  const versions = new Map<string, { version: string; publishedAt: string }>();
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await client
+      .from('work_versions')
+      .select('uuid, version, published_at')
+      .order('uuid', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Failed listing work versions: ${JSON.stringify(error)}`);
+    }
+
+    for (const row of data ?? []) {
+      versions.set(row.uuid, {
+        version: row.version,
+        publishedAt: row.published_at,
+      });
+    }
+
+    if ((data?.length ?? 0) < PAGE_SIZE) break;
+  }
+
+  return works
+    .map((work) => {
+      const live = work.publishedVersionUuid
+        ? versions.get(work.publishedVersionUuid)
+        : undefined;
+      return {
+        ...work,
+        version: live?.version ?? null,
+        publishedAt: live?.publishedAt ?? null,
+      };
+    })
+    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+};
+
 /**
  * Runs the publish validation rules.
  *

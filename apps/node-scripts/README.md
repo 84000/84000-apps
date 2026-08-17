@@ -5,7 +5,7 @@ pipeline entry points.
 
 ## Overview
 
-`publish-work.ts` and `rebuild-published-version.ts` are durable operational commands.
+`publish-works.ts` and `rebuild-published-version.ts` are durable operational commands.
 All logic lives in `libs/lib-publishing`; these are thin wrappers, so the publish UI can
 call the same code path.
 
@@ -47,30 +47,84 @@ npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/<script>.ts
 
 ## Publishing scripts
 
-### publish-work.ts
+### publish-works.ts
 
-Publishes a work: validates draft state, snapshots it into version-scoped `published_*`
-rows inside Postgres, serializes an immutable chunked artifact from those frozen rows, then
-flips `works.published_version_uuid`. The pointer flip is the only commit point, so any
-earlier failure leaves the previously published version live and serving.
+Publishes one or many works: validates draft state, snapshots it into version-scoped
+`published_*` rows inside Postgres, serializes an immutable chunked artifact from those
+frozen rows, then flips `works.published_version_uuid`. The pointer flip is the only commit
+point, so any earlier failure leaves the previously published version live and serving.
 
 ```bash
 # publish, auto-selecting the next patch version
-npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts toh251
 
 # validate only, writing nothing
-npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251 --check
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts toh251 --check
 
 # pin the version label, and record why
-npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-work.ts toh251 \
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts toh251 \
   --version 1.1.0 --notes "Revised chapter 3"
+
+# several works
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts \
+  toh251 toh252 toh253
+
+# a list, optionally with per-work version and notes
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts \
+  --file works.json
+
+# every work that currently has a published version
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts \
+  --all-published --notes "bibliography re-snapshot"
 ```
 
 `--check` runs the same SQL rule set the pipeline gates on, so it is a trustworthy
-pre-flight rather than an approximation.
+pre-flight rather than an approximation. Combined with `--all-published` it validates the
+whole corpus without writing anything, which is worth doing before any bulk run.
 
 Exits non-zero on validation failure, printing every offending entity. Validation has no
 override: unresolved reader-critical references must be fixed in the data, not bypassed.
+
+`--file` takes either a plain list or objects:
+
+```json
+["toh251", "toh252"]
+[{ "work": "toh251", "version": "1.1.0", "notes": "Revised chapter 3" }]
+```
+
+A shared `--version` is refused for more than one work, because version labels are unique
+per work; use the object form instead.
+
+#### Bulk runs
+
+One work failing does not abort the batch — the rest are independent — and the exit code is
+non-zero if any failed, with the failures listed at the end.
+
+A run of more than one work refreshes `glossary_term_index` **once** at the start rather
+than once per work. The publish pipeline refreshes it per publish by default, because the
+snapshot copies that view's output into an immutable artifact and a stale read would be
+permanent; but the view is a corpus-wide derivation and repeating it for every work in a
+pass where nothing is being edited dominates the run.
+
+**Publishing is not idempotent.** Every run creates a new `work_versions` row and a new
+immutable artifact, and neither can be cleanly removed — deleting a version row cascades
+away its snapshot rows and nulls the live pointer. So a batch that dies partway through must
+not simply be re-run:
+
+```bash
+# resume: skip anything whose live version was published at or after this instant,
+# so pass the instant the *failed run* started
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts \
+  --all-published --skip-published-since 2026-08-17T12:00:00Z
+```
+
+The timestamp is the start of the run being resumed, not a date to publish "since" — an
+older timestamp skips *more*, not less, because more works have been published after it.
+
+`--skip-published-since` reads `work_versions.published_at` rather than a progress file, so
+it cannot disagree with reality. It also gets the ambiguous case right: if a work died after
+its pointer flip committed it is skipped, and if it died before, the work is untouched and
+gets republished.
 
 ### Recovery, and why there is no scheduler
 
