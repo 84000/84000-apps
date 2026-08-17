@@ -9,6 +9,7 @@ import { createWorkTitleLoader } from './schema/work/work-title.loader';
 import { createFolioLoader } from './schema/folio/folio.loader';
 import { createBibliographyLabelLoader } from './schema/bibliography/bibliography-label.loader';
 import { createImprintLoader } from './schema/imprint/imprint.loader';
+import { createPublishedVersionLoader } from './schema/work/published-version.loader';
 
 export interface Loaders {
   /**
@@ -72,6 +73,12 @@ export interface Loaders {
    * Batches the per-work imprint RPC into a single query for list results.
    */
   imprintsByWorkToh: ReturnType<typeof createImprintLoader>;
+
+  /**
+   * Load the live version label by version uuid.
+   * Used by Work.publishedVersion, which has only the pointer to work from.
+   */
+  publishedVersionsByUuid: ReturnType<typeof createPublishedVersionLoader>;
 }
 
 /**
@@ -96,5 +103,6 @@ export function createLoaders(
     foliosByUuid: createFolioLoader(supabase),
     bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase, source),
     imprintsByWorkToh: createImprintLoader(supabase),
+    publishedVersionsByUuid: createPublishedVersionLoader(supabase),
   };
 }

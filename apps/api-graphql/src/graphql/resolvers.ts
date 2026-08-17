@@ -36,6 +36,7 @@ import {
 } from './schema/passage/passage.field-resolver';
 import { tocResolver } from './schema/toc/toc.resolver';
 import { titlesResolver } from './schema/work/title.resolver';
+import { publishedVersionResolver } from './schema/work/published-version.resolver';
 import { searchResolver } from './schema/search/search.resolver';
 
 export const resolvers = {
@@ -65,6 +66,7 @@ export const resolvers = {
     toc: tocResolver,
     passages: passagesResolver,
     titles: titlesResolver,
+    publishedVersion: publishedVersionResolver,
     glossary: workGlossaryResolver,
     glossaryTerms: workGlossaryTermsResolver,
     searchGlossaryTerms: searchWorkGlossaryTermsResolver,

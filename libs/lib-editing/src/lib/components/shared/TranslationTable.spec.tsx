@@ -140,6 +140,27 @@ describe('TranslationsTable', () => {
     });
   });
 
+  // The column shows the version being served, from work_versions, not the legacy
+  // works.publicationVersion the publish pipeline never writes.
+  it('shows the live published version, and a dash when there is none', async () => {
+    render(
+      <TooltipProvider>
+        <TranslationsTable
+          works={[
+            work({ title: 'Has a live version', publishedVersion: '2.1.0' }),
+            work({ title: 'Never published', publishedVersion: undefined }),
+          ]}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText('2.1.0')).toBeTruthy();
+    // The legacy value is 1.0.0 on every fixture, so its absence proves the column
+    // switched rather than coincidentally agreeing.
+    expect(screen.queryByText('1.0.0')).toBeNull();
+    expect(screen.getByText('—')).toBeTruthy();
+  });
+
   it('hides unpublished works when the published-only switch is on', async () => {
     renderTable();
     expect(screen.getAllByText('Unpublished').length).toBeGreaterThan(0);

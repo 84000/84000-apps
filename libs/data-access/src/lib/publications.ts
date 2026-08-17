@@ -238,7 +238,8 @@ export const getTranslationMetadataByUuid = async ({
       pages:source_pages,
       restriction,
       breadcrumb,
-      published_version_uuid
+      published_version_uuid,
+      publicationStatus
     `,
     )
     .eq('uuid', uuid)
@@ -309,7 +310,8 @@ export const getTranslationsMetadata = async ({
       pages:source_pages,
       restriction,
       breadcrumb,
-      published_version_uuid
+      published_version_uuid,
+      publicationStatus
     `,
     )
     .not('toh', 'like', 'toh00%');
@@ -348,7 +350,8 @@ export const getWorksPage = async ({
       pages:source_pages,
       restriction,
       breadcrumb,
-      published_version_uuid
+      published_version_uuid,
+      publicationStatus
     `,
       { count: 'exact' },
     )
@@ -404,4 +407,41 @@ export const getWorksPage = async ({
     },
     totalCount: count ?? 0,
   };
+};
+
+/**
+ * The live version label for each of `versionUuids`.
+ *
+ * The label lives on `work_versions`, one join away from the pointer a work carries, so a
+ * list query would otherwise make a round trip per work. Batched for the GraphQL loader.
+ *
+ * Absent from the map means the pointer names a row that is not there. That should not
+ * happen — the pointer is a foreign key — but the caller distinguishes it from "never
+ * published", which is a null pointer and never reaches here.
+ */
+export const getVersionLabelsByUuids = async ({
+  client,
+  versionUuids,
+}: {
+  client: DataClient;
+  versionUuids: readonly string[];
+}): Promise<Map<string, string>> => {
+  const labelsByUuid = new Map<string, string>();
+  if (versionUuids.length === 0) return labelsByUuid;
+
+  const { data, error } = await client
+    .from('work_versions')
+    .select('uuid, version')
+    .in('uuid', versionUuids as string[]);
+
+  if (error) {
+    console.error('Error batch loading version labels:', error);
+    return labelsByUuid;
+  }
+
+  for (const row of data ?? []) {
+    if (row.version) labelsByUuid.set(row.uuid, row.version);
+  }
+
+  return labelsByUuid;
 };

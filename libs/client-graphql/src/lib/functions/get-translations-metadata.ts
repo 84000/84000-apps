@@ -12,6 +12,8 @@ const GET_ALL_WORKS = gql`
         toh
         publicationDate
         publicationVersion
+        publishedVersion
+        publicationStatus
         pages
         restriction
         section

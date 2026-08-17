@@ -26,6 +26,26 @@ type Work {
   Semantic version of the publication (e.g., "1.0.0")
   """
   publicationVersion: String!
+    @deprecated(
+      reason: "Reads works.publicationVersion, which the publish pipeline never writes, so it does not identify the version being served. Use publishedVersion."
+    )
+
+  """
+  The version currently published, from work_versions via works.published_version_uuid.
+
+  Null for a work that has never been published — which is the difference from
+  publicationVersion, a text column that carries a value regardless.
+  """
+  publishedVersion: String
+
+  """
+  Editorial publication status code, e.g. "1", "1.a", "2.h", "3".
+
+  A major segment of "1" means published. This is the authority on publication status —
+  not the version number, and not the presence of a published snapshot, which a public
+  work can lack if it has never been through the versioning pipeline.
+  """
+  publicationStatus: String
 
   """
   Number of source pages

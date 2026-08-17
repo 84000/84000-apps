@@ -56,7 +56,9 @@ export const TranslationStructuredData = async ({
         url: 'https://84000.co',
       },
       datePublished: work.publicationDate?.toISOString().split('T')[0],
-      version: work.publicationVersion,
+      // The version actually being served. publicationVersion is a text column the
+      // publish pipeline never writes, so it can name a version that is not live.
+      version: work.publishedVersion ?? work.publicationVersion,
       numberOfPages: work.pages || undefined,
     },
     {
