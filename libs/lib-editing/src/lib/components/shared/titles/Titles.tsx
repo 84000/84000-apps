@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@eightyfourthousand/design-system';
 import { TitlesCard } from './TitlesCard';
-import { TitleForm } from './TitleForm';
+import { sortTitles, TitleForm } from './TitleForm';
 
 export type TitlesVariant =
   | 'english'
@@ -48,7 +48,7 @@ export const Titles = ({
   onTitlesSaved?: (titles: TitlesData) => void;
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [draft, setDraft] = useState<TitlesData>(titles);
+  const [draft, setDraft] = useState<TitlesData>(() => sortTitles(titles));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
 
@@ -57,7 +57,9 @@ export const Titles = ({
   // stored — without a second render to clear the previous draft.
   const setDialogOpen = (open: boolean) => {
     if (open) {
-      setDraft(titles);
+      // Sorted on the way in: the stored order is arbitrary, so the rows would
+      // otherwise appear in whatever order Postgres returned them.
+      setDraft(sortTitles(titles));
       setError(undefined);
     }
     setIsEditOpen(open);

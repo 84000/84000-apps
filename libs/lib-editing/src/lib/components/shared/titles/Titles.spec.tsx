@@ -47,12 +47,24 @@ const TITLES: TitlesData = [
   },
 ];
 
-// A deliberately jumbled set: no column is already in order, so each sort has
-// something to prove.
+// A deliberately jumbled set, chosen so each of the three columns sorts into a
+// *different* order — otherwise the per-column tests below could all pass on
+// one shared accident.
+//
+//                 title    type (label)      language (label)
+//   u-1           Mango    Tohoku number     English
+//   u-2           Apple    Main title        Tibetan
+//   u-3           Zebra    Other title       Sanskrit (Latin)
+//
+//   by title:     Apple, Mango, Zebra        → u-2, u-1, u-3
+//   by type:      Main title, Other title, Tohoku number
+//                                            → u-2, u-3, u-1
+//   by language:  English, Sanskrit (Latin), Tibetan
+//                                            → u-1, u-3, u-2
 const UNSORTED: TitlesData = [
-  { uuid: 'u-1', title: 'Zebra', language: 'Sa-Ltn', type: 'otherTitle' },
-  { uuid: 'u-2', title: 'Apple', language: 'bo', type: 'toh' },
-  { uuid: 'u-3', title: 'Mango', language: 'en', type: 'mainTitle' },
+  { uuid: 'u-1', title: 'Mango', language: 'en', type: 'toh' },
+  { uuid: 'u-2', title: 'Apple', language: 'bo', type: 'mainTitle' },
+  { uuid: 'u-3', title: 'Zebra', language: 'Sa-Ltn', type: 'otherTitle' },
 ];
 
 // This project does not load jest-dom, so element state is read directly.
@@ -198,36 +210,55 @@ describe('Titles edit dialog', () => {
       ]);
     });
 
-    it('sorts by type in canonical order, not alphabetically by label', async () => {
+    it('opens sorted by type ascending', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      // Main title, Other title, Tohoku number — alphabetical by what the
+      // editor sees, not by the underlying TITLE_TYPES sequence, which would
+      // have put Tohoku number first.
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Apple',
+        'Zebra',
+        'Mango',
+      ]);
+      expect(
+        screen.getByRole('button', {
+          name: 'Sort by type (currently ascending)',
+        }),
+      ).toBeTruthy();
+    });
+
+    it('reverses to descending when the already-active type column is clicked', async () => {
       await openDialog({ titles: UNSORTED });
 
       await sortBy(/^sort by type/i);
 
-      // TITLE_TYPES order is toh, mainTitle, ..., otherTitle — which is not the
-      // order the labels would take alphabetically.
       expect(titleInputs().map((i) => i.value)).toEqual([
-        'Apple',
         'Mango',
         'Zebra',
+        'Apple',
       ]);
     });
 
-    it('sorts by language', async () => {
+    it('sorts by the language label shown in the picker', async () => {
       await openDialog({ titles: UNSORTED });
 
       await sortBy(/^sort by language/i);
 
-      // Language order runs most to least common: en, bo, Bo-Ltn, Sa-Ltn.
+      // English, Sanskrit (Latin), Tibetan — alphabetical by label rather than
+      // by the picker's most-to-least-common ordering, which would have put
+      // Tibetan second.
       expect(titleInputs().map((i) => i.value)).toEqual([
         'Mango',
-        'Apple',
         'Zebra',
+        'Apple',
       ]);
     });
 
     it('reports the active direction in the accessible name', async () => {
       await openDialog({ titles: UNSORTED });
 
+      // Title is not the active column on open, so it carries no state.
       expect(
         screen.getByRole('button', { name: 'Sort by title' }),
       ).toBeTruthy();
@@ -281,7 +312,7 @@ describe('Titles edit dialog', () => {
       const { titles } = mockSaveWorkTitles.mock.calls[0][0];
       const edited = titles.find((t: { uuid: string }) => t.uuid === 'u-2');
       expect(edited.title).toBe('Apricot');
-      expect(titles.find((t: { uuid: string }) => t.uuid === 'u-3').title).toBe(
+      expect(titles.find((t: { uuid: string }) => t.uuid === 'u-1').title).toBe(
         'Mango',
       );
     });

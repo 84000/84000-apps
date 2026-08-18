@@ -84,42 +84,52 @@ export const emptyTitle = (): Title => ({
 /** The columns the row list can be sorted by. */
 export type TitleSortColumn = 'title' | 'type' | 'language';
 
-// Type and language sort by their canonical sequence rather than by label,
-// because alphabetising the labels would scramble an order that carries
-// meaning: 'Long title' < 'Main title' < 'Tohoku number' is not the order these
-// belong in. TITLE_TYPES is the preferred order the reader already renders in,
-// and the language list runs most to least common.
-const TYPE_ORDER = new Map(TITLE_TYPES.map((type, index) => [type, index]));
-const LANGUAGE_ORDER = new Map(
-  TITLE_LANGUAGES.map((language, index) => [language, index]),
-);
+export type TitleSort = { column: TitleSortColumn; direction: 'asc' | 'desc' };
 
-const compareBy = (column: TitleSortColumn, a: Title, b: Title): number => {
+/**
+ * How the rows are ordered when the dialog opens. Grouping by type is what an
+ * editor scanning the list expects, and a default matters here because the
+ * stored order is arbitrary — `get_work_titles` has no `ORDER BY`, and an edited
+ * row moves to the end of the heap, so an unsorted list would put the title you
+ * just changed at the bottom.
+ */
+export const DEFAULT_TITLE_SORT: TitleSort = {
+  column: 'type',
+  direction: 'asc',
+};
+
+// Every column sorts by the text the editor can actually see: the label in the
+// picker, not the underlying enum value. Ordering type by the canonical
+// TITLE_TYPES sequence would put 'Tohoku number' above 'Main title' for reasons
+// invisible in the dialog, which reads as a broken sort. The canonical order
+// still governs the order options appear *within* each picker.
+const displayedValue = (column: TitleSortColumn, title: Title): string => {
   switch (column) {
     case 'type':
-      return (TYPE_ORDER.get(a.type) ?? -1) - (TYPE_ORDER.get(b.type) ?? -1);
+      return TITLE_TYPE_LABELS[title.type] ?? title.type;
     case 'language':
-      return (
-        (LANGUAGE_ORDER.get(a.language) ?? -1) -
-        (LANGUAGE_ORDER.get(b.language) ?? -1)
-      );
+      return TITLE_LANGUAGE_LABELS[title.language] ?? title.language;
     case 'title':
     default:
-      return a.title.localeCompare(b.title);
+      return title.title;
   }
 };
 
+const compareBy = (column: TitleSortColumn, a: Title, b: Title): number =>
+  displayedValue(column, a).localeCompare(displayedValue(column, b));
+
 /**
- * Order titles by one column, falling back through the remaining ones so the
- * result is total and therefore stable across repeated sorts.
+ * Order titles by one column — comparing the text shown in that column —
+ * falling back through the remaining ones so the result is total and therefore
+ * stable across repeated sorts.
  *
  * Row order is presentation only: nothing persists it, and the save diffs by
  * UUID, so reordering never changes what is written.
  */
 export const sortTitles = (
   titles: Titles,
-  column: TitleSortColumn = 'type',
-  direction: 'asc' | 'desc' = 'asc',
+  column: TitleSortColumn = DEFAULT_TITLE_SORT.column,
+  direction: 'asc' | 'desc' = DEFAULT_TITLE_SORT.direction,
 ): Titles => {
   const factor = direction === 'asc' ? 1 : -1;
   return [...titles].sort(
@@ -132,8 +142,6 @@ export const sortTitles = (
       compareBy('title', a, b),
   );
 };
-
-type TitleSort = { column: TitleSortColumn; direction: 'asc' | 'desc' };
 
 /**
  * A clickable column heading that sorts the row list.
@@ -155,12 +163,12 @@ const SortHeader = ({
 }: {
   column: TitleSortColumn;
   label: string;
-  sort: TitleSort | null;
+  sort: TitleSort;
   disabled?: boolean;
   onSort: (column: TitleSortColumn) => void;
   className?: string;
 }) => {
-  const active = sort?.column === column;
+  const active = sort.column === column;
   const state = active
     ? ` (currently ${sort.direction === 'asc' ? 'ascending' : 'descending'})`
     : '';
@@ -208,7 +216,7 @@ export const TitleForm = ({
   disabled?: boolean;
   onChange: (titles: Titles) => void;
 }) => {
-  const [sort, setSort] = useState<TitleSort | null>(null);
+  const [sort, setSort] = useState<TitleSort>(DEFAULT_TITLE_SORT);
 
   const replaceAt = (index: number, changes: Partial<Title>) => {
     onChange(
@@ -229,7 +237,7 @@ export const TitleForm = ({
   // type: a row that moved mid-edit would take the cursor with it.
   const sortBy = (column: TitleSortColumn) => {
     const direction =
-      sort?.column === column && sort.direction === 'asc' ? 'desc' : 'asc';
+      sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc';
     setSort({ column, direction });
     onChange(sortTitles(titles, column, direction));
   };
