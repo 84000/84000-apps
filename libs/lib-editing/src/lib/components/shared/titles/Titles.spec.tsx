@@ -67,6 +67,28 @@ const UNSORTED: TitlesData = [
   { uuid: 'u-3', title: 'Zebra', language: 'Sa-Ltn', type: 'otherTitle' },
 ];
 
+// This suite mounts a dialog whose every row carries three Radix Selects, and
+// it runs roughly four times slower in CI than locally (6s here, 26s there).
+// The default 5s per-test budget is not enough headroom, and a test that times
+// out leaves its async work running to contaminate the next one.
+jest.setTimeout(20000);
+
+/**
+ * Retype a title's text.
+ *
+ * Real keystrokes, because the design-system Input debounces its onChange and a
+ * single synthetic change event never reaches the caller's draft — the value
+ * lands in the DOM and goes no further. Each keystroke costs a render of the
+ * whole dialog, so the strings here are kept short; the assertions are about
+ * what a save writes, and a longer title proved nothing extra.
+ */
+const setText = async (input: HTMLInputElement, text: string) => {
+  await userEvent.clear(input);
+  if (text) {
+    await userEvent.type(input, text);
+  }
+};
+
 // This project does not load jest-dom, so element state is read directly.
 const saveButton = () =>
   screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
@@ -118,8 +140,7 @@ describe('Titles edit dialog', () => {
   it('updates an existing title', async () => {
     const { onTitlesSaved } = await openDialog();
 
-    await userEvent.clear(titleInputs()[0]);
-    await userEvent.type(titleInputs()[0], 'The Noble Perfection of Wisdom');
+    await setText(titleInputs()[0], 'Renamed');
     await userEvent.click(saveButton());
 
     await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
@@ -128,7 +149,7 @@ describe('Titles edit dialog', () => {
     expect(original).toEqual(TITLES);
     expect(titles[0]).toEqual({
       uuid: 'title-1',
-      title: 'The Noble Perfection of Wisdom',
+      title: 'Renamed',
       language: 'en',
       type: 'mainTitle',
     });
@@ -141,14 +162,14 @@ describe('Titles edit dialog', () => {
     await userEvent.click(screen.getByRole('button', { name: /add title/i }));
     expect(titleInputs()).toHaveLength(3);
 
-    await userEvent.type(titleInputs()[2], 'Prajñāpāramitā');
+    await setText(titleInputs()[2], 'Prajna');
     await userEvent.click(saveButton());
 
     await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
     const { titles } = mockSaveWorkTitles.mock.calls[0][0];
     expect(titles).toHaveLength(3);
     expect(titles[2]).toMatchObject({
-      title: 'Prajñāpāramitā',
+      title: 'Prajna',
       type: 'mainTitle',
       language: 'en',
     });
@@ -260,8 +281,7 @@ describe('Titles edit dialog', () => {
       await openDialog({ titles: ATTESTED });
 
       const row = rowOf('Reconstructed one');
-      await userEvent.clear(titleInputs()[row]);
-      await userEvent.type(titleInputs()[row], 'Reconstructed one, renamed');
+      await setText(titleInputs()[row], 'Renamed');
       await userEvent.click(saveButton());
 
       await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
@@ -402,8 +422,7 @@ describe('Titles edit dialog', () => {
       await sortBy(/^sort by title/i);
       // Rows are edited by index, so a sort that moved only the view would send
       // this keystroke to the wrong title.
-      await userEvent.clear(titleInputs()[0]);
-      await userEvent.type(titleInputs()[0], 'Apricot');
+      await setText(titleInputs()[0], 'Apricot');
       await userEvent.click(saveButton());
 
       await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
@@ -431,7 +450,7 @@ describe('Titles edit dialog', () => {
   it('refuses to save a blank title and keeps the dialog open', async () => {
     await openDialog();
 
-    await userEvent.clear(titleInputs()[0]);
+    await setText(titleInputs()[0], '');
     await userEvent.click(saveButton());
 
     expect(await screen.findByRole('alert')).toBeTruthy();
@@ -448,8 +467,7 @@ describe('Titles edit dialog', () => {
     });
     const { onTitlesSaved } = await openDialog();
 
-    await userEvent.clear(titleInputs()[0]);
-    await userEvent.type(titleInputs()[0], 'Renamed');
+    await setText(titleInputs()[0], 'Renamed');
     await userEvent.click(saveButton());
 
     const alert = await screen.findByRole('alert');
@@ -461,8 +479,7 @@ describe('Titles edit dialog', () => {
   it('discards edits when the dialog is cancelled', async () => {
     await openDialog();
 
-    await userEvent.clear(titleInputs()[0]);
-    await userEvent.type(titleInputs()[0], 'Discarded');
+    await setText(titleInputs()[0], 'Discarded');
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
