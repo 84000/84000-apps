@@ -35,9 +35,7 @@ const createMockClient = (resultsByTable: Record<string, QueryResult>) => {
         }),
         limit: jest.fn(() => builder),
         maybeSingle: jest.fn(() =>
-          Promise.resolve(
-            resultsByTable[table] ?? { data: null, error: null },
-          ),
+          Promise.resolve(resultsByTable[table] ?? { data: null, error: null }),
         ),
       };
       return builder;
@@ -62,9 +60,9 @@ const indexRow = {
 };
 
 describe('getGlossaryInstance', () => {
-  it('returns the mapped instance on a direct index hit without touching glossary_edges', async () => {
+  it('returns the mapped instance on a direct index hit', async () => {
     const { client, fromCalls, eqCalls } = createMockClient({
-      glossary_term_index: { data: indexRow, error: null },
+      published_glossaries_live: { data: indexRow, error: null },
     });
 
     const result = await getGlossaryInstance({ client, uuid: 'parent-uuid' });
@@ -86,9 +84,9 @@ describe('getGlossaryInstance', () => {
       },
     });
 
-    expect(fromCalls).toEqual(['glossary_term_index']);
+    expect(fromCalls).toEqual(['published_glossaries_live']);
     expect(eqCalls).toContainEqual({
-      table: 'glossary_term_index',
+      table: 'published_glossaries_live',
       column: 'glossary_uuid',
       value: 'parent-uuid',
     });
