@@ -15,6 +15,7 @@ export * from './lib/publications';
 export * from './lib/replace';
 export * from './lib/search';
 export * from './lib/storage';
+export * from './lib/titles';
 export * from './lib/types';
 export * from './lib/local-storage';
 export * from './lib/use-bookmark';
