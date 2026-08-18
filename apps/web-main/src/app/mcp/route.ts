@@ -1,8 +1,6 @@
 import {
   MCP_CORS_HEADERS,
   corsPreflightResponse,
-  createAgentPrompts,
-  createAgentTools,
   createMcpHandler,
   createReadTools,
   createWriteTools,
@@ -59,14 +57,11 @@ export async function POST(req: Request) {
   const tools = [
     ...createReadTools(auth.client),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
-    ...createAgentTools(auth.role),
   ];
-  const prompts = createAgentPrompts(auth.role);
   const handler = createMcpHandler({
     description,
     instructions,
     tools,
-    prompts,
   });
   return withCorsHeaders(await handler.POST(req));
 }
