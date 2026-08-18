@@ -15,7 +15,7 @@
  * at each call site also lets the cross-work reads express it at all — PostgREST
  * cannot compare two columns.
  *
- * Every default funnels through DEFAULT_CONTENT_SOURCE, which is `draft`, so
+ * Every default funnels through DEFAULT_CONTENT_SOURCE, which is `published`, so
  * adding this changes no caller's behaviour. A surface reads the published
  * snapshot only by declaring so.
  */
@@ -24,12 +24,11 @@ export const CONTENT_SOURCES = ['draft', 'published'] as const;
 export type ContentSource = (typeof CONTENT_SOURCES)[number];
 
 /**
- * What a caller gets when it does not choose: the draft tables, which is what
- * every read did before there was a choice. Every default in this module funnels
- * through here, so switching a surface to the published snapshot is a deliberate
+ * What a caller gets when it does not choose. Every default in this module funnels
+ * through here, so switching a surface to a different snapshot is a deliberate
  * act at that surface rather than a side effect of this constant.
  */
-export const DEFAULT_CONTENT_SOURCE: ContentSource = 'draft';
+export const DEFAULT_CONTENT_SOURCE: ContentSource = 'published';
 
 /**
  * The header carrying the source across an API boundary.
@@ -46,14 +45,6 @@ export const CONTENT_SOURCE_HEADER = 'x-84000-content-source';
  * How an app declares which copy it serves. Set in `next.config.js` rather than
  * an env file so it is version-controlled and visible in review.
  *
- * An app that declares nothing gets DEFAULT_CONTENT_SOURCE, which is `draft` —
- * what every app reads today — so adding this machinery changes no behaviour on
- * its own. Each surface opts into `published` explicitly when it is ready, which
- * makes the reader switch a one-line change that can be reverted on its own.
- *
- * The cost of that choice: a *new* public surface that forgets to declare gets
- * draft, so anything reader-facing must declare `published` deliberately rather
- * than inherit it.
  */
 export const CONTENT_SOURCE_ENV_VAR = 'NEXT_PUBLIC_CONTENT_SOURCE';
 
@@ -143,17 +134,12 @@ export const rpcFor = (
 /**
  * Passage columns to select, per source.
  *
- * The published snapshot is UUID-only by design — DEV-557 gave `published_passages`
+ * The published snapshot is UUID-only by design — `published_passages` have
  * no `xmlId` column — so selecting it there would error. Published passages
  * therefore surface `xmlId` as null. Nothing in the reader render path reads it;
  * hash deep links resolve through `lookup()`, which keys xmlIds against the draft
  * tables and returns a UUID that is stable across both copies.
  */
-// Callers pass the result to `.select<string, RowDTO>(...)`, declaring the row
-// type explicitly: supabase-js normally infers it by parsing the select string at
-// the type level, which a value chosen at runtime defeats. Nothing is lost —
-// DataClient is an untyped SupabaseClient, so that parse checks the string's shape
-// rather than the actual schema, and every call site already casts to a DTO.
 export const passageColumnsFor = (
   source: ContentSource = DEFAULT_CONTENT_SOURCE,
 ): string =>
