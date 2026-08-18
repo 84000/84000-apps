@@ -3,33 +3,65 @@
 import { useState } from 'react';
 import {
   BO_TITLE_PREFIX,
+  createBrowserClient,
   Imprint,
+  saveWorkTitles,
   Titles as TitlesData,
   TitleType,
 } from '@eightyfourthousand/data-access';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogTitle,
 } from '@eightyfourthousand/design-system';
 import { TitlesCard } from './TitlesCard';
 import { TitleForm } from './TitleForm';
 
-export type TitlesVariant = 'english' | 'tibetan' | 'comparison' | 'front' | 'other';
+export type TitlesVariant =
+  | 'english'
+  | 'tibetan'
+  | 'comparison'
+  | 'front'
+  | 'other';
 
 export const Titles = ({
   titles,
   variant = 'english',
   imprint,
   canEdit = false,
+  workUuid,
+  onTitlesSaved,
 }: {
   titles: TitlesData;
   imprint?: Imprint;
   variant?: TitlesVariant;
   canEdit?: boolean;
+  /**
+   * The work the titles belong to. Required to save; without it the dialog
+   * opens read-only, since a new title cannot be attached to anything.
+   */
+  workUuid?: string;
+  /** Called with the saved titles so the surrounding page can re-render. */
+  onTitlesSaved?: (titles: TitlesData) => void;
 }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [draft, setDraft] = useState<TitlesData>(titles);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  // Seed the draft on open rather than in an effect, so a cancelled edit is
+  // really discarded and a reopened dialog starts from what is currently
+  // stored — without a second render to clear the previous draft.
+  const setDialogOpen = (open: boolean) => {
+    if (open) {
+      setDraft(titles);
+      setError(undefined);
+    }
+    setIsEditOpen(open);
+  };
 
   const titlesByType = titles.reduce(
     (acc, title) => {
@@ -94,6 +126,48 @@ export const Titles = ({
       break;
   }
 
+  const save = async () => {
+    if (!workUuid) {
+      setError('Cannot save titles: no work is associated with this view.');
+      return;
+    }
+
+    const cleaned = draft.map((title) => ({
+      ...title,
+      title: title.title.trim(),
+    }));
+    if (cleaned.some((title) => !title.title)) {
+      setError('Every title needs text. Remove any blank rows before saving.');
+      return;
+    }
+
+    setSaving(true);
+    setError(undefined);
+
+    const result = await saveWorkTitles({
+      client: createBrowserClient(),
+      workUuid,
+      titles: cleaned,
+      original: titles,
+    });
+
+    setSaving(false);
+
+    if (result.error) {
+      // The writes are not atomic, so some may have landed. Report what did
+      // and leave the dialog open rather than implying nothing changed.
+      const applied =
+        result.inserted + result.updated + result.deleted > 0
+          ? ' Some changes were applied; reload before trying again.'
+          : '';
+      setError(`Failed to save titles: ${result.error}.${applied}`);
+      return;
+    }
+
+    onTitlesSaved?.(cleaned);
+    setDialogOpen(false);
+  };
+
   return (
     <>
       <TitlesCard
@@ -106,18 +180,36 @@ export const Titles = ({
         attribution={imprint?.isAuthorContested ? 'attributed to' : 'by'}
         authorsJoiner={imprint?.isAuthorContested ? ' or' : ','}
         canEdit={canEdit}
-        onEdit={() => setIsEditOpen(true)}
+        onEdit={() => setDialogOpen(true)}
       />
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+      <Dialog open={isEditOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-4xl" showCloseButton={false}>
-          <DialogTitle className="hidden">Edit Titles</DialogTitle>
-          <DialogDescription className="hidden">Edit Titles</DialogDescription>
-          <TitleForm
-            titles={titles}
-            onChange={(title) => {
-              console.log('TODO: save title', title);
-            }}
-          />
+          <DialogTitle>Edit titles</DialogTitle>
+          <DialogDescription>
+            Titles are global to this work and go live as soon as they are
+            saved. They are not part of the publishing workflow.
+          </DialogDescription>
+          <div className="max-h-[60vh] overflow-y-auto px-1">
+            <TitleForm titles={draft} disabled={saving} onChange={setDraft} />
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" disabled={saving} onClick={save}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

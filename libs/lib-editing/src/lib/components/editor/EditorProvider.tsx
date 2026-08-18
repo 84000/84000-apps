@@ -40,6 +40,12 @@ interface EditorContextState {
   work: Work;
   dirtyStore: DirtyStore;
   canEdit(): Promise<boolean>;
+  /**
+   * Whether the user may make administrative changes to the work — those that
+   * bypass the publishing workflow and go live immediately, such as editing
+   * titles. A stricter bar than `canEdit`.
+   */
+  canAdminister(): Promise<boolean>;
   applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
@@ -80,6 +86,7 @@ export const EditorContext = createContext<EditorContextState>({
     getSnapshot: () => false,
   },
   canEdit: async () => false,
+  canAdminister: async () => false,
   applyReplacedPassages: async () => {
     // No-op when outside provider
   },
@@ -353,6 +360,10 @@ export const EditorContextProvider = ({
 
   const canEdit = useCallback(async () => {
     return await hasPermission({ client, permission: 'EDITOR_EDIT' });
+  }, [client]);
+
+  const canAdminister = useCallback(async () => {
+    return await hasPermission({ client, permission: 'EDITOR_ADMIN' });
   }, [client]);
 
   const applyReplacedPassages = useCallback(
@@ -629,6 +640,7 @@ export const EditorContextProvider = ({
         doc,
         dirtyStore,
         canEdit,
+        canAdminister,
         applyReplacedPassages,
         getFragment,
         setDoc,
