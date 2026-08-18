@@ -10,8 +10,10 @@ import {
 } from 'lucide-react';
 import {
   type ExtendedTranslationLanguage,
+  TITLE_ATTESTATIONS,
   TITLE_TYPES,
   type Title,
+  type TitleAttestation,
   type Titles,
   type TitleType,
 } from '@eightyfourthousand/data-access';
@@ -64,6 +66,24 @@ const TITLE_LANGUAGES = Object.keys(
 ) as ExtendedTranslationLanguage[];
 
 /**
+ * Labels for the attestation values. The absent case is a real choice in the
+ * picker rather than a blank, so an editor can clear one deliberately.
+ */
+export const TITLE_ATTESTATION_LABELS: Record<TitleAttestation, string> = {
+  reconstructedPhonetic: 'Reconstructed phonetic',
+  reconstructedSemantic: 'Reconstructed semantic',
+};
+
+export const NO_ATTESTATION_LABEL = 'None' as const;
+
+/**
+ * Radix's Select cannot hold an empty string as a value, so the absent case
+ * travels through the picker under this sentinel and is mapped back to
+ * `undefined` on the way out.
+ */
+const NO_ATTESTATION = '__none__' as const;
+
+/**
  * The default shape of a title added from an empty row: the type and language
  * that between them account for most of the corpus.
  */
@@ -82,7 +102,7 @@ export const emptyTitle = (): Title => ({
 });
 
 /** The columns the row list can be sorted by. */
-export type TitleSortColumn = 'title' | 'type' | 'language';
+export type TitleSortColumn = 'title' | 'type' | 'language' | 'attestation';
 
 export type TitleSort = { column: TitleSortColumn; direction: 'asc' | 'desc' };
 
@@ -109,6 +129,10 @@ const displayedValue = (column: TitleSortColumn, title: Title): string => {
       return TITLE_TYPE_LABELS[title.type] ?? title.type;
     case 'language':
       return TITLE_LANGUAGE_LABELS[title.language] ?? title.language;
+    case 'attestation':
+      return title.attestation
+        ? TITLE_ATTESTATION_LABELS[title.attestation]
+        : NO_ATTESTATION_LABEL;
     case 'title':
     default:
       return title.title;
@@ -139,7 +163,8 @@ export const sortTitles = (
       factor * compareBy(column, a, b) ||
       compareBy('type', a, b) ||
       compareBy('language', a, b) ||
-      compareBy('title', a, b),
+      compareBy('title', a, b) ||
+      compareBy('attestation', a, b),
   );
 };
 
@@ -259,7 +284,7 @@ export const TitleForm = ({
           sort={sort}
           disabled={disabled}
           onSort={sortBy}
-          className="w-56 shrink-0"
+          className="w-52 shrink-0"
         />
         <SortHeader
           column="language"
@@ -267,7 +292,15 @@ export const TitleForm = ({
           sort={sort}
           disabled={disabled}
           onSort={sortBy}
-          className="w-44 shrink-0"
+          className="w-40 shrink-0"
+        />
+        <SortHeader
+          column="attestation"
+          label="Attestation"
+          sort={sort}
+          disabled={disabled}
+          onSort={sortBy}
+          className="w-52 shrink-0"
         />
         <span className="w-9 shrink-0" />
       </div>
@@ -298,7 +331,7 @@ export const TitleForm = ({
             />
           </div>
 
-          <div className="w-full shrink-0 sm:w-56">
+          <div className="w-full shrink-0 sm:w-52">
             <Label className="sr-only" htmlFor={`title-type-${title.uuid}`}>
               Type
             </Label>
@@ -322,7 +355,7 @@ export const TitleForm = ({
             </Select>
           </div>
 
-          <div className="w-full shrink-0 sm:w-44">
+          <div className="w-full shrink-0 sm:w-40">
             <Label className="sr-only" htmlFor={`title-language-${title.uuid}`}>
               Language
             </Label>
@@ -345,6 +378,44 @@ export const TitleForm = ({
                 {TITLE_LANGUAGES.map((language) => (
                   <SelectItem key={language} value={language}>
                     {TITLE_LANGUAGE_LABELS[language]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full shrink-0 sm:w-52">
+            <Label
+              className="sr-only"
+              htmlFor={`title-attestation-${title.uuid}`}
+            >
+              Attestation
+            </Label>
+            <Select
+              value={title.attestation ?? NO_ATTESTATION}
+              disabled={disabled}
+              onValueChange={(value) =>
+                replaceAt(index, {
+                  attestation:
+                    value === NO_ATTESTATION
+                      ? undefined
+                      : (value as TitleAttestation),
+                })
+              }
+            >
+              <SelectTrigger
+                id={`title-attestation-${title.uuid}`}
+                className="w-full"
+              >
+                <SelectValue placeholder={NO_ATTESTATION_LABEL} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_ATTESTATION}>
+                  {NO_ATTESTATION_LABEL}
+                </SelectItem>
+                {TITLE_ATTESTATIONS.map((attestation) => (
+                  <SelectItem key={attestation} value={attestation}>
+                    {TITLE_ATTESTATION_LABELS[attestation]}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -132,6 +132,7 @@ describe('saveWorkTitles', () => {
             content: 'Toh 12',
             type: 'eft:toh',
             language: 'en',
+            attestation: null,
           },
         ],
       },
@@ -159,6 +160,7 @@ describe('saveWorkTitles', () => {
           content: 'The Noble Perfection of Wisdom',
           type: 'eft:mainTitle',
           language: 'en',
+          attestation: null,
         },
       },
     ]);
@@ -214,6 +216,91 @@ describe('saveWorkTitles', () => {
     expect(calls.inserts[0].rows[0]).toMatchObject({ uuid: 'title-3' });
     expect(calls.updates[0]).toMatchObject({ uuid: 'title-1' });
     expect(calls.deletes[0]).toEqual({ uuids: ['title-2'] });
+  });
+
+  it('carries attestation on an inserted title', async () => {
+    const calls = emptyCalls();
+    const existing = title();
+
+    await saveWorkTitles({
+      client: makeFakeClient(calls),
+      workUuid: 'work-1',
+      titles: [
+        existing,
+        title({
+          uuid: 'title-2',
+          title: 'Praj\u00f1\u0101p\u0101ramit\u0101',
+          attestation: 'reconstructedPhonetic',
+        }),
+      ],
+      original: [existing],
+    });
+
+    expect(calls.inserts[0].rows[0]).toMatchObject({
+      attestation: 'reconstructedPhonetic',
+    });
+  });
+
+  it('writes null for a title with no attestation', async () => {
+    const calls = emptyCalls();
+
+    await saveWorkTitles({
+      client: makeFakeClient(calls),
+      workUuid: 'work-1',
+      titles: [title({ uuid: 'title-2' })],
+      original: [],
+    });
+
+    expect(calls.inserts[0].rows[0]).toMatchObject({ attestation: null });
+  });
+
+  it('updates a title whose attestation changed', async () => {
+    const calls = emptyCalls();
+    const original = title();
+
+    const result = await saveWorkTitles({
+      client: makeFakeClient(calls),
+      workUuid: 'work-1',
+      titles: [title({ attestation: 'reconstructedSemantic' })],
+      original: [original],
+    });
+
+    expect(result.updated).toBe(1);
+    expect(calls.updates[0].patch).toMatchObject({
+      attestation: 'reconstructedSemantic',
+    });
+  });
+
+  it('clears an attestation by writing null', async () => {
+    const calls = emptyCalls();
+    const original = title({ attestation: 'reconstructedPhonetic' });
+
+    const result = await saveWorkTitles({
+      client: makeFakeClient(calls),
+      workUuid: 'work-1',
+      titles: [title()],
+      original: [original],
+    });
+
+    expect(result.updated).toBe(1);
+    expect(calls.updates[0].patch).toMatchObject({ attestation: null });
+  });
+
+  it('does not treat absent and null attestation as a change', async () => {
+    const calls = emptyCalls();
+    // A row read back from the database can carry an explicit null where the
+    // domain type simply omits the field; that must not look like an edit.
+    const original = { ...title(), attestation: undefined };
+
+    const result = await saveWorkTitles({
+      client: makeFakeClient(calls),
+      workUuid: 'work-1',
+      titles: [title()],
+      original: [original],
+    });
+
+    expect(result).toEqual({ inserted: 0, updated: 0, deleted: 0 });
+    expect(calls.updates).toEqual([]);
   });
 
   it('reports the error and stops when a write is rejected', async () => {

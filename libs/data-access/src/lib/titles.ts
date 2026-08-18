@@ -25,7 +25,12 @@ const byUuid = (titles: Titles) =>
   new Map(titles.map((title) => [title.uuid, title]));
 
 const isSameTitle = (a: Title, b: Title) =>
-  a.title === b.title && a.type === b.type && a.language === b.language;
+  a.title === b.title &&
+  a.type === b.type &&
+  a.language === b.language &&
+  // Absent and null are the same state; normalise so a round trip through the
+  // database does not read as an edit.
+  (a.attestation ?? null) === (b.attestation ?? null);
 
 /**
  * Persist an edited set of titles for a work.
@@ -66,6 +71,7 @@ export const saveWorkTitles = async ({
       content: title.title,
       type: titleTypeToDTO(title.type),
       language: title.language,
+      attestation: title.attestation ?? null,
     }));
 
   const toUpdate = titles.filter((title) => {
@@ -100,6 +106,7 @@ export const saveWorkTitles = async ({
         content: title.title,
         type: titleTypeToDTO(title.type),
         language: title.language,
+        attestation: title.attestation ?? null,
       })
       .eq('uuid', title.uuid)
       .select('uuid');

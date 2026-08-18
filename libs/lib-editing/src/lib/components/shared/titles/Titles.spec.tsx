@@ -176,9 +176,9 @@ describe('Titles edit dialog', () => {
   it('changes a title type', async () => {
     await openDialog();
 
-    // Each row contributes a type picker then a language picker, so the second
-    // row's type picker is the third combobox.
-    const typePickerForSecondRow = screen.getAllByRole('combobox')[2];
+    // Each row contributes type, language, then attestation pickers, so the
+    // second row's type picker is the fourth combobox.
+    const typePickerForSecondRow = screen.getAllByRole('combobox')[3];
     await userEvent.click(typePickerForSecondRow);
     await userEvent.click(screen.getByRole('option', { name: 'Short code' }));
     await userEvent.click(saveButton());
@@ -186,6 +186,104 @@ describe('Titles edit dialog', () => {
     await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
     const { titles } = mockSaveWorkTitles.mock.calls[0][0];
     expect(titles[1].type).toBe('shortcode');
+  });
+
+  describe('attestation', () => {
+    const ATTESTED: TitlesData = [
+      {
+        uuid: 'a-1',
+        title: 'Reconstructed one',
+        language: 'Sa-Ltn',
+        type: 'mainTitle',
+        attestation: 'reconstructedPhonetic',
+      },
+      {
+        uuid: 'a-2',
+        title: 'Plain one',
+        language: 'en',
+        type: 'mainTitle',
+      },
+    ];
+
+    // Rows open in the default type-ascending order, and these two share a
+    // type, so the language tie-breaker decides which comes first. Locate rows
+    // by their text rather than assuming a position.
+    const rowOf = (text: string) =>
+      titleInputs().findIndex((input) => input.value === text);
+
+    // Each row contributes type, language, then attestation pickers.
+    const attestationPicker = (row: number) =>
+      screen.getAllByRole('combobox')[row * 3 + 2];
+
+    it('shows the stored attestation, and Directly attested when there is none', async () => {
+      await openDialog({ titles: ATTESTED });
+
+      expect(
+        attestationPicker(rowOf('Reconstructed one')).textContent,
+      ).toContain('Reconstructed phonetic');
+      expect(attestationPicker(rowOf('Plain one')).textContent).toContain(
+        'None',
+      );
+    });
+
+    it('sets an attestation on a title that had none', async () => {
+      await openDialog({ titles: ATTESTED });
+
+      await userEvent.click(attestationPicker(rowOf('Plain one')));
+      await userEvent.click(
+        screen.getByRole('option', { name: 'Reconstructed semantic' }),
+      );
+      await userEvent.click(saveButton());
+
+      await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
+      const { titles } = mockSaveWorkTitles.mock.calls[0][0];
+      expect(
+        titles.find((t: { uuid: string }) => t.uuid === 'a-2').attestation,
+      ).toBe('reconstructedSemantic');
+    });
+
+    it('clears an attestation back to undefined rather than a sentinel', async () => {
+      await openDialog({ titles: ATTESTED });
+
+      await userEvent.click(attestationPicker(rowOf('Reconstructed one')));
+      await userEvent.click(screen.getByRole('option', { name: 'None' }));
+      await userEvent.click(saveButton());
+
+      await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
+      const { titles } = mockSaveWorkTitles.mock.calls[0][0];
+      const cleared = titles.find((t: { uuid: string }) => t.uuid === 'a-1');
+      // The picker's placeholder value must never reach the database.
+      expect(cleared.attestation).toBeUndefined();
+    });
+
+    it('leaves attestation alone when only the title text is edited', async () => {
+      await openDialog({ titles: ATTESTED });
+
+      const row = rowOf('Reconstructed one');
+      await userEvent.clear(titleInputs()[row]);
+      await userEvent.type(titleInputs()[row], 'Reconstructed one, renamed');
+      await userEvent.click(saveButton());
+
+      await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
+      const { titles } = mockSaveWorkTitles.mock.calls[0][0];
+      expect(
+        titles.find((t: { uuid: string }) => t.uuid === 'a-1').attestation,
+      ).toBe('reconstructedPhonetic');
+    });
+
+    it('sorts by attestation label', async () => {
+      await openDialog({ titles: ATTESTED });
+
+      await userEvent.click(
+        screen.getByRole('button', { name: /^sort by attestation/i }),
+      );
+
+      // None, then Reconstructed phonetic.
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Plain one',
+        'Reconstructed one',
+      ]);
+    });
   });
 
   describe('column sorting', () => {

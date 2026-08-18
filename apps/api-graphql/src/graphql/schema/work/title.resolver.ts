@@ -7,6 +7,7 @@ type TitleResult = {
   content: string;
   language: string;
   type: string;
+  attestation: string | null;
 };
 
 export const titlesResolver = async (
@@ -14,11 +15,15 @@ export const titlesResolver = async (
   _args: Record<string, never>,
   ctx: GraphQLContext,
 ): Promise<TitleResult[]> => {
-  const titles = await getWorkTitles({ client: ctx.supabase, uuid: parent.uuid });
+  const titles = await getWorkTitles({
+    client: ctx.supabase,
+    uuid: parent.uuid,
+  });
   return titles.map((title) => ({
     uuid: title.uuid,
     content: title.title,
     language: title.language,
     type: title.type,
+    attestation: title.attestation ?? null,
   }));
 };

@@ -21,6 +21,12 @@ type Title {
   Type of title (e.g., "mainTitle", "longTitle", "otherTitle", "toh", "shortcode")
   """
   type: String!
+
+  """
+  How the wording is attested ("reconstructedPhonetic" or
+  "reconstructedSemantic"). Null when the title is directly attested.
+  """
+  attestation: String
 }
 
 extend type Work {

@@ -185,7 +185,7 @@ export const Titles = ({
         onEdit={() => setDialogOpen(true)}
       />
       <Dialog open={isEditOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl" showCloseButton={false}>
+        <DialogContent className="max-w-6xl" showCloseButton={false}>
           <DialogTitle>Edit titles</DialogTitle>
           <DialogDescription>
             Titles are global to this work and go live as soon as they are

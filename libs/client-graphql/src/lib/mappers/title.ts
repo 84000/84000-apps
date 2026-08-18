@@ -1,8 +1,10 @@
-import type {
-  Title,
-  Titles,
-  TitleType,
-  ExtendedTranslationLanguage,
+import {
+  TITLE_ATTESTATIONS,
+  type Title,
+  type TitleAttestation,
+  type Titles,
+  type TitleType,
+  type ExtendedTranslationLanguage,
 } from '@eightyfourthousand/data-access';
 
 /**
@@ -13,17 +15,25 @@ export type GraphQLTitle = {
   content: string;
   language: string;
   type: string;
+  attestation?: string | null;
 };
 
 /**
  * Convert a GraphQL title to the internal Title type
  */
 export function titleFromGraphQL(gqlTitle: GraphQLTitle): Title {
+  const attestation = (TITLE_ATTESTATIONS as readonly string[]).includes(
+    gqlTitle.attestation ?? '',
+  )
+    ? (gqlTitle.attestation as TitleAttestation)
+    : undefined;
+
   return {
     uuid: gqlTitle.uuid,
     title: gqlTitle.content,
     language: gqlTitle.language as ExtendedTranslationLanguage,
     type: gqlTitle.type as TitleType,
+    ...(attestation ? { attestation } : {}),
   };
 }
 

@@ -11,6 +11,7 @@ const GET_WORK_TITLES = gql`
         content
         language
         type
+        attestation
       }
     }
   }
@@ -23,6 +24,7 @@ type GetWorkTitlesResponse = {
       content: string;
       language: string;
       type: string;
+      attestation: string | null;
     }>;
   } | null;
 };
