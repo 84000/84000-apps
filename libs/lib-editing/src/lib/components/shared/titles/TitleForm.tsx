@@ -1,6 +1,13 @@
 'use client';
 
-import { PlusIcon, Trash2Icon } from 'lucide-react';
+import { useState } from 'react';
+import {
+  ArrowDownIcon,
+  ArrowUpDownIcon,
+  ArrowUpIcon,
+  PlusIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import {
   type ExtendedTranslationLanguage,
   TITLE_TYPES,
@@ -74,6 +81,116 @@ export const emptyTitle = (): Title => ({
   language: NEW_TITLE_LANGUAGE,
 });
 
+/** The columns the row list can be sorted by. */
+export type TitleSortColumn = 'title' | 'type' | 'language';
+
+// Type and language sort by their canonical sequence rather than by label,
+// because alphabetising the labels would scramble an order that carries
+// meaning: 'Long title' < 'Main title' < 'Tohoku number' is not the order these
+// belong in. TITLE_TYPES is the preferred order the reader already renders in,
+// and the language list runs most to least common.
+const TYPE_ORDER = new Map(TITLE_TYPES.map((type, index) => [type, index]));
+const LANGUAGE_ORDER = new Map(
+  TITLE_LANGUAGES.map((language, index) => [language, index]),
+);
+
+const compareBy = (column: TitleSortColumn, a: Title, b: Title): number => {
+  switch (column) {
+    case 'type':
+      return (TYPE_ORDER.get(a.type) ?? -1) - (TYPE_ORDER.get(b.type) ?? -1);
+    case 'language':
+      return (
+        (LANGUAGE_ORDER.get(a.language) ?? -1) -
+        (LANGUAGE_ORDER.get(b.language) ?? -1)
+      );
+    case 'title':
+    default:
+      return a.title.localeCompare(b.title);
+  }
+};
+
+/**
+ * Order titles by one column, falling back through the remaining ones so the
+ * result is total and therefore stable across repeated sorts.
+ *
+ * Row order is presentation only: nothing persists it, and the save diffs by
+ * UUID, so reordering never changes what is written.
+ */
+export const sortTitles = (
+  titles: Titles,
+  column: TitleSortColumn = 'type',
+  direction: 'asc' | 'desc' = 'asc',
+): Titles => {
+  const factor = direction === 'asc' ? 1 : -1;
+  return [...titles].sort(
+    (a, b) =>
+      // Only the chosen column reverses; the tie-breakers keep their order so
+      // rows that compare equal do not shuffle between clicks.
+      factor * compareBy(column, a, b) ||
+      compareBy('type', a, b) ||
+      compareBy('language', a, b) ||
+      compareBy('title', a, b),
+  );
+};
+
+type TitleSort = { column: TitleSortColumn; direction: 'asc' | 'desc' };
+
+/**
+ * A clickable column heading that sorts the row list.
+ *
+ * Declared at module scope rather than inside `TitleForm` so it keeps its
+ * identity across renders — a component redefined each render remounts, and the
+ * button would lose focus on the very click that sorted.
+ *
+ * The rows are a flex layout rather than a `<table>`, so `aria-sort` has no
+ * valid host here; the direction goes into the accessible name instead.
+ */
+const SortHeader = ({
+  column,
+  label,
+  sort,
+  disabled,
+  onSort,
+  className,
+}: {
+  column: TitleSortColumn;
+  label: string;
+  sort: TitleSort | null;
+  disabled?: boolean;
+  onSort: (column: TitleSortColumn) => void;
+  className?: string;
+}) => {
+  const active = sort?.column === column;
+  const state = active
+    ? ` (currently ${sort.direction === 'asc' ? 'ascending' : 'descending'})`
+    : '';
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onSort(column)}
+      aria-label={`Sort by ${label.toLowerCase()}${state}`}
+      className={cn(
+        'flex items-center gap-1 text-left uppercase transition-colors hover:text-foreground disabled:cursor-not-allowed',
+        active && 'text-foreground',
+        className,
+      )}
+    >
+      {label}
+      {active ? (
+        sort.direction === 'asc' ? (
+          <ArrowUpIcon className="size-3" />
+        ) : (
+          <ArrowDownIcon className="size-3" />
+        )
+      ) : (
+        <ArrowUpDownIcon className="size-3 opacity-40" />
+      )}
+    </button>
+  );
+};
+
 /**
  * Edit a work's titles as a list of rows, one row per title.
  *
@@ -91,6 +208,8 @@ export const TitleForm = ({
   disabled?: boolean;
   onChange: (titles: Titles) => void;
 }) => {
+  const [sort, setSort] = useState<TitleSort | null>(null);
+
   const replaceAt = (index: number, changes: Partial<Title>) => {
     onChange(
       titles.map((title, idx) =>
@@ -103,12 +222,45 @@ export const TitleForm = ({
     onChange(titles.filter((_, idx) => idx !== index));
   };
 
+  // Sorting reorders the rows the caller holds rather than a display copy,
+  // because rows are edited by index — sorting only the view would send a
+  // keystroke in one row to another. It runs once per click rather than
+  // continuously for the same reason a spreadsheet does not re-sort as you
+  // type: a row that moved mid-edit would take the cursor with it.
+  const sortBy = (column: TitleSortColumn) => {
+    const direction =
+      sort?.column === column && sort.direction === 'asc' ? 'desc' : 'asc';
+    setSort({ column, direction });
+    onChange(sortTitles(titles, column, direction));
+  };
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="hidden gap-2 px-1 text-xs uppercase text-muted-foreground sm:flex">
-        <span className="grow">Title</span>
-        <span className="w-56 shrink-0">Type</span>
-        <span className="w-44 shrink-0">Language</span>
+      <div className="hidden gap-2 px-1 text-xs text-muted-foreground sm:flex">
+        <SortHeader
+          column="title"
+          label="Title"
+          sort={sort}
+          disabled={disabled}
+          onSort={sortBy}
+          className="grow"
+        />
+        <SortHeader
+          column="type"
+          label="Type"
+          sort={sort}
+          disabled={disabled}
+          onSort={sortBy}
+          className="w-56 shrink-0"
+        />
+        <SortHeader
+          column="language"
+          label="Language"
+          sort={sort}
+          disabled={disabled}
+          onSort={sortBy}
+          className="w-44 shrink-0"
+        />
         <span className="w-9 shrink-0" />
       </div>
 

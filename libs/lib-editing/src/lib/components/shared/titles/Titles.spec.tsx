@@ -47,6 +47,14 @@ const TITLES: TitlesData = [
   },
 ];
 
+// A deliberately jumbled set: no column is already in order, so each sort has
+// something to prove.
+const UNSORTED: TitlesData = [
+  { uuid: 'u-1', title: 'Zebra', language: 'Sa-Ltn', type: 'otherTitle' },
+  { uuid: 'u-2', title: 'Apple', language: 'bo', type: 'toh' },
+  { uuid: 'u-3', title: 'Mango', language: 'en', type: 'mainTitle' },
+];
+
 // This project does not load jest-dom, so element state is read directly.
 const saveButton = () =>
   screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
@@ -166,6 +174,129 @@ describe('Titles edit dialog', () => {
     await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
     const { titles } = mockSaveWorkTitles.mock.calls[0][0];
     expect(titles[1].type).toBe('shortcode');
+  });
+
+  describe('column sorting', () => {
+    const sortBy = async (label: RegExp) =>
+      userEvent.click(screen.getByRole('button', { name: label }));
+
+    it('sorts by title text, and reverses on a second click', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by title/i);
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Apple',
+        'Mango',
+        'Zebra',
+      ]);
+
+      await sortBy(/^sort by title/i);
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Zebra',
+        'Mango',
+        'Apple',
+      ]);
+    });
+
+    it('sorts by type in canonical order, not alphabetically by label', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by type/i);
+
+      // TITLE_TYPES order is toh, mainTitle, ..., otherTitle — which is not the
+      // order the labels would take alphabetically.
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Apple',
+        'Mango',
+        'Zebra',
+      ]);
+    });
+
+    it('sorts by language', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by language/i);
+
+      // Language order runs most to least common: en, bo, Bo-Ltn, Sa-Ltn.
+      expect(titleInputs().map((i) => i.value)).toEqual([
+        'Mango',
+        'Apple',
+        'Zebra',
+      ]);
+    });
+
+    it('reports the active direction in the accessible name', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      expect(
+        screen.getByRole('button', { name: 'Sort by title' }),
+      ).toBeTruthy();
+
+      await sortBy(/^sort by title/i);
+      expect(
+        screen.getByRole('button', {
+          name: 'Sort by title (currently ascending)',
+        }),
+      ).toBeTruthy();
+
+      await sortBy(/^sort by title/i);
+      expect(
+        screen.getByRole('button', {
+          name: 'Sort by title (currently descending)',
+        }),
+      ).toBeTruthy();
+    });
+
+    it('does not turn a sort into a pending write', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by title/i);
+      await userEvent.click(saveButton());
+
+      // Order is presentation only and the diff is keyed by UUID, so a save
+      // straight after sorting must find nothing to change.
+      await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
+      const { titles, original } = mockSaveWorkTitles.mock.calls[0][0];
+      const byUuid = (rows: TitlesData) =>
+        [...rows].sort((a, b) => a.uuid.localeCompare(b.uuid));
+      expect(byUuid(titles)).toEqual(byUuid(original));
+      // ...and the rows really were reordered, so the check above means
+      // something.
+      expect(titles.map((t: { uuid: string }) => t.uuid)).not.toEqual(
+        original.map((t: { uuid: string }) => t.uuid),
+      );
+    });
+
+    it('edits the row that was clicked after a sort', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by title/i);
+      // Rows are edited by index, so a sort that moved only the view would send
+      // this keystroke to the wrong title.
+      await userEvent.clear(titleInputs()[0]);
+      await userEvent.type(titleInputs()[0], 'Apricot');
+      await userEvent.click(saveButton());
+
+      await waitFor(() => expect(mockSaveWorkTitles).toHaveBeenCalled());
+      const { titles } = mockSaveWorkTitles.mock.calls[0][0];
+      const edited = titles.find((t: { uuid: string }) => t.uuid === 'u-2');
+      expect(edited.title).toBe('Apricot');
+      expect(titles.find((t: { uuid: string }) => t.uuid === 'u-3').title).toBe(
+        'Mango',
+      );
+    });
+
+    it('leaves a newly added row in place rather than re-sorting it away', async () => {
+      await openDialog({ titles: UNSORTED });
+
+      await sortBy(/^sort by title/i);
+      await userEvent.click(screen.getByRole('button', { name: /add title/i }));
+
+      // Sorting is a one-shot action, so the empty row stays at the end where
+      // the editor can see it instead of jumping to the top.
+      expect(titleInputs()).toHaveLength(4);
+      expect(titleInputs()[3].value).toBe('');
+    });
   });
 
   it('refuses to save a blank title and keeps the dialog open', async () => {
