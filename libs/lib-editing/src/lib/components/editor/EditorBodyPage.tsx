@@ -60,9 +60,16 @@ export const EditorBodyPage = () => {
 
   const renderTitles = useCallback(
     ({ titles, imprint }: TitlesRenderer) => (
-      <TitlesBuilder titles={titles} imprint={imprint} />
+      <TitlesBuilder
+        titles={titles}
+        imprint={imprint}
+        workUuid={work.uuid}
+        // Titles save straight to the database, so the saved list is what is
+        // stored — adopt it rather than refetching.
+        onTitlesSaved={setTitles}
+      />
     ),
-    [],
+    [work.uuid],
   );
 
   const renderTranslation = useCallback(

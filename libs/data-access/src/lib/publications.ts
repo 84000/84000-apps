@@ -2,7 +2,7 @@ import {
   BodyItemType,
   DataClient,
   Title,
-  TitlesDTO,
+  TitleDTO,
   WorkDTO,
   titlesFromDTO,
   workFromDTO,
@@ -156,20 +156,27 @@ export const getTranslationPassagesAround = async ({
   return passagesPageAroundFromDTO(data as PassagesPageAroundDTO);
 };
 
-export const getTranslationTitles = async ({
-  client,
-  uuid,
-}: {
-  client: DataClient;
-  uuid: string;
-}) => {
-  const { data } = await client.rpc('get_work_titles', {
-    work_uuid_input: uuid,
-  });
+/**
+ * Columns a title is read with. `content` is aliased to `title` because that is
+ * what the domain type calls it — the alias is the only thing the old
+ * `get_work_titles` RPC was doing that a plain select does not.
+ */
+const TITLE_COLUMNS = 'uuid, title:content, language, type, attestation';
 
-  return titlesFromDTO(data as TitlesDTO);
-};
-
+/**
+ * Read every title belonging to a work.
+ *
+ * Selects the table directly rather than going through the `get_work_titles`
+ * RPC. The RPC was a plain select behind an alias, so every column added to
+ * `titles` needed a schema migration before the app could see it — which is how
+ * `attestation` came to be invisible to the whole read path. Choosing columns
+ * here keeps that in application code.
+ *
+ * The RPC still exists and is intentionally not dropped: apps running an older
+ * published `data-access` still call it.
+ *
+ * Titles are unversioned, so there is no published/draft variant to resolve.
+ */
 export const getWorkTitles = async ({
   client,
   uuid,
@@ -177,17 +184,30 @@ export const getWorkTitles = async ({
   client: DataClient;
   uuid: string;
 }): Promise<Title[]> => {
-  const { data, error } = await client.rpc('get_work_titles', {
-    work_uuid_input: uuid,
-  });
+  const { data, error } = await client
+    .from('titles')
+    .select<string, TitleDTO>(TITLE_COLUMNS)
+    .eq('work_uuid', uuid)
+    // The table carries no natural order, and an updated row moves to the end of
+    // the heap, so an unordered read would reshuffle after every edit. Order
+    // explicitly, down to the UUID, so the sequence is total and stable.
+    .order('type', { ascending: true })
+    .order('language', { ascending: true })
+    .order('uuid', { ascending: true });
 
   if (error) {
     console.error('Error fetching work titles:', error);
     return [];
   }
 
-  return titlesFromDTO(data as TitlesDTO);
+  return titlesFromDTO(data ?? []);
 };
+
+/** @deprecated Prefer {@link getWorkTitles}, which this now delegates to. */
+export const getTranslationTitles = async (args: {
+  client: DataClient;
+  uuid: string;
+}) => getWorkTitles(args);
 
 export const getWorkTitlesByUuids = async ({
   client,
