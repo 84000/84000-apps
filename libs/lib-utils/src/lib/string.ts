@@ -36,3 +36,16 @@ export const isUuid = (str: string) =>
 
 export const isXmlId = (str: string) =>
   /^UT\d+-\d+-\d+(-[\w]+)*$/.test(str);
+
+/**
+ * Escapes text for interpolation into HTML markup.
+ *
+ * Only the three characters that can break out of a text node — an attribute
+ * value needs `escapeHtmlAttribute` instead.
+ */
+export const escapeHtml = (str: string) =>
+  str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Escapes text for interpolation into a double-quoted HTML attribute. */
+export const escapeHtmlAttribute = (str: string) =>
+  escapeHtml(str).replace(/"/g, '&quot;');

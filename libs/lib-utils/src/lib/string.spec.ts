@@ -1,5 +1,7 @@
 import {
   compareIgnoringArticles,
+  escapeHtml,
+  escapeHtmlAttribute,
   parseToh,
   stripLeadingArticles,
 } from './string';
@@ -61,5 +63,31 @@ describe('compareIgnoringArticles', () => {
 
   it('ignores case and diacritics', () => {
     expect(compareIgnoringArticles('āpple', 'Apple')).toBe(0);
+  });
+});
+
+describe('escapeHtml', () => {
+  it('escapes the characters that break out of a text node', () => {
+    expect(escapeHtml('<b>a & b</b>')).toBe('&lt;b&gt;a &amp; b&lt;/b&gt;');
+  });
+
+  it('escapes ampersands before the entities it introduces', () => {
+    expect(escapeHtml('&lt;')).toBe('&amp;lt;');
+  });
+
+  it('leaves quotes alone, since a text node may hold them', () => {
+    expect(escapeHtml('say "hi"')).toBe('say "hi"');
+  });
+
+  it('passes plain text through unchanged', () => {
+    expect(escapeHtml('oṃ | āḥ hūṃ')).toBe('oṃ | āḥ hūṃ');
+  });
+});
+
+describe('escapeHtmlAttribute', () => {
+  it('escapes double quotes as well', () => {
+    expect(escapeHtmlAttribute('say "hi" & <bye>')).toBe(
+      'say &quot;hi&quot; &amp; &lt;bye&gt;',
+    );
   });
 });
