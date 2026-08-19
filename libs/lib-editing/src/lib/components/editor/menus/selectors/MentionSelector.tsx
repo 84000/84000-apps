@@ -51,8 +51,15 @@ export const MentionSelector = ({ editor }: { editor: Editor }) => {
           />
         </Button>
       </PopoverTrigger>
+      {/*
+        `w-fit`, not a fixed width: MentionSearch carries its own `w-72` (it is
+        shared with the mention hover card and the advanced dialog), so pinning
+        a width here leaves that rigid child overflowing the padded content box
+        — `w-72` with `p-2` gives it only 17rem to sit in. LinkSelector wraps a
+        self-sizing child the same way.
+      */}
       <PopoverContent
-        className="w-72 shadow-xl rounded-md border p-2"
+        className="w-fit shadow-xl rounded-md border p-2"
         align="end"
         noPortal
       >
