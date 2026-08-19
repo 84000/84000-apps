@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - main
+    # Plugins carry lib-agent's version, so they publish when that version is
+    # bumped — the same trigger publish-packages.yml uses for the npm packages.
+    # Skill and agent edits land on main without publishing and ship with the
+    # next "Packages vX" release commit, which is what keeps plugin content and
+    # its version in step.
     paths:
-      - 'libs/lib-agent/plugins.json'
-      - 'libs/lib-agent/skills/**'
-      - 'libs/lib-agent/agents/**'
-      - 'tools/build-plugins.mjs'
-      - '.github/workflows/publish-plugins.yml'
+      - 'libs/lib-agent/package.json'
   workflow_dispatch:
     inputs:
       dry_run:

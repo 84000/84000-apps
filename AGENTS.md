@@ -40,13 +40,19 @@ directory inside a checkout of `84000/claude-plugins` and regenerates
 install, so nothing may reference a path outside its own plugin directory — the
 generator copies rather than symlinks for that reason.
 
-Versions follow the repo `YYYY.M.X` convention and are written to each plugin's
-`plugin.json` **only**; a version in the marketplace entry is silently masked.
-When a plugin's content is unchanged the generator keeps its published version,
-so installed clients never re-download an untouched plugin.
+Plugins carry `libs/lib-agent/package.json`'s version, written into each plugin's
+`plugin.json` **only** — a version in the marketplace entry is silently masked.
+That library is bumped in dedicated "Packages vX" release commits, so plugins
+release on the same cadence as the npm packages and the bump is already
+deliberate. When a plugin's content is unchanged the generator keeps its
+published version even if lib-agent has moved on, so installed clients never
+re-download an untouched plugin. Changing plugin content without bumping the
+version is an error — publishing new content under a published version means
+clients keep the cached copy.
 
-`.github/workflows/publish-plugins.yml` runs the generator on pushes to `main`
-that touch plugin sources. To preview locally without publishing:
+`.github/workflows/publish-plugins.yml` runs the generator when
+`libs/lib-agent/package.json` changes. Skill and agent edits land on `main`
+without publishing and ship with the next release commit. To preview locally:
 
 ```sh
 node tools/build-plugins.mjs --target /tmp/marketplace

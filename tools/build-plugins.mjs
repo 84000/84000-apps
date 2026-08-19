@@ -9,7 +9,6 @@
  *
  * Usage:
  *   node tools/build-plugins.mjs --target <path-to-claude-plugins-checkout>
- *   node tools/build-plugins.mjs --target ./out --date 2026-08-18
  *
  * Exits 0 whether or not anything changed; inspect the `changed` line on stdout
  * (or $GITHUB_OUTPUT when --github-output is passed) to decide about committing.
@@ -20,6 +19,9 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG_PATH = join(REPO_ROOT, 'libs', 'lib-agent', 'plugins.json');
+// Plugins release on the same cadence as the npm packages, so they carry
+// lib-agent's version rather than one invented here.
+const VERSION_SOURCE = join(REPO_ROOT, 'libs', 'lib-agent', 'package.json');
 
 // Stand-in written into plugin.json while diffing, so a version bump alone
 // never reads as a content change (which would make the bump self-justifying).
@@ -30,11 +32,10 @@ const VERSION_PLACEHOLDER = '0.0.0-compare';
 const IGNORED_FILES = new Set(['.DS_Store', 'Thumbs.db']);
 
 function parseArgs(argv) {
-  const args = { target: null, date: null, githubOutput: false };
+  const args = { target: null, githubOutput: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--target') args.target = argv[++i];
-    else if (arg === '--date') args.date = argv[++i];
     else if (arg === '--github-output') args.githubOutput = true;
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -101,21 +102,15 @@ function normalizeForCompare(tree) {
 }
 
 /**
- * 84000 release convention: YYYY.MM.X, X being the 0-indexed release that
- * month. The month is unpadded — `2026.08.0` is not valid semver, since
- * semver forbids leading zeros in numeric identifiers.
- *
- * X counts *plugin* releases, not monorepo releases: a release that leaves a
- * plugin's content untouched keeps its published version, so Claude Code does
- * not re-download an unchanged plugin.
+ * Plugins take lib-agent's version. That library is released in dedicated
+ * "Packages vX" commits following the 84000 YYYY.M.X convention, so the bump is
+ * already deliberate and human-reviewed — there is nothing for this script to
+ * invent, and plugin versions stay legible next to the published packages.
  */
-function nextVersion(publishedVersion, now) {
-  const prefix = `${now.getUTCFullYear()}.${now.getUTCMonth() + 1}`;
-  if (publishedVersion && publishedVersion.startsWith(`${prefix}.`)) {
-    const published = Number.parseInt(publishedVersion.slice(prefix.length + 1), 10);
-    if (Number.isInteger(published)) return `${prefix}.${published + 1}`;
-  }
-  return `${prefix}.0`;
+function sourceVersion() {
+  const version = JSON.parse(readFileSync(VERSION_SOURCE, 'utf-8')).version;
+  if (!version) throw new Error(`No version in ${VERSION_SOURCE}`);
+  return version;
 }
 
 function readPublishedVersion(pluginDir) {
@@ -185,8 +180,7 @@ function stampVersion(tree, version) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const targetRoot = resolve(args.target);
-  const now = args.date ? new Date(`${args.date}T00:00:00Z`) : new Date();
-  if (Number.isNaN(now.getTime())) throw new Error(`Invalid --date: ${args.date}`);
+  const version = sourceVersion();
 
   const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'));
   const defaults = config.defaults ?? {};
@@ -208,16 +202,31 @@ function main() {
     const isNew = published.size === 0;
     const contentChanged = !treesEqual(normalizeForCompare(built), normalizeForCompare(published));
 
-    let version;
+    const publishedVersion = readPublishedVersion(pluginDir);
+    let pluginVersion;
     if (isNew || contentChanged) {
-      version = nextVersion(readPublishedVersion(pluginDir), now);
-      writeTree(pluginDir, stampVersion(built, version));
+      // Shipping changed content under an already-published version means
+      // installed clients keep the cached copy and never see the change.
+      if (publishedVersion === version) {
+        throw new Error(
+          `${plugin.name}: content changed but version ${version} is already published. ` +
+            'Bump the version in libs/lib-agent/package.json.',
+        );
+      }
+      pluginVersion = version;
+      writeTree(pluginDir, stampVersion(built, pluginVersion));
       changed = true;
     } else {
-      version = readPublishedVersion(pluginDir);
+      // Unchanged content keeps its published version even when lib-agent has
+      // moved on, so clients do not re-download an untouched plugin.
+      pluginVersion = publishedVersion;
     }
 
-    results.push({ name: plugin.name, version, status: isNew ? 'new' : contentChanged ? 'updated' : 'unchanged' });
+    results.push({
+      name: plugin.name,
+      version: pluginVersion,
+      status: isNew ? 'new' : contentChanged ? 'updated' : 'unchanged',
+    });
 
     const entry = {
       name: plugin.name,
