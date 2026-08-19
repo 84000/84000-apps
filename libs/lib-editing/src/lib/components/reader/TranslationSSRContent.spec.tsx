@@ -674,6 +674,55 @@ describe('TranslationSSRContent', () => {
     );
   });
 
+  it('keeps dandas upright in italic and foreign runs (ED-1458)', () => {
+    // The rule lives in the PipeNotItalic plugin as decorations, which never
+    // run here; this asserts the static renderer applies it too.
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'hūṁ | picu',
+                  marks: [{ type: 'italic', attrs: { textStyle: 'emphasis' } }],
+                },
+                { type: 'text', text: ' — ' },
+                {
+                  type: 'text',
+                  text: 'oṃ | āḥ',
+                  marks: [
+                    {
+                      type: 'foreign',
+                      attrs: { lang: 'Sa-Ltn', textStyle: 'foreign' },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
+    const html = renderedHtml(el);
+    const upright = '<span class="not-italic" style="font-style:normal">|</span>';
+
+    expect(html).toContain(`hūṁ ${upright} picu`);
+    expect(html).toContain(`oṃ ${upright} āḥ`);
+    // The surrounding marks still wrap the run they came from.
+    expect(html).toContain('<em');
+    expect(html).toContain('lang="Sa-Ltn"');
+  });
+
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));

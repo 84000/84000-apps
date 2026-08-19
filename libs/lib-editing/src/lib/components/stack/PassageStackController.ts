@@ -22,6 +22,7 @@ import type { TranslationEditorContentItem } from '@eightyfourthousand/data-acce
 
 import { incrementLabel } from '../editor/extensions/Passage/label';
 import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
+import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
 import {
   buildStackEditorExtensions,
   buildStackSchemaExtensions,
@@ -162,7 +163,12 @@ export class PassageStackController {
       html = renderToHTMLString({
         content: this.getDocJSON(uuid),
         extensions: buildStackSchemaExtensions(),
-        options: { nodeMapping: { mention: renderMentionToHTMLString } },
+        options: {
+          nodeMapping: {
+            mention: renderMentionToHTMLString,
+            text: renderTextToHTMLString,
+          },
+        },
       });
     } catch (error) {
       console.error('failed to statically render passage', error);
