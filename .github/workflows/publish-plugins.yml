@@ -61,7 +61,11 @@ jobs:
       - name: Validate generated marketplace
         run: |
           set -euo pipefail
-          npm install -g @anthropic-ai/claude-code
+          # --allow-scripts is required: the postinstall fetches the actual
+          # binary, and npm skips it by default on GitHub runners, leaving
+          # `claude` installed but not runnable.
+          npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code
+          claude --version
           claude plugin validate "$RUNNER_TEMP/claude-plugins" --strict
           for plugin in "$RUNNER_TEMP"/claude-plugins/plugins/*/; do
             claude plugin validate "$plugin" --strict
