@@ -84,8 +84,12 @@ Build an ordered list of **operations** (the input to `apply-docx-import`):
   `span` (`data.textStyle`: `text-bold` | `emphasis` | `underline` |
   `small-caps`), `link` (`data.href`), `heading` (`data.level`, `data.class`).
 
-You do **not** need to supply UUIDs, `sort`, `xmlId`, or per-row `workUuid` —
-the write tool fills those in. Emit operations in source order.
+You do **not** need to supply UUIDs, `sort`, or per-row `workUuid` — the write
+tool fills those in. Emit operations in source order.
+
+Leave `xmlId` unset. It is a deprecated artifact of the original migration:
+the write tool accepts it but never generates one, and new works should not
+have one.
 
 ### 4. Present a preview for review (required)
 
