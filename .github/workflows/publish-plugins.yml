@@ -1,0 +1,94 @@
+name: Publish Claude Code Plugins
+
+on:
+  push:
+    branches:
+      - main
+    # Plugins carry lib-agent's version, so they publish when that version is
+    # bumped — the same trigger publish-packages.yml uses for the npm packages.
+    # Skill and agent edits land on main without publishing and ship with the
+    # next "Packages vX" release commit, which is what keeps plugin content and
+    # its version in step.
+    paths:
+      - 'libs/lib-agent/package.json'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Generate and validate without pushing to claude-plugins'
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: publish-plugins
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Generate and publish plugins
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout 84000-apps
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # A deploy key is scoped to exactly one repo, and unlike the default
+      # GITHUB_TOKEN a deploy-key push *does* trigger downstream workflows —
+      # which is what makes the validate job on the claude-plugins side fire.
+      - name: Load the claude-plugins deploy key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.CLAUDE_PLUGINS_DEPLOY_KEY }}
+
+      - name: Checkout claude-plugins
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone git@github.com:84000/claude-plugins.git "$RUNNER_TEMP/claude-plugins"
+
+      # The generator needs no dependencies — it uses only Node builtins.
+      - name: Generate plugins
+        id: generate
+        run: node tools/build-plugins.mjs --target "$RUNNER_TEMP/claude-plugins" --github-output
+
+      - name: Validate generated marketplace
+        run: |
+          set -euo pipefail
+          # --allow-scripts is required: the postinstall fetches the actual
+          # binary, and npm skips it by default on GitHub runners, leaving
+          # `claude` installed but not runnable.
+          npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code
+          claude --version
+          claude plugin validate "$RUNNER_TEMP/claude-plugins" --strict
+          for plugin in "$RUNNER_TEMP"/claude-plugins/plugins/*/; do
+            claude plugin validate "$plugin" --strict
+          done
+
+      - name: Commit and push
+        if: ${{ steps.generate.outputs.changed == 'true' && !inputs.dry_run }}
+        working-directory: ${{ runner.temp }}/claude-plugins
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          # Belt and braces: the generator already reports changed=false for a
+          # byte-identical tree, so a no-op commit here would mean a bug in it.
+          if git diff --cached --quiet; then
+            echo 'Generator reported changes but the tree is identical; nothing to commit.'
+            exit 0
+          fi
+          git commit -m "Publish plugins from 84000-apps@${GITHUB_SHA::7}"
+          git push origin HEAD:main
+
+      - name: Report no-op
+        if: ${{ steps.generate.outputs.changed != 'true' }}
+        run: echo 'Generated tree is identical to what is published; skipping commit.'

@@ -1,0 +1,62 @@
+{
+  "marketplace": {
+    "name": "84000",
+    "description": "Internal Claude Code plugins for the 84000 translation studio, generated from the 84000-apps monorepo.",
+    "owner": {
+      "name": "84000",
+      "url": "https://84000.co"
+    }
+  },
+  "defaults": {
+    "author": {
+      "name": "84000",
+      "url": "https://84000.co"
+    },
+    "homepage": "https://github.com/84000/84000-apps",
+    "repository": "https://github.com/84000/84000-apps",
+    "license": "ISC",
+    "mcpServers": {
+      "84000-studio": {
+        "type": "http",
+        "url": "https://studio.84000.co/mcp"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "84000-editor-tools",
+      "displayName": "84000 Editor Tools",
+      "description": "Editorial tooling for the 84000 translation studio. Import copy-edited translation .docx files into a work as structured passages, titles, and metadata.",
+      "keywords": [
+        "84000",
+        "translation",
+        "docx",
+        "import",
+        "editing"
+      ],
+      "skills": [
+        "libs/lib-agent/skills/docx-import"
+      ],
+      "agents": [],
+      "renames": {}
+    },
+    {
+      "name": "84000-translator-tools",
+      "displayName": "84000 Translator Tools",
+      "description": "Research tooling for the 84000 library of Tibetan Buddhist texts. Read-only access to translations, folios, glossaries, bibliographies, and metadata.",
+      "keywords": [
+        "84000",
+        "translation",
+        "tibetan",
+        "buddhism",
+        "glossary",
+        "research"
+      ],
+      "skills": [],
+      "agents": [
+        "libs/lib-agent/agents/library-assistant.md"
+      ],
+      "renames": {}
+    }
+  ]
+}

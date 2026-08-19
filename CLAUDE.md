@@ -14,6 +14,7 @@
 - **GraphQL client queries**: `libs/client-graphql/src/lib/graphql/` (queries, fragments, mutations)
 - **Design system components**: `libs/design-system/src/lib/<ComponentName>/` — check these before building custom UI. Preview with `npx nx storybook design-system`
 - **Deeper documentation**: `docs/` folder at the repo root — domain model, data flow, app guide, common tasks
+- **Skills and agents**: `libs/lib-agent/skills/` and `libs/lib-agent/agents/` — prose, not code, shipped to the org as Claude Code plugins
 
 ## Architectural Constraints
 
@@ -23,6 +24,40 @@
 - **Error handling**: return `null` or empty arrays on error with `console.error`. Don't throw.
 - **Design system first**: components use Radix UI + Tailwind + CVA. Use `cn()` from `@eightyfourthousand/lib-utils` for class merging.
 - **Named exports** only in libraries. No default exports.
+
+## Claude Code Plugins
+
+Skills and agents are content rather than code, so they live outside `src/` and
+are not compiled:
+
+- **Skills**: `libs/lib-agent/skills/<name>/SKILL.md` (plus a `reference/` folder)
+- **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
+
+`libs/lib-agent/plugins.json` declares which of them belong to which plugin.
+`tools/build-plugins.mjs` assembles each plugin into a **self-contained**
+directory inside a checkout of `84000/claude-plugins` and regenerates
+`.claude-plugin/marketplace.json`. Claude Code copies a plugin into a cache on
+install, so nothing may reference a path outside its own plugin directory — the
+generator copies rather than symlinks for that reason.
+
+Plugins carry `libs/lib-agent/package.json`'s version, written into each plugin's
+`plugin.json` **only** — a version in the marketplace entry is silently masked.
+That library is bumped in dedicated "Packages vX" release commits, so plugins
+release on the same cadence as the npm packages and the bump is already
+deliberate. When a plugin's content is unchanged the generator keeps its
+published version even if lib-agent has moved on, so installed clients never
+re-download an untouched plugin. Changing plugin content without bumping the
+version is an error — publishing new content under a published version means
+clients keep the cached copy.
+
+`.github/workflows/publish-plugins.yml` runs the generator when
+`libs/lib-agent/package.json` changes. Skill and agent edits land on `main`
+without publishing and ship with the next release commit. To preview locally:
+
+```sh
+node tools/build-plugins.mjs --target /tmp/marketplace
+claude plugin validate /tmp/marketplace --strict
+```
 
 ## Code Style
 
