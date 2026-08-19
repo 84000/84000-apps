@@ -17,6 +17,7 @@ import { LinkSelector } from './LinkSelector';
 import { MantraSelector } from './MantraSelector';
 import { EndNoteSelector } from './EndNoteSelector';
 import { GlossarySelector } from './GlossarySelector';
+import { MentionSelector } from './MentionSelector';
 
 interface SelectorResult {
   isBold: boolean;
@@ -120,6 +121,7 @@ export const TranslationTextButtons = ({ editor }: { editor: Editor }) => {
       <MantraSelector editor={editor} />
       <Separator orientation="vertical" className="h-10" />
       <GlossarySelector editor={editor} />
+      <MentionSelector editor={editor} />
       <LinkSelector editor={editor} />
       <EndNoteSelector editor={editor} />
     </>

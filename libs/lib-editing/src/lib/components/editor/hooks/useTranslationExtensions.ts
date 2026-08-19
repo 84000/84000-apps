@@ -43,6 +43,7 @@ import { InternalLink } from '../extensions/InternalLink';
 import { ForeignMark } from '../extensions/Foreign/Foreign';
 import { MantraMark } from '../extensions/Mantra/Mantra';
 import { Mention } from '../extensions/Mention/Mention';
+import { MentionCommandSuggestion } from '../extensions/Mention/MentionCommandSuggestion';
 import { EndNoteLinkMark } from '../extensions/EndNoteLink/EndNoteLinkMark';
 import { GlossaryInstanceNode } from '../extensions/GlossaryInstance/GlossaryInstanceNode';
 import {
@@ -87,6 +88,7 @@ export const useTranslationExtensions = ({
     Heading2Suggestion,
     Heading3Suggestion,
     AbbreviationSuggestion,
+    MentionCommandSuggestion,
     BulletListSuggestion,
     NumberListSuggestion,
     QuoteSuggestion,
