@@ -20,7 +20,7 @@ import { CommandSuggestionItem } from '../SlashCommand/SuggestionList';
  */
 export const MentionCommandSuggestion: CommandSuggestionItem = {
   title: 'Mention',
-  description: 'Link to a passage, folio, work, glossary term, or source.',
+  description: 'Link to internal resources',
   keywords: ['mention', 'reference', 'cite', 'citation'],
   icon: AtSignIcon,
   // The dropdown this hands off to belongs to the Mention extension. Without it

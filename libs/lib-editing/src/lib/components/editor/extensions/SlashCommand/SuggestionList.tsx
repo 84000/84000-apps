@@ -94,7 +94,13 @@ const SuggestionList = forwardRef<SuggestionListHandle, SuggestionListProps>(
                 props.command(item);
               }}
             >
-              <div className="size-10 flex items-center justify-center border bg-popover rounded-md">
+              {/*
+                `shrink-0`: `size-10` sets a width, but this is a flex child and
+                flex-shrink still defaults to 1, so a long title/description
+                could squeeze the box and leave one item's icon narrower than
+                the rest.
+              */}
+              <div className="size-10 shrink-0 flex items-center justify-center border bg-popover rounded-md">
                 <item.icon className="size-4" />
               </div>
               <div className="flex flex-col">
