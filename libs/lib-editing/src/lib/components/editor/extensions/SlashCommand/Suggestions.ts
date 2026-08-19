@@ -126,8 +126,11 @@ export const getSuggestion = (
   suggestions: CommandSuggestionItem[] = defaultSuggestions,
 ): SuggestionType => {
   return {
-    items: ({ query }) => {
+    items: ({ query, editor }) => {
       return suggestions.filter((item: CommandSuggestionItem) => {
+        if (item.isAvailable && !item.isAvailable(editor)) {
+          return false;
+        }
         return item.keywords.some((kwd) => kwd.startsWith(query.toLowerCase()));
       });
     },

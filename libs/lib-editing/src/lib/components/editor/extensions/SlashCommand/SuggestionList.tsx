@@ -2,12 +2,21 @@
 
 import { SlashCommandNodeAttributes, SuggestionItem } from './SlashCommand';
 import { cn } from '@eightyfourthousand/lib-utils';
+import { Editor } from '@tiptap/core';
 import { SuggestionKeyDownProps, SuggestionProps } from '@tiptap/suggestion';
 import { LucideIcon } from 'lucide-react';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
 export interface CommandSuggestionItem extends SuggestionItem {
   icon: LucideIcon;
+  /**
+   * Whether this item can run against the given editor. Items whose command
+   * depends on something the host has to provide — an extension, or a React
+   * overlay registered through `editor.storage` — use this to stay out of the
+   * menu where that dependency is absent, rather than appearing and no-opping.
+   * Omitted means always available.
+   */
+  isAvailable?: (editor: Editor) => boolean;
 }
 
 export interface SuggestionListHandle {
