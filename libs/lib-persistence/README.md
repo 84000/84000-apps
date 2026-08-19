@@ -208,6 +208,77 @@ Two things to know if you do:
   differ from the shipping engine, so a green WebKit run is not evidence.
   Playwright's Firefox _is_ genuine Gecko and does count.
 
+## Server sync (DEV-707)
+
+`src/lib/sync/` is the other half of local-first: getting a passage's Yjs
+document to and from the server. It lives here rather than in its own package
+because the two meet — "record the sync and drop the journal entries it covers"
+is one transaction against one database.
+
+The path is Supabase-only, with no new infrastructure:
+
+```
+edit → coalesce ~300ms → insert passage_doc_updates
+                              ↓ Postgres trigger
+                         realtime.send → passage:<uuid> → peers apply
+```
+
+`SupabaseSyncTransport` is the only file that imports `@supabase/supabase-js`;
+everything else is driven through the `SyncTransport` interface, the same seam
+idea as `driver.ts`. Schema, trigger, RLS and the two RPCs are an `infra`
+migration (`20260810120000_passage_doc_sync_substrate.sql`).
+
+Four things here are load-bearing and easy to undo by accident:
+
+- **Subscribe before catching up.** `connect()` joins the channel first and
+  *then* reads state. The other order leaves a window where an append is in
+  neither, and it is lost silently. Subscribing first can only duplicate, which
+  idempotent apply makes free.
+- **Catch-up never resumes from a `seq`.** Identity values are allocated before
+  commit, so rows can become visible out of `seq` order; a client resuming from
+  "everything through N" skips the straggler forever. `get_passage_doc_state`
+  returns the snapshot plus *every* row it does not cover. Compaction is what
+  keeps that cheap. There is a test that constructs the interleaving.
+- **`realtime.setAuth()` before joining a private channel.** Otherwise the
+  socket authorizes as `anon`, the policies (granted to `authenticated`) do not
+  apply, and the join is rejected with a message that reads like a broken
+  policy. It is a race, so it hides — a slow client wins and works.
+- **Presence shares the document channel.** One topic is one channel object and
+  its callbacks must all be registered before `subscribe()`, so presence is an
+  option on `subscribe`, not a separate join.
+
+Compaction merges a passage's log into a snapshot. The merge needs Yjs so it
+runs in the `compact-passage-docs` edge function; the commit is
+`compact_passage_doc`, which writes the snapshot and deletes the rows it covers
+in one transaction. That is what makes it invisible to a live session.
+
+Measured locally at the issue's stated ceiling of 2–4 concurrent editors:
+round-trip 13ms median via the trigger, 12ms broadcasting directly from the
+client — so the trigger hop costs about a millisecond and the dual-write it
+would buy is not worth it. A minute of continuous typing produces ~60 log rows
+and ~6KB stored (~8KB relayed, base64).
+
+### Verifying it
+
+`nx test lib-persistence` runs the convergence suite in
+`src/lib/sync/convergence.spec.ts` — two- and four-client co-editing,
+kill-and-reconnect, late join, compaction under a live session, the `seq` gap,
+and RLS in both directions. Every scenario asserts **equal Yjs state vectors**,
+not just equal text: silent divergence is this design's real failure mode, and
+two documents can render the same string from different update sets.
+
+It needs a live Realtime server, so it **skips** when no local stack is
+listening (`make start` in `infra`). The skip is a real Jest skip rather than an
+early return — an early return reports as passing, which for the primary gate is
+worse than useless — and it prints a banner saying so.
+
+`apps/web-editor/src/app/sync/` is a throwaway browser sandbox for the same
+path. Open it in two windows and type in both; the **state fingerprint** is a
+hash of the state vector, so matching fingerprints mean provably identical
+documents. It needs `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_JWT_SECRET` in
+`apps/web-editor/.env.local` (from `supabase status`) and refuses to run against
+any non-loopback Supabase URL.
+
 ## Running unit tests
 
 Run `nx test lib-persistence` to execute the unit tests via [Jest](https://jestjs.io).
