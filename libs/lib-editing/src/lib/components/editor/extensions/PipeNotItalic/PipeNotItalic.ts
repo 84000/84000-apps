@@ -1,13 +1,23 @@
 import { Extension } from '@tiptap/core';
-import type { Node, Mark } from '@tiptap/pm/model';
+import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
+
+import {
+  hasItalicizingMark,
+  UPRIGHT_PIPE_CLASS,
+  UPRIGHT_PIPE_STYLE,
+} from './italicizingMarks';
 
 const pluginKey = new PluginKey('pipeNotItalic');
 
 /**
- * Scans a region of the document for italic text nodes containing `|`
+ * Scans a region of the document for italicised text nodes containing `|`
  * and returns an array of inline Decorations for each match.
+ *
+ * This only covers live editors. Decorations belong to the view, so the
+ * readers — which serialise through `@tiptap/static-renderer` and never build
+ * an EditorView — get the same rule from `renderTextToHTMLString` instead.
  */
 function findPipeDecorations(doc: Node, from: number, to: number) {
   const decorations: Decoration[] = [];
@@ -15,17 +25,15 @@ function findPipeDecorations(doc: Node, from: number, to: number) {
   doc.nodesBetween(from, to, (node, pos) => {
     if (!node.isText) return;
 
-    const isItalic = node.marks.some(
-      (mark: Mark) => mark.type.name === 'italic' || mark.type.name === 'em',
-    );
-    if (!isItalic) return;
+    if (!hasItalicizingMark(node.marks)) return;
 
     const text = node.text ?? '';
     let index = text.indexOf('|');
     while (index !== -1) {
       decorations.push(
         Decoration.inline(pos + index, pos + index + 1, {
-          class: 'not-italic',
+          class: UPRIGHT_PIPE_CLASS,
+          style: UPRIGHT_PIPE_STYLE,
         }),
       );
       index = text.indexOf('|', index + 1);

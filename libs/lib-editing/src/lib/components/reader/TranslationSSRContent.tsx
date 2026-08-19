@@ -1,9 +1,14 @@
 import type { Extensions, JSONContent } from '@tiptap/core';
 import { getSchema } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
-import { cn } from '@eightyfourthousand/lib-utils';
+import {
+  cn,
+  escapeHtml,
+  escapeHtmlAttribute,
+} from '@eightyfourthousand/lib-utils';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
+import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
 import { extractPlainText } from './ssr-text-fallback';
 
 type EndNoteItem = {
@@ -19,11 +24,6 @@ const isEndNoteItem = (value: unknown): value is EndNoteItem => {
   const v = value as Record<string, unknown>;
   return typeof v.uuid === 'string' && typeof v.endNote === 'string';
 };
-
-const escapeHTML = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const escapeHTMLAttribute = (value: string) =>
-  escapeHTML(value).replace(/"/g, '&quot;');
 
 const renderEndNoteLinkMark = ({
   mark,
@@ -43,19 +43,19 @@ const renderEndNoteLinkMark = ({
 
   const supHtml = (n: EndNoteItem, marginClass: string) => {
     const cls = cn('end-note-link', marginClass);
-    const tohAttr = n.toh ? ` data-toh="${escapeHTMLAttribute(n.toh)}"` : '';
-    const itemLabel = escapeHTML(n.label?.split('.').pop() || '');
+    const tohAttr = n.toh ? ` data-toh="${escapeHtmlAttribute(n.toh)}"` : '';
+    const itemLabel = escapeHtml(n.label?.split('.').pop() || '');
     // Glue the marker to the text it's attached to with a word joiner (U+2060)
     // so it never wraps to a new line away from its content: after the text for
     // start notes, before it for end notes.
     const joined =
       n.location === 'start' ? `${itemLabel}⁠` : `⁠${itemLabel}`;
     return (
-      `<sup class="${escapeHTMLAttribute(cls)}"` +
+      `<sup class="${escapeHtmlAttribute(cls)}"` +
       tohAttr +
       ` type="endNoteLink"` +
-      ` endNote="${escapeHTMLAttribute(n.endNote)}"` +
-      ` uuid="${escapeHTMLAttribute(n.uuid)}">` +
+      ` endNote="${escapeHtmlAttribute(n.endNote)}"` +
+      ` uuid="${escapeHtmlAttribute(n.uuid)}">` +
       `${joined}</sup>`
     );
   };
@@ -154,7 +154,10 @@ export const TranslationSSRContent = ({
       extensions: exts,
       options: {
         markMapping: { endNoteLink: renderEndNoteLinkMark },
-        nodeMapping: { mention: renderMentionToHTMLString },
+        nodeMapping: {
+          mention: renderMentionToHTMLString,
+          text: renderTextToHTMLString,
+        },
       },
     });
   } catch (err) {
