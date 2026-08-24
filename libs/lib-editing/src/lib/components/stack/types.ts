@@ -1,27 +1,35 @@
-import type {
-  BodyItemType,
-  Passage,
-  TranslationEditorContentItem,
-} from '@eightyfourthousand/data-access';
-import { blockFromPassage } from '@eightyfourthousand/lib-doc-model';
+import type { JSONContent } from '@tiptap/core';
+import type { Passage } from '@eightyfourthousand/data-access';
+import {
+  blockFromPassage,
+  type FocusTarget,
+  type SpineSeed,
+} from '@eightyfourthousand/lib-doc-model';
 
-export type StackPassageMeta = {
-  uuid: string;
-  label: string;
-  sort: number;
-  type: BodyItemType;
-  toh?: string;
-};
-
+/**
+ * What a passage needs before its content exists: identity for the spine, the
+ * content to seed its document with, and a character count.
+ *
+ * The count is view state, not model state — the spine deliberately holds no
+ * measure of a passage's size, and a virtualized list needs one to estimate
+ * row heights for passages it has not hydrated.
+ */
 export type StackPassageSeed = {
-  meta: StackPassageMeta;
-  content: TranslationEditorContentItem[];
+  meta: SpineSeed;
+  content: JSONContent[];
   charCount: number;
 };
 
+/**
+ * Where to put the caret, widened by the one case the doc model has no
+ * opinion about: a click on a static row, which arrives as viewport
+ * coordinates and is resolved against the editor once it mounts.
+ */
+export type StackFocusWhere = FocusTarget['where'] | { x: number; y: number };
+
 export type StackFocusTarget = {
   uuid: string;
-  where: 'start' | 'end' | number | { x: number; y: number };
+  where: StackFocusWhere;
 };
 
 export type StackCrossSelection = {
@@ -47,17 +55,17 @@ export type StackKeyboardDelegate = {
   redo: () => boolean;
 };
 
+/** Split a row into the spine's half and the view's half. */
 export const stackSeedFromPassage = (passage: Passage): StackPassageSeed => {
   const block = blockFromPassage(passage);
   return {
     meta: {
       uuid: passage.uuid,
       label: passage.label,
-      sort: passage.sort,
       type: passage.type,
       toh: passage.toh,
     },
-    content: (block.content ?? []) as TranslationEditorContentItem[],
+    content: (block.content ?? []) as JSONContent[],
     charCount: passage.content?.length ?? 0,
   };
 };

@@ -70,6 +70,17 @@ export const PassageStack = ({
     return () => controller.setScrollHandler(null);
   }, [controller, virtualizer]);
 
+  // Hydration follows the rows actually being drawn. The loader widens this by
+  // its own buffer, so passing the rendered range (overscan included) is what
+  // keeps a row's document in memory by the time it is scrolled onto.
+  const items = virtualizer.getVirtualItems();
+  const firstIndex = items[0]?.index ?? 0;
+  const lastIndex = items[items.length - 1]?.index ?? 0;
+  useEffect(() => {
+    if (!order.length) return;
+    controller.setVisibleRange({ start: firstIndex, end: lastIndex + 1 });
+  }, [controller, order.length, firstIndex, lastIndex]);
+
   useStackSelection(controller);
 
   // Click-to-focus on static rows, via delegation so text drags across
@@ -162,7 +173,7 @@ export const PassageStack = ({
         className="relative mx-auto w-full max-w-readable px-8"
         style={{ height: virtualizer.getTotalSize() }}
       >
-        {virtualizer.getVirtualItems().map((item) => {
+        {items.map((item) => {
           const uuid = order[item.index];
           const meta = controller.getMeta(uuid);
           if (!meta) return null;
