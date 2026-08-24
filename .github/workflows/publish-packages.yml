@@ -44,6 +44,7 @@ jobs:
             libs/lib-instr/package.json \
             libs/design-system/package.json \
             libs/lib-search/package.json \
+            libs/lib-doc-model/package.json \
             libs/lib-editing/package.json)"
 
           if [ -z "$changed_files" ]; then
@@ -92,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Build publishable libraries
-        run: npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-search,lib-editing
+        run: npx nx run-many -t build -p lib-utils,data-access,client-graphql,lib-instr,design-system,lib-search,lib-doc-model,lib-editing
 
       - name: Publish packages to npm
         if: ${{ !inputs.dry_run }}

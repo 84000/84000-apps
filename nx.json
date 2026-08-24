@@ -125,6 +125,7 @@
       "lib-instr",
       "design-system",
       "lib-search",
+      "lib-doc-model",
       "lib-editing"
     ]
   },
