@@ -22,6 +22,11 @@ export type {
   WorkerFactories,
 } from './lib/client/storage-client';
 export { createStorageClient } from './lib/client/create-client';
+export {
+  cachePassageSnapshots,
+  localPassageSource,
+  LOCAL_SOURCE_NAME,
+} from './lib/client/passage-source';
 export { crc32, verifyChecksum } from './lib/checksum';
 export {
   DatabaseNotOpenError,
