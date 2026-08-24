@@ -39,6 +39,9 @@
       "@eightyfourthousand/design-system/css": [
         "./libs/design-system/src/lib/theme/global.css"
       ],
+      "@eightyfourthousand/lib-doc-model": [
+        "./libs/lib-doc-model/src/index.ts"
+      ],
       "@eightyfourthousand/lib-editing": [
         "./libs/lib-editing/src/index.ts"
       ],

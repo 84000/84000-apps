@@ -20,6 +20,7 @@
     "@eightyfourthousand/client-graphql": "^2026.8.1",
     "@eightyfourthousand/data-access": "^2026.8.1",
     "@eightyfourthousand/design-system": "^2026.8.1",
+    "@eightyfourthousand/lib-doc-model": "^2026.8.1",
     "@eightyfourthousand/lib-instr": "^2026.8.1",
     "@eightyfourthousand/lib-search": "^2026.8.1",
     "@eightyfourthousand/lib-utils": "^2026.8.1",

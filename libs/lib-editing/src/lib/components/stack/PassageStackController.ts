@@ -20,7 +20,7 @@ import {
 } from '@tiptap/y-tiptap';
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
-import { incrementLabel } from '../editor/extensions/Passage/label';
+import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
 import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
 import {

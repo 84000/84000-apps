@@ -1,0 +1,42 @@
+{
+  "name": "@eightyfourthousand/lib-doc-model",
+  "version": "2026.8.1",
+  "description": "Per-passage Yjs document model, work spine, structural operations, and row exporters for 84000 translations.",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/84000/84000-apps.git",
+    "directory": "libs/lib-doc-model"
+  },
+  "homepage": "https://github.com/84000/84000-apps",
+  "bugs": {
+    "url": "https://github.com/84000/84000-apps/issues"
+  },
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@eightyfourthousand/data-access": "^2026.8.1",
+    "@tiptap/core": "^3.23.6",
+    "@tiptap/pm": "^3.23.6",
+    "uuid": "^14.0.0",
+    "y-prosemirror": "^1.3.7",
+    "yjs": "13.6.30"
+  },
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": ""
+}

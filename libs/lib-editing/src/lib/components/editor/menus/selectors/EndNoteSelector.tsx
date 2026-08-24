@@ -32,7 +32,7 @@ import {
   syncEndnoteLinkLabelsAcrossEditors,
   waitFor,
 } from '../../extensions/EndNoteLink/endnote-utils';
-import { incrementLabel } from '../../extensions/Passage/label';
+import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 
 const SEARCH_ENDNOTES = gql`
   query SearchEndnotes($uuid: ID!, $limit: Int, $filter: PassageFilter) {
