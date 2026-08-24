@@ -3,7 +3,7 @@ import type {
   Passage,
   TranslationEditorContentItem,
 } from '@eightyfourthousand/data-access';
-import { blockFromPassage } from '../../block';
+import { blockFromPassage } from '@eightyfourthousand/lib-doc-model';
 
 export type StackPassageMeta = {
   uuid: string;

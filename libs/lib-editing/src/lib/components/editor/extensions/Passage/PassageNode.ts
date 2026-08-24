@@ -2,7 +2,7 @@ import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { Fragment, type Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
-import { incrementLabel } from './label';
+import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 import { PassageNodeSSR } from './PassageNode.ssr';
 import {
   PASSAGE_CONTENT_CLASS,

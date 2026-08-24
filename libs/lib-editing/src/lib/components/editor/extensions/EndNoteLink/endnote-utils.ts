@@ -1,6 +1,6 @@
 import { Editor } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { incrementLabel } from '../Passage/label';
+import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 import { findPassageNode } from '../../util';
 
 interface EndNoteLinkNote {
