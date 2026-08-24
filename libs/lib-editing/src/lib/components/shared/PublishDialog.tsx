@@ -392,18 +392,6 @@ export const PublishDialog = ({
           </div>
         )}
 
-        {/* Shown in every state, including after a successful publish, because the wrong
-            belief this corrects — that publishing has just changed the public site — is one an
-            editor is most likely to hold at exactly that moment. Remove this when the reader
-            reads from the published_* tables. */}
-        <div className="rounded-md border border-border bg-warning/10 p-3">
-          <MutedText className="text-xs">
-            {
-              'The public reader does not read published versions yet — it still serves draft content. Publishing records the version and materializes the snapshot in the database, but published versions are not "live" until the reader is switched over.'
-            }
-          </MutedText>
-        </div>
-
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {succeeded || (failed && !retryable) ? 'Close' : 'Cancel'}

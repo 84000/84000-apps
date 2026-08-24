@@ -69,18 +69,6 @@ beforeEach(() => {
 });
 
 describe('PublishDialog', () => {
-  it('says the reader does not serve published versions yet, in every state', async () => {
-    // True until DEV-558 switches the reader to the published_* tables. It must survive to
-    // the success state especially: "Published 0.0.3" otherwise reads as "it is live now".
-    renderDialog();
-    expect(screen.getByText(/does not read published versions yet/)).toBeTruthy();
-
-    await userEvent.click(publishButton());
-
-    await waitFor(() => expect(screen.getByText('Published 0.0.3')).toBeTruthy());
-    expect(screen.getByText(/does not read published versions yet/)).toBeTruthy();
-  });
-
   it('pre-fills the version the pipeline would choose', () => {
     renderDialog();
 
@@ -142,7 +130,9 @@ describe('PublishDialog', () => {
   });
 
   it('refuses to publish when the checks could not be evaluated', async () => {
-    renderDialog({ verdict: { ok: false, undetermined: true, checkedAt: null } });
+    renderDialog({
+      verdict: { ok: false, undetermined: true, checkedAt: null },
+    });
 
     expect(publishButton().disabled).toBe(true);
     expect(screen.getByText(/could not be evaluated/)).toBeTruthy();
@@ -189,7 +179,9 @@ describe('PublishDialog', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
-    await waitFor(() => expect(screen.getByText('Publish failed')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('Publish failed')).toBeTruthy(),
+    );
     expect(screen.getByText(/still the live one/)).toBeTruthy();
     expect(onPublished).not.toHaveBeenCalled();
   });
@@ -228,7 +220,9 @@ describe('PublishDialog', () => {
     });
     await userEvent.click(retry);
 
-    await waitFor(() => expect(screen.getByText('Published 1.1.1')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('Published 1.1.1')).toBeTruthy(),
+    );
     expect(mockPublishWork).toHaveBeenLastCalledWith(
       expect.objectContaining({ version: '1.1.1' }),
     );
@@ -259,11 +253,15 @@ describe('PublishDialog', () => {
 
     await userEvent.click(publishButton());
 
-    await waitFor(() => expect(screen.getByText('Publish failed')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('Publish failed')).toBeTruthy(),
+    );
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
     expect(screen.queryByLabelText('Version')).toBeNull();
     // Dismissal only. ("Close" also matches the dialog's own X, hence getAll.)
-    expect(screen.getAllByRole('button', { name: 'Close' }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button', { name: 'Close' }).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(/still the live one/)).toBeTruthy();
   });
 
@@ -272,7 +270,9 @@ describe('PublishDialog', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
-    await waitFor(() => expect(screen.getByText('Published 0.0.3')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('Published 0.0.3')).toBeTruthy(),
+    );
     expect(onPublished).toHaveBeenCalledTimes(1);
     // Nothing to poll for: the job came back terminal.
     expect(mockGetPublishJob).not.toHaveBeenCalled();
@@ -297,7 +297,9 @@ describe('PublishDialog', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
 
-    await waitFor(() => expect(screen.getByText('Published 0.0.3')).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText('Published 0.0.3')).toBeTruthy(),
+    );
     expect(screen.getByText(/do not block publication/)).toBeTruthy();
   });
 
