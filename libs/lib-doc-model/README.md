@@ -12,21 +12,25 @@ The work is split in two:
   content, which is how the exporters read them, and a second home for them
   would be a second thing to reconcile on merge.
 - **One spine per work.** Ordered passage uuids, plus each passage's label,
-  type, and tab assignment.
+  type, and placement — the panel and tab it is surfaced in, derived from the
+  type by `data-access`'s `panelAndTabForContentType`. Tab is the grain the UI
+  actually draws, so it is the grain the spine stores: `abbreviations` and
+  `endnotes` share the right panel but are separate tabs fetched by separate
+  queries, and any coarser grouping makes one of them unreachable.
 
 Memory is bounded by the window rather than by the work.
 
 ## The pieces
 
-| Module                          | What it is                                                                  |
-| ------------------------------- | --------------------------------------------------------------------------- |
-| `Spine`                         | The work-level Yjs document: order, labels, types, matter. All renumbering. |
-| `PassageDoc`                    | One passage's Yjs document, its undo manager, and its dirty flag.           |
-| `PassageDocStore`               | The set of documents currently in memory; hydration and release.            |
-| `WorkDocument`                  | Spine + store + command log, and the structural operations over them.       |
-| `CommandLog`                    | Interleaved undo history for text edits and structural ops.                 |
-| `PassageLoader`                 | Resolves a window of passages, cheapest source first.                       |
-| `exporters/`, `passageFromNode` | Row materialization, carried over unchanged.                                |
+| Module                          | What it is                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `Spine`                         | The work-level Yjs document: order, labels, types, placement. All renumbering. |
+| `PassageDoc`                    | One passage's Yjs document, its undo manager, and its dirty flag.              |
+| `PassageDocStore`               | The set of documents currently in memory; hydration and release.               |
+| `WorkDocument`                  | Spine + store + command log, and the structural operations over them.          |
+| `CommandLog`                    | Interleaved undo history for text edits and structural ops.                    |
+| `PassageLoader`                 | Resolves a window of passages, cheapest source first.                          |
+| `exporters/`, `passageFromNode` | Row materialization, carried over unchanged.                                   |
 
 ## Undo
 

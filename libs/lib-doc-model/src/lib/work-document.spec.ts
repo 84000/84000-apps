@@ -1,12 +1,12 @@
 import { WorkDocument } from './work-document';
 import { para, paraTexts, testSchema } from './schema.fixture';
-import type { PassageMeta } from './types';
+import type { SpineSeed } from './spine';
 
 const meta = (
   uuid: string,
   label: string,
   type = 'translation',
-): Omit<PassageMeta, 'matter'> => ({ uuid, label, type });
+): SpineSeed => ({ uuid, label, type });
 
 /** A work of `count` passages, each holding one paragraph of known text. */
 const build = (count = 3) => {

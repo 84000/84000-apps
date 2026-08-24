@@ -43,8 +43,6 @@ export type {
   PassageSource,
 } from './lib/loader';
 
-export { matterForType } from './lib/matter';
-
 export {
   PassageDoc,
   REMOTE_ORIGIN,
@@ -55,7 +53,7 @@ export type { PassageDocOptions } from './lib/passage-doc';
 export { passageFromNode } from './lib/passage';
 
 export { Spine, SPINE_ORIGIN } from './lib/spine';
-export type { MutateOptions } from './lib/spine';
+export type { MutateOptions, SpineSeed } from './lib/spine';
 
 export { WorkDocument } from './lib/work-document';
 export type {
@@ -66,7 +64,7 @@ export type {
 export type {
   FocusTarget,
   LabelChange,
-  Matter,
+  PassagePlacement,
   PassageMeta,
   SpineEntry,
   SpineRange,

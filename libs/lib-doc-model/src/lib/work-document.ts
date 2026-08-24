@@ -8,7 +8,7 @@ import { PassageDocStore } from './doc-store';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
 import type { PassageDoc } from './passage-doc';
-import { Spine } from './spine';
+import { Spine, type SpineSeed } from './spine';
 import type {
   FocusTarget,
   LabelChange,
@@ -99,7 +99,7 @@ export class WorkDocument {
   }
 
   /** Seed the spine from passage metadata, e.g. on a work's first visit. */
-  seedSpine(passages: Omit<PassageMeta, 'matter'>[]) {
+  seedSpine(passages: SpineSeed[]) {
     this.spine.seed(passages);
     this.notify();
   }
@@ -124,7 +124,7 @@ export class WorkDocument {
     const tail = this.fragmentToJSON(node.content.cut(pos));
     const before = doc.toJSON();
 
-    const newMeta: Omit<PassageMeta, 'matter'> = {
+    const newMeta: SpineSeed = {
       uuid: this.newUuid(),
       type: meta.type,
       label: incrementLabel(meta.label),
@@ -207,7 +207,7 @@ export class WorkDocument {
     const at = Math.max(0, Math.min(index, this.spine.length));
     const previous =
       at > 0 ? this.spine.meta(this.spine.uuidAt(at - 1) ?? '') : null;
-    const meta: Omit<PassageMeta, 'matter'> = {
+    const meta: SpineSeed = {
       uuid: passage.uuid ?? this.newUuid(),
       type: passage.type,
       label: passage.label ?? (previous ? incrementLabel(previous.label) : '1'),

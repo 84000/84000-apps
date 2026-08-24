@@ -1,11 +1,11 @@
 import { Spine } from './spine';
-import type { PassageMeta } from './types';
+import type { SpineSeed } from './spine';
 
 const meta = (
   uuid: string,
   label: string,
   type = 'translation',
-): Omit<PassageMeta, 'matter'> => ({ uuid, label, type });
+): SpineSeed => ({ uuid, label, type });
 
 const seeded = (count: number) => {
   const spine = new Spine('work-1');
@@ -30,7 +30,7 @@ describe('Spine', () => {
     expect(spine.meta('p0')).toBeNull();
   });
 
-  it('derives matter from the passage type', () => {
+  it('derives panel and tab from the passage type', () => {
     const spine = new Spine('work-1');
     spine.seed([
       meta('a', '1', 'introduction'),
@@ -38,17 +38,87 @@ describe('Spine', () => {
       meta('c', '3', 'endnotes'),
       meta('d', '4', 'translationHeader'),
     ]);
-    expect(spine.meta('a')?.matter).toBe('front');
-    expect(spine.meta('b')?.matter).toBe('body');
-    expect(spine.meta('c')?.matter).toBe('endnotes');
-    expect(spine.meta('d')?.matter).toBe('body');
-    expect(spine.matter('front').map((e) => e.uuid)).toEqual(['a']);
+    expect(spine.meta('a')).toMatchObject({ panel: 'main', tab: 'front' });
+    expect(spine.meta('b')).toMatchObject({
+      panel: 'main',
+      tab: 'translation',
+    });
+    expect(spine.meta('c')).toMatchObject({ panel: 'right', tab: 'endnotes' });
+    // A header is folded into the section it introduces.
+    expect(spine.meta('d')).toMatchObject({
+      panel: 'main',
+      tab: 'translation',
+    });
+    expect(spine.tab('front').map((e) => e.uuid)).toEqual(['a']);
   });
 
-  it('re-derives matter when a type changes', () => {
+  it('re-derives placement when a type changes', () => {
     const spine = seeded(1);
     spine.setType('p0', 'endnotes');
-    expect(spine.meta('p0')?.matter).toBe('endnotes');
+    expect(spine.meta('p0')).toMatchObject({
+      panel: 'right',
+      tab: 'endnotes',
+    });
+  });
+
+  describe('the back panel holds more than endnotes', () => {
+    // The right panel has an Abbr tab and a Notes tab, fetched as two separate
+    // `type` queries. A grouping that cannot tell them apart makes one of them
+    // unreachable from the spine — which a three-way front/body/back split did.
+    const backPanelSpine = () => {
+      const spine = new Spine('work-1');
+      spine.seed([
+        meta('body-1', '1', 'translation'),
+        meta('abbr-h', '2', 'abbreviationsHeader'),
+        meta('abbr-1', '3', 'abbreviations'),
+        meta('abbr-2', '4', 'abbreviations'),
+        meta('notes-h', '5', 'endnotesHeader'),
+        meta('notes-1', '6', 'endnotes'),
+      ]);
+      return spine;
+    };
+
+    it('gives abbreviations and endnotes distinct tabs in the same panel', () => {
+      const spine = backPanelSpine();
+      expect(spine.meta('abbr-1')).toMatchObject({
+        panel: 'right',
+        tab: 'abbreviations',
+      });
+      expect(spine.meta('notes-1')).toMatchObject({
+        panel: 'right',
+        tab: 'endnotes',
+      });
+    });
+
+    it('separates the two tabs', () => {
+      const spine = backPanelSpine();
+      expect(spine.tab('abbreviations').map((e) => e.uuid)).toEqual([
+        'abbr-h',
+        'abbr-1',
+        'abbr-2',
+      ]);
+      expect(spine.tab('endnotes').map((e) => e.uuid)).toEqual([
+        'notes-h',
+        'notes-1',
+      ]);
+    });
+
+    it('groups the whole panel when asked for the column', () => {
+      expect(
+        backPanelSpine()
+          .panel('right')
+          .map((e) => e.uuid),
+      ).toEqual(['abbr-h', 'abbr-1', 'abbr-2', 'notes-h', 'notes-1']);
+    });
+
+    it('a tab includes its section header; a type does not', () => {
+      const spine = backPanelSpine();
+      expect(spine.tab('abbreviations')).toHaveLength(3);
+      expect(spine.ofType('abbreviations').map((e) => e.uuid)).toEqual([
+        'abbr-1',
+        'abbr-2',
+      ]);
+    });
   });
 
   describe('windowing', () => {

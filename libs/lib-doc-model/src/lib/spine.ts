@@ -1,14 +1,10 @@
 import { Array as YArray, Doc, Map as YMap, transact } from 'yjs';
-import type { BodyItemType } from '@eightyfourthousand/data-access';
-import { matterForType } from './matter';
+import {
+  panelAndTabForContentType,
+  type BodyItemType,
+} from '@eightyfourthousand/data-access';
 import { renumberLabelsFrom } from './labels';
-import type {
-  LabelChange,
-  Matter,
-  PassageMeta,
-  SpineEntry,
-  SpineRange,
-} from './types';
+import type { LabelChange, PassageMeta, SpineEntry, SpineRange } from './types';
 
 /**
  * Whether a mutation should renumber the labels it disturbs.
@@ -18,6 +14,15 @@ import type {
  * that would compute them a second time from a different starting state.
  */
 export type MutateOptions = { renumber?: boolean };
+
+/**
+ * What a caller supplies for a new passage.
+ *
+ * Placement is not part of it: panel and tab are derived from the type by
+ * `panelAndTabForContentType`, so there is no way to seed a passage into a tab
+ * its type does not belong to.
+ */
+export type SpineSeed = Omit<PassageMeta, 'panel' | 'tab'>;
 
 /** Yjs key for the ordered passage uuids. */
 const ORDER_KEY = 'order';
@@ -61,7 +66,7 @@ export class Spine {
    * Used when seeding a work from the server for the first time. It is a
    * single transaction so observers see one change, not one per passage.
    */
-  seed(passages: Omit<PassageMeta, 'matter'>[]) {
+  seed(passages: SpineSeed[]) {
     transact(
       this.doc,
       () => {
@@ -104,7 +109,8 @@ export class Spine {
       uuid,
       label: (entry.get('label') as string) ?? '',
       type: (entry.get('type') as BodyItemType) ?? 'unknown',
-      matter: (entry.get('matter') as Matter) ?? 'body',
+      panel: (entry.get('panel') as string) ?? 'main',
+      tab: (entry.get('tab') as string) ?? 'translation',
       toh: entry.get('toh') as PassageMeta['toh'],
     };
   }
@@ -138,9 +144,31 @@ export class Spine {
     return { start, end };
   }
 
-  /** The passages assigned to one section of the work. */
-  matter(matter: Matter): SpineEntry[] {
-    return this.entries().filter((entry) => entry.matter === matter);
+  /**
+   * The passages shown in one tab, in order — everything that tab renders.
+   *
+   * This is the grouping the UI actually draws, and the one worth asking the
+   * spine for. Section headers come with their tab, because
+   * `panelAndTabForContentType` folds `endnotesHeader` into `endnotes`.
+   */
+  tab(tab: string): SpineEntry[] {
+    return this.entries().filter((entry) => entry.tab === tab);
+  }
+
+  /** The passages shown in one panel — `'main'` or `'right'`. */
+  panel(panel: string): SpineEntry[] {
+    return this.entries().filter((entry) => entry.panel === panel);
+  }
+
+  /**
+   * The passages of one type, in order.
+   *
+   * Narrower than `tab`: a type excludes its section header, where the tab
+   * includes it. The reader fetches by type (`getTranslationBlocks({ type })`),
+   * so the spine answers that question too.
+   */
+  ofType(type: BodyItemType): SpineEntry[] {
+    return this.entries().filter((entry) => entry.type === type);
   }
 
   /**
@@ -163,7 +191,7 @@ export class Spine {
    * `insert(meta, spine.length)` appends.
    */
   insert(
-    passage: Omit<PassageMeta, 'matter'>,
+    passage: SpineSeed,
     index: number,
     options: MutateOptions = {},
   ): { entry: SpineEntry; labelChanges: LabelChange[] } {
@@ -266,15 +294,17 @@ export class Spine {
     transact(this.doc, () => entry.set('label', label), SPINE_ORIGIN);
   }
 
-  /** Set one passage's type, re-deriving which matter it belongs to. */
+  /** Set one passage's type, re-deriving where it is surfaced. */
   setType(uuid: string, type: BodyItemType) {
     const entry = this.metas.get(uuid);
     if (!entry) return;
+    const { panel, tab } = panelAndTabForContentType(type);
     transact(
       this.doc,
       () => {
         entry.set('type', type);
-        entry.set('matter', matterForType(type));
+        entry.set('panel', panel);
+        entry.set('tab', tab);
       },
       SPINE_ORIGIN,
     );
@@ -382,16 +412,18 @@ export class Spine {
   // ------------------------------------------------------------ private
 
   /** Insert at the end without a transaction of its own. Callers wrap. */
-  private appendUnsafe(passage: Omit<PassageMeta, 'matter'>) {
+  private appendUnsafe(passage: SpineSeed) {
     this.order.push([passage.uuid]);
     this.metas.set(passage.uuid, this.metaMap(passage));
   }
 
-  private metaMap(passage: Omit<PassageMeta, 'matter'>): YMap<unknown> {
+  private metaMap(passage: SpineSeed): YMap<unknown> {
+    const { panel, tab } = panelAndTabForContentType(passage.type);
     const entry = new YMap<unknown>();
     entry.set('label', passage.label);
     entry.set('type', passage.type);
-    entry.set('matter', matterForType(passage.type));
+    entry.set('panel', panel);
+    entry.set('tab', tab);
     if (passage.toh) entry.set('toh', passage.toh);
     return entry;
   }

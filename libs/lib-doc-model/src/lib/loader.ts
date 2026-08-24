@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
-import type { PassageMeta, SpineRange } from './types';
+import type { SpineSeed } from './spine';
+import type { SpineRange } from './types';
 
 /**
  * What a source can supply for one passage.
@@ -38,7 +39,7 @@ export type PassageSource = {
   /** The work's spine, encoded, or null when this source does not have it. */
   loadSpine?(workUuid: string): Promise<Uint8Array | null>;
   /** The work's passage metadata, for seeding a spine that has no document. */
-  loadSpineMetas?(workUuid: string): Promise<Omit<PassageMeta, 'matter'>[]>;
+  loadSpineMetas?(workUuid: string): Promise<SpineSeed[]>;
 };
 
 export type PassageLoaderOptions = {
@@ -166,9 +167,7 @@ export class PassageLoader {
   }
 
   /** The work's passage metadata, from the first source that has it. */
-  async loadSpineMetas(
-    workUuid: string,
-  ): Promise<Omit<PassageMeta, 'matter'>[]> {
+  async loadSpineMetas(workUuid: string): Promise<SpineSeed[]> {
     for (const source of this.sources) {
       if (!source.loadSpineMetas) continue;
       try {

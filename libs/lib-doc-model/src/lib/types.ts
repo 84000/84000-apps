@@ -4,13 +4,28 @@ import type {
 } from '@eightyfourthousand/data-access';
 
 /**
- * Which of a work's three sections a passage belongs to.
+ * Where a passage is surfaced: which panel, and which tab within it.
  *
- * Derived from the passage type rather than stored on the row, but held in the
- * spine so a consumer can partition a work without touching a single passage
- * document.
+ * Both come from `data-access`'s `panelAndTabForContentType`, which is the
+ * layout model the reader and editor already use — `PANEL_FOR_CONTENT_SECTION`
+ * and `TAB_FOR_CONTENT_SECTION`, with `*Header` types folded into the section
+ * they introduce.
+ *
+ * Tab is the useful grain, and the reason this is not a coarser three-way
+ * front/body/back split: `abbreviations` and `endnotes` share the right panel
+ * but are separate tabs fetched by separate queries, so any grouping that
+ * cannot tell them apart makes one of them unreachable.
+ *
+ * Plain strings rather than a union because that is what the layout constants
+ * are — `Partial<Record<PanelContentType, string>>`. Inventing a union here
+ * would be a second list to keep in step with them.
  */
-export type Matter = 'front' | 'body' | 'endnotes';
+export type PassagePlacement = {
+  /** `'main'` or `'right'` — which column shows this passage. */
+  panel: string;
+  /** `'front'`, `'translation'`, `'endnotes'`, `'abbreviations'`, … */
+  tab: string;
+};
 
 /**
  * Everything about a passage that is *not* its content.
@@ -23,9 +38,8 @@ export type PassageMeta = {
   uuid: string;
   label: string;
   type: BodyItemType;
-  matter: Matter;
   toh?: TohokuCatalogEntry;
-};
+} & PassagePlacement;
 
 /** A passage's position and identity, as read back from the spine. */
 export type SpineEntry = PassageMeta & {
