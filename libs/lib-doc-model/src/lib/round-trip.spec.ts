@@ -11,6 +11,24 @@ import { passageFromNode } from './passage';
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
 /**
+ * Export a passage the way the single-document editor does, reading identity
+ * off the node's attributes rather than from a spine.
+ *
+ * `lib-editing`'s `passageFromNode` is this same adapter. It is duplicated in
+ * three lines here so the round-trip contract stays tested in the package that
+ * owns the exporters, rather than importing the package that depends on it.
+ */
+const passageFromEditorNode = (node: Node, workUuid: string) =>
+  passageFromNode(node, workUuid, {
+    uuid: node.attrs.uuid,
+    type: node.attrs.type,
+    sort: node.attrs.sort,
+    label: node.attrs.label,
+    toh: node.attrs.toh,
+    invalid: node.attrs.invalid,
+  });
+
+/**
  * Round-trip contract: every annotation that renders must survive export with
  * equivalent combined coverage. A mark that was split across segments by an
  * overlapping annotation persists back as N contiguous annotations (one per
@@ -198,7 +216,10 @@ describe('passageFromNode annotationsIncomplete flag', () => {
   it('leaves the flag unset when every annotation exports', () => {
     const block = buildBlock(dto.annotations);
     dedupeMarkUuids(block);
-    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+    const passage = passageFromEditorNode(
+      toFakeNode(block) as never,
+      'work-uuid-1',
+    );
 
     expect(passage.annotationsIncomplete).toBeUndefined();
     expect(passage.annotations.length).toBeGreaterThan(0);
@@ -213,7 +234,10 @@ describe('passageFromNode annotationsIncomplete flag', () => {
     // Simulate the ensureUuids timing gap: the paragraph's uuid is missing at
     // export time, so its block annotation cannot be exported.
     delete block.content?.[0]?.attrs?.uuid;
-    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+    const passage = passageFromEditorNode(
+      toFakeNode(block) as never,
+      'work-uuid-1',
+    );
 
     expect(passage.annotationsIncomplete).toBe(true);
     expect(consoleError).toHaveBeenCalled();
@@ -240,7 +264,10 @@ describe('passageFromNode annotationsIncomplete flag', () => {
         content: [{ 'text-style': 'emphasis' }],
       },
     ]);
-    const passage = passageFromNode(toFakeNode(block) as never, 'work-uuid-1');
+    const passage = passageFromEditorNode(
+      toFakeNode(block) as never,
+      'work-uuid-1',
+    );
 
     expect(passage.annotationsIncomplete).toBe(true);
     consoleWarn.mockRestore();

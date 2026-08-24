@@ -1,4 +1,4 @@
-import { incrementLabel, decrementLabel } from './labels';
+import { incrementLabel, decrementLabel, renumberLabelsFrom } from './labels';
 
 describe('incrementLabel', () => {
   it('should increment the last component of a dotted label', () => {
@@ -114,5 +114,48 @@ describe('normalizeLabelsAfter helpers', () => {
       sequence.push(label);
     }
     expect(sequence).toEqual(['2.1.4', '2.1.5', '2.1.6', '2.1.7']);
+  });
+});
+
+describe('renumberLabelsFrom', () => {
+  it('renumbers the run after the anchor', () => {
+    const labels = ['1', '2', '2', '3', '4'];
+    expect([...renumberLabelsFrom(labels, 1)]).toEqual([
+      [2, '3'],
+      [3, '4'],
+      [4, '5'],
+    ]);
+  });
+
+  it('returns nothing when the run is already consistent', () => {
+    expect(renumberLabelsFrom(['1', '2', '3'], 0).size).toBe(0);
+  });
+
+  it('stops as soon as a label already holds its expected value', () => {
+    // A split at the top of a long work must not rewrite every label below it.
+    const labels = ['1', '1', '3', '4'];
+    expect([...renumberLabelsFrom(labels, 0)]).toEqual([[1, '2']]);
+  });
+
+  it('skips deeper labels and renumbers only its own depth', () => {
+    const labels = ['1.1', '1.1', '1.1.1', '1.4'];
+    expect([...renumberLabelsFrom(labels, 0)]).toEqual([
+      [1, '1.2'],
+      [3, '1.3'],
+    ]);
+  });
+
+  it('stops at a shallower label', () => {
+    const labels = ['1.1', '1.1', '2', '2.1'];
+    expect([...renumberLabelsFrom(labels, 0)]).toEqual([[1, '1.2']]);
+  });
+
+  it('stops at a label under a different parent', () => {
+    const labels = ['1.1', '1.1', '2.5'];
+    expect([...renumberLabelsFrom(labels, 0)]).toEqual([[1, '1.2']]);
+  });
+
+  it('returns nothing for an anchor outside the list', () => {
+    expect(renumberLabelsFrom(['1'], 9).size).toBe(0);
   });
 });
