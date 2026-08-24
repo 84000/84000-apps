@@ -1,28 +1,75 @@
 /**
  * `@eightyfourthousand/lib-doc-model`
  *
- * Transformation between `passages` rows and TipTap editor content, in both
- * directions: `block.ts` and `transformers/` one way, `exporters/` and
- * `passageFromNode` the other, plus the passage labels both sides renumber.
+ * The per-passage document model: one small Yjs document per passage, a
+ * work-level spine holding order and identity, structural operations over the
+ * two, and the exporters that turn a passage document back into a row.
  *
- * They live here rather than in `lib-editing` because more than the browser
- * editor needs them. The per-passage document model and the server-side
- * passage write path apply the same transformation from a Next.js route
- * handler, and `lib-editing` is a React component library. So nothing in this
- * package touches a browser API or imports an editor — see
- * `eslint.config.mjs`, which enforces the first half of that.
+ * Nothing here touches a browser API, and nothing here imports an editor. That
+ * is the constraint the package exists to hold: the same model backs the
+ * browser editor stack, `@eightyfourthousand/lib-persistence` (which depends on
+ * this package, not the other way round), and the server-side write path in
+ * Next.js route handlers.
  *
- * `transformers/` is deliberately not exported: it was internal to
- * `lib-editing` and stays internal here. Only `blockFromPassage` and
- * `blocksFromTranslationBody` are public, and `lib-editing` re-exports those
- * two so its own consumers are unaffected.
+ * See `README.md` for the shape of the model and why it is sharded.
  */
 
 export { blockFromPassage, blocksFromTranslationBody } from './lib/block';
 
-export { decrementLabel, incrementLabel } from './lib/labels';
+export { CommandLog } from './lib/command-log';
+export type {
+  Command,
+  ContentChange,
+  MoveChange,
+  SpineChange,
+  StructuralCommand,
+  TextCommand,
+} from './lib/command-log';
+
+export { PassageDocStore, windowUuids } from './lib/doc-store';
+export type { PassageDocStoreOptions } from './lib/doc-store';
+
+export {
+  decrementLabel,
+  incrementLabel,
+  renumberLabelsFrom,
+} from './lib/labels';
+
+export { PassageLoader } from './lib/loader';
+export type {
+  LoadReport,
+  PassageLoaderOptions,
+  PassageSnapshot,
+  PassageSource,
+} from './lib/loader';
+
+export {
+  PassageDoc,
+  REMOTE_ORIGIN,
+  STRUCTURAL_ORIGIN,
+} from './lib/passage-doc';
+export type { PassageDocOptions } from './lib/passage-doc';
 
 export { passageFromNode } from './lib/passage';
+
+export { Spine, SPINE_ORIGIN } from './lib/spine';
+export type { MutateOptions, SpineSeed } from './lib/spine';
+
+export { WorkDocument } from './lib/work-document';
+export type {
+  InsertPassageInput,
+  WorkDocumentOptions,
+} from './lib/work-document';
+
+export type {
+  FocusTarget,
+  LabelChange,
+  PassagePlacement,
+  PassageMeta,
+  SpineEntry,
+  SpineRange,
+  StructuralOpKind,
+} from './lib/types';
 
 export { MARK_TYPES } from './lib/mark-types';
 export type { SpanMarkType } from './lib/mark-types';

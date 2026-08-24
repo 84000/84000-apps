@@ -47,3 +47,54 @@ export const decrementLabel = (label: string, depth = -1) => {
 
   return labelParts.join('.');
 };
+
+/**
+ * Renumber the run of labels that follows `anchorIndex`, returning only the
+ * ones that changed.
+ *
+ * The run is the sequence of labels at the anchor's own depth sharing the
+ * anchor's parent prefix. Deeper labels are skipped over (a sub-numbered
+ * passage keeps its number while its siblings shift around it); a shallower
+ * label, or one under a different parent, ends the run — the anchor's sequence
+ * does not reach past it.
+ *
+ * Renumbering also stops as soon as a label already holds the value it would
+ * be given, because from there on the rest of the run is already consistent.
+ * That early exit is what keeps a split near the top of a thousand-passage
+ * work from rewriting every label below it.
+ *
+ * Returns a sparse map of index → new label rather than a whole list, so the
+ * caller writes only the entries that moved.
+ */
+export const renumberLabelsFrom = (
+  labels: string[],
+  anchorIndex: number,
+): Map<number, string> => {
+  const changed = new Map<number, string>();
+  const anchor = labels[anchorIndex];
+  if (!anchor) return changed;
+
+  const parts = anchor.split('.');
+  const depth = parts.length;
+  const prefix = depth > 1 ? `${parts.slice(0, -1).join('.')}.` : '';
+
+  let expected = incrementLabel(anchor);
+  for (let i = anchorIndex + 1; i < labels.length; i++) {
+    const label = labels[i];
+    if (!label) continue;
+
+    const labelDepth = label.split('.').length;
+    // Shallower means we have left the anchor's sequence entirely.
+    if (labelDepth < depth) break;
+    // Deeper means a child of the passage above; it renumbers with its own
+    // parent, not with this run.
+    if (labelDepth > depth) continue;
+    if (prefix && !label.startsWith(prefix)) break;
+    if (label === expected) break;
+
+    changed.set(i, expected);
+    expected = incrementLabel(expected);
+  }
+
+  return changed;
+};

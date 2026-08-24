@@ -1,54 +1,65 @@
 # @eightyfourthousand/lib-doc-model
 
-Transformation between `passages` rows and TipTap editor content, in both
-directions, plus the passage labels both sides renumber.
+The per-passage document model: one small Yjs document per passage, a work-level
+spine holding order and identity, structural operations over the two, and the
+exporters that turn a passage document back into a `passages` row.
 
-It has no runtime of its own yet — this package is currently the new home for
-code that already existed in `lib-editing`. The per-passage Yjs document model
-it is named for lands on top of it
-([DEV-564](https://linear.app/84000/issue/DEV-564)).
+The work is split in two:
 
-## Why the code moved here
+- **One document per passage.** Content and annotations for a single passage,
+  created on demand and released when it leaves the visible window. Annotations
+  are not stored separately: they are the marks and node attributes on the
+  content, which is how the exporters read them, and a second home for them
+  would be a second thing to reconcile on merge.
+- **One spine per work.** Ordered passage uuids, plus each passage's label,
+  type, and placement — the panel and tab it is surfaced in, derived from the
+  type by `data-access`'s `panelAndTabForContentType`. Tab is the grain the UI
+  actually draws, so it is the grain the spine stores: `abbreviations` and
+  `endnotes` share the right panel but are separate tabs fetched by separate
+  queries, and any coarser grouping makes one of them unreachable.
 
-| Direction            | Modules                         |
-| -------------------- | ------------------------------- |
-| Row → editor content | `block.ts`, `transformers/`     |
-| Editor content → row | `exporters/`, `passageFromNode` |
-| Shared               | `labels.ts`, `mark-types.ts`    |
+Memory is bounded by the window rather than by the work.
 
-All of it lived in `lib-editing`, which is a React component library. That was
-fine while the browser editor was the only caller. It is not fine now: the
-per-passage document model and the server-side passage write service
-([DEV-713](https://linear.app/84000/issue/DEV-713)) apply the same
-transformation from a Next.js route handler, and re-seeding a passage document
-from its row is exactly `blockFromPassage`.
+## The pieces
 
-It was already leaking. `apps/api-graphql`'s passage field resolver imports
-`blockFromPassage` from `@eightyfourthousand/lib-editing`'s main barrel — a
-server-side GraphQL resolver reaching into a React package for a pure function.
+| Module                          | What it is                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `Spine`                         | The work-level Yjs document: order, labels, types, placement. All renumbering. |
+| `PassageDoc`                    | One passage's Yjs document, its undo manager, and its dirty flag.              |
+| `PassageDocStore`               | The set of documents currently in memory; hydration and release.               |
+| `WorkDocument`                  | Spine + store + command log, and the structural operations over them.          |
+| `CommandLog`                    | Interleaved undo history for text edits and structural ops.                    |
+| `PassageLoader`                 | Resolves a window of passages, cheapest source first.                          |
+| `exporters/`, `passageFromNode` | Row materialization, carried over unchanged.                                   |
 
-The two directions moved together because they are inverses: `round-trip.spec.ts`
-asserts that every annotation which renders survives export with equivalent
-coverage, and splitting the pair across packages would have put that contract on
-a package boundary.
+## Undo
 
-## Constraints
+**Text edits** live in each passage's own `Y.UndoManager`. Nothing else can undo
+them, and releasing a passage's document releases its text history with it —
+that is the trade the windowed model makes.
 
-Nothing here may touch a browser API or import an editor. TypeScript cannot
-enforce the first half — `data-access` is compiled from source and transitively
-needs the DOM lib, so `dom` has to stay in `tsconfig.lib.json` and every browser
-global is in scope as far as the compiler is concerned. `eslint.config.mjs`
-restricts the globals instead.
+**Structural operations** cannot live in any single passage's history, because a
+split changes two documents and the spine. They go in the command log, which
+records _what changed_ rather than a snapshot of the work: the passages touched,
+the positions taken and vacated, and the labels rewritten. A snapshot of a
+ten-thousand passage spine per operation would be unaffordable; a command's size
+is set by the operation instead.
 
-## Surface
+The two interleave in one log, so typing in passage 4, splitting passage 7, then
+typing in passage 9 undoes in that order rather than in three separate orders.
 
-`transformers/` is not exported, matching what `lib-editing` did with it. Public
-are `blockFromPassage`, `blocksFromTranslationBody`, `passageFromNode`, the
-exporters, `incrementLabel` / `decrementLabel`, and `MARK_TYPES`.
+## Hydration
 
-`lib-editing` re-exports `blockFromPassage` and `blocksFromTranslationBody`, so
-its consumers — `api-graphql`, `web-editor`, and the DEV-706 stack prototype —
-are unchanged.
+`PassageLoader` takes an ordered list of `PassageSource`s and asks each only for
+what the ones before it could not supply local first, then GraphQL. Anything a
+later source answered is written back through the loader's `cache`.
 
-`ensureUuids` and `passagesFromNodes` stayed in `lib-editing`: both take a live
-TipTap `Editor`, so neither can move.
+A source that throws is logged and skipped rather than failing the window: a
+corrupt local cache should fall through to the network, not leave a blank page.
+Passages no source could supply are reported in `LoadReport.missing` rather than
+silently omitted.
+
+`WorkDocument.hydrateWindow` is the whole memory story in one call — hydrate the
+range plus the loader's buffer, release everything outside it. Releasing refuses
+while a passage is dirty: a released document is gone, and unsynced edits are the
+one thing this model cannot re-fetch.

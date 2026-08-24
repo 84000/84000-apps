@@ -1,6 +1,7 @@
 import { Editor } from '@tiptap/react';
+import { Node } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
-import { passageFromNode } from '@eightyfourthousand/lib-doc-model';
+import { passageFromNode as passageFromContentNode } from '@eightyfourthousand/lib-doc-model';
 import { Passage } from '@eightyfourthousand/data-access';
 
 /**
@@ -145,6 +146,23 @@ export const ensureUuids = (
     view.dispatch(tr);
   }
 };
+
+/**
+ * Materialize a `passages` row from a passage node in the single-document
+ * editor, where identity lives on the node's attributes.
+ *
+ * The export itself is `@eightyfourthousand/lib-doc-model`'s; this only reads
+ * the identity the per-passage model keeps in the spine off the node instead.
+ */
+export const passageFromNode = (node: Node, workUuid: string): Passage =>
+  passageFromContentNode(node, workUuid, {
+    uuid: node.attrs.uuid,
+    type: node.attrs.type,
+    sort: node.attrs.sort,
+    label: node.attrs.label,
+    toh: node.attrs.toh,
+    invalid: node.attrs.invalid,
+  });
 
 export const passagesFromNodes = ({
   uuids,
