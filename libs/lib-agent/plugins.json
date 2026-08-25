@@ -43,7 +43,7 @@
     {
       "name": "84000-translator-tools",
       "displayName": "84000 Translator Tools",
-      "description": "Translation tooling for the 84000 library of Tibetan Buddhist texts. Read-only research access to translations, folios, glossaries, bibliographies and metadata, plus the Stage 1 first-draft translation workflow.",
+      "description": "Translation tooling for the 84000 library of Tibetan Buddhist texts. Read-only research access to translations, folios, glossaries, bibliographies and metadata, plus the Stage 0 text-analysis and Stage 1 first-draft translation workflows.",
       "keywords": [
         "84000",
         "translation",
@@ -54,12 +54,17 @@
         "drafting"
       ],
       "skills": [
+        "libs/lib-agent/skills/text-analysis-and-retrieval",
         "libs/lib-agent/skills/first-draft-translation",
         "libs/lib-agent/skills/tibetan-source-text",
         "libs/lib-agent/skills/tibetan-english-passage-alignment",
         "libs/lib-agent/skills/glossary-by-canon-section"
       ],
       "sharedReference": {
+        "text-analysis-and-retrieval": [
+          "libs/lib-agent/policies/translator-guidelines",
+          "libs/lib-agent/policies/text-critical-guidelines"
+        ],
         "first-draft-translation": [
           "libs/lib-agent/policies/translator-guidelines"
         ]

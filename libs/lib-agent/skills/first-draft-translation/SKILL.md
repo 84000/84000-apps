@@ -30,7 +30,7 @@ instead of an unstated assumption of correctness.
 Stage 1 assumes **Stage 0 (Text Analysis and Retrieval) has already been run**
 for this work. If no `toh#_stage0.md` exists yet, stop and run Stage 0 first
 rather than reconstructing its retrieval, catalog, and analytics record here.
-Stage 0 is governed by its own instructions, which this plugin does not ship.
+Stage 0 is governed by the `text-analysis-and-retrieval` skill in this plugin.
 
 Confirm each of these at the start of the session, retrieving from the studio
 where noted rather than asking the translator to supply it:
