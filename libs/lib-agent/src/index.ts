@@ -4,6 +4,8 @@ export type {
   McpPromptDefinition,
   McpHandlerOptions,
 } from './lib/types';
+export { readToolInstructions, joinInstructions } from './lib/instructions';
+export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export {
