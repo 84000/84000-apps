@@ -30,7 +30,7 @@ instead of an unstated assumption of correctness.
 Stage 1 assumes **Stage 0 (Text Analysis and Retrieval) has already been run**
 for this work. If no `toh#_stage0.md` exists yet, stop and run Stage 0 first
 rather than reconstructing its retrieval, catalog, and analytics record here.
-Stage 0 is governed by its own instructions, which this plugin does not ship.
+Stage 0 is governed by the `text-analysis-and-retrieval` skill in this plugin.
 
 Confirm each of these at the start of the session, retrieving from the studio
 where noted rather than asking the translator to supply it:
@@ -47,7 +47,9 @@ where noted rather than asking the translator to supply it:
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for checking existing terminology
       rather than relying on a table supplied in-session
-- [ ] Translator Guidelines v. 10.31 and the copyeditor stylesheet
+- [ ] Nothing further for the Translator Guidelines: the sections this skill
+      cites from v. 10.31 are vendored under `reference/translator-guidelines/`.
+      Consult the full document for anything beyond those sections
 - [ ] Any related published 84000 translations designated as style anchors
 - [ ] The `docx` skill, for generating the primary `toh#_stage1.docx`
       deliverable. This is Claude's general document skill, not one this plugin

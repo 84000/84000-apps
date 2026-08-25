@@ -1,7 +1,8 @@
 # Terminology
 
 **No formal glossary entry is drafted at this stage.** The
-Tibetan/Sanskrit/English/definition/alternatives table of Guidelines V.H comes
+Tibetan/Sanskrit/English/definition/alternatives table of Guidelines V.H
+(not vendored — it governs a later stage, not this one) comes
 after editorial review, once terminology choices are confirmed. This file
 governs how terminology decisions are *made and recorded during drafting*, not
 how they are packaged for submission.
@@ -56,8 +57,9 @@ The table is keyed to first occurrence in the translation body.
   note it in the passage footnote, not the terminology table.
 - Sanskrit follows IAST transliteration.
 - Leave conventionally untranslated terms (proper names, mantra, dhāraṇī) in
-  accordance with the Guidelines; transliterate mantras without translation
-  unless the Guidelines specify otherwise.
+  accordance with `translator-guidelines/II.C-terminology.md`; transliterate
+  mantras without translation except as
+  `translator-guidelines/IV.G-mantras-and-dharanis.md` specifies.
 
 ## Not this
 
