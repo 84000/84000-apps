@@ -47,7 +47,9 @@ where noted rather than asking the translator to supply it:
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for checking existing terminology
       rather than relying on a table supplied in-session
-- [ ] Translator Guidelines v. 10.31 and the copyeditor stylesheet
+- [ ] Nothing further for the Translator Guidelines: the sections this skill
+      cites from v. 10.31 are vendored under `reference/translator-guidelines/`.
+      Consult the full document for anything beyond those sections
 - [ ] Any related published 84000 translations designated as style anchors
 - [ ] The `docx` skill, for generating the primary `toh#_stage1.docx`
       deliverable. This is Claude's general document skill, not one this plugin

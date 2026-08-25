@@ -59,6 +59,11 @@
         "libs/lib-agent/skills/tibetan-english-passage-alignment",
         "libs/lib-agent/skills/glossary-by-canon-section"
       ],
+      "sharedReference": {
+        "first-draft-translation": [
+          "libs/lib-agent/policies/translator-guidelines"
+        ]
+      },
       "agents": [
         "libs/lib-agent/agents/library-assistant.md"
       ],

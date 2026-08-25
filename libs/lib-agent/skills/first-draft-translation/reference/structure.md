@@ -27,7 +27,7 @@ anything: its own opening title statement (typically "In the language of India:
 opens without one, its closing colophon title.
 
 Translate that source-given title (Sanskrit and Tibetan, where both are given)
-into English following the Guidelines' title conventions, and use that English
+into English following `translator-guidelines/IV.D-text-titles.md`, and use that English
 rendering — **not the studio catalog's `mainTitle`** — as the title of both
 `toh#_stage1.md` and `toh#_stage1.docx`.
 
@@ -66,9 +66,10 @@ Tibetan appears.
 is a visual anchor for cross-referencing within this working draft — locating a
 passage, citing it in a note, tying it to its Alignment record row. Keep it
 lightweight; a simple running number is enough. Do not build additional
-apparatus around it, and do not confuse it with the Guidelines' own
-section-numbering conventions for the published text, which are applied
-separately.
+apparatus around it, and do not confuse it with the section-numbering
+conventions for the published text in
+`translator-guidelines/IV.H-content-layout-and-folio-markers.md`, which are
+applied separately.
 
 **Granularity** follows the segmentation already established for the text — from
 the Stage 0 retrieval/segmentation pass — typically a sentence, clause group, or

@@ -135,6 +135,27 @@ function buildPluginTree(plugin, defaults) {
     }
   }
 
+  // Policy excerpts and other material cited by more than one skill are kept in
+  // one place in the repo, but a plugin must be self-contained, so each skill
+  // that cites them gets its own copy under its `reference/` directory.
+  for (const [skill, sources] of Object.entries(plugin.sharedReference ?? {})) {
+    if (!(plugin.skills ?? []).some((s) => basename(s) === skill)) {
+      throw new Error(
+        `${plugin.name}: sharedReference names a skill the plugin does not ship: ${skill}`,
+      );
+    }
+    for (const source of sources) {
+      const abs = join(REPO_ROOT, source);
+      if (!existsSync(abs))
+        throw new Error(
+          `${plugin.name}: shared reference source not found: ${source}`,
+        );
+      for (const [rel, contents] of readTree(abs)) {
+        tree.set(`skills/${skill}/reference/${basename(source)}/${rel}`, contents);
+      }
+    }
+  }
+
   for (const source of plugin.agents ?? []) {
     const abs = join(REPO_ROOT, source);
     if (!existsSync(abs)) throw new Error(`${plugin.name}: agent source not found: ${source}`);
