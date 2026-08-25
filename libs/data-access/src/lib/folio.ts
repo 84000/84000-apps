@@ -2,7 +2,13 @@
 
 import { createServerClient } from './client-ssr';
 import { DataClient, TohokuCatalogEntry } from './types';
-import { Folio, FolioDTO, FoliosAround, folioFromDTO } from './types/folio';
+import {
+  Folio,
+  FolioDTO,
+  FolioSide,
+  FoliosAround,
+  folioFromDTO,
+} from './types/folio';
 
 type GetWorkFoliosArgs = {
   client: DataClient;
@@ -113,6 +119,79 @@ export const getWorkFoliosAround = async ({
     hasMoreBefore: startIndex > 0,
     hasMoreAfter: endIndex < total - 1,
   };
+};
+
+type GetWorkFoliosAtArgs = {
+  client: DataClient;
+  uuid: string;
+  toh: TohokuCatalogEntry;
+  folioNumber: number;
+  side: FolioSide;
+  /**
+   * Pins the volume when a folio number recurs across volumes. Omitted, the
+   * lowest-numbered volume wins; every returned folio reports its own `volume`,
+   * so a caller can see which it got rather than having to assume.
+   */
+  volume?: number;
+  before?: number;
+  after?: number;
+};
+
+/**
+ * Fetch a window of folios anchored on a folio addressed the way it is cited —
+ * by number and side, as in `F.157b`.
+ *
+ * The sibling of {@link getWorkFoliosAround}, which anchors on a folio UUID a
+ * caller can only have from a previous read. Without this, locating a cited
+ * folio means paging through the work and filtering client-side, or estimating an
+ * offset from the work's average folios-per-page — a guess standing in for a
+ * predicate. Returns `null` when no such folio exists in the work, which is a
+ * different answer from an empty window and worth keeping distinct.
+ */
+export const getWorkFoliosAt = async ({
+  client,
+  uuid,
+  toh,
+  folioNumber,
+  side,
+  volume,
+  before = 0,
+  after = 0,
+}: GetWorkFoliosAtArgs): Promise<FoliosAround | null> => {
+  let query = client
+    .from('tibetan_works_folios')
+    .select('folio_uuid')
+    .eq('work_uuid', uuid)
+    .eq('toh', toh)
+    .eq('folio_number', folioNumber)
+    .eq('side', side);
+
+  if (volume !== undefined) {
+    query = query.eq('volume_number', volume);
+  }
+
+  const { data, error } = await query
+    .order('volume_number', { ascending: true })
+    .limit(1);
+
+  if (error) {
+    console.error('Error resolving folio by number:', error);
+    return null;
+  }
+
+  const folioUuid = data?.[0]?.folio_uuid as string | undefined;
+  if (!folioUuid) {
+    return null;
+  }
+
+  return getWorkFoliosAround({
+    client,
+    uuid,
+    toh,
+    folioUuid,
+    before,
+    after,
+  });
 };
 
 type FolioLocation = {

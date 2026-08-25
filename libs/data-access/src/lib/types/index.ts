@@ -1,6 +1,7 @@
 export * from './alignment';
 export * from './annotation';
 export * from './bibliography';
+export * from './catalog';
 export * from './client';
 export * from './editor-content';
 export * from './toh';
