@@ -17,6 +17,9 @@ import { createGetImprintTool } from './get-imprint';
 import { createGetTocTool } from './get-toc';
 import { createLookupEntityTool } from './lookup-entity';
 import { createGetWorkTitlesTool } from './get-work-titles';
+import { createSearchCanonSectionsTool } from './search-canon-sections';
+import { createSearchCanonSectionGlossaryTool } from './search-canon-section-glossary';
+import { createResolveTohTool } from './resolve-toh';
 
 export function createReadTools(client: DataClient): McpToolDefinition[] {
   return [
@@ -36,6 +39,9 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
     createGetTocTool(client),
     createLookupEntityTool(client),
     createGetWorkTitlesTool(client),
+    createSearchCanonSectionsTool(client),
+    createSearchCanonSectionGlossaryTool(client),
+    createResolveTohTool(client),
   ];
 }
 
@@ -55,3 +61,6 @@ export { createGetImprintTool } from './get-imprint';
 export { createGetTocTool } from './get-toc';
 export { createLookupEntityTool } from './lookup-entity';
 export { createGetWorkTitlesTool } from './get-work-titles';
+export { createSearchCanonSectionsTool } from './search-canon-sections';
+export { createSearchCanonSectionGlossaryTool } from './search-canon-section-glossary';
+export { createResolveTohTool } from './resolve-toh';

@@ -5,18 +5,22 @@ import {
   getTranslationMetadataByUuid,
   getWorkFolios,
   getWorkFoliosAround,
+  getWorkFoliosAt,
   getWorkUuidByToh,
 } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  FOLIO_SIDES: ['a', 'b'],
   getTranslationMetadataByUuid: jest.fn(),
   getWorkFolios: jest.fn(),
   getWorkFoliosAround: jest.fn(),
+  getWorkFoliosAt: jest.fn(),
   getWorkUuidByToh: jest.fn(),
 }));
 
 const mockedSequential = jest.mocked(getWorkFolios);
 const mockedAround = jest.mocked(getWorkFoliosAround);
+const mockedAt = jest.mocked(getWorkFoliosAt);
 const mockedUuidByToh = jest.mocked(getWorkUuidByToh);
 const mockedMetadata = jest.mocked(getTranslationMetadataByUuid);
 
@@ -176,5 +180,107 @@ describe('get-translation-folios tool', () => {
 
     expect(result.isError).toBe(true);
     expect((result.content[0] as { text: string }).text).toBe('boom');
+  });
+  it('addresses a folio by number and side', async () => {
+    const at = {
+      folios,
+      startIndex: 2,
+      hasMoreBefore: true,
+      hasMoreAfter: true,
+    };
+    mockedAt.mockResolvedValue(at as any);
+
+    const result = await tool.handler(
+      {
+        uuid: 'work-1',
+        toh: 'toh417',
+        folioNumber: 157,
+        side: 'b',
+        after: 3,
+      },
+      extra,
+    );
+
+    expect(mockedAt).toHaveBeenCalledWith({
+      client,
+      uuid: 'work-1',
+      toh: 'toh417',
+      folioNumber: 157,
+      side: 'b',
+      volume: undefined,
+      before: undefined,
+      after: 3,
+    });
+    expect(mockedSequential).not.toHaveBeenCalled();
+    expect(mockedAround).not.toHaveBeenCalled();
+    expect(JSON.parse((result.content[0] as { text: string }).text)).toEqual({
+      workUuid: 'work-1',
+      toh: 'toh417',
+      ...at,
+    });
+  });
+
+  it('takes the addressed folio over a folioUuid when both are given', async () => {
+    mockedAt.mockResolvedValue({ folios } as any);
+
+    await tool.handler(
+      {
+        uuid: 'work-1',
+        toh: 'toh417',
+        folioNumber: 157,
+        side: 'b',
+        folioUuid: 'folio-1',
+      },
+      extra,
+    );
+
+    expect(mockedAt).toHaveBeenCalled();
+    expect(mockedAround).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes a folio absent from the work from a work that does not exist', async () => {
+    mockedAt.mockResolvedValue(null);
+
+    const result = await tool.handler(
+      { uuid: 'work-1', toh: 'toh417', folioNumber: 999, side: 'a' },
+      extra,
+    );
+
+    expect(result.isError).toBe(true);
+    expect((result.content[0] as { text: string }).text).toContain('F.999a');
+    expect((result.content[0] as { text: string }).text).toContain(
+      'The work exists',
+    );
+  });
+
+  it('names the volume in the not-found message when one was pinned', async () => {
+    mockedAt.mockResolvedValue(null);
+
+    const result = await tool.handler(
+      {
+        uuid: 'work-1',
+        toh: 'toh417',
+        folioNumber: 12,
+        side: 'a',
+        volume: 73,
+      },
+      extra,
+    );
+
+    expect((result.content[0] as { text: string }).text).toContain('volume 73');
+  });
+
+  it.each([
+    ['folioNumber without side', { folioNumber: 157 }],
+    ['side without folioNumber', { side: 'b' as const }],
+  ])('rejects %s', async (_label, partial) => {
+    const result = await tool.handler(
+      { uuid: 'work-1', toh: 'toh417', ...partial },
+      extra,
+    );
+
+    expect(result.isError).toBe(true);
+    expect(mockedAt).not.toHaveBeenCalled();
+    expect(mockedSequential).not.toHaveBeenCalled();
   });
 });

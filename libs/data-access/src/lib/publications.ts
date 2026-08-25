@@ -13,6 +13,9 @@ import {
   passagesPageAroundFromDTO,
   PassagesPageAroundDTO,
   Work,
+  TohokuCatalogEntry,
+  normalizeToh,
+  tohNoteMentions,
 } from './types';
 
 type WorksPageInfo = {
@@ -236,6 +239,180 @@ export const getWorkTitlesByUuids = async ({
   }
 
   return titlesByUuid;
+};
+
+/** A work reduced to what it takes to cite it: identity, title, catalogue numbers. */
+export type WorkRef = {
+  uuid: string;
+  title: string;
+  toh: TohokuCatalogEntry[];
+};
+
+/**
+ * Batch-fetch citable work identity by UUID.
+ *
+ * Cross-work reads — glossary terms gathered across a canonical section, say —
+ * come back keyed by work UUID, which is not something a reader can cite. This
+ * resolves a whole result set's works in one round trip rather than per row.
+ */
+export const getWorkRefsByUuids = async ({
+  client,
+  uuids,
+}: {
+  client: DataClient;
+  uuids: readonly string[];
+}): Promise<Map<string, WorkRef>> => {
+  const refsByUuid = new Map<string, WorkRef>();
+  if (uuids.length === 0) {
+    return refsByUuid;
+  }
+
+  const { data, error } = await client
+    .from('works')
+    .select('uuid, title, tohs:work_toh(toh:toh_clean)')
+    .in('uuid', uuids as string[]);
+
+  if (error) {
+    console.error('Error batch loading work refs:', error);
+    return refsByUuid;
+  }
+
+  for (const row of data ?? []) {
+    const tohs = (row.tohs ?? []) as { toh: TohokuCatalogEntry }[];
+    refsByUuid.set(row.uuid as string, {
+      uuid: row.uuid as string,
+      title: (row.title as string) || '<Untitled>',
+      toh: tohs.map((entry) => entry.toh),
+    });
+  }
+
+  return refsByUuid;
+};
+
+/**
+ * A Tohoku number resolved to the work and catalogue entry it actually names.
+ */
+export type TohResolution = {
+  /** The number as normalized from the caller's input. */
+  requested: TohokuCatalogEntry;
+  workUuid: string;
+  /**
+   * The number this work's folios and passages are stored under — the one to
+   * pass to subsequent reads. Differs from `requested` for an alias.
+   */
+  toh: TohokuCatalogEntry;
+  /** True when `requested` was found in a note rather than as a catalogue entry. */
+  alias: boolean;
+  /** The note that recorded the alias, when one applies. */
+  note?: string;
+  /**
+   * Every number this work is catalogued under, `toh` included. More than one
+   * means the work sits at several distinct points in the canon, each with its
+   * own folios — not that the extras are aliases.
+   */
+  placements: TohokuCatalogEntry[];
+};
+
+/**
+ * Resolve a Tohoku number, following aliases.
+ *
+ * A number a translator cites is not always a catalogue entry: some works are
+ * cited under a superseded number recorded only in `work_toh.toh_note` (Toh 418
+ * is catalogued as Toh 417). Folio and passage reads key on the catalogued
+ * number, so they return "not found" for an alias — indistinguishable, to the
+ * caller, from a number that does not exist. Resolving first tells the two apart.
+ *
+ * Returns every candidate rather than one: an exact catalogue hit yields a single
+ * resolution, but a note can name the same number for more than one work, and
+ * choosing between those is the caller's to report, not this function's to guess.
+ * An empty array means the number resolves to nothing at all.
+ */
+export const resolveToh = async ({
+  client,
+  toh,
+}: {
+  client: DataClient;
+  toh: string;
+}): Promise<TohResolution[]> => {
+  const requested = normalizeToh(toh);
+  if (!requested) {
+    return [];
+  }
+
+  const { data: exact, error: exactError } = await client
+    .from('work_toh')
+    .select('work_uuid, toh_clean, toh_note')
+    .eq('toh_clean', requested);
+
+  if (exactError) {
+    console.error('Error resolving toh:', exactError);
+    return [];
+  }
+
+  const rows = exact ?? [];
+  let alias = false;
+
+  // Only fall back to the notes when the number is not itself catalogued —
+  // an exact entry is never an alias, and a note elsewhere covering the same
+  // number would otherwise add spurious candidates.
+  if (rows.length === 0) {
+    const { data: noted, error: notedError } = await client
+      .from('work_toh')
+      .select('work_uuid, toh_clean, toh_note')
+      .not('toh_note', 'is', null);
+
+    if (notedError) {
+      console.error('Error resolving toh note:', notedError);
+      return [];
+    }
+
+    // Every noted row is fetched and matched in full rather than prefiltered by
+    // ILIKE on the number. A note can cover a number it does not spell —
+    // "Toh 1069-1073" covers toh1071, and the string "1071" is nowhere in it —
+    // so a substring prefilter would discard the row before it could match. The
+    // column is very nearly empty (3 rows of 4,577 in production), so reading it
+    // whole costs nothing.
+    rows.push(
+      ...(noted ?? []).filter((row) =>
+        tohNoteMentions(row.toh_note as string | null, requested),
+      ),
+    );
+    alias = rows.length > 0;
+  }
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const workUuids = [...new Set(rows.map((row) => row.work_uuid as string))];
+  const { data: placements, error: placementsError } = await client
+    .from('work_toh')
+    .select('work_uuid, toh_clean')
+    .in('work_uuid', workUuids);
+
+  if (placementsError) {
+    console.error('Error fetching toh placements:', placementsError);
+  }
+
+  const byWork = new Map<string, TohokuCatalogEntry[]>();
+  for (const row of placements ?? []) {
+    const list = byWork.get(row.work_uuid as string) ?? [];
+    list.push(row.toh_clean as TohokuCatalogEntry);
+    byWork.set(row.work_uuid as string, list);
+  }
+
+  return rows.map((row) => ({
+    requested,
+    workUuid: row.work_uuid as string,
+    toh: row.toh_clean as TohokuCatalogEntry,
+    alias,
+    note: alias ? ((row.toh_note as string | null) ?? undefined) : undefined,
+    placements: (
+      byWork.get(row.work_uuid as string) ?? [
+        row.toh_clean as TohokuCatalogEntry,
+      ]
+    ).sort(),
+  }));
 };
 
 export const getTranslationMetadataByUuid = async ({

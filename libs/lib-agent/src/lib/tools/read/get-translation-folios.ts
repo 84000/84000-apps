@@ -4,9 +4,11 @@ import type {
   TohokuCatalogEntry,
 } from '@eightyfourthousand/data-access';
 import {
+  FOLIO_SIDES,
   getTranslationMetadataByUuid,
   getWorkFolios,
   getWorkFoliosAround,
+  getWorkFoliosAt,
   getWorkUuidByToh,
 } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
@@ -46,13 +48,33 @@ const inputSchema = {
     .describe(
       'Center results around this folio UUID instead of paginating sequentially',
     ),
+  folioNumber: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'Address a folio the way it is cited — the number in "F.157b". Requires side. Use this instead of guessing a page offset from the folio number.',
+    ),
+  side: z
+    .enum(FOLIO_SIDES)
+    .optional()
+    .describe('Folio side, the "b" in "F.157b". Required with folioNumber.'),
+  volume: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe(
+      'Pins the volume when a folio number recurs across volumes. Omitted, the lowest-numbered volume wins; every folio reports its own volume.',
+    ),
   before: z
     .number()
     .int()
     .nonnegative()
     .optional()
     .describe(
-      'Folios to include before folioUuid (default 10, ignored without folioUuid)',
+      'Folios to include before the anchor. Defaults to 10 with folioUuid and 0 with folioNumber, where addressing one cited folio should return that folio. Ignored without an anchor.',
     ),
   after: z
     .number()
@@ -60,7 +82,7 @@ const inputSchema = {
     .nonnegative()
     .optional()
     .describe(
-      'Folios to include after folioUuid (default 10, ignored without folioUuid)',
+      'Folios to include after the anchor. Defaults to 10 with folioUuid and 0 with folioNumber. Widen this to assemble a range from an addressed folio. Ignored without an anchor.',
     ),
 };
 
@@ -118,7 +140,7 @@ export function createGetTranslationFoliosTool(
   return {
     name: 'get-translation-folios',
     description:
-      'Get the Tibetan source folios for a work by UUID or Tohoku number. Supports sequential pagination (page/size/offset), where a page shorter than size means the end of the work, or centering around a specific folio (folioUuid), which also reports whether more folios exist on either side.',
+      'Get the Tibetan source folios for a work by UUID or Tohoku number. Three ways to select: sequential pagination (page/size/offset), where a page shorter than size means the end of the work; a window centered on a folio UUID; or a folio addressed as it is cited, by folioNumber plus side (the "157" and "b" of "F.157b"), optionally widened with before/after. A UUID-centered or number-addressed window also reports whether more folios exist on either side. To assemble a range such as F.5a–F.7b, address the first folio and widen with after — folios run as sequential a/b pairs — then check hasMoreAfter and the returned folio/side values rather than assuming the window covered it. A Tohoku number that is an alias resolves to nothing here; run resolve-toh first.',
     inputSchema,
     annotations: {
       title: 'Get Translation Folios',
@@ -132,13 +154,45 @@ export function createGetTranslationFoliosTool(
       size,
       offset,
       folioUuid,
+      folioNumber,
+      side,
+      volume,
       before,
       after,
     }) => {
       try {
+        if ((folioNumber === undefined) !== (side === undefined)) {
+          return errorResult(
+            'folioNumber and side go together — a folio is cited as a number and a side, e.g. F.157b.',
+          );
+        }
+
         const source = await resolveFolioSource({ client, uuid, toh });
         if ('error' in source) {
           return errorResult(source.error);
+        }
+
+        if (folioNumber !== undefined && side !== undefined) {
+          const at = await getWorkFoliosAt({
+            client,
+            uuid: source.workUuid,
+            toh: source.toh,
+            folioNumber,
+            side,
+            volume,
+            before,
+            after,
+          });
+
+          if (!at) {
+            return errorResult(
+              `No folio F.${folioNumber}${side} in ${source.toh}${
+                volume === undefined ? '' : ` volume ${volume}`
+              }. The work exists; this folio is not in it.`,
+            );
+          }
+
+          return jsonResult({ ...source, ...at });
         }
 
         if (folioUuid) {
