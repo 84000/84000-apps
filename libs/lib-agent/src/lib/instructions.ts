@@ -42,9 +42,11 @@ Start with \`get-translation\` to retrieve metadata for a work, then drill into 
 
 \`get-glossary-instances\`, \`list-glossary-terms\` and \`search-glossary-terms\` each cover a single work. There is no library-wide glossary search — do not treat a per-work result as evidence that the library has been checked. When a term is not glossed in the work at hand, escalate to that work's canonical section: \`search-canon-sections\` resolves a section name to a uuid, then \`search-canon-section-glossary\` reports how every work in that section glosses the term, grouped one entry per work. Canon-section neighbours are the closest comparable authority for a term the work itself does not gloss.
 
-## Tohoku numbers and aliases
+## Tohoku numbers are not all catalogue entries
 
-A number a source cites is not always the number a work is catalogued under: Toh 418 is catalogued as Toh 417. Folio and passage reads key on the catalogued number, so an alias is reported as a missing work. \`resolve-toh\` follows aliases, accepts any written form ("Toh 312", "T. 312", "312"), and lists every point in the canon the work is placed at — separate placements with their own folios, not duplicates.
+A number a source cites is often not an entry of its own. It may be superseded (Toh 418 is catalogued as Toh 417), or one of several numbers a single entry covers (Toh 1069 covers Toh 1069–1073; Toh 539 covers Toh 539a–d). Entries also come in subdivided and lettered forms — \`toh1-1\`, \`toh1059a\` — which are 123 of the catalogue's entries.
+
+Folio and passage reads key on the catalogued number, so all of the above read as a missing work. \`resolve-toh\` resolves any of them, accepts any written form ("Toh 312", "T. 312", "312"), reports whether the number was reached through an entry's note, and lists every point in the canon the work is placed at — separate placements with their own folios, not duplicates. Run it before concluding that a cited number does not exist.
 
 ## Addressing source folios
 

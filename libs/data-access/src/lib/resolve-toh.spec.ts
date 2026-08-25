@@ -4,7 +4,7 @@ import type { DataClient } from './types';
 type QueryResult = { data: unknown; error: unknown };
 
 type Query = {
-  filter: 'eq' | 'ilike' | 'in';
+  filter: 'eq' | 'not' | 'in';
   column: string;
   value: unknown;
 };
@@ -17,15 +17,19 @@ type Query = {
 type MockQueryBuilder = {
   select: () => MockQueryBuilder;
   eq: (column: string, value: unknown) => Promise<QueryResult>;
-  ilike: (column: string, value: unknown) => Promise<QueryResult>;
+  not: (
+    column: string,
+    operator: string,
+    value: unknown,
+  ) => Promise<QueryResult>;
   in: (column: string, value: unknown) => Promise<QueryResult>;
 };
 
 /**
- * `resolveToh` makes up to three reads of `work_toh` — an exact match, a note
- * match, and the placement lookup — distinguished by the filter each uses. The
- * mock is keyed on the filter so a test can register a different answer for each
- * leg and assert which legs actually ran.
+ * `resolveToh` makes up to three reads of `work_toh` — an exact match, a sweep of
+ * every noted row, and the placement lookup — distinguished by the filter each
+ * uses. The mock is keyed on the filter so a test can register a different answer
+ * for each leg and assert which legs actually ran.
  */
 const createMockClient = (
   resultsByFilter: Partial<Record<Query['filter'], QueryResult>>,
@@ -46,8 +50,8 @@ const createMockClient = (
         eq: jest.fn((column: string, value: unknown) =>
           settle('eq', column, value),
         ),
-        ilike: jest.fn((column: string, value: unknown) =>
-          settle('ilike', column, value),
+        not: jest.fn((column: string, operator: string, value: unknown) =>
+          settle('not', column, `${operator} ${value}`),
         ),
         in: jest.fn((column: string, value: unknown) =>
           settle('in', column, value),
@@ -85,18 +89,18 @@ describe('resolveToh', () => {
       note: undefined,
       placements: ['toh417'],
     });
-    expect(queries.some((query) => query.filter === 'ilike')).toBe(false);
+    expect(queries.some((query) => query.filter === 'not')).toBe(false);
   });
 
   it('follows an alias recorded only in a note, and reports it as one', async () => {
     const { client, queries } = createMockClient({
       eq: { data: [], error: null },
-      ilike: {
+      not: {
         data: [
           {
             work_uuid: 'work-1',
             toh_clean: 'toh417',
-            toh_note: 'also Toh 418',
+            toh_note: 'toh418',
           },
         ],
         error: null,
@@ -113,17 +117,19 @@ describe('resolveToh', () => {
       requested: 'toh418',
       toh: 'toh417',
       alias: true,
-      note: 'also Toh 418',
+      note: 'toh418',
     });
-    expect(queries.find((query) => query.filter === 'ilike')?.value).toBe(
-      '%418%',
+    // Every noted row is read and matched in full: a note can cover a number it
+    // never spells, so there is no substring prefilter to assert on.
+    expect(queries.find((query) => query.filter === 'not')?.column).toBe(
+      'toh_note',
     );
   });
 
   it('discards a note match where the digits sit inside a longer number', async () => {
     const { client } = createMockClient({
       eq: { data: [], error: null },
-      ilike: {
+      not: {
         data: [
           {
             work_uuid: 'work-9',
@@ -162,7 +168,7 @@ describe('resolveToh', () => {
   it('returns every candidate when a note is ambiguous across works', async () => {
     const { client } = createMockClient({
       eq: { data: [], error: null },
-      ilike: {
+      not: {
         data: [
           { work_uuid: 'work-1', toh_clean: 'toh417', toh_note: 'Toh 418' },
           { work_uuid: 'work-2', toh_clean: 'toh500', toh_note: 'Toh 418' },
@@ -178,10 +184,89 @@ describe('resolveToh', () => {
     expect(resolutions.map((entry) => entry.toh)).toEqual(['toh417', 'toh500']);
   });
 
+  it('reaches the interior of a numeric range the note never spells', async () => {
+    const { client } = createMockClient({
+      eq: { data: [], error: null },
+      not: {
+        data: [
+          {
+            work_uuid: 'work-1',
+            toh_clean: 'toh1069',
+            toh_note: 'Toh 1069-1073',
+          },
+        ],
+        error: null,
+      },
+      in: {
+        data: [
+          { work_uuid: 'work-1', toh_clean: 'toh1069' },
+          { work_uuid: 'work-1', toh_clean: 'toh539' },
+        ],
+        error: null,
+      },
+    });
+
+    // The string "1071" appears nowhere in the note, which is why the old ILIKE
+    // prefilter could never have found this row.
+    const [resolution] = await resolveToh({ client, toh: 'Toh 1071' });
+
+    expect(resolution).toMatchObject({
+      requested: 'toh1071',
+      toh: 'toh1069',
+      alias: true,
+    });
+  });
+
+  it('resolves a lettered citation through a lettered range note', async () => {
+    const { client } = createMockClient({
+      eq: { data: [], error: null },
+      not: {
+        data: [
+          { work_uuid: 'work-1', toh_clean: 'toh539', toh_note: 'toh539a–d' },
+        ],
+        error: null,
+      },
+      in: {
+        data: [{ work_uuid: 'work-1', toh_clean: 'toh539' }],
+        error: null,
+      },
+    });
+
+    const [resolution] = await resolveToh({ client, toh: 'Toh 539c' });
+
+    expect(resolution).toMatchObject({
+      requested: 'toh539c',
+      toh: 'toh539',
+      alias: true,
+    });
+  });
+
+  it('resolves a subdivision entry, which is catalogued in its own right', async () => {
+    const { client, queries } = createMockClient({
+      eq: {
+        data: [{ work_uuid: 'work-1', toh_clean: 'toh1-1', toh_note: null }],
+        error: null,
+      },
+      in: {
+        data: [{ work_uuid: 'work-1', toh_clean: 'toh1-1' }],
+        error: null,
+      },
+    });
+
+    // 82 production entries look like this; the earlier normaliser rejected them
+    // outright and reported the work as nonexistent.
+    const [resolution] = await resolveToh({ client, toh: 'Toh 1-1' });
+
+    expect(resolution).toMatchObject({ requested: 'toh1-1', toh: 'toh1-1' });
+    expect(queries.find((query) => query.filter === 'eq')?.value).toBe(
+      'toh1-1',
+    );
+  });
+
   it('returns nothing for a number that resolves to no work', async () => {
     const { client } = createMockClient({
       eq: { data: [], error: null },
-      ilike: { data: [], error: null },
+      not: { data: [], error: null },
     });
 
     expect(await resolveToh({ client, toh: 'toh99999' })).toEqual([]);

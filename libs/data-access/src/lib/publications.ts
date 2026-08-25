@@ -349,25 +349,29 @@ export const resolveToh = async ({
     return [];
   }
 
-  const digits = requested.replace(/^toh/, '');
   const rows = exact ?? [];
   let alias = false;
 
   // Only fall back to the notes when the number is not itself catalogued —
-  // an exact entry is never an alias, and a note elsewhere mentioning the same
-  // digits would otherwise add spurious candidates.
+  // an exact entry is never an alias, and a note elsewhere covering the same
+  // number would otherwise add spurious candidates.
   if (rows.length === 0) {
     const { data: noted, error: notedError } = await client
       .from('work_toh')
       .select('work_uuid, toh_clean, toh_note')
-      .ilike('toh_note', `%${digits}%`);
+      .not('toh_note', 'is', null);
 
     if (notedError) {
       console.error('Error resolving toh note:', notedError);
       return [];
     }
 
-    // The ILIKE is a coarse prefilter; `1418` and `4180` both match `%418%`.
+    // Every noted row is fetched and matched in full rather than prefiltered by
+    // ILIKE on the number. A note can cover a number it does not spell —
+    // "Toh 1069-1073" covers toh1071, and the string "1071" is nowhere in it —
+    // so a substring prefilter would discard the row before it could match. The
+    // column is very nearly empty (3 rows of 4,577 in production), so reading it
+    // whole costs nothing.
     rows.push(
       ...(noted ?? []).filter((row) =>
         tohNoteMentions(row.toh_note as string | null, requested),
