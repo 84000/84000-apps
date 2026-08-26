@@ -3,6 +3,10 @@ import { Node } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import { passageFromNode as passageFromContentNode } from '@eightyfourthousand/lib-doc-model';
 import { Passage } from '@eightyfourthousand/data-access';
+import {
+  PARAMETER_ANNOTATION_ATTRS,
+  parameterAnnotationValue,
+} from '@eightyfourthousand/lib-doc-model';
 
 /**
  * Ensures every node in the editor document has a unique, non-null UUID.
@@ -29,9 +33,9 @@ import { Passage } from '@eightyfourthousand/data-access';
  * It must be called (and awaited via a Promise.resolve()) before
  * passagesFromNodes() so that the transaction is committed to the editor state.
  */
-// Parameter annotation UUID attributes that live on block node attrs (not marks)
-// and must be deduplicated alongside the main `uuid` attribute.
-const PARAMETER_UUID_ATTRS = ['leadingSpaceUuid', 'indentUuid'] as const;
+// Parameter annotations live on block node attrs (not marks) as a
+// `{ uuid, toh }` object, and their uuid must be deduplicated alongside the
+// node's own `uuid`.
 
 export interface EnsureUuidsOptions {
   passageUuids?: Set<string>;
@@ -78,14 +82,18 @@ export const ensureUuids = (
     }
 
     // Check parameter annotation UUIDs
-    for (const attrKey of PARAMETER_UUID_ATTRS) {
-      const existingParam = node.attrs[attrKey] as string | null | undefined;
-      if (existingParam === undefined) continue; // node type doesn't use this attr
-      if (!existingParam || seen.has(existingParam)) {
-        newAttrs = { ...(newAttrs ?? node.attrs), [attrKey]: uuidv4() };
-        seen.add(newAttrs[attrKey] as string);
+    for (const attrKey of PARAMETER_ANNOTATION_ATTRS) {
+      const value = parameterAnnotationValue(node.attrs, attrKey);
+      // Absent means the block simply carries no such annotation. The previous
+      // flat pair minted a uuid here for every block that merely *could* hold
+      // one, because a `null` uuid was indistinguishable from an unset one.
+      if (!value) continue;
+      if (seen.has(value.uuid)) {
+        const replacement = { ...value, uuid: uuidv4() };
+        newAttrs = { ...(newAttrs ?? node.attrs), [attrKey]: replacement };
+        seen.add(replacement.uuid);
       } else {
-        seen.add(existingParam);
+        seen.add(value.uuid);
       }
     }
 

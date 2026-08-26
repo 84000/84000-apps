@@ -1,10 +1,4 @@
-import { Extension } from '@tiptap/core';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface IndentOptions {
-  types: string[];
-  defaultHasIndent: boolean;
-}
+import { createParameterAnnotationExtension } from './parameterAnnotation';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -26,74 +20,13 @@ declare module '@tiptap/core' {
   }
 }
 
-export const Indent = Extension.create<IndentOptions>({
+export const Indent = createParameterAnnotationExtension({
   name: 'indent',
-  addOptions() {
-    return {
-      types: ['paragraph', 'lineGroup', 'list', 'blockquote'],
-      defaultHasIndent: false,
-    };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          hasIndent: {
-            default: this.options.defaultHasIndent,
-            parseHTML: (element) => element.className.includes('pl-8'),
-            renderHTML: (attributes) =>
-              attributes.hasIndent ? { class: 'pl-8' } : {},
-          },
-          indentUuid: {
-            default: undefined,
-            parseHTML: (element) =>
-              element.getAttribute('data-indent-uuid') || undefined,
-            renderHTML: (attributes) => {
-              if (!attributes.indentUuid) {
-                return {};
-              }
-              return {
-                'data-indent-uuid': attributes.indentUuid,
-              };
-            },
-          },
-        },
-      },
-    ];
-  },
-
-  addCommands() {
-    return {
-      setIndent:
-        () =>
-        ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.updateAttributes(type, {
-                hasIndent: true,
-                indentUuid: uuidv4(),
-              }),
-            )
-            .every((response) => response);
-        },
-      unsetIndent:
-        () =>
-        ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.resetAttributes(type, ['hasIndent', 'indentUuid']),
-            )
-            .every((response) => response);
-        },
-      toggleIndent:
-        () =>
-        ({ editor, commands }) => {
-          if (editor.isActive({ hasIndent: true })) {
-            return commands.unsetIndent();
-          }
-          return commands.setIndent();
-        },
-    };
-  },
+  attr: 'indent',
+  // `bulletList` is the list node's real name (tiptap's `BulletList`
+  // extended). The previous `'list'` matched no node, so an indent on a list
+  // was never declared on the schema and never survived a save.
+  types: ['paragraph', 'lineGroup', 'bulletList', 'blockquote'],
+  className: 'pl-8',
+  dataPrefix: 'indent',
 });

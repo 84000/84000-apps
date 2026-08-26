@@ -2,6 +2,7 @@ import { ListAnnotation } from '@eightyfourthousand/data-access';
 import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
+import { tohAttrs } from '../annotation-attrs';
 
 export const list: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -18,6 +19,7 @@ export const list: Transformer = (ctx) => {
           block.type = 'bulletList';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
             nesting,
             spacing,
             itemStyle,

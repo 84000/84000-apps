@@ -1,8 +1,10 @@
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 export const table: Transformer = (ctx) => {
+  const { annotation } = ctx;
   recurse({
     ...ctx,
     until: ['paragraph'],
@@ -13,6 +15,7 @@ export const table: Transformer = (ctx) => {
           block.type = 'table';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
           };
           block.content = [
             {

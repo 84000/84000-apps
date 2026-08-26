@@ -6,6 +6,7 @@ import type { Transformer } from './transformer';
 import { type SpanMarkType, MARK_TYPES } from '../mark-types';
 import { splitContent } from './split-content';
 import { markUnplaceable, recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 const MARK_TYPE_FOR_SPAN_TYPE: {
   [key: string]: (
@@ -61,6 +62,7 @@ export const span: Transformer = (ctx) => {
               type: markType,
               attrs: {
                 ...block.attrs,
+                ...tohAttrs(annotation),
                 uuid,
                 type: 'span',
                 lang,

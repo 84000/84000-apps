@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/core';
 import { useEditorState } from '@tiptap/react';
 import { Button } from '@eightyfourthousand/design-system';
 import { ArrowUpToLineIcon, IndentIcon } from 'lucide-react';
+import { isParameterAnnotationActive } from '../../extensions/parameterAnnotation';
 
 interface SelectorResult {
   hasIndent: boolean;
@@ -38,8 +39,11 @@ export const ParagraphButtons = ({ editor }: { editor: Editor }) => {
       // mirrors the check inside toggleLeadingSpace/toggleIndent, keeping the
       // button state and the commands in sync.
       const atts = {
-        hasIndent: instance.editor.isActive({ hasIndent: true }),
-        hasLeadingSpace: instance.editor.isActive({ hasLeadingSpace: true }),
+        hasIndent: isParameterAnnotationActive(instance.editor, 'indent'),
+        hasLeadingSpace: isParameterAnnotationActive(
+          instance.editor,
+          'leadingSpace',
+        ),
       };
       return atts;
     },

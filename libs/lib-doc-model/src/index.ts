@@ -74,4 +74,20 @@ export type {
 export { MARK_TYPES } from './lib/mark-types';
 export type { SpanMarkType } from './lib/mark-types';
 
+export {
+  ANNOTATION_TOH_TYPES,
+  IDENTITY_ATTRS,
+  PARAMETER_ANNOTATIONS,
+  PARAMETER_ANNOTATION_ATTRS,
+  TOH_ATTR,
+  parameterAnnotationValue,
+  tohAttrs,
+  tohFromAttrs,
+  withToh,
+} from './lib/annotation-attrs';
+export type {
+  ParameterAnnotationSpec,
+  ParameterAnnotationValue,
+} from './lib/annotation-attrs';
+
 export * from './lib/exporters';

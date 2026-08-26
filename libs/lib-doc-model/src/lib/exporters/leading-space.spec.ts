@@ -5,7 +5,7 @@ describe('leadingSpace exporter', () => {
   it('should export leadingSpace annotation correctly', () => {
     const node = {
       attrs: {
-        leadingSpaceUuid: 'leading-space-uuid-1234',
+        leadingSpace: { uuid: 'leading-space-uuid-1234' },
       },
     } as unknown as Node;
 

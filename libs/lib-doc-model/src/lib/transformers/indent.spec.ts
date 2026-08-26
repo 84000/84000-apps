@@ -45,7 +45,6 @@ describe('indent transformer', () => {
     const paragraphBlock = block.content?.[0];
     expect(paragraphBlock).toBeDefined();
     expect(paragraphBlock?.attrs).toBeDefined();
-    expect(paragraphBlock?.attrs?.hasIndent).toBe(true);
-    expect(paragraphBlock?.attrs?.indentUuid).toBe('indent-uuid-1');
+    expect(paragraphBlock?.attrs?.indent).toEqual({ uuid: 'indent-uuid-1' });
   });
 });

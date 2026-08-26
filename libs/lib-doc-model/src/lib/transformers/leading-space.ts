@@ -1,14 +1,10 @@
-import { AnnotationType } from '@eightyfourthousand/data-access';
 import { recurse } from './recurse';
 import { Transformer } from './transformer';
 import { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
+import { PARAMETER_ANNOTATIONS, tohAttrs } from '../annotation-attrs';
 
-const HOST_TYPES: AnnotationType[] = [
-  'blockquote',
-  'heading',
-  'lineGroup',
-  'paragraph',
-];
+const SPEC = PARAMETER_ANNOTATIONS.find((spec) => spec.attr === 'leadingSpace');
+const HOST_TYPES = SPEC?.hostTypes ?? [];
 
 /**
  * A leading-space is a zero-width annotation marking the point that should be
@@ -27,7 +23,9 @@ const findInsertionBlock = (
 ): TranslationEditorContentItem | undefined => {
   for (const child of block.content || []) {
     if (
-      HOST_TYPES.includes((child.type || 'unknown') as AnnotationType) &&
+      HOST_TYPES.includes(
+        (child.type || 'unknown') as (typeof HOST_TYPES)[number],
+      ) &&
       child.attrs?.start === position
     ) {
       return child;
@@ -43,12 +41,11 @@ const findInsertionBlock = (
 };
 
 export const leadingSpace: Transformer = (ctx) => {
-  const leadingSpaceUuid = ctx.annotation.uuid;
+  const { annotation } = ctx;
   const applyLeadingSpace = (block: TranslationEditorContentItem) => {
     block.attrs = {
       ...block.attrs,
-      hasLeadingSpace: true,
-      leadingSpaceUuid,
+      leadingSpace: { uuid: annotation.uuid, ...tohAttrs(annotation) },
     };
   };
 

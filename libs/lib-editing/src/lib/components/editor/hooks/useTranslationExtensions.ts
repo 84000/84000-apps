@@ -2,6 +2,7 @@
 
 import type { XmlFragment } from 'yjs';
 import { Collaboration } from '@tiptap/extension-collaboration';
+import { AnnotationToh } from '../extensions/AnnotationToh';
 import { Audio } from '../extensions/Audio/Audio';
 import { EnsureUniqueUuids } from '../extensions/EnsureUniqueUuids';
 import Heading from '../extensions/Heading/Heading';
@@ -95,6 +96,7 @@ export const useTranslationExtensions = ({
   ];
   const extensions = [
     TranslationDocument,
+    AnnotationToh,
     Audio,
     Abbreviation,
     HasAbbreviation,

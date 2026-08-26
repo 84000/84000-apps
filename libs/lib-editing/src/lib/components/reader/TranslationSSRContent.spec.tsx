@@ -674,6 +674,46 @@ describe('TranslationSSRContent', () => {
     );
   });
 
+  it.each([
+    ['glossaryInstance', { glossary: 'g-1', authority: 'a-1', uuid: 'gi-1' }],
+    ['internalLink', { entity: 'e-1', type: 'work', href: '#x', uuid: 'il-1' }],
+  ])(
+    'sets data-toh on a toh-scoped %s mark (DEV-757)',
+    (markType, attrs) => {
+      // These two marks read `mark.attrs.toh` in renderHTML but never declared
+      // the attribute, so ProseMirror dropped it while building the document
+      // and the reader's toh-visibility rule had nothing to match on. The
+      // shared AnnotationToh extension declares it for every annotation type.
+      const doc: JSONContent = {
+        type: 'doc',
+        content: [
+          {
+            type: 'passage',
+            attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+            content: [
+              {
+                type: 'paragraph',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'scoped',
+                    marks: [{ type: markType, attrs: { ...attrs, toh: 'toh1' } }],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const el = TranslationSSRContent({
+        content: doc,
+      }) as ReactElement<DangerousProps>;
+
+      expect(renderedHtml(el)).toContain('data-toh="toh1"');
+    },
+  );
+
   it('keeps dandas upright in italic and foreign runs (ED-1458)', () => {
     // The rule lives in the PipeNotItalic plugin as decorations, which never
     // run here; this asserts the static renderer applies it too.

@@ -1,4 +1,7 @@
-import { EndNoteLinkAnnotation } from '@eightyfourthousand/data-access';
+import {
+  EndNoteLinkAnnotation,
+  parseTohList,
+} from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 
 export const endNoteLink: Exporter<EndNoteLinkAnnotation[]> = ({
@@ -17,8 +20,12 @@ export const endNoteLink: Exporter<EndNoteLinkAnnotation[]> = ({
 
   const end = start + textContent.length;
   const annotations: EndNoteLinkAnnotation[] = notes.map(
-    (note: { uuid: string; endNote: string }) => {
-      const { uuid, endNote } = note;
+    // One mark batches every note anchored at this point, so the toh scope is
+    // per-note rather than on the mark — the central read in
+    // `markAnnotationFromNode` cannot supply it.
+    (note: { uuid: string; endNote: string; toh?: string }) => {
+      const { uuid, endNote, toh } = note;
+      const scope = parseTohList(toh);
       return {
         uuid,
         type: 'endNoteLink',
@@ -27,6 +34,7 @@ export const endNoteLink: Exporter<EndNoteLinkAnnotation[]> = ({
         start: end,
         end,
         endNote,
+        ...(scope.length ? { toh: scope } : {}),
       };
     },
   );

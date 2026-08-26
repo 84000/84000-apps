@@ -1,8 +1,10 @@
 import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import type { Transformer } from './transformer';
+import { tohAttrs } from '../annotation-attrs';
 
 export const tableBodyData: Transformer = (ctx) => {
+  const { annotation } = ctx;
   recurse({
     ...ctx,
     until: ['paragraph'],
@@ -13,6 +15,7 @@ export const tableBodyData: Transformer = (ctx) => {
           block.type = 'tableCell';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
           };
           block.content = [
             {

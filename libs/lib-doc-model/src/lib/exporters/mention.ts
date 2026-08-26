@@ -1,5 +1,14 @@
-import { MentionAnnotation } from '@eightyfourthousand/data-access';
+import {
+  MentionAnnotation,
+  parseTohList,
+} from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
+
+/** A mention item's own toh scope, in annotation form; empty when unscoped. */
+const tohScope = (toh?: string): Pick<MentionAnnotation, 'toh'> | object => {
+  const scope = parseTohList(toh);
+  return scope.length ? { toh: scope } : {};
+};
 
 export const mention: Exporter<MentionAnnotation[]> = ({
   node,
@@ -22,6 +31,10 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       isSameWork?: boolean;
       subtype?: string;
       linkToh?: string;
+      // The annotation's own toh scope. Distinct from `linkToh`, which scopes
+      // the mention's *target*. One mention node batches several annotations,
+      // so this is per-item and the central export read cannot supply it.
+      toh?: string;
       lang?: MentionAnnotation['lang'];
       style?: MentionAnnotation['style'];
       highlightStart?: number;
@@ -37,6 +50,7 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       ...(item.isSameWork !== undefined && { isSameWork: item.isSameWork }),
       ...(item.subtype && { subtype: item.subtype }),
       ...(item.linkToh && { linkToh: item.linkToh }),
+      ...tohScope(item.toh),
       ...(item.lang && { lang: item.lang }),
       ...(item.style && { style: item.style }),
       ...(item.highlightStart !== undefined && {

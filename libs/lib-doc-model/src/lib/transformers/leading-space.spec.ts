@@ -45,10 +45,9 @@ describe('leadingSpace transformer', () => {
     const paragraphBlock = block.content?.[0];
     expect(paragraphBlock).toBeDefined();
     expect(paragraphBlock?.attrs).toBeDefined();
-    expect(paragraphBlock?.attrs?.hasLeadingSpace).toBe(true);
-    expect(paragraphBlock?.attrs?.leadingSpaceUuid).toBe(
-      'leading-space-uuid-1',
-    );
+    expect(paragraphBlock?.attrs?.leadingSpace).toEqual({
+      uuid: 'leading-space-uuid-1',
+    });
   });
 });
 
@@ -109,12 +108,11 @@ describe('leadingSpace transformer at a paragraph boundary', () => {
     const [firstParagraph, secondParagraph] = block.content ?? [];
 
     expect(firstParagraph?.attrs?.uuid).toBe('paragraph-uuid-1');
-    expect(firstParagraph?.attrs?.hasLeadingSpace).toBeFalsy();
+    expect(firstParagraph?.attrs?.leadingSpace).toBeFalsy();
 
     expect(secondParagraph?.attrs?.uuid).toBe('paragraph-uuid-2');
-    expect(secondParagraph?.attrs?.hasLeadingSpace).toBe(true);
-    expect(secondParagraph?.attrs?.leadingSpaceUuid).toBe(
-      'leading-space-uuid-2',
-    );
+    expect(secondParagraph?.attrs?.leadingSpace).toEqual({
+      uuid: 'leading-space-uuid-2',
+    });
   });
 });

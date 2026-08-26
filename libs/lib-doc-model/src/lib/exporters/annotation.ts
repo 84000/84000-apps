@@ -30,6 +30,7 @@ import { tableBodyHeader } from './table-body-header';
 import { tableBodyRow } from './table-body-row';
 import { SpanMarkType } from '../mark-types';
 import { findNodePosition, nodeNotFound } from './util';
+import { PARAMETER_ANNOTATIONS, withToh } from '../annotation-attrs';
 
 const EXPORTERS: Partial<
   Record<
@@ -86,31 +87,29 @@ const EXPORTERS: Partial<
   text: undefined,
 };
 
-const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
-  hasIndent: 'indent',
-  hasLeadingSpace: 'leadingSpace',
-};
-
+/**
+ * Annotations recorded as an attribute on a host block rather than as a node or
+ * mark of their own. Their `toh` travels inside the attribute's own object, so
+ * these are the one export path that does not read it off `node.attrs`.
+ */
 export const parameterAnnotationFromNode = (
   ctx: ExporterContext,
 ): Annotation[] => {
   const annotations: Annotation[] = [];
   const { node, start } = ctx;
 
-  const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
-  keys.forEach((key) => {
-    const annotType = PARAMETER_ANNOTATION_MAP[key];
-    const exporter = EXPORTERS[annotType];
-    const hasAttr = !!node.attrs[key];
-    if (!hasAttr) {
+  PARAMETER_ANNOTATIONS.forEach(({ attr, type }) => {
+    if (!node.attrs[attr]) {
       return;
     }
 
+    const exporter = EXPORTERS[type];
     if (!exporter) {
-      console.warn(`No exporter for parameter annotation: ${key}`);
+      console.warn(`No exporter for parameter annotation: ${attr}`);
+      return;
     }
 
-    const annotation = exporter?.({ ...ctx, start });
+    const annotation = exporter({ ...ctx, start });
     if (!annotation) {
       return;
     }
@@ -139,10 +138,14 @@ export const markAnnotationFromNode = (ctx: ExporterContext): Annotation[] => {
       return;
     }
 
+    // Central toh read: every annotation may be scoped to a subset of a work's
+    // Tohoku texts, so the scope is restored here rather than in each of the
+    // ~30 exporters. Exporters that batch several annotations onto one mark
+    // (endNoteLink) carry a per-item scope and set it themselves.
     if (Array.isArray(annotation)) {
       annotations.push(...annotation);
     } else {
-      annotations.push(annotation);
+      annotations.push(withToh(annotation, mark.attrs));
     }
   });
   return annotations;
@@ -175,7 +178,7 @@ export const annotationExportsFromNode = (
     if (Array.isArray(blockAnnotation)) {
       annotations.push(...blockAnnotation);
     } else {
-      annotations.push(blockAnnotation);
+      annotations.push(withToh(blockAnnotation, node.attrs));
     }
   }
 

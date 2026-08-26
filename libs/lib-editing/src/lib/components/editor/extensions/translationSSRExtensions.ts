@@ -2,6 +2,7 @@ import type { Extensions } from '@tiptap/core';
 import { Document } from '@tiptap/extension-document';
 
 import { Abbreviation, HasAbbreviation } from './Abbreviation/Abbreviation';
+import { AnnotationToh } from './AnnotationToh';
 import { Audio } from './Audio/Audio';
 import { Bold } from './Bold';
 import { EndNoteLinkMarkSSR } from './EndNoteLink/EndNoteLinkMark.ssr';
@@ -36,6 +37,7 @@ import { TableKit } from './Table';
 export const translationSSRExtensions: Extensions = [
   Document,
   Abbreviation,
+  AnnotationToh,
   Audio,
   Bold,
   EndNoteLinkMarkSSR,
