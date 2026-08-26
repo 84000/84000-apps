@@ -2,6 +2,7 @@ import { ImageAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';
+import { tohAttrs } from '../annotation-attrs';
 
 export const image: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -16,6 +17,7 @@ export const image: Transformer = (ctx) => {
           block.type = 'image';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
             src,
             uuid,
             start,

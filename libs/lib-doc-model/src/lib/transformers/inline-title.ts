@@ -3,6 +3,7 @@ import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { ITALIC_LANGUAGES } from './annotate';
 import { markUnplaceable, recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 export const inlineTitle: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -26,7 +27,15 @@ export const inlineTitle: Transformer = (ctx) => {
         transform: ({ block }) => {
           block.marks = [
             ...(block.marks || []),
-            { type: markType, attrs: { uuid, lang, type: 'inlineTitle' } },
+            {
+              type: markType,
+              attrs: {
+                ...tohAttrs(annotation),
+                uuid,
+                lang,
+                type: 'inlineTitle',
+              },
+            },
           ];
         },
       }),

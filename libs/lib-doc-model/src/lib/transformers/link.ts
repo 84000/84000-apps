@@ -2,6 +2,7 @@ import { LinkAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { splitContent } from './split-content';
 import { markUnplaceable, recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 export const link: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -18,7 +19,7 @@ export const link: Transformer = (ctx) => {
             ...(block.marks || []),
             {
               type: 'link',
-              attrs: { href, uuid, type },
+              attrs: { ...tohAttrs(annotation), href, uuid, type },
             },
           ];
         },

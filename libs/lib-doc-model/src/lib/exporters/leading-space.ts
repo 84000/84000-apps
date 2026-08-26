@@ -1,6 +1,6 @@
 import { LeadingSpaceAnnotation } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
-import { parameterAnnotationValue } from '../annotation-attrs';
+import { parameterAnnotationValue, tohFromAttrs } from '../annotation-attrs';
 
 export const leadingSpace: Exporter<LeadingSpaceAnnotation> = ({
   node,
@@ -12,11 +12,14 @@ export const leadingSpace: Exporter<LeadingSpaceAnnotation> = ({
     return undefined;
   }
 
+  const toh = tohFromAttrs(value as unknown as Record<string, unknown>);
+
   return {
     uuid: value.uuid,
     type: 'leadingSpace',
     passageUuid,
     start,
     end: start,
+    ...(toh.length ? { toh } : {}),
   };
 };

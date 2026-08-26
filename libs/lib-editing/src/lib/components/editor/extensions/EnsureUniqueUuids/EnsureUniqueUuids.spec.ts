@@ -132,7 +132,10 @@ describe('regenerateSliceUuids', () => {
       Fragment.from([
         schema.node(
           'paragraph',
-          { uuid: 'passage-1', leadingSpace: { uuid: 'leading-1' } },
+          {
+            uuid: 'passage-1',
+            leadingSpace: { uuid: 'leading-1', toh: 'toh417,toh418' },
+          },
           [
             schema.text('linked ', [linkMark]),
             schema.text('text', [linkMark, noteMark]),
@@ -158,6 +161,8 @@ describe('regenerateSliceUuids', () => {
     expect(paragraph.attrs.uuid).toBeTruthy();
     expect(paragraph.attrs.leadingSpace.uuid).not.toBe('leading-1');
     expect(paragraph.attrs.leadingSpace.uuid).toBeTruthy();
+    // The toh scope is not identity — a copy stays scoped to the same texts.
+    expect(paragraph.attrs.leadingSpace.toh).toBe('toh417,toh418');
 
     const mention = paragraph.child(2);
     expect(mention.attrs.items[0].uuid).not.toBe('item-1');

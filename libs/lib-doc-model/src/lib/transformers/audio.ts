@@ -2,6 +2,7 @@ import { AudioAnnotation } from '@eightyfourthousand/data-access';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
 import { splitAndInsert } from './split-insert';
+import { tohAttrs } from '../annotation-attrs';
 
 export const audio: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -16,6 +17,7 @@ export const audio: Transformer = (ctx) => {
           block.type = 'audio';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
             src,
             mediaType,
             uuid,

@@ -2,6 +2,7 @@ import { HeadingAnnotation } from '@eightyfourthousand/data-access';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 export const heading: Transformer = ({ root, parent, block, annotation }) => {
   const heading = annotation as HeadingAnnotation;
@@ -22,6 +23,7 @@ export const heading: Transformer = ({ root, parent, block, annotation }) => {
           item.type = 'heading';
           item.attrs = {
             ...item.attrs,
+            ...tohAttrs(annotation),
             level,
             class: cls,
             ...(align ? { textAlign: align } : {}),

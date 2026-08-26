@@ -6,10 +6,10 @@ import type { ParameterAnnotationValue } from '@eightyfourthousand/lib-doc-model
  * Builds the tiptap extension for a parameter annotation — one that has no node
  * or mark of its own and rides as an attribute on whichever block hosts it.
  *
- * The attribute is a single `{ uuid }` object rather than the `hasX` / `xUuid`
- * pair it replaces. Presence and identity then move together: no code path can
- * copy the flag without the uuid, and an unset attribute is no longer
- * indistinguishable from a block that simply has no such annotation.
+ * The attribute is a single `{ uuid, toh }` object rather than the `hasX` /
+ * `xUuid` / `xToh` triple it replaces. Presence, identity and Tohoku scope then
+ * move together: no code path can copy the flag without the uuid, and adding
+ * the scope did not mean adding a third name to four separate lists.
  */
 export type ParameterAnnotationConfig = {
   /** Extension name, e.g. `indent`. */
@@ -20,7 +20,7 @@ export type ParameterAnnotationConfig = {
   types: string[];
   /** Classes applied to a host block that carries the annotation. */
   className: string;
-  /** Prefix for the `data-*-uuid` HTML attribute. */
+  /** Prefix for the `data-*-uuid` / `data-*-toh` HTML attributes. */
   dataPrefix: string;
 };
 
@@ -72,7 +72,12 @@ export const createParameterAnnotationExtension = ({
               // annotation on every load.
               parseHTML: (element: HTMLElement) => {
                 const uuid = element.getAttribute(`data-${dataPrefix}-uuid`);
-                return uuid ? { uuid } : undefined;
+                if (!uuid) {
+                  return undefined;
+                }
+                const toh =
+                  element.getAttribute(`data-${dataPrefix}-toh`) || undefined;
+                return { uuid, ...(toh ? { toh } : {}) };
               },
 
               renderHTML: (attributes: Record<string, unknown>) => {
@@ -85,6 +90,14 @@ export const createParameterAnnotationExtension = ({
                 return {
                   class: className,
                   [`data-${dataPrefix}-uuid`]: value.uuid,
+                  // Drives the reader's toh-visibility rule, which hides any
+                  // `[data-toh]` outside the active Tohoku text.
+                  ...(value.toh
+                    ? {
+                        [`data-${dataPrefix}-toh`]: value.toh,
+                        'data-toh': value.toh,
+                      }
+                    : {}),
                 };
               },
             },

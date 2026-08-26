@@ -1,7 +1,7 @@
 import { recurse } from './recurse';
 import { Transformer } from './transformer';
 import { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
-import { PARAMETER_ANNOTATIONS } from '../annotation-attrs';
+import { PARAMETER_ANNOTATIONS, tohAttrs } from '../annotation-attrs';
 
 const SPEC = PARAMETER_ANNOTATIONS.find((spec) => spec.attr === 'leadingSpace');
 const HOST_TYPES = SPEC?.hostTypes ?? [];
@@ -45,7 +45,7 @@ export const leadingSpace: Transformer = (ctx) => {
   const applyLeadingSpace = (block: TranslationEditorContentItem) => {
     block.attrs = {
       ...block.attrs,
-      leadingSpace: { uuid: annotation.uuid },
+      leadingSpace: { uuid: annotation.uuid, ...tohAttrs(annotation) },
     };
   };
 

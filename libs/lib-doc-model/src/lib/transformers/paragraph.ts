@@ -2,6 +2,7 @@ import { ParagraphAnnotation } from '@eightyfourthousand/data-access';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
+import { tohAttrs } from '../annotation-attrs';
 
 export const paragraph: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -18,6 +19,7 @@ export const paragraph: Transformer = (ctx) => {
           block.type = 'paragraph';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
             start,
             end,
             uuid,

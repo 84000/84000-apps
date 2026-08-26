@@ -2,6 +2,7 @@ import { HasAbbreviationAnnotation } from '@eightyfourthousand/data-access';
 import { markUnplaceable, recurse } from './recurse';
 import { splitContent } from './split-content';
 import { Transformer } from './transformer';
+import { tohAttrs } from '../annotation-attrs';
 
 export const hasAbbreviation: Transformer = (ctx) => {
   const { annotation } = ctx;
@@ -18,6 +19,7 @@ export const hasAbbreviation: Transformer = (ctx) => {
           block.type = 'hasAbbreviation';
           block.attrs = {
             ...block.attrs,
+            ...tohAttrs(annotation),
             abbreviation,
             uuid,
           };
