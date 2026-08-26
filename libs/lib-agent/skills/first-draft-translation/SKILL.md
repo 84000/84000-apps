@@ -1,6 +1,6 @@
 ---
 name: first-draft-translation
-description: Produce a Stage 1 first-draft 84000 translation of a canonical Tibetan work for review by a research editor — aligned Tibetan/English passage pairs with folio references, footnoted uncertainties, a terminology table, and an alignment record, saved as toh#_stage1.docx and toh#_stage1.md. Use when a translator asks to draft, translate, or produce a first draft of a text by Toh number, or names Stage 1 of the 84000 AI translation pipeline. Not for editorial review of an existing draft, and not for Stage 0 text analysis and retrieval, which must already have been run.
+description: Produce a Stage 1 first-draft 84000 translation of a canonical Tibetan work for review by a research editor — aligned Tibetan/English passage pairs with folio references, footnoted uncertainties, a terminology table, and a companion alignment record, saved as toh#_stage1.docx, toh#_stage1.md, and toh#_stage1_alignment.md. Use when a translator asks to draft, translate, or produce a first draft of a text by Toh number, or names Stage 1 of the 84000 AI translation pipeline. Not for editorial review of an existing draft, and not for Stage 0 text analysis and retrieval, which must already have been run.
 ---
 
 # 84000 first-draft translation (Stage 1)
@@ -95,7 +95,9 @@ concluding that a cited number does not exist.
   first and elegant second. Avoid both archaizing ("thee", "verily") and casual
   register.
 - Render verse as verse, preserving the source's stanza divisions. Do not force
-  meter or rhyme at the expense of accuracy.
+  meter or rhyme at the expense of accuracy. **Capitalize the first word of
+  every line of verse**, following Western convention, including where the line
+  continues a sentence begun on the line above.
 - Preserve the rhetorical structure of the source — repetitions, formulaic
   passages, and epithets are features of the genre, not redundancies to trim.
   Abbreviate repeated formulae only where the source itself abbreviates.
@@ -103,6 +105,15 @@ concluding that a cited number does not exist.
   inflation.
 - Do not present uncertain renderings with confident prose. Calibrate the
   English to the actual security of the reading.
+- **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
+  never the straight typewriter forms, per
+  `translator-guidelines/IV.A-spelling.md`. This holds for the English, the
+  footnotes, and the Terminology Notes alike.
+  *The one exception is Extended Wylie*, wherever it appears: the *a-chung* (འ)
+  transliterates as a straight apostrophe, which a word processor will silently
+  turn into a left single quotation mark when it follows a space. Leave every
+  Wylie a-chung as a straight `'`, and confirm it survived generation of the
+  `.docx`.
 
 ## The four disciplines
 
@@ -112,8 +123,8 @@ Each has its own reference file. Read the one you need when you reach it.
 |---|---|
 | `reference/uncertainty.md` | How to flag what is not secure — the single most important discipline here |
 | `reference/terminology.md` | Locating the binding house rendering before choosing one, and the Terminology Notes table |
-| `reference/structure.md` | The document structure, passage pairs, folio labels, footnotes, alignment record |
-| `reference/output.md` | The two deliverables and how they are saved |
+| `reference/structure.md` | The document structure, passage pairs, folio labels, footnotes, and the companion alignment record |
+| `reference/output.md` | The three deliverables and how they are saved |
 
 ## Working order
 
@@ -128,7 +139,7 @@ Each has its own reference file. Read the one you need when you reach it.
    `tibetan-english-passage-alignment` and checking terminology per
    `reference/terminology.md` before rendering a significant term.
 4. Assemble the document in the order given in `reference/structure.md`.
-5. Save both deliverables per `reference/output.md`.
+5. Save all three deliverables per `reference/output.md`.
 
 Do not draft the introduction unless explicitly asked; introductions require
 research the editor will direct.
