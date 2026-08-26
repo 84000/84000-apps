@@ -1,6 +1,7 @@
 import { WorkDocument } from './work-document';
 import { para, paraTexts, testSchema } from './schema.fixture';
 import type { SpineSeed } from './spine';
+import { PassageLoader, type PassageSource } from './loader';
 import type { XmlElement, XmlText } from 'yjs';
 
 const meta = (
@@ -305,6 +306,77 @@ describe('WorkDocument undo', () => {
   it('returns null with nothing to undo', () => {
     expect(build(2).undo()).toBeNull();
     expect(build(2).redo()).toBeNull();
+  });
+});
+
+describe('WorkDocument hydration window', () => {
+  /** A source that can supply every passage of a `build(count)` work. */
+  const source = (count: number): PassageSource => ({
+    name: 'test',
+    loadPassages: async (_workUuid, uuids) =>
+      uuids
+        .filter((uuid) => Array.from({ length: count }, (_, i) => `p${i}`).includes(uuid))
+        .map((uuid) => ({ uuid, content: [para(`text ${uuid}`, `a-${uuid}`)] })),
+  });
+
+  /** A work whose documents are hydrated from a source, not pre-created. */
+  const windowed = (count: number, buffer = 0) => {
+    const work = new WorkDocument({
+      workUuid: 'work-1',
+      schema: testSchema,
+      loader: new PassageLoader({ sources: [source(count)], buffer }),
+    });
+    work.seedSpine(
+      Array.from({ length: count }, (_, i) => meta(`p${i}`, `${i + 1}`)),
+    );
+    return work;
+  };
+
+  it('hydrates the requested range and releases what fell outside it', async () => {
+    const work = windowed(6);
+
+    await work.hydrateWindow({ start: 0, end: 3 });
+    expect(['p0', 'p1', 'p2'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+
+    await work.hydrateWindow({ start: 3, end: 6 });
+    expect(['p0', 'p1', 'p2'].map((u) => work.store.has(u))).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(['p3', 'p4', 'p5'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('keeps pinned passages hydrated when the window moves past them', async () => {
+    const work = windowed(6);
+    await work.hydrateWindow({ start: 0, end: 3 });
+
+    // p0 is clean, so nothing but `keep` stops it being released — which is
+    // exactly the case of an editor mounted on a passage scrolled out of view.
+    await work.hydrateWindow({ start: 3, end: 6 }, { keep: ['p0'] });
+
+    expect(work.store.has('p0')).toBe(true);
+    expect(work.store.has('p1')).toBe(false);
+  });
+
+  it('widens the window by the loader buffer', async () => {
+    const work = windowed(6, 1);
+    await work.hydrateWindow({ start: 2, end: 3 });
+
+    expect(['p1', 'p2', 'p3'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(work.store.has('p4')).toBe(false);
   });
 });
 

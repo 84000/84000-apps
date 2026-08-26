@@ -88,12 +88,23 @@ export class WorkDocument {
    *
    * This is the whole memory story in one call: what is in memory is what the
    * last call asked for, and a work of any length costs the same.
+   *
+   * `keep` names passages that must stay hydrated wherever the window happens
+   * to be. A consumer that binds views to documents needs it: the editor keeps
+   * a small live set around whatever has focus, and focus does not have to sit
+   * inside the visible range — scrolling away from an open passage would
+   * otherwise release the document out from under a mounted editor. Dirty
+   * passages are already safe, so this is about the clean ones.
    */
-  async hydrateWindow(range: SpineRange): Promise<PassageDoc[]> {
+  async hydrateWindow(
+    range: SpineRange,
+    options: { keep?: Iterable<string> } = {},
+  ): Promise<PassageDoc[]> {
     const buffered = this.loader?.bufferedRange(range) ?? range;
     const uuids = this.spine.slice(buffered).map((entry) => entry.uuid);
     const docs = await this.store.hydrateMany(uuids);
-    this.store.releaseOutside(uuids);
+    const pinned = [...uuids, ...(options.keep ?? [])];
+    this.store.releaseOutside(pinned);
     this.notify();
     return docs;
   }
