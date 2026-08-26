@@ -90,6 +90,21 @@ anything the record needs that only they can supply. At minimum, solicit:
 Record their answers verbatim or in close paraphrase in the output document. Do
 not paraphrase away specifics like edition names or scholars' names.
 
+## House style
+
+The prose this stage writes — the prefatory note, the variant explanations, the
+open questions — follows 84000 house style like anything else the studio
+publishes:
+
+- **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
+  never the straight typewriter forms, per
+  `translator-guidelines/IV.A-spelling.md`.
+  *The one exception is Extended Wylie*, wherever it appears: the *a-chung* (འ)
+  transliterates as a straight apostrophe, which a word processor will silently
+  turn into a left single quotation mark when it follows a space. Leave every
+  Wylie a-chung as a straight `'`, and confirm it survived generation of any
+  `.docx`.
+
 ## The disciplines
 
 Each has its own reference file. Read the one you need when you reach it.
