@@ -5,7 +5,7 @@ describe('indent exporter', () => {
   it('should export indent annotation correctly', () => {
     const node = {
       attrs: {
-        indentUuid: 'indent-uuid-1234',
+        indent: { uuid: 'indent-uuid-1234' },
       },
       textContent: 'Indented text',
     } as unknown as Node;
@@ -34,7 +34,7 @@ describe('indent exporter', () => {
 
     const node = {
       attrs: {
-        indentUuid: 'indent-uuid-5678',
+        indent: { uuid: 'indent-uuid-5678' },
       },
       textContent: '',
     } as unknown as Node;

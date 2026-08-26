@@ -30,6 +30,7 @@ import { tableBodyHeader } from './table-body-header';
 import { tableBodyRow } from './table-body-row';
 import { SpanMarkType } from '../mark-types';
 import { findNodePosition, nodeNotFound } from './util';
+import { PARAMETER_ANNOTATIONS } from '../annotation-attrs';
 
 const EXPORTERS: Partial<
   Record<
@@ -86,31 +87,28 @@ const EXPORTERS: Partial<
   text: undefined,
 };
 
-const PARAMETER_ANNOTATION_MAP: { [key: string]: AnnotationType } = {
-  hasIndent: 'indent',
-  hasLeadingSpace: 'leadingSpace',
-};
-
+/**
+ * Annotations recorded as an attribute on a host block rather than as a node or
+ * mark of their own.
+ */
 export const parameterAnnotationFromNode = (
   ctx: ExporterContext,
 ): Annotation[] => {
   const annotations: Annotation[] = [];
   const { node, start } = ctx;
 
-  const keys = Object.keys(PARAMETER_ANNOTATION_MAP);
-  keys.forEach((key) => {
-    const annotType = PARAMETER_ANNOTATION_MAP[key];
-    const exporter = EXPORTERS[annotType];
-    const hasAttr = !!node.attrs[key];
-    if (!hasAttr) {
+  PARAMETER_ANNOTATIONS.forEach(({ attr, type }) => {
+    if (!node.attrs[attr]) {
       return;
     }
 
+    const exporter = EXPORTERS[type];
     if (!exporter) {
-      console.warn(`No exporter for parameter annotation: ${key}`);
+      console.warn(`No exporter for parameter annotation: ${attr}`);
+      return;
     }
 
-    const annotation = exporter?.({ ...ctx, start });
+    const annotation = exporter({ ...ctx, start });
     if (!annotation) {
       return;
     }

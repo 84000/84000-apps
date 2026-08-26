@@ -1201,8 +1201,7 @@ export const content: TranslationEditorContent = [
           start: 0,
           end: 731,
           uuid: 'bbf6ff9c-b5de-4b15-9ca8-9185ebc8d620',
-          hasLeadingSpace: true,
-          leadingSpaceUuid: '8512d924-48b2-477a-a306-35dd5c1b2227',
+          leadingSpace: { uuid: '8512d924-48b2-477a-a306-35dd5c1b2227' },
         },
         content: [
           {
@@ -2000,8 +1999,7 @@ export const content: TranslationEditorContent = [
           start: 0,
           end: 321,
           uuid: '9293d581-2755-4c1c-91e0-77bc2c0810ef',
-          hasLeadingSpace: true,
-          leadingSpaceUuid: '5571fb38-1193-41c0-9741-30d9656f6726',
+          leadingSpace: { uuid: '5571fb38-1193-41c0-9741-30d9656f6726' },
         },
         content: [
           {
@@ -2199,8 +2197,7 @@ export const content: TranslationEditorContent = [
           uuid: '7184b36c-1264-48fe-9cbf-e36572f3e00f',
           level: 2,
           class: 'body-title-honorific',
-          hasLeadingSpace: true,
-          leadingSpaceUuid: 'e134c0c3-e12a-4c6f-b45c-73e3fac2770e',
+          leadingSpace: { uuid: 'e134c0c3-e12a-4c6f-b45c-73e3fac2770e' },
         },
         content: [
           {
@@ -2298,8 +2295,7 @@ export const content: TranslationEditorContent = [
           start: 0,
           end: 262,
           uuid: '2dda83c5-f367-4b13-96b0-14835d5bb2dd',
-          hasLeadingSpace: true,
-          leadingSpaceUuid: 'c0e02497-7d8e-4150-9178-f13a2ad77d91',
+          leadingSpace: { uuid: 'c0e02497-7d8e-4150-9178-f13a2ad77d91' },
         },
         content: [
           {

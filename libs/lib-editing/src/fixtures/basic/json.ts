@@ -361,7 +361,7 @@ export const content: TranslationEditorContent = [
   {
     type: 'paragraph',
     attrs: {
-      hasLeadingSpace: true,
+      leadingSpace: { uuid: 'e0a4b6cc-4a1e-4a44-9f2b-6f0f1f9a7d21' },
     },
     content: [
       {

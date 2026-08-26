@@ -97,7 +97,7 @@ const handleCompareSourceClipboard = () => selectionInCompareSource();
 
 const compareLeadingSpaceClass = (node: PMNode): string => {
   const firstChild = node.content.firstChild;
-  if (firstChild?.attrs.hasLeadingSpace) return 'md:mt-5';
+  if (firstChild?.attrs.leadingSpace) return 'md:mt-5';
   if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
     return 'md:mt-2';
   }

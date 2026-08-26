@@ -5,10 +5,16 @@ import {
 } from '@eightyfourthousand/data-access';
 import { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
 
+/**
+ * A type a transformed block may carry. These are ProseMirror node names, which
+ * mostly match the annotation type but not always — `list` annotations become
+ * `bulletList` nodes, so a `until: ['list']` matches nothing.
+ */
 export type TranslationEditorContentType =
   | AnnotationType
   | BodyItemType
-  | 'text';
+  | 'text'
+  | 'bulletList';
 
 export type TransformationContext = {
   root?: TranslationEditorContentItem;

@@ -9,6 +9,7 @@ import { blockFromPassage } from './block';
 import { annotationExportsFromNode } from './exporters/annotation';
 import { passageFromNode } from './passage';
 import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
+import { toFakeNode } from './fake-node.fixture';
 
 /**
  * Export a passage the way the single-document editor does, reading identity
@@ -35,13 +36,6 @@ const passageFromEditorNode = (node: Node, workUuid: string) =>
  * segment) — the same behavior the editor produces when a user hand-applies a
  * mark across differently-marked text.
  */
-
-const collectText = (item: TranslationEditorContentItem): string => {
-  if (item.type === 'text') {
-    return item.text ?? '';
-  }
-  return (item.content ?? []).map(collectText).join('');
-};
 
 /**
  * Mimics the uuid dedup half of ensureUuids(): the save path stamps a fresh
@@ -73,28 +67,6 @@ const dedupeMarkUuids = (
     dedupeMarkUuids(child, seen, families, counter);
   }
   return families;
-};
-
-/** Wraps the JSON block tree in just enough ProseMirror Node shape for the exporters. */
-const toFakeNode = (item: TranslationEditorContentItem): Node => {
-  const children = (item.content ?? []).map(toFakeNode);
-  return {
-    type: { name: item.type ?? 'unknown' },
-    attrs: item.attrs ?? {},
-    marks: (item.marks ?? []).map((mark) => ({
-      type: { name: mark.type },
-      attrs: mark.attrs ?? {},
-    })),
-    isText: item.type === 'text',
-    text: item.text,
-    textContent: collectText(item),
-    content: {
-      size: children.length,
-      childCount: children.length,
-      child: (i: number) => children[i],
-      forEach: (cb: (child: Node) => void) => children.forEach(cb),
-    },
-  } as unknown as Node;
 };
 
 const dto: PassageDTO = {

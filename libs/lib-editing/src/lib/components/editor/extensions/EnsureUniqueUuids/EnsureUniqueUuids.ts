@@ -2,17 +2,23 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Fragment, Mark, Node, Slice } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  PARAMETER_ANNOTATION_ATTRS,
+  parameterAnnotationValue,
+} from '@eightyfourthousand/lib-doc-model';
 
+/**
+ * Attributes a node must not inherit from the node it was split or copied from.
+ * The parameter annotations come from the shared registry, so a new one is
+ * covered here without a second list to update; `hasParagraphIndent` is
+ * display-only and listed on its own.
+ */
 const DEPENDENT_ATTR_DEFAULTS: Record<string, unknown> = {
-  leadingSpaceUuid: null,
-  hasLeadingSpace: false,
-  indentUuid: null,
-  hasIndent: false,
+  ...Object.fromEntries(
+    PARAMETER_ANNOTATION_ATTRS.map((attr) => [attr, undefined]),
+  ),
   hasParagraphIndent: false,
 };
-
-// Node attrs that hold annotation uuids of their own (parameter annotations).
-const PARAM_UUID_KEYS = ['leadingSpaceUuid', 'indentUuid'] as const;
 
 const hasUuidAttr = (node: Node) =>
   Object.prototype.hasOwnProperty.call(node.type.spec.attrs ?? {}, 'uuid');
@@ -83,9 +89,12 @@ export const regenerateSliceUuids = (slice: Slice): Slice => {
     if (hasUuidAttr(node)) {
       attrs = { ...attrs, uuid: fresh(attrs.uuid as string | null) };
     }
-    for (const key of PARAM_UUID_KEYS) {
-      if (attrs[key]) {
-        attrs = { ...attrs, [key]: fresh(attrs[key] as string) };
+    // Parameter annotations carry their identity inside an object attribute,
+    // so the uuid is refreshed in place rather than on the node.
+    for (const attr of PARAMETER_ANNOTATION_ATTRS) {
+      const value = parameterAnnotationValue(attrs, attr);
+      if (value) {
+        attrs = { ...attrs, [attr]: { ...value, uuid: fresh(value.uuid) } };
       }
     }
     if (Array.isArray(attrs.items)) {

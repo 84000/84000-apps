@@ -1,10 +1,4 @@
-import { Extension } from '@tiptap/core';
-import { v4 as uuidv4 } from 'uuid';
-
-export interface LeadingSpaceOptions {
-  types: string[];
-  defaultHasLeadingSpace: boolean;
-}
+import { createParameterAnnotationExtension } from './parameterAnnotation';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -26,77 +20,10 @@ declare module '@tiptap/core' {
   }
 }
 
-export const LeadingSpace = Extension.create<LeadingSpaceOptions>({
+export const LeadingSpace = createParameterAnnotationExtension({
   name: 'leadingSpace',
-  addOptions() {
-    return {
-      types: ['paragraph', 'heading', 'lineGroup', 'blockquote'],
-      defaultHasLeadingSpace: false,
-    };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          hasLeadingSpace: {
-            default: this.options.defaultHasLeadingSpace,
-            parseHTML: (element) => element.className.includes('mt-6'),
-            renderHTML: (attributes) =>
-              attributes.hasLeadingSpace ? { class: 'mt-6 no-indent' } : {},
-          },
-          leadingSpaceUuid: {
-            default: undefined,
-            parseHTML: (element) =>
-              element.getAttribute('data-leading-space-uuid') || undefined,
-            renderHTML: (attributes) => {
-              if (!attributes.leadingSpaceUuid) {
-                return {};
-              }
-              return {
-                'data-leading-space-uuid': attributes.leadingSpaceUuid,
-              };
-            },
-          },
-        },
-      },
-    ];
-  },
-
-  addCommands() {
-    return {
-      setLeadingSpace:
-        () =>
-        ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.updateAttributes(type, {
-                hasLeadingSpace: true,
-                leadingSpaceUuid: uuidv4(),
-              }),
-            )
-            .every((response) => response);
-        },
-      unsetLeadingSpace:
-        () =>
-        ({ commands }) => {
-          return this.options.types
-            .map((type) =>
-              commands.resetAttributes(type, [
-                'hasLeadingSpace',
-                'leadingSpaceUuid',
-              ]),
-            )
-            .every((response) => response);
-        },
-      toggleLeadingSpace:
-        () =>
-        ({ editor, commands }) => {
-          if (editor.isActive({ hasLeadingSpace: true })) {
-            return commands.unsetLeadingSpace();
-          }
-          return commands.setLeadingSpace();
-        },
-    };
-  },
+  attr: 'leadingSpace',
+  types: ['blockquote', 'heading', 'lineGroup', 'paragraph'],
+  className: 'mt-6 no-indent',
+  dataPrefix: 'leading-space',
 });
