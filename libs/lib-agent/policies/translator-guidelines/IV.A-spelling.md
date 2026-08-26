@@ -29,7 +29,7 @@ Plurals of Sanskrit words should be created using "s," and should match the word
 
 Wherever the Wylie system is used, syllables should be separated with spaces, not periods or hyphens. Initial or root letters should never be capitalized to signify a proper name, place name, text title, etc. (except in some cases in the bibliography as noted below). This is important, because according to the Extended Wylie system a capitalized letter is interpreted as the transliteration of a Sanskrit letter (for example, Wylie _DA ki nI_ transcribes a Tibetan syllable that is in turn a transcription of the Sanskrit _ḍākinī_).
 
-Please note that the Wylie transcription of the _a-chung_ (འ) is an apostrophe, i.e., ' with its convexity to the right. As it usually follows a space, word processing software often interprets the appropriate keystroke as an opening quotation mark, ‘, which will need to be corrected. In general, please use "typographer's" apostrophes and quotation marks, not straight "typewriter" ones.
+Please note that the Wylie transcription of the _a-chung_ (འ) is an apostrophe, i.e., ’ with its convexity to the right. As it usually follows a space, word processing software often interprets the appropriate keystroke as an opening quotation mark, ‘, which will need to be corrected. In general, please use "typographer's" apostrophes and quotation marks, not straight "typewriter" ones.
 
 **Hyphenation:** Please avoid hyphenation when other options are valid, either dividing terms into two or contracting them into one. Common instances are: nondual, threefold, counterclockwise.
 
