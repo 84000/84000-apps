@@ -109,11 +109,13 @@ concluding that a cited number does not exist.
   never the straight typewriter forms, per
   `translator-guidelines/IV.A-spelling.md`. This holds for the English, the
   footnotes, and the Terminology Notes alike.
-  *The one exception is Extended Wylie*, wherever it appears: the *a-chung* (འ)
-  transliterates as a straight apostrophe, which a word processor will silently
-  turn into a left single quotation mark when it follows a space. Leave every
-  Wylie a-chung as a straight `'`, and confirm it survived generation of the
-  `.docx`.
+  *Extended Wylie needs particular care*, wherever it appears. The *a-chung* (འ)
+  transliterates as a **closing** single quotation mark — `’` (U+2019), its
+  convexity to the right, a closing inverted comma. It is **not** a straight
+  apostrophe `'` (U+0027), and **not** the opening `‘` (U+2018) that a word
+  processor produces automatically, which it usually will, since an a-chung
+  normally follows a space. Sweep the Wylie for `‘` and correct each one, and
+  confirm the `’` survived generation of the `.docx`.
 
 ## The four disciplines
 
