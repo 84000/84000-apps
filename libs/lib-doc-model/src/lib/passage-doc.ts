@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import { Node as PMNode, Schema } from '@tiptap/pm/model';
 import {
   prosemirrorToYXmlFragment,
+  updateYFragment,
   yXmlFragmentToProseMirrorRootNode,
 } from 'y-prosemirror';
 import {
@@ -157,19 +158,37 @@ export class PassageDoc {
   }
 
   /**
-   * Replace the whole content, as a structural change.
+   * Replace the content, as a structural change.
    *
    * Used by split, merge and cross-passage delete, which compute new content
-   * for a passage rather than editing it in place. The write carries
-   * `STRUCTURAL_ORIGIN`, so it does not enter this passage's text history.
+   * for a passage rather than editing it in place, and by the command log
+   * replaying them. The write carries `STRUCTURAL_ORIGIN`, so it does not
+   * enter this passage's text history.
+   *
+   * The replacement is applied as a *diff* rather than a clear-and-rebuild,
+   * and that is load bearing rather than an optimization. Deleting the whole
+   * fragment destroys every Yjs item in it, including the ones this passage's
+   * `UndoManager` still holds in its stack — so a text edit made before a
+   * structural op could not be undone after that op was undone. Worse, it did
+   * not fail loudly: the stack item applied to items that no longer existed,
+   * Yjs reported success, and the user's keystroke was silently swallowed.
+   * Matching prefixes and suffixes keeps their identity, so the text history
+   * underneath a structural undo stays applicable.
+   *
+   * `updateYFragment` is y-prosemirror's own reconciler — the one its sync
+   * plugin runs on every editor transaction — and is marked unstable there.
+   * It is used deliberately: hand-rolling a second ProseMirror-aware diff over
+   * Yjs to sit beside the one the editor already uses would be the worse risk.
    */
   replaceContent(json: JSONContent) {
     const node = this.parse(json);
     transact(
       this.doc,
       () => {
-        this.content.delete(0, this.content.length);
-        prosemirrorToYXmlFragment(node, this.content);
+        updateYFragment(this.doc, this.content, node, {
+          mapping: new Map(),
+          isOMark: new Map(),
+        });
       },
       STRUCTURAL_ORIGIN,
     );

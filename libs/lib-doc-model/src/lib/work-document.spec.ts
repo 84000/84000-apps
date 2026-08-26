@@ -1,6 +1,7 @@
 import { WorkDocument } from './work-document';
 import { para, paraTexts, testSchema } from './schema.fixture';
 import type { SpineSeed } from './spine';
+import type { XmlElement, XmlText } from 'yjs';
 
 const meta = (
   uuid: string,
@@ -304,5 +305,68 @@ describe('WorkDocument undo', () => {
   it('returns null with nothing to undo', () => {
     expect(build(2).undo()).toBeNull();
     expect(build(2).redo()).toBeNull();
+  });
+});
+
+describe('WorkDocument structural undo over text history', () => {
+  /**
+   * A text edit as the passage's own UndoManager sees one. `PassageDoc`
+   * defaults to tracking writes carrying no origin, which is what a direct
+   * transaction produces.
+   */
+  const typeInto = (work: WorkDocument, uuid: string, text: string) => {
+    const doc = work.store.ensure(uuid);
+    doc.doc.transact(() => {
+      const paragraph = doc.content.get(0) as XmlElement;
+      (paragraph.get(0) as XmlText).insert(0, text);
+    });
+    work.recordTextEdit(uuid);
+  };
+
+  // Regression. `replaceContent` used to clear the fragment and rebuild it,
+  // which destroyed the Yjs items the passage's UndoManager held in its stack.
+  // Undoing a structural op and then the text edit beneath it therefore
+  // applied a stack item to items that no longer existed: Yjs reported
+  // success, the entry was consumed, and the edit stayed put.
+  it('restores a text edit undone beneath a merge', () => {
+    const work = build(3);
+    typeInto(work, 'p0', 'edited ');
+    work.merge('p1');
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
+      'edited text 0',
+      'text 1',
+    ]);
+
+    work.undo(); // the merge
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
+      'edited text 0',
+    ]);
+
+    work.undo(); // the typing beneath it
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['text 0']);
+  });
+
+  it('restores a text edit undone beneath a split', () => {
+    const work = build(2);
+    typeInto(work, 'p0', 'edited ');
+    // Position 15: the end of 'edited text 0' plus the paragraph's own tokens.
+    work.split('p0', 15);
+
+    work.undo(); // the split
+    work.undo(); // the typing beneath it
+
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['text 0']);
+  });
+
+  it('leaves untouched passages alone when replacing content', () => {
+    const work = build(3);
+    const doc = work.store.ensure('p1');
+    const before = doc.content.get(0);
+
+    // Replacing with identical content must be a no-op on the Yjs items, or
+    // every command-log replay would invalidate history it never touched.
+    doc.replaceContent(doc.toJSON());
+
+    expect(doc.content.get(0)).toBe(before);
   });
 });
