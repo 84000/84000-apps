@@ -77,7 +77,7 @@ const titleSort: SortingFn<TableWork> = (rowA, rowB, columnId) => {
 };
 
 const firstTohNumber = (tohSearch: string) =>
-  parseInt(tohSearch.replace('toh', ''), 10) || 0;
+  parseInt(tohSearch.replace(/toh|-/g, ''), 10) || 0;
 
 const tohSort: SortingFn<TableWork> = (rowA, rowB) =>
   firstTohNumber(rowA.original.tohSearch) -
