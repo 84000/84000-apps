@@ -164,6 +164,10 @@ export const RestrictionWarning = ({ imprint }: { imprint?: Imprint }) => {
                 others who may or may not fulfill the requirements lie in the
                 hands of readers.
               </p>
+              <p>
+                If the work has multiple Tohoku numbers associated with it, this
+                restriction applies to all those Tohoku numbers.
+              </p>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
