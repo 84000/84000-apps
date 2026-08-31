@@ -1,14 +1,25 @@
 'use client';
 
 import { memo } from 'react';
+import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
-import type { StackPassageMeta } from './types';
+import { StackRow } from './StackRow';
 
 /**
  * The cheap tier of the stack: pre-rendered HTML for passages that don't
- * currently carry a live editor. Uses the same layout and a `tiptap` class
- * wrapper so typography (and row height) match the editor tier.
+ * currently carry a live editor.
+ *
+ * Carries `tiptap` for typography and `pm-text-metrics` for the four
+ * layout-affecting properties a mounted editor gets from `.ProseMirror`.
+ * Without the latter the text re-wraps the moment a row swaps to an editor, and
+ * because focusing a passage makes it *and both neighbours* live, three rows
+ * re-wrap at once and everything below them jumps.
+ *
+ * A passage outside the hydration window has no document and so no HTML. That
+ * is the ordinary state for most of a long work, not a failure — the row draws
+ * a placeholder at its estimated height and fills in when the window reaches
+ * it.
  */
 export const StaticPassageRow = memo(
   ({
@@ -16,20 +27,24 @@ export const StaticPassageRow = memo(
     meta,
   }: {
     controller: PassageStackController;
-    meta: StackPassageMeta;
-  }) => (
-    <div className="flex gap-4 py-1" data-stack-passage={meta.uuid}>
-      <div className="w-14 shrink-0 select-none pt-1 text-right font-sans text-xs text-muted-foreground">
-        {meta.label}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div
-          className="tiptap"
-          dangerouslySetInnerHTML={{
-            __html: controller.getStaticHTML(meta.uuid),
-          }}
-        />
-      </div>
-    </div>
-  ),
+    meta: PassageMeta;
+  }) => {
+    const html = controller.getStaticHTML(meta.uuid);
+
+    return (
+      <StackRow uuid={meta.uuid} label={meta.label}>
+        {html === null ? (
+          <div
+            className="animate-pulse rounded bg-muted"
+            style={{ height: controller.estimateContentHeight(meta.uuid) }}
+          />
+        ) : (
+          <div
+            className="tiptap pm-text-metrics"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        )}
+      </StackRow>
+    );
+  },
 );

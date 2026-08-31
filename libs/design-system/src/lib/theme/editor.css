@@ -79,6 +79,34 @@
   font-feature-settings: 'liga' 0; /* the above doesn't seem to work in Edge */
 }
 
+/* Text metrics identical to a mounted ProseMirror editor, for content rendered
+   statically beside one.
+
+   The editor-per-passage stack draws most rows as static HTML and swaps a row
+   to a live editor only when it takes focus. Both tiers must lay text out
+   identically or the swap re-wraps the paragraph and every line below it moves
+   — which is what happens without this: `white-space: break-spaces` measures a
+   trailing space at a line end instead of letting it hang, so lines break
+   earlier and a long paragraph gains a line the moment it is focused.
+
+   Deliberately a separate class rather than putting `.ProseMirror` on the
+   static wrapper: that class is an editor marker as well as a style hook
+   (`DragHandle` matches on it), so borrowing it would make static rows claim to
+   be editors.
+
+   These four properties are the ones affecting text layout, and they are
+   `.ProseMirror`'s — kept adjacent to it above so a divergence is visible in
+   one screen. `white-space` is `break-spaces` because that is what
+   prosemirror-view's own stylesheet resolves to; the `pre-wrap` above it is an
+   older duplicate this repo carries. */
+.pm-text-metrics {
+  word-wrap: break-word;
+  white-space: break-spaces;
+  -webkit-font-variant-ligatures: none;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0;
+}
+
 .ProseMirror [contenteditable='false'] {
   white-space: normal;
 }

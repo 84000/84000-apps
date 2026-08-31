@@ -11,10 +11,16 @@ import {
   PassageDTO,
 } from '@eightyfourthousand/data-access';
 import {
+  PassageLoader,
+  type PassageSnapshot,
+  type PassageSource,
+} from '@eightyfourthousand/lib-doc-model';
+import {
   PassageStack,
   PassageStackController,
   PerfHUD,
   StackPassageSeed,
+  createStackWorkDocument,
   stackSeedFromPassage,
 } from '@eightyfourthousand/lib-editing/stack';
 import { useEffect, useMemo, useState } from 'react';
@@ -110,6 +116,28 @@ const repeatPassages = (passages: Passage[], repeat: number): Passage[] => {
   return copies;
 };
 
+/**
+ * The seeds held as a `PassageSource`, so the sandbox drives the same windowed
+ * hydration path production does rather than preloading every document.
+ *
+ * The rows are all in memory here — this page fetches the whole work up front
+ * to measure against a large one — but handing them over a source is what
+ * keeps the stack honest: documents are still built a window at a time and
+ * released behind it.
+ */
+const seedSource = (seeds: StackPassageSeed[]): PassageSource => {
+  const byUuid = new Map(seeds.map((seed) => [seed.meta.uuid, seed]));
+  return {
+    name: 'sandbox-seeds',
+    loadPassages: async (_workUuid, uuids) =>
+      uuids.flatMap((uuid): PassageSnapshot[] => {
+        const seed = byUuid.get(uuid);
+        return seed ? [{ uuid, content: seed.content }] : [];
+      }),
+    loadSpineMetas: async () => seeds.map((seed) => seed.meta),
+  };
+};
+
 export const StackPage = ({
   toh,
   repeat = 1,
@@ -150,15 +178,27 @@ export const StackPage = ({
     };
   }, [toh, repeat]);
 
-  const controller = useMemo(
-    () => (seeds ? new PassageStackController(seeds) : null),
-    [seeds],
-  );
+  const controller = useMemo(() => {
+    if (!seeds) return null;
+    const work = createStackWorkDocument({
+      workUuid: `sandbox-${toh}`,
+      loader: new PassageLoader({ sources: [seedSource(seeds)] }),
+    });
+    work.seedSpine(seeds.map((seed) => seed.meta));
+    return new PassageStackController({
+      work,
+      charCounts: seeds.map(
+        (seed) => [seed.meta.uuid, seed.charCount] as const,
+      ),
+    });
+  }, [seeds, toh]);
 
   useEffect(() => {
+    if (!controller) return;
     // Debug handle for the spike: poke the spine from the console.
     (window as unknown as Record<string, unknown>)['__stackController'] =
-      controller ?? undefined;
+      controller;
+    return () => controller.destroy();
   }, [controller]);
 
   if (failed) {

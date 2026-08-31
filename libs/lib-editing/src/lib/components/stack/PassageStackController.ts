@@ -1,128 +1,123 @@
-import {
-  Editor,
-  Extensions,
-  JSONContent,
-  getSchema,
-} from '@tiptap/core';
-import { Node as PMNode, Schema } from '@tiptap/pm/model';
+import { Editor, Extensions } from '@tiptap/core';
 import { Selection } from '@tiptap/pm/state';
-import { Transform } from '@tiptap/pm/transform';
-import { Doc, UndoManager, XmlFragment, transact } from 'yjs';
-import {
-  prosemirrorToYXmlFragment,
-  yXmlFragmentToProseMirrorRootNode,
-} from 'y-prosemirror';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
-import {
-  defaultDeleteFilter,
-  defaultProtectedNodes,
-  ySyncPluginKey,
-} from '@tiptap/y-tiptap';
-import type { TranslationEditorContentItem } from '@eightyfourthousand/data-access';
+import type { UndoManager } from 'yjs';
+import type {
+  FocusTarget,
+  PassageDoc,
+  PassageMeta,
+  SpineRange,
+  WorkDocument,
+} from '@eightyfourthousand/lib-doc-model';
 
-import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
 import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
 import {
   buildStackEditorExtensions,
   buildStackSchemaExtensions,
 } from './stack-extensions';
-import { stackPerf } from './perf';
 import type {
   StackCrossSelection,
   StackFocusTarget,
-  StackPassageMeta,
+  StackFocusWhere,
   StackPassageSeed,
 } from './types';
 
-/**
- * Origin for structural Yjs transactions (split/merge/cross-passage delete
- * and their undo). Per-passage UndoManagers track only the sync-plugin
- * origin, so structural mutations never land in a passage's text history —
- * they are undone atomically through the command log instead.
- */
-const STRUCTURAL_ORIGIN = 'passage-stack-structural';
+/** Rough characters per rendered line, for unmeasured row height estimates. */
+const CHARS_PER_LINE = 85;
+/** Row chrome (label gutter, vertical padding) in pixels. */
+const ROW_CHROME_PX = 48;
+/** One line of rendered passage text, in pixels. */
+const LINE_HEIGHT_PX = 28;
+/** Fallback height for a passage whose size is entirely unknown. */
+const UNKNOWN_ROW_PX = 64;
 
-const EMPTY_PARAGRAPH: JSONContent = { type: 'paragraph' };
-
-type StackEntry = {
-  meta: StackPassageMeta;
-  seedContent: TranslationEditorContentItem[] | null;
-  charCount: number;
-  ydoc: Doc | null;
-  fragment: XmlFragment | null;
-  editor: Editor | null;
-  /**
-   * Owned by the controller and shared with every editor mounted for this
-   * passage, so text-undo history survives focus moving elsewhere. Works
-   * headless — undoing an unmounted passage mutates its fragment directly.
-   */
-  undoManager: UndoManager | null;
+export type PassageStackControllerOptions = {
+  work: WorkDocument;
+  /** Character counts by passage uuid, for estimating unhydrated row heights. */
+  charCounts?: Iterable<readonly [string, number]>;
 };
 
-type StructuralState = {
-  order: string[];
-  metas: [string, StackPassageMeta][];
-  docs: { uuid: string; json: JSONContent }[];
-};
-
-type LogEntry =
-  | { kind: 'text'; uuid: string }
-  | {
-      kind: 'structural';
-      label: string;
-      before: StructuralState;
-      after: StructuralState;
-      focusAfterUndo?: StackFocusTarget;
-      focusAfterRedo?: StackFocusTarget;
-    };
-
 /**
- * Owns the spine (ordered passage uuids + metadata), one Yjs doc per
- * passage, structural operations across passages, and the stack-wide
- * command-log undo. Editors mount and unmount freely as the virtualized
- * window moves; the controller is the stable coordinator between them.
+ * The view half of the editor-per-passage stack.
+ *
+ * Everything about *what the work is* — the spine, the passage documents,
+ * split/merge/delete, and the command log that undoes them — belongs to
+ * `WorkDocument` and is not duplicated here. What is here is everything a
+ * `WorkDocument` has no opinion about because it has no view: which passages
+ * currently carry a live editor, where focus is, the static HTML shown for the
+ * rest, row height estimates, and the DOM-level cross-passage selection.
+ *
+ * Two windows move independently and it matters that they are not confused.
+ * The *hydration* window is scroll-driven: it follows the virtualized range so
+ * a work of any length costs the same to hold. The *live editor* set is
+ * focus-driven and small — the focused passage and its immediate neighbours —
+ * so scrolling never mounts or destroys an editor, and a passage being edited
+ * keeps its editor even after it scrolls out of sight.
  */
 export class PassageStackController {
-  private schema: Schema;
-  private entries = new Map<string, StackEntry>();
-  private order: string[] = [];
+  readonly work: WorkDocument;
 
-  private undoLog: LogEntry[] = [];
-  private redoLog: LogEntry[] = [];
-  private suppressTextLog = false;
-
+  private editors = new Map<string, Editor>();
+  private charCounts = new Map<string, number>();
   private staticHTML = new Map<string, string>();
+  /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
+  private wiring = new Map<string, () => void>();
+
   private crossSelection: StackCrossSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
   private scrollToIndex: ((index: number) => void) | null = null;
 
-  /**
-   * Passages carrying a live editor: the focused passage and its neighbors
-   * (so boundary arrow keys land in an already-mounted editor). Everything
-   * else renders as static HTML — editors mount on focus, never on scroll.
-   */
   private liveUuids = new Set<string>();
   private focusedUuid: string | null = null;
 
+  private orderCache: string[] | null = null;
+  private visibleRange: SpineRange = { start: 0, end: 0 };
+  private hydrating = false;
+  private hydrationQueued = false;
+
   private listeners = new Set<() => void>();
   private version = 0;
+  private disposers: (() => void)[] = [];
 
-  constructor(seeds: StackPassageSeed[]) {
-    this.schema = getSchema(buildStackSchemaExtensions());
-    seeds.forEach((seed) => {
-      this.entries.set(seed.meta.uuid, {
-        meta: seed.meta,
-        seedContent: seed.content,
-        charCount: seed.charCount,
-        ydoc: null,
-        fragment: null,
-        editor: null,
-        undoManager: null,
-      });
-      this.order.push(seed.meta.uuid);
-    });
+  constructor(options: PassageStackControllerOptions) {
+    this.work = options.work;
+    if (options.charCounts) {
+      this.charCounts = new Map(options.charCounts);
+    }
+
+    // Structural ops notify through the work; a spine change arriving from
+    // another client notifies only through the spine. Both invalidate the
+    // order the virtualizer is drawing.
+    this.disposers.push(
+      this.work.observe(() => {
+        this.orderCache = null;
+        this.bump();
+      }),
+      this.work.spine.observe(() => {
+        this.orderCache = null;
+        this.bump();
+      }),
+      this.work.store.observe(() => {
+        this.reconcileWiring();
+        this.bump();
+      }),
+    );
+  }
+
+  /**
+   * Seed a work's spine and documents from rows, and return the char counts a
+   * controller wants alongside it.
+   *
+   * Only for callers holding a whole work already — the sandbox, and tests.
+   * The real path seeds the spine from `loadSpineMetas` and hydrates documents
+   * a window at a time.
+   */
+  static seedWork(work: WorkDocument, seeds: StackPassageSeed[]) {
+    work.seedSpine(seeds.map((seed) => seed.meta));
+    seeds.forEach((seed) => work.store.create(seed.meta.uuid, seed.content));
+    return new Map(seeds.map((seed) => [seed.meta.uuid, seed.charCount]));
   }
 
   // ---------------------------------------------------------------- spine
@@ -134,34 +129,61 @@ export class PassageStackController {
 
   getVersion = () => this.version;
 
-  getOrder = () => this.order;
+  /**
+   * The passage uuids in order.
+   *
+   * Cached because the virtualizer reads it every render and
+   * `Spine.uuids()` materializes the whole `Y.Array` each call.
+   */
+  getOrder = () => {
+    if (!this.orderCache) {
+      this.orderCache = this.work.spine.uuids();
+    }
+    return this.orderCache;
+  };
 
-  getMeta = (uuid: string) => this.entries.get(uuid)?.meta;
+  getMeta = (uuid: string): PassageMeta | null => this.work.spine.meta(uuid);
 
-  mountedCount = () =>
-    [...this.entries.values()].filter((entry) => entry.editor).length;
+  passageCount = () => this.work.spine.length;
 
-  passageCount = () => this.order.length;
+  mountedCount = () => this.editors.size;
 
-  estimateHeight = (uuid: string) => {
-    const entry = this.entries.get(uuid);
-    if (!entry) return 64;
-    return 48 + Math.ceil(entry.charCount / 85) * 28;
+  undoDepth = () => this.work.log.depth;
+
+  /** Whether this passage's document is in memory and can be rendered. */
+  isHydrated = (uuid: string) => this.work.store.has(uuid);
+
+  /** The whole row's height, for the virtualizer's initial estimate. */
+  estimateHeight = (uuid: string) =>
+    ROW_CHROME_PX + this.estimateContentHeight(uuid);
+
+  /** Just the text column, for sizing a placeholder inside an existing row. */
+  estimateContentHeight = (uuid: string) => {
+    const count = this.charCounts.get(uuid);
+    if (count === undefined) return UNKNOWN_ROW_PX;
+    return Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX;
   };
 
   /**
-   * Static HTML for rows that don't carry a live editor — cheap enough to
-   * render during fast scrolling, so the stack never shows blank rows.
-   * Cached per passage; invalidated by edits and structural ops.
+   * Static HTML for a row that doesn't carry a live editor, or null when the
+   * passage has not been hydrated.
+   *
+   * Null is not an error state — outside the hydration window there is
+   * genuinely no content to draw, and the row shows a skeleton at its
+   * estimated height instead. The prototype never had this case because it
+   * held every passage in memory, which is exactly what does not scale.
    */
-  getStaticHTML = (uuid: string) => {
+  getStaticHTML = (uuid: string): string | null => {
     const cached = this.staticHTML.get(uuid);
     if (cached !== undefined) return cached;
+
+    const doc = this.work.store.peek(uuid);
+    if (!doc) return null;
 
     let html = '';
     try {
       html = renderToHTMLString({
-        content: this.getDocJSON(uuid),
+        content: doc.toJSON(),
         extensions: buildStackSchemaExtensions(),
         options: {
           nodeMapping: {
@@ -172,29 +194,84 @@ export class PassageStackController {
       });
     } catch (error) {
       console.error('failed to statically render passage', error);
-      html = `<p>${this.pmDoc(this.getDocJSON(uuid)).textContent}</p>`;
+      html = `<p>${doc.text}</p>`;
     }
     this.staticHTML.set(uuid, html);
     return html;
   };
 
+  // ------------------------------------------------------------ hydration
+
+  /**
+   * Tell the controller which rows the virtualizer is drawing.
+   *
+   * Hydration is widened by the loader's own buffer, so this is the visible
+   * range rather than a padded one. Calls made while a load is in flight
+   * collapse into a single follow-up, so a fast scroll issues two loads rather
+   * than one per frame.
+   */
+  setVisibleRange = (range: SpineRange) => {
+    if (
+      range.start === this.visibleRange.start &&
+      range.end === this.visibleRange.end
+    ) {
+      return;
+    }
+    this.visibleRange = range;
+    void this.runHydration();
+  };
+
+  private async runHydration() {
+    if (this.hydrating) {
+      this.hydrationQueued = true;
+      return;
+    }
+    this.hydrating = true;
+    try {
+      do {
+        this.hydrationQueued = false;
+        // Live editors are pinned: focus does not have to sit inside the
+        // scrolled range, and releasing a document under a mounted editor
+        // would leave it bound to a destroyed fragment.
+        const docs = await this.work.hydrateWindow(this.visibleRange, {
+          keep: this.liveUuids,
+        });
+        docs.forEach((doc) => this.wire(doc));
+      } while (this.hydrationQueued);
+    } finally {
+      this.hydrating = false;
+    }
+    this.bump();
+  }
+
+  /** Hydrate one passage on demand — the path focus takes ahead of mounting. */
+  private async hydrateOne(uuid: string) {
+    if (this.work.store.has(uuid)) return;
+    const doc = await this.work.store.hydrate(uuid);
+    if (doc) {
+      this.wire(doc);
+      this.bump();
+    }
+  }
+
   // ------------------------------------------------------------- editors
 
   buildEditorExtensions(uuid: string): Extensions {
-    const entry = this.materialize(uuid);
+    const doc = this.work.store.peek(uuid);
+    if (!doc) {
+      throw new Error(`cannot mount an editor on unhydrated passage ${uuid}`);
+    }
+    this.wire(doc);
     return buildStackEditorExtensions({
       uuid,
-      fragment: entry.fragment as XmlFragment,
-      undoManager: entry.undoManager as UndoManager,
+      fragment: doc.content,
+      undoManager: doc.undoManager,
       delegate: this,
     });
   }
 
   registerEditor(uuid: string, editor: Editor) {
-    const entry = this.entries.get(uuid);
-    if (!entry) return;
-
-    entry.editor = editor;
+    this.editors.set(uuid, editor);
 
     if (this.pendingFocus?.uuid === uuid) {
       const { where } = this.pendingFocus;
@@ -208,12 +285,10 @@ export class PassageStackController {
   }
 
   unregisterEditor(uuid: string) {
-    const entry = this.entries.get(uuid);
-    if (!entry) return;
-    entry.editor = null;
+    this.editors.delete(uuid);
   }
 
-  getEditor = (uuid: string) => this.entries.get(uuid)?.editor ?? null;
+  getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
 
   setScrollHandler(handler: ((index: number) => void) | null) {
     this.scrollToIndex = handler;
@@ -221,7 +296,9 @@ export class PassageStackController {
 
   // --------------------------------------------------------------- focus
 
-  isLive = (uuid: string) => this.liveUuids.has(uuid);
+  /** Whether this row should render as an editor rather than static HTML. */
+  isLive = (uuid: string) =>
+    this.liveUuids.has(uuid) && this.work.store.has(uuid);
 
   getFocusedUuid = () => this.focusedUuid;
 
@@ -241,16 +318,16 @@ export class PassageStackController {
     this.recenterLive(uuid);
   }
 
-  focusPassage(uuid: string, where: StackFocusTarget['where'] = 'start') {
-    const entry = this.entries.get(uuid);
-    const index = this.order.indexOf(uuid);
-    if (!entry || index < 0) return false;
+  focusPassage(uuid: string, where: StackFocusWhere = 'start') {
+    const index = this.getOrder().indexOf(uuid);
+    if (index < 0) return false;
 
     this.focusedUuid = uuid;
     this.recenterLive(uuid);
 
-    if (entry.editor) {
-      this.focusEditor(entry.editor, where);
+    const editor = this.editors.get(uuid);
+    if (editor) {
+      this.focusEditor(editor, where);
       this.scrollToIndex?.(index);
       return true;
     }
@@ -258,38 +335,41 @@ export class PassageStackController {
     this.pendingFocus = { uuid, where };
     this.keyBuffer = '';
     this.scrollToIndex?.(index);
-    // The row is currently static — re-render so it swaps to an editor.
+    // Either the row is static and re-rendering swaps it to an editor, or the
+    // passage is not hydrated yet and mounting waits on its document.
+    void this.hydrateOne(uuid);
     this.bump();
     return true;
   }
 
-  private recenterLive(uuid: string) {
-    const index = this.order.indexOf(uuid);
-    if (index < 0) return;
-    const next = new Set<string>();
-    [this.order[index - 1], uuid, this.order[index + 1]].forEach((u) => {
-      if (u) next.add(u);
-    });
-    const changed =
-      next.size !== this.liveUuids.size ||
-      [...next].some((u) => !this.liveUuids.has(u));
-    if (!changed) return;
-    this.liveUuids = next;
-    this.bump();
-  }
-
-  focusRelative = (
-    uuid: string,
-    direction: -1 | 1,
-    where: 'start' | 'end',
-  ) => {
-    const index = this.order.indexOf(uuid);
-    const target = this.order[index + direction];
+  focusRelative = (uuid: string, direction: -1 | 1, where: 'start' | 'end') => {
+    const order = this.getOrder();
+    const index = order.indexOf(uuid);
+    const target = order[index + direction];
     if (index < 0 || !target) return false;
     return this.focusPassage(target, where);
   };
 
-  private focusEditor(editor: Editor, where: StackFocusTarget['where']) {
+  private recenterLive(uuid: string) {
+    const order = this.getOrder();
+    const index = order.indexOf(uuid);
+    if (index < 0) return;
+    const next = new Set<string>();
+    [order[index - 1], uuid, order[index + 1]].forEach((neighbour) => {
+      if (neighbour) next.add(neighbour);
+    });
+    const changed =
+      next.size !== this.liveUuids.size ||
+      [...next].some((entry) => !this.liveUuids.has(entry));
+    if (!changed) return;
+    this.liveUuids = next;
+    // Neighbours are premounted so boundary arrow keys land in an editor that
+    // already exists; they need documents for that.
+    next.forEach((entry) => void this.hydrateOne(entry));
+    this.bump();
+  }
+
+  private focusEditor(editor: Editor, where: StackFocusWhere) {
     // Premounted neighbors are non-editable (so at most one contenteditable
     // exists and native selection works everywhere else) — flip on focus.
     if (!editor.isEditable) editor.setEditable(true);
@@ -307,86 +387,26 @@ export class PassageStackController {
     editor.commands.focus(where);
   }
 
+  private applyFocusTarget(target: FocusTarget | null | undefined) {
+    if (!target) return;
+    this.focusPassage(target.uuid, target.where);
+  }
+
   // ------------------------------------------------------ structural ops
 
   splitAtSelection = (uuid: string) => {
-    const entry = this.entries.get(uuid);
-    const editor = entry?.editor;
-    const index = this.order.indexOf(uuid);
-    if (!entry || !editor || index < 0) return false;
-
-    const { doc, selection } = editor.state;
-    const pos = selection.$from.pos;
-    const beforeJSON = this.docJSONFromFragment(doc.content.cut(0, pos));
-    const afterJSON = this.docJSONFromFragment(doc.content.cut(pos));
-
-    const before = this.capture([uuid]);
-
-    const newMeta: StackPassageMeta = {
-      ...entry.meta,
-      uuid: crypto.randomUUID(),
-      sort: entry.meta.sort + 1,
-      label: incrementLabel(entry.meta.label),
-    };
-
-    this.setDocContent(uuid, beforeJSON);
-    this.createEntry(newMeta, afterJSON.content ?? []);
-    this.order = [
-      ...this.order.slice(0, index + 1),
-      newMeta.uuid,
-      ...this.order.slice(index + 1),
-    ];
-    this.normalizeLabelsFrom(index + 1);
-
-    const after = this.capture([uuid, newMeta.uuid]);
-    this.pushStructural({
-      kind: 'structural',
-      label: 'split',
-      before,
-      after,
-      focusAfterUndo: { uuid, where: pos },
-      focusAfterRedo: { uuid: newMeta.uuid, where: 'start' },
-    });
-
-    this.bump();
-    this.focusPassage(newMeta.uuid, 'start');
+    const editor = this.editors.get(uuid);
+    if (!editor) return false;
+    const result = this.work.split(uuid, editor.state.selection.$from.pos);
+    if (!result) return false;
+    this.focusPassage(result.uuid, 'start');
     return true;
   };
 
   mergeWithPrevious = (uuid: string) => {
-    const index = this.order.indexOf(uuid);
-    if (index <= 0) return false;
-    const prevUuid = this.order[index - 1];
-
-    const prevJSON = this.getDocJSON(prevUuid);
-    const currentJSON = this.getDocJSON(uuid);
-    const boundary = this.docSize(prevJSON);
-
-    const before = this.capture([prevUuid, uuid]);
-
-    const merged: JSONContent = {
-      type: 'doc',
-      content: [
-        ...(prevJSON.content ?? []),
-        ...(currentJSON.content ?? []),
-      ].filter(Boolean),
-    };
-    this.setDocContent(prevUuid, merged);
-    this.order = this.order.filter((entryUuid) => entryUuid !== uuid);
-    this.normalizeLabelsFrom(index - 1);
-
-    const after = this.capture([prevUuid, uuid]);
-    this.pushStructural({
-      kind: 'structural',
-      label: 'merge',
-      before,
-      after,
-      focusAfterUndo: { uuid, where: 'start' },
-      focusAfterRedo: { uuid: prevUuid, where: boundary },
-    });
-
-    this.bump();
-    this.focusPassage(prevUuid, boundary);
+    const result = this.work.merge(uuid);
+    if (!result) return false;
+    this.focusPassage(result.uuid, result.boundary);
     return true;
   };
 
@@ -396,7 +416,7 @@ export class PassageStackController {
    * text offset from the row start — inline atoms can skew it by a char).
    */
   resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
-    const editor = this.entries.get(uuid)?.editor;
+    const editor = this.editors.get(uuid);
     if (editor) {
       try {
         return editor.view.posAtDOM(node, offset);
@@ -419,23 +439,25 @@ export class PassageStackController {
     return this.posFromTextOffset(uuid, range.toString().length);
   };
 
-  private posFromTextOffset(uuid: string, textOffset: number): number {
-    const doc = this.pmDoc(this.getDocJSON(uuid));
+  private posFromTextOffset(uuid: string, textOffset: number): number | null {
+    const doc = this.work.store.peek(uuid);
+    if (!doc) return null;
+    const node = doc.toNode();
     let remaining = textOffset;
     let pos: number | null = null;
-    doc.descendants((node, nodePos) => {
+    node.descendants((child, childPos) => {
       if (pos !== null) return false;
-      if (node.isText) {
-        const length = node.text?.length ?? 0;
+      if (child.isText) {
+        const length = child.text?.length ?? 0;
         if (remaining <= length) {
-          pos = nodePos + remaining;
+          pos = childPos + remaining;
           return false;
         }
         remaining -= length;
       }
       return true;
     });
-    return pos ?? doc.content.size;
+    return pos ?? node.content.size;
   }
 
   // ---------------------------------------------------- cross selection
@@ -446,314 +468,155 @@ export class PassageStackController {
 
   hasCrossSelection = () => this.crossSelection !== null;
 
-  /** Replace the cross-passage selection with pasted plain text. */
-  pasteCrossSelection = (text: string) => this.deleteCrossSelection(text);
+  /**
+   * Replace a cross-passage selection with pasted plain text.
+   *
+   * The delete is one command; the insertion that follows is a second, because
+   * `WorkDocument.deleteRange` has no insert half. So an undo after pasting
+   * over a multi-passage selection takes two steps rather than one. Recorded
+   * as a known gap for the selection slice of DEV-710 rather than papered over
+   * here.
+   */
+  pasteCrossSelection = (text: string) => {
+    const selection = this.crossSelection;
+    if (!selection) return false;
+    const start = this.orderedSelection(selection);
+    if (!this.deleteCrossSelection()) return false;
+    if (!start) return true;
 
-  deleteCrossSelection = (replaceWith?: string) => {
+    const editor = this.editors.get(start.uuid);
+    if (editor) {
+      editor.commands.insertContentAt(
+        Math.min(start.pos, Selection.atEnd(editor.state.doc).from),
+        text,
+      );
+    } else {
+      // The surviving passage has no editor yet; focus queued the mount, so
+      // hand the text to the same buffer a click-and-type uses.
+      this.keyBuffer = text;
+    }
+    return true;
+  };
+
+  deleteCrossSelection = () => {
     const selection = this.crossSelection;
     if (!selection) return false;
     this.crossSelection = null;
 
-    let { fromUuid, fromPos, toUuid, toPos } = selection;
-    let fromIndex = this.order.indexOf(fromUuid);
-    let toIndex = this.order.indexOf(toUuid);
-    if (fromIndex < 0 || toIndex < 0) return false;
-    if (fromIndex > toIndex) {
-      [fromUuid, toUuid] = [toUuid, fromUuid];
-      [fromPos, toPos] = [toPos, fromPos];
-      [fromIndex, toIndex] = [toIndex, fromIndex];
-    }
-
-    const middles = this.order.slice(fromIndex + 1, toIndex);
-    const affected = [fromUuid, ...middles, toUuid];
-    const before = this.capture(affected);
-
-    const fromDoc = this.pmDoc(this.getDocJSON(fromUuid));
-    const toDoc = this.pmDoc(this.getDocJSON(toUuid));
-    let fromJSON = this.docJSONFromFragment(fromDoc.content.cut(0, fromPos));
-    if (replaceWith) {
-      // Pasted text lands at the cut point — the end of the trimmed head.
-      const trimmed = this.pmDoc(fromJSON);
-      const transform = new Transform(trimmed);
-      const insertPos = Selection.atEnd(trimmed).from;
-      transform.replaceWith(
-        insertPos,
-        insertPos,
-        this.schema.text(replaceWith),
-      );
-      fromJSON = transform.doc.toJSON();
-    }
-    this.setDocContent(fromUuid, fromJSON);
-    this.setDocContent(
-      toUuid,
-      this.docJSONFromFragment(toDoc.content.cut(toPos)),
+    const deleted = this.work.deleteRange(
+      selection.fromUuid,
+      selection.fromPos,
+      selection.toUuid,
+      selection.toPos,
     );
-    this.order = this.order.filter(
-      (entryUuid) => !middles.includes(entryUuid),
-    );
-    this.normalizeLabelsFrom(fromIndex);
-
-    const after = this.capture(affected);
-    this.pushStructural({
-      kind: 'structural',
-      label: 'cross-delete',
-      before,
-      after,
-      focusAfterUndo: { uuid: fromUuid, where: fromPos },
-      focusAfterRedo: { uuid: fromUuid, where: 'end' },
-    });
+    if (!deleted) return false;
 
     window.getSelection()?.removeAllRanges();
-    this.bump();
-    this.focusPassage(fromUuid, 'end');
+    const start = this.orderedSelection(selection);
+    if (start) this.focusPassage(start.uuid, start.pos);
     return true;
   };
+
+  /** Which end of a cross-passage selection comes first in the spine. */
+  private orderedSelection(selection: StackCrossSelection) {
+    const order = this.getOrder();
+    const fromIndex = order.indexOf(selection.fromUuid);
+    const toIndex = order.indexOf(selection.toUuid);
+    if (fromIndex < 0 || toIndex < 0) return null;
+    return fromIndex <= toIndex
+      ? { uuid: selection.fromUuid, pos: selection.fromPos }
+      : { uuid: selection.toUuid, pos: selection.toPos };
+  }
 
   // ------------------------------------------------------------ undo/redo
 
   undo = () => {
-    while (this.undoLog.length) {
-      const entry = this.undoLog.pop() as LogEntry;
-
-      if (entry.kind === 'structural') {
-        this.applyStructural(entry.before, entry.focusAfterUndo);
-        this.redoLog.push(entry);
-        return true;
-      }
-
-      const undoManager = this.entries.get(entry.uuid)?.undoManager;
-      if (undoManager?.undoStack.length) {
-        this.withSuppressedTextLog(() => undoManager.undo());
-        this.redoLog.push(entry);
-        this.focusPassage(entry.uuid, 'end');
-        return true;
-      }
-
-      // Shouldn't happen now that managers outlive their editors; count it
-      // in the HUD if it does.
-      stackPerf.recordSkippedUndo();
-    }
-    return false;
+    // `WorkDocument.undo` moves entries between its own stacks; the passage
+    // `UndoManager` it drives fires `stack-item-added` on the way, which would
+    // otherwise be recorded as a brand new text edit and clear the redo
+    // branch. Suppression gates recording only — the stack moves still happen.
+    const target = this.work.log.suppress(() => this.work.undo());
+    if (target === null) return false;
+    this.applyFocusTarget(target);
+    return true;
   };
 
   redo = () => {
-    while (this.redoLog.length) {
-      const entry = this.redoLog.pop() as LogEntry;
-
-      if (entry.kind === 'structural') {
-        this.applyStructural(entry.after, entry.focusAfterRedo);
-        this.undoLog.push(entry);
-        return true;
-      }
-
-      const undoManager = this.entries.get(entry.uuid)?.undoManager;
-      if (undoManager?.redoStack.length) {
-        this.withSuppressedTextLog(() => undoManager.redo());
-        this.undoLog.push(entry);
-        this.focusPassage(entry.uuid, 'end');
-        return true;
-      }
-
-      stackPerf.recordSkippedUndo();
-    }
-    return false;
+    const target = this.work.log.suppress(() => this.work.redo());
+    if (target === null) return false;
+    this.applyFocusTarget(target);
+    return true;
   };
-
-  undoDepth = () => this.undoLog.length;
 
   // -------------------------------------------------------------- private
 
-  private materialize(uuid: string): StackEntry {
-    const entry = this.entries.get(uuid);
-    if (!entry) throw new Error(`unknown passage: ${uuid}`);
-    if (entry.ydoc) return entry;
+  /**
+   * Attach the controller's per-document bookkeeping, once per document.
+   *
+   * Two jobs. Content changes invalidate the cached static HTML and the row's
+   * height estimate. And a text edit taken by the passage's own `UndoManager`
+   * has to be announced to the command log, or Mod-Z would skip straight past
+   * typing to the last structural op — `WorkDocument.recordTextEdit` exists
+   * for exactly this and nothing in the model calls it.
+   */
+  private wire(doc: PassageDoc) {
+    if (this.wiring.has(doc.uuid)) return;
+    const uuid = doc.uuid;
 
-    entry.ydoc = new Doc();
-    entry.fragment = entry.ydoc.getXmlFragment('content');
-    const content = entry.seedContent?.length
-      ? entry.seedContent
-      : [EMPTY_PARAGRAPH];
-    prosemirrorToYXmlFragment(
-      this.pmDoc({ type: 'doc', content }),
-      entry.fragment,
-    );
-    entry.seedContent = null;
+    this.charCounts.set(uuid, doc.text.length);
 
-    // Any fragment change — editor edits, structural ops, headless undo —
-    // invalidates the passage's cached static HTML.
-    entry.fragment.observeDeep(() => this.staticHTML.delete(uuid));
-
-    // Created after seeding so the seed isn't undoable. Tracks only the
-    // sync-plugin origin (user edits through a mounted editor); structural
-    // ops use STRUCTURAL_ORIGIN and stay out of text history.
-    const undoManager = new UndoManager(entry.fragment, {
-      trackedOrigins: new Set([ySyncPluginKey]),
-      deleteFilter: (item) => defaultDeleteFilter(item, defaultProtectedNodes),
-      captureTransaction: (tr) => tr.meta.get('addToHistory') !== false,
+    const unobserve = doc.observe(() => {
+      this.staticHTML.delete(uuid);
+      this.charCounts.set(uuid, doc.text.length);
+      this.bump();
     });
-    // The undo plugin destroys whatever manager it is handed when its editor
-    // unmounts; this one must outlive every mount, so neuter destroy.
-    undoManager.destroy = () => undefined;
-    undoManager.on(
-      'stack-item-added',
-      ({ type }: { type: 'undo' | 'redo' }) => {
-        if (this.suppressTextLog || type !== 'undo') return;
-        this.undoLog.push({ kind: 'text', uuid });
-        this.redoLog = [];
-      },
-    );
-    entry.undoManager = undoManager;
-    return entry;
-  }
 
-  private createEntry(
-    meta: StackPassageMeta,
-    content: TranslationEditorContentItem[],
-  ) {
-    this.entries.set(meta.uuid, {
-      meta,
-      seedContent: content,
-      charCount: JSON.stringify(content).length / 4,
-      ydoc: null,
-      fragment: null,
-      editor: null,
-      undoManager: null,
+    const onStackItem = ({ type }: { type: 'undo' | 'redo' }) => {
+      // A redo-stack item is the inverse produced by an undo, not a new edit.
+      if (type !== 'undo') return;
+      this.work.recordTextEdit(uuid);
+    };
+    doc.undoManager.on('stack-item-added', onStackItem);
+
+    // The y-undo plugin destroys whatever UndoManager it is handed when its
+    // editor unmounts, but this one belongs to the document and has to
+    // outlive every mount — otherwise typing, scrolling away and scrolling
+    // back would silently lose that passage's history. `PassageDoc.destroy`
+    // tears down the Yjs types it observes, so the neutered call leaks
+    // nothing.
+    const manager = doc.undoManager as UndoManager & { destroy: () => void };
+    manager.destroy = () => undefined;
+
+    this.wiring.set(uuid, () => {
+      unobserve();
+      doc.undoManager.off('stack-item-added', onStackItem);
     });
   }
 
-  private pmDoc(json: JSONContent): PMNode {
-    try {
-      return PMNode.fromJSON(this.schema, json);
-    } catch (error) {
-      console.error('failed to parse passage content', error);
-      return PMNode.fromJSON(this.schema, {
-        type: 'doc',
-        content: [EMPTY_PARAGRAPH],
-      });
-    }
-  }
-
-  private docJSONFromFragment(fragment: {
-    toJSON: () => JSONContent[] | null;
-  }): JSONContent {
-    const content = fragment.toJSON();
-    return {
-      type: 'doc',
-      content: content?.length ? content : [EMPTY_PARAGRAPH],
-    };
-  }
-
-  private docSize(json: JSONContent) {
-    return this.pmDoc(json).content.size;
-  }
-
-  private getDocJSON(uuid: string): JSONContent {
-    const entry = this.entries.get(uuid);
-    if (!entry) return { type: 'doc', content: [EMPTY_PARAGRAPH] };
-    if (entry.editor) return entry.editor.getJSON();
-    if (entry.fragment) {
-      return yXmlFragmentToProseMirrorRootNode(
-        entry.fragment,
-        this.schema,
-      ).toJSON();
-    }
-    return {
-      type: 'doc',
-      content: entry.seedContent?.length
-        ? (entry.seedContent as JSONContent[])
-        : [EMPTY_PARAGRAPH],
-    };
-  }
-
-  private setDocContent(uuid: string, json: JSONContent) {
-    const entry = this.entries.get(uuid);
-    if (!entry) return;
-    // Materialized docs invalidate via the fragment observer; seed-only
-    // entries have no observer yet.
-    this.staticHTML.delete(uuid);
-
-    if (!entry.ydoc || !entry.fragment) {
-      entry.seedContent = (json.content ?? []) as TranslationEditorContentItem[];
-      return;
-    }
-
-    const node = this.pmDoc(json);
-    transact(
-      entry.ydoc,
-      () => {
-        prosemirrorToYXmlFragment(node, entry.fragment as XmlFragment);
-      },
-      STRUCTURAL_ORIGIN,
-    );
-  }
-
-  private capture(affectedUuids: string[]): StructuralState {
-    return {
-      order: [...this.order],
-      metas: [...this.entries.entries()].map(([uuid, entry]) => [
-        uuid,
-        entry.meta,
-      ]),
-      docs: affectedUuids.map((uuid) => ({
-        uuid,
-        json: this.getDocJSON(uuid),
-      })),
-    };
-  }
-
-  private applyStructural(state: StructuralState, focus?: StackFocusTarget) {
-    state.metas.forEach(([uuid, meta]) => {
-      const entry = this.entries.get(uuid);
-      if (entry) entry.meta = meta;
+  /** Drop bookkeeping for documents the store has released. */
+  private reconcileWiring() {
+    [...this.wiring.keys()].forEach((uuid) => {
+      if (this.work.store.has(uuid)) return;
+      this.wiring.get(uuid)?.();
+      this.wiring.delete(uuid);
+      this.staticHTML.delete(uuid);
+      // The passage's text history went with its document; the command log
+      // would otherwise stall on entries it can no longer replay.
+      this.work.log.forgetText(uuid);
     });
-    state.docs.forEach(({ uuid, json }) => this.setDocContent(uuid, json));
-    this.order = [...state.order];
-    this.bump();
-    if (focus) this.focusPassage(focus.uuid, focus.where);
-  }
-
-  private pushStructural(entry: LogEntry) {
-    this.undoLog.push(entry);
-    this.redoLog = [];
-  }
-
-  private withSuppressedTextLog(fn: () => void) {
-    this.suppressTextLog = true;
-    try {
-      fn();
-    } finally {
-      this.suppressTextLog = false;
-    }
-  }
-
-  private normalizeLabelsFrom(anchorIndex: number) {
-    const anchor = this.entries.get(this.order[anchorIndex])?.meta;
-    if (!anchor?.label) return;
-
-    const parts = anchor.label.split('.');
-    const numParts = parts.length;
-    const prefix =
-      numParts > 1 ? parts.slice(0, -1).join('.') + '.' : '';
-
-    let expected = incrementLabel(anchor.label);
-    for (let i = anchorIndex + 1; i < this.order.length; i++) {
-      const entry = this.entries.get(this.order[i]);
-      const label = entry?.meta.label;
-      if (!entry || !label) continue;
-
-      const targetParts = label.split('.');
-      if (targetParts.length < numParts) break;
-      if (targetParts.length > numParts) continue;
-      if (prefix && !label.startsWith(prefix)) break;
-      if (label === expected) break;
-
-      entry.meta = { ...entry.meta, label: expected };
-      expected = incrementLabel(expected);
-    }
   }
 
   private bump() {
     this.version += 1;
     this.listeners.forEach((listener) => listener());
+  }
+
+  /** Release the controller's own listeners. The work outlives it. */
+  destroy() {
+    this.wiring.forEach((teardown) => teardown());
+    this.wiring.clear();
+    this.disposers.forEach((dispose) => dispose());
+    this.disposers = [];
+    this.listeners.clear();
   }
 }
