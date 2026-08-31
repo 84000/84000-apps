@@ -90,10 +90,10 @@ export const RestrictionWarning = ({ imprint }: { imprint?: Imprint }) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent
-        className="max-w-readable w-full font-serif"
+        className="max-w-readable flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden font-serif"
         showCloseButton={false}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0">
           <div className="flex justify-between pb-4 text-destructive">
             <CircleAlertIcon className="my-auto" />
             <DialogTitle className="my-auto text-2xl">
@@ -104,70 +104,77 @@ export const RestrictionWarning = ({ imprint }: { imprint?: Imprint }) => {
             </DialogClose>
           </div>
         </DialogHeader>
-        <p>
-          Readers are reminded that according to Vajrayāna Buddhist tradition
-          there are restrictions and commitments concerning tantra.
-        </p>
-        <p>
-          Practitioners who are not sure if they should read translations in
-          this section are advised to consult the authorities of their lineage.
-        </p>
-        <p>
-          The responsibility for reading these texts or sharing them with
-          others—and hence the consequences—lies in the hands of readers.
-        </p>
-        <Accordion type="single" collapsible>
-          <AccordionItem value="more-info">
-            <AccordionTrigger className="text-base">
-              About unrestricted access
-            </AccordionTrigger>
-            <AccordionContent className="space-y-2 leading-6">
-              <p>
-                The decision to publish tantra texts without restricted access
-                has been considered carefully. First of all, it should be noted
-                that all the original Tibetan texts of the Kangyur, including
-                those in this Tantra section, are in the public domain. Some of
-                the texts in this section (but by no means all of them) are
-                nevertheless, according to some traditions, only studied with
-                authorization and after suitable preliminaries.
-              </p>
-              <p>
-                It is true, of course, that a translation makes the content
-                accessible to a far greater number of people; 84000 has
-                therefore consulted many senior Buddhist teachers on this
-                question, and most of them felt that to publish the texts openly
-                is, on balance, the best solution. The alternatives would be not
-                to translate them at all (which would defeat the purposes of the
-                whole project), or to place some sort of restriction on their
-                access. Restricted access has been tried by some Buddhist book
-                publishers, and of course needs a system of administration,
-                judgment, and policing that is either a mere formality, or is
-                very difficult to implement. It would be even harder to
-                implement in the case of electronic texts—and even easier to
-                circumvent. Indeed, nowadays practically the whole range of
-                traditionally restricted Tibetan Buddhist material is already
-                available to anyone who looks for it, and is all too often
-                misrepresented, taken out of context, or its secret and esoteric
-                nature deliberately vaunted.
-              </p>
-              <p>
-                84000’s policy is to present carefully authenticated
-                translations in their proper setting of the whole body of
-                Buddhist sacred literature, and to trust the good sense of the
-                vast majority of readers not to misuse or misunderstand them.
-                Readers are reminded that according to Vajrayāna Buddhist
-                tradition there are restrictions and commitments concerning
-                tantra. Practitioners who are not sure if they should read
-                translations in this section are advised to consult the
-                authorities of their lineage. The responsibility, and hence
-                consequences, of reading these texts and/or sharing them with
-                others who may or may not fulfill the requirements lie in the
-                hands of readers.
-              </p>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        <DialogFooter>
+        <div className="min-h-0 space-y-4 overflow-y-auto">
+          <p>
+            Readers are reminded that according to Vajrayāna Buddhist tradition
+            there are restrictions and commitments concerning tantra.
+          </p>
+          <p>
+            Practitioners who are not sure if they should read translations in
+            this section are advised to consult the authorities of their
+            lineage.
+          </p>
+          <p>
+            The responsibility for reading these texts or sharing them with
+            others—and hence the consequences—lies in the hands of readers.
+          </p>
+          <p>
+            If this work has multiple Tohoku numbers associated with it, this
+            restriction applies to all those Tohoku numbers.
+          </p>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="more-info">
+              <AccordionTrigger className="text-base">
+                About unrestricted access
+              </AccordionTrigger>
+              <AccordionContent className="space-y-2 leading-6 bg-muted-foreground/5 p-2 rounded-lg">
+                <p>
+                  The decision to publish tantra texts without restricted access
+                  has been considered carefully. First of all, it should be
+                  noted that all the original Tibetan texts of the Kangyur,
+                  including those in this Tantra section, are in the public
+                  domain. Some of the texts in this section (but by no means all
+                  of them) are nevertheless, according to some traditions, only
+                  studied with authorization and after suitable preliminaries.
+                </p>
+                <p>
+                  It is true, of course, that a translation makes the content
+                  accessible to a far greater number of people; 84000 has
+                  therefore consulted many senior Buddhist teachers on this
+                  question, and most of them felt that to publish the texts
+                  openly is, on balance, the best solution. The alternatives
+                  would be not to translate them at all (which would defeat the
+                  purposes of the whole project), or to place some sort of
+                  restriction on their access. Restricted access has been tried
+                  by some Buddhist book publishers, and of course needs a system
+                  of administration, judgment, and policing that is either a
+                  mere formality, or is very difficult to implement. It would be
+                  even harder to implement in the case of electronic texts—and
+                  even easier to circumvent. Indeed, nowadays practically the
+                  whole range of traditionally restricted Tibetan Buddhist
+                  material is already available to anyone who looks for it, and
+                  is all too often misrepresented, taken out of context, or its
+                  secret and esoteric nature deliberately vaunted.
+                </p>
+                <p>
+                  84000’s policy is to present carefully authenticated
+                  translations in their proper setting of the whole body of
+                  Buddhist sacred literature, and to trust the good sense of the
+                  vast majority of readers not to misuse or misunderstand them.
+                  Readers are reminded that according to Vajrayāna Buddhist
+                  tradition there are restrictions and commitments concerning
+                  tantra. Practitioners who are not sure if they should read
+                  translations in this section are advised to consult the
+                  authorities of their lineage. The responsibility, and hence
+                  consequences, of reading these texts and/or sharing them with
+                  others who may or may not fulfill the requirements lie in the
+                  hands of readers.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+        <DialogFooter className="shrink-0">
           <Button
             className="font-sans"
             variant="destructive"
