@@ -21,6 +21,7 @@ import {
 import { Work } from '@eightyfourthousand/data-access';
 import {
   compareIgnoringArticles,
+  compareToh,
   parseToh,
 } from '@eightyfourthousand/lib-utils';
 import { useCallback, useMemo } from 'react';
@@ -76,12 +77,8 @@ const titleSort: SortingFn<TableWork> = (rowA, rowB, columnId) => {
   );
 };
 
-const firstTohNumber = (tohSearch: string) =>
-  parseInt(tohSearch.replace(/toh|-/g, ''), 10) || 0;
-
 const tohSort: SortingFn<TableWork> = (rowA, rowB) =>
-  firstTohNumber(rowA.original.tohSearch) -
-  firstTohNumber(rowB.original.tohSearch);
+  compareToh(rowA.original.tohSearch, rowB.original.tohSearch);
 
 const DEFAULT_SORT: SortingState = [{ id: 'title', desc: false }];
 const SORTABLE_COLUMNS = [

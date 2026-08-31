@@ -1,5 +1,6 @@
 import {
   compareIgnoringArticles,
+  compareToh,
   escapeHtml,
   escapeHtmlAttribute,
   parseToh,
@@ -13,6 +14,49 @@ describe('parseToh', () => {
 
   it('formats a comma-separated list', () => {
     expect(parseToh('toh417,toh418')).toBe('Toh 417, Toh 418');
+  });
+});
+
+describe('compareToh', () => {
+  const sorted = (tohs: string[]) => [...tohs].sort(compareToh);
+
+  it('orders by numeric value, not string value', () => {
+    expect(sorted(['toh1206', 'toh12', 'toh95', 'toh1'])).toEqual([
+      'toh1',
+      'toh12',
+      'toh95',
+      'toh1206',
+    ]);
+  });
+
+  it('uses the value after a dash only when the value before it ties', () => {
+    expect(sorted(['toh12', 'toh1-2', 'toh1-10', 'toh1', 'toh2'])).toEqual([
+      'toh1',
+      'toh1-2',
+      'toh1-10',
+      'toh2',
+      'toh12',
+    ]);
+  });
+
+  it('orders letter suffixes after the bare number', () => {
+    expect(sorted(['toh1006b', 'toh1007', 'toh1006', 'toh1006a'])).toEqual([
+      'toh1006',
+      'toh1006a',
+      'toh1006b',
+      'toh1007',
+    ]);
+  });
+
+  it('orders a list of tohs by its first entry', () => {
+    expect(sorted(['toh12 toh3', 'toh2 toh100'])).toEqual([
+      'toh2 toh100',
+      'toh12 toh3',
+    ]);
+  });
+
+  it('sorts an empty toh first', () => {
+    expect(sorted(['toh1', ''])).toEqual(['', 'toh1']);
   });
 });
 

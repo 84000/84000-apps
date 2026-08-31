@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TooltipProvider } from '@eightyfourthousand/design-system';
-import { SemVer, Work } from '@eightyfourthousand/data-access';
+import {
+  SemVer,
+  TohokuCatalogEntry,
+  Work,
+} from '@eightyfourthousand/data-access';
 import { TranslationsTable } from './TranslationTable';
 
 let mockSearchParams: URLSearchParams;
@@ -29,6 +33,10 @@ const work = (overrides: Partial<Work>): Work => ({
   ...overrides,
 });
 
+// The template literal type describes the plain form; the catalogue's suffixed
+// entries ("toh1-2", "toh1059a") are read out of the database with this cast.
+const toh = (entry: string) => entry as TohokuCatalogEntry;
+
 const WORKS: Work[] = [
   work({
     title: 'The Play in Full',
@@ -52,10 +60,10 @@ const WORKS: Work[] = [
   }),
 ];
 
-const renderTable = () =>
+const renderTable = (works: Work[] = WORKS) =>
   render(
     <TooltipProvider>
-      <TranslationsTable works={WORKS} />
+      <TranslationsTable works={works} />
     </TooltipProvider>,
   );
 
@@ -92,6 +100,25 @@ describe('TranslationsTable', () => {
       expect.stringContaining('Ornament of the Light of Awareness'),
       expect.stringContaining('The Play in Full'),
       expect.stringContaining('Unfinished Draft'),
+    ]);
+  });
+
+  it('sorts by toh number, with sub-numbers breaking ties only', () => {
+    mockSearchParams = new URLSearchParams('sort=toh.asc');
+    renderTable([
+      work({ title: 'Toh 12 work', toh: ['toh12'] }),
+      work({ title: 'Toh 1-10 work', toh: [toh('toh1-10')] }),
+      work({ title: 'Toh 1 work', toh: ['toh1'] }),
+      work({ title: 'Toh 1-2 work', toh: [toh('toh1-2')] }),
+      work({ title: 'Toh 2 work', toh: ['toh2'] }),
+    ]);
+
+    expect(bodyRowTitles()).toEqual([
+      expect.stringContaining('Toh 1 work'),
+      expect.stringContaining('Toh 1-2 work'),
+      expect.stringContaining('Toh 1-10 work'),
+      expect.stringContaining('Toh 2 work'),
+      expect.stringContaining('Toh 12 work'),
     ]);
   });
 
