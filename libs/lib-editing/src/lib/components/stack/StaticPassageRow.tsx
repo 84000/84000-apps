@@ -8,8 +8,13 @@ import { StackRow } from './StackRow';
 
 /**
  * The cheap tier of the stack: pre-rendered HTML for passages that don't
- * currently carry a live editor. Uses the same layout and a `tiptap` class
- * wrapper so typography (and row height) match the editor tier.
+ * currently carry a live editor.
+ *
+ * Carries `tiptap` for typography and `pm-text-metrics` for the four
+ * layout-affecting properties a mounted editor gets from `.ProseMirror`.
+ * Without the latter the text re-wraps the moment a row swaps to an editor, and
+ * because focusing a passage makes it *and both neighbours* live, three rows
+ * re-wrap at once and everything below them jumps.
  *
  * A passage outside the hydration window has no document and so no HTML. That
  * is the ordinary state for most of a long work, not a failure — the row draws
@@ -34,7 +39,10 @@ export const StaticPassageRow = memo(
             style={{ height: controller.estimateContentHeight(meta.uuid) }}
           />
         ) : (
-          <div className="tiptap" dangerouslySetInnerHTML={{ __html: html }} />
+          <div
+            className="tiptap pm-text-metrics"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
         )}
       </StackRow>
     );
