@@ -2,7 +2,10 @@ import { Extensions } from '@tiptap/core';
 import { Collaboration } from '@tiptap/extension-collaboration';
 import type { UndoManager, XmlFragment } from 'yjs';
 
-import { STARTER_KIT_CONFIG, StarterKit } from '../editor/extensions/StarterKit';
+import {
+  STARTER_KIT_CONFIG,
+  StarterKit,
+} from '../editor/extensions/StarterKit';
 import TranslationMetadata from '../editor/extensions/TranslationMetadata';
 import { Audio } from '../editor/extensions/Audio/Audio';
 import {

@@ -21,10 +21,9 @@ import {
   PassageStackController,
   PerfHUD,
   StackPassageSeed,
+  SpineFeed,
   createStackWork,
   createStackWorkDocument,
-  graphqlPassageSource,
-  seedStackSpine,
   stackSeedFromPassage,
 } from '@eightyfourthousand/lib-editing/stack';
 import {
@@ -210,21 +209,17 @@ export const StackPage = ({
         workUuid: found.uuid,
         client,
       });
-      const count = await seedStackSpine(
-        work,
-        (workUuid) =>
-          // The same source the loader reads through, asked directly for the
-          // spine so seeding does not depend on a hydration having happened.
-          graphqlPassageSource({ client, workUuid }).loadSpineMetas?.(
-            workUuid,
-          ) ?? Promise.resolve([]),
-      );
+      // The spine starts as a prefix and grows as the reader reaches its end.
+      // Seeding it whole would be one request per hundred passages, and the
+      // largest works in production run to about 16,000.
+      const spineFeed = new SpineFeed(work, client);
+      const count = await spineFeed.seed();
       if (!count) {
         console.error(`work ${found.uuid} has no passages`);
         return null;
       }
 
-      return new PassageStackController({ work });
+      return new PassageStackController({ work, spineFeed });
     };
 
     build().then((built) => {

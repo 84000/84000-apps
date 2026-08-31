@@ -1,7 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import type { GraphQLClient } from 'graphql-request';
 import {
-  getPassageMetas,
+  getPassageMetaPage,
   getTranslationBlocks,
 } from '@eightyfourthousand/client-graphql';
 import {
@@ -169,13 +169,22 @@ export const graphqlPassageSource = ({
       return found.filter((snapshot) => wanted.has(snapshot.uuid));
     },
 
+    /**
+     * The *first* page of the work's passages, not all of them.
+     *
+     * `PassageSource` declares this as the work's metadata, and for a short
+     * work that is what comes back. For a long one it is a prefix: seeding a
+     * complete spine costs one request per hundred passages, and production's
+     * largest works are 15,904 and 15,357. `SpineFeed` appends the rest as the
+     * reader reaches them.
+     */
     async loadSpineMetas(requestedWorkUuid: string): Promise<SpineSeed[]> {
       if (wrongWork(requestedWorkUuid)) return [];
 
-      const metas = await getPassageMetas({ client, uuid: workUuid });
+      const page = await getPassageMetaPage({ client, uuid: workUuid });
       // Server order is the spine's order: `sort` is sparse and not an index,
       // so position is what carries it.
-      return metas.map(({ uuid, label, type, toh }) => ({
+      return page.metas.map(({ uuid, label, type, toh }) => ({
         uuid,
         label,
         type,

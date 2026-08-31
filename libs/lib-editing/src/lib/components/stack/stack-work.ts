@@ -7,7 +7,6 @@ import {
   type PassageLoader,
   type PassageSnapshot,
   type PassageSource,
-  type SpineSeed,
 } from '@eightyfourthousand/lib-doc-model';
 
 import { createStackLoader } from './passage-source';
@@ -89,21 +88,4 @@ export const createStackWork = ({
 
   built.work = createStackWorkDocument({ workUuid, loader, spineDoc });
   return built.work;
-};
-
-/**
- * Seed a work's spine from the API, if it is not already populated.
- *
- * Separate from construction because it is a network round trip: a caller
- * restoring a spine from local storage passes `spineDoc` and skips this
- * entirely. Returns how many passages the work has.
- */
-export const seedStackSpine = async (
-  work: WorkDocument,
-  loadSpineMetas: (workUuid: string) => Promise<SpineSeed[]>,
-): Promise<number> => {
-  if (work.spine.length > 0) return work.spine.length;
-  const metas = await loadSpineMetas(work.workUuid);
-  if (metas.length) work.seedSpine(metas);
-  return work.spine.length;
 };

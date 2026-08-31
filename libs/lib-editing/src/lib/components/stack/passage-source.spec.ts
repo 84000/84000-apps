@@ -4,7 +4,7 @@ import { Spine } from '@eightyfourthousand/lib-doc-model';
 import { graphqlPassageSource } from './passage-source';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
-  getPassageMetas: jest.fn(),
+  getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
 }));
 
@@ -12,7 +12,7 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
-  getPassageMetas: jest.Mock;
+  getPassageMetaPage: jest.Mock;
   getTranslationBlocks: jest.Mock;
 };
 
@@ -47,16 +47,19 @@ const page = (uuids: string[], hasMoreAfter = false) => ({
 });
 
 beforeEach(() => {
-  clientGraphql.getPassageMetas.mockReset();
+  clientGraphql.getPassageMetaPage.mockReset();
   clientGraphql.getTranslationBlocks.mockReset();
 });
 
 describe('graphqlPassageSource loadSpineMetas', () => {
-  it('returns spine seeds in server order, dropping sort', async () => {
-    clientGraphql.getPassageMetas.mockResolvedValue([
-      { uuid: 'p0', label: '1', sort: 4, type: 'translation', toh: 'toh145' },
-      { uuid: 'p1', label: '2', sort: 90, type: 'endnotes', toh: undefined },
-    ]);
+  it('returns the first page as spine seeds, in server order, dropping sort', async () => {
+    clientGraphql.getPassageMetaPage.mockResolvedValue({
+      metas: [
+        { uuid: 'p0', label: '1', sort: 4, type: 'translation', toh: 'toh145' },
+        { uuid: 'p1', label: '2', sort: 90, type: 'endnotes', toh: undefined },
+      ],
+      hasMoreAfter: false,
+    });
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
 
     expect(await source.loadSpineMetas?.('w1')).toEqual([
@@ -68,7 +71,7 @@ describe('graphqlPassageSource loadSpineMetas', () => {
   it('refuses a work it is not wired to', async () => {
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
     expect(await source.loadSpineMetas?.('other')).toEqual([]);
-    expect(clientGraphql.getPassageMetas).not.toHaveBeenCalled();
+    expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
   });
 });
 

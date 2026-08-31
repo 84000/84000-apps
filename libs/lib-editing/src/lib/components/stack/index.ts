@@ -1,4 +1,5 @@
 export * from './passage-source';
+export * from './spine-feed';
 export * from './PassageStack';
 export * from './PassageStackController';
 export * from './PerfHUD';
