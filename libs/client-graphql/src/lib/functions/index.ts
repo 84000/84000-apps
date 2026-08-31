@@ -5,13 +5,7 @@ export {
   type TranslationBlocksPage,
 } from './get-translation-blocks';
 export { getTranslationBlocksAround } from './get-translation-blocks-around';
-export {
-  getPassageMetas,
-  getPassageWindow,
-  type PassageContent,
-  type PassageMeta,
-  type PassageWindowPage,
-} from './get-passage-window';
+export { getPassageMetas, type PassageMeta } from './get-passage-metas';
 export { getTranslationTitles } from './get-translation-titles';
 export {
   getTranslationMetadataByUuid,

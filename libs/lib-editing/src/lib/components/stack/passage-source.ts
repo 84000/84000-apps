@@ -1,7 +1,8 @@
+import type { JSONContent } from '@tiptap/core';
 import type { GraphQLClient } from 'graphql-request';
 import {
   getPassageMetas,
-  getPassageWindow,
+  getTranslationBlocks,
 } from '@eightyfourthousand/client-graphql';
 import {
   PassageLoader,
@@ -102,25 +103,40 @@ export const graphqlPassageSource = ({
     };
   };
 
-  /** Read a run of passages, paging until the whole span is covered. */
+  /**
+   * Read a run of passages, paging until the whole span is covered.
+   *
+   * `getTranslationBlocks` is the reader's own fetch, and its blocks already
+   * carry what a snapshot needs: identity in `attrs`, children in `content`.
+   * Only the children are kept — a passage's identity lives in the spine, so
+   * holding it in the document too would be a second copy free to drift.
+   */
   const readSpan = async (cursor: string | undefined, count: number) => {
     const found: PassageSnapshot[] = [];
     let next = cursor;
     let remaining = count;
 
     while (remaining > 0) {
-      const page = await getPassageWindow({
+      const page = await getTranslationBlocks({
         client,
         uuid: workUuid,
         cursor: next,
-        limit: Math.min(remaining, MAX_PAGE),
+        maxPassages: Math.min(remaining, MAX_PAGE),
       });
-      if (!page.passages.length) break;
+      const blocks = Array.isArray(page.blocks)
+        ? page.blocks
+        : [page.blocks].filter(Boolean);
+      if (!blocks.length) break;
 
-      page.passages.forEach(({ uuid, content }) =>
-        found.push({ uuid, content }),
-      );
-      remaining -= page.passages.length;
+      blocks.forEach((block) => {
+        const uuid = block?.attrs?.uuid;
+        if (!uuid) return;
+        found.push({
+          uuid,
+          content: (block.content ?? []) as JSONContent[],
+        });
+      });
+      remaining -= blocks.length;
       if (!page.hasMoreAfter || !page.nextCursor) break;
       next = page.nextCursor;
     }

@@ -5,7 +5,7 @@ import { graphqlPassageSource } from './passage-source';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetas: jest.fn(),
-  getPassageWindow: jest.fn(),
+  getTranslationBlocks: jest.fn(),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -13,7 +13,7 @@ const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   getPassageMetas: jest.Mock;
-  getPassageWindow: jest.Mock;
+  getTranslationBlocks: jest.Mock;
 };
 
 const client = {} as GraphQLClient;
@@ -31,19 +31,24 @@ const spineOf = (count: number) => {
   return spine;
 };
 
-/** One page of content for the passages named, in the order given. */
+/**
+ * One page as `getTranslationBlocks` returns it: passage nodes carrying
+ * identity in `attrs` and the passage's children in `content`.
+ */
 const page = (uuids: string[], hasMoreAfter = false) => ({
-  passages: uuids.map((uuid) => ({
-    uuid,
+  blocks: uuids.map((uuid) => ({
+    type: 'passage',
+    attrs: { uuid },
     content: [{ type: 'paragraph' }],
   })),
   nextCursor: hasMoreAfter ? uuids[uuids.length - 1] : undefined,
   hasMoreAfter,
+  hasMoreBefore: false,
 });
 
 beforeEach(() => {
   clientGraphql.getPassageMetas.mockReset();
-  clientGraphql.getPassageWindow.mockReset();
+  clientGraphql.getTranslationBlocks.mockReset();
 });
 
 describe('graphqlPassageSource loadSpineMetas', () => {
@@ -70,7 +75,9 @@ describe('graphqlPassageSource loadSpineMetas', () => {
 describe('graphqlPassageSource loadPassages', () => {
   it('starts after the passage preceding the run', async () => {
     const spine = spineOf(20);
-    clientGraphql.getPassageWindow.mockResolvedValue(page(['p5', 'p6', 'p7']));
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      page(['p5', 'p6', 'p7']),
+    );
     const source = graphqlPassageSource({
       client,
       workUuid: 'w1',
@@ -79,15 +86,15 @@ describe('graphqlPassageSource loadPassages', () => {
 
     await source.loadPassages('w1', ['p5', 'p6', 'p7']);
 
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledTimes(1);
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: 'p4', limit: 3 }),
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p4', maxPassages: 3 }),
     );
   });
 
   it('omits the cursor at the head of the work', async () => {
     const spine = spineOf(20);
-    clientGraphql.getPassageWindow.mockResolvedValue(page(['p0', 'p1']));
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p0', 'p1']));
     const source = graphqlPassageSource({
       client,
       workUuid: 'w1',
@@ -96,14 +103,14 @@ describe('graphqlPassageSource loadPassages', () => {
 
     await source.loadPassages('w1', ['p0', 'p1']);
 
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: undefined, limit: 2 }),
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: undefined, maxPassages: 2 }),
     );
   });
 
   it('reads the whole run when the caller already holds part of the middle', async () => {
     const spine = spineOf(20);
-    clientGraphql.getPassageWindow.mockResolvedValue(
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
       page(['p3', 'p4', 'p5', 'p6']),
     );
     const source = graphqlPassageSource({
@@ -116,8 +123,8 @@ describe('graphqlPassageSource loadPassages', () => {
     // still beats two requests for the exact set.
     const found = await source.loadPassages('w1', ['p3', 'p6']);
 
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: 'p2', limit: 4 }),
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p2', maxPassages: 4 }),
     );
     // Passages pulled in by the span but not asked for are dropped: the loader
     // treats anything returned as answered.
@@ -128,7 +135,7 @@ describe('graphqlPassageSource loadPassages', () => {
     const spine = spineOf(250);
     const first = Array.from({ length: 100 }, (_, i) => `p${i}`);
     const second = Array.from({ length: 20 }, (_, i) => `p${100 + i}`);
-    clientGraphql.getPassageWindow
+    clientGraphql.getTranslationBlocks
       .mockResolvedValueOnce(page(first, true))
       .mockResolvedValueOnce(page(second));
 
@@ -139,15 +146,19 @@ describe('graphqlPassageSource loadPassages', () => {
     });
     const found = await source.loadPassages('w1', [...first, ...second]);
 
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledTimes(2);
-    expect(clientGraphql.getPassageWindow.mock.calls[0][0].limit).toBe(100);
-    expect(clientGraphql.getPassageWindow.mock.calls[1][0].limit).toBe(20);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(2);
+    expect(
+      clientGraphql.getTranslationBlocks.mock.calls[0][0].maxPassages,
+    ).toBe(100);
+    expect(
+      clientGraphql.getTranslationBlocks.mock.calls[1][0].maxPassages,
+    ).toBe(20);
     expect(found).toHaveLength(120);
   });
 
   it('stops rather than looping when a page comes back empty', async () => {
     const spine = spineOf(20);
-    clientGraphql.getPassageWindow.mockResolvedValue(page([]));
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page([]));
     const source = graphqlPassageSource({
       client,
       workUuid: 'w1',
@@ -155,29 +166,29 @@ describe('graphqlPassageSource loadPassages', () => {
     });
 
     expect(await source.loadPassages('w1', ['p5', 'p6'])).toEqual([]);
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledTimes(1);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
   });
 
   it('makes no request for an empty uuid list', async () => {
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
     expect(await source.loadPassages('w1', [])).toEqual([]);
-    expect(clientGraphql.getPassageWindow).not.toHaveBeenCalled();
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
   });
 
   it('refuses a work it is not wired to', async () => {
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
     expect(await source.loadPassages('other', ['p0'])).toEqual([]);
-    expect(clientGraphql.getPassageWindow).not.toHaveBeenCalled();
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
   });
 
   it('falls back to reading from the start when it has no spine', async () => {
-    clientGraphql.getPassageWindow.mockResolvedValue(page(['p0', 'p1']));
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p0', 'p1']));
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
 
     const found = await source.loadPassages('w1', ['p1']);
 
-    expect(clientGraphql.getPassageWindow).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: undefined, limit: 100 }),
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: undefined, maxPassages: 100 }),
     );
     expect(found.map((s) => s.uuid)).toEqual(['p1']);
   });
