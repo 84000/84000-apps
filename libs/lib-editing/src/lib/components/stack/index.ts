@@ -1,3 +1,4 @@
+export * from './passage-source';
 export * from './PassageStack';
 export * from './PassageStackController';
 export * from './PerfHUD';

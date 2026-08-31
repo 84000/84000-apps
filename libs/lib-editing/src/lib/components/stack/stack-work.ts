@@ -1,11 +1,16 @@
 import { getSchema } from '@tiptap/core';
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
+import type { GraphQLClient } from 'graphql-request';
 import type { Doc } from 'yjs';
 import {
   WorkDocument,
   type PassageLoader,
+  type PassageSnapshot,
+  type PassageSource,
+  type SpineSeed,
 } from '@eightyfourthousand/lib-doc-model';
 
+import { createStackLoader } from './passage-source';
 import { buildStackSchemaExtensions } from './stack-extensions';
 
 export type StackWorkOptions = {
@@ -39,3 +44,66 @@ export const createStackWorkDocument = (options: StackWorkOptions) =>
     spineDoc: options.spineDoc,
     textOrigins: new Set([ySyncPluginKey]),
   });
+
+/**
+ * A stack `WorkDocument` reading through the API, and the local store when one
+ * is supplied.
+ *
+ * The assembly exists because the two halves reference each other: the loader's
+ * network source needs the spine to turn a uuid set into a cursor, and the
+ * spine belongs to the `WorkDocument` the loader is constructed for. Resolving
+ * it through a closure rather than passing the object keeps the cycle to this
+ * function — by the time a window is hydrated the document exists, and nothing
+ * outside here has to know the order things were built in.
+ */
+export const createStackWork = ({
+  workUuid,
+  client,
+  local,
+  cache,
+  buffer,
+  spineDoc,
+}: {
+  workUuid: string;
+  client: GraphQLClient;
+  /** `localPassageSource(storage)` from `lib-persistence`, when available. */
+  local?: PassageSource;
+  /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
+  cache?: (workUuid: string, snapshots: PassageSnapshot[]) => Promise<void>;
+  /** Passages either side of the visible range to hydrate. */
+  buffer?: number;
+  spineDoc?: Doc;
+}): WorkDocument => {
+  // A holder rather than a reassigned binding: the loader closes over this
+  // before the document exists, and by the time a window is hydrated it does.
+  const built: { work?: WorkDocument } = {};
+
+  const loader = createStackLoader({
+    client,
+    workUuid,
+    spine: () => built.work?.spine,
+    local,
+    cache,
+    buffer,
+  });
+
+  built.work = createStackWorkDocument({ workUuid, loader, spineDoc });
+  return built.work;
+};
+
+/**
+ * Seed a work's spine from the API, if it is not already populated.
+ *
+ * Separate from construction because it is a network round trip: a caller
+ * restoring a spine from local storage passes `spineDoc` and skips this
+ * entirely. Returns how many passages the work has.
+ */
+export const seedStackSpine = async (
+  work: WorkDocument,
+  loadSpineMetas: (workUuid: string) => Promise<SpineSeed[]>,
+): Promise<number> => {
+  if (work.spine.length > 0) return work.spine.length;
+  const metas = await loadSpineMetas(work.workUuid);
+  if (metas.length) work.seedSpine(metas);
+  return work.spine.length;
+};
