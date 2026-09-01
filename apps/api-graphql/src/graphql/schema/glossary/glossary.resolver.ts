@@ -3,7 +3,6 @@ import type { WorkParent } from '../work/work.types';
 import {
   getGlossaryInstance,
   getGlossaryInstances,
-  getGlossaryTermPassagesPage,
   getWorkGlossaryTermsPage,
   searchWorkGlossaryTerms,
 } from '@eightyfourthousand/data-access';
@@ -15,12 +14,12 @@ export const glossaryTermPassagesResolver = async (
   args: { first?: number; after?: string },
   ctx: GraphQLContext,
 ) => {
-  return getGlossaryTermPassagesPage({
-    client: ctx.supabase,
+  // Through the loader, so a page of terms costs one query rather than one per
+  // term. See glossary-passages.loader.ts.
+  return ctx.loaders.glossaryPassagesByTerm.load({
     uuid: parent.uuid,
     first: args.first,
     after: args.after,
-    source: ctx.source,
   });
 };
 
@@ -43,12 +42,10 @@ export const glossaryTermPassagesPageResolver = async (
   args: { uuid: string; first?: number; after?: string },
   ctx: GraphQLContext,
 ) => {
-  return getGlossaryTermPassagesPage({
-    client: ctx.supabase,
+  return ctx.loaders.glossaryPassagesByTerm.load({
     uuid: args.uuid,
     first: args.first,
     after: args.after,
-    source: ctx.source,
   });
 };
 

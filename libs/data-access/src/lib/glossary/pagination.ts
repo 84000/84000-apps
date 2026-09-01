@@ -1,14 +1,10 @@
 import { DataClient, Passage, PassageDTO, passageFromDTO } from '../types';
 import {
   DEFAULT_CONTENT_SOURCE,
-  passageColumnsFor,
   relationFor,
+  rpcFor,
   type ContentSource,
 } from '../content-source';
-
-/** Alias for the embedded annotations relation. Referenced in the select and
- * in both embedded filters, so it is spelled once. */
-const GLOSSARY_INSTANCES = 'glossaryInstances';
 
 type ApiPaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
@@ -137,28 +133,97 @@ export function rowToGlossaryTermNode(
 }
 
 /**
- * A page of the passages citing a glossary term, ordered by passage `sort`.
+ * A page of citing passages for each of several glossary terms, keyed by term.
  *
- * One request. The obvious shape — collect the citing passage uuids, then fetch
- * those passages — cannot work at this scale: the most-cited term is attested by
- * 18,697 annotations across 4,333 passages, and PostgREST caps a read at 1000
- * rows and a URL at ~16KB, so the uuid list has to be both paged and batched.
- * Doing that costs about 76 requests for a single term, and a glossary page
- * renders 50 of them: ~3,800 requests to produce 50 lists of ten rows, which
- * saturated the connection pool and returned 500s.
+ * Batched deliberately. A glossary page shows 50 terms and caps each list at ten
+ * rows, but resolving one term at a time from the client cannot be done in one
+ * request: the page orders by `passages.sort` while the filter lives on the
+ * annotations, and bridging them means collecting the citing uuids, which trips
+ * PostgREST's 1000-row read cap and ~16KB URL cap at once. That cost about 76
+ * requests per term — 3,827 in three minutes against production, 38 of them
+ * 500s, from connection-pool saturation rather than any single slow statement.
  *
- * Instead the join stays in the database. `!inner` on the annotations relation
- * turns the containment filter into a join condition, so `sort` — which lives on
- * passages — orders the result natively and `range` pages it. PostgREST nests
- * embedded rows under their parent rather than multiplying it, so a passage
- * citing the term several times still appears once and the page needs no
- * deduplication. Measured against production, the underlying query is ~55ms for
- * the worst term in the corpus.
+ * `rpcFor('glossaryTermPassages')` does the join, ordering and slicing in the
+ * database for the whole page of terms in one call. See the migration for why it
+ * is LATERAL per term rather than one set-based join.
  *
- * Attestations span works: a term published in one work is cited from others, so
- * this has no single work to scope by. The published relations are the
- * pointer-resolving views for exactly that reason.
+ * Terms with no citing passages are absent from the returned map rather than
+ * present and empty, so callers should treat a miss as an empty page.
  */
+export const getGlossaryTermPassagesPages = async ({
+  client,
+  uuids,
+  first,
+  after,
+  source = DEFAULT_CONTENT_SOURCE,
+}: {
+  client: DataClient;
+  uuids: readonly string[];
+  first?: number;
+  after?: string;
+  source?: ContentSource;
+}): Promise<Map<string, GlossaryPassagesPage>> => {
+  const pages = new Map<string, GlossaryPassagesPage>();
+
+  // `JSON.stringify` drops undefined, so a falsy uuid would reach the function
+  // as a null element and match nothing useful. Drop them here instead, and say
+  // so: a missing uuid means a caller passed a parent without one.
+  const termUuids = uuids.filter(Boolean);
+  if (termUuids.length !== uuids.length) {
+    console.error(
+      'getGlossaryTermPassagesPages called with one or more empty term uuids; they were skipped',
+    );
+  }
+  if (termUuids.length === 0) {
+    return pages;
+  }
+
+  const limit = Math.max(first ?? DEFAULT_GLOSSARY_PASSAGES_LIMIT, 1);
+  const offset = parseOffsetCursor(after);
+
+  const { data, error } = await client.rpc(
+    rpcFor('glossaryTermPassages', source),
+    {
+      p_term_uuids: termUuids,
+      // One past the page, so a full slice tells us another page exists.
+      p_limit: limit + 1,
+      p_offset: offset,
+    },
+  );
+
+  if (error) {
+    console.error('Error fetching glossary passages:', error);
+    return pages;
+  }
+
+  // Rows arrive grouped by term but flat; the function preserves per-term sort
+  // order within each group, so appending in receipt order preserves it too.
+  const rowsByTerm = new Map<string, PassageDTO[]>();
+  for (const row of (data ?? []) as (PassageDTO & { term_uuid: string })[]) {
+    const { term_uuid: termUuid, ...passage } = row;
+    const existing = rowsByTerm.get(termUuid);
+    if (existing) {
+      existing.push(passage as PassageDTO);
+    } else {
+      rowsByTerm.set(termUuid, [passage as PassageDTO]);
+    }
+  }
+
+  for (const [termUuid, rows] of rowsByTerm) {
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    pages.set(termUuid, {
+      items: page.map((passage) => passageFromDTO(passage)),
+      nextCursor: hasMore ? String(offset + limit) : null,
+      hasMore,
+    });
+  }
+
+  return pages;
+};
+
+/** Single-term convenience over {@link getGlossaryTermPassagesPages}. Prefer the
+ * batched form from a resolver, where a loader can coalesce the whole page. */
 export const getGlossaryTermPassagesPage = async ({
   client,
   uuid,
@@ -172,55 +237,15 @@ export const getGlossaryTermPassagesPage = async ({
   after?: string;
   source?: ContentSource;
 }): Promise<GlossaryPassagesPage> => {
-  const limit = Math.max(first ?? DEFAULT_GLOSSARY_PASSAGES_LIMIT, 1);
-  const offset = parseOffsetCursor(after);
+  const pages = await getGlossaryTermPassagesPages({
+    client,
+    uuids: [uuid],
+    first,
+    after,
+    source,
+  });
 
-  // `JSON.stringify([{ uuid }])` collapses to `[{}]` when uuid is undefined or
-  // empty, and `content @> '[{}]'` is true of every non-empty array — the GIN
-  // index cannot serve it, so the filter degrades to a full-table scan. Refuse
-  // to issue it. A falsy uuid means a caller passed a parent without one, which
-  // is worth seeing rather than quietly returning nothing.
-  if (!uuid) {
-    console.error(
-      'getGlossaryTermPassagesPage called without a term uuid; refusing to run an unbounded containment scan',
-    );
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  const annotations = relationFor('passageAnnotations', source);
-
-  const { data, error } = await client
-    .from(relationFor('passages', source))
-    .select<string, PassageDTO>(
-      // The embedded column is never read; it is what makes the join `inner`,
-      // and so what applies the filter below.
-      `${passageColumnsFor(source)}, ${GLOSSARY_INSTANCES}:${annotations}!inner(passage_uuid)`,
-    )
-    .eq(`${GLOSSARY_INSTANCES}.type`, 'glossary-instance')
-    .filter(`${GLOSSARY_INSTANCES}.content`, 'cs', JSON.stringify([{ uuid }]))
-    .order('sort', { ascending: true })
-    // One past the page, so a full slice tells us another page exists.
-    .range(offset, offset + limit);
-
-  if (error) {
-    console.error('Error fetching glossary passages:', error);
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  const rows = data ?? [];
-  const hasMore = rows.length > limit;
-  const page = hasMore ? rows.slice(0, limit) : rows;
-
-  return {
-    items: page.map((row) => {
-      // Drop the join marker so it cannot reach the domain mapper.
-      const { [GLOSSARY_INSTANCES]: _embed, ...passage } = row as PassageDTO &
-        Record<string, unknown>;
-      return passageFromDTO(passage as PassageDTO);
-    }),
-    nextCursor: hasMore ? String(offset + limit) : null,
-    hasMore,
-  };
+  return pages.get(uuid) ?? { items: [], nextCursor: null, hasMore: false };
 };
 
 export const getWorkGlossaryTermsPage = async ({

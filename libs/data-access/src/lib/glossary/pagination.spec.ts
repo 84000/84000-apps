@@ -1,5 +1,6 @@
 import {
   getGlossaryTermPassagesPage,
+  getGlossaryTermPassagesPages,
   getWorkGlossaryTermsPage,
   type GlossaryTermIndexRow,
 } from './pagination';
@@ -218,194 +219,224 @@ describe('getWorkGlossaryTermsPage', () => {
 });
 
 /**
- * A client shaped for `getGlossaryTermPassagesPage`, which issues exactly one
- * request. The fake records what that request asked for, because the shape of
- * the query — one embedded inner join rather than a walk over uuids — is the
- * thing worth protecting.
+ * A client shaped for the batched RPC. The fake records the call arguments,
+ * because the property worth protecting is that a page of terms costs one call
+ * with one page-size-plus-one limit — not the row plumbing.
  */
-type PassagesFakeState = {
-  requests: number;
-  selects: string[];
-  eqFilters: [string, unknown][];
-  containmentFilters: [string, string][];
-  orders: [string, boolean][];
-  ranges: [number, number][];
+type RpcFakeState = {
+  calls: { fn: string; args: Record<string, unknown> }[];
   error?: { message: string };
 };
 
-const makePassagesClient = ({
-  rows,
+const makeRpcClient = ({
+  rowsByTerm,
   state,
 }: {
-  rows: { uuid: string; sort: number }[];
-  state: PassagesFakeState;
-}) => {
-  class Query {
-    select(columns: string) {
-      state.requests++;
-      state.selects.push(columns);
-      return this;
-    }
-    eq(column: string, value: unknown) {
-      state.eqFilters.push([column, value]);
-      return this;
-    }
-    filter(column: string, _op: string, value: string) {
-      state.containmentFilters.push([column, value]);
-      return this;
-    }
-    order(column: string, opts?: { ascending?: boolean }) {
-      state.orders.push([column, opts?.ascending ?? true]);
-      return this;
-    }
-    range(from: number, to: number) {
-      state.ranges.push([from, to]);
+  rowsByTerm: Record<string, { uuid: string; sort: number }[]>;
+  state: RpcFakeState;
+}) =>
+  ({
+    rpc: (fn: string, args: Record<string, unknown>) => {
+      state.calls.push({ fn, args });
       if (state.error) {
         return Promise.resolve({ data: null, error: state.error });
       }
-      // Ordered by sort, as the database would return it, with the embedded
-      // join marker the real response carries.
-      const ordered = [...rows].sort((a, b) => a.sort - b.sort);
-      return Promise.resolve({
-        data: ordered.slice(from, to + 1).map((row) => ({
-          ...row,
-          content: null,
-          label: null,
-          type: 'passage',
-          glossaryInstances: [{ passage_uuid: row.uuid }],
-        })),
-        error: null,
-      });
-    }
-  }
+      const limit = args['p_limit'] as number;
+      const offset = args['p_offset'] as number;
+      const data = (args['p_term_uuids'] as string[]).flatMap((termUuid) =>
+        [...(rowsByTerm[termUuid] ?? [])]
+          .sort((a, b) => a.sort - b.sort)
+          .slice(offset, offset + limit)
+          .map((row) => ({
+            term_uuid: termUuid,
+            ...row,
+            content: null,
+            label: null,
+            type: 'passage',
+          })),
+      );
+      return Promise.resolve({ data, error: null });
+    },
+  }) as never;
 
-  return { from: () => new Query() } as never;
-};
-
-describe('getGlossaryTermPassagesPage', () => {
-  const emptyState = (): PassagesFakeState => ({
-    requests: 0,
-    selects: [],
-    eqFilters: [],
-    containmentFilters: [],
-    orders: [],
-    ranges: [],
-  });
-
-  const makeRows = (count: number) =>
+describe('getGlossaryTermPassagesPages', () => {
+  const makeRows = (count: number, prefix: string) =>
     Array.from({ length: count }, (_, i) => ({
-      uuid: `passage-${String(i).padStart(5, '0')}`,
+      uuid: `${prefix}-${String(i).padStart(3, '0')}`,
       // Descending sort against ascending uuid, so a test that passes by
       // accident of uuid ordering fails here.
       sort: count - i,
     }));
 
-  it('reads the page in a single request', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(50), state });
-
-    await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 10 });
-
-    expect(state.requests).toBe(1);
-  });
-
-  it('joins the annotations relation inner, scoped to the term', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(5), state });
-
-    await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 10 });
-
-    // `!inner` is what turns the embed into a join and applies the filters; a
-    // plain embed would return every passage instead.
-    expect(state.selects[0]).toContain('!inner(passage_uuid)');
-    expect(state.eqFilters).toEqual([
-      ['glossaryInstances.type', 'glossary-instance'],
-    ]);
-    expect(state.containmentFilters).toEqual([
-      ['glossaryInstances.content', '[{"uuid":"term-1"}]'],
-    ]);
-    // `sort` lives on passages, so ordering is native rather than reconstructed.
-    expect(state.orders).toEqual([['sort', true]]);
-  });
-
-  it('orders by sort and returns the requested slice', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(5), state });
-
-    const page = await getGlossaryTermPassagesPage({
-      client,
-      uuid: 'term-1',
-      first: 2,
+  it('resolves a whole page of terms in one call', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const uuids = Array.from({ length: 50 }, (_, i) => `term-${i}`);
+    const client = makeRpcClient({
+      rowsByTerm: Object.fromEntries(
+        uuids.map((uuid) => [uuid, makeRows(5, uuid)]),
+      ),
+      state,
     });
 
-    expect(page.items.map((item) => item.uuid)).toEqual([
-      'passage-00004',
-      'passage-00003',
-    ]);
-    expect(page.hasMore).toBe(true);
-    expect(page.nextCursor).toBe('2');
-  });
-
-  it('asks for one row past the page to detect a next page', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(5), state });
-
-    await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 2 });
-
-    expect(state.ranges).toEqual([[0, 2]]);
-  });
-
-  it('continues from a cursor and reports the final page', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(5), state });
-
-    const page = await getGlossaryTermPassagesPage({
+    const pages = await getGlossaryTermPassagesPages({
       client,
-      uuid: 'term-1',
+      uuids,
+      first: 10,
+    });
+
+    expect(state.calls).toHaveLength(1);
+    expect(state.calls[0].args['p_term_uuids']).toHaveLength(50);
+    expect(pages.size).toBe(50);
+  });
+
+  it('asks for one row past the page so a next page is detectable', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({
+      rowsByTerm: { 'term-1': makeRows(5, 'p') },
+      state,
+    });
+
+    await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['term-1'],
       first: 2,
       after: '3',
     });
 
-    // 5 passages, offset 3, limit 2 — the last two, and no further page.
-    expect(state.ranges).toEqual([[3, 5]]);
-    expect(page.items.map((item) => item.uuid)).toEqual([
-      'passage-00001',
-      'passage-00000',
+    expect(state.calls[0].args['p_limit']).toBe(3);
+    expect(state.calls[0].args['p_offset']).toBe(3);
+  });
+
+  it('selects the published function for the published source', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({ rowsByTerm: {}, state });
+
+    await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['term-1'],
+      source: 'published',
+    });
+
+    expect(state.calls[0].fn).toBe('get_glossary_term_passages_published');
+  });
+
+  it('keys pages by term and orders each by sort', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({
+      rowsByTerm: { a: makeRows(3, 'a'), b: makeRows(2, 'b') },
+      state,
+    });
+
+    const pages = await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['a', 'b'],
+      first: 10,
+    });
+
+    expect(pages.get('a')?.items.map((item) => item.uuid)).toEqual([
+      'a-002',
+      'a-001',
+      'a-000',
     ]);
-    expect(page.hasMore).toBe(false);
-    expect(page.nextCursor).toBeNull();
+    expect(pages.get('b')?.items.map((item) => item.uuid)).toEqual([
+      'b-001',
+      'b-000',
+    ]);
   });
 
-  it('strips the join marker from returned passages', async () => {
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(2), state });
+  it('reports hasMore and a cursor per term independently', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({
+      rowsByTerm: { many: makeRows(5, 'm'), few: makeRows(1, 'f') },
+      state,
+    });
 
-    const page = await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
+    const pages = await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['many', 'few'],
+      first: 2,
+    });
 
-    for (const item of page.items) {
-      expect(item).not.toHaveProperty('glossaryInstances');
-    }
-    expect(page.items[0].uuid).toBe('passage-00001');
+    expect(pages.get('many')).toMatchObject({ hasMore: true, nextCursor: '2' });
+    expect(pages.get('few')).toMatchObject({
+      hasMore: false,
+      nextCursor: null,
+    });
+    expect(pages.get('many')?.items).toHaveLength(2);
   });
 
-  it('refuses to run an unbounded containment scan for a falsy uuid', async () => {
-    // `JSON.stringify([{ uuid: undefined }])` is `[{}]`, and `content @> '[{}]'`
-    // matches every annotation with a non-empty array — a full-table scan that
-    // trips the statement timeout. The query must never be issued.
-    const state = emptyState();
-    const client = makePassagesClient({ rows: makeRows(10), state });
+  it('omits terms with no citing passages rather than erroring', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({
+      rowsByTerm: { cited: makeRows(1, 'c') },
+      state,
+    });
 
-    for (const uuid of ['', undefined as unknown as string]) {
-      const page = await getGlossaryTermPassagesPage({ client, uuid });
-      expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
-    }
+    const pages = await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['cited', 'uncited'],
+    });
 
-    expect(state.requests).toBe(0);
+    expect(pages.has('cited')).toBe(true);
+    expect(pages.has('uncited')).toBe(false);
   });
 
-  it('returns empty rather than a partial page on error', async () => {
-    const state = { ...emptyState(), error: { message: 'boom' } };
-    const client = makePassagesClient({ rows: makeRows(10), state });
+  it('drops falsy uuids and issues no call when none remain', async () => {
+    // `JSON.stringify` drops undefined, so an empty uuid would reach the
+    // function as a null element and match nothing useful.
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({ rowsByTerm: {}, state });
+
+    const pages = await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['', undefined as unknown as string],
+    });
+
+    expect(pages.size).toBe(0);
+    expect(state.calls).toHaveLength(0);
+  });
+
+  it('returns no pages rather than partial ones on error', async () => {
+    const state: RpcFakeState = { calls: [], error: { message: 'boom' } };
+    const client = makeRpcClient({
+      rowsByTerm: { 'term-1': makeRows(3, 'p') },
+      state,
+    });
+
+    const pages = await getGlossaryTermPassagesPages({
+      client,
+      uuids: ['term-1'],
+    });
+
+    expect(pages.size).toBe(0);
+  });
+});
+
+describe('getGlossaryTermPassagesPage', () => {
+  it('returns the single term page', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({
+      rowsByTerm: {
+        'term-1': [
+          { uuid: 'p-1', sort: 2 },
+          { uuid: 'p-0', sort: 1 },
+        ],
+      },
+      state,
+    });
+
+    const page = await getGlossaryTermPassagesPage({
+      client,
+      uuid: 'term-1',
+      first: 10,
+    });
+
+    expect(page.items.map((item) => item.uuid)).toEqual(['p-0', 'p-1']);
+  });
+
+  it('returns an empty page for an uncited term', async () => {
+    const state: RpcFakeState = { calls: [] };
+    const client = makeRpcClient({ rowsByTerm: {}, state });
 
     const page = await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
 
