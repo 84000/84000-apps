@@ -6,6 +6,10 @@ import {
   type ContentSource,
 } from '../content-source';
 
+/** Alias for the embedded annotations relation. Referenced in the select and
+ * in both embedded filters, so it is spelled once. */
+const GLOSSARY_INSTANCES = 'glossaryInstances';
+
 type ApiPaginationDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
 export type GlossaryTermNode = {
@@ -133,180 +137,28 @@ export function rowToGlossaryTermNode(
 }
 
 /**
- * PostgREST truncates any top-level read at 1000 rows without saying so, and
- * rejects a request whose URL exceeds ~16KB with an opaque undici failure. Both
- * caps bit here: a term cited in thousands of passages lost every citation past
- * the first thousand, and then produced a URL far past the limit — the worst
- * term in the corpus cites 5,486 passages, which is a ~214KB URL. See the
- * `postgrest-silent-limits` decision note.
- */
-const ANNOTATION_PAGE_SIZE = 1000;
-const PASSAGE_UUID_BATCH_SIZE = 200;
-
-/** Backstop on the keyset walk. The most-cited real term needs 19 pages; this
- * leaves plenty of headroom while keeping a pathological filter from walking
- * the whole table one page at a time. */
-const MAX_ANNOTATION_PAGES = 100;
-
-/** Concurrent batch reads. Bounded so a pathological term cannot fan out to
- * hundreds of simultaneous requests. */
-const BATCH_CONCURRENCY = 8;
-
-/** Runs `task` over `items` with at most `BATCH_CONCURRENCY` in flight. */
-const mapWithConcurrency = async <T, R>(
-  items: readonly T[],
-  task: (item: T) => Promise<R>,
-): Promise<R[]> => {
-  const results: R[] = new Array(items.length);
-  let next = 0;
-
-  const worker = async () => {
-    for (;;) {
-      const index = next++;
-      if (index >= items.length) return;
-      results[index] = await task(items[index]);
-    }
-  };
-
-  await Promise.all(
-    Array.from({ length: Math.min(BATCH_CONCURRENCY, items.length) }, worker),
-  );
-
-  return results;
-};
-
-const chunk = <T>(items: readonly T[], size: number): T[][] => {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-};
-
-/**
- * Every distinct passage citing `uuid` as a glossary instance.
+ * A page of the passages citing a glossary term, ordered by passage `sort`.
  *
- * Attestations span works: a term published in one work is cited from others,
- * so this has no single work to scope by. The published relations are the
+ * One request. The obvious shape — collect the citing passage uuids, then fetch
+ * those passages — cannot work at this scale: the most-cited term is attested by
+ * 18,697 annotations across 4,333 passages, and PostgREST caps a read at 1000
+ * rows and a URL at ~16KB, so the uuid list has to be both paged and batched.
+ * Doing that costs about 76 requests for a single term, and a glossary page
+ * renders 50 of them: ~3,800 requests to produce 50 lists of ten rows, which
+ * saturated the connection pool and returned 500s.
+ *
+ * Instead the join stays in the database. `!inner` on the annotations relation
+ * turns the containment filter into a join condition, so `sort` — which lives on
+ * passages — orders the result natively and `range` pages it. PostgREST nests
+ * embedded rows under their parent rather than multiplying it, so a passage
+ * citing the term several times still appears once and the page needs no
+ * deduplication. Measured against production, the underlying query is ~55ms for
+ * the worst term in the corpus.
+ *
+ * Attestations span works: a term published in one work is cited from others, so
+ * this has no single work to scope by. The published relations are the
  * pointer-resolving views for exactly that reason.
- *
- * Paged rather than read in one shot, because the 1000-row cap applies here and
- * silently drops citations. Paging needs a total order, so `uuid` is the
- * tiebreaker under `passage_uuid` — without it Postgres may return rows in a
- * different order per page, skipping and repeating annotations.
- *
- * Returns `null` on error, distinct from an empty result.
  */
-const getCitingPassageUuids = async ({
-  client,
-  uuid,
-  source,
-}: {
-  client: DataClient;
-  uuid: string;
-  source: ContentSource;
-}): Promise<string[] | null> => {
-  // `JSON.stringify([{ uuid }])` collapses to `[{}]` when uuid is undefined or
-  // empty, and `content @> '[{}]'` is true for every non-empty array — so the
-  // filter matches the whole table, loses the GIN index, and parallel-seq-scans
-  // ~1M rows. Refuse to issue it. A falsy uuid here means a caller passed a
-  // parent without one, which is a bug worth seeing rather than a quiet empty.
-  if (!uuid) {
-    console.error(
-      'getGlossaryTermPassagesPage called without a term uuid; refusing to run an unbounded containment scan',
-    );
-    return null;
-  }
-
-  const passageUuids = new Set<string>();
-  let lastPassageUuid: string | null = null;
-
-  for (let page = 0; page < MAX_ANNOTATION_PAGES; page++) {
-    // Keyset, not OFFSET. Each page is filtered to rows after the previous
-    // page's last key, so cost stays flat; with OFFSET the sort has to
-    // materialise every skipped row again and later pages get progressively
-    // slower until one trips the statement timeout.
-    let query = client
-      .from(relationFor('passageAnnotations', source))
-      .select('passage_uuid')
-      .eq('type', 'glossary-instance')
-      .filter('content', 'cs', JSON.stringify([{ uuid }]))
-      .order('passage_uuid', { ascending: true })
-      .limit(ANNOTATION_PAGE_SIZE);
-
-    if (lastPassageUuid !== null) {
-      query = query.gt('passage_uuid', lastPassageUuid);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching glossary passage annotations:', error);
-      return null;
-    }
-
-    const rows = (data ?? []) as { passage_uuid: string }[];
-    for (const row of rows) {
-      if (row.passage_uuid) passageUuids.add(row.passage_uuid);
-    }
-
-    if (rows.length < ANNOTATION_PAGE_SIZE) {
-      return Array.from(passageUuids);
-    }
-
-    // Advancing past the last uuid rather than to it skips that uuid's
-    // remaining duplicate annotations, which is exactly what we want: only
-    // distinct passages matter, and this one is already recorded.
-    const next = rows[rows.length - 1].passage_uuid;
-    if (next === lastPassageUuid) {
-      // A full page of one repeated uuid would otherwise loop forever.
-      return Array.from(passageUuids);
-    }
-    lastPassageUuid = next;
-  }
-
-  console.error(
-    `Glossary term ${uuid} cites more passages than ${MAX_ANNOTATION_PAGES} pages can cover; returning a truncated set`,
-  );
-  return Array.from(passageUuids);
-};
-
-/**
- * The `(uuid, sort)` pair for each passage, batched so no single request URL can
- * overflow. Returns `null` on error, distinct from an empty result.
- */
-const getPassageSortKeys = async ({
-  client,
-  passageUuids,
-  source,
-}: {
-  client: DataClient;
-  passageUuids: readonly string[];
-  source: ContentSource;
-}): Promise<{ uuid: string; sort: number }[] | null> => {
-  const batches = chunk(passageUuids, PASSAGE_UUID_BATCH_SIZE);
-
-  const results = await mapWithConcurrency(batches, async (batch) => {
-    const { data, error } = await client
-      .from(relationFor('passages', source))
-      .select('uuid, sort')
-      .in('uuid', batch);
-
-    if (error) {
-      console.error('Error fetching glossary passage ordering:', error);
-      return null;
-    }
-
-    return (data ?? []) as { uuid: string; sort: number }[];
-  });
-
-  if (results.some((result) => result === null)) {
-    return null;
-  }
-
-  return results.flat() as { uuid: string; sort: number }[];
-};
-
 export const getGlossaryTermPassagesPage = async ({
   client,
   uuid,
@@ -323,65 +175,49 @@ export const getGlossaryTermPassagesPage = async ({
   const limit = Math.max(first ?? DEFAULT_GLOSSARY_PASSAGES_LIMIT, 1);
   const offset = parseOffsetCursor(after);
 
-  const passageUuids = await getCitingPassageUuids({ client, uuid, source });
-
-  if (passageUuids === null) {
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  if (passageUuids.length === 0) {
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  // The page is ordered by `passages.sort`, which lives on a different relation
-  // than the annotations, so the ordering cannot be resolved without reading
-  // both. Pull just (uuid, sort) for every citing passage — two small columns,
-  // batched so no single URL can overflow — then order and slice in memory.
-  const ordering = await getPassageSortKeys({ client, passageUuids, source });
-
-  if (ordering === null) {
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  ordering.sort(
-    (a, b) =>
-      a.sort - b.sort || (a.uuid < b.uuid ? -1 : a.uuid > b.uuid ? 1 : 0),
-  );
-
-  // One past the page, so a full slice tells us another page exists — the same
-  // trick the previous `.range(offset, offset + limit)` relied on.
-  const pageKeys = ordering.slice(offset, offset + limit + 1);
-  const hasMore = pageKeys.length > limit;
-  const wanted = hasMore ? pageKeys.slice(0, limit) : pageKeys;
-
-  if (wanted.length === 0) {
-    return { items: [], nextCursor: null, hasMore: false };
-  }
-
-  // At most `limit` uuids, so this read needs no batching.
-  const { data: passages, error: passagesError } = await client
-    .from(relationFor('passages', source))
-    .select<string, PassageDTO>(passageColumnsFor(source))
-    .in(
-      'uuid',
-      wanted.map((key) => key.uuid),
+  // `JSON.stringify([{ uuid }])` collapses to `[{}]` when uuid is undefined or
+  // empty, and `content @> '[{}]'` is true of every non-empty array — the GIN
+  // index cannot serve it, so the filter degrades to a full-table scan. Refuse
+  // to issue it. A falsy uuid means a caller passed a parent without one, which
+  // is worth seeing rather than quietly returning nothing.
+  if (!uuid) {
+    console.error(
+      'getGlossaryTermPassagesPage called without a term uuid; refusing to run an unbounded containment scan',
     );
-
-  if (passagesError) {
-    console.error('Error fetching glossary passages:', passagesError);
     return { items: [], nextCursor: null, hasMore: false };
   }
 
-  // `.in()` does not preserve argument order, so re-apply the order established
-  // above rather than trusting the order rows came back in.
-  const byUuid = new Map((passages ?? []).map((row) => [row.uuid, row]));
-  const items = wanted
-    .map((key) => byUuid.get(key.uuid))
-    .filter((row): row is PassageDTO => !!row)
-    .map((row) => passageFromDTO(row));
+  const annotations = relationFor('passageAnnotations', source);
+
+  const { data, error } = await client
+    .from(relationFor('passages', source))
+    .select<string, PassageDTO>(
+      // The embedded column is never read; it is what makes the join `inner`,
+      // and so what applies the filter below.
+      `${passageColumnsFor(source)}, ${GLOSSARY_INSTANCES}:${annotations}!inner(passage_uuid)`,
+    )
+    .eq(`${GLOSSARY_INSTANCES}.type`, 'glossary-instance')
+    .filter(`${GLOSSARY_INSTANCES}.content`, 'cs', JSON.stringify([{ uuid }]))
+    .order('sort', { ascending: true })
+    // One past the page, so a full slice tells us another page exists.
+    .range(offset, offset + limit);
+
+  if (error) {
+    console.error('Error fetching glossary passages:', error);
+    return { items: [], nextCursor: null, hasMore: false };
+  }
+
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
 
   return {
-    items,
+    items: page.map((row) => {
+      // Drop the join marker so it cannot reach the domain mapper.
+      const { [GLOSSARY_INSTANCES]: _embed, ...passage } = row as PassageDTO &
+        Record<string, unknown>;
+      return passageFromDTO(passage as PassageDTO);
+    }),
     nextCursor: hasMore ? String(offset + limit) : null,
     hasMore,
   };

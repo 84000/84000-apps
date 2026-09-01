@@ -218,200 +218,119 @@ describe('getWorkGlossaryTermsPage', () => {
 });
 
 /**
- * A client shaped for `getGlossaryTermPassagesPage`. The two reads it makes hit
- * different relations, so this dispatches on relation name and records what
- * each read was handed — the batch sizes are the point of most of these tests.
+ * A client shaped for `getGlossaryTermPassagesPage`, which issues exactly one
+ * request. The fake records what that request asked for, because the shape of
+ * the query — one embedded inner join rather than a walk over uuids — is the
+ * thing worth protecting.
  */
 type PassagesFakeState = {
-  /** One entry per `.in('uuid', […])` on the light `(uuid, sort)` read — the
-   * one whose URL used to overflow. The final full-columns read is recorded
-   * separately, since it is bounded by the page size, not the citation count. */
-  inBatchSizes: number[];
-  finalReadSizes: number[];
-  /** The serialized `content` containment filter each annotations read used. */
-  containmentFilters: string[];
-  /** One entry per annotations page: the `gt` cursor it was given (null on the
-   * first page). Keyset paging, so there is no offset to record. */
-  annotationCursors: (string | null)[];
-  annotationsError?: { message: string };
-  passagesError?: { message: string };
+  requests: number;
+  selects: string[];
+  eqFilters: [string, unknown][];
+  containmentFilters: [string, string][];
+  orders: [string, boolean][];
+  ranges: [number, number][];
+  error?: { message: string };
 };
 
 const makePassagesClient = ({
-  annotationRows,
-  passageRows,
+  rows,
   state,
 }: {
-  annotationRows: { uuid: string; passage_uuid: string }[];
-  passageRows: { uuid: string; sort: number }[];
+  rows: { uuid: string; sort: number }[];
   state: PassagesFakeState;
 }) => {
   class Query {
-    private uuids: string[] | null = null;
-    private columns = '';
-    private containment = '';
-
-    constructor(private readonly relation: string) {}
-
-    private gtValue: string | null = null;
-    private limitValue = Infinity;
-
-    select(columns?: string) {
-      this.columns = columns ?? '';
+    select(columns: string) {
+      state.requests++;
+      state.selects.push(columns);
       return this;
     }
-    eq() {
+    eq(column: string, value: unknown) {
+      state.eqFilters.push([column, value]);
       return this;
     }
-    filter(_column: string, _op: string, value: string) {
-      this.containment = value;
+    filter(column: string, _op: string, value: string) {
+      state.containmentFilters.push([column, value]);
       return this;
     }
-    order() {
+    order(column: string, opts?: { ascending?: boolean }) {
+      state.orders.push([column, opts?.ascending ?? true]);
       return this;
     }
-    gt(_column: string, value: string) {
-      this.gtValue = value;
-      return this;
-    }
-    limit(value: number) {
-      this.limitValue = value;
-      return this;
-    }
-
-    in(_column: string, values: string[]) {
-      this.uuids = values;
-      if (this.columns === 'uuid, sort') {
-        state.inBatchSizes.push(values.length);
-      } else {
-        state.finalReadSizes.push(values.length);
+    range(from: number, to: number) {
+      state.ranges.push([from, to]);
+      if (state.error) {
+        return Promise.resolve({ data: null, error: state.error });
       }
-      return this;
-    }
-
-    then(resolve: (result: unknown) => unknown) {
-      if (this.relation.includes('annotation')) {
-        state.annotationCursors.push(this.gtValue);
-        state.containmentFilters.push(this.containment);
-        if (state.annotationsError) {
-          return Promise.resolve({
-            data: null,
-            error: state.annotationsError,
-          }).then(resolve);
-        }
-        const after = this.gtValue;
-        const rows = annotationRows
-          .filter((row) => after === null || row.passage_uuid > after)
-          .sort((a, b) =>
-            a.passage_uuid < b.passage_uuid
-              ? -1
-              : a.passage_uuid > b.passage_uuid
-                ? 1
-                : 0,
-          )
-          .slice(0, this.limitValue);
-        return Promise.resolve({ data: rows, error: null }).then(resolve);
-      }
-      if (state.passagesError) {
-        return Promise.resolve({
-          data: null,
-          error: state.passagesError,
-        }).then(resolve);
-      }
-      const wanted = new Set(this.uuids ?? []);
-      const rows = passageRows
-        .filter((row) => wanted.has(row.uuid))
-        // Deliberately reversed: `.in()` does not preserve argument order, and
-        // the implementation must not rely on the order rows come back in.
-        .reverse()
-        .map((row) => ({
+      // Ordered by sort, as the database would return it, with the embedded
+      // join marker the real response carries.
+      const ordered = [...rows].sort((a, b) => a.sort - b.sort);
+      return Promise.resolve({
+        data: ordered.slice(from, to + 1).map((row) => ({
           ...row,
           content: null,
           label: null,
           type: 'passage',
-        }));
-      return Promise.resolve({ data: rows, error: null }).then(resolve);
+          glossaryInstances: [{ passage_uuid: row.uuid }],
+        })),
+        error: null,
+      });
     }
   }
 
-  return {
-    from: (relation: string) => new Query(relation),
-  } as never;
+  return { from: () => new Query() } as never;
 };
 
 describe('getGlossaryTermPassagesPage', () => {
-  const makeAnnotations = (count: number) =>
-    Array.from({ length: count }, (_, i) => ({
-      uuid: `annotation-${i}`,
-      passage_uuid: `passage-${String(i).padStart(5, '0')}`,
-    }));
+  const emptyState = (): PassagesFakeState => ({
+    requests: 0,
+    selects: [],
+    eqFilters: [],
+    containmentFilters: [],
+    orders: [],
+    ranges: [],
+  });
 
-  const makePassages = (count: number) =>
+  const makeRows = (count: number) =>
     Array.from({ length: count }, (_, i) => ({
       uuid: `passage-${String(i).padStart(5, '0')}`,
-      // Descending sort against ascending uuid, so any test that passes by
+      // Descending sort against ascending uuid, so a test that passes by
       // accident of uuid ordering fails here.
       sort: count - i,
     }));
 
-  it('never sends more than 200 uuids in one `in` filter', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(1500),
-      passageRows: makePassages(1500),
-      state,
-    });
+  it('reads the page in a single request', async () => {
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(50), state });
 
     await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 10 });
 
-    expect(state.inBatchSizes.length).toBeGreaterThan(1);
-    expect(Math.max(...state.inBatchSizes)).toBeLessThanOrEqual(200);
+    expect(state.requests).toBe(1);
   });
 
-  it('pages the annotations read past the 1000-row cap', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(2500),
-      passageRows: makePassages(2500),
-      state,
-    });
+  it('joins the annotations relation inner, scoped to the term', async () => {
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(5), state });
 
     await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 10 });
 
-    // Three pages: no cursor, then keyed past each page's last uuid. The third
-    // is short (500 rows), which ends the walk.
-    expect(state.annotationCursors).toEqual([
-      null,
-      'passage-00999',
-      'passage-01999',
+    // `!inner` is what turns the embed into a join and applies the filters; a
+    // plain embed would return every passage instead.
+    expect(state.selects[0]).toContain('!inner(passage_uuid)');
+    expect(state.eqFilters).toEqual([
+      ['glossaryInstances.type', 'glossary-instance'],
     ]);
-    // All 2500 uuids reached the batched reads, not just the first 1000.
-    const totalBatched = state.inBatchSizes.reduce((a, b) => a + b, 0);
-    expect(totalBatched).toBe(2500);
+    expect(state.containmentFilters).toEqual([
+      ['glossaryInstances.content', '[{"uuid":"term-1"}]'],
+    ]);
+    // `sort` lives on passages, so ordering is native rather than reconstructed.
+    expect(state.orders).toEqual([['sort', true]]);
   });
 
   it('orders by sort and returns the requested slice', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(5),
-      passageRows: makePassages(5),
-      state,
-    });
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(5), state });
 
     const page = await getGlossaryTermPassagesPage({
       client,
@@ -419,7 +338,6 @@ describe('getGlossaryTermPassagesPage', () => {
       first: 2,
     });
 
-    // sort ascending means the highest-numbered passage comes first.
     expect(page.items.map((item) => item.uuid)).toEqual([
       'passage-00004',
       'passage-00003',
@@ -428,18 +346,18 @@ describe('getGlossaryTermPassagesPage', () => {
     expect(page.nextCursor).toBe('2');
   });
 
+  it('asks for one row past the page to detect a next page', async () => {
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(5), state });
+
+    await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 2 });
+
+    expect(state.ranges).toEqual([[0, 2]]);
+  });
+
   it('continues from a cursor and reports the final page', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(5),
-      passageRows: makePassages(5),
-      state,
-    });
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(5), state });
 
     const page = await getGlossaryTermPassagesPage({
       client,
@@ -449,6 +367,7 @@ describe('getGlossaryTermPassagesPage', () => {
     });
 
     // 5 passages, offset 3, limit 2 — the last two, and no further page.
+    expect(state.ranges).toEqual([[3, 5]]);
     expect(page.items.map((item) => item.uuid)).toEqual([
       'passage-00001',
       'passage-00000',
@@ -457,112 +376,39 @@ describe('getGlossaryTermPassagesPage', () => {
     expect(page.nextCursor).toBeNull();
   });
 
-  it('deduplicates passages cited more than once by the same term', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: [
-        { uuid: 'a-1', passage_uuid: 'passage-00000' },
-        { uuid: 'a-2', passage_uuid: 'passage-00000' },
-        { uuid: 'a-3', passage_uuid: 'passage-00001' },
-      ],
-      passageRows: makePassages(2),
-      state,
-    });
+  it('strips the join marker from returned passages', async () => {
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(2), state });
 
     const page = await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
 
-    expect(state.inBatchSizes).toEqual([2]);
-    expect(page.items.map((item) => item.uuid)).toEqual([
-      'passage-00001',
-      'passage-00000',
-    ]);
-  });
-
-  it('returns empty rather than a partial page when a batch fails', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-      passagesError: { message: 'boom' },
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(400),
-      passageRows: makePassages(400),
-      state,
-    });
-
-    const page = await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
-
-    expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
+    for (const item of page.items) {
+      expect(item).not.toHaveProperty('glossaryInstances');
+    }
+    expect(page.items[0].uuid).toBe('passage-00001');
   });
 
   it('refuses to run an unbounded containment scan for a falsy uuid', async () => {
     // `JSON.stringify([{ uuid: undefined }])` is `[{}]`, and `content @> '[{}]'`
     // matches every annotation with a non-empty array — a full-table scan that
-    // trips the statement timeout. The filter must never be issued.
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(10),
-      passageRows: makePassages(10),
-      state,
-    });
+    // trips the statement timeout. The query must never be issued.
+    const state = emptyState();
+    const client = makePassagesClient({ rows: makeRows(10), state });
 
     for (const uuid of ['', undefined as unknown as string]) {
       const page = await getGlossaryTermPassagesPage({ client, uuid });
       expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
     }
 
-    expect(state.annotationCursors).toEqual([]);
-    expect(state.containmentFilters).toEqual([]);
+    expect(state.requests).toBe(0);
   });
 
-  it('always scopes the containment filter to the term uuid', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(3),
-      passageRows: makePassages(3),
-      state,
-    });
-
-    await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
-
-    expect(state.containmentFilters).toEqual(['[{"uuid":"term-1"}]']);
-  });
-
-  it('returns empty when the annotations read fails', async () => {
-    const state: PassagesFakeState = {
-      inBatchSizes: [],
-      finalReadSizes: [],
-      containmentFilters: [],
-      annotationCursors: [],
-      annotationsError: { message: 'boom' },
-    };
-    const client = makePassagesClient({
-      annotationRows: makeAnnotations(10),
-      passageRows: makePassages(10),
-      state,
-    });
+  it('returns empty rather than a partial page on error', async () => {
+    const state = { ...emptyState(), error: { message: 'boom' } };
+    const client = makePassagesClient({ rows: makeRows(10), state });
 
     const page = await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
 
     expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
-    expect(state.inBatchSizes).toEqual([]);
-    expect(state.finalReadSizes).toEqual([]);
   });
 });
