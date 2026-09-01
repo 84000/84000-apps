@@ -4,6 +4,8 @@ Folio side (recto/verso)
 enum FolioSide {
   a
   b
+  xa
+  xb
 }
 
 """

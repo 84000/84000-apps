@@ -121,6 +121,35 @@ export type EntitySearchResult = {
   uuid: Scalars['ID']['output'];
 };
 
+/**
+ * Where a validation finding's subject sits, so a view can link to it.
+ *
+ * Findings report subject uuids without saying what they are — passage rules report passages,
+ * annotation rules report annotations, the bibliography rule reports bibliography entries.
+ * Resolving that here keeps the SQL rule set, which is the publish gate, free of presentation
+ * concerns.
+ */
+export type FindingLocation = {
+  __typename?: 'FindingLocation';
+  /** The annotation's type, e.g. `glossary-instance`. Null for other kinds. */
+  annotationType?: Maybe<Scalars['String']['output']>;
+  /**
+   * One of `annotation`, `passage`, `bibliography`, or `unknown`. `unknown` means the subject
+   * is not in this work — most often because it has since been deleted.
+   */
+  kind: Scalars['String']['output'];
+  passageLabel?: Maybe<Scalars['String']['output']>;
+  /**
+   * The passage's `type`, e.g. `endnotes` or `introductionHeader`, which decides the panel
+   * and tab it is displayed in. Without it a client can only assume the body, which is wrong
+   * for end notes, abbreviations, and front matter.
+   */
+  passageType?: Maybe<Scalars['String']['output']>;
+  /** The passage to navigate to. Null for bibliography entries and unknown subjects. */
+  passageUuid?: Maybe<Scalars['ID']['output']>;
+  uuid: Scalars['ID']['output'];
+};
+
 /** A folio page from a Tibetan work */
 export type Folio = {
   __typename?: 'Folio';
@@ -139,7 +168,9 @@ export type Folio = {
 /** Folio side (recto/verso) */
 export type FolioSide =
   | 'a'
-  | 'b';
+  | 'b'
+  | 'xa'
+  | 'xb';
 
 /** A window of folios centered on a target folio, with flags for further loading */
 export type FoliosAround = {
@@ -288,6 +319,29 @@ export type Mutation = {
   /** Placeholder for schema validation - not used */
   _empty?: Maybe<Scalars['Boolean']['output']>;
   /**
+   * Advance an in-progress publish job by one tick. Idempotent and safe to call
+   * concurrently: ticks take a short lease, and a caller that loses the claim does nothing.
+   *
+   * Useful for nudging a job along explicitly; routine continuation is automatic.
+   * Requires editor.admin.
+   */
+  advancePublishJob: PublishJob;
+  /**
+   * Publish a work: validate, snapshot, write the immutable artifact, then flip the live
+   * pointer. The pointer flip is the only commit point, so a failure at any earlier stage
+   * leaves the previously published version live and serving.
+   *
+   * Requires editor.admin. Returns as soon as the tick budget is spent — check `done`. Most
+   * works finish before returning; a large one keeps going after the response is sent, so
+   * poll `publishJob` until `done`.
+   *
+   * There is no background scheduler. If that continuation is cut short (function timeout,
+   * deploy), the job stays resumable and calling this again for the same work adopts it from
+   * its checkpoint rather than being refused. Calling it while a publish is genuinely in
+   * flight returns that job instead of erroring, so a double-clicked button is harmless.
+   */
+  publishWork: PublishJob;
+  /**
    * Replace text within one or more targets.
    * Requires editor.edit permission.
    */
@@ -297,6 +351,20 @@ export type Mutation = {
    * Requires editor.edit permission.
    */
   savePassages: SavePassagesResult;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationAdvancePublishJobArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationPublishWorkArgs = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['String']['input']>;
+  work: Scalars['String']['input'];
 };
 
 
@@ -459,11 +527,111 @@ export type Permission =
   | 'PROJECTS_EDIT'
   | 'PROJECTS_READ';
 
+/** A work's publish history, plus the label a new publish would take. */
+export type PublishHistory = {
+  __typename?: 'PublishHistory';
+  /**
+   * Whether the draft has moved on since the live version was published, so publishing again
+   * would produce different content.
+   *
+   * Null when there is nothing to compare — never published, or no draft write recorded. Do
+   * not render null as "up to date". Note this tracks draft WRITES, not a content diff: a save
+   * that changed nothing still counts as a change.
+   */
+  draftChangedSincePublish?: Maybe<Scalars['Boolean']['output']>;
+  /**
+   * Last write to any draft table this work's snapshot draws from. Null when the work has
+   * never been written to, which is not the same as "unchanged".
+   */
+  draftTouchedAt?: Maybe<Scalars['String']['output']>;
+  /**
+   * What `publishWork` would label the next version if given no explicit one — the same
+   * computation the pipeline makes, so a dialog can pre-fill it truthfully.
+   */
+  suggestedVersion?: Maybe<Scalars['String']['output']>;
+  /**
+   * Why no label could be suggested, chiefly a legacy label that is not SemVer. Present
+   * instead of `suggestedVersion`, never alongside it; ask for an explicit label.
+   */
+  suggestedVersionError?: Maybe<Scalars['String']['output']>;
+  /** Published versions, newest first. */
+  versions: Array<WorkVersion>;
+  workUuid: Scalars['ID']['output'];
+};
+
+/**
+ * A publish attempt.
+ *
+ * Publishing is a resumable job rather than a single call: it has to fit inside serverless
+ * invocations, and the largest work snapshots ~390k rows. Most works finish during the
+ * `publishWork` mutation itself, so `done` is already true when it returns. Large works
+ * return `done: false` and are advanced by later ticks; poll `publishJob` for progress.
+ */
+export type PublishJob = {
+  __typename?: 'PublishJob';
+  /** Rows captured per artifact section. Populated from the snapshot phase onward. */
+  counts?: Maybe<Scalars['JSON']['output']>;
+  createdAt: Scalars['String']['output'];
+  /** Whether the job has reached a terminal state. False means another tick is needed. */
+  done: Scalars['Boolean']['output'];
+  /** Failure message, including any cleanup problem that needs human attention. */
+  error?: Maybe<Scalars['String']['output']>;
+  /**
+   * Blocking findings. Non-empty only when the job failed validation, in which case
+   * nothing was written: no artifact, no rows, and the previous version is still live.
+   */
+  errors: Array<ValidationFinding>;
+  finishedAt?: Maybe<Scalars['String']['output']>;
+  phase: PublishPhase;
+  status: PublishJobStatus;
+  updatedAt: Scalars['String']['output'];
+  uuid: Scalars['ID']['output'];
+  /** SemVer label, patch-bumped from the work's history unless one was given. */
+  version?: Maybe<Scalars['String']['output']>;
+  /** The version this attempt created. Null until the snapshot phase runs. */
+  versionUuid?: Maybe<Scalars['ID']['output']>;
+  /** Non-blocking findings, also recorded in the artifact manifest as the audit trail. */
+  warnings: Array<ValidationFinding>;
+  workUuid: Scalars['ID']['output'];
+};
+
+export type PublishJobStatus =
+  | 'FAILED'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED';
+
+export type PublishPhase =
+  | 'ARTIFACT'
+  | 'DONE'
+  | 'FLIP'
+  | 'INDEX'
+  | 'MANIFEST'
+  | 'SNAPSHOT'
+  | 'VALIDATE';
+
+/**
+ * Whether a work can currently be published, without publishing it.
+ *
+ * Runs the same SQL rule set the pipeline uses, so it is a trustworthy pre-check.
+ */
+export type PublishReadiness = {
+  __typename?: 'PublishReadiness';
+  errors: Array<ValidationFinding>;
+  ok: Scalars['Boolean']['output'];
+  warnings: Array<ValidationFinding>;
+};
+
 /** Root Query type - extend this in other schema files */
 export type Query = {
   __typename?: 'Query';
   /** Get a single bibliography entry by UUID */
   bibliographyEntry?: Maybe<BibliographyEntryItem>;
+  /**
+   * Resolve finding subject uuids to the passages they sit in, scoped to one work.
+   * Requires editor.admin.
+   */
+  findingLocations: Array<FindingLocation>;
   /** Get a single glossary instance by UUID */
   glossaryInstance?: Maybe<GlossaryTermInstance>;
   /** Get paginated passage references for a glossary term (per-term, on-demand) */
@@ -487,6 +655,35 @@ export type Query = {
    * At least one of uuid or legacy xmlId must be provided. Prefers uuid if both are present.
    */
   passage?: Maybe<Passage>;
+  /**
+   * A work's published version history and next suggested version label.
+   *
+   * Null means the work does not exist. A work that has never been published is not null:
+   * it returns an empty `versions` list. Requires editor.admin.
+   */
+  publishHistory?: Maybe<PublishHistory>;
+  /** A publish job by uuid, for polling progress. Requires editor.admin. */
+  publishJob?: Maybe<PublishJob>;
+  /**
+   * Validate a work against the publish rules without publishing it, and cache the result
+   * for `publishStatuses`. Requires editor.admin.
+   */
+  publishReadiness?: Maybe<PublishReadiness>;
+  /**
+   * One work's cached readiness, including its findings, without validating.
+   *
+   * This is what the editor's publishing view reads on open, so that looking at a tab does
+   * not trigger a validation costing seconds on a large work. Null means the work has never
+   * been written to; a row whose `stale` is true has a verdict that predates the latest edit
+   * and must be presented as unchecked. Requires editor.admin.
+   */
+  publishStatus?: Maybe<WorkPublishStatus>;
+  /**
+   * Cached readiness for every work that has one, for the corpus diagnostics view.
+   *
+   * Works absent from this list have never been checked. Requires editor.admin.
+   */
+  publishStatuses: Array<WorkPublishStatus>;
   /**
    * Generic entity search for mention authoring. Accent- and case-insensitive.
    *
@@ -512,6 +709,13 @@ export type Query = {
 /** Root Query type - extend this in other schema files */
 export type QueryBibliographyEntryArgs = {
   uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryFindingLocationsArgs = {
+  uuids: Array<Scalars['ID']['input']>;
+  work: Scalars['String']['input'];
 };
 
 
@@ -552,6 +756,30 @@ export type QueryPassageArgs = {
 
 
 /** Root Query type - extend this in other schema files */
+export type QueryPublishHistoryArgs = {
+  work: Scalars['String']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryPublishJobArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryPublishReadinessArgs = {
+  work: Scalars['String']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryPublishStatusArgs = {
+  work: Scalars['String']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
 export type QuerySearchArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   query: Scalars['String']['input'];
@@ -573,6 +801,13 @@ export type QueryWorksArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<WorkFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** A passage renumbered by the server during a save */
+export type RenumberedPassage = {
+  __typename?: 'RenumberedPassage';
+  label: Scalars['String']['output'];
+  uuid: Scalars['ID']['output'];
 };
 
 /** Result of a replace mutation */
@@ -611,6 +846,12 @@ export type SavePassagesResult = {
   error?: Maybe<Scalars['String']['output']>;
   /** Saved passages (after server-side normalization), used for client-side refresh. */
   passages: Array<Passage>;
+  /**
+   * Passages whose label the server changed while renumbering a series, excluding
+   * those returned in `passages`. Mostly passages the editor never loaded — it
+   * uses these to refresh the labels cached in endnote links without a reload.
+   */
+  renumberedPassages: Array<RenumberedPassage>;
   /** Number of passages saved */
   savedCount: Scalars['Int']['output'];
   /** Whether the save was successful */
@@ -620,6 +861,11 @@ export type SavePassagesResult = {
 /** A title of a work in a specific language */
 export type Title = {
   __typename?: 'Title';
+  /**
+   * How the wording is attested ("reconstructedPhonetic" or
+   * "reconstructedSemantic"). Null when the title is directly attested.
+   */
+  attestation?: Maybe<Scalars['String']['output']>;
   /** The title text content */
   content: Scalars['String']['output'];
   /** Language code (e.g., "en", "bo", "Sa-Ltn", "Bo-Ltn") */
@@ -716,6 +962,18 @@ export type UserRole =
   | 'SCHOLAR'
   | 'TRANSLATOR';
 
+/** One validation finding. Rules live in SQL so this and the publish gate cannot disagree. */
+export type ValidationFinding = {
+  __typename?: 'ValidationFinding';
+  count: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  /** Stable machine-readable rule id, e.g. `glossary-instance-unresolved`. */
+  rule: Scalars['String']['output'];
+  severity: Scalars['String']['output'];
+  /** Offending entity uuids, capped at 20. Use `count` for the true total. */
+  subjects: Array<Scalars['ID']['output']>;
+};
+
 /** A published translation work from the 84000 canon */
 export type Work = {
   __typename?: 'Work';
@@ -744,8 +1002,26 @@ export type Work = {
   passages: PassageConnection;
   /** Date the work was published */
   publicationDate?: Maybe<Scalars['String']['output']>;
-  /** Semantic version of the publication (e.g., "1.0.0") */
+  /**
+   * Editorial publication status code, e.g. "1", "1.a", "2.h", "3".
+   *
+   * A major segment of "1" means published. This is the authority on publication status —
+   * not the version number, and not the presence of a published snapshot, which a public
+   * work can lack if it has never been through the versioning pipeline.
+   */
+  publicationStatus?: Maybe<Scalars['String']['output']>;
+  /**
+   * Semantic version of the publication (e.g., "1.0.0")
+   * @deprecated Reads works.publicationVersion, which the publish pipeline never writes, so it does not identify the version being served. Use publishedVersion.
+   */
   publicationVersion: Scalars['String']['output'];
+  /**
+   * The version currently published, from work_versions via works.published_version_uuid.
+   *
+   * Null for a work that has never been published — which is the difference from
+   * publicationVersion, a text column that carries a value regardless.
+   */
+  publishedVersion?: Maybe<Scalars['String']['output']>;
   /** Whether access to this work is restricted */
   restriction: Scalars['Boolean']['output'];
   /** Search glossary term instances for this work by English term. Results are ordered by term_number. */
@@ -835,6 +1111,82 @@ export type WorkFilter = {
   maxPages?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * A work's cached publish readiness.
+ *
+ * Exists because validating is not free — roughly 0.8 ms per passage, so checking the whole
+ * corpus on demand is minutes of database time. Reading cached verdicts makes a corpus-wide
+ * view possible; it does not make them authoritative. The publish pipeline revalidates.
+ */
+export type WorkPublishStatus = {
+  __typename?: 'WorkPublishStatus';
+  /** When the validation behind this verdict started. Null when never checked. */
+  checkedAt?: Maybe<Scalars['String']['output']>;
+  /** Last write to any draft table this work's snapshot draws from. */
+  draftTouchedAt: Scalars['String']['output'];
+  /** Number of error findings, i.e. distinct rules that fired. */
+  errorCount: Scalars['Int']['output'];
+  /**
+   * Total error occurrences. Exceeds the summed length of `subjects`, which is capped at 20
+   * per finding.
+   */
+  errorOccurrences: Scalars['Int']['output'];
+  errors: Array<ValidationFinding>;
+  /**
+   * Whether the work passed when last checked. Null means never checked, which is NOT the
+   * same as publishable and must not be rendered as such.
+   */
+  ok?: Maybe<Scalars['Boolean']['output']>;
+  /**
+   * The draft changed after the verdict was recorded, so it describes a state of the work
+   * that no longer exists. Present it as unchecked, not as the old answer.
+   */
+  stale: Scalars['Boolean']['output'];
+  warningCount: Scalars['Int']['output'];
+  warningOccurrences: Scalars['Int']['output'];
+  warnings: Array<ValidationFinding>;
+  workUuid: Scalars['ID']['output'];
+};
+
+/**
+ * One published version of a work.
+ *
+ * Sourced from `work_versions`, which holds one row per publish event and is only ever
+ * appended to — a failed publish removes its own row, so every version listed here was
+ * actually served.
+ */
+export type WorkVersion = {
+  __typename?: 'WorkVersion';
+  /**
+   * Whether this is the version `works.published_version_uuid` points at — the one the
+   * published_* snapshot tables hold.
+   *
+   * Not yet the same as "what readers see": the public reader still serves draft content until
+   * DEV-558 switches it to the snapshot tables.
+   */
+  isLive: Scalars['Boolean']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  publishedAt: Scalars['String']['output'];
+  /** Auth user id of the publisher. Null for a service-account or pipeline publish. */
+  publishedBy?: Maybe<Scalars['ID']['output']>;
+  /**
+   * The publisher's display name. Null when there is no name to show — a service-account
+   * publish, a publisher with no profile, or an account since deleted. Render an
+   * unattributed publish rather than falling back to the uuid.
+   */
+  publisher?: Maybe<Scalars['String']['output']>;
+  uuid: Scalars['ID']['output'];
+  /** Version label, SemVer by convention and unique per work. */
+  version: Scalars['String']['output'];
+  /**
+   * Non-blocking findings recorded when this version was published.
+   *
+   * Null and `[]` are different: `[]` is a publish that recorded no warnings, null is no
+   * surviving job row to read. Do not present null as a clean publish.
+   */
+  warnings?: Maybe<Array<ValidationFinding>>;
+};
+
 export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: string, toh: string, tibetan: string, folioNumber: number, volumeNumber: number };
 
 export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
@@ -869,7 +1221,7 @@ export type PassageWithAnnotationsFragment = (
 
 export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, workUuid: string, label?: string | null, sort: number, type: string, xmlId?: string | null, json?: any | null };
 
-export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string };
+export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string, attestation?: string | null };
 
 export type TocEntryFieldsFragment = { __typename?: 'TocEntry', uuid: string, content: string, label?: string | null, sort: number, level: number, section: string };
 
@@ -904,7 +1256,7 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
     & TocEntryNestedFragment
   )> };
 
-export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
+export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, publishedVersion?: string | null, publicationStatus?: string | null, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
 
 export type LookupQueryVariables = Exact<{
   toh?: InputMaybe<Scalars['String']['input']>;
@@ -1156,6 +1508,7 @@ export const TitleFieldsFragmentDoc = gql`
   content
   language
   type
+  attestation
 }
     `;
 export const TocEntryFieldsFragmentDoc = gql`
@@ -1208,6 +1561,8 @@ export const WorkFieldsFragmentDoc = gql`
   toh
   publicationDate
   publicationVersion
+  publishedVersion
+  publicationStatus
   pages
   restriction
   section

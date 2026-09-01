@@ -1,4 +1,4 @@
-export const FOLIO_SIDES = ['a', 'b'] as const;
+export const FOLIO_SIDES = ['a', 'b', 'xa', 'xb'] as const;
 export type FolioSide = (typeof FOLIO_SIDES)[number];
 
 export type FolioDTO = {
