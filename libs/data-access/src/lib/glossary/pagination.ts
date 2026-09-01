@@ -143,6 +143,11 @@ export function rowToGlossaryTermNode(
 const ANNOTATION_PAGE_SIZE = 1000;
 const PASSAGE_UUID_BATCH_SIZE = 200;
 
+/** Backstop on the keyset walk. The most-cited real term needs 19 pages; this
+ * leaves plenty of headroom while keeping a pathological filter from walking
+ * the whole table one page at a time. */
+const MAX_ANNOTATION_PAGES = 100;
+
 /** Concurrent batch reads. Bounded so a pathological term cannot fan out to
  * hundreds of simultaneous requests. */
 const BATCH_CONCURRENCY = 8;
@@ -201,18 +206,39 @@ const getCitingPassageUuids = async ({
   uuid: string;
   source: ContentSource;
 }): Promise<string[] | null> => {
-  const passageUuids = new Set<string>();
-  let offset = 0;
+  // `JSON.stringify([{ uuid }])` collapses to `[{}]` when uuid is undefined or
+  // empty, and `content @> '[{}]'` is true for every non-empty array — so the
+  // filter matches the whole table, loses the GIN index, and parallel-seq-scans
+  // ~1M rows. Refuse to issue it. A falsy uuid here means a caller passed a
+  // parent without one, which is a bug worth seeing rather than a quiet empty.
+  if (!uuid) {
+    console.error(
+      'getGlossaryTermPassagesPage called without a term uuid; refusing to run an unbounded containment scan',
+    );
+    return null;
+  }
 
-  for (;;) {
-    const { data, error } = await client
+  const passageUuids = new Set<string>();
+  let lastPassageUuid: string | null = null;
+
+  for (let page = 0; page < MAX_ANNOTATION_PAGES; page++) {
+    // Keyset, not OFFSET. Each page is filtered to rows after the previous
+    // page's last key, so cost stays flat; with OFFSET the sort has to
+    // materialise every skipped row again and later pages get progressively
+    // slower until one trips the statement timeout.
+    let query = client
       .from(relationFor('passageAnnotations', source))
-      .select('uuid, passage_uuid')
+      .select('passage_uuid')
       .eq('type', 'glossary-instance')
       .filter('content', 'cs', JSON.stringify([{ uuid }]))
       .order('passage_uuid', { ascending: true })
-      .order('uuid', { ascending: true })
-      .range(offset, offset + ANNOTATION_PAGE_SIZE - 1);
+      .limit(ANNOTATION_PAGE_SIZE);
+
+    if (lastPassageUuid !== null) {
+      query = query.gt('passage_uuid', lastPassageUuid);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching glossary passage annotations:', error);
@@ -224,10 +250,24 @@ const getCitingPassageUuids = async ({
       if (row.passage_uuid) passageUuids.add(row.passage_uuid);
     }
 
-    if (rows.length < ANNOTATION_PAGE_SIZE) break;
-    offset += ANNOTATION_PAGE_SIZE;
+    if (rows.length < ANNOTATION_PAGE_SIZE) {
+      return Array.from(passageUuids);
+    }
+
+    // Advancing past the last uuid rather than to it skips that uuid's
+    // remaining duplicate annotations, which is exactly what we want: only
+    // distinct passages matter, and this one is already recorded.
+    const next = rows[rows.length - 1].passage_uuid;
+    if (next === lastPassageUuid) {
+      // A full page of one repeated uuid would otherwise loop forever.
+      return Array.from(passageUuids);
+    }
+    lastPassageUuid = next;
   }
 
+  console.error(
+    `Glossary term ${uuid} cites more passages than ${MAX_ANNOTATION_PAGES} pages can cover; returning a truncated set`,
+  );
   return Array.from(passageUuids);
 };
 

@@ -228,8 +228,11 @@ type PassagesFakeState = {
    * separately, since it is bounded by the page size, not the citation count. */
   inBatchSizes: number[];
   finalReadSizes: number[];
-  /** One entry per `.range()` against the annotations relation. */
-  annotationRanges: [number, number][];
+  /** The serialized `content` containment filter each annotations read used. */
+  containmentFilters: string[];
+  /** One entry per annotations page: the `gt` cursor it was given (null on the
+   * first page). Keyset paging, so there is no offset to record. */
+  annotationCursors: (string | null)[];
   annotationsError?: { message: string };
   passagesError?: { message: string };
 };
@@ -246,8 +249,12 @@ const makePassagesClient = ({
   class Query {
     private uuids: string[] | null = null;
     private columns = '';
+    private containment = '';
 
     constructor(private readonly relation: string) {}
+
+    private gtValue: string | null = null;
+    private limitValue = Infinity;
 
     select(columns?: string) {
       this.columns = columns ?? '';
@@ -256,10 +263,19 @@ const makePassagesClient = ({
     eq() {
       return this;
     }
-    filter() {
+    filter(_column: string, _op: string, value: string) {
+      this.containment = value;
       return this;
     }
     order() {
+      return this;
+    }
+    gt(_column: string, value: string) {
+      this.gtValue = value;
+      return this;
+    }
+    limit(value: number) {
+      this.limitValue = value;
       return this;
     }
 
@@ -273,22 +289,28 @@ const makePassagesClient = ({
       return this;
     }
 
-    range(from: number, to: number) {
-      state.annotationRanges.push([from, to]);
-      if (state.annotationsError) {
-        return Promise.resolve({ data: null, error: state.annotationsError });
-      }
-      return Promise.resolve({
-        data: annotationRows.slice(from, to + 1),
-        error: null,
-      });
-    }
-
     then(resolve: (result: unknown) => unknown) {
       if (this.relation.includes('annotation')) {
-        return Promise.resolve({ data: annotationRows, error: null }).then(
-          resolve,
-        );
+        state.annotationCursors.push(this.gtValue);
+        state.containmentFilters.push(this.containment);
+        if (state.annotationsError) {
+          return Promise.resolve({
+            data: null,
+            error: state.annotationsError,
+          }).then(resolve);
+        }
+        const after = this.gtValue;
+        const rows = annotationRows
+          .filter((row) => after === null || row.passage_uuid > after)
+          .sort((a, b) =>
+            a.passage_uuid < b.passage_uuid
+              ? -1
+              : a.passage_uuid > b.passage_uuid
+                ? 1
+                : 0,
+          )
+          .slice(0, this.limitValue);
+        return Promise.resolve({ data: rows, error: null }).then(resolve);
       }
       if (state.passagesError) {
         return Promise.resolve({
@@ -336,7 +358,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
     };
     const client = makePassagesClient({
       annotationRows: makeAnnotations(1500),
@@ -354,7 +377,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
     };
     const client = makePassagesClient({
       annotationRows: makeAnnotations(2500),
@@ -364,11 +388,12 @@ describe('getGlossaryTermPassagesPage', () => {
 
     await getGlossaryTermPassagesPage({ client, uuid: 'term-1', first: 10 });
 
-    // 1000 + 1000 + 500: the third page is short, which ends the loop.
-    expect(state.annotationRanges).toEqual([
-      [0, 999],
-      [1000, 1999],
-      [2000, 2999],
+    // Three pages: no cursor, then keyed past each page's last uuid. The third
+    // is short (500 rows), which ends the walk.
+    expect(state.annotationCursors).toEqual([
+      null,
+      'passage-00999',
+      'passage-01999',
     ]);
     // All 2500 uuids reached the batched reads, not just the first 1000.
     const totalBatched = state.inBatchSizes.reduce((a, b) => a + b, 0);
@@ -379,7 +404,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
     };
     const client = makePassagesClient({
       annotationRows: makeAnnotations(5),
@@ -406,7 +432,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
     };
     const client = makePassagesClient({
       annotationRows: makeAnnotations(5),
@@ -434,7 +461,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
     };
     const client = makePassagesClient({
       annotationRows: [
@@ -459,7 +487,8 @@ describe('getGlossaryTermPassagesPage', () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
       passagesError: { message: 'boom' },
     };
     const client = makePassagesClient({
@@ -473,11 +502,55 @@ describe('getGlossaryTermPassagesPage', () => {
     expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
   });
 
+  it('refuses to run an unbounded containment scan for a falsy uuid', async () => {
+    // `JSON.stringify([{ uuid: undefined }])` is `[{}]`, and `content @> '[{}]'`
+    // matches every annotation with a non-empty array — a full-table scan that
+    // trips the statement timeout. The filter must never be issued.
+    const state: PassagesFakeState = {
+      inBatchSizes: [],
+      finalReadSizes: [],
+      containmentFilters: [],
+      annotationCursors: [],
+    };
+    const client = makePassagesClient({
+      annotationRows: makeAnnotations(10),
+      passageRows: makePassages(10),
+      state,
+    });
+
+    for (const uuid of ['', undefined as unknown as string]) {
+      const page = await getGlossaryTermPassagesPage({ client, uuid });
+      expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
+    }
+
+    expect(state.annotationCursors).toEqual([]);
+    expect(state.containmentFilters).toEqual([]);
+  });
+
+  it('always scopes the containment filter to the term uuid', async () => {
+    const state: PassagesFakeState = {
+      inBatchSizes: [],
+      finalReadSizes: [],
+      containmentFilters: [],
+      annotationCursors: [],
+    };
+    const client = makePassagesClient({
+      annotationRows: makeAnnotations(3),
+      passageRows: makePassages(3),
+      state,
+    });
+
+    await getGlossaryTermPassagesPage({ client, uuid: 'term-1' });
+
+    expect(state.containmentFilters).toEqual(['[{"uuid":"term-1"}]']);
+  });
+
   it('returns empty when the annotations read fails', async () => {
     const state: PassagesFakeState = {
       inBatchSizes: [],
       finalReadSizes: [],
-      annotationRanges: [],
+      containmentFilters: [],
+      annotationCursors: [],
       annotationsError: { message: 'boom' },
     };
     const client = makePassagesClient({
@@ -490,5 +563,6 @@ describe('getGlossaryTermPassagesPage', () => {
 
     expect(page).toEqual({ items: [], nextCursor: null, hasMore: false });
     expect(state.inBatchSizes).toEqual([]);
+    expect(state.finalReadSizes).toEqual([]);
   });
 });
