@@ -335,6 +335,22 @@ describe('getTranslationImprints', () => {
     expect(imprint?.tibetanTranslators).toBe('ye shes sde');
   });
 
+  it('narrows the authority names to the languages the fallback can use', async () => {
+    const { client, queries } = createMockClient(fullReads());
+
+    await getTranslationImprints({ client, keys: [KEY] });
+
+    const [credits] = forTable(queries, 'creators');
+    // An authority can carry dozens of transliterations; only 'en' and 'bo' are
+    // ever read. The creator's own name is deliberately not narrowed.
+    expect(credits.filters).toEqual(
+      expect.arrayContaining([
+        { op: 'in', column: 'authorities.names.language', value: ['en', 'bo'] },
+      ]),
+    );
+    expect(credits.columns).toContain('names!creators_name_uuid_fkey(content)');
+  });
+
   it('deduplicates credited names', async () => {
     const { client } = createMockClient({
       ...fullReads(),
