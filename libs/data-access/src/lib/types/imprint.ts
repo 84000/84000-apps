@@ -23,51 +23,6 @@ export type Imprint = {
   longTitles?: Partial<{ [key in TranslationLanguage]: string }>;
 };
 
-export type ImprintDTO = {
-  work_uuid: string;
-  toh: string;
-  section?: string;
-  version?: SemVer;
-  restriction?: boolean;
-  publishYear?: string;
-  tibetanAuthors?: string;
-  isAuthorContested?: boolean;
-  sourceDescription?: string;
-  publisherStatement?: string;
-  tibetanTranslators?: string;
-  license: {
-    link?: string;
-    name?: string;
-    description?: string;
-  };
-  mainTitles?: Partial<{ [key in TranslationLanguage]: string }>;
-  longTitles?: Partial<{ [key in TranslationLanguage]: string }>;
-};
-
-export const imprintFromDTO = (dto: ImprintDTO): Imprint => {
-  return {
-    uuid: dto.work_uuid,
-    toh: dto.toh,
-    section: dto.section,
-    version: dto.version,
-    restriction: dto.restriction,
-    publishYear: dto.publishYear,
-    tibetanAuthors: dto.tibetanAuthors
-      ?.split(',')
-      .map((author) => author.trim())
-      .filter((author) => author.length > 0),
-    isAuthorContested: dto.isAuthorContested || false,
-    sourceDescription: dto.sourceDescription,
-    publisherStatement: dto.publisherStatement,
-    tibetanTranslators: dto.tibetanTranslators,
-    license: {
-      ...dto.license,
-    },
-    mainTitles: dto.mainTitles,
-    longTitles: dto.longTitles,
-  };
-};
-
 const ALL_SECTIONS = [...FRONT_MATTER, ...BODY_MATTER, ...BACK_MATTER];
 export type TranslationSection = (typeof ALL_SECTIONS)[number];
 
