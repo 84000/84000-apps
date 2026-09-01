@@ -4,6 +4,7 @@ import type {
 } from '@eightyfourthousand/data-access';
 import { createPassageLoaders } from './schema/passage/passage.loader';
 import { createGlossaryNameLoader } from './schema/glossary/glossary-name.loader';
+import { createGlossaryPassagesLoader } from './schema/glossary/glossary-passages.loader';
 import { createPassageReferencesLoader } from './schema/passage/passage-references.loader';
 import { createWorkTitleLoader } from './schema/work/work-title.loader';
 import { createFolioLoader } from './schema/folio/folio.loader';
@@ -56,6 +57,13 @@ export interface Loaders {
   glossaryNamesByUuid: ReturnType<typeof createGlossaryNameLoader>;
 
   /**
+   * Load a page of citing passages per glossary term.
+   * A glossary page resolves this once per term; batching collapses the whole
+   * page into one call.
+   */
+  glossaryPassagesByTerm: ReturnType<typeof createGlossaryPassagesLoader>;
+
+  /**
    * Load folios by UUID.
    * Used to enrich mention annotations with display text from target folios.
    */
@@ -100,6 +108,7 @@ export function createLoaders(
     ),
     workTitlesByUuid: createWorkTitleLoader(supabase),
     glossaryNamesByUuid: createGlossaryNameLoader(supabase, source),
+    glossaryPassagesByTerm: createGlossaryPassagesLoader(supabase, source),
     foliosByUuid: createFolioLoader(supabase),
     bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase, source),
     imprintsByWorkToh: createImprintLoader(supabase),
