@@ -22,15 +22,34 @@ const ALLOWED_REQUEST_HEADERS = [
   CONTENT_SOURCE_HEADER,
 ].join(', ');
 
-function getCorsHeaders(req: NextRequest): Record<string, string> {
-  const origin = req.headers.get('origin') || '*';
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': ALLOWED_REQUEST_HEADERS,
-  };
-}
+/**
+ * CORS headers for this endpoint. Deliberately static.
+ *
+ * These used to reflect the request's `Origin` back with
+ * `Access-Control-Allow-Credentials: true`. Because the response carried no
+ * `Vary: Origin`, Vercel's edge cached it and replayed it to other origins with
+ * the wrong `Access-Control-Allow-Origin` — which Safari reports as "Fetch API
+ * cannot load ... due to access control checks". A constant value cannot vary
+ * by origin, so it cannot be poisoned by a cache and needs no `Vary`.
+ *
+ * Credentials are not part of the contract: the browser client
+ * (`libs/client-graphql`) uses `graphql-request`, whose fetch defaults to
+ * `credentials: 'same-origin'`, and authenticates with an `Authorization`
+ * bearer token. The cookie fallback in `createContext` only ever fires
+ * same-origin, where CORS does not apply. Dropping the credentials header is
+ * what makes the `*` wildcard legal.
+ *
+ * `Access-Control-Max-Age` matters because every request to this endpoint is
+ * preflighted — `apollo-require-preflight` and the content-source header are
+ * both non-simple. Without it Safari, whose preflight cache is far
+ * shorter-lived than Chrome's, pays two round-trips per query.
+ */
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': ALLOWED_REQUEST_HEADERS,
+  'Access-Control-Max-Age': '3600',
+};
 
 const server = new ApolloServer({
   typeDefs,
@@ -45,8 +64,6 @@ const serverStartPromise = server.start();
 
 async function handler(req: NextRequest) {
   await serverStartPromise;
-
-  const corsHeaders = getCorsHeaders(req);
 
   const body = req.method === 'POST' ? await req.json() : {};
 
@@ -79,17 +96,22 @@ async function handler(req: NextRequest) {
     response.headers.set(key, value);
   }
 
-  for (const [key, value] of Object.entries(corsHeaders)) {
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
     response.headers.set(key, value);
   }
+
+  // GraphQL results are per-request and several carry viewer-scoped content, so
+  // they must never sit in a shared cache. The framework default here is
+  // `public`, which is what allowed the edge to cache this endpoint at all.
+  response.headers.set('Cache-Control', 'no-store');
 
   return response;
 }
 
-function optionsHandler(req: NextRequest) {
+function optionsHandler() {
   return new NextResponse(null, {
     status: 204,
-    headers: getCorsHeaders(req),
+    headers: CORS_HEADERS,
   });
 }
 

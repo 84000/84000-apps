@@ -24,5 +24,3 @@ export async function GET(
 
   redirect(path);
 }
-
-export const revalidate = 3600;

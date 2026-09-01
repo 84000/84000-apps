@@ -19,6 +19,7 @@ import {
 import {
   isUuid,
   scrollToElement,
+  waitForFonts,
   waitForStableElement,
 } from '@eightyfourthousand/lib-utils';
 import { useNavigation } from '../NavigationProvider';
@@ -142,11 +143,17 @@ export const GlossaryPaginationProvider = ({
           // Wait for the freshly-rendered term to settle (skeletons removed,
           // content hydrated) before scrolling, so we don't land on a
           // pre-settle position.
+          await waitForFonts();
+
           element = await waitForStableElement(container, navCursor);
         }
 
         if (element) {
-          await scrollToElement({ element, behavior: 'smooth' });
+          // Instant, not smooth: `scrollToElement` resolves when scrollIntoView
+          // is called, so a smooth scroll leaves the hash-clearing below racing
+          // an animation still in flight. See PaginationProvider for the full
+          // reasoning.
+          await scrollToElement({ element, behavior: 'auto' });
           updatePanel({
             name: 'right',
             state: { ...panels.right, hash: undefined },

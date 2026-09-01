@@ -26,6 +26,7 @@ import {
   isUuid,
   scrollToElement,
   useIsMobile,
+  waitForFonts,
   waitForStableElement,
 } from '@eightyfourthousand/lib-utils';
 import { PanelName, TabName, useNavigation } from '../shared';
@@ -267,6 +268,11 @@ export const PaginationProvider = ({
             refreshEditorBaseline(tab);
           }
 
+          // Let the webfonts land before measuring. The Tibetan face swaps in
+          // late and reflows the whole body; measuring before it does gives a
+          // stable-looking position that is about to move.
+          await waitForFonts();
+
           // Wait for React to re-render and update the DOM (remove/add
           // skeletons) by waiting until the element's position stabilizes. The
           // wait is capped so a target that never renders can't hang
@@ -279,7 +285,15 @@ export const PaginationProvider = ({
           return;
         }
 
-        await scrollToElement({ element });
+        // Instant, not smooth. `scrollToElement` resolves when scrollIntoView is
+        // *called*, so with a smooth scroll everything below — clearing the hash,
+        // painting the highlight, releasing the navigating flag — ran while the
+        // animation was still in flight, and `useScrollPositionRestore` was free
+        // to write scrollTop into it. Safari's smooth scroll runs longest and
+        // aborts outright on a competing write, which is where the misposition
+        // came from. There is also no motion worth preserving here: the user
+        // arrived by link, not by scrolling.
+        await scrollToElement({ element, behavior: 'auto' });
 
         // Claim this passage as the highlight target when a range is pending,
         // else clear any prior highlight now that we've navigated elsewhere.

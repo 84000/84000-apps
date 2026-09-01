@@ -124,9 +124,17 @@
   /*   } */
   /* } */
 
+  /*
+   * woff2 rather than the original 1.8 MB TTF (same 3382 glyphs, 539 KB).
+   * `font-display: swap` means this face lands after first paint and reflows
+   * every .font-tibetan block when it does — which was landing after the
+   * deep-link scroll had already measured, leaving the reader on the wrong
+   * passage. Smaller is a shorter reflow window. The repo's browser floor is
+   * Safari 16.4, well past universal woff2 support, so no TTF fallback.
+   */
   @font-face {
     font-family: 'Monlam OuChan 2';
-    src: url('../assets/fonts/MonlamUniOuChan2.ttf') format('truetype');
+    src: url('../assets/fonts/MonlamUniOuChan2.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
     font-display: swap;

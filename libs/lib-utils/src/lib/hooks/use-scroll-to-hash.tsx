@@ -57,6 +57,33 @@ export const scrollToElement = async ({
 };
 
 /**
+ * Resolves once webfonts have loaded, or after `timeout` ms, whichever is first.
+ *
+ * The Tibetan face is half a megabyte declared `font-display: swap`, so it
+ * lands after first paint and reflows every `.font-tibetan` block when it
+ * does.
+ * A deep-link scroll measured before that reflow is measured against a layout
+ * that is about to change, which is how navigation ended up a screen or two off
+ * the target. `waitForStableElement` cannot catch it — two identical frames
+ * before the swap look exactly like a settled layout.
+ *
+ * The timeout matters: `document.fonts.ready` never rejects, but a face that
+ * fails to load can leave it pending, and navigation must not hang on that.
+ *
+ * @param timeout Maximum time to wait, in milliseconds.
+ */
+export const waitForFonts = (timeout = 2000): Promise<void> => {
+  if (typeof document === 'undefined' || !document.fonts) {
+    return Promise.resolve();
+  }
+
+  return Promise.race([
+    document.fonts.ready.then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, timeout)),
+  ]);
+};
+
+/**
  * Waits for the element with the given id to appear inside `container` and for
  * its vertical position to stabilize before resolving with it.
  *

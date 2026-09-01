@@ -1,10 +1,13 @@
 import { createServerClient } from '@eightyfourthousand/data-access/ssr';
 import { NextResponse } from 'next/server';
+import { safeNextPath } from '@eightyfourthousand/lib-utils';
 
 export const authCallback = async (request: Request) => {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  // Validated rather than trusted: `next` arrives from the query string, so an
+  // unchecked value would turn this callback into an open redirect.
+  const next = safeNextPath(searchParams.get('next')) ?? '/';
 
   if (code) {
     const dataClient = await createServerClient();
