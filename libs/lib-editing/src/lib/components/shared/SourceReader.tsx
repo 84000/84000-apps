@@ -22,6 +22,7 @@ import {
   isUuid,
   scrollToElement,
   useIsMobile,
+  waitForFonts,
 } from '@eightyfourthousand/lib-utils';
 import {
   LotusPond,
@@ -281,6 +282,10 @@ export const SourceReader = () => {
           setHasMoreAfter(around.hasMoreAfter);
           setInitialized(true);
 
+          // Let webfonts land before measuring — the Tibetan face swaps in
+          // late and reflows the folio column underneath the target.
+          await waitForFonts();
+
           // Wait for the window to render and the target's position to settle.
           await new Promise<void>((resolve) => {
             let stabilityCount = 0;
@@ -323,7 +328,11 @@ export const SourceReader = () => {
           return;
         }
 
-        await scrollToElement({ element });
+        // Instant, not smooth: `scrollToElement` resolves when scrollIntoView
+        // is called, so a smooth scroll leaves the hash-clearing below racing
+        // an animation still in flight. See PaginationProvider for the full
+        // reasoning.
+        await scrollToElement({ element, behavior: 'auto' });
         clearHash();
       } catch (error) {
         console.error('Folio navigation failed:', error);

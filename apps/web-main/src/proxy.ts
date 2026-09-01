@@ -44,6 +44,21 @@ const RESTRICTED_ROUTE_ROLES: Record<string, string[]> = {
 };
 const RESTRICTED_ROUTES = Object.keys(RESTRICTED_ROUTE_ROLES);
 
+/**
+ * Marks a response as uncacheable.
+ *
+ * Both redirects below are decided from the request's cookies, but the platform
+ * default for a redirect out of here is `Cache-Control: public` with no
+ * `Vary: Cookie` — so any cache in the path may serve one user's auth decision
+ * to everyone asking for that URL. Safari reuses such a redirect far more
+ * readily than Chrome, which is why deep links failed there and why appending a
+ * trailing slash (a different cache key) appeared to fix them.
+ */
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const { user, role, supabaseResponse } = await updateSession(request);
 
@@ -62,7 +77,13 @@ export async function proxy(request: NextRequest) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    // Carry the requested URL through login so a deep link survives the
+    // round-trip. `authCallback` already reads `next`; nothing set it before,
+    // so anyone opening an /entity/... link signed out landed on the homepage
+    // and lost the entity they clicked.
+    url.search = '';
+    url.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
+    return noStore(NextResponse.redirect(url));
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
@@ -89,7 +110,7 @@ export async function proxy(request: NextRequest) {
   if (isRestrictedRoute && !hasRequiredRole) {
     const url = request.nextUrl.clone();
     url.pathname = '/not-found';
-    const redirect = NextResponse.redirect(url);
+    const redirect = noStore(NextResponse.redirect(url));
     const cookies = supabaseResponse.cookies.getAll();
     cookies.forEach((cookie) => {
       redirect.cookies.set(cookie.name, cookie.value, cookie);

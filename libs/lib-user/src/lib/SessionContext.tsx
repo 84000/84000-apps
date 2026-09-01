@@ -14,6 +14,7 @@ import {
 import { SupabaseClient } from '@supabase/supabase-js';
 import { ScholarUser } from './types';
 import { useRouter } from 'next/navigation';
+import { safeNextPath } from '@eightyfourthousand/lib-utils';
 
 interface SessionContextState {
   getUser: () => Promise<ScholarUser | null>;
@@ -60,10 +61,23 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [apiClient]);
 
   const getRedirectUrl = useCallback(() => {
-    return (
+    const base =
       process.env.NEXT_PUBLIC_OATH_REDIRECT_URL ||
-      `${window.location.origin}/auth/callback`
+      `${window.location.origin}/auth/callback`;
+
+    // `proxy.ts` attaches the originally requested path as `?next=` when it
+    // bounces a signed-out visitor here. Forward it to the callback, which
+    // already knows how to land on it, so a deep link survives login instead of
+    // dropping the user on the homepage.
+    const next = safeNextPath(
+      new URLSearchParams(window.location.search).get('next'),
     );
+    if (!next) {
+      return base;
+    }
+
+    const separator = base.includes('?') ? '&' : '?';
+    return `${base}${separator}next=${encodeURIComponent(next)}`;
   }, []);
 
   const loginWithApple = useCallback(() => {

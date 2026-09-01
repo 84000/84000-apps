@@ -1,4 +1,4 @@
-import { safeHref } from './url';
+import { safeHref, safeNextPath } from './url';
 
 describe('safeHref', () => {
   it('returns undefined for empty/missing input', () => {
@@ -19,7 +19,9 @@ describe('safeHref', () => {
 
   it('allows http(s) and mailto', () => {
     expect(safeHref('http://example.com')).toBe('http://example.com');
-    expect(safeHref('https://example.com/path')).toBe('https://example.com/path');
+    expect(safeHref('https://example.com/path')).toBe(
+      'https://example.com/path',
+    );
     expect(safeHref('mailto:a@b.co')).toBe('mailto:a@b.co');
   });
 
@@ -34,5 +36,32 @@ describe('safeHref', () => {
   it('trims surrounding whitespace before evaluating', () => {
     expect(safeHref('  https://example.com  ')).toBe('https://example.com');
     expect(safeHref('  /foo  ')).toBe('/foo');
+  });
+});
+
+describe('safeNextPath', () => {
+  it('accepts a same-origin absolute path', () => {
+    expect(safeNextPath('/entity/work/abc-123')).toBe('/entity/work/abc-123');
+    expect(safeNextPath('/translations/reader/x?right=open:glossary:y')).toBe(
+      '/translations/reader/x?right=open:glossary:y',
+    );
+  });
+
+  it('rejects a missing or empty value', () => {
+    expect(safeNextPath(null)).toBeNull();
+    expect(safeNextPath(undefined)).toBeNull();
+    expect(safeNextPath('')).toBeNull();
+  });
+
+  it('rejects anything that could leave the origin', () => {
+    // Protocol-relative: the browser reads these as another host.
+    expect(safeNextPath('//evil.example')).toBeNull();
+    expect(safeNextPath('//evil.example/entity/work/abc')).toBeNull();
+    // Backslash variants, which some browsers normalize to '//'.
+    expect(safeNextPath('/\\evil.example')).toBeNull();
+    // Absolute URLs and non-path values.
+    expect(safeNextPath('https://evil.example')).toBeNull();
+    expect(safeNextPath('javascript:alert(1)')).toBeNull();
+    expect(safeNextPath('entity/work/abc')).toBeNull();
   });
 });
