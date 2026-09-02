@@ -201,7 +201,7 @@ describe('BoundaryKeymap suggestion guard', () => {
     expect(calls).toEqual([]);
   });
 
-  it('still splits on Enter at the end of a passage with no menu open', () => {
+  it('does not swallow Enter when no menu is open', () => {
     const calls: string[] = [];
     const delegate: StackKeyboardDelegate = {
       focusRelative: () => true,
@@ -212,16 +212,171 @@ describe('BoundaryKeymap suggestion guard', () => {
     };
 
     // A real state, because `atDocEnd` resolves `Selection.atEnd` against the
-    // document. No suggestion plugins are installed, so the guard reads them as
-    // closed — which is the case being covered.
+    // document. Two blocks with an empty trailing one is the "second Enter"
+    // shape, which is what now reaches the delegate — a single Enter at the end
+    // of a passage is the editor's to handle. No suggestion plugins are
+    // installed, so the guard reads them as closed, which is the case covered.
     const schema = getSchema(buildStackSchemaExtensions());
     const doc = schema.node('doc', null, [
       schema.node('paragraph', null, [schema.text('text')]),
+      schema.node('paragraph', null, []),
     ]);
     let state = EditorState.create({ doc });
     state = state.apply(state.tr.setSelection(Selection.atEnd(state.doc)));
+    const editor = {
+      state,
+      view: { endOfTextblock: () => true },
+      chain: () => ({
+        deleteCurrentNode: () => ({ run: () => true }),
+        run: () => true,
+      }),
+    };
 
-    expect(shortcuts(delegate)['Enter']({ editor: { state } })).toBe(true);
+    expect(shortcuts(delegate)['Enter']({ editor })).toBe(true);
     expect(calls).toEqual(['split']);
+  });
+});
+
+describe('BoundaryKeymap Enter and Backspace', () => {
+  const shortcuts = (delegate: StackKeyboardDelegate) =>
+    (
+      BoundaryKeymap.config.addKeyboardShortcuts as (this: {
+        options: { uuid: string; delegate: StackKeyboardDelegate };
+      }) => Record<string, (props: { editor: unknown }) => boolean>
+    ).call({ options: { uuid: 'p0', delegate } });
+
+  const spyDelegate = () => {
+    const calls: string[] = [];
+    const delegate: StackKeyboardDelegate = {
+      focusRelative: () => true,
+      splitAtSelection: () => (calls.push('split'), true),
+      mergeWithPrevious: () => (calls.push('merge'), true),
+      undo: () => true,
+      redo: () => true,
+    };
+    return { calls, delegate };
+  };
+
+  /**
+   * A real EditorState plus the bits of `Editor` the handlers touch. Real,
+   * because `atDocEnd` resolves `Selection.atEnd` and the empty-trailing-block
+   * check reads the document.
+   */
+  const editorFor = (
+    paragraphs: string[],
+    caret: 'end' | 'start',
+    joined: string[] = [],
+  ) => {
+    const schema = getSchema(buildStackSchemaExtensions());
+    const doc = schema.node(
+      'doc',
+      null,
+      paragraphs.map((text) =>
+        schema.node('paragraph', null, text ? [schema.text(text)] : []),
+      ),
+    );
+    let state = EditorState.create({ doc });
+    state = state.apply(
+      state.tr.setSelection(
+        caret === 'end'
+          ? Selection.atEnd(state.doc)
+          : Selection.atStart(state.doc),
+      ),
+    );
+    return {
+      state,
+      view: { endOfTextblock: () => true },
+      chain: () => ({
+        deleteCurrentNode: () => ({
+          run: () => (joined.push('deleteCurrentNode'), true),
+        }),
+        run: () => true,
+      }),
+      commands: { joinBackward: () => (joined.push('joinBackward'), true) },
+    };
+  };
+
+  // Reported: Enter at the end of a passage created a new passage. It should
+  // do what Enter does everywhere else and start a paragraph; the passage
+  // gesture is a second Enter, or the slash menu.
+  it('leaves a single Enter at the end of a passage to the editor', () => {
+    const { calls, delegate } = spyDelegate();
+    const editor = editorFor(['text'], 'end');
+
+    expect(shortcuts(delegate)['Enter']({ editor })).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  it('splits on a second Enter, dropping the empty paragraph the first made', () => {
+    const { calls, delegate } = spyDelegate();
+    const dropped: string[] = [];
+    const editor = editorFor(['text', ''], 'end', dropped);
+
+    expect(shortcuts(delegate)['Enter']({ editor })).toBe(true);
+    expect(calls).toEqual(['split']);
+    // Without this the head would end in a blank line.
+    expect(dropped).toContain('deleteCurrentNode');
+  });
+
+  it('does not treat an Enter in an empty passage as the second press', () => {
+    const { calls, delegate } = spyDelegate();
+    // One empty block only: the first Enter should still make a paragraph, so
+    // the gesture is always two presses rather than one here and two there.
+    expect(
+      shortcuts(delegate)['Enter']({ editor: editorFor([''], 'end') }),
+    ).toBe(false);
+    expect(calls).toEqual([]);
+  });
+
+  it('merges on Backspace at the start of a passage', () => {
+    const { calls, delegate } = spyDelegate();
+
+    expect(
+      shortcuts(delegate)['Backspace']({
+        editor: editorFor(['text'], 'start'),
+      }),
+    ).toBe(true);
+    expect(calls).toEqual(['merge']);
+  });
+
+  // Reported: after a merge, Backspace put the bubble menu over the passage and
+  // a further press deleted a block. ProseMirror was falling through to
+  // `selectNodeBackward` at a block start it could not join.
+  it('joins rather than letting a block start select the block before it', () => {
+    const { calls, delegate } = spyDelegate();
+    const joined: string[] = [];
+    // Caret at the start of the second block, which is not the doc start.
+    const schema = getSchema(buildStackSchemaExtensions());
+    const doc = schema.node('doc', null, [
+      schema.node('heading', { level: 2 }, [schema.text('Summary')]),
+      schema.node('paragraph', null, [schema.text('body')]),
+    ]);
+    let state = EditorState.create({ doc });
+    const secondBlockStart = doc.child(0).nodeSize + 1;
+    state = state.apply(
+      state.tr.setSelection(
+        Selection.near(state.doc.resolve(secondBlockStart), 1),
+      ),
+    );
+    const editor = {
+      state,
+      view: { endOfTextblock: () => true },
+      commands: { joinBackward: () => (joined.push('joinBackward'), true) },
+    };
+
+    expect(shortcuts(delegate)['Backspace']({ editor })).toBe(true);
+    expect(joined).toEqual(['joinBackward']);
+    expect(calls).toEqual([]);
+  });
+
+  it('leaves an ordinary character delete alone', () => {
+    const { calls, delegate } = spyDelegate();
+    const editor = {
+      ...editorFor(['text'], 'end'),
+      view: { endOfTextblock: () => false },
+    };
+
+    expect(shortcuts(delegate)['Backspace']({ editor })).toBe(false);
+    expect(calls).toEqual([]);
   });
 });

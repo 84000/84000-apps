@@ -1,5 +1,5 @@
 import { Editor, Extensions } from '@tiptap/core';
-import { Selection } from '@tiptap/pm/state';
+import { Selection, TextSelection } from '@tiptap/pm/state';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -352,7 +352,7 @@ export class PassageStackController {
    * time, so a bubble menu per row would be a popover per row watching nothing.
    */
   getFocusedEditor = (): Editor | null =>
-    this.focusedUuid ? this.editors.get(this.focusedUuid) ?? null : null;
+    this.focusedUuid ? (this.editors.get(this.focusedUuid) ?? null) : null;
 
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
     const index = this.getOrder().indexOf(uuid);
@@ -416,8 +416,20 @@ export class PassageStackController {
       return;
     }
     if (typeof where === 'number') {
-      const max = Selection.atEnd(editor.state.doc).from;
-      editor.commands.focus(Math.max(1, Math.min(where, max)));
+      // A position from the doc model — a merge's join point, a split's caret,
+      // the start of a cross-passage delete. It is a document offset, not
+      // necessarily a place a caret can sit: a merge's boundary is the size of
+      // the head's content, which lands *between* two blocks rather than
+      // inside either. Left there, the caret is in no textblock at all, and the
+      // next Backspace selects the preceding block instead of joining — which
+      // is what put the bubble menu over a freshly merged passage.
+      //
+      // `TextSelection.near` with a backward bias resolves it to the nearest
+      // real caret position, which at a join is the end of the head's text.
+      const { doc } = editor.state;
+      const clamped = Math.max(0, Math.min(where, doc.content.size));
+      const near = TextSelection.near(doc.resolve(clamped), -1);
+      editor.commands.focus(near.from);
       return;
     }
     editor.commands.focus(where);

@@ -54,6 +54,23 @@ boundary arrow keys land in a real editor. That is what decides this:
 | Schema, marks, node views | **Per editor.** Each passage parses and renders its own content. |
 | `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `PassageStackController.wire`. |
 | `BoundaryKeymap`, `SlashCommand` | **Per editor.** Both act on the focused passage and need its uuid. |
+
+### Keys at a passage boundary
+
+| Key | Behaviour |
+|---|---|
+| Enter at the end | Starts a **paragraph**, as it does anywhere else. A passage boundary is not a reason for Enter to mean something different. |
+| Enter again, in that empty paragraph | Starts a new passage, dropping the empty paragraph so the head does not end in a blank line. An Enter in an already-empty passage is still the *first* press, so the gesture is always two. |
+| Slash menu → Passage | The same split, directly. |
+| Backspace at the start | Merges into the previous passage and puts the caret at the join. |
+| Backspace at an inner block start | Joins into the block before it. Where a join is impossible — a heading, a table, a line group — it does nothing rather than letting ProseMirror fall through to `selectNodeBackward`, which selected the whole preceding block, showed the bubble menu over it, and made the next Backspace delete it. |
+
+A caret position handed over by the doc model is a document offset, not
+necessarily somewhere a caret can sit: a merge's boundary is the size of the
+head's content, which falls *between* two blocks. `focusEditor` resolves it with
+`TextSelection.near` so the caret lands in real text — at a join, the end of the
+head. Left unresolved the caret was in no textblock at all, which is what made
+the Backspace above misbehave in the first place.
 | `TranslationBubbleMenu` | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
 | `PassageMenuOverlay` | **Shared**, and no longer editor-driven: the label lives in `StackRow` outside the editor, so the trigger and the actions belong to the controller and the spine. |
 | `MentionAdvancedOverlay` | **Shared**, bound to whichever editor has focus. |
