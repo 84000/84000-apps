@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
+import { Node as PMNode } from '@tiptap/pm/model';
 import type { Fragment, Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
@@ -17,6 +18,31 @@ import type {
 } from './types';
 
 const EMPTY_PARAGRAPH: JSONContent = { type: 'paragraph' };
+
+/** An empty paragraph carries no text and no structure worth keeping. */
+const isBlankParagraph = (node: JSONContent | undefined): boolean =>
+  !!node && node.type === 'paragraph' && !node.content?.length;
+
+/**
+ * Trim a blank paragraph from either side of a merge seam.
+ *
+ * Only a paragraph, and only an empty one: an empty heading or line group is
+ * structure a merge has no business discarding, and a paragraph holding even
+ * whitespace is content. At most one side is trimmed, so merging two blank
+ * passages still leaves a block to hold the caret.
+ */
+const joinAtSeam = (
+  head: JSONContent[],
+  tail: JSONContent[],
+): [JSONContent[], JSONContent[]] => {
+  if (tail.length && isBlankParagraph(tail[0])) {
+    return [head, tail.slice(1)];
+  }
+  if (head.length && isBlankParagraph(head[head.length - 1])) {
+    return [head.slice(0, -1), tail];
+  }
+  return [head, tail];
+};
 
 export type WorkDocumentOptions = {
   workUuid: string;
@@ -182,14 +208,22 @@ export class WorkDocument {
     const current = this.store.ensure(uuid);
     const previousBefore = previous.toJSON();
     const currentBefore = current.toJSON();
-    const boundary = previous.toNode().content.size;
+
+    // Concatenating the two contents outright inserts a blank line whenever
+    // either side of the seam is an empty paragraph — deleting an empty
+    // passage would leave one at the end of the passage that absorbed it. Drop
+    // it, and take the caret position from what the head actually contributes
+    // rather than from its size beforehand, or the caret sits above the seam.
+    const [head, tail] = joinAtSeam(
+      previousBefore.content ?? [],
+      currentBefore.content ?? [],
+    );
+    const boundary = this.contentSize(head);
 
     const merged: JSONContent = {
       type: 'doc',
-      content: [
-        ...(previousBefore.content ?? []),
-        ...(currentBefore.content ?? []),
-      ],
+      content:
+        head.length || tail.length ? [...head, ...tail] : [EMPTY_PARAGRAPH],
     };
 
     const labelChanges = this.spine.remove([uuid]);
@@ -513,6 +547,12 @@ export class WorkDocument {
     this.spine.applyLabels(
       changes.map((change) => ({ uuid: change.uuid, label: change[side] })),
     );
+  }
+
+  /** The document size of a run of blocks, as a caret position. */
+  private contentSize(content: JSONContent[]): number {
+    if (!content.length) return 0;
+    return PMNode.fromJSON(this.schema, { type: 'doc', content }).content.size;
   }
 
   private fragmentToJSON(fragment: Fragment): JSONContent {
