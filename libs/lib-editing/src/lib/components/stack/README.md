@@ -54,12 +54,25 @@ boundary arrow keys land in a real editor. That is what decides this:
 | Schema, marks, node views | **Per editor.** Each passage parses and renders its own content. |
 | `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `PassageStackController.wire`. |
 | `BoundaryKeymap`, `SlashCommand` | **Per editor.** Both act on the focused passage and need its uuid. |
-| `TranslationBubbleMenu` | **Shared.** It follows a selection, and only one editor carries one. N mounted menus would be N popovers watching nothing. |
+| `TranslationBubbleMenu` | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
 | `PassageMenuOverlay` | **Shared**, and no longer editor-driven: the label lives in `StackRow` outside the editor, so the trigger and the actions belong to the controller and the spine. |
 | `MentionAdvancedOverlay` | **Shared**, bound to whichever editor has focus. |
 | `DragHandle` | Not in the production translation set either. Out of scope. |
 
-Mounting the three shared surfaces needs `NavigationProvider` and the reader
-cache in scope, or their selectors throw — see
-`.harness/decisions/2026-08-19-sandbox-editors-lack-editor-providers.md`, which
-is the same trap in the `web-editor` sandbox pages.
+### Providers a host must supply
+
+`TranslationBubbleMenu` needs a `NavigationProvider` above it, for
+`EndNoteSelector`. The stack does not mount one itself: `web-main` already does
+through `EditorContextProvider`, and a nested provider would shadow it with a
+different work. `NavigationProvider` is re-exported from this subpath so a host
+does not have to import the main `lib-editing` barrel as well — importing both
+loads yjs through two entry points, which is what produces "Yjs was already
+imported. This breaks constructor checks".
+
+A missing provider does **not** announce itself. `NavigationContext` is created
+with a complete default object, so the menu renders and every one of its
+controls opens; what the defaults hand out is `uuid: ''` and stubs that throw
+only when invoked. Verified in a browser both ways. See
+`.harness/decisions/2026-09-02-navigation-context-degrades-it-does-not-throw.md`,
+which corrects the mechanism described in the earlier
+`2026-08-19-sandbox-editors-lack-editor-providers` note.

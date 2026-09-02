@@ -292,10 +292,18 @@ export class PassageStackController {
         this.keyBuffer = '';
       }
     }
+
+    // The shared editing surfaces bind to `getFocusedEditor()`, which is null
+    // until the editor registers. Focusing a passage renders its row as an
+    // editor, the editor mounts and lands here — without this the menu is
+    // still holding the null it was rendered with and never appears.
+    if (this.focusedUuid === uuid) this.bump();
   }
 
   unregisterEditor(uuid: string) {
     this.editors.delete(uuid);
+    // Same reason in reverse: a surface bound to this editor has to let go.
+    if (this.focusedUuid === uuid) this.bump();
   }
 
   getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
@@ -322,11 +330,29 @@ export class PassageStackController {
     if (this.pendingFocus) this.keyBuffer += key;
   }
 
-  /** Recenter the live window when an editor gains focus by any means. */
+  /**
+   * Recenter the live window when an editor gains focus by any means.
+   *
+   * Bumps on a change of focus, not only on a change of live set. The shared
+   * bubble menu is bound to whichever editor has focus, so it has to re-render
+   * when focus moves between two passages that are both already live — which
+   * `recenterLive` alone would not report.
+   */
   notifyFocused(uuid: string) {
+    const changed = this.focusedUuid !== uuid;
     this.focusedUuid = uuid;
     this.recenterLive(uuid);
+    if (changed) this.bump();
   }
+
+  /**
+   * The editor that currently has focus, if it is mounted.
+   *
+   * What the shared editing surfaces bind to: only one passage is editable at a
+   * time, so a bubble menu per row would be a popover per row watching nothing.
+   */
+  getFocusedEditor = (): Editor | null =>
+    this.focusedUuid ? this.editors.get(this.focusedUuid) ?? null : null;
 
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
     const index = this.getOrder().indexOf(uuid);

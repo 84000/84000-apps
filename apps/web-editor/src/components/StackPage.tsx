@@ -4,6 +4,7 @@ import { H3 } from '@eightyfourthousand/design-system';
 import {
   AnnotationDTO,
   Passage,
+  type TohokuCatalogEntry,
   annotationsFromDTO,
   createBrowserClient,
   getAnnotationsByPassageUuids,
@@ -17,6 +18,7 @@ import {
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import {
+  NavigationProvider,
   PassageStack,
   PassageStackController,
   PerfHUD,
@@ -266,13 +268,33 @@ export const StackPage = ({
   }
 
   return (
-    <div className="h-[calc(100dvh-5rem)] w-full">
-      <PassageStack
-        controller={controller}
-        className="h-full"
-        overscan={overscan}
-      />
-      <PerfHUD controller={controller} />
-    </div>
+    /*
+      `NavigationProvider` is here for the bubble menu's `EndNoteSelector`,
+      which reads `{ uuid, updatePanel, fetchEndNote }` off `useNavigation()`.
+
+      Needed for *use*, not for render: `NavigationContext` has a full default
+      object, so every selector opens without it — verified in a browser, both
+      ways. What the defaults give are `uuid: ''`, so an endnote search would
+      look in an empty work, and `fetchEndNote`/`updatePanel` that throw "Not
+      implemented" when a result is chosen.
+
+      The work uuid is only known once the work resolves, which is why this is
+      not in the route. `EndNoteSelector` also reads `EditorProvider`'s
+      context, whose defaults degrade silently rather than throw — that one is
+      slice 5's concern, since the stack replaces that provider.
+    */
+    <NavigationProvider
+      uuid={controller.work.workUuid}
+      initialToh={toh as TohokuCatalogEntry}
+    >
+      <div className="h-[calc(100dvh-5rem)] w-full">
+        <PassageStack
+          controller={controller}
+          className="h-full"
+          overscan={overscan}
+        />
+        <PerfHUD controller={controller} />
+      </div>
+    </NavigationProvider>
   );
 };
