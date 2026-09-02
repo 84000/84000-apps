@@ -36,6 +36,16 @@ export type PassageStackControllerOptions = {
   work: WorkDocument;
   /** Character counts by passage uuid, for estimating unhydrated row heights. */
   charCounts?: Iterable<readonly [string, number]>;
+  /**
+   * Grows the spine as the reader approaches the end of it.
+   *
+   * Optional: a caller holding a complete spine already — the scale harness,
+   * and tests — passes none, and the stack simply never asks for more.
+   */
+  spineFeed?: {
+    hasMore: boolean;
+    maybeExtend: (visibleEnd: number) => boolean;
+  };
 };
 
 /**
@@ -77,12 +87,15 @@ export class PassageStackController {
   private hydrating = false;
   private hydrationQueued = false;
 
+  private spineFeed?: PassageStackControllerOptions['spineFeed'];
+
   private listeners = new Set<() => void>();
   private version = 0;
   private disposers: (() => void)[] = [];
 
   constructor(options: PassageStackControllerOptions) {
     this.work = options.work;
+    this.spineFeed = options.spineFeed;
     if (options.charCounts) {
       this.charCounts = new Map(options.charCounts);
     }
@@ -218,8 +231,14 @@ export class PassageStackController {
       return;
     }
     this.visibleRange = range;
+    // The spine is only as long as the pages fetched so far, so approaching its
+    // end has to pull the next one before there is anything to hydrate.
+    this.spineFeed?.maybeExtend(range.end);
     void this.runHydration();
   };
+
+  /** Whether the work has passages the spine has not loaded yet. */
+  hasMorePassages = () => this.spineFeed?.hasMore ?? false;
 
   private async runHydration() {
     if (this.hydrating) {

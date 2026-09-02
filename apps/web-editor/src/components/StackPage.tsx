@@ -14,15 +14,22 @@ import {
   PassageLoader,
   type PassageSnapshot,
   type PassageSource,
+  type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import {
   PassageStack,
   PassageStackController,
   PerfHUD,
   StackPassageSeed,
+  SpineFeed,
+  createStackWork,
   createStackWorkDocument,
   stackSeedFromPassage,
 } from '@eightyfourthousand/lib-editing/stack';
+import {
+  createGraphQLClient,
+  getTranslationMetadataByToh,
+} from '@eightyfourthousand/client-graphql';
 import { useEffect, useMemo, useState } from 'react';
 
 const PAGE_SIZE = 1000;
@@ -147,7 +154,9 @@ export const StackPage = ({
   repeat?: number;
   overscan?: number;
 }) => {
-  const [seeds, setSeeds] = useState<StackPassageSeed[] | null>(null);
+  const [controller, setController] = useState<PassageStackController | null>(
+    null,
+  );
   const [failed, setFailed] = useState(false);
 
   // Clear the previous stack as soon as the inputs change, rather than in the
@@ -157,41 +166,78 @@ export const StackPage = ({
   const [prevLoadKey, setPrevLoadKey] = useState(loadKey);
   if (loadKey !== prevLoadKey) {
     setPrevLoadKey(loadKey);
-    setSeeds(null);
+    setController(null);
     setFailed(false);
   }
 
   useEffect(() => {
     let cancelled = false;
 
-    loadPassages(toh).then((passages) => {
-      if (cancelled) return;
-      if (!passages.length) {
+    // Two paths on purpose. The default one is production's: resolve the work,
+    // seed the spine from the API, and let the stack hydrate windows through
+    // the loader. `?repeat=N` keeps the DEV-706 scale harness, which clones
+    // passages in memory to simulate a longer text — the server cannot serve
+    // passages it does not have, so those must come from an in-memory source.
+    const build = async (): Promise<PassageStackController | null> => {
+      if (repeat > 1) {
+        const passages = await loadPassages(toh);
+        if (!passages.length) return null;
+        const seeds = repeatPassages(passages, repeat).map(
+          stackSeedFromPassage,
+        );
+        const work = createStackWorkDocument({
+          workUuid: `sandbox-${toh}`,
+          loader: new PassageLoader({ sources: [seedSource(seeds)] }),
+        });
+        work.seedSpine(seeds.map((seed) => seed.meta));
+        return new PassageStackController({
+          work,
+          charCounts: seeds.map(
+            (seed) => [seed.meta.uuid, seed.charCount] as const,
+          ),
+        });
+      }
+
+      const client = createGraphQLClient();
+      const found = await getTranslationMetadataByToh({ client, toh });
+      if (!found) {
+        console.error(`no work found for ${toh}`);
+        return null;
+      }
+
+      const work: WorkDocument = createStackWork({
+        workUuid: found.uuid,
+        client,
+      });
+      // The spine starts as a prefix and grows as the reader reaches its end.
+      // Seeding it whole would be one request per hundred passages, and the
+      // largest works in production run to about 16,000.
+      const spineFeed = new SpineFeed(work, client);
+      const count = await spineFeed.seed();
+      if (!count) {
+        console.error(`work ${found.uuid} has no passages`);
+        return null;
+      }
+
+      return new PassageStackController({ work, spineFeed });
+    };
+
+    build().then((built) => {
+      if (cancelled) {
+        built?.destroy();
+        return;
+      }
+      if (!built) {
         setFailed(true);
         return;
       }
-      setSeeds(repeatPassages(passages, repeat).map(stackSeedFromPassage));
+      setController(built);
     });
 
     return () => {
       cancelled = true;
     };
   }, [toh, repeat]);
-
-  const controller = useMemo(() => {
-    if (!seeds) return null;
-    const work = createStackWorkDocument({
-      workUuid: `sandbox-${toh}`,
-      loader: new PassageLoader({ sources: [seedSource(seeds)] }),
-    });
-    work.seedSpine(seeds.map((seed) => seed.meta));
-    return new PassageStackController({
-      work,
-      charCounts: seeds.map(
-        (seed) => [seed.meta.uuid, seed.charCount] as const,
-      ),
-    });
-  }, [seeds, toh]);
 
   useEffect(() => {
     if (!controller) return;

@@ -6,7 +6,7 @@ import { PassageStackController } from './PassageStackController';
 
 const passageUuidFor = (node: Node | null): string | null => {
   const element =
-    node instanceof Element ? node : node?.parentElement ?? null;
+    node instanceof Element ? node : (node?.parentElement ?? null);
   return (
     element?.closest<HTMLElement>('[data-stack-passage]')?.dataset[
       'stackPassage'
