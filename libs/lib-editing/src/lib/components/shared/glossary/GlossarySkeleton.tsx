@@ -1,4 +1,4 @@
-import { Skeleton } from '@eightyfourthousand/design-system';
+import { Skeleton, SkeletonGroup } from '@eightyfourthousand/design-system';
 
 /**
  * Skeleton that mimics the shape of a glossary entry:
@@ -6,14 +6,14 @@ import { Skeleton } from '@eightyfourthousand/design-system';
  */
 export const GlossarySkeleton = () => {
   return (
-    <div className="flex gap-3 -ms-5">
-      <Skeleton className="h-4 w-6" />
+    <SkeletonGroup className="flex gap-3 -ms-5">
+      <Skeleton className="h-4 w-6 animate-none" />
       <div className="flex flex-col gap-1.5 grow">
-        <Skeleton className="h-5 w-40" />
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-10 w-full mt-1" />
+        <Skeleton className="h-5 w-40 animate-none" />
+        <Skeleton className="h-4 w-32 animate-none" />
+        <Skeleton className="h-4 w-28 animate-none" />
+        <Skeleton className="h-10 w-full mt-1 animate-none" />
       </div>
-    </div>
+    </SkeletonGroup>
   );
 };
