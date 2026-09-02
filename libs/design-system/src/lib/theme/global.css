@@ -4,6 +4,35 @@
 @import './components.css';
 @source '../**/*.{ts,tsx}';
 
+/*
+ * WebKit: do not animate loading placeholders.
+ *
+ * A running CSS animation during a large DOM subtree replacement can wedge
+ * WebKit's main thread permanently — the page still scrolls, because that runs
+ * on the compositor, but stops responding to input, logs nothing and issues no
+ * requests. Skeletons are the worst case because they mount exactly while a
+ * subtree is being rebuilt. Removing the animation is the only thing that
+ * cleared it; pausing it was not enough, so it is the animation's presence
+ * rather than its running state. See DEV-768.
+ *
+ * `-webkit-hyphens` is implemented by WebKit and by no other engine, so this
+ * matches Safari and every iOS browser (all of which are WebKit) while leaving
+ * Blink and Gecko untouched. Feature-tested across all three engines rather
+ * than sniffed from the user agent, which would miss Chrome and Firefox on iOS.
+ *
+ * Written as a plain attribute rule, NOT a Tailwind variant, on purpose. This
+ * file ships to consumers as source and each app runs Tailwind over it, but the
+ * `@source` glob above resolves inside node_modules where this package ships
+ * `.js`, not `.tsx` — so Tailwind never sees class usage from within the
+ * package and would silently drop a `webkit:animate-none` utility. An attribute
+ * selector needs no scanning to survive.
+ */
+@supports (-webkit-hyphens: none) {
+  [data-skeleton] {
+    animation: none;
+  }
+}
+
 @layer base {
   :root {
     --white: oklch(1 0 0);
