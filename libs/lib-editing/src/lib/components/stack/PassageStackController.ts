@@ -1,6 +1,5 @@
 import { Editor, Extensions } from '@tiptap/core';
 import { Selection } from '@tiptap/pm/state';
-import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -10,12 +9,8 @@ import type {
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
-import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
-import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
-import {
-  buildStackEditorExtensions,
-  buildStackSchemaExtensions,
-} from './stack-extensions';
+import { renderTranslationHTML } from '../reader/translation-html';
+import { buildStackEditorExtensions } from './stack-extensions';
 import type {
   StackCrossSelection,
   StackFocusTarget,
@@ -185,6 +180,16 @@ export class PassageStackController {
    * genuinely no content to draw, and the row shows a skeleton at its
    * estimated height instead. The prototype never had this case because it
    * held every passage in memory, which is exactly what does not scale.
+   *
+   * Rendered through the reader's own renderer, not the stack's schema set.
+   * Static rendering needs the `*.ssr` variant of every extension whose
+   * interactive form draws through a React node view, plus the `endNoteLink`
+   * mark mapping — rendering with the schema set silently dropped endnote
+   * markers from every static row while the editor showed them. The schema set
+   * is for parsing; this is for drawing, and they are not the same list.
+   *
+   * Cached per passage because the render is not cheap and a row re-renders on
+   * every controller bump. Invalidated by `wire`'s content observer.
    */
   getStaticHTML = (uuid: string): string | null => {
     const cached = this.staticHTML.get(uuid);
@@ -193,22 +198,8 @@ export class PassageStackController {
     const doc = this.work.store.peek(uuid);
     if (!doc) return null;
 
-    let html = '';
-    try {
-      html = renderToHTMLString({
-        content: doc.toJSON(),
-        extensions: buildStackSchemaExtensions(),
-        options: {
-          nodeMapping: {
-            mention: renderMentionToHTMLString,
-            text: renderTextToHTMLString,
-          },
-        },
-      });
-    } catch (error) {
-      console.error('failed to statically render passage', error);
-      html = `<p>${doc.text}</p>`;
-    }
+    const html =
+      renderTranslationHTML({ content: doc.toJSON() }) ?? `<p>${doc.text}</p>`;
     this.staticHTML.set(uuid, html);
     return html;
   };

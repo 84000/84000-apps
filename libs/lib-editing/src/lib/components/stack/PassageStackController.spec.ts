@@ -254,3 +254,62 @@ describe('PassageStackController structural ops', () => {
     expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
   });
 });
+
+describe('PassageStackController static rendering', () => {
+  /** A passage whose text carries an endnote-link mark, as the exporters make it. */
+  const withEndNote = (): StackPassageSeed => ({
+    meta: { uuid: 'p0', label: '1', type: 'translation' },
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { uuid: 'para-1' },
+        content: [
+          {
+            type: 'text',
+            text: 'scripture',
+            marks: [
+              {
+                type: 'endNoteLink',
+                attrs: {
+                  uuid: 'mark-1',
+                  notes: [
+                    {
+                      uuid: 'note-1',
+                      endNote: 'en-1',
+                      label: '1',
+                      location: 'end',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    charCount: 9,
+  });
+
+  // Regression: the static tier used to render with the stack's *schema* set,
+  // whose extensions draw through React node views that produce nothing to a
+  // string. Endnote markers were absent from every static row while the editor
+  // showed them, and internal links rendered differently. Static rendering goes
+  // through the reader's own renderer, which carries the `*.ssr` variants and
+  // the endNoteLink mark mapping.
+  it('renders endnote markers in a static row, as the reader does', async () => {
+    const all = [withEndNote()];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const html = controller.getStaticHTML('p0');
+    expect(html).toContain('class="end-note-link"');
+    expect(html).toContain('endNote="en-1"');
+  });
+});

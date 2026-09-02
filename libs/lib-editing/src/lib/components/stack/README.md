@@ -16,11 +16,20 @@ each extension can assume. Two lists, and the split between them is load
 bearing:
 
 - **`buildStackSchemaExtensions`** — nodes, marks and attributes. This is what
-  `getSchema` feeds to `PassageDoc` for parsing and to `renderToHTMLString` for
-  static rows, so it runs in contexts with no editor and no view. Only
-  schema-contributing extensions belong here.
+  `getSchema` feeds to `PassageDoc`, so it governs how content is **parsed**.
+  Only schema-contributing extensions belong here.
 - **`buildStackEditorExtensions`** — the schema set plus commands, plugins and
   the Yjs binding. Mounted per live editor.
+
+Static rows are **not** rendered from either list. They go through
+`renderTranslationHTML`, the reader's own renderer, because drawing needs a
+different set from parsing: the `*.ssr` variant of every extension whose
+interactive form draws through a React node view (a node view renders nothing
+to a string), plus the `endNoteLink` mark mapping, which is the only thing that
+emits its markers at all. Rendering static rows from the schema set dropped
+endnote markers from every row while the editor showed them, and rendered
+internal links differently — parity with read-only mode is by construction now
+rather than by keeping two lists in step.
 
 ### Differences from the production set
 
