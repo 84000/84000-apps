@@ -19,6 +19,7 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 import {
   NavigationProvider,
+  useStackTohVisibility,
   PassageStack,
   PassageStackController,
   PerfHUD,
@@ -147,6 +148,40 @@ const seedSource = (seeds: StackPassageSeed[]): PassageSource => {
   };
 };
 
+/**
+ * The stack, plus the two things a host owes it around toh.
+ *
+ * `web-main` gets both from `LeftPanel`; this sandbox has no left panel, so it
+ * does them here: install the visibility rule, and settle on a default toh so
+ * one is always active. Without the rule every toh-scoped annotation shows at
+ * once — two endnote markers numbered 10, one per Tohoku text.
+ *
+ * The active toh itself comes from `NavigationProvider`, which already reads
+ * `?toh=` and falls back to the `initialToh` it was given.
+ */
+const StackBody = ({
+  controller,
+  overscan,
+  tohList,
+}: {
+  controller: PassageStackController;
+  overscan?: number;
+  tohList: TohokuCatalogEntry[];
+}) => {
+  useStackTohVisibility({ tohList });
+
+  return (
+    <div className="h-[calc(100dvh-5rem)] w-full">
+      <PassageStack
+        controller={controller}
+        className="h-full"
+        overscan={overscan}
+      />
+      <PerfHUD controller={controller} />
+    </div>
+  );
+};
+
 export const StackPage = ({
   toh,
   repeat = 1,
@@ -159,6 +194,11 @@ export const StackPage = ({
   const [controller, setController] = useState<PassageStackController | null>(
     null,
   );
+  // The work's Tohoku entries, for choosing a default when neither the route
+  // nor `?toh=` names one. The route's own toh is the sensible first guess.
+  const [tohList, setTohList] = useState<TohokuCatalogEntry[]>([
+    toh as TohokuCatalogEntry,
+  ]);
   const [failed, setFailed] = useState(false);
 
   // Clear the previous stack as soon as the inputs change, rather than in the
@@ -206,6 +246,8 @@ export const StackPage = ({
         console.error(`no work found for ${toh}`);
         return null;
       }
+
+      if (found.toh?.length) setTohList(found.toh);
 
       const work: WorkDocument = createStackWork({
         workUuid: found.uuid,
@@ -287,14 +329,11 @@ export const StackPage = ({
       uuid={controller.work.workUuid}
       initialToh={toh as TohokuCatalogEntry}
     >
-      <div className="h-[calc(100dvh-5rem)] w-full">
-        <PassageStack
-          controller={controller}
-          className="h-full"
-          overscan={overscan}
-        />
-        <PerfHUD controller={controller} />
-      </div>
+      <StackBody
+        controller={controller}
+        overscan={overscan}
+        tohList={tohList}
+      />
     </NavigationProvider>
   );
 };

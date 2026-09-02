@@ -86,6 +86,23 @@ present. The rendering half — `data-toh`, which the reader's toh-visibility ru
 reads — is asserted through `renderTranslationHTML`, the path a static row
 actually takes.
 
+### Toh visibility a host must supply
+
+A work may span several Tohoku texts — toh145's spans four — and annotations
+carry a `toh` scope. Something has to install the visibility rule that hides
+the inactive ones, or every scope shows at once: two endnote markers numbered
+10, one for toh145 and one for toh847, both visible.
+
+`web-main` gets that from `LeftPanel`. A host without that panel calls
+`useStackTohVisibility({ tohList })`, which installs the rule and settles on a
+default so one toh is always active. The active toh itself comes from
+`NavigationProvider`, which already reads `?toh=` and falls back to its
+`initialToh`.
+
+The stack does not do this unprompted: with no `NavigationProvider` above it the
+active toh would be `undefined`, and the rule for that hides *all* scoped
+markup — worse than doing nothing.
+
 ### Providers a host must supply
 
 `TranslationBubbleMenu` needs a `NavigationProvider` above it, for
