@@ -1,16 +1,21 @@
 import { getSchema } from '@tiptap/core';
 import { EditorState, PluginKey, Selection } from '@tiptap/pm/state';
-import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
 import { Doc } from 'yjs';
-import { ANNOTATION_TOH_TYPES } from '@eightyfourthousand/lib-doc-model';
+import {
+  ANNOTATION_TOH_TYPES,
+  PassageLoader,
+  type PassageSource,
+} from '@eightyfourthousand/lib-doc-model';
 
 import { slashCommandPluginKey } from '../editor/extensions/SlashCommand/SlashCommand';
 import { mentionSuggestionPluginKey } from '../editor/extensions/Mention/MentionSuggestion';
+import { renderTranslationHTML } from '../reader/translation-html';
 import { BoundaryKeymap } from './BoundaryKeymap';
 import {
   buildStackEditorExtensions,
   buildStackSchemaExtensions,
 } from './stack-extensions';
+import { createStackWorkDocument } from './stack-work';
 import type { StackKeyboardDelegate } from './types';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
@@ -65,30 +70,18 @@ describe('stack schema extensions', () => {
     expect(missing).toEqual([]);
   });
 
-  // `AnnotationToh` is not what carries a toh scope — `TranslationMetadata`
-  // already declares `toh` on every type, so the value round-trips without it.
-  // What it adds is the rendered `data-toh`, which is the attribute the
-  // reader's toh-visibility rule reads. Without it a passage scoped to an
-  // inactive Tohoku text renders `toh=` in the static tier and cannot be
-  // hidden.
-  it('renders a toh scope as data-toh in the static tier', () => {
-    const html = renderToHTMLString({
-      content: {
-        type: 'doc',
-        content: [
-          {
-            type: 'paragraph',
-            attrs: { uuid: 'a', toh: 'toh417' },
-            content: [{ type: 'text', text: 'scoped' }],
-          },
-        ],
-      },
-      extensions: buildStackSchemaExtensions(),
-    });
-
-    expect(html).toContain('data-toh="toh417"');
-  });
-
+  // `AnnotationToh` is the *intentional* declaration of the toh attribute,
+  // tied to `ANNOTATION_TOH_TYPES` — which is why `translationSSRExtensions`
+  // carries it and no `TranslationMetadata`. In this list it is belt and
+  // braces: `TranslationMetadata` declares `toh` on every type as a side
+  // effect of declaring uuid/type/invalid, so retention does not depend on
+  // it. Verified both ways — see the round trip below, which passes with and
+  // without it. Kept so that dropping `TranslationMetadata` from this list
+  // could not silently take toh scopes with it.
+  //
+  // Note this list is *not* what renders a static row; that is
+  // `renderTranslationHTML`, which brings its own. Asserting `data-toh` here
+  // would be testing a path nothing uses.
   it('carries no editor-only commands, so parsing cannot depend on them', () => {
     const list = names(buildStackSchemaExtensions());
 
@@ -378,5 +371,66 @@ describe('BoundaryKeymap Enter and Backspace', () => {
 
     expect(shortcuts(delegate)['Backspace']({ editor })).toBe(false);
     expect(calls).toEqual([]);
+  });
+});
+
+describe('stack toh round trip', () => {
+  const source = (content: unknown): PassageSource => ({
+    name: 'test',
+    loadPassages: async (_workUuid, uuids) =>
+      uuids.map((uuid) => ({ uuid, content: content as never })),
+  });
+
+  const scopedPassage = [
+    {
+      type: 'paragraph',
+      attrs: { uuid: 'para-1' },
+      content: [
+        {
+          type: 'text',
+          text: 'scoped',
+          marks: [{ type: 'italic', attrs: { uuid: 'mark-1', toh: 'toh417' } }],
+        },
+      ],
+    },
+  ];
+
+  /**
+   * The concern DEV-757 fixed: `passage_annotations.toh` was stripped from
+   * every annotation on the first save of its passage. The stack materializes
+   * rows through the same exporters, so it has to keep the scope too — this is
+   * the assertion that matters, rather than anything about how it renders.
+   */
+  it('keeps an annotation toh scope through hydrate and materialize', async () => {
+    const work = createStackWorkDocument({
+      workUuid: 'w1',
+      loader: new PassageLoader({
+        sources: [source(scopedPassage)],
+        buffer: 0,
+      }),
+    });
+    work.seedSpine([{ uuid: 'p0', label: '1', type: 'translation' }]);
+    await work.hydrateWindow({ start: 0, end: 1 });
+
+    const passage = work.store
+      .peek('p0')
+      ?.toPassage({ label: '1', sort: 0, type: 'translation' });
+
+    const span = passage?.annotations.find((a) => a.type === 'span');
+    expect(span).toBeDefined();
+    expect((span as { toh?: string[] }).toh).toEqual(['toh417']);
+  });
+
+  /**
+   * And the rendering half, through the path a static row actually uses.
+   * `data-toh` is what the reader's toh-visibility rule reads, so without it a
+   * passage scoped to an inactive Tohoku text cannot be hidden.
+   */
+  it('renders a toh scope as data-toh through the static row renderer', () => {
+    const html = renderTranslationHTML({
+      content: { type: 'doc', content: scopedPassage },
+    });
+
+    expect(html).toContain('data-toh="toh417"');
   });
 });

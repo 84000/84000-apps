@@ -37,7 +37,7 @@ rather than by keeping two lists in step.
 |---|---|---|
 | `TranslationDocument` → `StackDocument` | schema | A passage's children *are* the document. Its top node is `block+`. |
 | `PassageNode` | absent | Passage identity (uuid, label, sort, type, toh) lives in the spine, not in a wrapping node. Its `splitPassage` / `normalizeLabelsAfter` commands become `WorkDocument.split` and spine renumbering. |
-| `AnnotationToh` | schema | Not what carries a toh scope — `TranslationMetadata` already declares `toh` on every type. It renders `data-toh`, which is the attribute the reader's toh-visibility rule reads; without it a passage scoped to an inactive Tohoku text cannot be hidden in the static tier. |
+| `AnnotationToh` | schema | The intentional declaration of the `toh` attribute, tied to `ANNOTATION_TOH_TYPES` — which is why `translationSSRExtensions` carries it and no `TranslationMetadata`. Belt and braces in this list: `TranslationMetadata` declares `toh` on every type as a side effect of declaring uuid/type/invalid, so retention does not depend on it (verified both ways). Kept so dropping `TranslationMetadata` could not silently take toh scopes with it. |
 | `SlashCommand` | editor | A plugin, so it stays out of the schema. Its Passage item is rebuilt to route through the controller (see `passageSuggestionFor`). |
 | `AbbreviationCommand` | editor | Commands only. Needed because `AbbreviationSuggestion` calls `insertAbbreviation`; the two travel together. |
 | `GlobalConfig` | omitted | A debug flag in editor storage that nothing anywhere reads. Left out rather than carried for symmetry. |
@@ -75,6 +75,16 @@ the Backspace above misbehave in the first place.
 | `PassageMenuOverlay` | **Shared**, and no longer editor-driven: the label lives in `StackRow` outside the editor, so the trigger and the actions belong to the controller and the spine. |
 | `MentionAdvancedOverlay` | **Shared**, bound to whichever editor has focus. |
 | `DragHandle` | Not in the production translation set either. Out of scope. |
+
+### Annotation toh scopes
+
+DEV-757 fixed `passage_annotations.toh` being stripped from every annotation on
+the first save of its passage. The stack materializes rows through the same
+exporters, so the scope has to survive hydrate → edit → materialize; that round
+trip is asserted directly rather than inferred from which extensions are
+present. The rendering half — `data-toh`, which the reader's toh-visibility rule
+reads — is asserted through `renderTranslationHTML`, the path a static row
+actually takes.
 
 ### Providers a host must supply
 
