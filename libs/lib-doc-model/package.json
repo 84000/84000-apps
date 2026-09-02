@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-doc-model",
-  "version": "2026.8.1",
+  "version": "2026.9.0",
   "description": "Per-passage Yjs document model, work spine, structural operations, and row exporters for 84000 translations.",
   "private": false,
   "repository": {
@@ -17,7 +17,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/data-access": "^2026.8.1",
+    "@eightyfourthousand/data-access": "^2026.9.0",
     "@tiptap/core": "^3.23.6",
     "@tiptap/pm": "^3.23.6",
     "uuid": "^14.0.0",
