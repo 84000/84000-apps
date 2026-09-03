@@ -196,7 +196,10 @@ export const PassageStack = ({
               key={item.key}
               data-index={item.index}
               ref={virtualizer.measureElement}
-              className="absolute left-0 top-0 w-full px-8"
+              // `pl-4` rather than `px-8`: `StackRow` owns a 4rem label
+              // gutter now, and the two together leave the text column where
+              // the flex gutter had it.
+              className="absolute left-0 top-0 w-full pl-4 pr-8"
               style={{ transform: `translateY(${item.start}px)` }}
             >
               {asEditor ? (
