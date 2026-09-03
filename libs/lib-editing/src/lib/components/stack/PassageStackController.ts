@@ -48,6 +48,14 @@ export type PassageStackControllerOptions = {
   };
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;
+  /**
+   * Names this view's hydration window on the work.
+   *
+   * Views over one work scroll independently, and the work hydrates the union
+   * of their windows — so two controllers sharing a key would release each
+   * other's documents, which is the whole thing the key prevents.
+   */
+  windowKey?: string;
 };
 
 /**
@@ -104,6 +112,7 @@ export class PassageStackController {
   /** In-flight reveals, so a remount does not fetch the same window twice. */
   private revealing = new Map<string, Promise<boolean>>();
   private readOnly: boolean;
+  private readonly windowKey: string;
   private bookmarks = new Set<string>();
 
   private listeners = new Set<() => void>();
@@ -114,6 +123,7 @@ export class PassageStackController {
     this.work = options.work;
     this.spineFeed = options.spineFeed;
     this.readOnly = options.readOnly ?? false;
+    this.windowKey = options.windowKey ?? 'default';
     this.readBookmarks();
     if (options.charCounts) {
       this.charCounts = new Map(options.charCounts);
@@ -301,6 +311,7 @@ export class PassageStackController {
         // would leave it bound to a destroyed fragment.
         const docs = await this.work.hydrateWindow(this.visibleRange, {
           keep: this.liveUuids,
+          key: this.windowKey,
         });
         docs.forEach((doc) => this.wire(doc));
       } while (this.hydrationQueued);
@@ -777,6 +788,9 @@ export class PassageStackController {
 
   /** Release the controller's own listeners. The work outlives it. */
   destroy() {
+    // The work outlives this view, so its window has to be given back or the
+    // documents only it was holding are pinned for good.
+    this.work.releaseWindow(this.windowKey);
     this.wiring.forEach((teardown) => teardown());
     this.wiring.clear();
     this.disposers.forEach((dispose) => dispose());
