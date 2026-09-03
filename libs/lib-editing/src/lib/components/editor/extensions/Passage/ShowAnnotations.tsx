@@ -8,11 +8,10 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '@eightyfourthousand/design-system';
-import type { Editor } from '@tiptap/core';
+import type { JSONContent } from '@tiptap/core';
 import { useNavigation } from '../../../shared';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Passage } from '@eightyfourthousand/data-access';
-import { findPassageNode } from '../../util';
 
 const CodeBlock = ({ code }: { code: string }) => {
   return (
@@ -24,26 +23,26 @@ const CodeBlock = ({ code }: { code: string }) => {
   );
 };
 
+/**
+ * `json` rather than an editor: the paginated editor finds the passage node in
+ * one big document, the stack holds a document per passage, and the dialog only
+ * ever wanted the node.
+ */
 export const ShowAnnotations = ({
-  editor,
   uuid,
   label,
   type,
+  json,
 }: {
-  editor: Editor;
   uuid: string;
   label: string;
   type: string;
+  json: JSONContent | null;
 }) => {
   const [passage, setPassage] = useState<Passage>();
   const [toggleValue, setToggleValue] = useState<string[]>(['db', 'editor']);
 
   const { fetchPassage } = useNavigation();
-
-  const nodeJson = useMemo(() => {
-    const found = findPassageNode(editor, uuid);
-    return found ? found.node.toJSON() : null;
-  }, [editor, uuid]);
 
   useEffect(() => {
     if (passage) {
@@ -98,7 +97,7 @@ export const ShowAnnotations = ({
           ))}
 
         {toggleValue.includes('editor') && (
-          <CodeBlock code={JSON.stringify(nodeJson, null, 2)} />
+          <CodeBlock code={JSON.stringify(json, null, 2)} />
         )}
       </div>
     </DialogContent>

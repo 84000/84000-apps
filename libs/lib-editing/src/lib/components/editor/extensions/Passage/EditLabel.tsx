@@ -7,18 +7,20 @@ import {
   DialogTitle,
   Input,
 } from '@eightyfourthousand/design-system';
-import type { Editor } from '@tiptap/core';
 import { ChangeEvent, useCallback, useState } from 'react';
 
+/**
+ * `onSave` rather than an editor and a uuid: a label is an editor command in
+ * the paginated editor and a spine write in the passage stack, and the dialog
+ * has no reason to know which.
+ */
 export const EditLabel = ({
-  editor,
-  uuid,
   label,
+  onSave,
   close,
 }: {
-  editor: Editor;
-  uuid: string;
   label: string;
+  onSave: (label: string) => void;
   close: () => void;
 }) => {
   const [newLabel, setNewLabel] = useState(label || '');
@@ -27,9 +29,9 @@ export const EditLabel = ({
   };
 
   const save = useCallback(() => {
-    editor.commands.setPassageLabel(uuid, newLabel);
+    onSave(newLabel);
     close();
-  }, [editor, uuid, newLabel, close]);
+  }, [onSave, newLabel, close]);
 
   return (
     <DialogContent className="sm:max-w-lg">
