@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { BookmarkIcon } from 'lucide-react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
 import { PASSAGE_CONTENT_CLASS } from '../editor/extensions/Passage/classes';
@@ -25,11 +26,13 @@ const STACK_LABEL_CLASS =
 export const StackRow = ({
   uuid,
   label,
+  bookmarked,
   className,
   children,
 }: {
   uuid: string;
   label: string;
+  bookmarked?: boolean;
   className?: string;
   children: ReactNode;
 }) => (
@@ -48,6 +51,13 @@ export const StackRow = ({
     >
       {label}
     </div>
+    {bookmarked && (
+      // Indicator only. Without this a click would focus the passage, which
+      // the label above it deliberately does not do either.
+      <div className="pointer-events-none absolute left-0.25 top-6 flex w-16 justify-end">
+        <BookmarkIcon className="size-3 text-accent" fill="currentColor" />
+      </div>
+    )}
     <div className={cn(PASSAGE_CONTENT_CLASS, className)}>{children}</div>
   </div>
 );

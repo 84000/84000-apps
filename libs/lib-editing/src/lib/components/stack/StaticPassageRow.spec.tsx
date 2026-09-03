@@ -27,14 +27,28 @@ const source = (): PassageSource => ({
     })),
 });
 
-const build = () => {
+const build = (readOnly = false) => {
   const work = createStackWorkDocument({
     workUuid: 'work-1',
     loader: new PassageLoader({ sources: [source()], buffer: 0 }),
   });
   work.seedSpine([{ uuid: 'p0', label: '1', type: 'translation' }]);
-  return new PassageStackController({ work });
+  return new PassageStackController({ work, readOnly });
 };
+
+const meta = {
+  uuid: 'p0',
+  label: '1',
+  type: 'translation',
+  panel: 'main',
+  tab: 'translation',
+} as const;
+
+const bookmark = (uuid: string) =>
+  localStorage.setItem(
+    'library',
+    JSON.stringify([{ type: 'passage', tab: '', uuid, label: '1', body: '' }]),
+  );
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -115,5 +129,35 @@ describe('StaticPassageRow', () => {
     expect(label?.classList.contains('labeled')).toBe(true);
 
     expect(container.querySelector('.passage.is-editable')).not.toBeNull();
+  });
+
+  // Reader chrome: production paints it from `syncPassageChrome`, which shows
+  // it only when the editor is not editable.
+  describe('the bookmark indicator', () => {
+    afterEach(() => localStorage.clear());
+
+    it('marks a bookmarked passage in a read-only stack', () => {
+      bookmark('p0');
+      const { container } = render(
+        <StaticPassageRow controller={build(true)} meta={meta} />,
+      );
+      expect(container.querySelector('.lucide-bookmark')).not.toBeNull();
+    });
+
+    it('stays hidden in an editable stack', () => {
+      bookmark('p0');
+      const { container } = render(
+        <StaticPassageRow controller={build()} meta={meta} />,
+      );
+      expect(container.querySelector('.lucide-bookmark')).toBeNull();
+    });
+
+    it('stays hidden for a passage nobody bookmarked', () => {
+      bookmark('somewhere-else');
+      const { container } = render(
+        <StaticPassageRow controller={build(true)} meta={meta} />,
+      );
+      expect(container.querySelector('.lucide-bookmark')).toBeNull();
+    });
   });
 });

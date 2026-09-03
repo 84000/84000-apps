@@ -80,6 +80,15 @@ Two deliberate differences:
   which ProseMirror leaves out of a copied slice. Static rows are copied
   natively, so without this a drag across them picks up the labels.
 
+The bookmark indicator comes from the bookmark store rather than from an
+editor, and shows only when the controller is `readOnly` — the same condition
+as production's `!editable`, because a bookmark is a reader's marker and the
+studio has no way to make one. Bookmarks are local storage, so `PassageStack`
+listens for `storage` and has the controller re-read.
+
+`readOnly` is the seam the reader migration widens. Today it governs chrome and
+nothing else; the sandbox reaches it with `?readonly=1`.
+
 `StackPassageMenu` is the passage label menu. Production drives it from a
 ProseMirror click plugin matching `[data-passage-label]`; the trigger is an
 ordinary React click here, so `editor.storage.passage.openMenu`, the plugin and
@@ -96,7 +105,7 @@ Not carried over, and why:
 
 | | |
 | --- | --- |
-| The bookmark indicator, and `ReaderOptions` | Both are `!editable` chrome. The reader still runs on `TranslationEditor`; migrating it is a follow-up issue. |
+| `ReaderOptions` in the menu | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet. |
 | The references list | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past. |
 | The compare source column | Compare mode is DEV-743's, and its surface is undecided. |
 | `data-toh` on the row | The toh visibility rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset. Hiding one leaves a hole. Which passages a toh shows is a question about spine order, not about CSS. |

@@ -76,7 +76,11 @@ export const StackPassageEditor = memo(
     }, [editor, focused]);
 
     return (
-      <StackRow uuid={uuid} label={meta.label}>
+      <StackRow
+        uuid={uuid}
+        label={meta.label}
+        bookmarked={controller.showsBookmark(uuid)}
+      >
         <EditorContent editor={editor} />
       </StackRow>
     );

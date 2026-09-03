@@ -155,6 +155,13 @@ export const PassageStack = ({
     };
   }, [controller]);
 
+  // Bookmarks live in local storage; another tab changing them arrives here.
+  useEffect(() => {
+    const onStorage = () => controller.refreshBookmarks();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [controller]);
+
   // Keys typed between click and editor mount are buffered and replayed.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

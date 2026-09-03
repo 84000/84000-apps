@@ -5,15 +5,20 @@ const Page = async ({
   searchParams,
 }: {
   params: Promise<{ toh: string }>;
-  searchParams: Promise<{ repeat?: string; overscan?: string }>;
+  searchParams: Promise<{
+    repeat?: string;
+    overscan?: string;
+    readonly?: string;
+  }>;
 }) => {
   const { toh } = await params;
-  const { repeat, overscan } = await searchParams;
+  const { repeat, overscan, readonly } = await searchParams;
   return (
     <StackPage
       toh={toh}
       repeat={Number(repeat) || 1}
       overscan={Number(overscan) || undefined}
+      readOnly={readonly !== undefined && readonly !== 'false'}
     />
   );
 };
