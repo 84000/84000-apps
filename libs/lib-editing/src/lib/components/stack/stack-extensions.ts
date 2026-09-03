@@ -66,24 +66,6 @@ import type { StackKeyboardDelegate } from './types';
 
 /**
  * The schema half of the stack's extension set.
- *
- * The translation set minus everything that assumes one document per panel:
- * no `TranslationDocument`/`PassageNode`, because passage identity lives in the
- * spine rather than in a wrapping node, and no undo history — the stack routes
- * undo through its command log.
- *
- * *Schema* is the operative word: this list is what `getSchema` builds the
- * ProseMirror schema from, so it also governs how `PassageDoc` parses content
- * and how the static row tier renders it. Only extensions contributing nodes,
- * marks or attributes belong here; commands and plugins go in the editor set
- * below, where they cannot change how a document is parsed.
- *
- * `AnnotationToh` is here rather than there because it declares attributes. It
- * is not needed to *carry* a toh scope — `TranslationMetadata` already declares
- * `toh` on every type — but it is what renders `data-toh`, which is the
- * attribute the reader's toh-visibility rule reads. Without it the static tier
- * emits `toh=` and a passage scoped to an inactive Tohoku text cannot be
- * hidden.
  */
 export const buildStackSchemaExtensions = (): Extensions => [
   StackDocument,
@@ -125,26 +107,13 @@ export const buildStackSchemaExtensions = (): Extensions => [
   WordBreak,
   StarterKit.configure({
     ...STARTER_KIT_CONFIG,
-    // No trailing node: it exists only in live editors, so it would make a
-    // passage grow on focus and shift the rows below it. Gap cursor still
-    // allows insertion after a trailing table or line group.
     trailingNode: false,
     undoRedo: false,
   }),
 ];
 
 /**
- * The stack's replacement for the production "Passage" slash item.
- *
- * Production runs `splitPassage().normalizeLabelsAfter()`, both commands of the
- * `PassageNode` this model does not have. The split is a spine operation here,
- * so it goes through the controller and renumbering follows from the spine.
- *
- * One deliberate difference: production also does
- * `selectParentNode().deleteCurrentNode()` to drop the block the trigger was
- * typed into. A single-passage document's top node is `block+`, so deleting its
- * only block would leave it invalid; the split puts that block in the tail
- * instead, which is where the caret was going anyway.
+ * The stack's replacement for the translation schema's "Passage" slash item.
  */
 const passageSuggestionFor = (
   uuid: string,
@@ -172,8 +141,8 @@ export const buildStackEditorExtensions = ({
   delegate: StackKeyboardDelegate;
 }): Extensions => [
   ...buildStackSchemaExtensions(),
-  // Commands and plugins, kept out of the schema set so they cannot affect how
-  // a passage document is parsed or statically rendered.
+  // Commands and plugins are kept out of the schema set so they do not affect
+  // how a passage document is parsed or statically rendered.
   AbbreviationCommand,
   SlashCommand.configure({
     suggestion: getSuggestion([

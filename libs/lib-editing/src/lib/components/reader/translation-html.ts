@@ -1,18 +1,3 @@
-/**
- * Translation content as an HTML string.
- *
- * The one place that turns passage content into static HTML, shared by the
- * reader's `TranslationSSRContent` and the passage stack's static row tier.
- *
- * It has to be shared rather than reimplemented. Static rendering needs the
- * `*.ssr` variant of every extension whose interactive form draws through a
- * React node view — a node view renders nothing to a string — plus the
- * `endNoteLink` mark mapping, which is the only way its markers are emitted at
- * all. A second copy of that list silently loses whichever pieces it forgets:
- * the stack rendered with the interactive set and dropped endnote markers from
- * every static row, which is how this module came to exist.
- */
-
 import type { Extensions, JSONContent } from '@tiptap/core';
 import { getSchema } from '@tiptap/core';
 import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
@@ -92,12 +77,6 @@ const renderEndNoteLinkMark = ({
 
 type Content = JSONContent | JSONContent[];
 
-type Props = {
-  content: Content;
-  className?: string;
-  extensions?: Extensions;
-};
-
 const TOP_NODE_NAME = 'doc';
 const TOP_NODE_ALIASES = new Set([TOP_NODE_NAME, 'translation']);
 const BUILTIN_TYPES = new Set([TOP_NODE_NAME, 'text']);
@@ -155,11 +134,6 @@ export type TranslationHTMLContent = Content;
 /**
  * Render translation content to HTML, or return null when it cannot be
  * rendered.
- *
- * Null rather than a throw so a caller can fall back — the reader shows plain
- * text, and the stack shows the passage's text. In development an incomplete
- * extension set throws instead, because that is a coverage bug to fix rather
- * than degrade past.
  */
 export const renderTranslationHTML = ({
   content,

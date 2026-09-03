@@ -149,15 +149,7 @@ const seedSource = (seeds: StackPassageSeed[]): PassageSource => {
 };
 
 /**
- * The stack, plus the two things a host owes it around toh.
- *
- * `web-main` gets both from `LeftPanel`; this sandbox has no left panel, so it
- * does them here: install the visibility rule, and settle on a default toh so
- * one is always active. Without the rule every toh-scoped annotation shows at
- * once — two endnote markers numbered 10, one per Tohoku text.
- *
- * The active toh itself comes from `NavigationProvider`, which already reads
- * `?toh=` and falls back to the `initialToh` it was given.
+ * The main stack plus basic toh tracking and performance HUD.
  */
 const StackBody = ({
   controller,
@@ -310,21 +302,6 @@ export const StackPage = ({
   }
 
   return (
-    /*
-      `NavigationProvider` is here for the bubble menu's `EndNoteSelector`,
-      which reads `{ uuid, updatePanel, fetchEndNote }` off `useNavigation()`.
-
-      Needed for *use*, not for render: `NavigationContext` has a full default
-      object, so every selector opens without it — verified in a browser, both
-      ways. What the defaults give are `uuid: ''`, so an endnote search would
-      look in an empty work, and `fetchEndNote`/`updatePanel` that throw "Not
-      implemented" when a result is chosen.
-
-      The work uuid is only known once the work resolves, which is why this is
-      not in the route. `EndNoteSelector` also reads `EditorProvider`'s
-      context, whose defaults degrade silently rather than throw — that one is
-      slice 5's concern, since the stack replaces that provider.
-    */
     <NavigationProvider
       uuid={controller.work.workUuid}
       initialToh={toh as TohokuCatalogEntry}
