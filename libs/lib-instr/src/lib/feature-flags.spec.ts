@@ -1,17 +1,23 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 
-import { featureFlagOverride, useFeatureFlagEnabled } from './feature-flags';
+import {
+  featureFlagOverride,
+  useFeatureFlagEnabled,
+  useFeatureFlagsReady,
+} from './feature-flags';
 
 jest.mock('@posthog/react', () => ({
   useFeatureFlagEnabled: jest.fn(),
   useFeatureFlagPayload: jest.fn(),
   useFeatureFlagVariantKey: jest.fn(),
+  usePostHog: jest.fn(),
   PostHogProvider: ({ children }: { children: unknown }) => children,
 }));
 
 const posthog = jest.requireMock('@posthog/react') as {
   useFeatureFlagEnabled: jest.Mock;
   useFeatureFlagPayload: jest.Mock;
+  usePostHog: jest.Mock;
 };
 
 /**
@@ -136,5 +142,66 @@ describe('useFeatureFlagEnabled', () => {
     posthog.useFeatureFlagPayload.mockReturnValue({ apps: ['somewhere-else'] });
 
     expect(enabled('authority-pages')).toBe(false);
+  });
+});
+
+describe('useFeatureFlagsReady', () => {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  let listener: (() => void) | undefined;
+
+  /** A client that has, or has not, received its flags. */
+  const client = (hasLoadedFlags: boolean) => ({
+    featureFlags: { hasLoadedFlags },
+    onFeatureFlags: (notify: () => void) => {
+      listener = notify;
+      return () => undefined;
+    },
+  });
+
+  beforeEach(() => {
+    listener = undefined;
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test';
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+    if (key === undefined) delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    else process.env.NEXT_PUBLIC_POSTHOG_KEY = key;
+  });
+
+  it('waits while PostHog is configured but has not answered', () => {
+    posthog.usePostHog.mockReturnValue(client(false));
+    expect(renderHook(() => useFeatureFlagsReady()).result.current).toBe(false);
+  });
+
+  it('is ready once the flags arrive', () => {
+    posthog.usePostHog.mockReturnValue(client(true));
+    expect(renderHook(() => useFeatureFlagsReady()).result.current).toBe(true);
+  });
+
+  // Nothing to wait for, so waiting would be a hang.
+  it('is ready immediately when PostHog is not configured', () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    posthog.usePostHog.mockReturnValue(client(false));
+    expect(renderHook(() => useFeatureFlagsReady()).result.current).toBe(true);
+  });
+
+  // An ad blocker stops the flags arriving at all; a caller holding a skeleton
+  // on this would hold it for good.
+  it('gives up waiting after the timeout', () => {
+    posthog.usePostHog.mockReturnValue(client(false));
+    const { result } = renderHook(() => useFeatureFlagsReady());
+    expect(result.current).toBe(false);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(result.current).toBe(true);
+  });
+
+  it('survives a missing client', () => {
+    posthog.usePostHog.mockReturnValue(undefined);
+    expect(renderHook(() => useFeatureFlagsReady()).result.current).toBe(false);
+    expect(listener).toBeUndefined();
   });
 });

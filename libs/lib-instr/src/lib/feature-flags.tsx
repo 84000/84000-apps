@@ -4,10 +4,17 @@ import {
   useFeatureFlagEnabled as phUseFeatureFlagEnabled,
   useFeatureFlagPayload as phUseFeatureFlagPayload,
   useFeatureFlagVariantKey as phUseFeatureFlagVariantKey,
+  usePostHog,
   PostHogFeatureProps,
 } from '@posthog/react';
 import { JsonType } from 'posthog-js';
-import { ReactNode, useSyncExternalStore } from 'react';
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 
 export type FeatureFlag =
   | 'authority-pages'
@@ -109,6 +116,48 @@ export const useFeatureFlagVariantKey = (
   flagKey: FeatureFlag,
 ): string | boolean | undefined => {
   return phUseFeatureFlagVariantKey(flagKey);
+};
+
+/**
+ * How long to wait for PostHog before treating the flags as settled.
+ *
+ * An ad blocker stops them arriving at all, and a caller holding a skeleton
+ * until they do would hold it for good.
+ */
+const FLAGS_TIMEOUT_MS = 2000;
+
+/**
+ * Whether flag values can be trusted yet.
+ *
+ * `useFeatureFlagEnabled` reports false both for a flag that is off and for
+ * one whose value has not arrived, and a caller that renders the un-flagged
+ * path on the difference builds it and throws it away. This tells them apart.
+ *
+ * Reports ready immediately when PostHog is not configured — there is nothing
+ * to wait for — and after a timeout when it is configured but silent.
+ */
+export const useFeatureFlagsReady = (): boolean => {
+  const posthog = usePostHog();
+  const configured = !!process.env.NEXT_PUBLIC_POSTHOG_KEY;
+
+  const loaded = useSyncExternalStore(
+    useCallback(
+      (notify: () => void) =>
+        posthog?.onFeatureFlags(notify) ?? (() => undefined),
+      [posthog],
+    ),
+    () => !!posthog?.featureFlags?.hasLoadedFlags,
+    () => false,
+  );
+
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (!configured || loaded) return;
+    const timer = setTimeout(() => setTimedOut(true), FLAGS_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [configured, loaded]);
+
+  return !configured || loaded || timedOut;
 };
 
 export type GatedFeatureProps = Omit<
