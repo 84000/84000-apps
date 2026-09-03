@@ -20,7 +20,7 @@ import type {
 
 /** Rough characters per rendered line, for unmeasured row height estimates. */
 const CHARS_PER_LINE = 85;
-/** Row chrome (label gutter, vertical padding) in pixels. */
+/** Everything in a row that is not a line of text, in pixels. */
 const ROW_CHROME_PX = 48;
 /** One line of rendered passage text, in pixels. */
 const LINE_HEIGHT_PX = 28;

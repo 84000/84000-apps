@@ -46,7 +46,11 @@ export const StackRow = ({
   <div
     id={uuid}
     data-stack-passage={uuid}
-    className="relative w-full scroll-mt-20 py-1 pl-16"
+    // No vertical padding: it would stop the first block's margin collapsing
+    // out of the row, which is what keeps the label — positioned against the
+    // row — level with the text. Row spacing comes from the block margins, as
+    // it does in production.
+    className="relative w-full scroll-mt-20 pl-16"
   >
     <div
       // `select-none` so a drag across static rows copies passage text without
