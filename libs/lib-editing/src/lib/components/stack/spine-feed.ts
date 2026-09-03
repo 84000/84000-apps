@@ -121,10 +121,18 @@ export class SpineFeed {
     return true;
   }
 
-  /** The same, approaching the top of a spine that starts mid-work. */
+  /**
+   * The same at the top of a spine that starts mid-work — but only once the
+   * reader has actually reached it.
+   *
+   * Downward has a wide threshold because a fast scroll must land on loaded
+   * rows. Upward cannot: prepending moves every row below it, so doing it
+   * speculatively would shift the page under a reader who never asked to go
+   * up — including right after a deep link, which lands mid-window.
+   */
   maybeExtendBefore(visibleStart: number): boolean {
     if (this.noneBefore || this.backward) return false;
-    if (visibleStart > EXTEND_THRESHOLD) return false;
+    if (visibleStart > 0) return false;
     void this.extendBefore();
     return true;
   }

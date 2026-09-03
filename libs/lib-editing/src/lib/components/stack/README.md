@@ -127,6 +127,33 @@ head's content, which falls _between_ two blocks. `focusEditor` resolves it with
 `TextSelection.near` so the caret lands in real text — at a join, the end of the
 head. Left unresolved the caret was in no textblock at all, which is what made
 the Backspace above misbehave in the first place.
+### Deep links
+
+A link names a passage, not a position, and the spine window rarely holds it.
+`useStackDeepLink` reads the panel hash a `NavigationProvider` parses and hands
+it to `revealPassage`, which moves the window rather than paging to the target
+— production has no spine and simply swaps the editor's content, so this is the
+equivalent. `?start`/`?end` paint the same range highlight.
+
+Three things that each cost a debugging pass:
+
+- **The scroll has to settle.** Rows above an unvisited target are estimates,
+  and measuring them moves it — by a screenful. The scroll is re-issued for a
+  few frames, which is what `waitForStableElement` does for the paginated
+  editor.
+- **Upward paging waits for the top.** Downward loads ahead of a fast scroll;
+  upward cannot, because a prepend moves every row below it. It is also
+  disarmed while a reveal is in flight and again while a prepend lands, or the
+  list renders at index 0 for a frame and asks for a page nobody wanted.
+- **A prepend is re-anchored through the virtualizer**, on the row that used to
+  be first. Anchoring on a DOM row does not work: a hundred prepended rows push
+  it out of the rendered window, so there is nothing left to measure.
+
+The spine starting mid-work also changes what index 0 means. `passage-source`
+used to read from the beginning of the work when a run began at the top of the
+spine; that is now a different part of the text, so the boundary row is read
+with `AROUND`, which includes its own cursor.
+
 ### Toh visibility a host must supply
 
 A work may span several Tohoku texts — toh145's spans four — and annotations

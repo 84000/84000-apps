@@ -3,6 +3,7 @@ import type { GraphQLClient } from 'graphql-request';
 import {
   getPassageMetaPage,
   getTranslationBlocks,
+  getTranslationBlocksAround,
 } from '@eightyfourthousand/client-graphql';
 import {
   PassageLoader,
@@ -96,9 +97,11 @@ export const graphqlPassageSource = ({
     const end = indices[indices.length - 1];
     return {
       // The connection's cursor is exclusive, so start from the passage before
-      // the run. At the head of the work there is none, and omitting it starts
-      // at the beginning.
+      // the run. At the top of the spine there is none loaded — and since a
+      // spine can start mid-work after a deep link, that is not the same as
+      // the start of the work.
       cursor: start > 0 ? current.uuidAt(start - 1) : undefined,
+      first: current.uuidAt(start),
       count: end - start + 1,
     };
   };
@@ -144,6 +147,42 @@ export const graphqlPassageSource = ({
     return found;
   };
 
+  /**
+   * Read a run that begins at the top of the spine.
+   *
+   * There is no loaded passage before it to use as an exclusive cursor, and
+   * assuming the start of the work would be wrong for a spine that opened
+   * around a deep link. `AROUND` includes its own cursor, which is the row
+   * that would otherwise be missed; the rest of the run continues forward.
+   */
+  const readFrom = async (first: string, count: number) => {
+    const page = await getTranslationBlocksAround({
+      client,
+      uuid: workUuid,
+      passageUuid: first,
+      maxPassages: Math.min(MAX_PAGE, Math.max(count * 2, 2)),
+    });
+    const blocks = Array.isArray(page.blocks)
+      ? page.blocks
+      : [page.blocks].filter(Boolean);
+
+    const found: PassageSnapshot[] = [];
+    blocks.forEach((block) => {
+      const uuid = block?.attrs?.uuid;
+      if (!uuid) return;
+      found.push({ uuid, content: (block.content ?? []) as JSONContent[] });
+    });
+
+    // `AROUND` splits its limit either side of the cursor, so a long run needs
+    // the remainder read forward from where it stopped.
+    const covered = found.findIndex((snapshot) => snapshot.uuid === first);
+    const after = covered >= 0 ? found.length - covered : 0;
+    if (after < count && page.hasMoreAfter && page.nextCursor) {
+      found.push(...(await readSpan(page.nextCursor, count - after)));
+    }
+    return found;
+  };
+
   return {
     name: GRAPHQL_SOURCE_NAME,
 
@@ -159,9 +198,13 @@ export const graphqlPassageSource = ({
       // Without a spine there is no cursor to derive, so fall back to reading
       // from the start of the work in pages until the wanted set is covered.
       // Correct but wasteful; the assembled loader always supplies a spine.
-      const found = span
-        ? await readSpan(span.cursor, span.count)
-        : await readSpan(undefined, MAX_PAGE);
+      const found = !span
+        ? await readSpan(undefined, MAX_PAGE)
+        : span.cursor
+          ? await readSpan(span.cursor, span.count)
+          : span.first
+            ? await readFrom(span.first, span.count)
+            : await readSpan(undefined, MAX_PAGE);
 
       // Passages pulled in because they sat inside the run are dropped: the
       // loader treats anything returned as answered, and a passage the caller

@@ -272,15 +272,19 @@ describe('SpineFeed', () => {
       expect(w.spine.uuids()).toEqual(['p0', 'p1', 'p2']);
     });
 
-    it('extends upward only when the window nears the top', async () => {
+    // Unlike downward, which loads ahead of a fast scroll: a prepend moves
+    // every row below it, so it may not happen until the reader is actually at
+    // the top and asking for it.
+    it('extends upward only once the window reaches the top', async () => {
       const { feed } = await revealed();
       expect(feed.maybeExtendBefore(80)).toBe(false);
+      expect(feed.maybeExtendBefore(2)).toBe(false);
       expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
 
       clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
         aroundPage(497, 3, { before: false }),
       );
-      expect(feed.maybeExtendBefore(2)).toBe(true);
+      expect(feed.maybeExtendBefore(0)).toBe(true);
     });
 
     it('shares one request across concurrent backward extends', async () => {
