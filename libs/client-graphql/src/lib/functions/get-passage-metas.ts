@@ -29,10 +29,15 @@ import { normalizeToh } from '@eightyfourthousand/data-access';
 const PAGE_LIMIT = 100;
 
 const GET_PASSAGE_METAS = gql`
-  query GetPassageMetaPage($uuid: ID!, $cursor: String, $limit: Int) {
+  query GetPassageMetaPage(
+    $uuid: ID!
+    $cursor: String
+    $limit: Int
+    $direction: PaginationDirection
+  ) {
     work(uuid: $uuid) {
       uuid
-      passages(cursor: $cursor, limit: $limit) {
+      passages(cursor: $cursor, limit: $limit, direction: $direction) {
         nodes {
           uuid
           label
@@ -42,7 +47,9 @@ const GET_PASSAGE_METAS = gql`
         }
         pageInfo {
           nextCursor
+          prevCursor
           hasMoreAfter
+          hasMoreBefore
         }
       }
     }
@@ -62,10 +69,24 @@ type MetaResponse = {
     uuid: string;
     passages: {
       nodes: MetaNode[];
-      pageInfo: { nextCursor: string | null; hasMoreAfter: boolean };
+      pageInfo: {
+        nextCursor: string | null;
+        prevCursor: string | null;
+        hasMoreAfter: boolean;
+        hasMoreBefore: boolean;
+      };
     };
   } | null;
 };
+
+/**
+ * Which way to read from the cursor.
+ *
+ * `AROUND` is the one a deep link needs: it centres the page on the cursor
+ * passage and includes it, so a spine can be rebuilt around a target it has
+ * never seen.
+ */
+export type PassageMetaDirection = 'FORWARD' | 'BACKWARD' | 'AROUND';
 
 /** A passage's identity, without its text — what a spine holds. */
 export type PassageMeta = {
@@ -76,39 +97,53 @@ export type PassageMeta = {
   toh?: TohokuCatalogEntry;
 };
 
-/** One page of identities, plus the cursor to continue from. */
+/** One page of identities, in order, plus the cursors either side of it. */
 export type PassageMetaPage = {
   metas: PassageMeta[];
   nextCursor?: string;
+  prevCursor?: string;
   hasMoreAfter: boolean;
+  hasMoreBefore: boolean;
 };
 
 /**
  * One page of passage identities, in order, starting after `cursor`.
  *
- * A failed page reports no passages and no more to come, so a caller appending
- * to a spine stops rather than continuing past a hole — order is the one thing
- * a spine cannot be wrong about.
+ * A failed page reports no passages and nothing more either side, so a caller
+ * growing a spine stops rather than continuing past a hole — order is the one
+ * thing a spine cannot be wrong about.
  */
 export async function getPassageMetaPage({
   client,
   uuid,
   cursor,
   limit = PAGE_LIMIT,
+  direction,
 }: {
   client: GraphQLClient;
   uuid: string;
-  /** Passage uuid to start *after*. Omit to start at the beginning. */
+  /**
+   * Passage uuid to read from. `FORWARD` starts *after* it, `BACKWARD` before
+   * it, and `AROUND` centres on it and includes it. Omit to start at the
+   * beginning.
+   */
   cursor?: string;
   limit?: number;
+  direction?: PassageMetaDirection;
 }): Promise<PassageMetaPage> {
+  const empty: PassageMetaPage = {
+    metas: [],
+    hasMoreAfter: false,
+    hasMoreBefore: false,
+  };
   try {
     const response = await client.request<MetaResponse>(GET_PASSAGE_METAS, {
       uuid,
       cursor,
       limit: Math.min(limit, PAGE_LIMIT),
+      direction,
     });
-    if (!response.work) return { metas: [], hasMoreAfter: false };
+    if (!response.work) return empty;
 
     const { nodes, pageInfo } = response.work.passages;
     return {
@@ -120,10 +155,12 @@ export async function getPassageMetaPage({
         toh: normalizeToh(node.toh),
       })),
       nextCursor: pageInfo.nextCursor ?? undefined,
+      prevCursor: pageInfo.prevCursor ?? undefined,
       hasMoreAfter: pageInfo.hasMoreAfter,
+      hasMoreBefore: pageInfo.hasMoreBefore,
     };
   } catch (error) {
     console.error('Error fetching passage metas:', error);
-    return { metas: [], hasMoreAfter: false };
+    return empty;
   }
 }

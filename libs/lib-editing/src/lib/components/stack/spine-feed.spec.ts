@@ -38,6 +38,26 @@ const metaPage = (from: number, count: number, hasMoreAfter: boolean) => ({
   })),
   nextCursor: hasMoreAfter ? `p${from + count - 1}` : undefined,
   hasMoreAfter,
+  hasMoreBefore: false,
+});
+
+/** A page centred on a passage, as `direction: 'AROUND'` returns it. */
+const aroundPage = (
+  from: number,
+  count: number,
+  { before = true, after = true } = {},
+) => ({
+  metas: Array.from({ length: count }, (_, i) => ({
+    uuid: `p${from + i}`,
+    label: `${from + i + 1}`,
+    sort: (from + i) * 2,
+    type: 'translation',
+    toh: undefined,
+  })),
+  prevCursor: before ? `p${from}` : undefined,
+  nextCursor: after ? `p${from + count - 1}` : undefined,
+  hasMoreBefore: before,
+  hasMoreAfter: after,
 });
 
 beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
@@ -150,5 +170,127 @@ describe('SpineFeed', () => {
 
     expect(await new SpineFeed(w, client).seed()).toBe(1);
     expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+  });
+
+  describe('reveal', () => {
+    it('returns the index of a passage the spine already holds', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 5, false),
+      );
+      await feed.seed();
+
+      expect(await feed.reveal('p3')).toBe(3);
+      // Already loaded, so no second request.
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(1);
+    });
+
+    // The whole point: a link to passage 15,000 costs one request, not the
+    // hundred and fifty that paging from the top would.
+    it('rebuilds the spine around a passage it has never loaded', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 5, true),
+      );
+      await feed.seed();
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(500, 4),
+      );
+      expect(await feed.reveal('p502')).toBe(2);
+
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ cursor: 'p502', direction: 'AROUND' }),
+      );
+      expect(w.spine.uuids()).toEqual(['p500', 'p501', 'p502', 'p503']);
+      expect(feed.hasMoreBefore).toBe(true);
+      expect(feed.hasMore).toBe(true);
+    });
+
+    it('reports -1 for a passage the work does not have', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        metas: [],
+        hasMoreAfter: false,
+        hasMoreBefore: false,
+      });
+
+      expect(await feed.reveal('nope')).toBe(-1);
+    });
+  });
+
+  describe('growing upward', () => {
+    /** A revealed spine, sitting mid-work with passages either side. */
+    const revealed = async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(500, 3),
+      );
+      await feed.reveal('p501');
+      clientGraphql.getPassageMetaPage.mockReset();
+      return { w, feed };
+    };
+
+    it('prepends the previous page, keeping the order', async () => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...aroundPage(497, 3, { before: false }),
+        nextCursor: undefined,
+      });
+
+      await feed.extendBefore();
+
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledWith(
+        expect.objectContaining({ cursor: 'p500', direction: 'BACKWARD' }),
+      );
+      expect(w.spine.uuids()).toEqual([
+        'p497',
+        'p498',
+        'p499',
+        'p500',
+        'p501',
+        'p502',
+      ]);
+      expect(feed.hasMoreBefore).toBe(false);
+    });
+
+    it('does not read backward from a spine that starts at the work', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 3, true),
+      );
+      await feed.seed();
+      clientGraphql.getPassageMetaPage.mockReset();
+
+      await feed.extendBefore();
+      expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'p2']);
+    });
+
+    it('extends upward only when the window nears the top', async () => {
+      const { feed } = await revealed();
+      expect(feed.maybeExtendBefore(80)).toBe(false);
+      expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(497, 3, { before: false }),
+      );
+      expect(feed.maybeExtendBefore(2)).toBe(true);
+    });
+
+    it('shares one request across concurrent backward extends', async () => {
+      const { feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(497, 3, { before: false }),
+      );
+
+      await Promise.all([feed.extendBefore(), feed.extendBefore()]);
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(1);
+    });
   });
 });
