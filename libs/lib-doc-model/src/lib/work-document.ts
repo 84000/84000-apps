@@ -1,6 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
-import { Node as PMNode } from '@tiptap/pm/model';
-import type { Fragment, Schema } from '@tiptap/pm/model';
+import { Fragment, Node as PMNode } from '@tiptap/pm/model';
+import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
 import type { BodyItemType } from '@eightyfourthousand/data-access';
@@ -324,12 +324,17 @@ export class WorkDocument {
    * Three things at once: trim the tail off the first passage, trim the head
    * off the last, and drop everything between. Doing it as one command is what
    * makes a single undo put all of it back.
+   *
+   * `insertText` continues the surviving head with the given text, so a paste
+   * over the range is that same single command rather than a delete and an
+   * edit.
    */
   deleteRange(
     fromUuid: string,
     fromPos: number,
     toUuid: string,
     toPos: number,
+    options: { insertText?: string } = {},
   ): boolean {
     let [startUuid, startPos, endUuid, endPos] = [
       fromUuid,
@@ -355,8 +360,9 @@ export class WorkDocument {
     const endDoc = this.store.ensure(endUuid);
     const startBefore = startDoc.toJSON();
     const endBefore = endDoc.toJSON();
-    const startAfter = this.fragmentToJSON(
-      startDoc.toNode().content.cut(0, startPos),
+    const startAfter = this.withTrailingText(
+      this.fragmentToJSON(startDoc.toNode().content.cut(0, startPos)),
+      options.insertText ?? '',
     );
     const endAfter = this.fragmentToJSON(endDoc.toNode().content.cut(endPos));
 
@@ -574,6 +580,38 @@ export class WorkDocument {
   private contentSize(content: JSONContent[]): number {
     if (!content.length) return 0;
     return PMNode.fromJSON(this.schema, { type: 'doc', content }).content.size;
+  }
+
+  /**
+   * Append plain text to the end of a document's last block.
+   *
+   * Where a cross-passage paste lands: the surviving head keeps its blocks and
+   * the pasted text continues its last line, as typing there would.
+   */
+  private withTrailingText(doc: JSONContent, text: string): JSONContent {
+    if (!text) return doc;
+
+    const node = PMNode.fromJSON(this.schema, doc);
+    const last = node.lastChild;
+    if (!last?.isTextblock) {
+      return {
+        type: 'doc',
+        content: [
+          ...(doc.content ?? []),
+          { type: 'paragraph', content: [{ type: 'text', text }] },
+        ],
+      };
+    }
+
+    const children: PMNode[] = [];
+    last.content.forEach((child) => children.push(child));
+    children.push(this.schema.text(text));
+    return this.fragmentToJSON(
+      node.content.replaceChild(
+        node.childCount - 1,
+        last.copy(Fragment.fromArray(children)),
+      ),
+    );
   }
 
   private fragmentToJSON(fragment: Fragment): JSONContent {

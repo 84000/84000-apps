@@ -1,6 +1,6 @@
 import { Editor, Extensions } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
-import { Selection, TextSelection } from '@tiptap/pm/state';
+import { TextSelection } from '@tiptap/pm/state';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -574,37 +574,17 @@ export class PassageStackController {
 
   hasCrossSelection = () => this.crossSelection !== null;
 
+  /** Replace a cross-passage selection with pasted plain text. */
+  pasteCrossSelection = (text: string) => this.replaceCrossSelection(text);
+
+  deleteCrossSelection = () => this.replaceCrossSelection();
+
   /**
-   * Replace a cross-passage selection with pasted plain text.
-   *
-   * The delete is one command; the insertion that follows is a second, because
-   * `WorkDocument.deleteRange` has no insert half. So an undo after pasting
-   * over a multi-passage selection takes two steps rather than one. Recorded
-   * as a known gap for the selection slice of DEV-710 rather than papered over
-   * here.
+   * The one command behind both: the range goes, and any pasted text
+   * continues the surviving head. One command means one undo, which is what a
+   * paste should cost.
    */
-  pasteCrossSelection = (text: string) => {
-    const selection = this.crossSelection;
-    if (!selection) return false;
-    const start = this.orderedSelection(selection);
-    if (!this.deleteCrossSelection()) return false;
-    if (!start) return true;
-
-    const editor = this.editors.get(start.uuid);
-    if (editor) {
-      editor.commands.insertContentAt(
-        Math.min(start.pos, Selection.atEnd(editor.state.doc).from),
-        text,
-      );
-    } else {
-      // The surviving passage has no editor yet; focus queued the mount, so
-      // hand the text to the same buffer a click-and-type uses.
-      this.keyBuffer = text;
-    }
-    return true;
-  };
-
-  deleteCrossSelection = () => {
+  private replaceCrossSelection(insertText = '') {
     const selection = this.crossSelection;
     if (!selection) return false;
     this.crossSelection = null;
@@ -614,14 +594,15 @@ export class PassageStackController {
       selection.fromPos,
       selection.toUuid,
       selection.toPos,
+      { insertText },
     );
     if (!deleted) return false;
 
     window.getSelection()?.removeAllRanges();
     const start = this.orderedSelection(selection);
-    if (start) this.focusPassage(start.uuid, start.pos);
+    if (start) this.focusPassage(start.uuid, start.pos + insertText.length);
     return true;
-  };
+  }
 
   /** Which end of a cross-passage selection comes first in the spine. */
   private orderedSelection(selection: StackCrossSelection) {
