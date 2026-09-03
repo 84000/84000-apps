@@ -21,7 +21,7 @@ import { EditorOptions } from '../editor/extensions/Passage/EditorOptions';
 import { ShowAnnotations } from '../editor/extensions/Passage/ShowAnnotations';
 import type { PassageStackController } from './PassageStackController';
 
-/** The label that was clicked, and where it was when it was. */
+/** The clicked label, and where it was. */
 export type StackPassageMenuTarget = {
   uuid: string;
   rect: { top: number; left: number; width: number; height: number };
@@ -30,16 +30,8 @@ export type StackPassageMenuTarget = {
 /**
  * The passage label menu, mounted once for the whole stack.
  *
- * `PassageMenuOverlay` is driven from a ProseMirror click plugin, because
- * production's label is DOM inside the document. Here the label is React in
- * `StackRow`, so the trigger is an ordinary click and none of that plumbing —
- * `editor.storage.passage.openMenu`, the click plugin, `findPassageNode` —
- * has anything to do. The actions go to the work and the spine for the same
- * reason: a label and a passage's existence are spine facts now, not node
- * attributes.
- *
- * Editor options only. Bookmarks and Suggest Revision belong to the reader,
- * which still runs on `TranslationEditor`.
+ * `PassageMenuOverlay`'s counterpart, acting on the work and the spine rather
+ * than on an editor. Editor options only; the reader's still live there.
  */
 export const StackPassageMenu = ({
   controller,
@@ -52,14 +44,12 @@ export const StackPassageMenu = ({
 }) => {
   const [dialogType, setDialogType] = useState<string>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // The passage the dialogs act on, held apart from `target` because choosing
-  // a dialog closes the dropdown, and closing it clears the target.
+  // Held apart from `target`, which choosing a dialog clears.
   const [subject, setSubject] = useState<PassageMeta | null>(null);
 
   const meta = target ? controller.getMeta(target.uuid) : null;
 
-  // The menu is anchored to a fixed-position trigger placed over the clicked
-  // label; a captured rect goes stale on scroll, so close instead of drift.
+  // The captured rect goes stale on scroll, so close rather than drift.
   useEffect(() => {
     if (!target) return;
     window.addEventListener('scroll', onClose, true);

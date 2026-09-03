@@ -9,11 +9,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { ChangeEvent, useCallback, useState } from 'react';
 
-/**
- * `onSave` rather than an editor and a uuid: a label is an editor command in
- * the paginated editor and a spine write in the passage stack, and the dialog
- * has no reason to know which.
- */
+/** Renames a passage. `onSave` because the write differs by host. */
 export const EditLabel = ({
   label,
   onSave,

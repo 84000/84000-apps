@@ -411,12 +411,7 @@ export class WorkDocument {
     return true;
   }
 
-  /**
-   * Rename one passage, leaving the run around it alone.
-   *
-   * Recorded like any other structural op so Mod-Z takes it back. A label
-   * lives in the spine, so no passage's own history can hold one.
-   */
+  /** Rename one passage, leaving the run around it alone. */
   setLabel(uuid: string, label: string): boolean {
     const meta = this.spine.meta(uuid);
     if (!meta || meta.label === label) return false;

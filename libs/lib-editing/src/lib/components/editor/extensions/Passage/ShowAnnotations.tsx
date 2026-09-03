@@ -23,11 +23,7 @@ const CodeBlock = ({ code }: { code: string }) => {
   );
 };
 
-/**
- * `json` rather than an editor: the paginated editor finds the passage node in
- * one big document, the stack holds a document per passage, and the dialog only
- * ever wanted the node.
- */
+/** A passage's annotations and node JSON side by side. */
 export const ShowAnnotations = ({
   uuid,
   label,

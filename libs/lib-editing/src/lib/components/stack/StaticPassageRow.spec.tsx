@@ -90,10 +90,8 @@ describe('StaticPassageRow', () => {
     expect(content?.classList.contains('pm-text-metrics')).toBe(true);
   });
 
-  // The chrome production draws from PassageNode's node view. The label is the
-  // passage menu's trigger and `PassageStack` finds it by these attributes;
-  // deep links resolve a passage by id and then look for the content class
-  // inside it.
+  // The label menu finds its trigger by these attributes; deep links resolve a
+  // passage by id, then the content class inside it.
   it('carries the passage chrome the label menu and deep links key off', () => {
     const controller = build();
     const { container } = render(

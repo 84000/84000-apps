@@ -112,11 +112,7 @@ export const PassageStack = ({
       const target = event.target as Element | null;
       down = null;
 
-      // The label is the passage menu's trigger, as it is in production —
-      // there the click is caught by a ProseMirror plugin, here by this
-      // handler, because the label is React around the editor rather than DOM
-      // inside it. Preventing the default keeps the click from moving focus or
-      // starting a selection.
+      // The label is the menu's trigger; the default would move focus.
       const labelEl = target?.closest?.<HTMLElement>('[data-passage-label]');
       if (labelEl) {
         event.preventDefault();
@@ -203,25 +199,15 @@ export const PassageStack = ({
       className={cn('h-full overflow-y-auto [overflow-anchor:none]', className)}
     >
       {/*
-        One bubble menu for the whole stack, bound to whichever passage has
-        focus. Only one passage is editable at a time — neighbours premount
-        non-editable so boundary keys land in a real editor — so a menu per row
-        would be a popover per row watching a selection it can never have. Keyed
-        on the focused passage so the menu rebinds rather than tracking a stale
-        editor when focus moves.
+        One of each for the whole stack, bound to the focused passage: only one
+        passage is editable at a time, so a copy per row would watch nothing.
+        Keyed so they rebind rather than hold a stale editor — and prefixed, or
+        the two keyed siblings would share a key.
       */}
       <TranslationBubbleMenu
         key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
         editor={focusedEditor}
       />
-      {/*
-        The other two shared surfaces, for the same reason. The passage menu is
-        driven by the controller and the spine rather than by an editor, so it
-        needs no focused editor at all; the mention dialog binds to whichever
-        editor has focus and is keyed the same way the bubble menu is — with a
-        prefix, because two siblings keyed on the same uuid are two children
-        with the same key.
-      */}
       <StackPassageMenu
         controller={controller}
         target={menuTarget}
@@ -247,9 +233,7 @@ export const PassageStack = ({
               key={item.key}
               data-index={item.index}
               ref={virtualizer.measureElement}
-              // `pl-4` rather than `px-8`: `StackRow` owns a 4rem label
-              // gutter now, and the two together leave the text column where
-              // the flex gutter had it.
+              // `StackRow` supplies the rest of the left gutter.
               className="absolute left-0 top-0 w-full pl-4 pr-8"
               style={{ transform: `translateY(${item.start}px)` }}
             >

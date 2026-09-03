@@ -267,8 +267,7 @@ describe('PassageStackController structural ops', () => {
     expect(controller.removePassage('p1')).toBe(true);
 
     expect(controller.getOrder()).toEqual(['p0', 'p2']);
-    // A focused uuid the spine no longer holds leaves every shared surface
-    // bound to a passage that is not drawn.
+    // A focused uuid the spine no longer holds is bound to nothing drawn.
     expect(controller.getFocusedUuid()).toBe('p2');
   });
 

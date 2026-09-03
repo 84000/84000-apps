@@ -458,20 +458,14 @@ export class PassageStackController {
     return true;
   };
 
-  /**
-   * Rename one passage.
-   *
-   * The label lives in the spine, not in the passage's content, so this is a
-   * work-level operation rather than an editor command — which is all
-   * `setPassageLabel` ever was.
-   */
+  /** Rename one passage. */
   setLabel = (uuid: string, label: string) => this.work.setLabel(uuid, label);
 
   /**
-   * Delete a whole passage, leaving focus on the one that takes its place.
+   * Delete a whole passage.
    *
-   * Focus has to move: the row is gone on the next render, and a focused uuid
-   * the spine no longer holds leaves every shared surface bound to nothing.
+   * Focus moves to the one taking its place: a focused uuid the spine no
+   * longer holds leaves the shared surfaces bound to nothing.
    */
   removePassage = (uuid: string) => {
     const index = this.getOrder().indexOf(uuid);
