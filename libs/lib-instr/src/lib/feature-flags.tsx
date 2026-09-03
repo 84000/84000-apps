@@ -14,12 +14,57 @@ export type FeatureFlag =
   | 'translation-hover-cards'
   | 'studio-header-config'
   | 'show-reader-header'
-  | 'show-restriction-warning';
+  | 'show-restriction-warning'
+  | 'per-passage-docs';
 
 export type FeatureFlagPayload = {
   apps?: string[];
   [key: string]: JsonType;
 };
+
+let cachedRaw: string | undefined;
+let cachedOverrides: Record<string, boolean> = {};
+
+/**
+ * Flags pinned by `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES`, a comma-separated
+ * list where `flag` forces it on and `flag=false` forces it off.
+ *
+ * Local development and tests otherwise resolve flags against the live
+ * PostHog project — `next.config.js` proxies `/ingest` in every environment —
+ * so what a checkout does depends on remote config nobody can see from the
+ * repo, and an anonymous browser makes any percentage rollout a coin flip per
+ * profile. An override also bypasses the `apps` payload check below, which is
+ * the other thing that silently turns a flag off locally.
+ *
+ * Ignored in production builds: a flag that cannot be turned off from PostHog
+ * is not a feature flag.
+ */
+const flagOverrides = (): Record<string, boolean> => {
+  if (process.env.NODE_ENV === 'production') {
+    return {};
+  }
+
+  const raw = process.env.NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES ?? '';
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    cachedOverrides = Object.fromEntries(
+      raw
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => {
+          const [key, value] = entry.split('=');
+          return [key.trim(), value?.trim() !== 'false'];
+        }),
+    );
+  }
+  return cachedOverrides;
+};
+
+/** Whether a flag is pinned, and to what. `undefined` when it is not. */
+export const featureFlagOverride = (
+  flagKey: FeatureFlag,
+): boolean | undefined => flagOverrides()[flagKey];
 
 /**
  * Checks if a feature flag is enabled for the current application.
@@ -34,6 +79,11 @@ export const useFeatureFlagEnabled = (flagKey: FeatureFlag): boolean => {
   const payload = phUseFeatureFlagPayload(flagKey) as
     | FeatureFlagPayload
     | undefined;
+
+  const override = featureFlagOverride(flagKey);
+  if (override !== undefined) {
+    return override;
+  }
 
   if (!isEnabled) {
     return false;
@@ -61,7 +111,10 @@ export const useFeatureFlagVariantKey = (
   return phUseFeatureFlagVariantKey(flagKey);
 };
 
-export type GatedFeatureProps = Omit<PostHogFeatureProps, 'flag' | 'children'> & {
+export type GatedFeatureProps = Omit<
+  PostHogFeatureProps,
+  'flag' | 'children'
+> & {
   flag: FeatureFlag;
   children: ReactNode;
 };
