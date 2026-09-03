@@ -1,6 +1,6 @@
 import { Editor, Extensions } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
-import { Selection, TextSelection } from '@tiptap/pm/state';
+import { TextSelection } from '@tiptap/pm/state';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -41,6 +41,10 @@ export type PassageStackControllerOptions = {
   spineFeed?: {
     hasMore: boolean;
     maybeExtend: (visibleEnd: number) => boolean;
+    /** Only a feed that can read backward supplies these. */
+    hasMoreBefore?: boolean;
+    maybeExtendBefore?: (visibleStart: number) => boolean;
+    reveal?: (uuid: string) => Promise<number>;
   };
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;
@@ -75,7 +79,9 @@ export class PassageStackController {
   private crossSelection: StackCrossSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
-  private scrollToIndex: ((index: number) => void) | null = null;
+  private scrollToIndex:
+    | ((index: number, options?: { settle?: boolean }) => void)
+    | null = null;
 
   private liveUuids = new Set<string>();
   private focusedUuid: string | null = null;
@@ -86,6 +92,17 @@ export class PassageStackController {
   private hydrationQueued = false;
 
   private spineFeed?: PassageStackControllerOptions['spineFeed'];
+  /**
+   * Whether reaching index 0 should pull the previous page.
+   *
+   * Disarmed by a reveal: the list renders from the top for a frame before the
+   * scroll lands, and paging upward then would prepend a hundred rows under a
+   * reader who never asked to go up — moving the target out from under the
+   * scroll that was about to happen.
+   */
+  private earlierArmed = true;
+  /** In-flight reveals, so a remount does not fetch the same window twice. */
+  private revealing = new Map<string, Promise<boolean>>();
   private readOnly: boolean;
   private bookmarks = new Set<string>();
 
@@ -251,11 +268,21 @@ export class PassageStackController {
       return;
     }
     this.visibleRange = range;
-    // The spine is only as long as the pages fetched so far, so approaching its
+    // The spine covers only the pages fetched so far, so approaching either
     // end has to pull the next one before there is anything to hydrate.
     this.spineFeed?.maybeExtend(range.end);
+    if (range.start > 0) this.earlierArmed = true;
+    // Disarmed again by the page it starts: until the view re-anchors on the
+    // row that used to be first, the range still reads as index 0 and would
+    // ask for another.
+    if (this.earlierArmed && this.spineFeed?.maybeExtendBefore?.(range.start)) {
+      this.earlierArmed = false;
+    }
     void this.runHydration();
   };
+
+  /** Whether the work has passages before the ones the spine holds. */
+  hasEarlierPassages = () => this.spineFeed?.hasMoreBefore ?? false;
 
   /** Whether the work has passages the spine has not loaded yet. */
   hasMorePassages = () => this.spineFeed?.hasMore ?? false;
@@ -281,6 +308,54 @@ export class PassageStackController {
       this.hydrating = false;
     }
     this.bump();
+  }
+
+  /**
+   * Scroll a passage into view, loading it into the spine if the window does
+   * not hold it.
+   *
+   * What a deep link resolves to. The target is named, not positioned, so an
+   * unknown one rebuilds the spine around itself rather than paging to it.
+   * Resolves false when the work has no such passage.
+   */
+  revealPassage = (uuid: string): Promise<boolean> => {
+    const existing = this.revealing.get(uuid);
+    if (existing) return existing;
+
+    const run = this.reveal(uuid).finally(() => this.revealing.delete(uuid));
+    this.revealing.set(uuid, run);
+    return run;
+  };
+
+  private async reveal(uuid: string): Promise<boolean> {
+    if (this.getOrder().indexOf(uuid) < 0) {
+      // Called through the feed, not detached from it — `reveal` is a method
+      // and reads the work off `this`.
+      if (!this.spineFeed?.reveal) return false;
+      // Before the await, not after: the list renders from the top while the
+      // window is in flight, and arming would prepend under the scroll that
+      // is about to happen.
+      this.earlierArmed = false;
+
+      if ((await this.spineFeed.reveal(uuid)) < 0) return false;
+      this.orderCache = null;
+      // The spine is a different set of passages now; anything the old one
+      // pinned is gone with it.
+      this.liveUuids = new Set();
+      this.focusedUuid = null;
+      this.bump();
+    }
+
+    await this.hydrateOne(uuid);
+
+    // Read the position now rather than trusting the one the feed returned:
+    // anything that grew the spine in the meantime has moved it.
+    const index = this.getOrder().indexOf(uuid);
+    if (index < 0) return false;
+    // Settled, unlike a focus move: the rows above an unvisited target are
+    // estimated, and measuring them moves it — by a screenful, on a deep link.
+    this.scrollToIndex?.(index, { settle: true });
+    return true;
   }
 
   /** Hydrate one passage on demand — the path focus takes ahead of mounting. */
@@ -337,7 +412,9 @@ export class PassageStackController {
 
   getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
 
-  setScrollHandler(handler: ((index: number) => void) | null) {
+  setScrollHandler(
+    handler: ((index: number, options?: { settle?: boolean }) => void) | null,
+  ) {
     this.scrollToIndex = handler;
   }
 
@@ -574,37 +651,17 @@ export class PassageStackController {
 
   hasCrossSelection = () => this.crossSelection !== null;
 
+  /** Replace a cross-passage selection with pasted plain text. */
+  pasteCrossSelection = (text: string) => this.replaceCrossSelection(text);
+
+  deleteCrossSelection = () => this.replaceCrossSelection();
+
   /**
-   * Replace a cross-passage selection with pasted plain text.
-   *
-   * The delete is one command; the insertion that follows is a second, because
-   * `WorkDocument.deleteRange` has no insert half. So an undo after pasting
-   * over a multi-passage selection takes two steps rather than one. Recorded
-   * as a known gap for the selection slice of DEV-710 rather than papered over
-   * here.
+   * The one command behind both: the range goes, and any pasted text
+   * continues the surviving head. One command means one undo, which is what a
+   * paste should cost.
    */
-  pasteCrossSelection = (text: string) => {
-    const selection = this.crossSelection;
-    if (!selection) return false;
-    const start = this.orderedSelection(selection);
-    if (!this.deleteCrossSelection()) return false;
-    if (!start) return true;
-
-    const editor = this.editors.get(start.uuid);
-    if (editor) {
-      editor.commands.insertContentAt(
-        Math.min(start.pos, Selection.atEnd(editor.state.doc).from),
-        text,
-      );
-    } else {
-      // The surviving passage has no editor yet; focus queued the mount, so
-      // hand the text to the same buffer a click-and-type uses.
-      this.keyBuffer = text;
-    }
-    return true;
-  };
-
-  deleteCrossSelection = () => {
+  private replaceCrossSelection(insertText = '') {
     const selection = this.crossSelection;
     if (!selection) return false;
     this.crossSelection = null;
@@ -614,14 +671,15 @@ export class PassageStackController {
       selection.fromPos,
       selection.toUuid,
       selection.toPos,
+      { insertText },
     );
     if (!deleted) return false;
 
     window.getSelection()?.removeAllRanges();
     const start = this.orderedSelection(selection);
-    if (start) this.focusPassage(start.uuid, start.pos);
+    if (start) this.focusPassage(start.uuid, start.pos + insertText.length);
     return true;
-  };
+  }
 
   /** Which end of a cross-passage selection comes first in the spine. */
   private orderedSelection(selection: StackCrossSelection) {

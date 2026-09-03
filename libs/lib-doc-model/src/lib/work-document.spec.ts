@@ -1,3 +1,4 @@
+import { Schema } from '@tiptap/pm/model';
 import { WorkDocument } from './work-document';
 import { para, paraTexts, testSchema } from './schema.fixture';
 import type { SpineSeed } from './spine';
@@ -159,6 +160,77 @@ describe('WorkDocument structural ops', () => {
 
     it('refuses a range inside one passage', () => {
       expect(build(2).deleteRange('p0', 1, 'p0', 3)).toBe(false);
+    });
+
+    it('continues the surviving head with pasted text', () => {
+      const work = build(4);
+      setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
+      setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
+
+      expect(
+        work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' }),
+      ).toBe(true);
+
+      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
+        'keep and more',
+      ]);
+      expect(paraTexts(work.store.ensure('p3').toJSON())).toEqual(['stay']);
+    });
+
+    it('undoes a paste over the range in one step', () => {
+      const work = build(4);
+      setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
+      setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
+      const before = shape(work);
+
+      work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' });
+      expect(work.log.depth).toBe(1);
+
+      work.undo();
+      expect(shape(work)).toEqual(before);
+      expect(work.spine.uuids()).toEqual(['p0', 'p1', 'p2', 'p3']);
+    });
+
+    it('pastes into a head that has been emptied', () => {
+      const work = build(3);
+      setContent(work, 'p0', []);
+
+      expect(work.deleteRange('p0', 0, 'p2', 0, { insertText: 'fresh' })).toBe(
+        true,
+      );
+      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['fresh']);
+    });
+
+    // `testSchema` is all paragraphs, so the branch that starts a new one
+    // needs a schema with a block that cannot hold text — a table or a line
+    // group, in the editor's own schema.
+    it('starts a paragraph when the head ends in a block that holds no text', () => {
+      const schema = new Schema({
+        nodes: {
+          doc: { content: 'block+' },
+          paragraph: {
+            group: 'block',
+            content: 'inline*',
+            toDOM: () => ['p', 0],
+          },
+          divider: { group: 'block', toDOM: () => ['hr'] },
+          text: { group: 'inline' },
+        },
+      });
+      const work = new WorkDocument({ workUuid: 'work-1', schema });
+      work.seedSpine([meta('p0', '1'), meta('p1', '2')]);
+      work.store.create('p0', [{ type: 'divider' }]);
+      work.store.create('p1', [
+        { type: 'paragraph', content: [{ type: 'text', text: 'tail' }] },
+      ]);
+
+      expect(work.deleteRange('p0', 1, 'p1', 0, { insertText: 'fresh' })).toBe(
+        true,
+      );
+      expect(work.store.ensure('p0').toJSON().content).toEqual([
+        { type: 'divider' },
+        { type: 'paragraph', content: [{ type: 'text', text: 'fresh' }] },
+      ]);
     });
   });
 

@@ -2,6 +2,7 @@ export { NavigationProvider } from '../shared/NavigationProvider';
 export { useNavigation } from '../shared/NavigationContext';
 export { useTohToggle } from '../shared/hooks/useTohToggle';
 export { useStackTohVisibility } from './useStackTohVisibility';
+export { useStackDeepLink } from './useStackDeepLink';
 
 export * from './passage-source';
 export * from './spine-feed';

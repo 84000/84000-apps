@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -20,6 +21,7 @@ import {
 } from './StackPassageMenu';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
+import { useStackDeepLink } from './useStackDeepLink';
 import { useStackSelection } from './useStackSelection';
 
 /**
@@ -30,6 +32,9 @@ import { useStackSelection } from './useStackSelection';
 const OVERSCAN = 20;
 
 const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
+
+/** Frames to keep re-issuing a settled scroll while rows measure. */
+const SETTLE_FRAMES = 12;
 
 export const PassageStack = ({
   controller,
@@ -77,9 +82,21 @@ export const PassageStack = ({
     instance.scrollDirection === 'backward';
 
   useEffect(() => {
-    controller.setScrollHandler((index) =>
-      virtualizer.scrollToIndex(index, { align: 'auto' }),
-    );
+    controller.setScrollHandler((index, options) => {
+      if (!options?.settle) {
+        virtualizer.scrollToIndex(index, { align: 'auto' });
+        return;
+      }
+      // A row is estimated until it is drawn and measured, so scrolling to a
+      // target the reader has never passed lands on estimates and then drifts
+      // as the rows above it settle. Re-issue over the next few frames.
+      let attempts = 0;
+      const again = () => {
+        virtualizer.scrollToIndex(index, { align: 'start' });
+        if (attempts++ < SETTLE_FRAMES) requestAnimationFrame(again);
+      };
+      again();
+    });
     return () => controller.setScrollHandler(null);
   }, [controller, virtualizer]);
 
@@ -94,7 +111,28 @@ export const PassageStack = ({
     controller.setVisibleRange({ start: firstIndex, end: lastIndex + 1 });
   }, [controller, order.length, firstIndex, lastIndex]);
 
+  // Prepending rows shifts every existing one down, so the viewport has to be
+  // put back on what the reader was looking at. Upward paging only ever runs
+  // from the very top, so re-anchoring the row that used to be first is exact
+  // — and going through the virtualizer keeps it consistent with the offsets
+  // it just laid out.
+  const firstUuid = order[0];
+  const previousFirstRef = useRef(firstUuid);
+  useLayoutEffect(() => {
+    const previous = previousFirstRef.current;
+    previousFirstRef.current = firstUuid;
+    if (previous === firstUuid) return;
+
+    // A prepend keeps the old first row, further down. `revealPassage` swaps
+    // the window for a different set of passages, and that one should land
+    // wherever it scrolled to.
+    const prepended = order.indexOf(previous);
+    if (prepended <= 0) return;
+    virtualizer.scrollToIndex(prepended, { align: 'start' });
+  }, [firstUuid, order, virtualizer]);
+
   useStackSelection(controller);
+  useStackDeepLink(controller);
 
   // Click-to-focus on static rows, via delegation so text drags across
   // static content stay plain selections instead of mounting editors.
