@@ -34,10 +34,16 @@ const GET_PASSAGE_METAS = gql`
     $cursor: String
     $limit: Int
     $direction: PaginationDirection
+    $filter: PassageFilter
   ) {
     work(uuid: $uuid) {
       uuid
-      passages(cursor: $cursor, limit: $limit, direction: $direction) {
+      passages(
+        cursor: $cursor
+        limit: $limit
+        direction: $direction
+        filter: $filter
+      ) {
         nodes {
           uuid
           label
@@ -119,6 +125,7 @@ export async function getPassageMetaPage({
   cursor,
   limit = PAGE_LIMIT,
   direction,
+  type,
 }: {
   client: GraphQLClient;
   uuid: string;
@@ -130,6 +137,11 @@ export async function getPassageMetaPage({
   cursor?: string;
   limit?: number;
   direction?: PassageMetaDirection;
+  /**
+   * Passage type pattern, as `FRONT_MATTER_FILTER` and friends express it —
+   * how a section of the work is asked for.
+   */
+  type?: string;
 }): Promise<PassageMetaPage> {
   const empty: PassageMetaPage = {
     metas: [],
@@ -142,6 +154,7 @@ export async function getPassageMetaPage({
       cursor,
       limit: Math.min(limit, PAGE_LIMIT),
       direction,
+      filter: type ? { type } : undefined,
     });
     if (!response.work) return empty;
 
