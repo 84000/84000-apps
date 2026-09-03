@@ -459,6 +459,41 @@ export class PassageStackController {
   };
 
   /**
+   * Rename one passage.
+   *
+   * The label lives in the spine, not in the passage's content, so this is a
+   * work-level operation rather than an editor command — which is all
+   * `setPassageLabel` ever was.
+   */
+  setLabel = (uuid: string, label: string) => this.work.setLabel(uuid, label);
+
+  /**
+   * Delete a whole passage, leaving focus on the one that takes its place.
+   *
+   * Focus has to move: the row is gone on the next render, and a focused uuid
+   * the spine no longer holds leaves every shared surface bound to nothing.
+   */
+  removePassage = (uuid: string) => {
+    const index = this.getOrder().indexOf(uuid);
+    if (index < 0) return false;
+    if (!this.work.remove([uuid])) return false;
+
+    this.orderCache = null;
+    const order = this.getOrder();
+    const next = order[index] ?? order[index - 1];
+    if (next) this.focusPassage(next, 'start');
+    else {
+      this.focusedUuid = null;
+      this.liveUuids = new Set();
+    }
+    return true;
+  };
+
+  /** A passage's document as editor JSON, for the attributes dialog. */
+  getPassageJSON = (uuid: string) =>
+    this.work.store.peek(uuid)?.toJSON() ?? null;
+
+  /**
    * Map a DOM point to a ProseMirror position, whether the passage is a
    * live editor (exact, via posAtDOM) or a static row (approximate, via the
    * text offset from the row start — inline atoms can skew it by a char).

@@ -1,12 +1,23 @@
 'use client';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
+import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
 import { TranslationBubbleMenu } from '../editor/menus';
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
+import {
+  StackPassageMenu,
+  type StackPassageMenuTarget,
+} from './StackPassageMenu';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackSelection } from './useStackSelection';
@@ -18,11 +29,7 @@ import { useStackSelection } from './useStackSelection';
  */
 const OVERSCAN = 20;
 
-const MEASURED_KEYS = new Set([
-  'Enter',
-  'Backspace',
-  'Delete',
-]);
+const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
 
 export const PassageStack = ({
   controller,
@@ -40,6 +47,11 @@ export const PassageStack = ({
   );
   const order = controller.getOrder();
   const parentRef = useRef<HTMLDivElement>(null);
+  const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
+    null,
+  );
+  const closeMenu = useCallback(() => setMenuTarget(null), []);
+  const focusedEditor = controller.getFocusedEditor();
 
   const virtualizer = useVirtualizer({
     count: order.length,
@@ -98,10 +110,30 @@ export const PassageStack = ({
     let down: { x: number; y: number; uuid: string | null } | null = null;
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as Element | null;
-      if (target?.closest?.('[contenteditable="true"]')) {
-        down = null; // live editors handle their own caret
+      down = null;
+
+      // The label is the passage menu's trigger, as it is in production —
+      // there the click is caught by a ProseMirror plugin, here by this
+      // handler, because the label is React around the editor rather than DOM
+      // inside it. Preventing the default keeps the click from moving focus or
+      // starting a selection.
+      const labelEl = target?.closest?.<HTMLElement>('[data-passage-label]');
+      if (labelEl) {
+        event.preventDefault();
+        const rect = labelEl.getBoundingClientRect();
+        setMenuTarget({
+          uuid: labelEl.dataset['uuid'] ?? '',
+          rect: {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          },
+        });
         return;
       }
+
+      if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
       down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
     };
     const onMouseUp = (event: MouseEvent) => {
@@ -113,7 +145,10 @@ export const PassageStack = ({
         Math.abs(event.clientY - start.y) > 5;
       if (moved || !document.getSelection()?.isCollapsed) return;
       if (uuidAt(event.target) !== start.uuid) return;
-      controller.focusPassage(start.uuid, { x: event.clientX, y: event.clientY });
+      controller.focusPassage(start.uuid, {
+        x: event.clientX,
+        y: event.clientY,
+      });
     };
 
     container.addEventListener('mousedown', onMouseDown);
@@ -165,10 +200,7 @@ export const PassageStack = ({
       // overflow-anchor off: Chrome's scroll anchoring chases re-rendering
       // virtual rows after a scrollbar jump, compounding with the
       // virtualizer's own offset math into an endless scroll drift.
-      className={cn(
-        'h-full overflow-y-auto [overflow-anchor:none]',
-        className,
-      )}
+      className={cn('h-full overflow-y-auto [overflow-anchor:none]', className)}
     >
       {/*
         One bubble menu for the whole stack, bound to whichever passage has
@@ -179,9 +211,28 @@ export const PassageStack = ({
         editor when focus moves.
       */}
       <TranslationBubbleMenu
-        key={controller.getFocusedUuid() ?? 'none'}
-        editor={controller.getFocusedEditor()}
+        key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
+        editor={focusedEditor}
       />
+      {/*
+        The other two shared surfaces, for the same reason. The passage menu is
+        driven by the controller and the spine rather than by an editor, so it
+        needs no focused editor at all; the mention dialog binds to whichever
+        editor has focus and is keyed the same way the bubble menu is — with a
+        prefix, because two siblings keyed on the same uuid are two children
+        with the same key.
+      */}
+      <StackPassageMenu
+        controller={controller}
+        target={menuTarget}
+        onClose={closeMenu}
+      />
+      {focusedEditor && (
+        <MentionAdvancedOverlay
+          key={`mention-${controller.getFocusedUuid() ?? 'none'}`}
+          editor={focusedEditor}
+        />
+      )}
       <div
         className="relative mx-auto w-full max-w-readable px-8"
         style={{ height: virtualizer.getTotalSize() }}

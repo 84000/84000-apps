@@ -71,7 +71,8 @@ export type StructuralOpKind =
   | 'merge'
   | 'insert'
   | 'delete'
-  | 'reorder';
+  | 'reorder'
+  | 'label';
 
 /**
  * Where to put the caret after an operation is undone or redone.

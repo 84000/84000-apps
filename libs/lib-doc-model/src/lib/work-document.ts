@@ -411,6 +411,32 @@ export class WorkDocument {
     return true;
   }
 
+  /**
+   * Rename one passage, leaving the run around it alone.
+   *
+   * Recorded like any other structural op so Mod-Z takes it back. A label
+   * lives in the spine, so no passage's own history can hold one.
+   */
+  setLabel(uuid: string, label: string): boolean {
+    const meta = this.spine.meta(uuid);
+    if (!meta || meta.label === label) return false;
+
+    this.spine.setLabel(uuid, label);
+    this.record({
+      kind: 'label',
+      content: [],
+      inserted: [],
+      removed: [],
+      moved: [],
+      labels: [{ uuid, from: meta.label, to: label }],
+      focusAfterUndo: { uuid, where: 'start' },
+      focusAfterRedo: { uuid, where: 'start' },
+    });
+
+    this.notify();
+    return true;
+  }
+
   // ------------------------------------------------------------- history
 
   /** Record that a passage's own undo manager took a text edit. */

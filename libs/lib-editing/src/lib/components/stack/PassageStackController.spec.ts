@@ -253,6 +253,30 @@ describe('PassageStackController structural ops', () => {
     expect(controller.splitAtSelection('p1')).toBe(false);
     expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
   });
+
+  it('renames a passage without touching the run below it', async () => {
+    const { controller } = await hydrated(3);
+    expect(controller.setLabel('p1', '1.5')).toBe(true);
+    expect(
+      controller.getOrder().map((uuid) => controller.getMeta(uuid)?.label),
+    ).toEqual(['1', '1.5', '3']);
+  });
+
+  it('deletes a passage and leaves focus on the one that takes its place', async () => {
+    const { controller } = await hydrated(3);
+    expect(controller.removePassage('p1')).toBe(true);
+
+    expect(controller.getOrder()).toEqual(['p0', 'p2']);
+    // A focused uuid the spine no longer holds leaves every shared surface
+    // bound to a passage that is not drawn.
+    expect(controller.getFocusedUuid()).toBe('p2');
+  });
+
+  it('falls back to the previous passage when deleting the last one', async () => {
+    const { controller } = await hydrated(3);
+    expect(controller.removePassage('p2')).toBe(true);
+    expect(controller.getFocusedUuid()).toBe('p1');
+  });
 });
 
 describe('PassageStackController static rendering', () => {
