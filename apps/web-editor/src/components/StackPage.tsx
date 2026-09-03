@@ -4,6 +4,7 @@ import { H3 } from '@eightyfourthousand/design-system';
 import {
   AnnotationDTO,
   Passage,
+  type TohokuCatalogEntry,
   annotationsFromDTO,
   createBrowserClient,
   getAnnotationsByPassageUuids,
@@ -17,6 +18,8 @@ import {
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import {
+  NavigationProvider,
+  useStackTohVisibility,
   PassageStack,
   PassageStackController,
   PerfHUD,
@@ -145,6 +148,32 @@ const seedSource = (seeds: StackPassageSeed[]): PassageSource => {
   };
 };
 
+/**
+ * The main stack plus basic toh tracking and performance HUD.
+ */
+const StackBody = ({
+  controller,
+  overscan,
+  tohList,
+}: {
+  controller: PassageStackController;
+  overscan?: number;
+  tohList: TohokuCatalogEntry[];
+}) => {
+  useStackTohVisibility({ tohList });
+
+  return (
+    <div className="h-[calc(100dvh-5rem)] w-full">
+      <PassageStack
+        controller={controller}
+        className="h-full"
+        overscan={overscan}
+      />
+      <PerfHUD controller={controller} />
+    </div>
+  );
+};
+
 export const StackPage = ({
   toh,
   repeat = 1,
@@ -157,6 +186,11 @@ export const StackPage = ({
   const [controller, setController] = useState<PassageStackController | null>(
     null,
   );
+  // The work's Tohoku entries, for choosing a default when neither the route
+  // nor `?toh=` names one. The route's own toh is the sensible first guess.
+  const [tohList, setTohList] = useState<TohokuCatalogEntry[]>([
+    toh as TohokuCatalogEntry,
+  ]);
   const [failed, setFailed] = useState(false);
 
   // Clear the previous stack as soon as the inputs change, rather than in the
@@ -204,6 +238,8 @@ export const StackPage = ({
         console.error(`no work found for ${toh}`);
         return null;
       }
+
+      if (found.toh?.length) setTohList(found.toh);
 
       const work: WorkDocument = createStackWork({
         workUuid: found.uuid,
@@ -266,13 +302,15 @@ export const StackPage = ({
   }
 
   return (
-    <div className="h-[calc(100dvh-5rem)] w-full">
-      <PassageStack
+    <NavigationProvider
+      uuid={controller.work.workUuid}
+      initialToh={toh as TohokuCatalogEntry}
+    >
+      <StackBody
         controller={controller}
-        className="h-full"
         overscan={overscan}
+        tohList={tohList}
       />
-      <PerfHUD controller={controller} />
-    </div>
+    </NavigationProvider>
   );
 };

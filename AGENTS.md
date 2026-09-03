@@ -61,4 +61,17 @@ claude plugin validate /tmp/marketplace --strict
 
 ## Code Style
 
-Single quotes, 2-space indent, trailing commas — enforced by Prettier (see `.prettierrc`). ESLint config handles the rest. Follow existing patterns in the file you're editing.
+Single quotes, 2-space indent, trailing commas — enforced by Prettier (see
+`.prettierrc`). ESLint config handles the rest. Follow existing patterns in the
+file you're editing.
+
+## Comments
+
+Prefer concise, clear comments over long ones loaded with context. Such details
+become stale quickly. Long comments are code smell. Occasionally, a long comment
+is justified as outward-facing documentation, but use restraint even then.
+
+Exported types, class, functions, etc should have doc comments. But keep them
+short and avoid leaking implementation details.
+
+Avoid referencing external resources in comments, especially issue tracking numbers.

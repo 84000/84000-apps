@@ -1,4 +1,5 @@
 import { Extensions } from '@tiptap/core';
+import { TableOfContentsIcon } from 'lucide-react';
 import { Collaboration } from '@tiptap/extension-collaboration';
 import type { UndoManager, XmlFragment } from 'yjs';
 
@@ -7,9 +8,12 @@ import {
   StarterKit,
 } from '../editor/extensions/StarterKit';
 import TranslationMetadata from '../editor/extensions/TranslationMetadata';
+import { AnnotationToh } from '../editor/extensions/AnnotationToh';
 import { Audio } from '../editor/extensions/Audio/Audio';
 import {
   Abbreviation,
+  AbbreviationCommand,
+  AbbreviationSuggestion,
   HasAbbreviation,
 } from '../editor/extensions/Abbreviation/Abbreviation';
 import { Bold } from '../editor/extensions/Bold';
@@ -29,6 +33,19 @@ import { Link } from '../editor/extensions/Link';
 import { List, ListItem } from '../editor/extensions/List';
 import { MantraMark } from '../editor/extensions/Mantra/Mantra';
 import { Mention } from '../editor/extensions/Mention/Mention';
+import { MentionCommandSuggestion } from '../editor/extensions/Mention/MentionCommandSuggestion';
+import { SlashCommand } from '../editor/extensions/SlashCommand/SlashCommand';
+import {
+  BulletListSuggestion,
+  Heading1Suggestion,
+  Heading2Suggestion,
+  Heading3Suggestion,
+  NumberListSuggestion,
+  QuoteSuggestion,
+  TextSuggestion,
+  getSuggestion,
+} from '../editor/extensions/SlashCommand/Suggestions';
+import type { CommandSuggestionItem } from '../editor/extensions/SlashCommand/SuggestionList';
 import Paragraph from '../editor/extensions/Paragraph/Paragraph';
 import { ParagraphIndent } from '../editor/extensions/ParagraphIndent';
 import { PipeNotItalic } from '../editor/extensions/PipeNotItalic';
@@ -48,15 +65,13 @@ import { BoundaryKeymap } from './BoundaryKeymap';
 import type { StackKeyboardDelegate } from './types';
 
 /**
- * The translation extension set minus everything that assumes one document
- * per panel: no TranslationDocument/PassageNode (passage identity lives in
- * the spine), no SlashCommand (its passage command calls splitPassage), and
- * no undo history — the stack routes undo through its command log.
+ * The schema half of the stack's extension set.
  */
 export const buildStackSchemaExtensions = (): Extensions => [
   StackDocument,
   Audio,
   Abbreviation,
+  AnnotationToh,
   HasAbbreviation,
   Bold,
   EndNoteLinkMark,
@@ -92,13 +107,27 @@ export const buildStackSchemaExtensions = (): Extensions => [
   WordBreak,
   StarterKit.configure({
     ...STARTER_KIT_CONFIG,
-    // No trailing node: it exists only in live editors, so it would make a
-    // passage grow on focus and shift the rows below it. Gap cursor still
-    // allows insertion after a trailing table or line group.
     trailingNode: false,
     undoRedo: false,
   }),
 ];
+
+/**
+ * The stack's replacement for the translation schema's "Passage" slash item.
+ */
+const passageSuggestionFor = (
+  uuid: string,
+  delegate: StackKeyboardDelegate,
+): CommandSuggestionItem => ({
+  title: 'Passage',
+  description: 'Start a new passage.',
+  keywords: ['passage'],
+  icon: TableOfContentsIcon,
+  command: ({ editor, range }) => {
+    editor.chain().deleteRange(range).run();
+    delegate.splitAtSelection(uuid);
+  },
+});
 
 export const buildStackEditorExtensions = ({
   uuid,
@@ -112,6 +141,23 @@ export const buildStackEditorExtensions = ({
   delegate: StackKeyboardDelegate;
 }): Extensions => [
   ...buildStackSchemaExtensions(),
+  // Commands and plugins are kept out of the schema set so they do not affect
+  // how a passage document is parsed or statically rendered.
+  AbbreviationCommand,
+  SlashCommand.configure({
+    suggestion: getSuggestion([
+      TextSuggestion,
+      passageSuggestionFor(uuid, delegate),
+      Heading1Suggestion,
+      Heading2Suggestion,
+      Heading3Suggestion,
+      AbbreviationSuggestion,
+      MentionCommandSuggestion,
+      BulletListSuggestion,
+      NumberListSuggestion,
+      QuoteSuggestion,
+    ]),
+  }),
   // The controller's persistent per-passage UndoManager is handed to the
   // undo plugin so history accumulates across mounts (its destroy is
   // neutered — the plugin destroys whatever manager it is given).

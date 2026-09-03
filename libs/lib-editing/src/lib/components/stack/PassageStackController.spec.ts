@@ -254,3 +254,120 @@ describe('PassageStackController structural ops', () => {
     expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
   });
 });
+
+describe('PassageStackController static rendering', () => {
+  /** A passage whose text carries an endnote-link mark, as the exporters make it. */
+  const withEndNote = (): StackPassageSeed => ({
+    meta: { uuid: 'p0', label: '1', type: 'translation' },
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { uuid: 'para-1' },
+        content: [
+          {
+            type: 'text',
+            text: 'scripture',
+            marks: [
+              {
+                type: 'endNoteLink',
+                attrs: {
+                  uuid: 'mark-1',
+                  notes: [
+                    {
+                      uuid: 'note-1',
+                      endNote: 'en-1',
+                      label: '1',
+                      location: 'end',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    charCount: 9,
+  });
+
+  // Regression: the static tier used to render with the stack's *schema* set,
+  // whose extensions draw through React node views that produce nothing to a
+  // string. Endnote markers were absent from every static row while the editor
+  // showed them, and internal links rendered differently. Static rendering goes
+  // through the reader's own renderer, which carries the `*.ssr` variants and
+  // the endNoteLink mark mapping.
+  it('renders endnote markers in a static row, as the reader does', async () => {
+    const all = [withEndNote()];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const html = controller.getStaticHTML('p0');
+    expect(html).toContain('class="end-note-link"');
+    expect(html).toContain('endNote="en-1"');
+  });
+});
+
+describe('PassageStackController focused editor', () => {
+  /** Enough of an Editor for the controller's focus bookkeeping. */
+  const fakeEditor = () =>
+    ({
+      isEditable: true,
+      setEditable: () => undefined,
+      commands: {
+        focus: () => true,
+        insertContent: () => true,
+      },
+    }) as never;
+
+  // Regression: the shared bubble menu binds to `getFocusedEditor()`, which is
+  // null until an editor registers. Focusing a passage renders its row as an
+  // editor, the editor mounts and registers — and without a notify there the
+  // menu was still holding the null it had been rendered with, so it never
+  // appeared. Found in a browser: the menu was absent while the controller was
+  // correctly bound.
+  it('notifies when the focused passage registers its editor', async () => {
+    const { controller } = await hydrated(3);
+    const seen: number[] = [];
+    controller.subscribe(() => seen.push(controller.getVersion()));
+
+    controller.focusPassage('p1');
+    seen.length = 0;
+
+    controller.registerEditor('p1', fakeEditor());
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(controller.getFocusedEditor()).not.toBeNull();
+  });
+
+  it('notifies when focus moves between two already-live passages', async () => {
+    const { controller } = await hydrated(5);
+    controller.focusPassage('p2');
+    controller.registerEditor('p2', fakeEditor());
+    controller.registerEditor('p3', fakeEditor());
+
+    const seen: number[] = [];
+    controller.subscribe(() => seen.push(controller.getVersion()));
+    controller.notifyFocused('p3');
+
+    // `recenterLive` alone would not report this when both are already live.
+    expect(seen.length).toBeGreaterThan(0);
+    expect(controller.getFocusedUuid()).toBe('p3');
+  });
+
+  it('lets go of the editor when the focused passage unmounts', async () => {
+    const { controller } = await hydrated(3);
+    controller.focusPassage('p1');
+    controller.registerEditor('p1', fakeEditor());
+    expect(controller.getFocusedEditor()).not.toBeNull();
+
+    controller.unregisterEditor('p1');
+    expect(controller.getFocusedEditor()).toBeNull();
+  });
+});

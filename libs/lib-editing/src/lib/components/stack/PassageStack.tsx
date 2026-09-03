@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
+import { TranslationBubbleMenu } from '../editor/menus';
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
 import { StaticPassageRow } from './StaticPassageRow';
@@ -169,6 +170,18 @@ export const PassageStack = ({
         className,
       )}
     >
+      {/*
+        One bubble menu for the whole stack, bound to whichever passage has
+        focus. Only one passage is editable at a time — neighbours premount
+        non-editable so boundary keys land in a real editor — so a menu per row
+        would be a popover per row watching a selection it can never have. Keyed
+        on the focused passage so the menu rebinds rather than tracking a stale
+        editor when focus moves.
+      */}
+      <TranslationBubbleMenu
+        key={controller.getFocusedUuid() ?? 'none'}
+        editor={controller.getFocusedEditor()}
+      />
       <div
         className="relative mx-auto w-full max-w-readable px-8"
         style={{ height: virtualizer.getTotalSize() }}

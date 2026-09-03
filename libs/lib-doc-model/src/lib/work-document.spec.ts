@@ -315,8 +315,13 @@ describe('WorkDocument hydration window', () => {
     name: 'test',
     loadPassages: async (_workUuid, uuids) =>
       uuids
-        .filter((uuid) => Array.from({ length: count }, (_, i) => `p${i}`).includes(uuid))
-        .map((uuid) => ({ uuid, content: [para(`text ${uuid}`, `a-${uuid}`)] })),
+        .filter((uuid) =>
+          Array.from({ length: count }, (_, i) => `p${i}`).includes(uuid),
+        )
+        .map((uuid) => ({
+          uuid,
+          content: [para(`text ${uuid}`, `a-${uuid}`)],
+        })),
   });
 
   /** A work whose documents are hydrated from a source, not pre-created. */
@@ -440,5 +445,81 @@ describe('WorkDocument structural undo over text history', () => {
     doc.replaceContent(doc.toJSON());
 
     expect(doc.content.get(0)).toBe(before);
+  });
+});
+
+describe('WorkDocument merge at a blank seam', () => {
+  /** A work of `count` passages whose content is set explicitly per passage. */
+  const withContent = (contents: ReturnType<typeof para>[][]) => {
+    const work = new WorkDocument({ workUuid: 'work-1', schema: testSchema });
+    work.seedSpine(contents.map((_, i) => meta(`p${i}`, `${i + 1}`)));
+    contents.forEach((content, i) =>
+      work.store
+        .ensure(`p${i}`)
+        .replaceContent({
+          type: 'doc',
+          content: content.length ? content : [],
+        }),
+    );
+    return work;
+  };
+
+  const empty = () => para('', 'blank');
+
+  // Reported: deleting an empty passage with Backspace left a blank line at the
+  // end of the passage that absorbed it, and put the caret above that line —
+  // because the boundary was the head's size before the concatenation.
+  it('drops the blank paragraph when an empty passage is merged away', () => {
+    const work = withContent([[para('text', 'a')], [empty()]]);
+
+    const result = work.merge('p1');
+
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['text']);
+    // The caret belongs at the end of the surviving text, not past a blank.
+    expect(result?.boundary).toBe(
+      work.store.ensure('p0').toNode().content.size,
+    );
+  });
+
+  it('drops a blank tail on the passage that absorbs content', () => {
+    const work = withContent([
+      [para('text', 'a'), empty()],
+      [para('more', 'b')],
+    ]);
+
+    work.merge('p1');
+
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
+      'text',
+      'more',
+    ]);
+  });
+
+  it('keeps both when neither side of the seam is blank', () => {
+    const work = withContent([[para('one', 'a')], [para('two', 'b')]]);
+
+    work.merge('p1');
+
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['one', 'two']);
+  });
+
+  it('leaves a block to hold the caret when both passages are blank', () => {
+    const work = withContent([[empty()], [empty()]]);
+
+    work.merge('p1');
+
+    // Trimming both sides would leave a document with no blocks at all.
+    expect(work.store.ensure('p0').toNode().childCount).toBe(1);
+  });
+
+  it('restores the blank paragraph on undo', () => {
+    const work = withContent([[para('text', 'a')], [empty()]]);
+    work.merge('p1');
+
+    work.undo();
+
+    expect(work.spine.uuids()).toEqual(['p0', 'p1']);
+    expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['text']);
+    expect(work.store.ensure('p1').toNode().childCount).toBe(1);
   });
 });

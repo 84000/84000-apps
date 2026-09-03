@@ -1,6 +1,5 @@
 import { Editor, Extensions } from '@tiptap/core';
-import { Selection } from '@tiptap/pm/state';
-import { renderToHTMLString } from '@tiptap/static-renderer/pm/html-string';
+import { Selection, TextSelection } from '@tiptap/pm/state';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -10,12 +9,8 @@ import type {
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
-import { renderMentionToHTMLString } from '../editor/extensions/Mention/mentionSSRMapping';
-import { renderTextToHTMLString } from '../editor/extensions/PipeNotItalic';
-import {
-  buildStackEditorExtensions,
-  buildStackSchemaExtensions,
-} from './stack-extensions';
+import { renderTranslationHTML } from '../reader/translation-html';
+import { buildStackEditorExtensions } from './stack-extensions';
 import type {
   StackCrossSelection,
   StackFocusTarget,
@@ -185,6 +180,16 @@ export class PassageStackController {
    * genuinely no content to draw, and the row shows a skeleton at its
    * estimated height instead. The prototype never had this case because it
    * held every passage in memory, which is exactly what does not scale.
+   *
+   * Rendered through the reader's own renderer, not the stack's schema set.
+   * Static rendering needs the `*.ssr` variant of every extension whose
+   * interactive form draws through a React node view, plus the `endNoteLink`
+   * mark mapping — rendering with the schema set silently dropped endnote
+   * markers from every static row while the editor showed them. The schema set
+   * is for parsing; this is for drawing, and they are not the same list.
+   *
+   * Cached per passage because the render is not cheap and a row re-renders on
+   * every controller bump. Invalidated by `wire`'s content observer.
    */
   getStaticHTML = (uuid: string): string | null => {
     const cached = this.staticHTML.get(uuid);
@@ -193,22 +198,8 @@ export class PassageStackController {
     const doc = this.work.store.peek(uuid);
     if (!doc) return null;
 
-    let html = '';
-    try {
-      html = renderToHTMLString({
-        content: doc.toJSON(),
-        extensions: buildStackSchemaExtensions(),
-        options: {
-          nodeMapping: {
-            mention: renderMentionToHTMLString,
-            text: renderTextToHTMLString,
-          },
-        },
-      });
-    } catch (error) {
-      console.error('failed to statically render passage', error);
-      html = `<p>${doc.text}</p>`;
-    }
+    const html =
+      renderTranslationHTML({ content: doc.toJSON() }) ?? `<p>${doc.text}</p>`;
     this.staticHTML.set(uuid, html);
     return html;
   };
@@ -301,10 +292,18 @@ export class PassageStackController {
         this.keyBuffer = '';
       }
     }
+
+    // The shared editing surfaces bind to `getFocusedEditor()`, which is null
+    // until the editor registers. Focusing a passage renders its row as an
+    // editor, the editor mounts and lands here — without this the menu is
+    // still holding the null it was rendered with and never appears.
+    if (this.focusedUuid === uuid) this.bump();
   }
 
   unregisterEditor(uuid: string) {
     this.editors.delete(uuid);
+    // Same reason in reverse: a surface bound to this editor has to let go.
+    if (this.focusedUuid === uuid) this.bump();
   }
 
   getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
@@ -331,11 +330,29 @@ export class PassageStackController {
     if (this.pendingFocus) this.keyBuffer += key;
   }
 
-  /** Recenter the live window when an editor gains focus by any means. */
+  /**
+   * Recenter the live window when an editor gains focus by any means.
+   *
+   * Bumps on a change of focus, not only on a change of live set. The shared
+   * bubble menu is bound to whichever editor has focus, so it has to re-render
+   * when focus moves between two passages that are both already live — which
+   * `recenterLive` alone would not report.
+   */
   notifyFocused(uuid: string) {
+    const changed = this.focusedUuid !== uuid;
     this.focusedUuid = uuid;
     this.recenterLive(uuid);
+    if (changed) this.bump();
   }
+
+  /**
+   * The editor that currently has focus, if it is mounted.
+   *
+   * What the shared editing surfaces bind to: only one passage is editable at a
+   * time, so a bubble menu per row would be a popover per row watching nothing.
+   */
+  getFocusedEditor = (): Editor | null =>
+    this.focusedUuid ? (this.editors.get(this.focusedUuid) ?? null) : null;
 
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
     const index = this.getOrder().indexOf(uuid);
@@ -399,8 +416,20 @@ export class PassageStackController {
       return;
     }
     if (typeof where === 'number') {
-      const max = Selection.atEnd(editor.state.doc).from;
-      editor.commands.focus(Math.max(1, Math.min(where, max)));
+      // A position from the doc model — a merge's join point, a split's caret,
+      // the start of a cross-passage delete. It is a document offset, not
+      // necessarily a place a caret can sit: a merge's boundary is the size of
+      // the head's content, which lands *between* two blocks rather than
+      // inside either. Left there, the caret is in no textblock at all, and the
+      // next Backspace selects the preceding block instead of joining — which
+      // is what put the bubble menu over a freshly merged passage.
+      //
+      // `TextSelection.near` with a backward bias resolves it to the nearest
+      // real caret position, which at a join is the end of the head's text.
+      const { doc } = editor.state;
+      const clamped = Math.max(0, Math.min(where, doc.content.size));
+      const near = TextSelection.near(doc.resolve(clamped), -1);
+      editor.commands.focus(near.from);
       return;
     }
     editor.commands.focus(where);
