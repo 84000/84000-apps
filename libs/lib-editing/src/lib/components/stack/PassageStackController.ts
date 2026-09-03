@@ -1,4 +1,5 @@
 import { Editor, Extensions } from '@tiptap/core';
+import { getBookmarks } from '@eightyfourthousand/data-access';
 import { Selection, TextSelection } from '@tiptap/pm/state';
 import type { UndoManager } from 'yjs';
 import type {
@@ -20,7 +21,7 @@ import type {
 
 /** Rough characters per rendered line, for unmeasured row height estimates. */
 const CHARS_PER_LINE = 85;
-/** Row chrome (label gutter, vertical padding) in pixels. */
+/** Everything in a row that is not a line of text, in pixels. */
 const ROW_CHROME_PX = 48;
 /** One line of rendered passage text, in pixels. */
 const LINE_HEIGHT_PX = 28;
@@ -41,6 +42,8 @@ export type PassageStackControllerOptions = {
     hasMore: boolean;
     maybeExtend: (visibleEnd: number) => boolean;
   };
+  /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
+  readOnly?: boolean;
 };
 
 /**
@@ -83,6 +86,8 @@ export class PassageStackController {
   private hydrationQueued = false;
 
   private spineFeed?: PassageStackControllerOptions['spineFeed'];
+  private readOnly: boolean;
+  private bookmarks = new Set<string>();
 
   private listeners = new Set<() => void>();
   private version = 0;
@@ -91,6 +96,8 @@ export class PassageStackController {
   constructor(options: PassageStackControllerOptions) {
     this.work = options.work;
     this.spineFeed = options.spineFeed;
+    this.readOnly = options.readOnly ?? false;
+    this.readBookmarks();
     if (options.charCounts) {
       this.charCounts = new Map(options.charCounts);
     }
@@ -157,6 +164,28 @@ export class PassageStackController {
   mountedCount = () => this.editors.size;
 
   undoDepth = () => this.work.log.depth;
+
+  /** Whether a row shows the bookmark indicator. */
+  showsBookmark = (uuid: string) => this.readOnly && this.bookmarks.has(uuid);
+
+  /**
+   * Re-read the bookmark store.
+   *
+   * Bookmarks live in local storage, so a change in another tab arrives as a
+   * `storage` event and nothing else announces it.
+   */
+  refreshBookmarks = () => {
+    const before = this.bookmarks;
+    this.readBookmarks();
+    const same =
+      before.size === this.bookmarks.size &&
+      [...before].every((uuid) => this.bookmarks.has(uuid));
+    if (!same) this.bump();
+  };
+
+  private readBookmarks() {
+    this.bookmarks = new Set(getBookmarks().map((bookmark) => bookmark.uuid));
+  }
 
   /** Whether this passage's document is in memory and can be rendered. */
   isHydrated = (uuid: string) => this.work.store.has(uuid);
@@ -457,6 +486,35 @@ export class PassageStackController {
     this.focusPassage(result.uuid, result.boundary);
     return true;
   };
+
+  /** Rename one passage. */
+  setLabel = (uuid: string, label: string) => this.work.setLabel(uuid, label);
+
+  /**
+   * Delete a whole passage.
+   *
+   * Focus moves to the one taking its place: a focused uuid the spine no
+   * longer holds leaves the shared surfaces bound to nothing.
+   */
+  removePassage = (uuid: string) => {
+    const index = this.getOrder().indexOf(uuid);
+    if (index < 0) return false;
+    if (!this.work.remove([uuid])) return false;
+
+    this.orderCache = null;
+    const order = this.getOrder();
+    const next = order[index] ?? order[index - 1];
+    if (next) this.focusPassage(next, 'start');
+    else {
+      this.focusedUuid = null;
+      this.liveUuids = new Set();
+    }
+    return true;
+  };
+
+  /** A passage's document as editor JSON, for the attributes dialog. */
+  getPassageJSON = (uuid: string) =>
+    this.work.store.peek(uuid)?.toJSON() ?? null;
 
   /**
    * Map a DOM point to a ProseMirror position, whether the passage is a

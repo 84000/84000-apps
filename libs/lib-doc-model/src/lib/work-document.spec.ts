@@ -162,6 +162,35 @@ describe('WorkDocument structural ops', () => {
     });
   });
 
+  describe('setLabel', () => {
+    it('renames one passage and leaves the run alone', () => {
+      const work = build(3);
+      expect(work.setLabel('p1', '1.5')).toBe(true);
+      expect(work.spine.entries().map((e) => e.label)).toEqual([
+        '1',
+        '1.5',
+        '3',
+      ]);
+    });
+
+    it('records nothing for a label that has not changed', () => {
+      const work = build(2);
+      expect(work.setLabel('p0', '1')).toBe(false);
+      expect(work.log.depth).toBe(0);
+    });
+
+    it('undoes and redoes the rename', () => {
+      const work = build(2);
+      work.setLabel('p0', '7');
+
+      expect(work.undo()).toEqual({ uuid: 'p0', where: 'start' });
+      expect(work.spine.meta('p0')?.label).toBe('1');
+
+      expect(work.redo()).toEqual({ uuid: 'p0', where: 'start' });
+      expect(work.spine.meta('p0')?.label).toBe('7');
+    });
+  });
+
   describe('reorder', () => {
     it('moves a passage and renumbers', () => {
       const work = build(4);

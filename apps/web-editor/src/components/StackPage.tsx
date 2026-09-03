@@ -178,10 +178,12 @@ export const StackPage = ({
   toh,
   repeat = 1,
   overscan,
+  readOnly = false,
 }: {
   toh: string;
   repeat?: number;
   overscan?: number;
+  readOnly?: boolean;
 }) => {
   const [controller, setController] = useState<PassageStackController | null>(
     null,
@@ -196,7 +198,7 @@ export const StackPage = ({
   // Clear the previous stack as soon as the inputs change, rather than in the
   // fetch effect below. Adjusting state during render is React's recommended
   // alternative, and on mount there is nothing to clear.
-  const loadKey = `${toh}|${repeat}`;
+  const loadKey = `${toh}|${repeat}|${readOnly}`;
   const [prevLoadKey, setPrevLoadKey] = useState(loadKey);
   if (loadKey !== prevLoadKey) {
     setPrevLoadKey(loadKey);
@@ -226,6 +228,7 @@ export const StackPage = ({
         work.seedSpine(seeds.map((seed) => seed.meta));
         return new PassageStackController({
           work,
+          readOnly,
           charCounts: seeds.map(
             (seed) => [seed.meta.uuid, seed.charCount] as const,
           ),
@@ -255,7 +258,7 @@ export const StackPage = ({
         return null;
       }
 
-      return new PassageStackController({ work, spineFeed });
+      return new PassageStackController({ work, spineFeed, readOnly });
     };
 
     build().then((built) => {
@@ -273,7 +276,7 @@ export const StackPage = ({
     return () => {
       cancelled = true;
     };
-  }, [toh, repeat]);
+  }, [toh, repeat, readOnly]);
 
   useEffect(() => {
     if (!controller) return;

@@ -1,12 +1,23 @@
 'use client';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
+import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
 import { TranslationBubbleMenu } from '../editor/menus';
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
+import {
+  StackPassageMenu,
+  type StackPassageMenuTarget,
+} from './StackPassageMenu';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackSelection } from './useStackSelection';
@@ -18,11 +29,7 @@ import { useStackSelection } from './useStackSelection';
  */
 const OVERSCAN = 20;
 
-const MEASURED_KEYS = new Set([
-  'Enter',
-  'Backspace',
-  'Delete',
-]);
+const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
 
 export const PassageStack = ({
   controller,
@@ -40,6 +47,11 @@ export const PassageStack = ({
   );
   const order = controller.getOrder();
   const parentRef = useRef<HTMLDivElement>(null);
+  const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
+    null,
+  );
+  const closeMenu = useCallback(() => setMenuTarget(null), []);
+  const focusedEditor = controller.getFocusedEditor();
 
   const virtualizer = useVirtualizer({
     count: order.length,
@@ -98,10 +110,26 @@ export const PassageStack = ({
     let down: { x: number; y: number; uuid: string | null } | null = null;
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as Element | null;
-      if (target?.closest?.('[contenteditable="true"]')) {
-        down = null; // live editors handle their own caret
+      down = null;
+
+      // The label is the menu's trigger; the default would move focus.
+      const labelEl = target?.closest?.<HTMLElement>('[data-passage-label]');
+      if (labelEl) {
+        event.preventDefault();
+        const rect = labelEl.getBoundingClientRect();
+        setMenuTarget({
+          uuid: labelEl.dataset['uuid'] ?? '',
+          rect: {
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+          },
+        });
         return;
       }
+
+      if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
       down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
     };
     const onMouseUp = (event: MouseEvent) => {
@@ -113,7 +141,10 @@ export const PassageStack = ({
         Math.abs(event.clientY - start.y) > 5;
       if (moved || !document.getSelection()?.isCollapsed) return;
       if (uuidAt(event.target) !== start.uuid) return;
-      controller.focusPassage(start.uuid, { x: event.clientX, y: event.clientY });
+      controller.focusPassage(start.uuid, {
+        x: event.clientX,
+        y: event.clientY,
+      });
     };
 
     container.addEventListener('mousedown', onMouseDown);
@@ -122,6 +153,13 @@ export const PassageStack = ({
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mouseup', onMouseUp);
     };
+  }, [controller]);
+
+  // Bookmarks live in local storage; another tab changing them arrives here.
+  useEffect(() => {
+    const onStorage = () => controller.refreshBookmarks();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, [controller]);
 
   // Keys typed between click and editor mount are buffered and replayed.
@@ -165,23 +203,29 @@ export const PassageStack = ({
       // overflow-anchor off: Chrome's scroll anchoring chases re-rendering
       // virtual rows after a scrollbar jump, compounding with the
       // virtualizer's own offset math into an endless scroll drift.
-      className={cn(
-        'h-full overflow-y-auto [overflow-anchor:none]',
-        className,
-      )}
+      className={cn('h-full overflow-y-auto [overflow-anchor:none]', className)}
     >
       {/*
-        One bubble menu for the whole stack, bound to whichever passage has
-        focus. Only one passage is editable at a time — neighbours premount
-        non-editable so boundary keys land in a real editor — so a menu per row
-        would be a popover per row watching a selection it can never have. Keyed
-        on the focused passage so the menu rebinds rather than tracking a stale
-        editor when focus moves.
+        One of each for the whole stack, bound to the focused passage: only one
+        passage is editable at a time, so a copy per row would watch nothing.
+        Keyed so they rebind rather than hold a stale editor — and prefixed, or
+        the two keyed siblings would share a key.
       */}
       <TranslationBubbleMenu
-        key={controller.getFocusedUuid() ?? 'none'}
-        editor={controller.getFocusedEditor()}
+        key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
+        editor={focusedEditor}
       />
+      <StackPassageMenu
+        controller={controller}
+        target={menuTarget}
+        onClose={closeMenu}
+      />
+      {focusedEditor && (
+        <MentionAdvancedOverlay
+          key={`mention-${controller.getFocusedUuid() ?? 'none'}`}
+          editor={focusedEditor}
+        />
+      )}
       <div
         className="relative mx-auto w-full max-w-readable px-8"
         style={{ height: virtualizer.getTotalSize() }}
@@ -196,7 +240,8 @@ export const PassageStack = ({
               key={item.key}
               data-index={item.index}
               ref={virtualizer.measureElement}
-              className="absolute left-0 top-0 w-full px-8"
+              // `StackRow` supplies the rest of the left gutter.
+              className="absolute left-0 top-0 w-full pl-4 pr-8"
               style={{ transform: `translateY(${item.start}px)` }}
             >
               {asEditor ? (

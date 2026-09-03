@@ -67,6 +67,7 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
       type: (found.node.attrs.type as string) || '',
       excerpt: text.slice(0, 100) + (text.length > 100 ? '...' : ''),
       hasCompare: !!(found.node.attrs.alignments?.[toh ?? ''] as unknown),
+      json: found.node.toJSON(),
     };
   }, [editor, menu, toh]);
 
@@ -228,18 +229,19 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           {dialogType === 'label' && (
             <EditLabel
-              editor={editor}
-              uuid={passage.uuid}
               label={passage.label}
+              onSave={(label) =>
+                editor.commands.setPassageLabel(passage.uuid, label)
+              }
               close={() => setIsDialogOpen(false)}
             />
           )}
           {dialogType === 'attributes' && (
             <ShowAnnotations
-              editor={editor}
               uuid={passage.uuid}
               label={passage.label}
               type={passage.type}
+              json={passage.json}
             />
           )}
           {dialogType === 'delete' && (
@@ -257,7 +259,10 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button variant="destructive" onClick={handleDelete}>

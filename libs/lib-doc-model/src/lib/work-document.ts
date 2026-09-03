@@ -411,6 +411,27 @@ export class WorkDocument {
     return true;
   }
 
+  /** Rename one passage, leaving the run around it alone. */
+  setLabel(uuid: string, label: string): boolean {
+    const meta = this.spine.meta(uuid);
+    if (!meta || meta.label === label) return false;
+
+    this.spine.setLabel(uuid, label);
+    this.record({
+      kind: 'label',
+      content: [],
+      inserted: [],
+      removed: [],
+      moved: [],
+      labels: [{ uuid, from: meta.label, to: label }],
+      focusAfterUndo: { uuid, where: 'start' },
+      focusAfterRedo: { uuid, where: 'start' },
+    });
+
+    this.notify();
+    return true;
+  }
+
   // ------------------------------------------------------------- history
 
   /** Record that a passage's own undo manager took a text edit. */

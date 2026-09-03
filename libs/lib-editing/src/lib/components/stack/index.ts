@@ -7,6 +7,7 @@ export * from './passage-source';
 export * from './spine-feed';
 export * from './PassageStack';
 export * from './PassageStackController';
+export * from './StackPassageMenu';
 export * from './PerfHUD';
 export * from './StackPassageEditor';
 export * from './StackRow';

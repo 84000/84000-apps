@@ -32,7 +32,11 @@ export const StaticPassageRow = memo(
     const html = controller.getStaticHTML(meta.uuid);
 
     return (
-      <StackRow uuid={meta.uuid} label={meta.label}>
+      <StackRow
+        uuid={meta.uuid}
+        label={meta.label}
+        bookmarked={controller.showsBookmark(meta.uuid)}
+      >
         {html === null ? (
           <div
             className="animate-pulse rounded bg-muted"

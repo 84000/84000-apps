@@ -54,6 +54,62 @@ boundary arrow keys land in a real editor. That is what decides this:
 | Schema, marks, node views              | **Per editor.** Each passage parses and renders its own content.                                                                      |
 | `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `PassageStackController.wire`. |
 | `BoundaryKeymap`, `SlashCommand`       | **Per editor.** Both act on the focused passage and need its uuid.                                                                    |
+| `TranslationBubbleMenu`                | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
+| `StackPassageMenu`                     | **Shared**, and not editor-driven at all — see below.                                                                                |
+| `MentionAdvancedOverlay`               | **Shared**, bound to whichever editor has focus, keyed the same way. The prefix on that key is load bearing: two siblings keyed on the same uuid are two children with the same key. |
+| `DragHandle`                           | Not in the production translation set either. Out of scope.                                                                          |
+
+### Row chrome
+
+`StackRow` is permanent, not scaffolding. Production draws a passage's label
+from `PassageNode`'s node view, inside the document; passage identity lives in
+the spine here, so the chrome is React around the editor. The row carries the
+same classes and hooks either way — `.labeled` on the label,
+`PASSAGE_CONTENT_CLASS` on the content, `id`, `data-passage-label` and
+`data-uuid` — because the things that key off them are not all in this package:
+deep links resolve a passage by `id` and then look for `.passage.is-editable`
+inside it.
+
+Two deliberate differences:
+
+- **The label gutter is padding, not `-left-16`.** The stack scrolls in a
+  container whose `overflow-y: auto` makes `overflow-x` auto too, so a label at
+  a negative offset is clipped rather than drawn in the page margin. Same
+  gutter, same 24px to the text, reached from the other side.
+- **`select-none` on the label.** In production the label is node view chrome,
+  which ProseMirror leaves out of a copied slice. Static rows are copied
+  natively, so without this a drag across them picks up the labels.
+
+The bookmark indicator comes from the bookmark store rather than from an
+editor, and shows only when the controller is `readOnly` — the same condition
+as production's `!editable`, because a bookmark is a reader's marker and the
+studio has no way to make one. Bookmarks are local storage, so `PassageStack`
+listens for `storage` and has the controller re-read.
+
+`readOnly` is the seam the reader migration widens. Today it governs chrome and
+nothing else; the sandbox reaches it with `?readonly=1`.
+
+`StackPassageMenu` is the passage label menu. Production drives it from a
+ProseMirror click plugin matching `[data-passage-label]`; the trigger is an
+ordinary React click here, so `editor.storage.passage.openMenu`, the plugin and
+`findPassageNode` have nothing to do. The actions go to the work and the spine
+for the same reason a label does: `setPassageLabel` becomes
+`WorkDocument.setLabel`, and deleting a passage becomes `WorkDocument.remove`
+rather than a transaction over a node.
+
+Deleting moves focus onto the passage that takes the deleted one's place. It has
+to: a focused uuid the spine no longer holds leaves every shared surface bound
+to a row that is not drawn.
+
+Not carried over, and why:
+
+| | |
+| --- | --- |
+| `ReaderOptions` in the menu | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet. |
+| The references list | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past. |
+| The compare source column | Compare mode is DEV-743's, and its surface is undecided. |
+| `data-toh` on the row | The toh visibility rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset. Hiding one leaves a hole. Which passages a toh shows is a question about spine order, not about CSS. |
+| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet. |
 
 ### Keys at a passage boundary
 
@@ -71,11 +127,6 @@ head's content, which falls _between_ two blocks. `focusEditor` resolves it with
 `TextSelection.near` so the caret lands in real text — at a join, the end of the
 head. Left unresolved the caret was in no textblock at all, which is what made
 the Backspace above misbehave in the first place.
-| `TranslationBubbleMenu` | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
-| `PassageMenuOverlay` | **Shared**, and no longer editor-driven: the label lives in `StackRow` outside the editor, so the trigger and the actions belong to the controller and the spine. |
-| `MentionAdvancedOverlay` | **Shared**, bound to whichever editor has focus. |
-| `DragHandle` | Not in the production translation set either. Out of scope. |
-
 ### Toh visibility a host must supply
 
 A work may span several Tohoku texts — toh145's spans four — and annotations
