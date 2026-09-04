@@ -53,6 +53,15 @@ interface EditorContextState {
   setEditor: (key: string, editor?: Editor) => void;
   refreshEditorBaseline: (key: string) => void;
   save: () => Promise<void>;
+  /**
+   * Hand `save` over to something else, or take it back with null.
+   *
+   * The passage stack materializes rows from its own documents rather than
+   * from a TipTap editor, and this provider cannot call into it — the stack
+   * sits behind a dynamic boundary so its `@tiptap/y-tiptap` imports stay out
+   * of the server bundle. So the stack registers instead.
+   */
+  registerSaveHandler: (handler: (() => Promise<void>) | null) => void;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
   setNavigating: (
@@ -87,6 +96,9 @@ export const EditorContext = createContext<EditorContextState>({
   },
   canEdit: async () => false,
   canAdminister: async () => false,
+  registerSaveHandler: () => {
+    // No-op when outside provider (reader mode)
+  },
   applyReplacedPassages: async () => {
     // No-op when outside provider
   },
@@ -439,7 +451,19 @@ export const EditorContextProvider = ({
     [setNavigating],
   );
 
+  const saveHandlerRef = useRef<(() => Promise<void>) | null>(null);
+  const registerSaveHandler = useCallback(
+    (handler: (() => Promise<void>) | null) => {
+      saveHandlerRef.current = handler;
+    },
+    [],
+  );
+
   const save = useCallback(async () => {
+    if (saveHandlerRef.current) {
+      return saveHandlerRef.current();
+    }
+
     if (isSavingRef.current) {
       console.warn('Save already in progress; skipping.');
       return;
@@ -648,6 +672,7 @@ export const EditorContextProvider = ({
         setEditor,
         refreshEditorBaseline,
         save,
+        registerSaveHandler,
         startObserving,
         stopObserving,
         setNavigating,
