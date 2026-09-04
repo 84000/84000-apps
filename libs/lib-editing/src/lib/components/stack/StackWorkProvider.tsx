@@ -11,7 +11,9 @@ import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
 import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
+import { useEditorState } from '../editor/EditorProvider';
 import { PassageStackController } from './PassageStackController';
+import { saveStackWork } from './stack-save';
 import { SpineFeed, type SpineSection } from './spine-feed';
 import { createStackWork } from './stack-work';
 
@@ -53,6 +55,22 @@ export const StackWorkProvider = ({
   children: ReactNode;
 }) => {
   const [stack, setStack] = useState<StackWork | null>(null);
+  const { registerSaveHandler } = useEditorState();
+
+  // The editor's save button materializes rows from one TipTap editor per tab,
+  // which per-passage documents do not have. This provider cannot be called
+  // into from `EditorProvider` — the stack sits behind a dynamic boundary — so
+  // it hands its own save over instead.
+  //
+  // Content only for now: passages deleted in the stack are not yet removed
+  // from the server, so a delete survives until reload and then comes back.
+  useEffect(() => {
+    if (!stack) return;
+    registerSaveHandler(async () => {
+      await saveStackWork(stack.work);
+    });
+    return () => registerSaveHandler(null);
+  }, [stack, registerSaveHandler]);
 
   useEffect(() => {
     let cancelled = false;
