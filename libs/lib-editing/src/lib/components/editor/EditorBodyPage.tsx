@@ -15,11 +15,20 @@ import { useCallback, useEffect, useState } from 'react';
 import { TranslationBuilder, TranslationEditorContent } from '.';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TitlesBuilder } from './TitlesBuilder';
+import { usePerPassageDocs } from './usePerPassageDocs';
+import dynamic from 'next/dynamic';
+
+/** See `EditorLayout` — the stack must not reach the server bundle. */
+const StackTab = dynamic(
+  () => import('../stack/StackTab').then((m) => m.StackTab),
+  { ssr: false },
+);
 
 const INITIAL_PASSAGES = 100;
 
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
+  const perPassageDocs = usePerPassageDocs();
   const [body, setBody] = useState<TranslationEditorContent>();
   const [frontMatter, setFrontMatter] = useState<TranslationEditorContent>();
   const [frontMatterHasMore, setFrontMatterHasMore] = useState<boolean>();
@@ -73,17 +82,27 @@ export const EditorBodyPage = () => {
   );
 
   const renderTranslation = useCallback(
-    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
-      <TranslationBuilder
-        content={content}
-        name={name}
-        className={className}
-        filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
-        panel="main"
-        hasMoreAfter={hasMoreAfter}
-      />
-    ),
-    [],
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>
+      // Front matter keeps the paginated editor for now; only the translation
+      // tab is stacked.
+      !perPassageDocs.ready ? (
+        // Not "the flag is off" — the value has not arrived. Building the
+        // paginated editor on that answer costs a TipTap instance and a Yjs
+        // binding, thrown away when it does.
+        <TranslationSkeleton />
+      ) : perPassageDocs.enabled && name === 'translation' ? (
+        <StackTab tab="translation" className={className} />
+      ) : (
+        <TranslationBuilder
+          content={content}
+          name={name}
+          className={className}
+          filter={name === 'front' ? FRONT_MATTER_FILTER : BODY_MATTER_FILTER}
+          panel="main"
+          hasMoreAfter={hasMoreAfter}
+        />
+      ),
+    [perPassageDocs.enabled, perPassageDocs.ready],
   );
 
   if (!titles || !frontMatter || !body) {
