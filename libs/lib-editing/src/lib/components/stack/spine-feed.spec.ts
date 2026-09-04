@@ -28,15 +28,21 @@ const client = {} as GraphQLClient;
 const work = () => new WorkDocument({ workUuid: 'w1', schema });
 
 /** One page of `count` passages, labelled from `from`. */
-const metaPage = (from: number, count: number, hasMoreAfter: boolean) => ({
+const metaPage = (
+  from: number,
+  count: number,
+  hasMoreAfter: boolean,
+  type = 'translation',
+  prefix = 'p',
+) => ({
   metas: Array.from({ length: count }, (_, i) => ({
-    uuid: `p${from + i}`,
+    uuid: `${prefix}${from + i}`,
     label: `${from + i + 1}`,
     sort: (from + i) * 2,
-    type: 'translation',
+    type,
     toh: undefined,
   })),
-  nextCursor: hasMoreAfter ? `p${from + count - 1}` : undefined,
+  nextCursor: hasMoreAfter ? `${prefix}${from + count - 1}` : undefined,
   hasMoreAfter,
   hasMoreBefore: false,
 });
@@ -295,6 +301,76 @@ describe('SpineFeed', () => {
 
       await Promise.all([feed.extendBefore(), feed.extendBefore()]);
       expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // The editor loads a panel at a time, so the runs arrive independently and
+  // must not disturb each other. Sections do not interleave, so each run grows
+  // at its own end.
+  describe('sections', () => {
+    const TRANSLATION = { type: '(translation)', tab: 'translation' };
+    const ENDNOTES = { type: '(endnotes)', tab: 'endnotes' };
+
+    /** Both runs seeded, translation first, as the work reads. */
+    const both = async () => {
+      const w = work();
+      const main = new SpineFeed(w, client, TRANSLATION);
+      const notes = new SpineFeed(w, client, ENDNOTES);
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, true),
+      );
+      await main.seed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, true, 'endnotes', 'n'),
+      );
+      await notes.seed();
+      return { w, main, notes };
+    };
+
+    it('asks the server for its own section', async () => {
+      const w = work();
+      const notes = new SpineFeed(w, client, ENDNOTES);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, false, 'endnotes', 'n'),
+      );
+
+      await notes.seed();
+
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: '(endnotes)' }),
+      );
+    });
+
+    it('seeds each run without the other stopping it', async () => {
+      const { w } = await both();
+      // A run is seeded only if *its* section is empty, not the spine.
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n1']);
+    });
+
+    it('grows a run at its own end rather than the spine end', async () => {
+      const { w, main } = await both();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(2, 2, false),
+      );
+
+      await main.extend();
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'p2', 'p3', 'n0', 'n1']);
+    });
+
+    it('replaces only its own run when revealing a passage', async () => {
+      const { w, notes } = await both();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...metaPage(90, 2, false, 'endnotes', 'n'),
+        prevCursor: 'n90',
+        hasMoreBefore: true,
+      });
+
+      expect(await notes.reveal('n91')).toBe(3);
+
+      // The translation run is untouched; only the endnotes window moved.
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n90', 'n91']);
     });
   });
 });

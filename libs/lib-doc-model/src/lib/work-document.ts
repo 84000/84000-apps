@@ -19,6 +19,9 @@ import type {
 
 const EMPTY_PARAGRAPH: JSONContent = { type: 'paragraph' };
 
+/** The window key a single-view consumer gets without asking for one. */
+const DEFAULT_WINDOW = 'default';
+
 /** An empty paragraph carries no text and no structure worth keeping. */
 const isBlankParagraph = (node: JSONContent | undefined): boolean =>
   !!node && node.type === 'paragraph' && !node.content?.length;
@@ -91,6 +94,8 @@ export class WorkDocument {
   private loader?: PassageLoader;
   private newUuid: () => string;
   private listeners = new Set<() => void>();
+  /** Ranges each view currently has on screen, so hydration is their union. */
+  private windows = new Map<string, { range: SpineRange; keep: Set<string> }>();
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
@@ -124,15 +129,39 @@ export class WorkDocument {
    */
   async hydrateWindow(
     range: SpineRange,
-    options: { keep?: Iterable<string> } = {},
+    options: { keep?: Iterable<string>; key?: string } = {},
   ): Promise<PassageDoc[]> {
-    const buffered = this.loader?.bufferedRange(range) ?? range;
-    const uuids = this.spine.slice(buffered).map((entry) => entry.uuid);
-    const docs = await this.store.hydrateMany(uuids);
-    const pinned = [...uuids, ...(options.keep ?? [])];
-    this.store.releaseOutside(pinned);
+    const key = options.key ?? DEFAULT_WINDOW;
+    this.windows.set(key, { range, keep: new Set(options.keep ?? []) });
+
+    // The union of every open window. Views onto one work scroll
+    // independently — the editor draws a tab per panel — so releasing what
+    // this one has left behind would release what another one is drawing.
+    const wanted = new Set<string>();
+    this.windows.forEach((window) => {
+      this.windowUuids(window.range).forEach((uuid) => wanted.add(uuid));
+      window.keep.forEach((uuid) => wanted.add(uuid));
+    });
+
+    const docs = await this.store.hydrateMany([...wanted]);
+    this.store.releaseOutside(wanted);
     this.notify();
-    return docs;
+
+    // Only this window's documents come back: a consumer attaches its own
+    // bookkeeping to what it draws, and two of them observing one document
+    // would record every edit to it twice.
+    const mine = new Set(this.windowUuids(range));
+    return docs.filter((doc) => mine.has(doc.uuid));
+  }
+
+  /** Forget a window, so what only it held can be released. */
+  releaseWindow(key: string) {
+    this.windows.delete(key);
+  }
+
+  private windowUuids(range: SpineRange): string[] {
+    const buffered = this.loader?.bufferedRange(range) ?? range;
+    return this.spine.slice(buffered).map((entry) => entry.uuid);
   }
 
   /** Seed the spine from passage metadata, e.g. on a work's first visit. */
@@ -510,6 +539,7 @@ export class WorkDocument {
 
   /** Release every document. The spine survives — it is cheap to keep. */
   destroy() {
+    this.windows.clear();
     this.store.destroy();
     this.listeners.clear();
   }

@@ -394,3 +394,78 @@ describe('PassageStackController focused editor', () => {
     expect(controller.getFocusedEditor()).toBeNull();
   });
 });
+
+// One work, one spine, one undo history — but a view per panel, because that
+// is what the editor draws.
+describe('PassageStackController tab views', () => {
+  /** A spine holding two sections, translation first as the work reads. */
+  const sectioned = () => {
+    const all = [
+      ...Array.from({ length: 3 }, (_, i) => seed(`p${i}`, `${i + 1}`, `body ${i}`)),
+      ...Array.from({ length: 2 }, (_, i) => seed(`n${i}`, `n.${i + 1}`, `note ${i}`)),
+    ];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine([
+      ...['p0', 'p1', 'p2'].map((uuid, i) => ({
+        uuid,
+        label: `${i + 1}`,
+        type: 'translation' as const,
+      })),
+      ...['n0', 'n1'].map((uuid, i) => ({
+        uuid,
+        label: `n.${i + 1}`,
+        type: 'endnotes' as const,
+      })),
+    ]);
+    return work;
+  };
+
+  it('draws only its own tab', () => {
+    const work = sectioned();
+    const main = new PassageStackController({ work, tab: 'translation' });
+    const notes = new PassageStackController({ work, tab: 'endnotes' });
+
+    expect(main.getOrder()).toEqual(['p0', 'p1', 'p2']);
+    expect(notes.getOrder()).toEqual(['n0', 'n1']);
+  });
+
+  // Rows are indexed within the tab; hydration is indexed within the work.
+  it('hydrates its own passages, not the spine positions its rows sit at', async () => {
+    const work = sectioned();
+    const notes = new PassageStackController({ work, tab: 'endnotes' });
+
+    notes.setVisibleRange({ start: 0, end: 2 });
+    await flush();
+
+    expect(['n0', 'n1'].map((uuid) => work.store.has(uuid))).toEqual([
+      true,
+      true,
+    ]);
+    expect(work.store.has('p0')).toBe(false);
+  });
+
+  it('leaves the other tab documents hydrated', async () => {
+    const work = sectioned();
+    const main = new PassageStackController({ work, tab: 'translation' });
+    const notes = new PassageStackController({ work, tab: 'endnotes' });
+
+    main.setVisibleRange({ start: 0, end: 3 });
+    await flush();
+    notes.setVisibleRange({ start: 0, end: 2 });
+    await flush();
+
+    expect(work.store.has('p0')).toBe(true);
+    expect(work.store.has('n0')).toBe(true);
+  });
+
+  it('keeps arrow navigation inside the tab', () => {
+    const work = sectioned();
+    const main = new PassageStackController({ work, tab: 'translation' });
+
+    // p2 is the last translation passage; the spine continues into endnotes.
+    expect(main.focusRelative('p2', 1, 'start')).toBe(false);
+  });
+});

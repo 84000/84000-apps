@@ -63,3 +63,10 @@ silently omitted.
 range plus the loader's buffer, release everything outside it. Releasing refuses
 while a passage is dirty: a released document is gone, and unsynced edits are the
 one thing this model cannot re-fetch.
+
+A work can carry several views, and they scroll independently — the editor draws
+a tab per panel. Each names its window with `key`, and what stays hydrated is
+their union; otherwise whichever view moved last would release what the others
+were drawing. Only the caller's own documents come back, because two views
+observing one document would record every edit to it twice. A view that goes
+away hands its window back with `releaseWindow`.

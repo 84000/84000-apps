@@ -19,6 +19,14 @@ const EXTEND_THRESHOLD = 40;
 
 type Meta = { uuid: string; label: string; type: string; toh?: string };
 
+/** What a feed reads, and where its passages sit in the spine. */
+export type SpineSection = {
+  /** Passage type pattern, e.g. `BODY_MATTER_FILTER`. */
+  type: string;
+  /** The tab those passages are placed in, which identifies their run. */
+  tab: string;
+};
+
 /**
  * Grows a work's spine a page at a time.
  *
@@ -56,6 +64,14 @@ export class SpineFeed {
   constructor(
     private readonly work: WorkDocument,
     private readonly client: GraphQLClient,
+    /**
+     * The section this feed reads, when a work is loaded a tab at a time.
+     *
+     * Omitted, it reads the whole work into one run — what the sandbox does.
+     * Supplied, its pages join that tab's run and leave the other runs alone,
+     * so the panels can load independently of each other.
+     */
+    private readonly section?: SpineSection,
   ) {}
 
   /** Whether the work has passages after the ones this spine holds. */
@@ -75,12 +91,19 @@ export class SpineFeed {
    * has nothing in it, and reports how many passages it now holds.
    */
   async seed(): Promise<number> {
-    if (this.work.spine.length > 0) {
+    // Its own run, not the whole spine: another section may have seeded first.
+    if (this.runLength() > 0) {
       // Somebody else populated it; assume they know where it ends.
       this.noneAfter = true;
       return this.work.spine.length;
     }
     return this.extend(FIRST_PAGE);
+  }
+
+  /** How many passages this feed's section holds. */
+  private runLength(): number {
+    const tab = this.section?.tab;
+    return tab ? this.work.spine.tab(tab).length : this.work.spine.length;
   }
 
   /**
@@ -116,7 +139,7 @@ export class SpineFeed {
    */
   maybeExtend(visibleEnd: number): boolean {
     if (this.noneAfter || this.forward) return false;
-    if (visibleEnd < this.work.spine.length - EXTEND_THRESHOLD) return false;
+    if (visibleEnd < this.runLength() - EXTEND_THRESHOLD) return false;
     void this.extend();
     return true;
   }
@@ -157,10 +180,11 @@ export class SpineFeed {
       cursor: uuid,
       limit: FIRST_PAGE,
       direction: 'AROUND',
+      type: this.section?.type,
     });
     if (!page.metas.length) return -1;
 
-    this.work.spine.seed(page.metas as SpineSeed[]);
+    this.replaceRun(page.metas);
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
     this.noneBefore = !page.hasMoreBefore || !page.prevCursor;
@@ -169,12 +193,39 @@ export class SpineFeed {
     return this.work.spine.indexOf(uuid);
   }
 
+  /**
+   * Swap this feed's passages for a window around the target.
+   *
+   * A sectioned feed replaces only its own run: the other panels are showing
+   * theirs, and seeding the spine would take those with it.
+   */
+  private replaceRun(metas: Meta[]) {
+    const spine = this.work.spine;
+    const tab = this.section?.tab;
+    if (!tab) {
+      spine.seed(metas as SpineSeed[]);
+      return;
+    }
+
+    const existing = spine.tab(tab).map((entry) => entry.uuid);
+    const at = runStart(spine, tab);
+    spine.doc.transact(() => {
+      if (existing.length) spine.remove(existing, { renumber: false });
+      metas.forEach((meta, offset) => {
+        spine.insert(meta as Parameters<Spine['insert']>[0], at + offset, {
+          renumber: false,
+        });
+      });
+    });
+  }
+
   private async fetchAfter(limit: number): Promise<number> {
     const page = await getPassageMetaPage({
       client: this.client,
       uuid: this.work.workUuid,
       cursor: this.endCursor,
       limit,
+      type: this.section?.type,
     });
 
     if (!page.metas.length) {
@@ -185,7 +236,7 @@ export class SpineFeed {
       return this.work.spine.length;
     }
 
-    appendToSpine(this.work.spine, page.metas);
+    appendToSpine(this.work.spine, page.metas, this.section?.tab);
     this.endCursor = page.nextCursor;
     if (!page.hasMoreAfter || !page.nextCursor) this.noneAfter = true;
 
@@ -199,6 +250,7 @@ export class SpineFeed {
       cursor: this.startCursor,
       limit,
       direction: 'BACKWARD',
+      type: this.section?.type,
     });
 
     if (!page.metas.length) {
@@ -206,7 +258,7 @@ export class SpineFeed {
       return this.work.spine.length;
     }
 
-    prependToSpine(this.work.spine, page.metas);
+    prependToSpine(this.work.spine, page.metas, this.section?.tab);
     this.startCursor = page.prevCursor;
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
 
@@ -215,29 +267,59 @@ export class SpineFeed {
 }
 
 /**
- * Append server metadata to the end of a spine, as one transaction.
+ * Where a section's run ends, as an insertion index.
+ *
+ * Sections do not interleave — `panelAndTabForContentType` puts a passage in
+ * exactly one tab, and the tabs follow the work's order — so a run is
+ * contiguous and grows at its own end. A run with nothing in it yet goes at
+ * the end of the spine, which is why sections must be seeded in the order the
+ * work reads.
+ */
+const runEnd = (spine: Spine, tab?: string): number => {
+  if (!tab) return spine.length;
+  const uuids = spine.uuids();
+  for (let i = uuids.length - 1; i >= 0; i--) {
+    if (spine.meta(uuids[i])?.tab === tab) return i + 1;
+  }
+  return spine.length;
+};
+
+/** Where it begins. */
+const runStart = (spine: Spine, tab?: string): number => {
+  if (!tab) return 0;
+  const uuids = spine.uuids();
+  for (let i = 0; i < uuids.length; i++) {
+    if (spine.meta(uuids[i])?.tab === tab) return i;
+  }
+  return spine.length;
+};
+
+/**
+ * Append server metadata to the end of a spine — or of one section's run.
  *
  * Renumbering is off: these labels *are* the server's, so recomputing them
  * would overwrite the truth with a guess derived from a partial spine.
  */
-export const appendToSpine = (spine: Spine, metas: Meta[]) => {
+export const appendToSpine = (spine: Spine, metas: Meta[], tab?: string) => {
   // `doc.transact` rather than yjs's free `transact`: a runtime yjs import in
   // this package risks a second copy of the library alongside the one
   // `lib-doc-model` loads, and a dual-loaded yjs breaks its constructor checks.
   spine.doc.transact(() => {
+    let at = runEnd(spine, tab);
     metas.forEach((meta) => {
       if (spine.indexOf(meta.uuid) >= 0) return;
-      spine.insert(meta as Parameters<Spine['insert']>[0], spine.length, {
+      spine.insert(meta as Parameters<Spine['insert']>[0], at, {
         renumber: false,
       });
+      at += 1;
     });
   });
 };
 
-/** The same, at the front, keeping the page's own order. */
-export const prependToSpine = (spine: Spine, metas: Meta[]) => {
+/** The same, at the front of the run, keeping the page's own order. */
+export const prependToSpine = (spine: Spine, metas: Meta[], tab?: string) => {
   spine.doc.transact(() => {
-    let at = 0;
+    let at = runStart(spine, tab);
     metas.forEach((meta) => {
       if (spine.indexOf(meta.uuid) >= 0) return;
       spine.insert(meta as Parameters<Spine['insert']>[0], at, {

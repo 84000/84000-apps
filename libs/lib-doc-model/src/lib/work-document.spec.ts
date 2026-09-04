@@ -473,6 +473,69 @@ describe('WorkDocument hydration window', () => {
     expect(work.store.has('p1')).toBe(false);
   });
 
+  // The editor draws a tab per panel over one work, and they scroll
+  // independently. A single window would make the endnotes tab release what
+  // the translation tab is showing every time either of them moved.
+  it('holds a window open per view rather than one for the work', async () => {
+    const work = windowed(9);
+
+    await work.hydrateWindow({ start: 0, end: 3 }, { key: 'translation' });
+    await work.hydrateWindow({ start: 6, end: 9 }, { key: 'endnotes' });
+
+    expect(['p0', 'p1', 'p2'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(['p6', 'p7', 'p8'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(work.store.has('p4')).toBe(false);
+  });
+
+  it('moves one view without disturbing another', async () => {
+    const work = windowed(9);
+    await work.hydrateWindow({ start: 6, end: 9 }, { key: 'endnotes' });
+    await work.hydrateWindow({ start: 0, end: 3 }, { key: 'translation' });
+
+    await work.hydrateWindow({ start: 3, end: 6 }, { key: 'translation' });
+
+    expect(work.store.has('p0')).toBe(false);
+    expect(work.store.has('p4')).toBe(true);
+    expect(['p6', 'p7', 'p8'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it('returns only the documents of the view that asked', async () => {
+    const work = windowed(9);
+    await work.hydrateWindow({ start: 6, end: 9 }, { key: 'endnotes' });
+
+    const docs = await work.hydrateWindow(
+      { start: 0, end: 3 },
+      { key: 'translation' },
+    );
+
+    // Two views wiring one document would record every edit to it twice.
+    expect(docs.map((doc) => doc.uuid)).toEqual(['p0', 'p1', 'p2']);
+  });
+
+  it('releases what only a closed view was holding', async () => {
+    const work = windowed(9);
+    await work.hydrateWindow({ start: 0, end: 3 }, { key: 'translation' });
+    await work.hydrateWindow({ start: 6, end: 9 }, { key: 'endnotes' });
+
+    work.releaseWindow('endnotes');
+    await work.hydrateWindow({ start: 0, end: 3 }, { key: 'translation' });
+
+    expect(work.store.has('p7')).toBe(false);
+    expect(work.store.has('p1')).toBe(true);
+  });
+
   it('widens the window by the loader buffer', async () => {
     const work = windowed(6, 1);
     await work.hydrateWindow({ start: 2, end: 3 });

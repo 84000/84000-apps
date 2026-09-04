@@ -48,6 +48,21 @@ export type PassageStackControllerOptions = {
   };
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;
+  /**
+   * Names this view's hydration window on the work.
+   *
+   * Views over one work scroll independently, and the work hydrates the union
+   * of their windows — so two controllers sharing a key would release each
+   * other's documents, which is the whole thing the key prevents.
+   */
+  windowKey?: string;
+  /**
+   * Draw only this tab's passages.
+   *
+   * One work, one spine, one undo history — but a view per panel, because
+   * that is what the editor draws. Omitted, the view is the whole spine.
+   */
+  tab?: string;
 };
 
 /**
@@ -104,6 +119,8 @@ export class PassageStackController {
   /** In-flight reveals, so a remount does not fetch the same window twice. */
   private revealing = new Map<string, Promise<boolean>>();
   private readOnly: boolean;
+  private readonly windowKey: string;
+  private readonly tab?: string;
   private bookmarks = new Set<string>();
 
   private listeners = new Set<() => void>();
@@ -114,6 +131,8 @@ export class PassageStackController {
     this.work = options.work;
     this.spineFeed = options.spineFeed;
     this.readOnly = options.readOnly ?? false;
+    this.tab = options.tab;
+    this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
     if (options.charCounts) {
       this.charCounts = new Map(options.charCounts);
@@ -169,7 +188,9 @@ export class PassageStackController {
    */
   getOrder = () => {
     if (!this.orderCache) {
-      this.orderCache = this.work.spine.uuids();
+      this.orderCache = this.tab
+        ? this.work.spine.tab(this.tab).map((entry) => entry.uuid)
+        : this.work.spine.uuids();
     }
     return this.orderCache;
   };
@@ -281,6 +302,24 @@ export class PassageStackController {
     void this.runHydration();
   };
 
+  /**
+   * This view's range, as spine positions.
+   *
+   * Rows are indexed within the tab, hydration is indexed within the work.
+   * A tab's passages are contiguous in the spine, so the ends are enough.
+   */
+  private spineRange(range: SpineRange): SpineRange {
+    if (!this.tab) return range;
+    const order = this.getOrder();
+    const first = order[range.start];
+    const last = order[Math.max(range.start, range.end - 1)];
+    if (!first || !last) return { start: 0, end: 0 };
+
+    const start = this.work.spine.indexOf(first);
+    const end = this.work.spine.indexOf(last) + 1;
+    return { start: Math.max(0, start), end: Math.max(start, end) };
+  }
+
   /** Whether the work has passages before the ones the spine holds. */
   hasEarlierPassages = () => this.spineFeed?.hasMoreBefore ?? false;
 
@@ -299,9 +338,10 @@ export class PassageStackController {
         // Live editors are pinned: focus does not have to sit inside the
         // scrolled range, and releasing a document under a mounted editor
         // would leave it bound to a destroyed fragment.
-        const docs = await this.work.hydrateWindow(this.visibleRange, {
-          keep: this.liveUuids,
-        });
+        const docs = await this.work.hydrateWindow(
+          this.spineRange(this.visibleRange),
+          { keep: this.liveUuids, key: this.windowKey },
+        );
         docs.forEach((doc) => this.wire(doc));
       } while (this.hydrationQueued);
     } finally {
@@ -777,6 +817,9 @@ export class PassageStackController {
 
   /** Release the controller's own listeners. The work outlives it. */
   destroy() {
+    // The work outlives this view, so its window has to be given back or the
+    // documents only it was holding are pinned for good.
+    this.work.releaseWindow(this.windowKey);
     this.wiring.forEach((teardown) => teardown());
     this.wiring.clear();
     this.disposers.forEach((dispose) => dispose());
