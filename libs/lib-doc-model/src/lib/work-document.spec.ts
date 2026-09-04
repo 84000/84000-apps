@@ -536,6 +536,30 @@ describe('WorkDocument hydration window', () => {
     expect(work.store.has('p1')).toBe(true);
   });
 
+  // A position is an index into a list the other views are appending to. The
+  // endnotes tab dropped to skeletons every time the body tab loaded a page,
+  // because its window still named the positions those new passages now hold.
+  it('keeps a window on its passages when another view grows the spine', async () => {
+    const work = windowed(6);
+    await work.hydrateWindow({ start: 3, end: 6 }, { key: 'endnotes' });
+    await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
+
+    // The body section loads a page: everything after it shifts along.
+    work.spine.insert(
+      { uuid: 'extra', label: 'x', type: 'translation' },
+      2,
+      { renumber: false },
+    );
+
+    await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
+
+    expect(['p3', 'p4', 'p5'].map((u) => work.store.has(u))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
   it('widens the window by the loader buffer', async () => {
     const work = windowed(6, 1);
     await work.hydrateWindow({ start: 2, end: 3 });
