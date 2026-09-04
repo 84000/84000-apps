@@ -28,7 +28,7 @@ export interface WorkUpdateOperation {
  * Operation that inserts a title for the target work.
  */
 export interface TitleInsertOperation {
-  kind: 'insert_title';
+  kind: 'upsert_title';
   /** Title row to insert. */
   title: {
     /** Generated title UUID. */
@@ -48,7 +48,7 @@ export interface TitleInsertOperation {
  * Operation that creates or updates folio-level annotation metadata.
  */
 export interface FolioAnnotationOperation {
-  kind: 'upsert_folio_annotation';
+  kind: 'update_folio_annotation';
   /** Partial database patch for the folio annotation row. */
   patch: Record<string, unknown>;
 }
@@ -57,7 +57,7 @@ export interface FolioAnnotationOperation {
  * Operation that inserts a passage and its child annotations.
  */
 export interface PassageInsertOperation {
-  kind: 'insert_passage';
+  kind: 'upsert_passage';
   /** Passage row to insert for the target work. */
   passage: {
     /** Generated passage UUID. */
@@ -99,7 +99,7 @@ export type ImportOperation =
 export type ImportOperationInput =
   | WorkUpdateOperation
   | {
-      kind: 'insert_title';
+      kind: 'upsert_title';
       title: {
         /** Generated title UUID; assigned when omitted. */
         uuid?: string;
@@ -112,7 +112,7 @@ export type ImportOperationInput =
     }
   | FolioAnnotationOperation
   | {
-      kind: 'insert_passage';
+      kind: 'upsert_passage';
       passage: {
         /** Generated passage UUID; assigned when omitted. */
         uuid?: string;
@@ -151,11 +151,11 @@ export interface ImportPreview {
 
 export const normalizePassageType = (type: string): BodyItemType => {
   if (type === 'preface') {
-    return 'prelude';
+    return 'prologue';
   }
 
   if (type === 'prefaceHeader') {
-    return 'preludeHeader';
+    return 'prologueHeader';
   }
 
   if (type === 'acknowledgement') {

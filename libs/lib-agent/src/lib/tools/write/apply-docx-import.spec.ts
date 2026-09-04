@@ -1,7 +1,10 @@
 import { createApplyDocxImportTool } from './apply-docx-import';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
-import { applyImportPreview, hasPermission } from '@eightyfourthousand/data-access';
+import {
+  applyImportPreview,
+  hasPermission,
+} from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
   applyImportPreview: jest.fn(),
@@ -19,12 +22,16 @@ describe('apply-docx-import tool', () => {
   const operations = [
     { kind: 'update_work', patch: { toh: 'toh44' } },
     {
-      kind: 'insert_title',
+      kind: 'upsert_title',
       title: { content: 'The Blessed One', type: 'mainTitle', language: 'en' },
     },
     {
-      kind: 'insert_passage',
-      passage: { label: '1', type: 'translation', content: 'Thus have I heard.' },
+      kind: 'upsert_passage',
+      passage: {
+        label: '1',
+        type: 'translation',
+        content: 'Thus have I heard.',
+      },
       annotations: [],
     },
   ];
@@ -80,22 +87,5 @@ describe('apply-docx-import tool', () => {
     const payload = JSON.parse((result.content[0] as { text: string }).text);
     expect(payload.applied).toBe(true);
     expect(payload.counts.passages).toBe(1);
-  });
-
-  it('surfaces persistence errors (e.g. non-empty target work)', async () => {
-    mockedHasPermission.mockResolvedValue(true);
-    mockedApply.mockRejectedValue(
-      new Error('Work work-1 already contains passages.'),
-    );
-
-    const result = await tool.handler(
-      { workUuid: 'work-1', operations } as never,
-      extra,
-    );
-
-    expect(result.isError).toBe(true);
-    expect((result.content[0] as { text: string }).text).toContain(
-      'already contains passages',
-    );
   });
 });

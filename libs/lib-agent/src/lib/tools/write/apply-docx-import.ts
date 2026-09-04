@@ -40,7 +40,7 @@ const operationSchema = z.discriminatedUnion('kind', [
       ),
   }),
   z.object({
-    kind: z.literal('insert_title'),
+    kind: z.literal('upsert_title'),
     title: z.object({
       content: z.string().describe('Title text.'),
       type: z
@@ -57,10 +57,12 @@ const operationSchema = z.discriminatedUnion('kind', [
     kind: z.literal('upsert_folio_annotation'),
     patch: z
       .record(z.string(), z.unknown())
-      .describe('Folio annotation patch, e.g. { "source_description": "..." }.'),
+      .describe(
+        'Folio annotation patch, e.g. { "source_description": "..." }.',
+      ),
   }),
   z.object({
-    kind: z.literal('insert_passage'),
+    kind: z.literal('upsert_passage'),
     passage: z.object({
       label: z
         .string()
@@ -89,37 +91,39 @@ const operationSchema = z.discriminatedUnion('kind', [
 const inputSchema = {
   workUuid: z
     .string()
-    .describe('UUID of the target work. The work must have no titles or passages yet.'),
+    .describe(
+      'UUID of the target work. The work must have no titles or passages yet.',
+    ),
   operations: z
     .array(operationSchema)
     .describe(
-      'Ordered import operations produced by mapping the docx: update_work, insert_title, upsert_folio_annotation, and insert_passage.',
+      'Ordered import operations produced by mapping the docx: update_work, upsert_title, upsert_folio_annotation, and upsert_passage.',
     ),
 };
 
 /**
- * Write tool that applies a reviewed docx-import mapping to an empty target
- * work. Titles, work metadata, folio source description, and passages (with
- * their annotations) are written through the shared passage save path. Requires
- * the `editor.edit` permission.
+ * Write tool that applies entity import operations to target work. Titles, work
+ * metadata, folio source description, and passages (with their annotations) are
+ * written through the shared passage save path. Requires `editor.edit` permission.
  */
-export function createApplyDocxImportTool(
-  client: DataClient,
-): McpToolDefinition {
+export function createApplyImportTool(client: DataClient): McpToolDefinition {
   return {
-    name: 'apply-docx-import',
+    name: 'apply-entity-import',
     description:
-      'Persist a reviewed docx-import mapping (titles, work metadata, and passages with annotations) into an empty target work. Present the operations to the user for review before calling this. Requires editor permissions.',
+      'Persist work entities (titles, metadata, and passages with annotations) into a target work. Present the operations to the user for review before calling this. Requires editor permissions.',
     inputSchema,
     annotations: {
-      title: 'Apply Docx Import',
+      title: 'Apply Enity Import',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
       openWorldHint: false,
     },
     handler: async ({ workUuid, operations }) => {
-      const allowed = await hasPermission({ client, permission: 'editor.edit' });
+      const allowed = await hasPermission({
+        client,
+        permission: 'editor.edit',
+      });
       if (!allowed) {
         return errorResult(
           'This tool requires the editor.edit permission on the current account.',
