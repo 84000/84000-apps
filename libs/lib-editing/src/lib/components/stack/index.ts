@@ -9,6 +9,8 @@ export * from './spine-feed';
 export * from './PassageStack';
 export * from './PassageStackController';
 export * from './StackPassageMenu';
+export * from './StackWorkProvider';
+export * from './StackTab';
 export * from './PerfHUD';
 export * from './StackPassageEditor';
 export * from './StackRow';

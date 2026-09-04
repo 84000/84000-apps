@@ -79,9 +79,9 @@ describe('graphqlPassageSource loadSpineMetas', () => {
 });
 
 describe('graphqlPassageSource loadPassages', () => {
-  it('starts after the passage preceding the run', async () => {
+  it('reads from the first passage of the run', async () => {
     const spine = spineOf(20);
-    clientGraphql.getTranslationBlocks.mockResolvedValue(
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
       page(['p5', 'p6', 'p7']),
     );
     const source = graphqlPassageSource({
@@ -92,15 +92,83 @@ describe('graphqlPassageSource loadPassages', () => {
 
     await source.loadPassages('w1', ['p5', 'p6', 'p7']);
 
-    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
-    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: 'p4', maxPassages: 3 }),
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
+      expect.objectContaining({ passageUuid: 'p5' }),
     );
   });
 
-  // The cursor is exclusive, so a run starting at the top of the spine has no
-  // loaded passage to start after. `AROUND` includes its own cursor, which is
-  // the row that would otherwise never be fetched.
+  // The regression the sandbox caught: the entry before a run in the spine is
+  // not the passage before it in the work. A spine holds a run per section
+  // with the rest of the work missing between them, so reading forward from
+  // the previous entry returns a different section's passages entirely.
+  it('does not start from the spine entry before the run', async () => {
+    const spine = new Spine('w1');
+    spine.seed([
+      { uuid: 'body0', label: '1', type: 'translation' },
+      { uuid: 'body1', label: '2', type: 'translation' },
+      { uuid: 'n0', label: 'n.1', type: 'endnotes' },
+      { uuid: 'n1', label: 'n.2', type: 'endnotes' },
+    ]);
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+      page(['n0', 'n1']),
+    );
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    const found = await source.loadPassages('w1', ['n0', 'n1']);
+
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
+      expect.objectContaining({ passageUuid: 'n0' }),
+    );
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
+    expect(found.map((snapshot) => snapshot.uuid)).toEqual(['n0', 'n1']);
+  });
+
+  // A work hydrates the union of its open windows, so one call carries both
+  // tabs' passages. They meet in the spine with the rest of the work missing
+  // between them, so reading them as one span starts in the body and never
+  // reaches the endnotes — which is what left the endnotes tab in skeletons.
+  it('reads each section separately when a window spans two of them', async () => {
+    const spine = new Spine('w1');
+    spine.seed([
+      { uuid: 'body0', label: '1', type: 'translation' },
+      { uuid: 'body1', label: '2', type: 'translation' },
+      { uuid: 'n0', label: 'n.1', type: 'endnotes' },
+      { uuid: 'n1', label: 'n.2', type: 'endnotes' },
+    ]);
+    clientGraphql.getTranslationBlocksAround
+      .mockResolvedValueOnce(page(['body0', 'body1']))
+      .mockResolvedValueOnce(page(['n0', 'n1']));
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    const found = await source.loadPassages('w1', [
+      'body1',
+      'n0',
+      'body0',
+      'n1',
+    ]);
+
+    // Adjacent in the spine, but one read each.
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(2);
+    const cursors = clientGraphql.getTranslationBlocksAround.mock.calls.map(
+      (call) => call[0].passageUuid,
+    );
+    expect(cursors).toEqual(['body0', 'n0']);
+    expect(found.map((snapshot) => snapshot.uuid).sort()).toEqual([
+      'body0',
+      'body1',
+      'n0',
+      'n1',
+    ]);
+  });
+
   it('reads around the first row when nothing is loaded before it', async () => {
     const spine = spineOf(20);
     clientGraphql.getTranslationBlocksAround.mockResolvedValue(
@@ -149,7 +217,7 @@ describe('graphqlPassageSource loadPassages', () => {
 
   it('reads the whole run when the caller already holds part of the middle', async () => {
     const spine = spineOf(20);
-    clientGraphql.getTranslationBlocks.mockResolvedValue(
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
       page(['p3', 'p4', 'p5', 'p6']),
     );
     const source = graphqlPassageSource({
@@ -162,22 +230,23 @@ describe('graphqlPassageSource loadPassages', () => {
     // still beats two requests for the exact set.
     const found = await source.loadPassages('w1', ['p3', 'p6']);
 
-    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
-      expect.objectContaining({ cursor: 'p2', maxPassages: 4 }),
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
+      expect.objectContaining({ passageUuid: 'p3' }),
     );
     // Passages pulled in by the span but not asked for are dropped: the loader
     // treats anything returned as answered.
     expect(found.map((s) => s.uuid)).toEqual(['p3', 'p6']);
   });
 
+  // `AROUND` covers the head of the run; anything past it continues forward.
   it('pages when the run is longer than the server page limit', async () => {
     const spine = spineOf(250);
-    // From p1, so the run has a passage before it and takes the cursor path.
-    const first = Array.from({ length: 100 }, (_, i) => `p${i + 1}`);
-    const second = Array.from({ length: 20 }, (_, i) => `p${101 + i}`);
-    clientGraphql.getTranslationBlocks
-      .mockResolvedValueOnce(page(first, true))
-      .mockResolvedValueOnce(page(second));
+    const first = Array.from({ length: 100 }, (_, i) => `p${i}`);
+    const second = Array.from({ length: 20 }, (_, i) => `p${100 + i}`);
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+      page(first, true),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce(page(second));
 
     const source = graphqlPassageSource({
       client,
@@ -186,18 +255,21 @@ describe('graphqlPassageSource loadPassages', () => {
     });
     const found = await source.loadPassages('w1', [...first, ...second]);
 
-    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(2);
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
     expect(
       clientGraphql.getTranslationBlocks.mock.calls[0][0].maxPassages,
-    ).toBe(100);
-    expect(
-      clientGraphql.getTranslationBlocks.mock.calls[1][0].maxPassages,
     ).toBe(20);
     expect(found).toHaveLength(120);
   });
 
   it('stops rather than looping when a page comes back empty', async () => {
-    const spine = spineOf(20);
+    const spine = spineOf(250);
+    const head = Array.from({ length: 100 }, (_, i) => `p${i}`);
+    // The head says there is more, and the continuation comes back empty.
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+      page(head, true),
+    );
     clientGraphql.getTranslationBlocks.mockResolvedValue(page([]));
     const source = graphqlPassageSource({
       client,
@@ -205,7 +277,8 @@ describe('graphqlPassageSource loadPassages', () => {
       spine: () => spine,
     });
 
-    expect(await source.loadPassages('w1', ['p5', 'p6'])).toEqual([]);
+    const wanted = Array.from({ length: 120 }, (_, i) => `p${i}`);
+    expect(await source.loadPassages('w1', wanted)).toHaveLength(100);
     expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
   });
 
