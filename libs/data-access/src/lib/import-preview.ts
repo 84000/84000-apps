@@ -10,34 +10,6 @@ import {
 } from './types';
 
 /**
- * Guards the docx-import contract: the target work must have no passages yet.
- * Titles are handled separately — it is common for a work's titles to be
- * created before its content, so their presence is not an error.
- */
-export const assertImportTargetHasNoPassages = async ({
-  client,
-  workUuid,
-}: {
-  client: DataClient;
-  workUuid: string;
-}) => {
-  const { count, error } = await client
-    .from('passages')
-    .select('uuid', { count: 'exact', head: true })
-    .eq('work_uuid', workUuid);
-
-  if (error) {
-    throw error;
-  }
-
-  if ((count || 0) > 0) {
-    throw new Error(
-      `Work ${workUuid} already contains passages. Import currently requires a work with no passages.`,
-    );
-  }
-};
-
-/**
  * Identity for a title "slot". The document is authoritative for titles, so
  * import upserts by slot: a title whose slot already exists is updated to the
  * document's content, and one whose slot is new is inserted.
@@ -136,7 +108,7 @@ export const upsertTitlesFromPreview = async ({
   existingSlots?: Map<string, string>;
 }): Promise<{ inserted: number; updated: number }> => {
   const titleOps = preview.operations.filter(
-    (operation) => operation.kind === 'insert_title',
+    (operation) => operation.kind === 'upsert_title',
   );
 
   const slots = existingSlots ?? new Map<string, string>();
@@ -195,13 +167,13 @@ export const updateFolioAnnotationsFromPreview = async ({
 }) => {
   const sourceDescription = preview.operations.find(
     (operation) =>
-      operation.kind === 'upsert_folio_annotation' &&
+      operation.kind === 'update_folio_annotation' &&
       typeof operation.patch.source_description === 'string',
   );
 
   if (
     !sourceDescription ||
-    sourceDescription.kind !== 'upsert_folio_annotation'
+    sourceDescription.kind !== 'update_folio_annotation'
   ) {
     return {
       updated: 0,
@@ -245,7 +217,7 @@ export const updateFolioAnnotationsFromPreview = async ({
   };
 };
 
-export const insertPassagesFromPreview = async ({
+export const upsertPassagesFromPreview = async ({
   client,
   preview,
 }: {
@@ -255,7 +227,7 @@ export const insertPassagesFromPreview = async ({
   const passages = preview.operations
     .filter(
       (operation): operation is PassageInsertOperation =>
-        operation.kind === 'insert_passage',
+        operation.kind === 'upsert_passage',
     )
     .map(previewDtoToPassage);
 
@@ -280,7 +252,7 @@ export const insertPassagesFromPreview = async ({
 /**
  * Fills in the deterministic fields an agent should not have to supply: title
  * and passage UUIDs, the owning work reference, monotonic passage sort order,
- * and derived xmlIds. `update_work` and `upsert_folio_annotation` operations
+ * and derived xmlIds. `update_work` and `update_folio_annotation` operations
  * pass through unchanged.
  */
 export const normalizeImportOperations = (
@@ -290,9 +262,9 @@ export const normalizeImportOperations = (
   let nextSort = 0;
 
   return operations.map((operation) => {
-    if (operation.kind === 'insert_title') {
+    if (operation.kind === 'upsert_title') {
       return {
-        kind: 'insert_title',
+        kind: 'upsert_title',
         title: {
           uuid: operation.title.uuid ?? uuidv4(),
           workUuid: operation.title.workUuid ?? workUuid,
@@ -303,12 +275,12 @@ export const normalizeImportOperations = (
       };
     }
 
-    if (operation.kind === 'insert_passage') {
+    if (operation.kind === 'upsert_passage') {
       const sort = operation.passage.sort ?? nextSort;
       nextSort = sort + 1;
 
       return {
-        kind: 'insert_passage',
+        kind: 'upsert_passage',
         passage: {
           uuid: operation.passage.uuid ?? uuidv4(),
           workUuid: operation.passage.workUuid ?? workUuid,
@@ -334,14 +306,14 @@ export const summarizeImportOperations = (
 ): ImportPreview['counts'] => {
   return operations.reduce<ImportPreview['counts']>(
     (counts, operation) => {
-      if (operation.kind === 'insert_title') {
+      if (operation.kind === 'upsert_title') {
         counts.titles += 1;
-      } else if (operation.kind === 'insert_passage') {
+      } else if (operation.kind === 'upsert_passage') {
         counts.passages += 1;
         counts.annotations += operation.annotations.length;
       } else if (operation.kind === 'update_work') {
         counts.workUpdates += 1;
-      } else if (operation.kind === 'upsert_folio_annotation') {
+      } else if (operation.kind === 'update_folio_annotation') {
         counts.folioUpdates += 1;
       }
       return counts;
@@ -351,14 +323,9 @@ export const summarizeImportOperations = (
 };
 
 /**
- * Applies a set of import operations to an empty target work in one pass:
+ * Applies a set of import or update operations to a target work in one pass:
  * work metadata, titles, folio source description, and passages (with their
- * annotations) via the shared passage save path. This is the single entry point
- * used by the docx-import MCP write tool.
- *
- * The target work must have no passages (`assertImportTargetHasNoPassages`
- * throws otherwise). Existing titles are left untouched and title import is
- * skipped when any are present.
+ * annotations) via the shared passage save path.
  */
 export const applyImportPreview = async ({
   client,
@@ -369,8 +336,6 @@ export const applyImportPreview = async ({
   workUuid: string;
   operations: ImportOperationInput[];
 }) => {
-  await assertImportTargetHasNoPassages({ client, workUuid });
-
   const normalized = normalizeImportOperations(workUuid, operations);
   const preview: ImportPreview = {
     operations: normalized,
@@ -379,7 +344,11 @@ export const applyImportPreview = async ({
 
   const warnings: string[] = [];
 
-  const workUpdated = await updateWorkFromPreview({ client, workUuid, preview });
+  const workUpdated = await updateWorkFromPreview({
+    client,
+    workUuid,
+    preview,
+  });
 
   // The document is authoritative for titles. Upsert by slot: update the title
   // already occupying a slot to the document's content, insert new slots.
@@ -399,7 +368,7 @@ export const applyImportPreview = async ({
     warnings.push(folioResult.warning);
   }
 
-  const passageResult = await insertPassagesFromPreview({ client, preview });
+  const passageResult = await upsertPassagesFromPreview({ client, preview });
 
   return {
     counts: {
