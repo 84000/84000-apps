@@ -86,15 +86,15 @@ function makeFakeClient(state: FakeState): DataClient {
 const sampleOps: ImportOperationInput[] = [
   { kind: 'update_work', patch: { toh: 'toh44' } },
   {
-    kind: 'insert_title',
+    kind: 'upsert_title',
     title: { content: 'བཅོམ་ལྡན་འདས།', type: 'mainTitle', language: 'bo' },
   },
   {
-    kind: 'insert_title',
+    kind: 'upsert_title',
     title: { content: 'The Blessed One', type: 'mainTitle', language: 'en' },
   },
   {
-    kind: 'insert_passage',
+    kind: 'upsert_passage',
     passage: { label: '1', type: 'translation', content: 'Thus have I heard.' },
   },
 ];
@@ -105,12 +105,16 @@ describe('normalizeImportOperations', () => {
   it('fills the owning work and generates a uuid for titles', () => {
     const [op] = normalizeImportOperations(workUuid, [
       {
-        kind: 'insert_title',
-        title: { content: 'The Blessed One', type: 'mainTitle', language: 'en' },
+        kind: 'upsert_title',
+        title: {
+          content: 'The Blessed One',
+          type: 'mainTitle',
+          language: 'en',
+        },
       },
     ]);
 
-    if (op.kind !== 'insert_title') throw new Error('expected insert_title');
+    if (op.kind !== 'upsert_title') throw new Error('expected upsert_title');
     expect(op.title.workUuid).toBe(workUuid);
     expect(op.title.uuid).toEqual(expect.any(String));
     expect(op.title.content).toBe('The Blessed One');
@@ -118,41 +122,61 @@ describe('normalizeImportOperations', () => {
 
   it('assigns monotonic sort and derived xmlId to passages in source order', () => {
     const ops = normalizeImportOperations(workUuid, [
-      { kind: 'insert_passage', passage: { label: '1', type: 'translation', content: 'a' } },
-      { kind: 'insert_passage', passage: { label: '2', type: 'translation', content: 'b' } },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '1', type: 'translation', content: 'a' },
+      },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '2', type: 'translation', content: 'b' },
+      },
     ]);
 
-    const passages = ops.filter((o) => o.kind === 'insert_passage');
-    expect(passages.map((o) => (o.kind === 'insert_passage' ? o.passage.sort : -1))).toEqual([
-      0, 1,
-    ]);
-    expect(passages.map((o) => (o.kind === 'insert_passage' ? o.passage.xmlId : ''))).toEqual([
-      'docx-0',
-      'docx-1',
-    ]);
+    const passages = ops.filter((o) => o.kind === 'upsert_passage');
+    expect(
+      passages.map((o) => (o.kind === 'upsert_passage' ? o.passage.sort : -1)),
+    ).toEqual([0, 1]);
+    expect(
+      passages.map((o) => (o.kind === 'upsert_passage' ? o.passage.xmlId : '')),
+    ).toEqual(['docx-0', 'docx-1']);
   });
 
   it('respects an explicit passage sort and continues from it', () => {
     const ops = normalizeImportOperations(workUuid, [
-      { kind: 'insert_passage', passage: { label: '1', type: 'translation', content: 'a', sort: 5 } },
-      { kind: 'insert_passage', passage: { label: '2', type: 'translation', content: 'b' } },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '1', type: 'translation', content: 'a', sort: 5 },
+      },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '2', type: 'translation', content: 'b' },
+      },
     ]);
-    const sorts = ops.map((o) => (o.kind === 'insert_passage' ? o.passage.sort : -1));
+    const sorts = ops.map((o) =>
+      o.kind === 'upsert_passage' ? o.passage.sort : -1,
+    );
     expect(sorts).toEqual([5, 6]);
   });
 
   it('defaults passage annotations to an empty array', () => {
     const [op] = normalizeImportOperations(workUuid, [
-      { kind: 'insert_passage', passage: { label: '1', type: 'summary', content: 'x' } },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '1', type: 'summary', content: 'x' },
+      },
     ]);
-    if (op.kind !== 'insert_passage') throw new Error('expected insert_passage');
+    if (op.kind !== 'upsert_passage')
+      throw new Error('expected upsert_passage');
     expect(op.annotations).toEqual([]);
   });
 
-  it('passes update_work and upsert_folio_annotation through unchanged', () => {
+  it('passes update_work and update_folio_annotation through unchanged', () => {
     const input: ImportOperationInput[] = [
       { kind: 'update_work', patch: { toh: 'toh44' } },
-      { kind: 'upsert_folio_annotation', patch: { source_description: 'Degé Kangyur' } },
+      {
+        kind: 'update_folio_annotation',
+        patch: { source_description: 'Degé Kangyur' },
+      },
     ];
     expect(normalizeImportOperations(workUuid, input)).toEqual(input);
   });
@@ -165,10 +189,18 @@ describe('applyImportPreview', () => {
   });
 
   it('inserts all titles when the work has none yet', async () => {
-    const state: FakeState = { passagesCount: 0, titleRows: [], titleInserts: [] };
+    const state: FakeState = {
+      passagesCount: 0,
+      titleRows: [],
+      titleInserts: [],
+    };
     const client = makeFakeClient(state);
 
-    const result = await applyImportPreview({ client, workUuid: 'w1', operations: sampleOps });
+    const result = await applyImportPreview({
+      client,
+      workUuid: 'w1',
+      operations: sampleOps,
+    });
 
     expect(state.titleInserts).toHaveLength(1);
     expect(state.titleInserts?.[0]).toHaveLength(2);
@@ -184,13 +216,22 @@ describe('applyImportPreview', () => {
     const state: FakeState = {
       passagesCount: 0,
       titleRows: [
-        { uuid: 't-bo', type: 'mainTitle', language: 'bo', content: 'stale bo title' },
+        {
+          uuid: 't-bo',
+          type: 'mainTitle',
+          language: 'bo',
+          content: 'stale bo title',
+        },
       ],
       titleInserts: [],
     };
     const client = makeFakeClient(state);
 
-    const result = await applyImportPreview({ client, workUuid: 'w1', operations: sampleOps });
+    const result = await applyImportPreview({
+      client,
+      workUuid: 'w1',
+      operations: sampleOps,
+    });
 
     // English slot inserted...
     expect(state.titleInserts).toHaveLength(1);
@@ -211,29 +252,34 @@ describe('applyImportPreview', () => {
     const state: FakeState = {
       passagesCount: 0,
       titleRows: [
-        { uuid: 't-bo', type: 'mainTitle', language: 'bo', content: 'stale bo' },
-        { uuid: 't-en', type: 'mainTitle', language: 'en', content: 'stale en' },
+        {
+          uuid: 't-bo',
+          type: 'mainTitle',
+          language: 'bo',
+          content: 'stale bo',
+        },
+        {
+          uuid: 't-en',
+          type: 'mainTitle',
+          language: 'en',
+          content: 'stale en',
+        },
       ],
       titleInserts: [],
     };
     const client = makeFakeClient(state);
 
-    const result = await applyImportPreview({ client, workUuid: 'w1', operations: sampleOps });
+    const result = await applyImportPreview({
+      client,
+      workUuid: 'w1',
+      operations: sampleOps,
+    });
 
     expect(state.titleInserts).toHaveLength(0);
     expect(state.titleUpdates).toHaveLength(2);
     expect(result.counts.titles).toBe(0);
     expect(result.counts.titlesUpdated).toBe(2);
     expect(result.counts.passages).toBe(1);
-  });
-
-  it('throws when the work already has passages', async () => {
-    const client = makeFakeClient({ passagesCount: 12 });
-
-    await expect(
-      applyImportPreview({ client, workUuid: 'w1', operations: sampleOps }),
-    ).rejects.toThrow('already contains passages');
-    expect(mockedSavePassages).not.toHaveBeenCalled();
   });
 });
 
@@ -242,10 +288,10 @@ describe('summarizeImportOperations', () => {
     const counts = summarizeImportOperations(
       normalizeImportOperations('w', [
         { kind: 'update_work', patch: { toh: 'toh1' } },
-        { kind: 'insert_title', title: { content: 't', type: 'mainTitle' } },
-        { kind: 'upsert_folio_annotation', patch: { source_description: 's' } },
+        { kind: 'upsert_title', title: { content: 't', type: 'mainTitle' } },
+        { kind: 'update_folio_annotation', patch: { source_description: 's' } },
         {
-          kind: 'insert_passage',
+          kind: 'upsert_passage',
           passage: { label: '1', type: 'translation', content: 'c' },
           annotations: [
             { kind: 'span', start: 0, end: 1, data: { textStyle: 'emphasis' } },

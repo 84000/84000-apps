@@ -1,4 +1,4 @@
-import { createApplyDocxImportTool } from './apply-docx-import';
+import { createApplyImportTool } from './apply-entity-import';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
 import {
@@ -14,9 +14,9 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 const mockedApply = jest.mocked(applyImportPreview);
 const mockedHasPermission = jest.mocked(hasPermission);
 
-describe('apply-docx-import tool', () => {
+describe('apply-entity-import tool', () => {
   const client = {} as DataClient;
-  const tool = createApplyDocxImportTool(client);
+  const tool = createApplyImportTool(client);
   const extra = {} as Parameters<typeof tool.handler>[1];
 
   const operations = [
@@ -39,7 +39,7 @@ describe('apply-docx-import tool', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('has correct metadata and is not read-only', () => {
-    expect(tool.name).toBe('apply-docx-import');
+    expect(tool.name).toBe('apply-entity-import');
     expect(tool.annotations?.readOnlyHint).toBe(false);
   });
 

@@ -1,7 +1,7 @@
 import type { DataClient } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 
-import { createApplyImportTool } from './apply-docx-import';
+import { createApplyImportTool } from './apply-entity-import';
 
 /**
  * Write tools mutate studio data. Each handler performs its own permission
@@ -12,4 +12,4 @@ export function createWriteTools(client: DataClient): McpToolDefinition[] {
   return [createApplyImportTool(client)];
 }
 
-export { createApplyImportTool } from './apply-docx-import';
+export { createApplyImportTool } from './apply-entity-import';
