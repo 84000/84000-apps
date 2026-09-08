@@ -1,9 +1,8 @@
-> Verbatim excerpt from **84000 Guidelines for Translators v. 10.31 (February 2026)**, section **I.E**. Vendored so the
-> section a skill cites is resolvable offline.
+> Verbatim excerpt from **84000 Guidelines for Translators v. 10.31 (February 2026)**, section **I.E**.
 >
 > The full document remains the authority. Only the sections the skills cite
 > are reproduced, so a cross-reference below may point to a section that is
-> not in this directory — consult the full document for those.
+> not here — consult the full document for those.
 
 ## E. Target readership
 

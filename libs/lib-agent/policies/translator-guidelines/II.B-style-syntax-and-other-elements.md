@@ -1,0 +1,27 @@
+> Verbatim excerpt from **84000 Guidelines for Translators v. 10.31 (February 2026)**, section **II.B**.
+>
+> The full document remains the authority. Only the sections the skills cite
+> are reproduced, so a cross-reference below may point to a section that is
+> not here — consult the full document for those.
+
+## B. Style, syntax, and treatment of other text elements
+
+The translations are aimed at the general reader, and the goal is to communicate the meaning clearly. **Readability** should be considered one of the most important conditions for intelligibility and thus communication; a translation that reads fluidly, naturally, and without strain will convey the meaning to the reader far more effectively than an awkward, overliteral one requiring repeated review of each sentence. The notion that accuracy and readability are at opposite ends of the same scale should be treated with skepticism.
+
+Ideally, the **style** should give a feel (in a suitable Western register) for the style of the original text and its author, rather than the translator's individual style. This is difficult in any translation, and even more so in the case of the Kangyur and Tengyur texts, which are already translations. The all-important measure of accuracy should be calibrated in terms of how well the meaning is conveyed, and not interpreted as implying a strict word-for-word correspondence with the original, or a slavish and awkward retention of Tibetan sentence structure.
+
+Translations do not need to be written "defensively" with other translators or scholars in mind. The common practice of **using square brackets** to indicate words inserted by the translator to make the meaning clear should be avoided as much as possible—if there is justification for inserting the word or phrase, there is no need to inconvenience the reader with such distracting punctuation.
+
+**Omitting superfluous words and phrases** is also acceptable. Not every word in the Tibetan needs to be meticulously included if it is unnecessary in English. For example, _de nas_ is a very frequent marker in many texts which can, of course, be translated by "then" or "next" where appropriate, but if repeated too frequently becomes tedious. In English, a paragraph break will often serve the same function.
+
+Please pay particular attention to the naturalness of phrases that connect **dialogue**. In Tibetan, "downward" honorific stock phrases (often _'di skad ces bka' stsal to_) and "upward" ones (_de gsol pa_ or _'di skad ces gsol to_) are often used to mark changes of speaker. Much of the function of these phrases is already met in English simply by the use of paragraph breaks and double inverted commas. They can, of course, be translated, but simple renderings such as "The Buddha said, …", "Ānanda asked, …" are much better than laborious phrases like "The Buddha proclaimed the following words" or "Ānanda supplicated with these words," etc.
+
+A great deal of **repetition**, sometimes of stock phrases, is a characteristic feature of some Kangyur texts, and in most cases it should be reproduced in full in the translation. In exceptional cases, should its presence seem to be a purely technical aid for memorization, a decision to abbreviate may be taken by the 84000 project editor; alternatively, electronic versions with and without the repetitions may be created. Similar treatment will be applied to **honorifics, titles,** etc.
+
+There are many stock sentences, phrases, and even quite long passages that are common to many Kangyur texts, with or without variations; they can be called modules. If you are not already familiar with the literature, please read some of the published texts to identify such modules that may also figure in your text; if other translators have produced a satisfactory translation, you may save yourself time by reproducing their translations. A cumulative collection of such modules is being compiled and will be made accessible online in the near future; in the meantime, if you think you are dealing with a modular passage, you should be able to see if other translations already include a similar passage by using the [Translation Memory Search](https://84000.co/translation-memory-search). If you come across modules in your text, please mark them provisionally with the codes <module starts> and <module ends> (these codes will not appear in the published version), and if they do not already figure in the collection, please send your English translation, the Tibetan, and (if you have identified it) the Sanskrit to the editorial committee for inclusion.
+
+**Verse** should be translated in such a way that it is distinct from prose (see IV.H below for more details).
+
+**Gender-neutral** language is to be preferred whenever it can be used without introducing distortions or awkward syntax. Use of plural forms can be a useful solution and is justified when the original singular forms are used in generalizations (e.g., instead of "a bodhisattva must not relax **his** endeavor," the plural yields "bodhisattvas must not relax **their** endeavor"). Note that at a recent meeting of the American Copy Editors Society, the Chicago Manual of Style and the Associated Press stylebook announced (in AP's words) that "_They_/_them_/_their_ is acceptable in limited cases as a singular and-or gender-neutral pronoun, when alternative wording is overly awkward or clumsy." Nevertheless, straightforward pluralization is usually possible and is a preferable strategy.
+
+For **mantras and dhāraṇī**, see IV.G below.
