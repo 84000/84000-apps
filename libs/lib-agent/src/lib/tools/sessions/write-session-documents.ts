@@ -9,6 +9,7 @@ import {
   hasPermission,
   invalidSessionNames,
   prepareSessionUploads,
+  reservedWriteNames,
   sessionPath,
   writeSessionManifest,
 } from '@eightyfourthousand/data-access';
@@ -107,6 +108,13 @@ export function createWriteSessionDocumentsTool(
       if (invalid.length) {
         return errorResult(
           `These are not valid session document names: ${invalid.join(', ')}. A filename is a plain name, not a path.`,
+        );
+      }
+
+      const reserved = reservedWriteNames(filenames);
+      if (reserved.length) {
+        return errorResult(
+          `${reserved.join(', ')} is written for you and cannot be uploaded; pass the run's details instead.`,
         );
       }
 

@@ -4,6 +4,7 @@ import {
   prepareSessionUploads,
   readSessionDocument,
   readSessionDocuments,
+  reservedWriteNames,
   sessionPath,
   writeSessionManifest,
 } from './sessions';
@@ -153,6 +154,17 @@ describe('session paths', () => {
         filenames: ['toh345_stage1.md', '../archive/x.md', 'a/b.md', '..'],
       }),
     ).toEqual(['../archive/x.md', 'a/b.md', '..']);
+  });
+
+  it('refuses a work that would put live objects in the archive', () => {
+    expect(invalidSessionNames({ toh: 'archive' })).toEqual(['archive']);
+    expect(invalidSessionNames({ toh: 'toh345' })).toEqual([]);
+  });
+
+  it('reserves the manifest, which the server writes, from being uploaded', () => {
+    expect(reservedWriteNames(['toh345_stage1.md', 'manifest.json'])).toEqual([
+      'manifest.json',
+    ]);
   });
 });
 

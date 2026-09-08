@@ -18,6 +18,8 @@ jest.mock('@eightyfourthousand/data-access', () => ({
     toh: string;
     filenames: string[];
   }) => [toh, ...filenames].filter((n) => !n || n.includes('/') || n === '..'),
+  reservedWriteNames: (filenames: string[]) =>
+    filenames.filter((n) => n === 'manifest.json'),
   sessionPath: ({
     toh,
     stage,
@@ -105,6 +107,15 @@ describe('write-session-documents tool', () => {
   it('rejects a filename that is a path', async () => {
     const result = await call({
       files: [{ filename: '../archive/x.md', role: 'supporting' }],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(mockedPrepare).not.toHaveBeenCalled();
+  });
+
+  it('refuses to hand out an upload url for the manifest', async () => {
+    const result = await call({
+      files: [{ filename: 'manifest.json', role: 'supporting' }],
     });
 
     expect(result.isError).toBe(true);

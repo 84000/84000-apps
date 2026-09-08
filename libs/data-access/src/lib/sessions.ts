@@ -53,9 +53,9 @@ const sessionPrefix = ({
 }) => (stage ? `${toh}/${stage}` : toh);
 
 /**
- * A filename may not steer the write out of its own work and stage folder, and
- * may not reach the archive. The paths are assembled here, but `toh` and the
- * filename both arrive from the agent.
+ * A path segment may not steer a write out of its own work and stage folder.
+ * The paths are assembled here, but `toh` and the filename both arrive from the
+ * agent.
  */
 const isSafeSegment = (segment: string) =>
   segment.length > 0 &&
@@ -64,13 +64,30 @@ const isSafeSegment = (segment: string) =>
   segment !== '.' &&
   segment !== '..';
 
+/**
+ * Names that would steer a write outside its own work and stage folder. A work
+ * called `archive` is refused too: live objects under the append-only prefix
+ * could never be removed by anything but `service_role`.
+ */
 export const invalidSessionNames = ({
   toh,
-  filenames,
+  filenames = [],
 }: {
   toh: string;
-  filenames: string[];
-}) => [toh, ...filenames].filter((name) => !isSafeSegment(name));
+  filenames?: string[];
+}) => {
+  const invalid = [toh, ...filenames].filter((name) => !isSafeSegment(name));
+  if (isSafeSegment(toh) && toh === SESSIONS_ARCHIVE_PREFIX) invalid.push(toh);
+  return invalid;
+};
+
+/**
+ * Names the agent may not write, though it may read them. The manifest is
+ * written by the server precisely so its identity and timestamp are not the
+ * agent's to assert; handing out an upload URL for it would give that back.
+ */
+export const reservedWriteNames = (filenames: string[]) =>
+  filenames.filter((filename) => filename === MANIFEST_FILENAME);
 
 /** Lists the live document paths for a work, or for one stage of it. */
 export const listSessionDocuments = async ({
