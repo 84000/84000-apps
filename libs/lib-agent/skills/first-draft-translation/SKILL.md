@@ -48,10 +48,11 @@ where noted rather than asking the translator to supply it:
       the `glossary-by-canon-section` skill, for checking existing terminology
       rather than relying on a table supplied in-session
 - [ ] The `read-policies` studio tool, for the Translator Guidelines sections
-      this skill cites. Read them at the start of the session: they are edited
-      in place, so the current text binds, not a remembered one. Call it with no
-      arguments to see what else is available, and consult the full document for
-      anything beyond the sections it returns
+      this skill cites and for `shared-policies/uncertainty` and
+      `shared-policies/terminology`. Read them at the start of the session: they
+      are edited in place, so the current text binds, not a remembered one. Call
+      it with no arguments to see what else is available, and consult the full
+      document for anything beyond the sections it returns
 - [ ] Any related published 84000 translations designated as style anchors
 - [ ] The `docx` skill, for generating the primary `toh#_stage1.docx`
       deliverable. This is Claude's general document skill, not one this plugin
@@ -121,12 +122,14 @@ concluding that a cited number does not exist.
 
 ## The four disciplines
 
-Each has its own reference file. Read the one you need when you reach it.
+The first two are policies: fetch them with `read-policies` at the start of the
+session, since they are edited in place and the current text binds. The other
+two ship with this skill — read those when you reach them.
 
 | | |
 |---|---|
-| `reference/uncertainty.md` | How to flag what is not secure — the single most important discipline here |
-| `reference/terminology.md` | Locating the binding house rendering before choosing one, and the Terminology Notes table |
+| `shared-policies/uncertainty` | How to flag what is not secure — the single most important discipline here |
+| `shared-policies/terminology` | Locating the binding house rendering before choosing one, and the Terminology Notes table |
 | `reference/structure.md` | The document structure, passage pairs, folio labels, footnotes, and the companion alignment record |
 | `reference/output.md` | The three deliverables and how they are saved |
 
@@ -141,7 +144,7 @@ Each has its own reference file. Read the one you need when you reach it.
    catalog's `mainTitle`. See `reference/structure.md`.
 3. Draft passage by passage, aligning each pair with
    `tibetan-english-passage-alignment` and checking terminology per
-   `reference/terminology.md` before rendering a significant term.
+   `shared-policies/terminology` before rendering a significant term.
 4. Assemble the document in the order given in `reference/structure.md`.
 5. Save all three deliverables per `reference/output.md`.
 
