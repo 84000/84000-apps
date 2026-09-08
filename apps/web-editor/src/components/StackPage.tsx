@@ -155,20 +155,49 @@ const StackBody = ({
   controller,
   overscan,
   tohList,
+  unbounded,
 }: {
   controller: PassageStackController;
   overscan?: number;
   tohList: TohokuCatalogEntry[];
+  unbounded?: boolean;
 }) => {
   useStackTohVisibility({ tohList });
 
+  // `?unbounded=1` reproduces web-main's nesting: the panel scrolls, and the
+  // stack sits inside auto-height wrappers with content above it. The stack
+  // must find that scroller rather than make one.
+  if (unbounded) {
+    return (
+      <div
+        className="h-[calc(100dvh-5rem)] w-full overflow-y-auto"
+        data-testid="panel-scroller"
+      >
+        <div className="flex w-full justify-center">
+          <div className="w-full px-12">
+            <div className="py-8 text-center text-muted-foreground">
+              content above the stack, as the tabs are
+            </div>
+            <div className="mx-auto mt-8 w-full max-w-readable">
+              <PassageStack
+                controller={controller}
+                className="block"
+                overscan={overscan}
+              />
+            </div>
+          </div>
+        </div>
+        <PerfHUD controller={controller} />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-[calc(100dvh-5rem)] w-full">
-      <PassageStack
-        controller={controller}
-        className="h-full"
-        overscan={overscan}
-      />
+    <div
+      className="h-[calc(100dvh-5rem)] w-full overflow-y-auto"
+      data-testid="panel-scroller"
+    >
+      <PassageStack controller={controller} overscan={overscan} />
       <PerfHUD controller={controller} />
     </div>
   );
@@ -179,11 +208,13 @@ export const StackPage = ({
   repeat = 1,
   overscan,
   readOnly = false,
+  unbounded = false,
 }: {
   toh: string;
   repeat?: number;
   overscan?: number;
   readOnly?: boolean;
+  unbounded?: boolean;
 }) => {
   const [controller, setController] = useState<PassageStackController | null>(
     null,
@@ -313,6 +344,7 @@ export const StackPage = ({
         controller={controller}
         overscan={overscan}
         tohList={tohList}
+        unbounded={unbounded}
       />
     </NavigationProvider>
   );

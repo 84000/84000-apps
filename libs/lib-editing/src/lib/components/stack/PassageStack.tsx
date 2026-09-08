@@ -33,6 +33,26 @@ const OVERSCAN = 20;
 
 const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
 
+/**
+ * The scrollable ancestor a stack virtualizes against, or the document.
+ *
+ * The stack does not own a scroller. Its host already has one — the editor's
+ * resizable panel, the sandbox's frame — and creating a second gave it a
+ * viewport as tall as its own content: every row counted as visible, so the
+ * virtualizer drew all of them and the feed kept fetching the next page
+ * because the visible range always reached the end. Fifteen thousand passages,
+ * from one `height: 100%` against an auto-height parent.
+ */
+export const scrollParent = (from: HTMLElement): HTMLElement => {
+  let node = from.parentElement;
+  while (node) {
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === 'auto' || overflowY === 'scroll') return node;
+    node = node.parentElement;
+  }
+  return (document.scrollingElement as HTMLElement) ?? document.body;
+};
+
 /** Frames to keep re-issuing a settled scroll while rows measure. */
 const SETTLE_FRAMES = 12;
 
@@ -52,6 +72,23 @@ export const PassageStack = ({
   );
   const order = controller.getOrder();
   const parentRef = useRef<HTMLDivElement>(null);
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
+  // How far the stack sits below the top of that scroller's content — the
+  // tabs and titles above it. The virtualizer measures from the scroller, so
+  // without this every row is placed a header too high.
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useLayoutEffect(() => {
+    const root = parentRef.current;
+    if (!root) return;
+    const found = scrollParent(root);
+    setScroller(found);
+    setScrollMargin(
+      root.getBoundingClientRect().top -
+        found.getBoundingClientRect().top +
+        found.scrollTop,
+    );
+  }, []);
   const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
     null,
   );
@@ -60,10 +97,11 @@ export const PassageStack = ({
 
   const virtualizer = useVirtualizer({
     count: order.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => scroller,
     estimateSize: (index) => controller.estimateHeight(order[index]),
     overscan,
     getItemKey: (index) => order[index],
+    scrollMargin,
   });
 
   // Default behavior compensates scrollTop for every first measurement of an
@@ -241,7 +279,7 @@ export const PassageStack = ({
       // overflow-anchor off: Chrome's scroll anchoring chases re-rendering
       // virtual rows after a scrollbar jump, compounding with the
       // virtualizer's own offset math into an endless scroll drift.
-      className={cn('h-full overflow-y-auto [overflow-anchor:none]', className)}
+      className={cn('w-full [overflow-anchor:none]', className)}
     >
       {/*
         One of each for the whole stack, bound to the focused passage: only one
@@ -280,7 +318,9 @@ export const PassageStack = ({
               ref={virtualizer.measureElement}
               // `StackRow` supplies the rest of the left gutter.
               className="absolute left-0 top-0 w-full pl-4 pr-8"
-              style={{ transform: `translateY(${item.start}px)` }}
+              style={{
+                transform: `translateY(${item.start - scrollMargin}px)`,
+              }}
             >
               {asEditor ? (
                 <StackPassageEditor
