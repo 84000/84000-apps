@@ -47,9 +47,11 @@ where noted rather than asking the translator to supply it:
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for checking existing terminology
       rather than relying on a table supplied in-session
-- [ ] Nothing further for the Translator Guidelines: the sections this skill
-      cites from v. 10.31 are vendored under `reference/translator-guidelines/`.
-      Consult the full document for anything beyond those sections
+- [ ] The `read-policies` studio tool, for the Translator Guidelines sections
+      this skill cites. Read them at the start of the session: they are edited
+      in place, so the current text binds, not a remembered one. Call it with no
+      arguments to see what else is available, and consult the full document for
+      anything beyond the sections it returns
 - [ ] Any related published 84000 translations designated as style anchors
 - [ ] The `docx` skill, for generating the primary `toh#_stage1.docx`
       deliverable. This is Claude's general document skill, not one this plugin
@@ -107,7 +109,7 @@ concluding that a cited number does not exist.
   English to the actual security of the reading.
 - **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
   never the straight typewriter forms, per
-  `translator-guidelines/IV.A-spelling.md`. This holds for the English, the
+  `translator-guidelines/IV.A-spelling`. This holds for the English, the
   footnotes, and the Terminology Notes alike.
   *Extended Wylie needs particular care*, wherever it appears. The *a-chung* (འ)
   transliterates as a **closing** single quotation mark — `’` (U+2019), its
