@@ -36,13 +36,20 @@ const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
   return (
     <div className="flex h-[calc(100dvh-5rem)] w-full gap-4">
       <div
-        className="h-full flex-1 overflow-y-auto border-r"
+        className="h-full flex-1 overflow-y-auto border-r px-12"
         data-testid="tab-translation"
       >
-        <StackTab tab="translation" />
+        <div className="mx-auto mt-8 w-full max-w-readable">
+          <StackTab tab="translation" />
+        </div>
       </div>
-      <div className="h-full w-2/5 overflow-y-auto" data-testid="tab-endnotes">
-        <StackTab tab="endnotes" />
+      <div
+        className="h-full w-2/5 overflow-y-auto px-12"
+        data-testid="tab-endnotes"
+      >
+        <div className="mx-auto mt-8 w-full max-w-readable">
+          <StackTab tab="endnotes" />
+        </div>
       </div>
     </div>
   );
