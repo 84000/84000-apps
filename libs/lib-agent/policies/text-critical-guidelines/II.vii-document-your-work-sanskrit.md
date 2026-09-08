@@ -1,9 +1,8 @@
-> Verbatim excerpt from **Text Critical Guidelines for 84000 Translators**, section **II.vii**. Vendored so the
-> section a skill cites is resolvable offline.
+> Verbatim excerpt from **Text Critical Guidelines for 84000 Translators**, section **II.vii**.
 >
 > The full document remains the authority. Only the sections the skills cite
 > are reproduced, so a cross-reference below may point to a section that is
-> not in this directory — consult the full document for those.
+> not here — consult the full document for those.
 >
 > Heading anchors from the Google Docs export have been removed; the text is
 > otherwise unchanged.
