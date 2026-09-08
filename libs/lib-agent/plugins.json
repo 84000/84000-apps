@@ -38,7 +38,12 @@
         "libs/lib-agent/skills/docx-import"
       ],
       "agents": [],
-      "renames": {}
+      "renames": {},
+      "sharedReference": {
+        "docx-import": [
+          "libs/lib-agent/reference/import-model"
+        ]
+      }
     },
     {
       "name": "84000-translator-tools",

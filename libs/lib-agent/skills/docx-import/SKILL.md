@@ -1,6 +1,6 @@
 ---
 name: docx-import
-description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-docx-import` tool.
+description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-entity-import` tool.
 ---
 
 # Docx import
@@ -30,7 +30,7 @@ Treat them as **strong guidance you reason around**, not exact-match rules:
 ## Prerequisites
 
 - The studio MCP endpoint is connected and you are authenticated as an
-  **editor** (the `apply-docx-import` tool requires `editor.edit`).
+  **editor** (the `apply-entity-import` tool requires `editor.edit`).
 - A **target work exists and has no passages yet.** Import does a first-time
   content fill and refuses a work that already has passages. Titles may already
   exist — it is common for them to be created before the content. The document
@@ -62,34 +62,22 @@ the document and add any missing ones.
 
 ### 3. Map structure → operations
 
-Read `reference/mapping-overview.md` first, then the specialized file for the
-content in front of you (`reference/mapping-metadata.md`,
-`reference/mapping-passages.md`, `reference/mapping-formatting.md`). Use
-`reference/mapping-examples.md` to sanity-check your interpretation.
+Two layers, in two places. **`reference/import-model/`** says what the studio
+accepts — it is shared with every other importer, so it is the same contract
+however the content arrived:
 
-Build an ordered list of **operations** (the input to `apply-docx-import`):
+- `import-model/operations.md` — the four operation kinds and their shapes
+- `import-model/passages.md` — passage types, section families, label rules
+- `import-model/annotations.md` — the eight importable annotation kinds
+- `import-model/titles.md` — title slots and work metadata
 
-- `update_work` — `{ "kind": "update_work", "patch": { "toh": "toh44" } }`
-  (also `{ "restriction": true }` when the tantra warning `☒` is present).
-- `insert_title` —
-  `{ "kind": "insert_title", "title": { "content": "…", "type": "mainTitle", "language": "bo" } }`.
-  Types: `mainTitle`, `longTitle`, `otherTitle`. Languages: `bo`, `Bo-Ltn`,
-  `en`, `Sa-Ltn`, `zh`.
-- `upsert_folio_annotation` —
-  `{ "kind": "upsert_folio_annotation", "patch": { "source_description": "…" } }`.
-- `insert_passage` —
-  `{ "kind": "insert_passage", "passage": { "label": "1.1", "type": "translation", "content": "…" }, "annotations": [ … ] }`.
-  Each annotation is `{ "kind": "span", "start": 0, "end": 4, "data": { "textStyle": "emphasis" } }`.
-  Annotation kinds: `blockquote`, `paragraph`, `indent`, `line-group`, `line`,
-  `span` (`data.textStyle`: `text-bold` | `emphasis` | `underline` |
-  `small-caps`), `link` (`data.href`), `heading` (`data.level`, `data.class`).
+The `docx-*` files say how a Word document signals those things: read
+`reference/docx-structure.md` first, then `reference/docx-metadata.md`,
+`reference/docx-sections.md`, or `reference/docx-styles.md` for what is in front
+of you. `reference/examples.md` shows input beside the operations it should
+produce — check your reading against it before building the preview.
 
-You do **not** need to supply UUIDs, `sort`, or per-row `workUuid` — the write
-tool fills those in. Emit operations in source order.
-
-Leave `xmlId` unset. It is a deprecated artifact of the original migration:
-the write tool accepts it but never generates one, and new works should not
-have one.
+Build an ordered list of operations in source order.
 
 ### 4. Present a preview for review (required)
 
@@ -100,7 +88,7 @@ confirms.** This conversational preview is the dry-run gate.
 
 ### 5. Apply
 
-Call `apply-docx-import` with `{ "workUuid": "…", "operations": [ … ] }`. It
+Call `apply-entity-import` with `{ "workUuid": "…", "operations": [ … ] }`. It
 writes everything to the empty work through the shared passage save path and
 returns counts plus any warnings (e.g. a missing folio-annotation row).
 
@@ -119,5 +107,8 @@ labels landed as previewed. Report the result to the editor.
 - **Bibliography and Glossary sections are skipped** (detected, no rows).
 - **Internal links** are imported as ordinary links; post-ingest correction of
   internal-link targets is not automated yet — flag them for the editor.
-- Tables and native lists are described in the formatting reference but are
-  easy to get wrong from a rough extraction — preview them carefully.
+- **Lists and tables cannot be imported as structure.** No importer exists for
+  the annotation kinds that would carry them, and an unsupported kind is dropped
+  without an error. Import the text in reading order and say in the preview that
+  the structure was flattened. The same is true of the tab-separated pairing in
+  an abbreviations section.
