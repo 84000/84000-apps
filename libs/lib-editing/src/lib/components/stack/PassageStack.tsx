@@ -303,7 +303,9 @@ export const PassageStack = ({
         />
       )}
       <div
-        className="relative mx-auto w-full max-w-readable px-8"
+        // No width of its own: the host already constrains the column, the
+        // way it does for the paginated editor.
+        className="relative w-full"
         style={{ height: virtualizer.getTotalSize() }}
       >
         {items.map((item) => {
@@ -316,8 +318,7 @@ export const PassageStack = ({
               key={item.key}
               data-index={item.index}
               ref={virtualizer.measureElement}
-              // `StackRow` supplies the rest of the left gutter.
-              className="absolute left-0 top-0 w-full pl-4 pr-8"
+              className="absolute left-0 top-0 w-full"
               style={{
                 transform: `translateY(${item.start - scrollMargin}px)`,
               }}

@@ -70,12 +70,14 @@ same classes and hooks either way — `.labeled` on the label,
 deep links resolve a passage by `id` and then look for `.passage.is-editable`
 inside it.
 
-Two deliberate differences:
+The label hangs in the margin at `-left-16`, exactly as production draws it, so
+the content keeps the full width of the column. The stack imposes no width of
+its own: a host that already constrains the column — `BodyPanel` does, for the
+paginated editor — would otherwise constrain it twice, and the text would come
+out a hundred pixels narrower than the editor beside it.
 
-- **The label gutter is padding, not `-left-16`.** The stack scrolls in a
-  container whose `overflow-y: auto` makes `overflow-x` auto too, so a label at
-  a negative offset is clipped rather than drawn in the page margin. Same
-  gutter, same 24px to the text, reached from the other side.
+One deliberate difference:
+
 - **`select-none` on the label.** In production the label is node view chrome,
   which ProseMirror leaves out of a copied slice. Static rows are copied
   natively, so without this a drag across them picks up the labels.

@@ -192,12 +192,16 @@ const StackBody = ({
     );
   }
 
+  // The host owns the column width and the room the label hangs in, as
+  // `BodyPanel` does in web-main.
   return (
     <div
-      className="h-[calc(100dvh-5rem)] w-full overflow-y-auto"
+      className="h-[calc(100dvh-5rem)] w-full overflow-y-auto px-12"
       data-testid="panel-scroller"
     >
-      <PassageStack controller={controller} overscan={overscan} />
+      <div className="mx-auto mt-8 w-full max-w-readable">
+        <PassageStack controller={controller} overscan={overscan} />
+      </div>
       <PerfHUD controller={controller} />
     </div>
   );

@@ -4,16 +4,10 @@ import type { ReactNode } from 'react';
 import { BookmarkIcon } from 'lucide-react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
-import { PASSAGE_CONTENT_CLASS } from '../editor/extensions/Passage/classes';
-
-/**
- * `PASSAGE_LABEL_CLASS` without its `-left-16`.
- *
- * The stack's scroller clips a negative offset, so the gutter is padding on
- * the row and the label sits at its left edge.
- */
-const STACK_LABEL_CLASS =
-  'absolute labeled left-0 w-16 text-end hover:cursor-pointer';
+import {
+  PASSAGE_CONTENT_CLASS,
+  PASSAGE_LABEL_CLASS,
+} from '../editor/extensions/Passage/classes';
 
 /**
  * The shared frame of one stack row: the label gutter and the content column.
@@ -41,11 +35,11 @@ export const StackRow = ({
     data-stack-passage={uuid}
     // No vertical padding: it would trap the first block's margin, dropping
     // the content below the label. Spacing comes from the block margins.
-    className="relative w-full scroll-mt-20 pl-16"
+    className="relative w-full scroll-mt-20"
   >
     <div
       // `select-none` keeps labels out of a drag across static rows.
-      className={cn(STACK_LABEL_CLASS, 'select-none')}
+      className={cn(PASSAGE_LABEL_CLASS, 'select-none')}
       data-passage-label=""
       data-uuid={uuid}
     >
