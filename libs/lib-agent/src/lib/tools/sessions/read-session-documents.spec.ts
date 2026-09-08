@@ -11,13 +11,12 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   hasPermission: jest.fn(),
   listSessionDocuments: jest.fn(),
   readSessionDocuments: jest.fn(),
-  invalidSessionNames: ({
-    toh,
-    filenames,
-  }: {
-    toh: string;
-    filenames: string[];
-  }) => [toh, ...filenames].filter((n) => !n || n.includes('/') || n === '..'),
+  invalidSessionFilenames: (filenames: string[]) =>
+    filenames.filter((n) => !n || n.includes('/') || n === '..'),
+  sessionToh: (input: string) =>
+    /^toh\d+/.test(input.trim().toLowerCase())
+      ? input.trim().toLowerCase()
+      : undefined,
   sessionPath: ({
     toh,
     stage,
@@ -84,7 +83,11 @@ describe('read-session-documents tool', () => {
       contentType: 'text/markdown',
       content: '# Stage 0',
     };
-    mockedRead.mockResolvedValue({ documents: [document], missing: [] });
+    mockedRead.mockResolvedValue({
+      documents: [document],
+      missing: [],
+      failed: [],
+    });
 
     const result = await call({
       toh: 'toh345',
@@ -108,6 +111,35 @@ describe('read-session-documents tool', () => {
 
     expect(result.isError).toBe(true);
     expect(mockedRead).not.toHaveBeenCalled();
+  });
+
+  it('reports an unreadable document as an error, never as unsaved', async () => {
+    mockedRead.mockResolvedValue({
+      documents: [],
+      missing: [],
+      failed: [
+        {
+          path: 'toh345/stage0/toh345_stage0.md',
+          error: 'network unreachable',
+        },
+      ],
+    });
+
+    const result = await call({
+      toh: 'toh345',
+      stage: 'stage0',
+      names: ['toh345_stage0.md'],
+    });
+
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain('do not treat them as unsaved');
+  });
+
+  it('refuses a work name that is not a Tohoku number', async () => {
+    const result = await call({ toh: 'archive' });
+
+    expect(result.isError).toBe(true);
+    expect(mockedList).not.toHaveBeenCalled();
   });
 
   it('rejects a name that is a path', async () => {

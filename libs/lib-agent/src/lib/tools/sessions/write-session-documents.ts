@@ -7,10 +7,11 @@ import type {
 import {
   SESSION_STAGES,
   hasPermission,
-  invalidSessionNames,
+  invalidSessionFilenames,
   prepareSessionUploads,
   reservedWriteNames,
   sessionPath,
+  sessionToh,
   writeSessionManifest,
 } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
@@ -85,7 +86,12 @@ export function createWriteSessionDocumentsTool(
       openWorldHint: false,
     },
     handler: async (args) => {
-      const { toh, stage, workUuid, model } = args as {
+      const {
+        toh: requestedToh,
+        stage,
+        workUuid,
+        model,
+      } = args as {
         toh: string;
         stage: SessionStage;
         workUuid?: string;
@@ -103,11 +109,18 @@ export function createWriteSessionDocumentsTool(
         );
       }
 
+      const toh = sessionToh(requestedToh);
+      if (!toh) {
+        return errorResult(
+          `"${requestedToh}" is not a Tohoku number, so it names no session folder.`,
+        );
+      }
+
       const filenames = files.map((f) => f.filename);
-      const invalid = invalidSessionNames({ toh, filenames });
+      const invalid = invalidSessionFilenames(filenames);
       if (invalid.length) {
         return errorResult(
-          `These are not valid session document names: ${invalid.join(', ')}. A filename is a plain name, not a path.`,
+          `These are not valid document names: ${invalid.join(', ')}. A filename is a plain name, not a path.`,
         );
       }
 

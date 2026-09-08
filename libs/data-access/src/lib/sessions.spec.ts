@@ -1,11 +1,12 @@
 import {
-  invalidSessionNames,
+  invalidSessionFilenames,
   listSessionDocuments,
   prepareSessionUploads,
   readSessionDocument,
   readSessionDocuments,
   reservedWriteNames,
   sessionPath,
+  sessionToh,
   writeSessionManifest,
 } from './sessions';
 import {
@@ -13,7 +14,10 @@ import {
   contentTypeFor,
   isTextPath,
 } from './storage-archive';
-import type { DataClient } from './types';
+import type { DataClient, TohokuCatalogEntry } from './types';
+
+/** `normalizeToh` returns the branded form; fixtures have to match it. */
+const TOH = 'toh345' as TohokuCatalogEntry;
 
 type ListResult = { data: unknown; error: { message: string } | null };
 
@@ -29,6 +33,7 @@ type MockCalls = {
 const createMockClient = ({
   lists = {},
   downloads = {},
+  downloadErrors = {},
   copyError = null,
   uploadError = null,
   signUploadError = null,
@@ -36,6 +41,7 @@ const createMockClient = ({
 }: {
   lists?: Record<string, ListResult>;
   downloads?: Record<string, string>;
+  downloadErrors?: Record<string, { message: string; status?: number }>;
   copyError?: { message: string } | null;
   uploadError?: { message: string } | null;
   signUploadError?: { message: string } | null;
@@ -64,6 +70,9 @@ const createMockClient = ({
         },
         download: async (path: string) => {
           calls.download.push(path);
+          if (downloadErrors[path]) {
+            return { data: null, error: downloadErrors[path] };
+          }
           const content = downloads[path];
           // Only `.text()` is consumed, and jsdom's Blob does not implement it.
           return content == null
@@ -123,7 +132,7 @@ describe('session paths', () => {
   it('keys a document by work, then stage, then the filename the skill made', () => {
     expect(
       sessionPath({
-        toh: 'toh345',
+        toh: TOH,
         stage: 'stage1',
         filename: 'toh345_stage1.docx',
       }),
@@ -149,16 +158,25 @@ describe('session paths', () => {
 
   it('refuses a filename that would climb out of its folder', () => {
     expect(
-      invalidSessionNames({
-        toh: 'toh345',
-        filenames: ['toh345_stage1.md', '../archive/x.md', 'a/b.md', '..'],
-      }),
+      invalidSessionFilenames([
+        'toh345_stage1.md',
+        '../archive/x.md',
+        'a/b.md',
+        '..',
+      ]),
     ).toEqual(['../archive/x.md', 'a/b.md', '..']);
   });
 
-  it('refuses a work that would put live objects in the archive', () => {
-    expect(invalidSessionNames({ toh: 'archive' })).toEqual(['archive']);
-    expect(invalidSessionNames({ toh: 'toh345' })).toEqual([]);
+  it('keys a work by its canonical number, however it was written', () => {
+    expect(sessionToh('Toh 345')).toBe('toh345');
+    expect(sessionToh('toh0345')).toBe('toh345');
+    expect(sessionToh('toh1-1')).toBe('toh1-1');
+  });
+
+  it('refuses a work name that is not a Tohoku number', () => {
+    // Normalizing is what keeps the folder out of the append-only prefix.
+    expect(sessionToh('archive')).toBeUndefined();
+    expect(sessionToh('../etc')).toBeUndefined();
   });
 
   it('reserves the manifest, which the server writes, from being uploaded', () => {
@@ -181,7 +199,7 @@ describe('listSessionDocuments', () => {
       },
     });
 
-    expect(await listSessionDocuments({ client, toh: 'toh345' })).toEqual([
+    expect(await listSessionDocuments({ client, toh: TOH })).toEqual([
       'toh345/stage0/toh345_stage0.md',
       'toh345/stage1/toh345_stage1.docx',
       'toh345/stage1/toh345_stage1.md',
@@ -196,7 +214,7 @@ describe('listSessionDocuments', () => {
     });
 
     expect(
-      await listSessionDocuments({ client, toh: 'toh345', stage: 'stage0' }),
+      await listSessionDocuments({ client, toh: TOH, stage: 'stage0' }),
     ).toEqual(['toh345/stage0/toh345_stage0.md']);
     expect(calls.list).toEqual(['toh345/stage0']);
   });
@@ -205,9 +223,7 @@ describe('listSessionDocuments', () => {
     const { client } = createMockClient({
       lists: { toh345: { data: null, error: { message: 'denied' } } },
     });
-    expect(
-      await listSessionDocuments({ client, toh: 'toh345' }),
-    ).toBeUndefined();
+    expect(await listSessionDocuments({ client, toh: TOH })).toBeUndefined();
   });
 });
 
@@ -223,10 +239,12 @@ describe('readSessionDocument', () => {
         path: 'toh345/stage0/toh345_stage0.md',
       }),
     ).toEqual({
-      path: 'toh345/stage0/toh345_stage0.md',
-      filename: 'toh345_stage0.md',
-      contentType: 'text/markdown',
-      content: '# Stage 0',
+      document: {
+        path: 'toh345/stage0/toh345_stage0.md',
+        filename: 'toh345_stage0.md',
+        contentType: 'text/markdown',
+        content: '# Stage 0',
+      },
     });
   });
 
@@ -239,8 +257,10 @@ describe('readSessionDocument', () => {
     });
 
     expect(result).toMatchObject({
-      filename: 'toh345_stage1.docx',
-      downloadUrl: 'https://storage/get/toh345/stage1/toh345_stage1.docx',
+      document: {
+        filename: 'toh345_stage1.docx',
+        downloadUrl: 'https://storage/get/toh345/stage1/toh345_stage1.docx',
+      },
     });
     expect(calls.download).toEqual([]);
   });
@@ -265,7 +285,31 @@ describe('readSessionDocument', () => {
         },
       ],
       missing: ['toh345/stage0/missing.md'],
+      failed: [],
     });
+  });
+
+  it('separates a document it could not read from one that is not there', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client } = createMockClient({
+      downloadErrors: {
+        'toh345/stage0/broken.md': { message: 'network unreachable' },
+      },
+    });
+
+    const result = await readSessionDocuments({
+      client,
+      paths: ['toh345/stage0/broken.md', 'toh345/stage0/absent.md'],
+    });
+
+    expect(result.missing).toEqual(['toh345/stage0/absent.md']);
+    expect(result.failed).toEqual([
+      { path: 'toh345/stage0/broken.md', error: 'network unreachable' },
+    ]);
+
+    logged.mockRestore();
   });
 });
 
@@ -362,7 +406,7 @@ describe('writeSessionManifest', () => {
   const at = new Date('2026-09-08T19:30:00.000Z');
 
   const args = {
-    toh: 'toh345',
+    toh: TOH,
     stage: 'stage1' as const,
     files: [
       {
@@ -412,6 +456,62 @@ describe('writeSessionManifest', () => {
         'archive/toh345/stage1/manifest.json/20260908T193000Z.json',
       ],
     ]);
+  });
+
+  it('carries forward files a previous call recorded', async () => {
+    const { client } = createMockClient({
+      lists: {
+        'toh345/stage1': { data: [file('manifest.json')], error: null },
+      },
+      downloads: {
+        'toh345/stage1/manifest.json': JSON.stringify({
+          toh: 'toh345',
+          stage: 'stage1',
+          files: [
+            {
+              filename: 'toh345_stage1.md',
+              contentType: 'text/markdown',
+              role: 'supporting',
+            },
+            {
+              filename: 'toh345_stage1.docx',
+              contentType: 'stale/type',
+              role: 'supporting',
+            },
+          ],
+          userUuid: 'earlier-user',
+          timestamp: '2026-09-01T00:00:00.000Z',
+        }),
+      },
+    });
+
+    const result = await writeSessionManifest({ client, ...args });
+
+    // The file named again is replaced; the one only the earlier call saved is
+    // kept, so it does not lose its provenance.
+    expect(result.manifest?.files).toEqual([
+      args.files[0],
+      {
+        filename: 'toh345_stage1.md',
+        contentType: 'text/markdown',
+        role: 'supporting',
+      },
+    ]);
+    expect(result.manifest?.userUuid).toBe('user-uuid');
+  });
+
+  it('still writes when the previous manifest is unreadable', async () => {
+    const { client } = createMockClient({
+      lists: {
+        'toh345/stage1': { data: [file('manifest.json')], error: null },
+      },
+      downloads: { 'toh345/stage1/manifest.json': 'not json' },
+    });
+
+    const result = await writeSessionManifest({ client, ...args });
+
+    expect(result.path).toBe('toh345/stage1/manifest.json');
+    expect(result.manifest?.files).toEqual(args.files);
   });
 
   it('does not write when the previous manifest could not be archived', async () => {

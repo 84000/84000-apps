@@ -1,4 +1,5 @@
-import { DataClient } from './types';
+import { DataClient, normalizeToh } from './types';
+import type { TohokuCatalogEntry } from './types';
 import {
   ARCHIVE_PREFIX,
   archiveIfPresent,
@@ -39,7 +40,7 @@ export const sessionPath = ({
   stage,
   filename,
 }: {
-  toh: string;
+  toh: TohokuCatalogEntry;
   stage: SessionStage;
   filename: string;
 }) => `${toh}/${stage}/${filename}`;
@@ -48,38 +49,32 @@ const sessionPrefix = ({
   toh,
   stage,
 }: {
-  toh: string;
+  toh: TohokuCatalogEntry;
   stage?: SessionStage;
 }) => (stage ? `${toh}/${stage}` : toh);
 
 /**
- * A path segment may not steer a write out of its own work and stage folder.
- * The paths are assembled here, but `toh` and the filename both arrive from the
- * agent.
+ * The canonical key for a work's folder, or `undefined` when the number is not
+ * one. Callers must resolve this before building a path: `toh` reaches these
+ * functions from a model on every call, and storage keys are case-sensitive, so
+ * an unnormalized `Toh345` would silently open a second folder beside `toh345`.
+ *
+ * Normalizing is also what makes the folder name safe. The result always has
+ * the shape `toh<number>`, so it can carry no separator and can never collide
+ * with the append-only `archive` prefix.
  */
-const isSafeSegment = (segment: string) =>
-  segment.length > 0 &&
-  !segment.includes('/') &&
-  !segment.includes('\\') &&
-  segment !== '.' &&
-  segment !== '..';
+export const sessionToh = (input: string) => normalizeToh(input);
 
-/**
- * Names that would steer a write outside its own work and stage folder. A work
- * called `archive` is refused too: live objects under the append-only prefix
- * could never be removed by anything but `service_role`.
- */
-export const invalidSessionNames = ({
-  toh,
-  filenames = [],
-}: {
-  toh: string;
-  filenames?: string[];
-}) => {
-  const invalid = [toh, ...filenames].filter((name) => !isSafeSegment(name));
-  if (isSafeSegment(toh) && toh === SESSIONS_ARCHIVE_PREFIX) invalid.push(toh);
-  return invalid;
-};
+/** Filenames that would steer a write out of its own work and stage folder. */
+export const invalidSessionFilenames = (filenames: string[]) =>
+  filenames.filter(
+    (name) =>
+      !name ||
+      name.includes('/') ||
+      name.includes('\\') ||
+      name === '.' ||
+      name === '..',
+  );
 
 /**
  * Names the agent may not write, though it may read them. The manifest is
@@ -96,14 +91,13 @@ export const listSessionDocuments = async ({
   stage,
 }: {
   client: DataClient;
-  toh: string;
+  toh: TohokuCatalogEntry;
   stage?: SessionStage;
 }) =>
   listObjects({
     client,
     bucket: SESSIONS_BUCKET,
     prefix: sessionPrefix({ toh, stage }),
-    skip: [SESSIONS_ARCHIVE_PREFIX],
   });
 
 export type SessionDocument = {
@@ -111,6 +105,17 @@ export type SessionDocument = {
   filename: string;
   contentType: string;
 } & ({ content: string } | { downloadUrl: string });
+
+/**
+ * The outcome of a read. Absence and failure are kept apart deliberately: a
+ * Stage 1 session that reads a transient storage error as "the Stage 0 record
+ * was never saved" would re-draft from scratch and discard the previous
+ * session's work.
+ */
+export type SessionRead =
+  | { document: SessionDocument }
+  | { missing: true }
+  | { error: string };
 
 /**
  * Reads are asymmetric on purpose. Markdown and JSON come back inline, because
@@ -124,7 +129,7 @@ export const readSessionDocument = async ({
 }: {
   client: DataClient;
   path: string;
-}): Promise<SessionDocument | undefined> => {
+}): Promise<SessionRead> => {
   const bucket = client.storage.from(SESSIONS_BUCKET);
   const filename = path.slice(path.lastIndexOf('/') + 1);
   const contentType = contentTypeFor(path);
@@ -135,28 +140,31 @@ export const readSessionDocument = async ({
       DOWNLOAD_URL_TTL,
     );
     if (error || !data) {
-      if (!isNotFound(error)) {
-        console.error(`Error signing ${path}:`, error?.message);
-      }
-      return undefined;
+      if (isNotFound(error)) return { missing: true };
+      console.error(`Error signing ${path}:`, error?.message);
+      return { error: error?.message ?? `Could not sign ${path}.` };
     }
-    return { path, filename, contentType, downloadUrl: data.signedUrl };
+    return {
+      document: { path, filename, contentType, downloadUrl: data.signedUrl },
+    };
   }
 
   const { data, error } = await bucket.download(path);
   if (error || !data) {
-    // A document that has not been written yet is reported by the caller as
-    // `missing`, so only a real failure earns a log line.
-    if (!isNotFound(error)) {
-      console.error(`Error reading ${path}:`, error?.message);
-    }
-    return undefined;
+    if (isNotFound(error)) return { missing: true };
+    console.error(`Error reading ${path}:`, error?.message);
+    return { error: error?.message ?? `Could not read ${path}.` };
   }
 
-  return { path, filename, contentType, content: await data.text() };
+  return {
+    document: { path, filename, contentType, content: await data.text() },
+  };
 };
 
-/** Resolves each path independently, reporting the ones that did not resolve. */
+/**
+ * Resolves each path independently, separating the ones that are not there from
+ * the ones that could not be read.
+ */
 export const readSessionDocuments = async ({
   client,
   paths,
@@ -168,9 +176,17 @@ export const readSessionDocuments = async ({
     paths.map((path) => readSessionDocument({ client, path })),
   );
 
-  const documents = results.filter((d): d is SessionDocument => !!d);
-  const missing = paths.filter((_, i) => !results[i]);
-  return { documents, missing };
+  const documents: SessionDocument[] = [];
+  const missing: string[] = [];
+  const failed: { path: string; error: string }[] = [];
+
+  results.forEach((result, i) => {
+    if ('document' in result) documents.push(result.document);
+    else if ('missing' in result) missing.push(paths[i]);
+    else failed.push({ path: paths[i], error: result.error });
+  });
+
+  return { documents, missing, failed };
 };
 
 export type SessionUpload = {
@@ -261,10 +277,38 @@ export type SessionManifest = {
 };
 
 /**
- * Writes the manifest describing one run of a stage. It is small text, so it
- * goes straight in rather than through a signed URL — which is also what keeps
- * `userUuid` and `timestamp` honest: they are stamped here from the verified
- * token and the server clock, never taken from the agent.
+ * Reads the manifest a previous save left, so a new one can carry its files
+ * forward. A manifest that is absent or unreadable yields no files rather than
+ * failing the save: losing provenance is bad, but refusing the write is worse.
+ */
+const previousManifestFiles = async ({
+  client,
+  path,
+}: {
+  client: DataClient;
+  path: string;
+}): Promise<ManifestFile[]> => {
+  const read = await readSessionDocument({ client, path });
+  if (!('document' in read) || !('content' in read.document)) return [];
+
+  try {
+    const files = (JSON.parse(read.document.content) as SessionManifest).files;
+    return Array.isArray(files) ? files : [];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Writes the manifest describing a stage. It is small text, so it goes straight
+ * in rather than through a signed URL — which is also what keeps `userUuid` and
+ * `timestamp` honest: they are stamped here from the verified token and the
+ * server clock, never taken from the agent.
+ *
+ * There is one manifest per work and stage, and a stage's files can be saved
+ * across more than one call, so files already recorded are carried forward and
+ * only the ones named again are replaced. Otherwise a second call would leave
+ * the first call's files live in storage with no record of who produced them.
  */
 export const writeSessionManifest = async ({
   client,
@@ -277,7 +321,7 @@ export const writeSessionManifest = async ({
   at = new Date(),
 }: {
   client: DataClient;
-  toh: string;
+  toh: TohokuCatalogEntry;
   workUuid?: string;
   stage: SessionStage;
   files: ManifestFile[];
@@ -297,11 +341,18 @@ export const writeSessionManifest = async ({
     return { error: `${archive.error}; the manifest was not written.` };
   }
 
+  const named = new Set(files.map((f) => f.filename));
+  const carried = (await previousManifestFiles({ client, path })).filter(
+    (f) => !named.has(f.filename),
+  );
+
   const manifest: SessionManifest = {
     toh,
     ...(workUuid ? { workUuid } : {}),
     stage,
-    files,
+    files: [...carried, ...files].sort((a, b) =>
+      a.filename.localeCompare(b.filename),
+    ),
     ...(model ? { model } : {}),
     userUuid,
     timestamp: at.toISOString(),

@@ -11,13 +11,12 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   hasPermission: jest.fn(),
   prepareSessionUploads: jest.fn(),
   writeSessionManifest: jest.fn(),
-  invalidSessionNames: ({
-    toh,
-    filenames,
-  }: {
-    toh: string;
-    filenames: string[];
-  }) => [toh, ...filenames].filter((n) => !n || n.includes('/') || n === '..'),
+  invalidSessionFilenames: (filenames: string[]) =>
+    filenames.filter((n) => !n || n.includes('/') || n === '..'),
+  sessionToh: (input: string) =>
+    /^toh\d+/.test(input.trim().toLowerCase())
+      ? input.trim().toLowerCase()
+      : undefined,
   reservedWriteNames: (filenames: string[]) =>
     filenames.filter((n) => n === 'manifest.json'),
   sessionPath: ({
@@ -102,6 +101,13 @@ describe('write-session-documents tool', () => {
         ],
       }),
     );
+  });
+
+  it('refuses a work name that is not a Tohoku number', async () => {
+    const result = await call({ toh: 'archive' });
+
+    expect(result.isError).toBe(true);
+    expect(mockedPrepare).not.toHaveBeenCalled();
   });
 
   it('rejects a filename that is a path', async () => {

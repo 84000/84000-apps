@@ -3,10 +3,11 @@ import type { DataClient, SessionStage } from '@eightyfourthousand/data-access';
 import {
   SESSION_STAGES,
   hasPermission,
-  invalidSessionNames,
+  invalidSessionFilenames,
   listSessionDocuments,
   readSessionDocuments,
   sessionPath,
+  sessionToh,
 } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
@@ -47,7 +48,11 @@ export function createReadSessionDocumentsTool(
       openWorldHint: false,
     },
     handler: async (args) => {
-      const { toh, stage, names } = args as {
+      const {
+        toh: requestedToh,
+        stage,
+        names,
+      } = args as {
         toh: string;
         stage?: SessionStage;
         names?: string[];
@@ -63,10 +68,17 @@ export function createReadSessionDocumentsTool(
         );
       }
 
-      const invalid = invalidSessionNames({ toh, filenames: names ?? [] });
+      const toh = sessionToh(requestedToh);
+      if (!toh) {
+        return errorResult(
+          `"${requestedToh}" is not a Tohoku number, so it names no session folder.`,
+        );
+      }
+
+      const invalid = invalidSessionFilenames(names ?? []);
       if (invalid.length) {
         return errorResult(
-          `These are not valid session document names: ${invalid.join(', ')}.`,
+          `These are not valid document names: ${invalid.join(', ')}. A name is a plain filename, not a path.`,
         );
       }
 
@@ -88,10 +100,19 @@ export function createReadSessionDocumentsTool(
         );
       }
 
-      const { documents, missing } = await readSessionDocuments({
+      const { documents, missing, failed } = await readSessionDocuments({
         client,
         paths: names.map((filename) => sessionPath({ toh, stage, filename })),
       });
+
+      // A document that could not be read is not a document that was never
+      // saved, and must never be reported as one: a stage told its predecessor
+      // produced nothing would start over and discard that work.
+      if (failed.length) {
+        return errorResult(
+          `Could not read ${failed.map((f) => `${f.path} (${f.error})`).join(', ')}. These documents may well exist; do not treat them as unsaved.`,
+        );
+      }
 
       if (!documents.length) {
         return errorResult(
