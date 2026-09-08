@@ -32,6 +32,15 @@ are not compiled:
 
 - **Skills**: `libs/lib-agent/skills/<name>/SKILL.md` (plus a `reference/` folder)
 - **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
+- **Shared reference**: `libs/lib-agent/reference/<name>/`, vendored into each
+  skill that cites it by the `sharedReference` entries in `plugins.json`
+
+The **translation policies are not in this repo.** They live in the private
+`translation-harness` storage bucket and are read and edited through the studio
+MCP's `read-policies` and `write-policy` tools, so an editorial change reaches
+the next session without a release. Do not re-add a copy here: two copies drift,
+and the bucket is the source. Prior revisions are under its append-only
+`archive/` prefix.
 
 `libs/lib-agent/plugins.json` declares which of them belong to which plugin.
 `tools/build-plugins.mjs` assembles each plugin into a **self-contained**
