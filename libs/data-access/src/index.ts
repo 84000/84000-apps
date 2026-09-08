@@ -7,6 +7,7 @@ export * from './lib/client-token';
 export * from './lib/content-source';
 export * from './lib/folio';
 export * from './lib/glossary';
+export * from './lib/harness';
 export * from './lib/imprint';
 export * from './lib/import-preview';
 export * from './lib/panel-url';

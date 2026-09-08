@@ -10,6 +10,9 @@ export const USER_PERMISIONS = [
   'editor.read',
   'editor.edit',
   'editor.admin',
+  'harness.read',
+  'harness.edit',
+  'harness.admin',
 ];
 
 export type UserPermission = (typeof USER_PERMISIONS)[number];
