@@ -1,6 +1,9 @@
+> 84000 workflow guidance, authored here rather than excerpted from a governing
+> document. Read live from the studio: an edit binds from the next session.
+
 # The collation report
 
-Recording that a parallel witness *exists* (`analytics.md`) is different from
+Recording that a parallel witness *exists* (`shared-policies/analytics`) is different from
 actually comparing it against the base text passage by passage. When the
 translator has asked for the latter, produce a **detailed collation report** as
 its own deliverable — not as inline content inside `toh#_stage0.md`.

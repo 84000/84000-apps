@@ -1,3 +1,6 @@
+> 84000 workflow guidance, authored here rather than excerpted from a governing
+> document. Read live from the studio: an edit binds from the next session.
+
 # Marking uncertainty
 
 This is the most important discipline of the entire workflow.

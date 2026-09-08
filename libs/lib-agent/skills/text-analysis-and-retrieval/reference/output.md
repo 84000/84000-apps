@@ -14,7 +14,7 @@ Use this structure, in this order:
    if noted.
 2. **Structural overview** — chapter and section count, prose versus verse
    composition, approximate length, any structural anomalies worth flagging.
-3. **Genre and register** — as established in `analytics.md`, marked as
+3. **Genre and register** — as established in `shared-policies/analytics`, marked as
    provisional where applicable.
 4. **Precedent translations** — a cited list, or an explicit "none located" if
    that is the finding.
@@ -31,7 +31,7 @@ Use this structure, in this order:
 ## `toh#_collation.md` and `.docx` — only when a collation was undertaken
 
 Named for the text (`toh345_collation.md`), following the structure in
-`collation.md`, and saved locally alongside `toh#_stage0.md`.
+`shared-policies/collation`, and saved locally alongside `toh#_stage0.md`.
 
 Also generate a Word mirror, **`toh#_collation.docx`**, via the `docx` skill —
 Claude's general document skill, not one this plugin ships. The report is a

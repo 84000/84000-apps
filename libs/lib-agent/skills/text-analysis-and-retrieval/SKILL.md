@@ -31,9 +31,10 @@ Confirm each of these at the start of the session:
 - [ ] Any translator preferences already known — base recension, prior
       familiarity with the text, planned team
 - [ ] The `read-policies` studio tool, for the *Translator Guidelines* and
-      *Text Critical Guidelines* sections this skill cites. Read them at the
-      start of the session: they are edited in place, so the current text binds,
-      not a remembered one. Call it with no arguments to see what else is
+      *Text Critical Guidelines* sections this skill cites and for
+      `shared-policies/analytics` and `shared-policies/collation`. Read them at
+      the start of the session: they are edited in place, so the current text
+      binds, not a remembered one. Call it with no arguments to see what else is
       available, and consult the full documents for anything beyond the sections
       it returns
 
@@ -85,7 +86,7 @@ anything the record needs that only they can supply. At minimum, solicit:
 - **Whether a witness collation should be undertaken for this text.** Frame this
   as a case-by-case decision, not a default: ask whether the translator wants it
   done at Stage 0, deferred to later, or skipped for this text, and record the
-  answer either way. See `reference/collation.md` for what the Text Critical
+  answer either way. See `shared-policies/collation` for what the Text Critical
   Guidelines recommend and what the report contains.
 
 Record their answers verbatim or in close paraphrase in the output document. Do
@@ -110,12 +111,14 @@ publishes:
 
 ## The disciplines
 
-Each has its own reference file. Read the one you need when you reach it.
+The first two are policies: fetch them with `read-policies` at the start of the
+session, since they are edited in place and the current text binds. The last
+ships with this skill.
 
 | | |
 |---|---|
-| `reference/analytics.md` | The analytics pass — genre, register, precedent translations, terminological field, parallel witnesses |
-| `reference/collation.md` | The collation report, when a witness comparison is undertaken |
+| `shared-policies/analytics` | The analytics pass — genre, register, precedent translations, terminological field, parallel witnesses |
+| `shared-policies/collation` | The collation report, when a witness comparison is undertaken |
 | `reference/output.md` | The deliverables and how they are saved |
 
 ## Working order
@@ -123,8 +126,8 @@ Each has its own reference file. Read the one you need when you reach it.
 1. Retrieve the Tibetan source and record its placement.
 2. Register the work against the Toh catalog.
 3. Solicit translator input, including the collation decision.
-4. Run the analytics pass per `reference/analytics.md`.
-5. Produce the collation report per `reference/collation.md`, if one was
+4. Run the analytics pass per `shared-policies/analytics`.
+5. Produce the collation report per `shared-policies/collation`, if one was
    requested.
 6. Assemble and save `toh#_stage0.md` per `reference/output.md`.
 

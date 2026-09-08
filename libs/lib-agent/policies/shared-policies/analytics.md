@@ -1,3 +1,6 @@
+> 84000 workflow guidance, authored here rather than excerpted from a governing
+> document. Read live from the studio: an edit binds from the next session.
+
 # The analytics pass
 
 Beyond the structural and catalog record, assemble the following for the
@@ -48,5 +51,5 @@ Record only what is attested in the catalog, in the source tools, or in
 translator input. Mark anything uncertain as a question rather than a fact.
 
 This item records that witnesses **exist**. It is not itself a comparison of
-them — that is `collation.md`, and it happens only when the translator has asked
+them — that is `shared-policies/collation`, and it happens only when the translator has asked
 for it.

@@ -112,7 +112,7 @@ touched, and a confidence rating — to:
 ### 4. Terminology notes
 
 The compact Tibetan/Sanskrit/English reference table specified in
-`terminology.md`, keyed to first occurrence in the translation body.
+`shared-policies/terminology`, keyed to first occurrence in the translation body.
 
 ## The companion alignment record
 

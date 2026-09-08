@@ -1,3 +1,6 @@
+> 84000 workflow guidance, authored here rather than excerpted from a governing
+> document. Read live from the studio: an edit binds from the next session.
+
 # Terminology
 
 **No formal glossary entry is drafted at this stage.** The
