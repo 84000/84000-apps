@@ -73,6 +73,11 @@ export const listPolicies = async ({ client }: { client: DataClient }) => {
 
 export type Policy = { name: string; content: string };
 
+/** A policy that is not there yet is a normal outcome, not a transport failure. */
+const isNotFound = (error: { message?: string; status?: number } | null) =>
+  !!error &&
+  (error.status === 404 || /not.?found/i.test(error.message ?? ''));
+
 export const readPolicy = async ({
   client,
   name,
@@ -85,7 +90,12 @@ export const readPolicy = async ({
     .download(policyPath(name));
 
   if (error || !data) {
-    console.error(`Error reading policy ${name}:`, error?.message);
+    // Absence is reported by the caller — `readPolicies` as `missing`, and
+    // `writePolicy` as the difference between creating and replacing. Only a
+    // real failure is worth a log line.
+    if (!isNotFound(error)) {
+      console.error(`Error reading policy ${name}:`, error?.message);
+    }
     return undefined;
   }
 

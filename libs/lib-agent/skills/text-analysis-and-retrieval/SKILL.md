@@ -30,11 +30,12 @@ Confirm each of these at the start of the session:
       tools
 - [ ] Any translator preferences already known — base recension, prior
       familiarity with the text, planned team
-- [ ] Nothing further for the guidelines themselves: the sections this skill
-      cites from the *Translator Guidelines* and the *Text Critical Guidelines*
-      are vendored under `reference/translator-guidelines/` and
-      `reference/text-critical-guidelines/`. Consult the full documents for
-      anything beyond those sections
+- [ ] The `read-policies` studio tool, for the *Translator Guidelines* and
+      *Text Critical Guidelines* sections this skill cites. Read them at the
+      start of the session: they are edited in place, so the current text binds,
+      not a remembered one. Call it with no arguments to see what else is
+      available, and consult the full documents for anything beyond the sections
+      it returns
 
 If only the Toh number is available, proceed with retrieval and catalog
 registration, then use the solicitation step below to gather the rest directly
@@ -50,7 +51,7 @@ from the translator rather than guessing.
   or duplicates elsewhere in the canon. If duplicates exist, record all
   locations, not just the first found — the Fx/Fy/Fz labeling this feeds is
   specified in
-  `reference/translator-guidelines/IV.H-content-layout-and-folio-markers.md`.
+  `translator-guidelines/IV.H-content-layout-and-folio-markers`.
 - **If retrieval fails or returns an ambiguous match** — a Toh number spanning
   multiple works, a title mismatch — stop and flag it rather than guessing which
   text was intended.
@@ -98,7 +99,7 @@ publishes:
 
 - **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
   never the straight typewriter forms, per
-  `translator-guidelines/IV.A-spelling.md`.
+  `translator-guidelines/IV.A-spelling`.
   *Extended Wylie needs particular care*, wherever it appears. The *a-chung* (འ)
   transliterates as a **closing** single quotation mark — `’` (U+2019), its
   convexity to the right, a closing inverted comma. It is **not** a straight

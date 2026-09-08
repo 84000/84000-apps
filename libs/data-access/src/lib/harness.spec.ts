@@ -27,11 +27,13 @@ type MockCalls = {
 const createMockClient = ({
   lists = {},
   downloads = {},
+  downloadError = null,
   copyError = null,
   uploadError = null,
 }: {
   lists?: Record<string, ListResult>;
   downloads?: Record<string, string | null>;
+  downloadError?: { message: string; status?: number } | null;
   copyError?: { message: string } | null;
   uploadError?: { message: string } | null;
 }) => {
@@ -46,10 +48,11 @@ const createMockClient = ({
         },
         download: async (path: string) => {
           calls.download.push(path);
+          if (downloadError) return { data: null, error: downloadError };
           const content = downloads[path];
           // Only `.text()` is consumed, and jsdom's Blob does not implement it.
           return content == null
-            ? { data: null, error: { message: 'Object not found' } }
+            ? { data: null, error: { message: 'Object not found', status: 404 } }
             : { data: { text: async () => content }, error: null };
         },
         copy: async (from: string, to: string) => {
@@ -158,6 +161,32 @@ describe('readPolicy', () => {
       name: 'a/b',
       content: '## B. Proper names',
     });
+  });
+
+  it('stays quiet about a policy that does not exist yet', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client } = createMockClient({ downloads: {} });
+
+    expect(await readPolicy({ client, name: 'a/absent' })).toBeUndefined();
+    expect(logged).not.toHaveBeenCalled();
+
+    logged.mockRestore();
+  });
+
+  it('still logs a failure that is not an absent object', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client } = createMockClient({
+      downloadError: { message: 'network unreachable' },
+    });
+
+    expect(await readPolicy({ client, name: 'a/b' })).toBeUndefined();
+    expect(logged).toHaveBeenCalled();
+
+    logged.mockRestore();
   });
 
   it('reports the names it could not resolve without losing the rest', async () => {

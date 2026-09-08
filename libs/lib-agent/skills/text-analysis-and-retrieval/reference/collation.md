@@ -8,7 +8,7 @@ its own deliverable — not as inline content inside `toh#_stage0.md`.
 ## When a collation happens
 
 Only when the translator has asked for one.
-`text-critical-guidelines/III.i-consult-other-versions.md` recommends consulting
+`text-critical-guidelines/III.i-consult-other-versions` recommends consulting
 at least one witness purely from the Thempangma line — the Stok Palace Kangyur
 is the usual candidate, particularly for sūtras — in addition to the Degé and
 its Pedurma apparatus. Treat that as a recommendation to raise with the
@@ -34,7 +34,7 @@ first-draft rule against silent emendation — never a silent substitution.
 2. **Prefatory note.** State which witnesses were compared and what lineage or
    recension each represents; why the comparison was undertaken, citing the
    governing provision (for a Thempangma check,
-   `text-critical-guidelines/III.i-consult-other-versions.md`);
+   `text-critical-guidelines/III.i-consult-other-versions`);
    the scope of the comparison, whether full text or a stated partial range; the
    total count of variant locations identified; and — explicitly — what kinds of
    difference were excluded from the table and why. Shad placement, spacing, and
@@ -66,7 +66,7 @@ first-draft rule against silent emendation — never a silent substitution.
    - each witness's reading, one column per witness, labeled by its code;
    - category, per item 3;
    - notes and preferred reading — the variant explained, a hypothesis about its
-     cause where relevant — `text-critical-guidelines/V.ii-causes-of-variation.md`
+     cause where relevant — `text-critical-guidelines/V.ii-causes-of-variation`
      lists the patterns to hypothesize from, including the orthographic shifts
      that occur moving cursive script into print — and which reading is
      preferred and why.
@@ -91,9 +91,9 @@ Do not treat the report's preferred-reading calls as settled decisions the
 translator must follow. They are Stage 0's best-supported recommendation,
 consistent with the principle of recording each variant reading, the preferred
 reading, and the reason for the preference, set out in
-`text-critical-guidelines/III.iii-document-your-work-tibetan-versions.md` and,
+`text-critical-guidelines/III.iii-document-your-work-tibetan-versions` and,
 for Sanskrit comparison,
-`text-critical-guidelines/II.vii-document-your-work-sanskrit.md` — but the
+`text-critical-guidelines/II.vii-document-your-work-sanskrit` — but the
 translator or editor retains the final call, and adopting any non-primary
 witness's reading still needs its own note in the Stage 1 draft.
 

@@ -17,7 +17,7 @@ catalog and by the text's own self-description — its title or its colophon.
 
 An initial read of whether the text is pitched at a general or listener audience
 or uses dense technical and philosophical language, per
-`translator-guidelines/I.E-target-readership.md`.
+`translator-guidelines/I.E-target-readership`.
 
 State this as a **first impression for the translator to confirm**, not a
 settled judgment.

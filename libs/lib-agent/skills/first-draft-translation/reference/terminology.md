@@ -57,9 +57,9 @@ The table is keyed to first occurrence in the translation body.
   note it in the passage footnote, not the terminology table.
 - Sanskrit follows IAST transliteration.
 - Leave conventionally untranslated terms (proper names, mantra, dhāraṇī) in
-  accordance with `translator-guidelines/II.C-terminology.md`; transliterate
+  accordance with `translator-guidelines/II.C-terminology`; transliterate
   mantras without translation except as
-  `translator-guidelines/IV.G-mantras-and-dharanis.md` specifies.
+  `translator-guidelines/IV.G-mantras-and-dharanis` specifies.
 
 ## Not this
 
