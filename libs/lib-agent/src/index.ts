@@ -9,6 +9,7 @@ export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export { createHarnessTools } from './lib/tools/harness';
+export { createSessionTools } from './lib/tools/sessions';
 export {
   validateBearerToken,
   requirePermission,
