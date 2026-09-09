@@ -68,7 +68,15 @@
       "agents": [
         "libs/lib-agent/agents/library-assistant.md"
       ],
-      "renames": {}
+      "renames": {},
+      "sharedReference": {
+        "text-analysis-and-retrieval": [
+          "libs/lib-agent/reference/session-documents"
+        ],
+        "first-draft-translation": [
+          "libs/lib-agent/reference/session-documents"
+        ]
+      }
     }
   ]
 }

@@ -65,54 +65,26 @@ Uchen size matters more here than anywhere in the Stage 1 draft.
 ## Saving to storage
 
 Save the stage's deliverables to storage once the local files are written and
-complete. Without this, the record is only on one machine and Stage 1 has
-nothing to read.
+complete. Without this the record is only on one machine, and Stage 1 — which
+reads `toh#_stage0.md` from the bucket before drafting — has nothing to read.
 
-Call `write-session-documents` with:
+`reference/session-documents/saving.md` is the mechanism, and it is the same for
+every stage: the call, the upload URLs and the PUT that carries the bytes, what
+happens on a re-run, and what to do when the client cannot make an outbound
+request. Read it before the first save of a session.
+
+What this stage supplies:
 
 | | |
 |---|---|
-| `toh` | the work's Toh number, e.g. `toh345` |
 | `stage` | `stage0` |
 | `files` | `toh#_stage0.md` as `primary`; the collation pair, `toh#_collation.md` and `toh#_collation.docx`, as `supporting` when a collation was undertaken |
-| `model` | your model name, and its version only if you know it — see below |
 
-Do not pass `manifest.json`. The manifest recording the work, who saved the set,
-when, and with what model is written for you, and is refused as an upload
-precisely so its identity and timestamp are not yours to assert.
+A collation finished after the record was already saved can go in a second call
+rather than holding the record back — the manifest carries the earlier files
+forward.
 
-The tool authorizes the writes and returns one `uploadUrl` per file, each valid
-for two hours. **It does not carry the bytes** — PUT each file yourself, with
-the `contentType` the response gives for that file:
-
-```sh
-curl -X PUT -H "Content-Type: <contentType>" --data-binary @<file> "<uploadUrl>"
-```
-
-That PUT is an outbound HTTP request the session makes itself, and it is the one
-capability this step adds — the studio's other tools need nothing like it. Any
-client that can read a local file's bytes and PUT them to a supplied URL is
-sufficient: a shell, a code interpreter, or a plain HTTP-fetch tool all qualify,
-and the `curl` above is only the most convenient form. The filesystem half is
-already assumed, since the stage writes its deliverables to local files first.
-
-If the client cannot make an outbound request, **say the documents could not be
-saved to storage** rather than reporting a save that did not happen. The local
-files are still the deliverables and the stage's findings still stand; what is
-missing is the record Stage 1 reads, so a Stage 1 session will find nothing for
-this work and needs to be told why.
-
-**The save is not complete until every PUT has succeeded.** The manifest is
-written when the URLs are issued, so a file whose upload failed or was skipped
-is described by the manifest but absent from storage. Check each response and
-report any that failed.
-
-A stage's files may be saved across more than one call — the collation pair
-later than the record, say — and the manifest carries forward what an earlier
-call recorded, so a second call does not erase the first. Re-running the stage
-archives the previous revision of each path rather than destroying it, which
-makes a re-run recoverable; it is not a reason to skip the confirmation that
-*Not this* in `SKILL.md` asks for.
-
-On `model`: record the name you know, and omit the version if you do not know it
-reliably. Do not guess it, and do not withhold the save over it.
+Before re-running the stage for a work, check what is already saved with
+`read-session-documents`; `reference/session-documents/reading.md` covers that
+call. A re-run archives rather than destroys, but *Not this* in `SKILL.md` still
+asks you to confirm one is intended.

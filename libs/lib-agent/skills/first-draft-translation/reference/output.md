@@ -20,23 +20,26 @@ alignment record is a separate report and is **not** a section of either.
 
 ## Reading the Stage 0 record
 
-Read `toh#_stage0.md` out of storage before drafting, rather than assuming a
-local file survived from the session that produced it — Stage 0 may have been
-run weeks ago, by someone else, on another machine.
+Stage 1 begins by reading `toh#_stage0.md` out of storage. Do not assume a local
+file survived from the session that produced it — Stage 0 may have been run weeks
+ago, by someone else, on another machine. `reference/session-documents/reading.md`
+is the mechanism, including the distinction between a record that is absent and
+one that could not be read.
 
-Call `read-session-documents` with the work's `toh`, `stage: stage0`, and
-`names: ["toh#_stage0.md"]`. Markdown comes back inline as text. Call it with
-just the `toh` to list everything the work has saved, which is also how to find
-a collation report if Stage 0 produced one; a `.docx` comes back as a download
-URL to fetch rather than as text.
+For this stage that distinction decides between two different stops:
 
-Absent and unreadable are different findings, and the tool distinguishes them
-even though both come back as errors. *No document matched* means Stage 0 has
-not been saved for this work: stop and run Stage 0, per *Before drafting* in
-`SKILL.md`. *Could not read* means the document may well exist and storage
-failed to hand it over — report that and stop, without re-deriving Stage 0's
-record here. Re-deriving it would discard work that is sitting in storage.
+- **Stage 0 absent** — stop and run Stage 0 first, per *Before drafting* in
+  `SKILL.md`.
+- **Stage 0 unreadable** — stop and say so. The record probably exists.
 
+Either way, **do not re-derive Stage 0's retrieval, catalog, and analytics
+record here.** It is a different skill's work, and re-deriving it discards
+findings and translator answers that Stage 0 gathered and that no rerun will
+reproduce.
+
+While you are there, list what else the work has saved. A collation report from
+Stage 0 bears directly on the drafting decisions this stage makes, and it is not
+mentioned in `toh#_stage0.md` beyond a link and a headline finding.
 ## `toh#_stage1.docx` — the primary deliverable
 
 Generated via the `docx` skill. Translators and editors review and substantially
@@ -113,49 +116,19 @@ it complete: a UUID dropped here is lost.
 Save all three deliverables to storage once the local files are written and
 complete.
 
-Call `write-session-documents` with:
+`reference/session-documents/saving.md` is the mechanism, and it is the same for
+every stage: the call, the upload URLs and the PUT that carries the bytes, what
+happens on a re-run, and what to do when the client cannot make an outbound
+request.
+
+What this stage supplies:
 
 | | |
 |---|---|
-| `toh` | the work's Toh number, e.g. `toh345` |
 | `stage` | `stage1` |
 | `files` | `toh#_stage1.docx` as `primary` — it is the file the editor revises; `toh#_stage1.md` and `toh#_stage1_alignment.md` as `supporting` |
-| `model` | your model name, and its version only if you know it — see below |
 
-Do not pass `manifest.json`. The manifest recording the work, who saved the set,
-when, and with what model is written for you, and is refused as an upload
-precisely so its identity and timestamp are not yours to assert.
-
-The tool authorizes the writes and returns one `uploadUrl` per file, each valid
-for two hours. **It does not carry the bytes** — PUT each file yourself, with
-the `contentType` the response gives for that file. This is how the `.docx`
-reaches storage; it cannot ride in a tool argument:
-
-```sh
-curl -X PUT -H "Content-Type: <contentType>" --data-binary @<file> "<uploadUrl>"
-```
-
-That PUT is an outbound HTTP request the session makes itself, and it is the one
-capability this step adds — the studio's other tools need nothing like it. Any
-client that can read a local file's bytes and PUT them to a supplied URL is
-sufficient: a shell, a code interpreter, or a plain HTTP-fetch tool all qualify,
-and the `curl` above is only the most convenient form. The filesystem half is
-already assumed, since generating the `.docx` needs somewhere to write it.
-
-If the client cannot make an outbound request, **say the deliverables could not
-be saved to storage** rather than reporting a save that did not happen. The
-local files are still the deliverables the editor opens; what is missing is the
-stage's record in storage, and the translator should know it has to be saved
-from somewhere else.
-
-**The save is not complete until every PUT has succeeded.** The manifest is
-written when the URLs are issued, so a file whose upload failed or was skipped
-is described by the manifest but absent from storage. Check each response and
-report any that failed — and take particular care with the `.docx`, since it is
-the deliverable and the one upload that is not plain text.
-
-Re-drafting archives the previous revision of each path rather than destroying
-it, so a re-run does not lose the draft it replaces.
-
-On `model`: record the name you know, and omit the version if you do not know it
-reliably. Do not guess it, and do not withhold the save over it.
+The `.docx` is the only upload here that is not plain text, and it is the one the
+editor actually opens. Give its PUT particular attention: a Stage 1 that saved
+two markdown records and lost the Word document has not saved its deliverable,
+however complete the manifest looks.
