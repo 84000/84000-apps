@@ -89,10 +89,18 @@ the `contentType` the response gives for that file:
 curl -X PUT -H "Content-Type: <contentType>" --data-binary @<file> "<uploadUrl>"
 ```
 
-That PUT is the session's own HTTP request, which is a capability the policy
-tools do not need. It holds in Claude Code, where this skill ships as a plugin
-and `curl` is available. In a client where it does not, say the documents could
-not be saved to storage rather than reporting a save that did not happen.
+That PUT is an outbound HTTP request the session makes itself, and it is the one
+capability this step adds — the studio's other tools need nothing like it. Any
+client that can read a local file's bytes and PUT them to a supplied URL is
+sufficient: a shell, a code interpreter, or a plain HTTP-fetch tool all qualify,
+and the `curl` above is only the most convenient form. The filesystem half is
+already assumed, since the stage writes its deliverables to local files first.
+
+If the client cannot make an outbound request, **say the documents could not be
+saved to storage** rather than reporting a save that did not happen. The local
+files are still the deliverables and the stage's findings still stand; what is
+missing is the record Stage 1 reads, so a Stage 1 session will find nothing for
+this work and needs to be told why.
 
 **The save is not complete until every PUT has succeeded.** The manifest is
 written when the URLs are issued, so a file whose upload failed or was skipped
