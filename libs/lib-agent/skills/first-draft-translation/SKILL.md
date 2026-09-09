@@ -28,14 +28,21 @@ instead of an unstated assumption of correctness.
 ## Before drafting
 
 Stage 1 assumes **Stage 0 (Text Analysis and Retrieval) has already been run**
-for this work. If no `toh#_stage0.md` exists yet, stop and run Stage 0 first
-rather than reconstructing its retrieval, catalog, and analytics record here.
-Stage 0 is governed by the `text-analysis-and-retrieval` skill in this plugin.
+for this work. Look for its record in storage, not on local disk: Stage 0 may
+have been run in another session, on another machine, by someone else. If no
+`toh#_stage0.md` has been saved for this work, stop and run Stage 0 first rather
+than reconstructing its retrieval, catalog, and analytics record here. Stage 0
+is governed by the `text-analysis-and-retrieval` skill in this plugin.
+
+A read that *fails* is not a record that is *absent*, and the two must not be
+treated alike — see *Reading the Stage 0 record* in `reference/output.md`.
 
 Confirm each of these at the start of the session, retrieving from the studio
 where noted rather than asking the translator to supply it:
 
-- [ ] A completed Stage 0 record (`toh#_stage0.md`) for this text
+- [ ] A completed Stage 0 record (`toh#_stage0.md`) for this text, read out of
+      storage with `read-session-documents` rather than assumed to be a local
+      file left by an earlier session. See `reference/output.md`
 - [ ] The Tibetan source, retrieved from the studio via the `tibetan-source-text`
       skill / `get-translation-folios` — never uploaded or pasted — with folio
       references, and segmented into passages if Stage 0 established a
@@ -59,6 +66,8 @@ where noted rather than asking the translator to supply it:
       ships
 - [ ] The translator's choice of Tibetan display format for this draft —
       Unicode or Extended Wylie, not both
+- [ ] The `write-session-documents` studio tool, for saving the three
+      deliverables to storage. See `reference/output.md`
 
 If any are missing, say so before drafting rather than proceeding on
 assumptions.
@@ -135,18 +144,26 @@ two ship with this skill — read those when you reach them.
 
 ## Working order
 
-1. Ask the translator whether the source Tibetan should be shown as **Unicode
+1. Read the Stage 0 record for this work out of storage with
+   `read-session-documents`, and list what else the work has saved. See
+   `reference/output.md`.
+2. Ask the translator whether the source Tibetan should be shown as **Unicode
    (Uchen)** or **Extended Wylie** for this draft. Pick one; never both for the
    same passage. Default to Unicode if they decline to state a preference, and
    say in the header that this was the default rather than a stated preference.
    See `reference/structure.md`.
-2. Establish the **title** from the Tibetan source itself, not the studio
+3. Establish the **title** from the Tibetan source itself, not the studio
    catalog's `mainTitle`. See `reference/structure.md`.
-3. Draft passage by passage, aligning each pair with
+4. Draft passage by passage, aligning each pair with
    `tibetan-english-passage-alignment` and checking terminology per
    `shared-policies/terminology` before rendering a significant term.
-4. Assemble the document in the order given in `reference/structure.md`.
-5. Save all three deliverables per `reference/output.md`.
+5. Assemble the document in the order given in `reference/structure.md`.
+6. Save all three deliverables locally per `reference/output.md`.
+7. Save them to storage with `write-session-documents`, passing the work's
+   `toh`, `stage: stage1`, the files with `toh#_stage1.docx` as `primary` and
+   the two markdown records as `supporting`, and your `model` — then PUT each
+   file to the upload URL it returns. See `reference/output.md`; the save is not
+   complete until every upload has succeeded, the `.docx` included.
 
 Do not draft the introduction unless explicitly asked; introductions require
 research the editor will direct.

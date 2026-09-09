@@ -1,9 +1,10 @@
 # Output
 
-Store the results in a single local markdown document named `toh#_stage0.md` —
-`toh345_stage0.md`, for instance — saved locally rather than delivered only
-inline in the conversation. This file is what Stage 1 reads before drafting
-begins.
+Store the results in a single markdown document named `toh#_stage0.md` —
+`toh345_stage0.md`, for instance — written to a local file rather than delivered
+only inline in the conversation, then saved to storage per *Saving to storage*
+below. The local file is how the translator works; the saved copy is where the
+stage's record lives, and it is what Stage 1 reads before drafting begins.
 
 ## `toh#_stage0.md` — the Stage 0 record
 
@@ -31,7 +32,8 @@ Use this structure, in this order:
 ## `toh#_collation.md` and `.docx` — only when a collation was undertaken
 
 Named for the text (`toh345_collation.md`), following the structure in
-`shared-policies/collation`, and saved locally alongside `toh#_stage0.md`.
+`shared-policies/collation`, and saved alongside `toh#_stage0.md` — locally and
+in storage both.
 
 Also generate a Word mirror, **`toh#_collation.docx`**, via the `docx` skill —
 Claude's general document skill, not one this plugin ships. The report is a
@@ -59,3 +61,30 @@ Times New Roman default like the rest of the document.
 The witness-reading columns are the substance of this report and get read
 character by character — a single letter is often the whole variant — so the
 Uchen size matters more here than anywhere in the Stage 1 draft.
+
+## Saving to storage
+
+Save the stage's deliverables to storage once the local files are written and
+complete. Without this the record is only on one machine, and Stage 1 — which
+reads `toh#_stage0.md` from the bucket before drafting — has nothing to read.
+
+`reference/session-documents/saving.md` is the mechanism, and it is the same for
+every stage: the call, the upload URLs and the PUT that carries the bytes, what
+happens on a re-run, and what to do when the client cannot make an outbound
+request. Read it before the first save of a session.
+
+What this stage supplies:
+
+| | |
+|---|---|
+| `stage` | `stage0` |
+| `files` | `toh#_stage0.md` as `primary`; the collation pair, `toh#_collation.md` and `toh#_collation.docx`, as `supporting` when a collation was undertaken |
+
+A collation finished after the record was already saved can go in a second call
+rather than holding the record back — the manifest carries the earlier files
+forward.
+
+Before re-running the stage for a work, check what is already saved with
+`read-session-documents`; `reference/session-documents/reading.md` covers that
+call. A re-run archives rather than destroys, but *Not this* in `SKILL.md` still
+asks you to confirm one is intended.
