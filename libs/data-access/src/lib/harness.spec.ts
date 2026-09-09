@@ -22,7 +22,8 @@ type MockCalls = {
 /**
  * Serves storage results per operation and records what was asked for. `list`
  * is keyed by prefix because the policy listing descends one level, so the
- * order of the two calls is what the test needs to see.
+ * order of the two calls is what the test needs to see. It also backs the
+ * existence check that precedes a write, which is a filtered listing.
  */
 const createMockClient = ({
   lists = {},
@@ -42,9 +43,14 @@ const createMockClient = ({
   const client = {
     storage: {
       from: () => ({
-        list: async (prefix: string) => {
+        list: async (prefix: string, options?: { search?: string }) => {
           calls.list.push(prefix);
-          return lists[prefix] ?? { data: [], error: null };
+          const result = lists[prefix] ?? { data: [], error: null };
+          if (!options?.search || !Array.isArray(result.data)) return result;
+          const data = (result.data as { name: string }[]).filter((e) =>
+            e.name.startsWith(options.search as string),
+          );
+          return { ...result, data };
         },
         download: async (path: string) => {
           calls.download.push(path);
@@ -52,7 +58,10 @@ const createMockClient = ({
           const content = downloads[path];
           // Only `.text()` is consumed, and jsdom's Blob does not implement it.
           return content == null
-            ? { data: null, error: { message: 'Object not found', status: 404 } }
+            ? {
+                data: null,
+                error: { message: 'Object not found', status: 404 },
+              }
             : { data: { text: async () => content }, error: null };
         },
         copy: async (from: string, to: string) => {
@@ -191,20 +200,22 @@ describe('readPolicy', () => {
 
   it('reports the names it could not resolve without losing the rest', async () => {
     const { client } = createMockClient({ downloads: { 'a/b.md': 'kept' } });
-    expect(await readPolicies({ client, names: ['a/b', 'a/missing'] })).toEqual({
-      policies: [{ name: 'a/b', content: 'kept' }],
-      missing: ['a/missing'],
-    });
+    expect(await readPolicies({ client, names: ['a/b', 'a/missing'] })).toEqual(
+      {
+        policies: [{ name: 'a/b', content: 'kept' }],
+        missing: ['a/missing'],
+      },
+    );
   });
 });
 
 describe('writePolicy', () => {
   const at = new Date('2026-09-08T19:30:00.000Z');
 
+  const live = { a: { data: [file('b.md')], error: null } };
+
   it('archives the current revision before replacing it', async () => {
-    const { client, calls } = createMockClient({
-      downloads: { 'a/b.md': 'old' },
-    });
+    const { client, calls } = createMockClient({ lists: live });
 
     const result = await writePolicy({
       client,
@@ -222,7 +233,7 @@ describe('writePolicy', () => {
 
   it('abandons the write when the archive copy fails', async () => {
     const { client, calls } = createMockClient({
-      downloads: { 'a/b.md': 'old' },
+      lists: live,
       copyError: { message: 'archive is append-only' },
     });
 
@@ -234,9 +245,13 @@ describe('writePolicy', () => {
   });
 
   it('creates a new policy without archiving anything', async () => {
-    const { client, calls } = createMockClient({ downloads: {} });
+    const { client, calls } = createMockClient({ lists: {} });
 
-    const result = await writePolicy({ client, name: 'a/new', content: 'text' });
+    const result = await writePolicy({
+      client,
+      name: 'a/new',
+      content: 'text',
+    });
 
     expect(result).toMatchObject({ written: true, created: true });
     expect(result.archivedPath).toBeUndefined();
@@ -245,10 +260,23 @@ describe('writePolicy', () => {
 
   it('surfaces an upload failure', async () => {
     const { client } = createMockClient({
-      downloads: {},
       uploadError: { message: 'row-level security' },
     });
     const result = await writePolicy({ client, name: 'a/new', content: 't' });
-    expect(result).toMatchObject({ written: false, error: 'row-level security' });
+    expect(result).toMatchObject({
+      written: false,
+      error: 'row-level security',
+    });
+  });
+
+  it('does not overwrite when it cannot tell whether a revision is there', async () => {
+    const { client, calls } = createMockClient({
+      lists: { a: { data: null, error: { message: 'denied' } } },
+    });
+
+    const result = await writePolicy({ client, name: 'a/b', content: 'new' });
+
+    expect(result.written).toBe(false);
+    expect(calls.upload).toEqual([]);
   });
 });

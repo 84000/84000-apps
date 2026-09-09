@@ -1,4 +1,14 @@
 import { DataClient } from './types';
+import {
+  ARCHIVE_PREFIX,
+  archiveObject,
+  archiveStamp,
+  archivedObjectPath,
+  isNotFound,
+  listObjects,
+  objectExists,
+  uploadText,
+} from './storage-archive';
 
 /**
  * Bucket holding the translation policies as markdown. Access is enforced by
@@ -7,7 +17,7 @@ import { DataClient } from './types';
 export const HARNESS_BUCKET = 'translation-harness';
 
 /** Append-only prefix holding prior revisions; RLS denies UPDATE and DELETE on it. */
-export const HARNESS_ARCHIVE_PREFIX = 'archive';
+export const HARNESS_ARCHIVE_PREFIX = ARCHIVE_PREFIX;
 
 const POLICY_SUFFIX = '.md';
 
@@ -20,63 +30,30 @@ export const policyPath = (name: string) =>
   name.endsWith(POLICY_SUFFIX) ? name : `${name}${POLICY_SUFFIX}`;
 
 export const policyName = (path: string) =>
-  path.endsWith(POLICY_SUFFIX)
-    ? path.slice(0, -POLICY_SUFFIX.length)
-    : path;
+  path.endsWith(POLICY_SUFFIX) ? path.slice(0, -POLICY_SUFFIX.length) : path;
 
-/** `20260908T193000Z` — sorts chronologically, needs no escaping in a key. */
-export const archiveStamp = (at: Date = new Date()) =>
-  at.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+export { archiveStamp };
 
 export const archivePathFor = (name: string, at: Date = new Date()) =>
-  `${HARNESS_ARCHIVE_PREFIX}/${policyPath(name)}/${archiveStamp(at)}${POLICY_SUFFIX}`;
+  archivedObjectPath({ path: policyPath(name), at });
 
-/**
- * Lists the live policy names. Storage marks pseudo-folders with a null `id`,
- * so this descends one level and skips the archive.
- */
+/** Lists the live policy names, skipping the archive. */
 export const listPolicies = async ({ client }: { client: DataClient }) => {
-  const bucket = client.storage.from(HARNESS_BUCKET);
+  const paths = await listObjects({
+    client,
+    bucket: HARNESS_BUCKET,
+    skip: [HARNESS_ARCHIVE_PREFIX],
+  });
 
-  const { data: roots, error } = await bucket.list('');
-  if (error) {
-    console.error('Error listing policies:', error.message);
-    return undefined;
-  }
+  if (!paths) return undefined;
 
-  const names: string[] = [];
-  for (const entry of roots ?? []) {
-    if (entry.name === HARNESS_ARCHIVE_PREFIX) continue;
-
-    if (entry.id) {
-      if (entry.name.endsWith(POLICY_SUFFIX)) names.push(policyName(entry.name));
-      continue;
-    }
-
-    const { data: children, error: childError } = await bucket.list(entry.name);
-    if (childError) {
-      console.error(
-        `Error listing policies under ${entry.name}:`,
-        childError.message,
-      );
-      return undefined;
-    }
-
-    for (const child of children ?? []) {
-      if (!child.id || !child.name.endsWith(POLICY_SUFFIX)) continue;
-      names.push(policyName(`${entry.name}/${child.name}`));
-    }
-  }
-
-  return names.sort();
+  return paths
+    .filter((path) => path.endsWith(POLICY_SUFFIX))
+    .map(policyName)
+    .sort();
 };
 
 export type Policy = { name: string; content: string };
-
-/** A policy that is not there yet is a normal outcome, not a transport failure. */
-const isNotFound = (error: { message?: string; status?: number } | null) =>
-  !!error &&
-  (error.status === 404 || /not.?found/i.test(error.message ?? ''));
 
 export const readPolicy = async ({
   client,
@@ -128,17 +105,13 @@ export const archivePolicy = async ({
   client: DataClient;
   name: string;
   at?: Date;
-}) => {
-  const from = policyPath(name);
-  const to = archivePathFor(name, at);
-
-  const { error } = await client.storage.from(HARNESS_BUCKET).copy(from, to);
-  if (error) {
-    return { archived: false, path: undefined, error: error.message };
-  }
-
-  return { archived: true, path: to, error: undefined };
-};
+}) =>
+  archiveObject({
+    client,
+    bucket: HARNESS_BUCKET,
+    path: policyPath(name),
+    at,
+  });
 
 /**
  * Archive-on-write. A failed archive stops the write: the copy is what makes an
@@ -156,10 +129,22 @@ export const writePolicy = async ({
   at?: Date;
 }) => {
   const path = policyPath(name);
-  const existing = await readPolicy({ client, name });
+
+  const present = await objectExists({
+    client,
+    bucket: HARNESS_BUCKET,
+    path,
+  });
+  if (present.error) {
+    return {
+      written: false,
+      archivedPath: undefined,
+      error: `Could not check whether ${policyName(name)} exists (${present.error}); the write was not attempted.`,
+    };
+  }
 
   let archivedPath: string | undefined;
-  if (existing) {
+  if (present.exists) {
     const archive = await archivePolicy({ client, name, at });
     if (!archive.archived) {
       return {
@@ -171,16 +156,21 @@ export const writePolicy = async ({
     archivedPath = archive.path;
   }
 
-  const { error } = await client.storage
-    .from(HARNESS_BUCKET)
-    .upload(path, new Blob([content], { type: 'text/markdown' }), {
-      upsert: true,
-      contentType: 'text/markdown',
-    });
+  const upload = await uploadText({
+    client,
+    bucket: HARNESS_BUCKET,
+    path,
+    content,
+  });
 
-  if (error) {
-    return { written: false, archivedPath, error: error.message };
+  if (!upload.written) {
+    return { written: false, archivedPath, error: upload.error };
   }
 
-  return { written: true, archivedPath, created: !existing, error: undefined };
+  return {
+    written: true,
+    archivedPath,
+    created: !present.exists,
+    error: undefined,
+  };
 };

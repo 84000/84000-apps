@@ -16,6 +16,7 @@ export * from './lib/passage';
 export * from './lib/publications';
 export * from './lib/replace';
 export * from './lib/search';
+export * from './lib/sessions';
 export * from './lib/storage';
 export * from './lib/titles';
 export * from './lib/types';
