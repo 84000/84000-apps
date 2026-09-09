@@ -30,6 +30,9 @@ Confirm each of these at the start of the session:
       tools
 - [ ] Any translator preferences already known — base recension, prior
       familiarity with the text, planned team
+- [ ] The `write-session-documents` studio tool, for saving the stage's
+      deliverables to storage, and `read-session-documents` for seeing what the
+      work already has saved. See `reference/output.md`
 - [ ] The `read-policies` studio tool, for the *Translator Guidelines* and
       *Text Critical Guidelines* sections this skill cites and for
       `shared-policies/analytics` and `shared-policies/collation`. Read them at
@@ -129,7 +132,12 @@ ships with this skill.
 4. Run the analytics pass per `shared-policies/analytics`.
 5. Produce the collation report per `shared-policies/collation`, if one was
    requested.
-6. Assemble and save `toh#_stage0.md` per `reference/output.md`.
+6. Assemble and save `toh#_stage0.md` locally per `reference/output.md`.
+7. Save the stage's deliverables to storage with `write-session-documents`,
+   passing the work's `toh`, `stage: stage0`, the files with `toh#_stage0.md` as
+   `primary` and any collation pair as `supporting`, and your `model` — then PUT
+   each file to the upload URL it returns. See `reference/output.md`; the save
+   is not complete until every upload has succeeded.
 
 ## Not this
 
@@ -142,4 +150,9 @@ ships with this skill.
 - **Do not silently resolve a discrepancy** between the catalog and the source
   text, such as conflicting folio ranges. Flag it for the translator or editor.
 - **Do not overwrite an existing `toh#_stage0.md`** for the same work without
-  confirming with the translator that a re-run is intended.
+  confirming with the translator that a re-run is intended. Check with
+  `read-session-documents` rather than by looking for a local file. Storage
+  archives what a re-run replaces, so the previous record is recoverable — but
+  the translator should still know a re-run is happening.
+- **Do not report the stage as saved** when an upload failed or the client could
+  not make the PUT. A manifest exists either way; the file does not.
