@@ -10,6 +10,7 @@ import {
   invalidSessionFilenames,
   prepareSessionUploads,
   reservedWriteNames,
+  resolveToh,
   sessionPath,
   sessionToh,
   writeSessionManifest,
@@ -43,10 +44,6 @@ const inputSchema = {
     )
     .min(1)
     .describe('The documents being saved. One upload URL is issued per file.'),
-  workUuid: z
-    .string()
-    .optional()
-    .describe("The work's uuid, when the session has resolved it."),
   model: z
     .object({
       name: z.string(),
@@ -65,9 +62,9 @@ const inputSchema = {
  * base64 would push hundreds of kilobytes through the model's context, so the
  * tool authorizes the writes and the client PUTs each file itself.
  *
- * The manifest is written here rather than uploaded, so that the identity and
- * timestamp on it come from the verified token and the server clock instead of
- * from the agent.
+ * The manifest is written here rather than uploaded, so that the identity,
+ * timestamp and work on it come from the verified token, the server clock and
+ * the catalogue instead of from the agent.
  */
 export function createWriteSessionDocumentsTool(
   client: DataClient,
@@ -76,7 +73,7 @@ export function createWriteSessionDocumentsTool(
   return {
     name: 'write-session-documents',
     description:
-      'Save a translation session\'s working documents to storage. This authorizes the writes and returns one upload URL per file, each valid for two hours — PUT the file\'s bytes to its url with the content type given, e.g. `curl -X PUT -H "Content-Type: <contentType>" --data-binary @<file> "<uploadUrl>"`. Any revision being replaced is archived first. A manifest recording who saved the set, when, and with what model is written for you.',
+      'Save a translation session\'s working documents to storage. This authorizes the writes and returns one upload URL per file, each valid for two hours — PUT the file\'s bytes to its url with the content type given, e.g. `curl -X PUT -H "Content-Type: <contentType>" --data-binary @<file> "<uploadUrl>"`. Any revision being replaced is archived first. A manifest recording the work, who saved the set, when, and with what model is written for you.',
     inputSchema,
     annotations: {
       title: 'Write Session Documents',
@@ -89,12 +86,10 @@ export function createWriteSessionDocumentsTool(
       const {
         toh: requestedToh,
         stage,
-        workUuid,
         model,
       } = args as {
         toh: string;
         stage: SessionStage;
-        workUuid?: string;
         model?: { name: string; version?: string };
       };
       const files = args.files as WriteFileInput[];
@@ -160,6 +155,14 @@ export function createWriteSessionDocumentsTool(
         contentType: upload.contentType,
         role: roles.get(upload.filename) ?? 'supporting',
       }));
+
+      // The work uuid follows from the toh, so it is resolved here rather than
+      // trusted from the agent. A number that resolves to nothing, or to more
+      // than one work, records no uuid: the ambiguity is real and guessing at it
+      // would be worse than omitting it. Never a reason to refuse the save.
+      const resolutions = await resolveToh({ client, toh });
+      const workUuid =
+        resolutions.length === 1 ? resolutions[0].workUuid : undefined;
 
       const manifest = await writeSessionManifest({
         client,

@@ -3,6 +3,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import {
   hasPermission,
   prepareSessionUploads,
+  resolveToh,
   writeSessionManifest,
 } from '@eightyfourthousand/data-access';
 
@@ -11,6 +12,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   hasPermission: jest.fn(),
   prepareSessionUploads: jest.fn(),
   writeSessionManifest: jest.fn(),
+  resolveToh: jest.fn(),
   invalidSessionFilenames: (filenames: string[]) =>
     filenames.filter((n) => !n || n.includes('/') || n === '..'),
   sessionToh: (input: string) =>
@@ -33,6 +35,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 const mockedHasPermission = jest.mocked(hasPermission);
 const mockedPrepare = jest.mocked(prepareSessionUploads);
 const mockedManifest = jest.mocked(writeSessionManifest);
+const mockedResolveToh = jest.mocked(resolveToh);
 
 const upload = {
   path: 'toh345/stage1/toh345_stage1.docx',
@@ -64,6 +67,9 @@ describe('write-session-documents tool', () => {
     mockedManifest.mockResolvedValue({
       path: 'toh345/stage1/manifest.json',
     });
+    mockedResolveToh.mockResolvedValue([
+      { workUuid: 'work-uuid' },
+    ] as unknown as Awaited<ReturnType<typeof resolveToh>>);
   });
 
   it('refuses without harness.edit', async () => {
@@ -92,6 +98,7 @@ describe('write-session-documents tool', () => {
     expect(mockedManifest).toHaveBeenCalledWith(
       expect.objectContaining({
         userUuid: 'user-uuid',
+        workUuid: 'work-uuid',
         files: [
           {
             filename: 'toh345_stage1.docx',
@@ -108,6 +115,43 @@ describe('write-session-documents tool', () => {
 
     expect(result.isError).toBe(true);
     expect(mockedPrepare).not.toHaveBeenCalled();
+  });
+
+  it('resolves the work from the toh rather than taking it from the agent', async () => {
+    await call({ workUuid: 'spoofed-work' });
+
+    expect(mockedResolveToh).toHaveBeenCalledWith({
+      client,
+      toh: 'toh345',
+    });
+    expect(mockedManifest).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: 'work-uuid' }),
+    );
+  });
+
+  it('records no work when the toh is ambiguous, and still saves', async () => {
+    mockedResolveToh.mockResolvedValue([
+      { workUuid: 'one' },
+      { workUuid: 'two' },
+    ] as unknown as Awaited<ReturnType<typeof resolveToh>>);
+
+    const result = await call();
+
+    expect(result.isError).toBeUndefined();
+    expect(mockedManifest).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: undefined }),
+    );
+  });
+
+  it('records no work when the toh resolves to nothing, and still saves', async () => {
+    mockedResolveToh.mockResolvedValue([]);
+
+    const result = await call();
+
+    expect(result.isError).toBeUndefined();
+    expect(mockedManifest).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: undefined }),
+    );
   });
 
   it('rejects a filename that is a path', async () => {
