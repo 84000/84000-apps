@@ -129,7 +129,12 @@ describe('write-session-documents tool', () => {
     );
   });
 
-  it('records no work when the toh is ambiguous, and still saves', async () => {
+  it('logs and records no work when a toh resolves to several, and still saves', async () => {
+    // A number belongs to one work, so this is a catalogue anomaly rather than
+    // something to resolve by picking one.
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
     mockedResolveToh.mockResolvedValue([
       { workUuid: 'one' },
       { workUuid: 'two' },
@@ -141,9 +146,15 @@ describe('write-session-documents tool', () => {
     expect(mockedManifest).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: undefined }),
     );
+    expect(logged).toHaveBeenCalled();
+
+    logged.mockRestore();
   });
 
-  it('records no work when the toh resolves to nothing, and still saves', async () => {
+  it('records no work for an uncatalogued toh, quietly, and still saves', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
     mockedResolveToh.mockResolvedValue([]);
 
     const result = await call();
@@ -152,6 +163,9 @@ describe('write-session-documents tool', () => {
     expect(mockedManifest).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: undefined }),
     );
+    expect(logged).not.toHaveBeenCalled();
+
+    logged.mockRestore();
   });
 
   it('rejects a filename that is a path', async () => {

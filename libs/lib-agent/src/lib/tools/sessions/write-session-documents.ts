@@ -157,10 +157,17 @@ export function createWriteSessionDocumentsTool(
       }));
 
       // The work uuid follows from the toh, so it is resolved here rather than
-      // trusted from the agent. A number that resolves to nothing, or to more
-      // than one work, records no uuid: the ambiguity is real and guessing at it
-      // would be worse than omitting it. Never a reason to refuse the save.
+      // trusted from the agent. A number that is not catalogued records no
+      // uuid, which is ordinary. More than one work is not: a number belongs to
+      // a single work, so that means a catalogue anomaly, and it is logged
+      // rather than resolved by picking one. Neither refuses the save —
+      // provenance is worth recording, not worth losing a draft over.
       const resolutions = await resolveToh({ client, toh });
+      if (resolutions.length > 1) {
+        console.error(
+          `${toh} resolves to ${resolutions.length} works; recording no work uuid for ${toh}/${stage}.`,
+        );
+      }
       const workUuid =
         resolutions.length === 1 ? resolutions[0].workUuid : undefined;
 
