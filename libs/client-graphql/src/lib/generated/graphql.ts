@@ -431,6 +431,11 @@ export type Passage = {
   /** Text content of the passage */
   content: Scalars['String']['output'];
   /**
+   * Length of `content` in characters, for callers that need a passage's size
+   * but not its text — a virtualized reader estimating unloaded row heights.
+   */
+  contentLength: Scalars['Int']['output'];
+  /**
    * TipTap editor JSON representation of this passage.
    * Transforms content and annotations into nested JSON structure.
    */
@@ -703,6 +708,10 @@ export type Query = {
    *
    * Passages come back ranked by relevance when the search spans the corpus, and
    * in document order when it is scoped to a single work.
+   *
+   * Which copy is searched follows the request's `x-84000-content-source` header,
+   * as every other read does: published unless the calling app declares draft.
+   * Draft requires `editor.read`.
    */
   search: Array<EntitySearchResult>;
   /** Get the current API version */

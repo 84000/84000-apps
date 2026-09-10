@@ -230,6 +230,13 @@ export const passageAnnotationsResolver = async (
 };
 
 /**
+ * Field resolver for Passage.contentLength.
+ * A projection of `content`, which every passage read already selects.
+ */
+export const passageContentLengthResolver = (parent: PassageParent) =>
+  parent.content.length;
+
+/**
  * Field resolver for Passage.alignments.
  * Loads alignments via DataLoader (batched across all passages in the request).
  */

@@ -9,10 +9,10 @@ import { normalizeToh } from '@eightyfourthousand/data-access';
 /**
  * The spine's read: one page of passage identities, and nothing else.
  *
- * Over the existing paginated `passages` connection — no new server field, and
- * no new way of fetching content either. Passage *content* comes from
- * `getTranslationBlocks`, whose blocks already carry identity in `json.attrs`
- * alongside the children; there is no reason for a second version of that.
+ * Over the existing paginated `passages` connection, and no new way of fetching
+ * content either. Passage *content* comes from `getTranslationBlocks`, whose
+ * blocks already carry identity in `json.attrs` alongside the children; there
+ * is no reason for a second version of that.
  *
  * What that function cannot do is answer cheaply for a work's shape, because it
  * requests `json`. Selecting only the identity fields is the difference between
@@ -24,6 +24,10 @@ import { normalizeToh } from '@eightyfourthousand/data-access';
  * and 154 sequential requests, since each cursor is the previous page's last
  * uuid and cannot be parallelised. A spine is therefore built from as many
  * pages as the reader has actually needed, not from all of them.
+ *
+ * `contentLength` is the one field here that is not identity: a virtualized
+ * reader needs a height for a row it has not loaded. The server reads `content`
+ * regardless, so its length is a projection rather than a second query.
  */
 
 const PAGE_LIMIT = 100;
@@ -50,6 +54,7 @@ const GET_PASSAGE_METAS = gql`
           sort
           type
           toh
+          contentLength
         }
         pageInfo {
           nextCursor
@@ -68,6 +73,7 @@ type MetaNode = {
   sort: number;
   type: string;
   toh: string | null;
+  contentLength: number;
 };
 
 type MetaResponse = {
@@ -101,6 +107,8 @@ export type PassageMeta = {
   sort: number;
   type: BodyItemType;
   toh?: TohokuCatalogEntry;
+  /** Characters of text, for estimating the height of an unloaded row. */
+  contentLength: number;
 };
 
 /** One page of identities, in order, plus the cursors either side of it. */
@@ -166,6 +174,7 @@ export async function getPassageMetaPage({
         sort: node.sort,
         type: node.type as BodyItemType,
         toh: normalizeToh(node.toh),
+        contentLength: node.contentLength ?? 0,
       })),
       nextCursor: pageInfo.nextCursor ?? undefined,
       prevCursor: pageInfo.prevCursor ?? undefined,

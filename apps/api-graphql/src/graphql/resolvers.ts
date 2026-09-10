@@ -30,6 +30,7 @@ import { imprintResolver } from './schema/imprint/imprint.resolver';
 import { passagesResolver } from './schema/passage/passage.resolver';
 import {
   passageJsonResolver,
+  passageContentLengthResolver,
   passageAnnotationsResolver,
   passageAlignmentsResolver,
   passageReferencesResolver,
@@ -81,6 +82,7 @@ export const resolvers = {
 
   Passage: {
     json: passageJsonResolver,
+    contentLength: passageContentLengthResolver,
     annotations: passageAnnotationsResolver,
     alignments: passageAlignmentsResolver,
     references: passageReferencesResolver,
