@@ -20,6 +20,9 @@ const SEARCH_ENTITIES = gql`
       type
       label
       text
+      workUuid
+      toh
+      workTitle
     }
   }
 `;
@@ -31,11 +34,16 @@ export type EntitySearchResultType =
   | 'bibliography'
   | 'glossary';
 
+/** A search hit, with the work it belongs to so it can be cited on its own. */
 export type EntitySearchResult = {
   uuid: string;
   type: EntitySearchResultType;
   label: string;
   text: string;
+  workUuid?: string | null;
+  /** Tohoku number as catalogued; multi-catalogue works carry a list. */
+  toh?: string | null;
+  workTitle?: string | null;
 };
 
 type SearchEntitiesResponse = {
