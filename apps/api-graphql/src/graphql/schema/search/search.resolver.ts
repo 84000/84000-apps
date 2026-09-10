@@ -22,5 +22,6 @@ export const searchResolver = async (
     toh: args.toh,
     types: args.types,
     limit: args.limit,
+    source: ctx.source,
   });
 };

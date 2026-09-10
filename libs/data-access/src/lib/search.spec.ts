@@ -66,7 +66,7 @@ describe('searchEntities', () => {
     await searchEntities({ client, query: 'dharma', limit: 5 });
 
     expect(rpcCalls[0]).toEqual({
-      name: 'search_entities',
+      name: 'search_entities_published',
       args: {
         p_query: 'dharma',
         p_work_uuid: null,
@@ -75,6 +75,20 @@ describe('searchEntities', () => {
         p_limit: 5,
       },
     });
+  });
+
+  it('reads the published snapshot unless draft is asked for', async () => {
+    const { client, rpcCalls } = createMockClient({ data: [], error: null });
+
+    await searchEntities({ client, query: 'dharma' });
+    await searchEntities({ client, query: 'dharma', source: 'published' });
+    await searchEntities({ client, query: 'dharma', source: 'draft' });
+
+    expect(rpcCalls.map((c) => c.name)).toEqual([
+      'search_entities_published',
+      'search_entities_published',
+      'search_entities',
+    ]);
   });
 
   it('clamps the limit to what the function accepts', async () => {
