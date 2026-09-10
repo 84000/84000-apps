@@ -3,6 +3,7 @@ export * from './annotation';
 export * from './bibliography';
 export * from './catalog';
 export * from './client';
+export * from './comment';
 export * from './editor-content';
 export * from './toh';
 export * from './folio';
