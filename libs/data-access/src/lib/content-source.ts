@@ -103,6 +103,9 @@ export const relationFor = (
  * RPC names per source. Only the functions still on the reader path have a
  * published variant; anything reading unversioned data (titles, imprints, folios,
  * alignments) is shared and absent here.
+ *
+ * `entitySearch` is the exception to that being a reader-only list: the editor's
+ * mention picker reads the draft variant, which is why it requires `editor.read`.
  */
 const RPCS = {
   draft: {
@@ -114,6 +117,7 @@ const RPCS = {
     workGlossarySearch: 'search_work_glossary_terms',
     sectionGlossarySearch: 'search_glossary_terms_by_section',
     glossaryTermPassages: 'get_glossary_term_passages',
+    entitySearch: 'search_entities',
   },
   published: {
     workToc: 'get_work_toc_published',
@@ -124,6 +128,7 @@ const RPCS = {
     workGlossarySearch: 'search_work_glossary_terms_published',
     sectionGlossarySearch: 'search_glossary_terms_by_section_published',
     glossaryTermPassages: 'get_glossary_term_passages_published',
+    entitySearch: 'search_entities_published',
   },
 } as const satisfies Record<ContentSource, Record<string, string>>;
 

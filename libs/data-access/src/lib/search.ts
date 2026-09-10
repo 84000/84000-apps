@@ -1,3 +1,8 @@
+import {
+  DEFAULT_CONTENT_SOURCE,
+  rpcFor,
+  type ContentSource,
+} from './content-source';
 import { DataClient } from './types';
 
 const DEFAULT_SEARCH_LIMIT = 20;
@@ -48,13 +53,16 @@ const escapeIlike = (input: string) =>
   input.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 
 /**
- * Generic entity search backed by the `search_entities` Postgres function.
+ * Generic entity search, backed by `search_entities_published` or, for editorial
+ * surfaces, `search_entities`.
  *
  * - `work` results are always global (search all works by title/toh).
  * - `workUuid` and `toh` are optional scoping filters: passages, folios,
  *   bibliographies, and glossary terms are scoped to them when provided and
  *   searched globally when omitted (`toh` scopes folios).
  * - `types` restricts the search to specific entity types; omit for all.
+ * - `source` chooses the copy. Published is the default; draft is the editorial
+ *   copy and the database requires `editor.read` for it.
  *
  * Passages are ranked by relevance when the search spans the corpus and left in
  * document order when it is scoped to one work.
@@ -66,6 +74,7 @@ export const searchEntities = async ({
   toh,
   types,
   limit = DEFAULT_SEARCH_LIMIT,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   query: string;
@@ -73,6 +82,7 @@ export const searchEntities = async ({
   toh?: string;
   types?: EntitySearchResultType[];
   limit?: number;
+  source?: ContentSource;
 }): Promise<EntitySearchResult[]> => {
   const trimmed = query.trim();
   if (!trimmed) {
@@ -81,7 +91,7 @@ export const searchEntities = async ({
 
   const clampedLimit = Math.min(Math.max(limit, 1), MAX_SEARCH_LIMIT);
 
-  const { data, error } = await client.rpc('search_entities', {
+  const { data, error } = await client.rpc(rpcFor('entitySearch', source), {
     p_query: escapeIlike(trimmed),
     p_work_uuid: workUuid ?? null,
     p_toh: toh ?? null,
