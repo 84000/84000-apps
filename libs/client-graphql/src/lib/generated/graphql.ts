@@ -115,10 +115,19 @@ export type EntitySearchResult = {
    * term, or bibliography excerpt).
    */
   text: Scalars['String']['output'];
+  /**
+   * Tohoku number of that work, as catalogued. Multi-catalogue works carry a
+   * comma-separated list rather than a single number.
+   */
+  toh?: Maybe<Scalars['String']['output']>;
   /** Entity kind: "work", "passage", "folio", "bibliography", or "glossary". */
   type: Scalars['String']['output'];
   /** UUID of the matched entity. */
   uuid: Scalars['ID']['output'];
+  /** Title of that work. */
+  workTitle?: Maybe<Scalars['String']['output']>;
+  /** UUID of the work the match belongs to. For a `work` result, its own uuid. */
+  workUuid?: Maybe<Scalars['ID']['output']>;
 };
 
 /**
@@ -691,6 +700,9 @@ export type Query = {
    * filters for the work-internal types (passage, folio, bibliography, glossary):
    * when provided they scope the search, when omitted those types are searched
    * globally. `types` restricts the search to specific entity kinds.
+   *
+   * Passages come back ranked by relevance when the search spans the corpus, and
+   * in document order when it is scoped to a single work.
    */
   search: Array<EntitySearchResult>;
   /** Get the current API version */

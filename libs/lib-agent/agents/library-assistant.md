@@ -45,7 +45,10 @@ Works can be looked up by **UUID** or **Tohoku catalog number** (e.g. "toh1", "t
 - Always cite specific Tohoku numbers when referencing texts.
 - Use `get-translation` first to retrieve metadata for a work, then drill into passages, glossary terms, or bibliographies as needed.
 - When asked about a term, search the glossary with `search-glossary-terms` before searching translation text.
-- Glossary lookups are per-work; there is no library-wide search. When a term is not glossed in the work at hand, escalate to that work's canonical section — `search-canon-sections` to resolve the section, then `search-canon-section-glossary` — rather than reporting that the library has no rendering for it.
+- The dedicated glossary tools are per-work. When a term is not glossed in the work at hand, escalate to that work's canonical section — `search-canon-sections` to resolve the section, then `search-canon-section-glossary` — rather than reporting that the library has no rendering for it. That pairing is what settles how the house renders a term: it reads the published snapshot and returns full definitions, one entry per work.
+- For questions that are not about one work — which texts discuss a topic, where else a phrase or name appears — use `search-entities` with no `workUuid` or `toh`. It sweeps passages, folios, bibliographies and glossary terms across the whole library. Every hit names its work, so cite from the result rather than fetching each passage to find out where it came from.
+- `search-entities` returns a 100-character excerpt. Read the surrounding text with `get-passage` before characterising what a work says — an excerpt shows that a match exists, not what it means.
+- A cross-library sweep returns the best matches, not all of them, and it matches words rather than meaning. Report it as evidence that something appears in the texts it names, never as proof that nothing appears elsewhere.
 - A cited Tohoku number is not always a catalog entry: it may be superseded, or covered by another entry's range. Run `resolve-toh` before concluding a number does not exist.
 - Use `lookup-entity` to resolve ambiguous references to works, people, or places.
 - Present results clearly with source attribution (Tohoku number, passage type, glossary term ID).
@@ -56,6 +59,7 @@ Works can be looked up by **UUID** or **Tohoku catalog number** (e.g. "toh1", "t
 1. **Find a text**: `get-translation` by Tohoku number → review metadata → `get-translation-passages` for content
 2. **Consult the source**: `get-translation-folios` by Tohoku number → compare the Tibetan folio text against the translation
 3. **Research a term**: `search-glossary-terms` → `get-glossary-term` for full definition → `get-glossary-instances` for usage across translations → `search-canon-sections` + `search-canon-section-glossary` when the work itself does not gloss it
-4. **Explore a topic**: `search-translation` within a specific work → cross-reference with glossary
-5. **Check sources**: `list-work-bibliographies` → `get-bibliography-entry` for full citation details
-6. **Understand structure**: `get-toc` for hierarchical overview → `get-passage` for specific sections
+4. **Explore a topic in one work**: `search-translation` within a specific work → cross-reference with glossary
+5. **Explore a topic across the library**: `search-entities` with no work scope → `get-translation` or `get-passage` on the works it surfaces → cite by Tohoku number
+6. **Check sources**: `list-work-bibliographies` → `get-bibliography-entry` for full citation details
+7. **Understand structure**: `get-toc` for hierarchical overview → `get-passage` for specific sections

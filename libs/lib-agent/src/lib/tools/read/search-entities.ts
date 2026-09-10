@@ -21,7 +21,7 @@ const inputSchema = {
     .string()
     .optional()
     .describe(
-      'Optional work UUID to scope passages, folios, bibliographies, and glossary terms',
+      'Optional work UUID to scope passages, folios, bibliographies, and glossary terms. Omit it to search the whole corpus.',
     ),
   toh: z
     .string()
@@ -43,7 +43,7 @@ export function createSearchEntitiesTool(
   return {
     name: 'search-entities',
     description:
-      'Search across works, passages, folios, bibliographies, and glossary terms. Works are searched globally by title/toh; other types can be scoped to a work via workUuid (or folios via toh).',
+      'Search across works, passages, folios, bibliographies, and glossary terms. Works are searched globally by title/toh; other types can be scoped to a work via workUuid (or folios via toh), and are searched across the whole library when neither is given — this is the cross-work search, and the tool to reach for on "which works discuss X?" or "where else does this phrase appear?". Every result carries the toh, title, and uuid of the work it came from, so a hit is citable without a second lookup. Cross-library passage results are ranked by relevance; within a single work they stay in document order.',
     inputSchema,
     annotations: {
       title: 'Search Entities',
