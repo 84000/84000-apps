@@ -10,12 +10,39 @@ export type EntitySearchResultType =
   | 'bibliography'
   | 'glossary';
 
+export interface EntitySearchResultDTO {
+  uuid: string;
+  type: EntitySearchResultType;
+  label: string;
+  text: string;
+  work_uuid: string | null;
+  toh: string | null;
+  work_title: string | null;
+}
+
+/** A search hit, with the work it belongs to so it can be cited on its own. */
 export interface EntitySearchResult {
   uuid: string;
   type: EntitySearchResultType;
   label: string;
   text: string;
+  workUuid?: string;
+  /** Tohoku number as catalogued; multi-catalogue works carry a list. */
+  toh?: string;
+  workTitle?: string;
 }
+
+export const entitySearchResultFromDTO = (
+  dto: EntitySearchResultDTO,
+): EntitySearchResult => ({
+  uuid: dto.uuid,
+  type: dto.type,
+  label: dto.label,
+  text: dto.text,
+  workUuid: dto.work_uuid ?? undefined,
+  toh: dto.toh ?? undefined,
+  workTitle: dto.work_title ?? undefined,
+});
 
 const escapeIlike = (input: string) =>
   input.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -28,6 +55,9 @@ const escapeIlike = (input: string) =>
  *   bibliographies, and glossary terms are scoped to them when provided and
  *   searched globally when omitted (`toh` scopes folios).
  * - `types` restricts the search to specific entity types; omit for all.
+ *
+ * Passages are ranked by relevance when the search spans the corpus and left in
+ * document order when it is scoped to one work.
  */
 export const searchEntities = async ({
   client,
@@ -64,5 +94,7 @@ export const searchEntities = async ({
     return [];
   }
 
-  return (data ?? []) as EntitySearchResult[];
+  return ((data ?? []) as EntitySearchResultDTO[]).map(
+    entitySearchResultFromDTO,
+  );
 };

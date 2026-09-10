@@ -24,6 +24,22 @@ type EntitySearchResult {
   term, or bibliography excerpt).
   """
   text: String!
+
+  """
+  UUID of the work the match belongs to. For a `work` result, its own uuid.
+  """
+  workUuid: ID
+
+  """
+  Tohoku number of that work, as catalogued. Multi-catalogue works carry a
+  comma-separated list rather than a single number.
+  """
+  toh: String
+
+  """
+  Title of that work.
+  """
+  workTitle: String
 }
 
 extend type Query {
@@ -34,6 +50,9 @@ extend type Query {
   filters for the work-internal types (passage, folio, bibliography, glossary):
   when provided they scope the search, when omitted those types are searched
   globally. `types` restricts the search to specific entity kinds.
+
+  Passages come back ranked by relevance when the search spans the corpus, and
+  in document order when it is scoped to a single work.
   """
   search(
     """
