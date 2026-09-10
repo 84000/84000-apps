@@ -4,6 +4,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import { searchEntities } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  CONTENT_SOURCES: ['draft', 'published'],
   searchEntities: jest.fn(),
 }));
 const mockedSearch = jest.mocked(searchEntities);
@@ -38,11 +39,32 @@ describe('search-entities tool', () => {
       toh: undefined,
       types: ['work'],
       limit: undefined,
+      source: undefined,
     });
     expect(result.content[0]).toEqual({
       type: 'text',
       text: JSON.stringify(results, null, 2),
     });
+  });
+
+  it('passes the requested content source through', async () => {
+    mockedSearch.mockResolvedValue([]);
+
+    await tool.handler({ query: 'play', source: 'draft' }, extra);
+
+    expect(mockedSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'draft' }),
+    );
+  });
+
+  it('leaves the source unset so data-access applies the published default', async () => {
+    mockedSearch.mockResolvedValue([]);
+
+    await tool.handler({ query: 'play' }, extra);
+
+    expect(mockedSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ source: undefined }),
+    );
   });
 
   it('returns empty results as JSON', async () => {
