@@ -30,8 +30,12 @@ renaming the app to reach one flag silently turns off every other flag scoped
 to the old name. That is what the override is for.
 
 Ignored in production builds. A flag that cannot be turned off from PostHog is
-not a feature flag, so a stale value in a deployed environment must not pin one
-— which also means previews cannot use this.
+not a feature flag, so a stale value in a deployed environment must not pin one.
+
+That excludes Vercel previews, which build as production — deliberately, since
+they have a real flag source: previews evaluate against the **sandbox** PostHog
+project. Scope a flag there for every app that will exercise it, not just the
+one you are testing from, or it reads as off in the others.
 
 ## Waiting for flags
 
