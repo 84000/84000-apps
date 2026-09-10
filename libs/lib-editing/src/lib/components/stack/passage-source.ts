@@ -77,13 +77,19 @@ export const graphqlPassageSource = ({
   };
 
   /**
-   * The cursor and span covering `uuids`, from the spine's ordering.
+   * The runs covering `uuids`, from the spine's ordering.
    *
-   * The span is the whole run from the first wanted passage to the last, which
-   * may be wider than the set when the caller already holds some of the middle
-   * — one request for a contiguous read beats several for the exact set.
+   * A run is widened to everything between its first and last wanted passage —
+   * one contiguous read beats several for the exact set when the caller
+   * already holds some of the middle.
+   *
+   * Usually one run, but not always: a work hydrates the union of its open
+   * windows, so one call can carry the translation tab's passages and the
+   * endnotes tab's, which sit in different parts of the spine with the rest of
+   * the work missing between them. Reading that as a single span starts in one
+   * section and never reaches the other.
    */
-  const spanFor = (uuids: string[]) => {
+  const runsFor = (uuids: string[]) => {
     const current = spine?.();
     if (!current) return null;
 
@@ -93,17 +99,34 @@ export const graphqlPassageSource = ({
       .sort((a, b) => a - b);
     if (!indices.length) return null;
 
-    const start = indices[0];
-    const end = indices[indices.length - 1];
-    return {
-      // The connection's cursor is exclusive, so start from the passage before
-      // the run. At the top of the spine there is none loaded — and since a
-      // spine can start mid-work after a deep link, that is not the same as
-      // the start of the work.
-      cursor: start > 0 ? current.uuidAt(start - 1) : undefined,
-      first: current.uuidAt(start),
-      count: end - start + 1,
+    const tabAt = (index: number) => {
+      const uuid = current.uuidAt(index);
+      return uuid ? current.meta(uuid)?.tab : undefined;
     };
+
+    const runs: { first: string; count: number }[] = [];
+    let start = indices[0];
+    let previous = indices[0];
+
+    const close = () => {
+      const first = current.uuidAt(start);
+      if (first) runs.push({ first, count: previous - start + 1 });
+    };
+
+    indices.slice(1).forEach((index) => {
+      // The section is the boundary, not a distance: two passages are adjacent
+      // in the work only if they are in the same one, and the runs meet in the
+      // spine with everything between them missing. A distance cannot see that
+      // — the last body passage and the first endnote sit side by side.
+      if (tabAt(index) !== tabAt(previous)) {
+        close();
+        start = index;
+      }
+      previous = index;
+    });
+    close();
+
+    return runs;
   };
 
   /**
@@ -148,12 +171,14 @@ export const graphqlPassageSource = ({
   };
 
   /**
-   * Read a run that begins at the top of the spine.
+   * Read a run, starting from its first passage.
    *
-   * There is no loaded passage before it to use as an exclusive cursor, and
-   * assuming the start of the work would be wrong for a spine that opened
-   * around a deep link. `AROUND` includes its own cursor, which is the row
-   * that would otherwise be missed; the rest of the run continues forward.
+   * `AROUND` rather than a cursor taken from the spine, because the connection's
+   * cursor is exclusive and the entry before a run in the spine is not the
+   * passage before it in the work: a spine can open mid-work after a deep link,
+   * and it holds a separate run per section with the rest of the work missing
+   * between them. `AROUND` includes its own cursor and needs no neighbour; the
+   * rest of the run continues forward from where it stopped.
    */
   const readFrom = async (first: string, count: number) => {
     const page = await getTranslationBlocksAround({
@@ -192,19 +217,17 @@ export const graphqlPassageSource = ({
     ): Promise<PassageSnapshot[]> {
       if (wrongWork(requestedWorkUuid) || !uuids.length) return [];
 
-      const span = spanFor(uuids);
+      const runs = runsFor(uuids);
       const wanted = new Set(uuids);
 
       // Without a spine there is no cursor to derive, so fall back to reading
       // from the start of the work in pages until the wanted set is covered.
       // Correct but wasteful; the assembled loader always supplies a spine.
-      const found = !span
-        ? await readSpan(undefined, MAX_PAGE)
-        : span.cursor
-          ? await readSpan(span.cursor, span.count)
-          : span.first
-            ? await readFrom(span.first, span.count)
-            : await readSpan(undefined, MAX_PAGE);
+      const found = runs?.length
+        ? (
+            await Promise.all(runs.map((run) => readFrom(run.first, run.count)))
+          ).flat()
+        : await readSpan(undefined, MAX_PAGE);
 
       // Passages pulled in because they sat inside the run are dropped: the
       // loader treats anything returned as answered, and a passage the caller

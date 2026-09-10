@@ -11,15 +11,25 @@ import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
+import { usePerPassageDocs } from './usePerPassageDocs';
+import dynamic from 'next/dynamic';
+
 import { useCallback, useEffect, useState } from 'react';
 import { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { TranslationBuilder } from '../editor';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 
+/** See `EditorLayout` — the stack must not reach the server bundle. */
+const StackTab = dynamic(
+  () => import('../stack/StackTab').then((m) => m.StackTab),
+  { ssr: false },
+);
+
 export const EditorBackMatterPage = () => {
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
   const { work } = useEditorState();
+  const perPassageDocs = usePerPassageDocs();
   const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
   const [abbreviations, setAbbreviations] =
     useState<TranslationEditorContent>();
@@ -70,17 +80,26 @@ export const EditorBackMatterPage = () => {
   }, [work]);
 
   const renderTranslation = useCallback(
-    ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
-      <TranslationBuilder
-        content={content}
-        name={name}
-        className={className}
-        filter={name}
-        panel="right"
-        hasMoreAfter={hasMoreAfter}
-      />
-    ),
-    [],
+    ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>
+      // Abbreviations keep the paginated editor for now.
+      !perPassageDocs.ready ? (
+        // Not "the flag is off" — the value has not arrived. Building the
+        // paginated editor on that answer costs a TipTap instance and a Yjs
+        // binding, thrown away when it does.
+        <TranslationSkeleton />
+      ) : perPassageDocs.enabled && name === 'endnotes' ? (
+        <StackTab tab="endnotes" className={className} />
+      ) : (
+        <TranslationBuilder
+          content={content}
+          name={name}
+          className={className}
+          filter={name}
+          panel="right"
+          hasMoreAfter={hasMoreAfter}
+        />
+      ),
+    [perPassageDocs.enabled, perPassageDocs.ready],
   );
 
   if (!endnotes || !glossary || !bibliography || !abbreviations) {

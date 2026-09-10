@@ -95,7 +95,14 @@ export class WorkDocument {
   private newUuid: () => string;
   private listeners = new Set<() => void>();
   /** Ranges each view currently has on screen, so hydration is their union. */
-  private windows = new Map<string, { range: SpineRange; keep: Set<string> }>();
+  /**
+   * What each view currently has on screen, so hydration is their union.
+   *
+   * Passages rather than positions: a position is an index into a list the
+   * other views are appending to, so a window recorded as `100..130` stops
+   * meaning the same passages the moment another section loads a page.
+   */
+  private windows = new Map<string, { uuids: string[]; keep: Set<string> }>();
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
@@ -132,14 +139,15 @@ export class WorkDocument {
     options: { keep?: Iterable<string>; key?: string } = {},
   ): Promise<PassageDoc[]> {
     const key = options.key ?? DEFAULT_WINDOW;
-    this.windows.set(key, { range, keep: new Set(options.keep ?? []) });
+    const mine = this.windowUuids(range);
+    this.windows.set(key, { uuids: mine, keep: new Set(options.keep ?? []) });
 
     // The union of every open window. Views onto one work scroll
     // independently — the editor draws a tab per panel — so releasing what
     // this one has left behind would release what another one is drawing.
     const wanted = new Set<string>();
     this.windows.forEach((window) => {
-      this.windowUuids(window.range).forEach((uuid) => wanted.add(uuid));
+      window.uuids.forEach((uuid) => wanted.add(uuid));
       window.keep.forEach((uuid) => wanted.add(uuid));
     });
 
@@ -150,8 +158,8 @@ export class WorkDocument {
     // Only this window's documents come back: a consumer attaches its own
     // bookkeeping to what it draws, and two of them observing one document
     // would record every edit to it twice.
-    const mine = new Set(this.windowUuids(range));
-    return docs.filter((doc) => mine.has(doc.uuid));
+    const drawn = new Set(mine);
+    return docs.filter((doc) => drawn.has(doc.uuid));
   }
 
   /** Forget a window, so what only it held can be released. */

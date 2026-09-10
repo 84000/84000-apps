@@ -70,12 +70,14 @@ same classes and hooks either way — `.labeled` on the label,
 deep links resolve a passage by `id` and then look for `.passage.is-editable`
 inside it.
 
-Two deliberate differences:
+The label hangs in the margin at `-left-16`, exactly as production draws it, so
+the content keeps the full width of the column. The stack imposes no width of
+its own: a host that already constrains the column — `BodyPanel` does, for the
+paginated editor — would otherwise constrain it twice, and the text would come
+out a hundred pixels narrower than the editor beside it.
 
-- **The label gutter is padding, not `-left-16`.** The stack scrolls in a
-  container whose `overflow-y: auto` makes `overflow-x` auto too, so a label at
-  a negative offset is clipped rather than drawn in the page margin. Same
-  gutter, same 24px to the text, reached from the other side.
+One deliberate difference:
+
 - **`select-none` on the label.** In production the label is node view chrome,
   which ProseMirror leaves out of a copied slice. Static rows are copied
   natively, so without this a drag across them picks up the labels.
@@ -127,6 +129,27 @@ head's content, which falls _between_ two blocks. `focusEditor` resolves it with
 `TextSelection.near` so the caret lands in real text — at a join, the end of the
 head. Left unresolved the caret was in no textblock at all, which is what made
 the Backspace above misbehave in the first place.
+### The stack does not own a scroller
+
+It virtualizes against the nearest scrollable ancestor. Its hosts already have
+one — the editor's resizable panel, the sandbox's frame — and creating a second
+is how the worst bug in this component happened: `h-full` on the stack root is
+`height: 100%`, every wrapper between it and web-main's panel has auto height,
+so it resolved to `auto`. The scroller grew to fit its own content and never
+scrolled, which meant every row counted as visible, the virtualizer drew all of
+them, the visible range always reached the end of the spine, and the feed kept
+fetching. Fifteen thousand passages, from one percentage height.
+
+A host therefore owes the stack a scrollable ancestor with a bounded height.
+`scrollMargin` accounts for whatever sits above it in that scroller — tabs,
+titles — because the virtualizer measures from the scroller, not from the
+stack.
+
+None of the harness routes caught it, because each one wrapped the stack in an
+explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
+instead, and is the regression test: with the stack owning a scroller it loads
+the entire work, and without it loads one page.
+
 ### Deep links
 
 A link names a passage, not a position, and the spine window rarely holds it.
