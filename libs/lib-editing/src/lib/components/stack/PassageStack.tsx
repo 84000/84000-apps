@@ -23,6 +23,9 @@ import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
 import { useStackSelection } from './useStackSelection';
+import { resolveStackLink, STACK_LINK_SELECTOR } from './stack-links';
+import { useNavigation } from '../shared/NavigationContext';
+import type { StackLinkTarget } from './stack-links';
 
 /**
  * Rows rendered in the virtualized window (cheap static HTML tier).
@@ -93,6 +96,37 @@ export const PassageStack = ({
     null,
   );
   const closeMenu = useCallback(() => setMenuTarget(null), []);
+
+  const { updatePanel, setToh } = useNavigation();
+  /**
+   * Take a static row's content link, through the panel state rather than the
+   * URL — the provider writes the URL from that state, so a link that pushed
+   * history directly would be overwritten by the next sync.
+   */
+  const followLink = useCallback(
+    (link: StackLinkTarget) => {
+      if (link.kind === 'external') {
+        window.open(link.href, '_blank');
+        return;
+      }
+      if (link.toh) setToh(link.toh);
+      // The provider reads the highlight range back off the URL, and its own
+      // sync preserves whatever else is already there.
+      const query = new URLSearchParams(window.location.search);
+      query.delete('start');
+      query.delete('end');
+      if (link.highlight) {
+        query.set('start', link.highlight.start);
+        query.set('end', link.highlight.end);
+      }
+      window.history.replaceState(null, '', `?${query.toString()}`);
+      updatePanel({
+        name: link.panel,
+        state: { open: true, tab: link.tab, hash: link.hash },
+      });
+    },
+    [updatePanel, setToh],
+  );
   const focusedEditor = controller.getFocusedEditor();
 
   const virtualizer = useVirtualizer({
@@ -206,6 +240,21 @@ export const PassageStack = ({
       }
 
       if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
+
+      // Content links, before the focus branch below claims the click. A
+      // mounted editor handles these from its own mark and node views; a
+      // static row has none, so the stack follows them by delegation. It has
+      // to happen on mousedown: focusing swaps the row for an editor, and the
+      // clicked element is detached before a `click` would reach it.
+      const link = resolveStackLink(target, {
+        editable: !controller.isReadOnly(),
+      });
+      if (link) {
+        event.preventDefault();
+        followLink(link);
+        return;
+      }
+
       down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
     };
     const onMouseUp = (event: MouseEvent) => {
@@ -223,13 +272,23 @@ export const PassageStack = ({
       });
     };
 
+    // Navigation happens on mousedown, but an anchor's own default fires on
+    // click — preventing it there is what keeps a static internal link from
+    // also loading its href as a page.
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (target?.closest?.(STACK_LINK_SELECTOR)) event.preventDefault();
+    };
+
     container.addEventListener('mousedown', onMouseDown);
     container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('click', onClick);
     return () => {
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('click', onClick);
     };
-  }, [controller]);
+  }, [controller, followLink]);
 
   // Bookmarks live in local storage; another tab changing them arrives here.
   useEffect(() => {

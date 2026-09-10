@@ -1,6 +1,11 @@
 import { getSchema, Node } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
-import { MentionSSR, MentionItem, mentionContainerToh } from './Mention.ssr';
+import {
+  MentionSSR,
+  MentionItem,
+  mentionContainerToh,
+  mentionDOMOutputSpec,
+} from './Mention.ssr';
 
 const Document = Node.create({
   name: 'doc',
@@ -27,6 +32,50 @@ describe('MentionSSR', () => {
     expect(mention.isAtom).toBe(true);
     expect(schema.nodes['mention'].spec.draggable).toBe(true);
     expect(NodeSelection.isSelectable(mention)).toBe(false);
+  });
+});
+
+describe('mentionDOMOutputSpec same-work links', () => {
+  const schema = getSchema([Document, Paragraph, Text, MentionSSR]);
+
+  /** The attrs of the anchor a single same-work item renders to. */
+  const anchorAttrs = (item: Partial<MentionItem>) => {
+    const node = schema.nodes['mention'].create({
+      items: [
+        {
+          uuid: 'm-1',
+          entity: 'p-1',
+          linkType: 'passage',
+          displayText: 'a passage',
+          isSameWork: true,
+          ...item,
+        },
+      ],
+    });
+    // The container's children are spread into the spec, so the first item
+    // sits at index 2 rather than inside a nested array.
+    const spec = mentionDOMOutputSpec(node) as [
+      string,
+      unknown,
+      [string, Record<string, string>, string],
+    ];
+    return spec[2][1];
+  };
+
+  it('carries the highlight range a static row has no other source for', () => {
+    expect(anchorAttrs({ highlightStart: 12, highlightEnd: 20 })).toMatchObject(
+      {
+        'data-same-work': 'true',
+        'data-highlight-start': '12',
+        'data-highlight-end': '20',
+      },
+    );
+  });
+
+  it('omits the range when the mention names none', () => {
+    const attrs = anchorAttrs({});
+    expect(attrs['data-highlight-start']).toBeUndefined();
+    expect(attrs['data-highlight-end']).toBeUndefined();
   });
 });
 

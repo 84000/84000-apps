@@ -150,6 +150,35 @@ explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
 instead, and is the regression test: with the stack owning a scroller it loads
 the entire work, and without it loads one page.
 
+### Content links on a static row
+
+A mounted editor handles glossary instances, endnote markers, internal links
+and mentions from its own mark and node views. A static row has none, so
+`PassageStack` follows them by delegation, reading the intent back out of the
+attributes the `*.ssr` renderers emit — which is what makes those attributes a
+contract rather than presentation.
+
+Three things this has to get right, each of which the obvious version gets
+wrong:
+
+- **It acts on `mousedown`.** The focus handler below it runs on `mouseup`, and
+  focusing swaps the row for an editor — so by the time a `click` would fire,
+  the element it fired on is detached.
+- **The anchor's own default is prevented on `click`.** `preventDefault` on
+  `mousedown` does not stop a link loading its `href`; only the click does.
+  Without it a static internal link navigates out of the app entirely.
+- **It goes through `updatePanel`, not `history.pushState`.** The panels are
+  React state and `NavigationProvider` writes the URL from it, so a link that
+  pushed history directly is overwritten by the next sync. `useSearchParams`
+  does not observe a manual history write either, so nothing reads it back.
+
+`resolveStackLink` is therefore pure: it reports where a link goes and leaves
+navigating to the stack. A target it cannot route resolves to null and the link
+is left alone, rather than navigating somewhere arbitrary.
+
+The one thing the static HTML did not carry is a same-work mention's highlight
+range, which lived only in the model; `Mention.ssr` now emits it.
+
 ### Deep links
 
 A link names a passage, not a position, and the spine window rarely holds it.

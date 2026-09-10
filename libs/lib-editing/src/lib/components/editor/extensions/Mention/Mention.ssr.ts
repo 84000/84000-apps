@@ -98,7 +98,11 @@ export const mentionDOMOutputSpec = (
     };
 
     if (!label || !item.entity || !item.linkType) {
-      return ['span', { class: 'mention-link', ...extraAttrs }, label] as unknown;
+      return [
+        'span',
+        { class: 'mention-link', ...extraAttrs },
+        label,
+      ] as unknown;
     }
 
     const hrefParams = new URLSearchParams();
@@ -120,12 +124,24 @@ export const mentionDOMOutputSpec = (
       attrs['data-same-work'] = 'true';
       if (item.subtype) attrs['data-subtype'] = item.subtype;
       if (item.linkToh) attrs['data-link-toh'] = item.linkToh;
+      // The highlight range lives only in the model otherwise, and a static
+      // row is followed from its attributes.
+      if (item.highlightStart !== undefined) {
+        attrs['data-highlight-start'] = String(item.highlightStart);
+      }
+      if (item.highlightEnd !== undefined) {
+        attrs['data-highlight-end'] = String(item.highlightEnd);
+      }
     } else if (href) {
       attrs['href'] = href;
       attrs['target'] = '_blank';
       attrs['rel'] = 'noreferrer noopener';
     } else {
-      return ['span', { class: 'mention-link', ...extraAttrs }, label] as unknown;
+      return [
+        'span',
+        { class: 'mention-link', ...extraAttrs },
+        label,
+      ] as unknown;
     }
 
     return ['a', attrs, label] as unknown;
