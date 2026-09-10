@@ -24,6 +24,11 @@ that silently reports a flag as off: `useFeatureFlagEnabled` compares the
 payload's `apps` list against `NEXT_PUBLIC_APPLICATION_NAME`, and a local
 `.env.local` does not always carry the name the flag was scoped to.
 
+**Do not edit `NEXT_PUBLIC_APPLICATION_NAME` to turn a flag on.** It is not a
+per-flag lever — it is the identity every `apps` payload is matched against, so
+renaming the app to reach one flag silently turns off every other flag scoped
+to the old name. That is what the override is for.
+
 Ignored in production builds. A flag that cannot be turned off from PostHog is
 not a feature flag, so a stale value in a deployed environment must not pin one
 — which also means previews cannot use this.
