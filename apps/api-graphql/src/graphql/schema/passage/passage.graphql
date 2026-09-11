@@ -18,6 +18,12 @@ type Passage {
   content: String!
 
   """
+  Length of `content` in characters, for callers that need a passage's size
+  but not its text — a virtualized reader estimating unloaded row heights.
+  """
+  contentLength: Int!
+
+  """
   Display label for the passage (e.g., "1.1")
   """
   label: String

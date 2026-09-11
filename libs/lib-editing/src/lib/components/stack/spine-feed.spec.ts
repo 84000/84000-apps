@@ -41,6 +41,7 @@ const metaPage = (
     sort: (from + i) * 2,
     type,
     toh: undefined,
+    contentLength: (from + i + 1) * 10,
   })),
   nextCursor: hasMoreAfter ? `${prefix}${from + count - 1}` : undefined,
   hasMoreAfter,
@@ -59,6 +60,7 @@ const aroundPage = (
     sort: (from + i) * 2,
     type: 'translation',
     toh: undefined,
+    contentLength: (from + i + 1) * 10,
   })),
   prevCursor: before ? `p${from}` : undefined,
   nextCursor: after ? `p${from + count - 1}` : undefined,
@@ -67,6 +69,29 @@ const aroundPage = (
 });
 
 beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
+
+describe('SpineFeed content lengths', () => {
+  it('records the content length of every passage a page reports', async () => {
+    const w = work();
+    clientGraphql.getPassageMetaPage.mockResolvedValue(metaPage(0, 3, false));
+
+    const feed = new SpineFeed(w, client);
+    await feed.seed();
+
+    expect(feed.contentLength('p0')).toBe(10);
+    expect(feed.contentLength('p2')).toBe(30);
+  });
+
+  it('reports nothing for a passage no page has covered', async () => {
+    const w = work();
+    clientGraphql.getPassageMetaPage.mockResolvedValue(metaPage(0, 3, false));
+
+    const feed = new SpineFeed(w, client);
+    await feed.seed();
+
+    expect(feed.contentLength('p99')).toBeUndefined();
+  });
+});
 
 describe('SpineFeed', () => {
   it('seeds only the first page, not the whole work', async () => {

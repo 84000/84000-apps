@@ -19,14 +19,19 @@ import type {
   StackPassageSeed,
 } from './types';
 
-/** Rough characters per rendered line, for unmeasured row height estimates. */
-const CHARS_PER_LINE = 85;
-/** Everything in a row that is not a line of text, in pixels. */
-const ROW_CHROME_PX = 48;
+/**
+ * Rough characters per rendered line, for unmeasured row height estimates.
+ *
+ * Fitted against measured rows. It follows the column width, so a host far
+ * narrower than the editor's will under-estimate.
+ */
+const CHARS_PER_LINE = 77;
 /** One line of rendered passage text, in pixels. */
 const LINE_HEIGHT_PX = 28;
+/** A row is never shorter than this, however little text it holds. */
+const MIN_CONTENT_PX = 60;
 /** Fallback height for a passage whose size is entirely unknown. */
-const UNKNOWN_ROW_PX = 64;
+const UNKNOWN_ROW_PX = 112;
 
 export type PassageStackControllerOptions = {
   work: WorkDocument;
@@ -41,6 +46,8 @@ export type PassageStackControllerOptions = {
   spineFeed?: {
     hasMore: boolean;
     maybeExtend: (visibleEnd: number) => boolean;
+    /** Characters of text in a passage, for estimating an unhydrated row. */
+    contentLength?: (uuid: string) => number | undefined;
     /** Only a feed that can read backward supplies these. */
     hasMoreBefore?: boolean;
     maybeExtendBefore?: (visibleStart: number) => boolean;
@@ -228,15 +235,32 @@ export class PassageStackController {
   /** Whether this passage's document is in memory and can be rendered. */
   isHydrated = (uuid: string) => this.work.store.has(uuid);
 
-  /** The whole row's height, for the virtualizer's initial estimate. */
-  estimateHeight = (uuid: string) =>
-    ROW_CHROME_PX + this.estimateContentHeight(uuid);
+  /**
+   * The whole row's height, for the virtualizer's initial estimate.
+   *
+   * The same as the content's: the label hangs in the margin and the row has
+   * no vertical padding, so nothing else contributes height. An estimate that
+   * added chrome would exceed what the row then measures, and every unhydrated
+   * row would visibly collapse the moment it was drawn.
+   */
+  estimateHeight = (uuid: string) => this.estimateContentHeight(uuid);
 
-  /** Just the text column, for sizing a placeholder inside an existing row. */
+  /**
+   * Just the text column, for sizing a placeholder inside an existing row.
+   *
+   * The placeholder is what the virtualizer measures, so this has to be the
+   * row's best guess and not a token height — a short placeholder is not a
+   * pessimistic estimate that gets corrected, it *becomes* the row's height
+   * until the passage hydrates.
+   */
   estimateContentHeight = (uuid: string) => {
-    const count = this.charCounts.get(uuid);
+    const count =
+      this.charCounts.get(uuid) ?? this.spineFeed?.contentLength?.(uuid);
     if (count === undefined) return UNKNOWN_ROW_PX;
-    return Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX;
+    return Math.max(
+      MIN_CONTENT_PX,
+      Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX,
+    );
   };
 
   /**

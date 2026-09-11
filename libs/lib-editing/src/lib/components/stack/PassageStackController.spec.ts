@@ -108,6 +108,62 @@ describe('PassageStackController spine view', () => {
     expect(controller.isHydrated('p2')).toBe(false);
     expect(controller.estimateHeight('p2')).toBeGreaterThan(0);
   });
+
+  it('estimates the whole row at its content height', () => {
+    const { controller } = build(3);
+    // The label hangs in the margin, so a row is exactly its content. An
+    // estimate taller than that collapses the moment the row is measured.
+    expect(controller.estimateHeight('p2')).toBe(
+      controller.estimateContentHeight('p2'),
+    );
+  });
+
+  it('scales the estimate with the passage size', () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([seed('short', '1', 'x').meta, seed('long', '2', 'y').meta]);
+    const controller = new PassageStackController({
+      work,
+      charCounts: [
+        ['short', 10],
+        ['long', 4000],
+      ],
+    });
+
+    expect(controller.estimateContentHeight('long')).toBeGreaterThan(
+      controller.estimateContentHeight('short'),
+    );
+  });
+
+  it('gives a tiny passage a floor rather than a near-zero row', () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([seed('tiny', '1', 'x').meta]);
+    const controller = new PassageStackController({
+      work,
+      charCounts: [['tiny', 1]],
+    });
+
+    expect(controller.estimateContentHeight('tiny')).toBeGreaterThanOrEqual(28);
+  });
+
+  it('falls back to the spine feed for a passage it holds no count for', () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([seed('p0', '1', 'text').meta]);
+    const withoutFeed = new PassageStackController({ work });
+    const withFeed = new PassageStackController({
+      work,
+      windowKey: 'fed',
+      spineFeed: {
+        hasMore: false,
+        maybeExtend: () => false,
+        contentLength: (uuid) => (uuid === 'p0' ? 4000 : undefined),
+      },
+    });
+
+    // The feed's count is the only thing separating these two.
+    expect(withFeed.estimateContentHeight('p0')).toBeGreaterThan(
+      withoutFeed.estimateContentHeight('p0'),
+    );
+  });
 });
 
 describe('PassageStackController hydration', () => {
@@ -401,8 +457,12 @@ describe('PassageStackController tab views', () => {
   /** A spine holding two sections, translation first as the work reads. */
   const sectioned = () => {
     const all = [
-      ...Array.from({ length: 3 }, (_, i) => seed(`p${i}`, `${i + 1}`, `body ${i}`)),
-      ...Array.from({ length: 2 }, (_, i) => seed(`n${i}`, `n.${i + 1}`, `note ${i}`)),
+      ...Array.from({ length: 3 }, (_, i) =>
+        seed(`p${i}`, `${i + 1}`, `body ${i}`),
+      ),
+      ...Array.from({ length: 2 }, (_, i) =>
+        seed(`n${i}`, `n.${i + 1}`, `note ${i}`),
+      ),
     ];
     const work = createStackWorkDocument({
       workUuid: 'work-1',

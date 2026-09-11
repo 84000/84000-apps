@@ -17,7 +17,13 @@ const NEXT_PAGE = 100;
  */
 const EXTEND_THRESHOLD = 40;
 
-type Meta = { uuid: string; label: string; type: string; toh?: string };
+type Meta = {
+  uuid: string;
+  label: string;
+  type: string;
+  toh?: string;
+  contentLength?: number;
+};
 
 /** What a feed reads, and where its passages sit in the spine. */
 export type SpineSection = {
@@ -60,6 +66,14 @@ export class SpineFeed {
   private noneAfter = false;
   private forward: Promise<number> | null = null;
   private backward: Promise<number> | null = null;
+  /**
+   * Character counts by uuid, from the pages this feed has read.
+   *
+   * View state, not model state — the spine deliberately holds no measure of a
+   * passage's size, and a virtualized list needs one to estimate the height of
+   * a row it has not hydrated.
+   */
+  private lengths = new Map<string, number>();
 
   constructor(
     private readonly work: WorkDocument,
@@ -73,6 +87,9 @@ export class SpineFeed {
      */
     private readonly section?: SpineSection,
   ) {}
+
+  /** Characters of text in a passage, when a page has reported it. */
+  contentLength = (uuid: string): number | undefined => this.lengths.get(uuid);
 
   /** Whether the work has passages after the ones this spine holds. */
   get hasMore(): boolean {
@@ -98,6 +115,14 @@ export class SpineFeed {
       return this.work.spine.length;
     }
     return this.extend(FIRST_PAGE);
+  }
+
+  private record(metas: Meta[]) {
+    for (const meta of metas) {
+      if (meta.contentLength !== undefined) {
+        this.lengths.set(meta.uuid, meta.contentLength);
+      }
+    }
   }
 
   /** How many passages this feed's section holds. */
@@ -184,6 +209,7 @@ export class SpineFeed {
     });
     if (!page.metas.length) return -1;
 
+    this.record(page.metas);
     this.replaceRun(page.metas);
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
@@ -236,6 +262,7 @@ export class SpineFeed {
       return this.work.spine.length;
     }
 
+    this.record(page.metas);
     appendToSpine(this.work.spine, page.metas, this.section?.tab);
     this.endCursor = page.nextCursor;
     if (!page.hasMoreAfter || !page.nextCursor) this.noneAfter = true;
@@ -258,6 +285,7 @@ export class SpineFeed {
       return this.work.spine.length;
     }
 
+    this.record(page.metas);
     prependToSpine(this.work.spine, page.metas, this.section?.tab);
     this.startCursor = page.prevCursor;
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
