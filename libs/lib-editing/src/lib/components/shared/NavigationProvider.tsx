@@ -25,6 +25,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import type { Editor } from '@tiptap/core';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import {
   HighlightRange,
@@ -102,8 +103,11 @@ export const NavigationProvider = ({
   uuid,
   initialToh,
   initialHasTranslationContent = true,
+  editable = false,
   children,
 }: {
+  /** The studio rather than the reader. Defaults to the reader. */
+  editable?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -245,6 +249,24 @@ export const NavigationProvider = ({
       return work;
     },
     [graphqlClient],
+  );
+
+  // Registered by a host whose editors come and go — the passage stack mounts
+  // one per passage, so an anchor on a static row has none until something
+  // asks for it.
+  const editorRequest = useRef<
+    ((element: HTMLElement) => Promise<Editor | null>) | null
+  >(null);
+  const registerEditorRequest = useCallback(
+    (request: ((element: HTMLElement) => Promise<Editor | null>) | null) => {
+      editorRequest.current = request;
+    },
+    [],
+  );
+  const requestEditorFor = useCallback(
+    (element: HTMLElement) =>
+      editorRequest.current?.(element) ?? Promise.resolve(null),
+    [],
   );
 
   const updatePanel = useCallback(
@@ -428,6 +450,7 @@ export const NavigationProvider = ({
   const contextValue = useMemo(
     () => ({
       uuid,
+      editable,
       imprint,
       panels,
       toh,
@@ -445,9 +468,12 @@ export const NavigationProvider = ({
       fetchGlossaryTerm,
       fetchPassage,
       fetchWork,
+      requestEditorFor,
+      registerEditorRequest,
     }),
     [
       uuid,
+      editable,
       imprint,
       panels,
       toh,
@@ -465,6 +491,8 @@ export const NavigationProvider = ({
       fetchGlossaryTerm,
       fetchPassage,
       fetchWork,
+      requestEditorFor,
+      registerEditorRequest,
     ],
   );
 

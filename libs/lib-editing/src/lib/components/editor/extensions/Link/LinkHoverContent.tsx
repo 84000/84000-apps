@@ -4,25 +4,27 @@ import { GlobeIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
 import { findMarkByUuid } from '../../util';
-
-const EDITOR_UPDATE_DELAY_MS = 100;
+import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const LinkHoverContent = ({
   uuid,
   href,
   editor,
+  requestEditor,
   anchor,
   close,
   setHoverCardEditing,
 }: {
   uuid: string;
   href: string;
-  editor: Editor;
+  editor?: Editor;
+  requestEditor: EditorRequest;
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
+  const withEditor = useHoverCardEditor(editor, requestEditor);
 
   const setIsEditing = useCallback(
     (editing: boolean) => {
@@ -36,7 +38,7 @@ export const LinkHoverContent = ({
     setIsEditing(false);
     close();
 
-    setTimeout(() => {
+    withEditor((editor) => {
       const range = findMarkByUuid({ editor, uuid, markType: 'link' });
       if (!range) {
         console.warn('Link mark not found in the document.');
@@ -47,15 +49,15 @@ export const LinkHoverContent = ({
       const { tr } = editor.state;
       tr.removeMark(from, to, mark.type);
       editor.view.dispatch(tr);
-    }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setIsEditing]);
+    });
+  }, [withEditor, uuid, close, setIsEditing]);
 
   const updateLink = useCallback(
     (newHref: string) => {
       setIsEditing(false);
       close();
 
-      setTimeout(() => {
+      withEditor((editor) => {
         const range = findMarkByUuid({ editor, uuid, markType: 'link' });
         if (!range) {
           console.warn('Link mark not found in the document.');
@@ -74,9 +76,9 @@ export const LinkHoverContent = ({
 
         // Update the DOM attribute directly for immediate feedback
         anchor.setAttribute('href', newHref);
-      }, EDITOR_UPDATE_DELAY_MS);
+      });
     },
-    [editor, uuid, anchor, close, setIsEditing],
+    [withEditor, uuid, anchor, close, setIsEditing],
   );
 
   return (

@@ -38,7 +38,11 @@ const decoClasses = (set: DecorationSet): string[] =>
   set
     .find()
     // `type.attrs` is where prosemirror-view stores node-decoration attributes.
-    .map((deco) => (deco as unknown as { type: { attrs: { class: string } } }).type.attrs.class);
+    .map(
+      (deco) =>
+        (deco as unknown as { type: { attrs: { class: string } } }).type.attrs
+          .class,
+    );
 
 const stateFor = (doc: PMNodeDoc) => {
   const plugin = mentionSpacingPlugin();
@@ -48,8 +52,10 @@ const stateFor = (doc: PMNodeDoc) => {
 
 type PMNodeDoc = ReturnType<typeof schema.node>;
 
-const para = (...children: PMNodeDoc[]) => schema.node('paragraph', null, children);
-const doc = (...paragraphs: PMNodeDoc[]) => schema.node('doc', null, paragraphs);
+const para = (...children: PMNodeDoc[]) =>
+  schema.node('paragraph', null, children);
+const doc = (...paragraphs: PMNodeDoc[]) =>
+  schema.node('doc', null, paragraphs);
 
 describe('mentionSpacingPlugin', () => {
   it('decorates a mention flanked by letters with both classes', () => {
@@ -62,7 +68,9 @@ describe('mentionSpacingPlugin', () => {
   });
 
   it('adds the after-class when text is typed directly after a mention', () => {
-    const { plugin, state } = stateFor(doc(para(schema.text('foo'), mention())));
+    const { plugin, state } = stateFor(
+      doc(para(schema.text('foo'), mention())),
+    );
     expect(decoClasses(plugin.getState(state) as DecorationSet)).toEqual([
       MENTION_SPACE_BEFORE_CLASS,
     ]);
@@ -75,7 +83,9 @@ describe('mentionSpacingPlugin', () => {
   });
 
   it('keeps the before-class when punctuation is typed before a mention', () => {
-    const { plugin, state } = stateFor(doc(para(schema.text('foo'), mention())));
+    const { plugin, state } = stateFor(
+      doc(para(schema.text('foo'), mention())),
+    );
     // Insert '.' at pos 4, immediately before the mention. Punctuation still
     // gets a leading gap.
     const next = state.apply(state.tr.insertText('.', 4));
@@ -85,7 +95,9 @@ describe('mentionSpacingPlugin', () => {
   });
 
   it('removes the before-class when whitespace is typed before a mention', () => {
-    const { plugin, state } = stateFor(doc(para(schema.text('foo'), mention())));
+    const { plugin, state } = stateFor(
+      doc(para(schema.text('foo'), mention())),
+    );
     expect(decoClasses(plugin.getState(state) as DecorationSet)).toEqual([
       MENTION_SPACE_BEFORE_CLASS,
     ]);

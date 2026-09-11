@@ -33,7 +33,7 @@ const hasVisibleText = (node: PMNode): boolean =>
 
 /** Text content of a sibling — empty for atoms/breaks (treated as no char). */
 const siblingText = (node: PMNode): string =>
-  node.isText ? node.text ?? '' : node.textContent;
+  node.isText ? (node.text ?? '') : node.textContent;
 
 const firstCodePoint = (text: string): string =>
   text ? String.fromCodePoint(text.codePointAt(0) as number) : '';

@@ -197,10 +197,10 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
           anchor.setAttribute('entity-type', item.linkType);
         }
 
-        if (isEditable) {
-          anchor.setAttribute('type', 'mention');
-          registerEditorElement(anchor, props.editor);
-        }
+        // Detection is unconditional; whether a card is offered is decided at
+        // the application level, not by this editor's editability.
+        anchor.setAttribute('type', 'mention');
+        registerEditorElement(anchor, props.editor);
 
         dom.appendChild(anchor);
       });

@@ -622,10 +622,7 @@ export const EditorContextProvider = ({
       if (renumbered.length) {
         setNavigating(true);
         try {
-          applyRenumberedLabels(
-            Object.values(editorCache.current),
-            renumbered,
-          );
+          applyRenumberedLabels(Object.values(editorCache.current), renumbered);
         } finally {
           setNavigating(false);
         }
@@ -679,7 +676,8 @@ export const EditorContextProvider = ({
         isNavigating,
       }}
     >
-      <NavigationProvider uuid={work.uuid} initialToh={work.toh[0]}>
+      {/* The studio: editing surfaces are offered here and not in the reader. */}
+      <NavigationProvider uuid={work.uuid} initialToh={work.toh[0]} editable>
         {children}
       </NavigationProvider>
       <Toaster />

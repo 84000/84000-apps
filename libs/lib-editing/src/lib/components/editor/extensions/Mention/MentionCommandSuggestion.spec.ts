@@ -23,7 +23,10 @@ const createEditor = (storage: Record<string, unknown> = { mention: {} }) => {
     },
   };
 
-  return { editor: { chain: () => chain, storage } as unknown as Editor, calls };
+  return {
+    editor: { chain: () => chain, storage } as unknown as Editor,
+    calls,
+  };
 };
 
 describe('MentionCommandSuggestion', () => {

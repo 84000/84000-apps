@@ -104,7 +104,19 @@ export const PassageStack = ({
   );
   const closeMenu = useCallback(() => setMenuTarget(null), []);
 
-  const { updatePanel, setToh } = useNavigation();
+  const { updatePanel, setToh, registerEditorRequest } = useNavigation();
+
+  // Hover cards are drawn without an editor; their edit actions ask for one.
+  // Resolving it here rather than keeping editors mounted is what lets the
+  // static tier stay static.
+  useEffect(() => {
+    registerEditorRequest((element) => {
+      const uuid = element.closest<HTMLElement>('[data-stack-passage]')
+        ?.dataset['stackPassage'];
+      return uuid ? controller.requestEditorFor(uuid) : Promise.resolve(null);
+    });
+    return () => registerEditorRequest(null);
+  }, [controller, registerEditorRequest]);
   /**
    * Take a static row's content link, through the panel state rather than the
    * URL — the provider writes the URL from that state, so a link that pushed

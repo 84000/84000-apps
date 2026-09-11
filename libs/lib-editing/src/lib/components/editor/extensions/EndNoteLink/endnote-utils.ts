@@ -15,9 +15,9 @@ interface MarkRange {
   from: number;
   to: number;
   mark: ReturnType<Editor['state']['doc']['resolve']> extends never
-  ? never
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  any;
+    ? never
+    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      any;
   note: EndNoteLinkNote;
 }
 
@@ -40,7 +40,11 @@ export function findLastEndNoteLinkBefore(
         const notes: EndNoteLinkNote[] = mark.attrs.notes || [];
         for (const note of notes) {
           if (note.endNote) {
-            last = { endNote: note.endNote, from: pos, to: pos + node.nodeSize };
+            last = {
+              endNote: note.endNote,
+              from: pos,
+              to: pos + node.nodeSize,
+            };
           }
         }
       }
@@ -104,7 +108,11 @@ export function removeAllEndnoteLinksForPassage(
       (n: EndNoteLinkNote) => n.uuid !== note.uuid,
     );
     if (remainingNotes.length > 0) {
-      tr.addMark(from, to, mark.type.create({ ...mark.attrs, notes: remainingNotes }));
+      tr.addMark(
+        from,
+        to,
+        mark.type.create({ ...mark.attrs, notes: remainingNotes }),
+      );
     }
   }
 
@@ -126,7 +134,11 @@ export function getFirstEndnoteInEditor(
   let first: { label: string; sort: number; uuid: string } | undefined;
 
   doc.descendants((node) => {
-    if (!first && node.type.name === 'passage' && node.attrs.type === 'endnotes') {
+    if (
+      !first &&
+      node.type.name === 'passage' &&
+      node.attrs.type === 'endnotes'
+    ) {
       first = {
         label: node.attrs.label || '',
         sort: node.attrs.sort ?? 0,
@@ -177,7 +189,9 @@ export function inSameSlot(
   otherToh: unknown,
 ): boolean {
   return (
-    label === otherLabel && (toh ?? null) !== null && (otherToh ?? null) !== null
+    label === otherLabel &&
+    (toh ?? null) !== null &&
+    (otherToh ?? null) !== null
   );
 }
 

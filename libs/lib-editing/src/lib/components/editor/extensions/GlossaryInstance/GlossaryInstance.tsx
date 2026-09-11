@@ -10,25 +10,27 @@ import { useCallback, useEffect, useState } from 'react';
 import { GlossarySearch } from './GlossarySearch';
 import { findMarkByUuid } from '../../util';
 import { useNavigation } from '../../../shared';
-
-const EDITOR_UPDATE_DELAY_MS = 100;
+import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const GlossaryInstance = ({
   uuid,
   glossary,
   editor,
+  requestEditor,
   anchor,
   close,
   setHoverCardEditing,
 }: {
   uuid: string;
   glossary: string;
-  editor: Editor;
+  editor?: Editor;
+  requestEditor: EditorRequest;
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
+  const withEditor = useHoverCardEditor(editor, requestEditor);
   const [english, setEnglish] = useState<string | null>(null);
   const [termNumber, setTermNumber] = useState<number | null>(null);
   const markText = anchor.textContent ?? '';
@@ -70,7 +72,7 @@ export const GlossaryInstance = ({
   const deleteLink = useCallback(() => {
     close();
 
-    setTimeout(() => {
+    withEditor((editor) => {
       const range = findMarkByUuid({
         editor,
         uuid,
@@ -85,8 +87,8 @@ export const GlossaryInstance = ({
       const { tr } = editor.state;
       tr.removeMark(from, to, mark.type);
       editor.view.dispatch(tr);
-    }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close]);
+    });
+  }, [withEditor, uuid, close]);
 
   const updateGlossary = useCallback(
     ({
@@ -98,7 +100,7 @@ export const GlossaryInstance = ({
     }) => {
       close();
 
-      setTimeout(() => {
+      withEditor((editor) => {
         const range = findMarkByUuid({
           editor,
           uuid,
@@ -125,9 +127,9 @@ export const GlossaryInstance = ({
 
         anchor.setAttribute('glossary', newGlossary);
         anchor.setAttribute('authority', newAuthority);
-      }, EDITOR_UPDATE_DELAY_MS);
+      });
     },
-    [editor, uuid, anchor, close],
+    [withEditor, uuid, anchor, close],
   );
 
   return (

@@ -343,6 +343,8 @@ export const StackPage = ({
     <NavigationProvider
       uuid={controller.work.workUuid}
       initialToh={toh as TohokuCatalogEntry}
+      // `?readonly=1` is the reader; everything else is the studio sandbox.
+      editable={!readOnly}
     >
       <StackBody
         controller={controller}

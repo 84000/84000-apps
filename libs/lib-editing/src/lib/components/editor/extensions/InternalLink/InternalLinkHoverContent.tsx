@@ -4,14 +4,14 @@ import { ChevronRightIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { InternalLinkInput } from './InternalLinkInput';
 import { findMarkByUuid } from '../../util';
-
-const EDITOR_UPDATE_DELAY_MS = 100;
+import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const InternalLinkHoverContent = ({
   uuid,
   entityType,
   entity,
   editor,
+  requestEditor,
   anchor,
   close,
   setHoverCardEditing,
@@ -19,12 +19,14 @@ export const InternalLinkHoverContent = ({
   uuid: string;
   entityType: string;
   entity: string;
-  editor: Editor;
+  editor?: Editor;
+  requestEditor: EditorRequest;
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
+  const withEditor = useHoverCardEditor(editor, requestEditor);
 
   const setIsEditing = useCallback(
     (editing: boolean) => {
@@ -38,7 +40,7 @@ export const InternalLinkHoverContent = ({
     setIsEditing(false);
     close();
 
-    setTimeout(() => {
+    withEditor((editor) => {
       const range = findMarkByUuid({ editor, uuid, markType: 'internalLink' });
       if (!range) {
         console.warn('InternalLink mark not found in the document.');
@@ -49,15 +51,15 @@ export const InternalLinkHoverContent = ({
       const { tr } = editor.state;
       tr.removeMark(from, to, mark.type);
       editor.view.dispatch(tr);
-    }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setIsEditing]);
+    });
+  }, [withEditor, uuid, close, setIsEditing]);
 
   const updateValues = useCallback(
     (newType: string, newEntity: string) => {
       setIsEditing(false);
       close();
 
-      setTimeout(() => {
+      withEditor((editor) => {
         const range = findMarkByUuid({
           editor,
           uuid,
@@ -88,9 +90,9 @@ export const InternalLinkHoverContent = ({
         anchor.setAttribute('entity-type', newType);
         anchor.setAttribute('entity', newEntity);
         anchor.setAttribute('href', newHref);
-      }, EDITOR_UPDATE_DELAY_MS);
+      });
     },
-    [editor, uuid, anchor, close, setIsEditing],
+    [withEditor, uuid, anchor, close, setIsEditing],
   );
 
   return (

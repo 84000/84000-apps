@@ -213,9 +213,9 @@ export const EndNoteLinkMark = EndNoteLinkMarkSSR.extend({
 
       updateAttributes(attributes);
 
-      if (isEditable) {
-        registerEditorElement(endnoteDOM, editor);
-      }
+      // Registered whether or not this editor is editable: resolving the
+      // editor for an anchor is a lookup, not a permission.
+      registerEditorElement(endnoteDOM, editor);
 
       const itemLabel = label?.split('.').pop() || defaultLabel;
       const text = itemLabel || defaultLabel;

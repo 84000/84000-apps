@@ -30,6 +30,9 @@ const CHARS_PER_LINE = 77;
 const LINE_HEIGHT_PX = 28;
 /** A row is never shorter than this, however little text it holds. */
 const MIN_CONTENT_PX = 60;
+/** Frames to wait for a focused passage's editor to mount. */
+const EDITOR_MOUNT_FRAMES = 60;
+
 /** Fallback height for a passage whose size is entirely unknown. */
 const UNKNOWN_ROW_PX = 112;
 
@@ -529,6 +532,34 @@ export class PassageStackController {
    */
   getFocusedEditor = (): Editor | null =>
     this.focusedUuid ? (this.editors.get(this.focusedUuid) ?? null) : null;
+
+  /**
+   * An editor for this passage, focusing it if that is what it takes.
+   *
+   * What a hover card's edit actions resolve through. A card is drawn from the
+   * anchor's attributes and the navigation fetchers, so most of them open over
+   * a static row with no editor at all. One is mounted when an action actually
+   * needs a document to change, rather than kept alive on the chance that it
+   * might — which is the difference between editing costing an editor and
+   * hovering costing one.
+   */
+  requestEditorFor = async (uuid: string): Promise<Editor | null> => {
+    const existing = this.editors.get(uuid);
+    if (existing?.isEditable) return existing;
+    if (!this.focusPassage(uuid, 'start')) return null;
+
+    // Focus mounts the row on the next render; the editor arrives with it.
+    return new Promise((resolve) => {
+      let frames = 0;
+      const look = () => {
+        const editor = this.editors.get(uuid);
+        if (editor?.isEditable) return resolve(editor);
+        if (frames++ > EDITOR_MOUNT_FRAMES) return resolve(null);
+        requestAnimationFrame(look);
+      };
+      look();
+    });
+  };
 
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
     const index = this.getOrder().indexOf(uuid);

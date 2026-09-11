@@ -213,7 +213,7 @@ describe('TranslationSSRContent', () => {
     expect(html).not.toContain('"null"');
     expect(html).not.toContain('[object Object]');
     expect(html).toMatchInlineSnapshot(
-      `"<div label="1.1" sort="0" class="flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20"><div class="w-full"><div class="relative scroll-m-20 w-full self-start"><div class="absolute labeled -left-16 w-16 text-end hover:cursor-pointer" contenteditable="false" data-passage-label="">1.1</div><div class="passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end" contenteditable="false"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="passage is-editable pl-6 @c/sidebar:pl-4"><h1 class="font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2" type="heading">Head</h1><p class="no-indent paragraph" type="paragraph"><span class="glossary-instance" type="glossaryInstance" authority="auth-1" glossary="gloss-1" uuid="gi-1">gi</span><a class="text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer" type="internalLink" entity="ent-1" entity-type="work" uuid="il-1" href="/reader/x">il</a><a href="https://example.com" target="_blank" rel="noreferrer noopener">ln</a><span uuid="f-1" type="span" textStyle="foreign" lang="foreign" data-text-style="foreign">fo</span><span uuid="m-1" type="mantra" lang="Sa-Ltn">ma</span><sm class="uppercase">sc</sm><sub>sub</sub><sup>sup</sup><em>me</em></p><ul data-spacing="horizontal" class="ml-4 list-none" data-item-style="none"><li><p class="no-indent paragraph" type="paragraph">item</p></li></ul><p class="no-indent paragraph" type="paragraph"><span class="mention-container" data-type="mention"><a class="mention-link" uuid="mi-1" entity="me-1" entity-type="work" href="/entity/work/me-1" target="_blank" rel="noreferrer noopener">Mentioned</a></span></p></div></div></div><div class="passage-compare-source w-full hidden md:mt-1" contenteditable="false" data-compare-source=""><div class="passage pl-6 @c/sidebar:pl-4"><div class="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2"></div></div></div></div>"`,
+      `"<div label="1.1" sort="0" class="flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20"><div class="w-full"><div class="relative scroll-m-20 w-full self-start"><div class="absolute labeled -left-16 w-16 text-end hover:cursor-pointer" contenteditable="false" data-passage-label="">1.1</div><div class="passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end" contenteditable="false"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div><div class="passage is-editable pl-6 @c/sidebar:pl-4"><h1 class="font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2" type="heading">Head</h1><p class="no-indent paragraph" type="paragraph"><span class="glossary-instance" type="glossaryInstance" authority="auth-1" glossary="gloss-1" uuid="gi-1">gi</span><a class="text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer" type="internalLink" entity="ent-1" entity-type="work" uuid="il-1" href="/reader/x">il</a><a href="https://example.com" target="_blank" rel="noreferrer noopener" type="link">ln</a><span uuid="f-1" type="span" textStyle="foreign" lang="foreign" data-text-style="foreign">fo</span><span uuid="m-1" type="mantra" lang="Sa-Ltn">ma</span><sm class="uppercase">sc</sm><sub>sub</sub><sup>sup</sup><em>me</em></p><ul data-spacing="horizontal" class="ml-4 list-none" data-item-style="none"><li><p class="no-indent paragraph" type="paragraph">item</p></li></ul><p class="no-indent paragraph" type="paragraph"><span class="mention-container" data-type="mention"><a class="mention-link" type="mention" uuid="mi-1" entity="me-1" entity-type="work" href="/entity/work/me-1" target="_blank" rel="noreferrer noopener">Mentioned</a></span></p></div></div></div><div class="passage-compare-source w-full hidden md:mt-1" contenteditable="false" data-compare-source=""><div class="passage pl-6 @c/sidebar:pl-4"><div class="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2"></div></div></div></div>"`,
     );
   });
 
@@ -283,7 +283,10 @@ describe('TranslationSSRContent', () => {
             {
               type: 'paragraph',
               content: [
-                { type: 'abbreviation', content: [{ type: 'text', text: 'Mvy' }] },
+                {
+                  type: 'abbreviation',
+                  content: [{ type: 'text', text: 'Mvy' }],
+                },
                 {
                   type: 'hasAbbreviation',
                   content: [{ type: 'text', text: 'Mahāvyutpatti' }],
@@ -623,7 +626,9 @@ describe('TranslationSSRContent', () => {
       content: doc,
     }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
-    expect(html).toContain('<span class="mention-container" data-type="mention"');
+    expect(html).toContain(
+      '<span class="mention-container" data-type="mention"',
+    );
     expect(html).not.toContain('mention-space-before');
     expect(html).not.toContain('mention-space-after');
   });
@@ -677,42 +682,39 @@ describe('TranslationSSRContent', () => {
   it.each([
     ['glossaryInstance', { glossary: 'g-1', authority: 'a-1', uuid: 'gi-1' }],
     ['internalLink', { entity: 'e-1', type: 'work', href: '#x', uuid: 'il-1' }],
-  ])(
-    'sets data-toh on a toh-scoped %s mark (DEV-757)',
-    (markType, attrs) => {
-      // These two marks read `mark.attrs.toh` in renderHTML but never declared
-      // the attribute, so ProseMirror dropped it while building the document
-      // and the reader's toh-visibility rule had nothing to match on. The
-      // shared AnnotationToh extension declares it for every annotation type.
-      const doc: JSONContent = {
-        type: 'doc',
-        content: [
-          {
-            type: 'passage',
-            attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
-            content: [
-              {
-                type: 'paragraph',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'scoped',
-                    marks: [{ type: markType, attrs: { ...attrs, toh: 'toh1' } }],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      };
+  ])('sets data-toh on a toh-scoped %s mark (DEV-757)', (markType, attrs) => {
+    // These two marks read `mark.attrs.toh` in renderHTML but never declared
+    // the attribute, so ProseMirror dropped it while building the document
+    // and the reader's toh-visibility rule had nothing to match on. The
+    // shared AnnotationToh extension declares it for every annotation type.
+    const doc: JSONContent = {
+      type: 'doc',
+      content: [
+        {
+          type: 'passage',
+          attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'scoped',
+                  marks: [{ type: markType, attrs: { ...attrs, toh: 'toh1' } }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
 
-      const el = TranslationSSRContent({
-        content: doc,
-      }) as ReactElement<DangerousProps>;
+    const el = TranslationSSRContent({
+      content: doc,
+    }) as ReactElement<DangerousProps>;
 
-      expect(renderedHtml(el)).toContain('data-toh="toh1"');
-    },
-  );
+    expect(renderedHtml(el)).toContain('data-toh="toh1"');
+  });
 
   it('keeps dandas upright in italic and foreign runs (ED-1458)', () => {
     // The rule lives in the PipeNotItalic plugin as decorations, which never
@@ -754,7 +756,8 @@ describe('TranslationSSRContent', () => {
       content: doc,
     }) as ReactElement<DangerousProps>;
     const html = renderedHtml(el);
-    const upright = '<span class="not-italic" style="font-style:normal">|</span>';
+    const upright =
+      '<span class="not-italic" style="font-style:normal">|</span>';
 
     expect(html).toContain(`hūṁ ${upright} picu`);
     expect(html).toContain(`oṃ ${upright} āḥ`);

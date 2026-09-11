@@ -39,11 +39,10 @@ export const Link = LinkSSR.extend({
         dom.setAttribute('uuid', props.mark.attrs.uuid);
       }
 
-      // Only add type attribute in edit mode for hover card detection
-      if (isEditable) {
-        dom.setAttribute('type', 'link');
-        registerEditorElement(dom, props.editor);
-      }
+      // Detection is unconditional; whether a card is offered is decided at
+      // the application level, not by this editor's editability.
+      dom.setAttribute('type', 'link');
+      registerEditorElement(dom, props.editor);
 
       return {
         dom,
