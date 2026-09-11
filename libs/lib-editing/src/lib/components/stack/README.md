@@ -274,10 +274,23 @@ opened, and nothing scrolled. A host that places a tab somewhere unusual passes
 
 Three things that each cost a debugging pass:
 
-- **The scroll has to settle.** Rows above an unvisited target are estimates,
-  and measuring them moves it — by a screenful. The scroll is re-issued for a
-  few frames, which is what `waitForStableElement` does for the paginated
-  editor.
+- **The scroll has to settle, and stillness is not the signal.** Rows above an
+  unvisited target are estimates, and measuring them moves it — by a
+  screenful. Re-issuing the scroll for a fixed number of frames is not enough:
+  hydration arrives over hundreds of milliseconds and its last page can land
+  seconds later, by which time any frame budget has run out. Measured on a
+  throttled deep link, the target sat correctly for two seconds and then jumped
+  912px out of view as the final rows measured.
+
+  So the anchor is held until the page stops moving, re-armed by anything that
+  changes the view, and released only once the offset, the controller's version
+  *and* `isHydrating` all agree there is nothing left to come. The last of
+  those is load bearing: between issuing the scroll and the content landing the
+  page is perfectly still, and letting go in that gap is exactly when the drift
+  happens.
+
+  It yields immediately to a reader who scrolls. Holding a position against
+  someone trying to leave it is worse than the drift.
 - **Upward paging waits for the top.** Downward loads ahead of a fast scroll;
   upward cannot, because a prepend moves every row below it. It is also
   disarmed while a reveal is in flight and again while a prepend lands, or the

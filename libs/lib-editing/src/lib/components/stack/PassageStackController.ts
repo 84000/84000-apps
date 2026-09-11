@@ -290,6 +290,17 @@ export class PassageStackController {
   isHydrated = (uuid: string) => this.work.store.has(uuid);
 
   /**
+   * Whether a window load is in flight.
+   *
+   * A settled scroll needs this: between issuing the scroll and the content
+   * landing the page is perfectly still, and stillness alone cannot tell
+   * "finished" from "waiting on the network". Releasing the anchor during that
+   * gap is what let a revealed row jump out of view when the last page
+   * arrived.
+   */
+  isHydrating = () => this.hydrating;
+
+  /**
    * The whole row's height, for the virtualizer's initial estimate.
    *
    * The same as the content's: the label hangs in the margin and the row has
