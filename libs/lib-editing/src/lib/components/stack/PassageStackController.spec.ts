@@ -145,6 +145,38 @@ describe('PassageStackController spine view', () => {
     expect(controller.estimateContentHeight('tiny')).toBeGreaterThanOrEqual(28);
   });
 
+  it('reports whether a row is sized from its own passage or a fallback', () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([
+      seed('known', '1', 'x').meta,
+      seed('unknown', '2', 'y').meta,
+    ]);
+    const controller = new PassageStackController({
+      work,
+      charCounts: [['known', 400]],
+    });
+
+    expect(controller.hasSizeFor('known')).toBe(true);
+    // Nothing has reported this passage's length, so its height is a guess and
+    // the row should say so rather than draw a confident skeleton.
+    expect(controller.hasSizeFor('unknown')).toBe(false);
+  });
+
+  it('counts a length reported by the spine feed as a real size', () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([seed('p0', '1', 'text').meta]);
+    const controller = new PassageStackController({
+      work,
+      spineFeed: {
+        hasMore: false,
+        maybeExtend: () => false,
+        contentLength: () => 300,
+      },
+    });
+
+    expect(controller.hasSizeFor('p0')).toBe(true);
+  });
+
   it('falls back to the spine feed for a passage it holds no count for', () => {
     const work = createStackWorkDocument({ workUuid: 'work-1' });
     work.seedSpine([seed('p0', '1', 'text').meta]);

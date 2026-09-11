@@ -17,7 +17,9 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getTranslationBlocksAround: jest.fn(),
 }));
 
-const clientGraphql = jest.requireMock('@eightyfourthousand/client-graphql') as {
+const clientGraphql = jest.requireMock(
+  '@eightyfourthousand/client-graphql',
+) as {
   getPassageMetaPage: jest.Mock;
 };
 
@@ -55,7 +57,9 @@ describe('StackWorkProvider', () => {
   beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
 
   it('holds back until the sections are seeded', () => {
-    clientGraphql.getPassageMetaPage.mockReturnValue(new Promise(() => undefined));
+    clientGraphql.getPassageMetaPage.mockReturnValue(
+      new Promise(() => undefined),
+    );
 
     render(
       <StackWorkProvider workUuid="w1">
