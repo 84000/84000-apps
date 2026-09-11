@@ -4,6 +4,7 @@ import { memo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
+import { PassageSkeleton } from './PassageSkeleton';
 import { StackRow } from './StackRow';
 
 /**
@@ -38,9 +39,9 @@ export const StaticPassageRow = memo(
         bookmarked={controller.showsBookmark(meta.uuid)}
       >
         {html === null ? (
-          <div
-            className="animate-pulse rounded bg-muted"
-            style={{ height: controller.estimateContentHeight(meta.uuid) }}
+          <PassageSkeleton
+            height={controller.estimateContentHeight(meta.uuid)}
+            sized={controller.hasSizeFor(meta.uuid)}
           />
         ) : (
           <div

@@ -176,6 +176,37 @@ editor under the pointer so the old check would pass, which meant a second
 `contenteditable` on the page and an editor per hovered row. Verified instead:
 a card opens over a static row with zero editors mounted anywhere.
 
+### The loading state
+
+A row that cannot draw its content yet draws `PassageSkeleton` instead — both
+tiers, because a live editor renders an empty box until it mounts
+(`immediatelyRender` is off) and a row that keeps its height and shows nothing
+reads as content that failed rather than content arriving.
+
+Three things it has to get right:
+
+- **It is what the virtualizer measures.** So it is drawn at the row's
+  estimated height, not a token height: a short placeholder does not get
+  corrected, it *becomes* the row's height until the passage hydrates.
+- **It is one block per passage, not ruled lines.** A passage is a block of
+  text, and a placeholder that draws individual lines is inventing a shape it
+  does not know — line breaks depend on the column width. The space between
+  blocks is a transparent bottom border rather than a margin: the row has no
+  padding by design, so a margin would collapse out of it and the block would
+  stop measuring its own height. `data-passage-skeleton`
+  records whether the height came from the passage's own length or from the
+  fallback, so a mis-sized row can be traced back to whether a size existed.
+- **It comes from the design system's `Skeleton`, not a bare `animate-pulse`.**
+  That carries
+  `data-skeleton`, which the WebKit guard keys off to stop the animation: a
+  running animation during a large DOM subtree replacement can wedge WebKit's
+  main thread, and a virtualized list replaces subtrees continuously. It also
+  means one animation per row rather than one per line.
+
+The colour is `bg-foreground/10`, as the design system's own `Skeleton` uses.
+`bg-muted` — what this drew at first — resolves to the studio's page background,
+so the placeholder was there, sized correctly, and completely invisible.
+
 ### Content links on a static row
 
 A mounted editor handles glossary instances, endnote markers, internal links

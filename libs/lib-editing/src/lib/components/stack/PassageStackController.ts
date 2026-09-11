@@ -33,7 +33,14 @@ const MIN_CONTENT_PX = 60;
 /** Frames to wait for a focused passage's editor to mount. */
 const EDITOR_MOUNT_FRAMES = 60;
 
-/** Fallback height for a passage whose size is entirely unknown. */
+/**
+ * Fallback height for a passage whose size is entirely unknown.
+ *
+ * Roughly the median measured row, so a screenful of unknown rows occupies
+ * about the space the real ones will. A short guess here is not conservative:
+ * the placeholder is what the virtualizer measures, so every row collapses to
+ * it and a screenful of labels ends up stacked at the top.
+ */
 const UNKNOWN_ROW_PX = 112;
 
 export type PassageStackControllerOptions = {
@@ -263,14 +270,27 @@ export class PassageStackController {
    * until the passage hydrates.
    */
   estimateContentHeight = (uuid: string) => {
-    const count =
-      this.charCounts.get(uuid) ?? this.spineFeed?.contentLength?.(uuid);
+    const count = this.contentLength(uuid);
     if (count === undefined) return UNKNOWN_ROW_PX;
     return Math.max(
       MIN_CONTENT_PX,
       Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX,
     );
   };
+
+  /** Characters of text, from a hydrated document or the spine's read. */
+  private contentLength = (uuid: string) =>
+    this.charCounts.get(uuid) ?? this.spineFeed?.contentLength?.(uuid);
+
+  /**
+   * Whether the row's height is a real measure of *this* passage or the
+   * generic fallback.
+   *
+   * A skeleton drawn at a known size can imitate the text it stands in for; one
+   * drawn at a guess should not pretend to, or it reads as content that failed
+   * to load rather than content still arriving.
+   */
+  hasSizeFor = (uuid: string) => this.contentLength(uuid) !== undefined;
 
   /**
    * Static HTML for a row that doesn't carry a live editor, or null when the

@@ -5,6 +5,7 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
+import { PassageSkeleton } from './PassageSkeleton';
 import { StackRow } from './StackRow';
 import { stackPerf } from './perf';
 
@@ -81,7 +82,20 @@ export const StackPassageEditor = memo(
         label={meta.label}
         bookmarked={controller.showsBookmark(uuid)}
       >
-        <EditorContent editor={editor} />
+        {/*
+          `immediatelyRender` is off, so there is a frame or more with no
+          editor and `EditorContent` draws an empty box. Without a placeholder
+          the row keeps its height and shows nothing, which reads as content
+          that failed rather than content arriving.
+        */}
+        {editor ? (
+          <EditorContent editor={editor} />
+        ) : (
+          <PassageSkeleton
+            height={controller.estimateContentHeight(uuid)}
+            sized={controller.hasSizeFor(uuid)}
+          />
+        )}
       </StackRow>
     );
   },
