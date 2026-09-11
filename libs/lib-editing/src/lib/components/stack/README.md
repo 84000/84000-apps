@@ -236,6 +236,27 @@ is left alone, rather than navigating somewhere arbitrary.
 The one thing the static HTML did not carry is a same-work mention's highlight
 range, which lived only in the model; `Mention.ssr` now emits it.
 
+### Reading a window without over-reading it
+
+`AROUND` splits its limit either side of its cursor, so reading a run from its
+first passage had to ask for twice the run and throw the leading half away —
+on every hydration, including plain scrolling.
+
+It is only needed where no predecessor is held. Within a section's run the
+spine entry before a passage *is* the passage before it in the work, so that
+entry is an exclusive cursor and the run reads forward at exactly its length.
+`AROUND` stays as the fallback for a run that opens a section, or a spine that
+opens mid-work after a deep link — which is the case the original note was
+about, and the case a distance-based check would get wrong.
+
+The spine can hold a gap the server does not: a passage removed locally is
+still there to be read. So a forward read checks it actually covered the run
+and continues if it fell short, the same way the `AROUND` path already does.
+
+Measured over one load and eight screens of scrolling on toh145: 445 KB of
+passage content before, 277 KB after, and nine of the eleven reads stop costing
+the server the two parallel queries an `AROUND` needs.
+
 ### Deep links
 
 A link names a passage, not a position, and the spine window rarely holds it.
