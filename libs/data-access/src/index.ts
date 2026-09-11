@@ -4,6 +4,7 @@ export * from './lib/catalog';
 export * from './lib/client-browser';
 export * from './lib/client-server';
 export * from './lib/client-token';
+export * from './lib/comment';
 export * from './lib/content-source';
 export * from './lib/folio';
 export * from './lib/glossary';
