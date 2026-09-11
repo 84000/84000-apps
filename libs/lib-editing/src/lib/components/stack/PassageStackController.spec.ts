@@ -198,6 +198,65 @@ describe('PassageStackController spine view', () => {
   });
 });
 
+describe('PassageStackController toh scoping', () => {
+  /** A spine holding one unscoped row and one per toh, as toh145's does. */
+  const scoped = () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([
+      { uuid: 'plain', label: 'n.9', type: 'endnotes' },
+      { uuid: 'a', label: 'n.10', type: 'endnotes', toh: 'toh145' },
+      { uuid: 'b', label: 'n.10', type: 'endnotes', toh: 'toh847' },
+    ] as Parameters<typeof work.seedSpine>[0]);
+    return { work, controller: new PassageStackController({ work }) };
+  };
+
+  it('draws every row until a toh is named', () => {
+    const { controller } = scoped();
+
+    // Hiding all scoped rows because nothing has scoped yet is worse than
+    // showing them, as the annotation rule also concludes.
+    expect(controller.getOrder()).toEqual(['plain', 'a', 'b']);
+  });
+
+  it('drops rows belonging to a different Tohoku text', () => {
+    const { controller } = scoped();
+
+    controller.setActiveToh('toh145');
+
+    // Both n.10s would otherwise appear, one of them toh847's.
+    expect(controller.getOrder()).toEqual(['plain', 'a']);
+  });
+
+  it('keeps unscoped rows, which belong to every reading of the work', () => {
+    const { controller } = scoped();
+
+    controller.setActiveToh('toh847');
+
+    expect(controller.getOrder()).toEqual(['plain', 'b']);
+  });
+
+  it('re-draws when the reader switches Tohoku text', () => {
+    const { controller } = scoped();
+    controller.setActiveToh('toh145');
+    const before = controller.getVersion();
+
+    controller.setActiveToh('toh847');
+
+    expect(controller.getOrder()).toEqual(['plain', 'b']);
+    expect(controller.getVersion()).not.toBe(before);
+  });
+
+  it('does not re-render when the toh is set to what it already was', () => {
+    const { controller } = scoped();
+    controller.setActiveToh('toh145');
+    const before = controller.getVersion();
+
+    controller.setActiveToh('toh145');
+
+    expect(controller.getVersion()).toBe(before);
+  });
+});
+
 describe('PassageStackController hydration', () => {
   it('has no static HTML for a passage outside the window', () => {
     const { controller } = build(5);

@@ -104,7 +104,7 @@ export const PassageStack = ({
   );
   const closeMenu = useCallback(() => setMenuTarget(null), []);
 
-  const { updatePanel, setToh, registerEditorRequest } = useNavigation();
+  const { updatePanel, setToh, toh, registerEditorRequest } = useNavigation();
 
   // Hover cards are drawn without an editor; their edit actions ask for one.
   // Resolving it here rather than keeping editors mounted is what lets the
@@ -117,6 +117,13 @@ export const PassageStack = ({
     });
     return () => registerEditorRequest(null);
   }, [controller, registerEditorRequest]);
+
+  // Which Tohoku text is being read decides which rows exist: a work spanning
+  // several of them carries passages scoped to one, and toh145 and toh847 each
+  // have their own endnote n.10.
+  useEffect(() => {
+    controller.setActiveToh(toh);
+  }, [controller, toh]);
   /**
    * Take a static row's content link, through the panel state rather than the
    * URL — the provider writes the URL from that state, so a link that pushed
