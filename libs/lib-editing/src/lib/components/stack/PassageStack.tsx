@@ -100,11 +100,41 @@ export const PassageStack = ({
     if (!root) return;
     const found = scrollParent(root);
     setScroller(found);
-    setScrollMargin(
-      root.getBoundingClientRect().top -
+
+    const measure = () => {
+      const next =
+        root.getBoundingClientRect().top -
         found.getBoundingClientRect().top +
-        found.scrollTop,
-    );
+        found.scrollTop;
+      setScrollMargin((current) =>
+        Math.abs(current - next) > 0.5 ? next : current,
+      );
+    };
+    measure();
+
+    // What sits above the stack can change height well after mount — a title
+    // or an imprint arriving — and this margin is measured from the scroller,
+    // so a stale one offsets every row *and* every scroll by that much. It is
+    // silent: rows still render and a deep link still scrolls, just to the
+    // wrong place. Injecting 260px above a settled stack moved the landing by
+    // exactly 260px.
+    //
+    // Watching the scroller alone is not enough: it reports its own box, not
+    // its content's. The things that can move the stack down are its own
+    // ancestors up to the scroller, and the scroller's other children.
+    const watched = new Set<Element>([found, root]);
+    for (
+      let node: HTMLElement | null = root;
+      node && node !== found;
+      node = node.parentElement
+    ) {
+      watched.add(node);
+    }
+    Array.from(found.children).forEach((child) => watched.add(child));
+
+    const observer = new ResizeObserver(measure);
+    watched.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
   }, []);
   const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
     null,

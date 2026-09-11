@@ -145,6 +145,16 @@ A host therefore owes the stack a scrollable ancestor with a bounded height.
 titles — because the virtualizer measures from the scroller, not from the
 stack.
 
+It is re-measured, not taken once. What sits above can change height long
+after mount — a title or an imprint arriving — and a stale margin offsets
+every row *and* every scroll by that much, silently: rows still render and a
+deep link still scrolls, just to the wrong place. Adding 260px above a settled
+stack moved a revealed row by exactly 260px, which on web-main reads as landing
+a couple of passages short. Watching the scroller alone does not see it, since
+a `ResizeObserver` reports an element's own box and not its content's; what can
+move the stack down is its own ancestors up to the scroller, and the scroller's
+other children, so those are what is observed.
+
 None of the harness routes caught it, because each one wrapped the stack in an
 explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
 instead, and is the regression test: with the stack owning a scroller it loads
