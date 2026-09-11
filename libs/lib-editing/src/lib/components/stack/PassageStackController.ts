@@ -43,6 +43,57 @@ const EDITOR_MOUNT_FRAMES = 60;
  */
 const UNKNOWN_ROW_PX = 112;
 
+/** An endnote marker: a decoration, with no text in the document at all. */
+const ENDNOTE_MARKER_SELECTOR = '[type="endNoteLink"]';
+/** A mention: one inline atom, however many characters its label renders. */
+const MENTION_SELECTOR = '.mention-container';
+
+/**
+ * How far into a row's *document* text a DOM point sits.
+ *
+ * Not `Range.toString().length`: that counts every rendered character, and a
+ * static row renders some that the document does not hold. Each kind is
+ * counted as the document counts it — an endnote marker as nothing, a mention
+ * as the single position its atom occupies — so this lines up with
+ * `posFromTextOffset` walking the other side.
+ */
+const domOffsetWithin = (root: Element, node: Node, offset: number): number => {
+  let count = 0;
+  let reached = false;
+
+  const visit = (current: Node) => {
+    if (reached) return;
+
+    if (current === node) {
+      if (current.nodeType === Node.TEXT_NODE) {
+        count += offset;
+      } else {
+        // An element boundary: the point sits before its `offset`th child.
+        Array.from(current.childNodes).slice(0, offset).forEach(visit);
+      }
+      reached = true;
+      return;
+    }
+
+    if (current.nodeType === Node.TEXT_NODE) {
+      count += (current as Text).data.length;
+      return;
+    }
+    if (current.nodeType !== Node.ELEMENT_NODE) return;
+
+    const element = current as Element;
+    if (element.matches(ENDNOTE_MARKER_SELECTOR)) return;
+    if (element.matches(MENTION_SELECTOR)) {
+      count += 1;
+      return;
+    }
+    Array.from(element.childNodes).forEach(visit);
+  };
+
+  visit(root);
+  return count;
+};
+
 export type PassageStackControllerOptions = {
   work: WorkDocument;
   /** Character counts by passage uuid, for estimating unhydrated row heights. */
@@ -764,9 +815,18 @@ export class PassageStackController {
     this.work.store.peek(uuid)?.toJSON() ?? null;
 
   /**
-   * Map a DOM point to a ProseMirror position, whether the passage is a
-   * live editor (exact, via posAtDOM) or a static row (approximate, via the
-   * text offset from the row start — inline atoms can skew it by a char).
+   * Map a DOM point to a ProseMirror position, whether the passage is a live
+   * editor (exact, via `posAtDOM`) or a static row (counted from the row
+   * start).
+   *
+   * Counting rendered characters is not enough on a static row, because some
+   * annotations render text the document does not hold — the two that do are
+   * exactly the two stored with a zero-length range. An endnote marker is a
+   * decoration with no document text at all, and a mention is an inline atom
+   * whose label lives in its attributes. Measured on toh145, that is 3
+   * characters per marker and 4 per mention, so a selection past a few of them
+   * resolved several characters late and a cross-passage delete cut the wrong
+   * range — silently, because the selection itself looked right.
    */
   resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
     const editor = this.editors.get(uuid);
@@ -782,16 +842,15 @@ export class PassageStackController {
       `[data-stack-passage="${uuid}"] .tiptap`,
     );
     if (!row) return null;
-    const range = document.createRange();
-    try {
-      range.setStart(row, 0);
-      range.setEnd(node, offset);
-    } catch {
-      return null;
-    }
-    return this.posFromTextOffset(uuid, range.toString().length);
+    if (!row.contains(node)) return null;
+    return this.posFromTextOffset(uuid, domOffsetWithin(row, node, offset));
   };
 
+  /**
+   * Walk the document counting the units `domOffsetWithin` counts: one per
+   * character of text, and one per inline node that renders without holding
+   * any.
+   */
   private posFromTextOffset(uuid: string, textOffset: number): number | null {
     const doc = this.work.store.peek(uuid);
     if (!doc) return null;
@@ -807,6 +866,19 @@ export class PassageStackController {
           return false;
         }
         remaining -= length;
+        return false;
+      }
+      // An inline node with no content — a mention. It occupies one position
+      // however many characters its label renders, which is the whole reason
+      // the DOM side cannot just count text. Keyed on holding no content
+      // rather than on `isAtom`, which this schema's mention does not set.
+      if (child.isInline && child.content.size === 0) {
+        if (remaining === 0) {
+          pos = childPos;
+          return false;
+        }
+        remaining -= 1;
+        return false;
       }
       return true;
     });

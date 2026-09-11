@@ -217,6 +217,24 @@ The colour is `bg-foreground/10`, as the design system's own `Skeleton` uses.
 `bg-muted` — what this drew at first — resolves to the studio's page background,
 so the placeholder was there, sized correctly, and completely invisible.
 
+### Mapping a DOM point into a passage
+
+A live row has `posAtDOM`. A static row has to count, and counting rendered
+characters is wrong: some annotations render text the document does not hold,
+and they are exactly the two stored with a zero-length range — an endnote
+marker is a decoration with no document text at all, and a mention is an inline
+node whose label lives in its attributes. Measured on toh145 that is three
+characters per marker and four per mention.
+
+So both sides count the same units. `domOffsetWithin` walks the DOM adding a
+unit per character, none for an endnote marker, and one for a mention;
+`posFromTextOffset` walks the document adding one per character and one per
+inline node that holds no content. Keyed on holding no content rather than on
+`isAtom`, which this schema's mention does not set.
+
+Getting this wrong is quiet. The selection looks right and registers as a
+cross-passage selection; only the delete cuts the wrong range.
+
 ### Content links on a static row
 
 A mounted editor handles glossary instances, endnote markers, internal links

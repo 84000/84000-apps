@@ -346,6 +346,72 @@ describe('PassageStackController hydration', () => {
   });
 });
 
+describe('PassageStackController point resolution', () => {
+  /**
+   * A passage whose paragraph is `before` + a mention + `after`, plus the
+   * static row the controller reads DOM points out of.
+   */
+  const withMention = (before: string, after: string) => {
+    const uuid = 'p0';
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([{ uuid, label: '1', type: 'translation' }] as Parameters<
+      typeof work.seedSpine
+    >[0]);
+    work.store.create(uuid, [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: before },
+          { type: 'mention', attrs: { items: [{ uuid: 'm1', entity: 'e1' }] } },
+          { type: 'text', text: after },
+        ],
+      },
+    ]);
+    const controller = new PassageStackController({ work });
+
+    // The row as `renderTranslationHTML` draws it: the mention's label is
+    // rendered text the document does not hold.
+    document.body.innerHTML = `
+      <div data-stack-passage="${uuid}">
+        <div class="tiptap"><p><span id="a">${before}</span><span class="mention-container"><a class="mention-link">1.11</a></span><span id="b">${after}</span></p></div>
+      </div>`;
+    return { controller, uuid };
+  };
+
+  it('resolves a point before a mention from the text alone', () => {
+    const { controller, uuid } = withMention('Hello ', 'world');
+    const head = document.querySelector('#a')?.firstChild as Text;
+
+    expect(controller.resolvePoint(uuid, head, 2)).toBe(1 + 2);
+  });
+
+  it('counts a mention as the one position its atom occupies', () => {
+    const { controller, uuid } = withMention('Hello ', 'world');
+    const tail = document.querySelector('#b')?.firstChild as Text;
+
+    const pos = controller.resolvePoint(uuid, tail, 3);
+
+    // Six characters, the atom, then three more. The label's four rendered
+    // characters must not count, or every point past it lands late — which is
+    // what made a cross-passage delete cut the wrong range.
+    expect(pos).toBe(1 + 6 + 1 + 3);
+  });
+
+  it('ignores an endnote marker, which renders text the document has none of', () => {
+    const { controller, uuid } = withMention('Hello ', 'world');
+    const tail = document.querySelector('#b') as HTMLElement;
+    tail.insertAdjacentHTML(
+      'beforebegin',
+      '<sup type="endNoteLink" class="end-note-link">\u20601</sup>',
+    );
+
+    const pos = controller.resolvePoint(uuid, tail.firstChild as Text, 3);
+
+    // A decoration: the answer must not move because of it.
+    expect(pos).toBe(1 + 6 + 1 + 3);
+  });
+});
+
 describe('PassageStackController undo bookkeeping', () => {
   it('records a passage text edit in the work command log', async () => {
     const { work, controller } = await hydrated(3);
