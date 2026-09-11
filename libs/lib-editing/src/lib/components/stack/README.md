@@ -110,7 +110,7 @@ Not carried over, and why:
 | `ReaderOptions` in the menu | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet. |
 | The references list | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past. |
 | The compare source column | Compare mode is DEV-743's, and its surface is undecided. |
-| `data-toh` on the row | The toh visibility rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset. Hiding one leaves a hole. Which passages a toh shows is a question about spine order, not about CSS. |
+| `data-toh` on the row | Correct, but the wrong mechanism: the annotation rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
 | Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet. |
 
 ### Keys at a passage boundary
@@ -269,6 +269,24 @@ The spine starting mid-work also changes what index 0 means. `passage-source`
 used to read from the beginning of the work when a run began at the top of the
 spine; that is now a different part of the text, so the boundary row is read
 with `AROUND`, which includes its own cursor.
+
+### Which rows a toh shows
+
+A work can span several Tohoku texts, and a passage may be scoped to one of
+them: toh145 and toh847 each carry their own endnote n.10. Drawing both is
+wrong under either reading, and it is what the stack did.
+
+The view filters them out of `getOrder`, rather than hiding them with CSS as
+the annotation rule does — a virtualized row is absolutely positioned at a
+measured offset, so `display: none` leaves a hole rather than closing the gap.
+Rows are indexed within the tab and hydration within the work, and `spineRange`
+maps between them through the first and last *visible* uuid, so a filtered row
+costs at most a passage of over-fetch at the window's edges.
+
+Most passages carry no scope and belong to every reading. Until a toh is named
+at all, every row is drawn: hiding all scoped rows because nothing has scoped
+yet is worse than doing nothing, which is the same conclusion the annotation
+rule reaches.
 
 ### Toh visibility a host must supply
 

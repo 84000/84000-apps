@@ -117,6 +117,14 @@ export class PassageStackController {
 
   private liveUuids = new Set<string>();
   private focusedUuid: string | null = null;
+  /**
+   * The Tohoku text being read, when the work spans more than one.
+   *
+   * Undefined means "not scoped yet", which shows every row. Hiding all
+   * scoped rows because nothing has named a toh is worse than doing nothing —
+   * the same reason the annotation visibility rule settles on a default.
+   */
+  private activeToh?: string;
 
   private orderCache: string[] | null = null;
   private visibleRange: SpineRange = { start: 0, end: 0 };
@@ -205,12 +213,42 @@ export class PassageStackController {
    */
   getOrder = () => {
     if (!this.orderCache) {
-      this.orderCache = this.tab
+      const all = this.tab
         ? this.work.spine.tab(this.tab).map((entry) => entry.uuid)
         : this.work.spine.uuids();
+      this.orderCache = all.filter((uuid) => this.showsForToh(uuid));
     }
     return this.orderCache;
   };
+
+  /**
+   * Whether a passage belongs to the toh being read.
+   *
+   * A work can span several Tohoku texts — toh145's spans four — and a
+   * passage scoped to one of them has no business appearing under another:
+   * toh145 and toh847 each carry their own endnote n.10. Most passages carry
+   * no scope at all and belong to every reading of the work.
+   *
+   * This is a question about which rows exist, not about CSS. The annotation
+   * rule hides scoped markup with `display: none`, which a virtualized row
+   * cannot use: rows are absolutely positioned at measured offsets, so hiding
+   * one leaves a hole the size of the passage.
+   */
+  private showsForToh = (uuid: string) => {
+    if (!this.activeToh) return true;
+    const toh = this.work.spine.meta(uuid)?.toh;
+    return !toh || toh === this.activeToh;
+  };
+
+  /** Name the Tohoku text being read, which decides which rows are drawn. */
+  setActiveToh = (toh?: string) => {
+    if (this.activeToh === toh) return;
+    this.activeToh = toh;
+    this.orderCache = null;
+    this.bump();
+  };
+
+  getActiveToh = () => this.activeToh;
 
   getMeta = (uuid: string): PassageMeta | null => this.work.spine.meta(uuid);
 
