@@ -53,8 +53,10 @@ describe('getSuggestion items', () => {
 
   it('omits an item whose isAvailable predicate rejects the editor', () => {
     const mention = item('Mention', ['mention'], (editor) =>
-      Boolean((editor.storage.mention as { openAdvanced?: unknown } | undefined)
-        ?.openAdvanced),
+      Boolean(
+        (editor.storage.mention as { openAdvanced?: unknown } | undefined)
+          ?.openAdvanced,
+      ),
     );
 
     expect(listItems([heading, mention], 'mention')).toEqual([]);

@@ -150,6 +150,32 @@ explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
 instead, and is the regression test: with the stack owning a scroller it loads
 the entire work, and without it loads one page.
 
+### Hover cards are a document-level surface
+
+A card needs no editor. Its content comes from the navigation fetchers by uuid
+and from the anchor's own attributes, and detection is a delegated listener
+over the whole subtree — all three are already document level. The only thing
+that genuinely needs an editor is *editing*, and that is resolved when an
+action runs: `requestEditorFor` focuses the passage, which mounts it.
+
+What used to decide whether a card appeared was whether the anchor resolved to
+an **editable editor instance** — a per-instance answer to an
+application-level question. In the paginated editor, where one editable editor
+covers the whole panel, the two coincide. In the stack they do not: most rows
+are static HTML, so cards simply stopped existing for them, and premounted
+neighbours are non-editable, so they had none either.
+
+The switch is now `NavigationContext.editable` — the studio rather than the
+reader — set by the host that mounts the provider. Detection in the mark and
+node views is unconditional for the same reason: an anchor that hides itself
+from detection cannot be reconsidered later, and whether to offer a card is
+not its decision to make.
+
+This is why hovering costs nothing. An earlier version of this mounted an
+editor under the pointer so the old check would pass, which meant a second
+`contenteditable` on the page and an editor per hovered row. Verified instead:
+a card opens over a static row with zero editors mounted anywhere.
+
 ### Content links on a static row
 
 A mounted editor handles glossary instances, endnote markers, internal links

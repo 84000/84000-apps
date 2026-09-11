@@ -115,6 +115,9 @@ export const mentionDOMOutputSpec = (
       class: 'mention-link',
       ...extraAttrs,
     };
+    // The hover card provider matches on `type`, as it does for the other
+    // anchor kinds. Without it a static mention is invisible to detection.
+    attrs['type'] = 'mention';
     if (item.uuid) attrs['uuid'] = item.uuid;
     if (item.entity) attrs['entity'] = item.entity;
     if (item.linkType) attrs['entity-type'] = item.linkType;

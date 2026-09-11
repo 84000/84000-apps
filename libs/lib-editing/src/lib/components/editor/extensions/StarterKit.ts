@@ -2,7 +2,11 @@ import {
   StarterKitOptions,
   StarterKit as TiptapStarterKit,
 } from '@tiptap/starter-kit';
-import { BLOCKQUOTE_STYLE, CODE_STYLE, OL_STYLE } from '@eightyfourthousand/design-system';
+import {
+  BLOCKQUOTE_STYLE,
+  CODE_STYLE,
+  OL_STYLE,
+} from '@eightyfourthousand/design-system';
 
 export const STARTER_KIT_CONFIG: Partial<StarterKitOptions> = {
   document: false,

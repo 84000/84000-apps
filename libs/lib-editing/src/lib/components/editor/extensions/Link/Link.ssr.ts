@@ -32,11 +32,7 @@ export const LinkSSR = TipTapLink.extend({
     const uuid = mark.attrs.uuid as string | undefined;
 
     if (!href) {
-      return [
-        'span',
-        mergeAttributes(HTMLAttributes, uuid ? { uuid } : {}),
-        0,
-      ];
+      return ['span', mergeAttributes(HTMLAttributes, uuid ? { uuid } : {}), 0];
     }
 
     return [
@@ -45,6 +41,8 @@ export const LinkSSR = TipTapLink.extend({
         href,
         target: '_blank',
         rel: 'noreferrer noopener',
+        // Matched by the hover card provider, as the live mark view does.
+        type: 'link',
         ...(uuid ? { uuid } : {}),
       }),
       0,

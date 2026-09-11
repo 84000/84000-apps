@@ -13,28 +13,30 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
 import { useEditorState } from '../../EditorProvider';
+import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 import {
   deleteEndnotePassageNode,
   removeAllEndnoteLinksForPassage,
 } from './endnote-utils';
 
-const EDITOR_UPDATE_DELAY_MS = 100;
-
 export const EndNoteLinkHoverContent = ({
   uuid,
   endNote,
   editor,
+  requestEditor,
   close,
   setHoverCardEditing,
 }: {
   uuid: string;
   endNote: string;
-  editor: Editor;
+  editor?: Editor;
+  requestEditor: EditorRequest;
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [label, setLabel] = useState<string | undefined>();
+  const withEditor = useHoverCardEditor(editor, requestEditor);
   const [fetchState, setFetchState] = useState<'loading' | 'loaded' | 'error'>(
     'loading',
   );
@@ -81,7 +83,7 @@ export const EndNoteLinkHoverContent = ({
     setHoverCardEditing(false);
     close();
 
-    setTimeout(() => {
+    withEditor((editor) => {
       const range = findEndnoteMarkByUuid({ editor, uuid });
       if (!range) {
         console.warn('EndNoteLink mark not found in the document.');
@@ -98,14 +100,14 @@ export const EndNoteLinkHoverContent = ({
         tr.addMark(from, to, mark.type.create({ ...mark.attrs, notes }));
       }
       editor.view.dispatch(tr);
-    }, EDITOR_UPDATE_DELAY_MS);
-  }, [editor, uuid, close, setHoverCardEditing]);
+    });
+  }, [withEditor, uuid, close, setHoverCardEditing]);
 
   const deleteEndnoteAndLink = useCallback(() => {
     setHoverCardEditing(false);
     close();
 
-    setTimeout(() => {
+    withEditor((editor) => {
       const endnotesEditor = getEditor('endnotes');
       if (endnotesEditor) {
         deleteEndnotePassageNode(endnotesEditor, endNote);
@@ -123,7 +125,7 @@ export const EndNoteLinkHoverContent = ({
       if (translationEditor) {
         removeAllEndnoteLinksForPassage(translationEditor, endNote);
       }
-    }, EDITOR_UPDATE_DELAY_MS);
+    });
   }, [endNote, getEditor, close, setHoverCardEditing]);
 
   return (

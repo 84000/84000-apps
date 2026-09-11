@@ -76,7 +76,9 @@ describe('renderTextToHTMLString', () => {
       para({
         type: 'text',
         text: '大 | 乘',
-        marks: [{ type: 'foreign', attrs: { lang: 'zh', textStyle: 'foreign' } }],
+        marks: [
+          { type: 'foreign', attrs: { lang: 'zh', textStyle: 'foreign' } },
+        ],
       }),
     );
     expect(html).toContain('大 | 乘');

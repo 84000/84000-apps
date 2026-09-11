@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { HoverInputField } from '../HoverInputField';
 import { useNavigation } from '../../../shared';
 import type { MentionItem } from './Mention.ssr';
+import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 type Mode = 'view' | 'rename' | 'lang' | 'range';
 
@@ -102,26 +103,44 @@ export const MentionHoverContent = ({
   entityType,
   entity,
   editor,
+  requestEditor,
+  anchor,
   close,
   setHoverCardEditing,
 }: {
   uuid: string;
   entityType: string;
   entity: string;
-  editor: Editor;
+  editor?: Editor;
+  requestEditor: EditorRequest;
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
 }) => {
   const [mode, setModeLocal] = useState<Mode>('view');
   const { fetchPassage } = useNavigation();
+  const withEditor = useHoverCardEditor(editor, requestEditor);
 
   // Snapshot the item once when the card opens — the custom override (`text`)
   // pre-fills the rename field, and text/displayText drive the label shown.
   const [item] = useState<MentionItem | undefined>(() => {
-    const found = findMentionNodeByItemUuid(editor, uuid);
-    const items: MentionItem[] = found?.node?.attrs.items || [];
-    return items.find((i) => i.uuid === uuid);
+    if (editor) {
+      const found = findMentionNodeByItemUuid(editor, uuid);
+      const items: MentionItem[] = found?.node?.attrs.items || [];
+      const match = items.find((i) => i.uuid === uuid);
+      if (match) return match;
+    }
+    // No editor over this anchor, which is ordinary rather than exceptional:
+    // most of a virtualized work is static HTML. The anchor carries what the
+    // card needs to show; the document is only needed to change it. `text` is
+    // deliberately left unset — it is the custom override, and the rendered
+    // label is not evidence that one exists.
+    return {
+      uuid,
+      entity,
+      linkType: entityType,
+      displayText: anchor?.textContent?.trim() || undefined,
+    } as MentionItem;
   });
   const currentText = item?.text ?? '';
   // Prefer the display text; fall back to the entity UUID only when unresolved.
@@ -144,39 +163,43 @@ export const MentionHoverContent = ({
       setMode('view');
       close();
 
-      withMentionNode(editor, uuid, (pos, node) => {
-        const items: MentionItem[] = (node.attrs.items || []).map(
-          (item: MentionItem) => (item.uuid === uuid ? updater(item) : item),
-        );
+      withEditor((resolved) =>
+        withMentionNode(resolved, uuid, (pos, node) => {
+          const items: MentionItem[] = (node.attrs.items || []).map(
+            (item: MentionItem) => (item.uuid === uuid ? updater(item) : item),
+          );
 
-        const { tr } = editor.state;
-        tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
-        editor.view.dispatch(tr);
-      });
+          const { tr } = resolved.state;
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
+          resolved.view.dispatch(tr);
+        }),
+      );
     },
-    [editor, uuid, close, setMode],
+    [withEditor, uuid, close, setMode],
   );
 
   const deleteMention = useCallback(() => {
     setMode('view');
     close();
 
-    withMentionNode(editor, uuid, (pos, node) => {
-      const items: MentionItem[] = (node.attrs.items || []).filter(
-        (item: MentionItem) => item.uuid !== uuid,
-      );
+    withEditor((resolved) =>
+      withMentionNode(resolved, uuid, (pos, node) => {
+        const items: MentionItem[] = (node.attrs.items || []).filter(
+          (item: MentionItem) => item.uuid !== uuid,
+        );
 
-      const { tr } = editor.state;
-      if (items.length === 0) {
-        // Delete the entire node
-        tr.delete(pos, pos + node.nodeSize);
-      } else {
-        // Update items array without deleted item
-        tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
-      }
-      editor.view.dispatch(tr);
-    });
-  }, [editor, uuid, close, setMode]);
+        const { tr } = resolved.state;
+        if (items.length === 0) {
+          // Delete the entire node
+          tr.delete(pos, pos + node.nodeSize);
+        } else {
+          // Update items array without deleted item
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, items });
+        }
+        resolved.view.dispatch(tr);
+      }),
+    );
+  }, [withEditor, uuid, close, setMode]);
 
   // Set or clear the custom override label. Passing no value clears `text`,
   // returning the mention to its dynamically resolved label.

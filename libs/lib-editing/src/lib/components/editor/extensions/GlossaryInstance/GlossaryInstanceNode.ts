@@ -40,11 +40,12 @@ export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
         dom.setAttribute('glossary', props.mark.attrs.glossary);
       }
 
-      // Only add type attribute and register in edit mode for hover card detection
-      if (isEditable) {
-        dom.setAttribute('type', 'glossaryInstance');
-        registerEditorElement(dom, props.editor);
-      }
+      // The hover card provider matches on `type` and resolves the editor
+      // through this registration. Neither is conditional on editability:
+      // whether cards are offered is an application-level decision, and an
+      // anchor that hides itself from detection cannot be reconsidered.
+      dom.setAttribute('type', 'glossaryInstance');
+      registerEditorElement(dom, props.editor);
 
       dom.addEventListener('click', () => {
         const { glossary } = props.mark.attrs;

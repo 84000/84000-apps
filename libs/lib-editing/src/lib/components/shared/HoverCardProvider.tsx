@@ -21,6 +21,7 @@ import { InternalLinkHoverContent } from '../editor/extensions/InternalLink/Inte
 import { MentionHoverContent } from '../editor/extensions/Mention/MentionHoverContent';
 import { Editor } from '@tiptap/core';
 import { getEditorForElement } from '../editor/util';
+import { useNavigation } from './NavigationContext';
 
 export type HoverCardType =
   | 'glossaryInstance'
@@ -50,15 +51,18 @@ export const HoverCardProvider = ({
   enabled?: boolean;
   children: ReactNode;
 }) => {
+  const { editable, requestEditorFor } = useNavigation();
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
 
-  // Get editor for anchor element using the WeakMap registry
+  // The editor holding this anchor, when one is mounted over it. Absent is
+  // ordinary rather than exceptional: most of a virtualized work is static
+  // HTML, and a card's content comes from the navigation fetchers by uuid, not
+  // from a document. Only the editing actions need one, and they ask for it
+  // when they are used.
   const getEditorForAnchor = useCallback(
-    (anchorEl: HTMLElement): Editor | undefined => {
-      const editor = getEditorForElement(anchorEl);
-      return editor?.isEditable ? editor : undefined;
-    },
+    (anchorEl: HTMLElement): Editor | undefined =>
+      getEditorForElement(anchorEl),
     [],
   );
 
@@ -296,7 +300,10 @@ export const HoverCardProvider = ({
   }, [enabled, card, anchor, closeImmediately]);
 
   const renderCard = (uuid: string, type: string, anchorEl: HTMLElement) => {
-    if (!editor) return null;
+    // A card renders without an editor; its actions resolve one on demand,
+    // falling back to the host when nothing is mounted over the anchor.
+    const requestEditor = async () =>
+      getEditorForAnchor(anchorEl) ?? (await requestEditorFor?.(anchorEl)) ?? null;
 
     if (type === 'glossaryInstance') {
       const glossary = anchorEl.getAttribute('glossary') || '';
@@ -305,6 +312,7 @@ export const HoverCardProvider = ({
           uuid={uuid}
           glossary={glossary}
           editor={editor}
+          requestEditor={requestEditor}
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
@@ -318,6 +326,7 @@ export const HoverCardProvider = ({
           uuid={uuid}
           endNote={endNote}
           editor={editor}
+          requestEditor={requestEditor}
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
@@ -331,6 +340,7 @@ export const HoverCardProvider = ({
           uuid={uuid}
           href={href}
           editor={editor}
+          requestEditor={requestEditor}
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
@@ -346,6 +356,7 @@ export const HoverCardProvider = ({
           entityType={entityType}
           entity={entity}
           editor={editor}
+          requestEditor={requestEditor}
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
@@ -361,6 +372,7 @@ export const HoverCardProvider = ({
           entityType={entityType}
           entity={entity}
           editor={editor}
+          requestEditor={requestEditor}
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
@@ -370,8 +382,10 @@ export const HoverCardProvider = ({
     return null;
   };
 
-  // Only show hover card when editor is available (editing mode only)
-  const shouldShowCard = enabled && anchor && uuid && cardType && editor;
+  // Whether the work is being edited is an application-level fact, so it is
+  // read from the navigation context rather than inferred from whichever
+  // editor happens to be mounted under the pointer.
+  const shouldShowCard = enabled && editable && anchor && uuid && cardType;
 
   return (
     <>

@@ -140,8 +140,10 @@ export const EnsureUniqueUuids = Extension.create({
             return null;
           }
 
-          const updates: Array<{ pos: number; attrs: Record<string, unknown> }> =
-            [];
+          const updates: Array<{
+            pos: number;
+            attrs: Record<string, unknown>;
+          }> = [];
 
           // Doc-order duplicate scan: the first occurrence of a uuid keeps
           // it; any later occurrence — adjacent or not — is regenerated.

@@ -87,7 +87,11 @@ export const StackTabsPage = ({ toh }: { toh: string }) => {
   }
 
   return (
-    <NavigationProvider uuid={work.uuid} initialToh={toh as TohokuCatalogEntry}>
+    <NavigationProvider
+      uuid={work.uuid}
+      initialToh={toh as TohokuCatalogEntry}
+      editable
+    >
       <StackWorkProvider workUuid={work.uuid}>
         <Body
           tohList={work.toh.length ? work.toh : [toh as TohokuCatalogEntry]}

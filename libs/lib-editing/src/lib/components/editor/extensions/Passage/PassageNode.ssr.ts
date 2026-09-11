@@ -107,7 +107,11 @@ export const PassageNodeSSR = Node.create({
       bookmarkIcon(),
     ];
 
-    const content: Array<unknown> = ['div', { class: PASSAGE_CONTENT_CLASS }, 0];
+    const content: Array<unknown> = [
+      'div',
+      { class: PASSAGE_CONTENT_CLASS },
+      0,
+    ];
 
     const referencesNode =
       references.length > 0

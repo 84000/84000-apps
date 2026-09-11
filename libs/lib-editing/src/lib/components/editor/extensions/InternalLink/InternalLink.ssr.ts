@@ -90,7 +90,11 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
     if (linkToh) attrs['data-link-toh'] = String(linkToh);
 
     if (!href) {
-      return ['span', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, attrs), 0];
+      return [
+        'span',
+        mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, attrs),
+        0,
+      ];
     }
 
     return [
