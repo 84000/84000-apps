@@ -79,9 +79,9 @@ describe('graphqlPassageSource loadSpineMetas', () => {
 });
 
 describe('graphqlPassageSource loadPassages', () => {
-  it('reads from the first passage of the run', async () => {
+  it('reads the run forward from the passage before it', async () => {
     const spine = spineOf(20);
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
       page(['p5', 'p6', 'p7']),
     );
     const source = graphqlPassageSource({
@@ -92,8 +92,49 @@ describe('graphqlPassageSource loadPassages', () => {
 
     await source.loadPassages('w1', ['p5', 'p6', 'p7']);
 
+    // `p4` is the run's predecessor in the spine and in the work, so the
+    // cursor is exclusive and the read starts exactly at `p5`.
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p4', maxPassages: 3 }),
+    );
+    // `AROUND` would have had to ask for twice the run and discard the half
+    // before the cursor.
+    expect(clientGraphql.getTranslationBlocksAround).not.toHaveBeenCalled();
+  });
+
+  it('asks for no more passages than the run holds', async () => {
+    const spine = spineOf(20);
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      page(['p5', 'p6', 'p7']),
+    );
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    await source.loadPassages('w1', ['p5', 'p6', 'p7']);
+
+    const { maxPassages } = clientGraphql.getTranslationBlocks.mock.calls[0][0];
+    expect(maxPassages).toBe(3);
+  });
+
+  it('falls back to AROUND for a run with no predecessor held', async () => {
+    const spine = spineOf(20);
+    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+      page(['p0', 'p1']),
+    );
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    // `p0` opens the spine, so nothing before it is held to read forward from.
+    await source.loadPassages('w1', ['p0', 'p1']);
+
     expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
-      expect.objectContaining({ passageUuid: 'p5' }),
+      expect.objectContaining({ passageUuid: 'p0' }),
     );
   });
 
@@ -217,7 +258,7 @@ describe('graphqlPassageSource loadPassages', () => {
 
   it('reads the whole run when the caller already holds part of the middle', async () => {
     const spine = spineOf(20);
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
       page(['p3', 'p4', 'p5', 'p6']),
     );
     const source = graphqlPassageSource({
@@ -230,8 +271,8 @@ describe('graphqlPassageSource loadPassages', () => {
     // still beats two requests for the exact set.
     const found = await source.loadPassages('w1', ['p3', 'p6']);
 
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
-      expect.objectContaining({ passageUuid: 'p3' }),
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p2', maxPassages: 4 }),
     );
     // Passages pulled in by the span but not asked for are dropped: the loader
     // treats anything returned as answered.

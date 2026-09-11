@@ -104,13 +104,27 @@ export const graphqlPassageSource = ({
       return uuid ? current.meta(uuid)?.tab : undefined;
     };
 
-    const runs: { first: string; count: number }[] = [];
+    const runs: { first: string; count: number; after?: string }[] = [];
     let start = indices[0];
     let previous = indices[0];
 
     const close = () => {
       const first = current.uuidAt(start);
-      if (first) runs.push({ first, count: previous - start + 1 });
+      if (!first) return;
+      // The spine entry before the run, when it is in the same section, *is*
+      // the passage before it in the work — so it can be used as an exclusive
+      // cursor and the run read forward. That matters because the `AROUND`
+      // alternative below splits its limit either side of its cursor and
+      // throws the leading half away.
+      const before =
+        start > 0 && tabAt(start - 1) === tabAt(start)
+          ? current.uuidAt(start - 1)
+          : undefined;
+      runs.push({
+        first,
+        count: previous - start + 1,
+        ...(before ? { after: before } : {}),
+      });
     };
 
     indices.slice(1).forEach((index) => {
@@ -180,7 +194,29 @@ export const graphqlPassageSource = ({
    * between them. `AROUND` includes its own cursor and needs no neighbour; the
    * rest of the run continues forward from where it stopped.
    */
-  const readFrom = async (first: string, count: number) => {
+  const readFrom = async (run: {
+    first: string;
+    count: number;
+    after?: string;
+  }) => {
+    const { first, count } = run;
+    // A known predecessor makes this an ordinary forward read of exactly the
+    // wanted passages. `AROUND` below is the fallback for a run that starts a
+    // section, or a spine that opens mid-work, where no predecessor is held.
+    if (run.after) {
+      const forward = await readSpan(run.after, count);
+      // The spine can hold a gap the server does not — a passage removed
+      // locally is still there to be read — so the page may start earlier in
+      // the work than the run does and stop short of it.
+      const from = forward.findIndex((snapshot) => snapshot.uuid === first);
+      const have = from >= 0 ? forward.length - from : 0;
+      if (have < count && forward.length) {
+        const last = forward[forward.length - 1].uuid;
+        forward.push(...(await readSpan(last, count - have)));
+      }
+      return forward;
+    }
+
     const page = await getTranslationBlocksAround({
       client,
       uuid: workUuid,
@@ -224,9 +260,7 @@ export const graphqlPassageSource = ({
       // from the start of the work in pages until the wanted set is covered.
       // Correct but wasteful; the assembled loader always supplies a spine.
       const found = runs?.length
-        ? (
-            await Promise.all(runs.map((run) => readFrom(run.first, run.count)))
-          ).flat()
+        ? (await Promise.all(runs.map((run) => readFrom(run)))).flat()
         : await readSpan(undefined, MAX_PAGE);
 
       // Passages pulled in because they sat inside the run are dropped: the
