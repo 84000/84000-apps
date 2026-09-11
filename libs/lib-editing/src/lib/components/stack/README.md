@@ -228,9 +228,13 @@ contract rather than presentation.
 Three things this has to get right, each of which the obvious version gets
 wrong:
 
-- **It acts on `mousedown`.** The focus handler below it runs on `mouseup`, and
-  focusing swaps the row for an editor — so by the time a `click` would fire,
-  the element it fired on is detached.
+- **It resolves on `mousedown` but acts on `mouseup`.** The element has to be
+  read while it is live, because focusing swaps the row for an editor and
+  detaches it. Acting there too is what broke text selection: a press on a
+  link is just as likely to begin a drag, and both following the link and
+  calling `preventDefault` stop the browser ever starting one. Resolving early
+  and acting late needs no element at release, which is what the original
+  reason for using `mousedown` was really about.
 - **The anchor's own default is prevented on `click`.** `preventDefault` on
   `mousedown` does not stop a link loading its `href`; only the click does.
   Without it a static internal link navigates out of the app entirely.

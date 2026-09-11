@@ -23,10 +23,13 @@ import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
 import { useStackSelection } from './useStackSelection';
-import { resolveStackLink, STACK_LINK_SELECTOR } from './stack-links';
+import {
+  resolveStackLink,
+  STACK_LINK_SELECTOR,
+  type StackLinkTarget,
+} from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
 import type { PanelName } from '../shared/types';
-import type { StackLinkTarget } from './stack-links';
 
 /**
  * Rows rendered in the virtualized window (cheap static HTML tier).
@@ -56,6 +59,9 @@ export const scrollParent = (from: HTMLElement): HTMLElement => {
   }
   return (document.scrollingElement as HTMLElement) ?? document.body;
 };
+
+/** How far the pointer may travel and still count as a click, not a drag. */
+const CLICK_SLOP_PX = 5;
 
 /**
  * Frames of no movement before a settled scroll stops holding its target.
@@ -334,6 +340,9 @@ export const PassageStack = ({
       )?.dataset['stackPassage'] ?? null;
 
     let down: { x: number; y: number; uuid: string | null } | null = null;
+    // A press on a content link, resolved while the element is still live but
+    // not acted on until release — see below.
+    let pending: { link: StackLinkTarget; x: number; y: number } | null = null;
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as Element | null;
       down = null;
@@ -357,29 +366,47 @@ export const PassageStack = ({
 
       if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
 
-      // Content links, before the focus branch below claims the click. A
+      // Content links, before the focus branch below claims the press. A
       // mounted editor handles these from its own mark and node views; a
-      // static row has none, so the stack follows them by delegation. It has
-      // to happen on mousedown: focusing swaps the row for an editor, and the
-      // clicked element is detached before a `click` would reach it.
+      // static row has none, so the stack follows them by delegation.
+      //
+      // Resolved here, while the element is live, but *not* followed here: a
+      // press on a link is just as likely to be the start of a selection
+      // drag, and both acting on it and calling `preventDefault` stop the
+      // browser ever beginning one. Following on release instead needs no
+      // element — the target was resolved already — which is what the
+      // original reason for acting on mousedown was about.
       const link = resolveStackLink(target, {
         editable: !controller.isReadOnly(),
       });
       if (link) {
-        event.preventDefault();
-        followLink(link);
+        pending = { link, x: event.clientX, y: event.clientY };
         return;
       }
 
       down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
     };
     const onMouseUp = (event: MouseEvent) => {
+      const link = pending;
+      pending = null;
+      if (link) {
+        // Moved, or left a selection behind: the press was a drag, not a
+        // click, and following the link would throw the selection away.
+        const dragged =
+          Math.abs(event.clientX - link.x) > CLICK_SLOP_PX ||
+          Math.abs(event.clientY - link.y) > CLICK_SLOP_PX;
+        if (!dragged && document.getSelection()?.isCollapsed) {
+          followLink(link.link);
+        }
+        return;
+      }
+
       const start = down;
       down = null;
       if (!start?.uuid) return;
       const moved =
-        Math.abs(event.clientX - start.x) > 5 ||
-        Math.abs(event.clientY - start.y) > 5;
+        Math.abs(event.clientX - start.x) > CLICK_SLOP_PX ||
+        Math.abs(event.clientY - start.y) > CLICK_SLOP_PX;
       if (moved || !document.getSelection()?.isCollapsed) return;
       if (uuidAt(event.target) !== start.uuid) return;
       controller.focusPassage(start.uuid, {
