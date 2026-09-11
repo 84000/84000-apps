@@ -145,6 +145,16 @@ A host therefore owes the stack a scrollable ancestor with a bounded height.
 titles — because the virtualizer measures from the scroller, not from the
 stack.
 
+It is re-measured, not taken once. What sits above can change height long
+after mount — a title or an imprint arriving — and a stale margin offsets
+every row *and* every scroll by that much, silently: rows still render and a
+deep link still scrolls, just to the wrong place. Adding 260px above a settled
+stack moved a revealed row by exactly 260px, which on web-main reads as landing
+a couple of passages short. Watching the scroller alone does not see it, since
+a `ResizeObserver` reports an element's own box and not its content's; what can
+move the stack down is its own ancestors up to the scroller, and the scroller's
+other children, so those are what is observed.
+
 None of the harness routes caught it, because each one wrapped the stack in an
 explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
 instead, and is the regression test: with the stack owning a scroller it loads
@@ -274,10 +284,23 @@ opened, and nothing scrolled. A host that places a tab somewhere unusual passes
 
 Three things that each cost a debugging pass:
 
-- **The scroll has to settle.** Rows above an unvisited target are estimates,
-  and measuring them moves it — by a screenful. The scroll is re-issued for a
-  few frames, which is what `waitForStableElement` does for the paginated
-  editor.
+- **The scroll has to settle, and stillness is not the signal.** Rows above an
+  unvisited target are estimates, and measuring them moves it — by a
+  screenful. Re-issuing the scroll for a fixed number of frames is not enough:
+  hydration arrives over hundreds of milliseconds and its last page can land
+  seconds later, by which time any frame budget has run out. Measured on a
+  throttled deep link, the target sat correctly for two seconds and then jumped
+  912px out of view as the final rows measured.
+
+  So the anchor is held until the page stops moving, re-armed by anything that
+  changes the view, and released only once the offset, the controller's version
+  *and* `isHydrating` all agree there is nothing left to come. The last of
+  those is load bearing: between issuing the scroll and the content landing the
+  page is perfectly still, and letting go in that gap is exactly when the drift
+  happens.
+
+  It yields immediately to a reader who scrolls. Holding a position against
+  someone trying to leave it is worse than the drift.
 - **Upward paging waits for the top.** Downward loads ahead of a fast scroll;
   upward cannot, because a prepend moves every row below it. It is also
   disarmed while a reveal is in flight and again while a prepend lands, or the
