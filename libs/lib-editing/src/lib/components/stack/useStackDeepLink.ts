@@ -7,7 +7,7 @@ import {
 } from '@eightyfourthousand/lib-utils';
 
 import { useNavigation } from '../shared/NavigationContext';
-import type { PanelName } from '../shared/types';
+import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
 import type { PassageStackController } from './PassageStackController';
 
 /** How long to wait for the target row to render before giving up. */
@@ -36,10 +36,16 @@ const waitForRow = (uuid: string): Promise<HTMLElement | null> =>
  * A `?start`/`?end` range paints the same highlight the paginated editor does.
  *
  * The hash is cleared once used, so the same link can be followed twice.
+ *
+ * Which panel to watch follows the view's own tab, because a hash is addressed
+ * to a panel and only the stack drawn in that panel can answer it. Defaulting
+ * every view to `main` left the endnotes stack watching a panel it is not in:
+ * an endnote link opened the tab and nothing scrolled. A host that draws a tab
+ * somewhere unusual can still say so.
  */
 export const useStackDeepLink = (
   controller: PassageStackController,
-  panel: PanelName = 'main',
+  panel: PanelName = PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main',
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
   const target = panels[panel]?.hash;

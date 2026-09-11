@@ -25,6 +25,7 @@ import { useStackDeepLink } from './useStackDeepLink';
 import { useStackSelection } from './useStackSelection';
 import { resolveStackLink, STACK_LINK_SELECTOR } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
+import type { PanelName } from '../shared/types';
 import type { StackLinkTarget } from './stack-links';
 
 /**
@@ -63,10 +64,16 @@ export const PassageStack = ({
   controller,
   className,
   overscan = OVERSCAN,
+  panel,
 }: {
   controller: PassageStackController;
   className?: string;
   overscan?: number;
+  /**
+   * The panel this stack is drawn in, for deep links. Defaults to the one its
+   * tab belongs to; pass it only for a host that places a tab elsewhere.
+   */
+  panel?: PanelName;
 }) => {
   useSyncExternalStore(
     controller.subscribe,
@@ -204,7 +211,7 @@ export const PassageStack = ({
   }, [firstUuid, order, virtualizer]);
 
   useStackSelection(controller);
-  useStackDeepLink(controller);
+  useStackDeepLink(controller, panel);
 
   // Click-to-focus on static rows, via delegation so text drags across
   // static content stay plain selections instead of mounting editors.

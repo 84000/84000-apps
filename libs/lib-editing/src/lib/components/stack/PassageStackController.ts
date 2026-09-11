@@ -213,6 +213,9 @@ export class PassageStackController {
   /** Reader rather than studio, which decides how a link is followed. */
   isReadOnly = () => this.readOnly;
 
+  /** The tab this view draws, which is also what names its panel. */
+  getTab = () => this.tab;
+
   /** Whether a row shows the bookmark indicator. */
   showsBookmark = (uuid: string) => this.readOnly && this.bookmarks.has(uuid);
 
