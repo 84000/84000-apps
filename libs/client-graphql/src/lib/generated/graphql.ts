@@ -49,6 +49,7 @@ export type Annotation = {
    * - image: { src }
    * - list: { spacing, nesting, itemStyle }
    * - glossaryInstance: { glossary }
+   * - comment: { comment }
    * - endNoteLink: { endNote, label }
    * - abbreviation/hasAbbreviation: { abbreviation }
    * - quote/quoted: { quote }
