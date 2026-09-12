@@ -4,6 +4,7 @@ import { abbreviation } from './abbreviation';
 import { audio } from './audio';
 import { blockquote } from './blockquote';
 import { code } from './code';
+import { comment } from './comment';
 import { endNoteLink } from './end-note-link';
 import { glossaryInstance } from './glossary-instance';
 import { hasAbbreviation } from './has-abbreviation';
@@ -50,6 +51,7 @@ const EXPORTERS: Partial<
   blockquote,
   bulletList: list,
   code,
+  comment,
   endNoteLink,
   foreign: span,
   glossaryInstance,

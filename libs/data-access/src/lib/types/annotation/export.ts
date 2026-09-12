@@ -4,6 +4,7 @@ import { exporter as abbreviation } from './abbreviation';
 import { exporter as audio } from './audio';
 import { exporter as blockquote } from './blockquote';
 import { exporter as code } from './code';
+import { exporter as comment } from './comment';
 import { exporter as deprecated } from './deprecated';
 import { exporter as endNoteLink } from './end-note-link';
 import { exporter as glossaryInstance } from './glossary-instance';
@@ -38,6 +39,7 @@ export const annotationToDtoMap: Record<AnnotationType, AnnotationExporter> = {
   audio,
   blockquote,
   code,
+  comment,
   deprecated,
   endNoteLink,
   glossaryInstance,

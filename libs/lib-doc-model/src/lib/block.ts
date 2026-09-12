@@ -143,6 +143,7 @@ const PRIORITY_FOR_ANNOTAION_TYPE: { [key in AnnotationType]: BlockPriority } =
     audio: BlockPriority.Inline,
     blockquote: BlockPriority.OuterBlock,
     code: BlockPriority.Inline,
+    comment: BlockPriority.Mark,
     deprecated: BlockPriority.Unknown,
     endNoteLink: BlockPriority.Mark,
     glossaryInstance: BlockPriority.Mark,

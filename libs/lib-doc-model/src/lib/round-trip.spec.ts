@@ -2,6 +2,7 @@ import type { Node } from '@tiptap/pm/model';
 import {
   Annotation,
   annotationsFromDTO,
+  CommentAnnotation,
   PassageDTO,
   passageFromDTO,
 } from '@eightyfourthousand/data-access';
@@ -107,6 +108,14 @@ const dto: PassageDTO = {
         { authority: 'authority-uuid-1' },
       ],
     },
+    {
+      uuid: 'comment-1',
+      passage_uuid: 'passage-uuid-1',
+      type: 'comment',
+      start: 26,
+      end: 39,
+      content: [{ uuid: 'comment-thread-uuid-1' }],
+    },
   ],
 };
 
@@ -162,8 +171,24 @@ describe('annotation round-trip', () => {
     expect(coverageByOriginal.get('span-1')?.length).toBeGreaterThan(1);
   });
 
+  it('carries the thread uuid back out of the comment anchor', () => {
+    const anchors = exported.filter((a) => a.type === 'comment');
+    expect(anchors.length).toBeGreaterThan(0);
+    for (const anchor of anchors) {
+      expect((anchor as CommentAnnotation).comment).toBe(
+        'comment-thread-uuid-1',
+      );
+    }
+  });
+
   it('does not invent annotations that were never in the source', () => {
-    const knownTypes = ['link', 'span', 'glossaryInstance', 'paragraph'];
+    const knownTypes = [
+      'link',
+      'span',
+      'glossaryInstance',
+      'comment',
+      'paragraph',
+    ];
     for (const annotation of exported) {
       expect(knownTypes).toContain(annotation.type);
     }

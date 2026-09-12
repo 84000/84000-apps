@@ -140,6 +140,43 @@ describe('replacePassageText', () => {
     expect(result.deletedAnnotationCount).toBe(1);
   });
 
+  it('shifts a comment anchor across a replaced range, keeping its thread', () => {
+    const anchor: Annotation = {
+      ...createAnnotation({ uuid: 'comment-1', start: 1, end: 9 }),
+      type: 'comment',
+      comment: 'comment-thread-uuid-1',
+    };
+    const result = replacePassageText({
+      passage: createPassage('0123456789', [anchor]),
+      searchText: '345',
+      replaceText: 'XX',
+    });
+
+    expect(result.passage.annotations[0]).toMatchObject({
+      start: 1,
+      end: 8,
+      comment: 'comment-thread-uuid-1',
+    });
+  });
+
+  it('deletes a comment anchor whose whole range is removed', () => {
+    const anchor: Annotation = {
+      ...createAnnotation({ uuid: 'comment-1', start: 0, end: 3 }),
+      type: 'comment',
+      comment: 'comment-thread-uuid-1',
+    };
+    const result = replacePassageText({
+      passage: createPassage('abc', [anchor]),
+      searchText: 'abc',
+      replaceText: '',
+    });
+
+    // The anchor goes; the thread it points at is a separate row this path
+    // never touches.
+    expect(result.passage.annotations).toEqual([]);
+    expect(result.deletedAnnotationCount).toBe(1);
+  });
+
   it('maps an annotation contained within the replaced range onto the inserted replacement', () => {
     const result = replacePassageText({
       passage: createPassage('abc def ghi', [

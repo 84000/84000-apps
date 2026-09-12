@@ -5,6 +5,7 @@ export type AnnotationDTOType =
   | 'audio'
   | 'blockquote'
   | 'code'
+  | 'comment'
   | 'deprecated-internal-link'
   | 'end-note-link'
   | 'glossary-instance'
@@ -39,6 +40,7 @@ export type AnnotationType =
   | 'audio'
   | 'blockquote'
   | 'code'
+  | 'comment'
   | 'deprecated'
   | 'endNoteLink'
   | 'glossaryInstance'
@@ -76,6 +78,7 @@ export const ANNOTATION_TYPE_DTO_TO_TYPE: Record<
   audio: 'audio',
   blockquote: 'blockquote',
   code: 'code',
+  comment: 'comment',
   'deprecated-internal-link': 'deprecated',
   'end-note-link': 'endNoteLink',
   'glossary-instance': 'glossaryInstance',
@@ -118,6 +121,7 @@ export const ANNOTATION_TYPE_TO_DTO: Record<AnnotationType, AnnotationDTOType> =
     audio: 'audio',
     blockquote: 'blockquote',
     code: 'code',
+    comment: 'comment',
     deprecated: 'deprecated-internal-link',
     endNoteLink: 'end-note-link',
     glossaryInstance: 'glossary-instance',
@@ -213,6 +217,21 @@ export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
 ];
 
 export type AnnotationsToIgnore = (typeof ANNOTATIONS_TO_IGNORE)[number];
+
+/**
+ * Annotations that exist only in the draft copy and must never reach a reader.
+ *
+ * Distinct from `ANNOTATIONS_TO_IGNORE`, which is consulted on the shared
+ * DTO -> domain path *and* by the save and replace diffs: a type listed there is
+ * invisible to the editor, excluded from the replace reflow, and never deleted
+ * when its mark is removed. A draft-only annotation needs all three, so it is
+ * filtered at the reader boundary instead — the GraphQL mapper the reading room
+ * and scholar's room read through.
+ *
+ * A `comment` anchor points at a `comments` thread, and comments are draft-only:
+ * there is no published copy of the table.
+ */
+export const DRAFT_ONLY_ANNOTATIONS: AnnotationDTOType[] = ['comment'];
 
 export type AnnotationBase = {
   end: number;
