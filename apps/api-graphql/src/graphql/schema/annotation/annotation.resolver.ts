@@ -10,6 +10,7 @@ import {
   type AudioAnnotation,
   type ImageAnnotation,
   type ListAnnotation,
+  type CommentAnnotation,
   type GlossaryInstanceAnnotation,
   type EndNoteLinkAnnotation,
   type AbbreviationAnnotation,
@@ -119,6 +120,11 @@ function extractMetadata(
       if (nesting !== undefined) meta.nesting = nesting;
       if (itemStyle) meta.itemStyle = itemStyle;
       return Object.keys(meta).length > 0 ? meta : null;
+    }
+
+    case 'comment': {
+      const { comment } = annotation as CommentAnnotation;
+      return { comment };
     }
 
     case 'glossaryInstance': {
