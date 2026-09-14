@@ -5,6 +5,7 @@ import {
   annotationsFromDTO,
   annotationsToDTO,
 } from './annotation';
+import { CommentThreads } from './comment';
 import { TohokuCatalogEntry } from './toh';
 
 export const BODY_ITEM_TYPES = [
@@ -76,6 +77,11 @@ export type Passage = {
   parent?: string;
   toh?: TohokuCatalogEntry;
   references?: Passages;
+  /**
+   * Comment threads anchored in this passage, read-only and draft-only. Absent
+   * unless a read asked for them; never written back.
+   */
+  comments?: CommentThreads;
   /**
    * True when the exporters could not serialize every annotation on this
    * passage (missing uuid, unlocatable node, or the passage was flagged
