@@ -49,10 +49,9 @@ type GetWorkAlignmentsArgs = {
   uuid: string;
   /** Pins the source edition when a work is catalogued under several numbers. */
   toh?: TohokuCatalogEntry;
-  page?: number;
+  /** Passage UUID to resume after; the `nextCursor` of the previous page. */
+  cursor?: string;
   size?: number;
-  /** Absolute offset into the work's ordered passages; takes precedence over `page`. */
-  offset?: number;
   includeEnglish?: boolean;
   /** Passage types to scan; defaults to those that carry alignments. */
   types?: BodyItemType[];
@@ -75,14 +74,18 @@ type GetWorkAlignmentsArgs = {
  * than alignments, and an unaligned one inside that scope returns nothing, so a
  * page can come back short with the body still ahead of it. `hasMore` is
  * reported for that reason and must not be inferred from the page length.
+ *
+ * Paging is by cursor — the `nextCursor` of the previous page, which is a
+ * passage UUID. It is the last passage *scanned* rather than the last one that
+ * produced an alignment, so a page ending in unaligned passages resumes after
+ * them instead of rewinding.
  */
 export const getWorkAlignments = async ({
   client,
   uuid,
   toh,
-  page = 0,
+  cursor,
   size = 20,
-  offset,
   includeEnglish = false,
   types = ALIGNABLE_PASSAGE_TYPES,
   source = DEFAULT_CONTENT_SOURCE,
@@ -94,19 +97,44 @@ export const getWorkAlignments = async ({
   };
 
   const pageSize = Math.min(size, MAX_BATCH);
-  const start = offset ?? page * pageSize;
+  const relation = relationFor('passages', source);
 
-  // One extra row answers `hasMore` without a second count query.
-  const { data: passageRows, error: passageError } = await client
-    .from(relationFor('passages', source))
+  let anchor: { sort: number; uuid: string } | null = null;
+  if (cursor) {
+    const { data } = await client
+      .from(relation)
+      .select('uuid, sort')
+      .eq('uuid', cursor)
+      .single();
+
+    if (!data) {
+      console.error(`No passage found for alignment cursor: ${cursor}`);
+      return empty;
+    }
+
+    anchor = data as { sort: number; uuid: string };
+  }
+
+  let passageQuery = client
+    .from(relation)
     .select('uuid, sort')
-    // `sort` repeats across a work's Tohoku numbers, so it is not a total order
-    // on its own; the uuid tiebreak keeps paging from skipping or repeating.
     .eq('work_uuid', uuid)
     .in('type', types)
     .order('sort', { ascending: true })
     .order('uuid', { ascending: true })
-    .range(start, start + pageSize);
+    // One extra row answers `hasMore` without a second count query.
+    .limit(pageSize + 1);
+
+  if (anchor) {
+    // Keyset on the whole sort key, not on `sort` alone. `sort` is not unique
+    // within a work — 83 groups share one across 46 works — so `sort > anchor`
+    // would drop the rest of a group whenever a page boundary landed inside it.
+    passageQuery = passageQuery.or(
+      `sort.gt.${anchor.sort},and(sort.eq.${anchor.sort},uuid.gt.${anchor.uuid})`,
+    );
+  }
+
+  const { data: passageRows, error: passageError } = await passageQuery;
 
   if (passageError) {
     console.error('Error fetching passages for alignments:', passageError);
@@ -172,7 +200,7 @@ export const getWorkAlignments = async ({
     alignments,
     passagesScanned: pageRows.length,
     hasMore,
-    nextOffset: hasMore ? start + pageRows.length : undefined,
+    nextCursor: hasMore ? pageRows[pageRows.length - 1].uuid : undefined,
   };
 };
 

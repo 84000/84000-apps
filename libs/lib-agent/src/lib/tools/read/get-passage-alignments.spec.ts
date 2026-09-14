@@ -54,7 +54,7 @@ describe('get-passage-alignments tool', () => {
       alignments: [alignment('passage-1')],
       passagesScanned: 20,
       hasMore: true,
-      nextOffset: 20,
+      nextCursor: 'passage-20',
     } as never);
 
     const result = await tool.handler({ uuid: 'work-1' }, extra);
@@ -63,15 +63,14 @@ describe('get-passage-alignments tool', () => {
       client,
       uuid: 'work-1',
       toh: undefined,
-      page: undefined,
+      cursor: undefined,
       size: undefined,
-      offset: undefined,
       includeEnglish: undefined,
     });
     expect(parse(result)).toMatchObject({
       workUuid: 'work-1',
       hasMore: true,
-      nextOffset: 20,
+      nextCursor: 'passage-20',
     });
   });
 
@@ -121,6 +120,20 @@ describe('get-passage-alignments tool', () => {
       alignments: [alignment('passage-1'), alignment('passage-2')],
       unaligned: ['passage-3'],
     });
+  });
+
+  it('passes the cursor through', async () => {
+    mockedWork.mockResolvedValue({
+      alignments: [],
+      passagesScanned: 0,
+      hasMore: false,
+    } as never);
+
+    await tool.handler({ uuid: 'work-1', cursor: 'passage-20' }, extra);
+
+    expect(mockedWork).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'passage-20' }),
+    );
   });
 
   it('passes includeEnglish through', async () => {

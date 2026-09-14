@@ -26,7 +26,7 @@ superseded or covered by another entry, then call `get-passage-alignments`:
 
 - **A whole work** — address it by `toh` or `uuid`. Paging runs in reading
   order; `size` counts passages rather than alignments, so read `hasMore` and
-  pass `nextOffset` back rather than stopping at a short page. Add
+  pass `nextCursor` back rather than stopping at a short page. Add
   `includeEnglish` when you want both halves side by side; leave it off when you
   already have the English, which is most of the time.
 - **Passages you already hold** — pass their UUIDs as `passageUuids`. The

@@ -59,12 +59,16 @@ export type PassageAlignmentDTO = AlignmentDTO & {
  * passage contributes nothing. `hasMore` therefore has to be reported rather
  * than inferred from a short page — a page can legitimately come back empty
  * with the whole body still ahead of it.
+ *
+ * `nextCursor` is a passage UUID, and is the last passage scanned rather than
+ * the last one that yielded an alignment, so resuming from it does not repeat
+ * the unaligned tail of a page.
  */
 export type PassageAlignmentsPage = {
   alignments: PassageAlignment[];
   passagesScanned: number;
   hasMore: boolean;
-  nextOffset?: number;
+  nextCursor?: string;
 };
 
 export const passageAlignmentFromDTO = (

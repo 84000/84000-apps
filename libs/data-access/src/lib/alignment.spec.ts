@@ -8,7 +8,9 @@ type Call = {
   columns?: string;
   inValues?: unknown[];
   eq: Record<string, unknown>;
-  range?: [number, number];
+  or?: string;
+  limit?: number;
+  single?: boolean;
 };
 
 class FakeQueryBuilder {
@@ -37,26 +39,58 @@ class FakeQueryBuilder {
     return this;
   }
 
-  range(from: number, to: number) {
-    this.call.range = [from, to];
+  or(filter: string) {
+    this.call.or = filter;
+    return this;
+  }
+
+  limit(count: number) {
+    this.call.limit = count;
+    return this;
+  }
+
+  single() {
+    this.call.single = true;
     return this;
   }
 
   then<T>(onfulfilled?: (value: unknown) => T) {
-    const [from, to] = this.call.range ?? [0, this.rows.length - 1];
+    // Apply the filters the reader actually sets, so a test can assert on the
+    // rows that come back rather than only on the query that was built.
+    let matched = this.rows;
+    const eqUuid = this.call.eq['uuid'];
+    if (eqUuid !== undefined) {
+      matched = matched.filter((row) => row['uuid'] === eqUuid);
+    }
+    if (this.call.or) {
+      const [, gtSort, eqSort, gtUuid] =
+        /^sort\.gt\.(\S+?),and\(sort\.eq\.(\S+?),uuid\.gt\.(\S+?)\)$/.exec(
+          this.call.or,
+        ) ?? [];
+      matched = matched.filter(
+        (row) =>
+          Number(row['sort']) > Number(gtSort) ||
+          (Number(row['sort']) === Number(eqSort) &&
+            String(row['uuid']) > String(gtUuid)),
+      );
+    }
+    const from = 0;
+    const to = (this.call.limit ?? matched.length) - 1;
     // Project to the selected columns the way PostgREST does — a column the
     // query did not ask for must not reach the mapper.
     const selected = this.call.columns?.split(',').map((c) => c.trim());
-    const rows = this.rows.slice(from, to + 1).map((row) =>
-      selected
-        ? Object.fromEntries(
-            Object.entries(row).filter(([key]) => selected.includes(key)),
-          )
-        : row,
-    );
+    const rows = matched
+      .slice(from, to + 1)
+      .map((row) =>
+        selected
+          ? Object.fromEntries(
+              Object.entries(row).filter(([key]) => selected.includes(key)),
+            )
+          : row,
+      );
     const result = this.error
       ? { data: null, error: this.error }
-      : { data: rows, error: null };
+      : { data: this.call.single ? (rows[0] ?? null) : rows, error: null };
     return Promise.resolve(result).then(onfulfilled);
   }
 }
@@ -115,7 +149,7 @@ describe('getWorkAlignments', () => {
     expect(result.alignments.map((a) => a.passageUuid)).toEqual(['p-1', 'p-2']);
     expect(result.passagesScanned).toBe(2);
     expect(result.hasMore).toBe(false);
-    expect(result.nextOffset).toBeUndefined();
+    expect(result.nextCursor).toBeUndefined();
   });
 
   it('scans only passage types that carry alignments', async () => {
@@ -152,7 +186,84 @@ describe('getWorkAlignments', () => {
 
     expect(result.alignments).toEqual([]);
     expect(result.hasMore).toBe(true);
-    expect(result.nextOffset).toBe(2);
+    // The cursor is the last passage SCANNED, not the last that yielded an
+    // alignment — otherwise a page ending in unaligned passages rewinds.
+    expect(result.nextCursor).toBe('p-2');
+  });
+
+  it('resumes after the cursor passage', async () => {
+    const calls: Call[] = [];
+    const client = fakeClient(
+      {
+        published_passages_live: [
+          passage('p-1', 1),
+          passage('p-2', 2),
+          passage('p-3', 3),
+        ],
+        passage_alignments: [alignmentRow('p-3')],
+      },
+      calls,
+    );
+
+    const result = await getWorkAlignments({
+      client,
+      uuid: 'work-1',
+      cursor: 'p-2',
+    });
+
+    expect(result.alignments.map((a) => a.passageUuid)).toEqual(['p-3']);
+    expect(result.passagesScanned).toBe(1);
+  });
+
+  // `sort` is not unique within a work, so a cursor keyed on sort alone drops
+  // the rest of a duplicate-sort group whenever a page boundary lands inside it.
+  it('does not skip the rest of a duplicate-sort group', async () => {
+    const calls: Call[] = [];
+    const client = fakeClient(
+      {
+        published_passages_live: [
+          passage('p-a', 5),
+          passage('p-b', 5),
+          passage('p-c', 6),
+        ],
+        passage_alignments: [
+          alignmentRow('p-a'),
+          alignmentRow('p-b'),
+          alignmentRow('p-c'),
+        ],
+      },
+      calls,
+    );
+
+    const first = await getWorkAlignments({ client, uuid: 'work-1', size: 1 });
+    expect(first.alignments.map((a) => a.passageUuid)).toEqual(['p-a']);
+    expect(first.nextCursor).toBe('p-a');
+
+    const second = await getWorkAlignments({
+      client,
+      uuid: 'work-1',
+      cursor: first.nextCursor,
+    });
+
+    // p-b shares p-a's sort; a `sort > 5` cursor would have lost it.
+    expect(second.alignments.map((a) => a.passageUuid)).toEqual(['p-b', 'p-c']);
+  });
+
+  it('returns an empty page for a cursor that names no passage', async () => {
+    const calls: Call[] = [];
+    const client = fakeClient(
+      { published_passages_live: [passage('p-1', 1)], passage_alignments: [] },
+      calls,
+    );
+
+    const result = await getWorkAlignments({
+      client,
+      uuid: 'work-1',
+      cursor: 'nope',
+    });
+
+    expect(result.passagesScanned).toBe(0);
+    expect(result.hasMore).toBe(false);
   });
 
   it('omits english unless asked, and includes it when asked', async () => {

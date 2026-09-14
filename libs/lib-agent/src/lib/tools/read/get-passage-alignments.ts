@@ -31,12 +31,12 @@ const inputSchema = {
     .describe(
       'Include the English passage text alongside the Tibetan (default false). Leave it off when you already have the English — it roughly doubles the response.',
     ),
-  page: z
-    .number()
-    .int()
-    .nonnegative()
+  cursor: z
+    .string()
     .optional()
-    .describe('Zero-based page index (default 0)'),
+    .describe(
+      'Pagination cursor — pass back the nextCursor from the previous response to continue. Omit for the first page.',
+    ),
   size: z
     .number()
     .int()
@@ -44,14 +44,6 @@ const inputSchema = {
     .optional()
     .describe(
       'Passages per page, capped at 200 (default 20). This counts passages, not alignments — unaligned passages occupy a slot and return nothing.',
-    ),
-  offset: z
-    .number()
-    .int()
-    .nonnegative()
-    .optional()
-    .describe(
-      'Absolute offset into the work’s ordered passages — takes precedence over page. Pass back the nextOffset from a previous response to continue.',
     ),
 };
 
@@ -66,7 +58,7 @@ export function createGetPassageAlignmentsTool(
   return {
     name: 'get-passage-alignments',
     description:
-      'Get the stored alignments for a work: the span of Tibetan source text behind each translated passage, with the folio and volume it falls on. These are recorded alignments, not ones you derive — prefer this over reading folios and matching the Tibetan yourself. Returns Tibetan only by default, so it is the cheap way to add the source to English you already have; pass includeEnglish to get both and build a side-by-side. Address a work by uuid or toh, or pass passageUuids to fetch alignments for specific passages you already hold. Paging runs in passage reading order, and size counts passages rather than alignments: unaligned passages such as front matter occupy a slot and contribute nothing, so a short or even empty page does not mean the end of the work — read hasMore, and pass nextOffset back to continue. An empty result for a whole work means the work has no recorded alignments, not that it has no Tibetan source; get-translation-folios still has the folios.',
+      'Get the stored alignments for a work: the span of Tibetan source text behind each translated passage, with the folio and volume it falls on. These are recorded alignments, not ones you derive — prefer this over reading folios and matching the Tibetan yourself. Returns Tibetan only by default, so it is the cheap way to add the source to English you already have; pass includeEnglish to get both and build a side-by-side. Address a work by uuid or toh, or pass passageUuids to fetch alignments for specific passages you already hold. Paging runs in passage reading order, and size counts passages rather than alignments: unaligned passages such as front matter occupy a slot and contribute nothing, so a short or even empty page does not mean the end of the work — read hasMore, and pass nextCursor back to continue. An empty result for a whole work means the work has no recorded alignments, not that it has no Tibetan source; get-translation-folios still has the folios.',
     inputSchema,
     annotations: {
       title: 'Get Passage Alignments',
@@ -78,9 +70,8 @@ export function createGetPassageAlignmentsTool(
       toh,
       passageUuids,
       includeEnglish,
-      page,
+      cursor,
       size,
-      offset,
     }) => {
       try {
         if (passageUuids?.length) {
@@ -118,9 +109,8 @@ export function createGetPassageAlignmentsTool(
           client,
           uuid: workUuid,
           toh: toh as TohokuCatalogEntry | undefined,
-          page,
+          cursor,
           size,
-          offset,
           includeEnglish,
         });
 
