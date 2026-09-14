@@ -219,14 +219,15 @@ export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
 export type AnnotationsToIgnore = (typeof ANNOTATIONS_TO_IGNORE)[number];
 
 /**
- * Annotations that exist only in the draft copy and must never reach a reader.
+ * Annotations that exist only in the draft copy, excluded from a `published`
+ * annotation read.
  *
  * Distinct from `ANNOTATIONS_TO_IGNORE`, which is consulted on the shared
  * DTO -> domain path *and* by the save and replace diffs: a type listed there is
  * invisible to the editor, excluded from the replace reflow, and never deleted
  * when its mark is removed. A draft-only annotation needs all three, so it is
- * filtered at the reader boundary instead — the GraphQL mapper the reading room
- * and scholar's room read through.
+ * filtered by content source instead — see `getAnnotationsByPassageUuids`, which
+ * applies this only when reading the published snapshot.
  *
  * A `comment` anchor points at a `comments` thread, and comments are draft-only:
  * there is no published copy of the table.

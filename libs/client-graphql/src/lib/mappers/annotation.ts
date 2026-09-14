@@ -5,7 +5,6 @@ import {
   type HeadingClass,
   type ExtendedTranslationLanguage,
   ANNOTATION_TYPE_DTO_TO_TYPE,
-  DRAFT_ONLY_ANNOTATIONS,
 } from '@eightyfourthousand/data-access';
 
 /**
@@ -199,14 +198,12 @@ export function annotationsFromGraphQL(
   gqlAnnotations: GraphQLAnnotation[],
   passageUuid: string,
 ): Annotations {
-  // Ignored types, plus the draft-only ones a reader must never see: this
-  // mapper is the boundary the reading room and scholar's room read through.
+  // Filter out ignored annotation types
   const ignoredTypes = [
     'deprecated-internal-link',
     'quoted',
     'reference',
     'unknown',
-    ...DRAFT_ONLY_ANNOTATIONS,
   ];
   const filtered = gqlAnnotations.filter((a) => !ignoredTypes.includes(a.type));
 

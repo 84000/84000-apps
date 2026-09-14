@@ -2,6 +2,7 @@ import {
   AlignmentDTO,
   AnnotationDTO,
   DataClient,
+  DRAFT_ONLY_ANNOTATIONS,
   Passage,
   PassageDTO,
   Passages,
@@ -36,13 +37,23 @@ export const getAnnotationsByPassageUuids = async ({
   let hasMore = true;
 
   while (hasMore) {
-    const { data, error } = await client
+    let query = client
       .from(relationFor('passageAnnotations', source))
       .select('uuid, passage_uuid, type, start, end, content, toh')
       .in('passage_uuid', passageUuids as string[])
       // The published snapshot already excludes `deprecated%` types, so this is
       // a no-op there; it stays unconditional to keep one code path.
-      .not('type', 'like', 'deprecated%')
+      .not('type', 'like', 'deprecated%');
+
+    // Draft-only annotations must never reach a reader. Conditional, unlike the
+    // filter above, because the editor loads through this same function and
+    // needs them — excluding them everywhere would make a comment anchor
+    // invisible to the surface that owns it.
+    if (source === 'published') {
+      query = query.not('type', 'in', `(${DRAFT_ONLY_ANNOTATIONS.join(',')})`);
+    }
+
+    const { data, error } = await query
       // deterministic order is required for stable pagination; without it
       // postgres may return rows in a different order per page, skipping or
       // duplicating annotations
