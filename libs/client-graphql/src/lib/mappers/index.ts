@@ -1,4 +1,5 @@
 export * from './alignment';
+export * from './comment';
 export * from './annotation';
 export * from './imprint';
 export * from './passage';

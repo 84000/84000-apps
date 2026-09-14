@@ -1,0 +1,91 @@
+"""
+A comment thread on a passage, or one reply within it.
+
+Carries no text range. The range a comment refers to lives on the
+`comment` annotation anchoring it, which is what places a thread on a passage:
+a thread's `entityUuid` records where it was born, not where it currently sits.
+"""
+type Comment {
+  """
+  Unique identifier for the comment
+  """
+  uuid: ID!
+
+  """
+  The comment body
+  """
+  content: String!
+
+  """
+  Who wrote it
+  """
+  author: CommentAuthor!
+
+  """
+  When it was written, ISO 8601
+  """
+  createdAt: String!
+
+  """
+  When it was last edited, ISO 8601
+  """
+  updatedAt: String
+
+  """
+  When the thread was resolved, ISO 8601. Set on a thread root only; a reply
+  inherits its thread's resolution state rather than carrying its own.
+  """
+  resolvedAt: String
+
+  """
+  Who resolved the thread. Root-only, like `resolvedAt`.
+  """
+  resolvedBy: CommentAuthor
+
+  """
+  Replies to this comment, oldest first. Populated on a thread root; always
+  empty on a reply, since threads are one level deep.
+  """
+  replies: [Comment!]!
+}
+
+"""
+The identity of a comment's author, as a thread renders them.
+
+Identity only — never an email address. A comment needs attributing, not a
+contact list.
+"""
+type CommentAuthor {
+  """
+  The author's auth user id
+  """
+  id: ID!
+
+  """
+  Their full name, falling back to their username and then to a generic label.
+  Never empty: a blank beside a comment reads as a rendering bug.
+  """
+  displayName: String!
+
+  """
+  URL of their avatar image, if their profile has one
+  """
+  avatarUrl: String
+}
+
+extend type Passage {
+  """
+  Comment threads anchored in this passage, oldest first. Roots only, with
+  replies nested under `replies`; a flat list plus a parent id would push tree
+  assembly into every client.
+
+  Found through the passage's `comment` annotations rather than through
+  `comments.entity_uuid`, so a thread appears where its anchor currently is
+  rather than where the thread was first written. A thread whose anchor was
+  deleted is absent here and reachable only by work scope.
+
+  Always empty for a `published` content source: comments are draft-only, so
+  there is nothing to find and no query is issued.
+  """
+  comments: [Comment!]!
+}

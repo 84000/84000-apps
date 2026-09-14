@@ -1,0 +1,26 @@
+fragment CommentAuthorFields on CommentAuthor {
+  id
+  displayName
+  avatarUrl
+}
+
+fragment CommentFields on Comment {
+  uuid
+  content
+  createdAt
+  updatedAt
+  resolvedAt
+  author {
+    ...CommentAuthorFields
+  }
+  resolvedBy {
+    ...CommentAuthorFields
+  }
+}
+
+fragment CommentThreadFields on Comment {
+  ...CommentFields
+  replies {
+    ...CommentFields
+  }
+}
