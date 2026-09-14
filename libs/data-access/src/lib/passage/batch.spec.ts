@@ -10,6 +10,7 @@ type FakeState = {
   rows: FakeRow[];
   orderColumns: string[];
   rangeCalls: [number, number][];
+  notCalls: [string, string, string][];
   error?: { message: string };
 };
 
@@ -27,7 +28,8 @@ class FakeBatchQueryBuilder {
     return this;
   }
 
-  not() {
+  not(column: string, operator: string, value: string) {
+    this.state.notCalls.push([column, operator, value]);
     return this;
   }
 
@@ -71,6 +73,7 @@ const createState = (rows: FakeRow[]): FakeState => ({
   rows,
   orderColumns: [],
   rangeCalls: [],
+  notCalls: [],
 });
 
 const annotationRow = (
@@ -136,6 +139,32 @@ describe('getAnnotationsByPassageUuids', () => {
       'a-1',
     ]);
     expect(result.get('p-2')?.map((a) => a.uuid)).toEqual(['a-2']);
+  });
+
+  it('excludes draft-only annotations from a published read', async () => {
+    const state = createState([annotationRow('a-1', 'p-1')]);
+
+    await getAnnotationsByPassageUuids({
+      client: createFakeClient(state),
+      passageUuids: ['p-1'],
+      source: 'published',
+    });
+
+    expect(state.notCalls).toContainEqual(['type', 'in', '(comment)']);
+  });
+
+  it('keeps draft-only annotations on a draft read', async () => {
+    const state = createState([annotationRow('a-1', 'p-1')]);
+
+    await getAnnotationsByPassageUuids({
+      client: createFakeClient(state),
+      passageUuids: ['p-1'],
+      source: 'draft',
+    });
+
+    // The editor loads through here; filtering comment anchors out would make
+    // them invisible to the surface that owns them.
+    expect(state.notCalls.map(([, operator]) => operator)).not.toContain('in');
   });
 
   it('returns an empty map on query error', async () => {

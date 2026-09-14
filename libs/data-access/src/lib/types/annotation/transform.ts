@@ -15,6 +15,7 @@ import { transformer as abbreviation } from './abbreviation';
 import { transformer as audio } from './audio';
 import { transformer as blockquote } from './blockquote';
 import { transformer as code } from './code';
+import { transformer as comment } from './comment';
 import { transformer as deprecated } from './deprecated';
 import { transformer as endNoteLink } from './end-note-link';
 import { transformer as glossaryInstance } from './glossary-instance';
@@ -50,6 +51,7 @@ const dtoToAnnotationMap: Record<AnnotationDTOType, AnnotationTransformer> = {
   audio,
   blockquote,
   code,
+  comment,
   'deprecated-internal-link': deprecated,
   'end-note-link': endNoteLink,
   'glossary-instance': glossaryInstance,

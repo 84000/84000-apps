@@ -27,6 +27,23 @@ export type CodeAnnotation = AnnotationBase & {
   type: 'code';
 };
 
+/**
+ * Anchors a comment thread to a range of passage text.
+ *
+ * `comment` is the `comments.uuid` of the thread root, mirroring how
+ * `glossaryInstance` carries a glossary UUID. The anchor holds the range and the
+ * thread holds the discussion, so editing text above a comment reflows the
+ * anchor through the machinery every other annotation already uses.
+ *
+ * Removing the mark deletes this annotation and nothing else: the thread has no
+ * foreign key back to it and outlives it as an unanchored thread. A cascade
+ * would let a serialization gap on the client destroy comment history.
+ */
+export type CommentAnnotation = AnnotationBase & {
+  type: 'comment';
+  comment: string;
+};
+
 export type DeprecatedAnnotation = AnnotationBase & {
   type: 'deprecated';
 };
@@ -230,6 +247,7 @@ export type Annotation =
   | AudioAnnotation
   | BlockquoteAnnotation
   | CodeAnnotation
+  | CommentAnnotation
   | DeprecatedAnnotation
   | EndNoteLinkAnnotation
   | GlossaryInstanceAnnotation

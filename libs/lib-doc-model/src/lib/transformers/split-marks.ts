@@ -10,9 +10,9 @@ export type TranslationMark = {
 /**
  * Redistributes a node's marks onto one of its split segments [start, end].
  *
- * Marks without positional attrs (link, glossaryInstance, endNoteLink, etc. —
- * only span marks carry start/end) cover the whole original node, so they are
- * kept on every segment untouched. Ranged marks are kept only when they
+ * Marks without positional attrs (link, glossaryInstance, comment, endNoteLink,
+ * etc. — only span marks carry start/end) cover the whole original node, so they
+ * are kept on every segment untouched. Ranged marks are kept only when they
  * actually overlap the segment, then clamped to it; a mark that lies entirely
  * outside the segment must be dropped, never clamped into an inverted
  * (start > end) range.

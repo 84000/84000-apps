@@ -134,6 +134,13 @@ export function annotationFromGraphQL(
         itemStyle: metadata.itemStyle as string | undefined,
       };
 
+    case 'comment':
+      return {
+        ...base,
+        type: 'comment',
+        comment: (metadata.comment as string) ?? '',
+      };
+
     case 'glossaryInstance':
       return {
         ...base,

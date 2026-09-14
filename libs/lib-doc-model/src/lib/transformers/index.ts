@@ -2,6 +2,7 @@ export * from './abbreviation';
 export * from './audio';
 export * from './blockquote';
 export * from './code';
+export * from './comment';
 export * from './deprecated';
 export * from './end-note-link';
 export * from './glossary-instance';
