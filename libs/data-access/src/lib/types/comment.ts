@@ -172,3 +172,74 @@ export const threadsFromComments = (comments: Comments): Comments => {
     })
     .sort(byCreatedAt);
 };
+
+/**
+ * Who wrote a comment, as a thread renders them. Identity only — never an
+ * email, and never the unrelated profile columns such as `subscriptions`.
+ */
+export type CommentAuthor = {
+  id: string;
+  /** Never empty — see `commentAuthorFromDTO` for what fills a blank profile. */
+  displayName: string;
+  avatarUrl?: string;
+};
+
+export type CommentAuthorDTO = {
+  id: string;
+  username?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+};
+
+/**
+ * What a comment is attributed to when the profile says nothing. A comment
+ * always has an author — `user_uuid` is NOT NULL — so the question is only ever
+ * what to call them, and a blank beside the text reads as a rendering bug.
+ */
+export const UNKNOWN_COMMENT_AUTHOR = 'Unknown author';
+
+/**
+ * Prefers the name a person chose to be called over the handle they log in
+ * with. Both may be null on a profile created by the signup trigger from an
+ * identity provider that supplied neither.
+ */
+export const commentAuthorFromDTO = (dto: CommentAuthorDTO): CommentAuthor => {
+  const author: CommentAuthor = {
+    id: dto.id,
+    displayName: dto.full_name || dto.username || UNKNOWN_COMMENT_AUTHOR,
+  };
+
+  if (dto.avatar_url) author.avatarUrl = dto.avatar_url;
+
+  return author;
+};
+
+/**
+ * The author of a comment whose profile did not come back — deleted, or not
+ * resolvable by this caller. Renders like a profile with no name set, so a
+ * thread never shows a hole where a person should be.
+ */
+export const unknownCommentAuthor = (id: string): CommentAuthor => ({
+  id,
+  displayName: UNKNOWN_COMMENT_AUTHOR,
+});
+
+/**
+ * A comment as a thread is read and rendered: author attached, scope dropped.
+ *
+ * Distinct from `Comment`, the stored row, which carries ids a reader has no
+ * use for and no author identity it does need. Used for roots and replies
+ * alike; `replies` is empty on a reply, since threads are one level deep.
+ */
+export type CommentThread = {
+  uuid: string;
+  content: string;
+  author: CommentAuthor;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: CommentAuthor;
+  replies: CommentThreads;
+};
+
+export type CommentThreads = CommentThread[];
