@@ -3,6 +3,7 @@ import type { McpToolDefinition } from '../../types';
 
 import { createGetTranslationTool } from './get-translation';
 import { createGetPassageTool } from './get-passage';
+import { createGetPassageAlignmentsTool } from './get-passage-alignments';
 import { createGetTranslationPassagesTool } from './get-translation-passages';
 import { createGetTranslationFoliosTool } from './get-translation-folios';
 import { createSearchTranslationTool } from './search-translation';
@@ -25,6 +26,7 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
   return [
     createGetTranslationTool(client),
     createGetPassageTool(client),
+    createGetPassageAlignmentsTool(client),
     createGetTranslationPassagesTool(client),
     createGetTranslationFoliosTool(client),
     createSearchTranslationTool(client),
@@ -47,6 +49,7 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
 
 export { createGetTranslationTool } from './get-translation';
 export { createGetPassageTool } from './get-passage';
+export { createGetPassageAlignmentsTool } from './get-passage-alignments';
 export { createGetTranslationPassagesTool } from './get-translation-passages';
 export { createGetTranslationFoliosTool } from './get-translation-folios';
 export { createSearchTranslationTool } from './search-translation';
