@@ -1,12 +1,57 @@
 ---
 name: tibetan-english-passage-alignment
-description: Given a chunk of English translation and the corresponding Tibetan source, find the boundary of the Tibetan span that renders it and report which folio(s) it falls on, with a confidence rating. Use whenever a translator or editor has one specific English passage and needs to know exactly which piece of Tibetan it corresponds to — "find the Tibetan for this paragraph of my draft", "where in Toh 312 does this sentence come from", "align this English passage to the source folios". This is an on-demand lookup for a single given passage. Do not use it to fetch Tibetan when there is no English to align against — that is tibetan-source-text.
+description: Report which span of Tibetan source text a passage of English translation renders, and which folio(s) it falls on. Most published works already have alignments recorded passage by passage — fetch those first with get-passage-alignments; derive a boundary by hand only where none is recorded. Use whenever a translator or editor needs English and Tibetan set against each other — "find the Tibetan for this paragraph of my draft", "where in Toh 312 does this sentence come from", "align this English passage to the source folios", "show me the aligned Tibetan and English for Toh 312", "pull the source spans for this work". Covers one given passage and a whole work alike. Do not use it to fetch Tibetan when there is no English to set it against — that is tibetan-source-text.
 ---
 
 # Tibetan–English passage alignment
 
-Align one English passage to its span of Tibetan source text and report which
-folio(s) it falls on. A single-passage lookup, not a bulk segmentation pass.
+Set a passage of English against the span of Tibetan source text it renders, and
+report which folio(s) that span falls on.
+
+Two ways to arrive at one, and they are not equal:
+
+- **Recorded** — 84000 has stored alignments for most published works, one per
+  passage, produced editorially. Read them with `get-passage-alignments`.
+- **Derived** — you read the folios and judge the boundary yourself. This is an
+  interpretive act, and it is the fallback, not the default.
+
+Always check for a recorded alignment before deriving one. A derived boundary
+presented where a recorded one exists silently replaces editorial data with a
+guess.
+
+## Step 0 — Look for a recorded alignment
+
+Resolve the number with `resolve-toh` first if there is any chance it is
+superseded or covered by another entry, then call `get-passage-alignments`:
+
+- **A whole work** — address it by `toh` or `uuid`. Paging runs in reading
+  order; `size` counts passages rather than alignments, so read `hasMore` and
+  pass `nextOffset` back rather than stopping at a short page. Add
+  `includeEnglish` when you want both halves side by side; leave it off when you
+  already have the English, which is most of the time.
+- **Passages you already hold** — pass their UUIDs as `passageUuids`. The
+  response names any of them that carry no alignment, under `unaligned`.
+- **One English chunk the person pasted** — find its passage first, with
+  `search-translation` on a distinctive phrase, then ask for that passage UUID.
+
+A work catalogued at several points in the canon carries one alignment per
+placement, so a passage can come back with several spans in different volumes.
+Report the one for the edition under discussion, and say that the others exist
+rather than silently picking one. Pass `toh` to pin a single placement.
+
+Present what comes back as-is. It is already folio-cited; there is no boundary
+left to judge and no confidence to rate, so skip to the reporting format below
+and say the alignment is recorded.
+
+**Only if nothing is recorded** — an empty result for the whole work, or the
+passage listed under `unaligned` — continue to Step 1 and derive it. An empty
+result does not mean the work has no Tibetan: the folios are still there.
+
+## Deriving an alignment
+
+The rest of this skill covers the fallback: no recorded alignment exists, and
+you are judging the boundary yourself. Say so plainly in the result — a reader
+must be able to tell a derived boundary from a recorded one.
 
 ## Inputs
 
@@ -92,6 +137,13 @@ instead of forcing an answer.
 
 ## Step 5 — Report
 
+Use this format for a recorded alignment too, minus the confidence line. Note
+that a recorded one arrives shaped a little differently: it names the folio the
+span *starts* on, and where the span runs past a folio break it marks the
+crossing inline in the Tibetan as `[F.158.a]` rather than splitting into one
+entry per folio. Keep those markers where they are — they are the citation — and
+report the folios they name alongside the starting one.
+
 For the aligned span:
 
 - One entry per folio touched, each with `folio_uuid`, `folio_number`, `side`,
@@ -100,7 +152,9 @@ For the aligned span:
 - The English passage exactly as given.
 - If more than one folio was touched, the full Tibetan chunk combined across
   folios in reading order.
-- The confidence level, and a one-line note whenever it is anything but high.
+- Whether the alignment is **recorded** or **derived**.
+- For a derived one, the confidence level, and a one-line note whenever it is
+  anything but high. A recorded alignment carries no confidence rating.
 
 Single folio:
 
@@ -132,6 +186,10 @@ Confidence: moderate — boundary falls mid-formula; the exact split point is a 
   given.
 - Do not guess a folio, or fabricate a `folio_uuid`, when the passage cannot
   actually be located. Say so instead.
+- Do not derive a boundary without checking `get-passage-alignments` first, and
+  do not present a derived one as though it were recorded.
+- Do not "correct" a recorded alignment against your own reading. If it looks
+  wrong, report the recorded span and say why you doubt it.
 - Do not treat English sentence boundaries as automatically equal to Tibetan
   clause boundaries.
 - Do not import readings from a parallel or a published translation to "help"
