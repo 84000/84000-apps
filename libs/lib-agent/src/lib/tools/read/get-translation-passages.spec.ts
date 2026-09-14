@@ -80,3 +80,58 @@ describe('get-translation-passages tool', () => {
     );
   });
 });
+
+describe('get-translation-passages alignments', () => {
+  const client = {} as DataClient;
+  const tool = createGetTranslationPassagesTool(client);
+  const extra = {} as Parameters<typeof tool.handler>[1];
+  const aligned = {
+    passages: [
+      {
+        uuid: 'passage-1',
+        content: 'English',
+        alignments: [{ folioUuid: 'folio-1', tibetan: 'བོད' }],
+        annotations: [],
+      },
+    ],
+    hasMoreAfter: false,
+    hasMoreBefore: false,
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  const parse = (result: Awaited<ReturnType<typeof tool.handler>>) =>
+    JSON.parse((result.content[0] as { text: string }).text);
+
+  it('keeps alignments by default', async () => {
+    mockedSequential.mockResolvedValue(aligned as any);
+
+    const result = await tool.handler({ uuid: 'work-1' }, extra);
+
+    expect(parse(result).passages[0].alignments).toHaveLength(1);
+  });
+
+  it('drops alignments when includeAlignments is false', async () => {
+    mockedSequential.mockResolvedValue(aligned as any);
+
+    const result = await tool.handler(
+      { uuid: 'work-1', includeAlignments: false },
+      extra,
+    );
+
+    const [passage] = parse(result).passages;
+    expect(passage).not.toHaveProperty('alignments');
+    expect(passage.content).toBe('English');
+  });
+
+  it('drops alignments on the around path too', async () => {
+    mockedAround.mockResolvedValue(aligned as any);
+
+    const result = await tool.handler(
+      { uuid: 'work-1', passageUuid: 'passage-1', includeAlignments: false },
+      extra,
+    );
+
+    expect(parse(result).passages[0]).not.toHaveProperty('alignments');
+  });
+});

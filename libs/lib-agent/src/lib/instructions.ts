@@ -48,6 +48,12 @@ A number a source cites is often not an entry of its own. It may be superseded (
 
 Folio and passage reads key on the catalogued number, so all of the above read as a missing work. \`resolve-toh\` resolves any of them, accepts any written form ("Toh 312", "T. 312", "312"), reports whether the number was reached through an entry's note, and lists every point in the canon the work is placed at — separate placements with their own folios, not duplicates. Run it before concluding that a cited number does not exist.
 
+## Alignments are recorded, not derived
+
+Most published works carry stored alignments: for each translated passage, the span of Tibetan source text it renders, with the folio and volume it falls on. Reach for them before reading folios and matching the Tibetan by hand — a recorded alignment is editorial data, and a derived one is a guess.
+
+\`get-passage-alignments\` reads them on their own, Tibetan-only by default, which is the cheap way to add the source to English already in hand. \`get-translation-passages\` also embeds them in each passage; they fall outside its \`maxCharacters\` budget, so pass \`includeAlignments: false\` there when only the English is wanted. A work with no alignments still has folios — reach for \`get-translation-folios\` and align by hand only then.
+
 ## Addressing source folios
 
 \`get-translation-folios\` takes \`folioNumber\` plus \`side\` to address a folio the way it is cited (the "157" and "b" of \`F.157b\`), and widens into a range with \`before\`/\`after\`. Prefer that over paging to find a known folio.`;

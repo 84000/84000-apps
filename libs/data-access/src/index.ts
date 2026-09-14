@@ -1,3 +1,4 @@
+export * from './lib/alignment';
 export * from './lib/auth';
 export * from './lib/bibliography';
 export * from './lib/catalog';
