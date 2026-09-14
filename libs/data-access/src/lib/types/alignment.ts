@@ -30,3 +30,55 @@ export const alignmentFromDTO = (dto: AlignmentDTO): Alignment => {
 export const alignmentsFromDTO = (dtos: AlignmentDTO[]): Alignment[] => {
   return dtos.map(alignmentFromDTO);
 };
+
+/**
+ * A stored alignment together with the passage it belongs to.
+ *
+ * `Alignment` is shaped for the passage-embedded case, where the owning passage
+ * is the object carrying it. A work-scoped read has no such parent, so it names
+ * the passage itself. `english` is present only when the caller asked for it —
+ * the point of reading alignments on their own is usually to avoid paying for
+ * translation content a second time.
+ */
+export type PassageAlignment = Alignment & {
+  passageUuid: string;
+  label: string;
+  english?: string;
+};
+
+export type PassageAlignmentDTO = AlignmentDTO & {
+  label: string;
+  english?: string;
+};
+
+/**
+ * A page of a work's alignments, in passage reading order.
+ *
+ * `passagesScanned` is the number of passages the page covered, which is not
+ * the number of alignments returned: front matter and any other unaligned
+ * passage contributes nothing. `hasMore` therefore has to be reported rather
+ * than inferred from a short page — a page can legitimately come back empty
+ * with the whole body still ahead of it.
+ */
+export type PassageAlignmentsPage = {
+  alignments: PassageAlignment[];
+  passagesScanned: number;
+  hasMore: boolean;
+  nextOffset?: number;
+};
+
+export const passageAlignmentFromDTO = (
+  dto: PassageAlignmentDTO,
+): PassageAlignment => {
+  const alignment: PassageAlignment = {
+    ...alignmentFromDTO(dto),
+    passageUuid: dto.passage_uuid,
+    label: dto.label,
+  };
+
+  if (dto.english !== undefined) {
+    alignment.english = dto.english;
+  }
+
+  return alignment;
+};
