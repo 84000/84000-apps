@@ -99,7 +99,7 @@ export type BibliographyEntryItem = {
 export type Comment = {
   __typename?: 'Comment';
   /** Who wrote it */
-  author: CommentAuthor;
+  author: UserInfo;
   /** The comment body */
   content: Scalars['String']['output'];
   /** When it was written, ISO 8601 */
@@ -115,30 +115,11 @@ export type Comment = {
    */
   resolvedAt?: Maybe<Scalars['String']['output']>;
   /** Who resolved the thread. Root-only, like `resolvedAt`. */
-  resolvedBy?: Maybe<CommentAuthor>;
+  resolvedBy?: Maybe<UserInfo>;
   /** When it was last edited, ISO 8601 */
   updatedAt?: Maybe<Scalars['String']['output']>;
   /** Unique identifier for the comment */
   uuid: Scalars['ID']['output'];
-};
-
-/**
- * The identity of a comment's author, as a thread renders them.
- *
- * Identity only — never an email address. A comment needs attributing, not a
- * contact list.
- */
-export type CommentAuthor = {
-  __typename?: 'CommentAuthor';
-  /** URL of their avatar image, if their profile has one */
-  avatarUrl?: Maybe<Scalars['String']['output']>;
-  /**
-   * Their full name, falling back to their username and then to a generic label.
-   * Never empty: a blank beside a comment reads as a rendering bug.
-   */
-  displayName: Scalars['String']['output'];
-  /** The author's auth user id */
-  id: Scalars['ID']['output'];
 };
 
 /** Currently authenticated user */
@@ -1042,6 +1023,25 @@ export type TocEntry = {
   uuid: Scalars['ID']['output'];
 };
 
+/**
+ * Enough of a user to name them on screen — a comment's author, a mention's
+ * target. Identity only: never an email address, and never unrelated profile
+ * data. Distinct from `CurrentUser`, which is the session rather than an
+ * arbitrary person.
+ */
+export type UserInfo = {
+  __typename?: 'UserInfo';
+  /** URL of their avatar image, if their profile has one */
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  /**
+   * Their full name, falling back to their username and then to a generic label.
+   * Never empty: a blank where a person should be reads as a rendering bug.
+   */
+  displayName: Scalars['String']['output'];
+  /** The user's auth id */
+  id: Scalars['ID']['output'];
+};
+
 /** User role levels */
 export type UserRole =
   | 'ADMIN'
@@ -1279,14 +1279,12 @@ export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: str
 
 export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
 
-export type CommentAuthorFieldsFragment = { __typename?: 'CommentAuthor', id: string, displayName: string, avatarUrl?: string | null };
-
 export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, author: (
-    { __typename?: 'CommentAuthor' }
-    & CommentAuthorFieldsFragment
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
   ), resolvedBy?: (
-    { __typename?: 'CommentAuthor' }
-    & CommentAuthorFieldsFragment
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
   ) | null };
 
 export type CommentThreadFieldsFragment = (
@@ -1369,6 +1367,8 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
     { __typename?: 'TocEntry' }
     & TocEntryNestedFragment
   )> };
+
+export type UserInfoFieldsFragment = { __typename?: 'UserInfo', id: string, displayName: string, avatarUrl?: string | null };
 
 export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, publishedVersion?: string | null, publicationStatus?: string | null, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
 
@@ -1630,8 +1630,8 @@ export const PassageWithAnnotationsFragmentDoc = gql`
   }
 }
     `;
-export const CommentAuthorFieldsFragmentDoc = gql`
-    fragment CommentAuthorFields on CommentAuthor {
+export const UserInfoFieldsFragmentDoc = gql`
+    fragment UserInfoFields on UserInfo {
   id
   displayName
   avatarUrl
@@ -1645,10 +1645,10 @@ export const CommentFieldsFragmentDoc = gql`
   updatedAt
   resolvedAt
   author {
-    ...CommentAuthorFields
+    ...UserInfoFields
   }
   resolvedBy {
-    ...CommentAuthorFields
+    ...UserInfoFields
   }
 }
     `;
@@ -1858,7 +1858,7 @@ ${AnnotationFieldsFragmentDoc}
 ${AlignmentFieldsFragmentDoc}
 ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
-${CommentAuthorFieldsFragmentDoc}`;
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {

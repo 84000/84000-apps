@@ -1,9 +1,3 @@
-fragment CommentAuthorFields on CommentAuthor {
-  id
-  displayName
-  avatarUrl
-}
-
 fragment CommentFields on Comment {
   uuid
   content
@@ -11,10 +5,10 @@ fragment CommentFields on Comment {
   updatedAt
   resolvedAt
   author {
-    ...CommentAuthorFields
+    ...UserInfoFields
   }
   resolvedBy {
-    ...CommentAuthorFields
+    ...UserInfoFields
   }
 }
 

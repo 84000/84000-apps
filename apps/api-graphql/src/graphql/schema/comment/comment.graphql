@@ -19,7 +19,7 @@ type Comment {
   """
   Who wrote it
   """
-  author: CommentAuthor!
+  author: UserInfo!
 
   """
   When it was written, ISO 8601
@@ -40,37 +40,13 @@ type Comment {
   """
   Who resolved the thread. Root-only, like `resolvedAt`.
   """
-  resolvedBy: CommentAuthor
+  resolvedBy: UserInfo
 
   """
   Replies to this comment, oldest first. Populated on a thread root; always
   empty on a reply, since threads are one level deep.
   """
   replies: [Comment!]!
-}
-
-"""
-The identity of a comment's author, as a thread renders them.
-
-Identity only — never an email address. A comment needs attributing, not a
-contact list.
-"""
-type CommentAuthor {
-  """
-  The author's auth user id
-  """
-  id: ID!
-
-  """
-  Their full name, falling back to their username and then to a generic label.
-  Never empty: a blank beside a comment reads as a rendering bug.
-  """
-  displayName: String!
-
-  """
-  URL of their avatar image, if their profile has one
-  """
-  avatarUrl: String
 }
 
 extend type Passage {

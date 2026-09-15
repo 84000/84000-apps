@@ -76,7 +76,7 @@ export const passageCommentsResolver = async (
  * the request when it is.
  */
 export const commentAuthorResolver = (parent: Comment, _args: unknown, ctx: GraphQLContext) =>
-  ctx.loaders.commentAuthorsById.load(parent.userUuid);
+  ctx.loaders.userInfoById.load(parent.userUuid);
 
 /**
  * Field resolver for `Comment.resolvedBy`. Null on an unresolved thread and on
@@ -89,7 +89,7 @@ export const commentResolvedByResolver = (
   ctx: GraphQLContext,
 ) =>
   parent.resolvedBy
-    ? ctx.loaders.commentAuthorsById.load(parent.resolvedBy)
+    ? ctx.loaders.userInfoById.load(parent.resolvedBy)
     : null;
 
 /**
