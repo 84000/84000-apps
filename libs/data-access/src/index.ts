@@ -24,4 +24,5 @@ export * from './lib/titles';
 export * from './lib/types';
 export * from './lib/local-storage';
 export * from './lib/use-bookmark';
+export * from './lib/users';
 export * from './lib/lookup';

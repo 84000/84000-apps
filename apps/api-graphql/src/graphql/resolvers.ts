@@ -39,6 +39,14 @@ import { tocResolver } from './schema/toc/toc.resolver';
 import { titlesResolver } from './schema/work/title.resolver';
 import { publishedVersionResolver } from './schema/work/published-version.resolver';
 import { searchResolver } from './schema/search/search.resolver';
+import {
+  passageCommentsResolver,
+  commentAuthorResolver,
+  commentQueryResolver,
+  commentRepliesResolver,
+  commentReplyCountResolver,
+  commentResolvedByResolver,
+} from './schema/comment/comment.resolver';
 
 export const resolvers = {
   JSON: JSONResolver,
@@ -53,6 +61,7 @@ export const resolvers = {
     glossaryInstance: glossaryInstanceResolver,
     glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
+    comment: commentQueryResolver,
     search: searchResolver,
   },
 
@@ -86,5 +95,13 @@ export const resolvers = {
     annotations: passageAnnotationsResolver,
     alignments: passageAlignmentsResolver,
     references: passageReferencesResolver,
+    comments: passageCommentsResolver,
+  },
+
+  Comment: {
+    author: commentAuthorResolver,
+    resolvedBy: commentResolvedByResolver,
+    replies: commentRepliesResolver,
+    replyCount: commentReplyCountResolver,
   },
 };

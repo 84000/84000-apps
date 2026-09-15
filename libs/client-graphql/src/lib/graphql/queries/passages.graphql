@@ -114,3 +114,37 @@ query GetPassage($uuid: ID, $xmlId: String) {
     ...PassageWithAnnotations
   }
 }
+
+query GetPassagesWithComments(
+  $uuid: ID!
+  $cursor: String
+  $limit: Int
+  $direction: PaginationDirection
+  $filter: PassageFilter
+) {
+  work(uuid: $uuid) {
+    uuid
+    passages(
+      cursor: $cursor
+      limit: $limit
+      direction: $direction
+      filter: $filter
+    ) {
+      nodes {
+        ...PassageWithComments
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
+    }
+  }
+}
+
+query GetCommentThread($uuid: ID!, $depth: Int) {
+  comment(uuid: $uuid, depth: $depth) {
+    ...CommentThreadFields
+  }
+}

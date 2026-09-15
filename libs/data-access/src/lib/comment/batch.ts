@@ -1,5 +1,6 @@
 import {
   COMMENT_COLUMNS,
+  DEFAULT_THREAD_DEPTH,
   type CommentDTO,
   type CommentEntityType,
   type Comments,
@@ -24,11 +25,13 @@ export const getCommentsByEntityUuids = async ({
   entityUuids,
   entityType,
   source = DEFAULT_CONTENT_SOURCE,
+  maxDepth = DEFAULT_THREAD_DEPTH,
 }: {
   client: DataClient;
   entityUuids: readonly string[];
   entityType: CommentEntityType;
   source?: ContentSource;
+  maxDepth?: number;
 }): Promise<Map<string, Comments>> => {
   const commentsByEntity = new Map<string, Comments>();
 
@@ -90,7 +93,7 @@ export const getCommentsByEntityUuids = async ({
   // Assemble each entity's tree separately. A reply always shares its root's
   // entity, so no thread spans two entries.
   for (const [entityUuid, comments] of byEntity) {
-    const threads = threadsFromComments(comments);
+    const threads = threadsFromComments(comments, maxDepth);
     if (threads.length > 0) {
       commentsByEntity.set(entityUuid, threads);
     }

@@ -1,3 +1,5 @@
+import type { UserInfo } from './user';
+
 /**
  * A comment on a passage — and, later, on a glossary entry or bibliography.
  *
@@ -51,10 +53,17 @@ export type Comment = {
   resolvedAt?: string;
   resolvedBy?: string;
   /**
-   * Replies to this comment, oldest first. Populated only on a root, and only by
-   * a read that assembled the tree; a bare `commentFromDTO` leaves it absent.
+   * Replies to this comment, oldest first, nested to whatever depth the read
+   * asked for. Populated only by a read that assembled the tree; a bare
+   * `commentFromDTO` leaves it absent.
    */
   replies?: Comments;
+  /**
+   * How many direct replies this comment has in the database, which is not
+   * `replies.length` when a read truncated the tree. A client compares the two
+   * to know whether to offer "show more".
+   */
+  replyCount?: number;
 };
 
 export type Comments = Comment[];
@@ -129,17 +138,33 @@ export const commentsToDTO = (comments: Comments): CommentsDTO =>
   comments.map(commentToDTO);
 
 /**
- * Hangs replies off their roots and returns the roots, oldest first.
+ * How deep a thread read nests replies before truncating.
+ *
+ * Threads are not limited in the database and should not be: an editorial
+ * back-and-forth runs as long as it runs. This bounds the *response* rather
+ * than the data — a client renders what it gets, compares `replyCount` against
+ * `replies.length`, and fetches the rest of a branch when someone opens it.
+ */
+export const DEFAULT_THREAD_DEPTH = 2;
+
+/**
+ * Builds reply trees and returns the roots, oldest first.
  *
  * Takes a flat read of a whole thread set rather than a nested one: a PostgREST
  * embed is evaluated per parent row, so it degrades sharply as the batch grows
  * (see the decisions ledger, `2026-09-01-postgrest-embeds-scale-per-parent`).
  *
- * Only one level of nesting is built. A reply whose parent is not in the set —
- * the parent was deleted, or the read was truncated — is dropped rather than
- * promoted to a root, so a partial read cannot invent a top-level thread.
+ * `maxDepth` truncates the nesting, not the data: a comment whose replies were
+ * cut off still reports its true `replyCount`, so the caller can tell a leaf
+ * from a branch it has not fetched.
+ *
+ * A comment whose parent is absent from the set is dropped rather than promoted
+ * to a root, so a partial read cannot invent a top-level thread.
  */
-export const threadsFromComments = (comments: Comments): Comments => {
+export const threadsFromComments = (
+  comments: Comments,
+  maxDepth: number = DEFAULT_THREAD_DEPTH,
+): Comments => {
   // Compared as instants rather than strings: PostgREST returns UTC today, so
   // the two agree, but a differing offset would silently mis-sort a thread.
   // The uuid tiebreaker makes the order total, which paging depends on.
@@ -148,27 +173,68 @@ export const threadsFromComments = (comments: Comments): Comments => {
     return delta !== 0 ? delta : a.uuid.localeCompare(b.uuid);
   };
 
-  const rootUuids = new Set(
-    comments.filter((comment) => !comment.parentUuid).map(({ uuid }) => uuid),
-  );
+  const byUuid = new Map(comments.map((comment) => [comment.uuid, comment]));
 
-  const repliesByRoot = new Map<string, Comments>();
+  const childrenByParent = new Map<string, Comments>();
   for (const comment of comments) {
     const { parentUuid } = comment;
-    if (!parentUuid || !rootUuids.has(parentUuid)) continue;
-    const replies = repliesByRoot.get(parentUuid);
-    if (replies) {
-      replies.push(comment);
+    if (!parentUuid || !byUuid.has(parentUuid)) continue;
+    const siblings = childrenByParent.get(parentUuid);
+    if (siblings) {
+      siblings.push(comment);
     } else {
-      repliesByRoot.set(parentUuid, [comment]);
+      childrenByParent.set(parentUuid, [comment]);
     }
   }
 
+  // `visited` guards against a parent cycle. Nothing in the schema forbids one
+  // — `parent_uuid` is a plain self-reference — and following it blindly would
+  // spin forever rather than return a wrong answer.
+  const build = (comment: Comment, depth: number, visited: Set<string>): Comment => {
+    const children = childrenByParent.get(comment.uuid) ?? [];
+    const built: Comment = { ...comment, replyCount: children.length };
+
+    if (depth >= maxDepth || children.length === 0) return built;
+
+    const replies = children
+      .filter(({ uuid }) => !visited.has(uuid))
+      .sort(byCreatedAt)
+      .map((child) =>
+        build(child, depth + 1, new Set([...visited, child.uuid])),
+      );
+
+    if (replies.length > 0) built.replies = replies;
+
+    return built;
+  };
+
   return comments
     .filter((comment) => !comment.parentUuid)
-    .map((root) => {
-      const replies = repliesByRoot.get(root.uuid);
-      return replies ? { ...root, replies: replies.sort(byCreatedAt) } : root;
-    })
-    .sort(byCreatedAt);
+    .sort(byCreatedAt)
+    .map((root) => build(root, 0, new Set([root.uuid])));
 };
+
+/**
+ * A comment as a thread is read and rendered: author attached, scope dropped.
+ *
+ * Distinct from `Comment`, the stored row, which carries ids a reader has no
+ * use for and no author identity it does need. Used for roots and replies
+ * alike; `replies` is empty on a reply, since threads are one level deep.
+ */
+export type CommentThread = {
+  uuid: string;
+  content: string;
+  author: UserInfo;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  resolvedBy?: UserInfo;
+  replies: CommentThreads;
+  /**
+   * Direct replies the server holds, which exceeds `replies.length` wherever a
+   * read stopped short. A client offers "show more" on the difference.
+   */
+  replyCount: number;
+};
+
+export type CommentThreads = CommentThread[];

@@ -11,6 +11,8 @@ import { createFolioLoader } from './schema/folio/folio.loader';
 import { createBibliographyLabelLoader } from './schema/bibliography/bibliography-label.loader';
 import { createImprintLoader } from './schema/imprint/imprint.loader';
 import { createPublishedVersionLoader } from './schema/work/published-version.loader';
+import { createCommentThreadLoader } from './schema/comment/comment.loader';
+import { createUserInfoLoader } from './schema/user/user-info.loader';
 
 export interface Loaders {
   /**
@@ -87,6 +89,20 @@ export interface Loaders {
    * Used by Work.publishedVersion, which has only the pointer to work from.
    */
   publishedVersionsByUuid: ReturnType<typeof createPublishedVersionLoader>;
+
+  /**
+   * Load a comment thread by the uuid one of its anchors points at.
+   * Keyed on the anchor rather than the passage because `comments.entity_uuid`
+   * records where a thread was born, not where it currently sits.
+   */
+  commentThreadsByAnchorUuid: ReturnType<typeof createCommentThreadLoader>;
+
+  /**
+   * Load user identities by auth user id.
+   * Whatever names a user resolves through here, so a page naming the same few
+   * people many times costs one read.
+   */
+  userInfoById: ReturnType<typeof createUserInfoLoader>;
 }
 
 /**
@@ -113,5 +129,7 @@ export function createLoaders(
     bibliographyLabelsByUuid: createBibliographyLabelLoader(supabase, source),
     imprintsByWorkToh: createImprintLoader(supabase),
     publishedVersionsByUuid: createPublishedVersionLoader(supabase),
+    commentThreadsByAnchorUuid: createCommentThreadLoader(supabase, source),
+    userInfoById: createUserInfoLoader(supabase),
   };
 }
