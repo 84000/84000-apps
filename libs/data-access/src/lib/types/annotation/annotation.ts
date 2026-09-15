@@ -315,6 +315,11 @@ export type ImportAnnotationInput = {
   start: number;
   end: number;
   passageUuid: string;
+  // Identity of an annotation that already exists. A first-time import omits
+  // it and gets a derived uuid; a pass that rewrites a populated passage sends
+  // the stored uuid back so the row is updated rather than replaced — other
+  // rows reference annotations by uuid.
+  uuid?: string;
   // Full passage content, so importers that carry text (e.g. link) can slice it.
   passageText: string;
   // Kind-specific attributes, e.g. { textStyle }, { href }, { level, class }.
@@ -331,7 +336,7 @@ export const baseAnnotationFromImport = (
   input: ImportAnnotationInput,
   type: AnnotationType,
 ): AnnotationBase => ({
-  uuid: `${input.passageUuid}:${type}:${input.start}:${input.end}`,
+  uuid: input.uuid || `${input.passageUuid}:${type}:${input.start}:${input.end}`,
   start: input.start,
   end: input.end,
   type,

@@ -20,8 +20,9 @@ source independently implies each.
 
 ## The importable kinds
 
-Only these eight can be imported. Anything else is **dropped silently** — no
-error, no warning, no row.
+Anything else is **dropped silently** — no error, no warning, no row.
+
+These eight are what a document mapping produces:
 
 | kind | `data` | what it marks |
 |---|---|---|
@@ -45,13 +46,58 @@ dropped, so leave the text unannotated rather than emitting an empty `href`.
 `heading.class` defaults to `section-title`; the other values in use are
 `body-title-honorific` and `body-title-main`.
 
+These seven exist for a different reason — a pass that edits a passage which
+already has content must send that passage's **whole** annotation set back, and
+anything it cannot express here is deleted as absent. A document mapping has no
+reason to emit them:
+
+| kind | `data` | what it marks |
+|---|---|---|
+| `mention` | `entity`, `linkType`, and see below | a link to another entity |
+| `glossary-instance` | `glossary`, `authority` | an attested glossary term |
+| `end-note-link` | `endNote`, `label` | an end-note marker |
+| `inline-title` | `lang` | a title inside running text |
+| `mantra` | `lang` | a mantra |
+| `trailer` | — | a trailer |
+| `leading-space` | — | a leading space |
+
+`mention.entity` is the target's uuid and `mention.linkType` says what kind of
+thing it is (`folio`, `passage`, `work`, `bibliography`, `glossary`); both are
+required. It also takes `isSameWork`, `subtype`, `text`, `lang`,
+`style: "quote"`, and `highlightStart` / `highlightEnd` — a range in the
+*target*, not in this passage.
+
+`mention.linkToh` is the **target's** Tohoku number. It is a different field
+from the annotation's own `toh`, which scopes visibility; do not conflate them.
+
+A mention is zero-length: `start` and `end` are equal, at the position it marks.
+
+`glossary-instance` needs both `glossary` and `authority` — one alone cannot be
+resolved. `end-note-link` needs `endNote`; its `label` is optional.
+`inline-title` needs `lang`. A kind missing what it requires is dropped like any
+other unrepresentable annotation.
+
+## Preserving an existing annotation
+
+An annotation operation may carry a `uuid`. Omit it on a first import and one is
+derived. Send the stored uuid when rewriting a passage that already has
+annotations, so the row is updated rather than deleted and replaced — other rows
+reference annotations by uuid.
+
 ## Not importable
 
 There is no importer for `list`, `list-item`, `table`, `table-body-row`,
-`table-body-data`, `abbreviation`, or `header` — note `header` in particular,
-since the heading kind is `heading`. These exist as stored annotation types but
-no import path builds them, so emitting one loses the content's structure
-without saying so.
+`table-body-header`, `table-body-data`, `abbreviation`, `has-abbreviation`,
+`internal-link`, `image`, `audio`, `code`, `comment`, or `header` — note
+`header` in particular, since the heading kind is `heading`. These exist as
+stored annotation types but no import path builds them, so emitting one loses
+the content's structure without saying so.
+
+The `deprecated-*` types stored in the database (`deprecated-reference`,
+`deprecated-quoted`, `deprecated-temp-mention`, `deprecated-internal-link`) have
+no import path either, and unlike the list above they have no domain type to
+round-trip through — a read maps them to `unknown`. A pass over a passage
+carrying one cannot preserve it.
 
 When a source contains a list or a table, import the text as ordinary passages,
 keep the reading order, and **say so in the preview** so the editor knows the

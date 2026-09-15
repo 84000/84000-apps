@@ -9,10 +9,16 @@ import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
 
 const annotationSchema = z.object({
+  uuid: z
+    .string()
+    .optional()
+    .describe(
+      'Existing annotation uuid. Omit on a first import; send the stored uuid when rewriting a passage so the row is updated rather than replaced.',
+    ),
   kind: z
     .string()
     .describe(
-      'Annotation kind: blockquote, paragraph, indent, line-group, line, span, link, or heading.',
+      'Annotation kind. From a document mapping: blockquote, paragraph, indent, line-group, line, span, link, heading. When rewriting a passage that already has annotations, also mention, glossary-instance, end-note-link, inline-title, mantra, trailer, leading-space — the whole set must be sent back or the absent ones are deleted.',
     ),
   start: z
     .number()

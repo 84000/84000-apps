@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type EndNoteLinkAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 
@@ -32,4 +34,23 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     uuid,
   });
   return dto;
+};
+
+export const importer: AnnotationImporter = (
+  input,
+): EndNoteLinkAnnotation | null => {
+  const endNote = input.data?.endNote;
+  if (typeof endNote !== 'string' || !endNote) {
+    // The marker is meaningless without the note it points at.
+    return null;
+  }
+  const link = baseAnnotationFromImport(
+    input,
+    'endNoteLink',
+  ) as EndNoteLinkAnnotation;
+  link.endNote = endNote;
+  if (typeof input.data?.label === 'string') {
+    link.label = input.data.label;
+  }
+  return link;
 };
