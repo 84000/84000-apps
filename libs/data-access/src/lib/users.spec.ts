@@ -1,4 +1,4 @@
-import { getCommentAuthorProfiles } from './authors';
+import { getUserInfo } from './users';
 
 type FakeState = {
   rows: Record<string, unknown>[];
@@ -23,17 +23,17 @@ const createState = (rows: Record<string, unknown>[] = []): FakeState => ({
   rpcCalls: [],
 });
 
-describe('getCommentAuthorProfiles', () => {
+describe('getUserInfo', () => {
   it('reads through the definer function, not user_profiles', async () => {
     const state = createState([{ id: 'u-1', full_name: 'Dorje' }]);
 
-    await getCommentAuthorProfiles({
+    await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1'],
     });
 
     expect(state.rpcCalls).toEqual([
-      ['comment_author_profiles', { p_ids: ['u-1'] }],
+      ['get_user_info', { p_ids: ['u-1'] }],
     ]);
   });
 
@@ -44,14 +44,14 @@ describe('getCommentAuthorProfiles', () => {
       { id: 'u-3', full_name: null, username: null },
     ]);
 
-    const result = await getCommentAuthorProfiles({
+    const result = await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1', 'u-2', 'u-3'],
     });
 
     expect(result.get('u-1')?.displayName).toBe('Dorje');
     expect(result.get('u-2')?.displayName).toBe('pema');
-    expect(result.get('u-3')?.displayName).toBe('Unknown author');
+    expect(result.get('u-3')?.displayName).toBe('Unknown user');
   });
 
   it('omits an absent avatar rather than carrying null', async () => {
@@ -60,7 +60,7 @@ describe('getCommentAuthorProfiles', () => {
       { id: 'u-2', full_name: 'Pema', avatar_url: null },
     ]);
 
-    const result = await getCommentAuthorProfiles({
+    const result = await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1', 'u-2'],
     });
@@ -74,7 +74,7 @@ describe('getCommentAuthorProfiles', () => {
       { id: 'u-1', full_name: 'Dorje', email: 'dorje@example.org' },
     ]);
 
-    const result = await getCommentAuthorProfiles({
+    const result = await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1'],
     });
@@ -82,23 +82,23 @@ describe('getCommentAuthorProfiles', () => {
     expect(result.get('u-1')).toEqual({ id: 'u-1', displayName: 'Dorje' });
   });
 
-  it('dedupes ids, so a thread of many replies by one person reads one profile', async () => {
+  it('dedupes ids, so many mentions of one person read one profile', async () => {
     const state = createState([{ id: 'u-1', full_name: 'Dorje' }]);
 
-    await getCommentAuthorProfiles({
+    await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1', 'u-1', 'u-1'],
     });
 
     expect(state.rpcCalls).toEqual([
-      ['comment_author_profiles', { p_ids: ['u-1'] }],
+      ['get_user_info', { p_ids: ['u-1'] }],
     ]);
   });
 
   it('does not call for an empty id list', async () => {
     const state = createState();
 
-    const result = await getCommentAuthorProfiles({
+    const result = await getUserInfo({
       client: createFakeClient(state),
       ids: [],
     });
@@ -114,7 +114,7 @@ describe('getCommentAuthorProfiles', () => {
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
 
-    const result = await getCommentAuthorProfiles({
+    const result = await getUserInfo({
       client: createFakeClient(state),
       ids: ['u-1'],
     });

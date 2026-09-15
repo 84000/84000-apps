@@ -1,17 +1,8 @@
 import type {
-  CommentAuthor,
   CommentThread,
   CommentThreads,
 } from '@eightyfourthousand/data-access';
-
-/**
- * GraphQL CommentAuthor type
- */
-export type GraphQLCommentAuthor = {
-  id: string;
-  displayName: string;
-  avatarUrl?: string | null;
-};
+import { userInfoFromGraphQL, type GraphQLUserInfo } from './user-info';
 
 /**
  * GraphQL Comment type
@@ -22,23 +13,10 @@ export type GraphQLComment = {
   createdAt: string;
   updatedAt?: string | null;
   resolvedAt?: string | null;
-  author: GraphQLCommentAuthor;
-  resolvedBy?: GraphQLCommentAuthor | null;
+  author: GraphQLUserInfo;
+  resolvedBy?: GraphQLUserInfo | null;
   replies?: GraphQLComment[] | null;
 };
-
-/**
- * Convert a GraphQL comment author to the internal CommentAuthor type
- */
-export function commentAuthorFromGraphQL(
-  author: GraphQLCommentAuthor,
-): CommentAuthor {
-  return {
-    id: author.id,
-    displayName: author.displayName,
-    ...(author.avatarUrl ? { avatarUrl: author.avatarUrl } : {}),
-  };
-}
 
 /**
  * Convert a GraphQL comment to the internal CommentThread type.
@@ -51,7 +29,7 @@ export function commentFromGraphQL(comment: GraphQLComment): CommentThread {
   const thread: CommentThread = {
     uuid: comment.uuid,
     content: comment.content,
-    author: commentAuthorFromGraphQL(comment.author),
+    author: userInfoFromGraphQL(comment.author),
     createdAt: comment.createdAt,
     updatedAt: comment.updatedAt ?? comment.createdAt,
     replies: comment.replies?.map(commentFromGraphQL) ?? [],
@@ -59,7 +37,7 @@ export function commentFromGraphQL(comment: GraphQLComment): CommentThread {
 
   if (comment.resolvedAt) thread.resolvedAt = comment.resolvedAt;
   if (comment.resolvedBy) {
-    thread.resolvedBy = commentAuthorFromGraphQL(comment.resolvedBy);
+    thread.resolvedBy = userInfoFromGraphQL(comment.resolvedBy);
   }
 
   return thread;

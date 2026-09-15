@@ -12,7 +12,7 @@ import { createBibliographyLabelLoader } from './schema/bibliography/bibliograph
 import { createImprintLoader } from './schema/imprint/imprint.loader';
 import { createPublishedVersionLoader } from './schema/work/published-version.loader';
 import { createCommentThreadLoader } from './schema/comment/comment.loader';
-import { createCommentAuthorLoader } from './schema/comment/comment-author.loader';
+import { createUserInfoLoader } from './schema/user/user-info.loader';
 
 export interface Loaders {
   /**
@@ -98,10 +98,11 @@ export interface Loaders {
   commentThreadsByAnchorUuid: ReturnType<typeof createCommentThreadLoader>;
 
   /**
-   * Load comment author identities by auth user id.
-   * Keeps a thread of many replies by few people to one profile read.
+   * Load user identities by auth user id.
+   * Whatever names a user resolves through here, so a page naming the same few
+   * people many times costs one read.
    */
-  commentAuthorsById: ReturnType<typeof createCommentAuthorLoader>;
+  userInfoById: ReturnType<typeof createUserInfoLoader>;
 }
 
 /**
@@ -129,6 +130,6 @@ export function createLoaders(
     imprintsByWorkToh: createImprintLoader(supabase),
     publishedVersionsByUuid: createPublishedVersionLoader(supabase),
     commentThreadsByAnchorUuid: createCommentThreadLoader(supabase, source),
-    commentAuthorsById: createCommentAuthorLoader(supabase),
+    userInfoById: createUserInfoLoader(supabase),
   };
 }
