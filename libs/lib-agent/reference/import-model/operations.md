@@ -47,11 +47,15 @@ and insert when there is none. There is no `insert_title` or `insert_passage`.
   the tool fills in `docx-<sort>`, nothing reads it, and publishing strips it.
   New works should not have one.
 
-**Editing a passage that already exists inverts the first of these.** `uuid`,
-`sort` and `workUuid` must be supplied with the values the row already has, or
-the operation overwrites them: an omitted `uuid` inserts a second passage beside
-the one you meant to change, and an omitted `sort` is reassigned from a counter,
-reordering the work. `xmlId` stays optional either way.
+**Editing a passage that already exists inverts part of this.** `uuid` and
+`sort` must be supplied with the values the row already has, or the operation
+overwrites them: an omitted `uuid` inserts a second passage beside the one you
+meant to change, and an omitted `sort` is reassigned from a counter, reordering
+the work.
+
+`workUuid` and `xmlId` stay optional either way. `workUuid` falls back to the
+one you passed the tool, which is the same work you are editing; `xmlId` is
+filled with `docx-<sort>`, which nothing reads.
 
 The same inversion applies to the annotations. An annotation operation may carry
 a `uuid`; send the stored one for every annotation that already exists, or the
