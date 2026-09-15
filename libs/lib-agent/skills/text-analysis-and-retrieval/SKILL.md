@@ -1,6 +1,6 @@
 ---
 name: text-analysis-and-retrieval
-description: Run Stage 0 of the 84000 AI translation pipeline for a canonical Tibetan work — retrieve the Tibetan source by Toh number, register the work against the Toh catalog, and assemble the contextual record a translator needs before drafting (genre, register, precedent translations, terminological field, parallel witnesses), saved as toh#_stage0.md. Use when a translator asks to analyze, scope, research, or prepare a text by Toh number before drafting begins, or names Stage 0 of the pipeline. Also use when a witness collation against a parallel recension is requested. Not for producing a translation — that is Stage 1, the first-draft-translation skill — and not for editorial review of an existing draft.
+description: Run Stage 0 of the 84000 AI translation pipeline for a canonical Tibetan work — retrieve the Tibetan source by Toh number, register the work against the Toh catalog, and assemble the contextual record a translator needs before drafting (genre, register, precedent translations, terminological field, parallel witnesses, canonical commentaries), saved as toh#_stage0.md. Use when a translator asks to analyze, scope, research, or prepare a text by Toh number before drafting begins, or names Stage 0 of the pipeline. Also use when a witness collation against a parallel recension is requested, or when asked which commentaries bear on a work. Not for producing a translation — that is Stage 1, the first-draft-translation skill — and not for editorial review of an existing draft.
 ---
 
 # 84000 text analysis and retrieval (Stage 0)
@@ -35,11 +35,11 @@ Confirm each of these at the start of the session:
       work already has saved. See `reference/output.md`
 - [ ] The `read-policies` studio tool, for the *Translator Guidelines* and
       *Text Critical Guidelines* sections this skill cites and for
-      `shared-policies/analytics` and `shared-policies/collation`. Read them at
-      the start of the session: they are edited in place, so the current text
-      binds, not a remembered one. Call it with no arguments to see what else is
-      available, and consult the full documents for anything beyond the sections
-      it returns
+      `shared-policies/analytics`, `shared-policies/commentary-register` and
+      `shared-policies/collation`. Read them at the start of the session: they
+      are edited in place, so the current text binds, not a remembered one. Call
+      it with no arguments to see what else is available, and consult the full
+      documents for anything beyond the sections it returns
 
 If only the Toh number is available, proceed with retrieval and catalog
 registration, then use the solicitation step below to gather the rest directly
@@ -91,6 +91,12 @@ anything the record needs that only they can supply. At minimum, solicit:
   done at Stage 0, deferred to later, or skipped for this text, and record the
   answer either way. See `shared-policies/collation` for what the Text Critical
   Guidelines recommend and what the report contains.
+- **Which commentaries, if any, they want consulted during Stage 1 drafting.**
+  Unlike the collation, the *sweep* for exegetical works is not optional — it
+  runs for every text — but the *selection* is the translator's and must be
+  asked for explicitly. Present the works the sweep verified and ask which
+  should be consulted; never choose on their behalf, and never read silence as
+  either "all" or "none". See `shared-policies/commentary-register`.
 
 Record their answers verbatim or in close paraphrase in the output document. Do
 not paraphrase away specifics like edition names or scholars' names.
@@ -114,13 +120,14 @@ publishes:
 
 ## The disciplines
 
-The first two are policies: fetch them with `read-policies` at the start of the
-session, since they are edited in place and the current text binds. The last
+The first three are policies: fetch them with `read-policies` at the start of
+the session, since they are edited in place and the current text binds. The last
 ships with this skill.
 
 | | |
 |---|---|
 | `shared-policies/analytics` | The analytics pass — genre, register, precedent translations, terminological field, parallel witnesses |
+| `shared-policies/commentary-register` | The exegetical sweep and anchoring test — run for every text |
 | `shared-policies/collation` | The collation report, when a witness comparison is undertaken |
 | `reference/output.md` | The deliverables and how they are saved |
 
@@ -130,10 +137,15 @@ ships with this skill.
 2. Register the work against the Toh catalog.
 3. Solicit translator input, including the collation decision.
 4. Run the analytics pass per `shared-policies/analytics`.
-5. Produce the collation report per `shared-policies/collation`, if one was
+5. Run the exegetical sweep and anchoring test per
+   `shared-policies/commentary-register`, then put the verified register to the
+   translator and record which commentaries they select for Stage 1. This
+   solicitation comes here rather than at step 3 because the choice cannot be
+   put to them before the sweep has established what there is to choose from.
+6. Produce the collation report per `shared-policies/collation`, if one was
    requested.
-6. Assemble and save `toh#_stage0.md` locally per `reference/output.md`.
-7. Save the stage's deliverables to storage with `write-session-documents`,
+7. Assemble and save `toh#_stage0.md` locally per `reference/output.md`.
+8. Save the stage's deliverables to storage with `write-session-documents`,
    passing the work's `toh`, `stage: stage0`, the files with `toh#_stage0.md` as
    `primary` and any collation pair as `supporting`, and your `model` — then PUT
    each file to the upload URL it returns. See `reference/output.md`; the save
@@ -149,6 +161,21 @@ ships with this skill.
   scholarship exists** without a citation or source you can point to.
 - **Do not silently resolve a discrepancy** between the catalog and the source
   text, such as conflicting folio ranges. Flag it for the translator or editor.
+- **Do not skip the exegetical sweep** because a text looks unlikely to have
+  commentaries, and do not treat it as conditional on a translator request the
+  way a collation is. Run it and record "none located" if that is the finding.
+- **Do not assert that a work comments on the text at hand**, or state its
+  author, translators or placement, without verifying each against the catalog.
+  Title resemblance is a reason to check a candidate, not evidence of the
+  relation.
+- **Do not present a partial section sweep as exhaustive.** State what was
+  verified individually and what was not.
+- **Do not promise that commentary passages can be located** from a root-text
+  folio range without having run the anchoring test, and do not present a
+  commentary to the translator without disclosing an anchoring failure that
+  affects it.
+- **Do not select the commentaries for the translator**, and do not treat an
+  unanswered solicitation as a selection.
 - **Do not overwrite an existing `toh#_stage0.md`** for the same work without
   confirming with the translator that a re-run is intended. Check with
   `read-session-documents` rather than by looking for a local file. Storage

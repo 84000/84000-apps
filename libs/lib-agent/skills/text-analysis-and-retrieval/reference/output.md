@@ -25,8 +25,19 @@ Use this structure, in this order:
    than duplicating its table in this document; one or two sentences on the
    headline finding — how many substantive variants, and whether any change the
    recommended translation — is enough.
-7. **Translator input** — the answers gathered when soliciting translator input.
-8. **Open questions** — anything that could not be established mechanically and
+7. **Exegetical sources** — the verified commentary register from
+   `shared-policies/commentary-register`: a table of the works found, each with
+   Toh number, titles, author, Tibetan translators and Degé placement as the
+   catalog gives them; the candidates checked and excluded, with reasons; the
+   stated limits of the sweep; the result of the anchoring test, naming the
+   specific root and commentary folios it was run on; which works the translator
+   selected; and the consultation procedure Stage 1 is to follow for them. If
+   the sweep found nothing, record "none located" explicitly and name the
+   section swept. If the translator did not answer, record that it was
+   solicited and unanswered, and that Stage 1 must ask again — this is what
+   Stage 1 reads to know whether it may consult anything.
+8. **Translator input** — the answers gathered when soliciting translator input.
+9. **Open questions** — anything that could not be established mechanically and
    needs the translator's or editor's decision before drafting begins.
 
 ## `toh#_collation.md` and `.docx` — only when a collation was undertaken
