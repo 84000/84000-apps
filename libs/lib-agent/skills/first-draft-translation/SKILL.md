@@ -50,16 +50,25 @@ where noted rather than asking the translator to supply it:
 - [ ] The `tibetan-english-passage-alignment` skill, for establishing and
       recording passage alignment
 - [ ] Any parallel witnesses (Sanskrit, Chinese, other Kangyur recensions)
+- [ ] The **exegetical-sources section of the Stage 0 record** — which
+      commentaries were found for this work, which of them the translator
+      selected for consultation here, and whether Stage 0 demonstrated that
+      their passages can be anchored to a root-text folio range. If that
+      section records the selection as solicited but unanswered, ask before
+      drafting rather than choosing for the translator; if the record has no
+      such section, it predates the step, so say so and ask. See
+      `shared-policies/commentary-consultation`
 - [ ] The studio glossary tools (`get-glossary-instances`,
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for checking existing terminology
       rather than relying on a table supplied in-session
 - [ ] The `read-policies` studio tool, for the Translator Guidelines sections
-      this skill cites and for `shared-policies/uncertainty` and
-      `shared-policies/terminology`. Read them at the start of the session: they
-      are edited in place, so the current text binds, not a remembered one. Call
-      it with no arguments to see what else is available, and consult the full
-      document for anything beyond the sections it returns
+      this skill cites and for `shared-policies/uncertainty`,
+      `shared-policies/terminology` and
+      `shared-policies/commentary-consultation`. Read them at the start of the
+      session: they are edited in place, so the current text binds, not a
+      remembered one. Call it with no arguments to see what else is available,
+      and consult the full document for anything beyond the sections it returns
 - [ ] Any related published 84000 translations designated as style anchors
 - [ ] The `docx` skill, for generating the primary `toh#_stage1.docx`
       deliverable. This is Claude's general document skill, not one this plugin
@@ -92,6 +101,11 @@ falling back to one supplied ad hoc.
 - Do not consult or reproduce existing published translations of the text unless
   they are provided in the session; if one is provided, treat it as a reference
   witness, not a base text.
+- A canonical commentary the translator selected at Stage 0 is an aid to
+  construal, **not a second source authority**. Translate the root text as
+  transmitted; where a commentary construes it otherwise, or quotes a lemma that
+  differs from the transmitted reading, record that in a note rather than
+  adopting it silently. See `shared-policies/commentary-consultation`.
 - Do not normalize Tibetan orthography, "correct" spellings toward standard
   forms, or harmonize the source toward parallels.
 - Do not omit, soften, or gloss over content you consider difficult, repetitive,
@@ -129,16 +143,17 @@ concluding that a cited number does not exist.
   normally follows a space. Sweep the Wylie for `‘` and correct each one, and
   confirm the `’` survived generation of the `.docx`.
 
-## The four disciplines
+## The five disciplines
 
-The first two are policies: fetch them with `read-policies` at the start of the
-session, since they are edited in place and the current text binds. The other
-two ship with this skill — read those when you reach them.
+The first three are policies: fetch them with `read-policies` at the start of
+the session, since they are edited in place and the current text binds. The
+other two ship with this skill — read those when you reach them.
 
 | | |
 |---|---|
 | `shared-policies/uncertainty` | How to flag what is not secure — the single most important discipline here |
 | `shared-policies/terminology` | Locating the binding house rendering before choosing one, and the Terminology Notes table |
+| `shared-policies/commentary-consultation` | Consulting and citing a commentary the translator selected at Stage 0 |
 | `reference/structure.md` | The document structure, passage pairs, folio labels, footnotes, and the companion alignment record |
 | `reference/output.md` | The three deliverables and how they are saved |
 
@@ -156,7 +171,10 @@ two ship with this skill — read those when you reach them.
    catalog's `mainTitle`. See `reference/structure.md`.
 4. Draft passage by passage, aligning each pair with
    `tibetan-english-passage-alignment` and checking terminology per
-   `shared-policies/terminology` before rendering a significant term.
+   `shared-policies/terminology` before rendering a significant term. Where a
+   passage is genuinely difficult and the translator selected a commentary at
+   Stage 0, consult it per `shared-policies/commentary-consultation` and cite it
+   in the passage footnote.
 5. Assemble the document in the order given in `reference/structure.md`.
 6. Save all three deliverables locally per `reference/output.md`.
 7. Save them to storage with `write-session-documents`, passing the work's
