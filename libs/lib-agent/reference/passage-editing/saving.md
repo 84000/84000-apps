@@ -77,6 +77,35 @@ not required to be contiguous, and passages are allowed to share one.
 This applies only to inserts. An existing passage's `sort` is written exactly as
 you send it, with no shifting and no adjustment.
 
+## A sort is a reading position, not a passage
+
+Two passages in one work may share a `sort`, and when they do they differ by
+`toh`. A single work can be catalogued under several Tohoku numbers, and those
+versions are usually near-identical — a handful of passages carry the variation
+and the rest are common to all of them.
+
+So the tuple that identifies a passage is **`(work, sort, toh)`**, not
+`(work, sort)`. Match the passages you read on all three. Keying on `sort` alone
+silently conflates a passage with its variant under another Tohoku number, and
+writing back then overwrites one with the other.
+
+`toh` is set only where it has to be:
+
+- **`toh` unset** — the passage belongs to every Tohoku number the work carries.
+  This is nearly all of them.
+- **`toh` set** — the passage is the variant for that number, and its siblings at
+  the same `sort` cover the others.
+
+Leave that scoping exactly as you found it. A `toh` you drop turns a variant into
+the shared text for every version of the work; one you invent splits a shared
+passage away from the versions that still need it.
+
+Inserting at a shared sort displaces **every** variant there, because the shift
+keys on the work and the sort alone. That is right — they are one reading
+position — but it means an insert is a change to the whole work, not to one
+Tohoku number. If you meant to add something for a single version, say so in the
+preview: what you are actually doing is adding a position to all of them.
+
 ## Unchanged passages stay out of the payload
 
 Send only the passages you changed. An unchanged passage in the payload is not

@@ -53,8 +53,17 @@ The write contract itself is in `reference/import-model/operations.md` and
 
 Run `resolve-toh` on the Tohoku number first. A cited number is often not a
 catalog entry, and every folio read keys on the catalogued number. Carry the
-returned `toh` forward — it is the `toh` the mentions carry, and because folios
-are keyed by source text, it is what makes a folio number resolvable at all.
+returned `toh` forward — it is what makes a folio number resolvable at all.
+
+**Check `placements`.** More than one means the work is catalogued at several
+points in the canon, and each has its own folio sequence. A marker then resolves
+against the folios of the Tohoku number that owns the passage it sits in, and
+the mention's `linkToh` is that number — not the work's first. Work through such
+a work one Tohoku number at a time.
+
+Most passages in a multi-number work have no `toh` of their own and belong to
+all of them; the few that do are the variants. See
+`reference/passage-editing/saving.md`.
 
 ### 2. Build the folio index
 
@@ -62,6 +71,10 @@ Page `get-translation-folios` over the work and keep each folio's `uuid`,
 `folio`, `side` and `volume`. You need the whole list before you start: markers
 resolve against it, and you cannot tell a missing folio from a mis-read marker
 without it.
+
+Build one index **per Tohoku number** the work is catalogued under, passing `toh`
+explicitly. Omitted, the read falls back to the work's first number, which for a
+multi-number work silently resolves markers against the wrong sequence.
 
 Where a folio number recurs across volumes, the volume disambiguates. Resolve in
 reading order and the volume follows from the preceding folio.
@@ -172,7 +185,8 @@ confirms, and do not resolve an ask by choosing for them.
 
 What this conversion specifically owes the editor:
 
-- how many mentions will be created;
+- how many mentions will be created, and under which Tohoku number when the work
+  has more than one;
 - what happened to the first reference, and why;
 - every reference carrying a line number, with the line number it would lose;
 - every bracketed candidate you rejected, with the reason;
