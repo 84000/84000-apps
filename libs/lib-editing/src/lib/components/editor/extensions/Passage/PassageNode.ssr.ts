@@ -1,4 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
+import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 import {
   PASSAGE_CONTENT_CLASS,
   PASSAGE_INNER_CLASS,
@@ -7,11 +8,12 @@ import {
   PASSAGE_WRAPPER_CLASS,
 } from './classes';
 
-type PassageReference = {
+export type PassageReference = {
   uuid: string;
   label: string | null;
   sort: number;
   type: string;
+  toh?: TohokuCatalogEntry;
 };
 
 // The compare-mode Tibetan source and the reader bookmark icon are toh- and
@@ -120,16 +122,15 @@ export const PassageNodeSSR = Node.create({
             { class: PASSAGE_REFERENCES_CLASS, contenteditable: 'false' },
             ...references.flatMap((ref, index) => {
               const linkText = ref.label || ref.uuid.slice(0, 6);
-              const link = [
-                'a',
-                {
-                  href: `#${ref.uuid}`,
-                  'data-passage-reference': '',
-                  'data-ref-uuid': ref.uuid,
-                  'data-ref-type': ref.type,
-                },
-                linkText,
-              ] as unknown;
+              const attrs: { [key: string]: string } = {
+                href: `#${ref.uuid}`,
+                'data-passage-reference': '',
+                'data-ref-uuid': ref.uuid,
+                'data-ref-type': ref.type,
+              };
+
+              ref.toh && (attrs['data-toh'] = ref.toh);
+              const link = ['a', { ...attrs }, linkText] as unknown;
               return index === 0 ? [link] : [', ', link];
             }),
           ]
