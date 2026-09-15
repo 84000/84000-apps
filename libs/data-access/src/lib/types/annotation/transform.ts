@@ -1,5 +1,4 @@
 import {
-  baseAnnotationFromDTO,
   type UnknownAnnotation,
   type Annotation,
   type Annotations,
@@ -90,10 +89,9 @@ export const annotationFromDTO = (
   if (!annotation) {
     console.warn(`Unknown annotation type: ${dto.type}`);
     console.warn(dto);
-    return {
-      ...baseAnnotationFromDTO(dto),
-      type: 'unknown',
-    } as UnknownAnnotation;
+    // Through the unknown transformer, not a bare cast: it keeps the stored
+    // type and content so a save can put the row back as it was.
+    return unknown(dto) as UnknownAnnotation;
   }
 
   if (
