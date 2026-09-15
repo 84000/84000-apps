@@ -7,6 +7,8 @@ import { BodyItemType, Passage } from './passage';
 export interface PreviewAnnotationOperation {
   /** Annotation kind or class produced by mapping rules. */
   kind: string;
+  /** Existing annotation uuid, when rewriting a passage that already has one. */
+  uuid?: string;
   /** Inclusive start offset within the containing passage content. */
   start: number;
   /** Exclusive end offset within the containing passage content. */
@@ -186,6 +188,7 @@ export const previewDtoToPassage = (
           start: annotation.start,
           end: annotation.end,
           data: annotation.data,
+          uuid: annotation.uuid,
           passageUuid: operation.passage.uuid,
           passageText: operation.passage.content,
         }),

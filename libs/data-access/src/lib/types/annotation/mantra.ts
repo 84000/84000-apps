@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type MantraAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 import type { ExtendedTranslationLanguage } from '../language';
@@ -28,4 +30,13 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     });
   }
   return dto;
+};
+
+export const importer: AnnotationImporter = (input): MantraAnnotation => {
+  const mantra = baseAnnotationFromImport(input, 'mantra') as MantraAnnotation;
+  const lang = input.data?.lang;
+  if (typeof lang === 'string' && lang) {
+    mantra.lang = lang as ExtendedTranslationLanguage;
+  }
+  return mantra;
 };

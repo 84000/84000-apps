@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type MentionAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 
@@ -93,4 +95,59 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   }
 
   return dto;
+};
+
+export const importer: AnnotationImporter = (
+  input,
+): MentionAnnotation | null => {
+  const entity = input.data?.entity;
+  const linkType = input.data?.linkType;
+  if (typeof entity !== 'string' || !entity) {
+    // A mention with no target cannot be represented; drop it.
+    return null;
+  }
+  if (typeof linkType !== 'string' || !linkType) {
+    // The link type decides how the reader resolves and renders the target.
+    return null;
+  }
+
+  const mention = baseAnnotationFromImport(
+    input,
+    'mention',
+  ) as MentionAnnotation;
+  mention.entity = entity;
+  mention.linkType = linkType;
+
+  const { text, isSameWork, subtype, linkToh, lang, style } = input.data ?? {};
+  if (typeof text === 'string') {
+    mention.text = text;
+  }
+  if (typeof isSameWork === 'boolean') {
+    mention.isSameWork = isSameWork;
+  }
+  if (typeof subtype === 'string') {
+    mention.subtype = subtype;
+  }
+  // The target's Tohoku number, distinct from the row's own `toh` scope.
+  if (typeof linkToh === 'string') {
+    mention.linkToh = linkToh;
+  }
+  if (typeof lang === 'string') {
+    mention.lang = lang as MentionAnnotation['lang'];
+  }
+  if (style === 'quote') {
+    mention.style = style;
+  }
+
+  // A character range in the *target*, not in this passage — a commentary
+  // quote pointing at the root text it comments on.
+  const { highlightStart, highlightEnd } = input.data ?? {};
+  if (typeof highlightStart === 'number') {
+    mention.highlightStart = highlightStart;
+  }
+  if (typeof highlightEnd === 'number') {
+    mention.highlightEnd = highlightEnd;
+  }
+
+  return mention;
 };

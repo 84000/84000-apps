@@ -1,9 +1,11 @@
 import type { AnnotationDTO } from './annotation-type';
 import {
   type AnnotationExporter,
+  type AnnotationImporter,
   type AnnotationTransformer,
   type GlossaryInstanceAnnotation,
   baseAnnotationFromDTO,
+  baseAnnotationFromImport,
   baseAnnotationToDto,
 } from './annotation';
 
@@ -33,4 +35,22 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     authority,
   });
   return dto;
+};
+
+export const importer: AnnotationImporter = (
+  input,
+): GlossaryInstanceAnnotation | null => {
+  const glossary = input.data?.glossary;
+  const authority = input.data?.authority;
+  if (typeof glossary !== 'string' || typeof authority !== 'string') {
+    // Both halves identify the term; one alone cannot be resolved.
+    return null;
+  }
+  const instance = baseAnnotationFromImport(
+    input,
+    'glossaryInstance',
+  ) as GlossaryInstanceAnnotation;
+  instance.glossary = glossary;
+  instance.authority = authority;
+  return instance;
 };
