@@ -137,8 +137,8 @@ Both conditions carry weight. If the first reference is **not** at the start of
 its passage, leave it where it is and treat it like any other marker. Every
 reference after the first is an ordinary marker regardless of where it sits.
 
-Give the new passage a `sort` between the body-title passage and the one it
-precedes, and do not give it a label.
+Give the new passage the `sort` of the passage it precedes — the save path makes
+room — and do not give it a label. See `reference/passage-editing/saving.md`.
 
 Published works will often disagree with this rule — an older migration left
 their first mention at offset 0 of the first labeled passage, with no marker
@@ -188,7 +188,8 @@ has to go back or the omitted ones are deleted, and the passage's existing
 `uuid`, `label`, `sort` and `type` have to be carried through unchanged.
 
 The new first-folio passage is the exception — it is an insert, so it takes a
-fresh `uuid`, a `sort` between its neighbours, and no label.
+fresh `uuid`, no label, and the `sort` of the passage it should come before. The
+save path opens the slot; do not go looking for an unused number.
 
 Stop and tell the editor if a passage you need to change carries a
 `deprecated-*` annotation other than the marker you are removing. Those cannot
