@@ -1,6 +1,7 @@
-import type {
-  AnnotationDTO,
-  Comment,
+import {
+  getCommentThreadByUuid,
+  type AnnotationDTO,
+  type Comment,
 } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
 
@@ -94,6 +95,31 @@ export const commentResolvedByResolver = (
 
 /**
  * Field resolver for `Comment.replies`. The domain type leaves `replies` absent
- * on a comment with none, and on every reply; the schema promises a list.
+ * where a read found none or stopped; the schema promises a list.
  */
 export const commentRepliesResolver = (parent: Comment) => parent.replies ?? [];
+
+/**
+ * Field resolver for `Comment.replyCount`. Absent only on a comment that did
+ * not come from a tree build, which no resolver here returns.
+ */
+export const commentReplyCountResolver = (parent: Comment) =>
+  parent.replyCount ?? parent.replies?.length ?? 0;
+
+/**
+ * Resolver for `Query.comment` — the rest of a branch a shallower read cut off.
+ *
+ * Not batched behind a loader: this answers a person expanding one thread,
+ * so there is no fan-out to collapse.
+ */
+export const commentQueryResolver = async (
+  _parent: unknown,
+  args: { uuid: string; depth?: number },
+  ctx: GraphQLContext,
+) =>
+  getCommentThreadByUuid({
+    client: ctx.supabase,
+    uuid: args.uuid,
+    source: ctx.source,
+    ...(args.depth ? { maxDepth: args.depth } : {}),
+  });

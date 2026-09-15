@@ -137,6 +137,66 @@ describe('threadsFromComments', () => {
     expect(comments.some((comment) => 'replies' in comment)).toBe(false);
   });
 
+  it('nests beyond one level, since threads are not depth limited', () => {
+    const chain = commentsFromDTO(
+      Array.from({ length: 5 }, (_, i) => ({
+        ...rootDTO,
+        uuid: `d-${i}`,
+        parent_uuid: i === 0 ? null : `d-${i - 1}`,
+        created_at: `2026-09-10T1${i}:00:00+00:00`,
+      })),
+    );
+
+    const [thread] = threadsFromComments(chain, 4);
+
+    expect(thread.replies?.[0].uuid).toBe('d-1');
+    expect(thread.replies?.[0].replies?.[0].uuid).toBe('d-2');
+    expect(thread.replies?.[0].replies?.[0].replies?.[0].uuid).toBe('d-3');
+  });
+
+  it('truncates at maxDepth but still reports what lies below', () => {
+    const chain = commentsFromDTO(
+      Array.from({ length: 4 }, (_, i) => ({
+        ...rootDTO,
+        uuid: `d-${i}`,
+        parent_uuid: i === 0 ? null : `d-${i - 1}`,
+        created_at: `2026-09-10T1${i}:00:00+00:00`,
+      })),
+    );
+
+    const [thread] = threadsFromComments(chain, 1);
+
+    expect(thread.replies?.[0].uuid).toBe('d-1');
+    expect(thread.replies?.[0].replies).toBeUndefined();
+    // The branch continues; the response simply stopped.
+    expect(thread.replies?.[0].replyCount).toBe(1);
+  });
+
+  it('counts direct replies, not descendants', () => {
+    const [thread] = threadsFromComments(
+      commentsFromDTO([
+        rootDTO,
+        replyDTO,
+        { ...replyDTO, uuid: 'c-4', parent_uuid: 'c-2' },
+      ]),
+    );
+
+    expect(thread.replyCount).toBe(1);
+    expect(thread.replies?.[0].replyCount).toBe(1);
+  });
+
+  it('terminates on a parent cycle rather than spinning', () => {
+    const threads = threadsFromComments(
+      commentsFromDTO([
+        { ...rootDTO, uuid: 'a', parent_uuid: 'b' },
+        { ...rootDTO, uuid: 'b', parent_uuid: 'a' },
+      ]),
+    );
+
+    // Neither is a root, so neither is returned — but the build returns.
+    expect(threads).toEqual([]);
+  });
+
   it('drops an orphan reply rather than promoting it to a root', () => {
     // A truncated read or a deleted root would otherwise surface someone's reply
     // as a top-level thread.

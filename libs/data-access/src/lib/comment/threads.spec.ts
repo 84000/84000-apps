@@ -1,34 +1,22 @@
-import { getCommentThreadsByAnchorUuids } from './threads';
+import {
+  getCommentThreadByUuid,
+  getCommentThreadsByAnchorUuids,
+} from './threads';
 import type { CommentDTO } from '../types';
 
 type FakeState = {
   rows: CommentDTO[];
-  orFilters: string[];
+  /** One entry per read: the column filtered on and the values passed. */
+  reads: [string, string[]][];
   rangeCalls: [number, number][];
-  fromCalls: string[];
   error?: { message: string };
-};
-
-/**
- * Matches the `or(uuid.in.(…),parent_uuid.in.(…))` the read builds, so a test
- * exercises the same row selection PostgREST would.
- */
-const matches = (row: CommentDTO, filter: string): boolean => {
-  const [uuidClause, parentClause] = filter.split('),');
-  const uuids = uuidClause.slice(uuidClause.indexOf('(') + 1).split(',');
-  const parents = parentClause
-    .slice(parentClause.indexOf('(') + 1, -1)
-    .split(',');
-  return (
-    uuids.includes(row.uuid) ||
-    (!!row.parent_uuid && parents.includes(row.parent_uuid))
-  );
 };
 
 class FakeQueryBuilder {
   private rangeStart = 0;
   private rangeEnd = 0;
-  private filter = '';
+  private column = '';
+  private values: string[] = [];
 
   constructor(private readonly state: FakeState) {}
 
@@ -36,9 +24,10 @@ class FakeQueryBuilder {
     return this;
   }
 
-  or(filter: string) {
-    this.state.orFilters.push(filter);
-    this.filter = filter;
+  in(column: string, values: string[]) {
+    this.column = column;
+    this.values = values;
+    this.state.reads.push([column, values]);
     return this;
   }
 
@@ -62,7 +51,11 @@ class FakeQueryBuilder {
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ) {
-    const matching = this.state.rows.filter((row) => matches(row, this.filter));
+    const matching = this.state.rows.filter((row) =>
+      this.values.includes(
+        String(row[this.column as 'uuid' | 'entity_uuid'] ?? ''),
+      ),
+    );
     const result = this.state.error
       ? { data: null, error: this.state.error }
       : {
@@ -74,18 +67,12 @@ class FakeQueryBuilder {
 }
 
 const createFakeClient = (state: FakeState) =>
-  ({
-    from: (relation: string) => {
-      state.fromCalls.push(relation);
-      return new FakeQueryBuilder(state);
-    },
-  }) as never;
+  ({ from: () => new FakeQueryBuilder(state) }) as never;
 
 const createState = (rows: CommentDTO[] = []): FakeState => ({
   rows,
-  orFilters: [],
+  reads: [],
   rangeCalls: [],
-  fromCalls: [],
 });
 
 let clock = 0;
@@ -106,6 +93,17 @@ const commentRow = (
   resolved_by: null,
   ...overrides,
 });
+
+/** root c-0, then c-1 replying to it, c-2 replying to that, and so on. */
+const chain = (depth: number, entityUuid = 'p-1'): CommentDTO[] =>
+  Array.from({ length: depth + 1 }, (_, i) =>
+    commentRow(`c-${i}`, {
+      entity_uuid: entityUuid,
+      parent_uuid: i === 0 ? null : `c-${i - 1}`,
+    }),
+  );
+
+const readColumns = (state: FakeState) => state.reads.map(([column]) => column);
 
 beforeEach(() => {
   clock = 0;
@@ -130,9 +128,9 @@ describe('getCommentThreadsByAnchorUuids', () => {
     expect(result.get('c-3')?.replies).toBeUndefined();
   });
 
-  it('finds a thread whose entity_uuid names a different passage', async () => {
-    // The point of keying on the anchor: a split moved the anchor to p-2 while
-    // provenance still says p-1, and the thread must resolve all the same.
+  it('finds a thread anchored on a passage its entity_uuid does not name', async () => {
+    // The point of keying on the anchor: a split moved the anchor to another
+    // passage while provenance still names the one the thread was born on.
     const state = createState([commentRow('c-1', { entity_uuid: 'p-1' })]);
 
     const result = await getCommentThreadsByAnchorUuids({
@@ -144,22 +142,85 @@ describe('getCommentThreadsByAnchorUuids', () => {
     expect(result.get('c-1')?.uuid).toBe('c-1');
   });
 
-  it('resolves up to the root when an anchor points at a reply', async () => {
+  it('resolves an anchor naming a reply to its thread root', async () => {
+    const state = createState(chain(1));
+
+    const result = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['c-1'],
+      source: 'draft',
+    });
+
+    expect(result.get('c-1')?.uuid).toBe('c-0');
+  });
+
+  it('resolves an anchor naming a deeply nested reply, at any depth', async () => {
+    const state = createState(chain(8));
+
+    const result = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['c-8'],
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    // Depth bounds the response, never which thread an anchor belongs to.
+    expect(result.get('c-8')?.uuid).toBe('c-0');
+  });
+
+  it('nests to maxDepth and reports the true replyCount beyond it', async () => {
+    const state = createState(chain(5));
+
+    const result = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['c-0'],
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    const root = result.get('c-0');
+    const level1 = root?.replies?.[0];
+    const level2 = level1?.replies?.[0];
+
+    expect(root?.uuid).toBe('c-0');
+    expect(level1?.uuid).toBe('c-1');
+    expect(level2?.uuid).toBe('c-2');
+    // Truncated here, but it says there is more below.
+    expect(level2?.replies).toBeUndefined();
+    expect(level2?.replyCount).toBe(1);
+  });
+
+  it('distinguishes a leaf from a truncated branch by replyCount', async () => {
     const state = createState([
-      commentRow('c-1'),
-      commentRow('c-2', { parent_uuid: 'c-1' }),
-      commentRow('c-3', { parent_uuid: 'c-1' }),
+      commentRow('c-0'),
+      commentRow('c-1', { parent_uuid: 'c-0' }),
     ]);
 
     const result = await getCommentThreadsByAnchorUuids({
       client: createFakeClient(state),
-      anchorUuids: ['c-2'],
+      anchorUuids: ['c-0'],
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    expect(result.get('c-0')?.replies?.[0].replyCount).toBe(0);
+  });
+
+  it('terminates on a parent cycle rather than spinning', async () => {
+    const state = createState([
+      commentRow('a', { parent_uuid: 'b' }),
+      commentRow('b', { parent_uuid: 'a' }),
+    ]);
+
+    const result = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['a'],
       source: 'draft',
     });
 
-    const thread = result.get('c-2');
-    expect(thread?.uuid).toBe('c-1');
-    expect(thread?.replies?.map(({ uuid }) => uuid)).toEqual(['c-2', 'c-3']);
+    // No comment in a cycle is a root, so there is no thread to return — but
+    // the read comes back rather than hanging.
+    expect(result.size).toBe(0);
   });
 
   it('omits an anchor whose comment is gone rather than erroring', async () => {
@@ -199,7 +260,6 @@ describe('getCommentThreadsByAnchorUuids', () => {
       'u-2',
       'u-3',
     ]);
-    // Resolution is the thread's, so no reply carries its own.
     expect(thread?.replies?.every((reply) => !reply.resolvedAt)).toBe(true);
   });
 
@@ -221,6 +281,41 @@ describe('getCommentThreadsByAnchorUuids', () => {
     ]);
   });
 
+  it('issues two reads regardless of anchor count, thread size or depth', async () => {
+    const rows = [
+      ...chain(12, 'p-1'),
+      ...Array.from({ length: 30 }, (_, i) =>
+        commentRow(`r-${i}`, { entity_uuid: 'p-1', parent_uuid: 'c-0' }),
+      ),
+    ];
+    const state = createState(rows);
+
+    await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: rows.map(({ uuid }) => uuid),
+      source: 'draft',
+    });
+
+    expect(readColumns(state)).toEqual(['uuid', 'entity_uuid']);
+  });
+
+  it('resolves anchors whose threads live in different scopes', async () => {
+    const state = createState([
+      commentRow('a-0', { entity_uuid: 'p-1' }),
+      commentRow('b-0', { entity_uuid: 'p-2' }),
+      commentRow('b-1', { entity_uuid: 'p-2', parent_uuid: 'b-0' }),
+    ]);
+
+    const result = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['a-0', 'b-1'],
+      source: 'draft',
+    });
+
+    expect(result.get('a-0')?.uuid).toBe('a-0');
+    expect(result.get('b-1')?.uuid).toBe('b-0');
+  });
+
   it('returns empty for a published read without querying', async () => {
     const state = createState([commentRow('c-1')]);
 
@@ -231,7 +326,7 @@ describe('getCommentThreadsByAnchorUuids', () => {
     });
 
     expect(result.size).toBe(0);
-    expect(state.fromCalls).toEqual([]);
+    expect(state.reads).toEqual([]);
   });
 
   it('defaults to published, so a caller that does not ask reads no comments', async () => {
@@ -243,7 +338,7 @@ describe('getCommentThreadsByAnchorUuids', () => {
     });
 
     expect(result.size).toBe(0);
-    expect(state.fromCalls).toEqual([]);
+    expect(state.reads).toEqual([]);
   });
 
   it('does not query for an empty anchor list', async () => {
@@ -256,32 +351,12 @@ describe('getCommentThreadsByAnchorUuids', () => {
     });
 
     expect(result.size).toBe(0);
-    expect(state.fromCalls).toEqual([]);
+    expect(state.reads).toEqual([]);
   });
 
-  it('issues one query for many anchors, whatever their thread sizes', async () => {
-    const rows = Array.from({ length: 20 }, (_, i) => commentRow(`c-${i}`));
-    for (let i = 0; i < 20; i++) {
-      for (let r = 0; r < 5; r++) {
-        rows.push(commentRow(`r-${i}-${r}`, { parent_uuid: `c-${i}` }));
-      }
-    }
-    const state = createState(rows);
-
-    const result = await getCommentThreadsByAnchorUuids({
-      client: createFakeClient(state),
-      anchorUuids: rows.slice(0, 20).map(({ uuid }) => uuid),
-      source: 'draft',
-    });
-
-    expect(state.fromCalls).toHaveLength(1);
-    expect(result.size).toBe(20);
-    expect(result.get('c-0')?.replies).toHaveLength(5);
-  });
-
-  it('batches the uuid list at 100, since each uuid appears twice in the URL', async () => {
+  it('batches the uuid list at 200 to stay under the URL limit', async () => {
     const state = createState();
-    const anchorUuids = Array.from({ length: 250 }, (_, i) => `c-${i}`);
+    const anchorUuids = Array.from({ length: 450 }, (_, i) => `c-${i}`);
 
     await getCommentThreadsByAnchorUuids({
       client: createFakeClient(state),
@@ -289,10 +364,9 @@ describe('getCommentThreadsByAnchorUuids', () => {
       source: 'draft',
     });
 
-    expect(state.orFilters).toHaveLength(3);
-    const first = state.orFilters[0];
-    expect(first.startsWith('uuid.in.(')).toBe(true);
-    expect(first.includes('parent_uuid.in.(')).toBe(true);
+    expect(state.reads.map(([, values]) => values.length)).toEqual([
+      200, 200, 50,
+    ]);
   });
 
   it('pages until a short page, since PostgREST truncates at 1000 silently', async () => {
@@ -310,11 +384,8 @@ describe('getCommentThreadsByAnchorUuids', () => {
       source: 'draft',
     });
 
-    expect(state.rangeCalls).toEqual([
-      [0, 999],
-      [1000, 1999],
-    ]);
-    expect(result.get('c-1')?.replies).toHaveLength(1200);
+    expect(state.rangeCalls).toContainEqual([1000, 1999]);
+    expect(result.get('c-1')?.replyCount).toBe(1200);
   });
 
   it('returns empty on error rather than a partial map', async () => {
@@ -332,5 +403,68 @@ describe('getCommentThreadsByAnchorUuids', () => {
 
     expect(result.size).toBe(0);
     consoleError.mockRestore();
+  });
+});
+
+describe('getCommentThreadByUuid', () => {
+  it('nests from the named comment down, not from the thread root', async () => {
+    const state = createState(chain(5));
+
+    const thread = await getCommentThreadByUuid({
+      client: createFakeClient(state),
+      uuid: 'c-2',
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    expect(thread?.uuid).toBe('c-2');
+    expect(thread?.replies?.[0].uuid).toBe('c-3');
+    expect(thread?.replies?.[0].replies?.[0].uuid).toBe('c-4');
+  });
+
+  it('continues where a truncated read stopped', async () => {
+    const state = createState(chain(4));
+
+    const page = await getCommentThreadsByAnchorUuids({
+      client: createFakeClient(state),
+      anchorUuids: ['c-0'],
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    const truncated = page.get('c-0')?.replies?.[0].replies?.[0];
+    expect(truncated?.uuid).toBe('c-2');
+    expect(truncated?.replies).toBeUndefined();
+    expect(truncated?.replyCount).toBe(1);
+
+    const rest = await getCommentThreadByUuid({
+      client: createFakeClient(state),
+      uuid: truncated?.uuid ?? '',
+      source: 'draft',
+      maxDepth: 2,
+    });
+
+    expect(rest?.replies?.[0].uuid).toBe('c-3');
+    expect(rest?.replies?.[0].replies?.[0].uuid).toBe('c-4');
+  });
+
+  it('returns null for a published read and for an unknown uuid', async () => {
+    const state = createState(chain(1));
+
+    expect(
+      await getCommentThreadByUuid({
+        client: createFakeClient(state),
+        uuid: 'c-0',
+        source: 'published',
+      }),
+    ).toBeNull();
+
+    expect(
+      await getCommentThreadByUuid({
+        client: createFakeClient(state),
+        uuid: 'nope',
+        source: 'draft',
+      }),
+    ).toBeNull();
   });
 });

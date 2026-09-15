@@ -42,7 +42,9 @@ import { searchResolver } from './schema/search/search.resolver';
 import {
   passageCommentsResolver,
   commentAuthorResolver,
+  commentQueryResolver,
   commentRepliesResolver,
+  commentReplyCountResolver,
   commentResolvedByResolver,
 } from './schema/comment/comment.resolver';
 
@@ -59,6 +61,7 @@ export const resolvers = {
     glossaryInstance: glossaryInstanceResolver,
     glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
+    comment: commentQueryResolver,
     search: searchResolver,
   },
 
@@ -99,5 +102,6 @@ export const resolvers = {
     author: commentAuthorResolver,
     resolvedBy: commentResolvedByResolver,
     replies: commentRepliesResolver,
+    replyCount: commentReplyCountResolver,
   },
 };

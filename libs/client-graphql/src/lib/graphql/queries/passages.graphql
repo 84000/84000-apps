@@ -142,3 +142,9 @@ query GetPassagesWithComments(
     }
   }
 }
+
+query GetCommentThread($uuid: ID!, $depth: Int) {
+  comment(uuid: $uuid, depth: $depth) {
+    ...CommentThreadFields
+  }
+}

@@ -43,10 +43,38 @@ type Comment {
   resolvedBy: UserInfo
 
   """
-  Replies to this comment, oldest first. Populated on a thread root; always
-  empty on a reply, since threads are one level deep.
+  Replies to this comment, oldest first, nested as deep as the read went.
+  Empty when this comment has no replies — and also when the read stopped
+  here, which `replyCount` distinguishes.
   """
   replies: [Comment!]!
+
+  """
+  How many direct replies this comment has. Compare against the length of
+  `replies` to tell a leaf from a branch the read truncated: threads are not
+  depth-limited in the database, only in any one response.
+  """
+  replyCount: Int!
+}
+
+extend type Query {
+  """
+  One thread addressed by any comment in it, with replies nested from that
+  comment down. How a client opens a branch that a shallower read truncated.
+
+  Null for a `published` content source, and for a uuid that names no comment.
+  """
+  comment(
+    """
+    The comment to read from — a thread root, or any reply within it
+    """
+    uuid: ID!
+
+    """
+    How many levels of replies to nest below it
+    """
+    depth: Int
+  ): Comment
 }
 
 extend type Passage {

@@ -105,10 +105,17 @@ export type Comment = {
   /** When it was written, ISO 8601 */
   createdAt: Scalars['String']['output'];
   /**
-   * Replies to this comment, oldest first. Populated on a thread root; always
-   * empty on a reply, since threads are one level deep.
+   * Replies to this comment, oldest first, nested as deep as the read went.
+   * Empty when this comment has no replies — and also when the read stopped
+   * here, which `replyCount` distinguishes.
    */
   replies: Array<Comment>;
+  /**
+   * How many direct replies this comment has. Compare against the length of
+   * `replies` to tell a leaf from a branch the read truncated: threads are not
+   * depth-limited in the database, only in any one response.
+   */
+  replyCount: Scalars['Int']['output'];
   /**
    * When the thread was resolved, ISO 8601. Set on a thread root only; a reply
    * inherits its thread's resolution state rather than carrying its own.
@@ -690,6 +697,13 @@ export type Query = {
   /** Get a single bibliography entry by UUID */
   bibliographyEntry?: Maybe<BibliographyEntryItem>;
   /**
+   * One thread addressed by any comment in it, with replies nested from that
+   * comment down. How a client opens a branch that a shallower read truncated.
+   *
+   * Null for a `published` content source, and for a uuid that names no comment.
+   */
+  comment?: Maybe<Comment>;
+  /**
    * Resolve finding subject uuids to the passages they sit in, scoped to one work.
    * Requires editor.admin.
    */
@@ -777,6 +791,13 @@ export type Query = {
 
 /** Root Query type - extend this in other schema files */
 export type QueryBibliographyEntryArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryCommentArgs = {
+  depth?: InputMaybe<Scalars['Int']['input']>;
   uuid: Scalars['ID']['input'];
 };
 
@@ -1279,7 +1300,7 @@ export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: str
 
 export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
 
-export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, author: (
+export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, replyCount: number, author: (
     { __typename?: 'UserInfo' }
     & UserInfoFieldsFragment
   ), resolvedBy?: (
@@ -1289,7 +1310,10 @@ export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, cont
 
 export type CommentThreadFieldsFragment = (
   { __typename?: 'Comment', replies: Array<(
-    { __typename?: 'Comment' }
+    { __typename?: 'Comment', replies: Array<(
+      { __typename?: 'Comment' }
+      & CommentFieldsFragment
+    )> }
     & CommentFieldsFragment
   )> }
   & CommentFieldsFragment
@@ -1461,6 +1485,17 @@ export type GetPassagesWithCommentsQuery = { __typename?: 'Query', work?: { __ty
         { __typename?: 'Passage' }
         & PassageWithCommentsFragment
       )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
+
+export type GetCommentThreadQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  depth?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetCommentThreadQuery = { __typename?: 'Query', comment?: (
+    { __typename?: 'Comment' }
+    & CommentThreadFieldsFragment
+  ) | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -1644,6 +1679,7 @@ export const CommentFieldsFragmentDoc = gql`
   createdAt
   updatedAt
   resolvedAt
+  replyCount
   author {
     ...UserInfoFields
   }
@@ -1657,6 +1693,9 @@ export const CommentThreadFieldsFragmentDoc = gql`
   ...CommentFields
   replies {
     ...CommentFields
+    replies {
+      ...CommentFields
+    }
   }
 }
     `;
@@ -1859,6 +1898,15 @@ ${AlignmentFieldsFragmentDoc}
 ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
 ${UserInfoFieldsFragmentDoc}`;
+export const GetCommentThreadDocument = gql`
+    query GetCommentThread($uuid: ID!, $depth: Int) {
+  comment(uuid: $uuid, depth: $depth) {
+    ...CommentThreadFields
+  }
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -1964,6 +2012,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetPassagesWithComments(variables: GetPassagesWithCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesWithCommentsQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesWithCommentsQuery>({ document: GetPassagesWithCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesWithComments', 'query', variables);
+    },
+    GetCommentThread(variables: GetCommentThreadQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetCommentThreadQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetCommentThreadQuery>({ document: GetCommentThreadDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetCommentThread', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);
