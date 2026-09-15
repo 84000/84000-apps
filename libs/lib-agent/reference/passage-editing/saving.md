@@ -36,9 +36,13 @@ passage is the opposite: supply what it already has, or you overwrite it.**
 | field | if you omit it |
 |---|---|
 | `uuid` | a new passage is inserted beside the one you meant to change |
-| `xmlId` | replaced with `docx-<sort>` — and passages reference each other by `xmlId` |
 | `sort` | reassigned from a counter, reordering the work |
 | `label`, `type` | rewritten to whatever you sent |
+
+`xmlId` is not in that list. It is a deprecated artifact of the original
+migration: nothing in the reader path reads it, publishing strips it, and new
+works should not have one. Passing it through does no harm and leaving it out
+breaks nothing — do not spend effort preserving it.
 
 An annotation operation may also carry a `uuid`. Send the stored one for every
 annotation that already exists. Omitted, the uuid is derived from the

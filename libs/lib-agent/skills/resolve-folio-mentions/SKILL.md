@@ -185,7 +185,7 @@ Follow `reference/passage-editing/saving.md`, and check your annotation set
 against the importable kinds in `reference/import-model/annotations.md` before
 writing. The two things that bite here: the passage's **whole** annotation set
 has to go back or the omitted ones are deleted, and the passage's existing
-`uuid`, `label`, `sort`, `type` and `xmlId` have to be carried through unchanged.
+`uuid`, `label`, `sort` and `type` have to be carried through unchanged.
 
 The new first-folio passage is the exception — it is an insert, so it takes a
 fresh `uuid`, a `sort` between its neighbours, and no label.
