@@ -1,81 +1,72 @@
 # Saving a changed passage
 
-The unit of write is the **passage**, not the annotation. There is no API that
-adds or removes one annotation: a passage is saved with its annotations, and the
-stored set is replaced by the set you send.
+Use **`apply-passage-edits`**. You send what you want changed and it works out
+the consequences: the offsets of every other annotation on those passages, the
+annotations you did not mention, the content, the sort of a passage you insert.
 
-Use the `upsert_passage` operation — see `reference/import-model/operations.md`
-for its shape and `reference/import-model/annotations.md` for the annotation
-kinds it accepts.
+`apply-entity-import` is the other tool, and it is for filling a work that has
+no passages yet. It takes a passage's whole end state, which on a populated work
+means reconstructing everything you are not changing — see *Why not the import
+tool* below.
 
-## Send the whole annotation set
+## The edits
 
-**Any annotation you leave out is deleted.** A passage that carries a dozen
-glossary instances and an end-note link needs all of them in the payload, at
-their post-edit offsets, or they are gone.
-
-So editing one annotation means reading the passage's whole set, re-mapping the
-offsets of the ones you did not touch (`offsets.md`), and sending everything
-back together.
-
-Two things make that round-trip lossy if you are not careful:
-
-- **A kind with no importer is dropped silently** — no error, no warning, and
-  then deleted as absent. Check your set against the importable kinds in
-  `reference/import-model/annotations.md` *before* you write, not after.
-- **The `deprecated-*` types cannot be round-tripped at all.** A read maps them
-  to `unknown`, so their identity is already lost before you write. A passage
-  carrying one cannot be saved without destroying it. Stop and tell the editor
-  rather than proceeding.
-
-## Carry the existing values through
-
-A first-time import lets the tool fill in identifiers. **Editing an existing
-passage is the opposite: supply what it already has, or you overwrite it.**
-
-| field | if you omit it |
+| op | what it does |
 |---|---|
-| `uuid` | a new passage is inserted beside the one you meant to change |
-| `sort` | reassigned from a counter that starts at 0, reordering the work |
-| `label`, `type` | rewritten to whatever you sent |
+| `delete-text` | cuts `start`–`end` out of the passage content |
+| `add-annotation` | adds an annotation of `kind` at `start` (and `end`, if it spans) |
+| `remove-annotation` | removes the annotation with that uuid |
+| `insert-passage` | inserts a passage before an existing one |
 
-`sort` is the one to watch, because the editor does not behave this way and the
-difference is easy to carry over. Editing through the editor, passages arrive
-with their stored sort and keep it. On this path an omitted `sort` is filled by
-a counter running from 0 over the operations you sent, which on a work of any
-size rewrites a passage's position to a number far below where it belongs. The
-row is then updated in place, with no reordering step to catch it.
+`add-annotation` without `end` makes a zero-length marker, which is what a folio
+mention or an end-note link is. See `reference/import-model/annotations.md` for
+the kinds and the `data` each one needs; a kind with no importer is refused
+outright rather than silently dropped.
 
-`xmlId` is not in that list. It is a deprecated artifact of the original
-migration: nothing in the reader path reads it, publishing strips it, and new
-works should not have one. Passing it through does no harm and leaving it out
-breaks nothing — do not spend effort preserving it.
+## Offsets are read in the stored coordinates
 
-An annotation operation may also carry a `uuid`. Send the stored one for every
-annotation that already exists. Omitted, the uuid is derived from the
-annotation's kind and position — so a shifted offset yields a new identity, and
-the row is deleted and re-inserted rather than updated. Other rows reference
-annotations by uuid.
+**Every offset you send is a position in the passage as it is stored now**,
+before any edit in your list is applied. You do not adjust for your own edits.
 
-## Inserting a new passage
+Cut a nine-character marker at 14 and add a mention at 14, and the mention lands
+where the marker was; a glossary instance at 30 moves to 21 without you saying
+so. Several edits on one passage are fine and order does not matter.
 
-A passage you are adding is the one case with no existing values to preserve. It
-takes a fresh `uuid` and the `sort` you want it to occupy — **not** a gap you
-found between two neighbours. Give it the `label` the convention calls for,
-which is sometimes none.
+What the tool does with the annotations you did not name:
 
-The room is made for you. A passage whose `uuid` is not already stored counts as
-an insert, and the save path shifts the contiguous run of passages beginning at
-your `sort` up by one to open the slot. If nothing sits exactly at that `sort`
-the position is already free and nothing moves; the shift stops at the first gap
-either way, so it never disturbs the rest of the work.
+- one **before** the cut stays where it is;
+- one **after** it moves back by what was removed;
+- one that **spans** the cut keeps its start and loses the cut from its end;
+- one whose text was **entirely** deleted is dropped, with a warning naming it —
+  keeping it would turn a range into a zero-length marker, which means something
+  else. If that surprises you, your edit was wrong.
 
-So place a new passage by naming the sort of the passage it should come
-**before**. Hunting for an unused number is unnecessary and riskier — sorts are
-not required to be contiguous, and passages are allowed to share one.
+Read `offsets.md` for why this is the part worth getting right.
 
-This applies only to inserts. An existing passage's `sort` is written exactly as
-you send it, with no shifting and no adjustment.
+## Preview with `dryRun`
+
+`dryRun: true` computes the result and returns it without writing. That is the
+preview: the content as it would stand, the annotation counts, and any warnings.
+Show the editor that, not a description of your intentions. See `preview.md`.
+
+## Inserting a passage
+
+`insert-passage` takes the passage it goes **before** and adopts that passage's
+sort; the save path shifts the run beginning there to open the slot. Do not hunt
+for an unused number — sorts need not be contiguous and passages may share one.
+
+`label` defaults to none and `type` to the anchor's type.
+
+## Why not the import tool
+
+`apply-entity-import` replaces a passage's stored annotations with the set you
+send, so on a populated work you would have to re-send every annotation you were
+not changing, at offsets you had re-mapped yourself, along with the passage's
+existing `uuid`, `sort`, `label` and `type`. Anything you omitted would be
+deleted or overwritten.
+
+That is what `apply-passage-edits` exists to do for you. Reach for the import
+tool only when the work has no passages at all.
 
 ## A sort is a reading position, not a passage
 
@@ -106,8 +97,17 @@ position — but it means an insert is a change to the whole work, not to one
 Tohoku number. If you meant to add something for a single version, say so in the
 preview: what you are actually doing is adding a position to all of them.
 
-## Unchanged passages stay out of the payload
+## Legacy annotations are preserved, not lost
 
-Send only the passages you changed. An unchanged passage in the payload is not
-harmless: it is a full replacement of its annotation set, with every hazard
-above, for no benefit.
+Some passages carry `deprecated-*` annotations — around 23,000 rows across the
+library, left by earlier migrations. They have no domain model, so a read cannot
+say what they are beyond "unmodelled".
+
+They are kept verbatim through an edit and written back as they were. You do not
+need to do anything about them, and you do not need to avoid a passage that has
+one. If you deliberately want one gone, remove it by uuid like any other
+annotation.
+
+One of them is worth knowing about: `deprecated-temp-mention` holds content in
+exactly the shape of a folio mention. Those are not folio mentions and a reader
+does not render them as such.

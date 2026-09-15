@@ -158,25 +158,26 @@ their first mention at offset 0 of the first labeled passage, with no marker
 anywhere. That is an artifact, not the convention. Do not imitate it, and do not
 treat it as evidence you have mis-read a work.
 
-### 6. Remove the marker and re-map the offsets
+### 6. Describe the edit for each marker
 
-Read `reference/passage-editing/offsets.md` before doing this. Removing a marker
-shifts every annotation after it in that passage, and an annotation left at its
-old offset silently marks different words.
+`apply-passage-edits` does the arithmetic. For each marker you accepted, three
+edits on its passage, with every offset in the **stored** coordinates — the
+passage as you read it, before any of your edits:
 
-For each passage, working through its markers **right to left**:
+1. `delete-text` over the marker, and the single space that usually trails it.
+   Do not leave a double space, or a space before punctuation.
+2. `remove-annotation` for the `deprecated-reference` or `link` that covered it.
+3. `add-annotation` of kind `mention` at the marker's start offset, with
+   `data: { entity, linkType: "folio", isSameWork: true, linkToh }`. No `end` —
+   a folio break is zero-length.
 
-1. Note the marker's start offset.
-2. Cut the marker text, and the single space that usually trails it, out of
-   `content`. Do not leave a double space, or a space before punctuation.
-3. Drop the `deprecated-reference` or `link` annotation that covered it.
-4. Re-map every remaining annotation on the passage by the number of characters
-   you removed.
-5. Add the `mention` at the noted offset, with `start` and `end` equal.
+Send every marker in a passage together; order does not matter and you do not
+adjust for your own cuts. The other annotations on that passage — glossary
+instances, end-note links, the legacy `deprecated-*` rows — are re-mapped and
+carried through for you.
 
-The marker often sits beside an end-note link, which is also zero-length. Where
-the two land on the same offset, `offsets.md` says to decide their order
-deliberately rather than letting it fall out of the edit.
+Read `reference/passage-editing/offsets.md` if you need to reason about what a
+cut does, but do not do the shifting yourself.
 
 ### 7. Preview before writing (required)
 
@@ -193,21 +194,17 @@ What this conversion specifically owes the editor:
 - any folio number that did not resolve, and any gap in the folio sequence — a
   gap usually means a marker was missed rather than a folio missing.
 
-### 8. Apply through the passage save
+### 8. Apply
 
-Follow `reference/passage-editing/saving.md`, and check your annotation set
-against the importable kinds in `reference/import-model/annotations.md` before
-writing. The two things that bite here: the passage's **whole** annotation set
-has to go back or the omitted ones are deleted, and the passage's existing
-`uuid`, `label`, `sort` and `type` have to be carried through unchanged.
+Call `apply-passage-edits` with `dryRun: true` first — its result **is** the
+preview in step 7. Then call it again without `dryRun` once the editor confirms.
 
-The new first-folio passage is the exception — it is an insert, so it takes a
-fresh `uuid`, no label, and the `sort` of the passage it should come before. The
-save path opens the slot; do not go looking for an unused number.
+The new first-folio passage is an `insert-passage` edit: give it the passage it
+goes **before**, the bracketed text as content, and no label. Then add its
+mention at offset 0 of the new passage in a second call, once the insert has
+given it a uuid.
 
-Stop and tell the editor if a passage you need to change carries a
-`deprecated-*` annotation other than the marker you are removing. Those cannot
-be round-tripped, and saving the passage would destroy it.
+`reference/passage-editing/saving.md` covers the rest.
 
 ### 9. Verify
 
@@ -216,6 +213,6 @@ Re-read the passages and check that:
 - no `[F.<n>.<side>]` text remains, and every reference the editor declined still does;
 - the mention count matches the preview;
 - every mention has `start == end`;
-- the annotations around a converted marker still cover the text they used to —
-  re-slice them as `offsets.md` describes, and spot-check a glossary instance
-  near a break.
+- the warnings returned by the write are empty, or each one is something you
+  intended — a dropped annotation means a cut swallowed text you did not mean to
+  take.
