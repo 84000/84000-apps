@@ -4,6 +4,7 @@ fragment CommentFields on Comment {
   createdAt
   updatedAt
   resolvedAt
+  replyCount
   author {
     ...UserInfoFields
   }
@@ -12,9 +13,17 @@ fragment CommentFields on Comment {
   }
 }
 
+# Threads are not depth-limited in the database, but a GraphQL selection cannot
+# recurse — each level has to be spelled out. This selects the same two levels
+# the server nests by default; a branch with more replies than it returns is
+# opened by calling `comment(uuid:)` on the deepest one, which returns the next
+# slab in the same shape.
 fragment CommentThreadFields on Comment {
   ...CommentFields
   replies {
     ...CommentFields
+    replies {
+      ...CommentFields
+    }
   }
 }
