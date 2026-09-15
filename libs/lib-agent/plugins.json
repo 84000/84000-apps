@@ -45,6 +45,10 @@
       "sharedReference": {
         "docx-import": [
           "libs/lib-agent/reference/import-model"
+        ],
+        "resolve-folio-mentions": [
+          "libs/lib-agent/reference/import-model",
+          "libs/lib-agent/reference/passage-editing"
         ]
       }
     },

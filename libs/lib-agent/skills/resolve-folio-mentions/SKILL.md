@@ -33,6 +33,20 @@ The `toh` inside `content` is the *target's* Tohoku number. It is a different
 field from the row's own `toh` column, which scopes visibility; do not conflate
 them.
 
+## The shared policies this follows
+
+Editing a passage that already has content is the same problem whatever you are
+changing, and three files hold the parts that are not specific to folios. Read
+them before step 6:
+
+- `reference/passage-editing/offsets.md` — what moves when content changes
+- `reference/passage-editing/preview.md` — what to show before writing, and why
+  an unsure case is raised rather than skipped
+- `reference/passage-editing/saving.md` — the passage is the unit of write
+
+The write contract itself is in `reference/import-model/operations.md` and
+`reference/import-model/annotations.md`.
+
 ## Workflow
 
 ### 1. Resolve the work
@@ -70,9 +84,9 @@ of three states:
 
 Most bracketed text in the corpus is not a folio marker, and a
 `deprecated-reference` annotation is not a folio signal — across the library
-fewer than one in twenty of them is a break. But the boundary is not clean, and
-**an unsure case goes to the editor, not to the discard pile.** Skipping looks
-safe and is not: it buries the evidence that the case exists.
+fewer than one in twenty of them is a break. The boundary is not clean, so sort
+three ways rather than two, per `reference/passage-editing/preview.md`: an
+unsure case goes to the editor, not to the discard pile.
 
 **Convert** `[F.<number>.<a|b>]`, the bracket closing immediately after the side.
 
@@ -133,50 +147,52 @@ treat it as evidence you have mis-read a work.
 
 ### 6. Remove the marker and re-map the offsets
 
-This is where the conversion goes wrong if you are careless. Deleting
-`[F.90.a] ` removes nine or ten characters from `content`, so **every annotation
-on that passage that starts after the marker shifts back by that many
-characters.** A mention placed correctly beside glossary instances and end-note
-links left at their old offsets is a broken passage.
+Read `reference/passage-editing/offsets.md` before doing this. Removing a marker
+shifts every annotation after it in that passage, and an annotation left at its
+old offset silently marks different words.
 
-For each passage, working through its markers **right to left** so the offsets
-you have not reached yet stay valid:
+For each passage, working through its markers **right to left**:
 
 1. Note the marker's start offset.
 2. Cut the marker text, and the single space that usually trails it, out of
    `content`. Do not leave a double space, or a space before punctuation.
 3. Drop the `deprecated-reference` or `link` annotation that covered it.
-4. Shift every remaining annotation on the passage: any `start` or `end` past
-   the cut moves back by the number of characters removed. An annotation that
-   spanned the marker gets shorter; one entirely before it does not move.
+4. Re-map every remaining annotation on the passage by the number of characters
+   you removed.
 5. Add the `mention` at the noted offset, with `start` and `end` equal.
+
+The marker often sits beside an end-note link, which is also zero-length. Where
+the two land on the same offset, `offsets.md` says to decide their order
+deliberately rather than letting it fall out of the edit.
 
 ### 7. Preview before writing (required)
 
-Show the editor: how many mentions will be created; what happened to the first
-reference and why; **every candidate you are unsure about**, each with the reason
-it is doubtful and what converting it would cost; every candidate you rejected;
-any folio number that did not resolve; and any gap in the folio sequence.
+Follow `reference/passage-editing/preview.md`. Do not write until the editor
+confirms, and do not resolve an ask by choosing for them.
 
-Do not write until the editor confirms, and do not resolve an ask by choosing for
-them. The doubtful cases matter more than the clean ones — a gap in the sequence
-usually means a marker was missed rather than a folio missing, and a reference
-you quietly passed over is one nobody will find again.
+What this conversion specifically owes the editor:
+
+- how many mentions will be created;
+- what happened to the first reference, and why;
+- every reference carrying a line number, with the line number it would lose;
+- every bracketed candidate you rejected, with the reason;
+- any folio number that did not resolve, and any gap in the folio sequence — a
+  gap usually means a marker was missed rather than a folio missing.
 
 ### 8. Apply through the passage save
 
-Write with the entity-import `upsert_passage` action, one operation per passage
-you changed. The passage is the unit of write: annotations are saved as a set,
-so the operation carries the passage's **complete** annotation list, not just the
-new mentions. Anything you leave out is deleted.
+Follow `reference/passage-editing/saving.md`, and check your annotation set
+against the importable kinds in `reference/import-model/annotations.md` before
+writing. The two things that bite here: the passage's **whole** annotation set
+has to go back or the omitted ones are deleted, and the passage's existing
+`uuid`, `label`, `sort`, `type` and `xmlId` have to be carried through unchanged.
 
-That means echoing back every annotation you did not touch, at its shifted
-offset. Carry through the passage's existing `uuid`, `label`, `sort`, `type` and
-`xmlId` unchanged — `xmlId` in particular, because passages reference each other
-by it and an omitted one is silently replaced.
+The new first-folio passage is the exception — it is an insert, so it takes a
+fresh `uuid`, a `sort` between its neighbours, and no label.
 
-The new first-folio passage is the one exception: it is an insert, so it needs a
-fresh `uuid` and a `sort` that places it correctly, and its label stays empty.
+Stop and tell the editor if a passage you need to change carries a
+`deprecated-*` annotation other than the marker you are removing. Those cannot
+be round-tripped, and saving the passage would destroy it.
 
 ### 9. Verify
 
@@ -186,5 +202,5 @@ Re-read the passages and check that:
 - the mention count matches the preview;
 - every mention has `start == end`;
 - the annotations around a converted marker still cover the text they used to —
-  spot-check a glossary instance or an end-note link near a break, since a
-  mis-shifted offset reads as a subtly wrong word rather than an error.
+  re-slice them as `offsets.md` describes, and spot-check a glossary instance
+  near a break.
