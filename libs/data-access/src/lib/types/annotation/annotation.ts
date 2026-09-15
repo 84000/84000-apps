@@ -3,6 +3,7 @@ import { parseTohList, serializeTohList } from '../toh';
 import {
   AnnotationBase,
   AnnotationDTO,
+  AnnotationDTOContent,
   AnnotationType,
   annotationTypeFromDTO,
   annotationTypeToDTO,
@@ -238,8 +239,15 @@ export type TrailerAnnotation = AnnotationBase & {
   type: 'trailer';
 };
 
+/**
+ * An annotation whose stored type has no domain model — chiefly the legacy
+ * `deprecated-*` rows. The stored type and content ride along so a read/write
+ * round-trip returns the row unchanged instead of flattening it to `unknown`.
+ */
 export type UnknownAnnotation = AnnotationBase & {
   type: 'unknown';
+  dtoType?: string;
+  dtoContent?: AnnotationDTOContent[];
 };
 
 export type Annotation =
