@@ -3,6 +3,7 @@ import {
   createServerClient,
   createTokenClient,
   getSession,
+  hasPermission,
 } from '@eightyfourthousand/data-access';
 import {
   CONTENT_SOURCE_HEADER,
@@ -130,4 +131,33 @@ export function requireRole(ctx: GraphQLContext, requiredRole: UserRole): NonNul
   }
 
   return session;
+}
+
+/**
+ * Gates a mutation on `editor.edit`.
+ *
+ * Returns the failure rather than throwing, so a resolver can answer with its
+ * own result type and a client reads a refusal as data.
+ */
+export async function requireEditorEditPermission(ctx: GraphQLContext) {
+  if (!ctx.session) {
+    return {
+      ok: false as const,
+      error: 'Not authenticated',
+    };
+  }
+
+  const permitted = await hasPermission({
+    client: ctx.supabase,
+    permission: 'editor.edit',
+  });
+
+  if (!permitted) {
+    return {
+      ok: false as const,
+      error: 'Permission denied: editor.edit required',
+    };
+  }
+
+  return { ok: true as const, session: ctx.session };
 }

@@ -1,5 +1,4 @@
 import {
-  COMMENT_COLUMNS,
   DEFAULT_THREAD_DEPTH,
   type CommentDTO,
   type Comment,
@@ -9,52 +8,7 @@ import {
   threadsFromComments,
 } from '../types';
 import { DEFAULT_CONTENT_SOURCE, type ContentSource } from '../content-source';
-
-const UUID_BATCH_SIZE = 200;
-const PAGE_SIZE = 1000;
-
-/**
- * Pages a `comments` read until a short page, batching the uuid list.
- *
- * Neither cap surfaces as an error: PostgREST truncates a read at 1000 rows and
- * rejects a URL over ~16KB (`postgrest-silent-limits`).
- */
-const readBatched = async (
-  client: DataClient,
-  column: 'uuid' | 'entity_uuid',
-  values: readonly string[],
-): Promise<CommentDTO[] | null> => {
-  const rows: CommentDTO[] = [];
-
-  for (let i = 0; i < values.length; i += UUID_BATCH_SIZE) {
-    const batch = values.slice(i, i + UUID_BATCH_SIZE) as string[];
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const { data, error } = await client
-        .from('comments')
-        .select(COMMENT_COLUMNS)
-        .in(column, batch)
-        // A total order is required for stable paging; without the primary key
-        // as a final tiebreaker, pages can skip and repeat rows.
-        .order('created_at', { ascending: true })
-        .order('uuid', { ascending: true })
-        .range(offset, offset + PAGE_SIZE - 1);
-
-      if (error) {
-        console.error('Error batch loading comments:', error);
-        return null;
-      }
-
-      rows.push(...((data ?? []) as unknown as CommentDTO[]));
-      hasMore = (data?.length ?? 0) === PAGE_SIZE;
-      offset += PAGE_SIZE;
-    }
-  }
-
-  return rows;
-};
+import { readCommentRows } from './rows';
 
 /**
  * Walks up to the root of the thread containing `uuid`, within rows already in
@@ -116,13 +70,13 @@ export const getCommentThreadsByAnchorUuids = async ({
     return threadsByAnchor;
   }
 
-  const anchorRows = await readBatched(client, 'uuid', anchorUuids);
+  const anchorRows = await readCommentRows(client, 'uuid', anchorUuids);
   if (!anchorRows) return new Map();
 
   const scopes = [...new Set(anchorRows.map((row) => row.entity_uuid))];
   if (scopes.length === 0) return threadsByAnchor;
 
-  const scopeRows = await readBatched(client, 'entity_uuid', scopes);
+  const scopeRows = await readCommentRows(client, 'entity_uuid', scopes);
   if (!scopeRows) return new Map();
 
   const byUuid = new Map(scopeRows.map((row) => [row.uuid, row]));
@@ -164,10 +118,12 @@ export const getCommentThreadByUuid = async ({
 }): Promise<Comment | null> => {
   if (source === 'published') return null;
 
-  const [row] = (await readBatched(client, 'uuid', [uuid])) ?? [];
+  const [row] = (await readCommentRows(client, 'uuid', [uuid])) ?? [];
   if (!row) return null;
 
-  const scopeRows = await readBatched(client, 'entity_uuid', [row.entity_uuid]);
+  const scopeRows = await readCommentRows(client, 'entity_uuid', [
+    row.entity_uuid,
+  ]);
   if (!scopeRows) return null;
 
   // Built from this comment down rather than from the thread root, so the

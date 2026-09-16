@@ -1,4 +1,7 @@
-import type { GraphQLContext } from '../../context';
+import {
+  requireEditorEditPermission,
+  type GraphQLContext,
+} from '../../context';
 import {
   Passage,
   Annotation,
@@ -6,7 +9,6 @@ import {
   findRegexOccurrences,
   fetchReplaceAnnotations,
   fetchReplaceRows,
-  hasPermission,
   persistReplaceChanges,
   replacePassageText,
   savePassagesWithDeletions,
@@ -46,29 +48,6 @@ interface SavePassagesResult {
   renumberedPassages: RenumberedPassageRow[];
   error?: string;
 }
-
-const requireEditorEditPermission = async (ctx: GraphQLContext) => {
-  if (!ctx.session) {
-    return {
-      ok: false as const,
-      error: 'Not authenticated',
-    };
-  }
-
-  const permitted = await hasPermission({
-    client: ctx.supabase,
-    permission: 'editor.edit',
-  });
-
-  if (!permitted) {
-    return {
-      ok: false as const,
-      error: 'Permission denied: editor.edit required',
-    };
-  }
-
-  return { ok: true as const };
-};
 
 /**
  * Mutation resolver for saving passages
