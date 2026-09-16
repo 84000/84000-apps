@@ -89,6 +89,46 @@ export type BibliographyEntryItem = {
   workUuid?: Maybe<Scalars['ID']['output']>;
 };
 
+/**
+ * A comment thread on a passage, or one reply within it.
+ *
+ * Carries no text range. The range a comment refers to lives on the
+ * `comment` annotation anchoring it, which is what places a thread on a passage:
+ * a thread's `entityUuid` records where it was born, not where it currently sits.
+ */
+export type Comment = {
+  __typename?: 'Comment';
+  /** Who wrote it */
+  author: UserInfo;
+  /** The comment body */
+  content: Scalars['String']['output'];
+  /** When it was written, ISO 8601 */
+  createdAt: Scalars['String']['output'];
+  /**
+   * Replies to this comment, oldest first, nested as deep as the read went.
+   * Empty when this comment has no replies — and also when the read stopped
+   * here, which `replyCount` distinguishes.
+   */
+  replies: Array<Comment>;
+  /**
+   * How many direct replies this comment has. Compare against the length of
+   * `replies` to tell a leaf from a branch the read truncated: threads are not
+   * depth-limited in the database, only in any one response.
+   */
+  replyCount: Scalars['Int']['output'];
+  /**
+   * When the thread was resolved, ISO 8601. Set on a thread root only; a reply
+   * inherits its thread's resolution state rather than carrying its own.
+   */
+  resolvedAt?: Maybe<Scalars['String']['output']>;
+  /** Who resolved the thread. Root-only, like `resolvedAt`. */
+  resolvedBy?: Maybe<UserInfo>;
+  /** When it was last edited, ISO 8601 */
+  updatedAt?: Maybe<Scalars['String']['output']>;
+  /** Unique identifier for the comment */
+  uuid: Scalars['ID']['output'];
+};
+
 /** Currently authenticated user */
 export type CurrentUser = {
   __typename?: 'CurrentUser';
@@ -429,6 +469,20 @@ export type Passage = {
   alignments: Array<Alignment>;
   /** Annotations marking up ranges within this passage */
   annotations: Array<Annotation>;
+  /**
+   * Comment threads anchored in this passage, oldest first. Roots only, with
+   * replies nested under `replies`; a flat list plus a parent id would push tree
+   * assembly into every client.
+   *
+   * Found through the passage's `comment` annotations rather than through
+   * `comments.entity_uuid`, so a thread appears where its anchor currently is
+   * rather than where the thread was first written. A thread whose anchor was
+   * deleted is absent here and reachable only by work scope.
+   *
+   * Always empty for a `published` content source: comments are draft-only, so
+   * there is nothing to find and no query is issued.
+   */
+  comments: Array<Comment>;
   /** Text content of the passage */
   content: Scalars['String']['output'];
   /**
@@ -643,6 +697,13 @@ export type Query = {
   /** Get a single bibliography entry by UUID */
   bibliographyEntry?: Maybe<BibliographyEntryItem>;
   /**
+   * One thread addressed by any comment in it, with replies nested from that
+   * comment down. How a client opens a branch that a shallower read truncated.
+   *
+   * Null for a `published` content source, and for a uuid that names no comment.
+   */
+  comment?: Maybe<Comment>;
+  /**
    * Resolve finding subject uuids to the passages they sit in, scoped to one work.
    * Requires editor.admin.
    */
@@ -730,6 +791,13 @@ export type Query = {
 
 /** Root Query type - extend this in other schema files */
 export type QueryBibliographyEntryArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryCommentArgs = {
+  depth?: InputMaybe<Scalars['Int']['input']>;
   uuid: Scalars['ID']['input'];
 };
 
@@ -976,6 +1044,25 @@ export type TocEntry = {
   uuid: Scalars['ID']['output'];
 };
 
+/**
+ * Enough of a user to name them on screen — a comment's author, a mention's
+ * target. Identity only: never an email address, and never unrelated profile
+ * data. Distinct from `CurrentUser`, which is the session rather than an
+ * arbitrary person.
+ */
+export type UserInfo = {
+  __typename?: 'UserInfo';
+  /** URL of their avatar image, if their profile has one */
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  /**
+   * Their full name, falling back to their username and then to a generic label.
+   * Never empty: a blank where a person should be reads as a rendering bug.
+   */
+  displayName: Scalars['String']['output'];
+  /** The user's auth id */
+  id: Scalars['ID']['output'];
+};
+
 /** User role levels */
 export type UserRole =
   | 'ADMIN'
@@ -1213,6 +1300,25 @@ export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: str
 
 export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
 
+export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, replyCount: number, author: (
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
+  ), resolvedBy?: (
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
+  ) | null };
+
+export type CommentThreadFieldsFragment = (
+  { __typename?: 'Comment', replies: Array<(
+    { __typename?: 'Comment', replies: Array<(
+      { __typename?: 'Comment' }
+      & CommentFieldsFragment
+    )> }
+    & CommentFieldsFragment
+  )> }
+  & CommentFieldsFragment
+);
+
 export type LicenseFieldsFragment = { __typename?: 'License', name?: string | null, link?: string | null, description?: string | null };
 
 export type TitlesByLanguageFieldsFragment = { __typename?: 'TitlesByLanguage', tibetan?: string | null, english?: string | null, wylie?: string | null, sanskrit?: string | null };
@@ -1242,6 +1348,14 @@ export type PassageWithAnnotationsFragment = (
 );
 
 export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, workUuid: string, label?: string | null, sort: number, type: string, xmlId?: string | null, json?: any | null };
+
+export type PassageWithCommentsFragment = (
+  { __typename?: 'Passage', comments: Array<(
+    { __typename?: 'Comment' }
+    & CommentThreadFieldsFragment
+  )> }
+  & PassageWithAnnotationsFragment
+);
 
 export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string, attestation?: string | null };
 
@@ -1277,6 +1391,8 @@ export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
     { __typename?: 'TocEntry' }
     & TocEntryNestedFragment
   )> };
+
+export type UserInfoFieldsFragment = { __typename?: 'UserInfo', id: string, displayName: string, avatarUrl?: string | null };
 
 export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, publishedVersion?: string | null, publicationStatus?: string | null, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
 
@@ -1354,6 +1470,31 @@ export type GetPassageQueryVariables = Exact<{
 export type GetPassageQuery = { __typename?: 'Query', passage?: (
     { __typename?: 'Passage' }
     & PassageWithAnnotationsFragment
+  ) | null };
+
+export type GetPassagesWithCommentsQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  cursor?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  direction?: InputMaybe<PaginationDirection>;
+  filter?: InputMaybe<PassageFilter>;
+}>;
+
+
+export type GetPassagesWithCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithCommentsFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
+
+export type GetCommentThreadQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  depth?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetCommentThreadQuery = { __typename?: 'Query', comment?: (
+    { __typename?: 'Comment' }
+    & CommentThreadFieldsFragment
   ) | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
@@ -1473,6 +1614,17 @@ export const ImprintFieldsFragmentDoc = gql`
   }
 }
     `;
+export const PassageWithJsonFragmentDoc = gql`
+    fragment PassageWithJson on Passage {
+  uuid
+  workUuid
+  label
+  sort
+  type
+  xmlId
+  json
+}
+    `;
 export const PassageFieldsFragmentDoc = gql`
     fragment PassageFields on Passage {
   uuid
@@ -1513,15 +1665,46 @@ export const PassageWithAnnotationsFragmentDoc = gql`
   }
 }
     `;
-export const PassageWithJsonFragmentDoc = gql`
-    fragment PassageWithJson on Passage {
+export const UserInfoFieldsFragmentDoc = gql`
+    fragment UserInfoFields on UserInfo {
+  id
+  displayName
+  avatarUrl
+}
+    `;
+export const CommentFieldsFragmentDoc = gql`
+    fragment CommentFields on Comment {
   uuid
-  workUuid
-  label
-  sort
-  type
-  xmlId
-  json
+  content
+  createdAt
+  updatedAt
+  resolvedAt
+  replyCount
+  author {
+    ...UserInfoFields
+  }
+  resolvedBy {
+    ...UserInfoFields
+  }
+}
+    `;
+export const CommentThreadFieldsFragmentDoc = gql`
+    fragment CommentThreadFields on Comment {
+  ...CommentFields
+  replies {
+    ...CommentFields
+    replies {
+      ...CommentFields
+    }
+  }
+}
+    `;
+export const PassageWithCommentsFragmentDoc = gql`
+    fragment PassageWithComments on Passage {
+  ...PassageWithAnnotations
+  comments {
+    ...CommentThreadFields
+  }
 }
     `;
 export const TitleFieldsFragmentDoc = gql`
@@ -1690,6 +1873,40 @@ export const GetPassageDocument = gql`
 ${PassageFieldsFragmentDoc}
 ${AnnotationFieldsFragmentDoc}
 ${AlignmentFieldsFragmentDoc}`;
+export const GetPassagesWithCommentsDocument = gql`
+    query GetPassagesWithComments($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageWithComments
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
+      }
+    }
+  }
+}
+    ${PassageWithCommentsFragmentDoc}
+${PassageWithAnnotationsFragmentDoc}
+${PassageFieldsFragmentDoc}
+${AnnotationFieldsFragmentDoc}
+${AlignmentFieldsFragmentDoc}
+${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
+export const GetCommentThreadDocument = gql`
+    query GetCommentThread($uuid: ID!, $depth: Int) {
+  comment(uuid: $uuid, depth: $depth) {
+    ...CommentThreadFields
+  }
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -1792,6 +2009,12 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetPassage(variables?: GetPassageQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassageQuery>({ document: GetPassageDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassage', 'query', variables);
+    },
+    GetPassagesWithComments(variables: GetPassagesWithCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesWithCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesWithCommentsQuery>({ document: GetPassagesWithCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesWithComments', 'query', variables);
+    },
+    GetCommentThread(variables: GetCommentThreadQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetCommentThreadQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetCommentThreadQuery>({ document: GetCommentThreadDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetCommentThread', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);

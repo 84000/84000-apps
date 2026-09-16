@@ -1,6 +1,7 @@
 import type { Passage, PassagesPage, BodyItemType } from '@eightyfourthousand/data-access';
 import { annotationsFromGraphQL, type GraphQLAnnotation } from './annotation';
 import { alignmentsFromGraphQL, type GraphQLAlignment } from './alignment';
+import { commentsFromGraphQL, type GraphQLComment } from './comment';
 
 /**
  * GraphQL Passage type
@@ -15,6 +16,7 @@ export type GraphQLPassage = {
   xmlId?: string | null;
   annotations?: GraphQLAnnotation[];
   alignments?: GraphQLAlignment[];
+  comments?: GraphQLComment[];
 };
 
 /**
@@ -60,6 +62,9 @@ export function passageFromGraphQL(
     workUuid: gqlPassage.workUuid ?? workUuid ?? '',
     annotations,
     alignments,
+    ...(gqlPassage.comments
+      ? { comments: commentsFromGraphQL(gqlPassage.comments) }
+      : {}),
   };
 }
 

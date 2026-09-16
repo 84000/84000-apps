@@ -41,6 +41,30 @@ type CurrentUser {
   role: UserRole!
 }
 
+"""
+Enough of a user to name them on screen — a comment's author, a mention's
+target. Identity only: never an email address, and never unrelated profile
+data. Distinct from `CurrentUser`, which is the session rather than an
+arbitrary person.
+"""
+type UserInfo {
+  """
+  The user's auth id
+  """
+  id: ID!
+
+  """
+  Their full name, falling back to their username and then to a generic label.
+  Never empty: a blank where a person should be reads as a rendering bug.
+  """
+  displayName: String!
+
+  """
+  URL of their avatar image, if their profile has one
+  """
+  avatarUrl: String
+}
+
 extend type Query {
   """
   Check if the current user has a specific permission.

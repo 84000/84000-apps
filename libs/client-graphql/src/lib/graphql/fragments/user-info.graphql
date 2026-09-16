@@ -1,0 +1,5 @@
+fragment UserInfoFields on UserInfo {
+  id
+  displayName
+  avatarUrl
+}

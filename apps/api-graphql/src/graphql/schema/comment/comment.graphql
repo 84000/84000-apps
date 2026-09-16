@@ -1,0 +1,95 @@
+"""
+A comment thread on a passage, or one reply within it.
+
+Carries no text range. The range a comment refers to lives on the
+`comment` annotation anchoring it, which is what places a thread on a passage:
+a thread's `entityUuid` records where it was born, not where it currently sits.
+"""
+type Comment {
+  """
+  Unique identifier for the comment
+  """
+  uuid: ID!
+
+  """
+  The comment body
+  """
+  content: String!
+
+  """
+  Who wrote it
+  """
+  author: UserInfo!
+
+  """
+  When it was written, ISO 8601
+  """
+  createdAt: String!
+
+  """
+  When it was last edited, ISO 8601
+  """
+  updatedAt: String
+
+  """
+  When the thread was resolved, ISO 8601. Set on a thread root only; a reply
+  inherits its thread's resolution state rather than carrying its own.
+  """
+  resolvedAt: String
+
+  """
+  Who resolved the thread. Root-only, like `resolvedAt`.
+  """
+  resolvedBy: UserInfo
+
+  """
+  Replies to this comment, oldest first, nested as deep as the read went.
+  Empty when this comment has no replies — and also when the read stopped
+  here, which `replyCount` distinguishes.
+  """
+  replies: [Comment!]!
+
+  """
+  How many direct replies this comment has. Compare against the length of
+  `replies` to tell a leaf from a branch the read truncated: threads are not
+  depth-limited in the database, only in any one response.
+  """
+  replyCount: Int!
+}
+
+extend type Query {
+  """
+  One thread addressed by any comment in it, with replies nested from that
+  comment down. How a client opens a branch that a shallower read truncated.
+
+  Null for a `published` content source, and for a uuid that names no comment.
+  """
+  comment(
+    """
+    The comment to read from — a thread root, or any reply within it
+    """
+    uuid: ID!
+
+    """
+    How many levels of replies to nest below it
+    """
+    depth: Int
+  ): Comment
+}
+
+extend type Passage {
+  """
+  Comment threads anchored in this passage, oldest first. Roots only, with
+  replies nested under `replies`; a flat list plus a parent id would push tree
+  assembly into every client.
+
+  Found through the passage's `comment` annotations rather than through
+  `comments.entity_uuid`, so a thread appears where its anchor currently is
+  rather than where the thread was first written. A thread whose anchor was
+  deleted is absent here and reachable only by work scope.
+
+  Always empty for a `published` content source: comments are draft-only, so
+  there is nothing to find and no query is issued.
+  """
+  comments: [Comment!]!
+}
