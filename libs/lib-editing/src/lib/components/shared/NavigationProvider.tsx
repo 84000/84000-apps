@@ -38,10 +38,8 @@ import {
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
-import {
-  GatedFeature,
-  useFeatureFlagEnabled,
-} from '@eightyfourthousand/lib-instr';
+import { useFeatureFlagEnabled } from '@eightyfourthousand/lib-instr';
+import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 import { isXmlId, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
 import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
@@ -426,6 +424,11 @@ export const NavigationProvider = ({
   }, [query, parsePanelParams]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
+  // Static, not a PostHog flag: an ad blocker stops the flags arriving and the
+  // reader loses a warning we are obliged to show.
+  const showRestrictionWarning = isStaticFeatureEnabled(
+    'show-restriction-warning',
+  );
 
   // Close the right panel when there is no translation to show. `prev` starts
   // true so a first render that already lacks translation content still closes
@@ -499,9 +502,7 @@ export const NavigationProvider = ({
   return (
     <NavigationContext.Provider value={contextValue}>
       <HoverCardProvider enabled={hasHoverCards}>{children}</HoverCardProvider>
-      <GatedFeature flag="show-restriction-warning">
-        <RestrictionWarning imprint={imprint} />
-      </GatedFeature>
+      {showRestrictionWarning && <RestrictionWarning imprint={imprint} />}
     </NavigationContext.Provider>
   );
 };
