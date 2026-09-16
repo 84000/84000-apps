@@ -37,6 +37,23 @@ they have a real flag source: previews evaluate against the **sandbox** PostHog
 project. Scope a flag there for every app that will exercise it, not just the
 one you are testing from, or it reads as off in the others.
 
+## Static flags
+
+Not everything belongs in PostHog. `isStaticFeatureEnabled`, from
+`@eightyfourthousand/lib-instr/static`, resolves a flag from
+`NEXT_PUBLIC_APPLICATION_NAME` alone — no network call, and a value during SSR,
+which PostHog cannot give.
+
+Use it when a feature must not be able to fail off. A PostHog flag reads as off
+when the flags do not arrive, and an ad blocker or Firefox's tracking
+protection stops them arriving; that is acceptable for a rollout and not for a
+notice the reader is entitled to see.
+
+Each static flag names either the apps it applies to (`apps`) or the apps it
+does not (`exceptApps`). The difference only shows when an app leaves
+`NEXT_PUBLIC_APPLICATION_NAME` unset or misspells it: an allow list is then off
+and a deny list is on. Choose whichever of those two is the harmless one.
+
 ## Waiting for flags
 
 `useFeatureFlagEnabled` reports false both for a flag that is off and for one

@@ -21,7 +21,6 @@ export type FeatureFlag =
   | 'translation-hover-cards'
   | 'studio-header-config'
   | 'show-reader-header'
-  | 'show-restriction-warning'
   | 'per-passage-docs';
 
 export type FeatureFlagPayload = {
