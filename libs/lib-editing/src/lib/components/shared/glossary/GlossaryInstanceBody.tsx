@@ -1,6 +1,10 @@
 'use client';
 
-import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
+import type {
+  GlossaryTermInstance,
+  Passage,
+  TohokuCatalogEntry,
+} from '@eightyfourthousand/data-access';
 import { Button, Li, Ul } from '@eightyfourthousand/design-system';
 import { GatedFeature } from '@eightyfourthousand/lib-instr';
 import { cn } from '@eightyfourthousand/lib-utils';
@@ -13,7 +17,12 @@ import {
   getTermPassages,
 } from '@eightyfourthousand/client-graphql';
 
-type PassageItem = { uuid: string; type: string; label: string };
+type PassageItem = Partial<Passage> & {
+  uuid: string;
+  type: string;
+  label: string;
+  toh?: TohokuCatalogEntry;
+};
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -26,11 +35,11 @@ export const GlossaryInstanceBody = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
-  const { updatePanel } = useNavigation();
+  const { updatePanel, toh } = useNavigation();
 
   const initialPage = instance.passages;
   const [passages, setPassages] = useState<PassageItem[]>(
-    initialPage?.items ?? [],
+    (initialPage?.items as PassageItem[]) ?? [],
   );
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialPage?.nextCursor ?? null,
@@ -108,21 +117,21 @@ export const GlossaryInstanceBody = ({
       )}
       {passages.length > 0 && (
         <div>
-          {passages.map((passage, index) => (
-            <span key={passage.uuid}>
-              {index > 0 && ', '}
-              <Button
-                variant="link"
-                className="p-0 h-6 font-normal hover:cursor-pointer"
-                onClick={() => handlePassageClick(passage)}
-              >
-                {passage.label || passage.uuid.slice(0, 6)}
-              </Button>
-            </span>
-          ))}
+          {passages
+            .filter((p) => !p.toh || p.toh === toh)
+            .map((passage) => (
+              <span key={passage.uuid}>
+                <Button
+                  variant="link"
+                  className="p-0 pe-2 h-6 font-normal hover:cursor-pointer"
+                  onClick={() => handlePassageClick(passage)}
+                >
+                  {passage.label || passage.uuid.slice(0, 6)}
+                </Button>
+              </span>
+            ))}
           {hasMore && !loading && (
             <span>
-              {', '}
               <Button
                 variant="link"
                 className="p-0 h-6 font-normal hover:cursor-pointer"

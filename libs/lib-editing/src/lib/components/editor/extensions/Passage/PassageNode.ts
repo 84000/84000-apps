@@ -3,7 +3,7 @@ import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { Fragment, type Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
 import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
-import { PassageNodeSSR } from './PassageNode.ssr';
+import { PassageNodeSSR, type PassageReference } from './PassageNode.ssr';
 import {
   PASSAGE_CONTENT_CLASS,
   PASSAGE_INNER_CLASS,
@@ -11,13 +11,6 @@ import {
   PASSAGE_REFERENCES_CLASS,
   PASSAGE_WRAPPER_CLASS,
 } from './classes';
-
-type PassageReference = {
-  uuid: string;
-  label: string | null;
-  sort: number;
-  type: string;
-};
 
 const BOOKMARK_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
@@ -228,13 +221,13 @@ export const PassageNode = PassageNodeSSR.extend({
         const div = document.createElement('div');
         div.className = PASSAGE_REFERENCES_CLASS;
         div.setAttribute('contenteditable', 'false');
-        references.forEach((ref, index) => {
-          if (index > 0) div.append(document.createTextNode(', '));
+        references.forEach((ref) => {
           const a = document.createElement('a');
           a.href = `#${ref.uuid}`;
           a.setAttribute('data-passage-reference', '');
           a.setAttribute('data-ref-uuid', ref.uuid);
           a.setAttribute('data-ref-type', ref.type);
+          ref.toh && a.setAttribute('data-toh', ref.toh);
           a.textContent = ref.label || ref.uuid.slice(0, 6);
           div.append(a);
         });

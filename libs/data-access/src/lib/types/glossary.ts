@@ -1,3 +1,5 @@
+import type { Passage } from './passage';
+
 export type GlossaryItem = {
   authorityUuid: string;
   definition?: string | null;
@@ -48,7 +50,7 @@ export type GlossaryTermInstance = {
     alternatives?: string;
   };
   passages?: {
-    items: Array<{ uuid: string; type: string; label: string }>;
+    items: Array<Partial<Passage>>;
     nextCursor: string | null;
     hasMore: boolean;
   };
