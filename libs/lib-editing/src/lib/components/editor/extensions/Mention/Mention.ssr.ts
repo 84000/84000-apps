@@ -215,10 +215,20 @@ export const MentionSSR = Node.create<MentionSSROptions>({
     return [{ tag: 'span[data-type="mention"]' }];
   },
 
+  // The live editor renders through the node view and the reader through a
+  // `nodeMapping` override, so this is what the clipboard serializer uses.
+  // `items` is the whole annotation and is reachable from the rendered anchors
+  // only lossily, so it is carried verbatim for the matching parse rule.
   renderHTML({ node, HTMLAttributes }) {
+    const items = node.attrs.items;
+
     return mentionDOMOutputSpec(
       node,
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+        ...(Array.isArray(items) && items.length
+          ? { 'data-items': JSON.stringify(items) }
+          : {}),
+      }),
     );
   },
 });

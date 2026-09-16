@@ -17,7 +17,9 @@ declare module '@tiptap/core' {
 
 export const Trailer = Node.create({
   name: 'trailer',
-  priority: 1000,
+  // Above Paragraph's 1000: both claim `p`, and the more specific
+  // `p[type="trailer"]` has to be tried first.
+  priority: 1100,
   group: 'block',
   content: 'inline*',
 

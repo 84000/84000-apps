@@ -6,11 +6,19 @@ export const Heading = TiptapHeading.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
+      // The heading's semantic kind ('section-title', 'body-title-main'), not
+      // presentation: it is exported straight to the annotation. `class` holds
+      // the *resolved* style once rendered, so it round trips through its own
+      // attribute instead.
       class: {
         default: null,
         parseHTML(element) {
-          return element.getAttribute('class');
+          return element.getAttribute('data-heading-class');
         },
+        renderHTML: (attributes) =>
+          attributes.class
+            ? { 'data-heading-class': attributes.class as string }
+            : {},
       },
     };
   },
