@@ -1,5 +1,5 @@
 import { Node, mergeAttributes } from '@tiptap/core';
-import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
+import type { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 import {
   PASSAGE_CONTENT_CLASS,
   PASSAGE_INNER_CLASS,
@@ -129,7 +129,7 @@ export const PassageNodeSSR = Node.create({
                 'data-ref-type': ref.type,
               };
 
-              ref.toh && (attrs['data-toh'] = ref.toh);
+              ref.toh && (attrs['data--toh'] = ref.toh);
               const link = ['a', { ...attrs }, linkText] as unknown;
               return index === 0 ? [link] : [', ', link];
             }),

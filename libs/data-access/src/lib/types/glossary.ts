@@ -1,4 +1,4 @@
-import { Passage } from './passage';
+import type { Passage } from './passage';
 
 export type GlossaryItem = {
   authorityUuid: string;

@@ -3,7 +3,7 @@ import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { Fragment, type Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
 import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
-import { PassageNodeSSR, PassageReference } from './PassageNode.ssr';
+import { PassageNodeSSR, type PassageReference } from './PassageNode.ssr';
 import {
   PASSAGE_CONTENT_CLASS,
   PASSAGE_INNER_CLASS,
