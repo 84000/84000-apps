@@ -39,7 +39,7 @@ export function createReadSessionDocumentsTool(
   return {
     name: 'read-session-documents',
     description:
-      'Read the working documents of a translation session — Stage 0 records, Stage 1 drafts, collation reports, alignment records. Call with a toh to list what has been saved for that work; add a stage and names to read specific documents. Markdown and JSON come back as text; a .docx comes back as a download URL to fetch. Read the previous stage from here rather than assuming a local file survives from an earlier session.',
+      'Read the working documents of a translation session — Stage 0 records, Stage 1 drafts, Stage 2 review reports, collation reports, alignment records. Call with a toh to list what has been saved for that work; add a stage and names to read specific documents. Markdown and JSON come back as text; a .docx comes back as a download URL to fetch. Read the previous stage from here rather than assuming a local file survives from an earlier session.',
     inputSchema,
     annotations: {
       title: 'Read Session Documents',

@@ -11,14 +11,15 @@ import {
 
 /**
  * The working documents of an agentic translation session — Stage 0 records,
- * Stage 1 drafts, collation reports, alignment records. Private bucket, gated on
- * `harness.read` / `harness.edit`; RLS is the authority, nothing here.
+ * Stage 1 drafts, Stage 2 review reports, collation reports, alignment records.
+ * Private bucket, gated on `harness.read` / `harness.edit`; RLS is the
+ * authority, nothing here.
  */
 export const SESSIONS_BUCKET = 'translation-sessions';
 
 export const SESSIONS_ARCHIVE_PREFIX = ARCHIVE_PREFIX;
 
-export const SESSION_STAGES = ['stage0', 'stage1'] as const;
+export const SESSION_STAGES = ['stage0', 'stage1', 'stage2'] as const;
 export type SessionStage = (typeof SESSION_STAGES)[number];
 
 /** The name a manifest is always written under, one per work and stage. */
