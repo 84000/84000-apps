@@ -47,6 +47,7 @@ import {
   commentReplyCountResolver,
   commentResolvedByResolver,
 } from './schema/comment/comment.resolver';
+import { commentMutations } from './schema/comment/comment.mutation';
 
 export const resolvers = {
   JSON: JSONResolver,
@@ -66,6 +67,7 @@ export const resolvers = {
   },
 
   Mutation: {
+    ...commentMutations,
     ...publishMutations,
     replace: replaceMutation,
     savePassages: savePassagesMutation,

@@ -67,6 +67,13 @@ export {
   type RenumberedPassage,
   type WorkPublishStatus,
   type FindingLocation,
+  createComment,
+  replyToComment,
+  updateComment,
+  resolveComment,
+  deleteComment,
+  type CommentMutationResult,
+  type DeleteCommentResult,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

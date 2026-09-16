@@ -76,3 +76,9 @@ export {
   type PublishPhase,
   type PublishWorkResult,
 } from './publish-work';
+export { createComment } from './create-comment';
+export { replyToComment } from './reply-to-comment';
+export { updateComment } from './update-comment';
+export { resolveComment } from './resolve-comment';
+export { deleteComment, type DeleteCommentResult } from './delete-comment';
+export type { CommentMutationResult } from './comment-fields';

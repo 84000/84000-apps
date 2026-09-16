@@ -129,6 +129,31 @@ export type Comment = {
   uuid: Scalars['ID']['output'];
 };
 
+/**
+ * The outcome of a comment write. `comment` carries the saved row so a client can
+ * update a thread without refetching it, and is null when `success` is false.
+ */
+export type CommentResult = {
+  __typename?: 'CommentResult';
+  comment?: Maybe<Comment>;
+  error?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+};
+
+/**
+ * What a client sends to start a thread. A reply carries no scope of its own —
+ * `replyToComment` inherits its parent's, so a reply cannot be filed under an
+ * entity its thread does not belong to.
+ */
+export type CreateCommentInput = {
+  /** The comment body */
+  content: Scalars['String']['input'];
+  /** What kind of entity that is. Only `passage` is accepted. */
+  entityType: Scalars['String']['input'];
+  /** The entity the thread hangs off — a passage uuid today */
+  entityUuid: Scalars['ID']['input'];
+};
+
 /** Currently authenticated user */
 export type CurrentUser = {
   __typename?: 'CurrentUser';
@@ -138,6 +163,17 @@ export type CurrentUser = {
   id: Scalars['ID']['output'];
   /** User's role */
   role: UserRole;
+};
+
+/**
+ * The outcome of a comment delete. `deletedUuids` names the target together with
+ * every reply that cascaded with it, so a client can drop them all at once.
+ */
+export type DeleteCommentResult = {
+  __typename?: 'DeleteCommentResult';
+  deletedUuids: Array<Scalars['ID']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
 };
 
 /**
@@ -377,6 +413,19 @@ export type Mutation = {
    */
   advancePublishJob: PublishJob;
   /**
+   * Start a thread on an entity.
+   * Requires editor.edit permission.
+   */
+  createComment: CommentResult;
+  /**
+   * Delete a comment and every reply below it. The author only.
+   *
+   * Leaves the `comment` annotation anchoring the thread in place — the editor
+   * removes that mark through a normal passage save.
+   * Requires editor.edit permission.
+   */
+  deleteComment: DeleteCommentResult;
+  /**
    * Publish a work: validate, snapshot, write the immutable artifact, then flip the live
    * pointer. The pointer flip is the only commit point, so a failure at any earlier stage
    * leaves the previously published version live and serving.
@@ -397,15 +446,42 @@ export type Mutation = {
    */
   replace: ReplaceResult;
   /**
+   * Reply to a comment. Scope is inherited from the parent.
+   * Requires editor.edit permission.
+   */
+  replyToComment: CommentResult;
+  /**
+   * Resolve or un-resolve a thread, addressed by its root. Any editor may.
+   * Requires editor.edit permission.
+   */
+  resolveComment: CommentResult;
+  /**
    * Save one or more passages.
    * Requires editor.edit permission.
    */
   savePassages: SavePassagesResult;
+  /**
+   * Edit a comment's body. The author only.
+   * Requires editor.edit permission.
+   */
+  updateComment: CommentResult;
 };
 
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationAdvancePublishJobArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationCreateCommentArgs = {
+  input: CreateCommentInput;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationDeleteCommentArgs = {
   uuid: Scalars['ID']['input'];
 };
 
@@ -432,9 +508,30 @@ export type MutationReplaceArgs = {
 
 
 /** Root Mutation type - extend this in other schema files */
+export type MutationReplyToCommentArgs = {
+  content: Scalars['String']['input'];
+  parentUuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationResolveCommentArgs = {
+  resolved: Scalars['Boolean']['input'];
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
 export type MutationSavePassagesArgs = {
   deletedUuids?: InputMaybe<Array<Scalars['ID']['input']>>;
   passages: Array<PassageInput>;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationUpdateCommentArgs = {
+  content: Scalars['String']['input'];
+  uuid: Scalars['ID']['input'];
 };
 
 /**
