@@ -1,6 +1,6 @@
 ---
 name: first-draft-translation
-description: Produce a Stage 1 first-draft 84000 translation of a canonical Tibetan work for review by a research editor — aligned Tibetan/English passage pairs with folio references, footnoted uncertainties, a terminology table, and a companion alignment record, saved as toh#_stage1.docx, toh#_stage1.md, and toh#_stage1_alignment.md. Use when a translator asks to draft, translate, or produce a first draft of a text by Toh number, or names Stage 1 of the 84000 AI translation pipeline. Not for editorial review of an existing draft, and not for Stage 0 text analysis and retrieval, which must already have been run.
+description: Produce a Stage 1 first-draft 84000 translation of a canonical Tibetan work for review by a research editor — aligned Tibetan/English passage pairs with folio references, footnoted uncertainties, a terminology table, and a companion alignment record, saved as toh#_stage1.docx, toh#_stage1.md, and toh#_stage1_alignment.md. Use when a translator asks to draft, translate, or produce a first draft of a text by Toh number, or names Stage 1 of the 84000 AI translation pipeline. Not for editorial review of an existing draft — that is Stage 2, the editorial-review skill — and not for Stage 0 text analysis and retrieval, which must already have been run.
 ---
 
 # 84000 first-draft translation (Stage 1)
