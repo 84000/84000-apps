@@ -9,6 +9,11 @@ export interface InternalLinkSSROptions {
 export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
   name: 'internalLink',
 
+  // Above Link's 1000: both claim the anchor, and the more specific
+  // `a[type="internalLink"]` has to be tried first or an internal link
+  // degrades into an external one.
+  priority: 1100,
+
   addOptions() {
     return {
       HTMLAttributes: {},

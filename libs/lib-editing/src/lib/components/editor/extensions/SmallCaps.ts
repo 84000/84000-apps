@@ -68,10 +68,13 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
     };
   },
 
+  // `type` is only set on a mark loaded from an annotation, so it cannot
+  // discriminate one applied in the editor. `sm` is not an HTML element and
+  // nothing else emits it.
   parseHTML() {
     return [
       {
-        tag: 'sm[type="small-caps"]',
+        tag: 'sm',
       },
     ];
   },
