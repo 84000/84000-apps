@@ -27,12 +27,13 @@ describe('line exporter', () => {
     });
   });
 
-  it('should return undefined when textContent is empty', () => {
+  it('should return undefined when the line has no children at all', () => {
     const node = {
       attrs: {
         uuid: 'line-uuid-empty',
       },
       textContent: '',
+      childCount: 0,
     } as unknown as Node;
 
     const result = line({
@@ -44,5 +45,32 @@ describe('line exporter', () => {
     });
 
     expect(result).toBeUndefined();
+  });
+
+  it('should export a zero-length annotation for a line holding only atoms', () => {
+    // A folio reference on its own line: no characters, but still a break.
+    const node = {
+      attrs: {
+        uuid: 'line-uuid-folio',
+      },
+      textContent: '',
+      childCount: 1,
+    } as unknown as Node;
+
+    const result = line({
+      node,
+      parent: node,
+      root: node,
+      start: 12,
+      passageUuid: 'passage-uuid-1234',
+    });
+
+    expect(result).toEqual({
+      uuid: 'line-uuid-folio',
+      passageUuid: 'passage-uuid-1234',
+      type: 'line',
+      start: 12,
+      end: 12,
+    });
   });
 });

@@ -4,6 +4,7 @@ import {
   normalizeWordBreak,
 } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
+import { holdsOnlyAtoms } from './util';
 
 export const paragraph: Exporter<ParagraphAnnotation> = ({
   node,
@@ -21,7 +22,9 @@ export const paragraph: Exporter<ParagraphAnnotation> = ({
   }
 
   const textContent = node.textContent || '';
-  if (!textContent) {
+  // As with `line`, a paragraph holding only inline atoms marks a break the
+  // editor drew and persists as a zero-length annotation.
+  if (!textContent && !holdsOnlyAtoms(node)) {
     console.warn(`Paragraph ${uuid} is empty`);
     return undefined;
   }

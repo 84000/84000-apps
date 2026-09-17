@@ -1,4 +1,5 @@
 import { ParagraphAnnotation } from '@eightyfourthousand/data-access';
+import { insertBlockAt } from './insert-block';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
 import { recurse } from './recurse';
@@ -12,7 +13,14 @@ export const paragraph: Transformer = (ctx) => {
   recurse({
     ...ctx,
     until: ['paragraph'],
-    transform: (ctx) =>
+    transform: (ctx) => {
+      // As with `line`, a zero-length paragraph holds only inline atoms and is
+      // placed as an empty sibling rather than split.
+      if (start === end) {
+        insertBlockAt(ctx);
+        return;
+      }
+
       splitBlock({
         ...ctx,
         transform: ({ block }) => {
@@ -27,6 +35,7 @@ export const paragraph: Transformer = (ctx) => {
             ...(wordBreak ? { wordBreak } : {}),
           };
         },
-      }),
+      });
+    },
   });
 };

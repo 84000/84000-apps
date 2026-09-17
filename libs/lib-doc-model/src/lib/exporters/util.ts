@@ -66,3 +66,17 @@ export const nodeNotFound = (
     skipped.count++;
   }
 };
+
+/**
+ * Whether a block that contributes no characters still holds something worth
+ * persisting.
+ *
+ * A block whose only children are inline atoms — a folio mention, an image —
+ * has no text of its own, but it is still a block the editor drew, and
+ * discarding it discards the line break the editor intended. Such a block
+ * exports as a zero-length annotation (`start === end`), which
+ * `insertBlockAt` places back on load. A block with no children at all has
+ * nothing to preserve and is still dropped.
+ */
+export const holdsOnlyAtoms = (node: Node): boolean =>
+  !node.textContent && node.childCount > 0;
