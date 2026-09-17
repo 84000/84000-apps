@@ -1,6 +1,7 @@
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import type { XmlElement, XmlText } from 'yjs';
 import {
+  passageFromNode,
   PassageLoader,
   type PassageSnapshot,
   type PassageSource,
@@ -730,5 +731,144 @@ describe('PassageStackController tab views', () => {
 
     // p2 is the last translation passage; the spine continues into endnotes.
     expect(main.focusRelative('p2', 1, 'start')).toBe(false);
+  });
+});
+
+describe('cross-passage clipboard', () => {
+  /** A passage whose text carries an annotation, so loss is visible. */
+  const annotated = (uuid: string, label: string, text: string) => ({
+    meta: { uuid, label, type: 'translation' },
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { uuid: `${uuid}-p`, type: 'paragraph', invalid: false },
+        content: [
+          {
+            type: 'text',
+            text,
+            marks: [
+              { type: 'bold', attrs: { uuid: `${uuid}-m`, invalid: false } },
+            ],
+          },
+        ],
+      },
+    ],
+    charCount: text.length,
+  });
+
+  const withMarks = async () => {
+    const all = [
+      annotated('p0', '1', 'alpha'),
+      annotated('p1', '2', 'bravo'),
+      annotated('p2', '3', 'charlie'),
+    ];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+    controller.setVisibleRange({ start: 0, end: all.length });
+    await flush();
+    return { work, controller };
+  };
+
+  it('serializes a cross-passage selection as rich content', async () => {
+    const { controller } = await withMarks();
+    // From after "al" in p0 through before "rlie" in p2.
+    controller.setCrossSelection({
+      fromUuid: 'p0',
+      fromPos: 3,
+      toUuid: 'p2',
+      toPos: 4,
+    });
+
+    const copied = controller.serializeCrossSelection();
+
+    expect(copied?.text).toBe('pha\n\nbravo\n\ncha');
+    // The annotation is in the HTML flavour, which is the whole point.
+    expect(copied?.html).toContain('<strong');
+  });
+
+  it('serializes a selection dragged backwards the same way', async () => {
+    const { controller } = await withMarks();
+    // The same range, anchored in p2 and focused in p0.
+    controller.setCrossSelection({
+      fromUuid: 'p2',
+      fromPos: 4,
+      toUuid: 'p0',
+      toPos: 3,
+    });
+
+    expect(controller.serializeCrossSelection()?.text).toBe(
+      'pha\n\nbravo\n\ncha',
+    );
+  });
+
+  it('keeps the annotation when the copy is pasted back', async () => {
+    const { work, controller } = await withMarks();
+    controller.setCrossSelection({
+      fromUuid: 'p0',
+      fromPos: 3,
+      toUuid: 'p2',
+      toPos: 4,
+    });
+    const copied = controller.serializeCrossSelection();
+
+    controller.setCrossSelection({
+      fromUuid: 'p0',
+      fromPos: 3,
+      toUuid: 'p2',
+      toPos: 4,
+    });
+    expect(
+      controller.pasteCrossSelection({
+        html: copied?.html ?? '',
+        text: copied?.text ?? '',
+      }),
+    ).toBe(true);
+
+    // The head keeps "al" and continues with the pasted run, every character
+    // of it still bold — which the old plain-text paste dropped entirely.
+    const head = work.store.ensure('p0').toNode();
+    expect(head.textContent).toBe('alphabravocha');
+    const annotations = passageFromNode(head, 'work-1', {
+      uuid: 'p0',
+      type: 'translation',
+      sort: 0,
+      label: '1',
+    }).annotations;
+
+    // One bold span per passage the selection crossed, still covering the
+    // same text — the old plain-text paste kept none of them.
+    expect(
+      annotations
+        .filter(
+          (annotation) =>
+            annotation.type === 'span' && annotation.textStyle === 'text-bold',
+        )
+        .map(({ start, end }) => [start, end]),
+    ).toEqual([
+      [0, 5],
+      [5, 10],
+      [10, 13],
+    ]);
+    expect(work.spine.uuids()).toEqual(['p0', 'p2']);
+  });
+
+  it('falls back to plain text when the clipboard carries no HTML', async () => {
+    const { work, controller } = await withMarks();
+    controller.setCrossSelection({
+      fromUuid: 'p0',
+      fromPos: 3,
+      toUuid: 'p2',
+      toPos: 4,
+    });
+
+    expect(controller.pasteCrossSelection({ html: '', text: 'plain' })).toBe(
+      true,
+    );
+
+    expect(work.store.ensure('p0').toNode().textContent).toBe('alplain');
   });
 });
