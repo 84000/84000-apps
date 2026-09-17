@@ -4,6 +4,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import { getWorkGlossaryTermsPage } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  CONTENT_SOURCES: ['draft', 'published'],
   getWorkGlossaryTermsPage: jest.fn(),
 }));
 const mocked = jest.mocked(getWorkGlossaryTermsPage);
@@ -24,7 +25,13 @@ describe('list-glossary-terms tool', () => {
     mocked.mockResolvedValue(page as any);
 
     await tool.handler(
-      { workUuid: 'w1', limit: 10, cursor: 'c1', direction: 'FORWARD', withAttestations: true },
+      {
+        workUuid: 'w1',
+        limit: 10,
+        cursor: 'c1',
+        direction: 'FORWARD',
+        withAttestations: true,
+      },
       extra,
     );
 
@@ -35,6 +42,27 @@ describe('list-glossary-terms tool', () => {
       cursor: 'c1',
       direction: 'FORWARD',
       withAttestations: true,
+      source: undefined,
     });
+  });
+
+  it('forwards an explicit draft source', async () => {
+    mocked.mockResolvedValue({ nodes: [], pageInfo: {}, totalCount: 0 } as any);
+
+    await tool.handler({ workUuid: 'w1', source: 'draft' }, extra);
+
+    expect(mocked).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'draft' }),
+    );
+  });
+
+  it('leaves the source unset so data-access applies the published default', async () => {
+    mocked.mockResolvedValue({ nodes: [], pageInfo: {}, totalCount: 0 } as any);
+
+    await tool.handler({ workUuid: 'w1' }, extra);
+
+    expect(mocked).toHaveBeenCalledWith(
+      expect.objectContaining({ source: undefined }),
+    );
   });
 });

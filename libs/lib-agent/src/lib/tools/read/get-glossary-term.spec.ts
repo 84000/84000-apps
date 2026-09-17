@@ -4,6 +4,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import { getGlossaryInstance } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  CONTENT_SOURCES: ['draft', 'published'],
   getGlossaryInstance: jest.fn(),
 }));
 const mocked = jest.mocked(getGlossaryInstance);
@@ -26,7 +27,11 @@ describe('get-glossary-term tool', () => {
 
     const result = await tool.handler({ uuid: 'g1' }, extra);
 
-    expect(mocked).toHaveBeenCalledWith({ client, uuid: 'g1' });
+    expect(mocked).toHaveBeenCalledWith({
+      client,
+      uuid: 'g1',
+      source: undefined,
+    });
     expect(result.content[0]).toEqual({
       type: 'text',
       text: JSON.stringify(term, null, 2),
@@ -38,5 +43,25 @@ describe('get-glossary-term tool', () => {
 
     const result = await tool.handler({ uuid: 'missing' }, extra);
     expect(result.isError).toBe(true);
+  });
+
+  it('forwards an explicit draft source', async () => {
+    mocked.mockResolvedValue({ uuid: 'g1' } as any);
+
+    await tool.handler({ uuid: 'g1', source: 'draft' }, extra);
+
+    expect(mocked).toHaveBeenCalledWith(
+      expect.objectContaining({ source: 'draft' }),
+    );
+  });
+
+  it('leaves the source unset so data-access applies the published default', async () => {
+    mocked.mockResolvedValue({ uuid: 'g1' } as any);
+
+    await tool.handler({ uuid: 'g1' }, extra);
+
+    expect(mocked).toHaveBeenCalledWith(
+      expect.objectContaining({ source: undefined }),
+    );
   });
 });
