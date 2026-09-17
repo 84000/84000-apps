@@ -57,6 +57,21 @@ export const insertBlockAt: Transformer = ({ parent, block, annotation }) => {
     return;
   }
 
+  // An empty block already sitting at this position is the one this annotation
+  // describes — on a passage with no text that is the passage template's own
+  // block. Adopt it rather than leaving a second, blank one beside it.
+  if (blockStart === start && blockEnd === start && !block.content?.length) {
+    block.type = type;
+    block.attrs = {
+      ...block.attrs,
+      ...tohAttrs(annotation),
+      start,
+      end,
+      uuid,
+    };
+    return;
+  }
+
   const newBlock: TranslationEditorContentItem = {
     type,
     attrs: {

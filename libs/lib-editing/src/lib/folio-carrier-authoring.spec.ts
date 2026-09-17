@@ -1,13 +1,14 @@
-import { getSchema } from '@tiptap/core';
+import { Editor, getSchema } from '@tiptap/core';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { splitBlock } from '@tiptap/pm/commands';
 import { splitListItem } from '@tiptap/pm/schema-list';
 import { v4 as uuidv4 } from 'uuid';
 import type { Node } from '@tiptap/pm/model';
 import type { Annotation, Passage } from '@eightyfourthousand/data-access';
+import { blockFromPassage } from '@eightyfourthousand/lib-doc-model';
 import { translationSSRExtensions } from './components/editor/extensions/translationSSRExtensions';
 import TranslationMetadata from './components/editor/extensions/TranslationMetadata';
-import { passageFromNode } from './passage';
+import { ensureUuids, passageFromNode } from './passage';
 
 /**
  * The authoring half: an editor gives the opening folio reference its own line
@@ -21,7 +22,8 @@ import { passageFromNode } from './passage';
  * read, so it joins the SSR extensions to build the schema.
  */
 
-const schema = getSchema([...translationSSRExtensions, TranslationMetadata]);
+const extensions = [...translationSSRExtensions, TranslationMetadata];
+const schema = getSchema(extensions);
 
 const ranges = (passage: Passage, type: Annotation['type']): string[] =>
   (passage.annotations ?? [])
@@ -167,5 +169,88 @@ describe('giving the opening folio reference its own line', () => {
 
   it('does not mark the export incomplete, so no annotations are held back', () => {
     expect(exportPassage(pressEnter().doc).annotationsIncomplete).toBeUndefined();
+  });
+});
+
+/**
+ * A passage with no text at all — a new one, or one cleared for the folio
+ * reference to stand alone. It has no text node for a mention to attach to, so
+ * before the zero-length carrier the mention was unplaceable on reload and
+ * vanished from the editor on the save after it was added.
+ */
+describe('a folio reference in a passage with no text', () => {
+  const loaded = (passage: Passage) =>
+    blockFromPassage({
+      ...passage,
+      annotations: (passage.annotations ?? []).map((annotation) => ({
+        ...annotation,
+        validated: true,
+      })),
+    } as Passage);
+
+  const empty = (): Passage =>
+    ({
+      uuid: 'passage-1',
+      type: 'translation',
+      workUuid: 'work-1',
+      sort: 1,
+      label: '1.1',
+      content: '',
+      annotations: [],
+    }) as unknown as Passage;
+
+  /** One editor session: load, optionally add a mention, normalize, export. */
+  const session = (passage: Passage, addMention: boolean): Passage => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions,
+      content: { type: 'doc', content: [loaded(passage)] },
+    });
+
+    if (addMention) {
+      editor.commands.setTextSelection(2);
+      // The shape `setMention` inserts: the item carries the uuid, the node's
+      // own uuid is left for ensureUuids to stamp.
+      editor.commands.insertContent({
+        type: 'mention',
+        attrs: {
+          items: [
+            { uuid: 'mention-1', entity: 'folio-1', linkType: 'folio' },
+          ],
+        },
+      });
+    }
+
+    ensureUuids(editor);
+    const node = editor.$node('passage', { uuid: 'passage-1' });
+    if (!node) throw new Error('no passage node');
+    const saved = passageFromNode(node.node, 'work-1');
+    editor.destroy();
+    return saved;
+  };
+
+  it('survives the save it was added in', () => {
+    const saved = session(empty(), true);
+
+    expect(ranges(saved, 'mention')).toEqual(['0..0']);
+    expect(saved.content).toBe('');
+    expect(saved.annotationsIncomplete).toBeUndefined();
+  });
+
+  it('is still there after reopening and saving again', () => {
+    let passage = session(empty(), true);
+    for (let i = 0; i < 3; i += 1) {
+      passage = session(passage, false);
+      expect(ranges(passage, 'mention')).toEqual(['0..0']);
+    }
+  });
+
+  it('never grows a second, blank block', () => {
+    let passage = session(empty(), true);
+    for (let i = 0; i < 3; i += 1) {
+      const block = loaded(passage) as { content?: unknown[] };
+      expect(block.content).toHaveLength(1);
+      passage = session(passage, false);
+    }
   });
 });

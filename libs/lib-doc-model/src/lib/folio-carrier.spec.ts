@@ -246,3 +246,58 @@ describe('leading space alongside a folio carrier', () => {
     expect(textBlock?.attrs?.leadingSpace).toEqual({ uuid: 'space-1' });
   });
 });
+
+describe('a folio reference in a passage with no text', () => {
+  /** What the DB holds: no characters, and the mention as its only annotation. */
+  const stored = (): Passage =>
+    ({
+      uuid: 'passage-1',
+      type: 'translation',
+      workUuid: 'work-1',
+      sort: 1,
+      label: '1.1',
+      content: '',
+      annotations: [
+        {
+          uuid: 'mention-1',
+          type: 'mention',
+          passageUuid: 'passage-1',
+          start: 0,
+          end: 0,
+          entity: 'folio-1',
+          linkType: 'folio',
+          text: '[F.199.a]',
+        },
+      ],
+    }) as unknown as Passage;
+
+  it('renders the mention rather than dropping it as unplaceable', () => {
+    const block = blockFromPassage(forLoad(stored())) as Item;
+
+    expect(itemCount(block, 'mention')).toBe(1);
+    // An unplaceable annotation flags the whole passage invalid, which holds
+    // its annotations back from the next save.
+    expect(block.attrs?.invalid).toBeUndefined();
+  });
+
+  it('puts it in the passage\'s own block, leaving no blank block beside it', () => {
+    const block = blockFromPassage(forLoad(stored())) as Item;
+
+    expect(block.content).toHaveLength(1);
+    expect(block.content?.[0].type).toBe('paragraph');
+    expect(itemCount(block.content?.[0] as Item, 'mention')).toBe(1);
+  });
+
+  it('exports back to the same single zero-length mention', () => {
+    const node = schema.nodes.passage.create({ uuid: 'passage-1' }, [
+      schema.nodes.paragraph.create({ uuid: 'para-1' }, [
+        mention('mention-1', '[F.199.a]'),
+      ]),
+    ]);
+    const passage = exportPassage(node);
+
+    expect(passage.content).toBe('');
+    expect(ranges(passage, 'mention')).toEqual(['0..0']);
+    expect(passage.annotationsIncomplete).toBeUndefined();
+  });
+});
