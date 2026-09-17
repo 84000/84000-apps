@@ -5,6 +5,7 @@ import { Abbreviation, HasAbbreviation } from './Abbreviation/Abbreviation';
 import { AnnotationToh } from './AnnotationToh';
 import { Audio } from './Audio/Audio';
 import { Bold } from './Bold';
+import { CommentMarkSSR } from './Comment/CommentMark.ssr';
 import { EndNoteLinkMarkSSR } from './EndNoteLink/EndNoteLinkMark.ssr';
 import { ForeignMark } from './Foreign/Foreign';
 import { GlossaryInstanceNodeSSR } from './GlossaryInstance/GlossaryInstanceNode.ssr';
@@ -40,6 +41,7 @@ export const translationSSRExtensions: Extensions = [
   AnnotationToh,
   Audio,
   Bold,
+  CommentMarkSSR,
   EndNoteLinkMarkSSR,
   ForeignMark,
   GlossaryInstanceNodeSSR,

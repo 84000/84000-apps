@@ -434,3 +434,99 @@ describe('stack toh round trip', () => {
     expect(html).toContain('data-toh="toh417"');
   });
 });
+
+/**
+ * DEV-773 registered the `comment` annotation but could only exercise it
+ * against a throwaway schema, because the editor had no comment mark. These run
+ * it through the real one, which is where an undeclared attribute would be
+ * dropped (`2026-08-26-prosemirror-drops-undeclared-attrs`).
+ */
+describe('stack comment anchor round trip', () => {
+  const source = (content: unknown): PassageSource => ({
+    name: 'test',
+    loadPassages: async (_workUuid, uuids) =>
+      uuids.map((uuid) => ({ uuid, content: content as never })),
+  });
+
+  const commentedPassage = (
+    marks: { comment: string; uuid: string; toh?: string }[],
+  ) => [
+    {
+      type: 'paragraph',
+      attrs: { uuid: 'para-1' },
+      content: [
+        {
+          type: 'text',
+          text: 'commented',
+          marks: marks.map((attrs) => ({ type: 'comment', attrs })),
+        },
+      ],
+    },
+  ];
+
+  const materialize = async (content: unknown) => {
+    const work = createStackWorkDocument({
+      workUuid: 'w1',
+      loader: new PassageLoader({ sources: [source(content)], buffer: 0 }),
+    });
+    work.seedSpine([{ uuid: 'p0', label: '1', type: 'translation' }]);
+    await work.hydrateWindow({ start: 0, end: 1 });
+
+    return work.store
+      .peek('p0')
+      ?.toPassage({ label: '1', sort: 0, type: 'translation' })
+      ?.annotations.filter((a) => a.type === 'comment');
+  };
+
+  it('carries the thread uuid, the anchor uuid and the toh scope back out', async () => {
+    const anchors = await materialize(
+      commentedPassage([
+        { comment: 'thread-1', uuid: 'anchor-1', toh: 'toh417' },
+      ]),
+    );
+
+    expect(anchors).toHaveLength(1);
+    expect(anchors?.[0]).toEqual(
+      expect.objectContaining({
+        uuid: 'anchor-1',
+        comment: 'thread-1',
+        toh: ['toh417'],
+        start: 0,
+        end: 'commented'.length,
+      }),
+    );
+  });
+
+  // Overlapping anchors are ordinary, and a mark type excludes itself by
+  // default — so without `excludes: ''` the second would never reach the doc
+  // and its anchor row would be deleted on the next save.
+  it('materializes both anchors where two threads cover the same words', async () => {
+    const anchors = await materialize(
+      commentedPassage([
+        { comment: 'thread-1', uuid: 'anchor-1' },
+        { comment: 'thread-2', uuid: 'anchor-2' },
+      ]),
+    );
+
+    expect(
+      anchors?.map((a) => (a as { comment: string }).comment).sort(),
+    ).toEqual(['thread-1', 'thread-2']);
+  });
+
+  it('renders an anchor the static row renderer can find', () => {
+    const html = renderTranslationHTML({
+      content: {
+        type: 'doc',
+        content: commentedPassage([
+          { comment: 'thread-1', uuid: 'anchor-1', toh: 'toh417' },
+        ]),
+      },
+    });
+
+    // `type` is what the click delegation in `NavigationProvider` matches on,
+    // and `comment` is the thread it focuses.
+    expect(html).toContain('type="comment"');
+    expect(html).toContain('comment="thread-1"');
+    expect(html).toContain('data-toh="toh417"');
+  });
+});

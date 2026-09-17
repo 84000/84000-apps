@@ -32,8 +32,7 @@ export const TOH_ATTR = 'toh';
  * value), so a type missing from this list silently loses its scope on save.
  *
  * `text` and `doc` are deliberately absent: neither maps to an annotation, and
- * ProseMirror text nodes cannot carry attributes. `comment` is absent because
- * the editor has no comment mark yet; it belongs here as soon as one exists.
+ * ProseMirror text nodes cannot carry attributes.
  */
 export const ANNOTATION_TOH_TYPES = [
   // block nodes
@@ -57,6 +56,7 @@ export const ANNOTATION_TOH_TYPES = [
   'abbreviation',
   'bold',
   'code',
+  'comment',
   'endNoteLink',
   'foreign',
   'glossaryInstance',

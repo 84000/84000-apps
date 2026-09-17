@@ -59,6 +59,7 @@ import { Bold } from '../extensions/Bold';
 import { List, ListItem } from '../extensions/List';
 import { Underline } from '../extensions/Underline';
 import { GlobalConfig } from '../extensions/GlobalConfig';
+import { CommentMark } from '../extensions/Comment/CommentMark';
 
 const PassageSuggestion: CommandSuggestionItem = {
   title: 'Passage',
@@ -102,6 +103,7 @@ export const useTranslationExtensions = ({
     HasAbbreviation,
     AbbreviationCommand,
     Bold,
+    CommentMark,
     EndNoteLinkMark,
     EnsureUniqueUuids,
     ForeignMark,

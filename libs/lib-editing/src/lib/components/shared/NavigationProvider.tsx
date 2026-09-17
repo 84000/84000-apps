@@ -126,6 +126,7 @@ export const NavigationProvider = ({
   const [highlight, setHighlight] = useState<HighlightRange | undefined>(() =>
     parseHighlight(query),
   );
+  const [focusedComment, setFocusedComment] = useState<string | undefined>();
   const [hasTranslationContent, setHasTranslationContent] = useState(
     initialHasTranslationContent,
   );
@@ -266,6 +267,30 @@ export const NavigationProvider = ({
       editorRequest.current?.(element) ?? Promise.resolve(null),
     [],
   );
+
+  /**
+   * Clicking a comment anchor focuses its thread.
+   *
+   * Delegated from the document rather than bound in the mark view: most of a
+   * work is static HTML with no mark view to bind to, so a listener there would
+   * make only the passages under a mounted editor clickable. `closest` picks
+   * the innermost anchor, which is the most specific thread where comment marks
+   * overlap.
+   */
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[type="comment"]',
+      );
+      const comment = anchor?.getAttribute('comment');
+      if (comment) {
+        setFocusedComment(comment);
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
@@ -461,10 +486,12 @@ export const NavigationProvider = ({
       hasTranslationContent,
       focusMode,
       highlight,
+      focusedComment,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,
+      setFocusedComment,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
@@ -484,10 +511,12 @@ export const NavigationProvider = ({
       hasTranslationContent,
       focusMode,
       highlight,
+      focusedComment,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,
+      setFocusedComment,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
