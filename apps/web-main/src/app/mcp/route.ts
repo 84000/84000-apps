@@ -33,7 +33,9 @@ All requests require a valid Bearer token (Supabase JWT). Unauthenticated reques
 A translation session's working files — Stage 0 records, Stage 1 drafts, collation reports, alignment records — live in storage, keyed by work and stage. Read the previous stage with \`read-session-documents\` rather than assuming a local file survived from an earlier session: markdown comes back as text, and a \`.docx\` as a URL to fetch. \`write-session-documents\` authorizes a save and returns an upload URL per file for the client to PUT, archiving any revision it replaces and recording a manifest of who saved the set and when.`,
   `## Draft versus published content
 
-Glossary reads resolve against the published snapshot by default — the house rendering as published, which is what binds a translator. \`search-canon-section-glossary\` accepts \`source: "draft"\` to also surface terminology from translations still under editorial review; treat those as not yet binding.`,
+Glossary reads resolve against the published snapshot by default — the house rendering as published, which is what binds a translator. \`list-glossary-terms\`, \`search-glossary-terms\`, \`get-glossary-term\` and \`search-canon-section-glossary\` all accept \`source: "draft"\`, which surfaces terminology from translations still under editorial review; treat those as not yet binding.
+
+A work still in preparation is reachable only under \`draft\`. An empty result from a published read does not distinguish a work that has no glossary from one whose glossary is not published, so re-read with \`draft\` before concluding a term is unglossed.`,
 ]);
 
 export async function OPTIONS() {
