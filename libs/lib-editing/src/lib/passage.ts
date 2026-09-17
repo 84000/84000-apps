@@ -172,6 +172,22 @@ export const passageFromNode = (node: Node, workUuid: string): Passage =>
     invalid: node.attrs.invalid,
   });
 
+/**
+ * Whether a passage node is a schema artifact rather than a passage.
+ *
+ * Emptying a passage leaves the document without the `passage+` its content
+ * expression requires, so ProseMirror fills it with a default node: no type, no
+ * label, and nothing in it. `ensureUuids` then stamps a uuid on it, which puts
+ * it in the dirty set. It carries nothing to persist, and the API's `type` and
+ * `label` are non-nullable, so sending it fails the whole save rather than just
+ * itself.
+ *
+ * Keyed on the type, not the label: a passage the editor deliberately left
+ * unlabelled is a real passage and must still be saved.
+ */
+const isUnpersistable = (node: Node): boolean =>
+  !node.attrs.type && !node.textContent;
+
 export const passagesFromNodes = ({
   uuids,
   workUuid,
@@ -186,6 +202,10 @@ export const passagesFromNodes = ({
     const node = editor.$node('passage', { uuid });
     if (!node) {
       console.warn(`No passage node found for uuid: ${uuid}`);
+      return;
+    }
+
+    if (isUnpersistable(node.node)) {
       return;
     }
 
