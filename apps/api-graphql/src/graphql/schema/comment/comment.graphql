@@ -93,3 +93,81 @@ extend type Passage {
   """
   comments: [Comment!]!
 }
+
+"""
+What a client sends to start a thread. A reply carries no scope of its own —
+`replyToComment` inherits its parent's, so a reply cannot be filed under an
+entity its thread does not belong to.
+"""
+input CreateCommentInput {
+  """
+  The entity the thread hangs off — a passage uuid today
+  """
+  entityUuid: ID!
+
+  """
+  What kind of entity that is. Only `passage` is accepted.
+  """
+  entityType: String!
+
+  """
+  The comment body
+  """
+  content: String!
+}
+
+"""
+The outcome of a comment write. `comment` carries the saved row so a client can
+update a thread without refetching it. Null on failure — and, rarely, on a
+success whose read-back failed, which a client answers by refetching.
+"""
+type CommentResult {
+  success: Boolean!
+  comment: Comment
+  error: String
+}
+
+"""
+The outcome of a comment delete. `deletedUuids` names the target together with
+every reply that cascaded with it, so a client can drop them all at once.
+"""
+type DeleteCommentResult {
+  success: Boolean!
+  deletedUuids: [ID!]!
+  error: String
+}
+
+extend type Mutation {
+  """
+  Start a thread on an entity.
+  Requires editor.edit permission.
+  """
+  createComment(input: CreateCommentInput!): CommentResult!
+
+  """
+  Reply to a comment. Scope is inherited from the parent.
+  Requires editor.edit permission.
+  """
+  replyToComment(parentUuid: ID!, content: String!): CommentResult!
+
+  """
+  Edit a comment's body. The author only.
+  Requires editor.edit permission.
+  """
+  updateComment(uuid: ID!, content: String!): CommentResult!
+
+  """
+  Resolve or un-resolve a thread, addressed by its root. Any editor may.
+  Requires editor.edit permission.
+  """
+  resolveComment(uuid: ID!, resolved: Boolean!): CommentResult!
+
+  """
+  Delete a comment and every reply below it. The author only.
+
+  Leaves the `comment` annotation anchoring the thread in place — the editor
+  removes that mark through a normal passage save.
+  Requires editor.edit permission.
+  """
+  deleteComment(uuid: ID!): DeleteCommentResult!
+}
