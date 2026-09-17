@@ -1,4 +1,4 @@
-import { Schema } from '@tiptap/pm/model';
+import { Fragment, Schema, Slice } from '@tiptap/pm/model';
 import { WorkDocument } from './work-document';
 import { para, paraTexts, testSchema } from './schema.fixture';
 import type { SpineSeed } from './spine';
@@ -10,6 +10,21 @@ const meta = (
   label: string,
   type = 'translation',
 ): SpineSeed => ({ uuid, label, type });
+
+/**
+ * A pasted run of plain text, as the open slice a real paste carries.
+ *
+ * Open at both ends, so it joins the head's last block rather than starting a
+ * new one, the way a paste continues the line it lands on.
+ */
+const pastedText = (text: string, schema = testSchema) =>
+  new Slice(
+    Fragment.from(
+      schema.nodes.paragraph.create(null, Fragment.from(schema.text(text))),
+    ),
+    1,
+    1,
+  );
 
 /** A work of `count` passages, each holding one paragraph of known text. */
 const build = (count = 3) => {
@@ -162,13 +177,13 @@ describe('WorkDocument structural ops', () => {
       expect(build(2).deleteRange('p0', 1, 'p0', 3)).toBe(false);
     });
 
-    it('continues the surviving head with pasted text', () => {
+    it('continues the surviving head with pasted content', () => {
       const work = build(4);
       setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
       setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
 
       expect(
-        work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' }),
+        work.deleteRange('p0', 6, 'p3', 6, { insert: pastedText(' and more') }),
       ).toBe(true);
 
       expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
@@ -183,7 +198,7 @@ describe('WorkDocument structural ops', () => {
       setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
       const before = shape(work);
 
-      work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' });
+      work.deleteRange('p0', 6, 'p3', 6, { insert: pastedText(' and more') });
       expect(work.log.depth).toBe(1);
 
       work.undo();
@@ -195,10 +210,68 @@ describe('WorkDocument structural ops', () => {
       const work = build(3);
       setContent(work, 'p0', []);
 
-      expect(work.deleteRange('p0', 0, 'p2', 0, { insertText: 'fresh' })).toBe(
+      expect(
+        work.deleteRange('p0', 0, 'p2', 0, { insert: pastedText('fresh') }),
+      ).toBe(true);
+      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['fresh']);
+    });
+
+    it('keeps marks on both trimmed ends', () => {
+      const schema = new Schema({
+        nodes: testSchema.spec.nodes,
+        marks: {
+          endNoteLink: {
+            attrs: { uuid: { default: null } },
+            parseDOM: [{ tag: 'a[data-endnote]' }],
+            toDOM: () => ['a', { 'data-endnote': '' }, 0],
+          },
+        },
+      });
+      const note = [{ type: 'endNoteLink', attrs: { uuid: 'n-1' } }];
+      const work = new WorkDocument({ workUuid: 'work-1', schema });
+      work.seedSpine([meta('p0', '1'), meta('p1', '2'), meta('p2', '3')]);
+      // A marked run on each end that the cut lands in the middle of.
+      work.store.create('p0', [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'keep ' },
+            { type: 'text', text: 'TAILtail', marks: note },
+          ],
+        },
+      ]);
+      work.store.create('p1', [
+        { type: 'paragraph', content: [{ type: 'text', text: 'gone' }] },
+      ]);
+      work.store.create('p2', [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'headHEAD', marks: note },
+            { type: 'text', text: ' stay' },
+          ],
+        },
+      ]);
+
+      expect(work.deleteRange('p0', 1 + 'keep TAIL'.length, 'p2', 1 + 4)).toBe(
         true,
       );
-      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['fresh']);
+
+      const runs = (uuid: string) =>
+        (work.store.ensure(uuid).toJSON().content?.[0].content ?? []).map(
+          (run: { text?: string; marks?: { type: string }[] }) => [
+            run.text,
+            (run.marks ?? []).map((mark) => mark.type).join(),
+          ],
+        );
+      expect(runs('p0')).toEqual([
+        ['keep ', ''],
+        ['TAIL', 'endNoteLink'],
+      ]);
+      expect(runs('p2')).toEqual([
+        ['HEAD', 'endNoteLink'],
+        [' stay', ''],
+      ]);
     });
 
     // `testSchema` is all paragraphs, so the branch that starts a new one
@@ -224,9 +297,11 @@ describe('WorkDocument structural ops', () => {
         { type: 'paragraph', content: [{ type: 'text', text: 'tail' }] },
       ]);
 
-      expect(work.deleteRange('p0', 1, 'p1', 0, { insertText: 'fresh' })).toBe(
-        true,
-      );
+      expect(
+        work.deleteRange('p0', 1, 'p1', 0, {
+          insert: pastedText('fresh', schema),
+        }),
+      ).toBe(true);
       expect(work.store.ensure('p0').toJSON().content).toEqual([
         { type: 'divider' },
         { type: 'paragraph', content: [{ type: 'text', text: 'fresh' }] },
@@ -545,11 +620,9 @@ describe('WorkDocument hydration window', () => {
     await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
 
     // The body section loads a page: everything after it shifts along.
-    work.spine.insert(
-      { uuid: 'extra', label: 'x', type: 'translation' },
-      2,
-      { renumber: false },
-    );
+    work.spine.insert({ uuid: 'extra', label: 'x', type: 'translation' }, 2, {
+      renumber: false,
+    });
 
     await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
 
@@ -642,12 +715,10 @@ describe('WorkDocument merge at a blank seam', () => {
     const work = new WorkDocument({ workUuid: 'work-1', schema: testSchema });
     work.seedSpine(contents.map((_, i) => meta(`p${i}`, `${i + 1}`)));
     contents.forEach((content, i) =>
-      work.store
-        .ensure(`p${i}`)
-        .replaceContent({
-          type: 'doc',
-          content: content.length ? content : [],
-        }),
+      work.store.ensure(`p${i}`).replaceContent({
+        type: 'doc',
+        content: content.length ? content : [],
+      }),
     );
     return work;
   };

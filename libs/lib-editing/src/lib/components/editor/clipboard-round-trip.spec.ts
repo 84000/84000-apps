@@ -1,11 +1,22 @@
 import { Editor, getSchema } from '@tiptap/core';
 import type { Extensions } from '@tiptap/core';
-import { DOMParser, DOMSerializer, Fragment, Schema } from '@tiptap/pm/model';
+import {
+  DOMParser,
+  DOMSerializer,
+  Fragment,
+  Schema,
+  Slice,
+} from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Annotation } from '@eightyfourthousand/data-access';
 import { passageFromNode } from '@eightyfourthousand/lib-doc-model';
 
 import { buildStackSchemaExtensions } from '../stack/stack-extensions';
+import {
+  crossPassageSlice,
+  sliceFromHTML,
+  sliceToHTML,
+} from '../stack/stack-clipboard';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 
 // See PassageStackController.spec.ts — building the schema reaches
@@ -410,5 +421,75 @@ describe('the editor clipboard itself', () => {
 
     source.destroy();
     target.destroy();
+  });
+});
+
+/**
+ * The stack's cross-passage path, which has its own serializer.
+ *
+ * A selection spanning passage rows cannot come from one document — the stack
+ * gives each passage its own — so it is cut from each and assembled into a
+ * single slice. Only the stack schema applies: the per-tab editor holds its
+ * passages in one document and needs none of this.
+ */
+describe('annotations survive a cross-passage copy and paste', () => {
+  /** A sentinel block, so the cut lands at a real boundary inside a passage. */
+  const sentinel = (uuid: string) =>
+    paragraph([{ type: 'text', text: 'sentinel' }], { uuid });
+
+  const passage = (blocks: Blocks) =>
+    stackSchema.nodeFromJSON({ type: 'doc', content: blocks });
+
+  /**
+   * A three-passage selection carrying `blocks` in every one of them: trimmed
+   * at the head, whole in the middle, trimmed at the tail.
+   */
+  const crossSelection = (blocks: Blocks): Slice => {
+    const head = passage([sentinel('s-1'), ...blocks]);
+    const middle = passage(blocks);
+    const tail = passage([...blocks, sentinel('s-2')]);
+
+    return crossPassageSlice([
+      { node: head, from: head.firstChild?.nodeSize },
+      { node: middle },
+      {
+        node: tail,
+        to: tail.content.size - (tail.lastChild?.nodeSize ?? 0),
+      },
+    ]);
+  };
+
+  it.each(Object.keys(CASES))('%s', (name) => {
+    const copied = crossSelection(CASES[name]);
+    const html = sliceToHTML(stackSchema, copied);
+    const pasted = sliceFromHTML(stackSchema, html);
+
+    expect(pasted?.content).toBeDefined();
+    expect(
+      withoutIdentity(
+        annotationsOf(stackSchema, pasted?.content ?? Fragment.empty),
+      ),
+    ).toEqual(withoutIdentity(annotationsOf(stackSchema, copied.content)));
+  });
+
+  it('takes the selected content from every passage it spans', () => {
+    const copied = crossSelection(CASES['endNoteLink']);
+
+    // Three passages of "hello world", and neither sentinel.
+    expect(copied.content.textBetween(0, copied.content.size, ' ')).toBe(
+      'hello world hello world hello world',
+    );
+  });
+
+  it('leaves out the part of a passage the selection does not cover', () => {
+    const head = passage([sentinel('s-1'), ...CASES['bold']]);
+    const slice = crossPassageSlice([
+      { node: head, from: head.firstChild?.nodeSize },
+      { node: passage(CASES['bold']) },
+    ]);
+
+    expect(slice.content.textBetween(0, slice.content.size, ' ')).toBe(
+      'hello world hello world',
+    );
   });
 });

@@ -1,5 +1,5 @@
 import type { JSONContent } from '@tiptap/core';
-import { Fragment, Node as PMNode } from '@tiptap/pm/model';
+import { Fragment, Node as PMNode, Slice } from '@tiptap/pm/model';
 import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
@@ -89,8 +89,9 @@ export class WorkDocument {
   readonly spine: Spine;
   readonly store: PassageDocStore;
   readonly log = new CommandLog();
+  /** Public because a caller building a slice to paste needs the same one. */
+  readonly schema: Schema;
 
-  private schema: Schema;
   private loader?: PassageLoader;
   private newUuid: () => string;
   private listeners = new Set<() => void>();
@@ -362,16 +363,17 @@ export class WorkDocument {
    * off the last, and drop everything between. Doing it as one command is what
    * makes a single undo put all of it back.
    *
-   * `insertText` continues the surviving head with the given text, so a paste
+   * `insert` continues the surviving head with the given slice, so a paste
    * over the range is that same single command rather than a delete and an
-   * edit.
+   * edit. A slice rather than a string because a cross-passage copy carries
+   * marks and blocks, and a string would drop every annotation in it.
    */
   deleteRange(
     fromUuid: string,
     fromPos: number,
     toUuid: string,
     toPos: number,
-    options: { insertText?: string } = {},
+    options: { insert?: Slice } = {},
   ): boolean {
     let [startUuid, startPos, endUuid, endPos] = [
       fromUuid,
@@ -397,9 +399,9 @@ export class WorkDocument {
     const endDoc = this.store.ensure(endUuid);
     const startBefore = startDoc.toJSON();
     const endBefore = endDoc.toJSON();
-    const startAfter = this.withTrailingText(
+    const startAfter = this.withTrailingSlice(
       this.fragmentToJSON(startDoc.toNode().content.cut(0, startPos)),
-      options.insertText ?? '',
+      options.insert,
     );
     const endAfter = this.fragmentToJSON(endDoc.toNode().content.cut(endPos));
 
@@ -621,35 +623,31 @@ export class WorkDocument {
   }
 
   /**
-   * Append plain text to the end of a document's last block.
+   * Append a slice to the end of a document.
    *
    * Where a cross-passage paste lands: the surviving head keeps its blocks and
-   * the pasted text continues its last line, as typing there would.
+   * the pasted content continues its last one, as typing there would. An open
+   * slice joins into that last block; a closed one lands as its own blocks
+   * after it — which is `replace` doing the deciding rather than this method.
+   *
+   * The fallback covers a head whose last block cannot hold the slice at all —
+   * a table, or a line group next to a paragraph. `replace` throws there, and
+   * appending the blocks whole is the answer a paste wants; dropping the
+   * content because it did not join is not.
    */
-  private withTrailingText(doc: JSONContent, text: string): JSONContent {
-    if (!text) return doc;
+  private withTrailingSlice(doc: JSONContent, slice?: Slice): JSONContent {
+    if (!slice?.size) return doc;
 
     const node = PMNode.fromJSON(this.schema, doc);
-    const last = node.lastChild;
-    if (!last?.isTextblock) {
-      return {
-        type: 'doc',
-        content: [
-          ...(doc.content ?? []),
-          { type: 'paragraph', content: [{ type: 'text', text }] },
-        ],
-      };
+    // Inside the last block, not after it: `content.size` is a position at doc
+    // depth, where an open slice has nothing to join to and lands as its own
+    // block instead of continuing the line.
+    const at = node.content.size - (node.lastChild?.isTextblock ? 1 : 0);
+    try {
+      return this.fragmentToJSON(node.replace(at, at, slice).content);
+    } catch {
+      return this.fragmentToJSON(node.content.append(slice.content));
     }
-
-    const children: PMNode[] = [];
-    last.content.forEach((child) => children.push(child));
-    children.push(this.schema.text(text));
-    return this.fragmentToJSON(
-      node.content.replaceChild(
-        node.childCount - 1,
-        last.copy(Fragment.fromArray(children)),
-      ),
-    );
   }
 
   private fragmentToJSON(fragment: Fragment): JSONContent {
