@@ -59,7 +59,7 @@ describe('paragraph exporter', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should return undefined when textContent is empty', () => {
+  it('should return undefined when the paragraph has no children at all', () => {
     const parent = {
       attrs: {
         uuid: 'parent-uuid-5678',
@@ -71,6 +71,7 @@ describe('paragraph exporter', () => {
         uuid: 'paragraph-uuid-empty',
       },
       textContent: '',
+      childCount: 0,
     } as unknown as Node;
 
     const result = paragraph({
@@ -82,6 +83,38 @@ describe('paragraph exporter', () => {
     });
 
     expect(result).toBeUndefined();
+  });
+
+  it('should export a zero-length annotation for a paragraph holding only atoms', () => {
+    const parent = {
+      attrs: {
+        uuid: 'parent-uuid-5678',
+      },
+    } as unknown as Node;
+
+    const node = {
+      attrs: {
+        uuid: 'paragraph-uuid-folio',
+      },
+      textContent: '',
+      childCount: 1,
+    } as unknown as Node;
+
+    const result = paragraph({
+      node,
+      parent,
+      root: parent,
+      start: 0,
+      passageUuid: 'passage-uuid-1234',
+    });
+
+    expect(result).toEqual({
+      uuid: 'paragraph-uuid-folio',
+      passageUuid: 'passage-uuid-1234',
+      type: 'paragraph',
+      start: 0,
+      end: 0,
+    });
   });
 });
 

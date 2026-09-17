@@ -26,7 +26,10 @@ const findInsertionBlock = (
       HOST_TYPES.includes(
         (child.type || 'unknown') as (typeof HOST_TYPES)[number],
       ) &&
-      child.attrs?.start === position
+      child.attrs?.start === position &&
+      // A zero-length block here holds only inline atoms; the space belongs on
+      // the block carrying the text, which begins at the same position.
+      child.attrs?.end !== position
     ) {
       return child;
     }

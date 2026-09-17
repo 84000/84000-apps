@@ -10,6 +10,7 @@ export * from './has-abbreviation';
 export * from './heading';
 export * from './image';
 export * from './indent';
+export * from './insert-block';
 export * from './inline-title';
 export * from './internal-link';
 export * from './leading-space';

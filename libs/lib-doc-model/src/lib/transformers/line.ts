@@ -1,3 +1,4 @@
+import { insertBlockAt } from './insert-block';
 import { recurse } from './recurse';
 import { splitBlock } from './split-block';
 import { Transformer } from './transformer';
@@ -11,6 +12,13 @@ export const line: Transformer = (ctx) => {
     ...ctx,
     until: ['line'],
     transform: (ctx) => {
+      // A zero-length line holds only inline atoms — a folio reference on its
+      // own line — so there is no text to split: place it as an empty sibling.
+      if (start === end) {
+        insertBlockAt(ctx);
+        return;
+      }
+
       splitBlock({
         ...ctx,
         transform: ({ block }) => {
