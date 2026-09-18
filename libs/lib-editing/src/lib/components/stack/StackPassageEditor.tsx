@@ -24,10 +24,12 @@ export const StackPassageEditor = memo(
     controller,
     meta,
     focused,
+    selected,
   }: {
     controller: PassageStackController;
     meta: PassageMeta;
     focused: boolean;
+    selected?: boolean;
   }) => {
     const mountStart = useRef(0);
     const uuid = meta.uuid;
@@ -81,6 +83,7 @@ export const StackPassageEditor = memo(
         uuid={uuid}
         label={meta.label}
         bookmarked={controller.showsBookmark(uuid)}
+        selected={selected}
       >
         {/*
           `immediatelyRender` is off, so there is a frame or more with no

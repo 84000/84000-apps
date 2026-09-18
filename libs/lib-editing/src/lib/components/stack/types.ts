@@ -32,11 +32,15 @@ export type StackFocusTarget = {
   where: StackFocusWhere;
 };
 
-export type StackCrossSelection = {
-  fromUuid: string;
-  fromPos: number;
-  toUuid: string;
-  toPos: number;
+/**
+ * A run of whole passages, as the two ends the reader dragged between.
+ *
+ * Stored as anchor and focus rather than as an ordered range so the direction
+ * of the drag survives; spine order decides which is first.
+ */
+export type StackPassageSelection = {
+  anchorUuid: string;
+  focusUuid: string;
 };
 
 /**

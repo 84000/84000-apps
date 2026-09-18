@@ -6,6 +6,7 @@ import type { Annotation } from '@eightyfourthousand/data-access';
 import { passageFromNode } from '@eightyfourthousand/lib-doc-model';
 
 import { buildStackSchemaExtensions } from '../stack/stack-extensions';
+import { passagesFromHTML, passagesToHTML } from '../stack/stack-clipboard';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 
 // See PassageStackController.spec.ts — building the schema reaches
@@ -410,5 +411,62 @@ describe('the editor clipboard itself', () => {
 
     source.destroy();
     target.destroy();
+  });
+});
+
+/**
+ * The stack's passage selection, which has its own serializer.
+ *
+ * A selection spanning rows snaps to whole passages, and each passage is its
+ * own document — so the clipboard is written from those documents rather than
+ * from the selected DOM. A row that is not being edited is drawn by the
+ * reader's SSR extensions, whose markup the editor's parse rules cannot read
+ * back, so anything taken from the DOM loses every annotation it crosses.
+ */
+describe('annotations survive a passage selection copy and paste', () => {
+  /** Three passages, each holding the case under test. */
+  const passages = (blocks: Blocks) =>
+    [0, 1, 2].map(() =>
+      stackSchema.nodeFromJSON({ type: 'doc', content: blocks }),
+    );
+
+  const annotationsOfBlocks = (blocks: Blocks) =>
+    annotationsOf(
+      stackSchema,
+      stackSchema.nodeFromJSON({ type: 'doc', content: blocks }).content,
+    );
+
+  it.each(Object.keys(CASES))('%s', (name) => {
+    const html = passagesToHTML(stackSchema, passages(CASES[name]));
+    const pasted = passagesFromHTML(stackSchema, html);
+
+    // One passage out per passage in, each carrying the same annotations.
+    expect(pasted).toHaveLength(3);
+    pasted.forEach((blocks) => {
+      expect(
+        withoutIdentity(
+          annotationsOf(
+            stackSchema,
+            stackSchema.nodeFromJSON({ type: 'doc', content: blocks }).content,
+          ),
+        ),
+      ).toEqual(withoutIdentity(annotationsOfBlocks(CASES[name])));
+    });
+  });
+
+  it('keeps the passages apart rather than merging them', () => {
+    const html = passagesToHTML(stackSchema, passages(CASES['bold']));
+
+    expect(passagesFromHTML(stackSchema, html)).toHaveLength(3);
+  });
+
+  it('takes HTML that carries no passage boundaries as one passage', () => {
+    const pasted = passagesFromHTML(
+      stackSchema,
+      '<p>from somewhere else</p><p>and a second block</p>',
+    );
+
+    expect(pasted).toHaveLength(1);
+    expect(pasted[0]).toHaveLength(2);
   });
 });

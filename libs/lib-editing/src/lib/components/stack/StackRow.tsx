@@ -21,18 +21,22 @@ export const StackRow = ({
   uuid,
   label,
   bookmarked,
+  selected,
   className,
   children,
 }: {
   uuid: string;
   label: string;
   bookmarked?: boolean;
+  /** Part of a passage selection, which the stack draws itself. */
+  selected?: boolean;
   className?: string;
   children: ReactNode;
 }) => (
   <div
     id={uuid}
     data-stack-passage={uuid}
+    data-stack-selected={selected ? '' : undefined}
     // No vertical padding: it would trap the first block's margin, dropping
     // the content below the label. Spacing comes from the block margins.
     className="relative w-full scroll-mt-20"
@@ -52,6 +56,16 @@ export const StackRow = ({
         <BookmarkIcon className="size-3 text-accent" fill="currentColor" />
       </div>
     )}
-    <div className={cn(PASSAGE_CONTENT_CLASS, className)}>{children}</div>
+    <div
+      className={cn(
+        PASSAGE_CONTENT_CLASS,
+        // The stack owns this highlight: a passage selection is not a DOM
+        // selection, so nothing paints it otherwise.
+        selected && 'bg-accent/15 rounded-sm',
+        className,
+      )}
+    >
+      {children}
+    </div>
   </div>
 );

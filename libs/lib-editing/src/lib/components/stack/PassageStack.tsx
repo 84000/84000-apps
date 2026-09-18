@@ -530,9 +530,14 @@ export const PassageStack = ({
                   controller={controller}
                   meta={meta}
                   focused={controller.getFocusedUuid() === uuid}
+                  selected={controller.isSelected(uuid)}
                 />
               ) : (
-                <StaticPassageRow controller={controller} meta={meta} />
+                <StaticPassageRow
+                  controller={controller}
+                  meta={meta}
+                  selected={controller.isSelected(uuid)}
+                />
               )}
             </div>
           );

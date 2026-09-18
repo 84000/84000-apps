@@ -1,6 +1,7 @@
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import type { XmlElement, XmlText } from 'yjs';
 import {
+  passageFromNode,
   PassageLoader,
   type PassageSnapshot,
   type PassageSource,
@@ -346,69 +347,166 @@ describe('PassageStackController hydration', () => {
   });
 });
 
-describe('PassageStackController point resolution', () => {
-  /**
-   * A passage whose paragraph is `before` + a mention + `after`, plus the
-   * static row the controller reads DOM points out of.
-   */
-  const withMention = (before: string, after: string) => {
-    const uuid = 'p0';
-    const work = createStackWorkDocument({ workUuid: 'work-1' });
-    work.seedSpine([{ uuid, label: '1', type: 'translation' }] as Parameters<
-      typeof work.seedSpine
-    >[0]);
-    work.store.create(uuid, [
+describe('PassageStackController passage selection', () => {
+  /** A passage whose text carries an annotation, so loss is visible. */
+  const annotated = (uuid: string, label: string, text: string) => ({
+    meta: { uuid, label, type: 'translation' },
+    content: [
       {
         type: 'paragraph',
+        attrs: { uuid: `${uuid}-p`, type: 'paragraph', invalid: false },
         content: [
-          { type: 'text', text: before },
-          { type: 'mention', attrs: { items: [{ uuid: 'm1', entity: 'e1' }] } },
-          { type: 'text', text: after },
+          {
+            type: 'text',
+            text,
+            marks: [
+              { type: 'bold', attrs: { uuid: `${uuid}-m`, invalid: false } },
+            ],
+          },
         ],
       },
-    ]);
-    const controller = new PassageStackController({ work });
+    ],
+    charCount: text.length,
+  });
 
-    // The row as `renderTranslationHTML` draws it: the mention's label is
-    // rendered text the document does not hold.
-    document.body.innerHTML = `
-      <div data-stack-passage="${uuid}">
-        <div class="tiptap"><p><span id="a">${before}</span><span class="mention-container"><a class="mention-link">1.11</a></span><span id="b">${after}</span></p></div>
-      </div>`;
-    return { controller, uuid };
+  const withMarks = async () => {
+    const all = [
+      annotated('p0', '1', 'alpha'),
+      annotated('p1', '2', 'bravo'),
+      annotated('p2', '3', 'charlie'),
+      annotated('p3', '4', 'delta'),
+    ];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+    controller.setVisibleRange({ start: 0, end: all.length });
+    await flush();
+    return { work, controller };
   };
 
-  it('resolves a point before a mention from the text alone', () => {
-    const { controller, uuid } = withMention('Hello ', 'world');
-    const head = document.querySelector('#a')?.firstChild as Text;
+  it('selects the whole run between the two ends', async () => {
+    const { controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
 
-    expect(controller.resolvePoint(uuid, head, 2)).toBe(1 + 2);
+    expect(controller.selectedUuids()).toEqual(['p1', 'p2']);
+    expect(controller.isSelected('p0')).toBe(false);
+    expect(controller.isSelected('p1')).toBe(true);
   });
 
-  it('counts a mention as the one position its atom occupies', () => {
-    const { controller, uuid } = withMention('Hello ', 'world');
-    const tail = document.querySelector('#b')?.firstChild as Text;
+  it('selects the same run when dragged backwards', async () => {
+    const { controller } = await withMarks();
+    controller.setPassageSelection('p2', 'p1');
 
-    const pos = controller.resolvePoint(uuid, tail, 3);
-
-    // Six characters, the atom, then three more. The label's four rendered
-    // characters must not count, or every point past it lands late — which is
-    // what made a cross-passage delete cut the wrong range.
-    expect(pos).toBe(1 + 6 + 1 + 3);
+    expect(controller.selectedUuids()).toEqual(['p1', 'p2']);
   });
 
-  it('ignores an endnote marker, which renders text the document has none of', () => {
-    const { controller, uuid } = withMention('Hello ', 'world');
-    const tail = document.querySelector('#b') as HTMLElement;
-    tail.insertAdjacentHTML(
-      'beforebegin',
-      '<sup type="endNoteLink" class="end-note-link">\u20601</sup>',
+  it('serializes the selected passages as rich content', async () => {
+    const { controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+
+    const copied = controller.serializePassageSelection();
+
+    expect(copied?.text).toBe('bravo\n\ncharlie');
+    expect(copied?.html).toContain('<strong');
+  });
+
+  it('deletes the selected passages in one command', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+
+    expect(controller.deletePassageSelection()).toBe(true);
+
+    expect(work.spine.uuids()).toEqual(['p0', 'p3']);
+    expect(work.log.depth).toBe(1);
+    expect(controller.hasPassageSelection()).toBe(false);
+  });
+
+  it('undoes a delete of the selection in one step', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+    controller.deletePassageSelection();
+
+    work.undo();
+
+    expect(work.spine.uuids()).toEqual(['p0', 'p1', 'p2', 'p3']);
+  });
+
+  it('pastes the copied passages back as passages, annotations intact', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+    const copied = controller.serializePassageSelection();
+
+    controller.setPassageSelection('p1', 'p2');
+    expect(
+      controller.pastePassageSelection({
+        html: copied?.html ?? '',
+        text: copied?.text ?? '',
+      }),
+    ).toBe(true);
+
+    // Two passages in, two passages out, each still holding its own text.
+    expect(work.spine.uuids().length).toBe(4);
+    const texts = work.spine
+      .uuids()
+      .map((uuid) => work.store.ensure(uuid).toNode().textContent);
+    expect(texts).toEqual(['alpha', 'bravo', 'charlie', 'delta']);
+
+    const pasted = work.spine.uuids()[1];
+    const bold = passageFromNode(work.store.ensure(pasted).toNode(), 'work-1', {
+      uuid: pasted,
+      type: 'translation',
+      sort: 0,
+      label: '2',
+    }).annotations.filter(
+      (annotation) =>
+        annotation.type === 'span' && annotation.textStyle === 'text-bold',
     );
+    expect(bold.map(({ start, end }) => [start, end])).toEqual([[0, 5]]);
+  });
 
-    const pos = controller.resolvePoint(uuid, tail.firstChild as Text, 3);
+  it('renumbers the labels of what replaced the selection', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+    const copied = controller.serializePassageSelection();
+    controller.setPassageSelection('p1', 'p2');
+    controller.pastePassageSelection({
+      html: copied?.html ?? '',
+      text: copied?.text ?? '',
+    });
 
-    // A decoration: the answer must not move because of it.
-    expect(pos).toBe(1 + 6 + 1 + 3);
+    expect(work.spine.entries().map((entry) => entry.label)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
+  });
+
+  it('takes plain text as a single passage', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+
+    expect(
+      controller.pastePassageSelection({ html: '', text: 'one\n\ntwo' }),
+    ).toBe(true);
+
+    expect(work.spine.uuids().length).toBe(3);
+    expect(work.store.ensure(work.spine.uuids()[1]).toNode().textContent).toBe(
+      'onetwo',
+    );
+  });
+
+  it('clears the selection without touching the work', async () => {
+    const { work, controller } = await withMarks();
+    controller.setPassageSelection('p1', 'p2');
+
+    controller.clearPassageSelection();
+
+    expect(controller.hasPassageSelection()).toBe(false);
+    expect(work.spine.uuids().length).toBe(4);
   });
 });
 
