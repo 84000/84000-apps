@@ -25,7 +25,12 @@ export type TabName =
   | 'glossary'
   | 'abbreviations'
   /** Publish validation findings. Editor-only; readers never see this tab. */
-  | 'publishing';
+  | 'publishing'
+  /**
+   * Comment threads on the passages in view. Editor-only; comments are
+   * draft-only working material and readers never see this tab.
+   */
+  | 'comments';
 
 /**
  * Display state for the translation tab body:
