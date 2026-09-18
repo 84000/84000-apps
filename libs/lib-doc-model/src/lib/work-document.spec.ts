@@ -138,99 +138,96 @@ describe('WorkDocument structural ops', () => {
     });
   });
 
-  describe('deleteRange', () => {
-    it('trims the ends and drops everything between', () => {
+  describe('replacePassages', () => {
+    it('drops a run of passages', () => {
       const work = build(4);
-      setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
-      setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
-
-      // From after "keep" in p0, to before "stay" in p3.
-      expect(work.deleteRange('p0', 6, 'p3', 6)).toBe(true);
-
+      expect(work.replacePassages(['p1', 'p2'])).toBe(true);
       expect(work.spine.uuids()).toEqual(['p0', 'p3']);
-      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['keep']);
-      expect(paraTexts(work.store.ensure('p3').toJSON())).toEqual(['stay']);
     });
 
-    it('normalizes a backwards range', () => {
-      const work = build(3);
-      expect(work.deleteRange('p2', 1, 'p0', 1)).toBe(true);
-      expect(work.spine.uuids()).toEqual(['p0', 'p2']);
-    });
-
-    it('refuses a range inside one passage', () => {
-      expect(build(2).deleteRange('p0', 1, 'p0', 3)).toBe(false);
-    });
-
-    it('continues the surviving head with pasted text', () => {
+    it('puts the replacements where the run was', () => {
       const work = build(4);
-      setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
-      setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
+      setContent(work, 'p1', [para('gone', 'a')]);
 
       expect(
-        work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' }),
+        work.replacePassages(
+          ['p1', 'p2'],
+          [
+            { type: 'translation', content: [para('fresh', 'x')] },
+            { type: 'translation', content: [para('newer', 'y')] },
+          ],
+        ),
       ).toBe(true);
 
-      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual([
-        'keep and more',
-      ]);
-      expect(paraTexts(work.store.ensure('p3').toJSON())).toEqual(['stay']);
+      expect(work.spine.uuids()).toEqual(['p0', 'new-0', 'new-1', 'p3']);
+      expect(paraTexts(work.store.ensure('new-0').toJSON())).toEqual(['fresh']);
+      expect(paraTexts(work.store.ensure('new-1').toJSON())).toEqual(['newer']);
     });
 
-    it('undoes a paste over the range in one step', () => {
+    it('numbers the replacements from the passage before them', () => {
       const work = build(4);
-      setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
-      setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
+      work.replacePassages(
+        ['p1', 'p2'],
+        [{ type: 'translation', content: [para('fresh', 'x')] }],
+      );
+
+      expect(work.spine.entries().map((entry) => entry.label)).toEqual([
+        '1',
+        '2',
+        '3',
+      ]);
+    });
+
+    it('takes a shorter run than it replaces', () => {
+      const work = build(4);
+      expect(
+        work.replacePassages(
+          ['p1', 'p2'],
+          [{ type: 'translation', content: [para('one', 'x')] }],
+        ),
+      ).toBe(true);
+      expect(work.spine.uuids()).toEqual(['p0', 'new-0', 'p3']);
+    });
+
+    it('undoes a replacement in one step', () => {
+      const work = build(4);
+      setContent(work, 'p1', [para('original', 'a')]);
       const before = shape(work);
 
-      work.deleteRange('p0', 6, 'p3', 6, { insertText: ' and more' });
+      work.replacePassages(
+        ['p1', 'p2'],
+        [{ type: 'translation', content: [para('fresh', 'x')] }],
+      );
       expect(work.log.depth).toBe(1);
 
       work.undo();
-      expect(shape(work)).toEqual(before);
       expect(work.spine.uuids()).toEqual(['p0', 'p1', 'p2', 'p3']);
+      expect(shape(work)).toEqual(before);
     });
 
-    it('pastes into a head that has been emptied', () => {
+    it('undoes a plain delete of the run in one step', () => {
+      const work = build(4);
+      const before = shape(work);
+
+      work.replacePassages(['p1', 'p2']);
+      work.undo();
+
+      expect(shape(work)).toEqual(before);
+    });
+
+    it('reports failure when nothing matched', () => {
+      expect(build(2).replacePassages(['nope'])).toBe(false);
+    });
+
+    it('gives an empty replacement a block to hold the caret', () => {
       const work = build(3);
-      setContent(work, 'p0', []);
-
-      expect(work.deleteRange('p0', 0, 'p2', 0, { insertText: 'fresh' })).toBe(
-        true,
-      );
-      expect(paraTexts(work.store.ensure('p0').toJSON())).toEqual(['fresh']);
-    });
-
-    // `testSchema` is all paragraphs, so the branch that starts a new one
-    // needs a schema with a block that cannot hold text — a table or a line
-    // group, in the editor's own schema.
-    it('starts a paragraph when the head ends in a block that holds no text', () => {
-      const schema = new Schema({
-        nodes: {
-          doc: { content: 'block+' },
-          paragraph: {
-            group: 'block',
-            content: 'inline*',
-            toDOM: () => ['p', 0],
-          },
-          divider: { group: 'block', toDOM: () => ['hr'] },
-          text: { group: 'inline' },
-        },
-      });
-      const work = new WorkDocument({ workUuid: 'work-1', schema });
-      work.seedSpine([meta('p0', '1'), meta('p1', '2')]);
-      work.store.create('p0', [{ type: 'divider' }]);
-      work.store.create('p1', [
-        { type: 'paragraph', content: [{ type: 'text', text: 'tail' }] },
-      ]);
-
-      expect(work.deleteRange('p0', 1, 'p1', 0, { insertText: 'fresh' })).toBe(
-        true,
-      );
-      expect(work.store.ensure('p0').toJSON().content).toEqual([
-        { type: 'divider' },
-        { type: 'paragraph', content: [{ type: 'text', text: 'fresh' }] },
-      ]);
+      work.replacePassages(['p1'], [{ type: 'translation', content: [] }]);
+      expect(
+        work.store
+          .ensure('new-0')
+          .toJSON()
+          .content?.map((n) => n.type),
+      ).toEqual(['paragraph']);
     });
   });
 
@@ -334,13 +331,12 @@ describe('WorkDocument undo', () => {
     expect(shape(work)).toEqual(before);
   });
 
-  it('undoes a cross-passage delete in one step', () => {
+  it('undoes a whole-passage delete in one step', () => {
     const work = build(4);
     setContent(work, 'p0', [para('keep', 'a'), para('drop', 'b')]);
-    setContent(work, 'p3', [para('gone', 'c'), para('stay', 'd')]);
     const before = shape(work);
 
-    work.deleteRange('p0', 6, 'p3', 6);
+    work.replacePassages(['p1', 'p2']);
     expect(work.spine.length).toBe(2);
 
     work.undo();
@@ -545,11 +541,9 @@ describe('WorkDocument hydration window', () => {
     await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
 
     // The body section loads a page: everything after it shifts along.
-    work.spine.insert(
-      { uuid: 'extra', label: 'x', type: 'translation' },
-      2,
-      { renumber: false },
-    );
+    work.spine.insert({ uuid: 'extra', label: 'x', type: 'translation' }, 2, {
+      renumber: false,
+    });
 
     await work.hydrateWindow({ start: 0, end: 2 }, { key: 'translation' });
 
@@ -642,12 +636,10 @@ describe('WorkDocument merge at a blank seam', () => {
     const work = new WorkDocument({ workUuid: 'work-1', schema: testSchema });
     work.seedSpine(contents.map((_, i) => meta(`p${i}`, `${i + 1}`)));
     contents.forEach((content, i) =>
-      work.store
-        .ensure(`p${i}`)
-        .replaceContent({
-          type: 'doc',
-          content: content.length ? content : [],
-        }),
+      work.store.ensure(`p${i}`).replaceContent({
+        type: 'doc',
+        content: content.length ? content : [],
+      }),
     );
     return work;
   };

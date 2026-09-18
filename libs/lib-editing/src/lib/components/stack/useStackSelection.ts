@@ -4,6 +4,9 @@ import { useEffect } from 'react';
 
 import { PassageStackController } from './PassageStackController';
 
+/** How far the pointer must travel before a press counts as a drag. */
+const DRAG_SLOP_PX = 4;
+
 const passageUuidFor = (node: Node | null): string | null => {
   const element =
     node instanceof Element ? node : (node?.parentElement ?? null);
@@ -14,64 +17,94 @@ const passageUuidFor = (node: Node | null): string | null => {
   );
 };
 
+/** The passage under a point on screen, if any. */
+const passageUuidAt = (x: number, y: number): string | null =>
+  passageUuidFor(document.elementFromPoint(x, y));
+
 /**
- * Tracks DOM selections that span multiple passage editors and routes
- * Backspace/Delete to the controller's orchestrated cross-passage delete.
- * Whether such selections are even possible varies by browser (each editor
- * is its own contenteditable) — one of the questions this spike answers.
+ * Selection that spans passage rows, and the clipboard operations on it.
+ *
+ * A selection crossing a row boundary snaps to whole passages. Each row is its
+ * own editor, and a browser confines a selection that begins inside one
+ * `contenteditable` to that element — so a partial range across rows cannot be
+ * acquired by dragging, whatever the model could represent. The passage is
+ * already the unit of the spine, of a save and of undo, so it is the unit
+ * here.
+ *
+ * Which also means the drag is tracked by pointer position rather than by
+ * `selectionchange`: the browser never reports a selection leaving the row it
+ * started in, so there is nothing to listen for.
  */
 export const useStackSelection = (controller: PassageStackController) => {
   useEffect(() => {
-    const onSelectionChange = () => {
-      const selection = document.getSelection();
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        controller.setCrossSelection(null);
-        return;
-      }
+    let anchorUuid: string | null = null;
+    let origin: { x: number; y: number } | null = null;
 
-      const anchorUuid = passageUuidFor(selection.anchorNode);
-      const focusUuid = passageUuidFor(selection.focusNode);
-      if (!anchorUuid || !focusUuid || anchorUuid === focusUuid) {
-        controller.setCrossSelection(null);
-        return;
-      }
-
-      if (!selection.anchorNode || !selection.focusNode) {
-        controller.setCrossSelection(null);
-        return;
-      }
-
-      const fromPos = controller.resolvePoint(
-        anchorUuid,
-        selection.anchorNode,
-        selection.anchorOffset,
-      );
-      const toPos = controller.resolvePoint(
-        focusUuid,
-        selection.focusNode,
-        selection.focusOffset,
-      );
-      if (fromPos === null || toPos === null) {
-        controller.setCrossSelection(null);
-        return;
-      }
-
-      controller.setCrossSelection({
-        fromUuid: anchorUuid,
-        fromPos,
-        toUuid: focusUuid,
-        toPos,
-      });
+    const onMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      // A press anywhere begins a new selection; the old one goes whether or
+      // not this one turns into a drag.
+      controller.clearPassageSelection();
+      anchorUuid = passageUuidFor(event.target as Node);
+      origin = anchorUuid ? { x: event.clientX, y: event.clientY } : null;
     };
 
-    const serializeSelection = () => {
-      const selection = document.getSelection();
-      if (!selection || selection.isCollapsed) return null;
-      const container = document.createElement('div');
-      for (let i = 0; i < selection.rangeCount; i++) {
-        container.appendChild(selection.getRangeAt(i).cloneContents());
+    const onMouseMove = (event: MouseEvent) => {
+      if (!anchorUuid || !origin) return;
+      // Buttons released outside the window: the drag is over and no mouseup
+      // ever arrived.
+      if (!(event.buttons & 1)) {
+        anchorUuid = null;
+        origin = null;
+        return;
       }
-      return { text: selection.toString(), html: container.innerHTML };
+      if (
+        Math.abs(event.clientX - origin.x) < DRAG_SLOP_PX &&
+        Math.abs(event.clientY - origin.y) < DRAG_SLOP_PX
+      ) {
+        return;
+      }
+
+      const overUuid = passageUuidAt(event.clientX, event.clientY);
+      if (!overUuid) return;
+      // Still inside the row the drag began in: an ordinary text selection,
+      // which the editor handles.
+      if (overUuid === anchorUuid && !controller.hasPassageSelection()) return;
+
+      controller.setPassageSelection(anchorUuid, overUuid);
+    };
+
+    const endDrag = () => {
+      anchorUuid = null;
+      origin = null;
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!controller.hasPassageSelection()) return;
+
+      if (event.key === 'Escape') {
+        controller.clearPassageSelection();
+        return;
+      }
+
+      // Cut: the browser will not mutate a selection it does not own, so the
+      // clipboard write and the delete are both ours. `cut` does not fire for
+      // a selection spanning non-editable rows, hence the keystroke.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x') {
+        const serialized = controller.serializePassageSelection();
+        if (!serialized) return;
+        event.preventDefault();
+        event.stopPropagation();
+        writeClipboard(serialized).then(() =>
+          controller.deletePassageSelection(),
+        );
+        return;
+      }
+
+      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
+      event.preventDefault();
+      event.stopPropagation();
+      controller.deletePassageSelection();
     };
 
     const writeClipboard = async ({
@@ -96,47 +129,44 @@ export const useStackSelection = (controller: PassageStackController) => {
       }
     };
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!controller.hasCrossSelection()) return;
-
-      // Cut: the browser won't mutate a selection that spans non-editable
-      // rows, so serialize + orchestrated delete ourselves.
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x') {
-        const serialized = serializeSelection();
-        if (!serialized) return;
-        event.preventDefault();
-        event.stopPropagation();
-        writeClipboard(serialized).then(() =>
-          controller.deleteCrossSelection(),
-        );
-        return;
-      }
-
-      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
+    // The event rather than the keystroke, so the Edit menu and the context
+    // menu take this path too, and the clipboard is written synchronously.
+    const onCopy = (event: ClipboardEvent) => {
+      if (!controller.hasPassageSelection()) return;
+      const serialized = controller.serializePassageSelection();
+      if (!serialized || !event.clipboardData) return;
       event.preventDefault();
       event.stopPropagation();
-      controller.deleteCrossSelection();
+      event.clipboardData.setData('text/plain', serialized.text);
+      event.clipboardData.setData('text/html', serialized.html);
     };
 
-    // Paste over a cross-passage selection: orchestrated delete, then the
-    // clipboard text lands at the cut point in the first passage.
+    // HTML first: it carries the passage boundaries and every annotation.
+    // Plain text is the fallback for a clipboard holding nothing else.
     const onPaste = (event: ClipboardEvent) => {
-      if (!controller.hasCrossSelection()) return;
+      if (!controller.hasPassageSelection()) return;
+      const html = event.clipboardData?.getData('text/html') ?? '';
       const text = event.clipboardData?.getData('text/plain') ?? '';
       event.preventDefault();
       event.stopPropagation();
-      controller.pasteCrossSelection(text);
+      controller.pastePassageSelection({ html, text });
     };
 
     // Document-level: with static rows the selection can exist while focus
     // sits on <body>, so a container listener would never hear these.
-    document.addEventListener('selectionchange', onSelectionChange);
+    document.addEventListener('mousedown', onMouseDown, true);
+    document.addEventListener('mousemove', onMouseMove, true);
+    document.addEventListener('mouseup', endDrag, true);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('copy', onCopy, true);
     document.addEventListener('paste', onPaste, true);
 
     return () => {
-      document.removeEventListener('selectionchange', onSelectionChange);
+      document.removeEventListener('mousedown', onMouseDown, true);
+      document.removeEventListener('mousemove', onMouseMove, true);
+      document.removeEventListener('mouseup', endDrag, true);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('copy', onCopy, true);
       document.removeEventListener('paste', onPaste, true);
     };
   }, [controller]);
