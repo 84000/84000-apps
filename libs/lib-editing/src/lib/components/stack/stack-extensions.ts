@@ -17,6 +17,7 @@ import {
   HasAbbreviation,
 } from '../editor/extensions/Abbreviation/Abbreviation';
 import { Bold } from '../editor/extensions/Bold';
+import { CommentMark } from '../editor/extensions/Comment/CommentMark';
 import { EndNoteLinkMark } from '../editor/extensions/EndNoteLink/EndNoteLinkMark';
 import { EnsureUniqueUuids } from '../editor/extensions/EnsureUniqueUuids';
 import { ForeignMark } from '../editor/extensions/Foreign/Foreign';
@@ -74,6 +75,7 @@ export const buildStackSchemaExtensions = (): Extensions => [
   AnnotationToh,
   HasAbbreviation,
   Bold,
+  CommentMark,
   EndNoteLinkMark,
   EnsureUniqueUuids,
   ForeignMark,

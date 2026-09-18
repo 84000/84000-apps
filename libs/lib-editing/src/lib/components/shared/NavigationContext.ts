@@ -35,11 +35,21 @@ export interface NavigationState {
    * from the `start`/`end` query parameters.
    */
   highlight?: HighlightRange;
+  /**
+   * The comment thread the reader last asked to look at, by `comments.uuid`.
+   *
+   * Clicking a comment mark sets it; whatever renders threads beside the
+   * passage highlights the match. Provider state rather than a URL write —
+   * `NavigationProvider` writes the URL *from* its state, so a manual
+   * `pushState` is overwritten by the next sync and never read back.
+   */
+  focusedComment?: string;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
   setFocusMode: (focusMode: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
+  setFocusedComment: (uuid?: string) => void;
   fetchBibliographyEntry: (
     uuid: string,
   ) => Promise<BibliographyEntryItem | undefined>;
@@ -79,6 +89,9 @@ export const NavigationContext = createContext<NavigationState>({
   hasTranslationContent: true,
   focusMode: false,
   updatePanel: () => {
+    throw new Error('Not implemented');
+  },
+  setFocusedComment: () => {
     throw new Error('Not implemented');
   },
   setToh: () => {
