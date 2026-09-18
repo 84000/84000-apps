@@ -131,7 +131,8 @@ export type Comment = {
 
 /**
  * The outcome of a comment write. `comment` carries the saved row so a client can
- * update a thread without refetching it, and is null when `success` is false.
+ * update a thread without refetching it. Null on failure — and, rarely, on a
+ * success whose read-back failed, which a client answers by refetching.
  */
 export type CommentResult = {
   __typename?: 'CommentResult';
@@ -605,6 +606,23 @@ export type Passage = {
   toh?: Maybe<Scalars['String']['output']>;
   /** Type of passage content (e.g., translation, introduction, colophon) */
   type: Scalars['String']['output'];
+  /**
+   * Comment threads in this passage's scope that no `comment` annotation points
+   * at any more, oldest first. Roots only, replies nested as in `comments`.
+   *
+   * The complement of `comments`, and disjoint from it: a thread with no anchor
+   * has no position, so nothing that resolves position can reach it. Removing a
+   * mark deletes only the anchor, and a client serialization gap can drop one as
+   * easily as a deliberate unmark, so these stay readable and replyable rather
+   * than disappearing.
+   *
+   * Scope is where a thread was born. An anchor that moved to another passage
+   * still counts, so a thread is reported here only when no annotation anywhere
+   * names it.
+   *
+   * Always empty for a `published` content source.
+   */
+  unanchoredComments: Array<Comment>;
   /** Unique identifier for the passage */
   uuid: Scalars['ID']['output'];
   /** UUID of the work this passage belongs to */
@@ -656,6 +674,12 @@ export type PassageFilter = {
    * Use this instead of type when filtering by multiple types.
    */
   types?: InputMaybe<Array<Scalars['String']['input']>>;
+  /**
+   * Restrict the page to these passages, still in the work's own order. For a
+   * caller that already knows which passages it wants — the studio's comments
+   * panel reads the ones it is showing — rather than paging to reach them.
+   */
+  uuids?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 /** Input type for saving a passage */
@@ -1594,6 +1618,24 @@ export type GetCommentThreadQuery = { __typename?: 'Query', comment?: (
     & CommentThreadFieldsFragment
   ) | null };
 
+export type GetPassageCommentsQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  uuids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<{ __typename?: 'Passage', uuid: string, label?: string | null, sort: number, annotations: Array<(
+          { __typename?: 'Annotation' }
+          & AnnotationFieldsFragment
+        )>, comments: Array<(
+          { __typename?: 'Comment' }
+          & CommentThreadFieldsFragment
+        )>, unanchoredComments: Array<(
+          { __typename?: 'Comment' }
+          & CommentThreadFieldsFragment
+        )> }> } } | null };
+
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
 }>;
@@ -2004,6 +2046,32 @@ export const GetCommentThreadDocument = gql`
     ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
 ${UserInfoFieldsFragmentDoc}`;
+export const GetPassageCommentsDocument = gql`
+    query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
+  work(uuid: $uuid) {
+    uuid
+    passages(filter: {uuids: $uuids}, limit: $limit) {
+      nodes {
+        uuid
+        label
+        sort
+        annotations {
+          ...AnnotationFields
+        }
+        comments {
+          ...CommentThreadFields
+        }
+        unanchoredComments {
+          ...CommentThreadFields
+        }
+      }
+    }
+  }
+}
+    ${AnnotationFieldsFragmentDoc}
+${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -2112,6 +2180,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetCommentThread(variables: GetCommentThreadQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetCommentThreadQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetCommentThreadQuery>({ document: GetCommentThreadDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetCommentThread', 'query', variables);
+    },
+    GetPassageComments(variables: GetPassageCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassageCommentsQuery>({ document: GetPassageCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassageComments', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);

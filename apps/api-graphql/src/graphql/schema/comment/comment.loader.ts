@@ -1,5 +1,7 @@
 import DataLoader from 'dataloader';
 import {
+  getAnchoredCommentUuids,
+  getCommentsByEntityUuids,
   getCommentThreadsByAnchorUuids,
   type Comment,
   type ContentSource,
@@ -28,5 +30,49 @@ export function createCommentThreadLoader(
       source,
     });
     return anchorUuids.map((uuid) => threadsByAnchor.get(uuid) ?? null);
+  });
+}
+
+/**
+ * Creates a DataLoader for the comment threads an entity holds, keyed by
+ * `comments.entity_uuid`.
+ *
+ * Scope, not position — the companion to `commentThreadsByAnchorUuid`. A thread
+ * is in an entity's scope for as long as it exists, which is what makes it
+ * findable once no anchor places it any more.
+ */
+export function createCommentScopeLoader(
+  supabase: DataClient,
+  source: ContentSource,
+) {
+  return new DataLoader<string, Comment[]>(async (entityUuids) => {
+    const commentsByEntity = await getCommentsByEntityUuids({
+      client: supabase,
+      entityUuids,
+      entityType: 'passage',
+      source,
+    });
+    return entityUuids.map((uuid) => commentsByEntity.get(uuid) ?? []);
+  });
+}
+
+/**
+ * Creates a DataLoader answering whether a thread still has an anchor.
+ *
+ * Batched across the request: a page of passages asking about their own threads
+ * costs one read, and the answer is work-wide rather than per passage, so a
+ * thread whose anchor moved elsewhere is not mistaken for an unanchored one.
+ */
+export function createCommentAnchorLoader(
+  supabase: DataClient,
+  source: ContentSource,
+) {
+  return new DataLoader<string, boolean>(async (commentUuids) => {
+    const anchored = await getAnchoredCommentUuids({
+      client: supabase,
+      commentUuids,
+      source,
+    });
+    return commentUuids.map((uuid) => anchored.has(uuid));
   });
 }

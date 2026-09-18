@@ -268,30 +268,6 @@ export const NavigationProvider = ({
     [],
   );
 
-  /**
-   * Clicking a comment anchor focuses its thread.
-   *
-   * Delegated from the document rather than bound in the mark view: most of a
-   * work is static HTML with no mark view to bind to, so a listener there would
-   * make only the passages under a mounted editor clickable. `closest` picks
-   * the innermost anchor, which is the most specific thread where comment marks
-   * overlap.
-   */
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      const anchor = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-        '[type="comment"]',
-      );
-      const comment = anchor?.getAttribute('comment');
-      if (comment) {
-        setFocusedComment(comment);
-      }
-    };
-
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
       const { open } = state;
@@ -324,6 +300,41 @@ export const NavigationProvider = ({
     },
     [isMobile, hasTranslationContent],
   );
+
+  /**
+   * Clicking a comment anchor focuses its thread and opens the panel on it.
+   *
+   * Delegated from the document rather than bound in the mark view: most of a
+   * work is static HTML with no mark view to bind to, so a listener there would
+   * make only the passages under a mounted editor clickable. `closest` picks
+   * the innermost anchor, which is the most specific thread where comment marks
+   * overlap.
+   *
+   * The panel opens through `updatePanel` rather than a history write, which
+   * the URL sync below would overwrite unread.
+   */
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[type="comment"]',
+      );
+      const comment = anchor?.getAttribute('comment');
+      if (!comment) return;
+
+      setFocusedComment(comment);
+
+      // The comments tab is the studio's. A reader has no panel to open.
+      if (editable) {
+        updatePanel({
+          name: 'right',
+          state: { open: true, tab: 'comments', hash: comment },
+        });
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [editable, updatePanel]);
 
   useEffect(() => {
     if (!toh && !panels) {
