@@ -104,22 +104,26 @@ export const useStackSelection = (controller: PassageStackController) => {
         return;
       }
 
-      // Copy: same reason as cut, minus the delete. The browser's own copy
-      // would put the *rendered* selection on the clipboard, and most of a
-      // cross-row selection is static reader markup.
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'c') {
-        const serialized = controller.serializeCrossSelection();
-        if (!serialized) return;
-        event.preventDefault();
-        event.stopPropagation();
-        writeClipboard(serialized);
-        return;
-      }
-
       if (event.key !== 'Backspace' && event.key !== 'Delete') return;
       event.preventDefault();
       event.stopPropagation();
       controller.deleteCrossSelection();
+    };
+
+    // Copy: the event rather than the keystroke, so the Edit menu and the
+    // context menu are covered too, and the clipboard is written synchronously
+    // rather than through the permissioned async API. The browser's own copy
+    // would take the *rendered* selection — the label gutters with it, since
+    // cloning a range is a DOM operation that `user-select: none` does not
+    // reach.
+    const onCopy = (event: ClipboardEvent) => {
+      if (!controller.hasCrossSelection()) return;
+      const serialized = controller.serializeCrossSelection();
+      if (!serialized || !event.clipboardData) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.clipboardData.setData('text/plain', serialized.text);
+      event.clipboardData.setData('text/html', serialized.html);
     };
 
     // Paste over a cross-passage selection: orchestrated delete, then the
@@ -139,11 +143,13 @@ export const useStackSelection = (controller: PassageStackController) => {
     // sits on <body>, so a container listener would never hear these.
     document.addEventListener('selectionchange', onSelectionChange);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('copy', onCopy, true);
     document.addEventListener('paste', onPaste, true);
 
     return () => {
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('copy', onCopy, true);
       document.removeEventListener('paste', onPaste, true);
     };
   }, [controller]);

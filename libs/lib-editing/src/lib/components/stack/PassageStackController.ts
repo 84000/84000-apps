@@ -838,6 +838,20 @@ export class PassageStackController {
    * range — silently, because the selection itself looked right.
    */
   resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
+    const row = document.querySelector(`[data-stack-passage="${uuid}"]`);
+    const content = row?.querySelector('.tiptap') ?? null;
+
+    // A point on the row's chrome rather than its content — the label gutter,
+    // the bookmark — still names this passage, and a drag that ends on one is
+    // ordinary. Clamping it to the near edge of the content is what keeps the
+    // selection: returning null drops it, and the browser's own copy then
+    // takes the rendered row, label included.
+    if (row && content && !content.contains(node)) {
+      // Chrome belonging to this row clamps; anything further out names no
+      // point in this passage at all.
+      return row.contains(node) ? this.contentEdge(uuid, content, node) : null;
+    }
+
     const editor = this.editors.get(uuid);
     if (editor) {
       try {
@@ -847,13 +861,23 @@ export class PassageStackController {
       }
     }
 
-    const row = document.querySelector(
-      `[data-stack-passage="${uuid}"] .tiptap`,
-    );
-    if (!row) return null;
-    if (!row.contains(node)) return null;
-    return this.posFromTextOffset(uuid, domOffsetWithin(row, node, offset));
+    if (!content) return null;
+    return this.posFromTextOffset(uuid, domOffsetWithin(content, node, offset));
   };
+
+  /** Which end of a passage's content a point on its chrome belongs to. */
+  private contentEdge(
+    uuid: string,
+    content: Element,
+    node: Node,
+  ): number | null {
+    const precedes =
+      content.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING;
+    if (precedes) return 0;
+    const editor = this.editors.get(uuid);
+    if (editor) return editor.state.doc.content.size;
+    return this.work.store.peek(uuid)?.toNode().content.size ?? null;
+  }
 
   /**
    * Walk the document counting the units `domOffsetWithin` counts: one per

@@ -379,6 +379,61 @@ describe('PassageStackController point resolution', () => {
     return { controller, uuid };
   };
 
+  /** A row as `StackRow` draws it: label gutter, then the content column. */
+  const withChrome = () => {
+    const uuid = 'p0';
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([{ uuid, label: '1.2', type: 'translation' }] as Parameters<
+      typeof work.seedSpine
+    >[0]);
+    work.store.create(uuid, [
+      { type: 'paragraph', content: [{ type: 'text', text: 'hello' }] },
+    ]);
+    const controller = new PassageStackController({ work });
+
+    document.body.innerHTML = `
+      <div data-stack-passage="${uuid}">
+        <div data-passage-label="" id="label">1.2</div>
+        <div class="passage"><div class="tiptap"><p id="text">hello</p></div></div>
+      </div>`;
+    return { controller, uuid };
+  };
+
+  // A drag that ends on the label used to resolve to null, which dropped the
+  // whole cross-passage selection — and the browser's own copy then took the
+  // rendered rows, label gutters included.
+  it('clamps a point on the label to the start of the content', () => {
+    const { controller, uuid } = withChrome();
+    const label = document.querySelector('#label')?.firstChild as Text;
+
+    expect(controller.resolvePoint(uuid, label, 1)).toBe(0);
+  });
+
+  it('clamps a point on the row itself to the start of the content', () => {
+    const { controller, uuid } = withChrome();
+    const row = document.querySelector(`[data-stack-passage="${uuid}"]`);
+
+    expect(controller.resolvePoint(uuid, row as Node, 0)).toBe(0);
+  });
+
+  it('clamps a point after the content to its end', () => {
+    const { controller, uuid } = withChrome();
+    const row = document.querySelector(`[data-stack-passage="${uuid}"]`);
+    row?.insertAdjacentHTML('beforeend', '<div id="after">footer</div>');
+    const after = document.querySelector('#after')?.firstChild as Text;
+
+    // "hello" in a paragraph: the position past the last character.
+    expect(controller.resolvePoint(uuid, after, 0)).toBe(7);
+  });
+
+  it('still refuses a node belonging to no row', () => {
+    const { controller, uuid } = withChrome();
+    document.body.insertAdjacentHTML('beforeend', '<div id="loose">x</div>');
+    const loose = document.querySelector('#loose')?.firstChild as Text;
+
+    expect(controller.resolvePoint(uuid, loose, 0)).toBeNull();
+  });
+
   it('resolves a point before a mention from the text alone', () => {
     const { controller, uuid } = withMention('Hello ', 'world');
     const head = document.querySelector('#a')?.firstChild as Text;
