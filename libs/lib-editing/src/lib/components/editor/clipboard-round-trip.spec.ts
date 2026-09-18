@@ -1,6 +1,12 @@
 import { Editor, getSchema } from '@tiptap/core';
 import type { Extensions } from '@tiptap/core';
-import { DOMParser, DOMSerializer, Fragment, Schema } from '@tiptap/pm/model';
+import {
+  DOMParser,
+  DOMSerializer,
+  Fragment,
+  Schema,
+  Slice,
+} from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Annotation } from '@eightyfourthousand/data-access';
 import { passageFromNode } from '@eightyfourthousand/lib-doc-model';
@@ -468,5 +474,65 @@ describe('annotations survive a passage selection copy and paste', () => {
 
     expect(pasted).toHaveLength(1);
     expect(pasted[0]).toHaveLength(2);
+  });
+});
+
+/**
+ * Passage chrome, which the per-tab editor draws from the same `renderHTML`
+ * the reader is server-rendered with.
+ *
+ * The label, the bookmark and the reference list are not content, and nothing
+ * parses them back — so carrying them on the clipboard put the label text into
+ * the pasted document as ordinary text, once per passage the selection
+ * touched, whether or not that label was visibly selected.
+ */
+describe('a cross-passage copy carries no passage chrome', () => {
+  const labelled = (uuid: string, label: string, text: string) => ({
+    type: 'passage',
+    attrs: { uuid, label, sort: 0, type: 'translation' },
+    content: [paragraph([{ type: 'text', text }], { uuid: `${uuid}-p` })],
+  });
+
+  /** Two passages, selected from inside the first to inside the second. */
+  const across = () => {
+    const doc = tabSchema.nodeFromJSON({
+      type: 'translation',
+      content: [labelled('a', '1.2', 'alpha'), labelled('b', '1.3', 'bravo')],
+    });
+    return doc.slice(2, doc.content.size - 2);
+  };
+
+  /** The editor's clipboard serializer, as the paste side will read it. */
+  const editorClipboardHTML = (slice: Slice) => {
+    const editor = new Editor({
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      extensions: useTranslationExtensions().extensions as Extensions,
+    });
+    const { dom } = editor.view.serializeForClipboard(slice);
+    editor.destroy();
+    return dom.innerHTML;
+  };
+
+  it('leaves the labels out of the pasted text', () => {
+    const html = editorClipboardHTML(across());
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const pasted = DOMParser.fromSchema(tabSchema).parseSlice(container, {
+      preserveWhitespace: true,
+    });
+
+    expect(pasted.content.textBetween(0, pasted.content.size, ' ')).toBe(
+      'alpha bravo',
+    );
+  });
+
+  it('puts no passage chrome on the clipboard at all', () => {
+    const html = editorClipboardHTML(across());
+
+    expect(html).not.toContain('data-passage-label');
+    expect(html).not.toContain('passage-bookmark');
+    // An object-valued attribute has no business on the clipboard either.
+    expect(html).not.toContain('[object Object]');
   });
 });
