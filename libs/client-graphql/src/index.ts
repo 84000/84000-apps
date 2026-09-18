@@ -74,6 +74,11 @@ export {
   deleteComment,
   type CommentMutationResult,
   type DeleteCommentResult,
+  getCommentThread,
+  getPassageComments,
+  type AnchoredCommentThread,
+  type CommentAnchor,
+  type PassageComments,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

@@ -11,7 +11,11 @@ import { createFolioLoader } from './schema/folio/folio.loader';
 import { createBibliographyLabelLoader } from './schema/bibliography/bibliography-label.loader';
 import { createImprintLoader } from './schema/imprint/imprint.loader';
 import { createPublishedVersionLoader } from './schema/work/published-version.loader';
-import { createCommentThreadLoader } from './schema/comment/comment.loader';
+import {
+  createCommentAnchorLoader,
+  createCommentScopeLoader,
+  createCommentThreadLoader,
+} from './schema/comment/comment.loader';
 import { createUserInfoLoader } from './schema/user/user-info.loader';
 
 export interface Loaders {
@@ -98,6 +102,18 @@ export interface Loaders {
   commentThreadsByAnchorUuid: ReturnType<typeof createCommentThreadLoader>;
 
   /**
+   * Load the comment threads in an entity's scope, keyed by `entity_uuid`.
+   * Scope rather than position, which is what finds a thread nothing anchors.
+   */
+  commentsByEntityUuid: ReturnType<typeof createCommentScopeLoader>;
+
+  /**
+   * Load whether a comment thread still has an anchor pointing at it.
+   * Work-wide, so an anchor that moved to another passage still counts.
+   */
+  anchoredCommentUuid: ReturnType<typeof createCommentAnchorLoader>;
+
+  /**
    * Load user identities by auth user id.
    * Whatever names a user resolves through here, so a page naming the same few
    * people many times costs one read.
@@ -130,6 +146,8 @@ export function createLoaders(
     imprintsByWorkToh: createImprintLoader(supabase),
     publishedVersionsByUuid: createPublishedVersionLoader(supabase),
     commentThreadsByAnchorUuid: createCommentThreadLoader(supabase, source),
+    commentsByEntityUuid: createCommentScopeLoader(supabase, source),
+    anchoredCommentUuid: createCommentAnchorLoader(supabase, source),
     userInfoById: createUserInfoLoader(supabase),
   };
 }

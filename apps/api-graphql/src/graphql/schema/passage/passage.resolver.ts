@@ -43,7 +43,12 @@ export const passagesResolver = async (
   args: {
     cursor?: string;
     limit?: number;
-    filter?: { type?: string; types?: string[]; label?: string };
+    filter?: {
+      type?: string;
+      types?: string[];
+      label?: string;
+      uuids?: string[];
+    };
     direction?: PaginationDirection;
   },
   ctx: GraphQLContext,

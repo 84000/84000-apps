@@ -91,6 +91,13 @@ input PassageFilter {
   Filter by label pattern using ILIKE (e.g., "n.5%")
   """
   label: String
+
+  """
+  Restrict the page to these passages, still in the work's own order. For a
+  caller that already knows which passages it wants — the studio's comments
+  panel reads the ones it is showing — rather than paging to reach them.
+  """
+  uuids: [ID!]
 }
 
 """
