@@ -64,16 +64,6 @@ export const useStackSelection = (controller: PassageStackController) => {
       });
     };
 
-    const serializeSelection = () => {
-      const selection = document.getSelection();
-      if (!selection || selection.isCollapsed) return null;
-      const container = document.createElement('div');
-      for (let i = 0; i < selection.rangeCount; i++) {
-        container.appendChild(selection.getRangeAt(i).cloneContents());
-      }
-      return { text: selection.toString(), html: container.innerHTML };
-    };
-
     const writeClipboard = async ({
       text,
       html,
@@ -100,9 +90,11 @@ export const useStackSelection = (controller: PassageStackController) => {
       if (!controller.hasCrossSelection()) return;
 
       // Cut: the browser won't mutate a selection that spans non-editable
-      // rows, so serialize + orchestrated delete ourselves.
+      // rows, so serialize + orchestrated delete ourselves. A null
+      // serialization (a passage in the range not held in memory) falls
+      // through to the browser's own handling rather than losing the copy.
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x') {
-        const serialized = serializeSelection();
+        const serialized = controller.serializeCrossSelection();
         if (!serialized) return;
         event.preventDefault();
         event.stopPropagation();
@@ -118,25 +110,46 @@ export const useStackSelection = (controller: PassageStackController) => {
       controller.deleteCrossSelection();
     };
 
+    // Copy: the event rather than the keystroke, so the Edit menu and the
+    // context menu are covered too, and the clipboard is written synchronously
+    // rather than through the permissioned async API. The browser's own copy
+    // would take the *rendered* selection — the label gutters with it, since
+    // cloning a range is a DOM operation that `user-select: none` does not
+    // reach.
+    const onCopy = (event: ClipboardEvent) => {
+      if (!controller.hasCrossSelection()) return;
+      const serialized = controller.serializeCrossSelection();
+      if (!serialized || !event.clipboardData) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.clipboardData.setData('text/plain', serialized.text);
+      event.clipboardData.setData('text/html', serialized.html);
+    };
+
     // Paste over a cross-passage selection: orchestrated delete, then the
-    // clipboard text lands at the cut point in the first passage.
+    // clipboard content lands at the cut point in the first passage. HTML
+    // first — plain text is the fallback for a clipboard that carries nothing
+    // else, and taking it when HTML is there is what dropped every annotation.
     const onPaste = (event: ClipboardEvent) => {
       if (!controller.hasCrossSelection()) return;
+      const html = event.clipboardData?.getData('text/html') ?? '';
       const text = event.clipboardData?.getData('text/plain') ?? '';
       event.preventDefault();
       event.stopPropagation();
-      controller.pasteCrossSelection(text);
+      controller.pasteCrossSelection({ html, text });
     };
 
     // Document-level: with static rows the selection can exist while focus
     // sits on <body>, so a container listener would never hear these.
     document.addEventListener('selectionchange', onSelectionChange);
     document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('copy', onCopy, true);
     document.addEventListener('paste', onPaste, true);
 
     return () => {
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('copy', onCopy, true);
       document.removeEventListener('paste', onPaste, true);
     };
   }, [controller]);

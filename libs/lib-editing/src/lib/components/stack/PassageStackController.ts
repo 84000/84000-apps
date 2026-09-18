@@ -1,6 +1,7 @@
 import { Editor, Extensions } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
 import { TextSelection } from '@tiptap/pm/state';
+import type { Slice } from '@tiptap/pm/model';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -12,6 +13,14 @@ import type {
 
 import { renderTranslationHTML } from '../reader/translation-html';
 import { buildStackEditorExtensions } from './stack-extensions';
+import {
+  crossPassageSlice,
+  sliceFromHTML,
+  sliceFromText,
+  sliceToHTML,
+  sliceToText,
+  type PassageRange,
+} from './stack-clipboard';
 import type {
   StackCrossSelection,
   StackFocusTarget,
@@ -829,6 +838,20 @@ export class PassageStackController {
    * range — silently, because the selection itself looked right.
    */
   resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
+    const row = document.querySelector(`[data-stack-passage="${uuid}"]`);
+    const content = row?.querySelector('.tiptap') ?? null;
+
+    // A point on the row's chrome rather than its content — the label gutter,
+    // the bookmark — still names this passage, and a drag that ends on one is
+    // ordinary. Clamping it to the near edge of the content is what keeps the
+    // selection: returning null drops it, and the browser's own copy then
+    // takes the rendered row, label included.
+    if (row && content && !content.contains(node)) {
+      // Chrome belonging to this row clamps; anything further out names no
+      // point in this passage at all.
+      return row.contains(node) ? this.contentEdge(uuid, content, node) : null;
+    }
+
     const editor = this.editors.get(uuid);
     if (editor) {
       try {
@@ -838,13 +861,23 @@ export class PassageStackController {
       }
     }
 
-    const row = document.querySelector(
-      `[data-stack-passage="${uuid}"] .tiptap`,
-    );
-    if (!row) return null;
-    if (!row.contains(node)) return null;
-    return this.posFromTextOffset(uuid, domOffsetWithin(row, node, offset));
+    if (!content) return null;
+    return this.posFromTextOffset(uuid, domOffsetWithin(content, node, offset));
   };
+
+  /** Which end of a passage's content a point on its chrome belongs to. */
+  private contentEdge(
+    uuid: string,
+    content: Element,
+    node: Node,
+  ): number | null {
+    const precedes =
+      content.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING;
+    if (precedes) return 0;
+    const editor = this.editors.get(uuid);
+    if (editor) return editor.state.doc.content.size;
+    return this.work.store.peek(uuid)?.toNode().content.size ?? null;
+  }
 
   /**
    * Walk the document counting the units `domOffsetWithin` counts: one per
@@ -893,17 +926,41 @@ export class PassageStackController {
 
   hasCrossSelection = () => this.crossSelection !== null;
 
-  /** Replace a cross-passage selection with pasted plain text. */
-  pasteCrossSelection = (text: string) => this.replaceCrossSelection(text);
+  /**
+   * What a cross-passage selection puts on the clipboard.
+   *
+   * Built from the passage documents, not from the selected DOM. Most of a
+   * cross-row selection is static rows, and those are drawn by
+   * `renderTranslationHTML` with the reader's SSR extensions — markup the
+   * editor's own parse rules cannot read back, so cloning it dropped every
+   * annotation it crossed. Cutting the documents instead makes the copy the
+   * same schema round trip as a within-passage one.
+   */
+  serializeCrossSelection = (): { text: string; html: string } | null => {
+    const slice = this.crossSelectionSlice();
+    if (!slice?.content.size) return null;
+    return {
+      text: sliceToText(slice),
+      html: sliceToHTML(this.work.schema, slice),
+    };
+  };
+
+  /** Replace a cross-passage selection with pasted content. */
+  pasteCrossSelection = ({ html, text }: { html: string; text: string }) =>
+    this.replaceCrossSelection(
+      sliceFromHTML(this.work.schema, html) ??
+        sliceFromText(this.work.schema, text) ??
+        undefined,
+    );
 
   deleteCrossSelection = () => this.replaceCrossSelection();
 
   /**
-   * The one command behind both: the range goes, and any pasted text
+   * The one command behind both: the range goes, and any pasted content
    * continues the surviving head. One command means one undo, which is what a
    * paste should cost.
    */
-  private replaceCrossSelection(insertText = '') {
+  private replaceCrossSelection(insert?: Slice) {
     const selection = this.crossSelection;
     if (!selection) return false;
     this.crossSelection = null;
@@ -913,14 +970,50 @@ export class PassageStackController {
       selection.fromPos,
       selection.toUuid,
       selection.toPos,
-      { insertText },
+      { insert },
     );
     if (!deleted) return false;
 
     window.getSelection()?.removeAllRanges();
     const start = this.orderedSelection(selection);
-    if (start) this.focusPassage(start.uuid, start.pos + insertText.length);
+    // `Slice.size` excludes the open ends, so it is exactly how far the caret
+    // moves when the slice is inserted at a point.
+    if (start) this.focusPassage(start.uuid, start.pos + (insert?.size ?? 0));
     return true;
+  }
+
+  /**
+   * The selected content of every passage the selection touches.
+   *
+   * Returns null when any of them has no document in memory: a passage outside
+   * the hydration window has nothing to cut, and a copy that silently skipped
+   * it would lose content the selection visibly covered.
+   */
+  private crossSelectionSlice(): Slice | null {
+    const selection = this.crossSelection;
+    if (!selection) return null;
+
+    const order = this.getOrder();
+    const fromIndex = order.indexOf(selection.fromUuid);
+    const toIndex = order.indexOf(selection.toUuid);
+    if (fromIndex < 0 || toIndex < 0) return null;
+
+    const [startIndex, startPos, endIndex, endPos] =
+      fromIndex <= toIndex
+        ? [fromIndex, selection.fromPos, toIndex, selection.toPos]
+        : [toIndex, selection.toPos, fromIndex, selection.fromPos];
+
+    const ranges: PassageRange[] = [];
+    for (let index = startIndex; index <= endIndex; index++) {
+      const doc = this.work.store.peek(order[index]);
+      if (!doc) return null;
+      ranges.push({
+        node: doc.toNode(),
+        from: index === startIndex ? startPos : undefined,
+        to: index === endIndex ? endPos : undefined,
+      });
+    }
+    return crossPassageSlice(ranges);
   }
 
   /** Which end of a cross-passage selection comes first in the spine. */

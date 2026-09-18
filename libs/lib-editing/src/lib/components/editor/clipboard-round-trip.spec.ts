@@ -1,11 +1,22 @@
 import { Editor, getSchema } from '@tiptap/core';
 import type { Extensions } from '@tiptap/core';
-import { DOMParser, DOMSerializer, Fragment, Schema } from '@tiptap/pm/model';
+import {
+  DOMParser,
+  DOMSerializer,
+  Fragment,
+  Schema,
+  Slice,
+} from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Annotation } from '@eightyfourthousand/data-access';
 import { passageFromNode } from '@eightyfourthousand/lib-doc-model';
 
 import { buildStackSchemaExtensions } from '../stack/stack-extensions';
+import {
+  crossPassageSlice,
+  sliceFromHTML,
+  sliceToHTML,
+} from '../stack/stack-clipboard';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
 
 // See PassageStackController.spec.ts — building the schema reaches
@@ -410,5 +421,135 @@ describe('the editor clipboard itself', () => {
 
     source.destroy();
     target.destroy();
+  });
+});
+
+/**
+ * The stack's cross-passage path, which has its own serializer.
+ *
+ * A selection spanning passage rows cannot come from one document — the stack
+ * gives each passage its own — so it is cut from each and assembled into a
+ * single slice. Only the stack schema applies: the per-tab editor holds its
+ * passages in one document and needs none of this.
+ */
+describe('annotations survive a cross-passage copy and paste', () => {
+  /** A sentinel block, so the cut lands at a real boundary inside a passage. */
+  const sentinel = (uuid: string) =>
+    paragraph([{ type: 'text', text: 'sentinel' }], { uuid });
+
+  const passage = (blocks: Blocks) =>
+    stackSchema.nodeFromJSON({ type: 'doc', content: blocks });
+
+  /**
+   * A three-passage selection carrying `blocks` in every one of them: trimmed
+   * at the head, whole in the middle, trimmed at the tail.
+   */
+  const crossSelection = (blocks: Blocks): Slice => {
+    const head = passage([sentinel('s-1'), ...blocks]);
+    const middle = passage(blocks);
+    const tail = passage([...blocks, sentinel('s-2')]);
+
+    return crossPassageSlice([
+      { node: head, from: head.firstChild?.nodeSize },
+      { node: middle },
+      {
+        node: tail,
+        to: tail.content.size - (tail.lastChild?.nodeSize ?? 0),
+      },
+    ]);
+  };
+
+  it.each(Object.keys(CASES))('%s', (name) => {
+    const copied = crossSelection(CASES[name]);
+    const html = sliceToHTML(stackSchema, copied);
+    const pasted = sliceFromHTML(stackSchema, html);
+
+    expect(pasted?.content).toBeDefined();
+    expect(
+      withoutIdentity(
+        annotationsOf(stackSchema, pasted?.content ?? Fragment.empty),
+      ),
+    ).toEqual(withoutIdentity(annotationsOf(stackSchema, copied.content)));
+  });
+
+  it('takes the selected content from every passage it spans', () => {
+    const copied = crossSelection(CASES['endNoteLink']);
+
+    // Three passages of "hello world", and neither sentinel.
+    expect(copied.content.textBetween(0, copied.content.size, ' ')).toBe(
+      'hello world hello world hello world',
+    );
+  });
+
+  it('leaves out the part of a passage the selection does not cover', () => {
+    const head = passage([sentinel('s-1'), ...CASES['bold']]);
+    const slice = crossPassageSlice([
+      { node: head, from: head.firstChild?.nodeSize },
+      { node: passage(CASES['bold']) },
+    ]);
+
+    expect(slice.content.textBetween(0, slice.content.size, ' ')).toBe(
+      'hello world hello world',
+    );
+  });
+});
+
+/**
+ * Passage chrome, which the per-tab editor draws from the same `renderHTML`
+ * the reader is server-rendered with.
+ *
+ * The label, the bookmark and the reference list are not content, and nothing
+ * parses them back — so carrying them on the clipboard put the label text into
+ * the pasted document as ordinary text, once per passage the selection
+ * touched, whether or not that label was visibly selected.
+ */
+describe('a cross-passage copy carries no passage chrome', () => {
+  const labelled = (uuid: string, label: string, text: string) => ({
+    type: 'passage',
+    attrs: { uuid, label, sort: 0, type: 'translation' },
+    content: [paragraph([{ type: 'text', text }], { uuid: `${uuid}-p` })],
+  });
+
+  /** Two passages, selected from inside the first to inside the second. */
+  const across = () => {
+    const doc = tabSchema.nodeFromJSON({
+      type: 'translation',
+      content: [labelled('a', '1.2', 'alpha'), labelled('b', '1.3', 'bravo')],
+    });
+    return doc.slice(2, doc.content.size - 2);
+  };
+
+  /** The editor's clipboard serializer, as the paste side will read it. */
+  const editorClipboardHTML = (slice: Slice) => {
+    const editor = new Editor({
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      extensions: useTranslationExtensions().extensions as Extensions,
+    });
+    const { dom } = editor.view.serializeForClipboard(slice);
+    editor.destroy();
+    return dom.innerHTML;
+  };
+
+  it('leaves the labels out of the pasted text', () => {
+    const html = editorClipboardHTML(across());
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const pasted = DOMParser.fromSchema(tabSchema).parseSlice(container, {
+      preserveWhitespace: true,
+    });
+
+    expect(pasted.content.textBetween(0, pasted.content.size, ' ')).toBe(
+      'alpha bravo',
+    );
+  });
+
+  it('puts no passage chrome on the clipboard at all', () => {
+    const html = editorClipboardHTML(across());
+
+    expect(html).not.toContain('data-passage-label');
+    expect(html).not.toContain('passage-bookmark');
+    // An object-valued attribute has no business on the clipboard either.
+    expect(html).not.toContain('[object Object]');
   });
 });
