@@ -28,7 +28,7 @@ import WordBreak from '../extensions/WordBreak';
 import { STARTER_KIT_CONFIG, StarterKit } from '../extensions/StarterKit';
 import TranslationMetadata from '../extensions/TranslationMetadata';
 import TranslationDocument from '../extensions/TranslationDocument';
-import { PassageNode } from '../extensions/Passage';
+import { PassageClipboard, PassageNode } from '../extensions/Passage';
 import { CommandSuggestionItem } from '../extensions/SlashCommand/SuggestionList';
 import { TableOfContentsIcon } from 'lucide-react';
 import { LeadingSpace } from '../extensions/LeadingSpace';
@@ -123,6 +123,7 @@ export const useTranslationExtensions = ({
     Paragraph,
     ParagraphIndent,
     PassageNode,
+    PassageClipboard,
     PipeNotItalic,
     Placeholder,
     SlashCommand.configure({
