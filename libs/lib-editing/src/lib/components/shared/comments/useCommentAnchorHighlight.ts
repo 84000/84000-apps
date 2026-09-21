@@ -44,7 +44,7 @@ export const useCommentAnchorHighlight = (commentUuid?: string) => {
     if (commentUuid) {
       try {
         sheet.insertRule(
-          `${anchorSelector(commentUuid)} { background-color: var(--color-accent); color: var(--color-accent-foreground); }`,
+          `${anchorSelector(commentUuid)} { background-color: var(--color-secondary); color: var(--color-secondary-foreground); }`,
           0,
         );
       } catch (e) {

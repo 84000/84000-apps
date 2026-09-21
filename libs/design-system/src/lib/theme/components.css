@@ -40,7 +40,7 @@
      click without the underline that means "this goes somewhere". Overlapping
      anchors nest, and the wash deepens where they do. */
   .comment-mark {
-    @apply bg-accent/15 hover:bg-accent/30 rounded-xs transition-colors cursor-pointer;
+    @apply bg-secondary/15 hover:bg-secondary/30 rounded-xs transition-colors cursor-pointer;
   }
 
   /* A resolved thread's anchor is suppressed rather than restyled. The

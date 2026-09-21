@@ -147,7 +147,7 @@ export const CommentThreadCard = ({
       data-comment-thread={thread.uuid}
       className={cn(
         'rounded border p-2 cursor-pointer',
-        selected ? 'border-accent bg-accent/5' : 'border-border',
+        selected ? 'border-secondary bg-secondary/5' : 'border-border',
         resolved && 'opacity-70',
       )}
       onMouseEnter={() => onHover(thread.uuid)}
