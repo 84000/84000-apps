@@ -16,8 +16,6 @@ import { GlossaryTermList, GlossaryPaginationProvider } from './glossary';
 import { BibliographyList } from './bibliography';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { useScrollPositionRestore } from './hooks/useScrollPositionRestore';
-import { CommentsPanel } from './comments';
-import type { TabName } from './types';
 
 export const BackMatterPanel = ({
   workUuid,
@@ -60,10 +58,12 @@ export const BackMatterPanel = ({
     <Tabs
       value={panels.right.tab || 'endnotes'}
       onValueChange={(tabName) => {
-        updatePanel({
-          name: 'right',
-          state: { open: true, tab: tabName as TabName },
-        });
+        const tab = tabName as
+          | 'endnotes'
+          | 'glossary'
+          | 'bibliography'
+          | 'abbreviations';
+        updatePanel({ name: 'right', state: { open: true, tab } });
       }}
       defaultValue="endnotes"
       className="w-full gap-0 @container/sidebar h-full flex flex-col"
@@ -85,7 +85,6 @@ export const BackMatterPanel = ({
           {abbreviations.length > 0 && (
             <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
           )}
-          {isEditor && <TabsTrigger value="comments">Comments</TabsTrigger>}
         </TabsList>
       </div>
       <div className="flex-1 min-h-0">
@@ -132,14 +131,6 @@ export const BackMatterPanel = ({
                 className="pb-8 data-[state=inactive]:hidden"
               >
                 <BibliographyList content={bibliography} />
-              </TabsContent>
-            )}
-            {/* Deliberately not forceMount, unlike the tabs above. The read
-                costs a query per passage set in view, so it runs for an editor
-                who asks rather than for everyone who opens a work. */}
-            {isEditor && (
-              <TabsContent value="comments" className="pb-8">
-                <CommentsPanel workUuid={workUuid} />
               </TabsContent>
             )}
             {abbreviations.length > 0 && (

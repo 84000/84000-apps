@@ -29,6 +29,10 @@ import { useVisiblePassageUuids } from './useVisiblePassageUuids';
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
+ *
+ * Passages are what a thread hangs off today; the store was shaped for glossary
+ * entries and bibliographies too, so this reads a set of entities rather than
+ * the body specifically.
  */
 export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const { focusedComment, setFocusedComment } = useNavigation();

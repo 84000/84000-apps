@@ -326,7 +326,7 @@ export const NavigationProvider = ({
       // The comments tab is the studio's. A reader has no panel to open.
       if (editable) {
         updatePanel({
-          name: 'right',
+          name: 'left',
           state: { open: true, tab: 'comments', hash: comment },
         });
       }

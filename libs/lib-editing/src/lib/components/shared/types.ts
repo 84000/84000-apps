@@ -27,7 +27,7 @@ export type TabName =
   /** Publish validation findings. Editor-only; readers never see this tab. */
   | 'publishing'
   /**
-   * Comment threads on the passages in view. Editor-only; comments are
+   * Comment threads on the entities in view. Editor-only; comments are
    * draft-only working material and readers never see this tab.
    */
   | 'comments';

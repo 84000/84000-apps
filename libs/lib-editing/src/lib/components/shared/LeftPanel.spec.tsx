@@ -11,6 +11,11 @@ jest.mock('./PublishingPanel', () => ({
     <div>{`Checks for ${workUuid}`}</div>
   ),
 }));
+jest.mock('./comments', () => ({
+  CommentsPanel: ({ workUuid }: { workUuid: string }) => (
+    <div>{`Comments for ${workUuid}`}</div>
+  ),
+}));
 
 const mockUpdatePanel = jest.fn();
 jest.mock('./NavigationProvider', () => ({
@@ -67,5 +72,26 @@ describe('LeftPanel', () => {
     render(<LeftPanel work={WORK} isEditor />);
 
     expect(screen.queryByText('Checks for w1')).toBeNull();
+  });
+
+  it('offers the Comments tab to editors', () => {
+    render(<LeftPanel work={WORK} isEditor />);
+
+    expect(screen.getByRole('tab', { name: 'Comments' })).toBeTruthy();
+  });
+
+  it('hides the Comments tab from readers', () => {
+    // Comments are draft-only editorial working material and never reach a published
+    // version, so a reader has nothing to read there.
+    render(<LeftPanel work={WORK} />);
+
+    expect(screen.queryByRole('tab', { name: 'Comments' })).toBeNull();
+  });
+
+  it('does not read comments until the tab is opened', () => {
+    // Same reason as validation: the read costs a query per passage set in view.
+    render(<LeftPanel work={WORK} isEditor />);
+
+    expect(screen.queryByText('Comments for w1')).toBeNull();
   });
 });
