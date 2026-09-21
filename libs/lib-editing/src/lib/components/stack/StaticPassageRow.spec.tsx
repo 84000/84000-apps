@@ -161,3 +161,92 @@ describe('StaticPassageRow', () => {
     });
   });
 });
+
+/**
+ * The passage-selection highlight.
+ *
+ * Drawn by the stack, because a passage selection is not a DOM selection and
+ * nothing paints it otherwise — and drawn as its own layer, because the
+ * content box's padding sets the text column and changing it to make room
+ * would re-wrap every row.
+ */
+describe('StaticPassageRow selection highlight', () => {
+  const highlight = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>('[aria-hidden].absolute.rounded-sm');
+
+  it('draws nothing when the passage is not selected', async () => {
+    const controller = build();
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const { container } = render(
+      <StaticPassageRow controller={controller} meta={meta} />,
+    );
+
+    expect(highlight(container)).toBeNull();
+    expect(
+      container
+        .querySelector('[data-stack-passage]')
+        ?.getAttribute('data-stack-selected'),
+    ).toBeNull();
+  });
+
+  it('draws the highlight behind the content when selected', async () => {
+    const controller = build();
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const { container } = render(
+      <StaticPassageRow controller={controller} meta={meta} selected />,
+    );
+
+    const layer = highlight(container);
+    const content = container.querySelector('.tiptap');
+    expect(layer).not.toBeNull();
+    expect(content).not.toBeNull();
+
+    // Before the content in document order, so the text paints over it.
+    const relation = (layer as HTMLElement).compareDocumentPosition(
+      content as Node,
+    );
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('keeps the highlight off the content box, so the text column is unmoved', async () => {
+    const controller = build();
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const plain = render(
+      <StaticPassageRow controller={controller} meta={meta} />,
+    );
+    const chosen = render(
+      <StaticPassageRow controller={controller} meta={meta} selected />,
+    );
+
+    const contentClasses = (container: HTMLElement) =>
+      [...(container.querySelector('.tiptap')?.parentElement?.classList ?? [])]
+        // `relative` only stacks the content above the highlight; it moves
+        // nothing.
+        .filter((name) => name !== 'relative')
+        .sort();
+
+    expect(contentClasses(chosen.container)).toEqual(
+      contentClasses(plain.container),
+    );
+  });
+
+  it('insets the highlight from the label gutter and extends it past the text', async () => {
+    const controller = build();
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const { container } = render(
+      <StaticPassageRow controller={controller} meta={meta} selected />,
+    );
+
+    const classes = highlight(container)?.className ?? '';
+    expect(classes).toContain('left-3');
+    expect(classes).toContain('-right-3');
+  });
+});

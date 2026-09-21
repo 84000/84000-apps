@@ -41,11 +41,7 @@ export const StackRow = ({
     // the content below the label. Spacing comes from the block margins.
     className="relative w-full scroll-mt-20"
   >
-    <div
-      className={PASSAGE_LABEL_CLASS}
-      data-passage-label=""
-      data-uuid={uuid}
-    >
+    <div className={PASSAGE_LABEL_CLASS} data-passage-label="" data-uuid={uuid}>
       {label}
     </div>
     {bookmarked && (
@@ -55,14 +51,25 @@ export const StackRow = ({
         <BookmarkIcon className="size-3 text-accent" fill="currentColor" />
       </div>
     )}
+    {selected && (
+      // The stack owns this highlight: a passage selection is not a DOM
+      // selection, so nothing paints it otherwise.
+      //
+      // Its own layer rather than a background on the content box, because
+      // that box's padding is what sets the text column — widening it to make
+      // room on the right would re-wrap every row, which is the jump
+      // `pm-text-metrics` exists to prevent. Inset from the left so it stops
+      // short of the label gutter, and out to the right by as much, so the
+      // text sits in the middle of it rather than against one edge. The room
+      // on the right is the host's column padding.
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-3 -right-3 rounded-sm bg-accent/15 @c/sidebar:left-2 @c/sidebar:-right-2"
+      />
+    )}
     <div
-      className={cn(
-        PASSAGE_CONTENT_CLASS,
-        // The stack owns this highlight: a passage selection is not a DOM
-        // selection, so nothing paints it otherwise.
-        selected && 'bg-accent/15 rounded-sm',
-        className,
-      )}
+      // Positioned, so it paints over the highlight drawn before it.
+      className={cn(PASSAGE_CONTENT_CLASS, selected && 'relative', className)}
     >
       {children}
     </div>

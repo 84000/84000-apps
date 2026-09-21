@@ -72,11 +72,36 @@ export const useStackSelection = (controller: PassageStackController) => {
       if (overUuid === anchorUuid && !controller.hasPassageSelection()) return;
 
       controller.setPassageSelection(anchorUuid, overUuid);
+      // Every move, not only the ones that change the run: the drag that
+      // began inside a row goes on extending that row's own selection
+      // underneath this one, and two highlights would be visible at once.
+      dropNativeSelection();
+    };
+
+    /**
+     * Let go of the browser's own selection.
+     *
+     * A passage selection is drawn by the stack, so the blue one beneath it is
+     * a second highlight of a different shape saying the same thing.
+     */
+    const dropNativeSelection = () => {
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) selection.removeAllRanges();
+    };
+
+    // Refuse a *new* selection while passages are selected. Clearing alone
+    // leaves the browser free to start another on the next movement, which is
+    // what made the blue flicker back.
+    const onSelectStart = (event: Event) => {
+      if (!controller.hasPassageSelection()) return;
+      event.preventDefault();
     };
 
     const endDrag = () => {
       anchorUuid = null;
       origin = null;
+      // The release itself can leave a range behind on the anchor row.
+      if (controller.hasPassageSelection()) dropNativeSelection();
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -157,6 +182,7 @@ export const useStackSelection = (controller: PassageStackController) => {
     document.addEventListener('mousedown', onMouseDown, true);
     document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('mouseup', endDrag, true);
+    document.addEventListener('selectstart', onSelectStart, true);
     document.addEventListener('keydown', onKeyDown, true);
     document.addEventListener('copy', onCopy, true);
     document.addEventListener('paste', onPaste, true);
@@ -165,6 +191,7 @@ export const useStackSelection = (controller: PassageStackController) => {
       document.removeEventListener('mousedown', onMouseDown, true);
       document.removeEventListener('mousemove', onMouseMove, true);
       document.removeEventListener('mouseup', endDrag, true);
+      document.removeEventListener('selectstart', onSelectStart, true);
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('copy', onCopy, true);
       document.removeEventListener('paste', onPaste, true);

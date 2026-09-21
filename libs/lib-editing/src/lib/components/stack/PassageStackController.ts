@@ -794,8 +794,10 @@ export class PassageStackController {
     }
     this.passageSelection = next;
     // The selection now belongs to the stack, not to any editor: leave a live
-    // one holding a caret and the next keystroke would go to it.
+    // one holding a caret and the next keystroke would go to it, and leave the
+    // browser's own selection standing and two highlights are drawn at once.
     this.blurEditors();
+    window.getSelection()?.removeAllRanges();
     this.bump();
   }
 
