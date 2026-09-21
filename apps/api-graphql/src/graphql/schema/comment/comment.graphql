@@ -92,6 +92,24 @@ extend type Passage {
   there is nothing to find and no query is issued.
   """
   comments: [Comment!]!
+
+  """
+  Comment threads in this passage's scope that no `comment` annotation points
+  at any more, oldest first. Roots only, replies nested as in `comments`.
+
+  The complement of `comments`, and disjoint from it: a thread with no anchor
+  has no position, so nothing that resolves position can reach it. Removing a
+  mark deletes only the anchor, and a client serialization gap can drop one as
+  easily as a deliberate unmark, so these stay readable and replyable rather
+  than disappearing.
+
+  Scope is where a thread was born. An anchor that moved to another passage
+  still counts, so a thread is reported here only when no annotation anywhere
+  names it.
+
+  Always empty for a `published` content source.
+  """
+  unanchoredComments: [Comment!]!
 }
 
 """

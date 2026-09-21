@@ -45,7 +45,11 @@ export const LeftPanel = ({ children }: { children: ReactNode }) => {
 };
 
 export const MainPanel = ({ children }: { children: ReactNode }) => {
-  return <div className="flex justify-center w-full">{children}</div>;
+  return (
+    <div data-panel="main" className="flex justify-center w-full">
+      {children}
+    </div>
+  );
 };
 
 export const RightPanel = ({ children }: { children: ReactNode }) => {

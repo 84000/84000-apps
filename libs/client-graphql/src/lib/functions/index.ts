@@ -82,3 +82,10 @@ export { updateComment } from './update-comment';
 export { resolveComment } from './resolve-comment';
 export { deleteComment, type DeleteCommentResult } from './delete-comment';
 export type { CommentMutationResult } from './comment-fields';
+export { getCommentThread } from './get-comment-thread';
+export {
+  getPassageComments,
+  type AnchoredCommentThread,
+  type CommentAnchor,
+  type PassageComments,
+} from './get-passage-comments';

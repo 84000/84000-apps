@@ -72,12 +72,46 @@ export const passageCommentsResolver = async (
 };
 
 /**
+ * Field resolver for `Passage.unanchoredComments`.
+ *
+ * Reads the passage's scope and keeps what no annotation places. The anchor
+ * check is work-wide rather than over this passage's annotations: a thread
+ * whose anchor moved to another passage is anchored, and reporting it here
+ * would show it twice and in the wrong place.
+ */
+export const passageUnanchoredCommentsResolver = async (
+  parent: PassageParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+): Promise<Comment[]> => {
+  if (ctx.source === 'published') {
+    return [];
+  }
+
+  const threads = await ctx.loaders.commentsByEntityUuid.load(parent.uuid);
+  if (threads.length === 0) {
+    return [];
+  }
+
+  const anchored = await ctx.loaders.anchoredCommentUuid.loadMany(
+    threads.map((thread) => thread.uuid),
+  );
+
+  // An error from the loader means the anchor read failed, not that the thread
+  // is unanchored -- keep it out rather than inventing a loss.
+  return threads.filter((_thread, index) => anchored[index] === false);
+};
+
+/**
  * Field resolver for `Comment.author`. Separate from the thread read so the
  * identity is fetched only when selected, and batched across every comment in
  * the request when it is.
  */
-export const commentAuthorResolver = (parent: Comment, _args: unknown, ctx: GraphQLContext) =>
-  ctx.loaders.userInfoById.load(parent.userUuid);
+export const commentAuthorResolver = (
+  parent: Comment,
+  _args: unknown,
+  ctx: GraphQLContext,
+) => ctx.loaders.userInfoById.load(parent.userUuid);
 
 /**
  * Field resolver for `Comment.resolvedBy`. Null on an unresolved thread and on
@@ -89,9 +123,7 @@ export const commentResolvedByResolver = (
   _args: unknown,
   ctx: GraphQLContext,
 ) =>
-  parent.resolvedBy
-    ? ctx.loaders.userInfoById.load(parent.resolvedBy)
-    : null;
+  parent.resolvedBy ? ctx.loaders.userInfoById.load(parent.resolvedBy) : null;
 
 /**
  * Field resolver for `Comment.replies`. The domain type leaves `replies` absent

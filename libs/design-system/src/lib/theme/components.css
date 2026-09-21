@@ -40,15 +40,7 @@
      click without the underline that means "this goes somewhere". Overlapping
      anchors nest, and the wash deepens where they do. */
   .comment-mark {
-    @apply bg-accent/15 hover:bg-accent/30 rounded-xs transition-colors cursor-pointer;
-  }
-
-  /* A resolved thread's anchor is suppressed rather than restyled. The
-     alternative accumulates highlights over a work's life until every
-     discussed passage is marked forever. The thread survives the suppression —
-     it is reachable from the panel, and unresolving restores the anchor. */
-  .comment-mark[data-resolved='true'] {
-    @apply bg-transparent hover:bg-transparent cursor-auto;
+    @apply bg-secondary/15 hover:bg-secondary/30 rounded-xs transition-colors cursor-pointer;
   }
 
   /* Non-distracted view: hide endnote markers, neutralize glossary and

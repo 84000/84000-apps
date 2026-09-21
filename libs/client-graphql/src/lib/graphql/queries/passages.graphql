@@ -148,3 +148,26 @@ query GetCommentThread($uuid: ID!, $depth: Int) {
     ...CommentThreadFields
   }
 }
+
+query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
+  work(uuid: $uuid) {
+    uuid
+    passages(filter: { uuids: $uuids }, limit: $limit) {
+      nodes {
+        uuid
+        label
+        sort
+        type
+        annotations {
+          ...AnnotationFields
+        }
+        comments {
+          ...CommentThreadFields
+        }
+        unanchoredComments {
+          ...CommentThreadFields
+        }
+      }
+    }
+  }
+}

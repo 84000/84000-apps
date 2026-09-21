@@ -41,6 +41,7 @@ import { publishedVersionResolver } from './schema/work/published-version.resolv
 import { searchResolver } from './schema/search/search.resolver';
 import {
   passageCommentsResolver,
+  passageUnanchoredCommentsResolver,
   commentAuthorResolver,
   commentQueryResolver,
   commentRepliesResolver,
@@ -98,6 +99,7 @@ export const resolvers = {
     alignments: passageAlignmentsResolver,
     references: passageReferencesResolver,
     comments: passageCommentsResolver,
+    unanchoredComments: passageUnanchoredCommentsResolver,
   },
 
   Comment: {

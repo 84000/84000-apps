@@ -38,6 +38,53 @@ const EMPTY_PASSAGE_CONNECTION: PassageConnectionPage = {
 const DEFAULT_PASSAGE_CONNECTION_LIMIT = 20;
 const MAX_PASSAGE_CONNECTION_LIMIT = 100;
 
+/** What a caller may narrow a passage page by. */
+export type PassageConnectionFilter = {
+  type?: string;
+  types?: string[];
+  label?: string;
+  /** Restrict the page to these passages, still in the work's own order. */
+  uuids?: string[];
+};
+
+/**
+ * Applies a filter to a passage query. Shared so the forward and `AROUND`
+ * paths cannot drift: a filter honoured by only one of them narrows a page
+ * silently, and the caller sees a short page rather than an error.
+ */
+function applyPassageFilter<T>(
+  query: T,
+  filter: PassageConnectionFilter | undefined,
+): T {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- one shape for both query builders
+  let narrowed = query as any;
+
+  if (filter?.types && filter.types.length > 0) {
+    narrowed = narrowed.in('type', filter.types);
+  } else if (filter?.type) {
+    narrowed = narrowed.filter('type', 'match', `${filter.type}.*`);
+  }
+
+  if (filter?.label) {
+    narrowed = narrowed.ilike('label', filter.label);
+  }
+
+  if (filter?.uuids) {
+    // An empty list means no passage, not every passage. PostgREST's `in.()`
+    // is a syntax error, so the caller is expected not to ask; guarded anyway
+    // because an empty selection is the natural thing for a client to send.
+    narrowed = narrowed.in(
+      'uuid',
+      filter.uuids.length > 0 ? filter.uuids : [NO_PASSAGE_UUID],
+    );
+  }
+
+  return narrowed as T;
+}
+
+/** A uuid no passage has, so an empty `uuids` filter matches nothing. */
+const NO_PASSAGE_UUID = '00000000-0000-0000-0000-000000000000';
+
 function buildPassageConnection(
   nodes: PassageConnectionNode[],
   nextCursor: string | null,
@@ -83,7 +130,7 @@ export const getWorkPassagesConnection = async ({
   workUuid: string;
   cursor?: string;
   limit?: number;
-  filter?: { type?: string; types?: string[]; label?: string };
+  filter?: PassageConnectionFilter;
   direction?: ApiPaginationDirection;
   source?: ContentSource;
 }): Promise<PassageConnectionPage> => {
@@ -131,15 +178,7 @@ export const getWorkPassagesConnection = async ({
       : query.lt('sort', cursorSort);
   }
 
-  if (filter?.types && filter.types.length > 0) {
-    query = query.in('type', filter.types);
-  } else if (filter?.type) {
-    query = query.filter('type', 'match', `${filter.type}.*`);
-  }
-
-  if (filter?.label) {
-    query = query.ilike('label', filter.label);
-  }
+  query = applyPassageFilter(query, filter);
 
   const { data, error } = await query;
 
@@ -190,7 +229,7 @@ export const getWorkPassagesAround = async ({
   workUuid: string;
   cursor?: string;
   limit: number;
-  filter?: { type?: string; types?: string[]; label?: string };
+  filter?: PassageConnectionFilter;
   source?: ContentSource;
 }): Promise<PassageConnectionPage> => {
   if (!cursor) {
@@ -232,19 +271,8 @@ export const getWorkPassagesAround = async ({
     .order('sort', { ascending: true })
     .limit(limitAfter + 1);
 
-  if (filter?.types && filter.types.length > 0) {
-    beforeQuery = beforeQuery.in('type', filter.types);
-    afterQuery = afterQuery.in('type', filter.types);
-  } else if (filter?.type) {
-    const pattern = `${filter.type}.*`;
-    beforeQuery = beforeQuery.filter('type', 'match', pattern);
-    afterQuery = afterQuery.filter('type', 'match', pattern);
-  }
-
-  if (filter?.label) {
-    beforeQuery = beforeQuery.ilike('label', filter.label);
-    afterQuery = afterQuery.ilike('label', filter.label);
-  }
+  beforeQuery = applyPassageFilter(beforeQuery, filter);
+  afterQuery = applyPassageFilter(afterQuery, filter);
 
   const [beforeResult, afterResult] = await Promise.all([
     beforeQuery,

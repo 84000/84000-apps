@@ -3,17 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
 import { CommentMarkSSR, type CommentMarkSSROptions } from './CommentMark.ssr';
 
-export interface CommentStorage {
-  /**
-   * Thread roots whose discussion is resolved, by `comments.uuid`.
-   *
-   * Resolution is a property of the thread, not of the anchor, so it cannot be
-   * read off the mark. Whatever holds the thread data fills this in; empty
-   * means "nothing known to be resolved", which renders every mark as live.
-   */
-  resolved: Set<string>;
-}
-
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     comment: {
@@ -26,20 +15,9 @@ declare module '@tiptap/core' {
       unsetComment: (args: { comment: string }) => ReturnType;
     };
   }
-
-  interface Storage {
-    comment: CommentStorage;
-  }
 }
 
-export const CommentMark = CommentMarkSSR.extend<
-  CommentMarkSSROptions,
-  CommentStorage
->({
-  addStorage() {
-    return { resolved: new Set<string>() };
-  },
-
+export const CommentMark = CommentMarkSSR.extend<CommentMarkSSROptions>({
   addMarkView() {
     return (props) => {
       const { dom } = createMarkViewDom({
@@ -66,12 +44,6 @@ export const CommentMark = CommentMarkSSR.extend<
       // under an editor clickable. `type` is what that delegation matches on.
       dom.setAttribute('type', 'comment');
       registerEditorElement(dom, props.editor);
-
-      const { resolved } = props.editor.storage.comment;
-      dom.setAttribute(
-        'data-resolved',
-        String(Boolean(comment) && resolved.has(comment)),
-      );
 
       return {
         dom,
