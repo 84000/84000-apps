@@ -73,9 +73,12 @@ export const CommentItem = ({
             }}
           />
         ) : (
-          <p className="text-xs whitespace-pre-wrap break-words mt-0.5">
-            {comment.content}
-          </p>
+          // Rendered as markup: the body is a fragment, sanitized on write,
+          // so it is already safe to render as-is.
+          <div
+            className="text-xs break-words mt-0.5 [&>p]:mb-1.5 [&>p:last-child]:mb-0"
+            dangerouslySetInnerHTML={{ __html: comment.content }}
+          />
         )}
 
         {isAuthor && !editing && (

@@ -219,6 +219,57 @@ describe('createComment', () => {
     expect(state.comments).toHaveLength(1);
   });
 
+  it('stores the body as an HTML fragment, keeping the markup a comment allows', async () => {
+    const { client, state } = fakeClient();
+
+    await createComment({
+      client,
+      entityUuid: PASSAGE,
+      entityType: 'passage',
+      content: '<p>First</p><p>Second<br />line</p>',
+      userUuid: AUTHOR,
+    });
+
+    expect(state.comments[0].content).toBe(
+      '<p>First</p><p>Second<br />line</p>',
+    );
+  });
+
+  it('sanitizes the body on the way in, so no reader has to', async () => {
+    // The narrowest point every writer passes through, GraphQL and MCP alike.
+    const { client, state } = fakeClient();
+
+    await createComment({
+      client,
+      entityUuid: PASSAGE,
+      entityType: 'passage',
+      content: '<p onclick="steal()">Note</p><script>steal()</script>',
+      userUuid: AUTHOR,
+    });
+
+    expect(state.comments[0].content).toBe('<p>Note</p>');
+  });
+
+  it('rejects a body that is nothing but markup it refuses', async () => {
+    // It sanitizes away to nothing, and nothing is empty — better than storing
+    // a blank comment nobody wrote.
+    const { client, state } = fakeClient();
+
+    const result = await createComment({
+      client,
+      entityUuid: PASSAGE,
+      entityType: 'passage',
+      content: '<script>steal()</script>',
+      userUuid: AUTHOR,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Comment cannot be empty',
+    });
+    expect(state.comments).toEqual([]);
+  });
+
   it('rejects an entity type this build does not know', async () => {
     const { client, state } = fakeClient();
 
@@ -351,6 +402,21 @@ describe('updateComment', () => {
     expect(result.success).toBe(true);
     expect(result.comment).toMatchObject({ content: 'Revised', replyCount: 1 });
     expect(state.comments[0].content).toBe('Revised');
+  });
+
+  it('sanitizes an edit too, not only the first write', async () => {
+    const { client, state } = fakeClient({
+      comments: [comment({ uuid: 'root-1' })],
+    });
+
+    await updateComment({
+      client,
+      uuid: 'root-1',
+      content: '<p>Revised</p><img src="x" onerror="steal()" />',
+      userUuid: AUTHOR,
+    });
+
+    expect(state.comments[0].content).toBe('<p>Revised</p>');
   });
 
   it('refuses an editor who did not write the comment, without writing', async () => {

@@ -2,10 +2,15 @@
 
 import { Button } from '@eightyfourthousand/design-system';
 import { useState } from 'react';
+import { commentHtmlFromText, commentTextFromHtml } from './comment-html';
 
 /**
- * The text box every write goes through — a reply, an edit, and the first
+ * The box every comment write goes through — a reply, an edit, and the first
  * comment of a thread.
+ *
+ * HTML in, HTML out. A textarea cannot show markup, so it works in text and
+ * converts at the edges; keeping the contract in HTML is what lets a richer
+ * editing surface replace the inside of this without touching its callers.
  */
 export const CommentComposer = ({
   initialValue = '',
@@ -15,25 +20,28 @@ export const CommentComposer = ({
   onSubmit,
   onCancel,
 }: {
+  /** The comment as stored: an HTML fragment. */
   initialValue?: string;
   placeholder?: string;
   submitLabel?: string;
   autoFocus?: boolean;
+  /** Called with an HTML fragment. */
   onSubmit: (content: string) => Promise<void> | void;
   onCancel?: () => void;
 }) => {
-  const [value, setValue] = useState(initialValue);
+  const initialText = commentTextFromHtml(initialValue);
+  const [value, setValue] = useState(initialText);
   const [saving, setSaving] = useState(false);
 
   const trimmed = value.trim();
-  const unchanged = trimmed === initialValue.trim();
+  const unchanged = trimmed === initialText;
 
   const submit = async () => {
     if (!trimmed || unchanged || saving) return;
     setSaving(true);
     try {
-      await onSubmit(trimmed);
-      setValue(initialValue);
+      await onSubmit(commentHtmlFromText(trimmed));
+      setValue(initialText);
     } finally {
       setSaving(false);
     }

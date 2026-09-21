@@ -1,4 +1,5 @@
 export { CommentsPanel } from './CommentsPanel';
+export { commentHtmlFromText, commentTextFromHtml } from './comment-html';
 export { flattenThread, type FlatThread } from './flatten-thread';
 export { orderThreads, type PanelThread } from './order-threads';
 export { relativeTime } from './relative-time';

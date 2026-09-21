@@ -12,7 +12,10 @@ type Comment {
   uuid: ID!
 
   """
-  The comment body
+  The comment body, as a sanitized HTML fragment.
+
+  Not plain text: render it as markup, not as characters. It is sanitized on
+  write, so it is already safe to render as-is.
   """
   content: String!
 
@@ -129,7 +132,10 @@ input CreateCommentInput {
   entityType: String!
 
   """
-  The comment body
+  The comment body, as an HTML fragment.
+
+  Anything outside what a comment may hold is stripped on write rather than
+  rejected, so a body that is nothing but such markup is refused as empty.
   """
   content: String!
 }

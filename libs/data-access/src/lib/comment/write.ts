@@ -7,6 +7,7 @@ import {
   type CommentEntityType,
   type DataClient,
 } from '../types';
+import { COMMENT_ALLOWLIST, htmlHasText, sanitizeHtml } from '../html';
 import { readCommentRows } from './rows';
 import { getCommentThreadByUuid } from './threads';
 
@@ -45,6 +46,20 @@ const REFUSED =
   'Write was refused. You may not have permission to change this comment.';
 
 const EMPTY = 'Comment cannot be empty';
+
+/**
+ * A comment body as it is stored: an HTML fragment, reduced to what a comment
+ * may hold.
+ *
+ * Applied here rather than in a resolver because this is the narrowest point
+ * every writer passes through — the GraphQL mutations and the MCP server,
+ * which does not go through GraphQL at all. A body that is nothing but markup
+ * we refuse sanitizes to nothing, which is empty, which is refused.
+ */
+const commentBody = (content: string): string | null => {
+  const html = sanitizeHtml({ html: content, allowlist: COMMENT_ALLOWLIST });
+  return htmlHasText(html) ? html : null;
+};
 
 const failure = (error: string): CommentWriteResult => ({
   success: false,
@@ -134,7 +149,7 @@ export const createComment = async ({
     return failure(`Unknown comment entity type: ${entityType}`);
   }
 
-  const body = content.trim();
+  const body = commentBody(content);
   if (!body) return failure(EMPTY);
 
   const { data: entity, error: entityError } = await client
@@ -194,7 +209,7 @@ export const replyToComment = async ({
   content: string;
   userUuid: string;
 }): Promise<CommentWriteResult> => {
-  const body = content.trim();
+  const body = commentBody(content);
   if (!body) return failure(EMPTY);
 
   const parent = await readComment(client, parentUuid);
@@ -253,7 +268,7 @@ export const updateComment = async ({
   content: string;
   userUuid: string;
 }): Promise<CommentWriteResult> => {
-  const body = content.trim();
+  const body = commentBody(content);
   if (!body) return failure(EMPTY);
 
   const existing = await readComment(client, uuid);
