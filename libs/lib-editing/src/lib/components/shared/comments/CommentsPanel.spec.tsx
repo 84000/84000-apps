@@ -59,6 +59,13 @@ const page = ({
   { passageUuid: 'p1', label: '1.1', sort: 1, anchored, unanchored },
 ];
 
+const anchorRules = () => {
+  const el = document.getElementById(
+    'comment-anchor-styles',
+  ) as HTMLStyleElement | null;
+  return [...(el?.sheet?.cssRules ?? [])].map((r) => r.cssText).join(' ');
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockNavigation.focusedComment = undefined;
@@ -98,6 +105,57 @@ describe('CommentsPanel', () => {
     expect(
       screen.getByText(/Unanchored — no longer attached to any text/),
     ).toBeTruthy();
+  });
+
+  it('takes the mark off a resolved thread it is not listing, and puts it back', async () => {
+    // The text and the panel say the same thing: a thread the panel is hiding
+    // leaves no marking behind for someone to click.
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('done', { resolvedAt: '2026-09-02T00:00:00Z' }),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+          {
+            thread: thread('live'),
+            anchors: [{ uuid: 'a2', passageUuid: 'p1', start: 8, end: 12 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of live');
+
+    expect(anchorRules()).toContain('[comment="done"]');
+    expect(anchorRules()).not.toContain('[comment="live"]');
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Show 1 resolved' }),
+    );
+
+    expect(anchorRules()).not.toContain('[comment="done"]');
+  });
+
+  it('keeps a focused resolved thread listed and marked', async () => {
+    // A deep link to a resolved thread must not open an empty panel.
+    mockNavigation.focusedComment = 'done';
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('done', { resolvedAt: '2026-09-02T00:00:00Z' }),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+
+    expect(await screen.findByText('body of done')).toBeTruthy();
+    expect(anchorRules()).not.toContain('background-color: transparent');
   });
 
   it('hides resolved threads until asked for them', async () => {

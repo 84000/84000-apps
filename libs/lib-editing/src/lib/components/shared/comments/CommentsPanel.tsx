@@ -21,7 +21,7 @@ import { useNavigation } from '../NavigationProvider';
 import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
 import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
-import { useCommentAnchorHighlight } from './useCommentAnchorHighlight';
+import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
 
 /**
@@ -90,17 +90,41 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     [anchored, unanchored],
   );
 
+  // A thread the panel has been pointed at stays listed whatever the filter
+  // says — a deep link to a resolved thread should not open an empty panel.
   const visible = useCallback(
     (threads: PanelThread[]) =>
       showResolved
         ? threads
-        : threads.filter(({ thread }) => !thread.resolvedAt),
-    [showResolved],
+        : threads.filter(
+            ({ thread }) =>
+              !thread.resolvedAt || thread.uuid === focusedComment,
+          ),
+    [showResolved, focusedComment],
+  );
+
+  // A resolved thread the panel is not listing leaves no mark on the text
+  // either, so the marking in the text and the list in the panel say the same
+  // thing.
+  const suppressed = useMemo(
+    () =>
+      showResolved
+        ? []
+        : [...anchored, ...unanchored]
+            .filter(
+              ({ thread }) =>
+                thread.resolvedAt && thread.uuid !== focusedComment,
+            )
+            .map(({ thread }) => thread.uuid),
+    [anchored, unanchored, showResolved, focusedComment],
   );
 
   // Hover wins over selection: it is the more recent intent, and it returns to
   // the selected thread on leave.
-  useCommentAnchorHighlight(hovered ?? focusedComment);
+  useCommentAnchorStyles({
+    highlighted: hovered ?? focusedComment,
+    suppressed,
+  });
 
   // A mark click sets the focused thread; the panel answers by bringing its
   // card into view. Asserted on the card, not on the URL, since the panel hash
