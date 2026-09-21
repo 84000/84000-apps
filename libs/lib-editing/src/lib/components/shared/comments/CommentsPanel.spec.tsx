@@ -228,6 +228,105 @@ describe('CommentsPanel', () => {
     expect(await screen.findByText('2 places')).toBeTruthy();
   });
 
+  it('offers one reply box per thread, however deep the thread is', async () => {
+    const deep = thread('root', {
+      replyCount: 1,
+      replies: [thread('r1', { replyCount: 1, replies: [thread('r2')] })],
+    });
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: deep,
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of root');
+
+    // Every comment is shown; only the thread gets a reply box.
+    expect(screen.getByText('body of r1')).toBeTruthy();
+    expect(screen.getByText('body of r2')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Reply' })).toHaveLength(1);
+  });
+
+  it('files a reply against the thread root rather than the last entry', async () => {
+    // A read nests two levels by default, so chaining would truncate an
+    // ordinary conversation on every load.
+    const deep = thread('root', { replies: [thread('r1')], replyCount: 1 });
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: deep,
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+    mockReplyToComment.mockResolvedValue({ success: true });
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of root');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
+    await userEvent.type(screen.getByRole('textbox'), 'Noted.');
+    await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
+
+    expect(mockReplyToComment).toHaveBeenCalledWith(
+      expect.objectContaining({ parentUuid: 'root', content: 'Noted.' }),
+    );
+  });
+
+  it('collapses a thread to the comment that opened it', async () => {
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('root', { replies: [thread('r1')], replyCount: 1 }),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of r1');
+
+    await userEvent.click(screen.getByRole('button', { name: /Hide replies/ }));
+
+    expect(screen.getByText('body of root')).toBeTruthy();
+    expect(screen.queryByText('body of r1')).toBeNull();
+    // The reply box goes with them: collapsed means the opening comment alone.
+    expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: /1 reply/ }));
+
+    expect(screen.getByText('body of r1')).toBeTruthy();
+  });
+
+  it('offers no collapse control on a thread with no replies', async () => {
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('alone'),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of alone');
+
+    expect(screen.queryByRole('button', { name: /replies/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reply' })).toBeTruthy();
+  });
+
   it('re-reads after a resolve so the change shows immediately', async () => {
     mockGetPassageComments.mockResolvedValue(
       page({

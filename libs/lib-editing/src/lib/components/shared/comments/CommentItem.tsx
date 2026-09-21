@@ -27,15 +27,12 @@ export const CommentItem = ({
   currentUserId,
   onEdit,
   onDelete,
-  children,
 }: {
   comment: CommentThread;
   /** Undefined until the session resolves, which hides the author actions. */
   currentUserId?: string;
   onEdit: (content: string) => Promise<void>;
   onDelete: () => Promise<void>;
-  /** Replies and the reply box, rendered under the body. */
-  children?: React.ReactNode;
 }) => {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -102,8 +99,9 @@ export const CommentItem = ({
                     await onDelete();
                   }}
                 >
-                  {/* A delete takes every reply below it, including other
-                      people's, so the confirmation says which. */}
+                  {/* A delete cascades to everything filed under this
+                      comment, other people's replies included, so the
+                      confirmation says so rather than just 'Confirm'. */}
                   {comment.replyCount > 0 ? 'Delete with replies' : 'Confirm'}
                 </Button>
                 <Button
@@ -127,8 +125,6 @@ export const CommentItem = ({
             )}
           </div>
         )}
-
-        {children}
       </div>
     </div>
   );
