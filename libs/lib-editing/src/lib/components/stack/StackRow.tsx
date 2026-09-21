@@ -42,8 +42,7 @@ export const StackRow = ({
     className="relative w-full scroll-mt-20"
   >
     <div
-      // `select-none` keeps labels out of a drag across static rows.
-      className={cn(PASSAGE_LABEL_CLASS, 'select-none')}
+      className={PASSAGE_LABEL_CLASS}
       data-passage-label=""
       data-uuid={uuid}
     >
