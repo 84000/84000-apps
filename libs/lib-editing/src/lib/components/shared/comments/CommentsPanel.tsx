@@ -18,9 +18,10 @@ import {
 import { Button } from '@eightyfourthousand/design-system';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from '../NavigationProvider';
+import { locationForPassageType } from '../types';
 import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
 import { orderThreads, type PanelThread } from './order-threads';
-import { anchorSelector, attributeValue } from './selectors';
+import { attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
 
@@ -35,7 +36,7 @@ import { useVisiblePassageUuids } from './useVisiblePassageUuids';
  * the body specifically.
  */
 export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
-  const { focusedComment, setFocusedComment } = useNavigation();
+  const { focusedComment, setFocusedComment, updatePanel } = useNavigation();
   const passageUuids = useVisiblePassageUuids();
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,15 +172,23 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
 
       // The first anchor by document position wins. A thread may be anchored in
       // several places, and the earliest is where the discussion started.
-      const anchor = anchored.find(({ thread }) => thread.uuid === uuid)
-        ?.anchors[0];
+      const entry = anchored.find(({ thread }) => thread.uuid === uuid);
+      const anchor = entry?.anchors[0];
       if (!anchor) return;
 
-      document
-        .querySelector(anchorSelector(uuid))
-        ?.scrollIntoView({ block: 'center' });
+      // Navigate rather than scroll. The passage may be in a tab that is not
+      // showing — the front matter while the translation is open — and the
+      // panels are React state, so a hash the provider does not know about
+      // reveals nothing. `locationForPassageType` is the same map the xmlId
+      // deep link uses to place a passage; this is a passage, not the comments
+      // tab, so it is the right question to ask it.
+      const { panel, tab } = locationForPassageType(entry?.passageType);
+      updatePanel({
+        name: panel,
+        state: { open: true, tab, hash: anchor.passageUuid },
+      });
     },
-    [anchored, setFocusedComment],
+    [anchored, setFocusedComment, updatePanel],
   );
 
   const anchoredVisible = visible(anchored);

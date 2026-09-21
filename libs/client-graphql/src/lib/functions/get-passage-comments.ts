@@ -33,6 +33,8 @@ export interface AnchoredCommentThread {
 export interface PassageComments {
   passageUuid: string;
   label: string;
+  /** The passage's own type, which is what places it in a panel and tab. */
+  type: string;
   /** The passage's position in the work, for ordering the panel. */
   sort: number;
   anchored: AnchoredCommentThread[];
@@ -57,6 +59,7 @@ const GET_PASSAGE_COMMENTS = gql`
           uuid
           label
           sort
+          type
           annotations {
             uuid
             type
@@ -83,6 +86,7 @@ type GetPassageCommentsResponse = {
         uuid: string;
         label: string | null;
         sort: number;
+        type: string;
         annotations?: GraphQLAnnotation[] | null;
         comments?: GraphQLComment[] | null;
         unanchoredComments?: GraphQLComment[] | null;
@@ -173,6 +177,7 @@ export async function getPassageComments({
       return {
         passageUuid: node.uuid,
         label: node.label ?? '',
+        type: node.type,
         sort: node.sort,
         // A thread with no anchor in this passage is one the annotations did
         // not carry — it is anchored elsewhere, and belongs to that passage.

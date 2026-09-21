@@ -14,6 +14,8 @@ export interface PanelThread {
   anchors: CommentAnchor[];
   /** The label of the passage holding the first anchor, for the list heading. */
   passageLabel?: string;
+  /** That passage's type, which is what decides the panel and tab it is read in. */
+  passageType?: string;
 }
 
 /**
@@ -50,6 +52,7 @@ export const orderThreads = (
           thread,
           anchors: [...anchors],
           passageLabel: passage.label,
+          passageType: passage.type,
         });
       }
     }

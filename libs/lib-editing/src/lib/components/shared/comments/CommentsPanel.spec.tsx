@@ -24,11 +24,13 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 }));
 
 const mockSetFocusedComment = jest.fn();
+const mockUpdatePanel = jest.fn();
 const mockNavigation: { focusedComment?: string } = {};
 jest.mock('../NavigationProvider', () => ({
   useNavigation: () => ({
     focusedComment: mockNavigation.focusedComment,
     setFocusedComment: mockSetFocusedComment,
+    updatePanel: mockUpdatePanel,
   }),
 }));
 
@@ -56,7 +58,14 @@ const page = ({
 }: Partial<
   Pick<PassageComments, 'anchored' | 'unanchored'>
 >): PassageComments[] => [
-  { passageUuid: 'p1', label: '1.1', sort: 1, anchored, unanchored },
+  {
+    passageUuid: 'p1',
+    label: '1.1',
+    type: 'translation',
+    sort: 1,
+    anchored,
+    unanchored,
+  },
 ];
 
 const anchorRules = () => {
@@ -279,6 +288,50 @@ describe('CommentsPanel', () => {
     expect(mockReplyToComment).toHaveBeenCalledWith(
       expect.objectContaining({ parentUuid: 'root', content: 'Noted.' }),
     );
+  });
+
+  it('navigates to the passage a thread annotates, whatever tab is open', async () => {
+    // Scrolling to the anchor did nothing when its passage was on a tab that
+    // was not showing: the panels are React state, and a hidden row cannot be
+    // scrolled into view.
+    mockGetPassageComments.mockResolvedValue([
+      {
+        passageUuid: 'p9',
+        label: 's.1',
+        type: 'summary',
+        sort: 2,
+        anchored: [
+          {
+            thread: thread('t1'),
+            anchors: [{ uuid: 'a1', passageUuid: 'p9', start: 0, end: 4 }],
+          },
+        ],
+        unanchored: [],
+      },
+    ]);
+
+    render(<CommentsPanel workUuid="w1" />);
+    await userEvent.click(await screen.findByText('body of t1'));
+
+    // A summary passage is read in the front matter, not the body.
+    expect(mockUpdatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'front', hash: 'p9' },
+    });
+    expect(mockSetFocusedComment).toHaveBeenCalledWith('t1');
+  });
+
+  it('does not navigate for an unanchored thread', async () => {
+    // There is nowhere to go: no anchor places it.
+    mockGetPassageComments.mockResolvedValue(
+      page({ unanchored: [thread('gone')] }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await userEvent.click(await screen.findByText('body of gone'));
+
+    expect(mockUpdatePanel).not.toHaveBeenCalled();
+    expect(mockSetFocusedComment).toHaveBeenCalledWith('gone');
   });
 
   it('collapses a thread to the comment that opened it', async () => {

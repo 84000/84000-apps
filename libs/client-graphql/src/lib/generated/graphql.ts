@@ -1625,7 +1625,7 @@ export type GetPassageCommentsQueryVariables = Exact<{
 }>;
 
 
-export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<{ __typename?: 'Passage', uuid: string, label?: string | null, sort: number, annotations: Array<(
+export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<{ __typename?: 'Passage', uuid: string, label?: string | null, sort: number, type: string, annotations: Array<(
           { __typename?: 'Annotation' }
           & AnnotationFieldsFragment
         )>, comments: Array<(
@@ -2055,6 +2055,7 @@ export const GetPassageCommentsDocument = gql`
         uuid
         label
         sort
+        type
         annotations {
           ...AnnotationFields
         }

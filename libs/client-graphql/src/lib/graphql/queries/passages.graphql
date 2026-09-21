@@ -157,6 +157,7 @@ query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
         uuid
         label
         sort
+        type
         annotations {
           ...AnnotationFields
         }

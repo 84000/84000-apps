@@ -24,17 +24,20 @@ const passage = ({
   uuid,
   sort,
   label = uuid,
+  type = 'translation',
   anchored = [],
   unanchored = [],
 }: {
   uuid: string;
   sort: number;
   label?: string;
+  type?: string;
   anchored?: PassageComments['anchored'];
   unanchored?: PassageComments['unanchored'];
 }): PassageComments => ({
   passageUuid: uuid,
   label,
+  type,
   sort,
   anchored,
   unanchored,
