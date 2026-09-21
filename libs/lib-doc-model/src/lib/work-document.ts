@@ -22,6 +22,25 @@ const EMPTY_PARAGRAPH: JSONContent = { type: 'paragraph' };
 /** The window key a single-view consumer gets without asking for one. */
 const DEFAULT_WINDOW = 'default';
 
+/**
+ * Collapse repeated label changes for one passage into a single change.
+ *
+ * An operation that removes and inserts in the same breath renumbers the run
+ * twice, so a passage can appear in both batches. Undo applies each change's
+ * `from` independently, so a passage listed twice would be restored to the
+ * intermediate label rather than the one it started with: keep the first
+ * `from` and the last `to`, and drop whatever ends where it began.
+ */
+const collapseLabelChanges = (changes: LabelChange[]): LabelChange[] => {
+  const merged = new Map<string, LabelChange>();
+  changes.forEach((change) => {
+    const seen = merged.get(change.uuid);
+    if (seen) seen.to = change.to;
+    else merged.set(change.uuid, { ...change });
+  });
+  return [...merged.values()].filter((change) => change.from !== change.to);
+};
+
 /** An empty paragraph carries no text and no structure worth keeping. */
 const isBlankParagraph = (node: JSONContent | undefined): boolean =>
   !!node && node.type === 'paragraph' && !node.content?.length;
@@ -89,8 +108,9 @@ export class WorkDocument {
   readonly spine: Spine;
   readonly store: PassageDocStore;
   readonly log = new CommandLog();
+  /** Public because a caller building a slice to paste needs the same one. */
+  readonly schema: Schema;
 
-  private schema: Schema;
   private loader?: PassageLoader;
   private newUuid: () => string;
   private listeners = new Set<() => void>();
@@ -356,78 +376,83 @@ export class WorkDocument {
   }
 
   /**
-   * Delete a range that starts inside one passage and ends inside another.
+   * Replace a run of whole passages with new ones.
    *
-   * Three things at once: trim the tail off the first passage, trim the head
-   * off the last, and drop everything between. Doing it as one command is what
-   * makes a single undo put all of it back.
-   *
-   * `insertText` continues the surviving head with the given text, so a paste
-   * over the range is that same single command rather than a delete and an
-   * edit.
+   * What a paste over a passage selection is: the selected passages leave and
+   * the pasted ones take their place, as one command, so a single undo puts
+   * the originals back. With no replacements it is a plain delete of the run.
    */
-  deleteRange(
-    fromUuid: string,
-    fromPos: number,
-    toUuid: string,
-    toPos: number,
-    options: { insertText?: string } = {},
+  replacePassages(
+    uuids: string[],
+    replacements: InsertPassageInput[] = [],
   ): boolean {
-    let [startUuid, startPos, endUuid, endPos] = [
-      fromUuid,
-      fromPos,
-      toUuid,
-      toPos,
-    ];
-    let startIndex = this.spine.indexOf(startUuid);
-    let endIndex = this.spine.indexOf(endUuid);
-    if (startIndex < 0 || endIndex < 0) return false;
-    if (startIndex > endIndex) {
-      [startUuid, endUuid] = [endUuid, startUuid];
-      [startPos, endPos] = [endPos, startPos];
-      [startIndex, endIndex] = [endIndex, startIndex];
-    }
-    if (startIndex === endIndex) return false;
+    const targets = uuids
+      .map((uuid) => ({ uuid, index: this.spine.indexOf(uuid) }))
+      .filter((target) => target.index >= 0)
+      .sort((a, b) => a.index - b.index);
+    if (!targets.length) return false;
 
-    const middles = this.spine
-      .slice({ start: startIndex + 1, end: endIndex })
-      .map((entry) => ({ meta: entry as PassageMeta, index: entry.index }));
+    const at = targets[0].index;
+    const removed = targets.map((target) => ({
+      meta: this.spine.meta(target.uuid) as PassageMeta,
+      index: target.index,
+    }));
+    const previous =
+      at > 0 ? this.spine.meta(this.spine.uuidAt(at - 1) ?? '') : null;
 
-    const startDoc = this.store.ensure(startUuid);
-    const endDoc = this.store.ensure(endUuid);
-    const startBefore = startDoc.toJSON();
-    const endBefore = endDoc.toJSON();
-    const startAfter = this.withTrailingText(
-      this.fragmentToJSON(startDoc.toNode().content.cut(0, startPos)),
-      options.insertText ?? '',
-    );
-    const endAfter = this.fragmentToJSON(endDoc.toNode().content.cut(endPos));
+    // Seeded before the spine changes, so each new label follows the one
+    // before it rather than the run that is about to leave.
+    let label = previous ? incrementLabel(previous.label) : '1';
+    const seeds: SpineSeed[] = replacements.map((passage) => {
+      const seed: SpineSeed = {
+        uuid: passage.uuid ?? this.newUuid(),
+        type: passage.type,
+        label: passage.label ?? label,
+        toh: passage.toh,
+      };
+      label = incrementLabel(seed.label);
+      return seed;
+    });
 
     const content = [
-      { uuid: startUuid, before: startBefore, after: startAfter },
-      ...middles.map((middle) => ({
-        uuid: middle.meta.uuid,
-        before: this.store.ensure(middle.meta.uuid).toJSON(),
+      ...targets.map((target) => ({
+        uuid: target.uuid,
+        before: this.store.ensure(target.uuid).toJSON(),
         after: null,
       })),
-      { uuid: endUuid, before: endBefore, after: endAfter },
+      ...seeds.map((seed, i) => ({
+        uuid: seed.uuid,
+        before: null,
+        after: {
+          type: 'doc',
+          content: replacements[i].content?.length
+            ? replacements[i].content
+            : [EMPTY_PARAGRAPH],
+        } as JSONContent,
+      })),
     ];
 
-    const labelChanges = this.spine.remove(
-      middles.map((middle) => middle.meta.uuid),
-    );
-    startDoc.replaceContent(startAfter);
-    endDoc.replaceContent(endAfter);
+    const labelChanges = this.spine.remove(targets.map((t) => t.uuid));
+    const inserted = seeds.map((seed, i) => {
+      const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
+      labelChanges.push(...changes);
+      this.store
+        .ensure(entry.uuid)
+        .replaceContent(content[targets.length + i].after as JSONContent);
+      return { meta: entry, index: at + i };
+    });
 
     this.record({
       kind: 'delete',
       content,
-      inserted: [],
-      removed: middles,
+      inserted,
+      removed,
       moved: [],
-      labels: labelChanges,
-      focusAfterUndo: { uuid: startUuid, where: startPos },
-      focusAfterRedo: { uuid: startUuid, where: 'end' },
+      labels: collapseLabelChanges(labelChanges),
+      focusAfterUndo: { uuid: targets[0].uuid, where: 'start' },
+      focusAfterRedo: seeds.length
+        ? { uuid: seeds[0].uuid, where: 'start' }
+        : undefined,
     });
 
     this.notify();
@@ -618,38 +643,6 @@ export class WorkDocument {
   private contentSize(content: JSONContent[]): number {
     if (!content.length) return 0;
     return PMNode.fromJSON(this.schema, { type: 'doc', content }).content.size;
-  }
-
-  /**
-   * Append plain text to the end of a document's last block.
-   *
-   * Where a cross-passage paste lands: the surviving head keeps its blocks and
-   * the pasted text continues its last line, as typing there would.
-   */
-  private withTrailingText(doc: JSONContent, text: string): JSONContent {
-    if (!text) return doc;
-
-    const node = PMNode.fromJSON(this.schema, doc);
-    const last = node.lastChild;
-    if (!last?.isTextblock) {
-      return {
-        type: 'doc',
-        content: [
-          ...(doc.content ?? []),
-          { type: 'paragraph', content: [{ type: 'text', text }] },
-        ],
-      };
-    }
-
-    const children: PMNode[] = [];
-    last.content.forEach((child) => children.push(child));
-    children.push(this.schema.text(text));
-    return this.fragmentToJSON(
-      node.content.replaceChild(
-        node.childCount - 1,
-        last.copy(Fragment.fromArray(children)),
-      ),
-    );
   }
 
   private fragmentToJSON(fragment: Fragment): JSONContent {

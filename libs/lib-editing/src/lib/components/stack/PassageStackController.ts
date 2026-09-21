@@ -1,6 +1,8 @@
 import { Editor, Extensions } from '@tiptap/core';
+import type { JSONContent } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
 import { TextSelection } from '@tiptap/pm/state';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
@@ -12,8 +14,14 @@ import type {
 
 import { renderTranslationHTML } from '../reader/translation-html';
 import { buildStackEditorExtensions } from './stack-extensions';
+import {
+  passagesFromHTML,
+  passagesFromText,
+  passagesToHTML,
+  passagesToText,
+} from './stack-clipboard';
 import type {
-  StackCrossSelection,
+  StackPassageSelection,
   StackFocusTarget,
   StackFocusWhere,
   StackPassageSeed,
@@ -42,57 +50,6 @@ const EDITOR_MOUNT_FRAMES = 60;
  * it and a screenful of labels ends up stacked at the top.
  */
 const UNKNOWN_ROW_PX = 112;
-
-/** An endnote marker: a decoration, with no text in the document at all. */
-const ENDNOTE_MARKER_SELECTOR = '[type="endNoteLink"]';
-/** A mention: one inline atom, however many characters its label renders. */
-const MENTION_SELECTOR = '.mention-container';
-
-/**
- * How far into a row's *document* text a DOM point sits.
- *
- * Not `Range.toString().length`: that counts every rendered character, and a
- * static row renders some that the document does not hold. Each kind is
- * counted as the document counts it — an endnote marker as nothing, a mention
- * as the single position its atom occupies — so this lines up with
- * `posFromTextOffset` walking the other side.
- */
-const domOffsetWithin = (root: Element, node: Node, offset: number): number => {
-  let count = 0;
-  let reached = false;
-
-  const visit = (current: Node) => {
-    if (reached) return;
-
-    if (current === node) {
-      if (current.nodeType === Node.TEXT_NODE) {
-        count += offset;
-      } else {
-        // An element boundary: the point sits before its `offset`th child.
-        Array.from(current.childNodes).slice(0, offset).forEach(visit);
-      }
-      reached = true;
-      return;
-    }
-
-    if (current.nodeType === Node.TEXT_NODE) {
-      count += (current as Text).data.length;
-      return;
-    }
-    if (current.nodeType !== Node.ELEMENT_NODE) return;
-
-    const element = current as Element;
-    if (element.matches(ENDNOTE_MARKER_SELECTOR)) return;
-    if (element.matches(MENTION_SELECTOR)) {
-      count += 1;
-      return;
-    }
-    Array.from(element.childNodes).forEach(visit);
-  };
-
-  visit(root);
-  return count;
-};
 
 export type PassageStackControllerOptions = {
   work: WorkDocument;
@@ -159,7 +116,7 @@ export class PassageStackController {
   /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
   private wiring = new Map<string, () => void>();
 
-  private crossSelection: StackCrossSelection | null = null;
+  private passageSelection: StackPassageSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
   private scrollToIndex:
@@ -814,124 +771,120 @@ export class PassageStackController {
   getPassageJSON = (uuid: string) =>
     this.work.store.peek(uuid)?.toJSON() ?? null;
 
-  /**
-   * Map a DOM point to a ProseMirror position, whether the passage is a live
-   * editor (exact, via `posAtDOM`) or a static row (counted from the row
-   * start).
-   *
-   * Counting rendered characters is not enough on a static row, because some
-   * annotations render text the document does not hold — the two that do are
-   * exactly the two stored with a zero-length range. An endnote marker is a
-   * decoration with no document text at all, and a mention is an inline atom
-   * whose label lives in its attributes. Measured on toh145, that is 3
-   * characters per marker and 4 per mention, so a selection past a few of them
-   * resolved several characters late and a cross-passage delete cut the wrong
-   * range — silently, because the selection itself looked right.
-   */
-  resolvePoint = (uuid: string, node: Node, offset: number): number | null => {
-    const editor = this.editors.get(uuid);
-    if (editor) {
-      try {
-        return editor.view.posAtDOM(node, offset);
-      } catch {
-        return null;
-      }
-    }
+  // ---------------------------------------------------- passage selection
 
-    const row = document.querySelector(
-      `[data-stack-passage="${uuid}"] .tiptap`,
-    );
-    if (!row) return null;
-    if (!row.contains(node)) return null;
-    return this.posFromTextOffset(uuid, domOffsetWithin(row, node, offset));
+  /**
+   * Select whole passages from `anchorUuid` through `focusUuid`.
+   *
+   * Passages rather than a character range: each row is its own editor, and a
+   * browser keeps a selection that begins inside one `contenteditable` inside
+   * it, so a partial range spanning rows cannot be acquired by dragging in the
+   * first place. The passage is the unit the spine, the save and undo already
+   * work in, so it is the unit here too.
+   */
+  setPassageSelection(anchorUuid: string, focusUuid: string) {
+    const order = this.getOrder();
+    if (order.indexOf(anchorUuid) < 0 || order.indexOf(focusUuid) < 0) return;
+    const next = { anchorUuid, focusUuid };
+    if (
+      this.passageSelection?.anchorUuid === anchorUuid &&
+      this.passageSelection?.focusUuid === focusUuid
+    ) {
+      return;
+    }
+    this.passageSelection = next;
+    // The selection now belongs to the stack, not to any editor: leave a live
+    // one holding a caret and the next keystroke would go to it.
+    this.blurEditors();
+    this.bump();
+  }
+
+  clearPassageSelection() {
+    if (!this.passageSelection) return;
+    this.passageSelection = null;
+    this.bump();
+  }
+
+  hasPassageSelection = () => this.passageSelection !== null;
+
+  isSelected = (uuid: string) => this.selectedUuids().includes(uuid);
+
+  /** The selected passages, in spine order. */
+  selectedUuids = (): string[] => {
+    const selection = this.passageSelection;
+    if (!selection) return [];
+    const order = this.getOrder();
+    const from = order.indexOf(selection.anchorUuid);
+    const to = order.indexOf(selection.focusUuid);
+    if (from < 0 || to < 0) return [];
+    return order.slice(Math.min(from, to), Math.max(from, to) + 1);
   };
 
   /**
-   * Walk the document counting the units `domOffsetWithin` counts: one per
-   * character of text, and one per inline node that renders without holding
-   * any.
+   * What a passage selection puts on the clipboard.
+   *
+   * Null when any selected passage has no document in memory: a passage
+   * outside the hydration window has nothing to serialize, and a copy that
+   * silently skipped it would lose content the selection covered.
    */
-  private posFromTextOffset(uuid: string, textOffset: number): number | null {
-    const doc = this.work.store.peek(uuid);
-    if (!doc) return null;
-    const node = doc.toNode();
-    let remaining = textOffset;
-    let pos: number | null = null;
-    node.descendants((child, childPos) => {
-      if (pos !== null) return false;
-      if (child.isText) {
-        const length = child.text?.length ?? 0;
-        if (remaining <= length) {
-          pos = childPos + remaining;
-          return false;
-        }
-        remaining -= length;
-        return false;
-      }
-      // An inline node with no content — a mention. It occupies one position
-      // however many characters its label renders, which is the whole reason
-      // the DOM side cannot just count text. Keyed on holding no content
-      // rather than on `isAtom`, which this schema's mention does not set.
-      if (child.isInline && child.content.size === 0) {
-        if (remaining === 0) {
-          pos = childPos;
-          return false;
-        }
-        remaining -= 1;
-        return false;
-      }
-      return true;
-    });
-    return pos ?? node.content.size;
-  }
+  serializePassageSelection = (): { text: string; html: string } | null => {
+    const uuids = this.selectedUuids();
+    if (!uuids.length) return null;
 
-  // ---------------------------------------------------- cross selection
+    const nodes: PMNode[] = [];
+    for (const uuid of uuids) {
+      const doc = this.work.store.peek(uuid);
+      if (!doc) return null;
+      nodes.push(doc.toNode());
+    }
 
-  setCrossSelection(selection: StackCrossSelection | null) {
-    this.crossSelection = selection;
-  }
+    return {
+      text: passagesToText(nodes),
+      html: passagesToHTML(this.work.schema, nodes),
+    };
+  };
 
-  hasCrossSelection = () => this.crossSelection !== null;
+  /** Delete the selected passages, as one command. */
+  deletePassageSelection = () => this.replacePassageSelection();
 
-  /** Replace a cross-passage selection with pasted plain text. */
-  pasteCrossSelection = (text: string) => this.replaceCrossSelection(text);
-
-  deleteCrossSelection = () => this.replaceCrossSelection();
-
-  /**
-   * The one command behind both: the range goes, and any pasted text
-   * continues the surviving head. One command means one undo, which is what a
-   * paste should cost.
-   */
-  private replaceCrossSelection(insertText = '') {
-    const selection = this.crossSelection;
-    if (!selection) return false;
-    this.crossSelection = null;
-
-    const deleted = this.work.deleteRange(
-      selection.fromUuid,
-      selection.fromPos,
-      selection.toUuid,
-      selection.toPos,
-      { insertText },
+  /** Replace the selected passages with what the clipboard carries. */
+  pastePassageSelection = ({ html, text }: { html: string; text: string }) => {
+    const blocks = passagesFromHTML(this.work.schema, html);
+    return this.replacePassageSelection(
+      blocks.length ? blocks : passagesFromText(text),
     );
-    if (!deleted) return false;
+  };
+
+  private replacePassageSelection(passages: JSONContent[][] = []) {
+    const uuids = this.selectedUuids();
+    if (!uuids.length) return false;
+
+    const at = this.getOrder().indexOf(uuids[0]);
+    const meta = this.getMeta(uuids[0]);
+    this.passageSelection = null;
+
+    const replaced = this.work.replacePassages(
+      uuids,
+      passages.map((content) => ({
+        type: meta?.type ?? 'translation',
+        toh: meta?.toh,
+        content,
+      })),
+    );
+    if (!replaced) return false;
 
     window.getSelection()?.removeAllRanges();
-    const start = this.orderedSelection(selection);
-    if (start) this.focusPassage(start.uuid, start.pos + insertText.length);
+    // Whatever now stands where the selection was: the first pasted passage,
+    // or the row that closed the gap a delete left.
+    const order = this.getOrder();
+    const next = order[Math.min(at, order.length - 1)];
+    if (next) this.focusPassage(next, 'start');
     return true;
   }
 
-  /** Which end of a cross-passage selection comes first in the spine. */
-  private orderedSelection(selection: StackCrossSelection) {
-    const order = this.getOrder();
-    const fromIndex = order.indexOf(selection.fromUuid);
-    const toIndex = order.indexOf(selection.toUuid);
-    if (fromIndex < 0 || toIndex < 0) return null;
-    return fromIndex <= toIndex
-      ? { uuid: selection.fromUuid, pos: selection.fromPos }
-      : { uuid: selection.toUuid, pos: selection.toPos };
+  /** Let go of any caret a live editor is holding. */
+  private blurEditors() {
+    this.editors.forEach((editor) => editor.commands.blur());
   }
 
   // ------------------------------------------------------------ undo/redo

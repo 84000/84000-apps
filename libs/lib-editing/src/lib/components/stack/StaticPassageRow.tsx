@@ -26,9 +26,11 @@ export const StaticPassageRow = memo(
   ({
     controller,
     meta,
+    selected,
   }: {
     controller: PassageStackController;
     meta: PassageMeta;
+    selected?: boolean;
   }) => {
     const html = controller.getStaticHTML(meta.uuid);
 
@@ -37,6 +39,7 @@ export const StaticPassageRow = memo(
         uuid={meta.uuid}
         label={meta.label}
         bookmarked={controller.showsBookmark(meta.uuid)}
+        selected={selected}
       >
         {html === null ? (
           <PassageSkeleton
