@@ -6,7 +6,13 @@ import { Button, H4, MainLogo, Separator } from '@eightyfourthousand/design-syst
 import { EmailLogin } from './EmailLogin';
 import { LoginVariation } from './types';
 
-const EMAIL_AUTH_ENABLED = false;
+// Email sign-in is for the local Supabase stack, where infra's seed creates one
+// account per app role and there is no OAuth client to configure. Deriving it
+// from the Supabase host rather than a flag keeps a fresh clone working with no
+// setup, and means it cannot be switched on against a hosted project.
+const EMAIL_AUTH_ENABLED = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+);
 
 const HEADER = {
   create: 'Create an account',
