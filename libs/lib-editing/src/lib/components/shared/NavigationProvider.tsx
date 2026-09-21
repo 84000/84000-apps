@@ -486,6 +486,20 @@ export const NavigationProvider = ({
     }
   }
 
+  // Closing the panel that shows comment threads leaves no thread focused. The
+  // anchor in the text is lit from `focusedComment`, so without this it stays
+  // lit with nothing on screen to say why. Adjusted during render rather than
+  // in an effect, like the close above.
+  const [prevCommentsPanelOpen, setPrevCommentsPanelOpen] = useState(
+    panels.left.open,
+  );
+  if (panels.left.open !== prevCommentsPanelOpen) {
+    setPrevCommentsPanelOpen(panels.left.open);
+    if (!panels.left.open && focusedComment) {
+      setFocusedComment(undefined);
+    }
+  }
+
   const contextValue = useMemo(
     () => ({
       uuid,
