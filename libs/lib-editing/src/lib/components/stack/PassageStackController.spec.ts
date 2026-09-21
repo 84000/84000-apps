@@ -499,6 +499,21 @@ describe('PassageStackController passage selection', () => {
     );
   });
 
+  it('lets go of the browser selection, so only one highlight is drawn', async () => {
+    const { controller } = await withMarks();
+    document.body.innerHTML = '<p id="t">some text</p>';
+    const range = document.createRange();
+    range.selectNodeContents(document.querySelector('#t') as Node);
+    const native = window.getSelection();
+    native?.removeAllRanges();
+    native?.addRange(range);
+    expect(native?.isCollapsed).toBe(false);
+
+    controller.setPassageSelection('p1', 'p2');
+
+    expect(window.getSelection()?.rangeCount ?? 0).toBe(0);
+  });
+
   it('clears the selection without touching the work', async () => {
     const { work, controller } = await withMarks();
     controller.setPassageSelection('p1', 'p2');
