@@ -618,7 +618,7 @@ describe('CommentsPanel', () => {
       expect(mockSetFocusedComment).not.toHaveBeenCalled();
     });
 
-    it('lists every pending thread in the work, not only those in view', async () => {
+    it('lists every thread in the work carrying the filter tag, not only those in view', async () => {
       mockGetTaggedComments.mockResolvedValue([
         { workUuid: 'w1', threadUuid: 't9', passageUuids: ['p9'] },
       ]);
@@ -638,29 +638,69 @@ describe('CommentsPanel', () => {
       );
 
       render(<CommentsPanel workUuid="w1" />);
-      expect(mockGetTaggedComments).toHaveBeenCalledWith(
-        expect.objectContaining({ tag: 'pending', workUuid: 'w1' }),
-      );
       await screen.findByText('body of t1');
 
       await userEvent.click(
-        await screen.findByRole('button', { name: '1 pending' }),
+        await screen.findByRole('button', { name: 'Filter by tag' }),
       );
+      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
 
       expect(await screen.findByText('body of t9')).toBeTruthy();
       expect(screen.queryByText('body of t8')).toBeNull();
       expect(screen.queryByText('body of t1')).toBeNull();
     });
 
-    it('opens filtered when the URL asks for pending', async () => {
-      window.history.replaceState(null, '', '/?comments=pending');
+    it('opens filtered when the URL names a tag', async () => {
+      window.history.replaceState(null, '', '/?commentTag=Pending');
       mockGetTaggedComments.mockResolvedValue([]);
 
       render(<CommentsPanel workUuid="w1" />);
 
       expect(
-        await screen.findByText('No pending comments in this work.'),
+        await screen.findByText('No comments tagged “pending” in this work.'),
       ).toBeTruthy();
+      expect(mockGetTaggedComments).toHaveBeenCalledWith(
+        expect.objectContaining({ tag: 'pending', workUuid: 'w1' }),
+      );
+    });
+
+    it('filters by any tag typed, and suggests tags already in view', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({
+          anchored: [anchoredAt('t1', 'p1', { tags: ['needs source'] })],
+        }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByText('body of t1');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Filter by tag' }),
+      );
+      expect(screen.getByRole('button', { name: 'pending' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'needs source' })).toBeTruthy();
+
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Filter tag' }),
+        'Link Toh 123{Enter}',
+      );
+
+      expect(mockGetTaggedComments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tag: 'link toh 123', workUuid: 'w1' }),
+      );
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: 'Clear link toh 123 filter',
+        }),
+      );
+      expect(await screen.findByText('body of t1')).toBeTruthy();
+    });
+
+    it('reads no tagged comments until a filter is chosen', async () => {
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByRole('button', { name: 'Filter by tag' });
+
+      expect(mockGetTaggedComments).not.toHaveBeenCalled();
     });
   });
 });

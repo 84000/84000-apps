@@ -20,7 +20,7 @@ import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { relativeTime } from './comments/relative-time';
-import { COMMENT_FILTER_PARAM, PENDING_TAG } from './comments/tags';
+import { COMMENT_TAG_PARAM, PENDING_TAG } from './comments/tags';
 import { pendingWorkRows, type PendingWorkRow } from './pending-works';
 
 const SIZE_FOR_COL: { [key: string]: number } = {
@@ -63,7 +63,7 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
 
   const onCellClick = (cell: Cell<PendingWorkRow, unknown>) => {
     router.push(
-      `${pathname}/${cell.row.original.uuid}?left=open:comments&${COMMENT_FILTER_PARAM}=${PENDING_TAG}`,
+      `${pathname}/${cell.row.original.uuid}?left=open:comments&${COMMENT_TAG_PARAM}=${PENDING_TAG}`,
     );
   };
 

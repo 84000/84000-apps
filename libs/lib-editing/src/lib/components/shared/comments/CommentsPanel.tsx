@@ -14,10 +14,13 @@ import {
 } from '@eightyfourthousand/client-graphql';
 import {
   createBrowserClient,
+  COMMENT_TAG_SUGGESTIONS,
   getSession,
+  normalizeCommentTag,
   type CommentThread,
 } from '@eightyfourthousand/data-access';
-import { Button } from '@eightyfourthousand/design-system';
+import { Badge, Button } from '@eightyfourthousand/design-system';
+import { XIcon } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getEditorForElement } from '../../editor/util';
@@ -28,22 +31,40 @@ import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
-import { COMMENT_FILTER_PARAM, PENDING_TAG } from './tags';
+import { COMMENT_TAG_PARAM } from './tags';
+import { TagPicker } from './TagPicker';
 
 /** How many passages one comments read covers. */
 const PASSAGES_PER_READ = 100;
 
-/** Where the work's pending threads are, and which threads they are. */
-type PendingThreads = { threadUuids: Set<string>; passageUuids: string[] };
+/** Where the work's threads carrying a tag are, and which threads they are. */
+type TaggedThreads = { threadUuids: Set<string>; passageUuids: string[] };
 
-const initialShowPending = () =>
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get(COMMENT_FILTER_PARAM) ===
-    PENDING_TAG;
+const initialFilterTag = () =>
+  typeof window === 'undefined'
+    ? undefined
+    : (normalizeCommentTag(
+        new URLSearchParams(window.location.search).get(COMMENT_TAG_PARAM) ??
+          '',
+      ) ?? undefined);
+
+/** Every tag on the threads in `passages`, replies included. */
+const tagsIn = (passages: PassageComments[]): string[] => {
+  const tags = new Set<string>();
+  const walk = (comment: CommentThread) => {
+    comment.tags.forEach((tag) => tags.add(tag));
+    comment.replies.forEach(walk);
+  };
+  for (const passage of passages) {
+    passage.anchored.forEach(({ thread }) => walk(thread));
+    passage.unanchored.forEach(walk);
+  }
+  return [...tags].sort();
+};
 
 /**
  * Comment threads for the passages on screen, beside the text they annotate,
- * or every thread in the work carrying a `pending` comment.
+ * or, filtered by a tag, every thread in the work carrying it.
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
@@ -64,8 +85,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
-  const [showPending, setShowPending] = useState(initialShowPending);
-  const [pendingThreads, setPendingThreads] = useState<PendingThreads>();
+  const [filterTag, setFilterTag] = useState(initialFilterTag);
+  const [taggedThreads, setTaggedThreads] = useState<TaggedThreads>();
   const [currentUserId, setCurrentUserId] = useState<string>();
   const [hovered, setHovered] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
@@ -84,17 +105,19 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const reload = useCallback(() => setReadCount((count) => count + 1), []);
 
   useEffect(() => {
+    if (!filterTag) return;
+
     let current = true;
 
     (async () => {
       const tagged = await getTaggedComments({
         client,
-        tag: PENDING_TAG,
+        tag: filterTag,
         workUuid,
       });
       if (!current) return;
 
-      setPendingThreads({
+      setTaggedThreads({
         threadUuids: new Set(
           tagged.flatMap(({ threadUuid }) => (threadUuid ? [threadUuid] : [])),
         ),
@@ -107,11 +130,11 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     return () => {
       current = false;
     };
-  }, [client, workUuid, readCount, commentsRevision]);
+  }, [client, workUuid, filterTag, readCount, commentsRevision]);
 
-  // Filtered, the panel reads where the pending threads are rather than what
-  // is on screen.
-  const readUuids = showPending ? pendingThreads?.passageUuids : passageUuids;
+  // Filtered, the panel reads where the tagged threads are rather than what is
+  // on screen.
+  const readUuids = filterTag ? taggedThreads?.passageUuids : passageUuids;
 
   useEffect(() => {
     if (!readUuids) return;
@@ -143,12 +166,12 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
 
   const { anchored, unanchored } = useMemo(() => {
     const all = orderThreads(passages);
-    const isPending = ({ thread }: PanelThread) =>
-      !!pendingThreads?.threadUuids.has(thread.uuid);
-    const ordered = showPending
+    const isTagged = ({ thread }: PanelThread) =>
+      !!taggedThreads?.threadUuids.has(thread.uuid);
+    const ordered = filterTag
       ? {
-          anchored: all.anchored.filter(isPending),
-          unanchored: all.unanchored.filter(isPending),
+          anchored: all.anchored.filter(isTagged),
+          unanchored: all.unanchored.filter(isTagged),
         }
       : all;
 
@@ -176,7 +199,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages, pendingThreads, showPending]);
+  }, [passages, taggedThreads, filterTag]);
 
   const resolvedCount = useMemo(
     () =>
@@ -325,40 +348,55 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
 
   const anchoredVisible = visible(anchored);
   const unanchoredVisible = visible(unanchored);
-  const pendingCount = pendingThreads?.threadUuids.size ?? 0;
+  const filterSuggestions = [
+    ...new Set([...COMMENT_TAG_SUGGESTIONS, ...tagsIn(passages)]),
+  ];
+
+  const changeFilter = (tag?: string) => {
+    if (tag === filterTag) return;
+    setLoading(true);
+    setTaggedThreads(undefined);
+    setFilterTag(tag);
+  };
 
   return (
     <div ref={listRef} className="pb-8">
-      {(resolvedCount > 0 || pendingCount > 0 || showPending) && (
-        <div className="flex justify-end">
-          {(pendingCount > 0 || showPending) && (
-            <Button
-              size="xs"
-              variant={showPending ? 'secondary' : 'ghost'}
-              className="text-[11px] text-muted-foreground"
-              aria-pressed={showPending}
-              onClick={() => {
-                setLoading(true);
-                setShowPending((shown) => !shown);
-              }}
+      <div className="flex items-center justify-end gap-1 flex-wrap">
+        {filterTag ? (
+          <Badge
+            variant="outline"
+            data-comment-filter={filterTag}
+            className="gap-0.5 px-1.5 py-0 text-[10px] font-medium"
+          >
+            {filterTag}
+            <button
+              type="button"
+              aria-label={`Clear ${filterTag} filter`}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              onClick={() => changeFilter(undefined)}
             >
-              {showPending ? 'Show all' : `${pendingCount} pending`}
-            </Button>
-          )}
-          {resolvedCount > 0 && (
-            <Button
-              size="xs"
-              variant="ghost"
-              className="text-[11px] text-muted-foreground"
-              onClick={() => setShowResolved((shown) => !shown)}
-            >
-              {showResolved
-                ? 'Hide resolved'
-                : `Show ${resolvedCount} resolved`}
-            </Button>
-          )}
-        </div>
-      )}
+              <XIcon className="size-2.5" />
+            </button>
+          </Badge>
+        ) : (
+          <TagPicker
+            label="Filter by tag"
+            inputLabel="Filter tag"
+            suggestions={filterSuggestions}
+            onPick={changeFilter}
+          />
+        )}
+        {resolvedCount > 0 && (
+          <Button
+            size="xs"
+            variant="ghost"
+            className="text-[11px] text-muted-foreground"
+            onClick={() => setShowResolved((shown) => !shown)}
+          >
+            {showResolved ? 'Hide resolved' : `Show ${resolvedCount} resolved`}
+          </Button>
+        )}
+      </div>
 
       {loading && (
         <p className="text-xs text-muted-foreground py-4">Loading comments…</p>
@@ -368,8 +406,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         anchoredVisible.length === 0 &&
         unanchoredVisible.length === 0 && (
           <p className="text-xs text-muted-foreground py-4">
-            {showPending
-              ? 'No pending comments in this work.'
+            {filterTag
+              ? `No comments tagged “${filterTag}” in this work.`
               : 'No comments on the passages in view.'}
           </p>
         )}

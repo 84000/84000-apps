@@ -140,7 +140,7 @@ describe('EditorLandingTabs', () => {
     await userEvent.click(screen.getByText('Link Toh 123 once published'));
 
     expect(mockPush).toHaveBeenCalledWith(
-      '/translations/editor/w1?left=open:comments&comments=pending',
+      '/translations/editor/w1?left=open:comments&commentTag=pending',
     );
   });
 
