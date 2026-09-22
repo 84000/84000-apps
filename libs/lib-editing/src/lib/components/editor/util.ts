@@ -193,3 +193,28 @@ export const createMarkViewDom = ({
 
   return { dom, updateAttributes: updateElementAttributes };
 };
+
+/**
+ * The uuid of the passage the selection sits in, or undefined where nothing
+ * names one.
+ *
+ * Asked of the document first and the DOM second, because the two editing
+ * surfaces answer differently: the paginated editor holds every passage as a
+ * `passage` node in one document, while the stack mounts one editor per row and
+ * the row — not the document — carries the uuid.
+ */
+export const passageUuidForSelection = (editor: Editor): string | undefined => {
+  const { $from } = editor.state.selection;
+
+  for (let depth = $from.depth; depth > 0; depth--) {
+    const node = $from.node(depth);
+    if (node.type.name === 'passage' && node.attrs.uuid) {
+      return node.attrs.uuid as string;
+    }
+  }
+
+  return (
+    editor.view.dom.closest<HTMLElement>('[data-stack-passage]')?.dataset
+      .stackPassage || undefined
+  );
+};

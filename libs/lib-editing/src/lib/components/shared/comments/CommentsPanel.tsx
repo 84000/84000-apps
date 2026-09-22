@@ -16,12 +16,14 @@ import {
   type CommentThread,
 } from '@eightyfourthousand/data-access';
 import { Button } from '@eightyfourthousand/design-system';
+import type { Editor } from '@tiptap/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getEditorForElement } from '../../editor/util';
 import { useNavigation } from '../NavigationProvider';
 import { locationForPassageType } from '../types';
 import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
 import { orderThreads, type PanelThread } from './order-threads';
-import { attributeValue } from './selectors';
+import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
 
@@ -36,7 +38,13 @@ import { useVisiblePassageUuids } from './useVisiblePassageUuids';
  * the body specifically.
  */
 export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
-  const { focusedComment, setFocusedComment, updatePanel } = useNavigation();
+  const {
+    commentsRevision,
+    focusedComment,
+    requestEditorFor,
+    setFocusedComment,
+    updatePanel,
+  } = useNavigation();
   const passageUuids = useVisiblePassageUuids();
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,12 +85,36 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     return () => {
       current = false;
     };
-  }, [client, workUuid, passageUuids, readCount]);
+  }, [client, workUuid, passageUuids, readCount, commentsRevision]);
 
-  const { anchored, unanchored } = useMemo(
-    () => orderThreads(passages),
-    [passages],
-  );
+  const { anchored, unanchored } = useMemo(() => {
+    const ordered = orderThreads(passages);
+
+    if (typeof document === 'undefined') {
+      return ordered;
+    }
+
+    // A thread the server places nowhere but the text still marks is anchored.
+    // The mark goes on as soon as the thread is created and only reaches the
+    // server with the next passage save, and telling an author their new
+    // comment is attached to nothing would be a lie the text contradicts.
+    const pending = ordered.unanchored.filter(({ thread }) =>
+      document.querySelector(anchorSelector(thread.uuid)),
+    );
+
+    if (pending.length === 0) {
+      return ordered;
+    }
+
+    const pendingUuids = new Set(pending.map(({ thread }) => thread.uuid));
+
+    return {
+      anchored: [...ordered.anchored, ...pending],
+      unanchored: ordered.unanchored.filter(
+        ({ thread }) => !pendingUuids.has(thread.uuid),
+      ),
+    };
+  }, [passages]);
 
   const resolvedCount = useMemo(
     () =>
@@ -139,6 +171,35 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
       ?.scrollIntoView({ block: 'center' });
   }, [focusedComment, anchored, unanchored]);
 
+  /**
+   * Takes every anchor of a thread off the text.
+   *
+   * An anchor may sit on a static row with no editor mounted over it, so the
+   * host is asked for one; `unsetComment` then clears every anchor in that
+   * document at once.
+   */
+  const unsetAnchors = useCallback(
+    async (commentUuid: string) => {
+      const anchors = [
+        ...document.querySelectorAll<HTMLElement>(anchorSelector(commentUuid)),
+      ];
+      const editors = new Set<Editor>();
+
+      for (const anchor of anchors) {
+        const editor =
+          getEditorForElement(anchor) ?? (await requestEditorFor?.(anchor));
+        if (editor) {
+          editors.add(editor);
+        }
+      }
+
+      editors.forEach((editor) =>
+        editor.commands.unsetComment({ comment: commentUuid }),
+      );
+    },
+    [requestEditorFor],
+  );
+
   const actions: CommentActions = useMemo(
     () => ({
       reply: async (parentUuid, content) => {
@@ -150,6 +211,11 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         reload();
       },
       remove: async (uuid) => {
+        // Anchors first: once the thread is gone a surviving mark names
+        // nothing, and no read returns the thread that would prompt a cleanup.
+        // Failing the other way round only leaves the thread unanchored, which
+        // the panel already shows.
+        await unsetAnchors(uuid);
         await deleteComment({ client, uuid });
         reload();
       },
@@ -163,7 +229,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         setPassages((prev) => prev.map((p) => graftBranch(p, branch)));
       },
     }),
-    [client, reload],
+    [client, reload, unsetAnchors],
   );
 
   const select = useCallback(

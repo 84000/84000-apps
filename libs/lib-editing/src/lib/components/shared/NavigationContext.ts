@@ -44,12 +44,20 @@ export interface NavigationState {
    * `pushState` is overwritten by the next sync and never read back.
    */
   focusedComment?: string;
+  /**
+   * Bumped whenever a comment write lands outside the thread panel. The editor
+   * starts and removes threads, and nothing else tells the panel its read is
+   * stale.
+   */
+  commentsRevision: number;
   setToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
   setFocusMode: (focusMode: boolean) => void;
   updatePanel: (params: { name: PanelName; state: PanelState }) => void;
   setFocusedComment: (uuid?: string) => void;
+  /** Tells the thread panel to re-read. */
+  refreshComments: () => void;
   fetchBibliographyEntry: (
     uuid: string,
   ) => Promise<BibliographyEntryItem | undefined>;
@@ -88,10 +96,14 @@ export const NavigationContext = createContext<NavigationState>({
   showOuterContent: true,
   hasTranslationContent: true,
   focusMode: false,
+  commentsRevision: 0,
   updatePanel: () => {
     throw new Error('Not implemented');
   },
   setFocusedComment: () => {
+    throw new Error('Not implemented');
+  },
+  refreshComments: () => {
     throw new Error('Not implemented');
   },
   setToh: () => {

@@ -127,6 +127,7 @@ export const NavigationProvider = ({
     parseHighlight(query),
   );
   const [focusedComment, setFocusedComment] = useState<string | undefined>();
+  const [commentsRevision, setCommentsRevision] = useState(0);
   const [hasTranslationContent, setHasTranslationContent] = useState(
     initialHasTranslationContent,
   );
@@ -265,6 +266,11 @@ export const NavigationProvider = ({
   const requestEditorFor = useCallback(
     (element: HTMLElement) =>
       editorRequest.current?.(element) ?? Promise.resolve(null),
+    [],
+  );
+
+  const refreshComments = useCallback(
+    () => setCommentsRevision((revision) => revision + 1),
     [],
   );
 
@@ -512,11 +518,13 @@ export const NavigationProvider = ({
       focusMode,
       highlight,
       focusedComment,
+      commentsRevision,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,
       setFocusedComment,
+      refreshComments,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
@@ -537,11 +545,13 @@ export const NavigationProvider = ({
       focusMode,
       highlight,
       focusedComment,
+      commentsRevision,
       setToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,
       setFocusedComment,
+      refreshComments,
       updatePanel,
       fetchBibliographyEntry,
       fetchEndNote,
