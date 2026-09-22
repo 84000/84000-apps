@@ -12,13 +12,20 @@ import { useCallback, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { TranslationsTable } from './TranslationTable';
 import { DiagnosticsTable } from './DiagnosticsTable';
+import { PendingTable } from './PendingTable';
 
-type LandingTab = 'translations' | 'diagnostics';
+type LandingTab = 'translations' | 'diagnostics' | 'pending';
+
+const TABS: readonly LandingTab[] = ['translations', 'diagnostics', 'pending'];
+
+const asTab = (value: string | null): LandingTab =>
+  TABS.find((tab) => tab === value) ?? 'translations';
 
 const TAB_PARAM = 'view';
 
 /**
- * The editor landing page: the work list, and the publish diagnostics for the corpus.
+ * The editor landing page: the work list, the publish diagnostics for the corpus, and
+ * the works with pending comments.
  *
  * Replaces the former "Translation Editor" heading with tabs. Diagnostics is a peer of the
  * work list rather than a page of its own because it answers a question about the same
@@ -37,10 +44,7 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
   // straight from useSearchParams would make the switch depend on a replaceState being
   // reflected back through the router — true in Next today, but a fragile thing for a
   // click to rely on. Local state keeps the interaction self-contained.
-  const initialTab: LandingTab =
-    searchParams.get(TAB_PARAM) === 'diagnostics'
-      ? 'diagnostics'
-      : 'translations';
+  const initialTab = asTab(searchParams.get(TAB_PARAM));
 
   const [activeTab, setActiveTab] = useState<LandingTab>(initialTab);
 
@@ -57,15 +61,14 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
 
   const onValueChange = useCallback(
     (value: string) => {
-      const tab: LandingTab =
-        value === 'diagnostics' ? 'diagnostics' : 'translations';
+      const tab = asTab(value);
       setActiveTab(tab);
       setMounted((current) =>
         current.has(tab) ? current : new Set(current).add(tab),
       );
 
       const params = new URLSearchParams(window.location.search);
-      if (tab === 'diagnostics') {
+      if (tab !== 'translations') {
         params.set(TAB_PARAM, tab);
       } else {
         params.delete(TAB_PARAM);
@@ -97,6 +100,9 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
           <TabsTrigger className="bg-surface" value="diagnostics">
             Diagnostics
           </TabsTrigger>
+          <TabsTrigger className="bg-surface" value="pending">
+            Pending
+          </TabsTrigger>
         </TabsList>
       </div>
       {mounted.has('translations') && (
@@ -115,6 +121,15 @@ export const EditorLandingTabs = ({ works }: { works: Work[] }) => {
           className="data-[state=inactive]:hidden"
         >
           <DiagnosticsTable works={works} />
+        </TabsContent>
+      )}
+      {mounted.has('pending') && (
+        <TabsContent
+          value="pending"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
+          <PendingTable works={works} />
         </TabsContent>
       )}
     </Tabs>

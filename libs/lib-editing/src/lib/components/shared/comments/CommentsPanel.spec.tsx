@@ -574,20 +574,19 @@ describe('CommentsPanel', () => {
       mockGetTaggedComments.mockResolvedValue([
         { workUuid: 'w1', threadUuid: 't9', passageUuids: ['p9'] },
       ]);
-      mockGetPassageComments.mockImplementation(
-        async ({ passageUuids }: { passageUuids: string[] }) =>
-          passageUuids.includes('p9')
-            ? [
-                {
-                  passageUuid: 'p9',
-                  label: '9.1',
-                  type: 'translation',
-                  sort: 9,
-                  anchored: [anchoredAt('t9', 'p9'), anchoredAt('t8', 'p9')],
-                  unanchored: [],
-                },
-              ]
-            : page({ anchored: [anchoredAt('t1', 'p1')] }),
+      mockGetPassageComments.mockImplementation(async (...args: unknown[]) =>
+        (args[0] as { passageUuids: string[] }).passageUuids.includes('p9')
+          ? [
+              {
+                passageUuid: 'p9',
+                label: '9.1',
+                type: 'translation',
+                sort: 9,
+                anchored: [anchoredAt('t9', 'p9'), anchoredAt('t8', 'p9')],
+                unanchored: [],
+              },
+            ]
+          : page({ anchored: [anchoredAt('t1', 'p1')] }),
       );
 
       render(<CommentsPanel workUuid="w1" />);

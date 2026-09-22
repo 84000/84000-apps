@@ -5,11 +5,14 @@ import { Work } from '@eightyfourthousand/data-access';
 import { EditorLandingTabs } from './EditorLandingTabs';
 
 const mockGetPublishStatuses = jest.fn();
+const mockGetTaggedComments = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   ...jest.requireActual('@eightyfourthousand/client-graphql'),
   createGraphQLClient: () => ({}),
   getPublishStatuses: () => mockGetPublishStatuses(),
+  getTaggedComments: (...args: unknown[]) => mockGetTaggedComments(...args),
   getPublishReadiness: jest.fn().mockResolvedValue({
     ok: true,
     errors: [],
@@ -20,7 +23,7 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 let mockSearchParams: URLSearchParams;
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
   usePathname: () => '/translations/editor',
   useSearchParams: () => mockSearchParams,
 }));
@@ -41,6 +44,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSearchParams = new URLSearchParams();
   mockGetPublishStatuses.mockResolvedValue([]);
+  mockGetTaggedComments.mockResolvedValue([]);
   window.history.replaceState(null, '', '/translations/editor');
   window.localStorage.clear();
 });
@@ -52,7 +56,7 @@ const renderTabs = () =>
     </TooltipProvider>,
   );
 
-const tab = (name: 'Translations' | 'Diagnostics') =>
+const tab = (name: 'Translations' | 'Diagnostics' | 'Pending') =>
   screen.getByRole('tab', { name });
 
 describe('EditorLandingTabs', () => {
@@ -65,7 +69,9 @@ describe('EditorLandingTabs', () => {
 
     await userEvent.click(tab('Diagnostics'));
 
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1),
+    );
   });
 
   it('keeps both tables mounted once visited, so switching back does not refetch', async () => {
@@ -74,7 +80,9 @@ describe('EditorLandingTabs', () => {
     renderTabs();
 
     await userEvent.click(tab('Diagnostics'));
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1),
+    );
 
     await userEvent.click(tab('Translations'));
     await userEvent.click(tab('Diagnostics'));
@@ -102,6 +110,45 @@ describe('EditorLandingTabs', () => {
 
     renderTabs();
 
-    await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it('lists works with pending comments and opens one filtered to them', async () => {
+    mockGetTaggedComments.mockResolvedValue([
+      {
+        workUuid: 'w1',
+        passageUuids: ['p1'],
+        comment: {
+          uuid: 'c1',
+          content: '<p>Link Toh 123 once published</p>',
+          createdAt: '2026-09-20T00:00:00Z',
+        },
+      },
+    ]);
+    renderTabs();
+
+    await userEvent.click(tab('Pending'));
+
+    expect(mockGetTaggedComments).toHaveBeenCalledWith(
+      expect.objectContaining({ tag: 'pending' }),
+    );
+    expect(await screen.findByText('Link Toh 123 once published')).toBeTruthy();
+    expect(window.location.search).toBe('?view=pending');
+
+    await userEvent.click(screen.getByText('Link Toh 123 once published'));
+
+    expect(mockPush).toHaveBeenCalledWith(
+      '/translations/editor/w1?left=open:comments&comments=pending',
+    );
+  });
+
+  it('opens on the Pending tab from the URL', async () => {
+    mockSearchParams = new URLSearchParams('view=pending');
+    renderTabs();
+
+    expect(tab('Pending').getAttribute('aria-selected')).toBe('true');
+    await waitFor(() => expect(mockGetTaggedComments).toHaveBeenCalled());
   });
 });
