@@ -4,6 +4,7 @@ fragment CommentFields on Comment {
   createdAt
   updatedAt
   resolvedAt
+  tags
   replyCount
   author {
     ...UserInfoFields

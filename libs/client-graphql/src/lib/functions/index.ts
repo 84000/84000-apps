@@ -80,9 +80,14 @@ export { createComment } from './create-comment';
 export { replyToComment } from './reply-to-comment';
 export { updateComment } from './update-comment';
 export { resolveComment } from './resolve-comment';
+export { setCommentTags } from './set-comment-tags';
 export { deleteComment, type DeleteCommentResult } from './delete-comment';
 export type { CommentMutationResult } from './comment-fields';
 export { getCommentThread } from './get-comment-thread';
+export {
+  getTaggedComments,
+  type TaggedCommentEntry,
+} from './get-tagged-comments';
 export {
   getPassageComments,
   type AnchoredCommentThread,

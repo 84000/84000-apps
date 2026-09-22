@@ -3,6 +3,7 @@ import {
   deleteComment,
   replyToComment,
   resolveComment,
+  setCommentTags,
   updateComment,
   type CommentDeleteResult,
   type CommentWriteResult,
@@ -32,7 +33,7 @@ const deleteFailed = (error: string): CommentDeleteResult => ({
 /**
  * Comment mutations.
  *
- * All five gate on `editor.edit` and answer a refusal as data rather than
+ * All gate on `editor.edit` and answer a refusal as data rather than
  * throwing, so a client reads it from the result like any other outcome. The
  * author is the session's user throughout; no mutation takes one as input.
  */
@@ -118,6 +119,26 @@ export const commentMutations = {
       });
     } catch (error) {
       console.error('Unexpected error resolving comment:', error);
+      return failed(error instanceof Error ? error.message : 'Unknown error');
+    }
+  },
+
+  setCommentTags: async (
+    _parent: unknown,
+    args: { uuid: string; tags: string[] },
+    ctx: GraphQLContext,
+  ): Promise<CommentWriteResult> => {
+    const permission = await requireEditorEditPermission(ctx);
+    if (!permission.ok) return failed(permission.error);
+
+    try {
+      return await setCommentTags({
+        client: ctx.supabase,
+        uuid: args.uuid,
+        tags: args.tags,
+      });
+    } catch (error) {
+      console.error('Unexpected error tagging comment:', error);
       return failed(error instanceof Error ? error.message : 'Unknown error');
     }
   },

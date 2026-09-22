@@ -48,6 +48,12 @@ type Comment {
   resolvedBy: UserInfo
 
   """
+  Labels on this comment, root or reply. `pending` is the only one written
+  today. Independent of resolution.
+  """
+  tags: [String!]!
+
+  """
   Replies to this comment, oldest first, nested as deep as the read went.
   Empty when this comment has no replies — and also when the read stopped
   here, which `replyCount` distinguishes.
@@ -80,6 +86,42 @@ extend type Query {
     """
     depth: Int
   ): Comment
+
+  """
+  Comments carrying `tag`, oldest first, across the library or within one
+  work. Empty for a `published` content source.
+  """
+  taggedComments(
+    """
+    The tag to list, such as `pending`
+    """
+    tag: String!
+
+    """
+    Limit to one work. Omit for the whole library.
+    """
+    workUuid: ID
+  ): [TaggedComment!]!
+}
+
+"""
+A tagged comment, placed in its work and thread.
+"""
+type TaggedComment {
+  comment: Comment!
+
+  workUuid: ID!
+
+  """
+  The root of the comment's thread. Null when its parent chain is broken.
+  """
+  threadUuid: ID
+
+  """
+  Where the thread sits: the passages anchoring it, or the passage it was
+  written on when nothing anchors it.
+  """
+  passageUuids: [ID!]!
 }
 
 extend type Passage {
@@ -187,6 +229,13 @@ extend type Mutation {
   Requires editor.edit permission.
   """
   resolveComment(uuid: ID!, resolved: Boolean!): CommentResult!
+
+  """
+  Replace a comment's tags. Any comment, root or reply, and any editor may.
+  Does not change resolution.
+  Requires editor.edit permission.
+  """
+  setCommentTags(uuid: ID!, tags: [String!]!): CommentResult!
 
   """
   Delete a comment and every reply below it. The author only.

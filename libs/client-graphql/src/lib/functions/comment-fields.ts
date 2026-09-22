@@ -2,15 +2,8 @@ import { gql } from 'graphql-request';
 import type { CommentThread } from '@eightyfourthousand/data-access';
 import { commentFromGraphQL, type GraphQLComment } from '../mappers';
 
-/**
- * The comment selection every comment mutation returns.
- *
- * Two levels of replies, matching what the server nests by default: a GraphQL
- * selection cannot recurse, so each level is spelled out. A branch with more
- * replies than this carries them in `replyCount` and is opened with
- * `comment(uuid:)`.
- */
-export const COMMENT_THREAD_FRAGMENT = gql`
+/** One comment's own fields and its author, without replies. */
+export const COMMENT_FIELDS_FRAGMENT = gql`
   fragment UserInfoFields on UserInfo {
     id
     displayName
@@ -23,6 +16,7 @@ export const COMMENT_THREAD_FRAGMENT = gql`
     createdAt
     updatedAt
     resolvedAt
+    tags
     replyCount
     author {
       ...UserInfoFields
@@ -31,6 +25,18 @@ export const COMMENT_THREAD_FRAGMENT = gql`
       ...UserInfoFields
     }
   }
+`;
+
+/**
+ * The comment selection every comment mutation returns.
+ *
+ * Two levels of replies, matching what the server nests by default: a GraphQL
+ * selection cannot recurse, so each level is spelled out. A branch with more
+ * replies than this carries them in `replyCount` and is opened with
+ * `comment(uuid:)`.
+ */
+export const COMMENT_THREAD_FRAGMENT = gql`
+  ${COMMENT_FIELDS_FRAGMENT}
 
   fragment CommentThreadFields on Comment {
     ...CommentFields
