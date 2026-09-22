@@ -124,6 +124,18 @@ describe('getTaggedComments', () => {
     ]);
   });
 
+  it('normalizes the tag it asks for', async () => {
+    const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+
+    await getTaggedComments({
+      client: fakeClient({ rpcCalls }),
+      tag: ' Pending ',
+      source: 'draft',
+    });
+
+    expect(rpcCalls[0].args).toMatchObject({ p_tag: 'pending' });
+  });
+
   it('issues no query for a published read', async () => {
     const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
 

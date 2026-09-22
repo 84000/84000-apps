@@ -36,19 +36,25 @@ export const isCommentEntityType = (
   (COMMENT_ENTITY_TYPES as readonly string[]).includes(value);
 
 /**
- * The labels a comment may carry. A shared constant rather than a CHECK or an
- * enum, so adding a tag is not a migration. Tags carry no behaviour: nothing
- * couples them to resolution, and what a combination means is for the people
- * using them to decide.
+ * Tags offered when tagging a comment. Suggestions only: a comment may carry any
+ * tag. Tags carry no behaviour, and nothing couples them to resolution.
  */
-export const COMMENT_TAGS = ['pending'] as const;
+export const COMMENT_TAG_SUGGESTIONS = ['pending'] as const;
 
-export type CommentTag = (typeof COMMENT_TAGS)[number];
+/** The longest tag a comment may carry, after normalizing. */
+export const MAX_COMMENT_TAG_LENGTH = 40;
 
-/** Narrows arbitrary input to a tag this build knows about. */
-export const isCommentTag = (value: unknown): value is CommentTag =>
-  typeof value === 'string' &&
-  (COMMENT_TAGS as readonly string[]).includes(value);
+/**
+ * A tag as it is stored: trimmed, lowercased, inner whitespace collapsed, so
+ * `Pending` and `pending ` are one tag. Null when nothing is left or it is too
+ * long.
+ */
+export const normalizeCommentTag = (tag: string): string | null => {
+  const normalized = tag.trim().replace(/\s+/g, ' ').toLowerCase();
+  return normalized && normalized.length <= MAX_COMMENT_TAG_LENGTH
+    ? normalized
+    : null;
+};
 
 export type Comment = {
   uuid: string;
@@ -67,10 +73,7 @@ export type Comment = {
    */
   resolvedAt?: string;
   resolvedBy?: string;
-  /**
-   * Labels on this comment, root or reply. Typed as strings rather than
-   * `CommentTag` because a row may carry a tag added after this build.
-   */
+  /** Labels on this comment, root or reply, normalized on write. */
   tags: string[];
   /**
    * Replies to this comment, oldest first, nested to whatever depth the read

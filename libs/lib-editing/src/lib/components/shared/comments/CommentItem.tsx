@@ -12,7 +12,7 @@ import { XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CommentComposer } from './CommentComposer';
 import { relativeTime } from './relative-time';
-import { PENDING_TAG } from './tags';
+import { CommentTagInput } from './CommentTagInput';
 
 const initials = (name: string) =>
   name
@@ -43,7 +43,6 @@ export const CommentItem = ({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isAuthor = !!currentUserId && comment.author.id === currentUserId;
   const edited = comment.updatedAt !== comment.createdAt;
-  const pending = comment.tags.includes(PENDING_TAG);
 
   return (
     <div className="flex gap-2">
@@ -112,19 +111,10 @@ export const CommentItem = ({
 
         {!editing && (
           <div className="flex gap-1 -ms-2.5">
-            {!pending && (
-              <Button
-                size="xs"
-                variant="ghost"
-                className="text-[11px] text-muted-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSetTags([...comment.tags, PENDING_TAG]);
-                }}
-              >
-                Mark pending
-              </Button>
-            )}
+            <CommentTagInput
+              tags={comment.tags}
+              onAdd={(tag) => onSetTags([...comment.tags, tag])}
+            />
             {isAuthor && (
               <>
                 <Button

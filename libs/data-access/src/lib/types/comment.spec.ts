@@ -5,7 +5,7 @@ import {
   commentToDTO,
   commentsFromDTO,
   isCommentEntityType,
-  isCommentTag,
+  normalizeCommentTag,
   threadsFromComments,
 } from './comment';
 
@@ -120,14 +120,16 @@ describe('commentsFromDTO', () => {
   });
 });
 
-describe('isCommentTag', () => {
+describe('normalizeCommentTag', () => {
   it.each([
-    ['pending', true],
-    ['Pending', false],
-    ['', false],
-    [undefined, false],
-  ])('narrows %s to %s', (value, expected) => {
-    expect(isCommentTag(value)).toBe(expected);
+    ['pending', 'pending'],
+    ['  Pending ', 'pending'],
+    ['needs   Toh 123', 'needs toh 123'],
+    ['', null],
+    ['   ', null],
+    ['x'.repeat(41), null],
+  ])('normalizes %j to %j', (value, expected) => {
+    expect(normalizeCommentTag(value)).toBe(expected);
   });
 });
 

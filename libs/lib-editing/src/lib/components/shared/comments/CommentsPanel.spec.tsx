@@ -24,6 +24,10 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 }));
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  COMMENT_TAG_SUGGESTIONS: ['pending'],
+  MAX_COMMENT_TAG_LENGTH: 40,
+  normalizeCommentTag: (tag: string) =>
+    tag.trim().replace(/\s+/g, ' ').toLowerCase() || null,
   createBrowserClient: () => ({}),
   getSession: async () => ({ user: { id: 'u1' } }),
 }));
@@ -528,7 +532,7 @@ describe('CommentsPanel', () => {
       expect(chip.closest('[data-comment-tag]')).toBeTruthy();
     });
 
-    it('tags a reply', async () => {
+    it('tags a reply from the suggestions', async () => {
       mockGetPassageComments.mockResolvedValue(
         page({
           anchored: [
@@ -543,14 +547,58 @@ describe('CommentsPanel', () => {
       render(<CommentsPanel workUuid="w1" />);
       await screen.findByText('body of r1');
 
-      const [, onReply] = screen.getAllByRole('button', {
-        name: 'Mark pending',
-      });
+      const [, onReply] = screen.getAllByRole('button', { name: '+ Tag' });
       await userEvent.click(onReply);
+      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
 
       expect(mockSetCommentTags).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: 'r1', tags: ['pending'] }),
       );
+    });
+
+    it('tags with any value typed, normalized, alongside existing tags', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({ anchored: [anchoredAt('t1', 'p1', { tags: ['pending'] })] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: '+ Tag' }),
+      );
+      // Already carried, so not suggested again.
+      expect(screen.queryByRole('button', { name: 'pending' })).toBeNull();
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'New tag' }),
+        '  Link Toh 123{Enter}',
+      );
+
+      expect(mockSetCommentTags).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uuid: 't1',
+          tags: ['pending', 'link toh 123'],
+        }),
+      );
+      expect(mockSetFocusedComment).not.toHaveBeenCalled();
+    });
+
+    it('does not write when the input is dismissed', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({ anchored: [anchoredAt('t1', 'p1')] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: '+ Tag' }),
+      );
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'New tag' }),
+        'draft{Escape}',
+      );
+
+      expect(mockSetCommentTags).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: '+ Tag' })).toBeTruthy();
     });
 
     it('untags from the chip', async () => {

@@ -131,8 +131,8 @@ export type Comment = {
   /** Who resolved the thread. Root-only, like `resolvedAt`. */
   resolvedBy?: Maybe<UserInfo>;
   /**
-   * Labels on this comment, root or reply. `pending` is the only one written
-   * today. Independent of resolution.
+   * Labels on this comment, root or reply: any value, stored trimmed and
+   * lowercased. Independent of resolution.
    */
   tags: Array<Scalars['String']['output']>;
   /** When it was last edited, ISO 8601 */
@@ -480,7 +480,8 @@ export type Mutation = {
   savePassages: SavePassagesResult;
   /**
    * Replace a comment's tags. Any comment, root or reply, and any editor may.
-   * Does not change resolution.
+   * Any value is accepted; each is trimmed, lowercased and deduplicated, and one
+   * that is empty or over 40 characters is refused. Does not change resolution.
    * Requires editor.edit permission.
    */
   setCommentTags: CommentResult;

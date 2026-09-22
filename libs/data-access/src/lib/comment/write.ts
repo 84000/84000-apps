@@ -1,7 +1,8 @@
 import {
   COMMENT_COLUMNS,
   isCommentEntityType,
-  isCommentTag,
+  MAX_COMMENT_TAG_LENGTH,
+  normalizeCommentTag,
   commentFromDTO,
   type Comment,
   type CommentDTO,
@@ -324,6 +325,8 @@ export const resolveComment = async ({
  * Replaces a comment's tags. Any comment, root or reply, and any editor, not
  * only the author: tagging is an editorial act, like resolving. Leaves
  * resolution alone, and resolution leaves tags alone.
+ *
+ * Any tag is accepted; each is normalized, and duplicates collapse.
  */
 export const setCommentTags = async ({
   client,
@@ -334,9 +337,12 @@ export const setCommentTags = async ({
   uuid: string;
   tags: readonly string[];
 }): Promise<CommentWriteResult> => {
-  const unknown = tags.filter((tag) => !isCommentTag(tag));
-  if (unknown.length > 0) {
-    return failure(`Unknown comment tag: ${unknown.join(', ')}`);
+  const normalized = tags.map(normalizeCommentTag);
+  const invalid = tags.filter((_tag, i) => !normalized[i]);
+  if (invalid.length > 0) {
+    return failure(
+      `Invalid comment tag: ${invalid.map((tag) => JSON.stringify(tag)).join(', ')}. A tag must be 1 to ${MAX_COMMENT_TAG_LENGTH} characters.`,
+    );
   }
 
   const existing = await readComment(client, uuid);
@@ -345,7 +351,7 @@ export const setCommentTags = async ({
 
   const { data, error } = await client
     .from('comments')
-    .update({ tags: [...new Set(tags)] })
+    .update({ tags: [...new Set(normalized as string[])] })
     .eq('uuid', uuid)
     .select('uuid');
 

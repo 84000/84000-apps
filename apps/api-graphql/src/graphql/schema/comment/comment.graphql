@@ -48,8 +48,8 @@ type Comment {
   resolvedBy: UserInfo
 
   """
-  Labels on this comment, root or reply. `pending` is the only one written
-  today. Independent of resolution.
+  Labels on this comment, root or reply: any value, stored trimmed and
+  lowercased. Independent of resolution.
   """
   tags: [String!]!
 
@@ -93,7 +93,7 @@ extend type Query {
   """
   taggedComments(
     """
-    The tag to list, such as `pending`
+    The tag to list, such as `pending`. Normalized like a written tag.
     """
     tag: String!
 
@@ -232,7 +232,8 @@ extend type Mutation {
 
   """
   Replace a comment's tags. Any comment, root or reply, and any editor may.
-  Does not change resolution.
+  Any value is accepted; each is trimmed, lowercased and deduplicated, and one
+  that is empty or over 40 characters is refused. Does not change resolution.
   Requires editor.edit permission.
   """
   setCommentTags(uuid: ID!, tags: [String!]!): CommentResult!

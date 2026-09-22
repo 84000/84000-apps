@@ -664,17 +664,29 @@ describe('setCommentTags', () => {
     expect(state.comments[0].tags).toEqual(['pending']);
   });
 
-  it('refuses a tag outside the vocabulary without writing', async () => {
+  it('accepts any tag, normalized, with duplicates collapsed', async () => {
     const { client, state } = fakeClient({ comments: [comment()] });
 
     const result = await setCommentTags({
       client,
       uuid: 'root-1',
-      tags: ['pending', 'urgent'],
+      tags: ['Link Toh 123', ' link toh 123', 'pending'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.comments[0].tags).toEqual(['link toh 123', 'pending']);
+  });
+
+  it('refuses an empty tag without writing', async () => {
+    const { client, state } = fakeClient({ comments: [comment()] });
+
+    const result = await setCommentTags({
+      client,
+      uuid: 'root-1',
+      tags: ['pending', '  '],
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('urgent');
     expect(state.ops).not.toContain('update:comments');
   });
 

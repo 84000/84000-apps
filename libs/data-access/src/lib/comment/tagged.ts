@@ -3,6 +3,7 @@ import {
   type Comment,
   type CommentDTO,
   type DataClient,
+  normalizeCommentTag,
 } from '../types';
 import { DEFAULT_CONTENT_SOURCE, type ContentSource } from '../content-source';
 import { getCommentAnchorPassageUuids } from './anchors';
@@ -40,7 +41,8 @@ export const getTaggedComments = async ({
   workUuid?: string;
   source?: ContentSource;
 }): Promise<TaggedComment[]> => {
-  if (source === 'published') return [];
+  const normalized = normalizeCommentTag(tag);
+  if (source === 'published' || !normalized) return [];
 
   const rows: TaggedCommentRow[] = [];
   let offset = 0;
@@ -49,7 +51,7 @@ export const getTaggedComments = async ({
   while (hasMore) {
     const { data, error } = await client
       .rpc('get_tagged_comments', {
-        p_tag: tag,
+        p_tag: normalized,
         p_work_uuid: workUuid ?? null,
       })
       .order('created_at', { ascending: true })
