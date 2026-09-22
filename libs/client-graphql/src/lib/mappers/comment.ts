@@ -13,6 +13,7 @@ export type GraphQLComment = {
   createdAt: string;
   updatedAt?: string | null;
   resolvedAt?: string | null;
+  tags?: string[] | null;
   replyCount?: number | null;
   author: GraphQLUserInfo;
   resolvedBy?: GraphQLUserInfo | null;
@@ -33,6 +34,7 @@ export function commentFromGraphQL(comment: GraphQLComment): CommentThread {
     author: userInfoFromGraphQL(comment.author),
     createdAt: comment.createdAt,
     updatedAt: comment.updatedAt ?? comment.createdAt,
+    tags: comment.tags ?? [],
     replies: comment.replies?.map(commentFromGraphQL) ?? [],
     // What the server says it has, not what this response carried — the two
     // differ wherever the selection stopped short of the branch.

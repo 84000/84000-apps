@@ -1,5 +1,6 @@
 import {
   getCommentThreadByUuid,
+  getTaggedComments,
   type AnnotationDTO,
   type Comment,
 } from '@eightyfourthousand/data-access';
@@ -154,4 +155,20 @@ export const commentQueryResolver = async (
     uuid: args.uuid,
     source: ctx.source,
     ...(args.depth ? { maxDepth: args.depth } : {}),
+  });
+
+/**
+ * Query resolver for `taggedComments`. Gated by the comments RLS, like
+ * `comment`.
+ */
+export const taggedCommentsQueryResolver = async (
+  _parent: unknown,
+  args: { tag: string; workUuid?: string | null },
+  ctx: GraphQLContext,
+) =>
+  getTaggedComments({
+    client: ctx.supabase,
+    tag: args.tag,
+    workUuid: args.workUuid ?? undefined,
+    source: ctx.source,
   });

@@ -35,6 +35,27 @@ export const isCommentEntityType = (
   typeof value === 'string' &&
   (COMMENT_ENTITY_TYPES as readonly string[]).includes(value);
 
+/**
+ * Tags offered when tagging a comment. Suggestions only: a comment may carry any
+ * tag. Tags carry no behaviour, and nothing couples them to resolution.
+ */
+export const COMMENT_TAG_SUGGESTIONS = ['pending'] as const;
+
+/** The longest tag a comment may carry, after normalizing. */
+export const MAX_COMMENT_TAG_LENGTH = 40;
+
+/**
+ * A tag as it is stored: trimmed, lowercased, inner whitespace collapsed, so
+ * `Pending` and `pending ` are one tag. Null when nothing is left or it is too
+ * long.
+ */
+export const normalizeCommentTag = (tag: string): string | null => {
+  const normalized = tag.trim().replace(/\s+/g, ' ').toLowerCase();
+  return normalized && normalized.length <= MAX_COMMENT_TAG_LENGTH
+    ? normalized
+    : null;
+};
+
 export type Comment = {
   uuid: string;
   entityUuid: string;
@@ -52,6 +73,8 @@ export type Comment = {
    */
   resolvedAt?: string;
   resolvedBy?: string;
+  /** Labels on this comment, root or reply, normalized on write. */
+  tags: string[];
   /**
    * Replies to this comment, oldest first, nested to whatever depth the read
    * asked for. Populated only by a read that assembled the tree; a bare
@@ -79,13 +102,14 @@ export type CommentDTO = {
   parent_uuid?: string | null;
   resolved_at?: string | null;
   resolved_by?: string | null;
+  tags?: string[] | null;
 };
 
 export type CommentsDTO = CommentDTO[];
 
 /** The columns every comment read selects. */
 export const COMMENT_COLUMNS =
-  'uuid, parent_uuid, entity_uuid, entity_type, content, user_uuid, created_at, updated_at, resolved_at, resolved_by';
+  'uuid, parent_uuid, entity_uuid, entity_type, content, user_uuid, created_at, updated_at, resolved_at, resolved_by, tags';
 
 /**
  * Nullable columns become absent rather than null, so an unresolved thread and a
@@ -100,6 +124,7 @@ export const commentFromDTO = (dto: CommentDTO): Comment => {
     userUuid: dto.user_uuid,
     createdAt: dto.created_at,
     updatedAt: dto.updated_at,
+    tags: dto.tags ?? [],
   };
 
   if (dto.parent_uuid) comment.parentUuid = dto.parent_uuid;
@@ -125,6 +150,7 @@ export const commentToDTO = (comment: Comment): CommentDTO => {
     user_uuid: comment.userUuid,
     created_at: comment.createdAt,
     updated_at: comment.updatedAt,
+    tags: comment.tags,
   };
 
   if (comment.parentUuid) dto.parent_uuid = comment.parentUuid;
@@ -190,7 +216,11 @@ export const threadsFromComments = (
   // `visited` guards against a parent cycle. Nothing in the schema forbids one
   // — `parent_uuid` is a plain self-reference — and following it blindly would
   // spin forever rather than return a wrong answer.
-  const build = (comment: Comment, depth: number, visited: Set<string>): Comment => {
+  const build = (
+    comment: Comment,
+    depth: number,
+    visited: Set<string>,
+  ): Comment => {
     const children = childrenByParent.get(comment.uuid) ?? [];
     const built: Comment = { ...comment, replyCount: children.length };
 
@@ -229,6 +259,7 @@ export type CommentThread = {
   updatedAt: string;
   resolvedAt?: string;
   resolvedBy?: UserInfo;
+  tags: string[];
   replies: CommentThreads;
   /**
    * Direct replies the server holds, which exceeds `replies.length` wherever a

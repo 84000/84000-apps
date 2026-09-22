@@ -9,6 +9,7 @@ const thread = (uuid: string, createdAt = '2026-09-01T00:00:00Z') =>
     author: { id: 'u1', displayName: 'Editor' },
     createdAt,
     updatedAt: createdAt,
+    tags: [],
     replies: [],
     replyCount: 0,
   }) as CommentThread;

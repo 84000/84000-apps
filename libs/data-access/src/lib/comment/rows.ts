@@ -45,3 +45,28 @@ export const readCommentRows = async (
 
   return rows;
 };
+
+/**
+ * Walks from `uuid` to its thread root within `rows`.
+ *
+ * Returns undefined where the chain cycles or leaves the set. `parent_uuid` is
+ * a plain self-reference with no cycle constraint, and a cycle stores through
+ * ordinary statements; the readers survive one but yield no thread, because no
+ * comment in a cycle is a root.
+ */
+export const rootUuidOf = (
+  uuid: string,
+  rows: CommentDTO[],
+): string | undefined => {
+  const byUuid = new Map(rows.map((row) => [row.uuid, row]));
+  const seen = new Set<string>([uuid]);
+  let row = byUuid.get(uuid);
+
+  while (row?.parent_uuid) {
+    if (seen.has(row.parent_uuid)) return undefined;
+    seen.add(row.parent_uuid);
+    row = byUuid.get(row.parent_uuid);
+  }
+
+  return row?.uuid;
+};

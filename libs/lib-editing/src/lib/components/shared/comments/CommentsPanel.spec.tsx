@@ -8,6 +8,8 @@ const mockGetPassageComments = jest.fn<Promise<PassageComments[]>, unknown[]>();
 const mockResolveComment = jest.fn();
 const mockReplyToComment = jest.fn();
 const mockDeleteComment = jest.fn();
+const mockSetCommentTags = jest.fn();
+const mockGetTaggedComments = jest.fn();
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
@@ -17,9 +19,15 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   resolveComment: (...args: unknown[]) => mockResolveComment(...args),
   updateComment: jest.fn(),
   deleteComment: (...args: unknown[]) => mockDeleteComment(...args),
+  setCommentTags: (...args: unknown[]) => mockSetCommentTags(...args),
+  getTaggedComments: (...args: unknown[]) => mockGetTaggedComments(...args),
 }));
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  COMMENT_TAG_SUGGESTIONS: ['pending'],
+  MAX_COMMENT_TAG_LENGTH: 40,
+  normalizeCommentTag: (tag: string) =>
+    tag.trim().replace(/\s+/g, ' ').toLowerCase() || null,
   createBrowserClient: () => ({}),
   getSession: async () => ({ user: { id: 'u1' } }),
 }));
@@ -51,6 +59,7 @@ const thread = (
   author: { id: 'u1', displayName: 'Editor' },
   createdAt: '2026-09-01T00:00:00Z',
   updatedAt: '2026-09-01T00:00:00Z',
+  tags: [],
   replies: [],
   replyCount: 0,
   ...overrides,
@@ -95,7 +104,10 @@ beforeEach(() => {
   mockGetPassageComments.mockResolvedValue([]);
   mockDeleteComment.mockResolvedValue({ success: true, deletedUuids: [] });
   mockRequestEditorFor.mockResolvedValue(null);
+  mockSetCommentTags.mockResolvedValue({ success: true });
+  mockGetTaggedComments.mockResolvedValue([]);
   document.body.innerHTML = '';
+  window.history.replaceState(null, '', '/');
 });
 
 describe('CommentsPanel', () => {
@@ -494,5 +506,201 @@ describe('CommentsPanel', () => {
     await waitFor(() => expect(mockDeleteComment).toHaveBeenCalled());
     expect(unsetComment).toHaveBeenCalledWith({ comment: 't1' });
     expect(order).toEqual(['unset', 'delete']);
+  });
+
+  describe('tags', () => {
+    const anchoredAt = (uuid: string, passageUuid: string, extra = {}) => ({
+      thread: thread(uuid, extra),
+      anchors: [{ uuid: `a-${uuid}`, passageUuid, start: 0, end: 4 }],
+    });
+
+    it('shows a tag on the comment carrying it, reply included', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({
+          anchored: [
+            anchoredAt('t1', 'p1', {
+              replies: [thread('r1', { tags: ['pending'] })],
+              replyCount: 1,
+            }),
+          ],
+        }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      const chip = await screen.findByText('pending');
+      expect(chip.closest('[data-comment-tag]')).toBeTruthy();
+    });
+
+    it('tags a reply from the suggestions', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({
+          anchored: [
+            anchoredAt('t1', 'p1', {
+              replies: [thread('r1')],
+              replyCount: 1,
+            }),
+          ],
+        }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByText('body of r1');
+
+      const [, onReply] = screen.getAllByRole('button', { name: '+ Tag' });
+      await userEvent.click(onReply);
+      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
+
+      expect(mockSetCommentTags).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid: 'r1', tags: ['pending'] }),
+      );
+    });
+
+    it('tags with any value typed, normalized, alongside existing tags', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({ anchored: [anchoredAt('t1', 'p1', { tags: ['pending'] })] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: '+ Tag' }),
+      );
+      // Already carried, so not suggested again.
+      expect(screen.queryByRole('button', { name: 'pending' })).toBeNull();
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'New tag' }),
+        '  Link Toh 123{Enter}',
+      );
+
+      expect(mockSetCommentTags).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uuid: 't1',
+          tags: ['pending', 'link toh 123'],
+        }),
+      );
+      expect(mockSetFocusedComment).not.toHaveBeenCalled();
+    });
+
+    it('does not write when the input is dismissed', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({ anchored: [anchoredAt('t1', 'p1')] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: '+ Tag' }),
+      );
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'New tag' }),
+        'draft{Escape}',
+      );
+
+      expect(mockSetCommentTags).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: '+ Tag' })).toBeTruthy();
+    });
+
+    it('untags from the chip', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({ anchored: [anchoredAt('t1', 'p1', { tags: ['pending'] })] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Remove pending' }),
+      );
+
+      expect(mockSetCommentTags).toHaveBeenCalledWith(
+        expect.objectContaining({ uuid: 't1', tags: [] }),
+      );
+      expect(mockSetFocusedComment).not.toHaveBeenCalled();
+    });
+
+    it('lists every thread in the work carrying the filter tag, not only those in view', async () => {
+      mockGetTaggedComments.mockResolvedValue([
+        { workUuid: 'w1', threadUuid: 't9', passageUuids: ['p9'] },
+      ]);
+      mockGetPassageComments.mockImplementation(async (...args: unknown[]) =>
+        (args[0] as { passageUuids: string[] }).passageUuids.includes('p9')
+          ? [
+              {
+                passageUuid: 'p9',
+                label: '9.1',
+                type: 'translation',
+                sort: 9,
+                anchored: [anchoredAt('t9', 'p9'), anchoredAt('t8', 'p9')],
+                unanchored: [],
+              },
+            ]
+          : page({ anchored: [anchoredAt('t1', 'p1')] }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByText('body of t1');
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Filter by tag' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
+
+      expect(await screen.findByText('body of t9')).toBeTruthy();
+      expect(screen.queryByText('body of t8')).toBeNull();
+      expect(screen.queryByText('body of t1')).toBeNull();
+    });
+
+    it('opens filtered when the URL names a tag', async () => {
+      window.history.replaceState(null, '', '/?commentTag=Pending');
+      mockGetTaggedComments.mockResolvedValue([]);
+
+      render(<CommentsPanel workUuid="w1" />);
+
+      expect(
+        await screen.findByText('No comments tagged “pending” in this work.'),
+      ).toBeTruthy();
+      expect(mockGetTaggedComments).toHaveBeenCalledWith(
+        expect.objectContaining({ tag: 'pending', workUuid: 'w1' }),
+      );
+    });
+
+    it('filters by any tag typed, and suggests tags already in view', async () => {
+      mockGetPassageComments.mockResolvedValue(
+        page({
+          anchored: [anchoredAt('t1', 'p1', { tags: ['needs source'] })],
+        }),
+      );
+
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByText('body of t1');
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Filter by tag' }),
+      );
+      expect(screen.getByRole('button', { name: 'pending' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'needs source' })).toBeTruthy();
+
+      await userEvent.type(
+        screen.getByRole('textbox', { name: 'Filter tag' }),
+        'Link Toh 123{Enter}',
+      );
+
+      expect(mockGetTaggedComments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tag: 'link toh 123', workUuid: 'w1' }),
+      );
+      await userEvent.click(
+        await screen.findByRole('button', {
+          name: 'Clear link toh 123 filter',
+        }),
+      );
+      expect(await screen.findByText('body of t1')).toBeTruthy();
+    });
+
+    it('reads no tagged comments until a filter is chosen', async () => {
+      render(<CommentsPanel workUuid="w1" />);
+      await screen.findByRole('button', { name: 'Filter by tag' });
+
+      expect(mockGetTaggedComments).not.toHaveBeenCalled();
+    });
   });
 });

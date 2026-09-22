@@ -1,4 +1,7 @@
-import { getAnchoredCommentUuids } from './anchors';
+import {
+  getAnchoredCommentUuids,
+  getCommentAnchorPassageUuids,
+} from './anchors';
 import type { DataClient } from '../types';
 
 type RpcCall = { name: string; args: Record<string, unknown> };
@@ -8,7 +11,7 @@ const clientWith = ({
   error,
   calls = [],
 }: {
-  rows?: { target_uuid: string | null }[];
+  rows?: { passage_uuid?: string | null; target_uuid: string | null }[];
   error?: { message: string };
   calls?: RpcCall[];
 }) =>
@@ -100,5 +103,37 @@ describe('getAnchoredCommentUuids', () => {
     });
 
     expect(calls).toEqual([]);
+  });
+});
+
+describe('getCommentAnchorPassageUuids', () => {
+  it('groups anchoring passages by comment, without repeats', async () => {
+    const passages = await getCommentAnchorPassageUuids({
+      client: clientWith({
+        rows: [
+          { passage_uuid: 'p1', target_uuid: 'a' },
+          { passage_uuid: 'p1', target_uuid: 'a' },
+          { passage_uuid: 'p2', target_uuid: 'a' },
+          { passage_uuid: 'p3', target_uuid: 'b' },
+        ],
+      }),
+      commentUuids: ['a', 'b', 'c'],
+      source: 'draft',
+    });
+
+    expect(Object.fromEntries(passages ?? [])).toEqual({
+      a: ['p1', 'p2'],
+      b: ['p3'],
+    });
+  });
+
+  it('returns null when the read fails', async () => {
+    const passages = await getCommentAnchorPassageUuids({
+      client: clientWith({ error: { message: 'boom' } }),
+      commentUuids: ['a'],
+      source: 'draft',
+    });
+
+    expect(passages).toBeNull();
   });
 });

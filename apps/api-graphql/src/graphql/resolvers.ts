@@ -47,6 +47,7 @@ import {
   commentRepliesResolver,
   commentReplyCountResolver,
   commentResolvedByResolver,
+  taggedCommentsQueryResolver,
 } from './schema/comment/comment.resolver';
 import { commentMutations } from './schema/comment/comment.mutation';
 
@@ -64,6 +65,7 @@ export const resolvers = {
     glossaryTermPassages: glossaryTermPassagesPageResolver,
     bibliographyEntry: bibliographyEntryResolver,
     comment: commentQueryResolver,
+    taggedComments: taggedCommentsQueryResolver,
     search: searchResolver,
   },
 

@@ -5,17 +5,22 @@ import {
   deleteComment,
   getCommentThread,
   getPassageComments,
+  getTaggedComments,
   replyToComment,
   resolveComment,
+  setCommentTags,
   updateComment,
   type PassageComments,
 } from '@eightyfourthousand/client-graphql';
 import {
   createBrowserClient,
+  COMMENT_TAG_SUGGESTIONS,
   getSession,
+  normalizeCommentTag,
   type CommentThread,
 } from '@eightyfourthousand/data-access';
-import { Button } from '@eightyfourthousand/design-system';
+import { Badge, Button } from '@eightyfourthousand/design-system';
+import { XIcon } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getEditorForElement } from '../../editor/util';
@@ -26,9 +31,40 @@ import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
+import { COMMENT_TAG_PARAM } from './tags';
+import { TagPicker } from './TagPicker';
+
+/** How many passages one comments read covers. */
+const PASSAGES_PER_READ = 100;
+
+/** Where the work's threads carrying a tag are, and which threads they are. */
+type TaggedThreads = { threadUuids: Set<string>; passageUuids: string[] };
+
+const initialFilterTag = () =>
+  typeof window === 'undefined'
+    ? undefined
+    : (normalizeCommentTag(
+        new URLSearchParams(window.location.search).get(COMMENT_TAG_PARAM) ??
+          '',
+      ) ?? undefined);
+
+/** Every tag on the threads in `passages`, replies included. */
+const tagsIn = (passages: PassageComments[]): string[] => {
+  const tags = new Set<string>();
+  const walk = (comment: CommentThread) => {
+    comment.tags.forEach((tag) => tags.add(tag));
+    comment.replies.forEach(walk);
+  };
+  for (const passage of passages) {
+    passage.anchored.forEach(({ thread }) => walk(thread));
+    passage.unanchored.forEach(walk);
+  }
+  return [...tags].sort();
+};
 
 /**
- * Comment threads for the passages on screen, beside the text they annotate.
+ * Comment threads for the passages on screen, beside the text they annotate,
+ * or, filtered by a tag, every thread in the work carrying it.
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
@@ -49,6 +85,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
+  const [filterTag, setFilterTag] = useState(initialFilterTag);
+  const [taggedThreads, setTaggedThreads] = useState<TaggedThreads>();
   const [currentUserId, setCurrentUserId] = useState<string>();
   const [hovered, setHovered] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
@@ -67,28 +105,75 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const reload = useCallback(() => setReadCount((count) => count + 1), []);
 
   useEffect(() => {
+    if (!filterTag) return;
+
+    let current = true;
+
+    (async () => {
+      const tagged = await getTaggedComments({
+        client,
+        tag: filterTag,
+        workUuid,
+      });
+      if (!current) return;
+
+      setTaggedThreads({
+        threadUuids: new Set(
+          tagged.flatMap(({ threadUuid }) => (threadUuid ? [threadUuid] : [])),
+        ),
+        passageUuids: [
+          ...new Set(tagged.flatMap(({ passageUuids }) => passageUuids)),
+        ],
+      });
+    })();
+
+    return () => {
+      current = false;
+    };
+  }, [client, workUuid, filterTag, readCount, commentsRevision]);
+
+  // Filtered, the panel reads where the tagged threads are rather than what is
+  // on screen.
+  const readUuids = filterTag ? taggedThreads?.passageUuids : passageUuids;
+
+  useEffect(() => {
+    if (!readUuids) return;
+
     // Scrolling changes the passage set while a read is in flight, and the
     // responses need not come back in order.
     let current = true;
 
     (async () => {
-      const read = await getPassageComments({
-        client,
-        workUuid,
-        passageUuids,
-      });
+      const chunks: string[][] = [];
+      for (let i = 0; i < readUuids.length; i += PASSAGES_PER_READ) {
+        chunks.push(readUuids.slice(i, i + PASSAGES_PER_READ));
+      }
+
+      const reads = await Promise.all(
+        chunks.map((uuids) =>
+          getPassageComments({ client, workUuid, passageUuids: uuids }),
+        ),
+      );
       if (!current) return;
-      setPassages(read);
+      setPassages(reads.flat());
       setLoading(false);
     })();
 
     return () => {
       current = false;
     };
-  }, [client, workUuid, passageUuids, readCount, commentsRevision]);
+  }, [client, workUuid, readUuids, readCount, commentsRevision]);
 
   const { anchored, unanchored } = useMemo(() => {
-    const ordered = orderThreads(passages);
+    const all = orderThreads(passages);
+    const isTagged = ({ thread }: PanelThread) =>
+      !!taggedThreads?.threadUuids.has(thread.uuid);
+    const ordered = filterTag
+      ? {
+          anchored: all.anchored.filter(isTagged),
+          unanchored: all.unanchored.filter(isTagged),
+        }
+      : all;
 
     if (typeof document === 'undefined') {
       return ordered;
@@ -114,7 +199,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages]);
+  }, [passages, taggedThreads, filterTag]);
 
   const resolvedCount = useMemo(
     () =>
@@ -223,6 +308,10 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         await resolveComment({ client, uuid, resolved });
         reload();
       },
+      setTags: async (uuid, tags) => {
+        await setCommentTags({ client, uuid, tags });
+        reload();
+      },
       expand: async (uuid) => {
         const branch = await getCommentThread({ client, uuid, depth: 10 });
         if (!branch) return;
@@ -259,11 +348,45 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
 
   const anchoredVisible = visible(anchored);
   const unanchoredVisible = visible(unanchored);
+  const filterSuggestions = [
+    ...new Set([...COMMENT_TAG_SUGGESTIONS, ...tagsIn(passages)]),
+  ];
+
+  const changeFilter = (tag?: string) => {
+    if (tag === filterTag) return;
+    setLoading(true);
+    setTaggedThreads(undefined);
+    setFilterTag(tag);
+  };
 
   return (
     <div ref={listRef} className="pb-8">
-      {resolvedCount > 0 && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-1 flex-wrap">
+        {filterTag ? (
+          <Badge
+            variant="outline"
+            data-comment-filter={filterTag}
+            className="gap-0.5 px-1.5 py-0 text-[10px] font-medium"
+          >
+            {filterTag}
+            <button
+              type="button"
+              aria-label={`Clear ${filterTag} filter`}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              onClick={() => changeFilter(undefined)}
+            >
+              <XIcon className="size-2.5" />
+            </button>
+          </Badge>
+        ) : (
+          <TagPicker
+            label="Filter by tag"
+            inputLabel="Filter tag"
+            suggestions={filterSuggestions}
+            onPick={changeFilter}
+          />
+        )}
+        {resolvedCount > 0 && (
           <Button
             size="xs"
             variant="ghost"
@@ -272,8 +395,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
           >
             {showResolved ? 'Hide resolved' : `Show ${resolvedCount} resolved`}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {loading && (
         <p className="text-xs text-muted-foreground py-4">Loading comments…</p>
@@ -283,7 +406,9 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         anchoredVisible.length === 0 &&
         unanchoredVisible.length === 0 && (
           <p className="text-xs text-muted-foreground py-4">
-            No comments on the passages in view.
+            {filterTag
+              ? `No comments tagged “${filterTag}” in this work.`
+              : 'No comments on the passages in view.'}
           </p>
         )}
 

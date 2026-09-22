@@ -100,7 +100,14 @@ export type Comment = {
   __typename?: 'Comment';
   /** Who wrote it */
   author: UserInfo;
-  /** The comment body */
+  /**
+   * The comment body, as a sanitized HTML fragment.
+   *
+   * Not plain text: render it as markup, not as characters. Every write this API
+   * makes is sanitized, and so is every write through `data-access` — which is
+   * what the MCP server uses. A client holding a database role that can write the
+   * table directly is not covered.
+   */
   content: Scalars['String']['output'];
   /** When it was written, ISO 8601 */
   createdAt: Scalars['String']['output'];
@@ -123,6 +130,11 @@ export type Comment = {
   resolvedAt?: Maybe<Scalars['String']['output']>;
   /** Who resolved the thread. Root-only, like `resolvedAt`. */
   resolvedBy?: Maybe<UserInfo>;
+  /**
+   * Labels on this comment, root or reply: any value, stored trimmed and
+   * lowercased. Independent of resolution.
+   */
+  tags: Array<Scalars['String']['output']>;
   /** When it was last edited, ISO 8601 */
   updatedAt?: Maybe<Scalars['String']['output']>;
   /** Unique identifier for the comment */
@@ -147,7 +159,12 @@ export type CommentResult = {
  * entity its thread does not belong to.
  */
 export type CreateCommentInput = {
-  /** The comment body */
+  /**
+   * The comment body, as an HTML fragment.
+   *
+   * Anything outside what a comment may hold is stripped on write rather than
+   * rejected, so a body that is nothing but such markup is refused as empty.
+   */
   content: Scalars['String']['input'];
   /** What kind of entity that is. Only `passage` is accepted. */
   entityType: Scalars['String']['input'];
@@ -462,6 +479,13 @@ export type Mutation = {
    */
   savePassages: SavePassagesResult;
   /**
+   * Replace a comment's tags. Any comment, root or reply, and any editor may.
+   * Any value is accepted; each is trimmed, lowercased and deduplicated, and one
+   * that is empty or over 40 characters is refused. Does not change resolution.
+   * Requires editor.edit permission.
+   */
+  setCommentTags: CommentResult;
+  /**
    * Edit a comment's body. The author only.
    * Requires editor.edit permission.
    */
@@ -526,6 +550,13 @@ export type MutationResolveCommentArgs = {
 export type MutationSavePassagesArgs = {
   deletedUuids?: InputMaybe<Array<Scalars['ID']['input']>>;
   passages: Array<PassageInput>;
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationSetCommentTagsArgs = {
+  tags: Array<Scalars['String']['input']>;
+  uuid: Scalars['ID']['input'];
 };
 
 
@@ -897,6 +928,11 @@ export type Query = {
    * Draft requires `editor.read`.
    */
   search: Array<EntitySearchResult>;
+  /**
+   * Comments carrying `tag`, oldest first, across the library or within one
+   * work. Empty for a `published` content source.
+   */
+  taggedComments: Array<TaggedComment>;
   /** Get the current API version */
   version: Scalars['String']['output'];
   /**
@@ -1001,6 +1037,13 @@ export type QuerySearchArgs = {
 
 
 /** Root Query type - extend this in other schema files */
+export type QueryTaggedCommentsArgs = {
+  tag: Scalars['String']['input'];
+  workUuid?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+/** Root Query type - extend this in other schema files */
 export type QueryWorkArgs = {
   toh?: InputMaybe<Scalars['String']['input']>;
   uuid?: InputMaybe<Scalars['ID']['input']>;
@@ -1067,6 +1110,20 @@ export type SavePassagesResult = {
   savedCount: Scalars['Int']['output'];
   /** Whether the save was successful */
   success: Scalars['Boolean']['output'];
+};
+
+/** A tagged comment, placed in its work and thread. */
+export type TaggedComment = {
+  __typename?: 'TaggedComment';
+  comment: Comment;
+  /**
+   * Where the thread sits: the passages anchoring it, or the passage it was
+   * written on when nothing anchors it.
+   */
+  passageUuids: Array<Scalars['ID']['output']>;
+  /** The root of the comment's thread. Null when its parent chain is broken. */
+  threadUuid?: Maybe<Scalars['ID']['output']>;
+  workUuid: Scalars['ID']['output'];
 };
 
 /** A title of a work in a specific language */
@@ -1421,7 +1478,7 @@ export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: str
 
 export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
 
-export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, replyCount: number, author: (
+export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, tags: Array<string>, replyCount: number, author: (
     { __typename?: 'UserInfo' }
     & UserInfoFieldsFragment
   ), resolvedBy?: (
@@ -1818,6 +1875,7 @@ export const CommentFieldsFragmentDoc = gql`
   createdAt
   updatedAt
   resolvedAt
+  tags
   replyCount
   author {
     ...UserInfoFields

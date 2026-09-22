@@ -3,6 +3,7 @@ import {
   deleteComment,
   replyToComment,
   resolveComment,
+  setCommentTags,
   updateComment,
 } from './write';
 import type { CommentDTO, DataClient } from '../types';
@@ -177,6 +178,7 @@ const comment = (overrides: Partial<CommentDTO> = {}): CommentDTO => ({
   parent_uuid: null,
   resolved_at: null,
   resolved_by: null,
+  tags: [],
   ...overrides,
 });
 
@@ -604,5 +606,119 @@ describe('deleteComment', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('refused');
     expect(state.comments).toHaveLength(1);
+  });
+});
+
+describe('setCommentTags', () => {
+  it('tags a reply, by an editor who is not its author', async () => {
+    const { client, state } = fakeClient({
+      comments: [
+        comment({ uuid: 'root-1' }),
+        comment({ uuid: 'reply-1', parent_uuid: 'root-1' }),
+      ],
+    });
+
+    const result = await setCommentTags({
+      client,
+      uuid: 'reply-1',
+      tags: ['pending'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.comments[1].tags).toEqual(['pending']);
+  });
+
+  it('untags by setting none', async () => {
+    const { client, state } = fakeClient({
+      comments: [comment({ tags: ['pending'] })],
+    });
+
+    await setCommentTags({ client, uuid: 'root-1', tags: [] });
+
+    expect(state.comments[0].tags).toEqual([]);
+  });
+
+  it('writes only tags, leaving resolution alone', async () => {
+    const resolved = {
+      resolved_at: '2026-09-15T12:00:00Z',
+      resolved_by: OTHER,
+    };
+    const { client, state } = fakeClient({
+      comments: [comment(resolved)],
+    });
+
+    await setCommentTags({ client, uuid: 'root-1', tags: ['pending'] });
+
+    expect(state.comments[0]).toMatchObject(resolved);
+  });
+
+  it('dedupes', async () => {
+    const { client, state } = fakeClient({ comments: [comment()] });
+
+    await setCommentTags({
+      client,
+      uuid: 'root-1',
+      tags: ['pending', 'pending'],
+    });
+
+    expect(state.comments[0].tags).toEqual(['pending']);
+  });
+
+  it('accepts any tag, normalized, with duplicates collapsed', async () => {
+    const { client, state } = fakeClient({ comments: [comment()] });
+
+    const result = await setCommentTags({
+      client,
+      uuid: 'root-1',
+      tags: ['Link Toh 123', ' link toh 123', 'pending'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.comments[0].tags).toEqual(['link toh 123', 'pending']);
+  });
+
+  it('refuses an empty tag without writing', async () => {
+    const { client, state } = fakeClient({ comments: [comment()] });
+
+    const result = await setCommentTags({
+      client,
+      uuid: 'root-1',
+      tags: ['pending', '  '],
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.ops).not.toContain('update:comments');
+  });
+
+  it('reports an error when the database filters the update away', async () => {
+    const { client } = fakeClient({
+      comments: [comment()],
+      refuseWrites: true,
+    });
+
+    const result = await setCommentTags({
+      client,
+      uuid: 'root-1',
+      tags: ['pending'],
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('resolveComment and tags', () => {
+  it('leaves tags alone', async () => {
+    const { client, state } = fakeClient({
+      comments: [comment({ tags: ['pending'] })],
+    });
+
+    await resolveComment({
+      client,
+      uuid: 'root-1',
+      resolved: true,
+      userUuid: AUTHOR,
+    });
+
+    expect(state.comments[0].tags).toEqual(['pending']);
   });
 });
