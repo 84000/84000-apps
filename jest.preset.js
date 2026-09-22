@@ -1,19 +1,27 @@
 const nxPreset = require('@nx/jest/preset').default;
 
 // Dependencies that reach Jest as ESM, which it cannot require as-is. Naming a
-// package here also covers its own nested dependencies, which npm installs
-// under `node_modules/<pkg>/node_modules/` and which are ESM just as often.
+// package here also covers the copies npm installs under its own
+// `node_modules`, which are ESM just as often -- `sanitize-html` is itself CJS
+// and is here only for the parser beneath it.
 //
-// Un-ignoring is only half of it: `@nx/react/babel` leaves `import` alone, so
-// each project's transform adds `@babel/plugin-transform-modules-commonjs`.
+// Shared rather than per project because `data-access` is in almost every
+// project's graph, so four of them load the sanitizer transitively and the
+// fifth would meet a parse error with nothing pointing at the fix.
 const esmDeps = ['uuid', 'sanitize-html'];
 
 module.exports = {
   ...nxPreset,
   transformIgnorePatterns: [
-    // Matched against the whole path rather than each `node_modules` segment,
-    // so a nested copy is transformed along with the package that brought it.
-    `^(?!.*/(?:${esmDeps.join('|')})/).*/node_modules/`,
+    // Everything under `node_modules` is ignored unless one of the names above
+    // appears as a directory below it, which is what covers a nested copy.
+    //
+    // The prefix is anchored and forbids an earlier `node_modules`, so the scan
+    // happens once, at the first one. Without that a checkout living under a
+    // directory sharing one of these names would un-ignore every dependency --
+    // and the nested copy this is for would be missed anyway, because the
+    // engine would simply retry at the inner `node_modules`.
+    `^(?:(?!/node_modules/).)*/node_modules/(?!(?:.*/)?(?:${esmDeps.join('|')})/)`,
     '\\.pnp\\.[^\\/]+$',
   ],
 };

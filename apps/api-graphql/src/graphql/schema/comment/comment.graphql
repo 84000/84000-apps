@@ -14,8 +14,10 @@ type Comment {
   """
   The comment body, as a sanitized HTML fragment.
 
-  Not plain text: render it as markup, not as characters. It is sanitized on
-  write, so it is already safe to render as-is.
+  Not plain text: render it as markup, not as characters. Every write this API
+  makes is sanitized, and so is every write through `data-access` — which is
+  what the MCP server uses. A client holding a database role that can write the
+  table directly is not covered.
   """
   content: String!
 

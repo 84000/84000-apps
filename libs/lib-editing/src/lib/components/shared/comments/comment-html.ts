@@ -7,6 +7,13 @@ const ESCAPES: Record<string, string> = {
 
 const escape = (text: string) => text.replace(/[&<>"]/g, (c) => ESCAPES[c]);
 
+const UNESCAPES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+};
+
 /**
  * What a person typed, as the fragment a comment is stored as.
  *
@@ -29,18 +36,22 @@ export const commentHtmlFromText = (text: string): string =>
 /**
  * The fragment back as text, for editing it.
  *
- * Lossless only because a comment holds nothing a textarea cannot show — see
- * the comment allowlist. Anything richer has to arrive with an editing surface
- * that can show it, or editing would quietly flatten it.
+ * Reverses `commentHtmlFromText` exactly, and knows the whole of what a comment
+ * may hold: paragraphs, breaks, and the escapes written above. Widen the
+ * allowlist and this widens with it.
+ *
+ * Deliberately not `innerHTML` on a scratch element. That needs a document,
+ * which leaves the server with a fallback to pick, and every fallback is bad:
+ * returning the fragment puts markup in the textarea, and the next save escapes
+ * it into the body for good.
+ *
+ * Unescaping comes last, so an escaped `&lt;br /&gt;` someone typed stays text
+ * rather than becoming a line break.
  */
-export const commentTextFromHtml = (html: string): string => {
-  if (typeof document === 'undefined') return html;
-
-  const withBreaks = html
+export const commentTextFromHtml = (html: string): string =>
+  html
     .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
-
-  const el = document.createElement('div');
-  el.innerHTML = withBreaks;
-  return (el.textContent ?? '').trim();
-};
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<\/?p[^>]*>/gi, '')
+    .replace(/&(amp|lt|gt|quot);/g, (entity) => UNESCAPES[entity])
+    .trim();

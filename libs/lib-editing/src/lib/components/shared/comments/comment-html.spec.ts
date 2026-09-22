@@ -53,6 +53,25 @@ describe('commentTextFromHtml', () => {
     expect(commentTextFromHtml('Just text')).toBe('Just text');
   });
 
+  it('needs no document, so the server cannot get a different answer', () => {
+    // A fallback here would put markup in the textarea, and the next save would
+    // escape it into the body for good.
+    const doc = global.document;
+    try {
+      // @ts-expect-error -- standing in for a server render
+      delete global.document;
+      expect(commentTextFromHtml('<p>One<br />two</p>')).toBe('One\ntwo');
+    } finally {
+      global.document = doc;
+    }
+  });
+
+  it('unescapes last, so an escaped tag someone typed stays text', () => {
+    expect(commentTextFromHtml('<p>&lt;br /&gt; is a tag</p>')).toBe(
+      '<br /> is a tag',
+    );
+  });
+
   it('is empty for an empty fragment', () => {
     expect(commentTextFromHtml('')).toBe('');
   });

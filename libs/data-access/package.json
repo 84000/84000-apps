@@ -22,7 +22,8 @@
     "@supabase/supabase-js": "^2.106.2",
     "@tiptap/core": "^3.23.6",
     "jwt-decode": "^4.0.0",
-    "resend": "^6.12.4"
+    "resend": "^6.12.4",
+    "sanitize-html": "^2.17.7"
   },
   "peerDependencies": {
     "next": "^16.0.0",

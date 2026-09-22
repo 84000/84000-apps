@@ -1,3 +1,7 @@
+// `sanitize-html`'s parser is ESM only. The shared preset un-ignores it; this is
+// the other half, because `@nx/react/babel` leaves `import` alone. Only this
+// project has needed it so far -- the others that load the sanitizer transitively
+// convert it without help.
 export default {
   displayName: 'data-access',
   preset: '../../jest.preset.js',
@@ -7,9 +11,8 @@ export default {
       'babel-jest',
       {
         presets: ['@nx/react/babel'],
-        // `@nx/react/babel` leaves ESM alone, so an ESM-only dependency reaches
-        // Jest as `import` and fails to parse. Un-ignoring it in the preset is
-        // only half the job; this is the half that converts it.
+        // Un-ignoring is only half the job: `@nx/react/babel` leaves `import`
+        // alone, and this is the half that converts it.
         plugins: ['@babel/plugin-transform-modules-commonjs'],
       },
     ],

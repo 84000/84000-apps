@@ -63,6 +63,4 @@ export const sanitizeHtml = ({
  * rather than stored blank.
  */
 export const htmlHasText = (html: string): boolean =>
-  sanitize(html, { allowedTags: [], allowedAttributes: {} })
-    .replace(/&nbsp;/g, ' ')
-    .trim().length > 0;
+  sanitize(html, { allowedTags: [], allowedAttributes: {} }).trim().length > 0;

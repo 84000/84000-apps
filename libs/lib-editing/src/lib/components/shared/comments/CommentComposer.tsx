@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@eightyfourthousand/design-system';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { commentHtmlFromText, commentTextFromHtml } from './comment-html';
 
 /**
@@ -29,7 +29,10 @@ export const CommentComposer = ({
   onSubmit: (content: string) => Promise<void> | void;
   onCancel?: () => void;
 }) => {
-  const initialText = commentTextFromHtml(initialValue);
+  const initialText = useMemo(
+    () => commentTextFromHtml(initialValue),
+    [initialValue],
+  );
   const [value, setValue] = useState(initialText);
   const [saving, setSaving] = useState(false);
 
