@@ -5,6 +5,7 @@ import {
   commentToDTO,
   commentsFromDTO,
   isCommentEntityType,
+  isCommentTag,
   threadsFromComments,
 } from './comment';
 
@@ -19,6 +20,7 @@ const rootDTO: CommentDTO = {
   updated_at: '2026-09-10T10:00:00+00:00',
   resolved_at: null,
   resolved_by: null,
+  tags: [],
 };
 
 const replyDTO: CommentDTO = {
@@ -27,6 +29,7 @@ const replyDTO: CommentDTO = {
   parent_uuid: 'c-1',
   content: 'it is',
   user_uuid: 'u-2',
+  tags: ['pending'],
   created_at: '2026-09-10T11:00:00+00:00',
   updated_at: '2026-09-10T11:00:00+00:00',
 };
@@ -50,7 +53,18 @@ describe('commentFromDTO', () => {
       userUuid: 'u-1',
       createdAt: '2026-09-10T10:00:00+00:00',
       updatedAt: '2026-09-10T10:00:00+00:00',
+      tags: [],
     });
+  });
+
+  it('reads missing tags as none', () => {
+    const { tags: _tags, ...untagged } = rootDTO;
+    expect(commentFromDTO({ ...untagged, tags: null }).tags).toEqual([]);
+    expect(commentFromDTO(untagged).tags).toEqual([]);
+  });
+
+  it('carries tags on a reply', () => {
+    expect(commentFromDTO(replyDTO).tags).toEqual(['pending']);
   });
 
   it('drops nulls rather than carrying them through', () => {
@@ -103,6 +117,17 @@ describe('comment round trip', () => {
 describe('commentsFromDTO', () => {
   it('returns empty for missing input', () => {
     expect(commentsFromDTO()).toEqual([]);
+  });
+});
+
+describe('isCommentTag', () => {
+  it.each([
+    ['pending', true],
+    ['Pending', false],
+    ['', false],
+    [undefined, false],
+  ])('narrows %s to %s', (value, expected) => {
+    expect(isCommentTag(value)).toBe(expected);
   });
 });
 

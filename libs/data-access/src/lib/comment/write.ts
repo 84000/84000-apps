@@ -1,6 +1,7 @@
 import {
   COMMENT_COLUMNS,
   isCommentEntityType,
+  isCommentTag,
   commentFromDTO,
   type Comment,
   type CommentDTO,
@@ -8,7 +9,7 @@ import {
   type DataClient,
 } from '../types';
 import { COMMENT_ALLOWLIST, htmlHasText, sanitizeHtml } from '../html';
-import { readCommentRows } from './rows';
+import { readCommentRows, rootUuidOf } from './rows';
 import { getCommentThreadByUuid } from './threads';
 
 /** The outcome of a comment write. `comment` carries the saved row on success. */
@@ -76,28 +77,6 @@ const readComment = async (
 
   const [row] = rows;
   return row ? { row } : {};
-};
-
-/**
- * Walks from `uuid` to its thread root within `rows`.
- *
- * Returns undefined where the chain cycles or leaves the set. `parent_uuid` is
- * a plain self-reference with no cycle constraint, and a cycle stores through
- * ordinary statements; the readers survive one but yield no thread, because no
- * comment in a cycle is a root.
- */
-const rootUuidOf = (uuid: string, rows: CommentDTO[]): string | undefined => {
-  const byUuid = new Map(rows.map((row) => [row.uuid, row]));
-  const seen = new Set<string>([uuid]);
-  let row = byUuid.get(uuid);
-
-  while (row?.parent_uuid) {
-    if (seen.has(row.parent_uuid)) return undefined;
-    seen.add(row.parent_uuid);
-    row = byUuid.get(row.parent_uuid);
-  }
-
-  return row?.uuid;
 };
 
 /**
@@ -334,6 +313,44 @@ export const resolveComment = async ({
 
   if (error) {
     console.error('Error resolving comment:', error);
+    return failure(error.message);
+  }
+  if (!data?.length) return failure(REFUSED);
+
+  return readWritten(client, uuid);
+};
+
+/**
+ * Replaces a comment's tags. Any comment, root or reply, and any editor, not
+ * only the author: tagging is an editorial act, like resolving. Leaves
+ * resolution alone, and resolution leaves tags alone.
+ */
+export const setCommentTags = async ({
+  client,
+  uuid,
+  tags,
+}: {
+  client: DataClient;
+  uuid: string;
+  tags: readonly string[];
+}): Promise<CommentWriteResult> => {
+  const unknown = tags.filter((tag) => !isCommentTag(tag));
+  if (unknown.length > 0) {
+    return failure(`Unknown comment tag: ${unknown.join(', ')}`);
+  }
+
+  const existing = await readComment(client, uuid);
+  if (existing.error) return failure(existing.error);
+  if (!existing.row) return failure(`No comment found for ${uuid}`);
+
+  const { data, error } = await client
+    .from('comments')
+    .update({ tags: [...new Set(tags)] })
+    .eq('uuid', uuid)
+    .select('uuid');
+
+  if (error) {
+    console.error('Error tagging comment:', error);
     return failure(error.message);
   }
   if (!data?.length) return failure(REFUSED);
