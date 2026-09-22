@@ -52,12 +52,11 @@ export const TranslationBuilder = ({
 
   useEffect(() => {
     (async () => {
-      const isEditable = await canEdit();
-
-      setIsEditable(isEditable);
-      if (isEditable) {
-        setFragment(getFragment(name));
-      }
+      // The fragment is what the translation is drawn from, editable or not.
+      // Binding it only for `editor.edit` left everyone else — `manager`, who
+      // holds `editor.read` — on a skeleton with no text at all.
+      setIsEditable(await canEdit());
+      setFragment(getFragment(name));
     })();
   }, [name, canEdit, getFragment]);
 

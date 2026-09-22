@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  configure,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { TooltipProvider } from '@eightyfourthousand/design-system';
 import {
   SemVer,
@@ -6,6 +12,11 @@ import {
   Work,
 } from '@eightyfourthousand/data-access';
 import { TranslationsTable } from './TranslationTable';
+
+// Every search here waits on a 250ms debounce, which leaves only 750ms of the
+// default budget — enough on an idle machine and not enough on a loaded one.
+// These assertions are about what the filter returns, not how fast.
+configure({ asyncUtilTimeout: 5000 });
 
 let mockSearchParams: URLSearchParams;
 
@@ -280,12 +291,8 @@ describe('TranslationsTable', () => {
 
     const headers = screen.getAllByRole('columnheader');
     // 40 + 28 + pages 7 + date 10 + version 7 + restriction 4 = 96 shares
-    expect((headers[0] as HTMLElement).style.width).toBe(
-      `${(40 / 96) * 100}%`,
-    );
-    expect((headers[1] as HTMLElement).style.width).toBe(
-      `${(28 / 96) * 100}%`,
-    );
+    expect((headers[0] as HTMLElement).style.width).toBe(`${(40 / 96) * 100}%`);
+    expect((headers[1] as HTMLElement).style.width).toBe(`${(28 / 96) * 100}%`);
   });
 
   it('ignores unknown columns in stored widths', () => {
@@ -297,9 +304,7 @@ describe('TranslationsTable', () => {
 
     const headers = screen.getAllByRole('columnheader');
     // defaults: title 58 of 96 total shares
-    expect((headers[0] as HTMLElement).style.width).toBe(
-      `${(58 / 96) * 100}%`,
-    );
+    expect((headers[0] as HTMLElement).style.width).toBe(`${(58 / 96) * 100}%`);
   });
 
   it('clears the search when the clear button is clicked', async () => {
