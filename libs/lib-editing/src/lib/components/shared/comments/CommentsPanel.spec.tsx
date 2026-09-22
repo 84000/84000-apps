@@ -7,6 +7,7 @@ import { CommentsPanel } from './CommentsPanel';
 const mockGetPassageComments = jest.fn<Promise<PassageComments[]>, unknown[]>();
 const mockResolveComment = jest.fn();
 const mockReplyToComment = jest.fn();
+const mockDeleteComment = jest.fn();
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
@@ -15,7 +16,7 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   replyToComment: (...args: unknown[]) => mockReplyToComment(...args),
   resolveComment: (...args: unknown[]) => mockResolveComment(...args),
   updateComment: jest.fn(),
-  deleteComment: jest.fn(),
+  deleteComment: (...args: unknown[]) => mockDeleteComment(...args),
 }));
 
 jest.mock('@eightyfourthousand/data-access', () => ({
@@ -25,10 +26,13 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 
 const mockSetFocusedComment = jest.fn();
 const mockUpdatePanel = jest.fn();
+const mockRequestEditorFor = jest.fn();
 const mockNavigation: { focusedComment?: string } = {};
 jest.mock('../NavigationProvider', () => ({
   useNavigation: () => ({
+    commentsRevision: 0,
     focusedComment: mockNavigation.focusedComment,
+    requestEditorFor: mockRequestEditorFor,
     setFocusedComment: mockSetFocusedComment,
     updatePanel: mockUpdatePanel,
   }),
@@ -75,11 +79,23 @@ const anchorRules = () => {
   return [...(el?.sheet?.cssRules ?? [])].map((r) => r.cssText).join(' ');
 };
 
+/** A rendered comment anchor, as the mark view draws one. */
+const markInText = (commentUuid: string) => {
+  const anchor = document.createElement('span');
+  anchor.setAttribute('type', 'comment');
+  anchor.setAttribute('comment', commentUuid);
+  document.body.appendChild(anchor);
+  return anchor;
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockNavigation.focusedComment = undefined;
   Element.prototype.scrollIntoView = jest.fn();
   mockGetPassageComments.mockResolvedValue([]);
+  mockDeleteComment.mockResolvedValue({ success: true, deletedUuids: [] });
+  mockRequestEditorFor.mockResolvedValue(null);
+  document.body.innerHTML = '';
 });
 
 describe('CommentsPanel', () => {
@@ -426,5 +442,57 @@ describe('CommentsPanel', () => {
       expect.objectContaining({ uuid: 't1', resolved: true }),
     );
     await waitFor(() => expect(mockGetPassageComments).toHaveBeenCalled());
+  });
+
+  it('counts a thread the text still marks as anchored, though the server has none', async () => {
+    // A thread created from the editor carries its mark at once and its anchor
+    // only at the next passage save. Listing it as unanchored in between would
+    // tell the author their new comment is attached to nothing, while the text
+    // beside it shows the highlight.
+    markInText('fresh');
+    mockGetPassageComments.mockResolvedValue(
+      page({ unanchored: [thread('fresh')] }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+
+    expect(await screen.findByText('body of fresh')).toBeTruthy();
+    expect(
+      screen.queryByText(/Unanchored — no longer attached to any text/),
+    ).toBeNull();
+  });
+
+  it('takes the anchors off the text before deleting a thread', async () => {
+    // The other order leaves a mark naming a thread that no longer exists —
+    // which the panel cannot render and nobody can remove.
+    const order: string[] = [];
+    const unsetComment = jest.fn(() => order.push('unset'));
+    mockRequestEditorFor.mockResolvedValue({ commands: { unsetComment } });
+    mockDeleteComment.mockImplementation(async () => {
+      order.push('delete');
+      return { success: true, deletedUuids: ['t1'] };
+    });
+
+    markInText('t1');
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('t1'),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+    await screen.findByText('body of t1');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(mockDeleteComment).toHaveBeenCalled());
+    expect(unsetComment).toHaveBeenCalledWith({ comment: 't1' });
+    expect(order).toEqual(['unset', 'delete']);
   });
 });

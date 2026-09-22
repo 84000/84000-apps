@@ -19,6 +19,30 @@ export interface PanelThread {
 }
 
 /**
+ * Folds anchors that sit end to end into one.
+ *
+ * A mark spanning other inline marks is stored as one annotation per text run,
+ * so a comment over a sentence carrying glossary terms arrives as several
+ * adjacent ranges. They are one place in the text and the panel should say so.
+ */
+export const mergeContiguous = (anchors: CommentAnchor[]): CommentAnchor[] => {
+  const inOrder = [...anchors].sort(
+    (a, b) => a.passageUuid.localeCompare(b.passageUuid) || a.start - b.start,
+  );
+
+  return inOrder.reduce<CommentAnchor[]>((merged, anchor) => {
+    const last = merged[merged.length - 1];
+
+    if (last?.passageUuid === anchor.passageUuid && last.end === anchor.start) {
+      merged[merged.length - 1] = { ...last, end: anchor.end };
+      return merged;
+    }
+
+    return [...merged, anchor];
+  }, []);
+};
+
+/**
  * The panel's two lists: threads the text places, in the order the text places
  * them, and threads nothing places any more.
  *
@@ -59,7 +83,14 @@ export const orderThreads = (
 
     for (const thread of passage.unanchored) {
       if (!unanchored.has(thread.uuid)) {
-        unanchored.set(thread.uuid, { thread, anchors: [] });
+        // The passage is the one the thread was born on, which is the only
+        // place it can be read from once nothing anchors it.
+        unanchored.set(thread.uuid, {
+          thread,
+          anchors: [],
+          passageLabel: passage.label,
+          passageType: passage.type,
+        });
       }
     }
   }
@@ -69,6 +100,10 @@ export const orderThreads = (
   // a thread unanchored.
   for (const uuid of anchored.keys()) {
     unanchored.delete(uuid);
+  }
+
+  for (const entry of anchored.values()) {
+    entry.anchors = mergeContiguous(entry.anchors);
   }
 
   return {

@@ -1,6 +1,6 @@
 import type { PassageComments } from '@eightyfourthousand/client-graphql';
 import type { CommentThread } from '@eightyfourthousand/data-access';
-import { orderThreads } from './order-threads';
+import { mergeContiguous, orderThreads } from './order-threads';
 
 const thread = (uuid: string, createdAt = '2026-09-01T00:00:00Z') =>
   ({
@@ -153,5 +153,50 @@ describe('orderThreads', () => {
       'older',
       'newer',
     ]);
+  });
+});
+
+describe('mergeContiguous', () => {
+  const span = (passageUuid: string, start: number, end: number) => ({
+    uuid: `a-${start}`,
+    passageUuid,
+    start,
+    end,
+  });
+
+  it('folds runs that sit end to end into one place', () => {
+    // What one comment over a sentence carrying glossary terms is stored as:
+    // the mark is saved once per text run it survives intact.
+    expect(
+      mergeContiguous([
+        span('p1', 0, 48),
+        span('p1', 48, 60),
+        span('p1', 60, 147),
+      ]),
+    ).toEqual([{ uuid: 'a-0', passageUuid: 'p1', start: 0, end: 147 }]);
+  });
+
+  it('keeps ranges with text between them apart', () => {
+    expect(
+      mergeContiguous([span('p1', 0, 10), span('p1', 20, 30)]),
+    ).toHaveLength(2);
+  });
+
+  it('never folds across a passage boundary', () => {
+    // A selection crossing passages is two rows by construction, and they are
+    // two places however their offsets happen to line up.
+    expect(
+      mergeContiguous([span('p1', 0, 40), span('p2', 40, 90)]),
+    ).toHaveLength(2);
+  });
+
+  it('folds whatever order the anchors arrive in', () => {
+    expect(
+      mergeContiguous([
+        span('p1', 60, 147),
+        span('p1', 0, 48),
+        span('p1', 48, 60),
+      ]),
+    ).toEqual([{ uuid: 'a-0', passageUuid: 'p1', start: 0, end: 147 }]);
   });
 });
