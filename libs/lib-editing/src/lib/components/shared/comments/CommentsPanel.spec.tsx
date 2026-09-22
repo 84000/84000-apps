@@ -285,8 +285,9 @@ describe('CommentsPanel', () => {
     await userEvent.type(screen.getByRole('textbox'), 'Noted.');
     await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
 
+    // The composer emits a fragment: a comment is stored as HTML.
     expect(mockReplyToComment).toHaveBeenCalledWith(
-      expect.objectContaining({ parentUuid: 'root', content: 'Noted.' }),
+      expect.objectContaining({ parentUuid: 'root', content: '<p>Noted.</p>' }),
     );
   });
 
@@ -332,6 +333,28 @@ describe('CommentsPanel', () => {
 
     expect(mockUpdatePanel).not.toHaveBeenCalled();
     expect(mockSetFocusedComment).toHaveBeenCalledWith('gone');
+  });
+
+  it('renders a comment body as markup, not as characters', async () => {
+    mockGetPassageComments.mockResolvedValue(
+      page({
+        anchored: [
+          {
+            thread: thread('t1', {
+              content: '<p>First</p><p>Second</p>',
+            }),
+            anchors: [{ uuid: 'a1', passageUuid: 'p1', start: 0, end: 4 }],
+          },
+        ],
+      }),
+    );
+
+    render(<CommentsPanel workUuid="w1" />);
+
+    // Two paragraphs, not one line reading "<p>First</p><p>Second</p>".
+    expect(await screen.findByText('First')).toBeTruthy();
+    expect(screen.getByText('Second')).toBeTruthy();
+    expect(screen.queryByText(/<p>/)).toBeNull();
   });
 
   it('collapses a thread to the comment that opened it', async () => {

@@ -73,9 +73,14 @@ export const CommentItem = ({
             }}
           />
         ) : (
-          <p className="text-xs whitespace-pre-wrap break-words mt-0.5">
-            {comment.content}
-          </p>
+          // Rendered as markup: the body is a fragment sanitized on write.
+          // `whitespace-pre-line` is for the bodies that are not — sanitizing
+          // only ever removes, so a caller that sent bare text stored bare
+          // text, and its newlines are all the paragraphs it has.
+          <div
+            className="text-xs break-words whitespace-pre-line mt-0.5 [&>p]:mb-1.5 [&>p:last-child]:mb-0"
+            dangerouslySetInnerHTML={{ __html: comment.content }}
+          />
         )}
 
         {isAuthor && !editing && (

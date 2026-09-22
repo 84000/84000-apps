@@ -12,7 +12,12 @@ type Comment {
   uuid: ID!
 
   """
-  The comment body
+  The comment body, as a sanitized HTML fragment.
+
+  Not plain text: render it as markup, not as characters. Every write this API
+  makes is sanitized, and so is every write through `data-access` — which is
+  what the MCP server uses. A client holding a database role that can write the
+  table directly is not covered.
   """
   content: String!
 
@@ -129,7 +134,10 @@ input CreateCommentInput {
   entityType: String!
 
   """
-  The comment body
+  The comment body, as an HTML fragment.
+
+  Anything outside what a comment may hold is stripped on write rather than
+  rejected, so a body that is nothing but such markup is refused as empty.
   """
   content: String!
 }
