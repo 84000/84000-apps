@@ -1,3 +1,4 @@
+export * from './CommentSelector';
 export * from './LinkSelector';
 export * from './TextAlignSelector';
 export * from './WordBreakSelector';
