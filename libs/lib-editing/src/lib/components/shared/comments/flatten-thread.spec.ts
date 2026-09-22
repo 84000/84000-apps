@@ -12,6 +12,7 @@ const comment = (
   author: { id: 'u1', displayName: 'Editor' },
   createdAt,
   updatedAt: createdAt,
+  tags: [],
   replies,
   replyCount: replyCount ?? replies.length,
 });

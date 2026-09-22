@@ -5,8 +5,10 @@ import {
   deleteComment,
   getCommentThread,
   getPassageComments,
+  getTaggedComments,
   replyToComment,
   resolveComment,
+  setCommentTags,
   updateComment,
   type PassageComments,
 } from '@eightyfourthousand/client-graphql';
@@ -26,9 +28,22 @@ import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
 import { useVisiblePassageUuids } from './useVisiblePassageUuids';
+import { COMMENT_FILTER_PARAM, PENDING_TAG } from './tags';
+
+/** How many passages one comments read covers. */
+const PASSAGES_PER_READ = 100;
+
+/** Where the work's pending threads are, and which threads they are. */
+type PendingThreads = { threadUuids: Set<string>; passageUuids: string[] };
+
+const initialShowPending = () =>
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get(COMMENT_FILTER_PARAM) ===
+    PENDING_TAG;
 
 /**
- * Comment threads for the passages on screen, beside the text they annotate.
+ * Comment threads for the passages on screen, beside the text they annotate,
+ * or every thread in the work carrying a `pending` comment.
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
@@ -49,6 +64,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
+  const [showPending, setShowPending] = useState(initialShowPending);
+  const [pendingThreads, setPendingThreads] = useState<PendingThreads>();
   const [currentUserId, setCurrentUserId] = useState<string>();
   const [hovered, setHovered] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
@@ -67,28 +84,73 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const reload = useCallback(() => setReadCount((count) => count + 1), []);
 
   useEffect(() => {
+    let current = true;
+
+    (async () => {
+      const tagged = await getTaggedComments({
+        client,
+        tag: PENDING_TAG,
+        workUuid,
+      });
+      if (!current) return;
+
+      setPendingThreads({
+        threadUuids: new Set(
+          tagged.flatMap(({ threadUuid }) => (threadUuid ? [threadUuid] : [])),
+        ),
+        passageUuids: [
+          ...new Set(tagged.flatMap(({ passageUuids }) => passageUuids)),
+        ],
+      });
+    })();
+
+    return () => {
+      current = false;
+    };
+  }, [client, workUuid, readCount, commentsRevision]);
+
+  // Filtered, the panel reads where the pending threads are rather than what
+  // is on screen.
+  const readUuids = showPending ? pendingThreads?.passageUuids : passageUuids;
+
+  useEffect(() => {
+    if (!readUuids) return;
+
     // Scrolling changes the passage set while a read is in flight, and the
     // responses need not come back in order.
     let current = true;
 
     (async () => {
-      const read = await getPassageComments({
-        client,
-        workUuid,
-        passageUuids,
-      });
+      const chunks: string[][] = [];
+      for (let i = 0; i < readUuids.length; i += PASSAGES_PER_READ) {
+        chunks.push(readUuids.slice(i, i + PASSAGES_PER_READ));
+      }
+
+      const reads = await Promise.all(
+        chunks.map((uuids) =>
+          getPassageComments({ client, workUuid, passageUuids: uuids }),
+        ),
+      );
       if (!current) return;
-      setPassages(read);
+      setPassages(reads.flat());
       setLoading(false);
     })();
 
     return () => {
       current = false;
     };
-  }, [client, workUuid, passageUuids, readCount, commentsRevision]);
+  }, [client, workUuid, readUuids, readCount, commentsRevision]);
 
   const { anchored, unanchored } = useMemo(() => {
-    const ordered = orderThreads(passages);
+    const all = orderThreads(passages);
+    const isPending = ({ thread }: PanelThread) =>
+      !!pendingThreads?.threadUuids.has(thread.uuid);
+    const ordered = showPending
+      ? {
+          anchored: all.anchored.filter(isPending),
+          unanchored: all.unanchored.filter(isPending),
+        }
+      : all;
 
     if (typeof document === 'undefined') {
       return ordered;
@@ -114,7 +176,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages]);
+  }, [passages, pendingThreads, showPending]);
 
   const resolvedCount = useMemo(
     () =>
@@ -223,6 +285,10 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         await resolveComment({ client, uuid, resolved });
         reload();
       },
+      setTags: async (uuid, tags) => {
+        await setCommentTags({ client, uuid, tags });
+        reload();
+      },
       expand: async (uuid) => {
         const branch = await getCommentThread({ client, uuid, depth: 10 });
         if (!branch) return;
@@ -259,19 +325,38 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
 
   const anchoredVisible = visible(anchored);
   const unanchoredVisible = visible(unanchored);
+  const pendingCount = pendingThreads?.threadUuids.size ?? 0;
 
   return (
     <div ref={listRef} className="pb-8">
-      {resolvedCount > 0 && (
+      {(resolvedCount > 0 || pendingCount > 0 || showPending) && (
         <div className="flex justify-end">
-          <Button
-            size="xs"
-            variant="ghost"
-            className="text-[11px] text-muted-foreground"
-            onClick={() => setShowResolved((shown) => !shown)}
-          >
-            {showResolved ? 'Hide resolved' : `Show ${resolvedCount} resolved`}
-          </Button>
+          {(pendingCount > 0 || showPending) && (
+            <Button
+              size="xs"
+              variant={showPending ? 'secondary' : 'ghost'}
+              className="text-[11px] text-muted-foreground"
+              aria-pressed={showPending}
+              onClick={() => {
+                setLoading(true);
+                setShowPending((shown) => !shown);
+              }}
+            >
+              {showPending ? 'Show all' : `${pendingCount} pending`}
+            </Button>
+          )}
+          {resolvedCount > 0 && (
+            <Button
+              size="xs"
+              variant="ghost"
+              className="text-[11px] text-muted-foreground"
+              onClick={() => setShowResolved((shown) => !shown)}
+            >
+              {showResolved
+                ? 'Hide resolved'
+                : `Show ${resolvedCount} resolved`}
+            </Button>
+          )}
         </div>
       )}
 
@@ -283,7 +368,9 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         anchoredVisible.length === 0 &&
         unanchoredVisible.length === 0 && (
           <p className="text-xs text-muted-foreground py-4">
-            No comments on the passages in view.
+            {showPending
+              ? 'No pending comments in this work.'
+              : 'No comments on the passages in view.'}
           </p>
         )}
 

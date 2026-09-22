@@ -26,6 +26,7 @@ export interface CommentActions {
   edit: (uuid: string, content: string) => Promise<void>;
   remove: (uuid: string) => Promise<void>;
   resolve: (uuid: string, resolved: boolean) => Promise<void>;
+  setTags: (uuid: string, tags: string[]) => Promise<void>;
   /** Fetches the replies below a comment a shallower read stopped at. */
   expand: (uuid: string) => Promise<void>;
 }
@@ -93,6 +94,7 @@ export const CommentThreadCard = ({
         currentUserId={currentUserId}
         onEdit={(content) => actions.edit(opening.uuid, content)}
         onDelete={() => actions.remove(opening.uuid)}
+        onSetTags={(tags) => actions.setTags(opening.uuid, tags)}
       />
 
       <Collapsible open={open} onOpenChange={setOpen}>
@@ -124,6 +126,7 @@ export const CommentThreadCard = ({
                   currentUserId={currentUserId}
                   onEdit={(content) => actions.edit(comment.uuid, content)}
                   onDelete={() => actions.remove(comment.uuid)}
+                  onSetTags={(tags) => actions.setTags(comment.uuid, tags)}
                 />
               ))}
             </div>

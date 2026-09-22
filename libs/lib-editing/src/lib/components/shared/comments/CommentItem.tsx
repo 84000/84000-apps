@@ -4,12 +4,15 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
+  Badge,
   Button,
 } from '@eightyfourthousand/design-system';
 import type { CommentThread } from '@eightyfourthousand/data-access';
+import { XIcon } from 'lucide-react';
 import { useState } from 'react';
 import { CommentComposer } from './CommentComposer';
 import { relativeTime } from './relative-time';
+import { PENDING_TAG } from './tags';
 
 const initials = (name: string) =>
   name
@@ -19,25 +22,28 @@ const initials = (name: string) =>
     .join('') || '?';
 
 /**
- * One comment: who wrote it, when, and the body — plus the actions its author
- * has over it.
+ * One comment: who wrote it, when, its tags and the body — plus the actions its
+ * author has over it. Any editor may tag it.
  */
 export const CommentItem = ({
   comment,
   currentUserId,
   onEdit,
   onDelete,
+  onSetTags,
 }: {
   comment: CommentThread;
   /** Undefined until the session resolves, which hides the author actions. */
   currentUserId?: string;
   onEdit: (content: string) => Promise<void>;
   onDelete: () => Promise<void>;
+  onSetTags: (tags: string[]) => Promise<void>;
 }) => {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isAuthor = !!currentUserId && comment.author.id === currentUserId;
   const edited = comment.updatedAt !== comment.createdAt;
+  const pending = comment.tags.includes(PENDING_TAG);
 
   return (
     <div className="flex gap-2">
@@ -59,6 +65,27 @@ export const CommentItem = ({
             {relativeTime(comment.createdAt)}
             {edited && ' · edited'}
           </span>
+          {comment.tags.map((tag) => (
+            <Badge
+              key={tag}
+              variant="outline"
+              data-comment-tag={tag}
+              className="gap-0.5 px-1.5 py-0 text-[10px] font-medium"
+            >
+              {tag}
+              <button
+                type="button"
+                aria-label={`Remove ${tag}`}
+                className="text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetTags(comment.tags.filter((t) => t !== tag));
+                }}
+              >
+                <XIcon className="size-2.5" />
+              </button>
+            </Badge>
+          ))}
         </div>
 
         {editing ? (
@@ -83,50 +110,69 @@ export const CommentItem = ({
           />
         )}
 
-        {isAuthor && !editing && (
+        {!editing && (
           <div className="flex gap-1 -ms-2.5">
-            <Button
-              size="xs"
-              variant="ghost"
-              className="text-[11px] text-muted-foreground"
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </Button>
-            {confirmingDelete ? (
-              <>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  className="text-[11px] text-destructive"
-                  onClick={async () => {
-                    setConfirmingDelete(false);
-                    await onDelete();
-                  }}
-                >
-                  {/* A delete cascades to everything filed under this
-                      comment, other people's replies included, so the
-                      confirmation says so rather than just 'Confirm'. */}
-                  {comment.replyCount > 0 ? 'Delete with replies' : 'Confirm'}
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  className="text-[11px] text-muted-foreground"
-                  onClick={() => setConfirmingDelete(false)}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
+            {!pending && (
               <Button
                 size="xs"
                 variant="ghost"
                 className="text-[11px] text-muted-foreground"
-                onClick={() => setConfirmingDelete(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetTags([...comment.tags, PENDING_TAG]);
+                }}
               >
-                Delete
+                Mark pending
               </Button>
+            )}
+            {isAuthor && (
+              <>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  className="text-[11px] text-muted-foreground"
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+                {confirmingDelete ? (
+                  <>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      className="text-[11px] text-destructive"
+                      onClick={async () => {
+                        setConfirmingDelete(false);
+                        await onDelete();
+                      }}
+                    >
+                      {/* A delete cascades to everything filed under this
+                      comment, other people's replies included, so the
+                      confirmation says so rather than just 'Confirm'. */}
+                      {comment.replyCount > 0
+                        ? 'Delete with replies'
+                        : 'Confirm'}
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      className="text-[11px] text-muted-foreground"
+                      onClick={() => setConfirmingDelete(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="text-[11px] text-muted-foreground"
+                    onClick={() => setConfirmingDelete(true)}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}
