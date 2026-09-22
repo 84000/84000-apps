@@ -397,13 +397,13 @@ export const SearchButton = ({
       </DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="bg-transparent top-4 max-w-4xl shadow-none border-0 text-secondary translate-y-0"
+        className="bg-transparent mt-4 max-w-4xl shadow-none border-0 text-secondary"
       >
         <DialogTitle className="hidden">Search</DialogTitle>
         <DialogDescription className="hidden">
           Search this translation
         </DialogDescription>
-        <div className="flex flex-col justify-start gap-2 h-[calc(100vh-2.5rem)]">
+        <div className="flex flex-col justify-start gap-2 h-[calc(100dvh-5rem)]">
           <div className="w-full flex flex-col gap-2 text-foreground shrink-0">
             <div className="flex justify-end">
               <Button
