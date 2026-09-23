@@ -88,8 +88,9 @@ extend type Query {
   ): Comment
 
   """
-  Comments carrying `tag`, oldest first, across the library or within one
-  work. Empty for a `published` content source.
+  Comments carrying `tag` in one work, oldest first, each placed in its
+  thread. Empty for a `published` content source. For the whole library, use
+  `taggedCommentWorks`, which counts rather than places.
   """
   taggedComments(
     """
@@ -98,10 +99,36 @@ extend type Query {
     tag: String!
 
     """
-    Limit to one work. Omit for the whole library.
+    The work to list.
     """
-    workUuid: ID
+    workUuid: ID!
   ): [TaggedComment!]!
+
+  """
+  How many comments carry `tag` in each work, newest activity first, across
+  the library. Reads no threads, anchors or bodies. Empty for a `published`
+  content source.
+  """
+  taggedCommentWorks(
+    """
+    The tag to count, such as `pending`. Normalized like a written tag.
+    """
+    tag: String!
+  ): [TaggedCommentWork!]!
+}
+
+"""
+One work's comments carrying a tag.
+"""
+type TaggedCommentWork {
+  workUuid: ID!
+
+  count: Int!
+
+  """
+  When the newest of them was written.
+  """
+  latestAt: String!
 }
 
 """

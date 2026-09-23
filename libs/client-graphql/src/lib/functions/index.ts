@@ -89,6 +89,10 @@ export {
   type TaggedCommentEntry,
 } from './get-tagged-comments';
 export {
+  getTaggedCommentWorks,
+  type TaggedCommentWorkEntry,
+} from './get-tagged-comment-works';
+export {
   getPassageComments,
   type AnchoredCommentThread,
   type CommentAnchor,

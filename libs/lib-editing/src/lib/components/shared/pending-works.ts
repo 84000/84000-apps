@@ -1,7 +1,6 @@
-import type { TaggedCommentEntry } from '@eightyfourthousand/client-graphql';
+import type { TaggedCommentWorkEntry } from '@eightyfourthousand/client-graphql';
 import type { Work } from '@eightyfourthousand/data-access';
 import { parseToh } from '@eightyfourthousand/lib-utils';
-import { commentTextFromHtml } from './comments/comment-html';
 
 /** One work on the Pending tab. */
 export type PendingWorkRow = {
@@ -11,46 +10,27 @@ export type PendingWorkRow = {
   tohSearch: string;
   /** Pending comments in the work. */
   count: number;
-  /** The most recent pending comment, as plain text. */
-  latest: string;
-  latestAt: string;
 };
 
 /**
- * Groups tagged comments into one row per work, newest activity first. A work
- * missing from `works` still gets a row, so nothing tagged goes unlisted.
+ * One row per work with pending comments, in the order given — newest activity
+ * first, as the server returns them. A work missing from `works` still gets a
+ * row, so nothing tagged goes unlisted.
  */
 export const pendingWorkRows = (
   works: Work[],
-  tagged: TaggedCommentEntry[],
+  tagged: TaggedCommentWorkEntry[],
 ): PendingWorkRow[] => {
   const byUuid = new Map(works.map((work) => [work.uuid, work]));
-  const rows = new Map<string, PendingWorkRow>();
 
-  for (const { comment, workUuid } of tagged) {
-    const row = rows.get(workUuid);
-    if (row) {
-      row.count += 1;
-      if (Date.parse(comment.createdAt) > Date.parse(row.latestAt)) {
-        row.latest = commentTextFromHtml(comment.content);
-        row.latestAt = comment.createdAt;
-      }
-      continue;
-    }
-
+  return tagged.map(({ workUuid, count }) => {
     const work = byUuid.get(workUuid);
-    rows.set(workUuid, {
+    return {
       uuid: workUuid,
       title: work?.title ?? workUuid,
       toh: work ? parseToh(work.toh.join(',')) : '',
       tohSearch: work?.toh.join(' ') ?? '',
-      count: 1,
-      latest: commentTextFromHtml(comment.content),
-      latestAt: comment.createdAt,
-    });
-  }
-
-  return [...rows.values()].sort(
-    (a, b) => Date.parse(b.latestAt) - Date.parse(a.latestAt),
-  );
+      count,
+    };
+  });
 };

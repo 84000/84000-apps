@@ -5,14 +5,15 @@ import { Work } from '@eightyfourthousand/data-access';
 import { EditorLandingTabs } from './EditorLandingTabs';
 
 const mockGetPublishStatuses = jest.fn();
-const mockGetTaggedComments = jest.fn();
+const mockGetTaggedCommentWorks = jest.fn();
 const mockPush = jest.fn();
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   ...jest.requireActual('@eightyfourthousand/client-graphql'),
   createGraphQLClient: () => ({}),
   getPublishStatuses: () => mockGetPublishStatuses(),
-  getTaggedComments: (...args: unknown[]) => mockGetTaggedComments(...args),
+  getTaggedCommentWorks: (...args: unknown[]) =>
+    mockGetTaggedCommentWorks(...args),
   getPublishReadiness: jest.fn().mockResolvedValue({
     ok: true,
     errors: [],
@@ -44,7 +45,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockSearchParams = new URLSearchParams();
   mockGetPublishStatuses.mockResolvedValue([]);
-  mockGetTaggedComments.mockResolvedValue([]);
+  mockGetTaggedCommentWorks.mockResolvedValue([]);
   window.history.replaceState(null, '', '/translations/editor');
   window.localStorage.clear();
 });
@@ -116,28 +117,20 @@ describe('EditorLandingTabs', () => {
   });
 
   it('lists works with pending comments and opens one filtered to them', async () => {
-    mockGetTaggedComments.mockResolvedValue([
-      {
-        workUuid: 'w1',
-        passageUuids: ['p1'],
-        comment: {
-          uuid: 'c1',
-          content: '<p>Link Toh 123 once published</p>',
-          createdAt: '2026-09-20T00:00:00Z',
-        },
-      },
+    mockGetTaggedCommentWorks.mockResolvedValue([
+      { workUuid: 'w1', count: 3, latestAt: '2026-09-20T00:00:00Z' },
     ]);
     renderTabs();
 
     await userEvent.click(tab('Pending'));
 
-    expect(mockGetTaggedComments).toHaveBeenCalledWith(
+    expect(mockGetTaggedCommentWorks).toHaveBeenCalledWith(
       expect.objectContaining({ tag: 'pending' }),
     );
-    expect(await screen.findByText('Link Toh 123 once published')).toBeTruthy();
+    expect(await screen.findByText('3 pending across 1 work')).toBeTruthy();
     expect(window.location.search).toBe('?view=pending');
 
-    await userEvent.click(screen.getByText('Link Toh 123 once published'));
+    await userEvent.click(screen.getByText('3'));
 
     expect(mockPush).toHaveBeenCalledWith(
       '/translations/editor/w1?left=open:comments&commentTag=pending',
@@ -149,6 +142,6 @@ describe('EditorLandingTabs', () => {
     renderTabs();
 
     expect(tab('Pending').getAttribute('aria-selected')).toBe('true');
-    await waitFor(() => expect(mockGetTaggedComments).toHaveBeenCalled());
+    await waitFor(() => expect(mockGetTaggedCommentWorks).toHaveBeenCalled());
   });
 });

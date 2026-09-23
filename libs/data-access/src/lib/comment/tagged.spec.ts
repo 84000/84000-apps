@@ -1,4 +1,4 @@
-import { getTaggedComments } from './tagged';
+import { getTaggedComments, getTaggedCommentWorks } from './tagged';
 import type { CommentDTO, DataClient } from '../types';
 
 type Result = { data: unknown[] | null; error: { message: string } | null };
@@ -78,6 +78,7 @@ describe('getTaggedComments', () => {
         anchors: [{ passage_uuid: 'p2', target_uuid: 'root-1' }],
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -100,26 +101,24 @@ describe('getTaggedComments', () => {
         scope: [root],
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
     expect(tagged.passageUuids).toEqual(['p1']);
   });
 
-  it('passes the work through, or null for the whole library', async () => {
+  it('passes the work through', async () => {
     const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
-    const client = fakeClient({ rpcCalls });
 
-    await getTaggedComments({ client, tag: 'pending', source: 'draft' });
     await getTaggedComments({
-      client,
+      client: fakeClient({ rpcCalls }),
       tag: 'pending',
       workUuid: 'w1',
       source: 'draft',
     });
 
     expect(rpcCalls.map(({ args }) => args)).toEqual([
-      { p_tag: 'pending', p_work_uuid: null },
       { p_tag: 'pending', p_work_uuid: 'w1' },
     ]);
   });
@@ -130,6 +129,7 @@ describe('getTaggedComments', () => {
     await getTaggedComments({
       client: fakeClient({ rpcCalls }),
       tag: ' Pending ',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -142,6 +142,7 @@ describe('getTaggedComments', () => {
     const tagged = await getTaggedComments({
       client: fakeClient({ rpcCalls }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'published',
     });
 
@@ -153,6 +154,7 @@ describe('getTaggedComments', () => {
     const tagged = await getTaggedComments({
       client: fakeClient({ taggedError: { message: 'boom' } }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -169,9 +171,64 @@ describe('getTaggedComments', () => {
         anchorError: { message: 'boom' },
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
     expect(tagged.map(({ passageUuids }) => passageUuids)).toEqual([['p1']]);
+  });
+});
+
+describe('getTaggedCommentWorks', () => {
+  it('counts per work, newest activity first, without reading threads', async () => {
+    const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+    const client = fakeClient({
+      rpcCalls,
+      tagged: [
+        {
+          ...row({ uuid: 'a', created_at: '2026-09-01T00:00:00Z' }),
+          work_uuid: 'w1',
+        },
+        {
+          ...row({ uuid: 'b', created_at: '2026-09-02T00:00:00Z' }),
+          work_uuid: 'w2',
+        },
+        {
+          ...row({ uuid: 'c', created_at: '2026-09-03T00:00:00Z' }),
+          work_uuid: 'w1',
+        },
+      ],
+    });
+
+    const works = await getTaggedCommentWorks({
+      client,
+      tag: ' Pending ',
+      source: 'draft',
+    });
+
+    expect(works).toEqual([
+      { workUuid: 'w1', count: 2, latestAt: '2026-09-03T00:00:00Z' },
+      { workUuid: 'w2', count: 1, latestAt: '2026-09-02T00:00:00Z' },
+    ]);
+    expect(rpcCalls).toEqual([
+      {
+        name: 'get_tagged_comments',
+        args: { p_tag: 'pending', p_work_uuid: null },
+      },
+    ]);
+  });
+
+  it('reads nothing for a published source', async () => {
+    const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+    const client = fakeClient({ rpcCalls });
+
+    expect(
+      await getTaggedCommentWorks({
+        client,
+        tag: 'pending',
+        source: 'published',
+      }),
+    ).toEqual([]);
+    expect(rpcCalls).toEqual([]);
   });
 });
