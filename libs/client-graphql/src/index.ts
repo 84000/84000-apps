@@ -78,6 +78,8 @@ export {
   getCommentThread,
   getTaggedComments,
   type TaggedCommentEntry,
+  getTaggedCommentWorks,
+  type TaggedCommentWorkEntry,
   getPassageComments,
   type AnchoredCommentThread,
   type CommentAnchor,

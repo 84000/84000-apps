@@ -53,12 +53,17 @@ export const readCommentRows = async (
  * a plain self-reference with no cycle constraint, and a cycle stores through
  * ordinary statements; the readers survive one but yield no thread, because no
  * comment in a cycle is a root.
+ *
+ * Pass a map keyed by uuid when walking many comments over the same rows;
+ * an array is indexed on every call.
  */
 export const rootUuidOf = (
   uuid: string,
-  rows: CommentDTO[],
+  rows: CommentDTO[] | ReadonlyMap<string, CommentDTO>,
 ): string | undefined => {
-  const byUuid = new Map(rows.map((row) => [row.uuid, row]));
+  const byUuid = Array.isArray(rows)
+    ? new Map(rows.map((row) => [row.uuid, row]))
+    : rows;
   const seen = new Set<string>([uuid]);
   let row = byUuid.get(uuid);
 

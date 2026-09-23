@@ -1,17 +1,5 @@
-import type { TaggedCommentEntry } from '@eightyfourthousand/client-graphql';
 import type { Work } from '@eightyfourthousand/data-access';
 import { pendingWorkRows } from './pending-works';
-
-const tagged = (
-  workUuid: string,
-  content: string,
-  createdAt: string,
-): TaggedCommentEntry =>
-  ({
-    workUuid,
-    passageUuids: [],
-    comment: { uuid: content, content, createdAt },
-  }) as unknown as TaggedCommentEntry;
 
 const WORKS = [
   { uuid: 'w1', title: 'One', toh: ['toh1'] },
@@ -19,25 +7,22 @@ const WORKS = [
 ] as unknown as Work[];
 
 describe('pendingWorkRows', () => {
-  it('counts per work and keeps the newest comment as plain text', () => {
+  it('keeps the server order and carries each count', () => {
     const rows = pendingWorkRows(WORKS, [
-      tagged('w1', '<p>older</p>', '2026-09-01T00:00:00Z'),
-      tagged('w1', '<p>newer &amp; later</p>', '2026-09-03T00:00:00Z'),
-      tagged('w2', '<p>other</p>', '2026-09-02T00:00:00Z'),
+      { workUuid: 'w2', count: 1, latestAt: '2026-09-03T00:00:00Z' },
+      { workUuid: 'w1', count: 2, latestAt: '2026-09-01T00:00:00Z' },
     ]);
 
-    expect(
-      rows.map(({ uuid, count, latest }) => [uuid, count, latest]),
-    ).toEqual([
-      ['w1', 2, 'newer & later'],
-      ['w2', 1, 'other'],
+    expect(rows.map(({ uuid, title, count }) => [uuid, title, count])).toEqual([
+      ['w2', 'Two', 1],
+      ['w1', 'One', 2],
     ]);
   });
 
   it('still lists a work it has no metadata for', () => {
     const [row] = pendingWorkRows(
       [],
-      [tagged('w9', 'x', '2026-09-01T00:00:00Z')],
+      [{ workUuid: 'w9', count: 1, latestAt: '2026-09-01T00:00:00Z' }],
     );
 
     expect(row).toMatchObject({ uuid: 'w9', title: 'w9', count: 1 });

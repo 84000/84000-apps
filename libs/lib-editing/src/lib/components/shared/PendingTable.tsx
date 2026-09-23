@@ -11,23 +11,21 @@ import {
 } from '@eightyfourthousand/design-system';
 import {
   createGraphQLClient,
-  getTaggedComments,
-  type TaggedCommentEntry,
+  getTaggedCommentWorks,
+  type TaggedCommentWorkEntry,
 } from '@eightyfourthousand/client-graphql';
 import { Work } from '@eightyfourthousand/data-access';
 import { compareToh } from '@eightyfourthousand/lib-utils';
 import { Cell } from '@tanstack/react-table';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { relativeTime } from './comments/relative-time';
 import { COMMENT_TAG_PARAM, PENDING_TAG } from './comments/tags';
 import { pendingWorkRows, type PendingWorkRow } from './pending-works';
 
 const SIZE_FOR_COL: { [key: string]: number } = {
-  title: 40,
-  toh: 10,
-  count: 8,
-  latest: 42,
+  title: 70,
+  toh: 15,
+  count: 15,
 };
 
 const PendingHeader = SortableHeader<PendingWorkRow>;
@@ -41,14 +39,17 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
   const router = useRouter();
   const pathname = usePathname();
   const client = useMemo(() => createGraphQLClient(), []);
-  const [tagged, setTagged] = useState<TaggedCommentEntry[]>([]);
+  const [tagged, setTagged] = useState<TaggedCommentWorkEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let current = true;
 
     (async () => {
-      const read = await getTaggedComments({ client, tag: PENDING_TAG });
+      const read = await getTaggedCommentWorks({
+        client,
+        tag: PENDING_TAG,
+      });
       if (!current) return;
       setTagged(read);
       setLoading(false);
@@ -60,6 +61,10 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
   }, [client]);
 
   const data = useMemo(() => pendingWorkRows(works, tagged), [works, tagged]);
+  const total = useMemo(
+    () => tagged.reduce((sum, { count }) => sum + count, 0),
+    [tagged],
+  );
 
   const onCellClick = (cell: Cell<PendingWorkRow, unknown>) => {
     router.push(
@@ -97,23 +102,7 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
       cell: ({ row }) => <div>{row.original.count}</div>,
       onCellClick,
     },
-    {
-      id: 'latest',
-      accessorKey: 'latestAt',
-      size: SIZE_FOR_COL.latest,
-      header: ({ column }) => <PendingHeader column={column} name="Latest" />,
-      cell: ({ row }) => (
-        <div className="flex items-baseline gap-2 min-w-0">
-          <TooltipCell content={row.original.latest} />
-          <MutedText className="text-xs shrink-0">
-            {relativeTime(row.original.latestAt)}
-          </MutedText>
-        </div>
-      ),
-      onCellClick,
-    },
     { id: 'tohSearch', accessorKey: 'tohSearch' },
-    { id: 'latestText', accessorKey: 'latest' },
   ];
 
   return (
@@ -121,8 +110,7 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
       name="pending"
       columns={columns}
       data={data}
-      visibility={{ tohSearch: false, latestText: false }}
-      sorting={[{ id: 'latest', desc: true }]}
+      visibility={{ tohSearch: false }}
       infiniteScroll
       resizableColumns
       filters={(table) => (
@@ -135,7 +123,7 @@ export const PendingTable = ({ works }: { works: Work[] }) => {
           <MutedText className="text-xs ms-auto">
             {loading
               ? 'Loading pending comments…'
-              : `${tagged.length} pending across ${data.length} ${data.length === 1 ? 'work' : 'works'}`}
+              : `${total} pending across ${data.length} ${data.length === 1 ? 'work' : 'works'}`}
           </MutedText>
         </div>
       )}

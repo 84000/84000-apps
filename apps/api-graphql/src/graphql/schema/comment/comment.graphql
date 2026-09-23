@@ -102,6 +102,32 @@ extend type Query {
     """
     workUuid: ID
   ): [TaggedComment!]!
+
+  """
+  How many comments carry `tag` in each work, newest activity first. A
+  summary of `taggedComments` across the library that reads no threads,
+  anchors or bodies. Empty for a `published` content source.
+  """
+  taggedCommentWorks(
+    """
+    The tag to count, such as `pending`. Normalized like a written tag.
+    """
+    tag: String!
+  ): [TaggedCommentWork!]!
+}
+
+"""
+One work's comments carrying a tag.
+"""
+type TaggedCommentWork {
+  workUuid: ID!
+
+  count: Int!
+
+  """
+  When the newest of them was written.
+  """
+  latestAt: String!
 }
 
 """
