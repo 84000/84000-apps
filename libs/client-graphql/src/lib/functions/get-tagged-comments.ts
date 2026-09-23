@@ -1,27 +1,21 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
-import type { CommentThread } from '@eightyfourthousand/data-access';
-import { commentFromGraphQL, type GraphQLComment } from '../mappers';
-import { COMMENT_FIELDS_FRAGMENT } from './comment-fields';
 
 const GET_TAGGED_COMMENTS = gql`
-  ${COMMENT_FIELDS_FRAGMENT}
-
-  query GetTaggedComments($tag: String!, $workUuid: ID) {
+  query GetTaggedComments($tag: String!, $workUuid: ID!) {
     taggedComments(tag: $tag, workUuid: $workUuid) {
       workUuid
       threadUuid
       passageUuids
-      comment {
-        ...CommentFields
-      }
     }
   }
 `;
 
-/** A tagged comment, placed in its work and thread. */
+/**
+ * Where a tagged comment sits in its work. Its body is not read: a caller
+ * filtering to tagged threads reads those threads through the passage reads.
+ */
 export type TaggedCommentEntry = {
-  comment: CommentThread;
   workUuid: string;
   /** The root of the comment's thread. Absent when its parent chain is broken. */
   threadUuid?: string;
@@ -34,14 +28,10 @@ type GetTaggedCommentsResponse = {
     workUuid: string;
     threadUuid?: string | null;
     passageUuids: string[];
-    comment: GraphQLComment;
   }[];
 };
 
-/**
- * Comments carrying `tag`, oldest first, across the library or within one
- * work.
- */
+/** Comments carrying `tag` in one work, oldest first. */
 export async function getTaggedComments({
   client,
   tag,
@@ -49,7 +39,7 @@ export async function getTaggedComments({
 }: {
   client: GraphQLClient;
   tag: string;
-  workUuid?: string;
+  workUuid: string;
 }): Promise<TaggedCommentEntry[]> {
   try {
     const response = await client.request<GetTaggedCommentsResponse>(
@@ -58,8 +48,7 @@ export async function getTaggedComments({
     );
 
     return response.taggedComments.map(
-      ({ comment, workUuid, threadUuid, passageUuids }) => ({
-        comment: commentFromGraphQL(comment),
+      ({ workUuid, threadUuid, passageUuids }) => ({
         workUuid,
         ...(threadUuid ? { threadUuid } : {}),
         passageUuids,

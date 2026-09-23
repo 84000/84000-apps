@@ -929,14 +929,15 @@ export type Query = {
    */
   search: Array<EntitySearchResult>;
   /**
-   * How many comments carry `tag` in each work, newest activity first. A
-   * summary of `taggedComments` across the library that reads no threads,
-   * anchors or bodies. Empty for a `published` content source.
+   * How many comments carry `tag` in each work, newest activity first, across
+   * the library. Reads no threads, anchors or bodies. Empty for a `published`
+   * content source.
    */
   taggedCommentWorks: Array<TaggedCommentWork>;
   /**
-   * Comments carrying `tag`, oldest first, across the library or within one
-   * work. Empty for a `published` content source.
+   * Comments carrying `tag` in one work, oldest first, each placed in its
+   * thread. Empty for a `published` content source. For the whole library, use
+   * `taggedCommentWorks`, which counts rather than places.
    */
   taggedComments: Array<TaggedComment>;
   /** Get the current API version */
@@ -1051,7 +1052,7 @@ export type QueryTaggedCommentWorksArgs = {
 /** Root Query type - extend this in other schema files */
 export type QueryTaggedCommentsArgs = {
   tag: Scalars['String']['input'];
-  workUuid?: InputMaybe<Scalars['ID']['input']>;
+  workUuid: Scalars['ID']['input'];
 };
 
 

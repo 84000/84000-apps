@@ -78,6 +78,7 @@ describe('getTaggedComments', () => {
         anchors: [{ passage_uuid: 'p2', target_uuid: 'root-1' }],
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -100,26 +101,24 @@ describe('getTaggedComments', () => {
         scope: [root],
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
     expect(tagged.passageUuids).toEqual(['p1']);
   });
 
-  it('passes the work through, or null for the whole library', async () => {
+  it('passes the work through', async () => {
     const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
-    const client = fakeClient({ rpcCalls });
 
-    await getTaggedComments({ client, tag: 'pending', source: 'draft' });
     await getTaggedComments({
-      client,
+      client: fakeClient({ rpcCalls }),
       tag: 'pending',
       workUuid: 'w1',
       source: 'draft',
     });
 
     expect(rpcCalls.map(({ args }) => args)).toEqual([
-      { p_tag: 'pending', p_work_uuid: null },
       { p_tag: 'pending', p_work_uuid: 'w1' },
     ]);
   });
@@ -130,6 +129,7 @@ describe('getTaggedComments', () => {
     await getTaggedComments({
       client: fakeClient({ rpcCalls }),
       tag: ' Pending ',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -142,6 +142,7 @@ describe('getTaggedComments', () => {
     const tagged = await getTaggedComments({
       client: fakeClient({ rpcCalls }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'published',
     });
 
@@ -153,6 +154,7 @@ describe('getTaggedComments', () => {
     const tagged = await getTaggedComments({
       client: fakeClient({ taggedError: { message: 'boom' } }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 
@@ -169,6 +171,7 @@ describe('getTaggedComments', () => {
         anchorError: { message: 'boom' },
       }),
       tag: 'pending',
+      workUuid: 'w1',
       source: 'draft',
     });
 

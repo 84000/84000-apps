@@ -27,8 +27,10 @@ export type TaggedComment = {
 type TaggedCommentRow = CommentDTO & { work_uuid: string };
 
 /**
- * Comments carrying `tag`, oldest first, across the library or within one
- * work. Draft-only, like every comment read.
+ * Comments carrying `tag` in one work, oldest first, each placed in its
+ * thread. Draft-only, like every comment read. Placing a comment costs a read
+ * of its passages' comments and anchors, so this is scoped to a work; for the
+ * whole library, `getTaggedCommentWorks` counts instead.
  */
 export const getTaggedComments = async ({
   client,
@@ -38,7 +40,7 @@ export const getTaggedComments = async ({
 }: {
   client: DataClient;
   tag: string;
-  workUuid?: string;
+  workUuid: string;
   source?: ContentSource;
 }): Promise<TaggedComment[]> => {
   const normalized = normalizeCommentTag(tag);
@@ -52,7 +54,7 @@ export const getTaggedComments = async ({
     const { data, error } = await client
       .rpc('get_tagged_comments', {
         p_tag: normalized,
-        p_work_uuid: workUuid ?? null,
+        p_work_uuid: workUuid,
       })
       .order('created_at', { ascending: true })
       .order('uuid', { ascending: true })
@@ -122,8 +124,8 @@ type TaggedCommentWorkRow = {
 /**
  * How many comments carry `tag` in each work, newest activity first.
  *
- * The summary `getTaggedComments` would give, without its cost: it reads three
- * columns and none of the threads, anchors or bodies placing a comment needs.
+ * Library-wide, unlike `getTaggedComments`: it reads three columns and none of
+ * the threads, anchors or bodies placing a comment needs.
  */
 export const getTaggedCommentWorks = async ({
   client,

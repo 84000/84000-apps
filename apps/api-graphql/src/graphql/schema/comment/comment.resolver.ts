@@ -164,13 +164,13 @@ export const commentQueryResolver = async (
  */
 export const taggedCommentsQueryResolver = async (
   _parent: unknown,
-  args: { tag: string; workUuid?: string | null },
+  args: { tag: string; workUuid: string },
   ctx: GraphQLContext,
 ) =>
   getTaggedComments({
     client: ctx.supabase,
     tag: args.tag,
-    workUuid: args.workUuid ?? undefined,
+    workUuid: args.workUuid,
     source: ctx.source,
   });
 
