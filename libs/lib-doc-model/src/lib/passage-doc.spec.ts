@@ -55,6 +55,15 @@ describe('PassageDoc', () => {
       expect(doc.isDirty).toBe(false);
     });
 
+    // An observer offering a save would otherwise offer one with nothing in it.
+    it('is never dirty while seeding', () => {
+      const doc = build();
+      const seen: boolean[] = [];
+      doc.observe(() => seen.push(doc.isDirty));
+      doc.seed([para('hello', 'a')]);
+      expect(seen).not.toContain(true);
+    });
+
     it('becomes dirty on a structural content replacement', () => {
       const doc = build();
       doc.seed([para('hello', 'a')]);

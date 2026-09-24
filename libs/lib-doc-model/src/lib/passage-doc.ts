@@ -91,6 +91,7 @@ export class PassageDoc {
   private schema: Schema;
   private dirty = false;
   private revision = 0;
+  private seeding = false;
   private textOrigins: Set<unknown>;
   private listeners = new Set<() => void>();
   private nodeCache: PMNode | null = null;
@@ -127,16 +128,20 @@ export class PassageDoc {
         content: content.length ? content : [EMPTY_PARAGRAPH],
       }),
     );
-    transact(
-      this.doc,
-      () => prosemirrorToYXmlFragment(node, this.content),
-      STRUCTURAL_ORIGIN,
-    );
+    // The content came from the server, so writing it is not a local edit:
+    // an observer that saw the passage go dirty on the way past would offer
+    // a save with nothing to write.
+    this.seeding = true;
+    try {
+      transact(
+        this.doc,
+        () => prosemirrorToYXmlFragment(node, this.content),
+        STRUCTURAL_ORIGIN,
+      );
+    } finally {
+      this.seeding = false;
+    }
     this.undoManager.clear();
-    // Seeding writes to the document, which set the dirty flag on the way
-    // past. The content came from the server, so it is not a local edit —
-    // and clearing the flag has to be announced, or an observer that saw the
-    // write go by is left believing the passage is unsynced.
     this.dirty = false;
     this.notify();
   }
@@ -309,7 +314,7 @@ export class PassageDoc {
   // ------------------------------------------------------------- private
 
   private onUpdate = (_update: Uint8Array, origin: unknown) => {
-    if (origin === REMOTE_ORIGIN) return;
+    if (origin === REMOTE_ORIGIN || this.seeding) return;
     this.revision++;
     if (this.dirty) return;
     this.dirty = true;
