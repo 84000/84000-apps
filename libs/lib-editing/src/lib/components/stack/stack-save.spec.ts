@@ -281,6 +281,34 @@ describe('saveStackWork', () => {
     expect(work.store.dirty()).toContain('q');
   });
 
+  it('sends the saved passage each new one follows, within its tab', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'body', label: '1', type: 'translation', sort: 170 },
+      { uuid: 'note', label: 'n.1', type: 'endnotes', sort: 300 },
+    ]);
+    ['body', 'note'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    // Two consecutive splits of the body passage.
+    const n1 = work.split('body', 1)?.uuid ?? '';
+    const n2 = work.split(n1, 1)?.uuid ?? '';
+    // A new first endnote: the entry before it is the body's, another tab.
+    const first = work.insert(
+      { type: 'endnotes', label: 'n.1', content: [para('first')] },
+      work.spine.indexOf('note'),
+    ).uuid;
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValue(new Map());
+
+    await saveStackWork(work);
+
+    expect(
+      dataAccess.savePassagesWithDeletions.mock.calls[0][0].insertAfter,
+    ).toEqual({ [n1]: 'body', [n2]: 'body', [first]: null });
+  });
+
   it('reads no sorts back when a save created no passages', async () => {
     const work = new WorkDocument({ workUuid: 'w1', schema });
     work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);

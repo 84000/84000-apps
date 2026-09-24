@@ -35,6 +35,33 @@ export const dirtyPassages = (work: WorkDocument): Passage[] =>
     .filter((passage): passage is Passage => passage !== null);
 
 /**
+ * The saved passage each new one follows, for the save to place it by.
+ *
+ * Searched within the passage's own tab: the spine holds sections with the
+ * rest of the work missing between them, so the entry before a section's
+ * first row is not the passage before it in the work.
+ */
+const insertAfterFor = (
+  work: WorkDocument,
+  created: Passage[],
+): Record<string, string | null> => {
+  const entries = work.spine.entries();
+  const indexOf = new Map(entries.map((entry, i) => [entry.uuid, i]));
+  return Object.fromEntries(
+    created.map((passage) => {
+      const index = indexOf.get(passage.uuid) ?? -1;
+      const tab = entries[index]?.tab;
+      for (let i = index - 1; i >= 0; i--) {
+        if (entries[i].tab !== tab) break;
+        if (entries[i].sort !== undefined)
+          return [passage.uuid, entries[i].uuid];
+      }
+      return [passage.uuid, null];
+    }),
+  );
+};
+
+/**
  * Works whose sorts from a position on may be stale, because reading them
  * back after a save failed. The next save refreshes them before it builds its
  * payload, or it would write them.
@@ -86,7 +113,11 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     (passage) => work.spine.meta(passage.uuid)?.sort === undefined,
   );
 
-  const result = await savePassagesWithDeletions({ client, passages });
+  const result = await savePassagesWithDeletions({
+    client,
+    passages,
+    insertAfter: insertAfterFor(work, created),
+  });
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
     return false;
