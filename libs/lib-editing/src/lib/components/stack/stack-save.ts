@@ -137,6 +137,10 @@ const refreshSorts = async (
   return true;
 };
 
+/** Whether a save has anything to write or delete. */
+export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
+  work.store.dirty().length > 0 || work.spine.removedSinceSave().length > 0;
+
 /**
  * Write a work's edited passages and delete the ones it removed, and mark
  * them synced once the server agrees.

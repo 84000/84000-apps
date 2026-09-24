@@ -13,7 +13,7 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
 import { PassageStackController } from './PassageStackController';
-import { saveStackWork } from './stack-save';
+import { hasUnsavedStackChanges, saveStackWork } from './stack-save';
 import { SpineFeed, type SpineSection } from './spine-feed';
 import { createStackWork } from './stack-work';
 
@@ -55,19 +55,35 @@ export const StackWorkProvider = ({
   children: ReactNode;
 }) => {
   const [stack, setStack] = useState<StackWork | null>(null);
-  const { registerSaveHandler } = useEditorState();
+  const { registerSaveHandler, dirtyStore } = useEditorState();
 
   // The editor's save button materializes rows from one TipTap editor per tab,
   // which per-passage documents do not have. This provider cannot be called
   // into from `EditorProvider` — the stack sits behind a dynamic boundary — so
-  // it hands its own save over instead.
+  // it registers its own save to run alongside.
   useEffect(() => {
     if (!stack) return;
-    registerSaveHandler(async () => {
-      await saveStackWork(stack.work);
+    const { work } = stack;
+    registerSaveHandler({
+      save: async () => {
+        if (!hasUnsavedStackChanges(work)) return 'none';
+        return (await saveStackWork(work)) ? 'saved' : 'failed';
+      },
+      isDirty: () => hasUnsavedStackChanges(work),
     });
-    return () => registerSaveHandler(null);
-  }, [stack, registerSaveHandler]);
+    // Offer the save as soon as there is something to save. Clearing it is
+    // the save's job, which knows about the paginated editors too.
+    const offer = () => {
+      if (hasUnsavedStackChanges(work)) dirtyStore.setDirty(true);
+    };
+    const stopStore = work.store.observe(offer);
+    const stopSpine = work.spine.observe(offer);
+    return () => {
+      stopStore();
+      stopSpine();
+      registerSaveHandler(null);
+    };
+  }, [stack, registerSaveHandler, dirtyStore]);
 
   useEffect(() => {
     let cancelled = false;

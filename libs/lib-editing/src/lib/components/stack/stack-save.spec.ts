@@ -6,7 +6,11 @@ import {
 } from '@eightyfourthousand/data-access';
 import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
-import { dirtyPassages, saveStackWork } from './stack-save';
+import {
+  dirtyPassages,
+  hasUnsavedStackChanges,
+  saveStackWork,
+} from './stack-save';
 import { createStackWorkDocument } from './stack-work';
 import { stackSeedFromPassage } from './types';
 
@@ -154,6 +158,29 @@ describe('dirtyPassages', () => {
     const [passage] = dirtyPassages(work);
     expect(passage.label).toBe('3');
     expect(passage.sort).toBe(work.spine.sortOf('p2'));
+  });
+});
+
+describe('hasUnsavedStackChanges', () => {
+  it('is set by an edit or a removal of a saved passage', () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'a', label: '1', type: 'translation', sort: 1 },
+      { uuid: 'b', label: '2', type: 'translation', sort: 2 },
+    ]);
+    ['a', 'b'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+
+    work.remove(['b']);
+    expect(hasUnsavedStackChanges(work)).toBe(true);
+    work.undo();
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+
+    edit(work, 'a', 'changed');
+    expect(hasUnsavedStackChanges(work)).toBe(true);
   });
 });
 

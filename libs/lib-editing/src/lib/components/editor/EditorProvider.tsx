@@ -23,6 +23,7 @@ import { computeSavePayload, type PassageUuidRecord } from './save-filter';
 import {
   beginSave,
   filterReplacements,
+  combineSaveOutcomes,
   restoreFailedSave,
 } from './save-bookkeeping';
 import {
@@ -34,6 +35,18 @@ import {
   type FragmentBaseline,
 } from './observer-utils';
 import { applyRenumberedLabels } from './extensions/EndNoteLink/endnote-utils';
+
+/** What a save did: nothing to save, saved, or failed. */
+export type SaveOutcome = 'none' | 'saved' | 'failed';
+
+type SaveResult = { outcome: SaveOutcome; dirty: boolean };
+
+/** A second editing surface that saves alongside the paginated editors. */
+export type SaveHandler = {
+  save: () => Promise<SaveOutcome>;
+  /** Whether it holds changes the last save did not write. */
+  isDirty: () => boolean;
+};
 
 interface EditorContextState {
   doc?: Doc;
@@ -54,14 +67,14 @@ interface EditorContextState {
   refreshEditorBaseline: (key: string) => void;
   save: () => Promise<void>;
   /**
-   * Hand `save` over to something else, or take it back with null.
+   * Save something else alongside the paginated editors, or stop with null.
    *
    * The passage stack materializes rows from its own documents rather than
    * from a TipTap editor, and this provider cannot call into it — the stack
    * sits behind a dynamic boundary so its `@tiptap/y-tiptap` imports stay out
    * of the server bundle. So the stack registers instead.
    */
-  registerSaveHandler: (handler: (() => Promise<void>) | null) => void;
+  registerSaveHandler: (handler: SaveHandler | null) => void;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
   setNavigating: (
@@ -451,30 +464,18 @@ export const EditorContextProvider = ({
     [setNavigating],
   );
 
-  const saveHandlerRef = useRef<(() => Promise<void>) | null>(null);
-  const registerSaveHandler = useCallback(
-    (handler: (() => Promise<void>) | null) => {
-      saveHandlerRef.current = handler;
-    },
-    [],
-  );
+  const saveHandlerRef = useRef<SaveHandler | null>(null);
+  const registerSaveHandler = useCallback((handler: SaveHandler | null) => {
+    saveHandlerRef.current = handler;
+  }, []);
 
-  const save = useCallback(async () => {
-    if (saveHandlerRef.current) {
-      return saveHandlerRef.current();
-    }
-
-    if (isSavingRef.current) {
-      console.warn('Save already in progress; skipping.');
-      return;
-    }
-
+  /** The paginated editors' half of a save. */
+  const savePaginated = useCallback(async (): Promise<SaveResult> => {
     const editorEntries = Object.entries(editorCache.current).filter(
       ([, editor]) => !editor.isDestroyed,
     );
     if (!editorEntries.length) {
-      console.warn('No editor instance found, cannot save.');
-      return;
+      return { outcome: 'none', dirty: false };
     }
 
     const liveUuidsByEditor: PassageUuidRecord = {};
@@ -502,8 +503,7 @@ export const EditorContextProvider = ({
     });
 
     if (!hasChanges) {
-      console.log('No changes to save.');
-      return;
+      return { outcome: 'none', dirty: false };
     }
 
     // Swap in a fresh dirty set before any await: keystrokes made while the
@@ -511,40 +511,14 @@ export const EditorContextProvider = ({
     // post-save bookkeeping instead of being silently cleared.
     const { inFlight: inFlightDirty, next } = beginSave(dirtyUuidsRef.current);
     dirtyUuidsRef.current = next;
-    isSavingRef.current = true;
 
-    try {
-      // Everything up to the await is synchronous, so the serialized payload
-      // is consistent with the uuid sets captured above.
-      const passages: Passage[] = [];
-      if (uuidsToSave.length) {
-        const uuidsToSaveSet = new Set(uuidsToSave);
-        isNormalizingForSaveRef.current = true;
-        try {
-          editorEntries.forEach(([, editor]) => {
-            const editorUuids = Array.from(getEditorUuids(editor)).filter(
-              (uuid) => uuidsToSaveSet.has(uuid),
-            );
-            if (editorUuids.length === 0) {
-              return;
-            }
-
-            ensureUuids(editor, { passageUuids: new Set(editorUuids) });
-          });
-        } finally {
-          isNormalizingForSaveRef.current = false;
-        }
-
-        // Blur only the focused editor, once, to flush any pending IME
-        // composition into ProseMirror state before the docs are read —
-        // blurring editors that never had focus accomplishes nothing, and
-        // the old per-editor blur/focus pair stole focus across panels and
-        // scrolled the viewport on every save.
-        const focusedEntry = editorEntries.find(
-          ([, editor]) => editor.isFocused,
-        );
-        focusedEntry?.[1].commands.blur();
-
+    // Everything up to the await is synchronous, so the serialized payload
+    // is consistent with the uuid sets captured above.
+    const passages: Passage[] = [];
+    if (uuidsToSave.length) {
+      const uuidsToSaveSet = new Set(uuidsToSave);
+      isNormalizingForSaveRef.current = true;
+      try {
         editorEntries.forEach(([, editor]) => {
           const editorUuids = Array.from(getEditorUuids(editor)).filter(
             (uuid) => uuidsToSaveSet.has(uuid),
@@ -553,106 +527,142 @@ export const EditorContextProvider = ({
             return;
           }
 
-          passages.push(
-            ...passagesFromNodes({
-              uuids: editorUuids,
-              workUuid: work.uuid,
-              editor,
-            }),
-          );
+          ensureUuids(editor, { passageUuids: new Set(editorUuids) });
         });
-
-        // Restore focus where it was, keeping the existing selection and
-        // without scrolling, before the network await so focus is never
-        // visibly lost.
-        focusedEntry?.[1].commands.focus(null, { scrollIntoView: false });
+      } finally {
+        isNormalizingForSaveRef.current = false;
       }
-      const result = await savePassages({
-        client,
-        passages,
-        deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
+
+      // Blur only the focused editor, once, to flush any pending IME
+      // composition into ProseMirror state before the docs are read —
+      // blurring editors that never had focus accomplishes nothing, and
+      // the old per-editor blur/focus pair stole focus across panels and
+      // scrolled the viewport on every save.
+      const focusedEntry = editorEntries.find(([, editor]) => editor.isFocused);
+      focusedEntry?.[1].commands.blur();
+
+      editorEntries.forEach(([, editor]) => {
+        const editorUuids = Array.from(getEditorUuids(editor)).filter((uuid) =>
+          uuidsToSaveSet.has(uuid),
+        );
+        if (editorUuids.length === 0) {
+          return;
+        }
+
+        passages.push(
+          ...passagesFromNodes({
+            uuids: editorUuids,
+            workUuid: work.uuid,
+            editor,
+          }),
+        );
       });
 
-      if (!result?.success) {
-        // Nothing was durably confirmed; restore the attempted set so the
-        // next save retries it alongside any mid-flight edits.
-        dirtyUuidsRef.current = restoreFailedSave(
-          inFlightDirty,
-          dirtyUuidsRef.current,
-        );
-        console.error('Save failed:', result?.error ?? 'unknown error');
+      // Restore focus where it was, keeping the existing selection and
+      // without scrolling, before the network await so focus is never
+      // visibly lost.
+      focusedEntry?.[1].commands.focus(null, { scrollIntoView: false });
+    }
+    const result = await savePassages({
+      client,
+      passages,
+      deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
+    });
+
+    if (!result?.success) {
+      // Nothing was durably confirmed; restore the attempted set so the
+      // next save retries it alongside any mid-flight edits.
+      dirtyUuidsRef.current = restoreFailedSave(
+        inFlightDirty,
+        dirtyUuidsRef.current,
+      );
+      console.error('Save failed:', result?.error ?? 'unknown error');
+      return { outcome: 'failed', dirty: true };
+    }
+
+    // Baselines become the uuid sets captured at save start — not the live
+    // editor — so passages added or deleted during the flight are still
+    // detected by the next save. Skip editors swapped out mid-flight.
+    editorEntries.forEach(([key, editor]) => {
+      if (editorCache.current[key] === editor && !editor.isDestroyed) {
+        savedBaselineUuidsByEditorRef.current[key] = liveUuidsByEditor[key];
+      }
+    });
+
+    // Server replacements must not overwrite passages the user re-edited
+    // during the flight — their newer local content wins and is saved on
+    // the next save.
+    const replacements = filterReplacements(
+      result.passages ?? [],
+      dirtyUuidsRef.current,
+    );
+    if (replacements.length) {
+      await applyReplacedPassages(replacements);
+    }
+
+    // Inserting or deleting a passage renumbers the rest of its series
+    // server-side, including passages this client never loaded. Adopt those
+    // labels so endnote links stop showing stale numbers without a reload.
+    // `setNavigating` keeps the resulting transactions out of dirty tracking:
+    // the labels came from the server, so saving them back is pointless and
+    // would leave the editor permanently dirty.
+    const renumbered = result.renumberedPassages ?? [];
+    if (renumbered.length) {
+      setNavigating(true);
+      try {
+        applyRenumberedLabels(Object.values(editorCache.current), renumbered);
+      } finally {
+        setNavigating(false);
+      }
+    }
+
+    // The dirty flag reflects what is left: mid-flight edits plus any
+    // structural changes that have not been saved yet.
+    const residualLive: PassageUuidRecord = {};
+    Object.entries(editorCache.current)
+      .filter(([, editor]) => !editor.isDestroyed)
+      .forEach(([key, editor]) => {
+        residualLive[key] = getEditorUuids(editor);
+      });
+    const residual = computeSavePayload({
+      dirtyUuids: dirtyUuidsRef.current,
+      baseline: savedBaselineUuidsByEditorRef.current,
+      current: residualLive,
+    });
+    return { outcome: 'saved', dirty: residual.hasChanges };
+  }, [client, work.uuid, getEditorUuids, applyReplacedPassages, setNavigating]);
+
+  // The stack, when it is mounted, and the paginated editors each save what
+  // they hold; one button and one toast cover both.
+  const save = useCallback(async () => {
+    if (isSavingRef.current) {
+      console.warn('Save already in progress; skipping.');
+      return;
+    }
+    isSavingRef.current = true;
+    try {
+      const stack = saveHandlerRef.current;
+      const stackOutcome = stack ? await stack.save() : 'none';
+      const paginated = await savePaginated();
+      const outcome = combineSaveOutcomes([stackOutcome, paginated.outcome]);
+
+      if (outcome === 'failed') {
         toast('Error saving content.', {
           icon: <CircleAlertIcon className="size-4 text-error" />,
         });
-        return;
-      }
-
-      console.log('Document state saved.');
-      toast('Content saved', {
-        icon: <CircleCheckIcon className="size-4 text-success" />,
-      });
-
-      // Baselines become the uuid sets captured at save start — not the live
-      // editor — so passages added or deleted during the flight are still
-      // detected by the next save. Skip editors swapped out mid-flight.
-      editorEntries.forEach(([key, editor]) => {
-        if (editorCache.current[key] === editor && !editor.isDestroyed) {
-          savedBaselineUuidsByEditorRef.current[key] = liveUuidsByEditor[key];
-        }
-      });
-
-      // Server replacements must not overwrite passages the user re-edited
-      // during the flight — their newer local content wins and is saved on
-      // the next save.
-      const replacements = filterReplacements(
-        result.passages ?? [],
-        dirtyUuidsRef.current,
-      );
-      if (replacements.length) {
-        await applyReplacedPassages(replacements);
-      }
-
-      // Inserting or deleting a passage renumbers the rest of its series
-      // server-side, including passages this client never loaded. Adopt those
-      // labels so endnote links stop showing stale numbers without a reload.
-      // `setNavigating` keeps the resulting transactions out of dirty tracking:
-      // the labels came from the server, so saving them back is pointless and
-      // would leave the editor permanently dirty.
-      const renumbered = result.renumberedPassages ?? [];
-      if (renumbered.length) {
-        setNavigating(true);
-        try {
-          applyRenumberedLabels(Object.values(editorCache.current), renumbered);
-        } finally {
-          setNavigating(false);
-        }
-      }
-
-      // The dirty flag reflects what is left: mid-flight edits plus any
-      // structural changes that have not been saved yet.
-      const residualLive: PassageUuidRecord = {};
-      Object.entries(editorCache.current)
-        .filter(([, editor]) => !editor.isDestroyed)
-        .forEach(([key, editor]) => {
-          residualLive[key] = getEditorUuids(editor);
+      } else if (outcome === 'saved') {
+        toast('Content saved', {
+          icon: <CircleCheckIcon className="size-4 text-success" />,
         });
-      const residual = computeSavePayload({
-        dirtyUuids: dirtyUuidsRef.current,
-        baseline: savedBaselineUuidsByEditorRef.current,
-        current: residualLive,
-      });
-      dirtyStore.setDirty(residual.hasChanges);
+      } else {
+        console.log('No changes to save.');
+      }
+
+      dirtyStore.setDirty(paginated.dirty || (stack?.isDirty() ?? false));
     } finally {
       isSavingRef.current = false;
     }
-  }, [
-    client,
-    work.uuid,
-    getEditorUuids,
-    applyReplacedPassages,
-    dirtyStore,
-    setNavigating,
-  ]);
+  }, [savePaginated, dirtyStore]);
 
   return (
     <EditorContext.Provider
