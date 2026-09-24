@@ -563,10 +563,15 @@ export const EditorContextProvider = ({
       // visibly lost.
       focusedEntry?.[1].commands.focus(null, { scrollIntoView: false });
     }
+    // A request that throws confirmed nothing either, and must not take the
+    // in-flight set down with it.
     const result = await savePassages({
       client,
       passages,
       deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
+    }).catch((error: unknown) => {
+      console.error('Save failed:', error);
+      return null;
     });
 
     if (!result?.success) {
@@ -642,7 +647,12 @@ export const EditorContextProvider = ({
     isSavingRef.current = true;
     try {
       const stack = saveHandlerRef.current;
-      const stackOutcome = stack ? await stack.save() : 'none';
+      const stackOutcome: SaveOutcome = stack
+        ? await stack.save().catch((error: unknown) => {
+            console.error('Save failed:', error);
+            return 'failed' as const;
+          })
+        : 'none';
       const paginated = await savePaginated();
       const outcome = combineSaveOutcomes([stackOutcome, paginated.outcome]);
 
