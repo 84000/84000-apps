@@ -73,6 +73,27 @@ const anchorsFor = (
 };
 
 /**
+ * The lowest sort the save's shifts can start from: a new passage's own sort,
+ * or where its anchor puts it. The two differ when the passage is first in
+ * its tab: its own sort follows the nearest saved passage in any tab, which
+ * in a spine whose tabs are not in sort order can sit above the anchor.
+ */
+const shiftedFrom = (
+  work: WorkDocument,
+  created: Passage[],
+  anchors: Record<string, NewPassageAnchor>,
+): number =>
+  Math.min(
+    ...created.map((passage) => {
+      const anchor = anchors[passage.uuid];
+      const uuid = anchor && ('after' in anchor ? anchor.after : anchor.before);
+      const sort = uuid ? work.spine.meta(uuid)?.sort : undefined;
+      if (sort === undefined || !anchor) return passage.sort;
+      return Math.min(passage.sort, 'after' in anchor ? sort + 1 : sort);
+    }),
+  );
+
+/**
  * Sorts that may be stale because reading them back after a save failed:
  * held sorts from `from` on, and the passages in `also`, which the save may
  * have inserted. The next save refreshes them before it builds its payload,
@@ -137,12 +158,14 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     (passage) => work.spine.meta(passage.uuid)?.sort === undefined,
   );
 
+  const anchors = anchorsFor(work, created);
+  // Before the save, which moves the anchors' sorts.
+  const createdFrom = shiftedFrom(work, created, anchors);
   const result = await savePassagesWithDeletions({
     client,
     passages,
-    anchors: anchorsFor(work, created),
+    anchors,
   });
-  const createdFrom = Math.min(...created.map((passage) => passage.sort));
   const createdUuids = new Set(created.map((passage) => passage.uuid));
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');

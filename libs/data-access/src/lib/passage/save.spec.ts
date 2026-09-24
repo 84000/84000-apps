@@ -709,6 +709,27 @@ describe('savePassagesWithDeletions placing new passages', () => {
     ]);
   });
 
+  // The last body passage and the first endnote, each gaining a neighbour
+  // in the gap between them. Placed before-group first, the new body
+  // passage landed after the new endnote.
+  it('puts a passage after one ahead of a passage before the next', async () => {
+    const state = createState({
+      passages: [row('last', 170), row('note', 171)],
+    });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      // The endnote first, as a spine holding the Endnotes tab first sends it.
+      passages: [created('newNote', 171), created('newBody', 171)],
+      anchors: { newNote: { before: 'note' }, newBody: { after: 'last' } },
+    });
+    expect(stored(state)).toEqual([
+      'last:170',
+      'newBody:171',
+      'newNote:172',
+      'note:173',
+    ]);
+  });
+
   it('makes room for more passages than the gap after the anchor', async () => {
     const state = createState({
       passages: [row('p', 170), row('q', 171), row('r', 173)],

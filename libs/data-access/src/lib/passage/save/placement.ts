@@ -59,6 +59,9 @@ const placeNewPassages = async ({
     return group.passages[0].sort - 1;
   };
 
+  const rank = ({ anchor }: Group) =>
+    anchor && 'after' in anchor ? 0 : anchor && 'before' in anchor ? 2 : 1;
+
   const readAnchors = (list: Group[]) =>
     getPassageSorts({
       client,
@@ -71,7 +74,9 @@ const placeNewPassages = async ({
   if (!initial) return { error: 'Failed to read anchor passage sorts' };
   const order = [...groups.values()]
     .map((group) => ({ group, base: baseOf(group, initial) }))
-    .sort((a, b) => a.base - b.base);
+    // At the same base, a group after a passage comes before one placed
+    // before the next: the gap between them is where both belong.
+    .sort((a, b) => a.base - b.base || rank(a.group) - rank(b.group));
 
   const sorts = new Map<string, number>();
   let placedTo = -Infinity;
