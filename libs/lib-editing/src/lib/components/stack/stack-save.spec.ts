@@ -402,6 +402,19 @@ describe('saveStackWork', () => {
     expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
   });
 
+  // An edit typed while the request was in flight is not in the payload.
+  it('leaves a passage dirty when it changed during the save', async () => {
+    const work = build();
+    edit(work, 'p0', 'sent');
+    dataAccess.savePassagesWithDeletions.mockImplementation(async () => {
+      edit(work, 'p0', 'typed during the save');
+      return { success: true };
+    });
+
+    expect(await saveStackWork(work)).toBe(true);
+    expect(work.store.dirty()).toEqual(['p0']);
+  });
+
   // A document marked synced on a failed write would drop the edit from the
   // next save.
   it('leaves a passage dirty when the write fails', async () => {

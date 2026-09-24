@@ -90,6 +90,7 @@ export class PassageDoc {
 
   private schema: Schema;
   private dirty = false;
+  private revision = 0;
   private textOrigins: Set<unknown>;
   private listeners = new Set<() => void>();
   private nodeCache: PMNode | null = null;
@@ -248,12 +249,20 @@ export class PassageDoc {
     return this.dirty;
   }
 
+  /** Increases with every local change; compare before and after an await. */
+  get version(): number {
+    return this.revision;
+  }
+
   /**
    * Clear the dirty flag, after the caller has sent this document's state and
-   * had it acknowledged.
+   * had it acknowledged. Given the `version` read when the state was sent, a
+   * document changed since stays dirty.
    */
-  markSynced() {
+  markSynced(version?: number) {
     if (!this.dirty) return;
+    // Changed since the caller read it: the save did not include the change.
+    if (version !== undefined && version !== this.revision) return;
     this.dirty = false;
     this.notify();
   }
@@ -301,6 +310,7 @@ export class PassageDoc {
 
   private onUpdate = (_update: Uint8Array, origin: unknown) => {
     if (origin === REMOTE_ORIGIN) return;
+    this.revision++;
     if (this.dirty) return;
     this.dirty = true;
     this.notify();

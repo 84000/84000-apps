@@ -153,6 +153,14 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
 
   const passages = dirtyPassages(work);
   if (!passages.length) return true;
+  // Read with the payload: an edit made while the request is in flight is
+  // not in it, and must leave its passage dirty.
+  const versions = new Map(
+    passages.map((passage) => [
+      passage.uuid,
+      work.store.peek(passage.uuid)?.version,
+    ]),
+  );
   // Read before the write: once saved, these carry a stored sort.
   const created = passages.filter(
     (passage) => work.spine.meta(passage.uuid)?.sort === undefined,
@@ -178,7 +186,9 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
 
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.
-  passages.forEach((passage) => work.store.peek(passage.uuid)?.markSynced());
+  passages.forEach((passage) =>
+    work.store.peek(passage.uuid)?.markSynced(versions.get(passage.uuid)),
+  );
   work.spine.adoptSorts(
     new Map((result.passages ?? []).map((row) => [row.uuid, row.sort])),
   );

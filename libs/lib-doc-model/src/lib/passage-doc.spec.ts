@@ -79,6 +79,20 @@ describe('PassageDoc', () => {
       expect(doc.isDirty).toBe(false);
     });
 
+    it('stays dirty when changed after the version a save sent', () => {
+      const doc = build();
+      doc.seed([para('hello', 'a')]);
+      doc.replaceContent({ type: 'doc', content: [para('sent', 'a')] });
+      const sent = doc.version;
+      doc.replaceContent({ type: 'doc', content: [para('later', 'a')] });
+
+      doc.markSynced(sent);
+      expect(doc.isDirty).toBe(true);
+
+      doc.markSynced(doc.version);
+      expect(doc.isDirty).toBe(false);
+    });
+
     it('notifies observers when it becomes dirty', () => {
       const doc = build();
       doc.seed([para('hello', 'a')]);
