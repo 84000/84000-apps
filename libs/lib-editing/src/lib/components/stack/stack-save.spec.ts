@@ -1,18 +1,35 @@
 import { Schema } from '@tiptap/pm/model';
+import {
+  annotationsFromDTO,
+  passageFromDTO,
+  type PassageDTO,
+} from '@eightyfourthousand/data-access';
 import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { dirtyPassages, saveStackWork } from './stack-save';
+import { createStackWorkDocument } from './stack-work';
+import { stackSeedFromPassage } from './types';
 
-// Only the two writes are stubbed: `Spine` reads `panelAndTabForContentType`
+// See PassageStackController.spec.ts — building the stack schema reaches
+// `data-access/ssr` through two client barrels that leak it.
+jest.mock('next/server', () => ({
+  NextRequest: class {},
+  NextResponse: class {},
+}));
+jest.mock('resend', () => ({ Resend: class {} }));
+
+// Only the server calls are stubbed: `Spine` reads `panelAndTabForContentType`
 // from this module, so replacing the whole of it breaks seeding.
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
   createBrowserClient: jest.fn(() => ({})),
   savePassagesWithDeletions: jest.fn(),
+  getPassageSorts: jest.fn(),
 }));
 
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   savePassagesWithDeletions: jest.Mock;
+  getPassageSorts: jest.Mock;
 };
 
 const schema = new Schema({
@@ -45,7 +62,9 @@ const build = () => {
 
 /** Edit a passage, so its own document reports itself dirty. */
 const edit = (work: WorkDocument, uuid: string, text: string) =>
-  work.store.ensure(uuid).replaceContent({ type: 'doc', content: [para(text)] });
+  work.store
+    .ensure(uuid)
+    .replaceContent({ type: 'doc', content: [para(text)] });
 
 describe('dirtyPassages', () => {
   beforeEach(() => dataAccess.savePassagesWithDeletions.mockReset());
@@ -59,6 +78,75 @@ describe('dirtyPassages', () => {
     expect(dirtyPassages(work).map((passage) => passage.uuid)).toEqual(['p1']);
   });
 
+  // toh251 1.2 as seeded: a comment over the second half of a glossary
+  // instance renders the instance as two segments sharing its uuid. Exported
+  // as-is that is two rows with one primary key, and Postgres rejects the
+  // whole annotation write.
+  it('exports a split annotation as contiguous rows with distinct uuids', () => {
+    const text = 'residing in Jeta’s Grove, Anāthapiṇḍada’s park, together';
+    const start = text.indexOf('Jeta');
+    const split = text.indexOf('Anātha');
+    const end = text.indexOf(', together');
+    const dto: PassageDTO = {
+      uuid: 'p1',
+      work_uuid: 'w1',
+      sort: 1,
+      type: 'translation',
+      label: '1.2',
+      xmlId: 'x',
+      parent: 'y',
+      content: text,
+      annotations: [
+        {
+          uuid: 'glossary-1',
+          passage_uuid: 'p1',
+          type: 'glossary-instance',
+          start,
+          end,
+          content: [{ uuid: 'term-1' }, { authority: 'authority-1' }],
+        },
+        {
+          uuid: 'comment-1',
+          passage_uuid: 'p1',
+          type: 'comment',
+          start: split,
+          end,
+          content: [{ uuid: 'thread-1' }],
+        },
+      ],
+    };
+    const seed = stackSeedFromPassage(
+      passageFromDTO(
+        dto,
+        annotationsFromDTO(dto.annotations ?? [], text.length),
+      ),
+    );
+    const work = createStackWorkDocument({ workUuid: 'w1' });
+    work.seedSpine([seed.meta]);
+    work.store.create('p1', seed.content);
+    // An edit that leaves the marks in place: type at the end of the passage.
+    const edited = JSON.parse(JSON.stringify(seed.content));
+    edited[0].content.push({ type: 'text', text: ' edited' });
+    work.store.ensure('p1').replaceContent({ type: 'doc', content: edited });
+
+    const [passage] = dirtyPassages(work);
+    const uuids = passage.annotations.map((a) => a.uuid);
+    expect(new Set(uuids).size).toBe(uuids.length);
+
+    const glossary = passage.annotations
+      .filter((a) => a.type === 'glossaryInstance')
+      .sort((a, b) => a.start - b.start);
+    expect(glossary.map((a) => [a.start, a.end])).toEqual([
+      [start, split],
+      [split, end],
+    ]);
+    expect(glossary[0].uuid).toBe('glossary-1');
+
+    // Written back, so the next save sends the same rows.
+    const again = dirtyPassages(work)[0].annotations.map((a) => a.uuid);
+    expect(again.sort()).toEqual([...uuids].sort());
+  });
+
   it('takes identity from the spine and sort from position', () => {
     const work = build();
     edit(work, 'p2', 'changed');
@@ -70,7 +158,10 @@ describe('dirtyPassages', () => {
 });
 
 describe('saveStackWork', () => {
-  beforeEach(() => dataAccess.savePassagesWithDeletions.mockReset());
+  beforeEach(() => {
+    dataAccess.savePassagesWithDeletions.mockReset();
+    dataAccess.getPassageSorts.mockReset();
+  });
 
   it('writes nothing when nothing was edited', async () => {
     await saveStackWork(build());
@@ -84,6 +175,123 @@ describe('saveStackWork', () => {
 
     expect(await saveStackWork(work)).toBe(true);
     expect(work.store.dirty()).toEqual([]);
+  });
+
+  // The spine holds part of a work, so position is not a row's sort: saving
+  // 1.2 wrote sort 1, and it jumped ahead of the front matter.
+  it('sends stored sorts, and reads back the sorts a save shifted', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'a', label: '1.1', type: 'translation', sort: 169 },
+      { uuid: 'b', label: '1.2', type: 'translation', sort: 170 },
+      { uuid: 'c', label: '1.3', type: 'translation', sort: 171 },
+    ]);
+    ['a', 'b', 'c'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    edit(work, 'b', 'changed');
+    const created = work.split('a', 1)?.uuid ?? '';
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    // What the server holds after shifting 170–171 up and inserting.
+    dataAccess.getPassageSorts.mockResolvedValue(
+      new Map([
+        [created, 170],
+        ['b', 171],
+        ['c', 172],
+      ]),
+    );
+
+    await saveStackWork(work);
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls[0][0]
+      .passages as { uuid: string; sort: number }[];
+    const sortOf = (uuid: string) => sent.find((p) => p.uuid === uuid)?.sort;
+    expect(sortOf('b')).toBe(170);
+    expect(sortOf(created)).toBe(170);
+
+    // Everything from the new passage's sort on, held or not in the payload.
+    const { uuids } = dataAccess.getPassageSorts.mock.calls[0][0];
+    expect([...uuids].sort()).toEqual([created, 'b', 'c'].sort());
+    expect(
+      ['a', created, 'b', 'c'].map((uuid) => work.spine.meta(uuid)?.sort),
+    ).toEqual([169, 170, 171, 172]);
+  });
+
+  it('adopts the sorts the save returns for the rows it wrote', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);
+    work.store.create('a', [para('a')]);
+    work.store.peek('a')?.markSynced();
+    edit(work, 'a', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({
+      success: true,
+      passages: [{ uuid: 'a', sort: 5 }],
+    });
+
+    await saveStackWork(work);
+
+    expect(work.spine.meta('a')?.sort).toBe(5);
+  });
+
+  // Stale sorts would be written by the next save, tying passages.
+  it('retries a failed read-back before the next save', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'p', label: '1', type: 'translation', sort: 170 },
+      { uuid: 'q', label: '2', type: 'translation', sort: 171 },
+    ]);
+    ['p', 'q'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    work.split('p', 1);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValueOnce(null);
+    await saveStackWork(work);
+
+    // The server moved q to 172; the read-back that would have said so failed.
+    edit(work, 'q', 'changed');
+    dataAccess.getPassageSorts.mockResolvedValueOnce(new Map([['q', 172]]));
+    await saveStackWork(work);
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls[1][0]
+      .passages as { uuid: string; sort: number }[];
+    expect(sent.find((p) => p.uuid === 'q')?.sort).toBe(172);
+  });
+
+  it('does not save while stale sorts cannot be refreshed', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'p', label: '1', type: 'translation', sort: 170 },
+      { uuid: 'q', label: '2', type: 'translation', sort: 171 },
+    ]);
+    ['p', 'q'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    work.split('p', 1);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValue(null);
+    await saveStackWork(work);
+
+    edit(work, 'q', 'changed');
+    expect(await saveStackWork(work)).toBe(false);
+    expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
+    expect(work.store.dirty()).toContain('q');
+  });
+
+  it('reads no sorts back when a save created no passages', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);
+    work.store.create('a', [para('a')]);
+    work.store.peek('a')?.markSynced();
+    edit(work, 'a', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+
+    await saveStackWork(work);
+
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
   });
 
   // A document marked synced on a failed write would drop the edit from the

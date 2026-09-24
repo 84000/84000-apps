@@ -58,6 +58,20 @@ describe('WorkDocument structural ops', () => {
       expect(paraTexts(work.store.ensure('new-0').toJSON())).toEqual(['two']);
     });
 
+    // Cutting mid-paragraph leaves both halves with its uuid; saved, the new
+    // passage's rows would take the head's.
+    it('gives the tail of a split paragraph its own uuid', () => {
+      const work = build(1);
+      setContent(work, 'p0', [para('one two', 'a')]);
+      const result = work.split('p0', 4);
+
+      const uuidOf = (uuid: string) =>
+        work.store.ensure(uuid).toJSON().content?.[0].attrs?.uuid;
+      expect(uuidOf('p0')).toBe('a');
+      expect(uuidOf(result?.uuid ?? '')).toEqual(expect.any(String));
+      expect(uuidOf(result?.uuid ?? '')).not.toBe('a');
+    });
+
     it('renumbers the labels below the split', () => {
       const work = build(3);
       work.split('p0', 0);

@@ -9,6 +9,7 @@ import {
   passagesToDTO,
   passagesToRowDTO,
 } from '../types';
+import { getPassageSorts } from './read';
 
 const SAVE_PAGE_SIZE = 500;
 
@@ -353,10 +354,37 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  // `existingRows` predates the shifts. An existing passage sent with its
+  // stored sort unchanged is read as "leave it where it is", and takes the
+  // sort a shift gave it; writing its old sort back would tie it with the
+  // passage the shift made room for. A caller that means to set an absolute
+  // sort equal to the stored one cannot express that here.
+  let shiftedSorts = new Map<string, number>();
+  if (sortedNewPassages.length && existingUuidSet.size) {
+    const sorts = await getPassageSorts({
+      client,
+      uuids: [...existingUuidSet],
+    });
+    if (!sorts) {
+      return failure('Failed to read shifted passage sorts');
+    }
+    shiftedSorts = sorts;
+  }
+  const sortBefore = new Map(
+    (existingRows ?? []).map((row) => [row.uuid, row.sort]),
+  );
+  const toSave = passages.map((passage) => {
+    const shifted = shiftedSorts.get(passage.uuid);
+    return shifted !== undefined &&
+      passage.sort === sortBefore.get(passage.uuid)
+      ? { ...passage, sort: shifted }
+      : passage;
+  });
+
   // Compute row/annotation diffs against the pre-save state before any
   // content writes happen.
-  const dtos = passagesToDTO(passages);
-  const passageRowDtos = passagesToRowDTO(passages);
+  const dtos = passagesToDTO(toSave);
+  const passageRowDtos = passagesToRowDTO(toSave);
   const passageUuids = passages.map((p) => p.uuid);
   const annotations = dtos.flatMap((p) => p.annotations || []);
   const { data: existingAnnotations } =
@@ -371,7 +399,7 @@ export const savePassagesWithDeletions = async ({
   const existingRowsByUuid = new Map(
     ((existingRows ?? []) as ExistingPassageRow[]).map((row) => [
       row.uuid,
-      row,
+      { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
     ]),
   );
   const passageRowsToUpsert = passageRowDtos.filter((row) =>

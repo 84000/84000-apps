@@ -15,6 +15,7 @@ import {
 } from 'yjs';
 import type { Passage } from '@eightyfourthousand/data-access';
 import { passageFromNode } from './passage';
+import { withUniqueMarkUuids } from './unique-mark-uuids';
 
 /** Yjs key for a passage's content fragment. */
 const CONTENT_KEY = 'content';
@@ -192,6 +193,15 @@ export class PassageDoc {
       },
       STRUCTURAL_ORIGIN,
     );
+  }
+
+  /**
+   * Give each segment of a split annotation mark its own uuid, before an
+   * export. Written back, so every later save sends the same uuids.
+   */
+  ensureUniqueMarkUuids() {
+    const json = withUniqueMarkUuids(this.toNode().toJSON());
+    if (json) this.replaceContent(json);
   }
 
   /** Materialize this passage's row, given the identity held in the spine. */

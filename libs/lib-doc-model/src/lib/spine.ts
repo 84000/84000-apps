@@ -112,6 +112,9 @@ export class Spine {
       panel: (entry.get('panel') as string) ?? 'main',
       tab: (entry.get('tab') as string) ?? 'translation',
       toh: entry.get('toh') as PassageMeta['toh'],
+      ...(typeof entry.get('sort') === 'number'
+        ? { sort: entry.get('sort') as number }
+        : {}),
     };
   }
 
@@ -174,12 +177,41 @@ export class Spine {
   /**
    * The `sort` value a passage's materialized row should carry.
    *
-   * The spine's order is authoritative, so `sort` is derived from position
-   * rather than stored — nothing can drift out of step with the order it is
-   * meant to describe.
+   * A saved passage keeps its stored sort. One created locally sits after the
+   * nearest saved passage before it, as a paginated split does; the save makes
+   * room for it. With no stored sorts at all, position is the only answer.
    */
   sortOf(uuid: string): number {
-    return this.indexOf(uuid);
+    const order = this.order.toArray();
+    const index = order.indexOf(uuid);
+    if (index < 0) return -1;
+    const stored = this.storedSort(uuid);
+    if (stored !== undefined) return stored;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const before = this.storedSort(order[i]);
+      if (before !== undefined) return before + (index - i);
+    }
+    for (let i = index + 1; i < order.length; i++) {
+      const after = this.storedSort(order[i]);
+      if (after !== undefined) return after;
+    }
+    return index;
+  }
+
+  /**
+   * Adopt stored sorts read back from the server, e.g. after a save that
+   * inserted passages and shifted the sorts after them. Passages the spine
+   * does not hold are ignored.
+   */
+  adoptSorts(sorts: Map<string, number>) {
+    if (!sorts.size) return;
+    transact(
+      this.doc,
+      () =>
+        sorts.forEach((sort, uuid) => this.metas.get(uuid)?.set('sort', sort)),
+      SPINE_ORIGIN,
+    );
   }
 
   // ------------------------------------------------------------- writing
@@ -425,6 +457,12 @@ export class Spine {
     entry.set('panel', panel);
     entry.set('tab', tab);
     if (passage.toh) entry.set('toh', passage.toh);
+    if (passage.sort !== undefined) entry.set('sort', passage.sort);
     return entry;
+  }
+
+  private storedSort(uuid: string): number | undefined {
+    const sort = this.metas.get(uuid)?.get('sort');
+    return typeof sort === 'number' ? sort : undefined;
   }
 }

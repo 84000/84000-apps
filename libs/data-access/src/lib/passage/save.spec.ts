@@ -6,7 +6,8 @@ type TableName = 'passages' | 'passage_annotations';
 /**
  * Operation names recorded in `state.ops` and accepted by `state.failOn`:
  * - rpc:shift_passage_sorts / rpc:rename_passage_label_prefix
- * - select:passages / select:passages:renumber / select:annotations /
+ * - select:passages / select:passages:renumber / select:passages:sorts /
+ *   select:annotations /
  *   select:annotations:endnote-refs
  * - upsert:passages / upsert:passages:labels / upsert:annotations
  * - delete:passages / delete:annotations / delete:annotations:by-passage
@@ -44,8 +45,11 @@ class FakeQueryBuilder {
     private readonly table: TableName,
   ) {}
 
-  select() {
+  private columns?: string;
+
+  select(columns?: string) {
     this.action = 'select';
+    this.columns = columns;
     return this;
   }
 
@@ -57,10 +61,7 @@ class FakeQueryBuilder {
   upsert(rows: PassageRowDTO[] | AnnotationDTO[]) {
     if (this.table === 'passages') {
       const isLabelOnly = (rows as { uuid: string }[]).every(
-        (row) =>
-          Object.keys(row)
-            .sort()
-            .join(',') === 'label,uuid',
+        (row) => Object.keys(row).sort().join(',') === 'label,uuid',
       );
       const op = isLabelOnly ? 'upsert:passages:labels' : 'upsert:passages';
       this.state.ops.push(op);
@@ -69,9 +70,7 @@ class FakeQueryBuilder {
         return Promise.resolve({ error });
       }
       if (isLabelOnly) {
-        this.state.labelUpserts.push(
-          rows as { uuid: string; label: string }[],
-        );
+        this.state.labelUpserts.push(rows as { uuid: string; label: string }[]);
       } else {
         this.state.passageUpserts.push(rows as PassageRowDTO[]);
       }
@@ -152,8 +151,11 @@ class FakeQueryBuilder {
     }
 
     if (this.table === 'passages') {
-      return this.gtSort !== undefined || this.gteSort !== undefined
-        ? 'select:passages:renumber'
+      if (this.gtSort !== undefined || this.gteSort !== undefined) {
+        return 'select:passages:renumber';
+      }
+      return this.columns === 'uuid, sort'
+        ? 'select:passages:sorts'
         : 'select:passages';
     }
     return this.filterContentUuid
@@ -261,10 +263,30 @@ class FakeQueryBuilder {
 const createFakeClient = (state: FakeState) =>
   ({
     from: (table: TableName) => new FakeQueryBuilder(state, table),
-    rpc: (name: string) => {
+    rpc: (
+      name: string,
+      args?: { p_work_uuid?: string; p_from_sort?: number; p_delta?: number },
+    ) => {
       const op = `rpc:${name}`;
       state.ops.push(op);
       const error = failResult(state, op);
+      if (!error && name === 'shift_passage_sorts' && args) {
+        // The migration's rule: the contiguous run of distinct sorts starting
+        // at `p_from_sort` moves up by `p_delta`.
+        const inWork = state.passages.filter(
+          (row) => row.work_uuid === args.p_work_uuid,
+        );
+        const occupied = new Set(inWork.map((row) => row.sort));
+        let end = args.p_from_sort as number;
+        while (occupied.has(end)) end++;
+        state.passages = state.passages.map((row) =>
+          row.work_uuid === args.p_work_uuid &&
+          row.sort >= (args.p_from_sort as number) &&
+          row.sort < end
+            ? { ...row, sort: row.sort + (args.p_delta as number) }
+            : row,
+        );
+      }
       return Promise.resolve({ error });
     },
   }) as never;
@@ -446,6 +468,96 @@ describe('savePassagesWithDeletions', () => {
   });
 });
 
+describe('savePassagesWithDeletions sort shifts', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const row = (uuid: string, sort: number): PassageRowDTO => ({
+    uuid,
+    work_uuid: 'work-1',
+    content: uuid,
+    label: uuid,
+    sort,
+    type: 'translation',
+  });
+  const edited = (uuid: string, sort: number): Passage => ({
+    uuid,
+    workUuid: 'work-1',
+    content: `${uuid} edited`,
+    label: uuid,
+    sort,
+    type: 'translation',
+    annotations: [],
+  });
+
+  // Rows are read before the shift. Writing an edited passage's pre-shift
+  // sort back over the shifted one tied it with the new passage.
+  it('keeps the shifted sort of an edited passage inside the shifted run', async () => {
+    const state = createState({
+      passages: [row('a', 169), row('b', 170), row('c', 171)],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('b', 170), edited('new', 170)],
+    });
+
+    expect(result.success).toBe(true);
+    const upserted = new Map(
+      state.passageUpserts.flat().map((upsert) => [upsert.uuid, upsert.sort]),
+    );
+    expect(upserted.get('new')).toBe(170);
+    expect(upserted.get('b')).toBe(171);
+  });
+
+  it('fails the save when the shifted sorts cannot be read', async () => {
+    const state = createState({
+      passages: [row('a', 169), row('b', 170)],
+      failOn: { 'select:passages:sorts': 'read failed' },
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('b', 170), edited('new', 170)],
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.passageUpserts).toEqual([]);
+  });
+
+  it('does not re-read sorts when nothing is inserted', async () => {
+    const state = createState({ passages: [row('a', 169)] });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('a', 169)],
+    });
+
+    expect(state.ops).not.toContain('select:passages:sorts');
+  });
+
+  it('still writes a sort the client changed', async () => {
+    const state = createState({
+      passages: [row('a', 169), row('b', 170), row('c', 180)],
+    });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('c', 175), edited('new', 170)],
+    });
+
+    const upserted = new Map(
+      state.passageUpserts.flat().map((upsert) => [upsert.uuid, upsert.sort]),
+    );
+    expect(upserted.get('c')).toBe(175);
+  });
+});
+
 describe('savePassagesWithDeletions failure propagation', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -611,10 +723,7 @@ describe('savePassagesWithDeletions failure propagation', () => {
 
     const result = await savePassagesWithDeletions({
       client: createFakeClient(state),
-      passages: [
-        { ...passage, annotationsIncomplete: true },
-        completeSibling,
-      ],
+      passages: [{ ...passage, annotationsIncomplete: true }, completeSibling],
     });
 
     expect(result.success).toBe(true);

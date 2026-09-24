@@ -282,13 +282,14 @@ export const graphqlPassageSource = ({
       if (wrongWork(requestedWorkUuid)) return [];
 
       const page = await getPassageMetaPage({ client, uuid: workUuid });
-      // Server order is the spine's order: `sort` is sparse and not an index,
-      // so position is what carries it.
-      return page.metas.map(({ uuid, label, type, toh }) => ({
+      // Server order is the spine's order. `sort` is sparse and not an index,
+      // but it is what a saved row must keep.
+      return page.metas.map(({ uuid, label, type, toh, sort }) => ({
         uuid,
         label,
         type,
         toh,
+        sort,
       }));
     },
   };
