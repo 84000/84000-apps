@@ -68,6 +68,7 @@ export const stackSeedFromPassage = (passage: Passage): StackPassageSeed => {
       label: passage.label,
       type: passage.type,
       toh: passage.toh,
+      sort: passage.sort,
     },
     content: (block.content ?? []) as JSONContent[],
     charCount: passage.content?.length ?? 0,

@@ -39,6 +39,12 @@ export type PassageMeta = {
   label: string;
   type: BodyItemType;
   toh?: TohokuCatalogEntry;
+  /**
+   * The row's stored `sort`. Sparse, and only meaningful across the whole
+   * work, so a spine holding part of one cannot derive it from position.
+   * Absent for a passage created locally and not yet saved.
+   */
+  sort?: number;
 } & PassagePlacement;
 
 /** A passage's position and identity, as read back from the spine. */

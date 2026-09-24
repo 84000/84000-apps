@@ -249,11 +249,61 @@ describe('Spine', () => {
     expect(spine.entries().map((e) => e.label)).toEqual(['1', '7', '9']);
   });
 
-  it('derives sort from position', () => {
+  it('derives sort from position when no sort is stored', () => {
     const spine = seeded(3);
     spine.move('p2', 0);
     expect(spine.sortOf('p2')).toBe(0);
     expect(spine.sortOf('p0')).toBe(1);
+  });
+
+  describe('stored sort', () => {
+    // Part of a work, as a stack holds it: sparse sorts that do not start at
+    // zero, because the front matter sits before them.
+    const partial = () => {
+      const spine = new Spine('work-1');
+      spine.seed([
+        { ...meta('h', ''), sort: 165 },
+        { ...meta('a', '1.1'), sort: 169 },
+        { ...meta('b', '1.2'), sort: 170 },
+        { ...meta('c', '1.3'), sort: 176 },
+      ]);
+      return spine;
+    };
+
+    it('keeps a saved passage’s stored sort, not its position', () => {
+      const spine = partial();
+      expect(['h', 'a', 'b', 'c'].map((uuid) => spine.sortOf(uuid))).toEqual([
+        165, 169, 170, 176,
+      ]);
+    });
+
+    it('places new passages after the nearest saved one before them', () => {
+      const spine = partial();
+      spine.insert(meta('n1', '1.3'), 3);
+      spine.insert(meta('n2', '1.4'), 4);
+      expect(spine.sortOf('n1')).toBe(171);
+      expect(spine.sortOf('n2')).toBe(172);
+      expect(spine.meta('n1')?.sort).toBeUndefined();
+    });
+
+    it('takes the next saved sort for a new passage with none before it', () => {
+      const spine = partial();
+      spine.insert(meta('n', ''), 0);
+      expect(spine.sortOf('n')).toBe(165);
+    });
+
+    // Mirrors `shift_passage_sorts`: only the contiguous run starting at the
+    // new sort moves, and the new passage then takes that sort.
+    it('shifts the contiguous run a save made room in', () => {
+      const spine = partial();
+      spine.insert(meta('n', '1.2'), 2);
+      expect(spine.sortOf('n')).toBe(170);
+
+      spine.recordSaved([{ uuid: 'n', sort: 170 }]);
+      expect(
+        ['h', 'a', 'n', 'b', 'c'].map((uuid) => spine.meta(uuid)?.sort),
+      ).toEqual([165, 169, 170, 171, 176]);
+    });
   });
 
   it('notifies observers of order and label changes', () => {

@@ -172,6 +172,39 @@ describe('saveStackWork', () => {
     expect(work.store.dirty()).toEqual([]);
   });
 
+  // The spine holds part of a work, so position is not a row's sort: saving
+  // 1.2 wrote sort 1, and it jumped ahead of the front matter.
+  it('sends stored sorts, and adopts the sort of a passage it created', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'a', label: '1.1', type: 'translation', sort: 169 },
+      { uuid: 'b', label: '1.2', type: 'translation', sort: 170 },
+      { uuid: 'c', label: '1.3', type: 'translation', sort: 171 },
+    ]);
+    ['a', 'b', 'c'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    edit(work, 'b', 'changed');
+    const created = work.split('a', 1);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+
+    await saveStackWork(work);
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls[0][0]
+      .passages as { uuid: string; sort: number }[];
+    const sortOf = (uuid: string) => sent.find((p) => p.uuid === uuid)?.sort;
+    expect(sortOf('b')).toBe(170);
+    expect(sortOf(created?.uuid ?? '')).toBe(170);
+
+    // The server shifted 170–171 up to make room; the spine follows.
+    expect(
+      ['a', created?.uuid ?? '', 'b', 'c'].map(
+        (uuid) => work.spine.meta(uuid)?.sort,
+      ),
+    ).toEqual([169, 170, 171, 172]);
+  });
+
   // A document marked synced on a failed write would drop the edit from the
   // next save.
   it('leaves a passage dirty when the write fails', async () => {

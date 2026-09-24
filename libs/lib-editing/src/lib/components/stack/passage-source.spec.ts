@@ -55,7 +55,7 @@ beforeEach(() => {
 });
 
 describe('graphqlPassageSource loadSpineMetas', () => {
-  it('returns the first page as spine seeds, in server order, dropping sort', async () => {
+  it('returns the first page as spine seeds, in server order, keeping sort', async () => {
     clientGraphql.getPassageMetaPage.mockResolvedValue({
       metas: [
         { uuid: 'p0', label: '1', sort: 4, type: 'translation', toh: 'toh145' },
@@ -66,8 +66,8 @@ describe('graphqlPassageSource loadSpineMetas', () => {
     const source = graphqlPassageSource({ client, workUuid: 'w1' });
 
     expect(await source.loadSpineMetas?.('w1')).toEqual([
-      { uuid: 'p0', label: '1', type: 'translation', toh: 'toh145' },
-      { uuid: 'p1', label: '2', type: 'endnotes', toh: undefined },
+      { uuid: 'p0', label: '1', type: 'translation', toh: 'toh145', sort: 4 },
+      { uuid: 'p1', label: '2', type: 'endnotes', toh: undefined, sort: 90 },
     ]);
   });
 

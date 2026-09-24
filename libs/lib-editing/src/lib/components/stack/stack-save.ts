@@ -11,7 +11,8 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
  * The per-passage replacement for `passagesFromNodes`, which reads a whole
  * tab's editor: a passage knows it is dirty because its own document was
  * written to, so this costs the number of edits rather than the size of the
- * work. `sort` comes from the spine, where position is what carries order.
+ * work. `sort` comes from the spine: stored for a saved passage, derived from
+ * its neighbours for a new one.
  */
 export const dirtyPassages = (work: WorkDocument): Passage[] =>
   work.store
@@ -41,6 +42,10 @@ export const dirtyPassages = (work: WorkDocument): Passage[] =>
 export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const passages = dirtyPassages(work);
   if (!passages.length) return true;
+  // Read before the write: once saved, these carry a stored sort.
+  const created = passages.filter(
+    (passage) => work.spine.meta(passage.uuid)?.sort === undefined,
+  );
 
   const result = await savePassagesWithDeletions({
     client: createBrowserClient(),
@@ -54,5 +59,6 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.
   passages.forEach((passage) => work.store.peek(passage.uuid)?.markSynced());
+  work.spine.recordSaved(created);
   return true;
 };

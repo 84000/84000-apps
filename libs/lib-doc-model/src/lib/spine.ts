@@ -112,6 +112,9 @@ export class Spine {
       panel: (entry.get('panel') as string) ?? 'main',
       tab: (entry.get('tab') as string) ?? 'translation',
       toh: entry.get('toh') as PassageMeta['toh'],
+      ...(typeof entry.get('sort') === 'number'
+        ? { sort: entry.get('sort') as number }
+        : {}),
     };
   }
 
@@ -174,12 +177,50 @@ export class Spine {
   /**
    * The `sort` value a passage's materialized row should carry.
    *
-   * The spine's order is authoritative, so `sort` is derived from position
-   * rather than stored — nothing can drift out of step with the order it is
-   * meant to describe.
+   * A saved passage keeps its stored sort. One created locally sits after the
+   * nearest saved passage before it, as a paginated split does; the save makes
+   * room for it. With no stored sorts at all, position is the only answer.
    */
   sortOf(uuid: string): number {
-    return this.indexOf(uuid);
+    const order = this.order.toArray();
+    const index = order.indexOf(uuid);
+    if (index < 0) return -1;
+    const stored = this.storedSort(uuid);
+    if (stored !== undefined) return stored;
+
+    for (let i = index - 1; i >= 0; i--) {
+      const before = this.storedSort(order[i]);
+      if (before !== undefined) return before + (index - i);
+    }
+    for (let i = index + 1; i < order.length; i++) {
+      const after = this.storedSort(order[i]);
+      if (after !== undefined) return after;
+    }
+    return index;
+  }
+
+  /**
+   * Adopt the sorts a save wrote for passages created locally.
+   *
+   * The server makes room for each new passage by shifting the contiguous run
+   * of sorts starting at its own (`shift_passage_sorts`), highest first. The
+   * same shift is applied to the sorts held here, or the next save would send
+   * the old ones back.
+   */
+  recordSaved(created: { uuid: string; sort: number }[]) {
+    if (!created.length) return;
+    transact(
+      this.doc,
+      () => {
+        [...created]
+          .sort((a, b) => b.sort - a.sort)
+          .forEach(({ sort }) => this.shiftRun(sort));
+        created.forEach(({ uuid, sort }) =>
+          this.metas.get(uuid)?.set('sort', sort),
+        );
+      },
+      SPINE_ORIGIN,
+    );
   }
 
   // ------------------------------------------------------------- writing
@@ -425,6 +466,26 @@ export class Spine {
     entry.set('panel', panel);
     entry.set('tab', tab);
     if (passage.toh) entry.set('toh', passage.toh);
+    if (passage.sort !== undefined) entry.set('sort', passage.sort);
     return entry;
+  }
+
+  private storedSort(uuid: string): number | undefined {
+    const sort = this.metas.get(uuid)?.get('sort');
+    return typeof sort === 'number' ? sort : undefined;
+  }
+
+  /** `shift_passage_sorts` with a delta of one, over the sorts held here. */
+  private shiftRun(from: number) {
+    const held = [...this.metas.values()].filter(
+      (entry) => typeof entry.get('sort') === 'number',
+    );
+    const occupied = new Set(held.map((entry) => entry.get('sort') as number));
+    let end = from;
+    while (occupied.has(end)) end++;
+    held.forEach((entry) => {
+      const sort = entry.get('sort') as number;
+      if (sort >= from && sort < end) entry.set('sort', sort + 1);
+    });
   }
 }
