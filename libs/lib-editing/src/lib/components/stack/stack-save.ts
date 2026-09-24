@@ -20,6 +20,9 @@ export const dirtyPassages = (work: WorkDocument): Passage[] =>
       const meta = work.spine.meta(uuid);
       const doc = work.store.peek(uuid);
       if (!meta || !doc) return null;
+      // As `ensureUuids()` does before the paginated editor's save: a split
+      // annotation would otherwise export two rows under one uuid.
+      doc.ensureUniqueMarkUuids();
       return doc.toPassage({
         label: meta.label,
         sort: work.spine.sortOf(uuid),

@@ -1,7 +1,22 @@
 import { Schema } from '@tiptap/pm/model';
+import {
+  annotationsFromDTO,
+  passageFromDTO,
+  type PassageDTO,
+} from '@eightyfourthousand/data-access';
 import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { dirtyPassages, saveStackWork } from './stack-save';
+import { createStackWorkDocument } from './stack-work';
+import { stackSeedFromPassage } from './types';
+
+// See PassageStackController.spec.ts — building the stack schema reaches
+// `data-access/ssr` through two client barrels that leak it.
+jest.mock('next/server', () => ({
+  NextRequest: class {},
+  NextResponse: class {},
+}));
+jest.mock('resend', () => ({ Resend: class {} }));
 
 // Only the two writes are stubbed: `Spine` reads `panelAndTabForContentType`
 // from this module, so replacing the whole of it breaks seeding.
@@ -45,7 +60,9 @@ const build = () => {
 
 /** Edit a passage, so its own document reports itself dirty. */
 const edit = (work: WorkDocument, uuid: string, text: string) =>
-  work.store.ensure(uuid).replaceContent({ type: 'doc', content: [para(text)] });
+  work.store
+    .ensure(uuid)
+    .replaceContent({ type: 'doc', content: [para(text)] });
 
 describe('dirtyPassages', () => {
   beforeEach(() => dataAccess.savePassagesWithDeletions.mockReset());
@@ -57,6 +74,75 @@ describe('dirtyPassages', () => {
     edit(work, 'p1', 'changed');
 
     expect(dirtyPassages(work).map((passage) => passage.uuid)).toEqual(['p1']);
+  });
+
+  // toh251 1.2 as seeded: a comment over the second half of a glossary
+  // instance renders the instance as two segments sharing its uuid. Exported
+  // as-is that is two rows with one primary key, and Postgres rejects the
+  // whole annotation write.
+  it('exports a split annotation as contiguous rows with distinct uuids', () => {
+    const text = 'residing in Jeta’s Grove, Anāthapiṇḍada’s park, together';
+    const start = text.indexOf('Jeta');
+    const split = text.indexOf('Anātha');
+    const end = text.indexOf(', together');
+    const dto: PassageDTO = {
+      uuid: 'p1',
+      work_uuid: 'w1',
+      sort: 1,
+      type: 'translation',
+      label: '1.2',
+      xmlId: 'x',
+      parent: 'y',
+      content: text,
+      annotations: [
+        {
+          uuid: 'glossary-1',
+          passage_uuid: 'p1',
+          type: 'glossary-instance',
+          start,
+          end,
+          content: [{ uuid: 'term-1' }, { authority: 'authority-1' }],
+        },
+        {
+          uuid: 'comment-1',
+          passage_uuid: 'p1',
+          type: 'comment',
+          start: split,
+          end,
+          content: [{ uuid: 'thread-1' }],
+        },
+      ],
+    };
+    const seed = stackSeedFromPassage(
+      passageFromDTO(
+        dto,
+        annotationsFromDTO(dto.annotations ?? [], text.length),
+      ),
+    );
+    const work = createStackWorkDocument({ workUuid: 'w1' });
+    work.seedSpine([seed.meta]);
+    work.store.create('p1', seed.content);
+    // An edit that leaves the marks in place: type at the end of the passage.
+    const edited = JSON.parse(JSON.stringify(seed.content));
+    edited[0].content.push({ type: 'text', text: ' edited' });
+    work.store.ensure('p1').replaceContent({ type: 'doc', content: edited });
+
+    const [passage] = dirtyPassages(work);
+    const uuids = passage.annotations.map((a) => a.uuid);
+    expect(new Set(uuids).size).toBe(uuids.length);
+
+    const glossary = passage.annotations
+      .filter((a) => a.type === 'glossaryInstance')
+      .sort((a, b) => a.start - b.start);
+    expect(glossary.map((a) => [a.start, a.end])).toEqual([
+      [start, split],
+      [split, end],
+    ]);
+    expect(glossary[0].uuid).toBe('glossary-1');
+
+    // Written back, so the next save sends the same rows.
+    const again = dirtyPassages(work)[0].annotations.map((a) => a.uuid);
+    expect(again.sort()).toEqual([...uuids].sort());
   });
 
   it('takes identity from the spine and sort from position', () => {
