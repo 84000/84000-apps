@@ -115,8 +115,9 @@ export const getPassageUuidByXmlId = async ({
   return data?.uuid;
 };
 
-/** URLs carry the uuid list, so it is read in slices. */
+/** URLs carry the uuid list, so it is read in slices, a few at a time. */
 const SORT_READ_CHUNK = 150;
+const SORT_READ_CONCURRENCY = 4;
 
 /**
  * The stored `sort` of each passage, or null when a read fails.
@@ -131,19 +132,28 @@ export const getPassageSorts = async ({
   client: DataClient;
   uuids: string[];
 }): Promise<Map<string, number> | null> => {
-  const sorts = new Map<string, number>();
+  const chunks: string[][] = [];
   for (let i = 0; i < uuids.length; i += SORT_READ_CHUNK) {
-    const { data, error } = await client
-      .from('passages')
-      .select('uuid, sort')
-      .in('uuid', uuids.slice(i, i + SORT_READ_CHUNK));
-    if (error) {
-      console.error('Error reading passage sorts:', error);
-      return null;
-    }
-    (data ?? []).forEach((row) =>
-      sorts.set(row.uuid as string, row.sort as number),
+    chunks.push(uuids.slice(i, i + SORT_READ_CHUNK));
+  }
+  const sorts = new Map<string, number>();
+  for (let i = 0; i < chunks.length; i += SORT_READ_CONCURRENCY) {
+    const results = await Promise.all(
+      chunks
+        .slice(i, i + SORT_READ_CONCURRENCY)
+        .map((chunk) =>
+          client.from('passages').select('uuid, sort').in('uuid', chunk),
+        ),
     );
+    for (const { data, error } of results) {
+      if (error) {
+        console.error('Error reading passage sorts:', error);
+        return null;
+      }
+      (data ?? []).forEach((row) =>
+        sorts.set(row.uuid as string, row.sort as number),
+      );
+    }
   }
   return sorts;
 };

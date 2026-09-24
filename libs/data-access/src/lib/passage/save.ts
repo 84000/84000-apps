@@ -9,6 +9,7 @@ import {
   passagesToDTO,
   passagesToRowDTO,
 } from '../types';
+import { getPassageSorts } from './read';
 
 const SAVE_PAGE_SIZE = 500;
 
@@ -353,24 +354,21 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
-  // `existingRows` predates the shifts. A passage the client left where it
-  // was takes the sort a shift gave it; writing its old sort back would tie
-  // it with the passage the shift made room for.
-  const shiftedSorts = new Map<string, number>();
+  // `existingRows` predates the shifts. An existing passage sent with its
+  // stored sort unchanged is read as "leave it where it is", and takes the
+  // sort a shift gave it; writing its old sort back would tie it with the
+  // passage the shift made room for. A caller that means to set an absolute
+  // sort equal to the stored one cannot express that here.
+  let shiftedSorts = new Map<string, number>();
   if (sortedNewPassages.length && existingUuidSet.size) {
-    const { data: shiftedRows, error: shiftedError } = await client
-      .from('passages')
-      .select('uuid, sort')
-      .in('uuid', [...existingUuidSet]);
-    if (shiftedError) {
-      console.error('Error reading shifted passage sorts:', shiftedError);
-      return failure(
-        `Failed to read shifted passage sorts: ${shiftedError.message}`,
-      );
+    const sorts = await getPassageSorts({
+      client,
+      uuids: [...existingUuidSet],
+    });
+    if (!sorts) {
+      return failure('Failed to read shifted passage sorts');
     }
-    (shiftedRows ?? []).forEach((row) =>
-      shiftedSorts.set(row.uuid as string, row.sort as number),
-    );
+    shiftedSorts = sorts;
   }
   const sortBefore = new Map(
     (existingRows ?? []).map((row) => [row.uuid, row.sort]),

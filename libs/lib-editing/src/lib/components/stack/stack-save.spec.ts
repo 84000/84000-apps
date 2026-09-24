@@ -218,6 +218,69 @@ describe('saveStackWork', () => {
     ).toEqual([169, 170, 171, 172]);
   });
 
+  it('adopts the sorts the save returns for the rows it wrote', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);
+    work.store.create('a', [para('a')]);
+    work.store.peek('a')?.markSynced();
+    edit(work, 'a', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({
+      success: true,
+      passages: [{ uuid: 'a', sort: 5 }],
+    });
+
+    await saveStackWork(work);
+
+    expect(work.spine.meta('a')?.sort).toBe(5);
+  });
+
+  // Stale sorts would be written by the next save, tying passages.
+  it('retries a failed read-back before the next save', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'p', label: '1', type: 'translation', sort: 170 },
+      { uuid: 'q', label: '2', type: 'translation', sort: 171 },
+    ]);
+    ['p', 'q'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    work.split('p', 1);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValueOnce(null);
+    await saveStackWork(work);
+
+    // The server moved q to 172; the read-back that would have said so failed.
+    edit(work, 'q', 'changed');
+    dataAccess.getPassageSorts.mockResolvedValueOnce(new Map([['q', 172]]));
+    await saveStackWork(work);
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls[1][0]
+      .passages as { uuid: string; sort: number }[];
+    expect(sent.find((p) => p.uuid === 'q')?.sort).toBe(172);
+  });
+
+  it('does not save while stale sorts cannot be refreshed', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'p', label: '1', type: 'translation', sort: 170 },
+      { uuid: 'q', label: '2', type: 'translation', sort: 171 },
+    ]);
+    ['p', 'q'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    work.split('p', 1);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValue(null);
+    await saveStackWork(work);
+
+    edit(work, 'q', 'changed');
+    expect(await saveStackWork(work)).toBe(false);
+    expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
+    expect(work.store.dirty()).toContain('q');
+  });
+
   it('reads no sorts back when a save created no passages', async () => {
     const work = new WorkDocument({ workUuid: 'w1', schema });
     work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);

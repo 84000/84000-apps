@@ -6,7 +6,8 @@ type TableName = 'passages' | 'passage_annotations';
 /**
  * Operation names recorded in `state.ops` and accepted by `state.failOn`:
  * - rpc:shift_passage_sorts / rpc:rename_passage_label_prefix
- * - select:passages / select:passages:renumber / select:annotations /
+ * - select:passages / select:passages:renumber / select:passages:sorts /
+ *   select:annotations /
  *   select:annotations:endnote-refs
  * - upsert:passages / upsert:passages:labels / upsert:annotations
  * - delete:passages / delete:annotations / delete:annotations:by-passage
@@ -44,8 +45,11 @@ class FakeQueryBuilder {
     private readonly table: TableName,
   ) {}
 
-  select() {
+  private columns?: string;
+
+  select(columns?: string) {
     this.action = 'select';
+    this.columns = columns;
     return this;
   }
 
@@ -147,8 +151,11 @@ class FakeQueryBuilder {
     }
 
     if (this.table === 'passages') {
-      return this.gtSort !== undefined || this.gteSort !== undefined
-        ? 'select:passages:renumber'
+      if (this.gtSort !== undefined || this.gteSort !== undefined) {
+        return 'select:passages:renumber';
+      }
+      return this.columns === 'uuid, sort'
+        ? 'select:passages:sorts'
         : 'select:passages';
     }
     return this.filterContentUuid
@@ -506,6 +513,32 @@ describe('savePassagesWithDeletions sort shifts', () => {
     );
     expect(upserted.get('new')).toBe(170);
     expect(upserted.get('b')).toBe(171);
+  });
+
+  it('fails the save when the shifted sorts cannot be read', async () => {
+    const state = createState({
+      passages: [row('a', 169), row('b', 170)],
+      failOn: { 'select:passages:sorts': 'read failed' },
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('b', 170), edited('new', 170)],
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.passageUpserts).toEqual([]);
+  });
+
+  it('does not re-read sorts when nothing is inserted', async () => {
+    const state = createState({ passages: [row('a', 169)] });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('a', 169)],
+    });
+
+    expect(state.ops).not.toContain('select:passages:sorts');
   });
 
   it('still writes a sort the client changed', async () => {
