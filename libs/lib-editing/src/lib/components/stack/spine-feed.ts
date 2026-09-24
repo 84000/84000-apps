@@ -225,8 +225,9 @@ export class SpineFeed {
    * A sectioned feed replaces only its own run: the other panels are showing
    * theirs, and seeding the spine would take those with it.
    */
-  private replaceRun(metas: Meta[]) {
+  private replaceRun(page: Meta[]) {
     const spine = this.work.spine;
+    const metas = withoutDeleted(spine, page);
     const tab = this.section?.tab;
     if (!tab) {
       spine.seed(metas as SpineSeed[]);
@@ -323,6 +324,16 @@ const runStart = (spine: Spine, tab?: string): number => {
 };
 
 /**
+ * Server metadata less the passages deleted here but not saved yet. The
+ * server still has them, and putting one back would cancel its deletion:
+ * after a merge, its text would then be saved twice.
+ */
+const withoutDeleted = (spine: Spine, metas: Meta[]): Meta[] => {
+  const deleted = new Set(spine.removedSinceSave());
+  return deleted.size ? metas.filter((meta) => !deleted.has(meta.uuid)) : metas;
+};
+
+/**
  * Append server metadata to the end of a spine — or of one section's run.
  *
  * Renumbering is off: these labels *are* the server's, so recomputing them
@@ -334,7 +345,7 @@ export const appendToSpine = (spine: Spine, metas: Meta[], tab?: string) => {
   // `lib-doc-model` loads, and a dual-loaded yjs breaks its constructor checks.
   spine.doc.transact(() => {
     let at = runEnd(spine, tab);
-    metas.forEach((meta) => {
+    withoutDeleted(spine, metas).forEach((meta) => {
       if (spine.indexOf(meta.uuid) >= 0) return;
       spine.insert(meta as Parameters<Spine['insert']>[0], at, {
         renumber: false,
@@ -348,7 +359,7 @@ export const appendToSpine = (spine: Spine, metas: Meta[], tab?: string) => {
 export const prependToSpine = (spine: Spine, metas: Meta[], tab?: string) => {
   spine.doc.transact(() => {
     let at = runStart(spine, tab);
-    metas.forEach((meta) => {
+    withoutDeleted(spine, metas).forEach((meta) => {
       if (spine.indexOf(meta.uuid) >= 0) return;
       spine.insert(meta as Parameters<Spine['insert']>[0], at, {
         renumber: false,

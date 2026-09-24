@@ -399,5 +399,33 @@ describe('SpineFeed', () => {
       // Moving the window unloads passages; it does not delete them.
       expect(w.spine.removedSinceSave()).toEqual([]);
     });
+
+    // Following a link reloaded a passage deleted but not saved yet, which
+    // cancelled the deletion; after a merge its text was saved twice.
+    it('does not bring back a passage deleted but not saved', async () => {
+      const { w, notes } = await both();
+      w.spine.remove(['n1'], { deleted: true });
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...metaPage(0, 3, false, 'endnotes', 'n'),
+      });
+
+      expect(await notes.reveal('n2')).toBe(3);
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n2']);
+      expect(w.spine.removedSinceSave()).toEqual(['n1']);
+    });
+
+    it('does not page a passage deleted but not saved back in', async () => {
+      const { w, notes } = await both();
+      w.spine.remove(['n1'], { deleted: true });
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(1, 2, false, 'endnotes', 'n'),
+      );
+
+      await notes.extend();
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n2']);
+      expect(w.spine.removedSinceSave()).toEqual(['n1']);
+    });
   });
 });

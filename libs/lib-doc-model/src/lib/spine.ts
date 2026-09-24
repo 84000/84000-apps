@@ -85,9 +85,9 @@ export class Spine {
       () => {
         this.order.delete(0, this.order.length);
         [...this.metas.keys()].forEach((key) => this.metas.delete(key));
-        this.removedSaved.clear();
         this.deletedOnServer.clear();
         this.restored.clear();
+        // Deletions not saved yet are kept: the server still has those rows.
         passages.forEach((passage) => this.appendUnsafe(passage));
       },
       SPINE_ORIGIN,
