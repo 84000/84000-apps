@@ -10,6 +10,7 @@ import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
 import type { PassageDoc } from './passage-doc';
 import { Spine, type SpineSeed } from './spine';
+import { withFreshSplitIdentities } from './split-identities';
 import type {
   FocusTarget,
   LabelChange,
@@ -215,7 +216,10 @@ export class WorkDocument {
     const doc = this.store.ensure(uuid);
     const node = doc.toNode();
     const head = this.fragmentToJSON(node.content.cut(0, pos));
-    const tail = this.fragmentToJSON(node.content.cut(pos));
+    const tail = withFreshSplitIdentities(
+      head,
+      this.fragmentToJSON(node.content.cut(pos)),
+    );
     const before = doc.toJSON();
 
     const newMeta: SpineSeed = {
