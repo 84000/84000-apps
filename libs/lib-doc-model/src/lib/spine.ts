@@ -200,25 +200,16 @@ export class Spine {
   }
 
   /**
-   * Adopt the sorts a save wrote for passages created locally.
-   *
-   * The server makes room for each new passage by shifting the contiguous run
-   * of sorts starting at its own (`shift_passage_sorts`), highest first. The
-   * same shift is applied to the sorts held here, or the next save would send
-   * the old ones back.
+   * Adopt stored sorts read back from the server, e.g. after a save that
+   * inserted passages and shifted the sorts after them. Passages the spine
+   * does not hold are ignored.
    */
-  recordSaved(created: { uuid: string; sort: number }[]) {
-    if (!created.length) return;
+  adoptSorts(sorts: Map<string, number>) {
+    if (!sorts.size) return;
     transact(
       this.doc,
-      () => {
-        [...created]
-          .sort((a, b) => b.sort - a.sort)
-          .forEach(({ sort }) => this.shiftRun(sort));
-        created.forEach(({ uuid, sort }) =>
-          this.metas.get(uuid)?.set('sort', sort),
-        );
-      },
+      () =>
+        sorts.forEach((sort, uuid) => this.metas.get(uuid)?.set('sort', sort)),
       SPINE_ORIGIN,
     );
   }
@@ -473,19 +464,5 @@ export class Spine {
   private storedSort(uuid: string): number | undefined {
     const sort = this.metas.get(uuid)?.get('sort');
     return typeof sort === 'number' ? sort : undefined;
-  }
-
-  /** `shift_passage_sorts` with a delta of one, over the sorts held here. */
-  private shiftRun(from: number) {
-    const held = [...this.metas.values()].filter(
-      (entry) => typeof entry.get('sort') === 'number',
-    );
-    const occupied = new Set(held.map((entry) => entry.get('sort') as number));
-    let end = from;
-    while (occupied.has(end)) end++;
-    held.forEach((entry) => {
-      const sort = entry.get('sort') as number;
-      if (sort >= from && sort < end) entry.set('sort', sort + 1);
-    });
   }
 }

@@ -18,16 +18,18 @@ jest.mock('next/server', () => ({
 }));
 jest.mock('resend', () => ({ Resend: class {} }));
 
-// Only the two writes are stubbed: `Spine` reads `panelAndTabForContentType`
+// Only the server calls are stubbed: `Spine` reads `panelAndTabForContentType`
 // from this module, so replacing the whole of it breaks seeding.
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
   createBrowserClient: jest.fn(() => ({})),
   savePassagesWithDeletions: jest.fn(),
+  getPassageSorts: jest.fn(),
 }));
 
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   savePassagesWithDeletions: jest.Mock;
+  getPassageSorts: jest.Mock;
 };
 
 const schema = new Schema({
@@ -156,7 +158,10 @@ describe('dirtyPassages', () => {
 });
 
 describe('saveStackWork', () => {
-  beforeEach(() => dataAccess.savePassagesWithDeletions.mockReset());
+  beforeEach(() => {
+    dataAccess.savePassagesWithDeletions.mockReset();
+    dataAccess.getPassageSorts.mockReset();
+  });
 
   it('writes nothing when nothing was edited', async () => {
     await saveStackWork(build());
@@ -174,7 +179,7 @@ describe('saveStackWork', () => {
 
   // The spine holds part of a work, so position is not a row's sort: saving
   // 1.2 wrote sort 1, and it jumped ahead of the front matter.
-  it('sends stored sorts, and adopts the sort of a passage it created', async () => {
+  it('sends stored sorts, and reads back the sorts a save shifted', async () => {
     const work = new WorkDocument({ workUuid: 'w1', schema });
     work.seedSpine([
       { uuid: 'a', label: '1.1', type: 'translation', sort: 169 },
@@ -186,8 +191,16 @@ describe('saveStackWork', () => {
       work.store.peek(uuid)?.markSynced();
     });
     edit(work, 'b', 'changed');
-    const created = work.split('a', 1);
+    const created = work.split('a', 1)?.uuid ?? '';
     dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    // What the server holds after shifting 170–171 up and inserting.
+    dataAccess.getPassageSorts.mockResolvedValue(
+      new Map([
+        [created, 170],
+        ['b', 171],
+        ['c', 172],
+      ]),
+    );
 
     await saveStackWork(work);
 
@@ -195,14 +208,27 @@ describe('saveStackWork', () => {
       .passages as { uuid: string; sort: number }[];
     const sortOf = (uuid: string) => sent.find((p) => p.uuid === uuid)?.sort;
     expect(sortOf('b')).toBe(170);
-    expect(sortOf(created?.uuid ?? '')).toBe(170);
+    expect(sortOf(created)).toBe(170);
 
-    // The server shifted 170–171 up to make room; the spine follows.
+    // Everything from the new passage's sort on, held or not in the payload.
+    const { uuids } = dataAccess.getPassageSorts.mock.calls[0][0];
+    expect([...uuids].sort()).toEqual([created, 'b', 'c'].sort());
     expect(
-      ['a', created?.uuid ?? '', 'b', 'c'].map(
-        (uuid) => work.spine.meta(uuid)?.sort,
-      ),
+      ['a', created, 'b', 'c'].map((uuid) => work.spine.meta(uuid)?.sort),
     ).toEqual([169, 170, 171, 172]);
+  });
+
+  it('reads no sorts back when a save created no passages', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([{ uuid: 'a', label: '1', type: 'translation', sort: 4 }]);
+    work.store.create('a', [para('a')]);
+    work.store.peek('a')?.markSynced();
+    edit(work, 'a', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+
+    await saveStackWork(work);
+
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
   });
 
   // A document marked synced on a failed write would drop the edit from the

@@ -12,7 +12,15 @@ import { v4 as uuidv4 } from 'uuid';
  * `ensureUuids()`, for a document rather than an editor.
  */
 export const withUniqueMarkUuids = (doc: JSONContent): JSONContent | null => {
+  // Node uuids first, as `ensureUuids()` walks them before marks: a mark may
+  // not reuse one either.
   const seen = new Set<string>();
+  const collect = (item: JSONContent) => {
+    const uuid = item.attrs?.uuid;
+    if (typeof uuid === 'string' && uuid) seen.add(uuid);
+    item.content?.forEach(collect);
+  };
+  collect(doc);
   let changed = false;
 
   const visit = (item: JSONContent): JSONContent => {

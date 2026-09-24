@@ -353,10 +353,40 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  // `existingRows` predates the shifts. A passage the client left where it
+  // was takes the sort a shift gave it; writing its old sort back would tie
+  // it with the passage the shift made room for.
+  const shiftedSorts = new Map<string, number>();
+  if (sortedNewPassages.length && existingUuidSet.size) {
+    const { data: shiftedRows, error: shiftedError } = await client
+      .from('passages')
+      .select('uuid, sort')
+      .in('uuid', [...existingUuidSet]);
+    if (shiftedError) {
+      console.error('Error reading shifted passage sorts:', shiftedError);
+      return failure(
+        `Failed to read shifted passage sorts: ${shiftedError.message}`,
+      );
+    }
+    (shiftedRows ?? []).forEach((row) =>
+      shiftedSorts.set(row.uuid as string, row.sort as number),
+    );
+  }
+  const sortBefore = new Map(
+    (existingRows ?? []).map((row) => [row.uuid, row.sort]),
+  );
+  const toSave = passages.map((passage) => {
+    const shifted = shiftedSorts.get(passage.uuid);
+    return shifted !== undefined &&
+      passage.sort === sortBefore.get(passage.uuid)
+      ? { ...passage, sort: shifted }
+      : passage;
+  });
+
   // Compute row/annotation diffs against the pre-save state before any
   // content writes happen.
-  const dtos = passagesToDTO(passages);
-  const passageRowDtos = passagesToRowDTO(passages);
+  const dtos = passagesToDTO(toSave);
+  const passageRowDtos = passagesToRowDTO(toSave);
   const passageUuids = passages.map((p) => p.uuid);
   const annotations = dtos.flatMap((p) => p.annotations || []);
   const { data: existingAnnotations } =
@@ -371,7 +401,7 @@ export const savePassagesWithDeletions = async ({
   const existingRowsByUuid = new Map(
     ((existingRows ?? []) as ExistingPassageRow[]).map((row) => [
       row.uuid,
-      row,
+      { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
     ]),
   );
   const passageRowsToUpsert = passageRowDtos.filter((row) =>

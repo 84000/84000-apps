@@ -1,5 +1,6 @@
 import {
   createBrowserClient,
+  getPassageSorts,
   savePassagesWithDeletions,
   type Passage,
 } from '@eightyfourthousand/data-access';
@@ -47,10 +48,8 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     (passage) => work.spine.meta(passage.uuid)?.sort === undefined,
   );
 
-  const result = await savePassagesWithDeletions({
-    client: createBrowserClient(),
-    passages,
-  });
+  const client = createBrowserClient();
+  const result = await savePassagesWithDeletions({ client, passages });
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
     return false;
@@ -59,6 +58,22 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.
   passages.forEach((passage) => work.store.peek(passage.uuid)?.markSynced());
-  work.spine.recordSaved(created);
+
+  // Inserting shifted the sorts from the first new passage on, including
+  // passages this spine does not hold, so read them back rather than guess.
+  if (created.length) {
+    const from = Math.min(...created.map((passage) => passage.sort));
+    const createdUuids = new Set(created.map((passage) => passage.uuid));
+    const uuids = work.spine
+      .entries()
+      .filter((entry) =>
+        entry.sort === undefined
+          ? createdUuids.has(entry.uuid)
+          : entry.sort >= from,
+      )
+      .map((entry) => entry.uuid);
+    const sorts = await getPassageSorts({ client, uuids });
+    if (sorts) work.spine.adoptSorts(sorts);
+  }
   return true;
 };

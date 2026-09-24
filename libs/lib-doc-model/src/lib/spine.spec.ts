@@ -292,17 +292,21 @@ describe('Spine', () => {
       expect(spine.sortOf('n')).toBe(165);
     });
 
-    // Mirrors `shift_passage_sorts`: only the contiguous run starting at the
-    // new sort moves, and the new passage then takes that sort.
-    it('shifts the contiguous run a save made room in', () => {
+    it('adopts sorts read back from the server', () => {
       const spine = partial();
       spine.insert(meta('n', '1.2'), 2);
-      expect(spine.sortOf('n')).toBe(170);
+      spine.adoptSorts(
+        new Map([
+          ['n', 170],
+          ['b', 171],
+          ['not-held', 999],
+        ]),
+      );
 
-      spine.recordSaved([{ uuid: 'n', sort: 170 }]);
       expect(
         ['h', 'a', 'n', 'b', 'c'].map((uuid) => spine.meta(uuid)?.sort),
       ).toEqual([165, 169, 170, 171, 176]);
+      expect(spine.meta('not-held')).toBeNull();
     });
   });
 
