@@ -292,6 +292,25 @@ describe('Spine', () => {
       expect(spine.sortOf('n')).toBe(165);
     });
 
+    it('tracks saved passages removed since the last save', () => {
+      const spine = partial();
+      spine.insert(meta('new', '1.2'), 2);
+      spine.remove(['b', 'new']);
+      // `new` was never saved, so there is nothing to delete.
+      expect(spine.removedSinceSave()).toEqual(['b']);
+
+      spine.forgetRemoved(['b']);
+      expect(spine.removedSinceSave()).toEqual([]);
+    });
+
+    it('stops tracking a removed passage that is put back', () => {
+      const spine = partial();
+      const removed = spine.meta('b');
+      spine.remove(['b']);
+      spine.insert(removed as SpineSeed, 2, { renumber: false });
+      expect(spine.removedSinceSave()).toEqual([]);
+    });
+
     it('adopts sorts read back from the server', () => {
       const spine = partial();
       spine.insert(meta('n', '1.2'), 2);

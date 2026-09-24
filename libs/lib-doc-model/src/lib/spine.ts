@@ -52,6 +52,8 @@ export class Spine {
 
   private order: YArray<string>;
   private metas: YMap<YMap<unknown>>;
+  /** Saved passages removed since the last save, which it has to delete. */
+  private removedSaved = new Set<string>();
 
   constructor(workUuid: string, doc: Doc = new Doc()) {
     this.workUuid = workUuid;
@@ -72,6 +74,7 @@ export class Spine {
       () => {
         this.order.delete(0, this.order.length);
         [...this.metas.keys()].forEach((key) => this.metas.delete(key));
+        this.removedSaved.clear();
         passages.forEach((passage) => this.appendUnsafe(passage));
       },
       SPINE_ORIGIN,
@@ -199,6 +202,16 @@ export class Spine {
     return index;
   }
 
+  /** Saved passages removed since the last save, for it to delete. */
+  removedSinceSave(): string[] {
+    return [...this.removedSaved];
+  }
+
+  /** Forget removals a save has deleted. */
+  forgetRemoved(uuids: string[]) {
+    uuids.forEach((uuid) => this.removedSaved.delete(uuid));
+  }
+
   /**
    * Adopt stored sorts read back from the server, e.g. after a save that
    * inserted passages and shifted the sorts after them. Passages the spine
@@ -234,6 +247,8 @@ export class Spine {
       () => {
         this.order.insert(at, [passage.uuid]);
         this.metas.set(passage.uuid, this.metaMap(passage));
+        // Put back, e.g. by undo: nothing to delete after all.
+        this.removedSaved.delete(passage.uuid);
         // No anchor label: the caller chose the new passage's own label.
         if (options.renumber !== false) labelChanges = this.renumberRun(at);
       },
@@ -269,6 +284,9 @@ export class Spine {
         // Walk backwards so each deletion's index stays valid.
         for (let i = current.length - 1; i >= 0; i--) {
           if (!targets.has(current[i])) continue;
+          if (this.storedSort(current[i]) !== undefined) {
+            this.removedSaved.add(current[i]);
+          }
           this.order.delete(i, 1);
           this.metas.delete(current[i]);
         }

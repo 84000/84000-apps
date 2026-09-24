@@ -61,9 +61,6 @@ export const StackWorkProvider = ({
   // which per-passage documents do not have. This provider cannot be called
   // into from `EditorProvider` — the stack sits behind a dynamic boundary — so
   // it hands its own save over instead.
-  //
-  // Content only for now: passages deleted in the stack are not yet removed
-  // from the server, so a delete survives until reload and then comes back.
   useEffect(() => {
     if (!stack) return;
     registerSaveHandler(async () => {

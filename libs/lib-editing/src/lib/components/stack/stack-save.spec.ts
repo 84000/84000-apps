@@ -415,6 +415,72 @@ describe('saveStackWork', () => {
     expect(work.store.dirty()).toEqual(['p0']);
   });
 
+  describe('removed passages', () => {
+    const saved = () => {
+      const work = new WorkDocument({ workUuid: 'w1', schema });
+      work.seedSpine([
+        { uuid: 'a', label: '1', type: 'translation', sort: 10 },
+        { uuid: 'b', label: '2', type: 'translation', sort: 11 },
+        { uuid: 'c', label: '3', type: 'translation', sort: 12 },
+      ]);
+      ['a', 'b', 'c'].forEach((uuid) => {
+        work.store.create(uuid, [para(uuid)]);
+        work.store.peek(uuid)?.markSynced();
+      });
+      dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+      return work;
+    };
+    const lastCall = () =>
+      dataAccess.savePassagesWithDeletions.mock.calls.at(-1)?.[0];
+
+    // A delete used to survive until reload and then come back.
+    it('deletes a removed passage, even when nothing else changed', async () => {
+      const work = saved();
+      work.remove(['b']);
+
+      await saveStackWork(work);
+
+      expect(lastCall().deletedUuids).toEqual(['b']);
+      expect(lastCall().passages).toEqual([]);
+      expect(work.spine.removedSinceSave()).toEqual([]);
+    });
+
+    // A merge used to save the joined text and keep the merged passage too.
+    it('deletes the passage a merge joined into its neighbour', async () => {
+      const work = saved();
+      work.merge('b');
+
+      await saveStackWork(work);
+
+      expect(lastCall().deletedUuids).toEqual(['b']);
+      expect(lastCall().passages.map((p: { uuid: string }) => p.uuid)).toEqual([
+        'a',
+      ]);
+    });
+
+    it('deletes nothing once an undo puts the passage back', async () => {
+      const work = saved();
+      work.remove(['b']);
+      work.undo();
+
+      await saveStackWork(work);
+
+      expect(dataAccess.savePassagesWithDeletions).not.toHaveBeenCalled();
+    });
+
+    it('keeps a removal to delete when the save fails', async () => {
+      const work = saved();
+      work.remove(['b']);
+      dataAccess.savePassagesWithDeletions.mockResolvedValue({
+        success: false,
+      });
+
+      await saveStackWork(work);
+
+      expect(work.spine.removedSinceSave()).toEqual(['b']);
+    });
+  });
+
   // A document marked synced on a failed write would drop the edit from the
   // next save.
   it('leaves a passage dirty when the write fails', async () => {

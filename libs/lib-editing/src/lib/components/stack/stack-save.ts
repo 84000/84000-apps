@@ -138,10 +138,8 @@ const refreshSorts = async (
 };
 
 /**
- * Write a work's edited passages, and mark them synced once the server agrees.
- *
- * Content only. Passages the editor deleted are **not** removed from the
- * server yet — see the note in `StackWorkProvider`.
+ * Write a work's edited passages and delete the ones it removed, and mark
+ * them synced once the server agrees.
  */
 export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const client = createBrowserClient();
@@ -152,7 +150,8 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   }
 
   const passages = dirtyPassages(work);
-  if (!passages.length) return true;
+  const deletedUuids = work.spine.removedSinceSave();
+  if (!passages.length && !deletedUuids.length) return true;
   // Read with the payload: an edit made while the request is in flight is
   // not in it, and must leave its passage dirty.
   const versions = new Map(
@@ -172,6 +171,7 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const result = await savePassagesWithDeletions({
     client,
     passages,
+    deletedUuids,
     anchors,
   });
   const createdUuids = new Set(created.map((passage) => passage.uuid));
@@ -189,9 +189,14 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   passages.forEach((passage) =>
     work.store.peek(passage.uuid)?.markSynced(versions.get(passage.uuid)),
   );
+  work.spine.forgetRemoved(deletedUuids);
   work.spine.adoptSorts(
     new Map((result.passages ?? []).map((row) => [row.uuid, row.sort])),
   );
+  // Inserting or deleting renumbers the rest of a series server-side.
+  if (result.renumberedPassages?.length) {
+    work.spine.applyLabels(result.renumberedPassages);
+  }
 
   // Inserting shifted the sorts from the first new passage on, including
   // passages this spine does not hold, so read them back rather than guess.
