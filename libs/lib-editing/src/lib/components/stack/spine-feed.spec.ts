@@ -396,6 +396,8 @@ describe('SpineFeed', () => {
 
       // The translation run is untouched; only the endnotes window moved.
       expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n90', 'n91']);
+      // Moving the window unloads passages; it does not delete them.
+      expect(w.spine.removedSinceSave()).toEqual([]);
     });
   });
 });

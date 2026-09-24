@@ -495,6 +495,49 @@ describe('saveStackWork', () => {
       expect(dataAccess.savePassagesWithDeletions).not.toHaveBeenCalled();
     });
 
+    // A split then undone leaves the tail's document dirty with no passage;
+    // counted, it held the Save button on after every save.
+    it('does not count a dirty document whose passage has gone', async () => {
+      const work = saved();
+      work.split('a', 1);
+      work.undo();
+      await saveStackWork(work);
+      expect(hasUnsavedStackChanges(work)).toBe(false);
+    });
+
+    // The server deleted `b`; undo brings it back with its old content, which
+    // nothing marked edited, so it was never saved again.
+    it('saves a passage put back after a save deleted it', async () => {
+      const work = saved();
+      work.remove(['b']);
+      await saveStackWork(work);
+
+      work.undo();
+      expect(hasUnsavedStackChanges(work)).toBe(true);
+      await saveStackWork(work);
+
+      const call = lastCall();
+      expect(call.passages.map((p: { uuid: string }) => p.uuid)).toContain('b');
+      expect(call.anchors.b).toEqual({ after: 'a' });
+      expect(call.deletedUuids).toEqual([]);
+    });
+
+    it('deletes a new passage removed while its save was running', async () => {
+      const work = saved();
+      const created = work.split('a', 1)?.uuid ?? '';
+      dataAccess.savePassagesWithDeletions.mockImplementationOnce(async () => {
+        work.remove([created]);
+        return { success: true };
+      });
+      dataAccess.getPassageSorts.mockResolvedValue(new Map());
+
+      await saveStackWork(work);
+      expect(work.spine.removedSinceSave()).toEqual([created]);
+
+      await saveStackWork(work);
+      expect(lastCall().deletedUuids).toEqual([created]);
+    });
+
     it('keeps a removal to delete when the save fails', async () => {
       const work = saved();
       work.remove(['b']);

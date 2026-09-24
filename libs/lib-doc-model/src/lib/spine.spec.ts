@@ -292,21 +292,57 @@ describe('Spine', () => {
       expect(spine.sortOf('n')).toBe(165);
     });
 
-    it('tracks saved passages removed since the last save', () => {
+    it('tracks saved passages deleted since the last save', () => {
       const spine = partial();
       spine.insert(meta('new', '1.2'), 2);
-      spine.remove(['b', 'new']);
+      spine.remove(['b', 'new'], { deleted: true });
       // `new` was never saved, so there is nothing to delete.
       expect(spine.removedSinceSave()).toEqual(['b']);
 
-      spine.forgetRemoved(['b']);
+      spine.settleSave({ deleted: ['b'], created: [] });
       expect(spine.removedSinceSave()).toEqual([]);
+    });
+
+    // Unloading a window to follow a deep link queued every passage in it
+    // for deletion.
+    it('does not track a removal that only unloads a passage', () => {
+      const spine = partial();
+      spine.remove(['a', 'b']);
+      expect(spine.removedSinceSave()).toEqual([]);
+    });
+
+    // Undo after the save deleted it: the server no longer has the row.
+    it('makes a passage the server deleted new again when put back', () => {
+      const spine = partial();
+      const removed = spine.meta('b');
+      spine.remove(['b'], { deleted: true });
+      spine.settleSave({ deleted: ['b'], created: [] });
+
+      spine.insert(removed as SpineSeed, 2, { renumber: false });
+      expect(spine.meta('b')?.sort).toBeUndefined();
+      expect(spine.restoredSinceSave()).toEqual(['b']);
+
+      spine.settleSave({ deleted: [], created: ['b'] });
+      expect(spine.restoredSinceSave()).toEqual([]);
+    });
+
+    it('reconciles what changed while a save was running', () => {
+      const spine = partial();
+      // `b` was sent as a delete, then put back before the save returned.
+      spine.remove(['b'], { deleted: true });
+      spine.insert({ ...meta('b', '1.2'), sort: 170 }, 2, { renumber: false });
+      // `gone` was sent as new, then deleted before the save returned.
+      spine.settleSave({ deleted: ['b'], created: ['gone'] });
+
+      expect(spine.meta('b')?.sort).toBeUndefined();
+      expect(spine.restoredSinceSave()).toEqual(['b']);
+      expect(spine.removedSinceSave()).toEqual(['gone']);
     });
 
     it('stops tracking a removed passage that is put back', () => {
       const spine = partial();
       const removed = spine.meta('b');
-      spine.remove(['b']);
+      spine.remove(['b'], { deleted: true });
       spine.insert(removed as SpineSeed, 2, { renumber: false });
       expect(spine.removedSinceSave()).toEqual([]);
     });

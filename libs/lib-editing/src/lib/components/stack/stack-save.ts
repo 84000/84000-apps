@@ -139,7 +139,10 @@ const refreshSorts = async (
 
 /** Whether a save has anything to write or delete. */
 export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
-  work.store.dirty().length > 0 || work.spine.removedSinceSave().length > 0;
+  // A dirty document whose passage has left the spine has nothing to save:
+  // counting it would hold the Save button on for good.
+  work.store.dirty().some((uuid) => work.spine.meta(uuid)) ||
+  work.spine.removedSinceSave().length > 0;
 
 /**
  * Write a work's edited passages and delete the ones it removed, and mark
@@ -193,7 +196,14 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   passages.forEach((passage) =>
     work.store.peek(passage.uuid)?.markSynced(versions.get(passage.uuid)),
   );
-  work.spine.forgetRemoved(deletedUuids);
+  work.spine.settleSave({
+    deleted: deletedUuids,
+    created: [...createdUuids],
+  });
+  // Put back while the save deleted them: they are new again.
+  work.spine
+    .restoredSinceSave()
+    .forEach((uuid) => work.store.peek(uuid)?.markDirty());
   work.spine.adoptSorts(
     new Map((result.passages ?? []).map((row) => [row.uuid, row.sort])),
   );

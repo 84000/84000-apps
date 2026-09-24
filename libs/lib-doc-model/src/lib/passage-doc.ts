@@ -259,6 +259,14 @@ export class PassageDoc {
     return this.revision;
   }
 
+  /** Mark the document as needing a save, without changing it. */
+  markDirty() {
+    if (this.dirty) return;
+    this.dirty = true;
+    this.revision++;
+    this.notify();
+  }
+
   /**
    * Clear the dirty flag, after the caller has sent this document's state and
    * had it acknowledged. Given the `version` read when the state was sent, a
