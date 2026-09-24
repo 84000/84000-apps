@@ -1,66 +1,92 @@
 import type { DataClient, Passage, PassageRowDTO } from '../../types';
 import { getPassageSorts } from '../read';
-import type { StepError } from './types';
+import type { NewPassageAnchor, StepError } from './types';
+
+/** Where a group of new passages goes: after a passage, before one, or neither. */
+const groupKey = (passage: Passage, anchor: NewPassageAnchor | undefined) => {
+  if (anchor && 'after' in anchor) return `after:${anchor.after}`;
+  if (anchor && 'before' in anchor) return `before:${anchor.before}`;
+  return `own:${passage.uuid}`;
+};
+
+type Group = { anchor: NewPassageAnchor; passages: Passage[] };
 
 /**
- * Make room for new passages by the saved passage each follows, and choose
- * their sorts.
+ * Make room for new passages by the saved passage each sits next to, and
+ * choose their sorts.
  *
  * A sort alone is ambiguous when several passages are created together: two
  * new passages after P, or one after P and one after its neighbour Q, can send
- * the same sorts. Grouping by the passage they follow is not. Groups are
- * placed lowest first, each re-reading its anchor's sort because an earlier
- * group's shift can move it. `shift_passage_sorts` only checks that one slot
- * is free, so room for a group is made one slot at a time.
+ * the same sorts. Grouping by the passage they follow (or, first in their
+ * section, precede) is not. Groups are placed lowest first, each re-reading
+ * its anchor because an earlier group's shift can move it, and never below
+ * where the previous group ended, since anchors can share a sort.
+ * `shift_passage_sorts` only checks that one slot is free, so room for a
+ * group is made one slot at a time.
  */
 const placeNewPassages = async ({
   client,
   passages,
-  insertAfter,
+  anchors,
 }: {
   client: DataClient;
   passages: Passage[];
-  insertAfter: Record<string, string | null>;
+  anchors: Record<string, NewPassageAnchor>;
 }): Promise<{ sorts: Map<string, number> } | { error: string }> => {
-  const groups = new Map<string | null, Passage[]>();
+  const groups = new Map<string, Group>();
   passages.forEach((passage) => {
-    const anchor = insertAfter[passage.uuid] ?? null;
-    groups.set(anchor, [...(groups.get(anchor) ?? []), passage]);
+    const anchor = anchors[passage.uuid] ?? null;
+    const key = groupKey(passage, anchor);
+    const group = groups.get(key) ?? { anchor, passages: [] };
+    group.passages.push(passage);
+    groups.set(key, group);
   });
-  // Within a group the client's sorts still give the order.
-  groups.forEach((group) => group.sort((a, b) => a.sort - b.sort));
+  // Within a group the client's sorts give the order; ties keep its order.
+  groups.forEach((group) => group.passages.sort((a, b) => a.sort - b.sort));
 
-  const anchorSort = async (
-    anchor: string | null,
-    group: Passage[],
-  ): Promise<number | null> => {
-    if (anchor) {
-      const sorts = await getPassageSorts({ client, uuids: [anchor] });
-      if (!sorts) return null;
-      const sort = sorts.get(anchor);
-      if (sort !== undefined) return sort;
+  const anchorUuid = (anchor: NewPassageAnchor) =>
+    anchor ? ('after' in anchor ? anchor.after : anchor.before) : null;
+
+  /** The sort a group's first slot follows, given its anchor's sort. */
+  const baseOf = (group: Group, sorts: Map<string, number>) => {
+    const uuid = anchorUuid(group.anchor);
+    const sort = uuid ? sorts.get(uuid) : undefined;
+    if (sort !== undefined && group.anchor) {
+      return 'after' in group.anchor ? sort : sort - 1;
     }
-    // Nothing saved before it: take the place the client asked for.
-    return group[0].sort - 1;
+    // No anchor, or one that is not stored: take the place the client asked
+    // for.
+    return group.passages[0].sort - 1;
   };
 
-  const order: { anchor: string | null; at: number }[] = [];
-  for (const [anchor, group] of groups) {
-    const at = await anchorSort(anchor, group);
-    if (at === null) return { error: 'Failed to read anchor passage sorts' };
-    order.push({ anchor, at });
-  }
-  order.sort((a, b) => a.at - b.at);
+  const readAnchors = (list: Group[]) =>
+    getPassageSorts({
+      client,
+      uuids: list
+        .map((group) => anchorUuid(group.anchor))
+        .filter((uuid): uuid is string => !!uuid),
+    });
+
+  const initial = await readAnchors([...groups.values()]);
+  if (!initial) return { error: 'Failed to read anchor passage sorts' };
+  const order = [...groups.values()]
+    .map((group) => ({ group, base: baseOf(group, initial) }))
+    .sort((a, b) => a.base - b.base);
 
   const sorts = new Map<string, number>();
-  for (const [i, { anchor }] of order.entries()) {
-    const group = groups.get(anchor) ?? [];
+  let placedTo = -Infinity;
+  for (const [i, { group, base }] of order.entries()) {
     // An earlier group's shift may have moved this anchor.
-    const at = i === 0 ? order[0].at : await anchorSort(anchor, group);
-    if (at === null) return { error: 'Failed to read anchor passage sorts' };
-    for (let slot = at + 1; slot <= at + group.length; slot++) {
+    let at = base;
+    if (i > 0 && anchorUuid(group.anchor)) {
+      const current = await readAnchors([group]);
+      if (!current) return { error: 'Failed to read anchor passage sorts' };
+      at = baseOf(group, current);
+    }
+    at = Math.max(at, placedTo);
+    for (let slot = at + 1; slot <= at + group.passages.length; slot++) {
       const { error } = await client.rpc('shift_passage_sorts', {
-        p_work_uuid: group[0].workUuid,
+        p_work_uuid: group.passages[0].workUuid,
         p_from_sort: slot,
         p_delta: 1,
       });
@@ -69,37 +95,38 @@ const placeNewPassages = async ({
         return { error: `Failed to shift passage sorts: ${error.message}` };
       }
     }
-    group.forEach((passage, offset) =>
+    group.passages.forEach((passage, offset) =>
       sorts.set(passage.uuid, at + 1 + offset),
     );
+    placedTo = at + group.passages.length;
   }
   return { sorts };
 };
 
 /**
  * Make room for new passages before their rows are inserted, and return the
- * sorts the save assigned. Anchored placement applies only when `insertAfter`
+ * sorts the save assigned. Anchored placement applies only when `anchors`
  * covers every new passage; otherwise each shifts at its own sort, highest
  * first, and keeps it.
  */
 export const makeRoomForNewPassages = async ({
   client,
   newPassages,
-  insertAfter,
+  anchors,
 }: {
   client: DataClient;
   newPassages: Passage[];
-  insertAfter?: Record<string, string | null>;
+  anchors?: Record<string, NewPassageAnchor>;
 }): Promise<{ placedSorts: Map<string, number> } | StepError> => {
   if (
     newPassages.length &&
-    insertAfter &&
-    newPassages.every((passage) => passage.uuid in insertAfter)
+    anchors &&
+    newPassages.every((passage) => passage.uuid in anchors)
   ) {
     const placed = await placeNewPassages({
       client,
       passages: newPassages,
-      insertAfter,
+      anchors,
     });
     if ('error' in placed) return placed;
     return { placedSorts: placed.sorts };

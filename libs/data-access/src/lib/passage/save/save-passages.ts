@@ -18,6 +18,7 @@ import { normalizePassageLabelsAfter } from './labels';
 import { makeRoomForNewPassages, sortsAfterShift } from './placement';
 import {
   failure,
+  type NewPassageAnchor,
   type RenumberedPassageRow,
   type SavePassagesWithDeletionsResult,
   type SavedPassageRow,
@@ -39,17 +40,17 @@ export const savePassagesWithDeletions = async ({
   client,
   passages,
   deletedUuids = [],
-  insertAfter,
+  anchors,
 }: {
   client: DataClient;
   passages: Passage[];
   deletedUuids?: string[];
   /**
-   * For each new passage, the uuid of the saved passage it follows, or null
-   * when it opens its work. When given for every new passage, the save places
-   * them by it and assigns their sorts; see `placeNewPassages`.
+   * For each new passage, the saved passage it sits next to. When given for
+   * every new passage, the save places them by it and assigns their sorts;
+   * see `placeNewPassages`.
    */
-  insertAfter?: Record<string, string | null>;
+  anchors?: Record<string, NewPassageAnchor>;
 }): Promise<SavePassagesWithDeletionsResult> => {
   const inputUuids = passages.map((p) => p.uuid);
   const { data: existingRows } =
@@ -69,7 +70,7 @@ export const savePassagesWithDeletions = async ({
   const room = await makeRoomForNewPassages({
     client,
     newPassages,
-    insertAfter,
+    anchors,
   });
   if ('error' in room) {
     return failure(room.error);

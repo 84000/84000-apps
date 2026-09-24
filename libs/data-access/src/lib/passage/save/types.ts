@@ -31,6 +31,13 @@ export type SavePassagesWithDeletionsResult = {
   error?: string;
 };
 
+/**
+ * Where a new passage goes, by a saved passage next to it: the one it
+ * follows, or, when it is first in its section, the one it precedes. Null
+ * when neither exists; the passage's own sort then places it.
+ */
+export type NewPassageAnchor = { after: string } | { before: string } | null;
+
 /** A step that failed, and why. */
 export type StepError = { error: string };
 

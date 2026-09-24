@@ -2,6 +2,7 @@ import {
   createBrowserClient,
   getPassageSorts,
   savePassagesWithDeletions,
+  type NewPassageAnchor,
   type Passage,
 } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
@@ -18,6 +19,8 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 export const dirtyPassages = (work: WorkDocument): Passage[] =>
   work.store
     .dirty()
+    // In reading order, which is the order the save places new passages in.
+    .sort((a, b) => work.spine.indexOf(a) - work.spine.indexOf(b))
     .map((uuid) => {
       const meta = work.spine.meta(uuid);
       const doc = work.store.peek(uuid);
@@ -35,26 +38,34 @@ export const dirtyPassages = (work: WorkDocument): Passage[] =>
     .filter((passage): passage is Passage => passage !== null);
 
 /**
- * The saved passage each new one follows, for the save to place it by.
+ * The saved passage each new one sits next to, for the save to place it by:
+ * the nearest one before it, or, first in its section, the nearest after.
  *
  * Searched within the passage's own tab: the spine holds sections with the
  * rest of the work missing between them, so the entry before a section's
  * first row is not the passage before it in the work.
  */
-const insertAfterFor = (
+const anchorsFor = (
   work: WorkDocument,
   created: Passage[],
-): Record<string, string | null> => {
+): Record<string, NewPassageAnchor> => {
   const entries = work.spine.entries();
   const indexOf = new Map(entries.map((entry, i) => [entry.uuid, i]));
+  const saved = (i: number, tab?: string) =>
+    entries[i].tab === tab && entries[i].sort !== undefined;
   return Object.fromEntries(
-    created.map((passage) => {
+    created.map((passage): [string, NewPassageAnchor] => {
       const index = indexOf.get(passage.uuid) ?? -1;
       const tab = entries[index]?.tab;
-      for (let i = index - 1; i >= 0; i--) {
-        if (entries[i].tab !== tab) break;
-        if (entries[i].sort !== undefined)
-          return [passage.uuid, entries[i].uuid];
+      for (let i = index - 1; i >= 0 && entries[i].tab === tab; i--) {
+        if (saved(i, tab)) return [passage.uuid, { after: entries[i].uuid }];
+      }
+      for (
+        let i = index + 1;
+        i < entries.length && entries[i].tab === tab;
+        i++
+      ) {
+        if (saved(i, tab)) return [passage.uuid, { before: entries[i].uuid }];
       }
       return [passage.uuid, null];
     }),
@@ -62,11 +73,15 @@ const insertAfterFor = (
 };
 
 /**
- * Works whose sorts from a position on may be stale, because reading them
- * back after a save failed. The next save refreshes them before it builds its
- * payload, or it would write them.
+ * Sorts that may be stale because reading them back after a save failed:
+ * held sorts from `from` on, and the passages in `also`, which the save may
+ * have inserted. The next save refreshes them before it builds its payload,
+ * or it would write them.
  */
-const staleSortsFrom = new WeakMap<WorkDocument, number>();
+const staleSorts = new WeakMap<
+  WorkDocument,
+  { from: number; also: Set<string> }
+>();
 
 /** Read back the stored sorts from `from` on, plus `also`. False on failure. */
 const refreshSorts = async (
@@ -82,13 +97,22 @@ const refreshSorts = async (
     )
     .map((entry) => entry.uuid);
   const sorts = await getPassageSorts({ client, uuids });
+  const stale = staleSorts.get(work);
   if (!sorts) {
-    staleSortsFrom.set(work, Math.min(from, staleSortsFrom.get(work) ?? from));
+    staleSorts.set(work, {
+      from: Math.min(from, stale?.from ?? from),
+      also: new Set([...also, ...(stale?.also ?? [])]),
+    });
     return false;
   }
   work.spine.adoptSorts(sorts);
-  const stale = staleSortsFrom.get(work);
-  if (stale !== undefined && from <= stale) staleSortsFrom.delete(work);
+  if (
+    stale &&
+    from <= stale.from &&
+    [...stale.also].every((u) => also.has(u))
+  ) {
+    staleSorts.delete(work);
+  }
   return true;
 };
 
@@ -100,8 +124,8 @@ const refreshSorts = async (
  */
 export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const client = createBrowserClient();
-  const stale = staleSortsFrom.get(work);
-  if (stale !== undefined && !(await refreshSorts(work, client, stale))) {
+  const stale = staleSorts.get(work);
+  if (stale && !(await refreshSorts(work, client, stale.from, stale.also))) {
     console.error('Failed to save passages: stored sorts could not be read');
     return false;
   }
@@ -116,10 +140,16 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const result = await savePassagesWithDeletions({
     client,
     passages,
-    insertAfter: insertAfterFor(work, created),
+    anchors: anchorsFor(work, created),
   });
+  const createdFrom = Math.min(...created.map((passage) => passage.sort));
+  const createdUuids = new Set(created.map((passage) => passage.uuid));
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
+    // The save may have shifted sorts and inserted rows before it failed; a
+    // retry must send the sorts the server holds, not the ones sent here.
+    if (created.length)
+      await refreshSorts(work, client, createdFrom, createdUuids);
     return false;
   }
 
@@ -133,12 +163,7 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   // Inserting shifted the sorts from the first new passage on, including
   // passages this spine does not hold, so read them back rather than guess.
   if (created.length) {
-    await refreshSorts(
-      work,
-      client,
-      Math.min(...created.map((passage) => passage.sort)),
-      new Set(created.map((passage) => passage.uuid)),
-    );
+    await refreshSorts(work, client, createdFrom, createdUuids);
   }
   return true;
 };
