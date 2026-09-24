@@ -19,6 +19,17 @@ describe('PassageDoc', () => {
     expect(doc.toJSON().content).toHaveLength(1);
   });
 
+  // Left null, a mounted editor stamps one, and the passage reads as edited.
+  it('stamps a uuid on a node stored without one, and stays clean', () => {
+    const doc = build();
+    doc.seed([para('kept', 'a'), { ...para('stamped', 'x'), attrs: {} }]);
+
+    const [kept, stamped] = doc.toJSON().content ?? [];
+    expect(kept.attrs?.uuid).toBe('a');
+    expect(stamped.attrs?.uuid).toEqual(expect.any(String));
+    expect(doc.isDirty).toBe(false);
+  });
+
   it('ignores a second seed', () => {
     const doc = build();
     doc.seed([para('first', 'a')]);

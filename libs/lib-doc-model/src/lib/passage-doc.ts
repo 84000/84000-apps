@@ -13,6 +13,7 @@ import {
   encodeStateAsUpdate,
   transact,
 } from 'yjs';
+import { v4 as uuidv4 } from 'uuid';
 import type { Passage } from '@eightyfourthousand/data-access';
 import { passageFromNode } from './passage';
 import { withUniqueMarkUuids } from './unique-mark-uuids';
@@ -119,10 +120,12 @@ export class PassageDoc {
    */
   seed(content: JSONContent[]) {
     if (this.content.length > 0) return;
-    const node = this.parse({
-      type: 'doc',
-      content: content.length ? content : [EMPTY_PARAGRAPH],
-    });
+    const node = this.parse(
+      this.withNodeUuids({
+        type: 'doc',
+        content: content.length ? content : [EMPTY_PARAGRAPH],
+      }),
+    );
     transact(
       this.doc,
       () => prosemirrorToYXmlFragment(node, this.content),
@@ -310,6 +313,29 @@ export class PassageDoc {
 
   private notify() {
     this.listeners.forEach((listener) => listener());
+  }
+
+  /**
+   * Stamp a uuid on every node whose type declares one but was stored
+   * without it, such as a mention, whose identity is in its items. A mounted
+   * editor's `EnsureUniqueUuids` would otherwise stamp it, which reads as an
+   * edit, and the exporters skip a node that has none.
+   */
+  private withNodeUuids(json: JSONContent): JSONContent {
+    const declares = (type?: string) =>
+      !!type &&
+      Object.prototype.hasOwnProperty.call(
+        this.schema.nodes[type]?.spec.attrs ?? {},
+        'uuid',
+      );
+    const visit = (item: JSONContent): JSONContent => ({
+      ...item,
+      ...(declares(item.type) && !item.attrs?.uuid
+        ? { attrs: { ...item.attrs, uuid: uuidv4() } }
+        : {}),
+      ...(item.content ? { content: item.content.map(visit) } : {}),
+    });
+    return visit(json);
   }
 
   private parse(json: JSONContent): PMNode {
