@@ -159,3 +159,37 @@ describe('renumberLabelsFrom', () => {
     expect(renumberLabelsFrom(['1'], 9).size).toBe(0);
   });
 });
+
+describe('renumberLabelsFrom with per-Toh variants', () => {
+  const run = (labels: string[], tohs: (string | undefined)[], from = 0) =>
+    Object.fromEntries(renumberLabelsFrom(labels, from, tohs));
+
+  it('gives variants of one passage the same number', () => {
+    // n.5 was deleted: the anchor is n.4, and n.10 has a variant per text.
+    const labels = ['n.4', 'n.6', 'n.10', 'n.10', 'n.11'];
+    const tohs = [undefined, undefined, 'toh145', 'toh847', undefined];
+    expect(run(labels, tohs)).toEqual({
+      1: 'n.5',
+      2: 'n.6',
+      3: 'n.6',
+      4: 'n.7',
+    });
+  });
+
+  it('keeps going past a variant that already has the right number', () => {
+    const labels = ['n.4', 'n.6', 'n.6', 'n.7'];
+    const tohs = [undefined, 'toh145', 'toh847', undefined];
+    expect(run(labels, tohs)).toEqual({ 1: 'n.5', 2: 'n.5', 3: 'n.6' });
+  });
+
+  it("keeps the anchor's variant on the anchor's number", () => {
+    const labels = ['n.5', 'n.6', 'n.7'];
+    const tohs = ['toh145', 'toh847', undefined];
+    expect(run(labels, tohs)).toEqual({});
+    expect(run(['n.5', 'n.5', 'n.7'], tohs)).toEqual({ 2: 'n.6' });
+  });
+
+  it('treats equal labels without a toh as separate passages', () => {
+    expect(run(['n.1', 'n.1', 'n.1'], [])).toEqual({ 1: 'n.2', 2: 'n.3' });
+  });
+});
