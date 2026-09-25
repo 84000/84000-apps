@@ -58,6 +58,11 @@ export const decrementLabel = (label: string, depth = -1) => {
  * label, or one under a different parent, ends the run — the anchor's sequence
  * does not reach past it.
  *
+ * A label is a slot, not a passage: a work covering several Tohoku texts
+ * holds per-text variants of one passage, which share its label and each
+ * carry a `toh`. Given `tohs`, a passage with the same label and a `toh`, next
+ * to one with a `toh`, takes that passage's number, as the server does.
+ *
  * Renumbering also stops as soon as a label already holds the value it would
  * be given, because from there on the rest of the run is already consistent.
  * That early exit is what keeps a split near the top of a thousand-passage
@@ -69,6 +74,7 @@ export const decrementLabel = (label: string, depth = -1) => {
 export const renumberLabelsFrom = (
   labels: string[],
   anchorIndex: number,
+  tohs?: (unknown | undefined)[],
 ): Map<number, string> => {
   const changed = new Map<number, string>();
   const anchor = labels[anchorIndex];
@@ -77,8 +83,14 @@ export const renumberLabelsFrom = (
   const parts = anchor.split('.');
   const depth = parts.length;
   const prefix = depth > 1 ? `${parts.slice(0, -1).join('.')}.` : '';
+  const hasToh = (index: number) => {
+    const toh = tohs?.[index];
+    return Array.isArray(toh) ? toh.length > 0 : !!toh;
+  };
 
   let expected = incrementLabel(anchor);
+  // The slot the last passage in the run was given, for its variants.
+  let previous = { index: anchorIndex, label: anchor };
   for (let i = anchorIndex + 1; i < labels.length; i++) {
     const label = labels[i];
     if (!label) continue;
@@ -90,9 +102,19 @@ export const renumberLabelsFrom = (
     // parent, not with this run.
     if (labelDepth > depth) continue;
     if (prefix && !label.startsWith(prefix)) break;
+
+    const variant =
+      label === labels[previous.index] && hasToh(i) && hasToh(previous.index);
+    if (variant) {
+      if (label !== previous.label) changed.set(i, previous.label);
+      previous = { index: i, label: previous.label };
+      continue;
+    }
+
     if (label === expected) break;
 
     changed.set(i, expected);
+    previous = { index: i, label: expected };
     expected = incrementLabel(expected);
   }
 
