@@ -12,6 +12,7 @@ import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
@@ -95,7 +96,8 @@ export const StackWorkProvider = ({
   useEffect(() => {
     let cancelled = false;
     const client = createGraphQLClient();
-    const work = createStackWork({ workUuid, client });
+    const references = new Map<string, PassageReference[]>();
+    const work = createStackWork({ workUuid, client, references });
     const controllers = new Map<string, PassageStackController>();
 
     void (async () => {
@@ -111,6 +113,7 @@ export const StackWorkProvider = ({
             work,
             tab: section.tab,
             spineFeed: feed,
+            references,
           }),
         );
       }

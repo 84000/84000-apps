@@ -8,6 +8,7 @@ import {
   type PassageSnapshot,
   type PassageSource,
 } from '@eightyfourthousand/lib-doc-model';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import { createStackLoader } from './passage-source';
 import { buildStackSchemaExtensions } from './stack-extensions';
@@ -62,6 +63,7 @@ export const createStackWork = ({
   cache,
   buffer,
   spineDoc,
+  references,
 }: {
   workUuid: string;
   client: GraphQLClient;
@@ -72,6 +74,8 @@ export const createStackWork = ({
   /** Passages either side of the visible range to hydrate. */
   buffer?: number;
   spineDoc?: Doc;
+  /** Filled with loaded passages' back-references. */
+  references?: Map<string, PassageReference[]>;
 }): WorkDocument => {
   // A holder rather than a reassigned binding: the loader closes over this
   // before the document exists, and by the time a window is hydrated it does.
@@ -84,6 +88,7 @@ export const createStackWork = ({
     local,
     cache,
     buffer,
+    references,
   });
 
   built.work = createStackWorkDocument({ workUuid, loader, spineDoc });
