@@ -1,5 +1,6 @@
 import {
   beginSave,
+  combineSaveOutcomes,
   filterReplacements,
   restoreFailedSave,
 } from './save-bookkeeping';
@@ -73,5 +74,20 @@ describe('save bookkeeping', () => {
     });
 
     expect(payload.uuidsToSave).toEqual(['passage-new']);
+  });
+});
+
+describe('combineSaveOutcomes', () => {
+  it('fails when any part failed', () => {
+    expect(combineSaveOutcomes(['saved', 'failed'])).toBe('failed');
+  });
+
+  // The stack alone had changes: the paginated editors had nothing to save.
+  it('saved when any part wrote something', () => {
+    expect(combineSaveOutcomes(['saved', 'none'])).toBe('saved');
+  });
+
+  it('nothing to save when no part had anything', () => {
+    expect(combineSaveOutcomes(['none', 'none'])).toBe('none');
   });
 });

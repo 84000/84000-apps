@@ -33,3 +33,15 @@ export const filterReplacements = <T extends { uuid: string }>(
   replacements: T[],
   residualDirty: Set<string>,
 ): T[] => replacements.filter((passage) => !residualDirty.has(passage.uuid));
+
+/**
+ * One result for a save made of several parts: failed if any part failed,
+ * saved if any part wrote something, otherwise nothing to save.
+ */
+export const combineSaveOutcomes = (
+  outcomes: ('none' | 'saved' | 'failed')[],
+): 'none' | 'saved' | 'failed' => {
+  if (outcomes.includes('failed')) return 'failed';
+  if (outcomes.includes('saved')) return 'saved';
+  return 'none';
+};

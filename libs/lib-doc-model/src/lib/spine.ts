@@ -13,7 +13,14 @@ import type { LabelChange, PassageMeta, SpineEntry, SpineRange } from './types';
  * the original operation produced, and letting the spine renumber underneath
  * that would compute them a second time from a different starting state.
  */
-export type MutateOptions = { renumber?: boolean };
+export type MutateOptions = {
+  renumber?: boolean;
+  /**
+   * The passage leaves the work, not just what is loaded, so a save must
+   * delete it. Unloading a window to follow a deep link removes passages too.
+   */
+  deleted?: boolean;
+};
 
 /**
  * What a caller supplies for a new passage.
@@ -52,6 +59,12 @@ export class Spine {
 
   private order: YArray<string>;
   private metas: YMap<YMap<unknown>>;
+  /** Saved passages deleted since the last save, which it has to delete. */
+  private removedSaved = new Set<string>();
+  /** Passages a save deleted, so putting one back makes it new again. */
+  private deletedOnServer = new Set<string>();
+  /** Passages put back after a save deleted them; the next save inserts them. */
+  private restored = new Set<string>();
 
   constructor(workUuid: string, doc: Doc = new Doc()) {
     this.workUuid = workUuid;
@@ -72,6 +85,9 @@ export class Spine {
       () => {
         this.order.delete(0, this.order.length);
         [...this.metas.keys()].forEach((key) => this.metas.delete(key));
+        this.deletedOnServer.clear();
+        this.restored.clear();
+        // Deletions not saved yet are kept: the server still has those rows.
         passages.forEach((passage) => this.appendUnsafe(passage));
       },
       SPINE_ORIGIN,
@@ -199,6 +215,44 @@ export class Spine {
     return index;
   }
 
+  /** Saved passages deleted since the last save, for it to delete. */
+  removedSinceSave(): string[] {
+    return [...this.removedSaved];
+  }
+
+  /** Passages put back after a save deleted them, for the next to insert. */
+  restoredSinceSave(): string[] {
+    return [...this.restored];
+  }
+
+  /**
+   * Reconcile with a save that succeeded, including what changed while it
+   * ran: a deleted passage put back meanwhile is new again, and a passage it
+   * created that was deleted meanwhile now has to be deleted.
+   */
+  settleSave({ deleted, created }: { deleted: string[]; created: string[] }) {
+    transact(
+      this.doc,
+      () => {
+        deleted.forEach((uuid) => {
+          this.removedSaved.delete(uuid);
+          const entry = this.metas.get(uuid);
+          if (entry) {
+            entry.delete('sort');
+            this.restored.add(uuid);
+          } else {
+            this.deletedOnServer.add(uuid);
+          }
+        });
+        created.forEach((uuid) => {
+          this.restored.delete(uuid);
+          if (!this.metas.has(uuid)) this.removedSaved.add(uuid);
+        });
+      },
+      SPINE_ORIGIN,
+    );
+  }
+
   /**
    * Adopt stored sorts read back from the server, e.g. after a save that
    * inserted passages and shifted the sorts after them. Passages the spine
@@ -232,8 +286,17 @@ export class Spine {
     transact(
       this.doc,
       () => {
+        // Put back after a save deleted it: the server no longer has the row,
+        // so its stored sort describes nothing and it is saved as new.
+        const gone = this.deletedOnServer.delete(passage.uuid);
         this.order.insert(at, [passage.uuid]);
-        this.metas.set(passage.uuid, this.metaMap(passage));
+        this.metas.set(
+          passage.uuid,
+          this.metaMap(gone ? { ...passage, sort: undefined } : passage),
+        );
+        if (gone) this.restored.add(passage.uuid);
+        // Put back, e.g. by undo: nothing to delete after all.
+        this.removedSaved.delete(passage.uuid);
         // No anchor label: the caller chose the new passage's own label.
         if (options.renumber !== false) labelChanges = this.renumberRun(at);
       },
@@ -269,6 +332,9 @@ export class Spine {
         // Walk backwards so each deletion's index stays valid.
         for (let i = current.length - 1; i >= 0; i--) {
           if (!targets.has(current[i])) continue;
+          if (options.deleted && this.storedSort(current[i]) !== undefined) {
+            this.removedSaved.add(current[i]);
+          }
           this.order.delete(i, 1);
           this.metas.delete(current[i]);
         }

@@ -6,7 +6,11 @@ import {
 } from '@eightyfourthousand/data-access';
 import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
-import { dirtyPassages, saveStackWork } from './stack-save';
+import {
+  dirtyPassages,
+  hasUnsavedStackChanges,
+  saveStackWork,
+} from './stack-save';
 import { createStackWorkDocument } from './stack-work';
 import { stackSeedFromPassage } from './types';
 
@@ -154,6 +158,29 @@ describe('dirtyPassages', () => {
     const [passage] = dirtyPassages(work);
     expect(passage.label).toBe('3');
     expect(passage.sort).toBe(work.spine.sortOf('p2'));
+  });
+});
+
+describe('hasUnsavedStackChanges', () => {
+  it('is set by an edit or a removal of a saved passage', () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'a', label: '1', type: 'translation', sort: 1 },
+      { uuid: 'b', label: '2', type: 'translation', sort: 2 },
+    ]);
+    ['a', 'b'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+
+    work.remove(['b']);
+    expect(hasUnsavedStackChanges(work)).toBe(true);
+    work.undo();
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+
+    edit(work, 'a', 'changed');
+    expect(hasUnsavedStackChanges(work)).toBe(true);
   });
 });
 
@@ -400,6 +427,128 @@ describe('saveStackWork', () => {
     await saveStackWork(work);
 
     expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+  });
+
+  // An edit typed while the request was in flight is not in the payload.
+  it('leaves a passage dirty when it changed during the save', async () => {
+    const work = build();
+    edit(work, 'p0', 'sent');
+    dataAccess.savePassagesWithDeletions.mockImplementation(async () => {
+      edit(work, 'p0', 'typed during the save');
+      return { success: true };
+    });
+
+    expect(await saveStackWork(work)).toBe(true);
+    expect(work.store.dirty()).toEqual(['p0']);
+  });
+
+  describe('removed passages', () => {
+    const saved = () => {
+      const work = new WorkDocument({ workUuid: 'w1', schema });
+      work.seedSpine([
+        { uuid: 'a', label: '1', type: 'translation', sort: 10 },
+        { uuid: 'b', label: '2', type: 'translation', sort: 11 },
+        { uuid: 'c', label: '3', type: 'translation', sort: 12 },
+      ]);
+      ['a', 'b', 'c'].forEach((uuid) => {
+        work.store.create(uuid, [para(uuid)]);
+        work.store.peek(uuid)?.markSynced();
+      });
+      dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+      return work;
+    };
+    const lastCall = () =>
+      dataAccess.savePassagesWithDeletions.mock.calls.at(-1)?.[0];
+
+    // A delete used to survive until reload and then come back.
+    it('deletes a removed passage, even when nothing else changed', async () => {
+      const work = saved();
+      work.remove(['b']);
+
+      await saveStackWork(work);
+
+      expect(lastCall().deletedUuids).toEqual(['b']);
+      expect(lastCall().passages).toEqual([]);
+      expect(work.spine.removedSinceSave()).toEqual([]);
+    });
+
+    // A merge used to save the joined text and keep the merged passage too.
+    it('deletes the passage a merge joined into its neighbour', async () => {
+      const work = saved();
+      work.merge('b');
+
+      await saveStackWork(work);
+
+      expect(lastCall().deletedUuids).toEqual(['b']);
+      expect(lastCall().passages.map((p: { uuid: string }) => p.uuid)).toEqual([
+        'a',
+      ]);
+    });
+
+    it('deletes nothing once an undo puts the passage back', async () => {
+      const work = saved();
+      work.remove(['b']);
+      work.undo();
+
+      await saveStackWork(work);
+
+      expect(dataAccess.savePassagesWithDeletions).not.toHaveBeenCalled();
+    });
+
+    // A split then undone leaves the tail's document dirty with no passage;
+    // counted, it held the Save button on after every save.
+    it('does not count a dirty document whose passage has gone', async () => {
+      const work = saved();
+      work.split('a', 1);
+      work.undo();
+      await saveStackWork(work);
+      expect(hasUnsavedStackChanges(work)).toBe(false);
+    });
+
+    // The server deleted `b`; undo brings it back with its old content, which
+    // nothing marked edited, so it was never saved again.
+    it('saves a passage put back after a save deleted it', async () => {
+      const work = saved();
+      work.remove(['b']);
+      await saveStackWork(work);
+
+      work.undo();
+      expect(hasUnsavedStackChanges(work)).toBe(true);
+      await saveStackWork(work);
+
+      const call = lastCall();
+      expect(call.passages.map((p: { uuid: string }) => p.uuid)).toContain('b');
+      expect(call.anchors.b).toEqual({ after: 'a' });
+      expect(call.deletedUuids).toEqual([]);
+    });
+
+    it('deletes a new passage removed while its save was running', async () => {
+      const work = saved();
+      const created = work.split('a', 1)?.uuid ?? '';
+      dataAccess.savePassagesWithDeletions.mockImplementationOnce(async () => {
+        work.remove([created]);
+        return { success: true };
+      });
+      dataAccess.getPassageSorts.mockResolvedValue(new Map());
+
+      await saveStackWork(work);
+      expect(work.spine.removedSinceSave()).toEqual([created]);
+
+      await saveStackWork(work);
+      expect(lastCall().deletedUuids).toEqual([created]);
+    });
+
+    it('keeps a removal to delete when the save fails', async () => {
+      const work = saved();
+      work.remove(['b']);
+      dataAccess.savePassagesWithDeletions.mockResolvedValue({
+        success: false,
+      });
+
+      await saveStackWork(work);
+
+      expect(work.spine.removedSinceSave()).toEqual(['b']);
+    });
   });
 
   // A document marked synced on a failed write would drop the edit from the

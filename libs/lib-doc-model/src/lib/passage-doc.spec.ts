@@ -19,6 +19,17 @@ describe('PassageDoc', () => {
     expect(doc.toJSON().content).toHaveLength(1);
   });
 
+  // Left null, a mounted editor stamps one, and the passage reads as edited.
+  it('stamps a uuid on a node stored without one, and stays clean', () => {
+    const doc = build();
+    doc.seed([para('kept', 'a'), { ...para('stamped', 'x'), attrs: {} }]);
+
+    const [kept, stamped] = doc.toJSON().content ?? [];
+    expect(kept.attrs?.uuid).toBe('a');
+    expect(stamped.attrs?.uuid).toEqual(expect.any(String));
+    expect(doc.isDirty).toBe(false);
+  });
+
   it('ignores a second seed', () => {
     const doc = build();
     doc.seed([para('first', 'a')]);
@@ -44,6 +55,15 @@ describe('PassageDoc', () => {
       expect(doc.isDirty).toBe(false);
     });
 
+    // An observer offering a save would otherwise offer one with nothing in it.
+    it('is never dirty while seeding', () => {
+      const doc = build();
+      const seen: boolean[] = [];
+      doc.observe(() => seen.push(doc.isDirty));
+      doc.seed([para('hello', 'a')]);
+      expect(seen).not.toContain(true);
+    });
+
     it('becomes dirty on a structural content replacement', () => {
       const doc = build();
       doc.seed([para('hello', 'a')]);
@@ -65,6 +85,20 @@ describe('PassageDoc', () => {
       doc.seed([para('hello', 'a')]);
       doc.replaceContent({ type: 'doc', content: [para('edited', 'a')] });
       doc.markSynced();
+      expect(doc.isDirty).toBe(false);
+    });
+
+    it('stays dirty when changed after the version a save sent', () => {
+      const doc = build();
+      doc.seed([para('hello', 'a')]);
+      doc.replaceContent({ type: 'doc', content: [para('sent', 'a')] });
+      const sent = doc.version;
+      doc.replaceContent({ type: 'doc', content: [para('later', 'a')] });
+
+      doc.markSynced(sent);
+      expect(doc.isDirty).toBe(true);
+
+      doc.markSynced(doc.version);
       expect(doc.isDirty).toBe(false);
     });
 

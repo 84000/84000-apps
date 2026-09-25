@@ -287,7 +287,7 @@ export class WorkDocument {
         head.length || tail.length ? [...head, ...tail] : [EMPTY_PARAGRAPH],
     };
 
-    const labelChanges = this.spine.remove([uuid]);
+    const labelChanges = this.spine.remove([uuid], { deleted: true });
     previous.replaceContent(merged);
 
     this.record({
@@ -360,7 +360,10 @@ export class WorkDocument {
       before: this.store.ensure(target.uuid).toJSON(),
       after: null,
     }));
-    const labelChanges = this.spine.remove(targets.map((t) => t.uuid));
+    const labelChanges = this.spine.remove(
+      targets.map((t) => t.uuid),
+      { deleted: true },
+    );
 
     this.record({
       kind: 'delete',
@@ -436,7 +439,10 @@ export class WorkDocument {
       })),
     ];
 
-    const labelChanges = this.spine.remove(targets.map((t) => t.uuid));
+    const labelChanges = this.spine.remove(
+      targets.map((t) => t.uuid),
+      { deleted: true },
+    );
     const inserted = seeds.map((seed, i) => {
       const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
       labelChanges.push(...changes);
@@ -597,7 +603,7 @@ export class WorkDocument {
   private applyForward(command: StructuralCommand) {
     this.spine.remove(
       command.removed.map((change) => change.meta.uuid),
-      { renumber: false },
+      { renumber: false, deleted: true },
     );
     [...command.inserted]
       .sort((a, b) => a.index - b.index)
@@ -612,13 +618,14 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.after);
     });
     this.applyLabels(command.labels, 'to');
+    this.markRestoredDirty();
   }
 
   /** Replay a command backwards. The mirror of `applyForward`. */
   private applyInverse(command: StructuralCommand) {
     this.spine.remove(
       command.inserted.map((change) => change.meta.uuid),
-      { renumber: false },
+      { renumber: false, deleted: true },
     );
     [...command.removed]
       .sort((a, b) => a.index - b.index)
@@ -635,6 +642,17 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.before);
     });
     this.applyLabels(command.labels, 'from');
+    this.markRestoredDirty();
+  }
+
+  /**
+   * A passage put back after a save deleted it may hold exactly the content
+   * it had, so nothing marks it edited, yet the server no longer has it.
+   */
+  private markRestoredDirty() {
+    this.spine
+      .restoredSinceSave()
+      .forEach((uuid) => this.store.peek(uuid)?.markDirty());
   }
 
   private applyLabels(changes: LabelChange[], side: 'from' | 'to') {

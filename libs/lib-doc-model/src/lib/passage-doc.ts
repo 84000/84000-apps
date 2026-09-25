@@ -13,6 +13,7 @@ import {
   encodeStateAsUpdate,
   transact,
 } from 'yjs';
+import { v4 as uuidv4 } from 'uuid';
 import type { Passage } from '@eightyfourthousand/data-access';
 import { passageFromNode } from './passage';
 import { withUniqueMarkUuids } from './unique-mark-uuids';
@@ -89,6 +90,8 @@ export class PassageDoc {
 
   private schema: Schema;
   private dirty = false;
+  private revision = 0;
+  private seeding = false;
   private textOrigins: Set<unknown>;
   private listeners = new Set<() => void>();
   private nodeCache: PMNode | null = null;
@@ -119,20 +122,26 @@ export class PassageDoc {
    */
   seed(content: JSONContent[]) {
     if (this.content.length > 0) return;
-    const node = this.parse({
-      type: 'doc',
-      content: content.length ? content : [EMPTY_PARAGRAPH],
-    });
-    transact(
-      this.doc,
-      () => prosemirrorToYXmlFragment(node, this.content),
-      STRUCTURAL_ORIGIN,
+    const node = this.parse(
+      this.withNodeUuids({
+        type: 'doc',
+        content: content.length ? content : [EMPTY_PARAGRAPH],
+      }),
     );
+    // The content came from the server, so writing it is not a local edit:
+    // an observer that saw the passage go dirty on the way past would offer
+    // a save with nothing to write.
+    this.seeding = true;
+    try {
+      transact(
+        this.doc,
+        () => prosemirrorToYXmlFragment(node, this.content),
+        STRUCTURAL_ORIGIN,
+      );
+    } finally {
+      this.seeding = false;
+    }
     this.undoManager.clear();
-    // Seeding writes to the document, which set the dirty flag on the way
-    // past. The content came from the server, so it is not a local edit —
-    // and clearing the flag has to be announced, or an observer that saw the
-    // write go by is left believing the passage is unsynced.
     this.dirty = false;
     this.notify();
   }
@@ -245,12 +254,28 @@ export class PassageDoc {
     return this.dirty;
   }
 
+  /** Increases with every local change; compare before and after an await. */
+  get version(): number {
+    return this.revision;
+  }
+
+  /** Mark the document as needing a save, without changing it. */
+  markDirty() {
+    if (this.dirty) return;
+    this.dirty = true;
+    this.revision++;
+    this.notify();
+  }
+
   /**
    * Clear the dirty flag, after the caller has sent this document's state and
-   * had it acknowledged.
+   * had it acknowledged. Given the `version` read when the state was sent, a
+   * document changed since stays dirty.
    */
-  markSynced() {
+  markSynced(version?: number) {
     if (!this.dirty) return;
+    // Changed since the caller read it: the save did not include the change.
+    if (version !== undefined && version !== this.revision) return;
     this.dirty = false;
     this.notify();
   }
@@ -297,7 +322,8 @@ export class PassageDoc {
   // ------------------------------------------------------------- private
 
   private onUpdate = (_update: Uint8Array, origin: unknown) => {
-    if (origin === REMOTE_ORIGIN) return;
+    if (origin === REMOTE_ORIGIN || this.seeding) return;
+    this.revision++;
     if (this.dirty) return;
     this.dirty = true;
     this.notify();
@@ -310,6 +336,29 @@ export class PassageDoc {
 
   private notify() {
     this.listeners.forEach((listener) => listener());
+  }
+
+  /**
+   * Stamp a uuid on every node whose type declares one but was stored
+   * without it, such as a mention, whose identity is in its items. A mounted
+   * editor's `EnsureUniqueUuids` would otherwise stamp it, which reads as an
+   * edit, and the exporters skip a node that has none.
+   */
+  private withNodeUuids(json: JSONContent): JSONContent {
+    const declares = (type?: string) =>
+      !!type &&
+      Object.prototype.hasOwnProperty.call(
+        this.schema.nodes[type]?.spec.attrs ?? {},
+        'uuid',
+      );
+    const visit = (item: JSONContent): JSONContent => ({
+      ...item,
+      ...(declares(item.type) && !item.attrs?.uuid
+        ? { attrs: { ...item.attrs, uuid: uuidv4() } }
+        : {}),
+      ...(item.content ? { content: item.content.map(visit) } : {}),
+    });
+    return visit(json);
   }
 
   private parse(json: JSONContent): PMNode {

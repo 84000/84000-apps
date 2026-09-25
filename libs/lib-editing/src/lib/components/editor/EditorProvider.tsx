@@ -23,6 +23,7 @@ import { computeSavePayload, type PassageUuidRecord } from './save-filter';
 import {
   beginSave,
   filterReplacements,
+  combineSaveOutcomes,
   restoreFailedSave,
 } from './save-bookkeeping';
 import {
@@ -34,6 +35,18 @@ import {
   type FragmentBaseline,
 } from './observer-utils';
 import { applyRenumberedLabels } from './extensions/EndNoteLink/endnote-utils';
+
+/** What a save did: nothing to save, saved, or failed. */
+export type SaveOutcome = 'none' | 'saved' | 'failed';
+
+type SaveResult = { outcome: SaveOutcome; dirty: boolean };
+
+/** A second editing surface that saves alongside the paginated editors. */
+export type SaveHandler = {
+  save: () => Promise<SaveOutcome>;
+  /** Whether it holds changes the last save did not write. */
+  isDirty: () => boolean;
+};
 
 interface EditorContextState {
   doc?: Doc;
@@ -54,14 +67,14 @@ interface EditorContextState {
   refreshEditorBaseline: (key: string) => void;
   save: () => Promise<void>;
   /**
-   * Hand `save` over to something else, or take it back with null.
+   * Save something else alongside the paginated editors, or stop with null.
    *
    * The passage stack materializes rows from its own documents rather than
    * from a TipTap editor, and this provider cannot call into it — the stack
    * sits behind a dynamic boundary so its `@tiptap/y-tiptap` imports stay out
    * of the server bundle. So the stack registers instead.
    */
-  registerSaveHandler: (handler: (() => Promise<void>) | null) => void;
+  registerSaveHandler: (handler: SaveHandler | null) => void;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
   setNavigating: (
@@ -451,30 +464,18 @@ export const EditorContextProvider = ({
     [setNavigating],
   );
 
-  const saveHandlerRef = useRef<(() => Promise<void>) | null>(null);
-  const registerSaveHandler = useCallback(
-    (handler: (() => Promise<void>) | null) => {
-      saveHandlerRef.current = handler;
-    },
-    [],
-  );
+  const saveHandlerRef = useRef<SaveHandler | null>(null);
+  const registerSaveHandler = useCallback((handler: SaveHandler | null) => {
+    saveHandlerRef.current = handler;
+  }, []);
 
-  const save = useCallback(async () => {
-    if (saveHandlerRef.current) {
-      return saveHandlerRef.current();
-    }
-
-    if (isSavingRef.current) {
-      console.warn('Save already in progress; skipping.');
-      return;
-    }
-
+  /** The paginated editors' half of a save. */
+  const savePaginated = useCallback(async (): Promise<SaveResult> => {
     const editorEntries = Object.entries(editorCache.current).filter(
       ([, editor]) => !editor.isDestroyed,
     );
     if (!editorEntries.length) {
-      console.warn('No editor instance found, cannot save.');
-      return;
+      return { outcome: 'none', dirty: false };
     }
 
     const liveUuidsByEditor: PassageUuidRecord = {};
@@ -502,8 +503,7 @@ export const EditorContextProvider = ({
     });
 
     if (!hasChanges) {
-      console.log('No changes to save.');
-      return;
+      return { outcome: 'none', dirty: false };
     }
 
     // Swap in a fresh dirty set before any await: keystrokes made while the
@@ -511,7 +511,6 @@ export const EditorContextProvider = ({
     // post-save bookkeeping instead of being silently cleared.
     const { inFlight: inFlightDirty, next } = beginSave(dirtyUuidsRef.current);
     dirtyUuidsRef.current = next;
-    isSavingRef.current = true;
 
     try {
       // Everything up to the await is synchronous, so the serialized payload
@@ -581,16 +580,8 @@ export const EditorContextProvider = ({
           dirtyUuidsRef.current,
         );
         console.error('Save failed:', result?.error ?? 'unknown error');
-        toast('Error saving content.', {
-          icon: <CircleAlertIcon className="size-4 text-error" />,
-        });
-        return;
+        return { outcome: 'failed', dirty: true };
       }
-
-      console.log('Document state saved.');
-      toast('Content saved', {
-        icon: <CircleCheckIcon className="size-4 text-success" />,
-      });
 
       // Baselines become the uuid sets captured at save start — not the live
       // editor — so passages added or deleted during the flight are still
@@ -641,18 +632,55 @@ export const EditorContextProvider = ({
         baseline: savedBaselineUuidsByEditorRef.current,
         current: residualLive,
       });
-      dirtyStore.setDirty(residual.hasChanges);
+      return { outcome: 'saved', dirty: residual.hasChanges };
+    } catch (error) {
+      // A throw anywhere past the swap, the request included, confirmed
+      // nothing, and must not take the in-flight set down with it.
+      console.error('Save failed:', error);
+      dirtyUuidsRef.current = restoreFailedSave(
+        inFlightDirty,
+        dirtyUuidsRef.current,
+      );
+      return { outcome: 'failed', dirty: true };
+    }
+  }, [client, work.uuid, getEditorUuids, applyReplacedPassages, setNavigating]);
+
+  // The stack, when it is mounted, and the paginated editors each save what
+  // they hold; one button and one toast cover both.
+  const save = useCallback(async () => {
+    if (isSavingRef.current) {
+      console.warn('Save already in progress; skipping.');
+      return;
+    }
+    isSavingRef.current = true;
+    try {
+      const stack = saveHandlerRef.current;
+      const stackOutcome: SaveOutcome = stack
+        ? await stack.save().catch((error: unknown) => {
+            console.error('Save failed:', error);
+            return 'failed' as const;
+          })
+        : 'none';
+      const paginated = await savePaginated();
+      const outcome = combineSaveOutcomes([stackOutcome, paginated.outcome]);
+
+      if (outcome === 'failed') {
+        toast('Error saving content.', {
+          icon: <CircleAlertIcon className="size-4 text-error" />,
+        });
+      } else if (outcome === 'saved') {
+        toast('Content saved', {
+          icon: <CircleCheckIcon className="size-4 text-success" />,
+        });
+      } else {
+        console.log('No changes to save.');
+      }
+
+      dirtyStore.setDirty(paginated.dirty || (stack?.isDirty() ?? false));
     } finally {
       isSavingRef.current = false;
     }
-  }, [
-    client,
-    work.uuid,
-    getEditorUuids,
-    applyReplacedPassages,
-    dirtyStore,
-    setNavigating,
-  ]);
+  }, [savePaginated, dirtyStore]);
 
   return (
     <EditorContext.Provider
