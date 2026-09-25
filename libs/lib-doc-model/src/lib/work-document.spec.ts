@@ -717,3 +717,97 @@ describe('WorkDocument merge at a blank seam', () => {
     expect(work.store.ensure('p1').toNode().childCount).toBe(1);
   });
 });
+
+describe('deleting an endnote', () => {
+  const schema = new Schema({
+    nodes: {
+      doc: { content: 'block+' },
+      paragraph: {
+        group: 'block',
+        content: 'inline*',
+        attrs: { uuid: { default: null } },
+        toDOM: () => ['p', 0],
+      },
+      text: { group: 'inline' },
+    },
+    marks: {
+      endNoteLink: {
+        attrs: { notes: { default: [] } },
+        toDOM: () => ['sup', 0],
+      },
+    },
+  });
+
+  const note = (endNote: string) => ({ uuid: `link-${endNote}`, endNote });
+
+  /** A body passage whose word "linked" carries links to the given endnotes. */
+  const build = (...endNotes: string[]) => {
+    const work = new WorkDocument({ workUuid: 'work-1', schema });
+    work.seedSpine([
+      meta('body', '1.1'),
+      meta('n1', 'n.1', 'endnotes'),
+      meta('n2', 'n.2', 'endnotes'),
+    ]);
+    work.store.create('body', [
+      {
+        type: 'paragraph',
+        attrs: { uuid: 'para' },
+        content: [
+          { type: 'text', text: 'a ' },
+          {
+            type: 'text',
+            text: 'linked',
+            marks: [
+              { type: 'endNoteLink', attrs: { notes: endNotes.map(note) } },
+            ],
+          },
+          { type: 'text', text: ' word' },
+        ],
+      },
+    ]);
+    work.store.create('n1', [para('first note', 'x1')]);
+    work.store.create('n2', [para('second note', 'x2')]);
+    return work;
+  };
+
+  const links = (work: WorkDocument) => {
+    const found: string[] = [];
+    work.store
+      .ensure('body')
+      .toNode()
+      .descendants((node) => {
+        node.marks.forEach((mark) =>
+          (mark.attrs.notes as { endNote: string }[]).forEach((n) =>
+            found.push(n.endNote),
+          ),
+        );
+        return true;
+      });
+    return found;
+  };
+
+  it('removes the links to it and keeps the others at that position', () => {
+    const work = build('n1', 'n2');
+    work.remove(['n1']);
+    expect(links(work)).toEqual(['n2']);
+    expect(work.store.ensure('body').text).toBe('a linked word');
+    expect(work.store.ensure('body').isDirty).toBe(true);
+  });
+
+  it('removes the mark when no link is left, and joins the text', () => {
+    const work = build('n1');
+    work.remove(['n1']);
+    expect(links(work)).toEqual([]);
+    expect(work.store.ensure('body').toNode().child(0).childCount).toBe(1);
+  });
+
+  it('puts the endnote and its links back in one undo', () => {
+    const work = build('n1', 'n2');
+    work.remove(['n1']);
+    work.undo();
+    expect(work.spine.uuids()).toEqual(['body', 'n1', 'n2']);
+    expect(links(work)).toEqual(['n1', 'n2']);
+    work.redo();
+    expect(links(work)).toEqual(['n2']);
+  });
+});
