@@ -146,6 +146,40 @@ export class PassageDoc {
     this.notify();
   }
 
+  /**
+   * Replace the content with the server's, as a new starting point.
+   *
+   * For a passage the server rewrote, such as by a replace. Like a seed it is
+   * not a local edit, and the text history is cleared, since undoing into the
+   * old text would write it back. Applied as a diff, so a bound editor keeps
+   * its place.
+   */
+  reseed(content: JSONContent[]) {
+    const node = this.parse(
+      this.withNodeUuids({
+        type: 'doc',
+        content: content.length ? content : [EMPTY_PARAGRAPH],
+      }),
+    );
+    this.seeding = true;
+    try {
+      transact(
+        this.doc,
+        () =>
+          updateYFragment(this.doc, this.content, node, {
+            mapping: new Map(),
+            isOMark: new Map(),
+          }),
+        STRUCTURAL_ORIGIN,
+      );
+    } finally {
+      this.seeding = false;
+    }
+    this.undoManager.clear();
+    this.dirty = false;
+    this.notify();
+  }
+
   /** The content as a ProseMirror node. Cached until the fragment changes. */
   toNode(): PMNode {
     if (!this.nodeCache) {

@@ -7,6 +7,7 @@ import {
 import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import {
+  applyServerPassages,
   dirtyPassages,
   hasUnsavedStackChanges,
   saveStackWork,
@@ -563,5 +564,39 @@ describe('saveStackWork', () => {
 
     expect(await saveStackWork(work)).toBe(false);
     expect(work.store.dirty()).toEqual(['p0']);
+  });
+});
+
+describe('applyServerPassages', () => {
+  const replaced = (uuid: string, text: string) => ({
+    uuid,
+    json: { type: 'passage', content: [para(text)] },
+  });
+
+  it('replaces a held passage, so its next save sends the server text', () => {
+    const work = build();
+    applyServerPassages(work, [replaced('p1', 'replaced')]);
+    expect(work.store.peek('p1')?.text).toBe('replaced');
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+
+    edit(work, 'p1', 'replaced, then edited');
+    expect(dirtyPassages(work).map((p) => p.content)).toEqual([
+      'replaced, then edited',
+    ]);
+  });
+
+  it('leaves a passage with unsaved edits alone', () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => null);
+    const work = build();
+    edit(work, 'p1', 'mine');
+    applyServerPassages(work, [replaced('p1', 'theirs')]);
+    expect(work.store.peek('p1')?.text).toBe('mine');
+    error.mockRestore();
+  });
+
+  it('ignores passages the stack does not hold', () => {
+    const work = build();
+    applyServerPassages(work, [replaced('elsewhere', 'x')]);
+    expect(work.store.peek('elsewhere')).toBeNull();
   });
 });
