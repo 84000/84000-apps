@@ -9,7 +9,7 @@ import {
   type ContentChange,
   type StructuralCommand,
 } from './command-log';
-import { withoutEndNoteLinks } from './end-note-links';
+import { withEndNoteLabels, withoutEndNoteLinks } from './end-note-links';
 import { PassageDocStore } from './doc-store';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
@@ -129,6 +129,11 @@ export class WorkDocument {
    * meaning the same passages the moment another section loads a page.
    */
   private windows = new Map<string, { uuids: string[]; keep: Set<string> }>();
+  /** Each endnote's label as its links last showed it. */
+  private endNoteLabels = new Map<string, string>();
+  /** Passages whose endnote links have been numbered from the spine. */
+  private numbered = new Set<string>();
+  private unobserve: (() => void)[] = [];
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
@@ -142,6 +147,10 @@ export class WorkDocument {
       loader: options.loader,
       textOrigins: options.textOrigins,
     });
+    this.unobserve.push(
+      this.spine.observe(this.renumberLinks),
+      this.store.observe(this.numberNewPassages),
+    );
   }
 
   // ----------------------------------------------------------- hydration
@@ -495,6 +504,52 @@ export class WorkDocument {
     });
   }
 
+  /**
+   * Bring endnote links' numbers in line with the spine after endnotes were
+   * renumbered. Only the links to endnotes whose label changed are touched.
+   */
+  private renumberLinks = () => {
+    const changed = new Set<string>();
+    this.spine.entries().forEach(({ uuid, type, label }) => {
+      if (type !== 'endnotes' || this.endNoteLabels.get(uuid) === label) return;
+      this.endNoteLabels.set(uuid, label);
+      changed.add(uuid);
+    });
+    if (changed.size) this.numberLinks(this.store.held(), changed);
+  };
+
+  /**
+   * Number the links in passages newly hydrated. One loaded from the server
+   * shows the stored numbers, which unsaved renumbering may have moved on.
+   */
+  private numberNewPassages = () => {
+    const held = new Set(this.store.held());
+    // A document is adopted before it is seeded, so an empty one waits.
+    const fresh = [...held].filter(
+      (uuid) =>
+        !this.numbered.has(uuid) &&
+        (this.store.peek(uuid)?.content.length ?? 0) > 0,
+    );
+    this.numbered = new Set([
+      ...[...this.numbered].filter((uuid) => held.has(uuid)),
+      ...fresh,
+    ]);
+    if (fresh.length) this.numberLinks(fresh);
+  };
+
+  private numberLinks(uuids: string[], only?: ReadonlySet<string>) {
+    uuids.forEach((uuid) => {
+      const doc = this.store.peek(uuid);
+      if (!doc) return;
+      const json = withEndNoteLabels(doc.toJSON(), (endNote) =>
+        only && !only.has(endNote)
+          ? undefined
+          : this.spine.meta(endNote)?.label,
+      );
+      if (json) doc.adjust(json);
+    });
+  }
+
   /** Move a passage to another position. */
   reorder(uuid: string, toIndex: number): boolean {
     const result = this.spine.move(uuid, toIndex);
@@ -608,6 +663,7 @@ export class WorkDocument {
 
   /** Release every document. The spine survives — it is cheap to keep. */
   destroy() {
+    this.unobserve.forEach((stop) => stop());
     this.windows.clear();
     this.store.destroy();
     this.listeners.clear();
