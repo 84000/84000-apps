@@ -52,6 +52,8 @@ export type { PassageDocOptions } from './lib/passage-doc';
 
 export { passageFromNode } from './lib/passage';
 
+export { isPlainParagraph, isStructuralParagraph } from './lib/structural';
+
 export { Spine, SPINE_ORIGIN } from './lib/spine';
 export type { MutateOptions, SpineSeed } from './lib/spine';
 
