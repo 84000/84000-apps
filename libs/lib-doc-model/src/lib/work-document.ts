@@ -4,7 +4,12 @@ import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
 import type { BodyItemType } from '@eightyfourthousand/data-access';
-import { CommandLog, type StructuralCommand } from './command-log';
+import {
+  CommandLog,
+  type ContentChange,
+  type StructuralCommand,
+} from './command-log';
+import { withoutEndNoteLinks } from './end-note-links';
 import { PassageDocStore } from './doc-store';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
@@ -355,7 +360,7 @@ export class WorkDocument {
       .sort((a, b) => a.index - b.index);
     if (!targets.length) return false;
 
-    const content = targets.map((target) => ({
+    const content: ContentChange[] = targets.map((target) => ({
       uuid: target.uuid,
       before: this.store.ensure(target.uuid).toJSON(),
       after: null,
@@ -364,6 +369,7 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
+    content.push(...this.unlink(targets.map((t) => t.uuid)));
 
     this.record({
       kind: 'delete',
@@ -421,7 +427,7 @@ export class WorkDocument {
       return seed;
     });
 
-    const content = [
+    const content: ContentChange[] = [
       ...targets.map((target) => ({
         uuid: target.uuid,
         before: this.store.ensure(target.uuid).toJSON(),
@@ -443,6 +449,7 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
+    content.push(...this.unlink(targets.map((t) => t.uuid)));
     const inserted = seeds.map((seed, i) => {
       const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
       labelChanges.push(...changes);
@@ -467,6 +474,25 @@ export class WorkDocument {
 
     this.notify();
     return true;
+  }
+
+  /**
+   * Take the links to deleted passages out of every other held passage, and
+   * return the changes for the delete's command, so one undo puts both back.
+   *
+   * Passages that aren't held need nothing: the save deletes their links.
+   */
+  private unlink(deleted: string[]): ContentChange[] {
+    const gone = new Set(deleted);
+    return this.store.held().flatMap((uuid) => {
+      if (gone.has(uuid)) return [];
+      const doc = this.store.ensure(uuid);
+      const before = doc.toJSON();
+      const after = withoutEndNoteLinks(before, gone);
+      if (!after) return [];
+      doc.replaceContent(after);
+      return [{ uuid, before, after }];
+    });
   }
 
   /** Move a passage to another position. */
