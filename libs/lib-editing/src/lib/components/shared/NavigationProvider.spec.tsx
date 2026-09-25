@@ -140,48 +140,53 @@ describe('NavigationProvider comment anchors', () => {
 });
 
 describe('NavigationProvider editor requests', () => {
+  type Navigation = ReturnType<typeof useNavigation>;
+
   /** Hands the context out of the tree, so the test can call into it. */
-  let navigation: ReturnType<typeof useNavigation> | undefined;
-  const Capture = () => {
-    navigation = useNavigation();
+  const Capture = ({ onValue }: { onValue: (value: Navigation) => void }) => {
+    onValue(useNavigation());
     return null;
   };
 
-  const renderCapture = () =>
+  const renderCapture = (): Navigation => {
+    const captured: { value?: Navigation } = {};
     render(
       <NavigationProvider uuid="w1" editable>
-        <Capture />
+        <Capture onValue={(value) => (captured.value = value)} />
       </NavigationProvider>,
     );
+    if (!captured.value) throw new Error('navigation was not rendered');
+    return captured.value;
+  };
 
   // Each passage stack answers only for its own rows, so a second stack
   // registering must not take the first one's rows away.
   it('asks each registered host until one holds the element', async () => {
-    renderCapture();
+    const navigation = renderCapture();
     const mine = document.createElement('div');
     const theirs = document.createElement('div');
     const editor = { id: 'editor' } as never;
 
-    const unregisterOther = navigation!.registerEditorRequest((element) =>
+    const unregisterOther = navigation.registerEditorRequest((element) =>
       element === theirs ? Promise.resolve(null) : null,
     );
-    navigation!.registerEditorRequest((element) =>
+    navigation.registerEditorRequest((element) =>
       element === mine ? Promise.resolve(editor) : null,
     );
 
-    await expect(navigation!.requestEditorFor?.(mine)).resolves.toBe(editor);
+    await expect(navigation.requestEditorFor?.(mine)).resolves.toBe(editor);
     unregisterOther();
-    await expect(navigation!.requestEditorFor?.(theirs)).resolves.toBeNull();
+    await expect(navigation.requestEditorFor?.(theirs)).resolves.toBeNull();
   });
 
   it('stops asking a host once it is removed', async () => {
-    renderCapture();
+    const navigation = renderCapture();
     const element = document.createElement('div');
     const request = jest.fn(() => Promise.resolve(null));
-    const unregister = navigation!.registerEditorRequest(request);
+    const unregister = navigation.registerEditorRequest(request);
     unregister();
 
-    await expect(navigation!.requestEditorFor?.(element)).resolves.toBeNull();
+    await expect(navigation.requestEditorFor?.(element)).resolves.toBeNull();
     expect(request).not.toHaveBeenCalled();
   });
 });
