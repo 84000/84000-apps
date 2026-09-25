@@ -42,7 +42,11 @@ import { useFeatureFlagEnabled } from '@eightyfourthousand/lib-instr';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 import { isXmlId, useIsMobile } from '@eightyfourthousand/lib-utils';
 import { RestrictionWarning } from './RestrictionWarning';
-import { NavigationContext, DEFAULT_PANELS } from './NavigationContext';
+import {
+  NavigationContext,
+  DEFAULT_PANELS,
+  type EditorRequestHandler,
+} from './NavigationContext';
 
 export { NavigationContext, useNavigation } from './NavigationContext';
 export type { NavigationState } from './NavigationContext';
@@ -251,23 +255,23 @@ export const NavigationProvider = ({
     [graphqlClient],
   );
 
-  // Registered by a host whose editors come and go — the passage stack mounts
+  // Registered by hosts whose editors come and go — the passage stack mounts
   // one per passage, so an anchor on a static row has none until something
-  // asks for it.
-  const editorRequest = useRef<
-    ((element: HTMLElement) => Promise<Editor | null>) | null
-  >(null);
-  const registerEditorRequest = useCallback(
-    (request: ((element: HTMLElement) => Promise<Editor | null>) | null) => {
-      editorRequest.current = request;
-    },
-    [],
-  );
-  const requestEditorFor = useCallback(
-    (element: HTMLElement) =>
-      editorRequest.current?.(element) ?? Promise.resolve(null),
-    [],
-  );
+  // asks for it. Every stack registers, and each answers only for its rows.
+  const editorRequests = useRef(new Set<EditorRequestHandler>());
+  const registerEditorRequest = useCallback((request: EditorRequestHandler) => {
+    editorRequests.current.add(request);
+    return () => {
+      editorRequests.current.delete(request);
+    };
+  }, []);
+  const requestEditorFor = useCallback(async (element: HTMLElement) => {
+    for (const request of editorRequests.current) {
+      const pending = request(element);
+      if (pending) return pending;
+    }
+    return null;
+  }, []);
 
   const refreshComments = useCallback(
     () => setCommentsRevision((revision) => revision + 1),
