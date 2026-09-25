@@ -29,7 +29,11 @@ import {
   type StackLinkTarget,
 } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
-import type { PanelName } from '../shared/types';
+import {
+  PANEL_FOR_SECTION,
+  TAB_FOR_SECTION,
+  type PanelName,
+} from '../shared/types';
 
 /**
  * Rows rendered in the virtualized window (cheap static HTML tier).
@@ -337,6 +341,45 @@ export const PassageStack = ({
 
   useStackSelection(controller);
   useStackDeepLink(controller, panel);
+
+  // A back-reference under a passage opens the passage it names, and a press
+  // on one must not focus the row it sits in.
+  useEffect(() => {
+    const container = parentRef.current;
+    if (!container) return;
+    const onMouseDown = (event: MouseEvent) => {
+      const ref = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-passage-reference]',
+      );
+      if (!ref) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const type = ref.dataset['refType'] ?? '';
+      updatePanel({
+        name: PANEL_FOR_SECTION[type] ?? 'main',
+        state: {
+          open: true,
+          tab: TAB_FOR_SECTION[type] ?? 'translation',
+          hash: ref.dataset['refUuid'],
+        },
+      });
+    };
+    const onClick = (event: MouseEvent) => {
+      if (
+        (event.target as HTMLElement | null)?.closest(
+          '[data-passage-reference]',
+        )
+      ) {
+        event.preventDefault();
+      }
+    };
+    container.addEventListener('mousedown', onMouseDown, true);
+    container.addEventListener('click', onClick, true);
+    return () => {
+      container.removeEventListener('mousedown', onMouseDown, true);
+      container.removeEventListener('click', onClick, true);
+    };
+  }, [updatePanel]);
 
   // Click-to-focus on static rows, via delegation so text drags across
   // static content stay plain selections instead of mounting editors.

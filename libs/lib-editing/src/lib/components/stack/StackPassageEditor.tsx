@@ -84,6 +84,7 @@ export const StackPassageEditor = memo(
         label={meta.label}
         bookmarked={controller.showsBookmark(uuid)}
         selected={selected}
+        references={controller.getReferences(uuid)}
       >
         {/*
           `immediatelyRender` is off, so there is a frame or more with no

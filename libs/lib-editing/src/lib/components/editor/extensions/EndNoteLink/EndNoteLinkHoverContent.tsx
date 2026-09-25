@@ -40,7 +40,7 @@ export const EndNoteLinkHoverContent = ({
   const [fetchState, setFetchState] = useState<'loading' | 'loaded' | 'error'>(
     'loading',
   );
-  const { getEditor } = useEditorState();
+  const { getEditor, deleteEndnote } = useEditorState();
   const { fetchEndNote } = useNavigation();
 
   // With no endnote to resolve there is nothing to load, so this is derived
@@ -103,9 +103,12 @@ export const EndNoteLinkHoverContent = ({
     });
   }, [withEditor, uuid, close, setHoverCardEditing]);
 
-  const deleteEndnoteAndLink = useCallback(() => {
+  const deleteEndnoteAndLink = useCallback(async () => {
     setHoverCardEditing(false);
     close();
+
+    // The stack removes the endnote and every link to it as one change.
+    if (await deleteEndnote(endNote)) return;
 
     withEditor((editor) => {
       const endnotesEditor = getEditor('endnotes');
@@ -126,7 +129,7 @@ export const EndNoteLinkHoverContent = ({
         removeAllEndnoteLinksForPassage(translationEditor, endNote);
       }
     });
-  }, [endNote, getEditor, close, setHoverCardEditing]);
+  }, [endNote, getEditor, deleteEndnote, close, setHoverCardEditing]);
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">

@@ -418,7 +418,8 @@ export class Spine {
   renumberFrom(anchorIndex: number): LabelChange[] {
     const uuids = this.order.toArray();
     const labels = uuids.map((uuid) => this.meta(uuid)?.label ?? '');
-    const changes = renumberLabelsFrom(labels, anchorIndex);
+    const tohs = uuids.map((uuid) => this.meta(uuid)?.toh);
+    const changes = renumberLabelsFrom(labels, anchorIndex, tohs);
     if (!changes.size) return [];
 
     const applied: LabelChange[] = [];
