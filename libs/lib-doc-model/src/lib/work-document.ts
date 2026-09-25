@@ -322,8 +322,17 @@ export class WorkDocument {
     return { uuid: previousUuid, boundary };
   }
 
-  /** Insert a new passage at a position in the spine. */
-  insert(passage: InsertPassageInput, index: number): { uuid: string } {
+  /**
+   * Insert a new passage at a position in the spine.
+   *
+   * `alongWith` changes other passages in the same command, so one undo takes
+   * back both, such as the link to a new endnote.
+   */
+  insert(
+    passage: InsertPassageInput,
+    index: number,
+    options: { alongWith?: { uuid: string; after: JSONContent }[] } = {},
+  ): { uuid: string } {
     const at = Math.max(0, Math.min(index, this.spine.length));
     const previous =
       at > 0 ? this.spine.meta(this.spine.uuidAt(at - 1) ?? '') : null;
@@ -340,11 +349,20 @@ export class WorkDocument {
       : [EMPTY_PARAGRAPH];
     const doc = this.store.ensure(entry.uuid);
     doc.replaceContent({ type: 'doc', content });
+    const others = (options.alongWith ?? []).map(({ uuid, after }) => {
+      const other = this.store.ensure(uuid);
+      const before = other.toJSON();
+      other.replaceContent(after);
+      return { uuid, before, after };
+    });
+    // The new content was made before the spine renumbered.
+    this.numberLinks(others.map(({ uuid }) => uuid));
 
     this.record({
       kind: 'insert',
       content: [
         { uuid: entry.uuid, before: null, after: { type: 'doc', content } },
+        ...others,
       ],
       inserted: [{ meta: entry, index: at }],
       removed: [],
@@ -700,6 +718,7 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.after);
     });
     this.applyLabels(command.labels, 'to');
+    this.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
 
@@ -724,6 +743,7 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.before);
     });
     this.applyLabels(command.labels, 'from');
+    this.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
 

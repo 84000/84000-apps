@@ -855,6 +855,38 @@ describe('deleting an endnote', () => {
     expect(work.store.ensure('later').isDirty).toBe(false);
   });
 
+  it('adds an endnote and a link to it in one command', () => {
+    // body links n.3; a new note goes after n.1 and takes n.2.
+    const work = build('n2');
+    const body = work.store.ensure('body');
+    const linked = body.toJSON();
+    const text = linked.content?.[0].content ?? [];
+    text[0] = {
+      ...text[0],
+      marks: [
+        {
+          type: 'endNoteLink',
+          attrs: {
+            notes: [{ uuid: 'link-new', endNote: 'new', label: 'n.2' }],
+          },
+        },
+      ],
+    };
+    work.insert(
+      { uuid: 'new', type: 'endnotes', label: 'n.2' },
+      work.spine.indexOf('n0') + 1,
+      { alongWith: [{ uuid: 'body', after: linked }] },
+    );
+
+    expect(work.spine.meta('n2')?.label).toBe('n.4');
+    expect(labels(work)).toEqual(['n.2', 'n.4']);
+
+    work.undo();
+    expect(work.spine.uuids()).toEqual(['body', 'n0', 'n1', 'n2']);
+    expect(links(work)).toEqual(['n2']);
+    expect(labels(work)).toEqual(['n.3']);
+  });
+
   it('puts the endnote and its links back in one undo', () => {
     const work = build('n1', 'n2');
     work.remove(['n1']);
