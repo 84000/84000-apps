@@ -33,6 +33,8 @@ import {
   waitFor,
 } from '../../extensions/EndNoteLink/endnote-utils';
 import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
+import { useStackWork } from '../../../stack/StackWorkProvider';
+import { createStackEndnote } from '../../../stack/stack-endnotes';
 
 const SEARCH_ENDNOTES = gql`
   query SearchEndnotes($uuid: ID!, $limit: Int, $filter: PassageFilter) {
@@ -66,6 +68,7 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { getEditor, isNavigating } = useEditorState();
+  const stack = useStackWork();
   const { uuid: workUuid, updatePanel, fetchEndNote } = useNavigation();
 
   const editorState = useTiptapEditorState({
@@ -183,7 +186,35 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     [editor, dismiss],
   );
 
+  /** The passage stack's version: the endnote and its link as one change. */
+  const createStackNote = useCallback(
+    async (stackWork: NonNullable<typeof stack>) => {
+      const { to } = editor.state.selection;
+      const result = await createStackEndnote({ stack: stackWork, editor });
+      if ('error' in result) {
+        toast(result.error, {
+          icon: <TriangleAlertIcon className="size-4 text-warning" />,
+        });
+        dismiss();
+        return;
+      }
+
+      editor.chain().focus().setTextSelection(to).run();
+      updatePanel({
+        name: 'right',
+        state: { open: true, tab: 'endnotes', hash: result.uuid },
+      });
+      dismiss();
+    },
+    [editor, updatePanel, dismiss],
+  );
+
   const createNewEndnote = useCallback(async () => {
+    if (stack && editor.view.dom.closest('[data-stack-passage]')) {
+      await createStackNote(stack);
+      return;
+    }
+
     const endnotesEditor = getEditor('endnotes');
     const { from, to } = editor.state.selection;
     const selectionIsRange = from !== to;
@@ -211,8 +242,9 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
 
     // Check for an existing endNoteLink mark at the end of the selection.
     // Only the end matters — the endnote superscript renders there.
-    const nodeBeforeTo =
-      selectionIsRange ? editor.state.doc.nodeAt(to - 1) : null;
+    const nodeBeforeTo = selectionIsRange
+      ? editor.state.doc.nodeAt(to - 1)
+      : null;
     const endMark = nodeBeforeTo?.marks.find(
       (m) => m.type.name === 'endNoteLink',
     );
@@ -308,7 +340,8 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
       // Save button only appears once the document is dirty.
       const ready = await waitFor(
         () =>
-          !isNavigating() && Boolean(findPassageNode(endnotesEditor, anchorUuid)),
+          !isNavigating() &&
+          Boolean(findPassageNode(endnotesEditor, anchorUuid)),
       );
 
       if (!ready) {
@@ -365,7 +398,16 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
     }, 200);
 
     dismiss();
-  }, [editor, getEditor, fetchEndNote, updatePanel, dismiss, isNavigating]);
+  }, [
+    editor,
+    stack,
+    createStackNote,
+    getEditor,
+    fetchEndNote,
+    updatePanel,
+    dismiss,
+    isNavigating,
+  ]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
