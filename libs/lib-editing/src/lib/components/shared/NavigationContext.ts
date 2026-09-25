@@ -77,10 +77,17 @@ export interface NavigationState {
    * back to the element's own.
    */
   requestEditorFor?: (element: HTMLElement) => Promise<Editor | null>;
-  registerEditorRequest: (
-    request: ((element: HTMLElement) => Promise<Editor | null>) | null,
-  ) => void;
+  /**
+   * Add a host's editor request, returning its removal. A host returns null
+   * for an element it doesn't hold, so several can be registered at once.
+   */
+  registerEditorRequest: (request: EditorRequestHandler) => () => void;
 }
+
+/** Resolves an editor for an element, or null when it isn't the host's. */
+export type EditorRequestHandler = (
+  element: HTMLElement,
+) => Promise<Editor | null> | null;
 
 export const DEFAULT_PANELS: PanelsState = {
   left: { open: true, tab: 'toc' },
@@ -133,9 +140,7 @@ export const NavigationContext = createContext<NavigationState>({
   fetchWork: async () => {
     throw new Error('Not implemented');
   },
-  registerEditorRequest: () => {
-    throw new Error('Not implemented');
-  },
+  registerEditorRequest: () => () => undefined,
 });
 
 export const useNavigation = () => {
