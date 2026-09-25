@@ -5,6 +5,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import { Exporter } from './export';
 import { holdsOnlyAtoms } from './util';
+import { isStructuralParagraph } from '../structural';
 
 export const paragraph: Exporter<ParagraphAnnotation> = ({
   node,
@@ -15,9 +16,10 @@ export const paragraph: Exporter<ParagraphAnnotation> = ({
   const uuid = node.attrs.uuid;
   const parentUuid = parent?.attrs.uuid;
 
-  // NOTE: paragraph are often inserted as structural elements. When this happens,
-  // they have the same uuid as their parent. We skip these paragraphs.
-  if (uuid === parentUuid) {
+  // A paragraph sharing its parent's uuid is structural and has no row. One
+  // sharing the passage's is too, unless it carries attributes to save: a
+  // per-passage document has no passage node for it to share a uuid with.
+  if (uuid === parentUuid || isStructuralParagraph(node, passageUuid)) {
     return;
   }
 

@@ -5,6 +5,8 @@ import { passageFromNode as passageFromContentNode } from '@eightyfourthousand/l
 import { Passage } from '@eightyfourthousand/data-access';
 import {
   PARAMETER_ANNOTATION_ATTRS,
+  isPlainParagraph,
+  isStructuralParagraph,
   parameterAnnotationValue,
 } from '@eightyfourthousand/lib-doc-model';
 
@@ -52,7 +54,12 @@ export const ensureUuids = (
   let activePassageUuid: string | undefined;
   const targetPassageUuids = options.passageUuids;
 
-  doc.descendants((node, pos) => {
+  // As in `EnsureUniqueUuids`: a wrapper's first structural paragraph shares
+  // its uuid, and follows it when the wrapper is renamed.
+  const wrapped = new Set<Node>();
+  const renamed = new Map<Node, string>();
+
+  doc.descendants((node, pos, parent) => {
     // text and doc nodes never carry a uuid
     if (node.type.name === 'text' || node.type.name === 'doc') {
       return true;
@@ -74,8 +81,20 @@ export const ensureUuids = (
 
     // Check main uuid
     const existing: string | null | undefined = node.attrs.uuid;
-    if (!existing || seen.has(existing)) {
+    const follow = parent ? renamed.get(parent) : undefined;
+    const wraps = !!parent && !wrapped.has(parent) && isPlainParagraph(node);
+    if (
+      wraps &&
+      follow &&
+      (!existing || existing === parent.attrs.uuid || seen.has(existing))
+    ) {
+      wrapped.add(parent);
+      newAttrs = { ...node.attrs, uuid: follow };
+    } else if (wraps && isStructuralParagraph(node, parent.attrs.uuid)) {
+      wrapped.add(parent);
+    } else if (!existing || seen.has(existing)) {
       newAttrs = { ...node.attrs, uuid: uuidv4() };
+      renamed.set(node, newAttrs.uuid as string);
       seen.add(newAttrs.uuid as string);
     } else {
       seen.add(existing);

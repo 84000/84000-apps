@@ -4,6 +4,8 @@ import { Fragment, Mark, Node, Slice } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import {
   PARAMETER_ANNOTATION_ATTRS,
+  isPlainParagraph,
+  isStructuralParagraph,
   parameterAnnotationValue,
 } from '@eightyfourthousand/lib-doc-model';
 
@@ -151,26 +153,47 @@ export const EnsureUniqueUuids = Extension.create({
           // for duplicates arriving by other routes (collab edge cases,
           // stale drops).
           const seen = new Set<string>();
-          newState.doc.descendants((node, pos) => {
+          // A wrapper's first plain paragraph shares its uuid by design, and
+          // follows the wrapper when the wrapper gets a new one.
+          const wrapped = new Set<Node>();
+          const renamed = new Map<Node, string>();
+          newState.doc.descendants((node, pos, parent) => {
             if (!hasUuidAttr(node)) {
               return true;
             }
 
-            if (!node.attrs.uuid) {
-              updates.push({
-                pos,
-                attrs: { ...node.attrs, uuid: uuidv4() },
-              });
+            const existing: string | null = node.attrs.uuid;
+            if (parent && !wrapped.has(parent) && isPlainParagraph(node)) {
+              const follow = renamed.get(parent);
+              if (
+                follow &&
+                (!existing ||
+                  existing === parent.attrs.uuid ||
+                  seen.has(existing))
+              ) {
+                wrapped.add(parent);
+                updates.push({ pos, attrs: { ...node.attrs, uuid: follow } });
+                return true;
+              }
+              if (isStructuralParagraph(node, parent.attrs.uuid)) {
+                wrapped.add(parent);
+                return true;
+              }
+            }
+
+            if (!existing) {
+              const uuid = uuidv4();
+              renamed.set(node, uuid);
+              updates.push({ pos, attrs: { ...node.attrs, uuid } });
               return true;
             }
 
-            if (seen.has(node.attrs.uuid)) {
+            if (seen.has(existing)) {
+              const uuid = uuidv4();
+              renamed.set(node, uuid);
               updates.push({
                 pos,
-                attrs: resetDependentAttrs(node, {
-                  ...node.attrs,
-                  uuid: uuidv4(),
-                }),
+                attrs: resetDependentAttrs(node, { ...node.attrs, uuid }),
               });
             } else {
               seen.add(node.attrs.uuid);
