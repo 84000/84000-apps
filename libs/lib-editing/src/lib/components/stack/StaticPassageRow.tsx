@@ -40,6 +40,7 @@ export const StaticPassageRow = memo(
         label={meta.label}
         bookmarked={controller.showsBookmark(meta.uuid)}
         selected={selected}
+        references={controller.getReferences(meta.uuid)}
       >
         {html === null ? (
           <PassageSkeleton

@@ -5,6 +5,7 @@ import {
   getTranslationBlocks,
   getTranslationBlocksAround,
 } from '@eightyfourthousand/client-graphql';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import {
   PassageLoader,
   type PassageSnapshot,
@@ -52,6 +53,7 @@ export const graphqlPassageSource = ({
   client,
   workUuid,
   spine,
+  references,
 }: {
   client: GraphQLClient;
   /**
@@ -67,7 +69,26 @@ export const graphqlPassageSource = ({
    * the `WorkDocument` that owns the spine exists.
    */
   spine?: () => Spine | undefined;
+  /**
+   * Filled with each loaded passage's back-references (for an endnote, the
+   * passages linking to it). They are row data, not document content, so
+   * they don't go in the snapshot.
+   */
+  references?: Map<string, PassageReference[]>;
 }): PassageSource => {
+  /** A block's snapshot, noting its back-references on the way. */
+  const snapshotOf = (block: {
+    attrs?: Record<string, unknown>;
+    content?: unknown[];
+  }): PassageSnapshot | null => {
+    const uuid = block?.attrs?.uuid as string | undefined;
+    if (!uuid) return null;
+    const refs = block.attrs?.references as PassageReference[] | undefined;
+    if (refs?.length) references?.set(uuid, refs);
+    else references?.delete(uuid);
+    return { uuid, content: (block.content ?? []) as JSONContent[] };
+  };
+
   const wrongWork = (requested: string) => {
     if (requested === workUuid) return false;
     console.error(
@@ -169,12 +190,8 @@ export const graphqlPassageSource = ({
       if (!blocks.length) break;
 
       blocks.forEach((block) => {
-        const uuid = block?.attrs?.uuid;
-        if (!uuid) return;
-        found.push({
-          uuid,
-          content: (block.content ?? []) as JSONContent[],
-        });
+        const snapshot = snapshotOf(block);
+        if (snapshot) found.push(snapshot);
       });
       remaining -= blocks.length;
       if (!page.hasMoreAfter || !page.nextCursor) break;
@@ -229,9 +246,8 @@ export const graphqlPassageSource = ({
 
     const found: PassageSnapshot[] = [];
     blocks.forEach((block) => {
-      const uuid = block?.attrs?.uuid;
-      if (!uuid) return;
-      found.push({ uuid, content: (block.content ?? []) as JSONContent[] });
+      const snapshot = snapshotOf(block);
+      if (snapshot) found.push(snapshot);
     });
 
     // `AROUND` splits its limit either side of the cursor, so a long run needs
@@ -311,10 +327,13 @@ export const createStackLoader = ({
   local,
   cache,
   buffer,
+  references,
 }: {
   client: GraphQLClient;
   workUuid: string;
   spine?: () => Spine | undefined;
+  /** Filled with loaded passages' back-references. */
+  references?: Map<string, PassageReference[]>;
   /** `localPassageSource(storage)` from `lib-persistence`, when available. */
   local?: PassageSource;
   /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
@@ -325,7 +344,7 @@ export const createStackLoader = ({
   new PassageLoader({
     sources: [
       ...(local ? [local] : []),
-      graphqlPassageSource({ client, workUuid, spine }),
+      graphqlPassageSource({ client, workUuid, spine, references }),
     ],
     cache,
     buffer,

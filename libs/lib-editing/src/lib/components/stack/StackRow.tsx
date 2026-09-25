@@ -7,7 +7,9 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import {
   PASSAGE_CONTENT_CLASS,
   PASSAGE_LABEL_CLASS,
+  PASSAGE_REFERENCES_CLASS,
 } from '../editor/extensions/Passage/classes';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 /**
  * The shared frame of one stack row: the label gutter and the content column.
@@ -22,11 +24,14 @@ export const StackRow = ({
   label,
   bookmarked,
   selected,
+  references,
   className,
   children,
 }: {
   uuid: string;
   label: string;
+  /** The passages referring to this one, listed under it. */
+  references?: PassageReference[];
   bookmarked?: boolean;
   /** Part of a passage selection, which the stack draws itself. */
   selected?: boolean;
@@ -73,5 +78,24 @@ export const StackRow = ({
     >
       {children}
     </div>
+    {!!references?.length && (
+      // The markup `PassageNode` draws; the stack routes the clicks.
+      <div className={PASSAGE_REFERENCES_CLASS} contentEditable={false}>
+        {references.map((ref, index) => (
+          <span key={ref.uuid}>
+            {index > 0 && ', '}
+            <a
+              href={`#${ref.uuid}`}
+              data-passage-reference=""
+              data-ref-uuid={ref.uuid}
+              data-ref-type={ref.type}
+              data-toh={ref.toh}
+            >
+              {ref.label || ref.uuid.slice(0, 6)}
+            </a>
+          </span>
+        ))}
+      </div>
+    )}
   </div>
 );
