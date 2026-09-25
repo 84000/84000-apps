@@ -46,6 +46,8 @@ export type SaveHandler = {
   save: () => Promise<SaveOutcome>;
   /** Whether it holds changes the last save did not write. */
   isDirty: () => boolean;
+  /** Take in passages the server rewrote, such as by a replace. */
+  applyReplaced?: (passages: ReplacedPassage[]) => void;
 };
 
 interface EditorContextState {
@@ -391,6 +393,8 @@ export const EditorContextProvider = ({
     return await hasPermission({ client, permission: 'EDITOR_ADMIN' });
   }, [client]);
 
+  const saveHandlerRef = useRef<SaveHandler | null>(null);
+
   const applyReplacedPassages = useCallback(
     async (passages: ReplacedPassage[]) => {
       if (passages.length === 0) {
@@ -400,6 +404,8 @@ export const EditorContextProvider = ({
       setNavigating(true);
 
       try {
+        saveHandlerRef.current?.applyReplaced?.(passages);
+
         const passagesByUuid = new Map(
           passages
             .filter(
@@ -464,7 +470,6 @@ export const EditorContextProvider = ({
     [setNavigating],
   );
 
-  const saveHandlerRef = useRef<SaveHandler | null>(null);
   const registerSaveHandler = useCallback((handler: SaveHandler | null) => {
     saveHandlerRef.current = handler;
   }, []);

@@ -13,7 +13,11 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
 import { PassageStackController } from './PassageStackController';
-import { hasUnsavedStackChanges, saveStackWork } from './stack-save';
+import {
+  applyServerPassages,
+  hasUnsavedStackChanges,
+  saveStackWork,
+} from './stack-save';
 import { SpineFeed, type SpineSection } from './spine-feed';
 import { createStackWork } from './stack-work';
 
@@ -70,6 +74,7 @@ export const StackWorkProvider = ({
         return (await saveStackWork(work)) ? 'saved' : 'failed';
       },
       isDirty: () => hasUnsavedStackChanges(work),
+      applyReplaced: (passages) => applyServerPassages(work, passages),
     });
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.
