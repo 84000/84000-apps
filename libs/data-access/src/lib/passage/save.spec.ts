@@ -558,6 +558,234 @@ describe('savePassagesWithDeletions sort shifts', () => {
   });
 });
 
+describe('savePassagesWithDeletions placing new passages', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const row = (uuid: string, sort: number): PassageRowDTO => ({
+    uuid,
+    work_uuid: 'work-1',
+    content: uuid,
+    label: uuid,
+    sort,
+    type: 'translation',
+  });
+  const created = (uuid: string, sort: number): Passage => ({
+    uuid,
+    workUuid: 'work-1',
+    content: `${uuid} new`,
+    label: uuid,
+    sort,
+    type: 'translation',
+    annotations: [],
+  });
+
+  /** Every row after the save, in stored order, as `uuid:sort`. */
+  const stored = (state: FakeState) => {
+    const rows = new Map(state.passages.map((r) => [r.uuid, r.sort]));
+    state.passageUpserts.flat().forEach((r) => rows.set(r.uuid, r.sort));
+    return [...rows.entries()]
+      .sort((a, b) => a[1] - b[1])
+      .map(([uuid, sort]) => `${uuid}:${sort}`);
+  };
+
+  const dense = () =>
+    createState({
+      passages: [row('p', 170), row('q', 171), row('r', 172), row('s', 176)],
+    });
+
+  // Two consecutive splits of p. Without anchors this ended with n2 and q
+  // both at 172.
+  it('places a run of new passages after the passage they follow', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('n1', 171), created('n2', 172)],
+      anchors: { n1: { after: 'p' }, n2: { after: 'p' } },
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'n1:171',
+      'n2:172',
+      'q:173',
+      'r:174',
+      's:176',
+    ]);
+  });
+
+  // The same sorts as the case above, a different intent: one after p, one
+  // after q.
+  it('tells apart new passages after neighbouring passages', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('a', 171), created('b', 172)],
+      anchors: { a: { after: 'p' }, b: { after: 'q' } },
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'a:171',
+      'q:172',
+      'b:173',
+      'r:174',
+      's:176',
+    ]);
+  });
+
+  it('places a new passage with nothing saved before it where it was sent', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('first', 170)],
+      anchors: { first: null },
+    });
+    expect(stored(state)).toEqual([
+      'first:170',
+      'p:171',
+      'q:172',
+      'r:173',
+      's:176',
+    ]);
+  });
+
+  it('places a new passage first in its section before the passage it precedes', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('first', 999)],
+      anchors: { first: { before: 'q' } },
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'first:171',
+      'q:172',
+      'r:173',
+      's:176',
+    ]);
+  });
+
+  // One group for every unanchored passage packed a new endnote and a new
+  // bibliography passage together, three hundred sorts from the second.
+  it('keeps unanchored passages apart, each at its own sort', async () => {
+    const state = createState({
+      passages: [row('t', 170), row('u', 171), row('b1', 500)],
+    });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('e', 171), created('bib', 500)],
+      anchors: { e: null, bib: null },
+    });
+    expect(stored(state)).toEqual([
+      't:170',
+      'e:171',
+      'u:172',
+      'bib:500',
+      'b1:501',
+    ]);
+  });
+
+  // Per-text variants of one note share a sort. Placing after each gave
+  // both new passages the slot after it.
+  it('does not give two anchors sharing a sort the same slot', async () => {
+    const state = createState({
+      passages: [row('a', 305), row('b', 305), row('c', 306)],
+    });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('x', 306), created('y', 306)],
+      anchors: { x: { after: 'a' }, y: { after: 'b' } },
+    });
+    expect(stored(state)).toEqual([
+      'a:305',
+      'b:305',
+      'x:306',
+      'y:307',
+      'c:308',
+    ]);
+  });
+
+  // The last body passage and the first endnote, each gaining a neighbour
+  // in the gap between them. Placed before-group first, the new body
+  // passage landed after the new endnote.
+  it('puts a passage after one ahead of a passage before the next', async () => {
+    const state = createState({
+      passages: [row('last', 170), row('note', 171)],
+    });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      // The endnote first, as a spine holding the Endnotes tab first sends it.
+      passages: [created('newNote', 171), created('newBody', 171)],
+      anchors: { newNote: { before: 'note' }, newBody: { after: 'last' } },
+    });
+    expect(stored(state)).toEqual([
+      'last:170',
+      'newBody:171',
+      'newNote:172',
+      'note:173',
+    ]);
+  });
+
+  it('makes room for more passages than the gap after the anchor', async () => {
+    const state = createState({
+      passages: [row('p', 170), row('q', 171), row('r', 173)],
+    });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('n1', 171), created('n2', 172), created('n3', 173)],
+      anchors: {
+        n1: { after: 'p' },
+        n2: { after: 'p' },
+        n3: { after: 'p' },
+      },
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'n1:171',
+      'n2:172',
+      'n3:173',
+      'q:174',
+      'r:175',
+    ]);
+  });
+
+  it('falls back to the sent sort when the anchor is not stored', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('n', 172)],
+      anchors: { n: { after: 'missing' } },
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'q:171',
+      'n:172',
+      'r:173',
+      's:176',
+    ]);
+  });
+
+  it('keeps the old placement when a new passage has no anchor given', async () => {
+    const state = dense();
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [created('n1', 171)],
+      anchors: {},
+    });
+    expect(stored(state)).toEqual([
+      'p:170',
+      'n1:171',
+      'q:172',
+      'r:173',
+      's:176',
+    ]);
+  });
+});
+
 describe('savePassagesWithDeletions failure propagation', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
