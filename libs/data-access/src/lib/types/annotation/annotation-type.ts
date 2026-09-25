@@ -209,8 +209,13 @@ export const annotationTypeToDTO = (
   return ANNOTATION_TYPE_TO_DTO[type] || 'unknown';
 };
 
+/**
+ * Annotation types the editor cannot represent. They are not loaded into a
+ * document, and a save or a replace leaves their rows alone.
+ */
 export const ANNOTATIONS_TO_IGNORE: AnnotationDTOType[] = [
   'deprecated-internal-link',
+  'quote',
   'quoted',
   'reference',
   'unknown',

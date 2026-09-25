@@ -129,6 +129,40 @@ const assertCoverage = (doc: JSONContent, extensions: Extensions) => {
   }
 };
 
+/** Elements HTML parses as having no content, so `<tag/>` is safe for them. */
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'source',
+  'track',
+  'wbr',
+]);
+
+/**
+ * Give every self-closed non-void element a closing tag.
+ *
+ * The static renderer writes a leaf node as `<tag/>`, and HTML ignores the
+ * slash on a non-void element: `<audio/>` opens an element that swallows the
+ * rest of the passage as its fallback content. Attribute values and text are
+ * escaped, so `/>` only ends a tag.
+ */
+const closeNonVoidElements = (html: string): string =>
+  html.replace(
+    /<([a-zA-Z][\w-]*)([^<>]*?)\s*\/>/g,
+    (element, tag: string, attrs: string) =>
+      VOID_ELEMENTS.has(tag.toLowerCase())
+        ? element
+        : `<${tag}${attrs}></${tag}>`,
+  );
+
 export type TranslationHTMLContent = Content;
 
 /**
@@ -147,7 +181,7 @@ export const renderTranslationHTML = ({
     if (process.env.NODE_ENV !== 'production') {
       assertCoverage(doc, extensions);
     }
-    return renderToHTMLString({
+    const html = renderToHTMLString({
       content: doc,
       extensions,
       options: {
@@ -158,6 +192,7 @@ export const renderTranslationHTML = ({
         },
       },
     });
+    return closeNonVoidElements(html);
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       throw error;
