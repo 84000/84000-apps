@@ -104,6 +104,24 @@ describe('StaticPassageRow', () => {
     expect(content?.classList.contains('pm-text-metrics')).toBe(true);
   });
 
+  // A deep-link highlight is a live Range over the row's text nodes, and a
+  // hover card is anchored to an element in it: both break if a re-render
+  // replaces the row's DOM with an identical copy.
+  it('keeps its DOM across a re-render with the same content', async () => {
+    const controller = build();
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const { container, rerender } = render(
+      <StaticPassageRow controller={controller} meta={{ ...meta }} />,
+    );
+    const text = container.querySelector('.tiptap p')?.firstChild;
+    rerender(<StaticPassageRow controller={controller} meta={{ ...meta }} />);
+
+    expect(text?.isConnected).toBe(true);
+    expect(container.querySelector('.tiptap p')?.firstChild).toBe(text);
+  });
+
   // The label menu finds its trigger by these attributes; deep links resolve a
   // passage by id, then the content class inside it.
   it('carries the passage chrome the label menu and deep links key off', () => {
