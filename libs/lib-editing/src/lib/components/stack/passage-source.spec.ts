@@ -1,6 +1,7 @@
 import type { GraphQLClient } from 'graphql-request';
 import { Spine } from '@eightyfourthousand/lib-doc-model';
 
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { graphqlPassageSource } from './passage-source';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
@@ -351,7 +352,9 @@ describe('graphqlPassageSource loadPassages', () => {
 describe('graphqlPassageSource references', () => {
   it("records each loaded passage's back-references beside the snapshots", async () => {
     const spine = spineOf(20);
-    const refs = [{ uuid: 'p1', label: '2', type: 'translation' }];
+    const refs: PassageReference[] = [
+      { uuid: 'p1', label: '2', type: 'translation', sort: 2 },
+    ];
     const loaded = page(['p5', 'p6']);
     (loaded.blocks[0].attrs as Record<string, unknown>).references = refs;
     clientGraphql.getTranslationBlocks.mockResolvedValue(loaded);
