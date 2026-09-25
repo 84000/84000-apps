@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
@@ -33,6 +33,10 @@ export const StaticPassageRow = memo(
     selected?: boolean;
   }) => {
     const html = controller.getStaticHTML(meta.uuid);
+    // Held by the string: React compares this object by identity, and a new
+    // one on every render would replace the row's DOM, collapsing a deep-link
+    // highlight and detaching any hover card anchored in it.
+    const inner = useMemo(() => ({ __html: html ?? '' }), [html]);
 
     return (
       <StackRow
@@ -50,7 +54,7 @@ export const StaticPassageRow = memo(
         ) : (
           <div
             className="tiptap pm-text-metrics"
-            dangerouslySetInnerHTML={{ __html: html }}
+            dangerouslySetInnerHTML={inner}
           />
         )}
       </StackRow>
