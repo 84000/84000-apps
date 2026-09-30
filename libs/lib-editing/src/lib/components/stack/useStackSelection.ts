@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { toast } from '@eightyfourthousand/design-system';
 
 import { PassageStackController } from './PassageStackController';
 
@@ -139,7 +140,12 @@ export const useStackSelection = (controller: PassageStackController) => {
       if (event.key !== 'Backspace' && event.key !== 'Delete') return;
       event.preventDefault();
       event.stopPropagation();
-      controller.deletePassageSelection();
+      const count = controller.selectedUuids().length;
+      if (!controller.deletePassageSelection() || count < 2) return;
+      // Several passages go at a keystroke, so say so and offer the way back.
+      toast(`Deleted ${count} passages`, {
+        action: { label: 'Undo', onClick: () => controller.undo() },
+      });
     };
 
     const writeClipboard = async ({
