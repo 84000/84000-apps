@@ -131,7 +131,16 @@ export const getSuggestion = (
         if (item.isAvailable && !item.isAvailable(editor)) {
           return false;
         }
-        return item.keywords.some((kwd) => kwd.startsWith(query.toLowerCase()));
+        const search = query.toLowerCase();
+        // The title's words as well as the keywords: what the menu shows is
+        // what people type ("/quote", "/numbered").
+        const title = item.title.toLowerCase();
+        return (
+          title.startsWith(search) ||
+          [...item.keywords, ...title.split(/\s+/)].some((word) =>
+            word.startsWith(search),
+          )
+        );
       });
     },
     render: () => {
