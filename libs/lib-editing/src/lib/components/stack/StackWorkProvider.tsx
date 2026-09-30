@@ -96,6 +96,34 @@ export const StackWorkProvider = ({
     };
   }, [stack, registerSaveHandler, dirtyStore]);
 
+  // Undo and redo with focus outside any editor, such as after a label-menu
+  // action. The editors bind their own; this covers the rest of the page, once
+  // per work, since every view shares the one history.
+  useEffect(() => {
+    if (!stack) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest?.('input, textarea, select, [contenteditable="true"]')
+      ) {
+        return;
+      }
+      const redo = key === 'y' || event.shiftKey;
+      const { work } = stack;
+      const focus = work.log.suppress(() => (redo ? work.redo() : work.undo()));
+      if (focus === null) return;
+      event.preventDefault();
+      if (!focus) return;
+      const tab = work.spine.meta(focus.uuid)?.tab;
+      if (tab) stack.controllerFor(tab)?.focusPassage(focus.uuid, focus.where);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [stack]);
+
   useEffect(() => {
     let cancelled = false;
     const client = createGraphQLClient();
