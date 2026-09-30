@@ -48,7 +48,16 @@ export const useStackDeepLink = (
   panel: PanelName = PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main',
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
-  const target = panels[panel]?.hash;
+  // A hash is addressed to the panel's active tab, and every stack drawn in
+  // the panel sees it: only the one for that tab answers.
+  const tab = controller.getTab();
+  const activeTab = panels[panel]?.tab;
+  const answers =
+    !tab ||
+    !activeTab ||
+    tab === activeTab ||
+    (tab === 'translation' && activeTab === 'compare');
+  const target = answers ? panels[panel]?.hash : undefined;
   const handled = useRef<string>(undefined);
 
   useEffect(() => {
@@ -77,6 +86,9 @@ export const useStackDeepLink = (
 
       if (cancelled) return;
       finished = true;
+      // Kept when the passage wasn't found, so the stack it belongs to can
+      // still answer it.
+      if (!found) return;
       updatePanel({
         name: panel,
         state: { ...panels[panel], hash: undefined },
