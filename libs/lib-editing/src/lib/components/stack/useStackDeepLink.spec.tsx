@@ -9,6 +9,16 @@ const mockNavigation = {
   highlight: undefined as { start: number; end: number } | undefined,
 };
 
+jest.mock('@eightyfourthousand/lib-utils', () => ({
+  highlightTextRange: jest.fn(() => true),
+  clearTextRangeHighlight: jest.fn(),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const libUtils = jest.requireMock('@eightyfourthousand/lib-utils') as {
+  highlightTextRange: jest.Mock;
+};
+
 jest.mock('../shared/NavigationContext', () => ({
   useNavigation: () => mockNavigation,
 }));
@@ -149,5 +159,33 @@ describe('useStackDeepLink with several stacks in a panel', () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockNavigation.updatePanel).not.toHaveBeenCalled();
+  });
+});
+
+describe('useStackDeepLink highlight', () => {
+  // The window is still moving right after a reveal, so the row's content can
+  // be replaced (released, then hydrated again) after the first paint.
+  it('repaints when the row it highlighted is redrawn', async () => {
+    const { controller } = controllerFor('translation');
+    const row = document.createElement('div');
+    row.id = 'p-1';
+    row.innerHTML = '<div class="passage is-editable"><p>first</p></div>';
+    document.body.append(row);
+    mockNavigation.highlight = { start: 0, end: 3 };
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'p-1' },
+    };
+    libUtils.highlightTextRange.mockClear();
+
+    renderHook(() => useStackDeepLink(controller, 'main'));
+    await waitFor(() =>
+      expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(1),
+    );
+
+    row.querySelector('.passage')!.innerHTML = '<p>again</p>';
+    await waitFor(() =>
+      expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(2),
+    );
+    row.remove();
   });
 });
