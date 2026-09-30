@@ -19,6 +19,7 @@ import {
   hasUnsavedStackChanges,
   saveStackWork,
 } from './stack-save';
+import { removeStackCommentAnchors } from './stack-comments';
 import { deleteStackEndnote } from './stack-endnotes';
 import { SpineFeed, type SpineSection } from './spine-feed';
 import { createStackWork } from './stack-work';
@@ -78,6 +79,8 @@ export const StackWorkProvider = ({
       isDirty: () => hasUnsavedStackChanges(work),
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
+      removeCommentAnchors: (comment) =>
+        removeStackCommentAnchors(work, comment),
     });
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.
