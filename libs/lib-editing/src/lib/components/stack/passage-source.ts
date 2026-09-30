@@ -5,7 +5,7 @@ import {
   getTranslationBlocks,
   getTranslationBlocksAround,
 } from '@eightyfourthousand/client-graphql';
-import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
+import type { PassageExtras } from './types';
 import {
   PassageLoader,
   type PassageSnapshot,
@@ -53,7 +53,7 @@ export const graphqlPassageSource = ({
   client,
   workUuid,
   spine,
-  references,
+  extras,
 }: {
   client: GraphQLClient;
   /**
@@ -70,22 +70,29 @@ export const graphqlPassageSource = ({
    */
   spine?: () => Spine | undefined;
   /**
-   * Filled with each loaded passage's back-references (for an endnote, the
-   * passages linking to it). They are row data, not document content, so
-   * they don't go in the snapshot.
+   * Filled with each loaded passage's row data beyond its content: its
+   * back-references and alignments. They are not document content, so they
+   * don't go in the snapshot.
    */
-  references?: Map<string, PassageReference[]>;
+  extras?: Map<string, PassageExtras>;
 }): PassageSource => {
-  /** A block's snapshot, noting its back-references on the way. */
+  /** A block's snapshot, noting its row data on the way. */
   const snapshotOf = (block: {
     attrs?: Record<string, unknown>;
     content?: unknown[];
   }): PassageSnapshot | null => {
     const uuid = block?.attrs?.uuid as string | undefined;
     if (!uuid) return null;
-    const refs = block.attrs?.references as PassageReference[] | undefined;
-    if (refs?.length) references?.set(uuid, refs);
-    else references?.delete(uuid);
+    const references = block.attrs?.references as
+      | PassageExtras['references']
+      | undefined;
+    const alignments = block.attrs?.alignments as
+      | PassageExtras['alignments']
+      | undefined;
+    extras?.set(uuid, {
+      ...(references?.length ? { references } : {}),
+      ...(alignments && Object.keys(alignments).length ? { alignments } : {}),
+    });
     return { uuid, content: (block.content ?? []) as JSONContent[] };
   };
 
@@ -327,13 +334,13 @@ export const createStackLoader = ({
   local,
   cache,
   buffer,
-  references,
+  extras,
 }: {
   client: GraphQLClient;
   workUuid: string;
   spine?: () => Spine | undefined;
-  /** Filled with loaded passages' back-references. */
-  references?: Map<string, PassageReference[]>;
+  /** Filled with loaded passages' row data beyond their content. */
+  extras?: Map<string, PassageExtras>;
   /** `localPassageSource(storage)` from `lib-persistence`, when available. */
   local?: PassageSource;
   /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
@@ -344,7 +351,7 @@ export const createStackLoader = ({
   new PassageLoader({
     sources: [
       ...(local ? [local] : []),
-      graphqlPassageSource({ client, workUuid, spine, references }),
+      graphqlPassageSource({ client, workUuid, spine, extras }),
     ],
     cache,
     buffer,

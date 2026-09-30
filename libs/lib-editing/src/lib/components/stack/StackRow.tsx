@@ -25,6 +25,7 @@ export const StackRow = ({
   bookmarked,
   selected,
   references,
+  tibetan,
   className,
   children,
 }: {
@@ -32,6 +33,11 @@ export const StackRow = ({
   label: string;
   /** The passages referring to this one, listed under it. */
   references?: PassageReference[];
+  /**
+   * The Tibetan source, drawn beside the passage in Compare. Undefined outside
+   * Compare, and empty for a passage with no alignment.
+   */
+  tibetan?: string;
   bookmarked?: boolean;
   /** Part of a passage selection, which the stack draws itself. */
   selected?: boolean;
@@ -73,29 +79,59 @@ export const StackRow = ({
       />
     )}
     <div
-      // Positioned, so it paints over the highlight drawn before it.
-      className={cn(PASSAGE_CONTENT_CLASS, selected && 'relative', className)}
+      className={cn(
+        tibetan !== undefined &&
+          'flex w-full flex-col gap-2 md:flex-row md:gap-10',
+      )}
     >
-      {children}
-    </div>
-    {!!references?.length && (
-      // The markup `PassageNode` draws; the stack routes the clicks.
-      <div className={PASSAGE_REFERENCES_CLASS} contentEditable={false}>
-        {references.map((ref, index) => (
-          <span key={ref.uuid}>
-            {index > 0 && ', '}
-            <a
-              href={`#${ref.uuid}`}
-              data-passage-reference=""
-              data-ref-uuid={ref.uuid}
-              data-ref-type={ref.type}
-              data-toh={ref.toh}
-            >
-              {ref.label || ref.uuid.slice(0, 6)}
-            </a>
-          </span>
-        ))}
+      <div className="w-full">
+        <div
+          // Positioned, so it paints over the highlight drawn before it.
+          className={cn(
+            PASSAGE_CONTENT_CLASS,
+            selected && 'relative',
+            className,
+          )}
+        >
+          {children}
+        </div>
+        {!!references?.length && (
+          // The markup `PassageNode` draws; the stack routes the clicks.
+          <div className={PASSAGE_REFERENCES_CLASS} contentEditable={false}>
+            {references.map((ref, index) => (
+              <span key={ref.uuid}>
+                {index > 0 && ', '}
+                <a
+                  href={`#${ref.uuid}`}
+                  data-passage-reference=""
+                  data-ref-uuid={ref.uuid}
+                  data-ref-type={ref.type}
+                  data-toh={ref.toh}
+                >
+                  {ref.label || ref.uuid.slice(0, 6)}
+                </a>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-    )}
+      {tibetan !== undefined && (
+        // The column `PassageNode` draws in Compare, kept out of the editor.
+        <div
+          className={cn(
+            'passage-compare-source w-full md:mt-1',
+            !tibetan && 'hidden',
+          )}
+          contentEditable={false}
+          data-compare-source=""
+        >
+          <div className="passage pl-6 @c/sidebar:pl-4">
+            <div className="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2">
+              {tibetan}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
 );

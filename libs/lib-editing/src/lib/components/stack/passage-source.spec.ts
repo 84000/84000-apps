@@ -349,21 +349,22 @@ describe('graphqlPassageSource loadPassages', () => {
   });
 });
 
-describe('graphqlPassageSource references', () => {
-  it("records each loaded passage's back-references beside the snapshots", async () => {
+describe('graphqlPassageSource extras', () => {
+  it("records each loaded passage's references and alignments beside the snapshots", async () => {
     const spine = spineOf(20);
-    const refs: PassageReference[] = [
+    const references: PassageReference[] = [
       { uuid: 'p1', label: '2', type: 'translation', sort: 2 },
     ];
+    const alignments = { toh1: { tibetan: 'བོད' } };
     const loaded = page(['p5', 'p6']);
-    (loaded.blocks[0].attrs as Record<string, unknown>).references = refs;
+    Object.assign(loaded.blocks[0].attrs, { references, alignments });
     clientGraphql.getTranslationBlocks.mockResolvedValue(loaded);
-    const references = new Map([['p6', refs]]);
+    const extras = new Map([['p6', { references }]]);
     const source = graphqlPassageSource({
       client,
       workUuid: 'w1',
       spine: () => spine,
-      references,
+      extras,
     });
 
     const snapshots = await source.loadPassages('w1', ['p5', 'p6']);
@@ -372,8 +373,8 @@ describe('graphqlPassageSource references', () => {
       ['uuid', 'content'],
       ['uuid', 'content'],
     ]);
-    expect(references.get('p5')).toEqual(refs);
+    expect(extras.get('p5')).toEqual({ references, alignments });
     // A passage whose references are gone no longer lists stale ones.
-    expect(references.has('p6')).toBe(false);
+    expect(extras.get('p6')).toEqual({});
   });
 });

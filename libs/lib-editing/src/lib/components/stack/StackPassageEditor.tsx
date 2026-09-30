@@ -25,11 +25,14 @@ export const StackPassageEditor = memo(
     meta,
     focused,
     selected,
+    tibetan,
   }: {
     controller: PassageStackController;
     meta: PassageMeta;
     focused: boolean;
     selected?: boolean;
+    /** The Tibetan source, in Compare; undefined outside it. */
+    tibetan?: string;
   }) => {
     const mountStart = useRef(0);
     const uuid = meta.uuid;
@@ -84,6 +87,7 @@ export const StackPassageEditor = memo(
         label={meta.label}
         bookmarked={controller.showsBookmark(uuid)}
         selected={selected}
+        tibetan={tibetan}
         references={controller.getReferences(uuid)}
       >
         {/*

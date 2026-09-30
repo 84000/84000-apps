@@ -151,7 +151,15 @@ export const PassageStack = ({
   );
   const closeMenu = useCallback(() => setMenuTarget(null), []);
 
-  const { updatePanel, setToh, toh, registerEditorRequest } = useNavigation();
+  const { updatePanel, setToh, toh, registerEditorRequest, panels } =
+    useNavigation();
+  // Compare shows the Tibetan source beside each passage of the main panel.
+  const drawnIn =
+    panel ?? PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main';
+  const compareToh =
+    drawnIn === 'main' && panels.main.open && panels.main.tab === 'compare'
+      ? (toh ?? '')
+      : undefined;
 
   // Hover cards are drawn without an editor; their edit actions ask for one.
   // Resolving it here rather than keeping editors mounted is what lets the
@@ -568,6 +576,10 @@ export const PassageStack = ({
           const meta = controller.getMeta(uuid);
           if (!meta) return null;
           const asEditor = controller.isLive(uuid);
+          const tibetan =
+            compareToh === undefined
+              ? undefined
+              : controller.getTibetan(uuid, compareToh);
           return (
             <div
               key={item.key}
@@ -584,12 +596,14 @@ export const PassageStack = ({
                   meta={meta}
                   focused={controller.getFocusedUuid() === uuid}
                   selected={controller.isSelected(uuid)}
+                  tibetan={tibetan}
                 />
               ) : (
                 <StaticPassageRow
                   controller={controller}
                   meta={meta}
                   selected={controller.isSelected(uuid)}
+                  tibetan={tibetan}
                 />
               )}
             </div>
