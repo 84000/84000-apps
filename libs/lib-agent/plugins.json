@@ -24,9 +24,9 @@
   },
   "plugins": [
     {
-      "name": "84000-editor-tools",
-      "displayName": "84000 Editor Tools",
-      "description": "Editorial tooling for the 84000 translation studio. Import copy-edited translation .docx files into a work as structured passages, titles, and metadata, and convert the folio break markers in an imported work into folio mention annotations.",
+      "name": "84000-digital-editor-tools",
+      "displayName": "84000 Digital Editor Tools",
+      "description": "Tooling for digital content the 84000 translation studio. Import copy-edited translation .docx files into a work as structured passages, titles, and metadata, and convert the folio break markers in an imported work into folio mention annotations.",
       "keywords": [
         "84000",
         "translation",
@@ -43,9 +43,7 @@
       "agents": [],
       "renames": {},
       "sharedReference": {
-        "docx-import": [
-          "libs/lib-agent/reference/import-model"
-        ],
+        "docx-import": ["libs/lib-agent/reference/import-model"],
         "resolve-folio-mentions": [
           "libs/lib-agent/reference/import-model",
           "libs/lib-agent/reference/passage-editing"
@@ -77,9 +75,7 @@
         "libs/lib-agent/skills/glossary-by-canon-section",
         "libs/lib-agent/skills/policy-authoring"
       ],
-      "agents": [
-        "libs/lib-agent/agents/library-assistant.md"
-      ],
+      "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
       "sharedReference": {
         "text-analysis-and-retrieval": [
@@ -88,9 +84,7 @@
         "first-draft-translation": [
           "libs/lib-agent/reference/session-documents"
         ],
-        "editorial-review": [
-          "libs/lib-agent/reference/session-documents"
-        ]
+        "editorial-review": ["libs/lib-agent/reference/session-documents"]
       }
     }
   ]
