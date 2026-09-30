@@ -1,6 +1,6 @@
 'use client';
 
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { measureElement, useVirtualizer } from '@tanstack/react-virtual';
 import {
   useCallback,
   useEffect,
@@ -227,6 +227,19 @@ export const PassageStack = ({
     overscan,
     getItemKey: (index) => order[index],
     scrollMargin,
+    // A tab that isn't showing is `display: none`, and every row in it
+    // measures 0. Taking that would collapse the list and drag the shared
+    // scroll container with it, so a row that isn't rendered keeps its size.
+    measureElement: (element, entry, instance) => {
+      if (element.getClientRects().length > 0) {
+        return measureElement(element, entry, instance);
+      }
+      const index = instance.indexFromElement(element);
+      return (
+        instance.measurementsCache[index]?.size ??
+        controller.estimateHeight(order[index])
+      );
+    },
   });
 
   // Default behavior compensates scrollTop for every first measurement of an
