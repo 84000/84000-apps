@@ -69,3 +69,48 @@ describe('PipeNotItalic', () => {
     );
   });
 });
+
+describe('PipeNotItalic after a mark change', () => {
+  const mount = () =>
+    new Editor({
+      element: document.createElement('div'),
+      extensions: [
+        Doc,
+        Paragraph,
+        TextNode,
+        Italic,
+        ForeignMark,
+        PipeNotItalic,
+      ],
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'gang gi | blo' }],
+          },
+        ],
+      },
+    });
+
+  // A mark step moves no positions, so it has an empty step map and was never
+  // re-scanned: italicising existing text left its dandas italic.
+  it('decorates dandas in text made italic', () => {
+    const editor = mount();
+    expect(editor.view.dom.innerHTML).not.toContain('not-italic');
+
+    editor.chain().setTextSelection({ from: 1, to: 14 }).setItalic().run();
+
+    expect(editor.view.dom.innerHTML).toContain('not-italic');
+    editor.destroy();
+  });
+
+  it('drops the decoration when the italic is removed', () => {
+    const editor = mount();
+    editor.chain().setTextSelection({ from: 1, to: 14 }).setItalic().run();
+    editor.chain().setTextSelection({ from: 1, to: 14 }).unsetItalic().run();
+
+    expect(editor.view.dom.innerHTML).not.toContain('not-italic');
+    editor.destroy();
+  });
+});

@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
+import { AddMarkStep, RemoveMarkStep } from '@tiptap/pm/transform';
 
 import {
   hasItalicizingMark,
@@ -75,30 +76,45 @@ export const PipeNotItalic = Extension.create({
             // insertions/deletions elsewhere in the document.
             let decorationSet = oldDecorationSet.map(tr.mapping, tr.doc);
 
+            const rescan = (start: number, end: number) => {
+              // Clamp to document bounds.
+              const from = Math.max(0, start);
+              const to = Math.min(tr.doc.content.size, end);
+
+              // Remove any decorations that fall within this range — they may
+              // now be stale (e.g. the `|` was deleted, or italic was removed).
+              const stale = decorationSet.find(from, to);
+              if (stale.length > 0) {
+                decorationSet = decorationSet.remove(stale);
+              }
+
+              // Re-scan the changed range and add fresh decorations.
+              const fresh = findPipeDecorations(tr.doc, from, to);
+              if (fresh.length > 0) {
+                decorationSet = decorationSet.add(tr.doc, fresh);
+              }
+            };
+
             // Re-scan only the ranges touched by this transaction.
-            tr.steps.forEach((step) => {
+            tr.steps.forEach((step, index) => {
+              // A mark step changes no positions, so its step map is empty:
+              // re-scan the range it marked, as it stands after the rest of
+              // the transaction.
+              if (
+                step instanceof AddMarkStep ||
+                step instanceof RemoveMarkStep
+              ) {
+                const after = tr.mapping.slice(index + 1);
+                rescan(after.map(step.from), after.map(step.to, -1));
+                return;
+              }
+
               // stepMap gives us the affected ranges after the step.
-              const stepMap = step.getMap();
-
-              stepMap.forEach((_oldStart, _oldEnd, newStart, newEnd) => {
-                // Clamp to document bounds.
-                const from = Math.max(0, newStart);
-                const to = Math.min(tr.doc.content.size, newEnd);
-
-                // Remove any decorations that fall within this range —
-                // they may now be stale (e.g. the `|` was deleted, or
-                // italic was removed).
-                const stale = decorationSet.find(from, to);
-                if (stale.length > 0) {
-                  decorationSet = decorationSet.remove(stale);
-                }
-
-                // Re-scan the changed range and add fresh decorations.
-                const fresh = findPipeDecorations(tr.doc, from, to);
-                if (fresh.length > 0) {
-                  decorationSet = decorationSet.add(tr.doc, fresh);
-                }
-              });
+              step
+                .getMap()
+                .forEach((_oldStart, _oldEnd, newStart, newEnd) =>
+                  rescan(newStart, newEnd),
+                );
             });
 
             return decorationSet;
