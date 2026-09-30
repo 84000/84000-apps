@@ -178,6 +178,9 @@ export const savePassagesWithDeletions = async ({
     (a, b) => placedSort(b) - placedSort(a),
   );
   for (const passage of renumberOrder) {
+    // An unlabelled passage (the MCP inserts them) is in no numbered series,
+    // and there is no number to count on from.
+    if (!passage.label) continue;
     const { error, renumbered } = await normalizePassageLabelsAfter({
       client,
       workUuid: passage.workUuid,

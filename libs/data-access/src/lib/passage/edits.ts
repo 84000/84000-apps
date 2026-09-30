@@ -11,7 +11,7 @@ import {
   passageFromDTO,
 } from '../types';
 import { getAnnotationsByPassageUuids } from './batch';
-import { savePassagesWithDeletions } from './save';
+import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
 
 /** Remove a span of text from a passage. Offsets are in the stored content. */
 export type DeleteTextEdit = {
@@ -153,9 +153,12 @@ export const applyEditsToPassages = ({
 }): {
   passages: Passage[];
   warnings: PassageEditWarning[];
+  /** Each inserted passage's neighbour, for the save to place it by. */
+  anchors: Record<string, NewPassageAnchor>;
   error?: string;
 } => {
   const warnings: PassageEditWarning[] = [];
+  const anchors: Record<string, NewPassageAnchor> = {};
   const stored = new Map(passages.map((passage) => [passage.uuid, passage]));
   const edited: Passage[] = [];
 
@@ -212,6 +215,7 @@ export const applyEditsToPassages = ({
         return {
           passages: [],
           warnings,
+          anchors,
           error: `Cannot build a "${edit.kind}" annotation for passage ${uuid}. The kind has no importer, or required data is missing.`,
         };
       }
@@ -231,12 +235,16 @@ export const applyEditsToPassages = ({
       return {
         passages: [],
         warnings,
+        anchors,
         error: `Cannot insert before ${edit.before}: no such passage.`,
       };
     }
-    // The save path shifts the run beginning at this sort to open the slot.
+    // Placed by the passage it goes before: several inserts in one save
+    // would otherwise share this sort and tie.
+    const uuid = uuidv4();
+    anchors[uuid] = { before: edit.before };
     edited.push({
-      uuid: uuidv4(),
+      uuid,
       workUuid,
       content: edit.content,
       label: edit.label ?? '',
@@ -247,7 +255,7 @@ export const applyEditsToPassages = ({
     });
   }
 
-  return { passages: edited, warnings };
+  return { passages: edited, warnings, anchors };
 };
 
 /**
@@ -318,7 +326,12 @@ export const applyPassageEdits = async ({
     ),
   );
 
-  const { passages, warnings, error: editError } = applyEditsToPassages({
+  const {
+    passages,
+    warnings,
+    anchors,
+    error: editError,
+  } = applyEditsToPassages({
     workUuid,
     passages: stored,
     edits,
@@ -332,7 +345,11 @@ export const applyPassageEdits = async ({
     return { success: true, dryRun, passages, warnings };
   }
 
-  const result = await savePassagesWithDeletions({ client, passages });
+  const result = await savePassagesWithDeletions({
+    client,
+    passages,
+    anchors,
+  });
 
   return {
     success: result.success,
