@@ -25,7 +25,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { Editor } from '@tiptap/core';
 import { ReadonlyURLSearchParams, useSearchParams } from 'next/navigation';
 import {
   HighlightRange,

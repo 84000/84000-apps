@@ -14,7 +14,6 @@ jest.mock('@eightyfourthousand/lib-utils', () => ({
   clearTextRangeHighlight: jest.fn(),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const libUtils = jest.requireMock('@eightyfourthousand/lib-utils') as {
   highlightTextRange: jest.Mock;
 };
@@ -182,7 +181,8 @@ describe('useStackDeepLink highlight', () => {
       expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(1),
     );
 
-    row.querySelector('.passage')!.innerHTML = '<p>again</p>';
+    const content = row.querySelector('.passage');
+    if (content) content.innerHTML = '<p>again</p>';
     await waitFor(() =>
       expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(2),
     );
