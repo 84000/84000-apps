@@ -162,6 +162,30 @@ export class CommandLog {
     );
   }
 
+  /**
+   * Drop the history that holds a snapshot of any of these passages, for
+   * passages the server has rewritten.
+   *
+   * Undoing such an entry would write the old content back over the server's.
+   * Everything older goes with it, since later entries may depend on it but
+   * earlier ones are replayed only through it. A redo branch touching them
+   * goes entirely.
+   */
+  forgetSnapshotsOf(uuids: ReadonlySet<string>) {
+    const touches = (command: Command) =>
+      isText(command)
+        ? uuids.has(command.uuid)
+        : command.content.some((change) => uuids.has(change.uuid)) ||
+          command.inserted.some((change) => uuids.has(change.meta.uuid)) ||
+          command.removed.some((change) => uuids.has(change.meta.uuid));
+    let last = -1;
+    this.undoStack.forEach((command, index) => {
+      if (touches(command)) last = index;
+    });
+    if (last >= 0) this.undoStack = this.undoStack.slice(last + 1);
+    if (this.redoStack.some(touches)) this.redoStack = [];
+  }
+
   /** Discard the whole history. */
   clear() {
     this.undoStack = [];

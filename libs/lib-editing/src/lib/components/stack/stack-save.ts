@@ -231,14 +231,9 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
 export const applyServerPassages = (
   work: WorkDocument,
   passages: { uuid: string; json?: { content?: unknown[] } | null }[],
-) => {
-  for (const { uuid, json } of passages) {
-    const doc = work.store.peek(uuid);
-    if (!doc || !json) continue;
-    if (doc.isDirty) {
-      console.error(`not replacing passage ${uuid}: it has unsaved edits`);
-      continue;
-    }
-    doc.reseed((json.content ?? []) as JSONContent[]);
-  }
-};
+) =>
+  work.adoptServerContent(
+    passages.flatMap(({ uuid, json }) =>
+      json ? [{ uuid, content: (json.content ?? []) as JSONContent[] }] : [],
+    ),
+  );

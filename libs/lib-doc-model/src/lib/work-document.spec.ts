@@ -743,10 +743,12 @@ describe('deleting an endnote', () => {
   /** A body passage whose word "linked" carries links to the given endnotes. */
   const build = (...endNotes: string[]) => {
     const work = new WorkDocument({ workUuid: 'work-1', schema });
+    // With sorts, as saved passages have: a delete of one is what the save
+    // has to carry out.
     work.seedSpine([
-      meta('body', '1.1'),
-      meta('n1', 'n.1', 'endnotes'),
-      meta('n2', 'n.2', 'endnotes'),
+      { ...meta('body', '1.1'), sort: 1 },
+      { ...meta('n1', 'n.1', 'endnotes'), sort: 2 },
+      { ...meta('n2', 'n.2', 'endnotes'), sort: 3 },
     ]);
     work.store.create('body', [
       {
@@ -799,6 +801,53 @@ describe('deleting an endnote', () => {
     work.remove(['n1']);
     expect(links(work)).toEqual([]);
     expect(work.store.ensure('body').toNode().child(0).childCount).toBe(1);
+  });
+
+  // A replace rewrites the body on the server; undoing the earlier delete
+  // must not write the body's pre-replace content back.
+  it('drops history that would undo a server rewrite', () => {
+    const work = build('n1');
+    work.remove(['n1']);
+    work.store.ensure('body').markSynced();
+
+    work.adoptServerContent([
+      {
+        uuid: 'body',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { uuid: 'para' },
+            content: [{ type: 'text', text: 'replaced' }],
+          },
+        ],
+      },
+    ]);
+    work.undo();
+
+    expect(work.store.ensure('body').text).toBe('replaced');
+    expect(work.store.ensure('body').isDirty).toBe(false);
+  });
+
+  it('takes links to a deleted endnote out of a passage loaded afterwards', () => {
+    const work = build();
+    work.store.release('body');
+    work.remove(['n1']);
+
+    work.store.create('body', [
+      {
+        type: 'paragraph',
+        attrs: { uuid: 'para' },
+        content: [
+          {
+            type: 'text',
+            text: 'linked',
+            marks: [{ type: 'endNoteLink', attrs: { notes: [note('n1')] } }],
+          },
+        ],
+      },
+    ]);
+
+    expect(links(work)).toEqual([]);
   });
 
   it('puts the endnote and its links back in one undo', () => {
