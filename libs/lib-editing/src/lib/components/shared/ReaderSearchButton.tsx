@@ -1,6 +1,5 @@
 'use client';
 
-import { BodyItemType } from '@eightyfourthousand/data-access';
 import {
   PassageMatch,
   SearchButton,
@@ -10,7 +9,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useEditorState } from '../editor/EditorProvider';
 import { useNavigation } from './NavigationProvider';
 import { SearchReplacePanel } from './SearchReplacePanel';
-import { PanelName, PanelState, TabName } from './types';
+import { locationForPassageType, PanelName, PanelState } from './types';
 
 export const ReaderSearchButton = () => {
   const { uuid, toh, updatePanel } = useNavigation();
@@ -45,27 +44,15 @@ export const ReaderSearchButton = () => {
         hash: result.uuid,
       };
 
-      const TAB_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, TabName>> = {
-        abbreviations: 'abbreviations',
-        endnotes: 'endnotes',
-        summary: 'front',
-        introduction: 'front',
-        acknowledgements: 'front',
-      };
-
-      const SIDE_FOR_PASSAGE_SECTION: Partial<Record<BodyItemType, PanelName>> =
-      {
-        abbreviations: 'right',
-        endnotes: 'right',
-      };
-
       switch (result.type) {
         case 'passage':
           {
-            const passage = result as PassageMatch;
-            side = SIDE_FOR_PASSAGE_SECTION[passage.section] || 'main';
-            panelState.tab =
-              TAB_FOR_PASSAGE_SECTION[passage.section] || 'translation';
+            // `section` is the passage's raw type, heading rows included.
+            const { panel, tab } = locationForPassageType(
+              (result as PassageMatch).section,
+            );
+            side = panel;
+            panelState.tab = tab;
           }
           break;
         case 'alignment':
