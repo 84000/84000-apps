@@ -11,6 +11,7 @@ import type {
   SpineRange,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import { renderTranslationHTML } from '../reader/translation-html';
 import { buildStackEditorExtensions } from './stack-extensions';
@@ -88,6 +89,8 @@ export type PassageStackControllerOptions = {
    * that is what the editor draws. Omitted, the view is the whole spine.
    */
   tab?: string;
+  /** Each loaded passage's back-references, as the loader records them. */
+  references?: ReadonlyMap<string, PassageReference[]>;
 };
 
 /**
@@ -159,12 +162,14 @@ export class PassageStackController {
   private listeners = new Set<() => void>();
   private version = 0;
   private disposers: (() => void)[] = [];
+  private references?: ReadonlyMap<string, PassageReference[]>;
 
   constructor(options: PassageStackControllerOptions) {
     this.work = options.work;
     this.spineFeed = options.spineFeed;
     this.readOnly = options.readOnly ?? false;
     this.tab = options.tab;
+    this.references = options.references;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
     if (options.charCounts) {
@@ -259,6 +264,10 @@ export class PassageStackController {
   getActiveToh = () => this.activeToh;
 
   getMeta = (uuid: string): PassageMeta | null => this.work.spine.meta(uuid);
+
+  /** The passages that refer to this one, such as those linking an endnote. */
+  getReferences = (uuid: string): PassageReference[] =>
+    this.references?.get(uuid) ?? [];
 
   passageCount = () => this.work.spine.length;
 

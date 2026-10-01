@@ -642,6 +642,50 @@ describe('WorkDocument structural undo over text history', () => {
 
     expect(doc.content.get(0)).toBe(before);
   });
+
+  // Typing on either side of a command lands within the UndoManager's
+  // capture window, as when a link is made from the keyboard.
+  it('keeps typing after a command apart from typing before it', () => {
+    const work = build(2);
+    const doc = work.store.ensure('p0');
+    // Logged as the stack logs them: only a new stack item is a new entry.
+    doc.undoManager.on('stack-item-added', ({ type }: { type: string }) => {
+      if (type === 'undo') work.recordTextEdit('p0');
+    });
+    const type = (text: string) =>
+      doc.doc.transact(() => {
+        const paragraph = doc.content.get(0) as XmlElement;
+        (paragraph.get(0) as XmlText).insert(0, text);
+      });
+    const texts = () => paraTexts(doc.toJSON());
+
+    type('a ');
+    work.insert({ uuid: 'n', type: 'endnotes', label: 'n.1' }, 2, {
+      alongWith: [
+        {
+          uuid: 'p0',
+          after: {
+            type: 'doc',
+            content: [para('a text 0', 'a0'), para('note', 'x')],
+          },
+        },
+      ],
+    });
+    type('b ');
+
+    work.undo();
+    expect(texts()).toEqual(['a text 0', 'note']);
+    work.undo();
+    expect(texts()).toEqual(['a text 0']);
+    expect(work.spine.uuids()).toEqual(['p0', 'p1']);
+    work.undo();
+    expect(texts()).toEqual(['text 0']);
+
+    work.redo();
+    work.redo();
+    work.redo();
+    expect(texts()).toEqual(['b a text 0', 'note']);
+  });
 });
 
 describe('WorkDocument merge at a blank seam', () => {
@@ -747,8 +791,9 @@ describe('deleting an endnote', () => {
     // has to carry out.
     work.seedSpine([
       { ...meta('body', '1.1'), sort: 1 },
-      { ...meta('n1', 'n.1', 'endnotes'), sort: 2 },
-      { ...meta('n2', 'n.2', 'endnotes'), sort: 3 },
+      { ...meta('n0', 'n.1', 'endnotes'), sort: 2 },
+      { ...meta('n1', 'n.2', 'endnotes'), sort: 3 },
+      { ...meta('n2', 'n.3', 'endnotes'), sort: 4 },
     ]);
     work.store.create('body', [
       {
@@ -803,6 +848,91 @@ describe('deleting an endnote', () => {
     expect(work.store.ensure('body').toNode().child(0).childCount).toBe(1);
   });
 
+  const labels = (work: WorkDocument, uuid = 'body') => {
+    const found: string[] = [];
+    work.store
+      .ensure(uuid)
+      .toNode()
+      .descendants((node) => {
+        node.marks.forEach((mark) =>
+          (mark.attrs.notes as { label?: string }[]).forEach((n) =>
+            found.push(n.label ?? ''),
+          ),
+        );
+        return true;
+      });
+    return found;
+  };
+
+  it('renumbers the links to the endnotes after it, without an edit', () => {
+    const work = build('n2');
+    work.store.ensure('body').markSynced();
+    work.remove(['n1']);
+    expect(work.spine.meta('n2')?.label).toBe('n.2');
+    expect(labels(work)).toEqual(['n.2']);
+    expect(work.store.ensure('body').isDirty).toBe(false);
+
+    work.undo();
+    expect(labels(work)).toEqual(['n.3']);
+  });
+
+  it('numbers the links of a passage loaded after a renumbering', () => {
+    const work = build();
+    work.remove(['n1']);
+    work.store.create('later', [
+      {
+        type: 'paragraph',
+        attrs: { uuid: 'later-para' },
+        content: [
+          {
+            type: 'text',
+            text: 'stale',
+            marks: [
+              {
+                type: 'endNoteLink',
+                attrs: { notes: [{ ...note('n2'), label: 'n.3' }] },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(labels(work, 'later')).toEqual(['n.2']);
+    expect(work.store.ensure('later').isDirty).toBe(false);
+  });
+
+  it('adds an endnote and a link to it in one command', () => {
+    // body links n.3; a new note goes after n.1 and takes n.2.
+    const work = build('n2');
+    const body = work.store.ensure('body');
+    const linked = body.toJSON();
+    const text = linked.content?.[0].content ?? [];
+    text[0] = {
+      ...text[0],
+      marks: [
+        {
+          type: 'endNoteLink',
+          attrs: {
+            notes: [{ uuid: 'link-new', endNote: 'new', label: 'n.2' }],
+          },
+        },
+      ],
+    };
+    work.insert(
+      { uuid: 'new', type: 'endnotes', label: 'n.2' },
+      work.spine.indexOf('n0') + 1,
+      { alongWith: [{ uuid: 'body', after: linked }] },
+    );
+
+    expect(work.spine.meta('n2')?.label).toBe('n.4');
+    expect(labels(work)).toEqual(['n.2', 'n.4']);
+
+    work.undo();
+    expect(work.spine.uuids()).toEqual(['body', 'n0', 'n1', 'n2']);
+    expect(links(work)).toEqual(['n2']);
+    expect(labels(work)).toEqual(['n.3']);
+  });
+
   // A replace rewrites the body on the server; undoing the earlier delete
   // must not write the body's pre-replace content back.
   it('drops history that would undo a server rewrite', () => {
@@ -854,7 +984,7 @@ describe('deleting an endnote', () => {
     const work = build('n1', 'n2');
     work.remove(['n1']);
     work.undo();
-    expect(work.spine.uuids()).toEqual(['body', 'n1', 'n2']);
+    expect(work.spine.uuids()).toEqual(['body', 'n0', 'n1', 'n2']);
     expect(links(work)).toEqual(['n1', 'n2']);
     work.redo();
     expect(links(work)).toEqual(['n2']);

@@ -48,6 +48,8 @@ export type SaveHandler = {
   isDirty: () => boolean;
   /** Take in passages the server rewrote, such as by a replace. */
   applyReplaced?: (passages: ReplacedPassage[]) => void;
+  /** Delete an endnote and its links, if the handler holds the endnotes. */
+  deleteEndnote?: (uuid: string) => Promise<boolean>;
 };
 
 interface EditorContextState {
@@ -62,6 +64,11 @@ interface EditorContextState {
    */
   canAdminister(): Promise<boolean>;
   applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
+  /**
+   * Delete an endnote through the passage stack. False when the stack doesn't
+   * hold the endnotes, so the caller edits the paginated editors instead.
+   */
+  deleteEndnote: (uuid: string) => Promise<boolean>;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
   getEditor: (key: string) => Editor | undefined;
@@ -117,6 +124,7 @@ export const EditorContext = createContext<EditorContextState>({
   applyReplacedPassages: async () => {
     // No-op when outside provider
   },
+  deleteEndnote: async () => false,
   getFragment: () => {
     throw Error('Not implemented');
   },
@@ -394,6 +402,12 @@ export const EditorContextProvider = ({
   }, [client]);
 
   const saveHandlerRef = useRef<SaveHandler | null>(null);
+
+  const deleteEndnote = useCallback(
+    async (uuid: string) =>
+      (await saveHandlerRef.current?.deleteEndnote?.(uuid)) ?? false,
+    [],
+  );
 
   const applyReplacedPassages = useCallback(
     async (passages: ReplacedPassage[]) => {
@@ -696,6 +710,7 @@ export const EditorContextProvider = ({
         canEdit,
         canAdminister,
         applyReplacedPassages,
+        deleteEndnote,
         getFragment,
         setDoc,
         getEditor,

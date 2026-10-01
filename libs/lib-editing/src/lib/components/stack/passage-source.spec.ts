@@ -1,6 +1,7 @@
 import type { GraphQLClient } from 'graphql-request';
 import { Spine } from '@eightyfourthousand/lib-doc-model';
 
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { graphqlPassageSource } from './passage-source';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
@@ -345,5 +346,34 @@ describe('graphqlPassageSource loadPassages', () => {
       expect.objectContaining({ cursor: undefined, maxPassages: 100 }),
     );
     expect(found.map((s) => s.uuid)).toEqual(['p1']);
+  });
+});
+
+describe('graphqlPassageSource references', () => {
+  it("records each loaded passage's back-references beside the snapshots", async () => {
+    const spine = spineOf(20);
+    const refs: PassageReference[] = [
+      { uuid: 'p1', label: '2', type: 'translation', sort: 2 },
+    ];
+    const loaded = page(['p5', 'p6']);
+    (loaded.blocks[0].attrs as Record<string, unknown>).references = refs;
+    clientGraphql.getTranslationBlocks.mockResolvedValue(loaded);
+    const references = new Map([['p6', refs]]);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+      references,
+    });
+
+    const snapshots = await source.loadPassages('w1', ['p5', 'p6']);
+
+    expect(snapshots.map((snapshot) => Object.keys(snapshot))).toEqual([
+      ['uuid', 'content'],
+      ['uuid', 'content'],
+    ]);
+    expect(references.get('p5')).toEqual(refs);
+    // A passage whose references are gone no longer lists stale ones.
+    expect(references.has('p6')).toBe(false);
   });
 });

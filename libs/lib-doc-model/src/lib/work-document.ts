@@ -9,7 +9,7 @@ import {
   type ContentChange,
   type StructuralCommand,
 } from './command-log';
-import { withoutEndNoteLinks } from './end-note-links';
+import { withEndNoteLabels, withoutEndNoteLinks } from './end-note-links';
 import { PassageDocStore } from './doc-store';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
@@ -129,9 +129,13 @@ export class WorkDocument {
    * meaning the same passages the moment another section loads a page.
    */
   private windows = new Map<string, { uuids: string[]; keep: Set<string> }>();
+  /** Each endnote's label as its links last showed it. */
+  private endNoteLabels = new Map<string, string>();
+  /** Passages whose endnote links have been numbered from the spine. */
+  private numbered = new Set<string>();
+  private unobserve: (() => void)[] = [];
   /** Passages already checked for links to deleted endnotes. */
   private unlinked = new Set<string>();
-  private unobserveStore?: () => void;
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
@@ -145,7 +149,11 @@ export class WorkDocument {
       loader: options.loader,
       textOrigins: options.textOrigins,
     });
-    this.unobserveStore = this.store.observe(this.unlinkLoadedPassages);
+    this.unobserve.push(
+      this.spine.observe(this.renumberLinks),
+      this.store.observe(this.unlinkLoadedPassages),
+      this.store.observe(this.numberNewPassages),
+    );
   }
 
   // ----------------------------------------------------------- hydration
@@ -317,8 +325,17 @@ export class WorkDocument {
     return { uuid: previousUuid, boundary };
   }
 
-  /** Insert a new passage at a position in the spine. */
-  insert(passage: InsertPassageInput, index: number): { uuid: string } {
+  /**
+   * Insert a new passage at a position in the spine.
+   *
+   * `alongWith` changes other passages in the same command, so one undo takes
+   * back both, such as the link to a new endnote.
+   */
+  insert(
+    passage: InsertPassageInput,
+    index: number,
+    options: { alongWith?: { uuid: string; after: JSONContent }[] } = {},
+  ): { uuid: string } {
     const at = Math.max(0, Math.min(index, this.spine.length));
     const previous =
       at > 0 ? this.spine.meta(this.spine.uuidAt(at - 1) ?? '') : null;
@@ -335,11 +352,20 @@ export class WorkDocument {
       : [EMPTY_PARAGRAPH];
     const doc = this.store.ensure(entry.uuid);
     doc.replaceContent({ type: 'doc', content });
+    const others = (options.alongWith ?? []).map(({ uuid, after }) => {
+      const other = this.store.ensure(uuid);
+      const before = other.toJSON();
+      other.replaceContent(after);
+      return { uuid, before, after };
+    });
+    // The new content was made before the spine renumbered.
+    this.numberLinks(others.map(({ uuid }) => uuid));
 
     this.record({
       kind: 'insert',
       content: [
         { uuid: entry.uuid, before: null, after: { type: 'doc', content } },
+        ...others,
       ],
       inserted: [{ meta: entry, index: at }],
       removed: [],
@@ -500,6 +526,52 @@ export class WorkDocument {
   }
 
   /**
+   * Bring endnote links' numbers in line with the spine after endnotes were
+   * renumbered. Only the links to endnotes whose label changed are touched.
+   */
+  private renumberLinks = () => {
+    const changed = new Set<string>();
+    this.spine.entries().forEach(({ uuid, type, label }) => {
+      if (type !== 'endnotes' || this.endNoteLabels.get(uuid) === label) return;
+      this.endNoteLabels.set(uuid, label);
+      changed.add(uuid);
+    });
+    if (changed.size) this.numberLinks(this.store.held(), changed);
+  };
+
+  /**
+   * Number the links in passages newly hydrated. One loaded from the server
+   * shows the stored numbers, which unsaved renumbering may have moved on.
+   */
+  private numberNewPassages = () => {
+    const held = new Set(this.store.held());
+    // A document is adopted before it is seeded, so an empty one waits.
+    const fresh = [...held].filter(
+      (uuid) =>
+        !this.numbered.has(uuid) &&
+        (this.store.peek(uuid)?.content.length ?? 0) > 0,
+    );
+    this.numbered = new Set([
+      ...[...this.numbered].filter((uuid) => held.has(uuid)),
+      ...fresh,
+    ]);
+    if (fresh.length) this.numberLinks(fresh);
+  };
+
+  private numberLinks(uuids: string[], only?: ReadonlySet<string>) {
+    uuids.forEach((uuid) => {
+      const doc = this.store.peek(uuid);
+      if (!doc) return;
+      const json = withEndNoteLabels(doc.toJSON(), (endNote) =>
+        only && !only.has(endNote)
+          ? undefined
+          : this.spine.meta(endNote)?.label,
+      );
+      if (json) doc.adjust(json);
+    });
+  }
+
+  /**
    * Take in passages the server rewrote, such as by a replace: each held one
    * is re-seeded, and the history that would write its old content back is
    * dropped. One with unsaved edits is left alone.
@@ -638,7 +710,8 @@ export class WorkDocument {
       }
 
       const doc = this.store.peek(command.uuid);
-      if (doc?.redo()) {
+      // Yjs reports the redone edit as a new one, which isn't one to log.
+      if (doc && this.log.suppress(() => doc.redo())) {
         this.log.pushUndo(command);
         this.notify();
         return { uuid: command.uuid, where: 'end' };
@@ -657,7 +730,7 @@ export class WorkDocument {
 
   /** Release every document. The spine survives — it is cheap to keep. */
   destroy() {
-    this.unobserveStore?.();
+    this.unobserve.forEach((stop) => stop());
     this.windows.clear();
     this.store.destroy();
     this.listeners.clear();
@@ -667,6 +740,11 @@ export class WorkDocument {
 
   private record(command: StructuralCommand) {
     this.log.push(command);
+    // Typing next follows the command in the log, so it mustn't join the
+    // stack item of typing before it.
+    command.content.forEach(({ uuid }) =>
+      this.store.peek(uuid)?.undoManager.stopCapturing(),
+    );
   }
 
   /**
@@ -694,6 +772,7 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.after);
     });
     this.applyLabels(command.labels, 'to');
+    this.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
 
@@ -718,6 +797,7 @@ export class WorkDocument {
       this.store.ensure(change.uuid).replaceContent(change.before);
     });
     this.applyLabels(command.labels, 'from');
+    this.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
 

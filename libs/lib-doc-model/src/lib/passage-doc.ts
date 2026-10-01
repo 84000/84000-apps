@@ -180,6 +180,24 @@ export class PassageDoc {
     this.notify();
   }
 
+  /**
+   * Apply a change that follows from elsewhere rather than an edit to this
+   * passage, such as an endnote it links to being renumbered. The passage
+   * doesn't go dirty and the change isn't in its text history.
+   */
+  adjust(json: JSONContent) {
+    const node = this.parse(json);
+    transact(
+      this.doc,
+      () =>
+        updateYFragment(this.doc, this.content, node, {
+          mapping: new Map(),
+          isOMark: new Map(),
+        }),
+      REMOTE_ORIGIN,
+    );
+  }
+
   /** The content as a ProseMirror node. Cached until the fragment changes. */
   toNode(): PMNode {
     if (!this.nodeCache) {
