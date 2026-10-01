@@ -11,7 +11,7 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import { useCallback, useRef, useState } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
 import { useNavigation } from '../NavigationProvider';
-import { TAB_FOR_SECTION, PANEL_FOR_SECTION } from '../types';
+import { locationForPassageType } from '../types';
 import {
   createGraphQLClient,
   getTermPassages,
@@ -65,13 +65,10 @@ export const GlossaryInstanceBody = ({
 
   const handlePassageClick = useCallback(
     (passage: PassageItem) => {
+      const { panel, tab } = locationForPassageType(passage.type);
       updatePanel({
-        name: PANEL_FOR_SECTION[passage.type] || 'main',
-        state: {
-          open: true,
-          tab: TAB_FOR_SECTION[passage.type] || 'translation',
-          hash: passage.uuid,
-        },
+        name: panel,
+        state: { open: true, tab, hash: passage.uuid },
       });
     },
     [updatePanel],
