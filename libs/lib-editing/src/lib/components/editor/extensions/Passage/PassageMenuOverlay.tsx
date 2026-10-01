@@ -21,9 +21,8 @@ import {
   useBookmark,
 } from '@eightyfourthousand/data-access';
 import {
-  PANEL_FOR_SECTION,
+  locationForPassageType,
   SuggestRevisionForm,
-  TAB_FOR_SECTION,
   useNavigation,
 } from '../../../shared';
 import { EditorOptions } from './EditorOptions';
@@ -104,13 +103,10 @@ export const PassageMenuOverlay = ({ editor }: { editor: Editor }) => {
       setOpen(true);
     };
     storage.navigateRef = (ref) => {
+      const { panel, tab } = locationForPassageType(ref.type);
       updatePanel({
-        name: PANEL_FOR_SECTION[ref.type] || 'main',
-        state: {
-          open: true,
-          tab: TAB_FOR_SECTION[ref.type] || 'translation',
-          hash: ref.uuid,
-        },
+        name: panel,
+        state: { open: true, tab, hash: ref.uuid },
       });
     };
     return () => {
