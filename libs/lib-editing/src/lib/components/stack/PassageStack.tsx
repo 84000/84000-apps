@@ -152,14 +152,16 @@ export const PassageStack = ({
   // Hover cards are drawn without an editor; their edit actions ask for one.
   // Resolving it here rather than keeping editors mounted is what lets the
   // static tier stay static.
-  useEffect(() => {
-    registerEditorRequest((element) => {
-      const uuid = element.closest<HTMLElement>('[data-stack-passage]')
-        ?.dataset['stackPassage'];
-      return uuid ? controller.requestEditorFor(uuid) : Promise.resolve(null);
-    });
-    return () => registerEditorRequest(null);
-  }, [controller, registerEditorRequest]);
+  useEffect(
+    () =>
+      registerEditorRequest((element) => {
+        if (!parentRef.current?.contains(element)) return null;
+        const uuid = element.closest<HTMLElement>('[data-stack-passage]')
+          ?.dataset['stackPassage'];
+        return uuid ? controller.requestEditorFor(uuid) : null;
+      }),
+    [controller, registerEditorRequest],
+  );
 
   // Which Tohoku text is being read decides which rows exist: a work spanning
   // several of them carries passages scoped to one, and toh145 and toh847 each
@@ -197,6 +199,14 @@ export const PassageStack = ({
     [updatePanel, setToh],
   );
   const focusedEditor = controller.getFocusedEditor();
+  // A tab's stack can be mounted more than once (the layout keeps a hidden
+  // copy), and each copy shares the controller. Only the copy holding the
+  // editor draws its menus: two bubble menus would dismiss each other's
+  // clicks.
+  const menuEditor =
+    focusedEditor && parentRef.current?.contains(focusedEditor.view.dom)
+      ? focusedEditor
+      : null;
 
   const virtualizer = useVirtualizer({
     count: order.length,
@@ -491,17 +501,17 @@ export const PassageStack = ({
       */}
       <TranslationBubbleMenu
         key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
-        editor={focusedEditor}
+        editor={menuEditor}
       />
       <StackPassageMenu
         controller={controller}
         target={menuTarget}
         onClose={closeMenu}
       />
-      {focusedEditor && (
+      {menuEditor && (
         <MentionAdvancedOverlay
           key={`mention-${controller.getFocusedUuid() ?? 'none'}`}
-          editor={focusedEditor}
+          editor={menuEditor}
         />
       )}
       <div
