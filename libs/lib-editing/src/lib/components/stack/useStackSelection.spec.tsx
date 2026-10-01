@@ -84,9 +84,10 @@ describe('the undo offered after deleting passages', () => {
       work: { log: { peekUndo: () => log.last } },
     } as unknown as PassageStackController & { undo: jest.Mock };
     renderHook(() => useStackSelection(stack));
-    (toast as jest.Mock).mockClear();
+    (toast as unknown as jest.Mock).mockClear();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
-    const undo = (toast as jest.Mock).mock.calls[0][1].action.onClick;
+    const undo = (toast as unknown as jest.Mock).mock.calls[0][1].action
+      .onClick;
     return { stack, log, undo: undo as () => void };
   };
 
