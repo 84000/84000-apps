@@ -710,7 +710,8 @@ export class WorkDocument {
       }
 
       const doc = this.store.peek(command.uuid);
-      if (doc?.redo()) {
+      // Yjs reports the redone edit as a new one, which isn't one to log.
+      if (doc && this.log.suppress(() => doc.redo())) {
         this.log.pushUndo(command);
         this.notify();
         return { uuid: command.uuid, where: 'end' };
@@ -739,6 +740,11 @@ export class WorkDocument {
 
   private record(command: StructuralCommand) {
     this.log.push(command);
+    // Typing next follows the command in the log, so it mustn't join the
+    // stack item of typing before it.
+    command.content.forEach(({ uuid }) =>
+      this.store.peek(uuid)?.undoManager.stopCapturing(),
+    );
   }
 
   /**

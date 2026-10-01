@@ -642,6 +642,50 @@ describe('WorkDocument structural undo over text history', () => {
 
     expect(doc.content.get(0)).toBe(before);
   });
+
+  // Typing on either side of a command lands within the UndoManager's
+  // capture window, as when a link is made from the keyboard.
+  it('keeps typing after a command apart from typing before it', () => {
+    const work = build(2);
+    const doc = work.store.ensure('p0');
+    // Logged as the stack logs them: only a new stack item is a new entry.
+    doc.undoManager.on('stack-item-added', ({ type }: { type: string }) => {
+      if (type === 'undo') work.recordTextEdit('p0');
+    });
+    const type = (text: string) =>
+      doc.doc.transact(() => {
+        const paragraph = doc.content.get(0) as XmlElement;
+        (paragraph.get(0) as XmlText).insert(0, text);
+      });
+    const texts = () => paraTexts(doc.toJSON());
+
+    type('a ');
+    work.insert({ uuid: 'n', type: 'endnotes', label: 'n.1' }, 2, {
+      alongWith: [
+        {
+          uuid: 'p0',
+          after: {
+            type: 'doc',
+            content: [para('a text 0', 'a0'), para('note', 'x')],
+          },
+        },
+      ],
+    });
+    type('b ');
+
+    work.undo();
+    expect(texts()).toEqual(['a text 0', 'note']);
+    work.undo();
+    expect(texts()).toEqual(['a text 0']);
+    expect(work.spine.uuids()).toEqual(['p0', 'p1']);
+    work.undo();
+    expect(texts()).toEqual(['text 0']);
+
+    work.redo();
+    work.redo();
+    work.redo();
+    expect(texts()).toEqual(['b a text 0', 'note']);
+  });
 });
 
 describe('WorkDocument merge at a blank seam', () => {
