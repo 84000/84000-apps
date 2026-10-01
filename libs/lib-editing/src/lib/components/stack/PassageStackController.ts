@@ -2,7 +2,6 @@ import { Editor, Extensions } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
 import { TextSelection } from '@tiptap/pm/state';
-import type { Node as PMNode } from '@tiptap/pm/model';
 import type {
   FocusTarget,
   PassageMeta,
@@ -12,16 +11,10 @@ import type {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import { buildStackEditorExtensions } from './stack-extensions';
-import {
-  passagesFromHTML,
-  passagesFromText,
-  passagesToHTML,
-  passagesToText,
-} from './stack-clipboard';
+import { StackPassageSelectionModel } from './stack-passage-selection';
 import { StackRowContent } from './stack-row-content';
 import type {
   PassageExtras,
-  StackPassageSelection,
   StackFocusTarget,
   StackFocusWhere,
   StackPassageSeed,
@@ -94,7 +87,7 @@ export class PassageStackController {
   private editors = new Map<string, Editor>();
   private readonly content: StackRowContent;
 
-  private passageSelection: StackPassageSelection | null = null;
+  private readonly selection: StackPassageSelectionModel;
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
   private scrollToIndex:
@@ -151,6 +144,14 @@ export class PassageStackController {
       work: this.work,
       spineFeed: options.spineFeed,
       charCounts: options.charCounts,
+      bump: () => this.bump(),
+    });
+    this.selection = new StackPassageSelectionModel({
+      work: this.work,
+      getOrder: this.getOrder,
+      getMeta: this.getMeta,
+      focusPassage: (uuid, where) => this.focusPassage(uuid, where),
+      blurEditors: () => this.blurEditors(),
       bump: () => this.bump(),
     });
 
@@ -740,116 +741,32 @@ export class PassageStackController {
 
   // ---------------------------------------------------- passage selection
 
-  /**
-   * Select whole passages from `anchorUuid` through `focusUuid`.
-   *
-   * Passages rather than a character range: each row is its own editor, and a
-   * browser keeps a selection that begins inside one `contenteditable` inside
-   * it, so a partial range spanning rows cannot be acquired by dragging in the
-   * first place. The passage is the unit the spine, the save and undo already
-   * work in, so it is the unit here too.
-   */
+  /** Select whole passages from `anchorUuid` through `focusUuid`. */
   setPassageSelection(anchorUuid: string, focusUuid: string) {
-    const order = this.getOrder();
-    if (order.indexOf(anchorUuid) < 0 || order.indexOf(focusUuid) < 0) return;
-    const next = { anchorUuid, focusUuid };
-    if (
-      this.passageSelection?.anchorUuid === anchorUuid &&
-      this.passageSelection?.focusUuid === focusUuid
-    ) {
-      return;
-    }
-    this.passageSelection = next;
-    // The selection now belongs to the stack, not to any editor: leave a live
-    // one holding a caret and the next keystroke would go to it, and leave the
-    // browser's own selection standing and two highlights are drawn at once.
-    this.blurEditors();
-    window.getSelection()?.removeAllRanges();
-    this.bump();
+    this.selection.setPassageSelection(anchorUuid, focusUuid);
   }
 
   clearPassageSelection() {
-    if (!this.passageSelection) return;
-    this.passageSelection = null;
-    this.bump();
+    this.selection.clearPassageSelection();
   }
 
-  hasPassageSelection = () => this.passageSelection !== null;
+  hasPassageSelection = () => this.selection.hasPassageSelection();
 
-  isSelected = (uuid: string) => this.selectedUuids().includes(uuid);
+  isSelected = (uuid: string) => this.selection.isSelected(uuid);
 
   /** The selected passages, in spine order. */
-  selectedUuids = (): string[] => {
-    const selection = this.passageSelection;
-    if (!selection) return [];
-    const order = this.getOrder();
-    const from = order.indexOf(selection.anchorUuid);
-    const to = order.indexOf(selection.focusUuid);
-    if (from < 0 || to < 0) return [];
-    return order.slice(Math.min(from, to), Math.max(from, to) + 1);
-  };
+  selectedUuids = (): string[] => this.selection.selectedUuids();
 
-  /**
-   * What a passage selection puts on the clipboard.
-   *
-   * Null when any selected passage has no document in memory: a passage
-   * outside the hydration window has nothing to serialize, and a copy that
-   * silently skipped it would lose content the selection covered.
-   */
-  serializePassageSelection = (): { text: string; html: string } | null => {
-    const uuids = this.selectedUuids();
-    if (!uuids.length) return null;
-
-    const nodes: PMNode[] = [];
-    for (const uuid of uuids) {
-      const doc = this.work.store.peek(uuid);
-      if (!doc) return null;
-      nodes.push(doc.toNode());
-    }
-
-    return {
-      text: passagesToText(nodes),
-      html: passagesToHTML(this.work.schema, nodes),
-    };
-  };
+  /** What a passage selection puts on the clipboard. */
+  serializePassageSelection = (): { text: string; html: string } | null =>
+    this.selection.serializePassageSelection();
 
   /** Delete the selected passages, as one command. */
-  deletePassageSelection = () => this.replacePassageSelection();
+  deletePassageSelection = () => this.selection.deletePassageSelection();
 
   /** Replace the selected passages with what the clipboard carries. */
-  pastePassageSelection = ({ html, text }: { html: string; text: string }) => {
-    const blocks = passagesFromHTML(this.work.schema, html);
-    return this.replacePassageSelection(
-      blocks.length ? blocks : passagesFromText(text),
-    );
-  };
-
-  private replacePassageSelection(passages: JSONContent[][] = []) {
-    const uuids = this.selectedUuids();
-    if (!uuids.length) return false;
-
-    const at = this.getOrder().indexOf(uuids[0]);
-    const meta = this.getMeta(uuids[0]);
-    this.passageSelection = null;
-
-    const replaced = this.work.replacePassages(
-      uuids,
-      passages.map((content) => ({
-        type: meta?.type ?? 'translation',
-        toh: meta?.toh,
-        content,
-      })),
-    );
-    if (!replaced) return false;
-
-    window.getSelection()?.removeAllRanges();
-    // Whatever now stands where the selection was: the first pasted passage,
-    // or the row that closed the gap a delete left.
-    const order = this.getOrder();
-    const next = order[Math.min(at, order.length - 1)];
-    if (next) this.focusPassage(next, 'start');
-    return true;
-  }
+  pastePassageSelection = (clipboard: { html: string; text: string }) =>
+    this.selection.pastePassageSelection(clipboard);
 
   /** Let go of any caret a live editor is holding. */
   private blurEditors() {
