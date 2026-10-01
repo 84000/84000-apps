@@ -845,3 +845,30 @@ describe('PassageStackController tab views', () => {
     expect(main.focusRelative('p2', 1, 'start')).toBe(false);
   });
 });
+
+describe('PassageStackController getPassageJSON', () => {
+  // What View Attributes shows: the passage node, as the paginated editor has
+  // it, rather than the bare document.
+  it('gives the passage node with its identity and row data', () => {
+    const all = seeds(2);
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    PassageStackController.seedWork(work, all);
+    const alignments = { toh1: { tibetan: 'བོད' } };
+    const controller = new PassageStackController({
+      work,
+      extras: new Map([['p1', { alignments }]]),
+    });
+
+    const json = controller.getPassageJSON('p1');
+
+    expect(json?.type).toBe('passage');
+    expect(json?.attrs).toMatchObject({
+      uuid: 'p1',
+      label: '2',
+      type: 'translation',
+      alignments,
+    });
+    expect(json?.content?.[0].type).toBe('paragraph');
+    expect(controller.getPassageJSON('missing')).toBeNull();
+  });
+});

@@ -785,8 +785,27 @@ export class PassageStackController {
   };
 
   /** A passage's document as editor JSON, for the attributes dialog. */
-  getPassageJSON = (uuid: string) =>
-    this.work.store.peek(uuid)?.toJSON() ?? null;
+  getPassageJSON = (uuid: string): JSONContent | null => {
+    const doc = this.work.store.peek(uuid);
+    const meta = this.work.spine.meta(uuid);
+    if (!doc || !meta) return null;
+    const { references, alignments } = this.extras?.get(uuid) ?? {};
+    // The passage node the paginated editor shows: identity and row data as
+    // attributes, the document as content.
+    return {
+      type: 'passage',
+      attrs: {
+        uuid,
+        label: meta.label,
+        type: meta.type,
+        sort: this.work.spine.sortOf(uuid),
+        ...(meta.toh ? { toh: meta.toh } : {}),
+        alignments: alignments ?? {},
+        ...(references?.length ? { references } : {}),
+      },
+      content: doc.toJSON().content ?? [],
+    };
+  };
 
   // ---------------------------------------------------- passage selection
 

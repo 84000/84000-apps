@@ -12,6 +12,8 @@ import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
+import { useNavigation } from '../shared/NavigationContext';
+import type { PanelName, PanelState, TabName } from '../shared/types';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
@@ -35,6 +37,23 @@ const SECTIONS: SpineSection[] = [
   { tab: 'translation', type: BODY_MATTER_FILTER },
   { tab: 'endnotes', type: 'endnotes' },
 ];
+
+/** A panel's tab when it names none. */
+const DEFAULT_TABS: Partial<Record<PanelName, string>> = {
+  main: 'translation',
+  right: 'endnotes',
+};
+
+/** Whether a panel is showing a tab's passages; Compare draws Translation's. */
+const showsTab = (
+  state: PanelState | undefined,
+  panel: PanelName,
+  tab: string,
+) => {
+  if (!state?.open) return false;
+  const drawn = state.tab ?? DEFAULT_TABS[panel];
+  return (drawn === 'compare' ? 'translation' : drawn) === tab;
+};
 
 export type StackWork = {
   work: WorkDocument;
@@ -95,6 +114,45 @@ export const StackWorkProvider = ({
       registerSaveHandler(null);
     };
   }, [stack, registerSaveHandler, dirtyStore]);
+
+  const { panels, updatePanel } = useNavigation();
+
+  // Undo and redo with focus outside any editor, such as after a label-menu
+  // action. The editors bind their own; this covers the rest of the page, once
+  // per work, since every view shares the one history.
+  useEffect(() => {
+    if (!stack) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest?.('input, textarea, select, [contenteditable="true"]')
+      ) {
+        return;
+      }
+      const redo = key === 'y' || event.shiftKey;
+      const { work } = stack;
+      const focus = work.log.suppress(() => (redo ? work.redo() : work.undo()));
+      if (focus === null) return;
+      event.preventDefault();
+      if (!focus) return;
+      const meta = work.spine.meta(focus.uuid);
+      if (!meta) return;
+      // The passage may sit in a tab that isn't showing.
+      const panel = meta.panel as PanelName;
+      if (!showsTab(panels[panel], panel, meta.tab)) {
+        updatePanel({
+          name: panel,
+          state: { open: true, tab: meta.tab as TabName },
+        });
+      }
+      stack.controllerFor(meta.tab)?.focusPassage(focus.uuid, focus.where);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [stack, panels, updatePanel]);
 
   useEffect(() => {
     let cancelled = false;

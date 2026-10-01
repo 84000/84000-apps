@@ -44,6 +44,8 @@ export const StackPassageMenu = ({
 }) => {
   const [dialogType, setDialogType] = useState<string>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // Counts openings, so a dialog's own state starts over each time.
+  const [opened, setOpened] = useState(0);
   // Held apart from `target`, which choosing a dialog clears.
   const [subject, setSubject] = useState<PassageMeta | null>(null);
 
@@ -107,6 +109,7 @@ export const StackPassageMenu = ({
               onSelection={(item) => {
                 setSubject(meta);
                 setDialogType(item);
+                setOpened((count) => count + 1);
                 setIsDialogOpen(true);
                 onClose();
               }}
@@ -119,6 +122,7 @@ export const StackPassageMenu = ({
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           {dialogType === 'label' && (
             <EditLabel
+              key={opened}
               label={subject.label}
               onSave={(label) => controller.setLabel(subject.uuid, label)}
               close={() => setIsDialogOpen(false)}
