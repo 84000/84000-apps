@@ -26,13 +26,21 @@ export const useVisiblePassageUuids = (enabled = true): string[] => {
   useEffect(() => {
     if (!enabled) return;
 
-    const root = document.querySelector('[data-panel="main"]') ?? document;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const read = () => {
+      // Every main panel, keeping only rows that are drawn: the layout keeps a
+      // hidden copy of the panel, and each panel keeps its inactive tabs
+      // mounted but hidden, so the first panel found is often not the one
+      // being read.
+      const labels = [
+        ...document.querySelectorAll(
+          '[data-panel="main"] [data-passage-label][data-uuid]',
+        ),
+      ].filter((el) => el.getClientRects().length > 0);
       const found = [
         ...new Set(
-          [...root.querySelectorAll('[data-passage-label][data-uuid]')]
+          labels
             .map((el) => el.getAttribute('data-uuid'))
             .filter((uuid): uuid is string => !!uuid),
         ),
@@ -56,9 +64,12 @@ export const useVisiblePassageUuids = (enabled = true): string[] => {
     // swaps virtualized rows, the paginated editor replaces its document — so
     // one observer covers scrolling and paging alike.
     const observer = new MutationObserver(schedule);
-    observer.observe(root === document ? document.body : (root as Element), {
+    // Switching tabs changes only which panel is hidden.
+    observer.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ['hidden', 'data-state'],
     });
 
     return () => {

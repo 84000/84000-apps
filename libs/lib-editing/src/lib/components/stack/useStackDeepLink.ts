@@ -28,6 +28,39 @@ const waitForRow = (uuid: string): Promise<HTMLElement | null> =>
     look();
   });
 
+/** How long a painted highlight is kept up while the row settles. */
+const SETTLE_MS = 3000;
+
+/** Stops the highlight currently being held, if any. */
+let releaseHeld: (() => void) | undefined;
+
+/**
+ * Keep a highlight on a row while it settles.
+ *
+ * Right after a reveal the window around the row is still moving: the row's
+ * document can be released and hydrated again, which replaces its content
+ * (skeleton, then text) and collapses a highlight painted over the old text.
+ * Repainting on each replacement keeps it until the window has settled.
+ */
+const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
+  releaseHeld?.();
+  const row = document.getElementById(uuid);
+  if (!row) return;
+  const paint = () => {
+    const content = row.querySelector<HTMLElement>('.passage.is-editable');
+    if (content) highlightTextRange({ container: content, ...range });
+  };
+  const observer = new MutationObserver(paint);
+  observer.observe(row, { childList: true, subtree: true });
+  const timer = setTimeout(() => observer.disconnect(), SETTLE_MS);
+  // Not tied to the effect that painted it: clearing the consumed hash
+  // re-runs that effect straight away. A newer highlight replaces it.
+  releaseHeld = () => {
+    clearTimeout(timer);
+    observer.disconnect();
+  };
+};
+
 /**
  * Scrolls the stack to the passage a deep link names.
  *
@@ -48,7 +81,16 @@ export const useStackDeepLink = (
   panel: PanelName = PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main',
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
-  const target = panels[panel]?.hash;
+  // A hash is addressed to the panel's active tab, and every stack drawn in
+  // the panel sees it: only the one for that tab answers.
+  const tab = controller.getTab();
+  const activeTab = panels[panel]?.tab;
+  const answers =
+    !tab ||
+    !activeTab ||
+    tab === activeTab ||
+    (tab === 'translation' && activeTab === 'compare');
+  const target = answers ? panels[panel]?.hash : undefined;
   const handled = useRef<string>(undefined);
 
   useEffect(() => {
@@ -70,13 +112,18 @@ export const useStackDeepLink = (
             start: highlight.start,
             end: highlight.end,
           });
+          holdHighlight(target, highlight);
         }
       } else {
+        releaseHeld?.();
         clearTextRangeHighlight();
       }
 
       if (cancelled) return;
       finished = true;
+      // Kept when the passage wasn't found, so the stack it belongs to can
+      // still answer it.
+      if (!found) return;
       updatePanel({
         name: panel,
         state: { ...panels[panel], hash: undefined },

@@ -50,6 +50,8 @@ export type SaveHandler = {
   applyReplaced?: (passages: ReplacedPassage[]) => void;
   /** Delete an endnote and its links, if the handler holds the endnotes. */
   deleteEndnote?: (uuid: string) => Promise<boolean>;
+  /** Take a comment thread's anchors off every passage the handler holds. */
+  removeCommentAnchors?: (comment: string) => void;
 };
 
 interface EditorContextState {
@@ -69,6 +71,11 @@ interface EditorContextState {
    * hold the endnotes, so the caller edits the paginated editors instead.
    */
   deleteEndnote: (uuid: string) => Promise<boolean>;
+  /**
+   * Take a comment thread's anchors off the passages the stack holds,
+   * including those not drawn.
+   */
+  removeCommentAnchors: (comment: string) => void;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
   getEditor: (key: string) => Editor | undefined;
@@ -125,6 +132,7 @@ export const EditorContext = createContext<EditorContextState>({
     // No-op when outside provider
   },
   deleteEndnote: async () => false,
+  removeCommentAnchors: () => undefined,
   getFragment: () => {
     throw Error('Not implemented');
   },
@@ -406,6 +414,12 @@ export const EditorContextProvider = ({
   const deleteEndnote = useCallback(
     async (uuid: string) =>
       (await saveHandlerRef.current?.deleteEndnote?.(uuid)) ?? false,
+    [],
+  );
+
+  const removeCommentAnchors = useCallback(
+    (comment: string) =>
+      saveHandlerRef.current?.removeCommentAnchors?.(comment),
     [],
   );
 
@@ -711,6 +725,7 @@ export const EditorContextProvider = ({
         canAdminister,
         applyReplacedPassages,
         deleteEndnote,
+        removeCommentAnchors,
         getFragment,
         setDoc,
         getEditor,

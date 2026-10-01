@@ -17,6 +17,13 @@ const passageUuidFor = (node: Node | null): string | null => {
   );
 };
 
+/** Whether a node is in the Tibetan column a Compare row draws. */
+export const inCompareSource = (node: Node | null): boolean => {
+  const element =
+    node instanceof Element ? node : (node?.parentElement ?? null);
+  return !!element?.closest('[data-compare-source]');
+};
+
 /** The passage under a point on screen, if any. */
 const passageUuidAt = (x: number, y: number): string | null =>
   passageUuidFor(document.elementFromPoint(x, y));
@@ -45,7 +52,10 @@ export const useStackSelection = (controller: PassageStackController) => {
       // A press anywhere begins a new selection; the old one goes whether or
       // not this one turns into a drag.
       controller.clearPassageSelection();
-      anchorUuid = passageUuidFor(event.target as Node);
+      // The Tibetan beside a passage in Compare is text to select and copy.
+      anchorUuid = inCompareSource(event.target as Node)
+        ? null
+        : passageUuidFor(event.target as Node);
       origin = anchorUuid ? { x: event.clientX, y: event.clientY } : null;
     };
 

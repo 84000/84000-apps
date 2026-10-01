@@ -12,16 +12,17 @@ import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
-import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
   hasUnsavedStackChanges,
   saveStackWork,
 } from './stack-save';
+import { removeStackCommentAnchors } from './stack-comments';
 import { deleteStackEndnote } from './stack-endnotes';
 import { SpineFeed, type SpineSection } from './spine-feed';
 import { createStackWork } from './stack-work';
+import type { PassageExtras } from './types';
 
 /**
  * The sections drawn as stacks, **in the order the work reads**.
@@ -78,6 +79,8 @@ export const StackWorkProvider = ({
       isDirty: () => hasUnsavedStackChanges(work),
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
+      removeCommentAnchors: (comment) =>
+        removeStackCommentAnchors(work, comment),
     });
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.
@@ -96,8 +99,8 @@ export const StackWorkProvider = ({
   useEffect(() => {
     let cancelled = false;
     const client = createGraphQLClient();
-    const references = new Map<string, PassageReference[]>();
-    const work = createStackWork({ workUuid, client, references });
+    const extras = new Map<string, PassageExtras>();
+    const work = createStackWork({ workUuid, client, extras });
     const controllers = new Map<string, PassageStackController>();
 
     void (async () => {
@@ -113,7 +116,7 @@ export const StackWorkProvider = ({
             work,
             tab: section.tab,
             spineFeed: feed,
-            references,
+            extras,
           }),
         );
       }

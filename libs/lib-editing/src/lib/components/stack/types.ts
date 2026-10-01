@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 import type { Passage } from '@eightyfourthousand/data-access';
+import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import {
   blockFromPassage,
   type FocusTarget,
@@ -73,4 +74,13 @@ export const stackSeedFromPassage = (passage: Passage): StackPassageSeed => {
     content: (block.content ?? []) as JSONContent[],
     charCount: passage.content?.length ?? 0,
   };
+};
+
+/**
+ * Row data a passage's document doesn't hold: the passages referring to it,
+ * and its Tibetan source for each Toh it is aligned to.
+ */
+export type PassageExtras = {
+  references?: PassageReference[];
+  alignments?: Record<string, { tibetan?: string }>;
 };

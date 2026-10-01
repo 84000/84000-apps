@@ -11,6 +11,14 @@ const mockDeleteComment = jest.fn();
 const mockSetCommentTags = jest.fn();
 const mockGetTaggedComments = jest.fn();
 
+// See PassageStackController.spec.ts — the editor provider reaches
+// `data-access/ssr` through two client barrels that leak it.
+jest.mock('next/server', () => ({
+  NextRequest: class {},
+  NextResponse: class {},
+}));
+jest.mock('resend', () => ({ Resend: class {} }));
+
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
   getPassageComments: (...args: unknown[]) => mockGetPassageComments(...args),

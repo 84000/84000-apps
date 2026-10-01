@@ -24,6 +24,7 @@ import { XIcon } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getEditorForElement } from '../../editor/util';
+import { useEditorState } from '../../editor/EditorProvider';
 import { useNavigation } from '../NavigationProvider';
 import { locationForPassageType } from '../types';
 import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
@@ -81,6 +82,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     setFocusedComment,
     updatePanel,
   } = useNavigation();
+  const { removeCommentAnchors } = useEditorState();
   const passageUuids = useVisiblePassageUuids();
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,6 +267,8 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
    */
   const unsetAnchors = useCallback(
     async (commentUuid: string) => {
+      // The stack's passages outside the window hold anchors too.
+      removeCommentAnchors(commentUuid);
       const anchors = [
         ...document.querySelectorAll<HTMLElement>(anchorSelector(commentUuid)),
       ];
@@ -282,7 +286,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         editor.commands.unsetComment({ comment: commentUuid }),
       );
     },
-    [requestEditorFor],
+    [requestEditorFor, removeCommentAnchors],
   );
 
   const actions: CommentActions = useMemo(

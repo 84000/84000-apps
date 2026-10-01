@@ -54,6 +54,8 @@ export { passageFromNode } from './lib/passage';
 
 export { isPlainParagraph, isStructuralParagraph } from './lib/structural';
 
+export { mapMarks } from './lib/marks';
+
 export { Spine, SPINE_ORIGIN } from './lib/spine';
 export type { MutateOptions, SpineSeed } from './lib/spine';
 

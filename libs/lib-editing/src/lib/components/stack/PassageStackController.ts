@@ -22,6 +22,7 @@ import {
   passagesToText,
 } from './stack-clipboard';
 import type {
+  PassageExtras,
   StackPassageSelection,
   StackFocusTarget,
   StackFocusWhere,
@@ -89,8 +90,8 @@ export type PassageStackControllerOptions = {
    * that is what the editor draws. Omitted, the view is the whole spine.
    */
   tab?: string;
-  /** Each loaded passage's back-references, as the loader records them. */
-  references?: ReadonlyMap<string, PassageReference[]>;
+  /** Loaded passages' row data beyond their content, as the loader records it. */
+  extras?: ReadonlyMap<string, PassageExtras>;
 };
 
 /**
@@ -162,14 +163,14 @@ export class PassageStackController {
   private listeners = new Set<() => void>();
   private version = 0;
   private disposers: (() => void)[] = [];
-  private references?: ReadonlyMap<string, PassageReference[]>;
+  private extras?: ReadonlyMap<string, PassageExtras>;
 
   constructor(options: PassageStackControllerOptions) {
     this.work = options.work;
     this.spineFeed = options.spineFeed;
     this.readOnly = options.readOnly ?? false;
     this.tab = options.tab;
-    this.references = options.references;
+    this.extras = options.extras;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
     if (options.charCounts) {
@@ -267,7 +268,14 @@ export class PassageStackController {
 
   /** The passages that refer to this one, such as those linking an endnote. */
   getReferences = (uuid: string): PassageReference[] =>
-    this.references?.get(uuid) ?? [];
+    this.extras?.get(uuid)?.references ?? [];
+
+  /** A passage's Tibetan source for a Toh, when it is aligned to one. */
+  getTibetan = (uuid: string, toh?: string): string =>
+    (toh
+      ? this.extras?.get(uuid)?.alignments?.[toh]?.tibetan
+      : undefined
+    )?.trim() ?? '';
 
   passageCount = () => this.work.spine.length;
 
