@@ -3,17 +3,14 @@ import type { JSONContent } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
-  PassageDoc,
   PassageMeta,
   SpineRange,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
-import { renderTranslationHTML } from '../reader/translation-html';
 import { buildStackEditorExtensions } from './stack-extensions';
 import {
   passagesFromHTML,
@@ -21,6 +18,7 @@ import {
   passagesToHTML,
   passagesToText,
 } from './stack-clipboard';
+import { StackRowContent } from './stack-row-content';
 import type {
   PassageExtras,
   StackPassageSelection,
@@ -29,29 +27,8 @@ import type {
   StackPassageSeed,
 } from './types';
 
-/**
- * Rough characters per rendered line, for unmeasured row height estimates.
- *
- * Fitted against measured rows. It follows the column width, so a host far
- * narrower than the editor's will under-estimate.
- */
-const CHARS_PER_LINE = 77;
-/** One line of rendered passage text, in pixels. */
-const LINE_HEIGHT_PX = 28;
-/** A row is never shorter than this, however little text it holds. */
-const MIN_CONTENT_PX = 60;
 /** Frames to wait for a focused passage's editor to mount. */
 const EDITOR_MOUNT_FRAMES = 60;
-
-/**
- * Fallback height for a passage whose size is entirely unknown.
- *
- * Roughly the median measured row, so a screenful of unknown rows occupies
- * about the space the real ones will. A short guess here is not conservative:
- * the placeholder is what the virtualizer measures, so every row collapses to
- * it and a screenful of labels ends up stacked at the top.
- */
-const UNKNOWN_ROW_PX = 112;
 
 export type PassageStackControllerOptions = {
   work: WorkDocument;
@@ -115,10 +92,7 @@ export class PassageStackController {
   readonly work: WorkDocument;
 
   private editors = new Map<string, Editor>();
-  private charCounts = new Map<string, number>();
-  private staticHTML = new Map<string, string>();
-  /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
-  private wiring = new Map<string, () => void>();
+  private readonly content: StackRowContent;
 
   private passageSelection: StackPassageSelection | null = null;
   private pendingFocus: StackFocusTarget | null = null;
@@ -173,9 +147,12 @@ export class PassageStackController {
     this.extras = options.extras;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
-    if (options.charCounts) {
-      this.charCounts = new Map(options.charCounts);
-    }
+    this.content = new StackRowContent({
+      work: this.work,
+      spineFeed: options.spineFeed,
+      charCounts: options.charCounts,
+      bump: () => this.bump(),
+    });
 
     // Structural ops notify through the work; a spine change arriving from
     // another client notifies only through the spine. Both invalidate the
@@ -190,7 +167,7 @@ export class PassageStackController {
         this.bump();
       }),
       this.work.store.observe(() => {
-        this.reconcileWiring();
+        this.content.reconcileWiring();
         this.bump();
       }),
     );
@@ -335,68 +312,22 @@ export class PassageStackController {
    */
   estimateHeight = (uuid: string) => this.estimateContentHeight(uuid);
 
-  /**
-   * Just the text column, for sizing a placeholder inside an existing row.
-   *
-   * The placeholder is what the virtualizer measures, so this has to be the
-   * row's best guess and not a token height — a short placeholder is not a
-   * pessimistic estimate that gets corrected, it *becomes* the row's height
-   * until the passage hydrates.
-   */
-  estimateContentHeight = (uuid: string) => {
-    const count = this.contentLength(uuid);
-    if (count === undefined) return UNKNOWN_ROW_PX;
-    return Math.max(
-      MIN_CONTENT_PX,
-      Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX,
-    );
-  };
-
-  /** Characters of text, from a hydrated document or the spine's read. */
-  private contentLength = (uuid: string) =>
-    this.charCounts.get(uuid) ?? this.spineFeed?.contentLength?.(uuid);
+  /** Just the text column, for sizing a placeholder inside an existing row. */
+  estimateContentHeight = (uuid: string) =>
+    this.content.estimateContentHeight(uuid);
 
   /**
    * Whether the row's height is a real measure of *this* passage or the
    * generic fallback.
-   *
-   * A skeleton drawn at a known size can imitate the text it stands in for; one
-   * drawn at a guess should not pretend to, or it reads as content that failed
-   * to load rather than content still arriving.
    */
-  hasSizeFor = (uuid: string) => this.contentLength(uuid) !== undefined;
+  hasSizeFor = (uuid: string) => this.content.hasSizeFor(uuid);
 
   /**
    * Static HTML for a row that doesn't carry a live editor, or null when the
    * passage has not been hydrated.
-   *
-   * Null is not an error state — outside the hydration window there is
-   * genuinely no content to draw, and the row shows a skeleton at its
-   * estimated height instead. The prototype never had this case because it
-   * held every passage in memory, which is exactly what does not scale.
-   *
-   * Rendered through the reader's own renderer, not the stack's schema set.
-   * Static rendering needs the `*.ssr` variant of every extension whose
-   * interactive form draws through a React node view, plus the `endNoteLink`
-   * mark mapping — rendering with the schema set silently dropped endnote
-   * markers from every static row while the editor showed them. The schema set
-   * is for parsing; this is for drawing, and they are not the same list.
-   *
-   * Cached per passage because the render is not cheap and a row re-renders on
-   * every controller bump. Invalidated by `wire`'s content observer.
    */
-  getStaticHTML = (uuid: string): string | null => {
-    const cached = this.staticHTML.get(uuid);
-    if (cached !== undefined) return cached;
-
-    const doc = this.work.store.peek(uuid);
-    if (!doc) return null;
-
-    const html =
-      renderTranslationHTML({ content: doc.toJSON() }) ?? `<p>${doc.text}</p>`;
-    this.staticHTML.set(uuid, html);
-    return html;
-  };
+  getStaticHTML = (uuid: string): string | null =>
+    this.content.getStaticHTML(uuid);
 
   // ------------------------------------------------------------ hydration
 
@@ -469,7 +400,7 @@ export class PassageStackController {
           this.spineRange(this.visibleRange),
           { keep: this.liveUuids, key: this.windowKey },
         );
-        docs.forEach((doc) => this.wire(doc));
+        docs.forEach((doc) => this.content.wire(doc));
       } while (this.hydrationQueued);
     } finally {
       this.hydrating = false;
@@ -530,7 +461,7 @@ export class PassageStackController {
     if (this.work.store.has(uuid)) return;
     const doc = await this.work.store.hydrate(uuid);
     if (doc) {
-      this.wire(doc);
+      this.content.wire(doc);
       this.bump();
     }
   }
@@ -542,7 +473,7 @@ export class PassageStackController {
     if (!doc) {
       throw new Error(`cannot mount an editor on unhydrated passage ${uuid}`);
     }
-    this.wire(doc);
+    this.content.wire(doc);
     return buildStackEditorExtensions({
       uuid,
       fragment: doc.content,
@@ -947,62 +878,6 @@ export class PassageStackController {
 
   // -------------------------------------------------------------- private
 
-  /**
-   * Attach the controller's per-document bookkeeping, once per document.
-   *
-   * Two jobs. Content changes invalidate the cached static HTML and the row's
-   * height estimate. And a text edit taken by the passage's own `UndoManager`
-   * has to be announced to the command log, or Mod-Z would skip straight past
-   * typing to the last structural op — `WorkDocument.recordTextEdit` exists
-   * for exactly this and nothing in the model calls it.
-   */
-  private wire(doc: PassageDoc) {
-    if (this.wiring.has(doc.uuid)) return;
-    const uuid = doc.uuid;
-
-    this.charCounts.set(uuid, doc.text.length);
-
-    const unobserve = doc.observe(() => {
-      this.staticHTML.delete(uuid);
-      this.charCounts.set(uuid, doc.text.length);
-      this.bump();
-    });
-
-    const onStackItem = ({ type }: { type: 'undo' | 'redo' }) => {
-      // A redo-stack item is the inverse produced by an undo, not a new edit.
-      if (type !== 'undo') return;
-      this.work.recordTextEdit(uuid);
-    };
-    doc.undoManager.on('stack-item-added', onStackItem);
-
-    // The y-undo plugin destroys whatever UndoManager it is handed when its
-    // editor unmounts, but this one belongs to the document and has to
-    // outlive every mount — otherwise typing, scrolling away and scrolling
-    // back would silently lose that passage's history. `PassageDoc.destroy`
-    // tears down the Yjs types it observes, so the neutered call leaks
-    // nothing.
-    const manager = doc.undoManager as UndoManager & { destroy: () => void };
-    manager.destroy = () => undefined;
-
-    this.wiring.set(uuid, () => {
-      unobserve();
-      doc.undoManager.off('stack-item-added', onStackItem);
-    });
-  }
-
-  /** Drop bookkeeping for documents the store has released. */
-  private reconcileWiring() {
-    [...this.wiring.keys()].forEach((uuid) => {
-      if (this.work.store.has(uuid)) return;
-      this.wiring.get(uuid)?.();
-      this.wiring.delete(uuid);
-      this.staticHTML.delete(uuid);
-      // The passage's text history went with its document; the command log
-      // would otherwise stall on entries it can no longer replay.
-      this.work.log.forgetText(uuid);
-    });
-  }
-
   private bump() {
     this.version += 1;
     this.listeners.forEach((listener) => listener());
@@ -1013,8 +888,7 @@ export class PassageStackController {
     // The work outlives this view, so its window has to be given back or the
     // documents only it was holding are pinned for good.
     this.work.releaseWindow(this.windowKey);
-    this.wiring.forEach((teardown) => teardown());
-    this.wiring.clear();
+    this.content.unwireAll();
     this.disposers.forEach((dispose) => dispose());
     this.disposers = [];
     this.listeners.clear();
