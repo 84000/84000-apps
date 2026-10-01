@@ -13,7 +13,7 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
 import { useNavigation } from '../shared/NavigationContext';
-import type { PanelName, TabName } from '../shared/types';
+import type { PanelName, PanelState, TabName } from '../shared/types';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
@@ -37,6 +37,23 @@ const SECTIONS: SpineSection[] = [
   { tab: 'translation', type: BODY_MATTER_FILTER },
   { tab: 'endnotes', type: 'endnotes' },
 ];
+
+/** A panel's tab when it names none. */
+const DEFAULT_TABS: Partial<Record<PanelName, string>> = {
+  main: 'translation',
+  right: 'endnotes',
+};
+
+/** Whether a panel is showing a tab's passages; Compare draws Translation's. */
+const showsTab = (
+  state: PanelState | undefined,
+  panel: PanelName,
+  tab: string,
+) => {
+  if (!state?.open) return false;
+  const drawn = state.tab ?? DEFAULT_TABS[panel];
+  return (drawn === 'compare' ? 'translation' : drawn) === tab;
+};
 
 export type StackWork = {
   work: WorkDocument;
@@ -125,8 +142,7 @@ export const StackWorkProvider = ({
       if (!meta) return;
       // The passage may sit in a tab that isn't showing.
       const panel = meta.panel as PanelName;
-      const shown = panels[panel];
-      if (!shown?.open || shown.tab !== meta.tab) {
+      if (!showsTab(panels[panel], panel, meta.tab)) {
         updatePanel({
           name: panel,
           state: { open: true, tab: meta.tab as TabName },
