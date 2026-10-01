@@ -70,9 +70,7 @@ export const useStackRowPointer = ({
       container.removeEventListener('mousedown', onMouseDown, true);
       container.removeEventListener('click', onClick, true);
     };
-    // A ref and a state setter passed in are as stable as they were inline.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updatePanel]);
+  }, [updatePanel, parentRef]);
 
   // Click-to-focus on static rows, via delegation so text drags across
   // static content stay plain selections instead of mounting editors.
@@ -178,7 +176,5 @@ export const useStackRowPointer = ({
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('click', onClick);
     };
-    // A ref and a state setter passed in are as stable as they were inline.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [controller, followLink]);
+  }, [controller, followLink, parentRef, setMenuTarget]);
 };

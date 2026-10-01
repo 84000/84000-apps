@@ -75,9 +75,7 @@ export const useStackScroller = (
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-    // A ref passed in is as stable as it was inline.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [parentRef]);
 
   return { scroller, scrollMargin };
 };
