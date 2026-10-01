@@ -106,7 +106,7 @@ const SETTLE_DELAYS = [50, 150, 300, 600, 1000];
 
 /**
  * Re-align on an anchor as the rows around it load and take their real
- * heights, until the user scrolls.
+ * heights, until the user scrolls. Returns a function that stops it.
  */
 function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
   const timers = SETTLE_DELAYS.map((delay) =>
@@ -114,6 +114,7 @@ function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
   );
   const stop = () => {
     timers.forEach(clearTimeout);
+    clearTimeout(end);
     ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((type) =>
       container.removeEventListener(type, stop),
     );
@@ -121,7 +122,8 @@ function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
   ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((type) =>
     container.addEventListener(type, stop, { passive: true }),
   );
-  setTimeout(stop, SETTLE_DELAYS[SETTLE_DELAYS.length - 1] + 1);
+  const end = setTimeout(stop, SETTLE_DELAYS[SETTLE_DELAYS.length - 1] + 1);
+  return stop;
 }
 
 /** Tabs whose content contains passage elements. */
@@ -131,13 +133,24 @@ export function usePassageAnchorRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
   panelId = 'main',
+  hasHash = false,
 ): RefObject<PassageAnchor | null> {
   const anchorRef = useRef<PassageAnchor | null>(null);
   const prevTabRef = useRef<string | undefined>(undefined);
+  const stopSettlingRef = useRef<(() => void) | null>(null);
+
+  // A hash scrolls to its own target; settling would pull it back.
+  useEffect(() => {
+    if (!hasHash) return;
+    stopSettlingRef.current?.();
+    stopSettlingRef.current = null;
+  }, [hasHash]);
 
   useEffect(() => {
     if (prevTabRef.current === activeTab) return;
     prevTabRef.current = activeTab;
+    stopSettlingRef.current?.();
+    stopSettlingRef.current = null;
 
     // Only restore when arriving at a passage tab (translation/compare).
     // When switching to front/source, keep the anchor so it's available
@@ -151,20 +164,35 @@ export function usePassageAnchorRestore(
     // Clear inside rAF, not here — useScrollPositionRestore reads the ref
     // synchronously (in its effect, which runs after this one) to decide
     // whether to skip its own restore.
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       anchorRef.current = null;
-      if (restorePassageAnchor(container, anchor)) return;
-      // A virtualized list draws only the rows near its scroll position, so
-      // the anchor may not be drawn yet: go back to the recorded position,
-      // then align on the anchor once its row is there.
-      const saved = scrollPositions.get(
-        `${panelId}:${normalizeTabKey(activeTab || '')}`,
-      );
-      if (saved === undefined) return;
-      container.scrollTop = saved;
-      settleOnAnchor(container, anchor);
+      if (!container.isConnected) return;
+      if (!restorePassageAnchor(container, anchor)) {
+        // A virtualized list draws only the rows near its scroll position, so
+        // the anchor may not be drawn yet: go back to the recorded position,
+        // then align on the anchor once its row is there.
+        const saved = scrollPositions.get(
+          `${panelId}:${normalizeTabKey(activeTab || '')}`,
+        );
+        if (saved === undefined) return;
+        container.scrollTop = saved;
+      }
+      // Rows above the anchor can still change height as they load.
+      stopSettlingRef.current = settleOnAnchor(container, anchor);
     });
+    stopSettlingRef.current = () => cancelAnimationFrame(frame);
   }, [activeTab, scrollContainerRef, panelId]);
+
+  // Unmount. Forgetting the tab lets a remount, as StrictMode does, run the
+  // restore this cancelled.
+  useEffect(
+    () => () => {
+      stopSettlingRef.current?.();
+      stopSettlingRef.current = null;
+      prevTabRef.current = undefined;
+    },
+    [],
+  );
 
   return anchorRef;
 }

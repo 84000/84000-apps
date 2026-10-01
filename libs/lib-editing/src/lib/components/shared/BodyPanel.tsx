@@ -86,7 +86,12 @@ export const BodyPanel = ({
       node && node.offsetParent !== null ? findScrollParent(node) : null;
   }, []);
 
-  const passageAnchorRef = usePassageAnchorRestore(scrollContainerRef, safeTab);
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    safeTab,
+    'main',
+    !!panels.main.hash,
+  );
 
   useScrollPositionRestore(
     'main',

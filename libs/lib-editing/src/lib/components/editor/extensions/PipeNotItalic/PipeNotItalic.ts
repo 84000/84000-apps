@@ -76,44 +76,45 @@ export const PipeNotItalic = Extension.create({
             // insertions/deletions elsewhere in the document.
             let decorationSet = oldDecorationSet.map(tr.mapping, tr.doc);
 
+            // Each whole textblock a range touches: a text node reaching past
+            // the range is re-scanned in full, so its old decorations must go.
             const rescan = (start: number, end: number) => {
-              // Clamp to document bounds.
-              const from = Math.max(0, start);
-              const to = Math.min(tr.doc.content.size, end);
+              const size = tr.doc.content.size;
+              const $from = tr.doc.resolve(Math.max(0, Math.min(start, size)));
+              const $to = tr.doc.resolve(Math.max(0, Math.min(end, size)));
+              const from = $from.parent.isTextblock ? $from.start() : $from.pos;
+              const to = $to.parent.isTextblock ? $to.end() : $to.pos;
 
-              // Remove any decorations that fall within this range — they may
-              // now be stale (e.g. the `|` was deleted, or italic was removed).
+              // Stale decorations, e.g. the `|` was deleted or italic removed.
               const stale = decorationSet.find(from, to);
               if (stale.length > 0) {
                 decorationSet = decorationSet.remove(stale);
               }
 
-              // Re-scan the changed range and add fresh decorations.
               const fresh = findPipeDecorations(tr.doc, from, to);
               if (fresh.length > 0) {
                 decorationSet = decorationSet.add(tr.doc, fresh);
               }
             };
 
-            // Re-scan only the ranges touched by this transaction.
+            // Re-scan only the ranges touched by this transaction, as they
+            // stand after the rest of it.
             tr.steps.forEach((step, index) => {
+              const after = tr.mapping.slice(index + 1);
               // A mark step changes no positions, so its step map is empty:
-              // re-scan the range it marked, as it stands after the rest of
-              // the transaction.
+              // re-scan the range it marked.
               if (
                 step instanceof AddMarkStep ||
                 step instanceof RemoveMarkStep
               ) {
-                const after = tr.mapping.slice(index + 1);
                 rescan(after.map(step.from), after.map(step.to, -1));
                 return;
               }
 
-              // stepMap gives us the affected ranges after the step.
               step
                 .getMap()
                 .forEach((_oldStart, _oldEnd, newStart, newEnd) =>
-                  rescan(newStart, newEnd),
+                  rescan(after.map(newStart, -1), after.map(newEnd)),
                 );
             });
 
