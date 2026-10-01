@@ -52,7 +52,7 @@ boundary arrow keys land in a real editor. That is what decides this:
 | Concern                                | Verdict                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Schema, marks, node views              | **Per editor.** Each passage parses and renders its own content.                                                                      |
-| `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `PassageStackController.wire`. |
+| `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `StackRowContent.wire`.        |
 | `BoundaryKeymap`, `SlashCommand`       | **Per editor.** Both act on the focused passage and need its uuid.                                                                    |
 | `TranslationBubbleMenu`                | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
 | `StackPassageMenu`                     | **Shared**, and not editor-driven at all — see below.                                                                                |

@@ -1,98 +1,27 @@
 import { Editor, Extensions } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
-import { TextSelection } from '@tiptap/pm/state';
-import type { Node as PMNode } from '@tiptap/pm/model';
-import type { UndoManager } from 'yjs';
 import type {
   FocusTarget,
-  PassageDoc,
   PassageMeta,
   SpineRange,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
-import { renderTranslationHTML } from '../reader/translation-html';
 import { buildStackEditorExtensions } from './stack-extensions';
-import {
-  passagesFromHTML,
-  passagesFromText,
-  passagesToHTML,
-  passagesToText,
-} from './stack-clipboard';
+import { StackHydration } from './stack-hydration';
+import { StackLiveEditors } from './stack-live-editors';
+import { StackPassageSelectionModel } from './stack-passage-selection';
+import { StackRowContent } from './stack-row-content';
 import type {
   PassageExtras,
-  StackPassageSelection,
-  StackFocusTarget,
+  PassageStackControllerOptions,
   StackFocusWhere,
   StackPassageSeed,
 } from './types';
 
-/**
- * Rough characters per rendered line, for unmeasured row height estimates.
- *
- * Fitted against measured rows. It follows the column width, so a host far
- * narrower than the editor's will under-estimate.
- */
-const CHARS_PER_LINE = 77;
-/** One line of rendered passage text, in pixels. */
-const LINE_HEIGHT_PX = 28;
-/** A row is never shorter than this, however little text it holds. */
-const MIN_CONTENT_PX = 60;
-/** Frames to wait for a focused passage's editor to mount. */
-const EDITOR_MOUNT_FRAMES = 60;
-
-/**
- * Fallback height for a passage whose size is entirely unknown.
- *
- * Roughly the median measured row, so a screenful of unknown rows occupies
- * about the space the real ones will. A short guess here is not conservative:
- * the placeholder is what the virtualizer measures, so every row collapses to
- * it and a screenful of labels ends up stacked at the top.
- */
-const UNKNOWN_ROW_PX = 112;
-
-export type PassageStackControllerOptions = {
-  work: WorkDocument;
-  /** Character counts by passage uuid, for estimating unhydrated row heights. */
-  charCounts?: Iterable<readonly [string, number]>;
-  /**
-   * Grows the spine as the reader approaches the end of it.
-   *
-   * Optional: a caller holding a complete spine already — the scale harness,
-   * and tests — passes none, and the stack simply never asks for more.
-   */
-  spineFeed?: {
-    hasMore: boolean;
-    maybeExtend: (visibleEnd: number) => boolean;
-    /** Characters of text in a passage, for estimating an unhydrated row. */
-    contentLength?: (uuid: string) => number | undefined;
-    /** Only a feed that can read backward supplies these. */
-    hasMoreBefore?: boolean;
-    maybeExtendBefore?: (visibleStart: number) => boolean;
-    reveal?: (uuid: string) => Promise<number>;
-  };
-  /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
-  readOnly?: boolean;
-  /**
-   * Names this view's hydration window on the work.
-   *
-   * Views over one work scroll independently, and the work hydrates the union
-   * of their windows — so two controllers sharing a key would release each
-   * other's documents, which is the whole thing the key prevents.
-   */
-  windowKey?: string;
-  /**
-   * Draw only this tab's passages.
-   *
-   * One work, one spine, one undo history — but a view per panel, because
-   * that is what the editor draws. Omitted, the view is the whole spine.
-   */
-  tab?: string;
-  /** Loaded passages' row data beyond their content, as the loader records it. */
-  extras?: ReadonlyMap<string, PassageExtras>;
-};
+export type { PassageStackControllerOptions } from './types';
 
 /**
  * The view half of the editor-per-passage stack.
@@ -114,21 +43,11 @@ export type PassageStackControllerOptions = {
 export class PassageStackController {
   readonly work: WorkDocument;
 
-  private editors = new Map<string, Editor>();
-  private charCounts = new Map<string, number>();
-  private staticHTML = new Map<string, string>();
-  /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
-  private wiring = new Map<string, () => void>();
+  private readonly content: StackRowContent;
+  private readonly live: StackLiveEditors;
+  private readonly hydration: StackHydration;
+  private readonly selection: StackPassageSelectionModel;
 
-  private passageSelection: StackPassageSelection | null = null;
-  private pendingFocus: StackFocusTarget | null = null;
-  private keyBuffer = '';
-  private scrollToIndex:
-    | ((index: number, options?: { settle?: boolean }) => void)
-    | null = null;
-
-  private liveUuids = new Set<string>();
-  private focusedUuid: string | null = null;
   /**
    * The Tohoku text being read, when the work spans more than one.
    *
@@ -139,22 +58,6 @@ export class PassageStackController {
   private activeToh?: string;
 
   private orderCache: string[] | null = null;
-  private visibleRange: SpineRange = { start: 0, end: 0 };
-  private hydrating = false;
-  private hydrationQueued = false;
-
-  private spineFeed?: PassageStackControllerOptions['spineFeed'];
-  /**
-   * Whether reaching index 0 should pull the previous page.
-   *
-   * Disarmed by a reveal: the list renders from the top for a frame before the
-   * scroll lands, and paging upward then would prepend a hundred rows under a
-   * reader who never asked to go up — moving the target out from under the
-   * scroll that was about to happen.
-   */
-  private earlierArmed = true;
-  /** In-flight reveals, so a remount does not fetch the same window twice. */
-  private revealing = new Map<string, Promise<boolean>>();
   private readOnly: boolean;
   private readonly windowKey: string;
   private readonly tab?: string;
@@ -167,15 +70,46 @@ export class PassageStackController {
 
   constructor(options: PassageStackControllerOptions) {
     this.work = options.work;
-    this.spineFeed = options.spineFeed;
     this.readOnly = options.readOnly ?? false;
     this.tab = options.tab;
     this.extras = options.extras;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
-    if (options.charCounts) {
-      this.charCounts = new Map(options.charCounts);
-    }
+    this.content = new StackRowContent({
+      work: this.work,
+      spineFeed: options.spineFeed,
+      charCounts: options.charCounts,
+      bump: () => this.bump(),
+    });
+    this.live = new StackLiveEditors({
+      work: this.work,
+      getOrder: this.getOrder,
+      hydrateOne: (uuid) => this.hydration.hydrateOne(uuid),
+      bump: () => this.bump(),
+    });
+    this.hydration = new StackHydration({
+      work: this.work,
+      spineFeed: options.spineFeed,
+      tab: this.tab,
+      windowKey: this.windowKey,
+      getOrder: this.getOrder,
+      getLiveUuids: () => this.live.getLiveUuids(),
+      wire: (doc) => this.content.wire(doc),
+      invalidateOrder: () => {
+        this.orderCache = null;
+      },
+      resetLive: () => this.live.reset(),
+      scrollTo: (index, options) => this.live.scrollTo(index, options),
+      bump: () => this.bump(),
+    });
+    this.selection = new StackPassageSelectionModel({
+      work: this.work,
+      getOrder: this.getOrder,
+      getMeta: this.getMeta,
+      focusPassage: (uuid, where) => this.focusPassage(uuid, where),
+      blurEditors: () => this.live.blurEditors(),
+      bump: () => this.bump(),
+    });
 
     // Structural ops notify through the work; a spine change arriving from
     // another client notifies only through the spine. Both invalidate the
@@ -190,7 +124,7 @@ export class PassageStackController {
         this.bump();
       }),
       this.work.store.observe(() => {
-        this.reconcileWiring();
+        this.content.reconcileWiring();
         this.bump();
       }),
     );
@@ -279,7 +213,7 @@ export class PassageStackController {
 
   passageCount = () => this.work.spine.length;
 
-  mountedCount = () => this.editors.size;
+  mountedCount = () => this.live.mountedCount();
 
   undoDepth = () => this.work.log.depth;
 
@@ -314,16 +248,8 @@ export class PassageStackController {
   /** Whether this passage's document is in memory and can be rendered. */
   isHydrated = (uuid: string) => this.work.store.has(uuid);
 
-  /**
-   * Whether a window load is in flight.
-   *
-   * A settled scroll needs this: between issuing the scroll and the content
-   * landing the page is perfectly still, and stillness alone cannot tell
-   * "finished" from "waiting on the network". Releasing the anchor during that
-   * gap is what let a revealed row jump out of view when the last page
-   * arrived.
-   */
-  isHydrating = () => this.hydrating;
+  /** Whether a window load is in flight. */
+  isHydrating = () => this.hydration.isHydrating();
 
   /**
    * The whole row's height, for the virtualizer's initial estimate.
@@ -335,205 +261,39 @@ export class PassageStackController {
    */
   estimateHeight = (uuid: string) => this.estimateContentHeight(uuid);
 
-  /**
-   * Just the text column, for sizing a placeholder inside an existing row.
-   *
-   * The placeholder is what the virtualizer measures, so this has to be the
-   * row's best guess and not a token height — a short placeholder is not a
-   * pessimistic estimate that gets corrected, it *becomes* the row's height
-   * until the passage hydrates.
-   */
-  estimateContentHeight = (uuid: string) => {
-    const count = this.contentLength(uuid);
-    if (count === undefined) return UNKNOWN_ROW_PX;
-    return Math.max(
-      MIN_CONTENT_PX,
-      Math.ceil(count / CHARS_PER_LINE) * LINE_HEIGHT_PX,
-    );
-  };
-
-  /** Characters of text, from a hydrated document or the spine's read. */
-  private contentLength = (uuid: string) =>
-    this.charCounts.get(uuid) ?? this.spineFeed?.contentLength?.(uuid);
+  /** Just the text column, for sizing a placeholder inside an existing row. */
+  estimateContentHeight = (uuid: string) =>
+    this.content.estimateContentHeight(uuid);
 
   /**
    * Whether the row's height is a real measure of *this* passage or the
    * generic fallback.
-   *
-   * A skeleton drawn at a known size can imitate the text it stands in for; one
-   * drawn at a guess should not pretend to, or it reads as content that failed
-   * to load rather than content still arriving.
    */
-  hasSizeFor = (uuid: string) => this.contentLength(uuid) !== undefined;
+  hasSizeFor = (uuid: string) => this.content.hasSizeFor(uuid);
 
   /**
    * Static HTML for a row that doesn't carry a live editor, or null when the
    * passage has not been hydrated.
-   *
-   * Null is not an error state — outside the hydration window there is
-   * genuinely no content to draw, and the row shows a skeleton at its
-   * estimated height instead. The prototype never had this case because it
-   * held every passage in memory, which is exactly what does not scale.
-   *
-   * Rendered through the reader's own renderer, not the stack's schema set.
-   * Static rendering needs the `*.ssr` variant of every extension whose
-   * interactive form draws through a React node view, plus the `endNoteLink`
-   * mark mapping — rendering with the schema set silently dropped endnote
-   * markers from every static row while the editor showed them. The schema set
-   * is for parsing; this is for drawing, and they are not the same list.
-   *
-   * Cached per passage because the render is not cheap and a row re-renders on
-   * every controller bump. Invalidated by `wire`'s content observer.
    */
-  getStaticHTML = (uuid: string): string | null => {
-    const cached = this.staticHTML.get(uuid);
-    if (cached !== undefined) return cached;
+  getStaticHTML = (uuid: string): string | null =>
+    this.content.getStaticHTML(uuid);
 
-    const doc = this.work.store.peek(uuid);
-    if (!doc) return null;
-
-    const html =
-      renderTranslationHTML({ content: doc.toJSON() }) ?? `<p>${doc.text}</p>`;
-    this.staticHTML.set(uuid, html);
-    return html;
-  };
-
-  // ------------------------------------------------------------ hydration
-
-  /**
-   * Tell the controller which rows the virtualizer is drawing.
-   *
-   * Hydration is widened by the loader's own buffer, so this is the visible
-   * range rather than a padded one. Calls made while a load is in flight
-   * collapse into a single follow-up, so a fast scroll issues two loads rather
-   * than one per frame.
-   */
-  setVisibleRange = (range: SpineRange) => {
-    if (
-      range.start === this.visibleRange.start &&
-      range.end === this.visibleRange.end
-    ) {
-      return;
-    }
-    this.visibleRange = range;
-    // The spine covers only the pages fetched so far, so approaching either
-    // end has to pull the next one before there is anything to hydrate.
-    this.spineFeed?.maybeExtend(range.end);
-    if (range.start > 0) this.earlierArmed = true;
-    // Disarmed again by the page it starts: until the view re-anchors on the
-    // row that used to be first, the range still reads as index 0 and would
-    // ask for another.
-    if (this.earlierArmed && this.spineFeed?.maybeExtendBefore?.(range.start)) {
-      this.earlierArmed = false;
-    }
-    void this.runHydration();
-  };
-
-  /**
-   * This view's range, as spine positions.
-   *
-   * Rows are indexed within the tab, hydration is indexed within the work.
-   * A tab's passages are contiguous in the spine, so the ends are enough.
-   */
-  private spineRange(range: SpineRange): SpineRange {
-    if (!this.tab) return range;
-    const order = this.getOrder();
-    const first = order[range.start];
-    const last = order[Math.max(range.start, range.end - 1)];
-    if (!first || !last) return { start: 0, end: 0 };
-
-    const start = this.work.spine.indexOf(first);
-    const end = this.work.spine.indexOf(last) + 1;
-    return { start: Math.max(0, start), end: Math.max(start, end) };
-  }
+  /** Tell the controller which rows the virtualizer is drawing. */
+  setVisibleRange = (range: SpineRange) =>
+    this.hydration.setVisibleRange(range);
 
   /** Whether the work has passages before the ones the spine holds. */
-  hasEarlierPassages = () => this.spineFeed?.hasMoreBefore ?? false;
+  hasEarlierPassages = () => this.hydration.hasEarlierPassages();
 
   /** Whether the work has passages the spine has not loaded yet. */
-  hasMorePassages = () => this.spineFeed?.hasMore ?? false;
-
-  private async runHydration() {
-    if (this.hydrating) {
-      this.hydrationQueued = true;
-      return;
-    }
-    this.hydrating = true;
-    try {
-      do {
-        this.hydrationQueued = false;
-        // Live editors are pinned: focus does not have to sit inside the
-        // scrolled range, and releasing a document under a mounted editor
-        // would leave it bound to a destroyed fragment.
-        const docs = await this.work.hydrateWindow(
-          this.spineRange(this.visibleRange),
-          { keep: this.liveUuids, key: this.windowKey },
-        );
-        docs.forEach((doc) => this.wire(doc));
-      } while (this.hydrationQueued);
-    } finally {
-      this.hydrating = false;
-    }
-    this.bump();
-  }
+  hasMorePassages = () => this.hydration.hasMorePassages();
 
   /**
    * Scroll a passage into view, loading it into the spine if the window does
    * not hold it.
-   *
-   * What a deep link resolves to. The target is named, not positioned, so an
-   * unknown one rebuilds the spine around itself rather than paging to it.
-   * Resolves false when the work has no such passage.
    */
-  revealPassage = (uuid: string): Promise<boolean> => {
-    const existing = this.revealing.get(uuid);
-    if (existing) return existing;
-
-    const run = this.reveal(uuid).finally(() => this.revealing.delete(uuid));
-    this.revealing.set(uuid, run);
-    return run;
-  };
-
-  private async reveal(uuid: string): Promise<boolean> {
-    if (this.getOrder().indexOf(uuid) < 0) {
-      // Called through the feed, not detached from it — `reveal` is a method
-      // and reads the work off `this`.
-      if (!this.spineFeed?.reveal) return false;
-      // Before the await, not after: the list renders from the top while the
-      // window is in flight, and arming would prepend under the scroll that
-      // is about to happen.
-      this.earlierArmed = false;
-
-      if ((await this.spineFeed.reveal(uuid)) < 0) return false;
-      this.orderCache = null;
-      // The spine is a different set of passages now; anything the old one
-      // pinned is gone with it.
-      this.liveUuids = new Set();
-      this.focusedUuid = null;
-      this.bump();
-    }
-
-    await this.hydrateOne(uuid);
-
-    // Read the position now rather than trusting the one the feed returned:
-    // anything that grew the spine in the meantime has moved it.
-    const index = this.getOrder().indexOf(uuid);
-    if (index < 0) return false;
-    // Settled, unlike a focus move: the rows above an unvisited target are
-    // estimated, and measuring them moves it — by a screenful, on a deep link.
-    this.scrollToIndex?.(index, { settle: true });
-    return true;
-  }
-
-  /** Hydrate one passage on demand — the path focus takes ahead of mounting. */
-  private async hydrateOne(uuid: string) {
-    if (this.work.store.has(uuid)) return;
-    const doc = await this.work.store.hydrate(uuid);
-    if (doc) {
-      this.wire(doc);
-      this.bump();
-    }
-  }
+  revealPassage = (uuid: string): Promise<boolean> =>
+    this.hydration.revealPassage(uuid);
 
   // ------------------------------------------------------------- editors
 
@@ -542,7 +302,7 @@ export class PassageStackController {
     if (!doc) {
       throw new Error(`cannot mount an editor on unhydrated passage ${uuid}`);
     }
-    this.wire(doc);
+    this.content.wire(doc);
     return buildStackEditorExtensions({
       uuid,
       fragment: doc.content,
@@ -552,189 +312,56 @@ export class PassageStackController {
   }
 
   registerEditor(uuid: string, editor: Editor) {
-    this.editors.set(uuid, editor);
-
-    if (this.pendingFocus?.uuid === uuid) {
-      const { where } = this.pendingFocus;
-      this.pendingFocus = null;
-      this.focusEditor(editor, where);
-      if (this.keyBuffer) {
-        editor.commands.insertContent(this.keyBuffer);
-        this.keyBuffer = '';
-      }
-    }
-
-    // The shared editing surfaces bind to `getFocusedEditor()`, which is null
-    // until the editor registers. Focusing a passage renders its row as an
-    // editor, the editor mounts and lands here — without this the menu is
-    // still holding the null it was rendered with and never appears.
-    if (this.focusedUuid === uuid) this.bump();
+    this.live.registerEditor(uuid, editor);
   }
 
   unregisterEditor(uuid: string) {
-    this.editors.delete(uuid);
-    // Same reason in reverse: a surface bound to this editor has to let go.
-    if (this.focusedUuid === uuid) this.bump();
+    this.live.unregisterEditor(uuid);
   }
 
-  getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
+  getEditor = (uuid: string) => this.live.getEditor(uuid);
 
   setScrollHandler(
     handler: ((index: number, options?: { settle?: boolean }) => void) | null,
   ) {
-    this.scrollToIndex = handler;
+    this.live.setScrollHandler(handler);
   }
 
   // --------------------------------------------------------------- focus
 
   /** Whether this row should render as an editor rather than static HTML. */
-  isLive = (uuid: string) =>
-    this.liveUuids.has(uuid) && this.work.store.has(uuid);
+  isLive = (uuid: string) => this.live.isLive(uuid);
 
-  getFocusedUuid = () => this.focusedUuid;
+  getFocusedUuid = () => this.live.getFocusedUuid();
 
-  hasPendingFocus = () => this.pendingFocus !== null;
+  hasPendingFocus = () => this.live.hasPendingFocus();
 
   /**
    * Buffer keys typed between a focus request and the editor mounting, so a
    * click-and-immediately-type never drops characters.
    */
   bufferKey(key: string) {
-    if (this.pendingFocus) this.keyBuffer += key;
+    this.live.bufferKey(key);
   }
 
-  /**
-   * Recenter the live window when an editor gains focus by any means.
-   *
-   * Bumps on a change of focus, not only on a change of live set. The shared
-   * bubble menu is bound to whichever editor has focus, so it has to re-render
-   * when focus moves between two passages that are both already live — which
-   * `recenterLive` alone would not report.
-   */
+  /** Recenter the live window when an editor gains focus by any means. */
   notifyFocused(uuid: string) {
-    const changed = this.focusedUuid !== uuid;
-    this.focusedUuid = uuid;
-    this.recenterLive(uuid);
-    if (changed) this.bump();
+    this.live.notifyFocused(uuid);
   }
 
-  /**
-   * The editor that currently has focus, if it is mounted.
-   *
-   * What the shared editing surfaces bind to: only one passage is editable at a
-   * time, so a bubble menu per row would be a popover per row watching nothing.
-   */
-  getFocusedEditor = (): Editor | null =>
-    this.focusedUuid ? (this.editors.get(this.focusedUuid) ?? null) : null;
+  /** The editor that currently has focus, if it is mounted. */
+  getFocusedEditor = (): Editor | null => this.live.getFocusedEditor();
 
-  /**
-   * An editor for this passage, focusing it if that is what it takes.
-   *
-   * What a hover card's edit actions resolve through. A card is drawn from the
-   * anchor's attributes and the navigation fetchers, so most of them open over
-   * a static row with no editor at all. One is mounted when an action actually
-   * needs a document to change, rather than kept alive on the chance that it
-   * might — which is the difference between editing costing an editor and
-   * hovering costing one.
-   */
-  requestEditorFor = async (uuid: string): Promise<Editor | null> => {
-    const existing = this.editors.get(uuid);
-    if (existing?.isEditable) return existing;
-    if (!this.focusPassage(uuid, 'start')) return null;
-
-    // Focus mounts the row on the next render; the editor arrives with it.
-    return new Promise((resolve) => {
-      let frames = 0;
-      const look = () => {
-        const editor = this.editors.get(uuid);
-        if (editor?.isEditable) return resolve(editor);
-        if (frames++ > EDITOR_MOUNT_FRAMES) return resolve(null);
-        requestAnimationFrame(look);
-      };
-      look();
-    });
-  };
+  /** An editor for this passage, focusing it if that is what it takes. */
+  requestEditorFor = (uuid: string): Promise<Editor | null> =>
+    this.live.requestEditorFor(uuid);
 
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
-    const index = this.getOrder().indexOf(uuid);
-    if (index < 0) return false;
-
-    this.focusedUuid = uuid;
-    this.recenterLive(uuid);
-
-    const editor = this.editors.get(uuid);
-    if (editor) {
-      this.focusEditor(editor, where);
-      this.scrollToIndex?.(index);
-      return true;
-    }
-
-    this.pendingFocus = { uuid, where };
-    this.keyBuffer = '';
-    this.scrollToIndex?.(index);
-    // Either the row is static and re-rendering swaps it to an editor, or the
-    // passage is not hydrated yet and mounting waits on its document.
-    void this.hydrateOne(uuid);
-    this.bump();
-    return true;
+    return this.live.focusPassage(uuid, where);
   }
 
-  focusRelative = (uuid: string, direction: -1 | 1, where: 'start' | 'end') => {
-    const order = this.getOrder();
-    const index = order.indexOf(uuid);
-    const target = order[index + direction];
-    if (index < 0 || !target) return false;
-    return this.focusPassage(target, where);
-  };
-
-  private recenterLive(uuid: string) {
-    const order = this.getOrder();
-    const index = order.indexOf(uuid);
-    if (index < 0) return;
-    const next = new Set<string>();
-    [order[index - 1], uuid, order[index + 1]].forEach((neighbour) => {
-      if (neighbour) next.add(neighbour);
-    });
-    const changed =
-      next.size !== this.liveUuids.size ||
-      [...next].some((entry) => !this.liveUuids.has(entry));
-    if (!changed) return;
-    this.liveUuids = next;
-    // Neighbours are premounted so boundary arrow keys land in an editor that
-    // already exists; they need documents for that.
-    next.forEach((entry) => void this.hydrateOne(entry));
-    this.bump();
-  }
-
-  private focusEditor(editor: Editor, where: StackFocusWhere) {
-    // Premounted neighbors are non-editable (so at most one contenteditable
-    // exists and native selection works everywhere else) — flip on focus.
-    if (!editor.isEditable) editor.setEditable(true);
-    if (typeof where === 'object') {
-      // A click on a static row: land the caret where the user clicked.
-      const coords = editor.view.posAtCoords({ left: where.x, top: where.y });
-      editor.commands.focus(coords ? Math.max(1, coords.pos) : 'start');
-      return;
-    }
-    if (typeof where === 'number') {
-      // A position from the doc model — a merge's join point, a split's caret,
-      // the start of a cross-passage delete. It is a document offset, not
-      // necessarily a place a caret can sit: a merge's boundary is the size of
-      // the head's content, which lands *between* two blocks rather than
-      // inside either. Left there, the caret is in no textblock at all, and the
-      // next Backspace selects the preceding block instead of joining — which
-      // is what put the bubble menu over a freshly merged passage.
-      //
-      // `TextSelection.near` with a backward bias resolves it to the nearest
-      // real caret position, which at a join is the end of the head's text.
-      const { doc } = editor.state;
-      const clamped = Math.max(0, Math.min(where, doc.content.size));
-      const near = TextSelection.near(doc.resolve(clamped), -1);
-      editor.commands.focus(near.from);
-      return;
-    }
-    editor.commands.focus(where);
-  }
+  focusRelative = (uuid: string, direction: -1 | 1, where: 'start' | 'end') =>
+    this.live.focusRelative(uuid, direction, where);
 
   private applyFocusTarget(target: FocusTarget | null | undefined) {
     if (!target) return;
@@ -744,7 +371,7 @@ export class PassageStackController {
   // ------------------------------------------------------ structural ops
 
   splitAtSelection = (uuid: string) => {
-    const editor = this.editors.get(uuid);
+    const editor = this.live.getEditor(uuid);
     if (!editor) return false;
     const result = this.work.split(uuid, editor.state.selection.$from.pos);
     if (!result) return false;
@@ -777,10 +404,7 @@ export class PassageStackController {
     const order = this.getOrder();
     const next = order[index] ?? order[index - 1];
     if (next) this.focusPassage(next, 'start');
-    else {
-      this.focusedUuid = null;
-      this.liveUuids = new Set();
-    }
+    else this.live.reset();
     return true;
   };
 
@@ -809,121 +433,32 @@ export class PassageStackController {
 
   // ---------------------------------------------------- passage selection
 
-  /**
-   * Select whole passages from `anchorUuid` through `focusUuid`.
-   *
-   * Passages rather than a character range: each row is its own editor, and a
-   * browser keeps a selection that begins inside one `contenteditable` inside
-   * it, so a partial range spanning rows cannot be acquired by dragging in the
-   * first place. The passage is the unit the spine, the save and undo already
-   * work in, so it is the unit here too.
-   */
+  /** Select whole passages from `anchorUuid` through `focusUuid`. */
   setPassageSelection(anchorUuid: string, focusUuid: string) {
-    const order = this.getOrder();
-    if (order.indexOf(anchorUuid) < 0 || order.indexOf(focusUuid) < 0) return;
-    const next = { anchorUuid, focusUuid };
-    if (
-      this.passageSelection?.anchorUuid === anchorUuid &&
-      this.passageSelection?.focusUuid === focusUuid
-    ) {
-      return;
-    }
-    this.passageSelection = next;
-    // The selection now belongs to the stack, not to any editor: leave a live
-    // one holding a caret and the next keystroke would go to it, and leave the
-    // browser's own selection standing and two highlights are drawn at once.
-    this.blurEditors();
-    window.getSelection()?.removeAllRanges();
-    this.bump();
+    this.selection.setPassageSelection(anchorUuid, focusUuid);
   }
 
   clearPassageSelection() {
-    if (!this.passageSelection) return;
-    this.passageSelection = null;
-    this.bump();
+    this.selection.clearPassageSelection();
   }
 
-  hasPassageSelection = () => this.passageSelection !== null;
+  hasPassageSelection = () => this.selection.hasPassageSelection();
 
-  isSelected = (uuid: string) => this.selectedUuids().includes(uuid);
+  isSelected = (uuid: string) => this.selection.isSelected(uuid);
 
   /** The selected passages, in spine order. */
-  selectedUuids = (): string[] => {
-    const selection = this.passageSelection;
-    if (!selection) return [];
-    const order = this.getOrder();
-    const from = order.indexOf(selection.anchorUuid);
-    const to = order.indexOf(selection.focusUuid);
-    if (from < 0 || to < 0) return [];
-    return order.slice(Math.min(from, to), Math.max(from, to) + 1);
-  };
+  selectedUuids = (): string[] => this.selection.selectedUuids();
 
-  /**
-   * What a passage selection puts on the clipboard.
-   *
-   * Null when any selected passage has no document in memory: a passage
-   * outside the hydration window has nothing to serialize, and a copy that
-   * silently skipped it would lose content the selection covered.
-   */
-  serializePassageSelection = (): { text: string; html: string } | null => {
-    const uuids = this.selectedUuids();
-    if (!uuids.length) return null;
-
-    const nodes: PMNode[] = [];
-    for (const uuid of uuids) {
-      const doc = this.work.store.peek(uuid);
-      if (!doc) return null;
-      nodes.push(doc.toNode());
-    }
-
-    return {
-      text: passagesToText(nodes),
-      html: passagesToHTML(this.work.schema, nodes),
-    };
-  };
+  /** What a passage selection puts on the clipboard. */
+  serializePassageSelection = (): { text: string; html: string } | null =>
+    this.selection.serializePassageSelection();
 
   /** Delete the selected passages, as one command. */
-  deletePassageSelection = () => this.replacePassageSelection();
+  deletePassageSelection = () => this.selection.deletePassageSelection();
 
   /** Replace the selected passages with what the clipboard carries. */
-  pastePassageSelection = ({ html, text }: { html: string; text: string }) => {
-    const blocks = passagesFromHTML(this.work.schema, html);
-    return this.replacePassageSelection(
-      blocks.length ? blocks : passagesFromText(text),
-    );
-  };
-
-  private replacePassageSelection(passages: JSONContent[][] = []) {
-    const uuids = this.selectedUuids();
-    if (!uuids.length) return false;
-
-    const at = this.getOrder().indexOf(uuids[0]);
-    const meta = this.getMeta(uuids[0]);
-    this.passageSelection = null;
-
-    const replaced = this.work.replacePassages(
-      uuids,
-      passages.map((content) => ({
-        type: meta?.type ?? 'translation',
-        toh: meta?.toh,
-        content,
-      })),
-    );
-    if (!replaced) return false;
-
-    window.getSelection()?.removeAllRanges();
-    // Whatever now stands where the selection was: the first pasted passage,
-    // or the row that closed the gap a delete left.
-    const order = this.getOrder();
-    const next = order[Math.min(at, order.length - 1)];
-    if (next) this.focusPassage(next, 'start');
-    return true;
-  }
-
-  /** Let go of any caret a live editor is holding. */
-  private blurEditors() {
-    this.editors.forEach((editor) => editor.commands.blur());
-  }
+  pastePassageSelection = (clipboard: { html: string; text: string }) =>
+    this.selection.pastePassageSelection(clipboard);
 
   // ------------------------------------------------------------ undo/redo
 
@@ -947,62 +482,6 @@ export class PassageStackController {
 
   // -------------------------------------------------------------- private
 
-  /**
-   * Attach the controller's per-document bookkeeping, once per document.
-   *
-   * Two jobs. Content changes invalidate the cached static HTML and the row's
-   * height estimate. And a text edit taken by the passage's own `UndoManager`
-   * has to be announced to the command log, or Mod-Z would skip straight past
-   * typing to the last structural op — `WorkDocument.recordTextEdit` exists
-   * for exactly this and nothing in the model calls it.
-   */
-  private wire(doc: PassageDoc) {
-    if (this.wiring.has(doc.uuid)) return;
-    const uuid = doc.uuid;
-
-    this.charCounts.set(uuid, doc.text.length);
-
-    const unobserve = doc.observe(() => {
-      this.staticHTML.delete(uuid);
-      this.charCounts.set(uuid, doc.text.length);
-      this.bump();
-    });
-
-    const onStackItem = ({ type }: { type: 'undo' | 'redo' }) => {
-      // A redo-stack item is the inverse produced by an undo, not a new edit.
-      if (type !== 'undo') return;
-      this.work.recordTextEdit(uuid);
-    };
-    doc.undoManager.on('stack-item-added', onStackItem);
-
-    // The y-undo plugin destroys whatever UndoManager it is handed when its
-    // editor unmounts, but this one belongs to the document and has to
-    // outlive every mount — otherwise typing, scrolling away and scrolling
-    // back would silently lose that passage's history. `PassageDoc.destroy`
-    // tears down the Yjs types it observes, so the neutered call leaks
-    // nothing.
-    const manager = doc.undoManager as UndoManager & { destroy: () => void };
-    manager.destroy = () => undefined;
-
-    this.wiring.set(uuid, () => {
-      unobserve();
-      doc.undoManager.off('stack-item-added', onStackItem);
-    });
-  }
-
-  /** Drop bookkeeping for documents the store has released. */
-  private reconcileWiring() {
-    [...this.wiring.keys()].forEach((uuid) => {
-      if (this.work.store.has(uuid)) return;
-      this.wiring.get(uuid)?.();
-      this.wiring.delete(uuid);
-      this.staticHTML.delete(uuid);
-      // The passage's text history went with its document; the command log
-      // would otherwise stall on entries it can no longer replay.
-      this.work.log.forgetText(uuid);
-    });
-  }
-
   private bump() {
     this.version += 1;
     this.listeners.forEach((listener) => listener());
@@ -1013,8 +492,7 @@ export class PassageStackController {
     // The work outlives this view, so its window has to be given back or the
     // documents only it was holding are pinned for good.
     this.work.releaseWindow(this.windowKey);
-    this.wiring.forEach((teardown) => teardown());
-    this.wiring.clear();
+    this.content.unwireAll();
     this.disposers.forEach((dispose) => dispose());
     this.disposers = [];
     this.listeners.clear();

@@ -5,6 +5,7 @@ import {
   blockFromPassage,
   type FocusTarget,
   type SpineSeed,
+  type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
 /**
@@ -83,4 +84,45 @@ export const stackSeedFromPassage = (passage: Passage): StackPassageSeed => {
 export type PassageExtras = {
   references?: PassageReference[];
   alignments?: Record<string, { tibetan?: string }>;
+};
+
+export type PassageStackControllerOptions = {
+  work: WorkDocument;
+  /** Character counts by passage uuid, for estimating unhydrated row heights. */
+  charCounts?: Iterable<readonly [string, number]>;
+  /**
+   * Grows the spine as the reader approaches the end of it.
+   *
+   * Optional: a caller holding a complete spine already — the scale harness,
+   * and tests — passes none, and the stack simply never asks for more.
+   */
+  spineFeed?: {
+    hasMore: boolean;
+    maybeExtend: (visibleEnd: number) => boolean;
+    /** Characters of text in a passage, for estimating an unhydrated row. */
+    contentLength?: (uuid: string) => number | undefined;
+    /** Only a feed that can read backward supplies these. */
+    hasMoreBefore?: boolean;
+    maybeExtendBefore?: (visibleStart: number) => boolean;
+    reveal?: (uuid: string) => Promise<number>;
+  };
+  /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
+  readOnly?: boolean;
+  /**
+   * Names this view's hydration window on the work.
+   *
+   * Views over one work scroll independently, and the work hydrates the union
+   * of their windows — so two controllers sharing a key would release each
+   * other's documents, which is the whole thing the key prevents.
+   */
+  windowKey?: string;
+  /**
+   * Draw only this tab's passages.
+   *
+   * One work, one spine, one undo history — but a view per panel, because
+   * that is what the editor draws. Omitted, the view is the whole spine.
+   */
+  tab?: string;
+  /** Loaded passages' row data beyond their content, as the loader records it. */
+  extras?: ReadonlyMap<string, PassageExtras>;
 };

@@ -22,18 +22,15 @@ import {
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
-import { inCompareSource, useStackSelection } from './useStackSelection';
-import {
-  resolveStackLink,
-  STACK_LINK_SELECTOR,
-  type StackLinkTarget,
-} from './stack-links';
+import { useStackRowPointer } from './useStackRowPointer';
+import { useStackScrollHandler } from './useStackScrollHandler';
+import { useStackScroller } from './useStackScroller';
+import { useStackSelection } from './useStackSelection';
+import type { StackLinkTarget } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
-import {
-  PANEL_FOR_SECTION,
-  TAB_FOR_SECTION,
-  type PanelName,
-} from '../shared/types';
+import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
+
+export { scrollParent } from './useStackScroller';
 
 /**
  * Rows rendered in the virtualized window (cheap static HTML tier).
@@ -43,39 +40,6 @@ import {
 const OVERSCAN = 20;
 
 const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
-
-/**
- * The scrollable ancestor a stack virtualizes against, or the document.
- *
- * The stack does not own a scroller. Its host already has one — the editor's
- * resizable panel, the sandbox's frame — and creating a second gave it a
- * viewport as tall as its own content: every row counted as visible, so the
- * virtualizer drew all of them and the feed kept fetching the next page
- * because the visible range always reached the end. Fifteen thousand passages,
- * from one `height: 100%` against an auto-height parent.
- */
-export const scrollParent = (from: HTMLElement): HTMLElement => {
-  let node = from.parentElement;
-  while (node) {
-    const { overflowY } = getComputedStyle(node);
-    if (overflowY === 'auto' || overflowY === 'scroll') return node;
-    node = node.parentElement;
-  }
-  return (document.scrollingElement as HTMLElement) ?? document.body;
-};
-
-/** How far the pointer may travel and still count as a click, not a drag. */
-const CLICK_SLOP_PX = 5;
-
-/**
- * Frames of no movement before a settled scroll stops holding its target.
- *
- * Long enough to outlast a re-render, short enough that the anchor releases
- * as soon as the page is genuinely still.
- */
-const SETTLE_QUIET_FRAMES = 20;
-/** Hard stop, however much keeps arriving. */
-const SETTLE_TIMEOUT_MS = 5000;
 
 export const PassageStack = ({
   controller,
@@ -99,53 +63,7 @@ export const PassageStack = ({
   );
   const order = controller.getOrder();
   const parentRef = useRef<HTMLDivElement>(null);
-  const [scroller, setScroller] = useState<HTMLElement | null>(null);
-  // How far the stack sits below the top of that scroller's content — the
-  // tabs and titles above it. The virtualizer measures from the scroller, so
-  // without this every row is placed a header too high.
-  const [scrollMargin, setScrollMargin] = useState(0);
-
-  useLayoutEffect(() => {
-    const root = parentRef.current;
-    if (!root) return;
-    const found = scrollParent(root);
-    setScroller(found);
-
-    const measure = () => {
-      const next =
-        root.getBoundingClientRect().top -
-        found.getBoundingClientRect().top +
-        found.scrollTop;
-      setScrollMargin((current) =>
-        Math.abs(current - next) > 0.5 ? next : current,
-      );
-    };
-    measure();
-
-    // What sits above the stack can change height well after mount — a title
-    // or an imprint arriving — and this margin is measured from the scroller,
-    // so a stale one offsets every row *and* every scroll by that much. It is
-    // silent: rows still render and a deep link still scrolls, just to the
-    // wrong place. Injecting 260px above a settled stack moved the landing by
-    // exactly 260px.
-    //
-    // Watching the scroller alone is not enough: it reports its own box, not
-    // its content's. The things that can move the stack down are its own
-    // ancestors up to the scroller, and the scroller's other children.
-    const watched = new Set<Element>([found, root]);
-    for (
-      let node: HTMLElement | null = root;
-      node && node !== found;
-      node = node.parentElement
-    ) {
-      watched.add(node);
-    }
-    Array.from(found.children).forEach((child) => watched.add(child));
-
-    const observer = new ResizeObserver(measure);
-    watched.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
+  const { scroller, scrollMargin } = useStackScroller(parentRef);
   const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
     null,
   );
@@ -257,77 +175,7 @@ export const PassageStack = ({
     item.start < (instance.scrollOffset ?? 0) &&
     instance.scrollDirection === 'backward';
 
-  useEffect(() => {
-    controller.setScrollHandler((index, options) => {
-      if (!options?.settle) {
-        virtualizer.scrollToIndex(index, { align: 'auto' });
-        return;
-      }
-      // A row is estimated until it is drawn and measured, so scrolling to a
-      // target the reader has never passed lands on estimates and drifts as
-      // the rows above it settle.
-      //
-      // Holding for a fixed number of frames is not enough: hydration arrives
-      // over hundreds of milliseconds and its last page can land seconds after
-      // the scroll, long after a frame budget has run out. Measured on a
-      // throttled deep link, the target sat correctly for two seconds and then
-      // jumped 912px out of view as the final rows measured.
-      //
-      // So the anchor is held until the page stops moving rather than for a
-      // count, and re-armed by anything that changes the view — a hydration
-      // lands as a controller bump. It yields immediately to a reader who
-      // scrolls: holding a position against someone trying to leave it is
-      // worse than the drift.
-      const uuid = controller.getOrder()[index];
-      const deadline = performance.now() + SETTLE_TIMEOUT_MS;
-      let quiet = 0;
-      let lastOffset: number | null = null;
-      let lastVersion = controller.getVersion();
-      let released = false;
-
-      const release = () => {
-        if (released) return;
-        released = true;
-        scroller?.removeEventListener('wheel', release);
-        scroller?.removeEventListener('touchstart', release);
-        scroller?.removeEventListener('keydown', release);
-      };
-      scroller?.addEventListener('wheel', release, { passive: true });
-      scroller?.addEventListener('touchstart', release, { passive: true });
-      scroller?.addEventListener('keydown', release);
-
-      const again = () => {
-        if (released) return;
-        if (performance.now() > deadline) return release();
-
-        // Re-derive the row each frame: a prepend moves every index below it,
-        // so the number this started with can name a different passage.
-        const at = uuid ? controller.getOrder().indexOf(uuid) : index;
-        if (at < 0) return release();
-        virtualizer.scrollToIndex(at, { align: 'start' });
-
-        const offset = scroller?.scrollTop ?? null;
-        const version = controller.getVersion();
-        // Stillness is not the same as being done: between the scroll and the
-        // content landing nothing moves, and letting go there is exactly when
-        // the drift happens.
-        const settled =
-          offset === lastOffset &&
-          version === lastVersion &&
-          !controller.isHydrating();
-        if (settled) {
-          if (++quiet >= SETTLE_QUIET_FRAMES) return release();
-        } else {
-          quiet = 0;
-        }
-        lastOffset = offset;
-        lastVersion = version;
-        requestAnimationFrame(again);
-      };
-      again();
-    });
-    return () => controller.setScrollHandler(null);
-  }, [controller, virtualizer, scroller]);
+  useStackScrollHandler(controller, virtualizer, scroller);
 
   // Hydration follows the rows actually being drawn. The loader widens this by
   // its own buffer, so passing the rendered range (overscan included) is what
@@ -363,150 +211,13 @@ export const PassageStack = ({
   useStackSelection(controller);
   useStackDeepLink(controller, panel);
 
-  // A back-reference under a passage opens the passage it names, and a press
-  // on one must not focus the row it sits in.
-  useEffect(() => {
-    const container = parentRef.current;
-    if (!container) return;
-    const onMouseDown = (event: MouseEvent) => {
-      const ref = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-        '[data-passage-reference]',
-      );
-      if (!ref) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const type = ref.dataset['refType'] ?? '';
-      updatePanel({
-        name: PANEL_FOR_SECTION[type] ?? 'main',
-        state: {
-          open: true,
-          tab: TAB_FOR_SECTION[type] ?? 'translation',
-          hash: ref.dataset['refUuid'],
-        },
-      });
-    };
-    const onClick = (event: MouseEvent) => {
-      if (
-        (event.target as HTMLElement | null)?.closest(
-          '[data-passage-reference]',
-        )
-      ) {
-        event.preventDefault();
-      }
-    };
-    container.addEventListener('mousedown', onMouseDown, true);
-    container.addEventListener('click', onClick, true);
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown, true);
-      container.removeEventListener('click', onClick, true);
-    };
-  }, [updatePanel]);
-
-  // Click-to-focus on static rows, via delegation so text drags across
-  // static content stay plain selections instead of mounting editors.
-  useEffect(() => {
-    const container = parentRef.current;
-    if (!container) return;
-
-    const uuidAt = (target: EventTarget | null) =>
-      (target instanceof Element ? target : null)?.closest<HTMLElement>(
-        '[data-stack-passage]',
-      )?.dataset['stackPassage'] ?? null;
-
-    let down: { x: number; y: number; uuid: string | null } | null = null;
-    // A press on a content link, resolved while the element is still live but
-    // not acted on until release — see below.
-    let pending: { link: StackLinkTarget; x: number; y: number } | null = null;
-    const onMouseDown = (event: MouseEvent) => {
-      const target = event.target as Element | null;
-      down = null;
-
-      // The label is the menu's trigger; the default would move focus.
-      const labelEl = target?.closest?.<HTMLElement>('[data-passage-label]');
-      if (labelEl) {
-        event.preventDefault();
-        const rect = labelEl.getBoundingClientRect();
-        setMenuTarget({
-          uuid: labelEl.dataset['uuid'] ?? '',
-          rect: {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height,
-          },
-        });
-        return;
-      }
-
-      if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
-      if (inCompareSource(target)) return;
-
-      // Content links, before the focus branch below claims the press. A
-      // mounted editor handles these from its own mark and node views; a
-      // static row has none, so the stack follows them by delegation.
-      //
-      // Resolved here, while the element is live, but *not* followed here: a
-      // press on a link is just as likely to be the start of a selection
-      // drag, and both acting on it and calling `preventDefault` stop the
-      // browser ever beginning one. Following on release instead needs no
-      // element — the target was resolved already — which is what the
-      // original reason for acting on mousedown was about.
-      const link = resolveStackLink(target, {
-        editable: !controller.isReadOnly(),
-      });
-      if (link) {
-        pending = { link, x: event.clientX, y: event.clientY };
-        return;
-      }
-
-      down = { x: event.clientX, y: event.clientY, uuid: uuidAt(target) };
-    };
-    const onMouseUp = (event: MouseEvent) => {
-      const link = pending;
-      pending = null;
-      if (link) {
-        // Moved, or left a selection behind: the press was a drag, not a
-        // click, and following the link would throw the selection away.
-        const dragged =
-          Math.abs(event.clientX - link.x) > CLICK_SLOP_PX ||
-          Math.abs(event.clientY - link.y) > CLICK_SLOP_PX;
-        if (!dragged && document.getSelection()?.isCollapsed) {
-          followLink(link.link);
-        }
-        return;
-      }
-
-      const start = down;
-      down = null;
-      if (!start?.uuid) return;
-      const moved =
-        Math.abs(event.clientX - start.x) > CLICK_SLOP_PX ||
-        Math.abs(event.clientY - start.y) > CLICK_SLOP_PX;
-      if (moved || !document.getSelection()?.isCollapsed) return;
-      if (uuidAt(event.target) !== start.uuid) return;
-      controller.focusPassage(start.uuid, {
-        x: event.clientX,
-        y: event.clientY,
-      });
-    };
-
-    // Navigation happens on mousedown, but an anchor's own default fires on
-    // click — preventing it there is what keeps a static internal link from
-    // also loading its href as a page.
-    const onClick = (event: MouseEvent) => {
-      const target = event.target as Element | null;
-      if (target?.closest?.(STACK_LINK_SELECTOR)) event.preventDefault();
-    };
-
-    container.addEventListener('mousedown', onMouseDown);
-    container.addEventListener('mouseup', onMouseUp);
-    container.addEventListener('click', onClick);
-    return () => {
-      container.removeEventListener('mousedown', onMouseDown);
-      container.removeEventListener('mouseup', onMouseUp);
-      container.removeEventListener('click', onClick);
-    };
-  }, [controller, followLink]);
+  useStackRowPointer({
+    parentRef,
+    controller,
+    updatePanel,
+    followLink,
+    setMenuTarget,
+  });
 
   // Bookmarks live in local storage; another tab changing them arrives here.
   useEffect(() => {
