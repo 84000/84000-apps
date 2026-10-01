@@ -1,19 +1,12 @@
-import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
-import type { EditorView } from '@tiptap/pm/view';
 import { Fragment, type Node as PMNode, ResolvedPos } from '@tiptap/pm/model';
 import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
-import { PassageNodeSSR, type PassageReference } from './PassageNode.ssr';
+import { PassageNodeSSR } from './PassageNode.ssr';
 import {
-  PASSAGE_CONTENT_CLASS,
-  PASSAGE_INNER_CLASS,
-  PASSAGE_LABEL_CLASS,
-  PASSAGE_REFERENCES_CLASS,
-  PASSAGE_WRAPPER_CLASS,
-} from './classes';
-
-const BOOKMARK_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
+  handleCompareSourceClipboard,
+  syncPassageChrome,
+} from './passage-chrome';
+import { createPassageNodeView } from './passage-node-view';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -71,91 +64,6 @@ const currentPassageDepth = ($from: ResolvedPos) => {
   return passageDepth;
 };
 
-// True when the current native (browser) selection sits inside the read-only
-// Tibetan compare source, which is rendered outside ProseMirror's content DOM.
-const selectionInCompareSource = () => {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || !selection.focusNode) {
-    return false;
-  }
-  const node = selection.focusNode;
-  const el = node.nodeType === 3 ? node.parentElement : (node as HTMLElement);
-  return !!el?.closest('[data-compare-source]');
-};
-
-// Returning true makes ProseMirror skip its own copy/cut handling (without
-// calling preventDefault), so the browser's native clipboard behavior runs and
-// copies the selected Tibetan text.
-const handleCompareSourceClipboard = () => selectionInCompareSource();
-
-const compareLeadingSpaceClass = (node: PMNode): string => {
-  const firstChild = node.content.firstChild;
-  if (firstChild?.attrs.leadingSpace) return 'md:mt-5';
-  if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
-    return 'md:mt-2';
-  }
-  return 'md:mt-1';
-};
-
-// Imperatively populates the per-passage chrome (compare-mode Tibetan source and
-// the reader bookmark icon) that lives outside ProseMirror's editable content.
-// Driven by editor.storage.passage.chrome, refreshed on transactions and on
-// explicit navigation changes (via refreshChrome).
-const syncPassageChrome = (view: EditorView, editor: Editor, force = false) => {
-  const chrome = editor.storage.passage?.chrome;
-  const toh = chrome?.toh;
-  const isCompare = !!chrome?.isCompare;
-  const bookmarked = chrome?.bookmarkedUuids ?? new Set<string>();
-  const editable = editor.isEditable;
-
-  const needsWork = isCompare || (!editable && bookmarked.size > 0);
-  if (!needsWork && !force) return;
-
-  view.state.doc.descendants((node, pos) => {
-    if (node.type.name !== 'passage') return true;
-    const dom = view.nodeDOM(pos);
-    if (!dom || dom.nodeType !== 1) return false;
-    const el = dom as HTMLElement;
-
-    // Writes here mutate the node's DOM, which ProseMirror's mutation observer
-    // watches — so only touch the DOM when the desired state actually differs,
-    // otherwise redundant writes trigger an update→mutate→update feedback loop.
-    const csDiv = el.querySelector<HTMLElement>(
-      ':scope > .passage-compare-source',
-    );
-    const csText = csDiv?.querySelector<HTMLElement>('.passage-compare-text');
-    if (csDiv && csText) {
-      const alignment = node.attrs.alignments?.[toh ?? ''] as
-        | { tibetan?: string }
-        | undefined;
-      const tibetan = isCompare && toh ? (alignment?.tibetan ?? '').trim() : '';
-      if (csText.textContent !== tibetan) csText.textContent = tibetan;
-      const shouldHide = !tibetan;
-      if (csDiv.classList.contains('hidden') !== shouldHide) {
-        csDiv.classList.toggle('hidden', shouldHide);
-      }
-      const leading = tibetan ? compareLeadingSpaceClass(node) : 'md:mt-1';
-      for (const cls of ['md:mt-1', 'md:mt-2', 'md:mt-5']) {
-        const want = cls === leading;
-        if (csDiv.classList.contains(cls) !== want) {
-          csDiv.classList.toggle(cls, want);
-        }
-      }
-    }
-
-    const bm = el.querySelector<HTMLElement>(':scope .passage-bookmark');
-    if (bm) {
-      const uuid = node.attrs.uuid as string | undefined;
-      const show = !editable && !!uuid && bookmarked.has(uuid);
-      if (bm.classList.contains('hidden') === show) {
-        bm.classList.toggle('hidden', !show);
-      }
-    }
-
-    return false;
-  });
-};
-
 export const PassageNode = PassageNodeSSR.extend({
   addStorage(): PassageStorage {
     return {
@@ -166,131 +74,8 @@ export const PassageNode = PassageNodeSSR.extend({
     };
   },
 
-  // A plain DOM node view (no React) — so interacting with a passage never
-  // remounts a React tree the way the old ReactNodeViewRenderer did. The
-  // interactive menu/dialogs live in the stable PassageMenuOverlay; the
-  // compare-source / bookmark chrome is built here and populated by the view
-  // plugin in addProseMirrorPlugins. ignoreMutation shields that chrome from
-  // ProseMirror's mutation observer so syncing it never triggers a reparse loop.
   addNodeView() {
-    return ({ node }) => {
-      let current = node;
-
-      const wrapper = document.createElement('div');
-      wrapper.className = PASSAGE_WRAPPER_CLASS;
-
-      const applyWrapperAttrs = (n: PMNode) => {
-        if (n.attrs.uuid) wrapper.id = n.attrs.uuid;
-        if (n.attrs.toh) wrapper.setAttribute('data-toh', n.attrs.toh);
-        else wrapper.removeAttribute('data-toh');
-        if (n.attrs.type)
-          wrapper.setAttribute('data-passage-type', n.attrs.type);
-        else wrapper.removeAttribute('data-passage-type');
-        if (n.attrs.invalid) wrapper.setAttribute('data-invalid', 'true');
-        else wrapper.removeAttribute('data-invalid');
-      };
-      applyWrapperAttrs(node);
-
-      const column = document.createElement('div');
-      column.className = 'w-full';
-      const inner = document.createElement('div');
-      inner.className = PASSAGE_INNER_CLASS;
-
-      // Label doubles as the dropdown trigger (handled by the click plugin).
-      const label = document.createElement('div');
-      label.className = PASSAGE_LABEL_CLASS;
-      label.setAttribute('contenteditable', 'false');
-      label.setAttribute('data-passage-label', '');
-      if (node.attrs.uuid) label.setAttribute('data-uuid', node.attrs.uuid);
-      label.textContent = node.attrs.label || '';
-
-      const bookmark = document.createElement('div');
-      bookmark.className =
-        'passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end';
-      bookmark.setAttribute('contenteditable', 'false');
-      bookmark.innerHTML = BOOKMARK_SVG;
-
-      const content = document.createElement('div');
-      content.className = PASSAGE_CONTENT_CLASS;
-
-      inner.append(label, bookmark, content);
-
-      const buildReferences = (n: PMNode): HTMLElement | null => {
-        const references = (n.attrs.references ?? []) as PassageReference[];
-        if (!references.length) return null;
-        const div = document.createElement('div');
-        div.className = PASSAGE_REFERENCES_CLASS;
-        div.setAttribute('contenteditable', 'false');
-        references.forEach((ref) => {
-          const a = document.createElement('a');
-          a.href = `#${ref.uuid}`;
-          a.setAttribute('data-passage-reference', '');
-          a.setAttribute('data-ref-uuid', ref.uuid);
-          a.setAttribute('data-ref-type', ref.type);
-          ref.toh && a.setAttribute('data-toh', ref.toh);
-          a.textContent = ref.label || ref.uuid.slice(0, 6);
-          div.append(a);
-        });
-        return div;
-      };
-      let referencesEl = buildReferences(node);
-      if (referencesEl) inner.append(referencesEl);
-
-      column.append(inner);
-
-      // Second flex column: compare-mode Tibetan source (hidden until synced).
-      const compare = document.createElement('div');
-      compare.className = 'passage-compare-source w-full hidden md:mt-1';
-      compare.setAttribute('contenteditable', 'false');
-      compare.setAttribute('data-compare-source', '');
-      const compareInner = document.createElement('div');
-      compareInner.className = 'passage pl-6 @c/sidebar:pl-4';
-      const compareText = document.createElement('div');
-      compareText.className =
-        'passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2';
-      compareInner.append(compareText);
-      compare.append(compareInner);
-
-      wrapper.append(column, compare);
-
-      return {
-        dom: wrapper,
-        contentDOM: content,
-        update: (updated: PMNode) => {
-          if (updated.type.name !== 'passage') return false;
-          applyWrapperAttrs(updated);
-
-          const nextLabel = updated.attrs.label || '';
-          if (label.textContent !== nextLabel) label.textContent = nextLabel;
-          const nextUuid = (updated.attrs.uuid as string) || '';
-          if (label.getAttribute('data-uuid') !== nextUuid) {
-            label.setAttribute('data-uuid', nextUuid);
-          }
-
-          const prevRefs = JSON.stringify(current.attrs.references ?? []);
-          const nextRefs = JSON.stringify(updated.attrs.references ?? []);
-          if (prevRefs !== nextRefs) {
-            referencesEl?.remove();
-            referencesEl = buildReferences(updated);
-            if (referencesEl) inner.append(referencesEl);
-          }
-
-          current = updated;
-          return true;
-        },
-        // Ignore everything in the non-editable chrome (label/bookmark/compare
-        // source) and defer to ProseMirror only for the editable content hole.
-        // This must include selection-type records: ignoring them leaves the
-        // browser's native selection in place so the Tibetan compare source can
-        // be selected/copied, instead of ProseMirror pulling the selection back
-        // into the editable content. It also keeps the view plugin's chrome
-        // writes from triggering a mutation→reparse loop.
-        ignoreMutation: (mutation: MutationRecord | { type: string }) => {
-          const target = (mutation as MutationRecord).target as Node | null;
-          return !target || !content.contains(target);
-        },
-      };
-    };
+    return createPassageNodeView;
   },
 
   addCommands() {
