@@ -143,8 +143,16 @@ export const useStackSelection = (controller: PassageStackController) => {
       const count = controller.selectedUuids().length;
       if (!controller.deletePassageSelection() || count < 2) return;
       // Several passages go at a keystroke, so say so and offer the way back.
+      const deleted = controller.work.log.peekUndo();
       toast(`Deleted ${count} passages`, {
-        action: { label: 'Undo', onClick: () => controller.undo() },
+        action: {
+          label: 'Undo',
+          // Only while the delete is still the last thing done: otherwise the
+          // button would undo something else.
+          onClick: () => {
+            if (controller.work.log.peekUndo() === deleted) controller.undo();
+          },
+        },
       });
     };
 

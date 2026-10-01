@@ -12,6 +12,8 @@ import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
+import { useNavigation } from '../shared/NavigationContext';
+import type { PanelName, TabName } from '../shared/types';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
@@ -96,6 +98,8 @@ export const StackWorkProvider = ({
     };
   }, [stack, registerSaveHandler, dirtyStore]);
 
+  const { panels, updatePanel } = useNavigation();
+
   // Undo and redo with focus outside any editor, such as after a label-menu
   // action. The editors bind their own; this covers the rest of the page, once
   // per work, since every view shares the one history.
@@ -117,12 +121,22 @@ export const StackWorkProvider = ({
       if (focus === null) return;
       event.preventDefault();
       if (!focus) return;
-      const tab = work.spine.meta(focus.uuid)?.tab;
-      if (tab) stack.controllerFor(tab)?.focusPassage(focus.uuid, focus.where);
+      const meta = work.spine.meta(focus.uuid);
+      if (!meta) return;
+      // The passage may sit in a tab that isn't showing.
+      const panel = meta.panel as PanelName;
+      const shown = panels[panel];
+      if (!shown?.open || shown.tab !== meta.tab) {
+        updatePanel({
+          name: panel,
+          state: { open: true, tab: meta.tab as TabName },
+        });
+      }
+      stack.controllerFor(meta.tab)?.focusPassage(focus.uuid, focus.where);
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [stack]);
+  }, [stack, panels, updatePanel]);
 
   useEffect(() => {
     let cancelled = false;

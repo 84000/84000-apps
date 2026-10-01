@@ -1,7 +1,10 @@
 import { renderHook } from '@testing-library/react';
+import { toast } from '@eightyfourthousand/design-system';
 
 import type { PassageStackController } from './PassageStackController';
 import { useStackSelection } from './useStackSelection';
+
+jest.mock('@eightyfourthousand/design-system', () => ({ toast: jest.fn() }));
 
 /** Two rows; the first has a Tibetan column, as in Compare. */
 const rows = () => {
@@ -65,5 +68,38 @@ describe('useStackSelection', () => {
     drag('tibetan');
 
     expect(stack.setPassageSelection).not.toHaveBeenCalled();
+  });
+});
+
+describe('the undo offered after deleting passages', () => {
+  /** Delete two selected passages; returns the toast's Undo and the stack. */
+  const deleteTwo = () => {
+    const log = { last: { kind: 'delete' } as unknown };
+    const stack = {
+      clearPassageSelection: jest.fn(),
+      hasPassageSelection: jest.fn(() => true),
+      selectedUuids: jest.fn(() => ['a', 'b']),
+      deletePassageSelection: jest.fn(() => true),
+      undo: jest.fn(),
+      work: { log: { peekUndo: () => log.last } },
+    } as unknown as PassageStackController & { undo: jest.Mock };
+    renderHook(() => useStackSelection(stack));
+    (toast as jest.Mock).mockClear();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
+    const undo = (toast as jest.Mock).mock.calls[0][1].action.onClick;
+    return { stack, log, undo: undo as () => void };
+  };
+
+  it('undoes the delete', () => {
+    const { stack, undo } = deleteTwo();
+    undo();
+    expect(stack.undo).toHaveBeenCalled();
+  });
+
+  it('does nothing once something else was done since', () => {
+    const { stack, log, undo } = deleteTwo();
+    log.last = { kind: 'text' };
+    undo();
+    expect(stack.undo).not.toHaveBeenCalled();
   });
 });
