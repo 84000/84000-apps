@@ -4,7 +4,7 @@ import type { SearchResult } from '@eightyfourthousand/lib-search';
 import { ReaderSearchButton } from './ReaderSearchButton';
 
 const mockUpdatePanel = jest.fn();
-const mockSearchButton = jest.fn((_props: unknown) => null);
+const mockSearchButton = jest.fn<null, [unknown]>(() => null);
 
 jest.mock('@eightyfourthousand/lib-search', () => ({
   SearchButton: (props: unknown) => mockSearchButton(props),
