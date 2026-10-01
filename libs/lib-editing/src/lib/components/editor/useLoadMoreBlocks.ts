@@ -124,7 +124,6 @@ export const useLoadMoreBlocks = ({
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
       setEndIsLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the refs and setters are the provider's, so stable
   }, [
     uuid,
     filter,
@@ -136,6 +135,10 @@ export const useLoadMoreBlocks = ({
     refreshEditorBaseline,
     setNavigating,
     tab,
+    handledEndLoadRequestRef,
+    isNavigatingRef,
+    setEndCursor,
+    setEndIsLoading,
   ]);
 
   useEffect(() => {
@@ -204,7 +207,6 @@ export const useLoadMoreBlocks = ({
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
       setStartIsLoading(false);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the refs and setters are the provider's, so stable
   }, [
     uuid,
     filter,
@@ -216,5 +218,9 @@ export const useLoadMoreBlocks = ({
     refreshEditorBaseline,
     setNavigating,
     tab,
+    handledStartLoadRequestRef,
+    isNavigatingRef,
+    setStartCursor,
+    setStartIsLoading,
   ]);
 };

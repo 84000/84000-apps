@@ -230,8 +230,17 @@ export const useSaveLifecycle = ({
       );
       return { outcome: 'failed', dirty: true };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the refs are the provider's, so stable
-  }, [client, work.uuid, getEditorUuids, applyReplacedPassages, setNavigating]);
+  }, [
+    client,
+    work.uuid,
+    getEditorUuids,
+    applyReplacedPassages,
+    setNavigating,
+    dirtyUuidsRef,
+    editorCache,
+    isNormalizingForSaveRef,
+    savedBaselineUuidsByEditorRef,
+  ]);
 
   // The stack, when it is mounted, and the paginated editors each save what
   // they hold; one button and one toast cover both.
@@ -268,8 +277,7 @@ export const useSaveLifecycle = ({
     } finally {
       isSavingRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the refs are the provider's, so stable
-  }, [savePaginated, dirtyStore]);
+  }, [savePaginated, dirtyStore, isSavingRef, saveHandlerRef]);
 
   return { save };
 };
