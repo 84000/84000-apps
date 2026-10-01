@@ -5,7 +5,7 @@ import type {
 import type { UndoManager } from 'yjs';
 
 import { renderTranslationHTML } from '../reader/translation-html';
-import type { PassageStackControllerOptions } from './PassageStackController';
+import type { PassageStackControllerOptions } from './types';
 
 /**
  * Rough characters per rendered line, for unmeasured row height estimates.

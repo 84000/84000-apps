@@ -4,7 +4,7 @@ import type {
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
-import type { PassageStackControllerOptions } from './PassageStackController';
+import type { PassageStackControllerOptions } from './types';
 
 /**
  * A stack view's hydration window: scroll-driven, following the virtualized
