@@ -4,73 +4,22 @@ import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
 import type { BodyItemType } from '@eightyfourthousand/data-access';
-import {
-  CommandLog,
-  type ContentChange,
-  type StructuralCommand,
-} from './command-log';
-import { withEndNoteLabels, withoutEndNoteLinks } from './end-note-links';
+import { CommandLog, type ContentChange } from './command-log';
 import { PassageDocStore } from './doc-store';
+import { EndNoteLinkUpkeep } from './end-note-link-upkeep';
+import { HydrationWindows } from './hydration-windows';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
 import type { PassageDoc } from './passage-doc';
 import { Spine, type SpineSeed } from './spine';
 import { withFreshSplitIdentities } from './split-identities';
-import type {
-  FocusTarget,
-  LabelChange,
-  PassageMeta,
-  SpineRange,
-} from './types';
-
-const EMPTY_PARAGRAPH: JSONContent = { type: 'paragraph' };
-
-/** The window key a single-view consumer gets without asking for one. */
-const DEFAULT_WINDOW = 'default';
-
-/**
- * Collapse repeated label changes for one passage into a single change.
- *
- * An operation that removes and inserts in the same breath renumbers the run
- * twice, so a passage can appear in both batches. Undo applies each change's
- * `from` independently, so a passage listed twice would be restored to the
- * intermediate label rather than the one it started with: keep the first
- * `from` and the last `to`, and drop whatever ends where it began.
- */
-const collapseLabelChanges = (changes: LabelChange[]): LabelChange[] => {
-  const merged = new Map<string, LabelChange>();
-  changes.forEach((change) => {
-    const seen = merged.get(change.uuid);
-    if (seen) seen.to = change.to;
-    else merged.set(change.uuid, { ...change });
-  });
-  return [...merged.values()].filter((change) => change.from !== change.to);
-};
-
-/** An empty paragraph carries no text and no structure worth keeping. */
-const isBlankParagraph = (node: JSONContent | undefined): boolean =>
-  !!node && node.type === 'paragraph' && !node.content?.length;
-
-/**
- * Trim a blank paragraph from either side of a merge seam.
- *
- * Only a paragraph, and only an empty one: an empty heading or line group is
- * structure a merge has no business discarding, and a paragraph holding even
- * whitespace is content. At most one side is trimmed, so merging two blank
- * passages still leaves a block to hold the caret.
- */
-const joinAtSeam = (
-  head: JSONContent[],
-  tail: JSONContent[],
-): [JSONContent[], JSONContent[]] => {
-  if (tail.length && isBlankParagraph(tail[0])) {
-    return [head, tail.slice(1)];
-  }
-  if (head.length && isBlankParagraph(head[head.length - 1])) {
-    return [head.slice(0, -1), tail];
-  }
-  return [head, tail];
-};
+import type { FocusTarget, PassageMeta, SpineRange } from './types';
+import {
+  EMPTY_PARAGRAPH,
+  collapseLabelChanges,
+  joinAtSeam,
+} from './work-document-helpers';
+import { WorkHistory } from './work-history';
 
 export type WorkDocumentOptions = {
   workUuid: string;
@@ -117,30 +66,16 @@ export class WorkDocument {
   /** Public because a caller building a slice to paste needs the same one. */
   readonly schema: Schema;
 
-  private loader?: PassageLoader;
   private newUuid: () => string;
   private listeners = new Set<() => void>();
-  /** Ranges each view currently has on screen, so hydration is their union. */
-  /**
-   * What each view currently has on screen, so hydration is their union.
-   *
-   * Passages rather than positions: a position is an index into a list the
-   * other views are appending to, so a window recorded as `100..130` stops
-   * meaning the same passages the moment another section loads a page.
-   */
-  private windows = new Map<string, { uuids: string[]; keep: Set<string> }>();
-  /** Each endnote's label as its links last showed it. */
-  private endNoteLabels = new Map<string, string>();
-  /** Passages whose endnote links have been numbered from the spine. */
-  private numbered = new Set<string>();
+  private hydration: HydrationWindows;
+  private links: EndNoteLinkUpkeep;
+  private history: WorkHistory;
   private unobserve: (() => void)[] = [];
-  /** Passages already checked for links to deleted endnotes. */
-  private unlinked = new Set<string>();
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
     this.schema = options.schema;
-    this.loader = options.loader;
     this.newUuid = options.newUuid ?? uuidv4;
     this.spine = new Spine(options.workUuid, options.spineDoc);
     this.store = new PassageDocStore({
@@ -149,10 +84,24 @@ export class WorkDocument {
       loader: options.loader,
       textOrigins: options.textOrigins,
     });
+    this.hydration = new HydrationWindows({
+      spine: this.spine,
+      store: this.store,
+      loader: options.loader,
+      notify: () => this.notify(),
+    });
+    this.links = new EndNoteLinkUpkeep(this.spine, this.store);
+    this.history = new WorkHistory({
+      spine: this.spine,
+      store: this.store,
+      log: this.log,
+      links: this.links,
+      notify: () => this.notify(),
+    });
     this.unobserve.push(
-      this.spine.observe(this.renumberLinks),
-      this.store.observe(this.unlinkLoadedPassages),
-      this.store.observe(this.numberNewPassages),
+      this.spine.observe(this.links.renumberLinks),
+      this.store.observe(this.links.unlinkLoadedPassages),
+      this.store.observe(this.links.numberNewPassages),
     );
   }
 
@@ -172,42 +121,16 @@ export class WorkDocument {
    * otherwise release the document out from under a mounted editor. Dirty
    * passages are already safe, so this is about the clean ones.
    */
-  async hydrateWindow(
+  hydrateWindow(
     range: SpineRange,
     options: { keep?: Iterable<string>; key?: string } = {},
   ): Promise<PassageDoc[]> {
-    const key = options.key ?? DEFAULT_WINDOW;
-    const mine = this.windowUuids(range);
-    this.windows.set(key, { uuids: mine, keep: new Set(options.keep ?? []) });
-
-    // The union of every open window. Views onto one work scroll
-    // independently — the editor draws a tab per panel — so releasing what
-    // this one has left behind would release what another one is drawing.
-    const wanted = new Set<string>();
-    this.windows.forEach((window) => {
-      window.uuids.forEach((uuid) => wanted.add(uuid));
-      window.keep.forEach((uuid) => wanted.add(uuid));
-    });
-
-    const docs = await this.store.hydrateMany([...wanted]);
-    this.store.releaseOutside(wanted);
-    this.notify();
-
-    // Only this window's documents come back: a consumer attaches its own
-    // bookkeeping to what it draws, and two of them observing one document
-    // would record every edit to it twice.
-    const drawn = new Set(mine);
-    return docs.filter((doc) => drawn.has(doc.uuid));
+    return this.hydration.hydrate(range, options);
   }
 
   /** Forget a window, so what only it held can be released. */
   releaseWindow(key: string) {
-    this.windows.delete(key);
-  }
-
-  private windowUuids(range: SpineRange): string[] {
-    const buffered = this.loader?.bufferedRange(range) ?? range;
-    return this.spine.slice(buffered).map((entry) => entry.uuid);
+    this.hydration.release(key);
   }
 
   /** Seed the spine from passage metadata, e.g. on a work's first visit. */
@@ -251,7 +174,7 @@ export class WorkDocument {
     const tailDoc = this.store.ensure(entry.uuid);
     tailDoc.replaceContent(tail);
 
-    this.record({
+    this.history.record({
       kind: 'split',
       content: [
         { uuid, before, after: head },
@@ -307,7 +230,7 @@ export class WorkDocument {
     const labelChanges = this.spine.remove([uuid], { deleted: true });
     previous.replaceContent(merged);
 
-    this.record({
+    this.history.record({
       kind: 'merge',
       content: [
         { uuid: previousUuid, before: previousBefore, after: merged },
@@ -359,9 +282,9 @@ export class WorkDocument {
       return { uuid, before, after };
     });
     // The new content was made before the spine renumbered.
-    this.numberLinks(others.map(({ uuid }) => uuid));
+    this.links.numberLinks(others.map(({ uuid }) => uuid));
 
-    this.record({
+    this.history.record({
       kind: 'insert',
       content: [
         { uuid: entry.uuid, before: null, after: { type: 'doc', content } },
@@ -399,9 +322,9 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
-    content.push(...this.unlink(targets.map((t) => t.uuid)));
+    content.push(...this.links.unlink(targets.map((t) => t.uuid)));
 
-    this.record({
+    this.history.record({
       kind: 'delete',
       content,
       inserted: [],
@@ -479,7 +402,7 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
-    content.push(...this.unlink(targets.map((t) => t.uuid)));
+    content.push(...this.links.unlink(targets.map((t) => t.uuid)));
     const inserted = seeds.map((seed, i) => {
       const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
       labelChanges.push(...changes);
@@ -489,7 +412,7 @@ export class WorkDocument {
       return { meta: entry, index: at + i };
     });
 
-    this.record({
+    this.history.record({
       kind: 'delete',
       content,
       inserted,
@@ -504,71 +427,6 @@ export class WorkDocument {
 
     this.notify();
     return true;
-  }
-
-  /**
-   * Take the links to deleted passages out of every other held passage, and
-   * return the changes for the delete's command, so one undo puts both back.
-   *
-   * Passages that aren't held need nothing: the save deletes their links.
-   */
-  private unlink(deleted: string[]): ContentChange[] {
-    const gone = new Set(deleted);
-    return this.store.held().flatMap((uuid) => {
-      if (gone.has(uuid)) return [];
-      const doc = this.store.ensure(uuid);
-      const before = doc.toJSON();
-      const after = withoutEndNoteLinks(before, gone);
-      if (!after) return [];
-      doc.replaceContent(after);
-      return [{ uuid, before, after }];
-    });
-  }
-
-  /**
-   * Bring endnote links' numbers in line with the spine after endnotes were
-   * renumbered. Only the links to endnotes whose label changed are touched.
-   */
-  private renumberLinks = () => {
-    const changed = new Set<string>();
-    this.spine.entries().forEach(({ uuid, type, label }) => {
-      if (type !== 'endnotes' || this.endNoteLabels.get(uuid) === label) return;
-      this.endNoteLabels.set(uuid, label);
-      changed.add(uuid);
-    });
-    if (changed.size) this.numberLinks(this.store.held(), changed);
-  };
-
-  /**
-   * Number the links in passages newly hydrated. One loaded from the server
-   * shows the stored numbers, which unsaved renumbering may have moved on.
-   */
-  private numberNewPassages = () => {
-    const held = new Set(this.store.held());
-    // A document is adopted before it is seeded, so an empty one waits.
-    const fresh = [...held].filter(
-      (uuid) =>
-        !this.numbered.has(uuid) &&
-        (this.store.peek(uuid)?.content.length ?? 0) > 0,
-    );
-    this.numbered = new Set([
-      ...[...this.numbered].filter((uuid) => held.has(uuid)),
-      ...fresh,
-    ]);
-    if (fresh.length) this.numberLinks(fresh);
-  };
-
-  private numberLinks(uuids: string[], only?: ReadonlySet<string>) {
-    uuids.forEach((uuid) => {
-      const doc = this.store.peek(uuid);
-      if (!doc) return;
-      const json = withEndNoteLabels(doc.toJSON(), (endNote) =>
-        only && !only.has(endNote)
-          ? undefined
-          : this.spine.meta(endNote)?.label,
-      );
-      if (json) doc.adjust(json);
-    });
   }
 
   /**
@@ -591,37 +449,12 @@ export class WorkDocument {
     if (adopted.size) this.log.forgetSnapshotsOf(adopted);
   }
 
-  /**
-   * Take links to endnotes deleted since the last save out of passages loaded
-   * after the delete: they come from the server with the link, and the save
-   * that deletes the link rows would otherwise be undone by their next edit.
-   */
-  private unlinkLoadedPassages = () => {
-    const held = new Set(this.store.held());
-    const fresh = [...held].filter(
-      (uuid) =>
-        !this.unlinked.has(uuid) &&
-        (this.store.peek(uuid)?.content.length ?? 0) > 0,
-    );
-    this.unlinked = new Set([
-      ...[...this.unlinked].filter((uuid) => held.has(uuid)),
-      ...fresh,
-    ]);
-    const deleted = new Set(this.spine.removedSinceSave());
-    if (!deleted.size) return;
-    fresh.forEach((uuid) => {
-      const doc = this.store.peek(uuid);
-      const json = doc && withoutEndNoteLinks(doc.toJSON(), deleted);
-      if (json) doc.replaceContent(json);
-    });
-  };
-
   /** Move a passage to another position. */
   reorder(uuid: string, toIndex: number): boolean {
     const result = this.spine.move(uuid, toIndex);
     if (!result.moved || result.from === result.to) return result.moved;
 
-    this.record({
+    this.history.record({
       kind: 'reorder',
       content: [],
       inserted: [],
@@ -642,7 +475,7 @@ export class WorkDocument {
     if (!meta || meta.label === label) return false;
 
     this.spine.setLabel(uuid, label);
-    this.record({
+    this.history.record({
       kind: 'label',
       content: [],
       inserted: [],
@@ -673,51 +506,12 @@ export class WorkDocument {
    * undo.
    */
   undo(): FocusTarget | null | undefined {
-    while (this.log.depth) {
-      const command = this.log.popUndo();
-      if (!command) return null;
-
-      if (command.kind !== 'text') {
-        this.log.suppress(() => this.applyInverse(command));
-        this.log.pushRedo(command);
-        this.notify();
-        return command.focusAfterUndo;
-      }
-
-      const doc = this.store.peek(command.uuid);
-      if (doc?.undo()) {
-        this.log.pushRedo(command);
-        this.notify();
-        return { uuid: command.uuid, where: 'end' };
-      }
-      // The passage was released, taking its text history with it. Drop the
-      // entry and try the one before it rather than swallowing the undo.
-    }
-    return null;
+    return this.history.undo();
   }
 
   /** Redo the last undone operation. */
   redo(): FocusTarget | null | undefined {
-    while (this.log.redoDepth) {
-      const command = this.log.popRedo();
-      if (!command) return null;
-
-      if (command.kind !== 'text') {
-        this.log.suppress(() => this.applyForward(command));
-        this.log.pushUndo(command);
-        this.notify();
-        return command.focusAfterRedo;
-      }
-
-      const doc = this.store.peek(command.uuid);
-      // Yjs reports the redone edit as a new one, which isn't one to log.
-      if (doc && this.log.suppress(() => doc.redo())) {
-        this.log.pushUndo(command);
-        this.notify();
-        return { uuid: command.uuid, where: 'end' };
-      }
-    }
-    return null;
+    return this.history.redo();
   }
 
   // --------------------------------------------------------- observation
@@ -731,91 +525,12 @@ export class WorkDocument {
   /** Release every document. The spine survives — it is cheap to keep. */
   destroy() {
     this.unobserve.forEach((stop) => stop());
-    this.windows.clear();
+    this.hydration.clear();
     this.store.destroy();
     this.listeners.clear();
   }
 
   // ------------------------------------------------------------- private
-
-  private record(command: StructuralCommand) {
-    this.log.push(command);
-    // Typing next follows the command in the log, so it mustn't join the
-    // stack item of typing before it.
-    command.content.forEach(({ uuid }) =>
-      this.store.peek(uuid)?.undoManager.stopCapturing(),
-    );
-  }
-
-  /**
-   * Replay a command in the direction it was originally applied.
-   *
-   * Order is load bearing: passages leave the spine before the surviving
-   * passages take their merged content, and join it before theirs is written,
-   * so no intermediate state has content without a position or the reverse.
-   */
-  private applyForward(command: StructuralCommand) {
-    this.spine.remove(
-      command.removed.map((change) => change.meta.uuid),
-      { renumber: false, deleted: true },
-    );
-    [...command.inserted]
-      .sort((a, b) => a.index - b.index)
-      .forEach((change) =>
-        this.spine.insert(change.meta, change.index, { renumber: false }),
-      );
-    command.moved.forEach((move) =>
-      this.spine.move(move.uuid, move.to, { renumber: false }),
-    );
-    command.content.forEach((change) => {
-      if (change.after === null) return;
-      this.store.ensure(change.uuid).replaceContent(change.after);
-    });
-    this.applyLabels(command.labels, 'to');
-    this.numberLinks(command.content.map(({ uuid }) => uuid));
-    this.markRestoredDirty();
-  }
-
-  /** Replay a command backwards. The mirror of `applyForward`. */
-  private applyInverse(command: StructuralCommand) {
-    this.spine.remove(
-      command.inserted.map((change) => change.meta.uuid),
-      { renumber: false, deleted: true },
-    );
-    [...command.removed]
-      .sort((a, b) => a.index - b.index)
-      .forEach((change) =>
-        this.spine.insert(change.meta, change.index, { renumber: false }),
-      );
-    [...command.moved]
-      .reverse()
-      .forEach((move) =>
-        this.spine.move(move.uuid, move.from, { renumber: false }),
-      );
-    command.content.forEach((change) => {
-      if (change.before === null) return;
-      this.store.ensure(change.uuid).replaceContent(change.before);
-    });
-    this.applyLabels(command.labels, 'from');
-    this.numberLinks(command.content.map(({ uuid }) => uuid));
-    this.markRestoredDirty();
-  }
-
-  /**
-   * A passage put back after a save deleted it may hold exactly the content
-   * it had, so nothing marks it edited, yet the server no longer has it.
-   */
-  private markRestoredDirty() {
-    this.spine
-      .restoredSinceSave()
-      .forEach((uuid) => this.store.peek(uuid)?.markDirty());
-  }
-
-  private applyLabels(changes: LabelChange[], side: 'from' | 'to') {
-    this.spine.applyLabels(
-      changes.map((change) => ({ uuid: change.uuid, label: change[side] })),
-    );
-  }
 
   /** The document size of a run of blocks, as a caret position. */
   private contentSize(content: JSONContent[]): number {
