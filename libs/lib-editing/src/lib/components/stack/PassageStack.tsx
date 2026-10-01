@@ -226,18 +226,17 @@ export const PassageStack = ({
     return () => window.removeEventListener('storage', onStorage);
   }, [controller]);
 
-  // Keys typed between click and editor mount are buffered and replayed.
+  // Text typed between click and editor mount is buffered and replayed.
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!controller.hasPendingFocus()) return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key.length === 1) {
-        controller.bufferKey(event.key);
-        event.preventDefault();
-      }
+    const onTyping = (event: KeyboardEvent | InputEvent) => {
+      if (controller.bufferTyping(event)) event.preventDefault();
     };
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
+    document.addEventListener('keydown', onTyping, true);
+    document.addEventListener('beforeinput', onTyping, true);
+    return () => {
+      document.removeEventListener('keydown', onTyping, true);
+      document.removeEventListener('beforeinput', onTyping, true);
+    };
   }, [controller]);
 
   // Keystroke-to-paint latency: stamp on keydown, sample after the next

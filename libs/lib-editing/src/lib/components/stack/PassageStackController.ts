@@ -334,14 +334,13 @@ export class PassageStackController {
 
   getFocusedUuid = () => this.live.getFocusedUuid();
 
-  hasPendingFocus = () => this.live.hasPendingFocus();
-
   /**
-   * Buffer keys typed between a focus request and the editor mounting, so a
-   * click-and-immediately-type never drops characters.
+   * Buffer text typed between a focus request and the editor mounting, so a
+   * click-and-immediately-type never drops characters. Returns whether the
+   * event was taken; the caller then prevents its default.
    */
-  bufferKey(key: string) {
-    this.live.bufferKey(key);
+  bufferTyping(event: KeyboardEvent | InputEvent) {
+    return this.live.bufferTyping(event);
   }
 
   /** Recenter the live window when an editor gains focus by any means. */
