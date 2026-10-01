@@ -172,7 +172,15 @@ export const EnsureUniqueUuids = Extension.create({
                   seen.has(existing))
               ) {
                 wrapped.add(parent);
-                updates.push({ pos, attrs: { ...node.attrs, uuid: follow } });
+                // A copy, like any duplicate: it must not take the original's
+                // parameter annotations with it.
+                updates.push({
+                  pos,
+                  attrs: resetDependentAttrs(node, {
+                    ...node.attrs,
+                    uuid: follow,
+                  }),
+                });
                 return true;
               }
               if (isStructuralParagraph(node, parent.attrs.uuid)) {

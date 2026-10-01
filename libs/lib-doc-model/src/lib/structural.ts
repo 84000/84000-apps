@@ -1,10 +1,15 @@
 import type { Node } from '@tiptap/pm/model';
 
-/** Whether a node is a paragraph carrying no attributes a row would save. */
+/**
+ * Whether a node is a paragraph carrying nothing a row of its own would save:
+ * no alignment or word break, and not a line holding only inline atoms (such
+ * as a folio reference on its own line), whose row is what keeps the break.
+ */
 export const isPlainParagraph = (node: Node): boolean =>
   node.type.name === 'paragraph' &&
   !node.attrs.textAlign &&
-  !node.attrs.wordBreak;
+  !node.attrs.wordBreak &&
+  !(node.childCount > 0 && !node.textContent);
 
 /**
  * Whether a node is a paragraph that only wraps its parent's text.

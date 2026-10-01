@@ -275,6 +275,49 @@ describe('splitting inside a wrapper', () => {
     }
   });
 
+  // The new item's paragraph is a copy: it takes the item's new uuid, and
+  // must not keep the original paragraph's indent under the same uuid, or the
+  // export has two indent rows with one key and the save fails.
+  it("doesn't copy an indent into the new list item", () => {
+    const indented = stackSchema.nodeFromJSON({
+      type: 'doc',
+      content: [
+        {
+          type: 'bulletList',
+          attrs: { uuid: 'list-1' },
+          content: [
+            {
+              type: 'listItem',
+              attrs: { uuid: 'item-1' },
+              content: [
+                {
+                  type: 'paragraph',
+                  attrs: { uuid: 'item-1', indent: { uuid: 'indent-1' } },
+                  content: [{ type: 'text', text: 'onetwo' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const split = withPlugin(stackSchema, indented, (state) => {
+      const at = caretIn(state.doc, 'onetwo', 3);
+      const next = state.apply(
+        state.tr.setSelection(TextSelection.create(state.doc, at)),
+      );
+      let result = next;
+      splitListItem(stackSchema.nodes.listItem)(next, (tr) => {
+        result = next.apply(tr);
+      });
+      return result;
+    });
+    const indents = rows(exportStack(plain, split)).filter((row) =>
+      row.startsWith('indent '),
+    );
+    expect(indents).toEqual(['indent indent-1 0-3']);
+  });
+
   it('gives a second paragraph in a table cell its own uuid', () => {
     const doc = stackDoc(table);
     const split = withPlugin(stackSchema, doc, (state) => {
@@ -294,6 +337,64 @@ describe('splitting inside a wrapper', () => {
     expect(cell?.child(1).attrs.uuid).not.toBe('cell-1');
   });
 });
+
+describe.each(EDITORS)(
+  'a folio reference on its own line in the $name',
+  (editor) => {
+    // The opening paragraph holds only the mention: its zero-length row is what
+    // keeps the line break, so it is not a structural paragraph.
+    it('keeps the break through a save and a reload', () => {
+      const mention = {
+        type: 'mention',
+        attrs: {
+          items: [
+            { uuid: 'm1', entity: 'f1', linkType: 'folio', text: '[F.1.a]' },
+          ],
+        },
+      };
+      const blocks = [
+        { type: 'paragraph', attrs: { uuid: 'passage-1' }, content: [mention] },
+        {
+          type: 'paragraph',
+          attrs: { uuid: 'p2' },
+          content: [{ type: 'text', text: 'Homage' }],
+        },
+      ];
+      const doc =
+        editor.schema === tabSchema
+          ? tabSchema.nodeFromJSON({
+              type: 'translation',
+              content: [
+                {
+                  type: 'passage',
+                  attrs: { uuid: 'passage-1', ...IDENTITY },
+                  content: blocks,
+                },
+              ],
+            })
+          : stackSchema.nodeFromJSON({ type: 'doc', content: blocks });
+
+      const saved = editor.save(plain, withPlugin(editor.schema, doc));
+      expect(rows(saved)).toContainEqual(
+        expect.stringMatching(/^paragraph \S+ 0-0$/),
+      );
+
+      const reloaded: Passage = {
+        ...saved,
+        annotations: annotationsFromDTO(
+          annotationsToDTO(saved.annotations ?? []),
+          saved.content.length,
+        ),
+      };
+      const paragraphs: Node[] = [];
+      stackDoc(reloaded).descendants((node) => {
+        if (node.type.name === 'paragraph') paragraphs.push(node);
+        return true;
+      });
+      expect(paragraphs.map((p) => p.textContent)).toEqual(['', 'Homage']);
+    });
+  },
+);
 
 describe('quote annotations', () => {
   it('are left alone by a save, since no document can hold them', () => {
