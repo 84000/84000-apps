@@ -15,7 +15,6 @@ import { useBlockEditor, useTranslationExtensions } from './hooks';
 import type { XmlFragment } from 'yjs';
 import {
   createGraphQLClient,
-  getTranslationBlocks,
   getTranslationBlocksAround,
 } from '@eightyfourthousand/client-graphql';
 import type { PanelFilter } from '@eightyfourthousand/data-access';
@@ -36,37 +35,9 @@ import {
 } from '@eightyfourthousand/design-system';
 import { useEditorState } from './EditorProvider';
 import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
-import { findScrollParent } from '../shared/hooks/useScrollPositionRestore';
+import { useLoadMoreBlocks } from './useLoadMoreBlocks';
 
 const LOADING_SKELETONS_COUNT = 3;
-const CHUNK_SIZE = 25;
-
-/**
- * Insert content in chunks with yielding to browser to prevent long frame blocking
- */
-const insertContentChunked = async (
-  editor: Editor,
-  pos: number,
-  content: TranslationEditorContent,
-) => {
-  if (!Array.isArray(content) || content.length <= CHUNK_SIZE) {
-    // Small content - insert all at once
-    editor.commands.insertContentAt(pos, content);
-    return;
-  }
-
-  // Insert in chunks to avoid blocking the main thread
-  for (let i = 0; i < content.length; i += CHUNK_SIZE) {
-    const chunk = content.slice(i, i + CHUNK_SIZE);
-    const insertPos = i === 0 ? pos : editor.state.doc.content.size;
-    editor.commands.insertContentAt(insertPos, chunk);
-
-    // Yield to browser between chunks (except after last chunk)
-    if (i + CHUNK_SIZE < content.length) {
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-    }
-  }
-};
 
 interface PaginationContextState {
   endCursor?: string;
@@ -390,137 +361,28 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
-  useEffect(() => {
-    if (
-      endLoadRequest === 0 ||
-      handledEndLoadRequestRef.current === endLoadRequest ||
-      endIsLoading ||
-      !endCursor ||
-      isNavigatingRef.current
-    ) {
-      return;
-    }
-
-    handledEndLoadRequestRef.current = endLoadRequest;
-    setEndIsLoading(true);
-
-    (async () => {
-      const {
-        blocks,
-        hasMoreAfter: hasMore,
-        nextCursor,
-      } = await getTranslationBlocks({
-        client: dataClient,
-        uuid,
-        type: filter,
-        cursor: endCursor,
-      });
-
-      const pos = editor?.state.doc?.content.size;
-
-      if (pos >= 0 && blocks.length && editor) {
-        setNavigating(true);
-        await insertContentChunked(editor, pos, blocks);
-        setNavigating(false);
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
-      }
-
-      setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
-      setEndIsLoading(false);
-    })();
-  }, [
+  useLoadMoreBlocks({
     uuid,
     filter,
-    endIsLoading,
-    editor,
-    endCursor,
-    dataClient,
-    endLoadRequest,
-    refreshEditorBaseline,
-    setNavigating,
     tab,
-  ]);
-
-  useEffect(() => {
-    if (
-      startLoadRequest === 0 ||
-      handledStartLoadRequestRef.current === startLoadRequest ||
-      startIsLoading ||
-      !startCursor ||
-      isNavigatingRef.current
-    ) {
-      return;
-    }
-
-    handledStartLoadRequestRef.current = startLoadRequest;
-    setStartIsLoading(true);
-
-    (async () => {
-      const { blocks, hasMoreBefore, prevCursor } = await getTranslationBlocks({
-        client: dataClient,
-        uuid,
-        type: filter,
-        cursor: startCursor,
-        direction: 'backward',
-      });
-
-      const pos = 0;
-
-      if (blocks.length && editor?.view?.dom) {
-        const editorEl = editor.view.dom;
-        // Anchor against the real scrollable ancestor. The main translation
-        // panel has no `[data-panel]` element (only the back-matter panel does),
-        // so the old `closest('[data-panel]') || parentElement` fell back to the
-        // editor's non-scrollable parent — making the scroll adjustment below a
-        // no-op, which left the sentinel in view and the viewport jumping on
-        // prepend. `findScrollParent` is the same lookup BodyPanel/SourceReader use.
-        const scrollContainer = findScrollParent(editorEl);
-        const previousScrollHeight = scrollContainer?.scrollHeight || 0;
-        const previousScrollTop = scrollContainer?.scrollTop || 0;
-
-        // For start insertion, insert all at once to maintain scroll position accuracy.
-        // Chunking here would cause scroll jank since we adjust scroll after insertion.
-        setNavigating(true);
-        editor.commands.insertContentAt(pos, blocks);
-        setNavigating(false);
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
-
-        requestAnimationFrame(() => {
-          const newScrollHeight = scrollContainer?.scrollHeight || 0;
-          const deltaHeight = newScrollHeight - previousScrollHeight;
-          if (scrollContainer) {
-            scrollContainer.scrollTop = previousScrollTop + deltaHeight;
-          }
-        });
-      } else if (blocks.length && editor) {
-        // Fallback: insert without scroll preservation when view not ready
-        setNavigating(true);
-        editor.commands.insertContentAt(pos, blocks);
-        setNavigating(false);
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
-      }
-
-      setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
-      setStartIsLoading(false);
-    })();
-  }, [
-    uuid,
-    filter,
-    startIsLoading,
     editor,
+    dataClient,
     startCursor,
-    dataClient,
+    setStartCursor,
+    endCursor,
+    setEndCursor,
+    startIsLoading,
+    setStartIsLoading,
+    endIsLoading,
+    setEndIsLoading,
     startLoadRequest,
+    endLoadRequest,
+    handledStartLoadRequestRef,
+    handledEndLoadRequestRef,
+    isNavigatingRef,
     refreshEditorBaseline,
     setNavigating,
-    tab,
-  ]);
+  });
 
   return (
     <PaginationContext.Provider
