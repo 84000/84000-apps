@@ -30,6 +30,31 @@ const lastLinkBefore = (doc: PMNode, pos = doc.content.size) => {
   return last;
 };
 
+type Entry = ReturnType<StackWork['work']['spine']['entries']>[number];
+
+const hasToh = ({ toh }: Entry) =>
+  Array.isArray(toh) ? toh.length > 0 : !!toh;
+
+/** Whether two neighbours are per-Toh variants of one endnote. */
+const variants = (a: Entry | undefined, b: Entry | undefined) =>
+  !!a && !!b && a.label === b.label && hasToh(a) && hasToh(b);
+
+/** The index of the first variant in an endnote's slot. */
+const slotStart = ({ work }: StackWork, uuid: string) => {
+  const entries = work.spine.entries();
+  let index = work.spine.indexOf(uuid);
+  while (variants(entries[index - 1], entries[index])) index--;
+  return index;
+};
+
+/** The index of the last variant in an endnote's slot. */
+const slotEnd = ({ work }: StackWork, uuid: string) => {
+  const entries = work.spine.entries();
+  let index = work.spine.indexOf(uuid);
+  while (variants(entries[index], entries[index + 1])) index++;
+  return index;
+};
+
 type Placement = { after: string } | { before: string } | { error: string };
 
 /**
@@ -147,7 +172,10 @@ export const createStackEndnote = async ({
   const linked = endNoteLinkTransaction(initial, uuid, label);
   if (!linked) return { error: 'This passage can’t hold an endnote.' };
 
-  const index = work.spine.indexOf(anchor) + ('after' in placement ? 1 : 0);
+  const index =
+    'after' in placement
+      ? slotEnd(stack, anchor) + 1
+      : slotStart(stack, anchor);
   work.insert({ uuid, type: 'endnotes', label }, index, {
     alongWith: [{ uuid: passageUuid, after: linked.doc.toJSON() }],
   });

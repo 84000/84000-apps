@@ -175,15 +175,18 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   const linkToExisting = useCallback(
     (endnoteUuid: string, endnoteLabel: string | null) => {
       const { to } = editor.state.selection;
+      // The search reads saved labels; the stack's may have moved since.
+      const label =
+        stack?.work.spine.meta(endnoteUuid)?.label ?? endnoteLabel ?? undefined;
       editor
         .chain()
         .focus()
-        .setEndNoteLink(endnoteUuid, endnoteLabel ?? undefined)
+        .setEndNoteLink(endnoteUuid, label)
         .setTextSelection(to)
         .run();
       dismiss();
     },
-    [editor, dismiss],
+    [editor, dismiss, stack],
   );
 
   /** The passage stack's version: the endnote and its link as one change. */

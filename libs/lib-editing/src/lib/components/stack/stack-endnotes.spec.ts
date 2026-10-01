@@ -1,7 +1,10 @@
 import { Editor } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
+import type {
+  SpineSeed,
+  WorkDocument,
+} from '@eightyfourthousand/lib-doc-model';
 
 import { createStackEndnote, deleteStackEndnote } from './stack-endnotes';
 import { buildStackSchemaExtensions } from './stack-extensions';
@@ -47,17 +50,19 @@ const para = (
   ],
 });
 
+const SPINE: SpineSeed[] = [
+  { uuid: 'b1', label: '1.1', type: 'translation' },
+  { uuid: 'b2', label: '1.2', type: 'translation' },
+  { uuid: 'n1', label: 'n.1', type: 'endnotes' },
+  { uuid: 'n2', label: 'n.2', type: 'endnotes' },
+];
+
 /**
  * 1.1 links n.1; 1.2 has none. The endnotes n.1 and n.2 follow the body.
  */
-const build = () => {
+const build = (spine: SpineSeed[] = SPINE) => {
   const work = createStackWorkDocument({ workUuid: 'w1' });
-  work.seedSpine([
-    { uuid: 'b1', label: '1.1', type: 'translation' },
-    { uuid: 'b2', label: '1.2', type: 'translation' },
-    { uuid: 'n1', label: 'n.1', type: 'endnotes' },
-    { uuid: 'n2', label: 'n.2', type: 'endnotes' },
-  ]);
+  work.seedSpine(spine);
   work.store.create('b1', [
     para('b1p', 'first', [{ endNote: 'n1', label: 'n.1' }]),
   ]);
@@ -137,6 +142,31 @@ describe('createStackEndnote', () => {
     expect(work.spine.uuids()).toEqual(['b1', 'b2', 'n1', uuid, 'n2']);
     expect(work.spine.meta('n2')?.label).toBe('n.3');
     expect(linksIn(work, 'b2')).toEqual(['new n.2']);
+    editor.destroy();
+  });
+
+  it('puts the note after every per-Toh variant of the one before', async () => {
+    const { work, stack } = build([
+      { uuid: 'b1', label: '1.1', type: 'translation' },
+      { uuid: 'b2', label: '1.2', type: 'translation' },
+      { uuid: 'n1', label: 'n.1', type: 'endnotes', toh: 'toh1' },
+      { uuid: 'n1v', label: 'n.1', type: 'endnotes', toh: 'toh2' },
+      { uuid: 'n2', label: 'n.2', type: 'endnotes' },
+    ]);
+    const editor = editorFor(work, 'b2', 1, 7);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    const uuid = (result as { uuid: string }).uuid;
+    expect(work.spine.uuids()).toEqual(['b1', 'b2', 'n1', 'n1v', uuid, 'n2']);
+    expect(work.spine.entries().map((entry) => entry.label)).toEqual([
+      '1.1',
+      '1.2',
+      'n.1',
+      'n.1',
+      'n.2',
+      'n.3',
+    ]);
     editor.destroy();
   });
 
