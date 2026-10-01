@@ -52,6 +52,11 @@ export class PassageDocStore {
     return this.docs.has(uuid);
   }
 
+  /** The passages whose documents are held. */
+  held(): string[] {
+    return [...this.docs.keys()];
+  }
+
   /** How many documents are held. The number the window bounds. */
   get size(): number {
     return this.docs.size;

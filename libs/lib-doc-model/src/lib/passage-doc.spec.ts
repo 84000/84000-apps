@@ -145,6 +145,33 @@ describe('PassageDoc', () => {
     expect(doc.toJSON().content).toBeUndefined();
   });
 
+  describe('reseed', () => {
+    const edited = () => {
+      const doc = build();
+      doc.seed([para('before', 'a')]);
+      doc.doc.transact(() => {
+        doc.content.delete(0, doc.content.length);
+      });
+      doc.markSynced();
+      return doc;
+    };
+
+    it('takes the server content without going dirty', () => {
+      const doc = edited();
+      doc.reseed([para('replaced', 'a')]);
+      expect(paraTexts(doc.toJSON())).toEqual(['replaced']);
+      expect(doc.isDirty).toBe(false);
+    });
+
+    // Undoing into the old text would write it back on the next save.
+    it('clears the text history', () => {
+      const doc = edited();
+      doc.reseed([para('replaced', 'a')]);
+      expect(doc.undo()).toBe(false);
+      expect(paraTexts(doc.toJSON())).toEqual(['replaced']);
+    });
+  });
+
   it('materializes a row from the spine identity', () => {
     const doc = build('passage-1');
     doc.seed([para('Homage to the Buddha.', 'ann-1')]);

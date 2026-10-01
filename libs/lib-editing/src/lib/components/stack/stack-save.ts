@@ -5,6 +5,7 @@ import {
   type NewPassageAnchor,
   type Passage,
 } from '@eightyfourthousand/data-access';
+import type { JSONContent } from '@tiptap/core';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 /**
@@ -219,3 +220,20 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   }
   return true;
 };
+
+/**
+ * Take in passages the server rewrote, such as by a replace, so the stack's
+ * copies don't write the old text back on the next save.
+ *
+ * Only held passages need it: the rest load fresh. One with unsaved edits is
+ * left alone rather than overwritten.
+ */
+export const applyServerPassages = (
+  work: WorkDocument,
+  passages: { uuid: string; json?: { content?: unknown[] } | null }[],
+) =>
+  work.adoptServerContent(
+    passages.flatMap(({ uuid, json }) =>
+      json ? [{ uuid, content: (json.content ?? []) as JSONContent[] }] : [],
+    ),
+  );

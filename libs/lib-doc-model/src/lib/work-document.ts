@@ -4,7 +4,12 @@ import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
 import type { BodyItemType } from '@eightyfourthousand/data-access';
-import { CommandLog, type StructuralCommand } from './command-log';
+import {
+  CommandLog,
+  type ContentChange,
+  type StructuralCommand,
+} from './command-log';
+import { withoutEndNoteLinks } from './end-note-links';
 import { PassageDocStore } from './doc-store';
 import { incrementLabel } from './labels';
 import type { PassageLoader } from './loader';
@@ -124,6 +129,9 @@ export class WorkDocument {
    * meaning the same passages the moment another section loads a page.
    */
   private windows = new Map<string, { uuids: string[]; keep: Set<string> }>();
+  /** Passages already checked for links to deleted endnotes. */
+  private unlinked = new Set<string>();
+  private unobserveStore?: () => void;
 
   constructor(options: WorkDocumentOptions) {
     this.workUuid = options.workUuid;
@@ -137,6 +145,7 @@ export class WorkDocument {
       loader: options.loader,
       textOrigins: options.textOrigins,
     });
+    this.unobserveStore = this.store.observe(this.unlinkLoadedPassages);
   }
 
   // ----------------------------------------------------------- hydration
@@ -355,7 +364,7 @@ export class WorkDocument {
       .sort((a, b) => a.index - b.index);
     if (!targets.length) return false;
 
-    const content = targets.map((target) => ({
+    const content: ContentChange[] = targets.map((target) => ({
       uuid: target.uuid,
       before: this.store.ensure(target.uuid).toJSON(),
       after: null,
@@ -364,6 +373,7 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
+    content.push(...this.unlink(targets.map((t) => t.uuid)));
 
     this.record({
       kind: 'delete',
@@ -421,7 +431,7 @@ export class WorkDocument {
       return seed;
     });
 
-    const content = [
+    const content: ContentChange[] = [
       ...targets.map((target) => ({
         uuid: target.uuid,
         before: this.store.ensure(target.uuid).toJSON(),
@@ -443,6 +453,7 @@ export class WorkDocument {
       targets.map((t) => t.uuid),
       { deleted: true },
     );
+    content.push(...this.unlink(targets.map((t) => t.uuid)));
     const inserted = seeds.map((seed, i) => {
       const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
       labelChanges.push(...changes);
@@ -468,6 +479,70 @@ export class WorkDocument {
     this.notify();
     return true;
   }
+
+  /**
+   * Take the links to deleted passages out of every other held passage, and
+   * return the changes for the delete's command, so one undo puts both back.
+   *
+   * Passages that aren't held need nothing: the save deletes their links.
+   */
+  private unlink(deleted: string[]): ContentChange[] {
+    const gone = new Set(deleted);
+    return this.store.held().flatMap((uuid) => {
+      if (gone.has(uuid)) return [];
+      const doc = this.store.ensure(uuid);
+      const before = doc.toJSON();
+      const after = withoutEndNoteLinks(before, gone);
+      if (!after) return [];
+      doc.replaceContent(after);
+      return [{ uuid, before, after }];
+    });
+  }
+
+  /**
+   * Take in passages the server rewrote, such as by a replace: each held one
+   * is re-seeded, and the history that would write its old content back is
+   * dropped. One with unsaved edits is left alone.
+   */
+  adoptServerContent(passages: { uuid: string; content: JSONContent[] }[]) {
+    const adopted = new Set<string>();
+    passages.forEach(({ uuid, content }) => {
+      const doc = this.store.peek(uuid);
+      if (!doc) return;
+      if (doc.isDirty) {
+        console.error(`not replacing passage ${uuid}: it has unsaved edits`);
+        return;
+      }
+      doc.reseed(content);
+      adopted.add(uuid);
+    });
+    if (adopted.size) this.log.forgetSnapshotsOf(adopted);
+  }
+
+  /**
+   * Take links to endnotes deleted since the last save out of passages loaded
+   * after the delete: they come from the server with the link, and the save
+   * that deletes the link rows would otherwise be undone by their next edit.
+   */
+  private unlinkLoadedPassages = () => {
+    const held = new Set(this.store.held());
+    const fresh = [...held].filter(
+      (uuid) =>
+        !this.unlinked.has(uuid) &&
+        (this.store.peek(uuid)?.content.length ?? 0) > 0,
+    );
+    this.unlinked = new Set([
+      ...[...this.unlinked].filter((uuid) => held.has(uuid)),
+      ...fresh,
+    ]);
+    const deleted = new Set(this.spine.removedSinceSave());
+    if (!deleted.size) return;
+    fresh.forEach((uuid) => {
+      const doc = this.store.peek(uuid);
+      const json = doc && withoutEndNoteLinks(doc.toJSON(), deleted);
+      if (json) doc.replaceContent(json);
+    });
+  };
 
   /** Move a passage to another position. */
   reorder(uuid: string, toIndex: number): boolean {
@@ -582,6 +657,7 @@ export class WorkDocument {
 
   /** Release every document. The spine survives — it is cheap to keep. */
   destroy() {
+    this.unobserveStore?.();
     this.windows.clear();
     this.store.destroy();
     this.listeners.clear();
