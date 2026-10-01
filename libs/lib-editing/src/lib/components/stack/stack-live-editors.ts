@@ -7,6 +7,16 @@ import type { StackFocusTarget, StackFocusWhere } from './types';
 /** Frames to wait for a focused passage's editor to mount. */
 const EDITOR_MOUNT_FRAMES = 60;
 
+/** The character a keydown types, if it types one rather than a shortcut. */
+const keyedText = (event: KeyboardEvent) =>
+  event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1
+    ? null
+    : event.key;
+
+/** The text a `beforeinput` inserts, if it is plain inserted text. */
+const typedText = (event: InputEvent) =>
+  event.inputType === 'insertText' && !event.isComposing ? event.data : null;
+
 /**
  * Which passages of a stack view carry a live editor, and where focus is.
  *
@@ -96,14 +106,26 @@ export class StackLiveEditors {
 
   getFocusedUuid = () => this.focusedUuid;
 
-  hasPendingFocus = () => this.pendingFocus !== null;
-
   /**
-   * Buffer keys typed between a focus request and the editor mounting, so a
-   * click-and-immediately-type never drops characters.
+   * Buffer text typed between a focus request and the editor mounting, so a
+   * click-and-immediately-type never drops characters. Returns whether the
+   * event was taken; the caller then prevents its default.
+   *
+   * Takes `beforeinput` too: inserted text (e.g. automation's `insertText`)
+   * has no keydown. A taken keydown never fires `beforeinput`, so nothing is
+   * buffered twice.
    */
-  bufferKey(key: string) {
-    if (this.pendingFocus) this.keyBuffer += key;
+  bufferTyping(event: KeyboardEvent | InputEvent): boolean {
+    // A prevented event was already taken — by a handler, or by another stack
+    // drawing this controller (the mobile layout mounts a second one).
+    if (!this.pendingFocus || event.defaultPrevented) return false;
+    const text =
+      event.type === 'beforeinput'
+        ? typedText(event as InputEvent)
+        : keyedText(event as KeyboardEvent);
+    if (!text) return false;
+    this.keyBuffer += text;
+    return true;
   }
 
   /**
@@ -213,6 +235,14 @@ export class StackLiveEditors {
     // Premounted neighbors are non-editable (so at most one contenteditable
     // exists and native selection works everywhere else) — flip on focus.
     if (!editor.isEditable) editor.setEditable(true);
+    this.placeCaret(editor, where);
+    // `commands.focus` defers DOM focus a frame. A key typed in that frame
+    // lands on the clicked static row, after the buffer has stopped taking
+    // keys, and is lost.
+    editor.view.focus();
+  }
+
+  private placeCaret(editor: Editor, where: StackFocusWhere) {
     if (typeof where === 'object') {
       // A click on a static row: land the caret where the user clicked.
       const coords = editor.view.posAtCoords({ left: where.x, top: where.y });
