@@ -4,37 +4,16 @@ import {
   type BodyItemType,
 } from '@eightyfourthousand/data-access';
 import { renumberLabelsFrom } from './labels';
+import {
+  METAS_KEY,
+  ORDER_KEY,
+  metaMap,
+  type MutateOptions,
+  type SpineSeed,
+} from './spine-meta';
 import type { LabelChange, PassageMeta, SpineEntry, SpineRange } from './types';
 
-/**
- * Whether a mutation should renumber the labels it disturbs.
- *
- * Ordinary edits do. Command-log replay does not: it restores the exact labels
- * the original operation produced, and letting the spine renumber underneath
- * that would compute them a second time from a different starting state.
- */
-export type MutateOptions = {
-  renumber?: boolean;
-  /**
-   * The passage leaves the work, not just what is loaded, so a save must
-   * delete it. Unloading a window to follow a deep link removes passages too.
-   */
-  deleted?: boolean;
-};
-
-/**
- * What a caller supplies for a new passage.
- *
- * Placement is not part of it: panel and tab are derived from the type by
- * `panelAndTabForContentType`, so there is no way to seed a passage into a tab
- * its type does not belong to.
- */
-export type SpineSeed = Omit<PassageMeta, 'panel' | 'tab'>;
-
-/** Yjs key for the ordered passage uuids. */
-const ORDER_KEY = 'order';
-/** Yjs key for the uuid → metadata map. */
-const METAS_KEY = 'metas';
+export type { MutateOptions, SpineSeed } from './spine-meta';
 
 /** Transaction origin for every write this class makes. */
 export const SPINE_ORIGIN = 'spine';
@@ -292,7 +271,7 @@ export class Spine {
         this.order.insert(at, [passage.uuid]);
         this.metas.set(
           passage.uuid,
-          this.metaMap(gone ? { ...passage, sort: undefined } : passage),
+          metaMap(gone ? { ...passage, sort: undefined } : passage),
         );
         if (gone) this.restored.add(passage.uuid);
         // Put back, e.g. by undo: nothing to delete after all.
@@ -513,19 +492,7 @@ export class Spine {
   /** Insert at the end without a transaction of its own. Callers wrap. */
   private appendUnsafe(passage: SpineSeed) {
     this.order.push([passage.uuid]);
-    this.metas.set(passage.uuid, this.metaMap(passage));
-  }
-
-  private metaMap(passage: SpineSeed): YMap<unknown> {
-    const { panel, tab } = panelAndTabForContentType(passage.type);
-    const entry = new YMap<unknown>();
-    entry.set('label', passage.label);
-    entry.set('type', passage.type);
-    entry.set('panel', panel);
-    entry.set('tab', tab);
-    if (passage.toh) entry.set('toh', passage.toh);
-    if (passage.sort !== undefined) entry.set('sort', passage.sort);
-    return entry;
+    this.metas.set(passage.uuid, metaMap(passage));
   }
 
   private storedSort(uuid: string): number | undefined {
