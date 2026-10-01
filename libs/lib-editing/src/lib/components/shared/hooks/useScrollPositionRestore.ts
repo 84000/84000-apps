@@ -32,20 +32,31 @@ export function findScrollParent(element: HTMLElement): HTMLElement | null {
 }
 
 /**
+ * Passage elements, which carry the passage uuid as their `id`: the paginated
+ * editor's passage node views and the stack's rows.
+ */
+const PASSAGE_ATTRIBUTES = [
+  '[data-passage-type]',
+  '[data-node-view-wrapper]',
+  '[data-stack-passage]',
+];
+const PASSAGE_SELECTOR = PASSAGE_ATTRIBUTES.map((a) => `${a}[id]`).join(', ');
+
+/**
  * Finds the topmost visible passage element within the scroll container.
- * Passage elements are NodeViewWrappers with `id` attributes (UUIDs).
  */
 export function capturePassageAnchor(
   scrollContainer: HTMLElement,
 ): PassageAnchor | null {
-  const passagesList = scrollContainer.querySelectorAll<HTMLElement>(
-    '[data-node-view-wrapper][id]',
-  );
+  const passagesList =
+    scrollContainer.querySelectorAll<HTMLElement>(PASSAGE_SELECTOR);
   const passages = Array.from(passagesList);
   const containerTop = scrollContainer.getBoundingClientRect().top;
 
   for (const el of passages) {
     const rect = el.getBoundingClientRect();
+    // A hidden copy (an inactive tab, the mobile layout) has no box.
+    if (rect.height === 0) continue;
     // Find the first passage whose bottom is below the container top
     // (i.e. at least partially visible)
     if (rect.bottom > containerTop) {
@@ -65,12 +76,13 @@ export function capturePassageAnchor(
 export function restorePassageAnchor(
   scrollContainer: HTMLElement,
   anchor: PassageAnchor,
-): void {
+): boolean {
   // Use querySelectorAll because Translation and Compare can both contain
   // passages with the same UUID. querySelector would return the first
   // (hidden Translation), so we need to find the visible one.
+  const id = CSS.escape(anchor.uuid);
   const candidatesList = scrollContainer.querySelectorAll<HTMLElement>(
-    `[data-node-view-wrapper]#${CSS.escape(anchor.uuid)}`,
+    PASSAGE_ATTRIBUTES.map((a) => `${a}#${id}`).join(', '),
   );
   const candidates = Array.from(candidatesList);
   let el: HTMLElement | null = null;
@@ -80,27 +92,65 @@ export function restorePassageAnchor(
       break;
     }
   }
-  if (!el) return;
+  if (!el) return false;
 
   const containerTop = scrollContainer.getBoundingClientRect().top;
   const currentOffset = el.getBoundingClientRect().top - containerTop;
   const delta = currentOffset - anchor.offsetFromViewport;
   scrollContainer.scrollTop += delta;
+  return true;
 }
 
-/** Tabs whose content contains passage elements (data-node-view-wrapper). */
+/** When to re-align on an anchor while rows around it are still loading. */
+const SETTLE_DELAYS = [50, 150, 300, 600, 1000];
+
+/**
+ * Re-align on an anchor as the rows around it load and take their real
+ * heights, until the user scrolls. Returns a function that stops it.
+ */
+function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
+  const timers = SETTLE_DELAYS.map((delay) =>
+    setTimeout(() => restorePassageAnchor(container, anchor), delay),
+  );
+  const stop = () => {
+    timers.forEach(clearTimeout);
+    clearTimeout(end);
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((type) =>
+      container.removeEventListener(type, stop),
+    );
+  };
+  ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach((type) =>
+    container.addEventListener(type, stop, { passive: true }),
+  );
+  const end = setTimeout(stop, SETTLE_DELAYS[SETTLE_DELAYS.length - 1] + 1);
+  return stop;
+}
+
+/** Tabs whose content contains passage elements. */
 const PASSAGE_TABS = ['translation', 'compare'];
 
 export function usePassageAnchorRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
+  panelId = 'main',
+  hasHash = false,
 ): RefObject<PassageAnchor | null> {
   const anchorRef = useRef<PassageAnchor | null>(null);
   const prevTabRef = useRef<string | undefined>(undefined);
+  const stopSettlingRef = useRef<(() => void) | null>(null);
+
+  // A hash scrolls to its own target; settling would pull it back.
+  useEffect(() => {
+    if (!hasHash) return;
+    stopSettlingRef.current?.();
+    stopSettlingRef.current = null;
+  }, [hasHash]);
 
   useEffect(() => {
     if (prevTabRef.current === activeTab) return;
     prevTabRef.current = activeTab;
+    stopSettlingRef.current?.();
+    stopSettlingRef.current = null;
 
     // Only restore when arriving at a passage tab (translation/compare).
     // When switching to front/source, keep the anchor so it's available
@@ -114,11 +164,35 @@ export function usePassageAnchorRestore(
     // Clear inside rAF, not here — useScrollPositionRestore reads the ref
     // synchronously (in its effect, which runs after this one) to decide
     // whether to skip its own restore.
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       anchorRef.current = null;
-      restorePassageAnchor(container, anchor);
+      if (!container.isConnected) return;
+      if (!restorePassageAnchor(container, anchor)) {
+        // A virtualized list draws only the rows near its scroll position, so
+        // the anchor may not be drawn yet: go back to the recorded position,
+        // then align on the anchor once its row is there.
+        const saved = scrollPositions.get(
+          `${panelId}:${normalizeTabKey(activeTab || '')}`,
+        );
+        if (saved === undefined) return;
+        container.scrollTop = saved;
+      }
+      // Rows above the anchor can still change height as they load.
+      stopSettlingRef.current = settleOnAnchor(container, anchor);
     });
-  }, [activeTab, scrollContainerRef]);
+    stopSettlingRef.current = () => cancelAnimationFrame(frame);
+  }, [activeTab, scrollContainerRef, panelId]);
+
+  // Unmount. Forgetting the tab lets a remount, as StrictMode does, run the
+  // restore this cancelled.
+  useEffect(
+    () => () => {
+      stopSettlingRef.current?.();
+      stopSettlingRef.current = null;
+      prevTabRef.current = undefined;
+    },
+    [],
+  );
 
   return anchorRef;
 }
@@ -142,6 +216,26 @@ const RESTORE_TIMEOUT = 5000;
  */
 const scrollPositions = new Map<string, number>();
 
+/** Positions recorded at the moment of a switch, before it clamped them. */
+const recordedAtSwitch = new Set<string>();
+
+/**
+ * Record a tab's scroll position as it is left, before the switch.
+ *
+ * The panel's tabs share one scroll container. By the time the switch has
+ * rendered, the container may already hold the new tab's shorter content and
+ * have clamped its `scrollTop`, which is then saved as the old tab's position.
+ */
+export function recordScrollPosition(
+  panelId: string,
+  tab: string,
+  container: HTMLElement,
+) {
+  const key = `${panelId}:${normalizeTabKey(tab)}`;
+  scrollPositions.set(key, container.scrollTop);
+  recordedAtSwitch.add(key);
+}
+
 /**
  * Watches the scroll container for content changes (via MutationObserver) and
  * restores scrollTop once the container has enough height. Returns a cleanup
@@ -154,7 +248,9 @@ function waitForContentAndRestore(
   // Try immediately — content may already be present (non-paginated tabs)
   container.scrollTop = targetScroll;
   if (Math.abs(container.scrollTop - targetScroll) < 2) {
-    return () => { /* no-op */ };
+    return () => {
+      /* no-op */
+    };
   }
 
   let settled = false;
@@ -241,7 +337,10 @@ export function useScrollPositionRestore(
 
     // Save outgoing tab's scroll position
     if (prevKey !== undefined && prevKey !== currentKey && container) {
-      scrollPositions.set(`${panelId}:${prevKey}`, container.scrollTop);
+      const key = `${panelId}:${prevKey}`;
+      if (!recordedAtSwitch.delete(key)) {
+        scrollPositions.set(key, container.scrollTop);
+      }
     }
 
     // Restore incoming tab's scroll position.
@@ -249,9 +348,13 @@ export function useScrollPositionRestore(
     // tab — the passage anchor restore is more accurate (immune to scrollTop
     // clamping from hidden content) and will handle positioning instead.
     const passageAnchorWillRestore =
-      !!passageAnchorRef?.current &&
-      PASSAGE_TABS.includes(activeTab || '');
-    if (prevKey !== currentKey && !hasHash && !passageAnchorWillRestore && container) {
+      !!passageAnchorRef?.current && PASSAGE_TABS.includes(activeTab || '');
+    if (
+      prevKey !== currentKey &&
+      !hasHash &&
+      !passageAnchorWillRestore &&
+      container
+    ) {
       const saved = scrollPositions.get(`${panelId}:${currentKey}`) ?? 0;
       if (saved === 0) {
         requestAnimationFrame(() => {

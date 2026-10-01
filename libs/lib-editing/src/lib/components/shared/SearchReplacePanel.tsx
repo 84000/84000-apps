@@ -36,12 +36,18 @@ export const SearchReplacePanel = ({
   const [replaceQuery, setReplaceQuery] = useState('');
   const [replacing, setReplacing] = useState(false);
 
+  // Alignment matches are in the Tibetan source, which replace doesn't touch.
+  const onlyAlignments =
+    searchContext.passageOccurrences.length > 0 &&
+    searchContext.passages.length === 0;
   const canRunReplace =
     canReplace &&
     !replaceDisabledReason &&
     !!searchContext.searchQuery &&
-    searchContext.passageOccurrences.length > 0 &&
+    searchContext.passages.length > 0 &&
     !replacing;
+  const canReplaceActive =
+    canRunReplace && searchContext.activeOccurrence?.type !== 'alignment';
   const canStepBackward =
     replaceOpen && searchContext.activeOccurrenceIndex > 0;
   const canStepForward =
@@ -83,7 +89,7 @@ export const SearchReplacePanel = ({
   }
 
   const runReplace = async ({ replaceAll }: { replaceAll: boolean }) => {
-    if (!canRunReplace) {
+    if (!(replaceAll ? canRunReplace : canReplaceActive)) {
       return;
     }
 
@@ -91,7 +97,9 @@ export const SearchReplacePanel = ({
 
     try {
       if (replaceAll) {
-        const targetUuids = searchContext.passages.map((passage) => passage.uuid);
+        const targetUuids = searchContext.passages.map(
+          (passage) => passage.uuid,
+        );
         if (targetUuids.length === 0) {
           return;
         }
@@ -108,7 +116,9 @@ export const SearchReplacePanel = ({
           });
 
           if (!response.success) {
-            console.error(`Replace failed: ${response.error ?? 'unknown error'}`);
+            console.error(
+              `Replace failed: ${response.error ?? 'unknown error'}`,
+            );
             return;
           }
 
@@ -116,7 +126,9 @@ export const SearchReplacePanel = ({
         }
 
         await onPassagesReplaced?.(allReplacedPassages);
-        await searchContext.refreshSearch({ nextSelection: { kind: 'index', index: 0 } });
+        await searchContext.refreshSearch({
+          nextSelection: { kind: 'index', index: 0 },
+        });
         return;
       }
 
@@ -206,6 +218,11 @@ export const SearchReplacePanel = ({
                 : 'No exact passage occurrences available for replacement.'}
             </span>
             {replaceDisabledReason && <span>{replaceDisabledReason}</span>}
+            {!replaceDisabledReason && onlyAlignments && (
+              <span>
+                Every match is in the Tibetan source, which can't be replaced.
+              </span>
+            )}
           </div>
           <div className="text-sm text-muted-foreground pb-4">
             {searchContext.useRegex
@@ -215,7 +232,7 @@ export const SearchReplacePanel = ({
           <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
-              disabled={!canRunReplace}
+              disabled={!canReplaceActive}
               onClick={() => void runReplace({ replaceAll: false })}
             >
               {replacing ? 'Replacing…' : 'Replace'}

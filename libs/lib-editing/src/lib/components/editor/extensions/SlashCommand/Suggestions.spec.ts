@@ -47,6 +47,17 @@ describe('getSuggestion items', () => {
     expect(listItems([heading, quote], 'block')).toEqual(['Quote']);
   });
 
+  it('matches the words of the title too', () => {
+    const numbered = item('Numbered List', ['ordered', 'list']);
+    expect(listItems([heading, quote, numbered], 'quote')).toEqual(['Quote']);
+    expect(listItems([heading, quote, numbered], 'numbered')).toEqual([
+      'Numbered List',
+    ]);
+    expect(listItems([heading, quote, numbered], 'numbered l')).toEqual([
+      'Numbered List',
+    ]);
+  });
+
   it('returns every item for an empty query', () => {
     expect(listItems([heading, quote], '')).toEqual(['Heading', 'Quote']);
   });

@@ -23,6 +23,7 @@ import {
   capturePassageAnchor,
   findScrollParent,
   usePassageAnchorRestore,
+  recordScrollPosition,
   useScrollPositionRestore,
 } from './hooks/useScrollPositionRestore';
 
@@ -85,7 +86,12 @@ export const BodyPanel = ({
       node && node.offsetParent !== null ? findScrollParent(node) : null;
   }, []);
 
-  const passageAnchorRef = usePassageAnchorRestore(scrollContainerRef, safeTab);
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    safeTab,
+    'main',
+    !!panels.main.hash,
+  );
 
   useScrollPositionRestore(
     'main',
@@ -120,6 +126,9 @@ export const BodyPanel = ({
         // scroll position after the tab switch — immune to the scrollTop
         // clamping that happens when hidden content changes scroll height.
         const current = safeTab;
+        if (scrollContainerRef.current) {
+          recordScrollPosition('main', current, scrollContainerRef.current);
+        }
         const passageTabs = ['translation', 'compare'];
         if (scrollContainerRef.current && passageTabs.includes(current)) {
           passageAnchorRef.current = capturePassageAnchor(
@@ -135,9 +144,7 @@ export const BodyPanel = ({
         <TabsList className="w-fit inline-flex pointer-events-auto">
           <TabsTrigger value="front">Front</TabsTrigger>
           <TabsTrigger value="translation">Translation</TabsTrigger>
-          {hasAlignments && (
-            <TabsTrigger value="compare">Compare</TabsTrigger>
-          )}
+          {hasAlignments && <TabsTrigger value="compare">Compare</TabsTrigger>}
           <TabsTrigger value="source">Source</TabsTrigger>
         </TabsList>
       </div>
