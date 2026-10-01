@@ -67,8 +67,13 @@ export const EditorLayout = ({
     return <TranslationSkeleton />;
   }
 
+  // Mount only the visible layout. The stack's document-level listeners and
+  // its controller's scroll handler, editor request and active Toh are one per
+  // controller, and a CSS-hidden copy would register them a second time. The
+  // columns are client-rendered (`work` loads in an effect), so the viewport
+  // is known on first mount.
   const columns = (
-    <ThreeColumnRenderer withHeader={true}>
+    <ThreeColumnRenderer withHeader={true} mountHiddenLayout={false}>
       <LeftPanel>{left}</LeftPanel>
       <MainPanelHeader>
         <EditorHeader />

@@ -12,10 +12,12 @@ import { GatedFeature } from '@eightyfourthousand/lib-instr';
 export const ThreeColumnRenderer = ({
   withHeader = false,
   withFocusToggle = false,
+  mountHiddenLayout,
   children,
 }: {
   withHeader?: boolean;
   withFocusToggle?: boolean;
+  mountHiddenLayout?: boolean;
   children: ReactNode;
 }) => {
   const { panels, updatePanel, hasTranslationContent, focusMode } =
@@ -50,6 +52,7 @@ export const ThreeColumnRenderer = ({
         rightPanelOpen={rightPanelEnabled ? panels.right.open : false}
         rightPanelEnabled={rightPanelEnabled}
         mainPanelActions={mainPanelActions}
+        mountHiddenLayout={mountHiddenLayout}
         onLeftPanelOpenChange={(open) => {
           updatePanel({
             name: 'left',
