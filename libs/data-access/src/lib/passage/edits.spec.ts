@@ -171,6 +171,20 @@ describe('applyEditsToPassages', () => {
     expect(inserted?.uuid).not.toBe('p1');
   });
 
+  // Several inserts before one passage share its sort; the save places them
+  // by this anchor instead, so they don't tie.
+  it('anchors each inserted passage to the one it goes before', () => {
+    const result = run([
+      { op: 'insert-passage', before: 'p1', content: '[B1]' },
+      { op: 'insert-passage', before: 'p1', content: '[B2]' },
+    ]);
+    const inserted = result.passages.filter((p) => p.uuid !== 'p1');
+    expect(inserted).toHaveLength(2);
+    inserted.forEach((passage) =>
+      expect(result.anchors[passage.uuid]).toEqual({ before: 'p1' }),
+    );
+  });
+
   it('reports rather than writing when an annotation cannot be built', () => {
     const result = run([
       { op: 'add-annotation', passageUuid: 'p1', kind: 'mention', start: 0 },

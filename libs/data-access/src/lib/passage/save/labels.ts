@@ -87,9 +87,12 @@ export async function normalizePassageLabelsAfter({
       processedUuids.add(row.uuid);
       newRowsThisPage++;
 
-      const rowParts = (row.label ?? '').split('.');
+      // An unlabelled passage holds no slot in the series.
+      if (!row.label) continue;
 
-      if (rowParts.length < depth || !row.label?.startsWith(prefix)) {
+      const rowParts = row.label.split('.');
+
+      if (rowParts.length < depth || !row.label.startsWith(prefix)) {
         done = true;
         break;
       }
