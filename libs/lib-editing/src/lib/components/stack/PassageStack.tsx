@@ -22,7 +22,7 @@ import {
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
-import { useStackSelection } from './useStackSelection';
+import { inCompareSource, useStackSelection } from './useStackSelection';
 import {
   resolveStackLink,
   STACK_LINK_SELECTOR,
@@ -426,6 +426,7 @@ export const PassageStack = ({
       }
 
       if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
+      if (inCompareSource(target)) return;
 
       // Content links, before the focus branch below claims the press. A
       // mounted editor handles these from its own mark and node views; a
