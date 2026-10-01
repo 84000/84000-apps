@@ -18,7 +18,7 @@ import { line } from './line';
 import { lineGroup } from './line-group';
 import { link } from './link';
 import { listItem } from './list-item';
-import { list } from './list';
+import { list, orderedList } from './list';
 import { mantra } from './mantra';
 import { mention } from './mention';
 import { paragraph } from './paragraph';
@@ -39,6 +39,7 @@ const EXPORTERS: Partial<
     | SpanMarkType
     | 'text'
     | 'bulletList'
+    | 'orderedList'
     | 'tableCell'
     | 'tableHeader'
     | 'tableRow',
@@ -69,6 +70,7 @@ const EXPORTERS: Partial<
   listItem,
   mantra,
   mention,
+  orderedList,
   paragraph,
   quote,
   reference: link,

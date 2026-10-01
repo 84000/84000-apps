@@ -29,3 +29,12 @@ export const list: Exporter<ListAnnotation> = ({
     itemStyle,
   };
 };
+
+/**
+ * A numbered list made in the editor. It is stored as a `list` with numbered
+ * items, which is how it loads back.
+ */
+export const orderedList: Exporter<ListAnnotation> = (ctx) => {
+  const annotation = list(ctx);
+  return annotation && { ...annotation, itemStyle: 'numbers' };
+};

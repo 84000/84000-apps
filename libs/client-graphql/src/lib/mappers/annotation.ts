@@ -201,6 +201,7 @@ export function annotationsFromGraphQL(
   // Filter out ignored annotation types
   const ignoredTypes = [
     'deprecated-internal-link',
+    'quote',
     'quoted',
     'reference',
     'unknown',
