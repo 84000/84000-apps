@@ -171,7 +171,9 @@ describe('WorkDocument hydration window', () => {
     await work.hydrateWindow({ start: 0, end: 2 }, { key: 'a' });
     work.spine.remove(['p0', 'p1'], { renumber: false });
     const asked: string[] = [];
-    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errors = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     const loader = (work as unknown as { hydration: { loader: PassageLoader } })
       .hydration.loader;
     const load = loader.load.bind(loader);
