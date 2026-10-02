@@ -266,6 +266,39 @@ describe('SpineFeed', () => {
       return { w, feed };
     };
 
+    // A link to the imprint, over a front matter window opened part way.
+    it('goes back to the start of the run', async () => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, true),
+      );
+
+      await feed.revealStart();
+
+      // No cursor: from the beginning.
+      expect(
+        clientGraphql.getPassageMetaPage.mock.calls[0][0].cursor,
+      ).toBeUndefined();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+      expect(feed.hasMoreBefore).toBe(false);
+      expect(feed.hasMore).toBe(true);
+    });
+
+    it('asks for nothing when the run already starts at the top', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, false),
+      );
+      await feed.seed();
+      clientGraphql.getPassageMetaPage.mockReset();
+
+      await feed.revealStart();
+
+      expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+    });
+
     it('prepends the previous page, keeping the order', async () => {
       const { w, feed } = await revealed();
       clientGraphql.getPassageMetaPage.mockResolvedValueOnce({

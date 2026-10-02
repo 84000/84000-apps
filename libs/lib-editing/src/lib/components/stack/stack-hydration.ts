@@ -203,6 +203,15 @@ export class StackHydration {
     return true;
   }
 
+  /** Move the window back to the run's first passage, if it starts later. */
+  revealStart = async (): Promise<void> => {
+    if (!this.spineFeed?.hasMoreBefore || !this.spineFeed.revealStart) return;
+    await this.spineFeed.revealStart();
+    this.invalidateOrder();
+    this.resetLive();
+    this.bump();
+  };
+
   /** Hydrate one passage on demand — the path focus takes ahead of mounting. */
   async hydrateOne(uuid: string) {
     if (this.work.store.has(uuid)) return;
