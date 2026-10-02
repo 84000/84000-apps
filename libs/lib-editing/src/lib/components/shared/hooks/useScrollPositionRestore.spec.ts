@@ -182,6 +182,29 @@ describe('usePassageAnchorRestore', () => {
     scroller.remove();
   });
 
+  // A table of contents link into Front, or a deep link into Translation.
+  it.each(['front', 'translation'])(
+    'arriving at %s with a hash drops the anchor and leaves the scroll to the link',
+    (tab) => {
+      const row = boxed('<div data-stack-passage="a1" id="a1"></div>', 400, 50);
+      const scroller = container(row);
+      document.body.append(scroller);
+      const ref = { current: scroller };
+      const hook = renderHook(
+        ({ tab, hash }) => usePassageAnchorRestore(ref, tab, 'main', hash),
+        { initialProps: { tab: 'source', hash: false } },
+      );
+      hook.result.current.current[tab] = { uuid: 'a1', offsetFromViewport: 0 };
+
+      hook.rerender({ tab, hash: true });
+      jest.advanceTimersByTime(1000);
+
+      expect(scroller.scrollTop).toBe(0);
+      expect(hook.result.current.current[tab]).toBeUndefined();
+      scroller.remove();
+    },
+  );
+
   it('stops settling on unmount', () => {
     const { row, scroller, hook } = returnToTranslation();
     hook.unmount();
