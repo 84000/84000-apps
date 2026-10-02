@@ -8,7 +8,10 @@ import {
   type ReactNode,
 } from 'react';
 import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
-import { BODY_MATTER_FILTER } from '@eightyfourthousand/data-access';
+import {
+  BODY_MATTER_FILTER,
+  FRONT_MATTER_FILTER,
+} from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
@@ -39,7 +42,10 @@ import type { PassageExtras } from './types';
  * before the body.
  */
 const SECTIONS: SpineSection[] = [
+  // The filter matches each type's `*Header` too.
+  { tab: 'front', type: FRONT_MATTER_FILTER },
   { tab: 'translation', type: BODY_MATTER_FILTER },
+  // Abbreviations read between the body and the notes, when stacked.
   { tab: 'endnotes', type: 'endnotes' },
 ];
 

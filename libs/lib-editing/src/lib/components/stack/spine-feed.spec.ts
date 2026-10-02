@@ -353,6 +353,30 @@ describe('SpineFeed', () => {
       return { w, main, notes };
     };
 
+    it('keeps the front matter ahead of the body as both grow', async () => {
+      const w = work();
+      const front = new SpineFeed(w, client, {
+        type: '(introduction)',
+        tab: 'front',
+      });
+      const main = new SpineFeed(w, client, TRANSLATION);
+      const notes = new SpineFeed(w, client, ENDNOTES);
+      clientGraphql.getPassageMetaPage
+        .mockResolvedValueOnce(metaPage(0, 2, true, 'introduction', 'f'))
+        .mockResolvedValueOnce(metaPage(0, 2, true))
+        .mockResolvedValueOnce(metaPage(0, 1, false, 'endnotes', 'n'));
+      await front.seed();
+      await main.seed();
+      await notes.seed();
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(2, 1, false, 'introduction', 'f'),
+      );
+      await front.extend();
+
+      expect(w.spine.uuids()).toEqual(['f0', 'f1', 'f2', 'p0', 'p1', 'n0']);
+    });
+
     it('asks the server for its own section', async () => {
       const w = work();
       const notes = new SpineFeed(w, client, ENDNOTES);
