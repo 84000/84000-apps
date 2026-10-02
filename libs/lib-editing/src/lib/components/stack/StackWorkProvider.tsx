@@ -123,6 +123,9 @@ export const StackWorkProvider = ({
   useEffect(() => {
     if (!stack) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      // An editor handled it. Its undo can move focus and tear the editor
+      // down, so the target no longer reads as one.
+      if (event.defaultPrevented) return;
       if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       const key = event.key.toLowerCase();
       if (key !== 'z' && key !== 'y') return;
