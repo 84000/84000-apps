@@ -155,11 +155,12 @@ export function usePassageAnchorRestore(
   const prevTabRef = useRef<string | undefined>(undefined);
   const stopSettlingRef = useRef<(() => void) | null>(null);
   // Read by the tab effect, which must not re-run when only the hash changes.
+  // Declared first, so it is current by the time that effect runs.
   const hasHashRef = useRef(hasHash);
-  hasHashRef.current = hasHash;
 
   // A hash scrolls to its own target; settling would pull it back.
   useEffect(() => {
+    hasHashRef.current = hasHash;
     if (!hasHash) return;
     stopSettlingRef.current?.();
     stopSettlingRef.current = null;
