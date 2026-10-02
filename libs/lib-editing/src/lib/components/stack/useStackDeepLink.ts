@@ -42,8 +42,8 @@ const waitForDrawn = (id: string): Promise<HTMLElement | null> =>
     const deadline = performance.now() + RENDER_TIMEOUT_MS;
     const look = () => {
       const found = Array.from(
-        document.querySelectorAll<HTMLElement>('[id]'),
-      ).find((el) => el.id === id && el.getClientRects().length > 0);
+        document.querySelectorAll<HTMLElement>(`[id="${CSS.escape(id)}"]`),
+      ).find((el) => el.getClientRects().length > 0);
       if (found) return resolve(found);
       if (performance.now() > deadline) return resolve(null);
       requestAnimationFrame(look);
