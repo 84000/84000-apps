@@ -152,6 +152,60 @@ describe('dirtyPassages', () => {
     expect(again.sort()).toEqual([...uuids].sort());
   });
 
+  it('saves an abbreviation entry with its key and explanation, unlabelled', () => {
+    const text = 'DN Dīrhanikāya. The Pāli Text Society edition.';
+    const dto: PassageDTO = {
+      uuid: 'ab-1',
+      work_uuid: 'w1',
+      type: 'abbreviations',
+      label: '',
+      sort: 4120,
+      content: text,
+      annotations: [
+        {
+          uuid: 'key-1',
+          passage_uuid: 'ab-1',
+          type: 'abbreviation',
+          start: 0,
+          end: 3,
+          content: [],
+        },
+        {
+          uuid: 'explanation-1',
+          passage_uuid: 'ab-1',
+          type: 'has-abbreviation',
+          start: 3,
+          end: text.length,
+          content: [],
+        },
+      ],
+    };
+    const seed = stackSeedFromPassage(
+      passageFromDTO(
+        dto,
+        annotationsFromDTO(dto.annotations ?? [], text.length),
+      ),
+    );
+    const work = createStackWorkDocument({ workUuid: 'w1' });
+    work.seedSpine([seed.meta]);
+    work.store.create('ab-1', seed.content);
+    // Type at the end of the explanation.
+    const edited = JSON.parse(JSON.stringify(seed.content));
+    edited[0].content[1].content[0].text += ' Edited.';
+    work.store.ensure('ab-1').replaceContent({ type: 'doc', content: edited });
+
+    const [passage] = dirtyPassages(work);
+    expect(passage).toMatchObject({ type: 'abbreviations', label: '' });
+    expect(passage.content).toBe(`${text} Edited.`);
+    const spans = Object.fromEntries(
+      passage.annotations.map((a) => [a.type, [a.start, a.end]]),
+    );
+    expect(spans).toEqual({
+      abbreviation: [0, 3],
+      hasAbbreviation: [3, text.length + ' Edited.'.length],
+    });
+  });
+
   it('takes identity from the spine and sort from position', () => {
     const work = build();
     edit(work, 'p2', 'changed');
