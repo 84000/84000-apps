@@ -51,7 +51,13 @@ const createEditor = (item: Partial<MentionItem>) =>
     },
   });
 
+let editor: Editor | undefined;
+
 beforeEach(() => window.history.replaceState(null, '', '/'));
+afterEach(() => {
+  editor?.destroy();
+  editor = undefined;
+});
 
 describe('Mention same-work passage links', () => {
   // A section's heading row is typed `<section>Header`, and it lives in the
@@ -61,7 +67,7 @@ describe('Mention same-work passage links', () => {
     ['acknowledgmentHeader', 'main', 'front'],
     [undefined, 'main', 'translation'],
   ])('opens a %s passage in %s/%s', (subtype, panel, tab) => {
-    const editor = createEditor({ subtype });
+    editor = createEditor({ subtype });
     const anchor =
       editor.view.dom.querySelector<HTMLAnchorElement>('a.mention-link');
     if (!anchor) throw new Error('mention was not rendered');
@@ -70,6 +76,5 @@ describe('Mention same-work passage links', () => {
 
     const params = new URLSearchParams(window.location.search);
     expect(params.get(panel)).toBe(`open:${tab}:p-1`);
-    editor.destroy();
   });
 });
