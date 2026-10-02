@@ -61,6 +61,19 @@ const UNKNOWN: Placement = {
   error: 'Jump to the note just before this position, then add the new note.',
 };
 
+const TAB_NAMES: Record<string, string> = {
+  front: 'Front',
+  translation: 'Translation',
+};
+
+/** Unknown because the note before sits in an earlier tab the stack lacks. */
+const unknownIn = (tab: string): Placement =>
+  TAB_NAMES[tab]
+    ? {
+        error: `The note just before this position is in the ${TAB_NAMES[tab]} tab. Jump to it there, then add the new note.`,
+      }
+    : UNKNOWN;
+
 /**
  * Where a new endnote for the selection goes: next to the one whose link sits
  * nearest before it in reading order, which runs back through earlier tabs —
@@ -93,18 +106,22 @@ const placementFor = (
 
   const entries = work.spine.entries();
   const index = entries.findIndex((entry) => entry.uuid === passageUuid);
+  const own = entries[index]?.tab;
+  const unknown = (tab: string) => (tab === own ? UNKNOWN : unknownIn(tab));
   for (let i = index - 1; i >= -1; i--) {
     // The spine holds each tab's run, not the work between them.
     const later = entries[i + 1].tab;
     if (i < 0 || entries[i].tab !== later) {
-      if (stack.controllerFor(later)?.hasEarlierPassages()) return UNKNOWN;
+      if (stack.controllerFor(later)?.hasEarlierPassages()) {
+        return unknown(later);
+      }
       if (i < 0) break;
       if (stack.controllerFor(entries[i].tab)?.hasMorePassages()) {
-        return UNKNOWN;
+        return unknown(entries[i].tab);
       }
     }
     const doc = work.store.peek(entries[i].uuid);
-    if (!doc) return UNKNOWN;
+    if (!doc) return unknown(entries[i].tab);
     const link = lastLinkBefore(doc.toNode());
     if (link) return { after: link };
   }
