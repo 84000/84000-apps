@@ -348,7 +348,7 @@ describe('createStackEndnote', () => {
       const result = await createStackEndnote({ stack, editor });
 
       expect(result).toEqual({
-        error: expect.stringMatching(/Jump to the note/),
+        error: expect.stringMatching(/in the Translation tab/),
       });
       editor.destroy();
     });
