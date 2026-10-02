@@ -9,7 +9,6 @@ const DEFAULT_WINDOW = 'default';
 
 /** The ranges each view of a work has open, and the documents they hold. */
 export class HydrationWindows {
-  /** Ranges each view currently has on screen, so hydration is their union. */
   /**
    * What each view currently has on screen, so hydration is their union.
    *
@@ -48,13 +47,21 @@ export class HydrationWindows {
     // The union of every open window. Views onto one work scroll
     // independently — the editor draws a tab per panel — so releasing what
     // this one has left behind would release what another one is drawing.
+    // A window can name passages that have since left the spine, as when
+    // another view jumped and its section's run was swapped. No source can
+    // place those, so they are neither asked for nor kept.
+    const placed = new Set(this.spine.uuids());
     const wanted = new Set<string>();
     this.windows.forEach((window) => {
-      window.uuids.forEach((uuid) => wanted.add(uuid));
+      window.uuids.forEach((uuid) => {
+        if (placed.has(uuid)) wanted.add(uuid);
+      });
       window.keep.forEach((uuid) => wanted.add(uuid));
     });
 
-    const docs = await this.store.hydrateMany([...wanted]);
+    const docs = await this.store.hydrateMany(
+      [...wanted].filter((uuid) => placed.has(uuid) || this.store.has(uuid)),
+    );
     this.store.releaseOutside(wanted);
     this.notify();
 
