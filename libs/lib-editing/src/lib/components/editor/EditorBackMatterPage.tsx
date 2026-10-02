@@ -48,6 +48,7 @@ export const EditorBackMatterPage = () => {
 
       const [
         { blocks: endnoteBlocks, hasMoreAfter: endnoteHasMore },
+        { blocks: abbreviationBlocks, hasMoreAfter: abbreviationHasMore },
         glossaryData,
         bibliographyData,
       ] = await Promise.all([
@@ -55,6 +56,13 @@ export const EditorBackMatterPage = () => {
           client: graphqlClient,
           uuid,
           type: 'endnotes',
+        }),
+        // Read at mount whatever the flag. Under it the stack reads its own
+        // passages, and this only decides whether the panel shows the tab.
+        getTranslationBlocks({
+          client: graphqlClient,
+          uuid,
+          type: 'abbreviations',
         }),
         getWorkGlossaryTerms({
           client: graphqlClient,
@@ -69,32 +77,12 @@ export const EditorBackMatterPage = () => {
 
       setEndnotes(endnoteBlocks);
       setEndnotesHasMore(endnoteHasMore);
+      setAbbreviations(abbreviationBlocks);
+      setAbbreviationsHasMore(abbreviationHasMore);
       setGlossary(glossaryData);
       setBibliography(bibliographyData);
     })();
   }, [work]);
-
-  // The stack reads the abbreviations itself, so under the flag one passage is
-  // asked for: the panel draws the tab only for a work that has any. The run
-  // the stack seeds can't say so in time, as it is seeded after the body.
-  useEffect(() => {
-    if (!perPassageDocs.ready) return;
-    let cancelled = false;
-    (async () => {
-      const { blocks, hasMoreAfter } = await getTranslationBlocks({
-        client: createGraphQLClient(),
-        uuid: work.uuid,
-        type: 'abbreviations',
-        ...(perPassageDocs.enabled ? { maxPassages: 1 } : {}),
-      });
-      if (cancelled) return;
-      setAbbreviations(blocks);
-      setAbbreviationsHasMore(hasMoreAfter);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [work.uuid, perPassageDocs.ready, perPassageDocs.enabled]);
 
   const renderTranslation = useCallback(
     ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>
