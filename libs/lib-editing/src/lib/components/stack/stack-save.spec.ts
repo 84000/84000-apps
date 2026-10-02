@@ -168,7 +168,7 @@ describe('dirtyPassages', () => {
           type: 'abbreviation',
           start: 0,
           end: 3,
-          content: [],
+          content: [{ uuid: 'ab-1' }],
         },
         {
           uuid: 'explanation-1',
@@ -176,7 +176,7 @@ describe('dirtyPassages', () => {
           type: 'has-abbreviation',
           start: 3,
           end: text.length,
-          content: [],
+          content: [{ uuid: 'ab-1' }],
         },
       ],
     };
@@ -204,6 +204,12 @@ describe('dirtyPassages', () => {
       abbreviation: [0, 3],
       hasAbbreviation: [3, text.length + ' Edited.'.length],
     });
+    // Both point at the entry they belong to, as production's rows do.
+    expect(
+      passage.annotations.map(
+        (a) => (a as { abbreviation?: string }).abbreviation,
+      ),
+    ).toEqual(['ab-1', 'ab-1']);
   });
 
   it('takes identity from the spine and sort from position', () => {
