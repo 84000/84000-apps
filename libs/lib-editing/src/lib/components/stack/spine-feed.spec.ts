@@ -400,6 +400,22 @@ describe('SpineFeed', () => {
       expect(w.spine.removedSinceSave()).toEqual([]);
     });
 
+    // A filtered `AROUND` centres on the cursor's position, so a passage of
+    // another section still returns a page of this one.
+    it('leaves its run alone when the passage is in another section', async () => {
+      const { w, main } = await both();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...metaPage(40, 2, false),
+        prevCursor: 'p40',
+        hasMoreBefore: true,
+      });
+
+      expect(await main.reveal('n1-elsewhere')).toBe(-1);
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n1']);
+      expect(main.hasMoreBefore).toBe(false);
+    });
+
     // Following a link reloaded a passage deleted but not saved yet, which
     // cancelled the deletion; after a merge its text was saved twice.
     it('does not bring back a passage deleted but not saved', async () => {
