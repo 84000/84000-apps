@@ -133,6 +133,31 @@ describe('useStackDeepLink with several stacks in a panel', () => {
     expect(front.revealed).toEqual([]);
   });
 
+  // `?main=open` with no tab shows Translation; Front must not take its hash.
+  it('reads a panel naming no tab as showing its default', async () => {
+    const front = controllerFor('front');
+    const translation = controllerFor('translation');
+    mockNavigation.panels = { main: { open: true, hash: 'p-1' } };
+
+    renderHook(() => useStackDeepLink(front.controller));
+    renderHook(() => useStackDeepLink(translation.controller));
+
+    await waitFor(() => expect(translation.revealed).toEqual(['p-1']));
+    expect(front.revealed).toEqual([]);
+  });
+
+  it('watches the main panel for the front tab', async () => {
+    const { controller, revealed } = controllerFor('front');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'front', hash: 'f-1' },
+      right: { open: true, tab: 'front', hash: 'n-1' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() => expect(revealed).toEqual(['f-1']));
+  });
+
   it('answers for Compare, which draws the translation stack', async () => {
     const { controller, revealed } = controllerFor('translation');
     mockNavigation.panels = {

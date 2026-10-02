@@ -28,7 +28,7 @@ import { useStackScroller } from './useStackScroller';
 import { useStackSelection } from './useStackSelection';
 import type { StackLinkTarget } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
-import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
+import { panelForTab, type PanelName } from '../shared/types';
 
 export { scrollParent } from './useStackScroller';
 
@@ -72,8 +72,7 @@ export const PassageStack = ({
   const { updatePanel, setToh, toh, registerEditorRequest, panels } =
     useNavigation();
   // Compare shows the Tibetan source beside each passage of the main panel.
-  const drawnIn =
-    panel ?? PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main';
+  const drawnIn = panel ?? panelForTab(controller.getTab());
   const compareToh =
     drawnIn === 'main' && panels.main.open && panels.main.tab === 'compare'
       ? (toh ?? '')

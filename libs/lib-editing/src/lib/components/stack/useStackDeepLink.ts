@@ -7,7 +7,11 @@ import {
 } from '@eightyfourthousand/lib-utils';
 
 import { useNavigation } from '../shared/NavigationContext';
-import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
+import {
+  DEFAULT_TAB_FOR_PANEL,
+  panelForTab,
+  type PanelName,
+} from '../shared/types';
 import type { PassageStackController } from './PassageStackController';
 
 /** How long to wait for the target row to render before giving up. */
@@ -88,13 +92,15 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
  */
 export const useStackDeepLink = (
   controller: PassageStackController,
-  panel: PanelName = PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main',
+  panel: PanelName = panelForTab(controller.getTab()),
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
   // A hash is addressed to the panel's active tab, and every stack drawn in
   // the panel sees it: only the one for that tab answers.
   const tab = controller.getTab();
-  const activeTab = panels[panel]?.tab;
+  // A panel naming no tab shows its default, and only that stack answers:
+  // two stacks in one panel would otherwise both take the hash.
+  const activeTab = panels[panel]?.tab ?? DEFAULT_TAB_FOR_PANEL[panel];
   const answers =
     !tab ||
     !activeTab ||
