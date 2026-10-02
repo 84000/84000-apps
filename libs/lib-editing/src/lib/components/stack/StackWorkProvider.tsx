@@ -13,7 +13,12 @@ import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import { useEditorState } from '../editor/EditorProvider';
 import { useNavigation } from '../shared/NavigationContext';
-import type { PanelName, PanelState, TabName } from '../shared/types';
+import {
+  DEFAULT_TAB_FOR_PANEL,
+  type PanelName,
+  type PanelState,
+  type TabName,
+} from '../shared/types';
 import { PassageStackController } from './PassageStackController';
 import {
   applyServerPassages,
@@ -38,12 +43,6 @@ const SECTIONS: SpineSection[] = [
   { tab: 'endnotes', type: 'endnotes' },
 ];
 
-/** A panel's tab when it names none. */
-const DEFAULT_TABS: Partial<Record<PanelName, string>> = {
-  main: 'translation',
-  right: 'endnotes',
-};
-
 /** Whether a panel is showing a tab's passages; Compare draws Translation's. */
 const showsTab = (
   state: PanelState | undefined,
@@ -51,7 +50,7 @@ const showsTab = (
   tab: string,
 ) => {
   if (!state?.open) return false;
-  const drawn = state.tab ?? DEFAULT_TABS[panel];
+  const drawn = state.tab ?? DEFAULT_TAB_FOR_PANEL[panel];
   return (drawn === 'compare' ? 'translation' : drawn) === tab;
 };
 
