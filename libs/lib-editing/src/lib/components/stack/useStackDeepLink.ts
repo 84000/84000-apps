@@ -34,29 +34,39 @@ const SETTLE_MS = 3000;
 /** Stops the highlight currently being held, if any. */
 let releaseHeld: (() => void) | undefined;
 
+/** The range last painted, so each is painted once whichever stack gets it. */
+let paintedRange: { start: number; end: number } | undefined;
+
 /**
  * Keep a highlight on a row while it settles.
  *
  * Right after a reveal the window around the row is still moving: the row's
  * document can be released and hydrated again, which replaces its content
- * (skeleton, then text) and collapses a highlight painted over the old text.
- * Repainting on each replacement keeps it until the window has settled.
+ * (skeleton, then text), and in a long work the row itself can be redrawn.
+ * Either collapses a highlight painted over the old text. Repainting into
+ * whichever row holds the passage keeps it until the window has settled.
  */
 const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
   releaseHeld?.();
-  const row = document.getElementById(uuid);
-  if (!row) return;
+  let frame = 0;
   const paint = () => {
-    const content = row.querySelector<HTMLElement>('.passage.is-editable');
-    if (content) highlightTextRange({ container: content, ...range });
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      const content = document
+        .getElementById(uuid)
+        ?.querySelector<HTMLElement>('.passage.is-editable');
+      if (content) highlightTextRange({ container: content, ...range });
+    });
   };
   const observer = new MutationObserver(paint);
-  observer.observe(row, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true });
   const timer = setTimeout(() => observer.disconnect(), SETTLE_MS);
   // Not tied to the effect that painted it: clearing the consumed hash
   // re-runs that effect straight away. A newer highlight replaces it.
   releaseHeld = () => {
     clearTimeout(timer);
+    cancelAnimationFrame(frame);
     observer.disconnect();
   };
 };
@@ -99,24 +109,32 @@ export const useStackDeepLink = (
 
     let cancelled = false;
     let finished = false;
+    // One range in the URL, and a link can name a passage in each panel: the
+    // main panel's passage takes it.
+    const ownsRange = panel === 'main' || !panels.main?.hash;
     void (async () => {
       const found = await controller.revealPassage(target);
       if (cancelled) return;
 
       if (found && highlight) {
-        const content = await waitForRow(target);
-        if (cancelled) return;
-        if (content) {
-          highlightTextRange({
-            container: content,
-            start: highlight.start,
-            end: highlight.end,
-          });
-          holdHighlight(target, highlight);
+        // Painted once, so a stack that finishes later can't move it.
+        if (ownsRange && paintedRange !== highlight) {
+          const content = await waitForRow(target);
+          if (cancelled) return;
+          if (content) {
+            paintedRange = highlight;
+            highlightTextRange({
+              container: content,
+              start: highlight.start,
+              end: highlight.end,
+            });
+            holdHighlight(target, highlight);
+          }
         }
-      } else {
+      } else if (!highlight) {
         releaseHeld?.();
         clearTextRangeHighlight();
+        paintedRange = undefined;
       }
 
       if (cancelled) return;

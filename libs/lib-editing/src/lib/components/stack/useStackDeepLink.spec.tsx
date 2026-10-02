@@ -188,4 +188,80 @@ describe('useStackDeepLink highlight', () => {
     );
     row.remove();
   });
+
+  // A long work can redraw the row itself, not just its content, while the
+  // window around a revealed passage settles.
+  it('repaints into a row that replaced the one it highlighted', async () => {
+    const { controller } = controllerFor('translation');
+    const host = document.createElement('div');
+    const row = () => {
+      const el = document.createElement('div');
+      el.id = 'p-2';
+      el.innerHTML = '<div class="passage is-editable"><p>text</p></div>';
+      return el;
+    };
+    const first = row();
+    host.append(first);
+    document.body.append(host);
+    mockNavigation.highlight = { start: 0, end: 3 };
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'p-2' },
+    };
+    libUtils.highlightTextRange.mockClear();
+
+    renderHook(() => useStackDeepLink(controller, 'main'));
+    await waitFor(() =>
+      expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(1),
+    );
+
+    const second = row();
+    first.replaceWith(second);
+    // By identity: the two rows' markup is the same.
+    await waitFor(() =>
+      expect(libUtils.highlightTextRange.mock.lastCall?.[0].container).toBe(
+        second.querySelector('.passage'),
+      ),
+    );
+    host.remove();
+  });
+
+  // The URL carries one range; a link can still name a passage in each panel.
+  it("paints the range on the main panel's passage when both panels have one", async () => {
+    const rows = ['m-1', 'n-1'].map((id) => {
+      const el = document.createElement('div');
+      el.id = id;
+      el.innerHTML = '<div class="passage is-editable"><p>text</p></div>';
+      document.body.append(el);
+      return el;
+    });
+    mockNavigation.highlight = { start: 0, end: 3 };
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'm-1' },
+      right: { open: true, tab: 'endnotes', hash: 'n-1' },
+    };
+    libUtils.highlightTextRange.mockClear();
+    // The notes stack answers last, after the main one has painted.
+    let revealNotes: (found: boolean) => void = () => undefined;
+    const notes = {
+      getTab: () => 'endnotes',
+      revealPassage: jest.fn(
+        () => new Promise<boolean>((resolve) => (revealNotes = resolve)),
+      ),
+    } as unknown as PassageStackController;
+    const { controller: main } = controllerFor('translation');
+
+    renderHook(() => useStackDeepLink(notes, 'right'));
+    renderHook(() => useStackDeepLink(main, 'main'));
+    await waitFor(() =>
+      expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(1),
+    );
+    revealNotes(true);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(libUtils.highlightTextRange).toHaveBeenCalledTimes(1);
+    expect(libUtils.highlightTextRange.mock.lastCall?.[0].container).toBe(
+      rows[0].querySelector('.passage'),
+    );
+    rows.forEach((row) => row.remove());
+  });
 });
