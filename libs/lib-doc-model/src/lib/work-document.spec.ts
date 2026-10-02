@@ -320,3 +320,65 @@ describe('WorkDocument merge at a blank seam', () => {
     expect(work.store.ensure('p1').toNode().childCount).toBe(1);
   });
 });
+
+// An abbreviations run as production stores it: a header labelled `ab.`, then
+// entries with no label, then the notes.
+describe('WorkDocument in a run of unlabelled passages', () => {
+  const abbreviations = () => {
+    let next = 0;
+    const work = new WorkDocument({
+      workUuid: 'work-1',
+      schema: testSchema,
+      newUuid: () => `new-${next++}`,
+    });
+    work.seedSpine([
+      meta('b0', '1.12'),
+      meta('h', 'ab.', 'abbreviationsHeader'),
+      meta('a0', '', 'abbreviations'),
+      meta('a1', '', 'abbreviations'),
+      meta('n0', 'n.1', 'endnotes'),
+    ]);
+    ['b0', 'h', 'a0', 'a1', 'n0'].forEach((uuid) =>
+      work.store.create(uuid, [para(`text ${uuid}`, `p-${uuid}`)]),
+    );
+    return work;
+  };
+  const labels = (work: WorkDocument) =>
+    work.spine.entries().map((entry) => entry.label);
+
+  it('leaves the tail of a split entry unlabelled', () => {
+    const work = abbreviations();
+    work.split('a0', 3);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
+  it('leaves an entry inserted after another unlabelled', () => {
+    const work = abbreviations();
+    work.insert({ type: 'abbreviations' }, 3);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
+  it('leaves entries pasted after another unlabelled', () => {
+    const work = abbreviations();
+    work.replacePassages(
+      ['a1'],
+      [{ type: 'abbreviations' }, { type: 'abbreviations' }],
+    );
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
+  it.each([
+    ['an entry into the one before it', 'a1'],
+    ['the first entry into the header', 'a0'],
+  ])('relabels nothing merging %s', (_, uuid) => {
+    const work = abbreviations();
+    work.merge(uuid);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', 'n.1']);
+  });
+
+  it('relabels nothing deleting an entry', () => {
+    const work = abbreviations();
+    work.remove(['a0']);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', 'n.1']);
+  });
+});
