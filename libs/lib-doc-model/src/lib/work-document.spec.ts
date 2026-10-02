@@ -376,9 +376,75 @@ describe('WorkDocument in a run of unlabelled passages', () => {
     expect(labels(work)).toEqual(['1.12', 'ab.', '', 'n.1']);
   });
 
+  it('leaves entries pasted over the first one unlabelled', () => {
+    const work = abbreviations();
+    work.replacePassages(
+      ['a0'],
+      [{ type: 'abbreviations' }, { type: 'abbreviations' }],
+    );
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
+  it('leaves an entry inserted after the header unlabelled', () => {
+    const work = abbreviations();
+    work.insert({ type: 'abbreviations' }, 2);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
+  it('leaves the tail of a split header unlabelled', () => {
+    const work = abbreviations();
+    work.split('h', 3);
+    expect(labels(work)).toEqual(['1.12', 'ab.', '', '', '', 'n.1']);
+  });
+
   it('relabels nothing deleting an entry', () => {
     const work = abbreviations();
     work.remove(['a0']);
     expect(labels(work)).toEqual(['1.12', 'ab.', '', 'n.1']);
+  });
+});
+
+// Elsewhere an empty label is not a convention, and main's numbering holds.
+describe('WorkDocument after an unlabelled passage of another kind', () => {
+  const withHeader = () => {
+    let next = 0;
+    const work = new WorkDocument({
+      workUuid: 'work-1',
+      schema: testSchema,
+      newUuid: () => `new-${next++}`,
+    });
+    work.seedSpine([
+      meta('h', '', 'introductionHeader'),
+      meta('i1', '1', 'introduction'),
+      meta('i2', '2', 'introduction'),
+    ]);
+    ['h', 'i1', 'i2'].forEach((uuid) =>
+      work.store.create(uuid, [para(`text ${uuid}`, `p-${uuid}`)]),
+    );
+    return work;
+  };
+  const labels = (work: WorkDocument) =>
+    work.spine.entries().map((entry) => entry.label);
+
+  it('numbers passages pasted over the first after it', () => {
+    const work = withHeader();
+    work.replacePassages(
+      ['i1'],
+      [{ type: 'introduction' }, { type: 'introduction' }],
+    );
+    expect(labels(work)).toEqual(['', '1', '2', '3']);
+  });
+
+  it('numbers a passage inserted after it', () => {
+    const work = withHeader();
+    work.insert({ type: 'introduction' }, 1);
+    expect(labels(work)).toEqual(['', '1', '2', '3']);
+  });
+
+  // As toh145's introduction header is stored.
+  it('leaves the tail of the unlabelled passage itself unlabelled', () => {
+    const work = withHeader();
+    work.split('h', 3);
+    expect(labels(work)).toEqual(['', '', '1', '2']);
   });
 });
