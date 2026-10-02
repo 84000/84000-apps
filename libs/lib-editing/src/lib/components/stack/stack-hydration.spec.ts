@@ -100,3 +100,28 @@ describe('PassageStackController hydration', () => {
     expect(work.store.has('p0')).toBe(true);
   });
 });
+
+describe('PassageStackController revealStart', () => {
+  // The doubled layout draws each stack twice, and both answer one hash.
+  it('shares one move between concurrent callers', async () => {
+    const all = seeds(3);
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const revealStart = jest.fn(async () => undefined);
+    const controller = new PassageStackController({
+      work,
+      spineFeed: {
+        hasMore: false,
+        hasMoreBefore: true,
+        maybeExtend: () => false,
+        revealStart,
+      },
+    });
+
+    await Promise.all([controller.revealStart(), controller.revealStart()]);
+    expect(revealStart).toHaveBeenCalledTimes(1);
+
+    await controller.revealStart();
+    expect(revealStart).toHaveBeenCalledTimes(2);
+  });
+});
