@@ -222,18 +222,56 @@ describe('createStackEndnote', () => {
     });
 
     it.each([
-      ['the front run is not loaded to its end', { front: { after: true } }],
-      ['the body run starts mid-work', { translation: { before: true } }],
-    ])('refuses when %s', async (_, partial) => {
+      [
+        'the front run is not loaded to its end',
+        { front: { after: true } },
+        /in the Front tab/,
+      ],
+      [
+        'the body run starts mid-work',
+        { translation: { before: true } },
+        /^Jump to the note/,
+      ],
+    ])('refuses when %s', async (_, partial, message) => {
       const { work, stack } = withFront(partial);
       const editor = editorFor(work, 'b2', 1, 7);
 
       const result = await createStackEndnote({ stack, editor });
 
+      expect(result).toEqual({ error: expect.stringMatching(message) });
+      expect(work.spine.length).toBe(4);
+      editor.destroy();
+    });
+
+    // A Front tab never shown holds no documents.
+    it('says the note before is in Front when Front is not held', async () => {
+      const { work, stack } = build(WITH_FRONT);
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
       expect(result).toEqual({
-        error: expect.stringMatching(/Jump to the note/),
+        error: expect.stringMatching(/in the Front tab/),
       });
       expect(work.spine.length).toBe(4);
+      editor.destroy();
+    });
+
+    it('refuses in a front passage when the front run starts mid-work', async () => {
+      const { work, stack } = withFront({ front: { before: true } });
+      work.store.create('f0', [para('f0p', 'plain front text')]);
+      work.spine.insert({ uuid: 'f0', label: 'i.0', type: 'introduction' }, 0, {
+        renumber: false,
+      });
+      // The first front passage held, with no link before the selection.
+      const editor = editorFor(work, 'f0', 1, 6);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({
+        error: expect.stringMatching(/^Jump to the note/),
+      });
+      expect(work.spine.length).toBe(5);
       editor.destroy();
     });
   });
