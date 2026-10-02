@@ -3,7 +3,7 @@
 import { useEffect, type RefObject } from 'react';
 
 import { useNavigation } from '../shared/NavigationContext';
-import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../shared/types';
+import { locationForPassageType } from '../shared/types';
 import type { PassageStackController } from './PassageStackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import {
@@ -45,14 +45,10 @@ export const useStackRowPointer = ({
       if (!ref) return;
       event.preventDefault();
       event.stopPropagation();
-      const type = ref.dataset['refType'] ?? '';
+      const { panel, tab } = locationForPassageType(ref.dataset['refType']);
       updatePanel({
-        name: PANEL_FOR_SECTION[type] ?? 'main',
-        state: {
-          open: true,
-          tab: TAB_FOR_SECTION[type] ?? 'translation',
-          hash: ref.dataset['refUuid'],
-        },
+        name: panel,
+        state: { open: true, tab, hash: ref.dataset['refUuid'] },
       });
     };
     const onClick = (event: MouseEvent) => {

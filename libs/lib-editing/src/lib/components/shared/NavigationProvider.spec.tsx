@@ -190,3 +190,49 @@ describe('NavigationProvider editor requests', () => {
     expect(request).not.toHaveBeenCalled();
   });
 });
+
+describe('NavigationProvider xmlId deep links', () => {
+  const graphql = jest.requireMock('@eightyfourthousand/client-graphql') as {
+    lookup: jest.Mock;
+    getPassage: jest.Mock;
+  };
+
+  /** Reports where each panel points. */
+  const PanelsProbe = () => {
+    const { panels } = useNavigation();
+    return (
+      <>
+        {(['main', 'right'] as const).map((name) => (
+          <span key={name} data-testid={name}>
+            {`${panels[name].open ? 'open' : 'closed'}:${panels[name].tab ?? '-'}:${panels[name].hash ?? '-'}`}
+          </span>
+        ))}
+      </>
+    );
+  };
+
+  afterEach(() => {
+    graphql.lookup.mockReset().mockResolvedValue(null);
+    graphql.getPassage.mockReset();
+  });
+
+  // A section's heading row is typed `<section>Header`, and it lives in the
+  // same tab as the section body, not in the translation fallback.
+  it.each([
+    ['introductionHeader', 'main', 'front'],
+    ['abbreviationsHeader', 'right', 'abbreviations'],
+  ])('opens a %s passage in %s/%s', async (type, panel, tab) => {
+    graphql.lookup.mockResolvedValue({ type: 'passage', uuid: 'p-1' });
+    graphql.getPassage.mockResolvedValue({ uuid: 'p-1', type });
+    window.history.replaceState(null, '', '/#UT22084-001-001-12');
+
+    render(
+      <NavigationProvider uuid="w1" editable>
+        <PanelsProbe />
+      </NavigationProvider>,
+    );
+
+    const target = await screen.findByText(`open:${tab}:p-1`);
+    expect(target.getAttribute('data-testid')).toBe(panel);
+  });
+});

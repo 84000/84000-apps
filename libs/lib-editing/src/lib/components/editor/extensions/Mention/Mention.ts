@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import Suggestion from '@tiptap/suggestion';
 import { registerEditorElement } from '../../util';
-import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
+import { locationForPassageType } from '../../../shared/types';
 import {
   MentionSSR,
   MentionItem,
@@ -167,9 +167,7 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
                 query.set('right', `open:glossary:${item.entity}`);
                 break;
               case 'passage': {
-                const panel = PANEL_FOR_SECTION[item.subtype || ''] || 'main';
-                const tab =
-                  TAB_FOR_SECTION[item.subtype || ''] || 'translation';
+                const { panel, tab } = locationForPassageType(item.subtype);
                 query.set(panel, `open:${tab}:${item.entity}`);
                 applyMentionHighlightParams(query, item);
                 break;

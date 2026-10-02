@@ -21,11 +21,10 @@ import {
 import { useSearchParams } from 'next/navigation';
 import {
   HighlightRange,
-  PANEL_FOR_SECTION,
+  locationForPassageType,
   PanelName,
   PanelsState,
   PanelState,
-  TAB_FOR_SECTION,
   TabName,
 } from './types';
 import { HoverCardProvider } from './HoverCardProvider';
@@ -231,8 +230,7 @@ export const NavigationProvider = ({
           return;
         }
 
-        panel = PANEL_FOR_SECTION[passage.type] ?? 'main';
-        tab = TAB_FOR_SECTION[passage.type] ?? 'translation';
+        ({ panel, tab } = locationForPassageType(passage.type));
         uuid = passage.uuid;
       } else if (result.type === 'glossary') {
         panel = 'right';
