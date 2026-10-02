@@ -61,8 +61,11 @@ const Probe = () => {
       <span data-testid="front">
         {String(stack.controllerFor('front')?.getOrder().join(','))}
       </span>
+      <span data-testid="abbreviations">
+        {String(stack.controllerFor('abbreviations')?.getOrder().join(','))}
+      </span>
       <span data-testid="unstacked">
-        {String(stack.controllerFor('abbreviations'))}
+        {String(stack.controllerFor('glossary'))}
       </span>
     </div>
   );
@@ -92,6 +95,7 @@ describe('StackWorkProvider', () => {
     clientGraphql.getPassageMetaPage
       .mockResolvedValueOnce(page('f', 'introduction', 2))
       .mockResolvedValueOnce(page('p', 'translation', 2))
+      .mockResolvedValueOnce(page('a', 'abbreviations', 2))
       .mockResolvedValueOnce(page('n', 'endnotes', 2));
 
     render(
@@ -101,7 +105,9 @@ describe('StackWorkProvider', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId('spine').textContent).toBe('f0,f1,p0,p1,n0,n1'),
+      expect(screen.getByTestId('spine').textContent).toBe(
+        'f0,f1,p0,p1,a0,a1,n0,n1',
+      ),
     );
   });
 
@@ -109,6 +115,7 @@ describe('StackWorkProvider', () => {
     clientGraphql.getPassageMetaPage
       .mockResolvedValueOnce(page('f', 'introduction', 2))
       .mockResolvedValueOnce(page('p', 'translation', 2))
+      .mockResolvedValueOnce(page('a', 'abbreviations', 2))
       .mockResolvedValueOnce(page('n', 'endnotes', 2));
 
     render(
@@ -122,6 +129,7 @@ describe('StackWorkProvider', () => {
     );
     expect(screen.getByTestId('notes').textContent).toBe('n0,n1');
     expect(screen.getByTestId('front').textContent).toBe('f0,f1');
+    expect(screen.getByTestId('abbreviations').textContent).toBe('a0,a1');
   });
 
   // Many works have no front matter; the stack has nothing to draw, not
@@ -130,6 +138,7 @@ describe('StackWorkProvider', () => {
     clientGraphql.getPassageMetaPage
       .mockResolvedValueOnce(page('f', 'introduction', 0))
       .mockResolvedValueOnce(page('p', 'translation', 1))
+      .mockResolvedValueOnce(page('a', 'abbreviations', 0))
       .mockResolvedValueOnce(page('n', 'endnotes', 1));
 
     render(
@@ -142,12 +151,14 @@ describe('StackWorkProvider', () => {
       expect(screen.getByTestId('spine').textContent).toBe('p0,n0'),
     );
     expect(screen.getByTestId('front').textContent).toBe('');
+    expect(screen.getByTestId('abbreviations').textContent).toBe('');
   });
 
   it('reports nothing for a tab it does not draw', async () => {
     clientGraphql.getPassageMetaPage
       .mockResolvedValueOnce(page('f', 'introduction', 1))
       .mockResolvedValueOnce(page('p', 'translation', 1))
+      .mockResolvedValueOnce(page('a', 'abbreviations', 0))
       .mockResolvedValueOnce(page('n', 'endnotes', 1));
 
     render(
@@ -165,6 +176,7 @@ describe('StackWorkProvider', () => {
     clientGraphql.getPassageMetaPage
       .mockResolvedValueOnce(page('f', 'introduction', 1))
       .mockResolvedValueOnce(page('p', 'translation', 1))
+      .mockResolvedValueOnce(page('a', 'abbreviations', 0))
       .mockResolvedValueOnce(page('n', 'endnotes', 1));
 
     render(
@@ -174,7 +186,7 @@ describe('StackWorkProvider', () => {
     );
 
     await waitFor(() =>
-      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(3),
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(4),
     );
     const types = clientGraphql.getPassageMetaPage.mock.calls.map(
       (call) => call[0].type,
@@ -182,6 +194,7 @@ describe('StackWorkProvider', () => {
     expect(types).toEqual([
       FRONT_MATTER_FILTER,
       BODY_MATTER_FILTER,
+      'abbreviations',
       'endnotes',
     ]);
   });

@@ -1,12 +1,20 @@
+import { Editor, type JSONContent } from '@tiptap/core';
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import type { XmlElement, XmlText } from 'yjs';
 import {
+  annotationsFromDTO,
+  passageFromDTO,
+  type PassageDTO,
+} from '@eightyfourthousand/data-access';
+import {
+  blockFromPassage,
   PassageLoader,
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
 import { build, flush, hydrated, source } from './stack-controller.fixture';
+import { buildStackSchemaExtensions } from './stack-extensions';
 import { createStackWorkDocument } from './stack-work';
 import type { StackPassageSeed } from './types';
 
@@ -166,5 +174,94 @@ describe('PassageStackController static rendering', () => {
     const html = controller.getStaticHTML('p0');
     expect(html).toContain('class="end-note-link"');
     expect(html).toContain('endNote="en-1"');
+  });
+});
+
+describe('abbreviation rows', () => {
+  /**
+   * An entry as production stores it: an unlabelled `abbreviations` row whose
+   * key and explanation are two annotations over its text.
+   */
+  const ENTRY: PassageDTO = {
+    uuid: 'ab-1',
+    work_uuid: 'work-1',
+    type: 'abbreviations',
+    label: '',
+    sort: 4120,
+    content: 'DN Dīrhanikāya. The Pāli Text Society edition.',
+    annotations: [
+      {
+        uuid: 'an-1',
+        passage_uuid: 'ab-1',
+        type: 'abbreviation',
+        start: 0,
+        end: 3,
+        content: [],
+      },
+      {
+        uuid: 'an-2',
+        passage_uuid: 'ab-1',
+        type: 'has-abbreviation',
+        start: 3,
+        end: 46,
+        content: [],
+      },
+    ],
+  };
+
+  /** The entry as the stack's source hands it over: the passage's children. */
+  const entrySeed = (): StackPassageSeed => {
+    const passage = passageFromDTO(
+      ENTRY,
+      annotationsFromDTO(ENTRY.annotations ?? [], ENTRY.content.length),
+    );
+    const block = blockFromPassage(passage);
+    return {
+      meta: { uuid: ENTRY.uuid, label: '', type: 'abbreviations' },
+      content: (block?.content ?? []) as JSONContent[],
+      charCount: ENTRY.content.length,
+    };
+  };
+
+  /**
+   * The design system lays an entry out in two columns with
+   * `.paragraph:has(> [type='abbreviation'])`, so the key must be a direct
+   * child of a `.paragraph`. jsdom has no `:has`, so the child is looked for.
+   */
+  const keyIn = (root: Element) =>
+    root.querySelector(':scope p.paragraph > [type="abbreviation"]');
+
+  it('draws an entry as the two-column rule expects, statically', async () => {
+    const all = [entrySeed()];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+
+    const row = document.createElement('div');
+    row.innerHTML = controller.getStaticHTML(ENTRY.uuid) ?? '';
+
+    expect(keyIn(row)?.textContent).toBe('DN ');
+    expect(
+      keyIn(row)?.parentElement?.querySelector(
+        ':scope > [type="hasAbbreviation"]',
+      )?.textContent,
+    ).toBe('Dīrhanikāya. The Pāli Text Society edition.');
+  });
+
+  it('draws it the same way in a live editor', () => {
+    const element = document.createElement('div');
+    const editor = new Editor({
+      element,
+      extensions: buildStackSchemaExtensions(),
+      content: { type: 'doc', content: entrySeed().content },
+    });
+
+    expect(keyIn(editor.view.dom)?.textContent).toBe('DN ');
+    editor.destroy();
   });
 });
