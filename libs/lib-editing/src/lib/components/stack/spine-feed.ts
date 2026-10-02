@@ -228,6 +228,30 @@ export class SpineFeed {
   }
 
   /**
+   * Rebuild the run from its first passage, when a reveal opened it part way.
+   *
+   * What a link to something above the run needs — the titles and imprint
+   * over the front matter are drawn only once it starts at the top.
+   */
+  async revealStart(): Promise<void> {
+    if (this.noneBefore) return;
+    const page = await getPassageMetaPage({
+      client: this.client,
+      uuid: this.work.workUuid,
+      limit: FIRST_PAGE,
+      type: this.section?.type,
+    });
+    if (!page.metas.length) return;
+
+    this.record(page.metas);
+    this.replaceRun(page.metas);
+    this.startCursor = undefined;
+    this.endCursor = page.nextCursor;
+    this.noneBefore = true;
+    this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+  }
+
+  /**
    * Swap this feed's passages for a window around the target.
    *
    * A sectioned feed replaces only its own run: the other panels are showing

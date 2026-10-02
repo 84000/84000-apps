@@ -295,6 +295,9 @@ export class PassageStackController {
   revealPassage = (uuid: string): Promise<boolean> =>
     this.hydration.revealPassage(uuid);
 
+  /** Move the window to the start of this tab's run, if it opens later. */
+  revealStart = (): Promise<void> => this.hydration.revealStart();
+
   // ------------------------------------------------------------- editors
 
   buildEditorExtensions(uuid: string): Extensions {

@@ -12,6 +12,8 @@ const mockNavigation = {
 jest.mock('@eightyfourthousand/lib-utils', () => ({
   highlightTextRange: jest.fn(() => true),
   clearTextRangeHighlight: jest.fn(),
+  // The fixtures name passages with short ids; these name something else.
+  isUuid: (value: string) => !['imprint', 'nowhere'].includes(value),
 }));
 
 const libUtils = jest.requireMock('@eightyfourthousand/lib-utils') as {
@@ -31,6 +33,7 @@ const controllerFor = (tab?: string) => {
       revealed.push(uuid);
       return true;
     }),
+    revealStart: jest.fn(async () => undefined),
   } as unknown as PassageStackController;
   return { controller, revealed };
 };
@@ -183,6 +186,51 @@ describe('useStackDeepLink with several stacks in a panel', () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockNavigation.updatePanel).not.toHaveBeenCalled();
+  });
+});
+
+// The table of contents links the imprint by name rather than by uuid.
+describe('useStackDeepLink to something that is not a passage', () => {
+  it('moves the run to its start and scrolls to the element', async () => {
+    const { controller, revealed } = controllerFor('front');
+    const imprint = document.createElement('div');
+    imprint.id = 'imprint';
+    imprint.getClientRects = () => [{}] as unknown as DOMRectList;
+    imprint.scrollIntoView = jest.fn();
+    document.body.append(imprint);
+    mockNavigation.panels = {
+      main: { open: true, tab: 'front', hash: 'imprint' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() => expect(imprint.scrollIntoView).toHaveBeenCalled());
+    expect(controller.revealStart).toHaveBeenCalled();
+    expect(revealed).toEqual([]);
+    expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'front', hash: undefined },
+    });
+    imprint.remove();
+  });
+
+  // Kept, it would stay in the URL for good: no stack can answer it.
+  it('clears the hash even when nothing carries that id', async () => {
+    jest.useFakeTimers();
+    const { controller, revealed } = controllerFor('translation');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'nowhere' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+    await jest.advanceTimersByTimeAsync(3000);
+
+    expect(revealed).toEqual([]);
+    expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'translation', hash: undefined },
+    });
+    jest.useRealTimers();
   });
 });
 
