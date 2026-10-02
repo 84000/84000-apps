@@ -266,6 +266,25 @@ describe('SpineFeed', () => {
       return { w, feed };
     };
 
+    // The titles over the front matter follow `hasMoreBefore`, read when the
+    // spine notifies.
+    it.each([
+      ['prepending the first page', (feed: SpineFeed) => feed.extendBefore()],
+      ['going back to the start', (feed: SpineFeed) => feed.revealStart()],
+    ])('reports no more before by the time %s lands', async (_, move) => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(497, 3, { before: false }),
+      );
+      const seen: boolean[] = [];
+      w.spine.observe(() => seen.push(feed.hasMoreBefore));
+
+      await move(feed);
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.at(-1)).toBe(false);
+    });
+
     // A link to the imprint, over a front matter window opened part way.
     it('goes back to the start of the run', async () => {
       const { w, feed } = await revealed();

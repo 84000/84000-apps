@@ -218,11 +218,11 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
-    this.replaceRun(page.metas);
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
     this.noneBefore = !page.hasMoreBefore || !page.prevCursor;
     this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
 
     return this.work.spine.indexOf(uuid);
   }
@@ -244,11 +244,11 @@ export class SpineFeed {
     if (!page.metas.length) return;
 
     this.record(page.metas);
-    this.replaceRun(page.metas);
     this.startCursor = undefined;
     this.endCursor = page.nextCursor;
     this.noneBefore = true;
     this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
   }
 
   /**
@@ -319,9 +319,11 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
-    prependToSpine(this.work.spine, page.metas, this.section?.tab);
+    // Before the write: the spine notifies synchronously, and a view reading
+    // `hasMoreBefore` then must see the page it just got.
     this.startCursor = page.prevCursor;
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
+    prependToSpine(this.work.spine, page.metas, this.section?.tab);
 
     return this.work.spine.length;
   }
