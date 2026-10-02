@@ -35,8 +35,7 @@ const NO_CONTENT: TranslationEditorContent = [];
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
   const perPassageDocs = usePerPassageDocs();
-  // The stack reads front matter itself, so the paginated editor's first page
-  // of it would be fetched for nothing.
+  // The stack reads front matter itself, so it need not wait for the page.
   const stackedFront = perPassageDocs.ready && perPassageDocs.enabled;
   const [body, setBody] = useState<TranslationEditorContent>();
   const [frontMatter, setFrontMatter] = useState<TranslationEditorContent>();
@@ -48,10 +47,20 @@ export const EditorBodyPage = () => {
     (async () => {
       const client = createGraphQLClient();
 
+      // Front matter is read at mount whatever the flag says, as before: the
+      // flag's value arrives later, and the paginated editor should not wait
+      // on it. Under the flag the stack reads it, and this page goes unused.
       const [
+        { blocks: frontBlocks, hasMoreAfter: frontHasMore },
         { blocks: bodyBlocks, hasMoreAfter: bodyHasMoreAfter },
         titlesData,
       ] = await Promise.all([
+        getTranslationBlocks({
+          client,
+          uuid: work.uuid,
+          type: FRONT_MATTER_FILTER,
+          maxPassages: INITIAL_PASSAGES,
+        }),
         // Still read under the stack: its alignments decide the Compare tab.
         getTranslationBlocks({
           client,
@@ -63,29 +72,12 @@ export const EditorBodyPage = () => {
       ]);
 
       setTitles(titlesData);
+      setFrontMatter(frontBlocks);
+      setFrontMatterHasMore(frontHasMore);
       setBody(bodyBlocks);
       setBodyHasMore(bodyHasMoreAfter);
     })();
   }, [work.uuid]);
-
-  useEffect(() => {
-    if (!perPassageDocs.ready || perPassageDocs.enabled) return;
-    let cancelled = false;
-    (async () => {
-      const { blocks, hasMoreAfter } = await getTranslationBlocks({
-        client: createGraphQLClient(),
-        uuid: work.uuid,
-        type: FRONT_MATTER_FILTER,
-        maxPassages: INITIAL_PASSAGES,
-      });
-      if (cancelled) return;
-      setFrontMatter(blocks);
-      setFrontMatterHasMore(hasMoreAfter);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [work.uuid, perPassageDocs.ready, perPassageDocs.enabled]);
 
   const renderTitles = useCallback(
     ({ titles, imprint }: TitlesRenderer) => (
@@ -109,7 +101,7 @@ export const EditorBodyPage = () => {
         // binding, thrown away when it does.
         <TranslationSkeleton />
       ) : perPassageDocs.enabled && STACKED_TABS.has(name) ? (
-        // Compare draws Translation's stack.
+        // Compare is drawn in the translation tab, so it shares that stack.
         <StackTab tab={name} className={className} />
       ) : (
         <TranslationBuilder
