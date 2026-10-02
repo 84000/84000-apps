@@ -126,8 +126,17 @@ function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
   return stop;
 }
 
-/** Tabs whose content contains passage elements. */
-const PASSAGE_TABS = ['front', 'translation', 'compare'];
+/**
+ * Tabs whose content contains passage elements: the main panel's, and the
+ * right panel's Notes and Abbreviations.
+ */
+const PASSAGE_TABS = [
+  'front',
+  'translation',
+  'compare',
+  'endnotes',
+  'abbreviations',
+];
 
 /**
  * One anchor per tab, keyed as scroll positions are. One slot would not do:

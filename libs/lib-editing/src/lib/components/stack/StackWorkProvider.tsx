@@ -45,7 +45,8 @@ const SECTIONS: SpineSection[] = [
   // The filter matches each type's `*Header` too.
   { tab: 'front', type: FRONT_MATTER_FILTER },
   { tab: 'translation', type: BODY_MATTER_FILTER },
-  // Abbreviations read between the body and the notes, when stacked.
+  // Between the body and the notes, as every work that has them reads.
+  { tab: 'abbreviations', type: 'abbreviations' },
   { tab: 'endnotes', type: 'endnotes' },
 ];
 

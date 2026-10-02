@@ -26,6 +26,9 @@ const StackTab = dynamic(
   { ssr: false },
 );
 
+/** The right panel's tabs drawn as stacks under the flag. */
+const STACKED_TABS = new Set<string>(['endnotes', 'abbreviations']);
+
 export const EditorBackMatterPage = () => {
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
   const { work } = useEditorState();
@@ -54,6 +57,8 @@ export const EditorBackMatterPage = () => {
           uuid,
           type: 'endnotes',
         }),
+        // Read at mount whatever the flag. Under it the stack reads its own
+        // passages, and this only decides whether the panel shows the tab.
         getTranslationBlocks({
           client: graphqlClient,
           uuid,
@@ -81,14 +86,13 @@ export const EditorBackMatterPage = () => {
 
   const renderTranslation = useCallback(
     ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>
-      // Abbreviations keep the paginated editor for now.
       !perPassageDocs.ready ? (
         // Not "the flag is off" — the value has not arrived. Building the
         // paginated editor on that answer costs a TipTap instance and a Yjs
         // binding, thrown away when it does.
         <TranslationSkeleton />
-      ) : perPassageDocs.enabled && name === 'endnotes' ? (
-        <StackTab tab="endnotes" className={className} />
+      ) : perPassageDocs.enabled && STACKED_TABS.has(name) ? (
+        <StackTab tab={name} className={className} />
       ) : (
         <TranslationBuilder
           content={content}

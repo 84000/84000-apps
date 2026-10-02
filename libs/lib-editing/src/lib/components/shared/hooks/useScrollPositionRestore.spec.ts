@@ -76,7 +76,16 @@ describe('recordPassageAnchor', () => {
     const anchors: PassageAnchors = {};
     recordPassageAnchor(anchors, 'compare', scroller());
     recordPassageAnchor(anchors, 'source', scroller());
+    recordPassageAnchor(anchors, 'glossary', scroller());
     expect(Object.keys(anchors)).toEqual(['translation']);
+  });
+
+  // The right panel's stacked tabs share its scroller with the glossary.
+  it('anchors the Notes and Abbreviations tabs', () => {
+    const anchors: PassageAnchors = {};
+    recordPassageAnchor(anchors, 'endnotes', scroller());
+    recordPassageAnchor(anchors, 'abbreviations', scroller());
+    expect(Object.keys(anchors)).toEqual(['endnotes', 'abbreviations']);
   });
 });
 
@@ -204,6 +213,26 @@ describe('usePassageAnchorRestore', () => {
       scroller.remove();
     },
   );
+
+  it('restores Abbreviations by its anchor in the right panel', () => {
+    const row = boxed('<div data-stack-passage="a1" id="a1"></div>', 250, 50);
+    const scroller = container(row);
+    document.body.append(scroller);
+    const ref = { current: scroller };
+    const hook = renderHook(
+      ({ tab }) => usePassageAnchorRestore(ref, tab, 'right', false),
+      { initialProps: { tab: 'glossary' } },
+    );
+    hook.result.current.current.abbreviations = {
+      uuid: 'a1',
+      offsetFromViewport: 0,
+    };
+
+    hook.rerender({ tab: 'abbreviations' });
+    jest.advanceTimersToNextFrame();
+    expect(scroller.scrollTop).toBe(150);
+    scroller.remove();
+  });
 
   it('stops settling on unmount', () => {
     const { row, scroller, hook } = returnToTranslation();

@@ -8,6 +8,18 @@ import type { StackWork } from './StackWorkProvider';
 
 const ENDNOTES_TAB = 'endnotes';
 
+/**
+ * Tabs whose stored passages link no endnotes, so a scan for the nearest link
+ * can pass through what the stack has not read of them. Abbreviations sit
+ * between the body and the notes, and a note added inside the notes looks back
+ * across them. One the stack holds is still searched: a link may have been
+ * added there since.
+ */
+const UNLINKED_TABS = new Set(['abbreviations']);
+
+/** Whether the scan must stop at a seam where `tab`'s run is not loaded. */
+const gates = (tab: string) => !UNLINKED_TABS.has(tab);
+
 type Notes = { endNote?: string }[];
 
 /** The endnotes a link mark in `node`'s marks points at, if it has one. */
@@ -112,16 +124,20 @@ const placementFor = (
     // The spine holds each tab's run, not the work between them.
     const later = entries[i + 1].tab;
     if (i < 0 || entries[i].tab !== later) {
-      if (stack.controllerFor(later)?.hasEarlierPassages()) {
+      if (gates(later) && stack.controllerFor(later)?.hasEarlierPassages()) {
         return unknown(later);
       }
       if (i < 0) break;
-      if (stack.controllerFor(entries[i].tab)?.hasMorePassages()) {
-        return unknown(entries[i].tab);
+      const earlier = entries[i].tab;
+      if (gates(earlier) && stack.controllerFor(earlier)?.hasMorePassages()) {
+        return unknown(earlier);
       }
     }
     const doc = work.store.peek(entries[i].uuid);
-    if (!doc) return unknown(entries[i].tab);
+    if (!doc) {
+      if (!gates(entries[i].tab)) continue;
+      return unknown(entries[i].tab);
+    }
     const link = lastLinkBefore(doc.toNode());
     if (link) return { after: link };
   }
