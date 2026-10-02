@@ -1,6 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 
-import { StackWorkProvider, useStackWork } from './StackWorkProvider';
+import {
+  StackWorkProvider,
+  useStackWork,
+  type StackWork,
+} from './StackWorkProvider';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
 // `data-access/ssr` through two client barrels that leak it.
@@ -139,5 +144,55 @@ describe('StackWorkProvider', () => {
       (call) => call[0].type,
     );
     expect(types[types.length - 1]).toBe('endnotes');
+  });
+
+  describe('undo outside the editors', () => {
+    /** The provider's work, once its sections are seeded. */
+    const seeded = async () => {
+      clientGraphql.getPassageMetaPage
+        .mockResolvedValueOnce(page('p', 'translation', 1))
+        .mockResolvedValueOnce(page('n', 'endnotes', 1));
+      const found: { work?: StackWork['work'] } = {};
+      const Grab = () => {
+        const stack = useStackWork();
+        useEffect(() => {
+          if (stack) found.work = stack.work;
+        }, [stack]);
+        return null;
+      };
+      render(
+        <StackWorkProvider workUuid="w1">
+          <Grab />
+        </StackWorkProvider>,
+      );
+      await waitFor(() => expect(found.work).toBeDefined());
+      const work = found.work as StackWork['work'];
+      return { work, undo: jest.spyOn(work, 'undo') };
+    };
+
+    const pressUndo = (handled = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'z',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      if (handled) event.preventDefault();
+      document.body.dispatchEvent(event);
+    };
+
+    it('undoes from the page', async () => {
+      const { undo } = await seeded();
+      pressUndo();
+      expect(undo).toHaveBeenCalledTimes(1);
+    });
+
+    // An editor that handled the keystroke may be gone by the time the event
+    // reaches the page, as when its undo moved focus to another passage.
+    it('leaves a keystroke an editor already handled', async () => {
+      const { undo } = await seeded();
+      pressUndo(true);
+      expect(undo).not.toHaveBeenCalled();
+    });
   });
 });
