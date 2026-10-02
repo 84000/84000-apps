@@ -60,7 +60,11 @@ const SPINE: SpineSeed[] = [
 /**
  * 1.1 links n.1; 1.2 has none. The endnotes n.1 and n.2 follow the body.
  */
-const build = (spine: SpineSeed[] = SPINE) => {
+const build = (
+  spine: SpineSeed[] = SPINE,
+  /** Tabs whose runs the stack has not loaded to an end. */
+  partial: Record<string, { before?: boolean; after?: boolean }> = {},
+) => {
   const work = createStackWorkDocument({ workUuid: 'w1' });
   work.seedSpine(spine);
   work.store.create('b1', [
@@ -77,9 +81,14 @@ const build = (spine: SpineSeed[] = SPINE) => {
     revealPassage: jest.fn(async () => true),
     removePassage: jest.fn((uuid: string) => work.remove([uuid])),
   } as unknown as PassageStackController;
+  const viewOf = (tab: string) =>
+    ({
+      hasEarlierPassages: () => !!partial[tab]?.before,
+      hasMorePassages: () => !!partial[tab]?.after,
+    }) as unknown as PassageStackController;
   const stack: StackWork = {
     work,
-    controllerFor: (tab) => (tab === 'endnotes' ? endnotes : null),
+    controllerFor: (tab) => (tab === 'endnotes' ? endnotes : viewOf(tab)),
   };
   return { work, stack, endnotes };
 };
@@ -181,6 +190,52 @@ describe('createStackEndnote', () => {
     expect(work.spine.meta('n2')?.label).toBe('n.2');
     expect(linksIn(work, 'b2')).toEqual([]);
     editor.destroy();
+  });
+
+  describe('with front matter before the body', () => {
+    const WITH_FRONT: SpineSeed[] = [
+      { uuid: 'f1', label: 'i.1', type: 'introduction' },
+      { uuid: 'b2', label: '1.1', type: 'translation' },
+      { uuid: 'n1', label: 'n.1', type: 'endnotes' },
+      { uuid: 'n2', label: 'n.2', type: 'endnotes' },
+    ];
+    /** f1 links n.1; the body's first passage, b2, links nothing. */
+    const withFront = (partial = {}) => {
+      const built = build(WITH_FRONT, partial);
+      built.work.store.create('f1', [
+        para('f1p', 'intro', [{ endNote: 'n1', label: 'n.1' }]),
+      ]);
+      built.work.store.peek('f1')?.markSynced();
+      return built;
+    };
+
+    it('follows a link in the front matter', async () => {
+      const { work, stack } = withFront();
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+      const uuid = (result as { uuid: string }).uuid;
+      expect(work.spine.uuids()).toEqual(['f1', 'b2', 'n1', uuid, 'n2']);
+      editor.destroy();
+    });
+
+    it.each([
+      ['the front run is not loaded to its end', { front: { after: true } }],
+      ['the body run starts mid-work', { translation: { before: true } }],
+    ])('refuses when %s', async (_, partial) => {
+      const { work, stack } = withFront(partial);
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({
+        error: expect.stringMatching(/Jump to the note/),
+      });
+      expect(work.spine.length).toBe(4);
+      editor.destroy();
+    });
   });
 
   it('refuses when a passage before it is not held', async () => {
