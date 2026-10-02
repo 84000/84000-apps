@@ -129,6 +129,7 @@ head's content, which falls _between_ two blocks. `focusEditor` resolves it with
 `TextSelection.near` so the caret lands in real text — at a join, the end of the
 head. Left unresolved the caret was in no textblock at all, which is what made
 the Backspace above misbehave in the first place.
+
 ### Sections
 
 `StackWorkProvider` seeds one run per tab — Front, Translation, Endnotes — in
