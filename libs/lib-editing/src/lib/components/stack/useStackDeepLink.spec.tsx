@@ -154,6 +154,36 @@ describe('useStackDeepLink with several stacks in a panel', () => {
     expect(front.revealed).toEqual([]);
   });
 
+  // Notes and Abbreviations are both stacks in the right panel.
+  it.each([
+    ['Abbreviations', 'abbreviations', 'a-1'],
+    ['Notes', 'endnotes', 'n-1'],
+  ])('gives a right-panel hash to %s alone', async (_, tab, hash) => {
+    const notes = controllerFor('endnotes');
+    const abbreviations = controllerFor('abbreviations');
+    mockNavigation.panels = { right: { open: true, tab, hash } };
+
+    renderHook(() => useStackDeepLink(notes.controller));
+    renderHook(() => useStackDeepLink(abbreviations.controller));
+
+    const [answers, other] =
+      tab === 'endnotes' ? [notes, abbreviations] : [abbreviations, notes];
+    await waitFor(() => expect(answers.revealed).toEqual([hash]));
+    expect(other.revealed).toEqual([]);
+  });
+
+  it('reads a right panel naming no tab as showing Notes', async () => {
+    const notes = controllerFor('endnotes');
+    const abbreviations = controllerFor('abbreviations');
+    mockNavigation.panels = { right: { open: true, hash: 'n-1' } };
+
+    renderHook(() => useStackDeepLink(abbreviations.controller));
+    renderHook(() => useStackDeepLink(notes.controller));
+
+    await waitFor(() => expect(notes.revealed).toEqual(['n-1']));
+    expect(abbreviations.revealed).toEqual([]);
+  });
+
   it('watches the main panel for the front tab', async () => {
     const { controller, revealed } = controllerFor('front');
     mockNavigation.panels = {
