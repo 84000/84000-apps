@@ -80,6 +80,8 @@ const build = (
   const endnotes = {
     revealPassage: jest.fn(async () => true),
     removePassage: jest.fn((uuid: string) => work.remove([uuid])),
+    hasEarlierPassages: () => !!partial['endnotes']?.before,
+    hasMorePassages: () => !!partial['endnotes']?.after,
   } as unknown as PassageStackController;
   const viewOf = (tab: string) =>
     ({
@@ -272,6 +274,82 @@ describe('createStackEndnote', () => {
         error: expect.stringMatching(/^Jump to the note/),
       });
       expect(work.spine.length).toBe(5);
+      editor.destroy();
+    });
+  });
+
+  // A note added inside the notes looks back past the abbreviations, which
+  // the stack may not have read: no stored abbreviation links a note.
+  describe('with abbreviations between the body and the notes', () => {
+    const WITH_ABBREVIATIONS: SpineSeed[] = [
+      { uuid: 'b1', label: '1.1', type: 'translation' },
+      { uuid: 'b2', label: '1.2', type: 'translation' },
+      { uuid: 'ah', label: 'ab.', type: 'abbreviationsHeader' },
+      { uuid: 'a1', label: '', type: 'abbreviations' },
+      { uuid: 'n1', label: 'n.1', type: 'endnotes' },
+      { uuid: 'n2', label: 'n.2', type: 'endnotes' },
+    ];
+
+    it.each([
+      ['are not held', {}],
+      [
+        'are not loaded to either end',
+        { abbreviations: { before: true, after: true } },
+      ],
+    ])('looks past them when they %s', async (_, partial) => {
+      const { work, stack } = build(WITH_ABBREVIATIONS, partial);
+      // "note two" in n.2: the last link before it is 1.1's, to n.1.
+      const editor = editorFor(work, 'n2', 1, 5);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+      const uuid = (result as { uuid: string }).uuid;
+      expect(work.spine.uuids()).toEqual([
+        'b1',
+        'b2',
+        'ah',
+        'a1',
+        'n1',
+        uuid,
+        'n2',
+      ]);
+      editor.destroy();
+    });
+
+    it('follows a link added to one it holds', async () => {
+      const { work, stack } = build(WITH_ABBREVIATIONS);
+      work.store.create('a1', [
+        para('a1p', 'DN', [{ endNote: 'n2', label: 'n.2' }]),
+      ]);
+      const editor = editorFor(work, 'n1', 1, 5);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      const uuid = (result as { uuid: string }).uuid;
+      expect(work.spine.uuids()).toEqual([
+        'b1',
+        'b2',
+        'ah',
+        'a1',
+        'n1',
+        'n2',
+        uuid,
+      ]);
+      editor.destroy();
+    });
+
+    it('still refuses when the body is not loaded to its end', async () => {
+      const { work, stack } = build(WITH_ABBREVIATIONS, {
+        translation: { after: true },
+      });
+      const editor = editorFor(work, 'n2', 1, 5);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({
+        error: expect.stringMatching(/Jump to the note/),
+      });
       editor.destroy();
     });
   });
