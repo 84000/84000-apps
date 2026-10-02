@@ -3,6 +3,11 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useStackDeepLink } from './useStackDeepLink';
 import type { PassageStackController } from './PassageStackController';
 
+// jsdom has no CSS.escape; the ids here need no escaping.
+if (typeof CSS === 'undefined') {
+  (globalThis as { CSS?: unknown }).CSS = { escape: (value: string) => value };
+}
+
 const mockNavigation = {
   panels: {} as Record<string, { open: boolean; tab?: string; hash?: string }>,
   updatePanel: jest.fn(),
@@ -217,9 +222,9 @@ describe('useStackDeepLink to something that is not a passage', () => {
   // Kept, it would stay in the URL for good: no stack can answer it.
   it('clears the hash even when nothing carries that id', async () => {
     jest.useFakeTimers();
-    const { controller, revealed } = controllerFor('translation');
+    const { controller, revealed } = controllerFor('front');
     mockNavigation.panels = {
-      main: { open: true, tab: 'translation', hash: 'nowhere' },
+      main: { open: true, tab: 'front', hash: 'nowhere' },
     };
 
     renderHook(() => useStackDeepLink(controller));
@@ -228,9 +233,28 @@ describe('useStackDeepLink to something that is not a passage', () => {
     expect(revealed).toEqual([]);
     expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
       name: 'main',
-      state: { open: true, tab: 'translation', hash: undefined },
+      state: { open: true, tab: 'front', hash: undefined },
     });
     jest.useRealTimers();
+  });
+
+  // Only the front matter has anything drawn above its run.
+  it('clears it without moving the run of any other tab', async () => {
+    const { controller, revealed } = controllerFor('translation');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'nowhere' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() =>
+      expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+        name: 'main',
+        state: { open: true, tab: 'translation', hash: undefined },
+      }),
+    );
+    expect(controller.revealStart).not.toHaveBeenCalled();
+    expect(revealed).toEqual([]);
   });
 });
 
