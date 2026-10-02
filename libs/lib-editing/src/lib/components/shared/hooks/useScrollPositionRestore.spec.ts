@@ -2,8 +2,10 @@ import { renderHook } from '@testing-library/react';
 
 import {
   capturePassageAnchor,
+  recordPassageAnchor,
   restorePassageAnchor,
   usePassageAnchorRestore,
+  type PassageAnchors,
 } from './useScrollPositionRestore';
 
 // jsdom has no CSS.escape; the uuids here need no escaping.
@@ -55,6 +57,29 @@ describe('capturePassageAnchor', () => {
   });
 });
 
+describe('recordPassageAnchor', () => {
+  const scroller = () =>
+    container(boxed('<div data-stack-passage="f1" id="f1"></div>', 120, 50));
+
+  it("keeps a tab's anchor apart from the others", () => {
+    const anchors: PassageAnchors = {
+      translation: { uuid: 'p1', offsetFromViewport: 0 },
+    };
+    recordPassageAnchor(anchors, 'front', scroller());
+    expect(anchors).toEqual({
+      translation: { uuid: 'p1', offsetFromViewport: 0 },
+      front: { uuid: 'f1', offsetFromViewport: 20 },
+    });
+  });
+
+  it('files Compare under Translation, and ignores tabs without passages', () => {
+    const anchors: PassageAnchors = {};
+    recordPassageAnchor(anchors, 'compare', scroller());
+    recordPassageAnchor(anchors, 'source', scroller());
+    expect(Object.keys(anchors)).toEqual(['translation']);
+  });
+});
+
 describe('restorePassageAnchor', () => {
   it('says whether the passage was there to align on', () => {
     const scroller = container(
@@ -90,7 +115,10 @@ describe('usePassageAnchorRestore', () => {
       ({ tab, hash }) => usePassageAnchorRestore(ref, tab, 'main', hash),
       { initialProps: { tab: 'front', hash: false } },
     );
-    hook.result.current.current = { uuid: 'p1', offsetFromViewport: 20 };
+    hook.result.current.current.translation = {
+      uuid: 'p1',
+      offsetFromViewport: 20,
+    };
     hook.rerender({ tab: 'translation', hash: false });
     jest.advanceTimersToNextFrame();
     return { row, scroller, hook };
@@ -115,6 +143,43 @@ describe('usePassageAnchorRestore', () => {
     row.top = 200;
     jest.advanceTimersByTime(1000);
     expect(scroller.scrollTop).toBe(30);
+  });
+
+  // Front is a tab of passages too, and leaving it must not cost
+  // Translation the anchor it left.
+  it('restores each tab by its own anchor', () => {
+    const translationRow = boxed(
+      '<div data-stack-passage="p1" id="p1"></div>',
+      150,
+      50,
+    );
+    const frontRow = boxed(
+      '<div data-stack-passage="f1" id="f1"></div>',
+      400,
+      50,
+    );
+    const scroller = container(translationRow, frontRow);
+    document.body.append(scroller);
+    const ref = { current: scroller };
+    const hook = renderHook(
+      ({ tab }) => usePassageAnchorRestore(ref, tab, 'main', false),
+      { initialProps: { tab: 'translation' } },
+    );
+    hook.result.current.current.translation = {
+      uuid: 'p1',
+      offsetFromViewport: 20,
+    };
+    hook.result.current.current.front = { uuid: 'f1', offsetFromViewport: 0 };
+
+    hook.rerender({ tab: 'front' });
+    jest.advanceTimersToNextFrame();
+    expect(scroller.scrollTop).toBe(300);
+
+    scroller.scrollTop = 0;
+    hook.rerender({ tab: 'translation' });
+    jest.advanceTimersToNextFrame();
+    expect(scroller.scrollTop).toBe(30);
+    scroller.remove();
   });
 
   it('stops settling on unmount', () => {
