@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createMarkViewDom, registerEditorElement } from '../../util';
-import { PANEL_FOR_SECTION, TAB_FOR_SECTION } from '../../../shared/types';
+import { locationForPassageType } from '../../../shared/types';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
 import { InternalLinkSSR } from './InternalLink.ssr';
@@ -62,9 +62,7 @@ export const InternalLink = InternalLinkSSR.extend({
             break;
           case 'passage':
             {
-              const passageType = subtype.replace('Header', '').toLowerCase();
-              const panel = PANEL_FOR_SECTION[passageType] || 'main';
-              const tab = TAB_FOR_SECTION[passageType] || 'translation';
+              const { panel, tab } = locationForPassageType(subtype);
               query.set(panel, `open:${tab}:${entity}`);
             }
             break;
