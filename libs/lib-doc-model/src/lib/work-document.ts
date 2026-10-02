@@ -21,6 +21,14 @@ import {
 } from './work-document-helpers';
 import { WorkHistory } from './work-history';
 
+/**
+ * The label for a passage following one labelled `label`.
+ *
+ * An unlabelled passage is followed by another: abbreviation entries carry no
+ * label, and numbering one after another would invent "1" for an entry.
+ */
+const labelAfter = (label: string) => (label ? incrementLabel(label) : '');
+
 export type WorkDocumentOptions = {
   workUuid: string;
   /** See `PassageDocOptions.schema` — injected for the same reason. */
@@ -165,7 +173,7 @@ export class WorkDocument {
     const newMeta: SpineSeed = {
       uuid: this.newUuid(),
       type: meta.type,
-      label: incrementLabel(meta.label),
+      label: labelAfter(meta.label),
       toh: meta.toh,
     };
 
@@ -265,7 +273,7 @@ export class WorkDocument {
     const meta: SpineSeed = {
       uuid: passage.uuid ?? this.newUuid(),
       type: passage.type,
-      label: passage.label ?? (previous ? incrementLabel(previous.label) : '1'),
+      label: passage.label ?? (previous ? labelAfter(previous.label) : '1'),
       toh: passage.toh,
     };
 
@@ -368,7 +376,7 @@ export class WorkDocument {
 
     // Seeded before the spine changes, so each new label follows the one
     // before it rather than the run that is about to leave.
-    let label = previous ? incrementLabel(previous.label) : '1';
+    let label = previous ? labelAfter(previous.label) : '1';
     const seeds: SpineSeed[] = replacements.map((passage) => {
       const seed: SpineSeed = {
         uuid: passage.uuid ?? this.newUuid(),
@@ -376,7 +384,7 @@ export class WorkDocument {
         label: passage.label ?? label,
         toh: passage.toh,
       };
-      label = incrementLabel(seed.label);
+      label = labelAfter(seed.label);
       return seed;
     });
 
