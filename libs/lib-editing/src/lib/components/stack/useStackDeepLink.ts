@@ -92,8 +92,8 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
  * A `?start`/`?end` range paints the same highlight the paginated editor does.
  *
  * The hash is cleared once used, so the same link can be followed twice. One
- * that is not a passage uuid names an element above the run, such as the
- * imprint: the run is moved to its start and the element scrolled to.
+ * that is not a passage uuid names an element above the front matter, such as
+ * the imprint: the run is moved to its start and the element scrolled to.
  *
  * Which panel to watch follows the view's own tab, because a hash is addressed
  * to a panel and only the stack drawn in that panel can answer it. Defaulting
@@ -133,8 +133,14 @@ export const useStackDeepLink = (
       });
     void (async () => {
       if (!isUuid(target)) {
-        // Not a passage, so nothing the server can find: something drawn
-        // above the run, such as the imprint over the front matter.
+        // Not a passage, so nothing the server can find. Over the front
+        // matter it is something drawn above the run, such as the imprint;
+        // elsewhere nothing a stack can answer, so it is only cleared.
+        if (tab !== 'front') {
+          finished = true;
+          consume();
+          return;
+        }
         await controller.revealStart();
         if (cancelled) return;
         const element = await waitForDrawn(target);
