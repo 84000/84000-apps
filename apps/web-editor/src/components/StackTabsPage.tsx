@@ -16,7 +16,7 @@ import {
 } from '@eightyfourthousand/lib-editing/stack';
 
 /**
- * The two stacked tabs side by side, over one work.
+ * The stacked tabs side by side, over one work.
  *
  * What `web-main` draws in its main and right panels, minus the panels — those
  * routes need an authenticated session, which the ledger records as a human
@@ -37,6 +37,14 @@ const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
     <div className="flex h-[calc(100dvh-5rem)] w-full gap-4">
       <div
         className="h-full flex-1 overflow-y-auto border-r px-12"
+        data-testid="tab-front"
+      >
+        <div className="mx-auto mt-8 w-full max-w-readable">
+          <StackTab tab="front" />
+        </div>
+      </div>
+      <div
+        className="h-full flex-1 overflow-y-auto border-r px-12"
         data-testid="tab-translation"
       >
         <div className="mx-auto mt-8 w-full max-w-readable">
@@ -44,7 +52,7 @@ const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
         </div>
       </div>
       <div
-        className="h-full w-2/5 overflow-y-auto px-12"
+        className="h-full w-1/4 overflow-y-auto px-12"
         data-testid="tab-endnotes"
       >
         <div className="mx-auto mt-8 w-full max-w-readable">

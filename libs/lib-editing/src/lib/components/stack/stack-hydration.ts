@@ -41,6 +41,7 @@ export class StackHydration {
   private earlierArmed = true;
   /** In-flight reveals, so a remount does not fetch the same window twice. */
   private revealing = new Map<string, Promise<boolean>>();
+  private revealingStart: Promise<void> | null = null;
 
   constructor(host: {
     work: WorkDocument;
@@ -201,6 +202,23 @@ export class StackHydration {
     // estimated, and measuring them moves it — by a screenful, on a deep link.
     this.scrollTo(index, { settle: true });
     return true;
+  }
+
+  /** Move the window back to the run's first passage, if it starts later. */
+  revealStart = (): Promise<void> => {
+    // Shared, as reveals are: each layout copy answers the same hash.
+    this.revealingStart ??= this.toStart().finally(() => {
+      this.revealingStart = null;
+    });
+    return this.revealingStart;
+  };
+
+  private async toStart() {
+    if (!this.spineFeed?.hasMoreBefore || !this.spineFeed.revealStart) return;
+    await this.spineFeed.revealStart();
+    this.invalidateOrder();
+    this.resetLive();
+    this.bump();
   }
 
   /** Hydrate one passage on demand — the path focus takes ahead of mounting. */

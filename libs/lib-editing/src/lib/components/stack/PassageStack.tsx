@@ -26,9 +26,10 @@ import { useStackRowPointer } from './useStackRowPointer';
 import { useStackScrollHandler } from './useStackScrollHandler';
 import { useStackScroller } from './useStackScroller';
 import { useStackSelection } from './useStackSelection';
+import { useStackVisibleRange } from './useStackVisibleRange';
 import type { StackLinkTarget } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
-import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
+import { panelForTab, type PanelName } from '../shared/types';
 
 export { scrollParent } from './useStackScroller';
 
@@ -72,8 +73,7 @@ export const PassageStack = ({
   const { updatePanel, setToh, toh, registerEditorRequest, panels } =
     useNavigation();
   // Compare shows the Tibetan source beside each passage of the main panel.
-  const drawnIn =
-    panel ?? PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main';
+  const drawnIn = panel ?? panelForTab(controller.getTab());
   const compareToh =
     drawnIn === 'main' && panels.main.open && panels.main.tab === 'compare'
       ? (toh ?? '')
@@ -183,10 +183,11 @@ export const PassageStack = ({
   const items = virtualizer.getVirtualItems();
   const firstIndex = items[0]?.index ?? 0;
   const lastIndex = items[items.length - 1]?.index ?? 0;
-  useEffect(() => {
-    if (!order.length) return;
-    controller.setVisibleRange({ start: firstIndex, end: lastIndex + 1 });
-  }, [controller, order.length, firstIndex, lastIndex]);
+  useStackVisibleRange(controller, parentRef, {
+    count: order.length,
+    start: firstIndex,
+    end: lastIndex + 1,
+  });
 
   // Prepending rows shifts every existing one down, so the viewport has to be
   // put back on what the reader was looking at. Upward paging only ever runs

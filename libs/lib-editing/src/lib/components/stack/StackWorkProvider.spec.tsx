@@ -2,6 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 
 import {
+  BODY_MATTER_FILTER,
+  FRONT_MATTER_FILTER,
+} from '@eightyfourthousand/data-access';
+
+import {
   StackWorkProvider,
   useStackWork,
   type StackWork,
@@ -53,7 +58,12 @@ const Probe = () => {
       <span data-testid="notes">
         {stack.controllerFor('endnotes')?.getOrder().join(',')}
       </span>
-      <span data-testid="front">{String(stack.controllerFor('front'))}</span>
+      <span data-testid="front">
+        {String(stack.controllerFor('front')?.getOrder().join(','))}
+      </span>
+      <span data-testid="unstacked">
+        {String(stack.controllerFor('abbreviations'))}
+      </span>
     </div>
   );
 };
@@ -76,9 +86,11 @@ describe('StackWorkProvider', () => {
   });
 
   // Order is load bearing: a run with nothing in it yet is appended at the end
-  // of the spine, so seeding the back matter first would put it before the body.
+  // of the spine, so seeding out of order would put the back matter before the
+  // body, or the body before the front matter.
   it('seeds the sections in the order the work reads', async () => {
     clientGraphql.getPassageMetaPage
+      .mockResolvedValueOnce(page('f', 'introduction', 2))
       .mockResolvedValueOnce(page('p', 'translation', 2))
       .mockResolvedValueOnce(page('n', 'endnotes', 2));
 
@@ -89,12 +101,13 @@ describe('StackWorkProvider', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId('spine').textContent).toBe('p0,p1,n0,n1'),
+      expect(screen.getByTestId('spine').textContent).toBe('f0,f1,p0,p1,n0,n1'),
     );
   });
 
   it('gives each tab a view of its own passages', async () => {
     clientGraphql.getPassageMetaPage
+      .mockResolvedValueOnce(page('f', 'introduction', 2))
       .mockResolvedValueOnce(page('p', 'translation', 2))
       .mockResolvedValueOnce(page('n', 'endnotes', 2));
 
@@ -108,10 +121,14 @@ describe('StackWorkProvider', () => {
       expect(screen.getByTestId('main').textContent).toBe('p0,p1'),
     );
     expect(screen.getByTestId('notes').textContent).toBe('n0,n1');
+    expect(screen.getByTestId('front').textContent).toBe('f0,f1');
   });
 
-  it('reports nothing for a tab it does not draw', async () => {
+  // Many works have no front matter; the stack has nothing to draw, not
+  // nothing to show.
+  it('gives a work without front matter an empty front view', async () => {
     clientGraphql.getPassageMetaPage
+      .mockResolvedValueOnce(page('f', 'introduction', 0))
       .mockResolvedValueOnce(page('p', 'translation', 1))
       .mockResolvedValueOnce(page('n', 'endnotes', 1));
 
@@ -122,12 +139,31 @@ describe('StackWorkProvider', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByTestId('front').textContent).toBe('null'),
+      expect(screen.getByTestId('spine').textContent).toBe('p0,n0'),
+    );
+    expect(screen.getByTestId('front').textContent).toBe('');
+  });
+
+  it('reports nothing for a tab it does not draw', async () => {
+    clientGraphql.getPassageMetaPage
+      .mockResolvedValueOnce(page('f', 'introduction', 1))
+      .mockResolvedValueOnce(page('p', 'translation', 1))
+      .mockResolvedValueOnce(page('n', 'endnotes', 1));
+
+    render(
+      <StackWorkProvider workUuid="w1">
+        <Probe />
+      </StackWorkProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('unstacked').textContent).toBe('null'),
     );
   });
 
   it('asks for each section separately', async () => {
     clientGraphql.getPassageMetaPage
+      .mockResolvedValueOnce(page('f', 'introduction', 1))
       .mockResolvedValueOnce(page('p', 'translation', 1))
       .mockResolvedValueOnce(page('n', 'endnotes', 1));
 
@@ -138,18 +174,23 @@ describe('StackWorkProvider', () => {
     );
 
     await waitFor(() =>
-      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(2),
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledTimes(3),
     );
     const types = clientGraphql.getPassageMetaPage.mock.calls.map(
       (call) => call[0].type,
     );
-    expect(types[types.length - 1]).toBe('endnotes');
+    expect(types).toEqual([
+      FRONT_MATTER_FILTER,
+      BODY_MATTER_FILTER,
+      'endnotes',
+    ]);
   });
 
   describe('undo outside the editors', () => {
     /** The provider's work, once its sections are seeded. */
     const seeded = async () => {
       clientGraphql.getPassageMetaPage
+        .mockResolvedValueOnce(page('f', 'introduction', 1))
         .mockResolvedValueOnce(page('p', 'translation', 1))
         .mockResolvedValueOnce(page('n', 'endnotes', 1));
       const found: { work?: StackWork['work'] } = {};

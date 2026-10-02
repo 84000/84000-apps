@@ -4,10 +4,15 @@ import { useEffect, useRef } from 'react';
 import {
   clearTextRangeHighlight,
   highlightTextRange,
+  isUuid,
 } from '@eightyfourthousand/lib-utils';
 
 import { useNavigation } from '../shared/NavigationContext';
-import { PANEL_FOR_SECTION, type PanelName } from '../shared/types';
+import {
+  DEFAULT_TAB_FOR_PANEL,
+  panelForTab,
+  type PanelName,
+} from '../shared/types';
 import type { PassageStackController } from './PassageStackController';
 
 /** How long to wait for the target row to render before giving up. */
@@ -22,6 +27,24 @@ const waitForRow = (uuid: string): Promise<HTMLElement | null> =>
         .getElementById(uuid)
         ?.querySelector<HTMLElement>('.passage.is-editable');
       if (content) return resolve(content);
+      if (performance.now() > deadline) return resolve(null);
+      requestAnimationFrame(look);
+    };
+    look();
+  });
+
+/**
+ * The laid-out element with this id, once it is drawn. A hidden layout copy
+ * can carry the same id.
+ */
+const waitForDrawn = (id: string): Promise<HTMLElement | null> =>
+  new Promise((resolve) => {
+    const deadline = performance.now() + RENDER_TIMEOUT_MS;
+    const look = () => {
+      const found = Array.from(
+        document.querySelectorAll<HTMLElement>(`[id="${CSS.escape(id)}"]`),
+      ).find((el) => el.getClientRects().length > 0);
+      if (found) return resolve(found);
       if (performance.now() > deadline) return resolve(null);
       requestAnimationFrame(look);
     };
@@ -68,7 +91,9 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
  * through `revealPassage`, which moves the window rather than paging to it.
  * A `?start`/`?end` range paints the same highlight the paginated editor does.
  *
- * The hash is cleared once used, so the same link can be followed twice.
+ * The hash is cleared once used, so the same link can be followed twice. One
+ * that is not a passage uuid names an element above the front matter, such as
+ * the imprint: the run is moved to its start and the element scrolled to.
  *
  * Which panel to watch follows the view's own tab, because a hash is addressed
  * to a panel and only the stack drawn in that panel can answer it. Defaulting
@@ -78,13 +103,15 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
  */
 export const useStackDeepLink = (
   controller: PassageStackController,
-  panel: PanelName = PANEL_FOR_SECTION[controller.getTab() ?? ''] ?? 'main',
+  panel: PanelName = panelForTab(controller.getTab()),
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
   // A hash is addressed to the panel's active tab, and every stack drawn in
   // the panel sees it: only the one for that tab answers.
   const tab = controller.getTab();
-  const activeTab = panels[panel]?.tab;
+  // A panel naming no tab shows its default, and only that stack answers:
+  // two stacks in one panel would otherwise both take the hash.
+  const activeTab = panels[panel]?.tab ?? DEFAULT_TAB_FOR_PANEL[panel];
   const answers =
     !tab ||
     !activeTab ||
@@ -99,7 +126,31 @@ export const useStackDeepLink = (
 
     let cancelled = false;
     let finished = false;
+    const consume = () =>
+      updatePanel({
+        name: panel,
+        state: { ...panels[panel], hash: undefined },
+      });
     void (async () => {
+      if (!isUuid(target)) {
+        // Not a passage, so nothing the server can find. Over the front
+        // matter it is something drawn above the run, such as the imprint;
+        // elsewhere nothing a stack can answer, so it is only cleared.
+        if (tab !== 'front') {
+          finished = true;
+          consume();
+          return;
+        }
+        await controller.revealStart();
+        if (cancelled) return;
+        const element = await waitForDrawn(target);
+        if (cancelled) return;
+        element?.scrollIntoView({ block: 'start' });
+        finished = true;
+        consume();
+        return;
+      }
+
       const found = await controller.revealPassage(target);
       if (cancelled) return;
 
@@ -124,10 +175,7 @@ export const useStackDeepLink = (
       // Kept when the passage wasn't found, so the stack it belongs to can
       // still answer it.
       if (!found) return;
-      updatePanel({
-        name: panel,
-        state: { ...panels[panel], hash: undefined },
-      });
+      consume();
     })();
 
     return () => {

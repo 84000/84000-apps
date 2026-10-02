@@ -129,6 +129,25 @@ head's content, which falls _between_ two blocks. `focusEditor` resolves it with
 `TextSelection.near` so the caret lands in real text — at a join, the end of the
 head. Left unresolved the caret was in no textblock at all, which is what made
 the Backspace above misbehave in the first place.
+
+### Sections
+
+`StackWorkProvider` seeds one run per tab — Front, Translation, Endnotes — in
+the order the work reads, since an empty run is placed at the end of the spine.
+Abbreviations are still the paginated editor's.
+
+Tabs in one panel share its scroller, and an inactive tab stays mounted, only
+hidden. A hidden stack still reads the shown tab's scroll offset, so it reports
+no visible range until it is laid out again: otherwise scrolling deep in
+Translation would page and hydrate the front matter.
+
+The titles and imprint above the front matter are drawn only while the Front
+run starts at its first passage, which `useStackOuterContent` reports — not over
+a window a deep link opened part way through it.
+
+A new endnote is numbered after the nearest link before it in reading order,
+which runs back through earlier tabs: front matter links notes too.
+
 ### The stack does not own a scroller
 
 It virtualizes against the nearest scrollable ancestor. Its hosts already have
@@ -299,10 +318,21 @@ equivalent. `?start`/`?end` paint the same range highlight.
 
 A hash is addressed to a **panel**, and only the stack drawn in that panel can
 answer it — so which panel a view watches follows its own tab, via
-`PANEL_FOR_SECTION`. Defaulting every view to `main` left the endnotes stack
+`PANEL_FOR_TAB`. Defaulting every view to `main` left the endnotes stack
 watching a panel it is not in: an endnote link set `right`'s hash, the tab
 opened, and nothing scrolled. A host that places a tab somewhere unusual passes
 `panel` to override it.
+
+Front and Translation are both stacks in `main`, so a panel's hash is answered
+only by the stack for its active tab — a panel naming no tab is showing its
+default. A feed asked to reveal a passage from another section leaves its run
+alone: a filtered `AROUND` centres on the cursor's position, so it still
+returns a page of the wrong section.
+
+A hash that is not a uuid names something above the run rather than a passage
+— the table of contents links the imprint by name. The run is moved back to its
+start, the element scrolled to, and the hash cleared; kept, no stack could ever
+answer it.
 
 Three things that each cost a debugging pass:
 

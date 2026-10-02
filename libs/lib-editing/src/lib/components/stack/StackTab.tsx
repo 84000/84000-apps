@@ -3,6 +3,7 @@
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { PassageStack } from './PassageStack';
 import { useStackWork } from './StackWorkProvider';
+import { useStackOuterContent } from './useStackOuterContent';
 
 /**
  * One editor tab, drawn as a passage stack.
@@ -20,6 +21,7 @@ export const StackTab = ({
 }) => {
   const stack = useStackWork();
   const controller = stack?.controllerFor(tab);
+  useStackOuterContent(tab === 'front' ? controller : null);
 
   if (!controller) {
     return <TranslationSkeleton />;

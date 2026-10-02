@@ -95,6 +95,32 @@ export const PANEL_FOR_SECTION: Record<string, PanelName> = {
   translation: 'main',
 };
 
+/** The panel each tab is drawn in. Keyed by tab, unlike `PANEL_FOR_SECTION`. */
+export const PANEL_FOR_TAB: Record<TabName, PanelName> = {
+  toc: 'left',
+  comments: 'left',
+  publishing: 'left',
+  front: 'main',
+  translation: 'main',
+  compare: 'main',
+  source: 'main',
+  endnotes: 'right',
+  abbreviations: 'right',
+  bibliography: 'right',
+  glossary: 'right',
+};
+
+/** The tab a panel shows when its state names none. */
+export const DEFAULT_TAB_FOR_PANEL: Record<PanelName, TabName> = {
+  left: 'toc',
+  main: 'translation',
+  right: 'endnotes',
+};
+
+/** The panel a tab is drawn in; `main` for one this does not know. */
+export const panelForTab = (tab?: string): PanelName =>
+  PANEL_FOR_TAB[tab as TabName] ?? 'main';
+
 /**
  * The section a passage belongs to, from its `type`.
  *

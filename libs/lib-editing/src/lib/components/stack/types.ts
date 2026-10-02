@@ -105,6 +105,7 @@ export type PassageStackControllerOptions = {
     hasMoreBefore?: boolean;
     maybeExtendBefore?: (visibleStart: number) => boolean;
     reveal?: (uuid: string) => Promise<number>;
+    revealStart?: () => Promise<void>;
   };
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;

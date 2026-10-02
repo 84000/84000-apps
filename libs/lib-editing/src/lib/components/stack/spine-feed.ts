@@ -207,16 +207,48 @@ export class SpineFeed {
       direction: 'AROUND',
       type: this.section?.type,
     });
-    if (!page.metas.length) return -1;
+    // The server centres a filtered page on the cursor's *position*, so a
+    // passage from another section still comes back with a page of this one
+    // around it. Taking that would re-window this run for a passage it does
+    // not hold — and with two stacks in one panel, that is a run on show.
+    if (
+      !withoutDeleted(this.work.spine, page.metas).some((m) => m.uuid === uuid)
+    ) {
+      return -1;
+    }
 
     this.record(page.metas);
-    this.replaceRun(page.metas);
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
     this.noneBefore = !page.hasMoreBefore || !page.prevCursor;
     this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
 
     return this.work.spine.indexOf(uuid);
+  }
+
+  /**
+   * Rebuild the run from its first passage, when a reveal opened it part way.
+   *
+   * What a link to something above the run needs — the titles and imprint
+   * over the front matter are drawn only once it starts at the top.
+   */
+  async revealStart(): Promise<void> {
+    if (this.noneBefore) return;
+    const page = await getPassageMetaPage({
+      client: this.client,
+      uuid: this.work.workUuid,
+      limit: FIRST_PAGE,
+      type: this.section?.type,
+    });
+    if (!page.metas.length) return;
+
+    this.record(page.metas);
+    this.startCursor = undefined;
+    this.endCursor = page.nextCursor;
+    this.noneBefore = true;
+    this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
   }
 
   /**
@@ -287,9 +319,11 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
-    prependToSpine(this.work.spine, page.metas, this.section?.tab);
+    // Before the write: the spine notifies synchronously, and a view reading
+    // `hasMoreBefore` then must see the page it just got.
     this.startCursor = page.prevCursor;
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
+    prependToSpine(this.work.spine, page.metas, this.section?.tab);
 
     return this.work.spine.length;
   }

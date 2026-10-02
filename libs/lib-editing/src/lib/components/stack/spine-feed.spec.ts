@@ -266,6 +266,58 @@ describe('SpineFeed', () => {
       return { w, feed };
     };
 
+    // The titles over the front matter follow `hasMoreBefore`, read when the
+    // spine notifies.
+    it.each([
+      ['prepending the first page', (feed: SpineFeed) => feed.extendBefore()],
+      ['going back to the start', (feed: SpineFeed) => feed.revealStart()],
+    ])('reports no more before by the time %s lands', async (_, move) => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(497, 3, { before: false }),
+      );
+      const seen: boolean[] = [];
+      w.spine.observe(() => seen.push(feed.hasMoreBefore));
+
+      await move(feed);
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.at(-1)).toBe(false);
+    });
+
+    // A link to the imprint, over a front matter window opened part way.
+    it('goes back to the start of the run', async () => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, true),
+      );
+
+      await feed.revealStart();
+
+      // No cursor: from the beginning.
+      expect(
+        clientGraphql.getPassageMetaPage.mock.calls[0][0].cursor,
+      ).toBeUndefined();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+      expect(feed.hasMoreBefore).toBe(false);
+      expect(feed.hasMore).toBe(true);
+    });
+
+    it('asks for nothing when the run already starts at the top', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, false),
+      );
+      await feed.seed();
+      clientGraphql.getPassageMetaPage.mockReset();
+
+      await feed.revealStart();
+
+      expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+    });
+
     it('prepends the previous page, keeping the order', async () => {
       const { w, feed } = await revealed();
       clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
@@ -353,6 +405,30 @@ describe('SpineFeed', () => {
       return { w, main, notes };
     };
 
+    it('keeps the front matter ahead of the body as both grow', async () => {
+      const w = work();
+      const front = new SpineFeed(w, client, {
+        type: '(introduction)',
+        tab: 'front',
+      });
+      const main = new SpineFeed(w, client, TRANSLATION);
+      const notes = new SpineFeed(w, client, ENDNOTES);
+      clientGraphql.getPassageMetaPage
+        .mockResolvedValueOnce(metaPage(0, 2, true, 'introduction', 'f'))
+        .mockResolvedValueOnce(metaPage(0, 2, true))
+        .mockResolvedValueOnce(metaPage(0, 1, false, 'endnotes', 'n'));
+      await front.seed();
+      await main.seed();
+      await notes.seed();
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(2, 1, false, 'introduction', 'f'),
+      );
+      await front.extend();
+
+      expect(w.spine.uuids()).toEqual(['f0', 'f1', 'f2', 'p0', 'p1', 'n0']);
+    });
+
     it('asks the server for its own section', async () => {
       const w = work();
       const notes = new SpineFeed(w, client, ENDNOTES);
@@ -398,6 +474,22 @@ describe('SpineFeed', () => {
       expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n90', 'n91']);
       // Moving the window unloads passages; it does not delete them.
       expect(w.spine.removedSinceSave()).toEqual([]);
+    });
+
+    // A filtered `AROUND` centres on the cursor's position, so a passage of
+    // another section still returns a page of this one.
+    it('leaves its run alone when the passage is in another section', async () => {
+      const { w, main } = await both();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...metaPage(40, 2, false),
+        prevCursor: 'p40',
+        hasMoreBefore: true,
+      });
+
+      expect(await main.reveal('n1-elsewhere')).toBe(-1);
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n1']);
+      expect(main.hasMoreBefore).toBe(false);
     });
 
     // Following a link reloaded a passage deleted but not saved yet, which
