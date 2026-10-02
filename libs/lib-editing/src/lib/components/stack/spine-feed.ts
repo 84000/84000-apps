@@ -207,7 +207,15 @@ export class SpineFeed {
       direction: 'AROUND',
       type: this.section?.type,
     });
-    if (!page.metas.length) return -1;
+    // The server centres a filtered page on the cursor's *position*, so a
+    // passage from another section still comes back with a page of this one
+    // around it. Taking that would re-window this run for a passage it does
+    // not hold — and with two stacks in one panel, that is a run on show.
+    if (
+      !withoutDeleted(this.work.spine, page.metas).some((m) => m.uuid === uuid)
+    ) {
+      return -1;
+    }
 
     this.record(page.metas);
     this.replaceRun(page.metas);
