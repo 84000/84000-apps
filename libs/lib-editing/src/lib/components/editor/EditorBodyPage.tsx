@@ -44,23 +44,10 @@ export const EditorBodyPage = () => {
   const [titles, setTitles] = useState<Title[]>();
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const client = createGraphQLClient();
-
-      // Front matter is read at mount whatever the flag says, as before: the
-      // flag's value arrives later, and the paginated editor should not wait
-      // on it. Under the flag the stack reads it, and this page goes unused.
-      const [
-        { blocks: frontBlocks, hasMoreAfter: frontHasMore },
-        { blocks: bodyBlocks, hasMoreAfter: bodyHasMoreAfter },
-        titlesData,
-      ] = await Promise.all([
-        getTranslationBlocks({
-          client,
-          uuid: work.uuid,
-          type: FRONT_MATTER_FILTER,
-          maxPassages: INITIAL_PASSAGES,
-        }),
+      const [{ blocks, hasMoreAfter }, titlesData] = await Promise.all([
         // Still read under the stack: its alignments decide the Compare tab.
         getTranslationBlocks({
           client,
@@ -70,14 +57,37 @@ export const EditorBodyPage = () => {
         }),
         getTranslationTitles({ client, uuid: work.uuid }),
       ]);
-
+      if (cancelled) return;
       setTitles(titlesData);
-      setFrontMatter(frontBlocks);
-      setFrontMatterHasMore(frontHasMore);
-      setBody(bodyBlocks);
-      setBodyHasMore(bodyHasMoreAfter);
+      setBody(blocks);
+      setBodyHasMore(hasMoreAfter);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [work.uuid]);
+
+  // Read unless the stack is known to read it instead — at mount while the
+  // flag is unresolved, so the paginated editor need not wait on it. Its own
+  // effect, so the stack never waits on a read it does not use.
+  useEffect(() => {
+    if (stackedFront) return;
+    let cancelled = false;
+    (async () => {
+      const { blocks, hasMoreAfter } = await getTranslationBlocks({
+        client: createGraphQLClient(),
+        uuid: work.uuid,
+        type: FRONT_MATTER_FILTER,
+        maxPassages: INITIAL_PASSAGES,
+      });
+      if (cancelled) return;
+      setFrontMatter(blocks);
+      setFrontMatterHasMore(hasMoreAfter);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [work.uuid, stackedFront]);
 
   const renderTitles = useCallback(
     ({ titles, imprint }: TitlesRenderer) => (
