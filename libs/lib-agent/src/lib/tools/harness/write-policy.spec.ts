@@ -55,7 +55,10 @@ describe('write-policy tool', () => {
     const current = { name: 'a/b', content: '## B. Names', version: 'v3' };
     mockedWrite.mockResolvedValue({ ok: false, reason: 'conflict', current });
 
-    const result = await tool.handler({ ...args, expectedVersion: 'v1' }, extra);
+    const result = await tool.handler(
+      { ...args, expectedVersion: 'v1' },
+      extra,
+    );
 
     expect(result.isError).toBe(true);
     expect(parse(result)).toMatchObject({

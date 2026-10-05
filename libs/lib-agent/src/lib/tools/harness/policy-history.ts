@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import type { DataClient } from '@eightyfourthousand/data-access';
-import { listPolicyRevisions } from '@eightyfourthousand/data-access';
+import {
+  isValidPolicyName,
+  listPolicyRevisions,
+} from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
 import {
+  APP_ONLY_NOTE,
   authorizePolicyTool,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
@@ -19,13 +23,12 @@ const inputSchema = {
 /**
  * App-only tool listing a policy's archived revisions, newest first, as
  * `{ revisions }`. Requires `harness.read`. A failed listing is an `error`,
- * never an empty history.
+ * never an empty history, and so is an invalid name, with a message saying so.
  */
 export function createPolicyHistoryTool(client: DataClient): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.history,
-    description:
-      'List the archived revisions of an 84000 translation policy, newest first. Used by the policy editor.',
+    description: `List the archived revisions of an 84000 translation policy, newest first. ${APP_ONLY_NOTE}`,
     inputSchema,
     annotations: {
       title: 'Policy History',
@@ -43,7 +46,11 @@ export function createPolicyHistoryTool(client: DataClient): McpToolDefinition {
         return policyFailureResult({
           ok: false,
           reason: 'error',
-          message: `Could not list the revisions of ${name}.`,
+          // The listing also returns undefined for a name it refuses to
+          // look up, which is not a storage failure.
+          message: isValidPolicyName(name)
+            ? `Could not list the revisions of ${name}.`
+            : `${name} is not a valid policy name; use a "<group>/<policy>" name from read-policies.`,
         });
       }
 

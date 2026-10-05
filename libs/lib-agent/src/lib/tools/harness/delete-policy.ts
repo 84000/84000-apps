@@ -4,7 +4,9 @@ import { deletePolicy } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
 import {
+  APP_ONLY_NOTE,
   authorizePolicyTool,
+  OPEN_EDITOR_NOTE,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
   policyFailureResult,
@@ -27,8 +29,7 @@ const inputSchema = {
 export function createDeletePolicyTool(client: DataClient): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.delete,
-    description:
-      'Delete an 84000 translation policy. Its last text is archived first. Used by the policy editor.',
+    description: `Delete an 84000 translation policy. Its last text is archived first. ${APP_ONLY_NOTE} ${OPEN_EDITOR_NOTE}`,
     inputSchema,
     annotations: {
       title: 'Delete Policy',

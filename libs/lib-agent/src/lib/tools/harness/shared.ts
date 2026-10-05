@@ -22,16 +22,28 @@ export const POLICY_TOOL_NAMES = {
   restore: 'restore-policy',
   delete: 'delete-policy',
   rename: 'rename-policy',
+  /** Served with the policy editor app (DEV-811), not by this library. */
+  openEditor: 'open-policy-editor',
 } as const;
+
+/** Appended to the description of every tool only the policy editor calls. */
+export const APP_ONLY_NOTE =
+  'Called only by the policy editor app; do not call it from chat.';
+
+/** Added to the destructive app-only tools, so a model knows where to send the user. */
+export const OPEN_EDITOR_NOTE = `To delete or rename a policy, the user opens the editor with ${POLICY_TOOL_NAMES.openEditor}.`;
 
 /**
  * `_meta` for a tool only the policy editor calls. Hosts that honour MCP Apps
  * visibility hide it from the model; it is not access control, so every
  * handler still runs {@link authorizePolicyTool}.
  */
-export const POLICY_EDITOR_TOOL_META = {
-  ui: { resourceUri: POLICY_EDITOR_RESOURCE_URI, visibility: ['app'] },
-};
+export const POLICY_EDITOR_TOOL_META = Object.freeze({
+  ui: Object.freeze({
+    resourceUri: POLICY_EDITOR_RESOURCE_URI,
+    visibility: Object.freeze(['app'] as const),
+  }),
+});
 
 /**
  * A policy failure as a tool result: the `PolicyFailure` object as JSON, with

@@ -4,6 +4,7 @@ import { readPolicyRevision } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
 import {
+  APP_ONLY_NOTE,
   authorizePolicyTool,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
@@ -28,8 +29,7 @@ export function createReadPolicyRevisionTool(
 ): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.readRevision,
-    description:
-      'Read one archived revision of an 84000 translation policy by its archive key. Used by the policy editor.',
+    description: `Read one archived revision of an 84000 translation policy by its archive key. ${APP_ONLY_NOTE}`,
     inputSchema,
     annotations: {
       title: 'Read Policy Revision',

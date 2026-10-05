@@ -2,6 +2,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import {
   deletePolicy,
   hasPermission,
+  isValidPolicyName,
   listPolicyRevisions,
   readPolicyRevision,
   renamePolicy,
@@ -21,6 +22,7 @@ import {
 
 jest.mock('@eightyfourthousand/data-access', () => ({
   hasPermission: jest.fn(),
+  isValidPolicyName: jest.fn(),
   listPolicies: jest.fn(),
   readPolicies: jest.fn(),
   writePolicy: jest.fn(),
@@ -32,6 +34,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 }));
 
 const mockedHasPermission = jest.mocked(hasPermission);
+const mockedIsValidName = jest.mocked(isValidPolicyName);
 const mockedHistory = jest.mocked(listPolicyRevisions);
 const mockedReadRevision = jest.mocked(readPolicyRevision);
 const mockedRestore = jest.mocked(restorePolicy);
@@ -57,6 +60,7 @@ const current = { name: 'a/b', content: '## B. Names', version: 'v3' };
 beforeEach(() => {
   jest.clearAllMocks();
   mockedHasPermission.mockResolvedValue(true);
+  mockedIsValidName.mockReturnValue(true);
 });
 
 describe('policy editor tools', () => {
@@ -113,6 +117,35 @@ describe('policy editor tools', () => {
     }
     expect(POLICY_EDITOR_RESOURCE_URI).toBe('ui://policy-editor/app.html');
   });
+
+  it('shares one frozen _meta across the editor tools', () => {
+    const meta = createPolicyHistoryTool(client)._meta as {
+      ui: { visibility: string[] };
+    };
+
+    expect(Object.isFrozen(meta)).toBe(true);
+    expect(Object.isFrozen(meta.ui)).toBe(true);
+    expect(Object.isFrozen(meta.ui.visibility)).toBe(true);
+  });
+
+  it('tells the model the editor tools are not for chat', () => {
+    const tools = createHarnessTools(client);
+    const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+    const appOnly =
+      'Called only by the policy editor app; do not call it from chat.';
+    const openEditor = `the user opens the editor with ${POLICY_TOOL_NAMES.openEditor}.`;
+
+    for (const tool of tools.filter((t) => t._meta)) {
+      expect(tool.description).toContain(appOnly);
+    }
+    for (const tool of tools.filter((t) => !t._meta)) {
+      expect(tool.description).not.toContain(appOnly);
+    }
+    for (const name of [POLICY_TOOL_NAMES.delete, POLICY_TOOL_NAMES.rename]) {
+      expect(byName[name].description).toMatch(new RegExp(`${openEditor}$`));
+    }
+    expect(POLICY_TOOL_NAMES.openEditor).toBe('open-policy-editor');
+  });
 });
 
 describe('policy-history', () => {
@@ -133,7 +166,24 @@ describe('policy-history', () => {
     const result = await call(tool, { name: 'a/b' });
 
     expect(result.isError).toBe(true);
-    expect(parse(result)).toMatchObject({ ok: false, reason: 'error' });
+    expect(parse(result)).toMatchObject({
+      ok: false,
+      reason: 'error',
+      message: 'Could not list the revisions of a/b.',
+    });
+  });
+
+  it('says an invalid name is invalid rather than a failed listing', async () => {
+    mockedHistory.mockResolvedValue(undefined);
+    mockedIsValidName.mockReturnValue(false);
+
+    const result = await call(tool, { name: 'archive/a' });
+
+    expect(mockedIsValidName).toHaveBeenCalledWith('archive/a');
+    expect(result.isError).toBe(true);
+    const body = parse(result);
+    expect(body).toMatchObject({ ok: false, reason: 'error' });
+    expect(body.message).toContain('archive/a is not a valid policy name');
   });
 });
 

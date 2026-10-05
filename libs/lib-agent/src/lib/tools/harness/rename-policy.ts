@@ -4,7 +4,9 @@ import { renamePolicy } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
 import {
+  APP_ONLY_NOTE,
   authorizePolicyTool,
+  OPEN_EDITOR_NOTE,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
   policyFailureResult,
@@ -29,8 +31,7 @@ const inputSchema = {
 export function createRenamePolicyTool(client: DataClient): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.rename,
-    description:
-      'Rename an 84000 translation policy. The old name is archived and removed; its history stays under the old name. Used by the policy editor.',
+    description: `Rename an 84000 translation policy. The old name is archived and removed; its history stays under the old name. ${APP_ONLY_NOTE} ${OPEN_EDITOR_NOTE}`,
     inputSchema,
     annotations: {
       title: 'Rename Policy',

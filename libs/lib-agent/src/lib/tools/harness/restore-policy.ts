@@ -4,6 +4,7 @@ import { restorePolicy } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
 import {
+  APP_ONLY_NOTE,
   authorizePolicyTool,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
@@ -31,8 +32,7 @@ const inputSchema = {
 export function createRestorePolicyTool(client: DataClient): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.restore,
-    description:
-      'Restore an archived revision of an 84000 translation policy as its current text. The text it replaces is archived first. Used by the policy editor.',
+    description: `Restore an archived revision of an 84000 translation policy as its current text. The text it replaces is archived first. ${APP_ONLY_NOTE}`,
     inputSchema,
     annotations: {
       title: 'Restore Policy',
