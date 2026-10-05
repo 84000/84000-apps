@@ -341,6 +341,43 @@ describe('writePolicy', () => {
     expect(result).toMatchObject({ ok: true, created: true });
     expect(result.ok && result.archivedPath).toBeUndefined();
     expect(calls.copy).toEqual([]);
+    // A create must not overwrite a policy someone else created meanwhile.
+    expect(calls.upload).toEqual([{ path: 'a/new.md', upsert: false }]);
+  });
+
+  const taken = {
+    message: 'The resource already exists',
+    status: 400,
+    statusCode: '409',
+  };
+
+  it('reports a create that lost a race as a conflict with their text', async () => {
+    const { client, calls } = createMockClient({
+      lists: {},
+      uploadError: taken,
+      downloads: { 'a/new.md': 'theirs' },
+    });
+
+    expect(
+      await writePolicy({ client, name: 'a/new', content: 'ours' }),
+    ).toEqual({
+      ok: false,
+      reason: 'conflict',
+      current: {
+        name: 'a/new',
+        content: 'theirs',
+        version: await policyVersion('theirs'),
+      },
+    });
+    expect(calls.writes).toEqual(['upload a/new.md']);
+  });
+
+  it('reports an error when the raced create cannot be read back', async () => {
+    const { client } = createMockClient({ lists: {}, uploadError: taken });
+
+    expect(
+      await writePolicy({ client, name: 'a/new', content: 'ours' }),
+    ).toMatchObject({ ok: false, reason: 'error' });
   });
 
   it('maps an RLS upload refusal to forbidden', async () => {

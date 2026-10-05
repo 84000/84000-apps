@@ -91,6 +91,13 @@ export const isForbidden = (error: StorageFailure) =>
     error.statusCode === '403' ||
     /row-level security/i.test(error.message ?? ''));
 
+/** Whether a copy or non-upsert upload failed because the target key is taken. */
+export const isAlreadyExists = (error: StorageFailure) =>
+  !!error &&
+  (error.status === 409 ||
+    error.statusCode === '409' ||
+    /already exists|duplicate/i.test(error.message ?? ''));
+
 type StorageEntry = { id: string | null; name: string };
 
 // Storage's `list` defaults to 100 rows and reports no truncation, so a folder
@@ -275,24 +282,30 @@ export const archiveIfPresent = async ({
   return { archivedPath: archive.path };
 };
 
-/** Uploads text, replacing whatever is at `path`. Archiving is the caller's job. */
+/**
+ * Uploads text, replacing whatever is at `path` unless `upsert` is false, in
+ * which case an existing object makes it fail with `exists`. Archiving is the
+ * caller's job.
+ */
 export const uploadText = async ({
   client,
   bucket,
   path,
   content,
+  upsert = true,
 }: {
   client: DataClient;
   bucket: string;
   path: string;
   content: string;
+  upsert?: boolean;
 }) => {
   const contentType = contentTypeFor(path);
 
   const { error } = await client.storage
     .from(bucket)
     .upload(path, new Blob([content], { type: contentType }), {
-      upsert: true,
+      upsert,
       contentType,
     });
 
@@ -300,5 +313,6 @@ export const uploadText = async ({
     written: !error,
     error: error?.message,
     forbidden: isForbidden(error),
+    exists: isAlreadyExists(error),
   };
 };

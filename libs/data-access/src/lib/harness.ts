@@ -217,6 +217,10 @@ export const archivePolicy = async ({
  * Whether the live object at `path` is present and, when `expectedVersion` is
  * given, still the revision the caller read. A failed existence check fails
  * closed: treating it as absence would skip the archive.
+ *
+ * The listing only distinguishes "absent" from "hidden" because every role
+ * holding harness.edit or harness.admin also holds harness.read; a role that
+ * could write without reading would see every policy as absent.
  */
 const checkLive = async ({
   client,
@@ -303,13 +307,16 @@ export const writePolicy = async ({
   });
   if (live.failure) return live.failure;
 
-  // Race window: storage has no conditional write, so the version check above
-  // and the upload below are separate requests, and a write landing between
-  // them is overwritten without a conflict. That is accepted at the rate
-  // policies are edited; the archive is the backstop. Our archive step copies
-  // whatever is live when it runs, so an intervening revision that landed
-  // before it is archived by us. Only one landing in the instant between our
-  // archive copy and our upload is lost, and its predecessor is still archived.
+  // Race window. Creating is closed: the upload below does not upsert when
+  // nothing was live, so a concurrent create makes it fail and is reported as
+  // a conflict. Replacing is not: storage has no conditional overwrite, so the
+  // version check above and the upload are separate requests, and a write
+  // landing between them is overwritten without a conflict. That is accepted
+  // at the rate policies are edited; the archive is the backstop. Our archive
+  // step copies whatever is live when it runs, so an intervening revision that
+  // landed before it is archived by us. Only one landing in the instant
+  // between our archive copy and our upload is lost, and its predecessor is
+  // still archived.
   let archivedPath: string | undefined;
   if (live.exists) {
     const archive = await archivePolicy({ client, name, at });
@@ -328,7 +335,19 @@ export const writePolicy = async ({
     bucket: HARNESS_BUCKET,
     path,
     content,
+    upsert: live.exists,
   });
+
+  if (!upload.written && upload.exists && !live.exists) {
+    // Someone created the policy since we looked. Hand back what they wrote
+    // so the caller can compare, rather than overwriting it.
+    const current = await readPolicy({ client, name });
+    return current
+      ? { ok: false, reason: 'conflict', current }
+      : failed(
+          `${policyName(name)} was created by someone else during this write, and could not be read back; nothing was written.`,
+        );
+  }
 
   if (!upload.written) {
     return upload.forbidden
