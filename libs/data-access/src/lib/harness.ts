@@ -517,6 +517,7 @@ export const deletePolicy = async ({
   expectedVersion?: PolicyVersion;
   at?: Date;
 }): Promise<{ ok: true; archivedPath: string } | PolicyFailure> => {
+  if (!isValidPolicyName(name)) return invalidName(name);
   if (!(await hasPermission({ client, permission: 'harness.admin' }))) {
     return FORBIDDEN;
   }
@@ -531,6 +532,10 @@ export const deletePolicy = async ({
   if (live.failure) return live.failure;
   if (!live.exists) return NOT_FOUND;
 
+  // Race window, as in `writePolicy`: storage has no conditional delete, so a
+  // write landing between our archive copy and our remove is deleted without
+  // being archived. Its predecessor is archived, by us. Rename has the same
+  // window between its archive of `from` and the remove.
   const archive = await archivePolicy({ client, name, at });
   if (!archive.path) {
     return archive.forbidden
@@ -560,8 +565,9 @@ export const deletePolicy = async ({
  * Renames a policy: copy to the new name, archive the old one, then delete it.
  * Requires `harness.admin`, checked up front so a caller who could copy but not
  * delete never leaves the rename half done. If a step after the copy fails, the
- * copy is removed again (best effort) and the error says whether that worked.
- * The history stays under the old name.
+ * copy is archived and removed again (best effort) and the error says whether
+ * that worked. The history stays under the old name. The race window is the
+ * one described on `deletePolicy`.
  */
 export const renamePolicy = async ({
   client,
@@ -576,6 +582,8 @@ export const renamePolicy = async ({
   expectedVersion?: PolicyVersion;
   at?: Date;
 }): Promise<{ ok: true; archivedPath: string } | PolicyFailure> => {
+  if (!isValidPolicyName(from)) return invalidName(from);
+  if (!isValidPolicyName(to)) return invalidName(to);
   const fromPath = policyPath(from);
   const toPath = policyPath(to);
   const fromName = policyName(fromPath);
@@ -623,7 +631,16 @@ export const renamePolicy = async ({
     );
   }
 
+  // The copy is archived before it is removed, as any delete is, so a write
+  // that landed at `to` since our copy is never lost by the rollback.
   const rollBack = async (reason: string) => {
+    const kept = `${reason}; ${fromName} was left in place`;
+    const saved = await archivePolicy({ client, name: toPath, at });
+    if (!saved.path) {
+      return failed(
+        `${kept} and so was the copy at ${toName}, because it could not be archived first (${saved.error}); check it and remove it by hand.`,
+      );
+    }
     const undo = await removeObjects({
       client,
       bucket: HARNESS_BUCKET,
@@ -631,8 +648,8 @@ export const renamePolicy = async ({
     });
     return failed(
       undo.removed
-        ? `${reason}; ${fromName} was left in place and the copy at ${toName} was removed.`
-        : `${reason}; ${fromName} was left in place but the copy at ${toName} could not be removed (${undo.error}) and must be removed by hand.`,
+        ? `${kept} and the copy at ${toName} was archived and removed.`
+        : `${kept} but the copy at ${toName} could not be removed (${undo.error}) and must be removed by hand.`,
     );
   };
 

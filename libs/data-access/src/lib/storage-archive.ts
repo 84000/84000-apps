@@ -342,7 +342,8 @@ export const removeObjects = async ({
   if ((data?.length ?? 0) < paths.length) {
     return {
       removed: false,
-      error: 'storage removed fewer objects than requested',
+      error:
+        'storage removed fewer objects than requested (refused or already gone)',
       forbidden: true,
     };
   }
