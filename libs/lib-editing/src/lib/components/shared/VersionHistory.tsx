@@ -2,19 +2,12 @@
 
 import {
   Badge,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   MutedText,
-  Separator,
+  RevisionList,
+  type RevisionListItem,
 } from '@eightyfourthousand/design-system';
 import type { WorkVersion } from '@eightyfourthousand/client-graphql';
-import {
-  ChevronRightIcon,
-  CircleCheckIcon,
-  TriangleAlertIcon,
-} from 'lucide-react';
-import { useState } from 'react';
+import { CircleCheckIcon, TriangleAlertIcon } from 'lucide-react';
 
 /**
  * The validation status recorded for a published version.
@@ -51,30 +44,30 @@ const ValidationStatus = ({ version }: { version: WorkVersion }) => {
   );
 };
 
-const VersionRow = ({ version }: { version: WorkVersion }) => (
-  <li className="py-3">
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-semibold">{version.version}</span>
-      {version.isLive && (
-        <Badge variant="secondary" className="shrink-0">
-          {'Live'}
-        </Badge>
+/** Maps a published version onto the generic revision row. */
+const toRevision = (version: WorkVersion): RevisionListItem => ({
+  id: version.uuid,
+  label: version.version,
+  timestamp: version.publishedAt,
+  // An unattributed publish is left unattributed rather than falling back to a uuid, which
+  // would read as data to act on and is not.
+  meta: version.publisher,
+  badges: version.isLive && (
+    <Badge variant="secondary" className="shrink-0">
+      {'Live'}
+    </Badge>
+  ),
+  body: (
+    <>
+      <div className="mt-1">
+        <ValidationStatus version={version} />
+      </div>
+      {version.notes && (
+        <p className="mt-1.5 whitespace-pre-line text-xs">{version.notes}</p>
       )}
-    </div>
-    <MutedText className="mt-0.5 block text-xs">
-      {new Date(version.publishedAt).toLocaleString()}
-      {/* An unattributed publish is left unattributed rather than falling back to a uuid,
-          which would read as data to act on and is not. */}
-      {version.publisher && ` · ${version.publisher}`}
-    </MutedText>
-    <div className="mt-1">
-      <ValidationStatus version={version} />
-    </div>
-    {version.notes && (
-      <p className="mt-1.5 whitespace-pre-line text-xs">{version.notes}</p>
-    )}
-  </li>
-);
+    </>
+  ),
+});
 
 /**
  * A work's published versions, newest first, collapsed behind a summary.
@@ -98,44 +91,13 @@ export const VersionHistory = ({
    * published" is a fact about the work and "could not load" is a fact about the request.
    */
   unavailable?: boolean;
-}) => {
-  const hasList = !unavailable && versions.length > 0;
-  const [open, setOpen] = useState(!hasList);
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="group/collapsible flex w-full items-center gap-2 text-left text-sm font-semibold cursor-pointer"
-        >
-          <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-          <span>{'Version history'}</span>
-          {versions.length > 0 && (
-            <MutedText className="ms-auto shrink-0 font-light">
-              ({versions.length})
-            </MutedText>
-          )}
-        </button>
-      </CollapsibleTrigger>
-      <Separator className="mt-2 bg-border" />
-      <CollapsibleContent>
-        {unavailable ? (
-          <MutedText className="mt-3 block text-sm">
-            {'The version history could not be loaded.'}
-          </MutedText>
-        ) : versions.length === 0 ? (
-          <MutedText className="mt-3 block text-sm">
-            {'This work has not been published yet.'}
-          </MutedText>
-        ) : (
-          <ul className="divide-y divide-border">
-            {versions.map((version) => (
-              <VersionRow key={version.uuid} version={version} />
-            ))}
-          </ul>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
+}) => (
+  <RevisionList
+    title={'Version history'}
+    items={versions}
+    toRevision={toRevision}
+    unavailable={unavailable}
+    unavailableMessage={'The version history could not be loaded.'}
+    emptyMessage={'This work has not been published yet.'}
+  />
+);
