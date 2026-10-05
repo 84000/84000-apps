@@ -14,6 +14,11 @@ export interface McpToolDefinition<
   inputSchema: T;
   outputSchema?: U;
   annotations?: ToolAnnotations;
+  /**
+   * Passed through to the tool's `_meta` on `tools/list`, for protocol
+   * extensions such as MCP Apps (`_meta.ui`).
+   */
+  _meta?: Record<string, unknown>;
   handler: ToolCallback<T>;
 }
 

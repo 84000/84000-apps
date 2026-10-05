@@ -25,6 +25,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
         inputSchema,
         outputSchema,
         annotations,
+        _meta,
         handler,
       } = tool;
       server.registerTool(
@@ -34,6 +35,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
           inputSchema,
           outputSchema,
           annotations,
+          _meta,
         },
         handler,
       );

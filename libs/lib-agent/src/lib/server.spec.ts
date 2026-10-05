@@ -97,4 +97,24 @@ describe('createMcpHandler prompt + tool surface', () => {
     const tools = (listed.result as { tools: { name: string }[] }).tools;
     expect(tools.map((t) => t.name)).toContain('ask_test');
   });
+
+  it('forwards a tool definition _meta to tools/list', async () => {
+    const ui = { resourceUri: 'ui://test/app.html', visibility: ['app'] };
+    const handler = createMcpHandler({
+      tools: [askTool, { ...askTool, name: 'app_test', _meta: { ui } }],
+    });
+    await rpc(handler, init);
+    const listed = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'tools/list',
+      params: {},
+    });
+    const tools = (
+      listed.result as { tools: { name: string; _meta?: unknown }[] }
+    ).tools;
+    const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
+    expect(byName['app_test']._meta).toEqual({ ui });
+    expect(byName['ask_test']._meta).toBeUndefined();
+  });
 });
