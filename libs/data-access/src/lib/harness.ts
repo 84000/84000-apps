@@ -1,12 +1,16 @@
+import { hasPermission } from './auth';
 import { DataClient } from './types';
 import {
   ARCHIVE_PREFIX,
   archiveObject,
   archiveStamp,
   archivedObjectPath,
+  isAlreadyExists,
+  isForbidden,
   isNotFound,
   listObjects,
   objectExists,
+  removeObjects,
   uploadText,
 } from './storage-archive';
 
@@ -124,6 +128,7 @@ export type PolicyWriteResult =
   | PolicyFailure;
 
 const NOT_FOUND = { ok: false, reason: 'not-found' } as const;
+const EXISTS = { ok: false, reason: 'exists' } as const;
 const FORBIDDEN = { ok: false, reason: 'forbidden' } as const;
 const failed = (message: string) =>
   ({ ok: false, reason: 'error', message }) as const;
@@ -494,4 +499,158 @@ export const restorePolicy = async ({
     expectedVersion,
     at,
   });
+};
+
+/**
+ * Deletes a live policy after archiving it. Requires `harness.admin`, checked
+ * up front: RLS would filter the delete anyway, but only after the archive copy
+ * had been made. A failed archive stops the delete.
+ */
+export const deletePolicy = async ({
+  client,
+  name,
+  expectedVersion,
+  at = new Date(),
+}: {
+  client: DataClient;
+  name: string;
+  expectedVersion?: PolicyVersion;
+  at?: Date;
+}): Promise<{ ok: true; archivedPath: string } | PolicyFailure> => {
+  if (!(await hasPermission({ client, permission: 'harness.admin' }))) {
+    return FORBIDDEN;
+  }
+
+  const path = policyPath(name);
+  const live = await checkLive({
+    client,
+    path,
+    expectedVersion,
+    action: 'delete',
+  });
+  if (live.failure) return live.failure;
+  if (!live.exists) return NOT_FOUND;
+
+  const archive = await archivePolicy({ client, name, at });
+  if (!archive.path) {
+    return archive.forbidden
+      ? FORBIDDEN
+      : failed(
+          `Could not archive ${policyName(name)} before deleting it (${archive.error}); the delete was not attempted.`,
+        );
+  }
+
+  const removal = await removeObjects({
+    client,
+    bucket: HARNESS_BUCKET,
+    paths: [path],
+  });
+  if (!removal.removed) {
+    return removal.forbidden
+      ? FORBIDDEN
+      : failed(
+          `Archived ${policyName(name)} to ${archive.path} but could not delete it (${removal.error}).`,
+        );
+  }
+
+  return { ok: true, archivedPath: archive.path };
+};
+
+/**
+ * Renames a policy: copy to the new name, archive the old one, then delete it.
+ * Requires `harness.admin`, checked up front so a caller who could copy but not
+ * delete never leaves the rename half done. If a step after the copy fails, the
+ * copy is removed again (best effort) and the error says whether that worked.
+ * The history stays under the old name.
+ */
+export const renamePolicy = async ({
+  client,
+  from,
+  to,
+  expectedVersion,
+  at = new Date(),
+}: {
+  client: DataClient;
+  from: string;
+  to: string;
+  expectedVersion?: PolicyVersion;
+  at?: Date;
+}): Promise<{ ok: true; archivedPath: string } | PolicyFailure> => {
+  const fromPath = policyPath(from);
+  const toPath = policyPath(to);
+  const fromName = policyName(fromPath);
+  const toName = policyName(toPath);
+
+  if (fromPath === toPath) {
+    return failed(`${fromName} cannot be renamed to itself.`);
+  }
+
+  if (!(await hasPermission({ client, permission: 'harness.admin' }))) {
+    return FORBIDDEN;
+  }
+
+  const target = await objectExists({
+    client,
+    bucket: HARNESS_BUCKET,
+    path: toPath,
+  });
+  if (target.error) {
+    return failed(
+      `Could not check whether ${toName} exists (${target.error}); the rename was not attempted.`,
+    );
+  }
+  if (target.exists) return EXISTS;
+
+  const live = await checkLive({
+    client,
+    path: fromPath,
+    expectedVersion,
+    action: 'rename',
+  });
+  if (live.failure) return live.failure;
+  if (!live.exists) return NOT_FOUND;
+
+  // Storage refuses a copy onto an existing key, so a target created since the
+  // check above still cannot be overwritten.
+  const { error: copyError } = await client.storage
+    .from(HARNESS_BUCKET)
+    .copy(fromPath, toPath);
+  if (copyError) {
+    if (isAlreadyExists(copyError)) return EXISTS;
+    if (isForbidden(copyError)) return FORBIDDEN;
+    return failed(
+      `Could not copy ${fromName} to ${toName} (${copyError.message}); the rename was not attempted.`,
+    );
+  }
+
+  const rollBack = async (reason: string) => {
+    const undo = await removeObjects({
+      client,
+      bucket: HARNESS_BUCKET,
+      paths: [toPath],
+    });
+    return failed(
+      undo.removed
+        ? `${reason}; ${fromName} was left in place and the copy at ${toName} was removed.`
+        : `${reason}; ${fromName} was left in place but the copy at ${toName} could not be removed (${undo.error}) and must be removed by hand.`,
+    );
+  };
+
+  const archive = await archivePolicy({ client, name: fromPath, at });
+  if (!archive.path) {
+    return rollBack(`Could not archive ${fromName} (${archive.error})`);
+  }
+
+  const removal = await removeObjects({
+    client,
+    bucket: HARNESS_BUCKET,
+    paths: [fromPath],
+  });
+  if (!removal.removed) {
+    return rollBack(
+      `Archived ${fromName} to ${archive.path} but could not delete it (${removal.error})`,
+    );
+  }
+
+  return { ok: true, archivedPath: archive.path };
 };
