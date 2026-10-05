@@ -57,7 +57,10 @@ export interface RevisionListProps<T> {
   defaultOpen?: boolean;
   /** Called when the header toggles the list. */
   onOpenChange?: (open: boolean) => void;
-  /** The `id` of the selected revision, highlighted and marked `aria-current`. */
+  /**
+   * The `id` of the selected revision, highlighted and marked `aria-current`. Works without
+   * `onSelect`, for a selection the caller drives from elsewhere.
+   */
   selectedId?: string;
   /** Makes rows selectable. Each row becomes a button that reports its item. */
   onSelect?: (item: T) => void;
@@ -125,9 +128,9 @@ export function RevisionList<T>({
           <ChevronRightIcon className="size-4 shrink-0 transition-transform group-data-[state=open]/collapsible:rotate-90" />
           <span>{title}</span>
           {items.length > 0 && (
-            <MutedText className="ms-auto shrink-0 font-light">
+            <span className="ms-auto shrink-0 text-sm font-light text-muted-foreground">
               ({items.length})
-            </MutedText>
+            </span>
           )}
         </button>
       </CollapsiblePrimitive.Trigger>
@@ -148,6 +151,7 @@ export function RevisionList<T>({
                   key={revision.id}
                   revision={revision}
                   selected={revision.id === selectedId}
+                  inset={selectedId !== undefined || onSelect !== undefined}
                   onSelect={onSelect && (() => onSelect(item))}
                   actions={renderActions?.(item)}
                   formatTimestamp={formatTimestamp}
@@ -161,15 +165,22 @@ export function RevisionList<T>({
   );
 }
 
+/** Whether a slot value renders anything, so empty ones leave no wrapper or separator. */
+const isPresent = (value: unknown) =>
+  value !== undefined && value !== null && value !== false && value !== '';
+
 const RevisionRow = ({
   revision,
   selected,
+  inset,
   onSelect,
   actions,
   formatTimestamp,
 }: {
   revision: RevisionListItem;
   selected: boolean;
+  /** Pads every row, so the selected one's highlight does not shift its text. */
+  inset: boolean;
   onSelect?: () => void;
   actions?: ReactNode;
   formatTimestamp: (timestamp: string | Date) => ReactNode;
@@ -177,9 +188,8 @@ const RevisionRow = ({
   const { label, timestamp, meta, badges, body } = revision;
   // A button may only hold phrasing content, so a selectable row is built from spans.
   const Part = onSelect ? 'span' : 'div';
-  const hasTimestamp = timestamp != null;
-  // Empty values render nothing, so they must not leave a dangling separator either.
-  const hasMeta = meta != null && meta !== false && meta !== '';
+  const hasTimestamp = isPresent(timestamp);
+  const hasMeta = isPresent(meta);
 
   const content = (
     <>
@@ -189,13 +199,19 @@ const RevisionRow = ({
       </Part>
       {(hasTimestamp || hasMeta) && (
         <Part className="mt-0.5 block text-xs text-muted-foreground">
-          {hasTimestamp && formatTimestamp(timestamp)}
+          {hasTimestamp && timestamp && formatTimestamp(timestamp)}
           {hasTimestamp && hasMeta && ' · '}
           {hasMeta && meta}
         </Part>
       )}
-      {body && <Part className="block">{body}</Part>}
+      {isPresent(body) && <Part className="block">{body}</Part>}
     </>
+  );
+
+  const rowClassName = cn(
+    'min-w-0 flex-1',
+    inset && 'rounded-md px-2',
+    selected && 'bg-accent',
   );
 
   return (
@@ -206,16 +222,21 @@ const RevisionRow = ({
           onClick={onSelect}
           aria-current={selected ? 'true' : undefined}
           className={cn(
-            'block min-w-0 flex-1 rounded-md px-2 text-left cursor-pointer hover:bg-accent',
-            selected && 'bg-accent',
+            rowClassName,
+            'block text-left cursor-pointer hover:bg-accent ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           )}
         >
           {content}
         </button>
       ) : (
-        <div className="min-w-0 flex-1">{content}</div>
+        <div
+          aria-current={selected ? 'true' : undefined}
+          className={rowClassName}
+        >
+          {content}
+        </div>
       )}
-      {actions && (
+      {isPresent(actions) && (
         <div className="flex shrink-0 items-center gap-1">{actions}</div>
       )}
     </li>

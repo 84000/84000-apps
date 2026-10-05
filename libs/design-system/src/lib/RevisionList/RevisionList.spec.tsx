@@ -134,6 +134,46 @@ describe('RevisionList', () => {
     expect(onSelect).toHaveBeenLastCalledWith(revisions[1]);
   });
 
+  it('marks the selected row in a read-only list', () => {
+    render(
+      <RevisionList
+        title="History"
+        items={revisions}
+        toRevision={toRevision}
+        defaultOpen
+        selectedId="r2"
+      />,
+    );
+
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    const current = document.querySelectorAll('[aria-current="true"]');
+    expect(current).toHaveLength(1);
+    expect(current[0].textContent).toContain('Revision 2');
+  });
+
+  it('treats empty slot values as absent', () => {
+    render(
+      <RevisionList
+        title="History"
+        items={[{ id: 'r0' }]}
+        toRevision={({ id }) => ({
+          id,
+          label: 'Revision 0',
+          timestamp: '',
+          meta: 'Dawa',
+          body: '',
+        })}
+        renderActions={() => ''}
+        defaultOpen
+      />,
+    );
+
+    // No "Invalid Date", no separator before the meta, no empty wrappers.
+    const row = screen.getByText('Revision 0').closest('li');
+    expect(row?.textContent).toBe('Revision 0Dawa');
+    expect(row?.children).toHaveLength(1);
+  });
+
   it('renders per-row actions outside the selectable row', async () => {
     const onRestore = jest.fn();
     const onSelect = jest.fn();
