@@ -289,6 +289,13 @@ export class PassageStackController {
   hasMorePassages = () => this.hydration.hasMorePassages();
 
   /**
+   * A page of this tab's passages past `cursor`, read without moving the
+   * window. Null when it can't be read.
+   */
+  readBeyond = (direction: 'before' | 'after', cursor: string) =>
+    this.hydration.readBeyond(direction, cursor);
+
+  /**
    * Scroll a passage into view, loading it into the spine if the window does
    * not hold it.
    */

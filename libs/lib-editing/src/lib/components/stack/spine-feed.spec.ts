@@ -7,12 +7,14 @@ import { dirtyPassages } from './stack-save';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetaPage: jest.fn(),
+  getTranslationBlocks: jest.fn(),
 }));
 
 const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   getPassageMetaPage: jest.Mock;
+  getTranslationBlocks: jest.Mock;
 };
 
 /** Minimal schema — the feed touches the spine only, never a passage document. */
@@ -69,7 +71,72 @@ const aroundPage = (
   hasMoreAfter: after,
 });
 
-beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
+beforeEach(() => {
+  clientGraphql.getPassageMetaPage.mockReset();
+  clientGraphql.getTranslationBlocks.mockReset();
+});
+
+describe('SpineFeed.readBeyond', () => {
+  const FRONT = { type: '(introduction)', tab: 'front' };
+  const block = (uuid: string) => ({
+    type: 'passage',
+    attrs: { uuid },
+    content: [{ type: 'paragraph' }],
+  });
+
+  it('reads its own section past the cursor, leaving the spine alone', async () => {
+    const w = work();
+    const feed = new SpineFeed(w, client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [block('f1'), block('f2')],
+      prevCursor: 'f1',
+      hasMoreBefore: true,
+      hasMoreAfter: true,
+    });
+
+    expect(await feed.readBeyond('before', 'f3')).toEqual({
+      passages: [
+        { uuid: 'f1', content: [{ type: 'paragraph' }] },
+        { uuid: 'f2', content: [{ type: 'paragraph' }] },
+      ],
+      next: 'f1',
+    });
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: '(introduction)',
+        cursor: 'f3',
+        direction: 'backward',
+      }),
+    );
+    expect(w.spine.length).toBe(0);
+  });
+
+  it('says where nothing more lies that way', async () => {
+    const feed = new SpineFeed(work(), client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [block('f9')],
+      nextCursor: 'f9',
+      hasMoreBefore: true,
+      hasMoreAfter: false,
+    });
+
+    expect(await feed.readBeyond('after', 'f8')).toEqual({
+      passages: [{ uuid: 'f9', content: [{ type: 'paragraph' }] }],
+    });
+  });
+
+  it('tells a failed read from an empty one', async () => {
+    const feed = new SpineFeed(work(), client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [],
+      hasMoreBefore: false,
+      hasMoreAfter: false,
+      failed: true,
+    });
+
+    expect(await feed.readBeyond('before', 'f1')).toBeNull();
+  });
+});
 
 describe('SpineFeed content lengths', () => {
   it('records the content length of every passage a page reports', async () => {

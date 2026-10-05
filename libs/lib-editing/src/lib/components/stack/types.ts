@@ -1,6 +1,7 @@
 import type { JSONContent } from '@tiptap/core';
 import type { Passage } from '@eightyfourthousand/data-access';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
+import type { BeyondPage } from './spine-feed';
 import {
   blockFromPassage,
   type FocusTarget,
@@ -106,6 +107,11 @@ export type PassageStackControllerOptions = {
     maybeExtendBefore?: (visibleStart: number) => boolean;
     reveal?: (uuid: string) => Promise<number>;
     revealStart?: () => Promise<void>;
+    /** Content past an end of the run, without moving it; null on failure. */
+    readBeyond?: (
+      direction: 'before' | 'after',
+      cursor: string,
+    ) => Promise<BeyondPage | null>;
   };
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;

@@ -4,6 +4,7 @@ import type {
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
+import type { BeyondPage } from './spine-feed';
 import type { PassageStackControllerOptions } from './types';
 
 /**
@@ -132,6 +133,13 @@ export class StackHydration {
 
   /** Whether the work has passages the spine has not loaded yet. */
   hasMorePassages = () => this.spineFeed?.hasMore ?? false;
+
+  /** A page of this run's section past `cursor`. Null when it can't be read. */
+  readBeyond = async (
+    direction: 'before' | 'after',
+    cursor: string,
+  ): Promise<BeyondPage | null> =>
+    (await this.spineFeed?.readBeyond?.(direction, cursor)) ?? null;
 
   private async runHydration() {
     if (this.hydrating) {

@@ -146,7 +146,11 @@ run starts at its first passage, which `useStackOuterContent` reports — not ov
 a window a deep link opened part way through it.
 
 A new endnote is numbered after the nearest link before it in reading order,
-which runs back through earlier tabs: front matter links notes too.
+which runs back through earlier tabs: front matter links notes too. The search
+does not depend on which tabs have been visited. Passages in the spine that the
+stack does not hold are hydrated through the store, and passages past either
+end of a run are read through that run's controller (`readBeyond`) without
+moving its window. A read that fails refuses, instead of guessing a number.
 
 ### The stack does not own a scroller
 

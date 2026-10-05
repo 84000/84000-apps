@@ -1,5 +1,9 @@
+import type { JSONContent } from '@tiptap/core';
 import type { GraphQLClient } from 'graphql-request';
-import { getPassageMetaPage } from '@eightyfourthousand/client-graphql';
+import {
+  getPassageMetaPage,
+  getTranslationBlocks,
+} from '@eightyfourthousand/client-graphql';
 import type {
   Spine,
   SpineSeed,
@@ -24,6 +28,14 @@ type Meta = {
   sort?: number;
   toh?: string;
   contentLength?: number;
+};
+
+/** A page of passage content read past one end of a run. */
+export type BeyondPage = {
+  /** In the work's order, whichever way the page was read. */
+  passages: { uuid: string; content: JSONContent[] }[];
+  /** Where the next page in the same direction starts, if there is one. */
+  next?: string;
 };
 
 /** What a feed reads, and where its passages sit in the spine. */
@@ -275,6 +287,35 @@ export class SpineFeed {
       if (backward ? this.noneBefore : this.noneAfter) return;
       await (backward ? this.extendBefore() : this.extend());
     }
+  }
+
+  /**
+   * A page of this section's content past `cursor`, read without moving the
+   * window — for a caller that needs what lies outside it, such as the link
+   * an endnote follows. Null when the read failed.
+   */
+  async readBeyond(
+    direction: 'before' | 'after',
+    cursor: string,
+  ): Promise<BeyondPage | null> {
+    const page = await getTranslationBlocks({
+      client: this.client,
+      uuid: this.work.workUuid,
+      type: this.section?.type,
+      cursor,
+      maxPassages: NEXT_PAGE,
+      direction: direction === 'before' ? 'backward' : 'forward',
+    });
+    if (page.failed) return null;
+    const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+    const passages = blocks.flatMap((block) => {
+      const uuid = block.attrs?.uuid;
+      return uuid ? [{ uuid, content: block.content ?? [] }] : [];
+    });
+    const more =
+      direction === 'before' ? page.hasMoreBefore : page.hasMoreAfter;
+    const next = direction === 'before' ? page.prevCursor : page.nextCursor;
+    return { passages, ...(more && next ? { next } : {}) };
   }
 
   /**
