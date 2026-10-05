@@ -1,0 +1,265 @@
+import type { DataClient } from '@eightyfourthousand/data-access';
+import {
+  deletePolicy,
+  hasPermission,
+  listPolicyRevisions,
+  readPolicyRevision,
+  renamePolicy,
+  restorePolicy,
+} from '@eightyfourthousand/data-access';
+import type { McpToolDefinition } from '../../types';
+import {
+  createDeletePolicyTool,
+  createHarnessTools,
+  createPolicyHistoryTool,
+  createReadPolicyRevisionTool,
+  createRenamePolicyTool,
+  createRestorePolicyTool,
+  POLICY_EDITOR_RESOURCE_URI,
+  POLICY_TOOL_NAMES,
+} from './index';
+
+jest.mock('@eightyfourthousand/data-access', () => ({
+  hasPermission: jest.fn(),
+  listPolicies: jest.fn(),
+  readPolicies: jest.fn(),
+  writePolicy: jest.fn(),
+  listPolicyRevisions: jest.fn(),
+  readPolicyRevision: jest.fn(),
+  restorePolicy: jest.fn(),
+  deletePolicy: jest.fn(),
+  renamePolicy: jest.fn(),
+}));
+
+const mockedHasPermission = jest.mocked(hasPermission);
+const mockedHistory = jest.mocked(listPolicyRevisions);
+const mockedReadRevision = jest.mocked(readPolicyRevision);
+const mockedRestore = jest.mocked(restorePolicy);
+const mockedDelete = jest.mocked(deletePolicy);
+const mockedRename = jest.mocked(renamePolicy);
+
+const client = {} as DataClient;
+type Result = Awaited<ReturnType<McpToolDefinition['handler']>>;
+const extra = {} as Parameters<McpToolDefinition['handler']>[1];
+const call = (tool: McpToolDefinition, args: Record<string, unknown>) =>
+  tool.handler(args, extra) as Promise<Result>;
+const parse = (result: Result) =>
+  JSON.parse((result.content[0] as { text: string }).text);
+
+const revisionPath = 'archive/a/b.md/20260908T193000Z.md';
+const revision = {
+  name: 'a/b',
+  path: revisionPath,
+  archivedAt: '2026-09-08T19:30:00.000Z',
+};
+const current = { name: 'a/b', content: '## B. Names', version: 'v3' };
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedHasPermission.mockResolvedValue(true);
+});
+
+describe('policy editor tools', () => {
+  it.each([
+    [createPolicyHistoryTool, { name: 'a/b' }, 'harness.read', mockedHistory],
+    [
+      createReadPolicyRevisionTool,
+      { path: revisionPath },
+      'harness.read',
+      mockedReadRevision,
+    ],
+    [
+      createRestorePolicyTool,
+      { name: 'a/b', revisionPath },
+      'harness.edit',
+      mockedRestore,
+    ],
+    [createDeletePolicyTool, { name: 'a/b' }, 'harness.admin', mockedDelete],
+    [
+      createRenamePolicyTool,
+      { from: 'a/b', to: 'a/c' },
+      'harness.admin',
+      mockedRename,
+    ],
+  ] as const)(
+    '%o refuses without %s and touches no data',
+    async (create, args, permission, dataCall) => {
+      mockedHasPermission.mockResolvedValue(false);
+
+      const result = await call(create(client), args);
+
+      expect(mockedHasPermission).toHaveBeenCalledWith({ client, permission });
+      expect(result.isError).toBe(true);
+      expect(parse(result)).toMatchObject({ ok: false, reason: 'forbidden' });
+      expect(dataCall).not.toHaveBeenCalled();
+    },
+  );
+
+  it('marks exactly the five editor tools app-only', () => {
+    const tools = createHarnessTools(client);
+    const appOnly = tools.filter((tool) => tool._meta).map((t) => t.name);
+
+    expect(appOnly).toEqual([
+      POLICY_TOOL_NAMES.history,
+      POLICY_TOOL_NAMES.readRevision,
+      POLICY_TOOL_NAMES.restore,
+      POLICY_TOOL_NAMES.delete,
+      POLICY_TOOL_NAMES.rename,
+    ]);
+    for (const tool of tools.filter((t) => t._meta)) {
+      expect(tool._meta).toEqual({
+        ui: { resourceUri: POLICY_EDITOR_RESOURCE_URI, visibility: ['app'] },
+      });
+    }
+    expect(POLICY_EDITOR_RESOURCE_URI).toBe('ui://policy-editor/app.html');
+  });
+});
+
+describe('policy-history', () => {
+  const tool = createPolicyHistoryTool(client);
+
+  it('returns the revisions newest first as listed', async () => {
+    mockedHistory.mockResolvedValue([revision]);
+
+    const result = await call(tool, { name: 'a/b' });
+
+    expect(mockedHistory).toHaveBeenCalledWith({ client, name: 'a/b' });
+    expect(parse(result)).toEqual({ revisions: [revision] });
+  });
+
+  it('reports a failed listing as an error, not an empty history', async () => {
+    mockedHistory.mockResolvedValue(undefined);
+
+    const result = await call(tool, { name: 'a/b' });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toMatchObject({ ok: false, reason: 'error' });
+  });
+});
+
+describe('read-policy-revision', () => {
+  const tool = createReadPolicyRevisionTool(client);
+
+  it('returns the revision and its content', async () => {
+    mockedReadRevision.mockResolvedValue({ revision, content: '## Old' });
+
+    const result = await call(tool, { path: revisionPath });
+
+    expect(parse(result)).toEqual({ revision, content: '## Old' });
+  });
+
+  it('reports an unreadable revision as not-found', async () => {
+    mockedReadRevision.mockResolvedValue(undefined);
+
+    const result = await call(tool, { path: 'policies/a/b.md' });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({ ok: false, reason: 'not-found' });
+  });
+});
+
+describe('restore-policy', () => {
+  const tool = createRestorePolicyTool(client);
+
+  it('forwards expectedVersion and returns the write result', async () => {
+    const written = {
+      ok: true as const,
+      version: 'v4',
+      created: false,
+      archivedPath: 'archive/a/b.md/20261005T120000Z.md',
+    };
+    mockedRestore.mockResolvedValue(written);
+
+    const result = await call(tool, {
+      name: 'a/b',
+      revisionPath,
+      expectedVersion: 'v3',
+    });
+
+    expect(mockedRestore).toHaveBeenCalledWith({
+      client,
+      name: 'a/b',
+      revisionPath,
+      expectedVersion: 'v3',
+    });
+    expect(parse(result)).toEqual(written);
+  });
+
+  it('passes a conflict through with the live document', async () => {
+    mockedRestore.mockResolvedValue({ ok: false, reason: 'conflict', current });
+
+    const result = await call(tool, {
+      name: 'a/b',
+      revisionPath,
+      expectedVersion: 'v1',
+    });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({ ok: false, reason: 'conflict', current });
+  });
+});
+
+describe('delete-policy', () => {
+  const tool = createDeletePolicyTool(client);
+
+  it('returns where the deleted text was archived', async () => {
+    mockedDelete.mockResolvedValue({ ok: true, archivedPath: revisionPath });
+
+    const result = await call(tool, { name: 'a/b', expectedVersion: 'v3' });
+
+    expect(mockedDelete).toHaveBeenCalledWith({
+      client,
+      name: 'a/b',
+      expectedVersion: 'v3',
+    });
+    expect(parse(result)).toEqual({ ok: true, archivedPath: revisionPath });
+  });
+
+  it('reports a missing policy as not-found', async () => {
+    mockedDelete.mockResolvedValue({ ok: false, reason: 'not-found' });
+
+    const result = await call(tool, { name: 'a/gone' });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({ ok: false, reason: 'not-found' });
+  });
+
+  it('passes a conflict through with the live document', async () => {
+    mockedDelete.mockResolvedValue({ ok: false, reason: 'conflict', current });
+
+    const result = await call(tool, { name: 'a/b', expectedVersion: 'v1' });
+
+    expect(parse(result)).toEqual({ ok: false, reason: 'conflict', current });
+  });
+});
+
+describe('rename-policy', () => {
+  const tool = createRenamePolicyTool(client);
+
+  it('returns where the old name was archived', async () => {
+    mockedRename.mockResolvedValue({ ok: true, archivedPath: revisionPath });
+
+    const result = await call(tool, {
+      from: 'a/b',
+      to: 'a/c',
+      expectedVersion: 'v3',
+    });
+
+    expect(mockedRename).toHaveBeenCalledWith({
+      client,
+      from: 'a/b',
+      to: 'a/c',
+      expectedVersion: 'v3',
+    });
+    expect(parse(result)).toEqual({ ok: true, archivedPath: revisionPath });
+  });
+
+  it('reports a taken target as exists', async () => {
+    mockedRename.mockResolvedValue({ ok: false, reason: 'exists' });
+
+    const result = await call(tool, { from: 'a/b', to: 'a/c' });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({ ok: false, reason: 'exists' });
+  });
+});
