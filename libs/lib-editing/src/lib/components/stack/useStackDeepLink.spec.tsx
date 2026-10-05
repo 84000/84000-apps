@@ -259,6 +259,50 @@ describe('useStackDeepLink to something that is not a passage', () => {
 });
 
 describe('useStackDeepLink highlight', () => {
+  // jsdom lays nothing out: count an element as drawn unless it sits in a
+  // hidden layout copy.
+  const getClientRects = Element.prototype.getClientRects;
+  beforeAll(() => {
+    Element.prototype.getClientRects = function (this: Element) {
+      return (this.closest('[hidden]') ? [] : [{}]) as unknown as DOMRectList;
+    };
+  });
+  afterAll(() => {
+    Element.prototype.getClientRects = getClientRects;
+  });
+
+  // The layout is drawn twice, and the hidden copy can come first.
+  it('paints into the copy of the row that is on show', async () => {
+    const { controller } = controllerFor('translation');
+    const copies = [true, false].map((hidden) => {
+      const host = document.createElement('div');
+      host.hidden = hidden;
+      host.innerHTML =
+        '<div id="p-3"><div class="passage is-editable"><p>text</p></div></div>';
+      document.body.append(host);
+      return host;
+    });
+    mockNavigation.highlight = { start: 0, end: 3 };
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'p-3' },
+    };
+    libUtils.highlightTextRange.mockClear();
+
+    renderHook(() => useStackDeepLink(controller, 'main'));
+
+    await waitFor(() => expect(libUtils.highlightTextRange).toHaveBeenCalled());
+    libUtils.highlightTextRange.mock.calls.forEach(([{ container }]) =>
+      expect(container).toBe(copies[1].querySelector('.passage')),
+    );
+    // Repainted into the same copy as the row settles.
+    copies[1].querySelector('p')?.append('!');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    libUtils.highlightTextRange.mock.calls.forEach(([{ container }]) =>
+      expect(container).toBe(copies[1].querySelector('.passage')),
+    );
+    copies.forEach((copy) => copy.remove());
+  });
+
   // The window is still moving right after a reveal, so the row's content can
   // be replaced (released, then hydrated again) after the first paint.
   it('repaints when the row it highlighted is redrawn', async () => {

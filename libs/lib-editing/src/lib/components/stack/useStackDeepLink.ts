@@ -18,32 +18,27 @@ import type { PassageStackController } from './PassageStackController';
 /** How long to wait for the target row to render before giving up. */
 const RENDER_TIMEOUT_MS = 2000;
 
-/** The row's content element, once the virtualizer has drawn it. */
-const waitForRow = (uuid: string): Promise<HTMLElement | null> =>
-  new Promise((resolve) => {
-    const deadline = performance.now() + RENDER_TIMEOUT_MS;
-    const look = () => {
-      const content = document
-        .getElementById(uuid)
-        ?.querySelector<HTMLElement>('.passage.is-editable');
-      if (content) return resolve(content);
-      if (performance.now() > deadline) return resolve(null);
-      requestAnimationFrame(look);
-    };
-    look();
-  });
-
 /**
- * The laid-out element with this id, once it is drawn. A hidden layout copy
- * can carry the same id.
+ * The laid-out element with this id. A hidden layout copy can carry the same
+ * id, so the first in the document is not necessarily the one on show.
  */
-const waitForDrawn = (id: string): Promise<HTMLElement | null> =>
+const drawn = (id: string): HTMLElement | undefined =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>(`[id="${CSS.escape(id)}"]`),
+  ).find((el) => el.getClientRects().length > 0);
+
+/** A row's content element, if its drawn copy has one. */
+const drawnRow = (uuid: string): HTMLElement | null =>
+  drawn(uuid)?.querySelector<HTMLElement>('.passage.is-editable') ?? null;
+
+/** Poll `find` each frame until it returns an element or time runs out. */
+const waitForElement = (
+  find: () => HTMLElement | null | undefined,
+): Promise<HTMLElement | null> =>
   new Promise((resolve) => {
     const deadline = performance.now() + RENDER_TIMEOUT_MS;
     const look = () => {
-      const found = Array.from(
-        document.querySelectorAll<HTMLElement>(`[id="${CSS.escape(id)}"]`),
-      ).find((el) => el.getClientRects().length > 0);
+      const found = find();
       if (found) return resolve(found);
       if (performance.now() > deadline) return resolve(null);
       requestAnimationFrame(look);
@@ -76,9 +71,7 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
     if (frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      const content = document
-        .getElementById(uuid)
-        ?.querySelector<HTMLElement>('.passage.is-editable');
+      const content = drawnRow(uuid);
       if (content) highlightTextRange({ container: content, ...range });
     });
   };
@@ -156,7 +149,7 @@ export const useStackDeepLink = (
         }
         await controller.revealStart();
         if (cancelled) return;
-        const element = await waitForDrawn(target);
+        const element = await waitForElement(() => drawn(target));
         if (cancelled) return;
         element?.scrollIntoView({ block: 'start' });
         finished = true;
@@ -170,7 +163,7 @@ export const useStackDeepLink = (
       if (found && highlight) {
         // Painted once, so a stack that finishes later can't move it.
         if (ownsRange && paintedRange !== highlight) {
-          const content = await waitForRow(target);
+          const content = await waitForElement(() => drawnRow(target));
           if (cancelled) return;
           if (content) {
             paintedRange = highlight;
