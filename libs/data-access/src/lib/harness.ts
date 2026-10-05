@@ -324,3 +324,119 @@ export const writePolicy = async ({
     archivedPath,
   };
 };
+
+const ARCHIVE_STAMP_FILE = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z\.md$/;
+
+/** `20260908T193000Z.md` → `2026-09-08T19:30:00.000Z`, or `undefined` if it is not a stamp. */
+const archivedAtFrom = (file: string) => {
+  const match = ARCHIVE_STAMP_FILE.exec(file);
+  if (!match) return undefined;
+  const [, y, mo, d, h, mi, s] = match;
+  const at = new Date(`${y}-${mo}-${d}T${h}:${mi}:${s}Z`);
+  return Number.isNaN(at.getTime()) ? undefined : at.toISOString();
+};
+
+/**
+ * The archived revisions of a policy, newest first. Returns `undefined` when
+ * the listing fails, so a denied listing is never read as "no history", and
+ * `[]` for a policy that has none.
+ */
+export const listPolicyRevisions = async ({
+  client,
+  name,
+}: {
+  client: DataClient;
+  name: string;
+}): Promise<PolicyRevision[] | undefined> => {
+  const prefix = `${HARNESS_ARCHIVE_PREFIX}/${policyPath(name)}`;
+  const paths = await listObjects({
+    client,
+    bucket: HARNESS_BUCKET,
+    prefix,
+    maxDepth: 1,
+  });
+  if (!paths) return undefined;
+
+  const revisionName = policyName(policyPath(name));
+  return paths
+    .flatMap((path) => {
+      const archivedAt = archivedAtFrom(path.slice(prefix.length + 1));
+      return archivedAt ? [{ name: revisionName, path, archivedAt }] : [];
+    })
+    .sort((a, b) => b.path.localeCompare(a.path));
+};
+
+// `archive/<dir>/<file>.md/<stamp>.md` — the only keys `readPolicyRevision`
+// will read, so it cannot be pointed at a live object.
+const REVISION_KEY = new RegExp(
+  `^${HARNESS_ARCHIVE_PREFIX}/([^/]+)/([^/]+)\\.md/(\\d{8}T\\d{6}Z\\.md)$`,
+);
+
+const parseRevisionPath = (path: string): PolicyRevision | undefined => {
+  const match = REVISION_KEY.exec(path);
+  if (!match) return undefined;
+  const [, dir, file, stamp] = match;
+  if ([dir, file].some((segment) => segment === '.' || segment === '..')) {
+    return undefined;
+  }
+  const archivedAt = archivedAtFrom(stamp);
+  return archivedAt ? { name: `${dir}/${file}`, path, archivedAt } : undefined;
+};
+
+/**
+ * Reads one archived revision by its archive key. Returns `undefined` for a key
+ * that is not an archived policy revision, for one that is not there, and for a
+ * failed read (which is logged).
+ */
+export const readPolicyRevision = async ({
+  client,
+  path,
+}: {
+  client: DataClient;
+  path: string;
+}): Promise<{ revision: PolicyRevision; content: string } | undefined> => {
+  const revision = parseRevisionPath(path);
+  if (!revision) return undefined;
+
+  const { content, error } = await downloadText({ client, path });
+  if (content === undefined) {
+    if (!isNotFound(error)) {
+      console.error(`Error reading policy revision ${path}:`, error?.message);
+    }
+    return undefined;
+  }
+
+  return { revision, content };
+};
+
+/**
+ * Restores an archived revision by writing its content as a new revision: the
+ * current one is archived first, as for any write, and the archive itself is
+ * never modified. The revision may come from a different policy's archive —
+ * after a rename the history stays under the old name, so restoring old text
+ * onto the new name has to work.
+ */
+export const restorePolicy = async ({
+  client,
+  name,
+  revisionPath,
+  expectedVersion,
+  at = new Date(),
+}: {
+  client: DataClient;
+  name: string;
+  revisionPath: string;
+  expectedVersion?: PolicyVersion;
+  at?: Date;
+}): Promise<PolicyWriteResult> => {
+  const revision = await readPolicyRevision({ client, path: revisionPath });
+  if (!revision) return NOT_FOUND;
+
+  return writePolicy({
+    client,
+    name,
+    content: revision.content,
+    expectedVersion,
+    at,
+  });
+};

@@ -7,11 +7,14 @@ import {
   archivePathFor,
   archiveStamp,
   listPolicies,
+  listPolicyRevisions,
   policyName,
   policyPath,
   policyVersion,
   readPolicies,
   readPolicy,
+  readPolicyRevision,
+  restorePolicy,
   writePolicy,
 } from './harness';
 import type { DataClient } from './types';
@@ -434,5 +437,153 @@ describe('writePolicy', () => {
       expect(result).toMatchObject({ ok: false, reason: 'error' });
       expect(calls.writes).toEqual([]);
     });
+  });
+});
+
+describe('listPolicyRevisions', () => {
+  it('lists stamped revisions newest first, ignoring anything else', async () => {
+    const { client, calls } = createMockClient({
+      lists: {
+        'archive/a/b.md': {
+          data: [
+            file('20260101T000000Z.md'),
+            file('20260908T193000Z.md'),
+            file('.emptyFolderPlaceholder'),
+            file('20260908T193000Z.md.bak'),
+            folder('20260301T120000Z.md'),
+            file('20260501T080910Z.md'),
+          ],
+          error: null,
+        },
+      },
+    });
+
+    const revision = (stamp: string, archivedAt: string) => ({
+      name: 'a/b',
+      path: `archive/a/b.md/${stamp}.md`,
+      archivedAt,
+    });
+    expect(await listPolicyRevisions({ client, name: 'a/b' })).toEqual([
+      revision('20260908T193000Z', '2026-09-08T19:30:00.000Z'),
+      revision('20260501T080910Z', '2026-05-01T08:09:10.000Z'),
+      revision('20260101T000000Z', '2026-01-01T00:00:00.000Z'),
+    ]);
+    // One level only: the folder entry is not descended into.
+    expect(calls.list).toEqual(['archive/a/b.md']);
+  });
+
+  it('returns an empty history for a policy with none', async () => {
+    const { client } = createMockClient({});
+    expect(await listPolicyRevisions({ client, name: 'a/b' })).toEqual([]);
+  });
+
+  it('returns undefined when the listing fails', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client } = createMockClient({
+      lists: { 'archive/a/b.md': { data: null, error: { message: 'denied' } } },
+    });
+
+    expect(await listPolicyRevisions({ client, name: 'a/b' })).toBeUndefined();
+
+    logged.mockRestore();
+  });
+});
+
+describe('readPolicyRevision', () => {
+  it('reads an archived revision and derives its policy name', async () => {
+    const { client } = createMockClient({
+      downloads: { [STAMPED]: 'archived text' },
+    });
+
+    expect(await readPolicyRevision({ client, path: STAMPED })).toEqual({
+      revision: {
+        name: 'a/b',
+        path: STAMPED,
+        archivedAt: '2026-09-08T19:30:00.000Z',
+      },
+      content: 'archived text',
+    });
+  });
+
+  it.each([
+    ['a live object', 'a/b.md'],
+    ['an archive folder', 'archive/a/b.md'],
+    ['a key that is not stamped', 'archive/a/b.md/latest.md'],
+    ['a key outside the archive', 'other/a/b.md/20260908T193000Z.md'],
+    ['a key with a dot segment', 'archive/../b.md/20260908T193000Z.md'],
+    ['a key nested too deep', 'archive/a/c/b.md/20260908T193000Z.md'],
+  ])('refuses %s without reading it', async (_, path) => {
+    const { client, calls } = createMockClient({
+      downloads: { [path]: 'text' },
+    });
+
+    expect(await readPolicyRevision({ client, path })).toBeUndefined();
+    expect(calls.download).toEqual([]);
+  });
+
+  it('returns undefined for a revision that is not there', async () => {
+    const { client } = createMockClient({});
+    expect(await readPolicyRevision({ client, path: STAMPED })).toBeUndefined();
+  });
+});
+
+describe('restorePolicy', () => {
+  const OLDER = 'archive/a/b.md/20260101T000000Z.md';
+
+  it('writes the revision content as a new write, archiving the current one', async () => {
+    const { client, calls } = createMockClient({
+      lists: live,
+      downloads: { 'a/b.md': 'current', [OLDER]: 'restored' },
+    });
+
+    const result = await restorePolicy({
+      client,
+      name: 'a/b',
+      revisionPath: OLDER,
+      expectedVersion: await policyVersion('current'),
+      at,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      version: await policyVersion('restored'),
+      created: false,
+      archivedPath: STAMPED,
+    });
+    // The only archive key touched is the new copy of the current revision.
+    expect(calls.writes).toEqual([
+      `copy a/b.md -> ${STAMPED}`,
+      'upload a/b.md',
+    ]);
+  });
+
+  it('restores a revision from another policy archive onto this name', async () => {
+    const { client, calls } = createMockClient({
+      downloads: { 'archive/a/old-name.md/20260101T000000Z.md': 'before' },
+    });
+
+    const result = await restorePolicy({
+      client,
+      name: 'a/b',
+      revisionPath: 'archive/a/old-name.md/20260101T000000Z.md',
+    });
+
+    expect(result).toMatchObject({ ok: true, created: true });
+    expect(calls.writes).toEqual(['upload a/b.md']);
+  });
+
+  it('reports not-found for a missing revision and writes nothing', async () => {
+    const { client, calls } = createMockClient({ lists: live });
+
+    const result = await restorePolicy({
+      client,
+      name: 'a/b',
+      revisionPath: OLDER,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'not-found' });
+    expect(calls.writes).toEqual([]);
   });
 });
