@@ -56,7 +56,12 @@ const bundleErrors = async (entry: string): Promise<Message[]> => {
     });
     return [];
   } catch (error) {
-    return (error as { errors?: Message[] }).errors ?? [];
+    // Only a build failure carrying its messages is a result; anything else is a broken test.
+    const errors = (error as { errors?: Message[] }).errors;
+    if (!errors?.length) {
+      throw error;
+    }
+    return errors;
   }
 };
 
@@ -81,6 +86,16 @@ describe('design-system/core', () => {
     // Nothing failed for any other reason.
     expect(texts.every((text) => text.startsWith('Next import'))).toBe(true);
   }, 60_000);
+
+  it('main entry is only star re-exports, so the drift check below sees all of it', () => {
+    const other = readFileSync(resolve(__dirname, 'index.ts'), 'utf8')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('//'))
+      .filter((line) => !/^export \* from '[^']+';$/.test(line));
+
+    expect(other).toEqual([]);
+  });
 
   it('carries every module of the main entry except the Next ones', () => {
     const core = new Set(exportedModules('core.ts'));
