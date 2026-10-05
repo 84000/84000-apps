@@ -8,7 +8,11 @@ export { readToolInstructions, joinInstructions } from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
-export { createHarnessTools } from './lib/tools/harness';
+export {
+  createHarnessTools,
+  POLICY_EDITOR_RESOURCE_URI,
+  POLICY_TOOL_NAMES,
+} from './lib/tools/harness';
 export { createSessionTools } from './lib/tools/sessions';
 export {
   validateBearerToken,

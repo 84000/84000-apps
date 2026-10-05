@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import type { DataClient } from '@eightyfourthousand/data-access';
-import {
-  hasPermission,
-  listPolicies,
-  readPolicies,
-} from '@eightyfourthousand/data-access';
+import { listPolicies, readPolicies } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
-import { jsonResult, errorResult } from '../read/util';
+import { jsonResult } from '../read/util';
+import {
+  authorizePolicyTool,
+  POLICY_TOOL_NAMES,
+  policyFailureResult,
+} from './shared';
 
 const inputSchema = {
   names: z
@@ -18,8 +19,8 @@ const inputSchema = {
 };
 
 /**
- * Read tool that resolves policy names to their current markdown. Requires
- * `harness.read`.
+ * Read tool that resolves policy names to their current markdown, each with the
+ * `version` a later write is checked against. Requires `harness.read`.
  *
  * Called with no names it lists what is available, so a session can discover
  * the tree before deciding what to load; called with names it returns content.
@@ -29,9 +30,9 @@ const inputSchema = {
  */
 export function createReadPoliciesTool(client: DataClient): McpToolDefinition {
   return {
-    name: 'read-policies',
+    name: POLICY_TOOL_NAMES.read,
     description:
-      "Read 84000's translation policies — house style, text-critical practice, and the rest of the governing guidance — as they stand right now. Call with no arguments to list the available policy names; call with names to get their markdown. Read the policies your task depends on at the start of a session rather than relying on remembered guidance.",
+      "Read 84000's translation policies — house style, text-critical practice, and the rest of the governing guidance — as they stand right now. Call with no arguments to list the available policy names; call with names to get their markdown, each with a `version` to pass to write-policy as `expectedVersion` when you edit it. Read the policies your task depends on at the start of a session rather than relying on remembered guidance.",
     inputSchema,
     annotations: {
       title: 'Read Policies',
@@ -40,27 +41,25 @@ export function createReadPoliciesTool(client: DataClient): McpToolDefinition {
       openWorldHint: false,
     },
     handler: async ({ names }) => {
-      const allowed = await hasPermission({
-        client,
-        permission: 'harness.read',
-      });
-      if (!allowed) {
-        return errorResult(
-          'This tool requires the harness.read permission on the current account.',
-        );
-      }
+      const refused = await authorizePolicyTool(client, 'harness.read');
+      if (refused) return refused;
 
       if (!names?.length) {
         const available = await listPolicies({ client });
         if (!available) {
-          return errorResult('Could not list the policies.');
+          return policyFailureResult({
+            ok: false,
+            reason: 'error',
+            message: 'Could not list the policies.',
+          });
         }
         return jsonResult({ policies: available });
       }
 
       const { policies, missing } = await readPolicies({ client, names });
       if (!policies.length) {
-        return errorResult(
+        return policyFailureResult(
+          { ok: false, reason: 'not-found' },
           `No policy matched ${missing.join(', ')}. Call this tool with no arguments to list the available names.`,
         );
       }

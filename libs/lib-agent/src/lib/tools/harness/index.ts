@@ -16,3 +16,7 @@ export function createHarnessTools(client: DataClient): McpToolDefinition[] {
 
 export { createReadPoliciesTool } from './read-policies';
 export { createWritePolicyTool } from './write-policy';
+export {
+  POLICY_EDITOR_RESOURCE_URI,
+  POLICY_TOOL_NAMES,
+} from './shared';
