@@ -32,6 +32,22 @@ export const policyPath = (name: string) =>
 export const policyName = (path: string) =>
   path.endsWith(POLICY_SUFFIX) ? path.slice(0, -POLICY_SUFFIX.length) : path;
 
+/**
+ * Whether `name` is a writable policy name: exactly `<dir>/<file>` once any
+ * `.md` is stripped, with no empty or dot segments, and never under the
+ * archive. Checked before any storage call, so a bad name cannot reach the
+ * archive prefix or a deeper key that the history and revision readers
+ * would not recognise.
+ */
+export const isValidPolicyName = (name: string) => {
+  const segments = policyName(name).split('/');
+  return (
+    segments.length === 2 &&
+    segments.every((s) => s !== '' && s !== '.' && s !== '..') &&
+    segments[0] !== HARNESS_ARCHIVE_PREFIX
+  );
+};
+
 export { archiveStamp };
 
 export const archivePathFor = (name: string, at: Date = new Date()) =>
@@ -98,6 +114,8 @@ const NOT_FOUND = { ok: false, reason: 'not-found' } as const;
 const FORBIDDEN = { ok: false, reason: 'forbidden' } as const;
 const failed = (message: string) =>
   ({ ok: false, reason: 'error', message }) as const;
+const invalidName = (name: string) =>
+  failed(`${name} is not a valid policy name`);
 
 /**
  * The version of a policy's content. Web Crypto rather than `node:crypto`,
@@ -274,6 +292,7 @@ export const writePolicy = async ({
   expectedVersion?: PolicyVersion;
   at?: Date;
 }): Promise<PolicyWriteResult> => {
+  if (!isValidPolicyName(name)) return invalidName(name);
   const path = policyPath(name);
 
   const live = await checkLive({
@@ -348,6 +367,7 @@ export const listPolicyRevisions = async ({
   client: DataClient;
   name: string;
 }): Promise<PolicyRevision[] | undefined> => {
+  if (!isValidPolicyName(name)) return undefined;
   const prefix = `${HARNESS_ARCHIVE_PREFIX}/${policyPath(name)}`;
   const paths = await listObjects({
     client,
@@ -429,6 +449,7 @@ export const restorePolicy = async ({
   expectedVersion?: PolicyVersion;
   at?: Date;
 }): Promise<PolicyWriteResult> => {
+  if (!isValidPolicyName(name)) return invalidName(name);
   const revision = await readPolicyRevision({ client, path: revisionPath });
   if (!revision) return NOT_FOUND;
 

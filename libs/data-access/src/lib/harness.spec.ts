@@ -6,6 +6,7 @@
 import {
   archivePathFor,
   archiveStamp,
+  isValidPolicyName,
   listPolicies,
   listPolicyRevisions,
   policyName,
@@ -586,4 +587,66 @@ describe('restorePolicy', () => {
     expect(result).toEqual({ ok: false, reason: 'not-found' });
     expect(calls.writes).toEqual([]);
   });
+});
+
+describe('policy name validation', () => {
+  const invalid = [
+    '',
+    '.md',
+    'top-level',
+    'a/b/c',
+    '/b',
+    'a/',
+    'a/.md',
+    'a//b',
+    './b',
+    'a/..',
+    'archive/b',
+    'archive/b.md',
+  ];
+
+  it('accepts exactly <dir>/<file>, with or without .md', () => {
+    expect(isValidPolicyName('a/b')).toBe(true);
+    expect(isValidPolicyName('a/b.md')).toBe(true);
+    expect(invalid.filter(isValidPolicyName)).toEqual([]);
+  });
+
+  it.each(invalid)(
+    'writePolicy refuses %j before any storage call',
+    async (name) => {
+      const { client, calls } = createMockClient({});
+      expect(await writePolicy({ client, name, content: 'x' })).toEqual({
+        ok: false,
+        reason: 'error',
+        message: `${name} is not a valid policy name`,
+      });
+      expect([...calls.list, ...calls.download, ...calls.writes]).toEqual([]);
+    },
+  );
+
+  it.each(invalid)(
+    'listPolicyRevisions refuses %j before listing',
+    async (name) => {
+      const { client, calls } = createMockClient({});
+      expect(await listPolicyRevisions({ client, name })).toBeUndefined();
+      expect(calls.list).toEqual([]);
+    },
+  );
+
+  it.each(invalid)(
+    'restorePolicy refuses %j before reading the revision',
+    async (name) => {
+      const { client, calls } = createMockClient({
+        downloads: { [STAMPED]: 'archived' },
+      });
+      expect(
+        await restorePolicy({ client, name, revisionPath: STAMPED }),
+      ).toEqual({
+        ok: false,
+        reason: 'error',
+        message: `${name} is not a valid policy name`,
+      });
+      expect([...calls.list, ...calls.download, ...calls.writes]).toEqual([]);
+    },
+  );
 });
