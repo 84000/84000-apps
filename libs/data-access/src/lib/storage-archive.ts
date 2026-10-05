@@ -71,6 +71,26 @@ export const isNotFound = (
 ) =>
   !!error && (error.status === 404 || /not.?found/i.test(error.message ?? ''));
 
+/** The fields of a storage-js error that say why a request was refused. */
+type StorageFailure = {
+  message?: string;
+  status?: number;
+  statusCode?: string;
+} | null;
+
+/**
+ * Whether storage refused the request on RLS grounds. Storage answers a denied
+ * INSERT with HTTP 400 and a body `statusCode` of `'403'`, so both fields and
+ * the Postgres message are checked. A denied SELECT is not detectable here —
+ * storage reports it as "not found" — and a denied DELETE is filtered rather
+ * than refused, so callers check `remove`'s returned rows instead.
+ */
+export const isForbidden = (error: StorageFailure) =>
+  !!error &&
+  (error.status === 403 ||
+    error.statusCode === '403' ||
+    /row-level security/i.test(error.message ?? ''));
+
 type StorageEntry = { id: string | null; name: string };
 
 // Storage's `list` defaults to 100 rows and reports no truncation, so a folder
@@ -208,10 +228,15 @@ export const archiveObject = async ({
 
   const { error } = await client.storage.from(bucket).copy(path, to);
   if (error) {
-    return { archived: false, path: undefined, error: error.message };
+    return {
+      archived: false,
+      path: undefined,
+      error: error.message,
+      forbidden: isForbidden(error),
+    };
   }
 
-  return { archived: true, path: to, error: undefined };
+  return { archived: true, path: to, error: undefined, forbidden: false };
 };
 
 /**
@@ -271,5 +296,9 @@ export const uploadText = async ({
       contentType,
     });
 
-  return { written: !error, error: error?.message };
+  return {
+    written: !error,
+    error: error?.message,
+    forbidden: isForbidden(error),
+  };
 };

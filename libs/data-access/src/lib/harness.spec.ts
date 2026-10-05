@@ -1,9 +1,15 @@
+/**
+ * @jest-environment node
+ */
+// Node rather than jsdom: the policy version is a Web Crypto SHA-256, and
+// jsdom's environment exposes neither `crypto.subtle` nor `TextEncoder`.
 import {
   archivePathFor,
   archiveStamp,
   listPolicies,
   policyName,
   policyPath,
+  policyVersion,
   readPolicies,
   readPolicy,
   writePolicy,
@@ -12,11 +18,19 @@ import type { DataClient } from './types';
 
 type ListResult = { data: unknown; error: { message: string } | null };
 
+type StorageError = { message: string; status?: number; statusCode?: string };
+
+type RemoveResult = { data: unknown; error: StorageError | null };
+
 type MockCalls = {
   list: string[];
   download: string[];
   copy: [string, string][];
   upload: { path: string; upsert?: boolean }[];
+  remove: string[][];
+  rpc: string[];
+  /** Every mutating call in order, e.g. `copy a/b.md -> archive/...`. */
+  writes: string[];
 };
 
 /**
@@ -31,16 +45,38 @@ const createMockClient = ({
   downloadError = null,
   copyError = null,
   uploadError = null,
+  remove = (paths) => ({
+    data: paths.map((name) => ({ name })),
+    error: null,
+  }),
+  admin = true,
 }: {
   lists?: Record<string, ListResult>;
   downloads?: Record<string, string | null>;
   downloadError?: { message: string; status?: number } | null;
-  copyError?: { message: string } | null;
-  uploadError?: { message: string } | null;
+  copyError?:
+    | StorageError
+    | null
+    | ((from: string, to: string) => StorageError | null);
+  uploadError?: StorageError | null;
+  remove?: (paths: string[]) => RemoveResult;
+  admin?: boolean;
 }) => {
-  const calls: MockCalls = { list: [], download: [], copy: [], upload: [] };
+  const calls: MockCalls = {
+    list: [],
+    download: [],
+    copy: [],
+    upload: [],
+    remove: [],
+    rpc: [],
+    writes: [],
+  };
 
   const client = {
+    rpc: async (fn: string, args: { requested_permission: string }) => {
+      calls.rpc.push(`${fn}:${args.requested_permission}`);
+      return { data: admin, error: null };
+    },
     storage: {
       from: () => ({
         list: async (prefix: string, options?: { search?: string }) => {
@@ -66,7 +102,10 @@ const createMockClient = ({
         },
         copy: async (from: string, to: string) => {
           calls.copy.push([from, to]);
-          return { data: null, error: copyError };
+          calls.writes.push(`copy ${from} -> ${to}`);
+          const error =
+            typeof copyError === 'function' ? copyError(from, to) : copyError;
+          return { data: null, error };
         },
         upload: async (
           path: string,
@@ -74,7 +113,13 @@ const createMockClient = ({
           opts?: { upsert?: boolean },
         ) => {
           calls.upload.push({ path, upsert: opts?.upsert });
+          calls.writes.push(`upload ${path}`);
           return { data: null, error: uploadError };
+        },
+        remove: async (paths: string[]) => {
+          calls.remove.push(paths);
+          calls.writes.push(`remove ${paths.join(',')}`);
+          return remove(paths);
         },
       }),
     },
@@ -161,6 +206,24 @@ describe('listPolicies', () => {
   });
 });
 
+describe('policyVersion', () => {
+  it('is the lowercase hex SHA-256 of the UTF-8 content', async () => {
+    expect(await policyVersion('')).toBe(
+      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    );
+    expect(await policyVersion('abc')).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
+  });
+
+  it('hashes the UTF-8 bytes rather than UTF-16 code units', async () => {
+    // "é" is 0xc3 0xa9 in UTF-8.
+    expect(await policyVersion('\u00e9')).toBe(
+      '4a99557e4033c3539de2eb65472017cad5f9557f7a0625a09f1c3f6e2ba69c4c',
+    );
+  });
+});
+
 describe('readPolicy', () => {
   it('resolves a name to its current markdown', async () => {
     const { client } = createMockClient({
@@ -169,6 +232,7 @@ describe('readPolicy', () => {
     expect(await readPolicy({ client, name: 'a/b' })).toEqual({
       name: 'a/b',
       content: '## B. Proper names',
+      version: await policyVersion('## B. Proper names'),
     });
   });
 
@@ -202,18 +266,27 @@ describe('readPolicy', () => {
     const { client } = createMockClient({ downloads: { 'a/b.md': 'kept' } });
     expect(await readPolicies({ client, names: ['a/b', 'a/missing'] })).toEqual(
       {
-        policies: [{ name: 'a/b', content: 'kept' }],
+        policies: [
+          {
+            name: 'a/b',
+            content: 'kept',
+            version: await policyVersion('kept'),
+          },
+        ],
         missing: ['a/missing'],
       },
     );
   });
 });
 
+const at = new Date('2026-09-08T19:30:00.000Z');
+const STAMPED = 'archive/a/b.md/20260908T193000Z.md';
+
+/** `a/b.md` is live with content `old`. */
+const live = { a: { data: [file('b.md')], error: null } };
+const liveOld = { lists: live, downloads: { 'a/b.md': 'old' } };
+
 describe('writePolicy', () => {
-  const at = new Date('2026-09-08T19:30:00.000Z');
-
-  const live = { a: { data: [file('b.md')], error: null } };
-
   it('archives the current revision before replacing it', async () => {
     const { client, calls } = createMockClient({ lists: live });
 
@@ -224,9 +297,15 @@ describe('writePolicy', () => {
       at,
     });
 
-    expect(result).toMatchObject({ written: true, created: false });
-    expect(calls.copy).toEqual([
-      ['a/b.md', 'archive/a/b.md/20260908T193000Z.md'],
+    expect(result).toEqual({
+      ok: true,
+      version: await policyVersion('new'),
+      created: false,
+      archivedPath: STAMPED,
+    });
+    expect(calls.writes).toEqual([
+      `copy a/b.md -> ${STAMPED}`,
+      'upload a/b.md',
     ]);
     expect(calls.upload).toEqual([{ path: 'a/b.md', upsert: true }]);
   });
@@ -239,8 +318,10 @@ describe('writePolicy', () => {
 
     const result = await writePolicy({ client, name: 'a/b', content: 'new' });
 
-    expect(result.written).toBe(false);
-    expect(result.error).toContain('archive is append-only');
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringContaining('archive is append-only'),
+    });
     expect(calls.upload).toEqual([]);
   });
 
@@ -253,20 +334,21 @@ describe('writePolicy', () => {
       content: 'text',
     });
 
-    expect(result).toMatchObject({ written: true, created: true });
-    expect(result.archivedPath).toBeUndefined();
+    expect(result).toMatchObject({ ok: true, created: true });
+    expect(result.ok && result.archivedPath).toBeUndefined();
     expect(calls.copy).toEqual([]);
   });
 
-  it('surfaces an upload failure', async () => {
+  it('maps an RLS upload refusal to forbidden', async () => {
     const { client } = createMockClient({
-      uploadError: { message: 'row-level security' },
+      uploadError: {
+        message: 'new row violates row-level security policy',
+        status: 400,
+        statusCode: '403',
+      },
     });
     const result = await writePolicy({ client, name: 'a/new', content: 't' });
-    expect(result).toMatchObject({
-      written: false,
-      error: 'row-level security',
-    });
+    expect(result).toEqual({ ok: false, reason: 'forbidden' });
   });
 
   it('does not overwrite when it cannot tell whether a revision is there', async () => {
@@ -276,7 +358,81 @@ describe('writePolicy', () => {
 
     const result = await writePolicy({ client, name: 'a/b', content: 'new' });
 
-    expect(result.written).toBe(false);
-    expect(calls.upload).toEqual([]);
+    expect(result).toMatchObject({ ok: false, reason: 'error' });
+    expect(calls.writes).toEqual([]);
+  });
+
+  describe('with expectedVersion', () => {
+    it('writes when the live content still matches', async () => {
+      const { client, calls } = createMockClient(liveOld);
+
+      const result = await writePolicy({
+        client,
+        name: 'a/b',
+        content: 'new',
+        expectedVersion: await policyVersion('old'),
+        at,
+      });
+
+      expect(result).toMatchObject({ ok: true, archivedPath: STAMPED });
+      expect(calls.writes).toEqual([
+        `copy a/b.md -> ${STAMPED}`,
+        'upload a/b.md',
+      ]);
+    });
+
+    it('reports a conflict with the current document and changes nothing', async () => {
+      const { client, calls } = createMockClient(liveOld);
+
+      const result = await writePolicy({
+        client,
+        name: 'a/b',
+        content: 'new',
+        expectedVersion: await policyVersion('what the caller read'),
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        reason: 'conflict',
+        current: {
+          name: 'a/b',
+          content: 'old',
+          version: await policyVersion('old'),
+        },
+      });
+      expect(calls.copy).toEqual([]);
+      expect(calls.upload).toEqual([]);
+    });
+
+    it('reports not-found when the policy has gone', async () => {
+      const { client, calls } = createMockClient({ lists: {} });
+
+      const result = await writePolicy({
+        client,
+        name: 'a/b',
+        content: 'new',
+        expectedVersion: await policyVersion('old'),
+      });
+
+      expect(result).toEqual({ ok: false, reason: 'not-found' });
+      expect(calls.writes).toEqual([]);
+    });
+
+    it('fails closed when the current content cannot be read', async () => {
+      const { client, calls } = createMockClient({
+        lists: live,
+        downloadError: { message: 'network unreachable' },
+      });
+
+      const result = await writePolicy({
+        client,
+        name: 'a/b',
+        content: 'new',
+        expectedVersion: 'anything',
+      });
+
+      expect(result).toMatchObject({ ok: false, reason: 'error' });
+      expect(calls.writes).toEqual([]);
+    });
   });
 });

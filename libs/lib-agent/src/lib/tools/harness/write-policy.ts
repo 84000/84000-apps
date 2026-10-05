@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import type { DataClient } from '@eightyfourthousand/data-access';
+import type {
+  DataClient,
+  PolicyFailure,
+} from '@eightyfourthousand/data-access';
 import { hasPermission, writePolicy } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
@@ -15,6 +18,22 @@ const inputSchema = {
     .describe(
       'The full markdown of the policy. This replaces the whole file rather than patching it.',
     ),
+};
+
+/** Why a write did not happen, in terms a model can relay to the user. */
+const failureMessage = (name: string, failure: PolicyFailure) => {
+  switch (failure.reason) {
+    case 'conflict':
+      return `${name} changed since it was read; nothing was written. Read it again and reapply the change.`;
+    case 'not-found':
+      return `${name} no longer exists; nothing was written.`;
+    case 'exists':
+      return `${name} already exists; nothing was written.`;
+    case 'forbidden':
+      return `The current account is not allowed to write ${name}; nothing was written.`;
+    case 'error':
+      return failure.message;
+  }
 };
 
 /**
@@ -49,8 +68,8 @@ export function createWritePolicyTool(client: DataClient): McpToolDefinition {
       }
 
       const result = await writePolicy({ client, name, content });
-      if (!result.written) {
-        return errorResult(result.error ?? `Could not write ${name}.`);
+      if (!result.ok) {
+        return errorResult(failureMessage(name, result));
       }
 
       return jsonResult({
