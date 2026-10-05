@@ -67,6 +67,11 @@
       "import": "./ssr.js",
       "default": "./ssr.js"
     },
+    "./core": {
+      "types": "./core.d.ts",
+      "import": "./core.js",
+      "default": "./core.js"
+    },
     "./css": "./lib/theme/global.css",
     "./package.json": "./package.json"
   },

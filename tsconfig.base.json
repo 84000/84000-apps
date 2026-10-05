@@ -36,6 +36,9 @@
       "@eightyfourthousand/design-system/ssr": [
         "./libs/design-system/src/ssr.ts"
       ],
+      "@eightyfourthousand/design-system/core": [
+        "./libs/design-system/src/core.ts"
+      ],
       "@eightyfourthousand/design-system/css": [
         "./libs/design-system/src/lib/theme/global.css"
       ],
