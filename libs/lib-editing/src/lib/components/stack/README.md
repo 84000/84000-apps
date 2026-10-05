@@ -334,6 +334,12 @@ A hash that is not a uuid names something above the run rather than a passage
 start, the element scrolled to, and the hash cleared; kept, no stack could ever
 answer it.
 
+Neither move replaces a run that holds unsaved passages — an edited document,
+or one created and not saved. A passage taken out of the spine is out of the
+save, and a new one's sort comes from its neighbours, so the feed grows the
+window toward the target a page at a time instead. That costs a page per
+hundred passages in between, paid only while there is something to keep.
+
 Three things that each cost a debugging pass:
 
 - **The scroll has to settle, and stillness is not the signal.** Rows above an

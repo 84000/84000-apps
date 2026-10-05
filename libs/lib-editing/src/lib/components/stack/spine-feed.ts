@@ -21,6 +21,7 @@ type Meta = {
   uuid: string;
   label: string;
   type: string;
+  sort?: number;
   toh?: string;
   contentLength?: number;
 };
@@ -218,6 +219,10 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
+    if (this.holdsUnsaved()) {
+      await this.bridgeTo(uuid, page.metas);
+      return this.work.spine.indexOf(uuid);
+    }
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
     this.noneBefore = !page.hasMoreBefore || !page.prevCursor;
@@ -228,6 +233,51 @@ export class SpineFeed {
   }
 
   /**
+   * Whether this run holds a passage with changes the server does not have:
+   * an edited document, or a passage created here and not saved yet.
+   *
+   * Replacing such a run would take those passages out of the spine, and a
+   * passage out of the spine is out of the save — its edits stay in the store
+   * with nothing left to say where it goes, what it is labelled, or what sort
+   * it takes. A new passage's sort comes from its neighbours, so even keeping
+   * its own entry would not be enough without them.
+   */
+  private holdsUnsaved(): boolean {
+    const dirty = new Set(this.work.store.dirty());
+    return this.runEntries().some(
+      (entry) => entry.sort === undefined || dirty.has(entry.uuid),
+    );
+  }
+
+  private runEntries() {
+    const tab = this.section?.tab;
+    return tab ? this.work.spine.tab(tab) : this.work.spine.entries();
+  }
+
+  /**
+   * Reach a passage by growing the window toward it rather than replacing it,
+   * so unsaved passages keep their place, their neighbours and their sorts.
+   *
+   * Costs a page per hundred passages between the window and the target,
+   * which replacing exists to avoid. Paid only while there is something
+   * unsaved to keep, and the alternative is losing it from the save. Stops
+   * where the feed stops — at the run's end, or a failed page — so a target
+   * it cannot reach is not found rather than guessed at.
+   */
+  private async bridgeTo(uuid: string, around: Meta[]) {
+    const target = around.find((meta) => meta.uuid === uuid);
+    const first = this.runEntries().find((entry) => entry.sort !== undefined);
+    const backward =
+      target?.sort !== undefined &&
+      first?.sort !== undefined &&
+      target.sort < first.sort;
+    while (this.work.spine.indexOf(uuid) < 0) {
+      if (backward ? this.noneBefore : this.noneAfter) return;
+      await (backward ? this.extendBefore() : this.extend());
+    }
+  }
+
+  /**
    * Rebuild the run from its first passage, when a reveal opened it part way.
    *
    * What a link to something above the run needs — the titles and imprint
@@ -235,6 +285,11 @@ export class SpineFeed {
    */
   async revealStart(): Promise<void> {
     if (this.noneBefore) return;
+    // Grown back to the start instead, for the same reason `reveal` is.
+    if (this.holdsUnsaved()) {
+      while (!this.noneBefore) await this.extendBefore();
+      return;
+    }
     const page = await getPassageMetaPage({
       client: this.client,
       uuid: this.work.workUuid,
