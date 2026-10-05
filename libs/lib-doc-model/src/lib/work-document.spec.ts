@@ -448,3 +448,66 @@ describe('WorkDocument after an unlabelled passage of another kind', () => {
     expect(labels(work)).toEqual(['', '', '1', '2']);
   });
 });
+
+// An unlabelled passage beside numbered ones of its own type is no reason to
+// stop numbering: only a split of the unlabelled passage itself stays empty.
+describe('WorkDocument in a mixed labelled and unlabelled run', () => {
+  const mixed = (labels = ['', '1', '2']) => {
+    let next = 0;
+    const work = new WorkDocument({
+      workUuid: 'work-1',
+      schema: testSchema,
+      newUuid: () => `new-${next++}`,
+    });
+    const uuids = ['u', 'p1', 'p2'];
+    work.seedSpine(uuids.map((uuid, i) => meta(uuid, labels[i])));
+    uuids.forEach((uuid) =>
+      work.store.create(uuid, [para(`text ${uuid}`, `p-${uuid}`)]),
+    );
+    return work;
+  };
+  const labels = (work: WorkDocument) =>
+    work.spine.entries().map((entry) => entry.label);
+
+  it('keeps the numbering pasting over the first numbered passage', () => {
+    const work = mixed();
+    work.replacePassages(['p1'], [{ type: 'translation' }]);
+    expect(labels(work)).toEqual(['', '1', '2']);
+  });
+
+  it('numbers every passage pasted over it', () => {
+    const work = mixed();
+    work.replacePassages(
+      ['p1'],
+      [{ type: 'translation' }, { type: 'translation' }],
+    );
+    expect(labels(work)).toEqual(['', '1', '2', '3']);
+  });
+
+  it('continues the series it replaces', () => {
+    const work = mixed(['', '5', '6']);
+    work.replacePassages(
+      ['p1'],
+      [{ type: 'translation' }, { type: 'translation' }],
+    );
+    expect(labels(work)).toEqual(['', '5', '6', '7']);
+  });
+
+  it('numbers a passage inserted after the unlabelled one', () => {
+    const work = mixed();
+    work.insert({ type: 'translation' }, 1);
+    expect(labels(work)).toEqual(['', '1', '2', '3']);
+  });
+
+  it('numbers the tail of a numbered passage split', () => {
+    const work = mixed();
+    work.split('p1', 3);
+    expect(labels(work)).toEqual(['', '1', '2', '3']);
+  });
+
+  it('leaves the tail of the unlabelled passage split unlabelled', () => {
+    const work = mixed();
+    work.split('u', 3);
+    expect(labels(work)).toEqual(['', '', '1', '2']);
+  });
+});
