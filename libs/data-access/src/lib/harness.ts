@@ -664,6 +664,17 @@ export const renamePolicy = async ({
     paths: [fromPath],
   });
   if (!removal.removed) {
+    // Someone may have deleted `from` at the same moment, which makes our
+    // remove come up short. If it is gone, the rename happened: keep `to`.
+    // A failed re-check is treated as still there, so the copy is rolled back.
+    const source = await objectExists({
+      client,
+      bucket: HARNESS_BUCKET,
+      path: fromPath,
+    });
+    if (!source.error && !source.exists) {
+      return { ok: true, archivedPath: archive.path };
+    }
     return rollBack(
       `Archived ${fromName} to ${archive.path} but could not delete it (${removal.error})`,
     );
