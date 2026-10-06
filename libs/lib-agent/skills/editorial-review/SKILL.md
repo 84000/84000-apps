@@ -1,6 +1,6 @@
 ---
 name: editorial-review
-description: Run Stage 2 of the 84000 AI translation pipeline — review a draft translation of a canonical Tibetan work against the Tibetan source and the house standards, and produce a structured review report for a research editor, saved as toh#_stage2.docx, toh#_stage2.md, and toh#_stage2_findings.md. Use when an editor asks to review, check, or assess a draft translation, whether it came from Stage 1 or from a human translator or team, or names Stage 2 of the pipeline. Not for producing a translation — that is Stage 1, the first-draft-translation skill — and not for Stage 0 text analysis and retrieval.
+description: Run Stage 2 of the 84000 AI translation pipeline — review a draft translation of a canonical Tibetan work against the Tibetan source and the house standards, and produce a structured review report for a research editor, saved as toh#_stage2.docx, toh#_stage2.md, and toh#_stage2_findings.md. Use when an editor asks to review, check, or assess a draft translation, whether it came from Stage 1 or from a human translator or team, or names Stage 2 of the pipeline. Not for producing a translation — that is Stage 1, the first-draft-translation skill — not for Stage 0 text analysis and retrieval, and not for copyediting an edited text for house style, which is the copyediting skill.
 ---
 
 # 84000 editorial review (Stage 2)
