@@ -50,7 +50,7 @@ describe('read-policies tool', () => {
   });
 
   it('resolves the names it was given', async () => {
-    const policies = [{ name: 'a/b', content: '## B' }];
+    const policies = [{ name: 'a/b', content: '## B', version: 'v1' }];
     mockedRead.mockResolvedValue({ policies, missing: [] });
 
     const result = await tool.handler({ names: ['a/b'] }, extra);
@@ -61,7 +61,7 @@ describe('read-policies tool', () => {
 
   it('returns what resolved and names what did not', async () => {
     mockedRead.mockResolvedValue({
-      policies: [{ name: 'a/b', content: '## B' }],
+      policies: [{ name: 'a/b', content: '## B', version: 'v1' }],
       missing: ['a/gone'],
     });
 

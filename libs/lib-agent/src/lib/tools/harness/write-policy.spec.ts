@@ -33,10 +33,10 @@ describe('write-policy tool', () => {
 
   it('reports where the replaced revision was archived', async () => {
     mockedWrite.mockResolvedValue({
-      written: true,
+      ok: true,
+      version: 'abc123',
       created: false,
       archivedPath: 'archive/a/b.md/20260908T193000Z.md',
-      error: undefined,
     });
 
     const result = await tool.handler(args, extra);
@@ -51,16 +51,27 @@ describe('write-policy tool', () => {
 
   it('surfaces a refused write rather than reporting success', async () => {
     mockedWrite.mockResolvedValue({
-      written: false,
-      archivedPath: undefined,
-      error: 'row-level security',
+      ok: false,
+      reason: 'error',
+      message: 'storage unreachable',
     });
 
     const result = await tool.handler(args, extra);
 
     expect(result.isError).toBe(true);
     expect((result.content[0] as { text: string }).text).toContain(
-      'row-level security',
+      'storage unreachable',
+    );
+  });
+
+  it('reports a write refused by the bucket policies', async () => {
+    mockedWrite.mockResolvedValue({ ok: false, reason: 'forbidden' });
+
+    const result = await tool.handler(args, extra);
+
+    expect(result.isError).toBe(true);
+    expect((result.content[0] as { text: string }).text).toContain(
+      'not allowed to write a/b',
     );
   });
 });
