@@ -19,7 +19,7 @@ import {
   StackPassageMenu,
   type StackPassageMenuTarget,
 } from './StackPassageMenu';
-import { STACK_START_PX, StackEnd, StackStart } from './StackEnd';
+import { StackEnd, StackStart, stackStartPx } from './StackEnd';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
@@ -143,9 +143,10 @@ export const PassageStack = ({
   // coordinates: a prepend that ends the earlier passages removes it in the
   // same render, so nothing below is placed against a stale offset.
   const hasEarlier = order.length > 0 && controller.hasEarlierPassages();
+  const [startPx] = useState(stackStartPx);
   const virtualizer = useVirtualizer({
     count: order.length,
-    paddingStart: hasEarlier ? STACK_START_PX : 0,
+    paddingStart: hasEarlier ? startPx : 0,
     getScrollElement: () => scroller,
     estimateSize: (index) => controller.estimateHeight(order[index]),
     overscan,
@@ -214,6 +215,20 @@ export const PassageStack = ({
     if (prepended <= 0) return;
     virtualizer.scrollToIndex(prepended, { align: 'start' });
   }, [firstUuid, order, virtualizer]);
+
+  // The placeholders can also go with nothing prepended — the earlier read
+  // failed or came back empty. Every row then moves up by their height, so
+  // the viewport follows, by no more than the part of them scrolled past.
+  const placeholderRef = useRef({ shown: hasEarlier, first: firstUuid });
+  useLayoutEffect(() => {
+    const before = placeholderRef.current;
+    placeholderRef.current = { shown: hasEarlier, first: firstUuid };
+    if (!before.shown || hasEarlier || before.first !== firstUuid) return;
+    if (!scroller) return;
+    const passed = scroller.scrollTop - scrollMargin;
+    const shift = Math.min(startPx, Math.max(0, passed));
+    if (shift > 0) scroller.scrollTop -= shift;
+  }, [hasEarlier, firstUuid, scroller, scrollMargin, startPx]);
 
   useStackSelection(controller);
   useStackDeepLink(controller, panel);

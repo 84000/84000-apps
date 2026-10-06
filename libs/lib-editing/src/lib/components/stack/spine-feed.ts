@@ -423,6 +423,8 @@ export class SpineFeed {
     // Before the write: the spine notifies synchronously, and a view reading
     // `hasMoreBefore` then must see the page it just got.
     this.startCursor = page.prevCursor;
+    // Synchronously after the prepend: the stack drops its placeholders in
+    // the render the prepend causes, and re-anchors against that layout.
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
     prependToSpine(this.work.spine, page.metas, this.section?.tab);
 
