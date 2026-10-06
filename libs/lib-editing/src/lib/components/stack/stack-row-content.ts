@@ -4,6 +4,7 @@ import type {
 } from '@eightyfourthousand/lib-doc-model';
 import type { UndoManager } from 'yjs';
 
+import { compareLeadingSpaceClass } from '../editor/extensions/Passage/passage-chrome';
 import { renderTranslationHTML } from '../reader/translation-html';
 import type { PassageStackControllerOptions } from './types';
 
@@ -40,6 +41,7 @@ export class StackRowContent {
 
   private charCounts = new Map<string, number>();
   private staticHTML = new Map<string, string>();
+  private compareLeads = new Map<string, string>();
   /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
   private wiring = new Map<string, () => void>();
 
@@ -121,6 +123,22 @@ export class StackRowContent {
   };
 
   /**
+   * The Compare column's top margin for a passage, which follows its first
+   * block. Cached with the static HTML, and invalidated with it.
+   */
+  getCompareLead = (uuid: string): string => {
+    const cached = this.compareLeads.get(uuid);
+    if (cached !== undefined) return cached;
+
+    const doc = this.work.store.peek(uuid);
+    if (!doc) return 'md:mt-1';
+
+    const lead = compareLeadingSpaceClass(doc.toNode());
+    this.compareLeads.set(uuid, lead);
+    return lead;
+  };
+
+  /**
    * Attach the controller's per-document bookkeeping, once per document.
    *
    * Two jobs. Content changes invalidate the cached static HTML and the row's
@@ -137,6 +155,7 @@ export class StackRowContent {
 
     const unobserve = doc.observe(() => {
       this.staticHTML.delete(uuid);
+      this.compareLeads.delete(uuid);
       this.charCounts.set(uuid, doc.text.length);
       this.bump();
     });
@@ -170,6 +189,7 @@ export class StackRowContent {
       this.wiring.get(uuid)?.();
       this.wiring.delete(uuid);
       this.staticHTML.delete(uuid);
+      this.compareLeads.delete(uuid);
       // The passage's text history went with its document; the command log
       // would otherwise stall on entries it can no longer replay.
       this.work.log.forgetText(uuid);

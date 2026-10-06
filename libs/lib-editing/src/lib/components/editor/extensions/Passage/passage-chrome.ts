@@ -19,7 +19,8 @@ const selectionInCompareSource = () => {
 // copies the selected Tibetan text.
 export const handleCompareSourceClipboard = () => selectionInCompareSource();
 
-const compareLeadingSpaceClass = (node: PMNode): string => {
+/** The Compare column's top margin, lined up with the passage's first block. */
+export const compareLeadingSpaceClass = (node: PMNode): string => {
   const firstChild = node.content.firstChild;
   if (firstChild?.attrs.leadingSpace) return 'md:mt-5';
   if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {

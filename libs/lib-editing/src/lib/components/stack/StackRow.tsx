@@ -26,6 +26,7 @@ export const StackRow = ({
   selected,
   references,
   tibetan,
+  tibetanLead = 'md:mt-1',
   className,
   children,
 }: {
@@ -38,6 +39,8 @@ export const StackRow = ({
    * Compare, and empty for a passage with no alignment.
    */
   tibetan?: string;
+  /** The Tibetan column's top margin, lined up with the first block. */
+  tibetanLead?: string;
   bookmarked?: boolean;
   /** Part of a passage selection, which the stack draws itself. */
   selected?: boolean;
@@ -119,8 +122,8 @@ export const StackRow = ({
         // The column `PassageNode` draws in Compare, kept out of the editor.
         <div
           className={cn(
-            'passage-compare-source w-full md:mt-1',
-            !tibetan && 'hidden',
+            'passage-compare-source w-full',
+            tibetan ? tibetanLead : 'md:mt-1 hidden',
           )}
           contentEditable={false}
           data-compare-source=""

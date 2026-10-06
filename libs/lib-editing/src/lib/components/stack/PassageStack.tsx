@@ -327,6 +327,9 @@ export const PassageStack = ({
             compareToh === undefined
               ? undefined
               : controller.getTibetan(uuid, compareToh);
+          const tibetanLead = tibetan
+            ? controller.getCompareLead(uuid)
+            : undefined;
           return (
             <div
               key={item.key}
@@ -344,6 +347,7 @@ export const PassageStack = ({
                   focused={controller.getFocusedUuid() === uuid}
                   selected={controller.isSelected(uuid)}
                   tibetan={tibetan}
+                  tibetanLead={tibetanLead}
                 />
               ) : (
                 <StaticPassageRow
@@ -351,6 +355,7 @@ export const PassageStack = ({
                   meta={meta}
                   selected={controller.isSelected(uuid)}
                   tibetan={tibetan}
+                  tibetanLead={tibetanLead}
                 />
               )}
             </div>

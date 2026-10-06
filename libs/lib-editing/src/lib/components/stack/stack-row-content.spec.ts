@@ -265,3 +265,71 @@ describe('abbreviation rows', () => {
     editor.destroy();
   });
 });
+
+// The paginated editor lines the Compare column up with the passage's first
+// block, which a verse or a leading space pushes down.
+describe('PassageStackController Compare lead', () => {
+  const passage = (uuid: string, content: StackPassageSeed['content']) => ({
+    meta: { uuid, label: uuid, type: 'translation' },
+    content,
+    charCount: 10,
+  });
+  const all: StackPassageSeed[] = [
+    passage('plain', [
+      { type: 'paragraph', content: [{ type: 'text', text: 'prose' }] },
+    ]),
+    passage('verse', [
+      {
+        type: 'lineGroup',
+        content: [{ type: 'line', content: [{ type: 'text', text: 'line' }] }],
+      },
+    ]),
+    passage('spaced', [
+      {
+        type: 'paragraph',
+        attrs: { leadingSpace: true },
+        content: [{ type: 'text', text: 'after a gap' }],
+      },
+    ]),
+  ];
+
+  const controllerFor = async () => {
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    const controller = new PassageStackController({ work });
+    controller.setVisibleRange({ start: 0, end: all.length });
+    await flush();
+    return { work, controller };
+  };
+
+  it('follows the first block', async () => {
+    const { controller } = await controllerFor();
+
+    expect(controller.getCompareLead('plain')).toBe('md:mt-1');
+    expect(controller.getCompareLead('verse')).toBe('md:mt-2');
+    expect(controller.getCompareLead('spaced')).toBe('md:mt-5');
+  });
+
+  it('falls back to the default for a passage not hydrated', () => {
+    const { controller } = build(2);
+
+    expect(controller.getCompareLead('p1')).toBe('md:mt-1');
+  });
+
+  it('follows an edit to the first block', async () => {
+    const { work, controller } = await controllerFor();
+    expect(controller.getCompareLead('verse')).toBe('md:mt-2');
+
+    work.store.peek('verse')?.replaceContent({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'prose now' }] },
+      ],
+    });
+
+    expect(controller.getCompareLead('verse')).toBe('md:mt-1');
+  });
+});
