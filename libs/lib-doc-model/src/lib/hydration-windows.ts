@@ -44,25 +44,15 @@ export class HydrationWindows {
     const mine = this.windowUuids(range);
     this.windows.set(key, { uuids: mine, keep: new Set(options.keep ?? []) });
 
-    // The union of every open window. Views onto one work scroll
-    // independently — the editor draws a tab per panel — so releasing what
-    // this one has left behind would release what another one is drawing.
-    // A window can name passages that have since left the spine, as when
-    // another view jumped and its section's run was swapped. No source can
-    // place those, so they are neither asked for nor kept.
     const placed = new Set(this.spine.uuids());
-    const wanted = new Set<string>();
-    this.windows.forEach((window) => {
-      window.uuids.forEach((uuid) => {
-        if (placed.has(uuid)) wanted.add(uuid);
-      });
-      window.keep.forEach((uuid) => wanted.add(uuid));
-    });
-
     const docs = await this.store.hydrateMany(
-      [...wanted].filter((uuid) => placed.has(uuid) || this.store.has(uuid)),
+      [...this.wanted()].filter(
+        (uuid) => placed.has(uuid) || this.store.has(uuid),
+      ),
     );
-    this.store.releaseOutside(wanted);
+    // Taken again after the load: another view may have opened or moved its
+    // window meanwhile, and what it loaded is not this call's to release.
+    this.store.releaseOutside(this.wanted());
     this.notify();
 
     // Only this window's documents come back: a consumer attaches its own
@@ -80,6 +70,26 @@ export class HydrationWindows {
   /** Forget every window. */
   clear() {
     this.windows.clear();
+  }
+
+  /**
+   * The union of every open window. Views onto one work scroll independently
+   * — the editor draws a tab per panel — so releasing what one has left
+   * behind would release what another is drawing. A window can name passages
+   * that have since left the spine, as when another view jumped and its
+   * section's run was swapped. No source can place those, so they are neither
+   * asked for nor kept.
+   */
+  private wanted(): Set<string> {
+    const placed = new Set(this.spine.uuids());
+    const wanted = new Set<string>();
+    this.windows.forEach((window) => {
+      window.uuids.forEach((uuid) => {
+        if (placed.has(uuid)) wanted.add(uuid);
+      });
+      window.keep.forEach((uuid) => wanted.add(uuid));
+    });
+    return wanted;
   }
 
   private windowUuids(range: SpineRange): string[] {
