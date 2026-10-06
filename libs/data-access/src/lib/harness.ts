@@ -33,17 +33,30 @@ export const policyName = (path: string) =>
   path.endsWith(POLICY_SUFFIX) ? path.slice(0, -POLICY_SUFFIX.length) : path;
 
 /**
- * Whether `name` is a writable policy name: exactly `<dir>/<file>` once any
- * `.md` is stripped, with no empty or dot segments, and never under the
- * archive. Checked before any storage call, so a bad name cannot reach the
- * archive prefix or a deeper key that the history and revision readers
- * would not recognise.
+ * One segment of a policy key: a leading letter or digit, then letters,
+ * digits, `.`, `_` or `-`. An allowlist rather than a denylist because storage
+ * puts the key into the URL path for upload and download but sends it as JSON
+ * for list, copy and remove — URL normalisation turns `\` into `/`, resolves
+ * `..`, decodes `%2e` and cuts at `?` or `#`, so anything a URL would rewrite
+ * must never reach storage.
+ */
+const POLICY_SEGMENT = '[A-Za-z0-9][A-Za-z0-9._-]*';
+const POLICY_SEGMENT_PATTERN = new RegExp(`^${POLICY_SEGMENT}$`);
+
+/**
+ * Whether `name` is a writable policy name: exactly `<dir>/<file>` once one
+ * `.md` is stripped, each segment matching the allowlist, no second `.md`, and
+ * never under the archive. Checked before any storage call, so a bad name
+ * cannot reach the archive prefix or a deeper key that the history and
+ * revision readers would not recognise.
  */
 export const isValidPolicyName = (name: string) => {
-  const segments = policyName(name).split('/');
+  const stripped = policyName(name);
+  if (stripped.endsWith(POLICY_SUFFIX)) return false;
+  const segments = stripped.split('/');
   return (
     segments.length === 2 &&
-    segments.every((s) => s !== '' && s !== '.' && s !== '..') &&
+    segments.every((s) => POLICY_SEGMENT_PATTERN.test(s)) &&
     segments[0] !== HARNESS_ARCHIVE_PREFIX
   );
 };
@@ -157,6 +170,9 @@ export const readPolicy = async ({
   client: DataClient;
   name: string;
 }): Promise<PolicyDocument | undefined> => {
+  // An invalid name cannot name a policy, so it is reported as missing
+  // without a storage call that URL normalisation could redirect.
+  if (!isValidPolicyName(name)) return undefined;
   const { content, error } = await downloadText({
     client,
     path: policyPath(name),
@@ -408,16 +424,15 @@ export const listPolicyRevisions = async ({
 // `archive/<dir>/<file>.md/<stamp>.md` — the only keys `readPolicyRevision`
 // will read, so it cannot be pointed at a live object.
 const REVISION_KEY = new RegExp(
-  `^${HARNESS_ARCHIVE_PREFIX}/([^/]+)/([^/]+)\\.md/(\\d{8}T\\d{6}Z\\.md)$`,
+  `^${HARNESS_ARCHIVE_PREFIX}/(${POLICY_SEGMENT})/(${POLICY_SEGMENT})\\.md/(\\d{8}T\\d{6}Z\\.md)$`,
 );
 
 const parseRevisionPath = (path: string): PolicyRevision | undefined => {
   const match = REVISION_KEY.exec(path);
   if (!match) return undefined;
   const [, dir, file, stamp] = match;
-  if ([dir, file].some((segment) => segment === '.' || segment === '..')) {
-    return undefined;
-  }
+  // The live key this revision was archived from must itself be valid.
+  if (!isValidPolicyName(`${dir}/${file}${POLICY_SUFFIX}`)) return undefined;
   const archivedAt = archivedAtFrom(stamp);
   return archivedAt ? { name: `${dir}/${file}`, path, archivedAt } : undefined;
 };

@@ -552,6 +552,9 @@ describe('readPolicyRevision', () => {
     ['a key outside the archive', 'other/a/b.md/20260908T193000Z.md'],
     ['a key with a dot segment', 'archive/../b.md/20260908T193000Z.md'],
     ['a key nested too deep', 'archive/a/c/b.md/20260908T193000Z.md'],
+    ['a key with a backslash', 'archive/a\\..\\x/b.md/20260908T193000Z.md'],
+    ['a key with an encoded slash', 'archive/a%2Fx/b.md/20260908T193000Z.md'],
+    ['a key with a doubled suffix', 'archive/a/b.md.md/20260908T193000Z.md'],
   ])('refuses %s without reading it', async (_, path) => {
     const { client, calls } = createMockClient({
       downloads: { [path]: 'text' },
@@ -610,6 +613,8 @@ describe('restorePolicy', () => {
 
     expect(result).toMatchObject({ ok: true, created: true });
     expect(calls.writes).toEqual(['upload a/b.md']);
+    // A create, so it must not overwrite one that landed meanwhile.
+    expect(calls.upload).toEqual([{ path: 'a/b.md', upsert: false }]);
   });
 
   it('reports not-found for a missing revision and writes nothing', async () => {
@@ -640,6 +645,18 @@ describe('policy name validation', () => {
     'a/..',
     'archive/b',
     'archive/b.md',
+    // Keys a URL would rewrite: storage sends upload and download keys in the
+    // URL path, where `\` becomes `/`, `..` resolves, `%2e` decodes, and
+    // `?` or `#` ends the path.
+    'archive\\d\\f.md/20260101T000000Z',
+    'x/..\\..\\b\\c',
+    'a/b?',
+    'a/b#',
+    'a%2Fb/c',
+    'a/b c',
+    ' a/b',
+    '.x/b',
+    'a/b.md.md',
   ];
 
   it('accepts exactly <dir>/<file>, with or without .md', () => {
@@ -647,6 +664,28 @@ describe('policy name validation', () => {
     expect(isValidPolicyName('a/b.md')).toBe(true);
     expect(invalid.filter(isValidPolicyName)).toEqual([]);
   });
+
+  it('accepts live names with dots, dashes and underscores', () => {
+    expect(
+      [
+        'translator-guidelines/IV.B-proper-names',
+        'translator-guidelines/IV.B-proper-names.md',
+        'shared-policies/term-selection',
+        'a_1/b_2.v3',
+      ].filter((name) => !isValidPolicyName(name)),
+    ).toEqual([]);
+  });
+
+  it.each(invalid)(
+    'readPolicy reports %j as missing without a storage call',
+    async (name) => {
+      const { client, calls } = createMockClient({
+        downloads: { 'archive/d/f.md/20260101T000000Z.md': 'forged' },
+      });
+      expect(await readPolicy({ client, name })).toBeUndefined();
+      expect(calls.download).toEqual([]);
+    },
+  );
 
   it.each(invalid)(
     'writePolicy refuses %j before any storage call',
