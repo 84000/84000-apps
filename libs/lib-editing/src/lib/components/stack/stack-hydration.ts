@@ -110,6 +110,8 @@ export class StackHydration {
     // ask for another.
     if (this.earlierArmed && this.spineFeed?.maybeExtendBefore?.(range.start)) {
       this.earlierArmed = false;
+      // As above: the placeholders above the first row read whether it has.
+      void this.spineFeed.extendBefore?.().then(this.bump);
     }
     void this.runHydration();
   };

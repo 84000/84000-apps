@@ -19,7 +19,7 @@ import {
   StackPassageMenu,
   type StackPassageMenuTarget,
 } from './StackPassageMenu';
-import { StackEnd } from './StackEnd';
+import { STACK_START_PX, StackEnd, StackStart } from './StackEnd';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
@@ -139,8 +139,13 @@ export const PassageStack = ({
       ? focusedEditor
       : null;
 
+  // Room above the first row for the placeholders, inside the list's own
+  // coordinates: a prepend that ends the earlier passages removes it in the
+  // same render, so nothing below is placed against a stale offset.
+  const hasEarlier = order.length > 0 && controller.hasEarlierPassages();
   const virtualizer = useVirtualizer({
     count: order.length,
+    paddingStart: hasEarlier ? STACK_START_PX : 0,
     getScrollElement: () => scroller,
     estimateSize: (index) => controller.estimateHeight(order[index]),
     overscan,
@@ -297,6 +302,7 @@ export const PassageStack = ({
         className="relative w-full"
         style={{ height: virtualizer.getTotalSize() }}
       >
+        {hasEarlier && <StackStart />}
         {items.map((item) => {
           const uuid = order[item.index];
           const meta = controller.getMeta(uuid);
