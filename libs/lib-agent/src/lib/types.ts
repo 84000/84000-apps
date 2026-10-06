@@ -32,6 +32,25 @@ export interface McpPromptDefinition<
   handler: PromptCallback<Args>;
 }
 
+/**
+ * A static resource served on `resources/list` and `resources/read`, such as
+ * an MCP App's `ui://` HTML.
+ */
+export interface McpResourceDefinition {
+  name: string;
+  uri: string;
+  title?: string;
+  description?: string;
+  mimeType: string;
+  /** The resource text, or a function producing it on each read. */
+  text: string | (() => string | Promise<string>);
+  /**
+   * `_meta` on the content returned by `resources/read`, for protocol
+   * extensions such as MCP Apps (`_meta.ui`).
+   */
+  _meta?: Record<string, unknown>;
+}
+
 export interface McpHandlerOptions {
   name?: string;
   version?: string;
@@ -39,4 +58,5 @@ export interface McpHandlerOptions {
   instructions?: string;
   tools: McpToolDefinition[];
   prompts?: McpPromptDefinition[];
+  resources?: McpResourceDefinition[];
 }
