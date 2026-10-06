@@ -11,7 +11,10 @@ export { createWriteTools } from './lib/tools/write';
 export {
   createHarnessTools,
   POLICY_EDITOR_RESOURCE_URI,
+  POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,
+  authorizePolicyTool,
+  policyFailureResult,
 } from './lib/tools/harness';
 export { createSessionTools } from './lib/tools/sessions';
 export {

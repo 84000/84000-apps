@@ -128,15 +128,19 @@ session, and the only record of what it replaced is the archive.
 The write itself is a whole-file replacement — send the complete markdown, never
 a fragment or a patch. The previous revision is copied into the bucket's
 append-only `archive/` prefix automatically, and a failed archive abandons the
-write, so a successful write always leaves the old text recoverable.
+write, so a successful write always leaves the old text recoverable. The person
+can browse that history and restore a revision in the policy editor
+(`open-policy-editor`).
 
 Always pass the `version` from your `read-policies` call as `expectedVersion`
 (omit it only when creating a new policy). If someone changed the policy since
 you read it, nothing is written and the result is a `conflict` carrying
-`current` — the live text and its version. Do not simply retry: show the person
-how the text they agreed to differs from `current.content`, since the other
-edit may need folding in or may already cover theirs, get their agreement again,
-and retry with `current.version`.
+`current` — the live text and its version. If `current.content` already equals
+what you sent, your write landed (a retry after a lost response, say): stop, and
+do not retry. Otherwise do not simply retry: show the person how the text they
+agreed to differs from `current.content`, since the other edit may need folding
+in or may already cover theirs, get their agreement again, and retry with
+`current.version`.
 
 ## Names are permanent
 

@@ -39,4 +39,10 @@ export { createReadPolicyRevisionTool } from './read-policy-revision';
 export { createRestorePolicyTool } from './restore-policy';
 export { createDeletePolicyTool } from './delete-policy';
 export { createRenamePolicyTool } from './rename-policy';
-export { POLICY_EDITOR_RESOURCE_URI, POLICY_TOOL_NAMES } from './shared';
+export {
+  POLICY_EDITOR_RESOURCE_URI,
+  POLICY_EDITOR_TOOL_META,
+  POLICY_TOOL_NAMES,
+  authorizePolicyTool,
+  policyFailureResult,
+} from './shared';
