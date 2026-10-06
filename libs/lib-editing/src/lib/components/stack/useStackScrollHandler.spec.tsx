@@ -65,6 +65,36 @@ describe('useStackScrollHandler', () => {
     });
   });
 
+  it('keeps a row margin of zero rather than the default', () => {
+    const scroller = document.createElement('div');
+    const row = document.createElement('div');
+    row.dataset['stackPassage'] = 'p1';
+    row.style.scrollMarginTop = '0px';
+    scroller.appendChild(row);
+    const { handler, virtualizer } = setup(scroller);
+
+    handler()(1, { settle: true });
+
+    expect(virtualizer.scrollToOffset).toHaveBeenCalledWith(500, {
+      align: 'start',
+    });
+  });
+
+  // A reveal can swap the window before the virtualizer has laid it out.
+  it('falls back to the row itself before it is laid out', () => {
+    const { handler, virtualizer } = setup(document.createElement('div'));
+    (
+      virtualizer as unknown as { measurementsCache: unknown[] }
+    ).measurementsCache = [];
+
+    handler()(1, { settle: true });
+
+    expect(virtualizer.scrollToIndex).toHaveBeenCalledWith(1, {
+      align: 'start',
+    });
+    expect(virtualizer.scrollToOffset).not.toHaveBeenCalled();
+  });
+
   it('keeps a plain scroll to the row itself', () => {
     const { handler, virtualizer } = setup(document.createElement('div'));
 

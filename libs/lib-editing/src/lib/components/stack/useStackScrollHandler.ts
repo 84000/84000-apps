@@ -15,15 +15,18 @@ const SETTLE_QUIET_FRAMES = 20;
 /** Hard stop, however much keeps arriving. */
 const SETTLE_TIMEOUT_MS = 5000;
 
-/** Matches the rows' `scroll-mt-20`, for a row not drawn yet. */
-const REVEAL_MARGIN_PX = 80;
-
+/**
+ * The scroll margin a revealed row keeps above it: the row's own
+ * `scroll-mt-20`, or that class's 5rem when the row isn't drawn yet.
+ */
 const revealMargin = (scroller: HTMLElement | null, uuid?: string) => {
   const row = Array.from(
     scroller?.querySelectorAll<HTMLElement>('[data-stack-passage]') ?? [],
   ).find((element) => element.dataset['stackPassage'] === uuid);
-  const margin = row ? parseFloat(getComputedStyle(row).scrollMarginTop) : NaN;
-  return Number.isNaN(margin) ? REVEAL_MARGIN_PX : margin;
+  const drawn = row ? parseFloat(getComputedStyle(row).scrollMarginTop) : NaN;
+  if (!Number.isNaN(drawn)) return { margin: drawn, drawn: true };
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return { margin: 5 * (Number.isNaN(rem) ? 16 : rem), drawn: false };
 };
 
 /** Install the controller's scroll handler: plain, or held until settled. */
@@ -56,10 +59,13 @@ export const useStackScrollHandler = (
       const uuid = controller.getOrder()[index];
       // Keep the row's scroll margin above it, as `scrollIntoView` does for
       // the paginated editor, rather than pinning it to the panel's edge.
+      // Read until the row is drawn, then kept: the loop runs every frame.
+      let margin: { margin: number; drawn: boolean } | null = null;
       const scrollToReveal = (at: number) => {
         const item = virtualizer.measurementsCache[at];
         if (!item) return virtualizer.scrollToIndex(at, { align: 'start' });
-        virtualizer.scrollToOffset(item.start - revealMargin(scroller, uuid), {
+        if (!margin?.drawn) margin = revealMargin(scroller, uuid);
+        virtualizer.scrollToOffset(item.start - margin.margin, {
           align: 'start',
         });
       };
