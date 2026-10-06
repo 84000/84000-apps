@@ -34,7 +34,7 @@ const OPEN_POLICY_EDITOR_TOOL_META = Object.freeze({
   'ui/resourceUri': POLICY_EDITOR_RESOURCE_URI,
 });
 
-const FALLBACK_NOTE = `Saves the user makes there are reported back to this conversation when the client supports it, best-effort: read-policies before acting on a policy. If nothing appeared, the client does not display MCP Apps (Claude Code in a terminal, for one): say so, suggest opening it from Claude Desktop or Cowork, and fall back to ${POLICY_TOOL_NAMES.read} and ${POLICY_TOOL_NAMES.write}.`;
+const FALLBACK_NOTE = `Saves the user makes there are reported back to this conversation when the client supports it, best-effort: ${POLICY_TOOL_NAMES.read} before acting on a policy. If nothing appeared, the client does not display MCP Apps (Claude Code in a terminal, for one): say so, suggest opening it from Claude Desktop or Cowork, and fall back to ${POLICY_TOOL_NAMES.read} and ${POLICY_TOOL_NAMES.write}.`;
 
 /**
  * The policy editor MCP App, as the `ui://` resource `open-policy-editor`
