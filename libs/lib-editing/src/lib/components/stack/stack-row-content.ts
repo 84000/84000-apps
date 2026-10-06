@@ -4,7 +4,10 @@ import type {
 } from '@eightyfourthousand/lib-doc-model';
 import type { UndoManager } from 'yjs';
 
-import { compareLeadingSpaceClass } from '../editor/extensions/Passage/passage-chrome';
+import {
+  COMPARE_LEAD_DEFAULT,
+  compareLeadingSpaceClass,
+} from '../editor/extensions/Passage/passage-chrome';
 import { renderTranslationHTML } from '../reader/translation-html';
 import type { PassageStackControllerOptions } from './types';
 
@@ -131,7 +134,7 @@ export class StackRowContent {
     if (cached !== undefined) return cached;
 
     const doc = this.work.store.peek(uuid);
-    if (!doc) return 'md:mt-1';
+    if (!doc) return COMPARE_LEAD_DEFAULT;
 
     const lead = compareLeadingSpaceClass(doc.toNode());
     this.compareLeads.set(uuid, lead);

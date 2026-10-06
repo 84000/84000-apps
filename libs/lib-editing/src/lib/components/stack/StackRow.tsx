@@ -10,6 +10,7 @@ import {
   PASSAGE_REFERENCES_CLASS,
 } from '../editor/extensions/Passage/classes';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
+import { COMPARE_LEAD_DEFAULT } from '../editor/extensions/Passage/passage-chrome';
 
 /**
  * The shared frame of one stack row: the label gutter and the content column.
@@ -26,7 +27,7 @@ export const StackRow = ({
   selected,
   references,
   tibetan,
-  tibetanLead = 'md:mt-1',
+  tibetanLead = COMPARE_LEAD_DEFAULT,
   className,
   children,
 }: {
@@ -123,7 +124,7 @@ export const StackRow = ({
         <div
           className={cn(
             'passage-compare-source w-full',
-            tibetan ? tibetanLead : 'md:mt-1 hidden',
+            tibetan ? tibetanLead : `${COMPARE_LEAD_DEFAULT} hidden`,
           )}
           contentEditable={false}
           data-compare-source=""
