@@ -35,6 +35,11 @@ describe('read-policies tool', () => {
     const result = await tool.handler({}, extra);
 
     expect(result.isError).toBe(true);
+    expect(parse(result)).toMatchObject({ ok: false, reason: 'forbidden' });
+    expect(mockedHasPermission).toHaveBeenCalledWith({
+      client,
+      permission: 'harness.read',
+    });
     expect(mockedList).not.toHaveBeenCalled();
     expect(mockedRead).not.toHaveBeenCalled();
   });
@@ -77,5 +82,19 @@ describe('read-policies tool', () => {
     const result = await tool.handler({ names: ['a/gone'] }, extra);
 
     expect(result.isError).toBe(true);
+    expect(parse(result)).toMatchObject({ ok: false, reason: 'not-found' });
+  });
+
+  it('reports a failed listing as an error rather than an empty list', async () => {
+    mockedList.mockResolvedValue(undefined);
+
+    const result = await tool.handler({}, extra);
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({
+      ok: false,
+      reason: 'error',
+      message: 'Could not list the policies.',
+    });
   });
 });

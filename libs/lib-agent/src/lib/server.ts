@@ -5,7 +5,7 @@ import type { McpHandlerOptions } from './types';
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
-    version = '2026.9.8',
+    version = '2026.10.0',
     description,
     instructions,
     tools,
@@ -25,6 +25,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
         inputSchema,
         outputSchema,
         annotations,
+        _meta,
         handler,
       } = tool;
       server.registerTool(
@@ -34,6 +35,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
           inputSchema,
           outputSchema,
           annotations,
+          _meta,
         },
         handler,
       );

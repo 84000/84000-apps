@@ -11,20 +11,22 @@ translator, without a release. That is the reason the conventions below matter
 more than they would for a file in a codebase: there is no review step between
 your write and someone else's next session.
 
-Two studio tools reach them. `read-policies` lists and reads; `write-policy`
-creates or replaces. There is nothing else — **no delete and no rename.**
+Two studio tools reach them from chat. `read-policies` lists and reads;
+`write-policy` creates or replaces. **Delete and rename are not chat tools** —
+they live in the policy editor (see "Names are permanent" below).
 
 ## Always read before you write
 
 1. `read-policies` with **no arguments** for the live listing of every name.
-2. `read-policies` with the name you intend to change, to get its current text.
+2. `read-policies` with the name you intend to change, to get its current text
+   and its `version`.
 
 Both steps are load-bearing, for different reasons. The write replaces the whole
 file rather than patching it, so you cannot revise a policy you have not read.
 And the listing is your only defense against a typo: `translator-guideline/…`
 instead of `translator-guidelines/…` does not fail, it silently creates a second
-policy that nothing cites and no tool can remove. Match the prefix against the
-listing character for character before writing.
+policy that nothing cites and nothing in chat can remove. Match the prefix
+against the listing character for character before writing.
 
 ## Naming
 
@@ -126,13 +128,25 @@ session, and the only record of what it replaced is the archive.
 The write itself is a whole-file replacement — send the complete markdown, never
 a fragment or a patch. The previous revision is copied into the bucket's
 append-only `archive/` prefix automatically, and a failed archive abandons the
-write, so a successful write always leaves the old text recoverable.
+write, so a successful write always leaves the old text recoverable. The person
+can browse that history and restore a revision in the policy editor
+(`open-policy-editor`).
+
+Always pass the `version` from your `read-policies` call as `expectedVersion`
+(omit it only when creating a new policy). If someone changed the policy since
+you read it, nothing is written and the result is a `conflict` carrying
+`current` — the live text and its version. If `current.content` already equals
+what you sent, your write landed (a retry after a lost response, say): stop, and
+do not retry. Otherwise do not simply retry: show the person how the text they
+agreed to differs from `current.content`, since the other edit may need folding
+in or may already cover theirs, get their agreement again, and retry with
+`current.version`.
 
 ## Names are permanent
 
-There is no delete and no rename, so a name is effectively an API: once written
-it stays in the listing forever and anything may cite it. Choose it from the
-listing, deliberately.
+Nothing in chat deletes or renames a policy, so a name is effectively an API:
+once written it stays in the listing and anything may cite it. Choose it from
+the listing, deliberately.
 
 When a policy is genuinely superseded or misnamed, establish who cites the old
 name **before** touching anything, because the two classes of citation are not
@@ -154,8 +168,15 @@ name with a pointer, so existing references resolve and read where to go:
 
 ```markdown
 > Superseded by `shared-policies/term-selection`. Read that instead — this name
-> is kept because there is no delete, and existing citations still resolve here.
+> is kept so that existing citations still resolve here.
 ```
+
+If the person wants the old name gone instead, that is done in the policy
+editor: open it with the `open-policy-editor` tool and let them rename or delete
+there (it takes the `harness.admin` permission). If that tool is not available,
+tell them delete and rename are not available from chat yet. A renamed or
+deleted name stops resolving, so any citation you could not fix breaks — prefer
+the pointer whenever one might remain.
 
 Never leave a superseded policy holding its old guidance. Two live policies on
 one subject is worse than either name being imperfect.
