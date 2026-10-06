@@ -316,3 +316,36 @@ export const uploadText = async ({
     exists: isAlreadyExists(error),
   };
 };
+
+/**
+ * Removes objects, reporting whether every one of them went. RLS filters a
+ * denied DELETE instead of raising, so storage answers with no error and fewer
+ * rows than were asked for — a short result is a refusal, not a success.
+ */
+export const removeObjects = async ({
+  client,
+  bucket,
+  paths,
+}: {
+  client: DataClient;
+  bucket: string;
+  paths: string[];
+}): Promise<{ removed: boolean; error?: string; forbidden: boolean }> => {
+  const { data, error } = await client.storage.from(bucket).remove(paths);
+  if (error) {
+    return {
+      removed: false,
+      error: error.message,
+      forbidden: isForbidden(error),
+    };
+  }
+  if ((data?.length ?? 0) < paths.length) {
+    return {
+      removed: false,
+      error:
+        'storage removed fewer objects than requested (refused or already gone)',
+      forbidden: true,
+    };
+  }
+  return { removed: true, forbidden: false };
+};

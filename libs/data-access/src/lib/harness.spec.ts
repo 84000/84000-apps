@@ -6,6 +6,7 @@
 import {
   archivePathFor,
   archiveStamp,
+  deletePolicy,
   isValidPolicyName,
   listPolicies,
   listPolicyRevisions,
@@ -15,6 +16,7 @@ import {
   readPolicies,
   readPolicy,
   readPolicyRevision,
+  renamePolicy,
   restorePolicy,
   writePolicy,
 } from './harness';
@@ -725,4 +727,379 @@ describe('policy name validation', () => {
       expect([...calls.list, ...calls.download, ...calls.writes]).toEqual([]);
     },
   );
+});
+
+describe('deletePolicy', () => {
+  it('archives the policy before removing it', async () => {
+    const { client, calls } = createMockClient(liveOld);
+
+    const result = await deletePolicy({
+      client,
+      name: 'a/b',
+      expectedVersion: await policyVersion('old'),
+      at,
+    });
+
+    expect(result).toEqual({ ok: true, archivedPath: STAMPED });
+    expect(calls.rpc).toEqual(['authorize:harness.admin']);
+    expect(calls.writes).toEqual([
+      `copy a/b.md -> ${STAMPED}`,
+      'remove a/b.md',
+    ]);
+  });
+
+  it('does not remove when the archive copy fails', async () => {
+    const { client, calls } = createMockClient({
+      ...liveOld,
+      copyError: { message: 'storage unavailable', status: 503 },
+    });
+
+    const result = await deletePolicy({ client, name: 'a/b' });
+
+    expect(result).toMatchObject({ ok: false, reason: 'error' });
+    expect(calls.remove).toEqual([]);
+  });
+
+  it('treats a remove that RLS filtered to nothing as forbidden', async () => {
+    const { client } = createMockClient({
+      ...liveOld,
+      remove: () => ({ data: [], error: null }),
+    });
+
+    expect(await deletePolicy({ client, name: 'a/b' })).toEqual({
+      ok: false,
+      reason: 'forbidden',
+    });
+  });
+
+  it('fails closed when it cannot tell whether the policy is there', async () => {
+    const { client, calls } = createMockClient({
+      lists: { a: { data: null, error: { message: 'denied' } } },
+    });
+
+    expect(await deletePolicy({ client, name: 'a/b' })).toMatchObject({
+      ok: false,
+      reason: 'error',
+      message: expect.stringContaining('the delete was not attempted'),
+    });
+    expect(calls.writes).toEqual([]);
+  });
+
+  it('reports not-found for a policy that is not there', async () => {
+    const { client, calls } = createMockClient({});
+
+    expect(await deletePolicy({ client, name: 'a/b' })).toEqual({
+      ok: false,
+      reason: 'not-found',
+    });
+    expect(calls.writes).toEqual([]);
+  });
+});
+
+describe('deletePolicy with expectedVersion', () => {
+  it('reports a conflict and deletes nothing', async () => {
+    const { client, calls } = createMockClient(liveOld);
+
+    const result = await deletePolicy({
+      client,
+      name: 'a/b',
+      expectedVersion: await policyVersion('stale'),
+    });
+
+    expect(result).toMatchObject({ ok: false, reason: 'conflict' });
+    expect(calls.writes).toEqual([]);
+  });
+});
+
+describe('renamePolicy', () => {
+  const both = {
+    a: { data: [file('b.md'), file('c.md')], error: null },
+  };
+
+  it('copies, then archives, then removes the old name', async () => {
+    const { client, calls } = createMockClient(liveOld);
+
+    const result = await renamePolicy({
+      client,
+      from: 'a/b',
+      to: 'a/c',
+      expectedVersion: await policyVersion('old'),
+      at,
+    });
+
+    expect(result).toEqual({ ok: true, archivedPath: STAMPED });
+    expect(calls.writes).toEqual([
+      'copy a/b.md -> a/c.md',
+      `copy a/b.md -> ${STAMPED}`,
+      'remove a/b.md',
+    ]);
+  });
+
+  it('refuses a rename onto an existing policy without copying', async () => {
+    const { client, calls } = createMockClient({ lists: both });
+
+    expect(await renamePolicy({ client, from: 'a/b', to: 'a/c' })).toEqual({
+      ok: false,
+      reason: 'exists',
+    });
+    expect(calls.writes).toEqual([]);
+  });
+
+  it('maps a copy refused because the target appeared since the check', async () => {
+    const { client, calls } = createMockClient({
+      ...liveOld,
+      copyError: (_, to) =>
+        to === 'a/c.md'
+          ? {
+              message: 'The resource already exists',
+              status: 400,
+              statusCode: '409',
+            }
+          : null,
+    });
+
+    expect(await renamePolicy({ client, from: 'a/b', to: 'a/c' })).toEqual({
+      ok: false,
+      reason: 'exists',
+    });
+    expect(calls.remove).toEqual([]);
+  });
+
+  it('refuses to rename a policy onto itself', async () => {
+    const { client, calls } = createMockClient(liveOld);
+
+    expect(
+      await renamePolicy({ client, from: 'a/b', to: 'a/b.md' }),
+    ).toMatchObject({ ok: false, reason: 'error' });
+    expect(calls.writes).toEqual([]);
+  });
+
+  const C_STAMPED = 'archive/a/c.md/20260908T193000Z.md';
+
+  it('archives then removes the copy when the archive of the source fails', async () => {
+    const { client, calls } = createMockClient({
+      ...liveOld,
+      copyError: (_, to) =>
+        to === STAMPED ? { message: 'archive refused' } : null,
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringMatching(
+        /archive refused.*copy at a\/c was archived and removed/,
+      ),
+    });
+    expect(calls.writes).toEqual([
+      'copy a/b.md -> a/c.md',
+      `copy a/b.md -> ${STAMPED}`,
+      `copy a/c.md -> ${C_STAMPED}`,
+      'remove a/c.md',
+    ]);
+  });
+
+  it('leaves the copy in place when it cannot be archived for the rollback', async () => {
+    const { client, calls } = createMockClient({
+      ...liveOld,
+      copyError: (_, to) =>
+        to.startsWith('archive/') ? { message: 'archive refused' } : null,
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringMatching(/so was the copy at a\/c/),
+    });
+    expect(calls.remove).toEqual([]);
+  });
+
+  it('removes the copy again when removing the old name fails and it is still there', async () => {
+    const { client, calls } = createMockClient({
+      ...liveOld,
+      remove: (paths) =>
+        paths[0] === 'a/b.md'
+          ? { data: [], error: null }
+          : { data: paths.map((name) => ({ name })), error: null },
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringContaining('copy at a/c was archived and removed'),
+    });
+    expect(calls.writes).toEqual([
+      'copy a/b.md -> a/c.md',
+      `copy a/b.md -> ${STAMPED}`,
+      'remove a/b.md',
+      `copy a/c.md -> ${C_STAMPED}`,
+      'remove a/c.md',
+    ]);
+  });
+
+  it('keeps the copy when the old name was deleted by someone else meanwhile', async () => {
+    const lists: Record<string, ListResult> = { ...live };
+    const { client, calls } = createMockClient({
+      lists,
+      downloads: { 'a/b.md': 'old' },
+      remove: (paths) => {
+        // A concurrent delete of a/b.md wins, so ours removes nothing.
+        if (paths[0] === 'a/b.md') lists.a = { data: [], error: null };
+        return { data: [], error: null };
+      },
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+
+    expect(result).toEqual({ ok: true, archivedPath: STAMPED });
+    expect(calls.writes).toEqual([
+      'copy a/b.md -> a/c.md',
+      `copy a/b.md -> ${STAMPED}`,
+      'remove a/b.md',
+    ]);
+  });
+
+  it('rolls back when the old name cannot be re-checked after a failed remove', async () => {
+    const lists: Record<string, ListResult> = { ...live };
+    const { client, calls } = createMockClient({
+      lists,
+      downloads: { 'a/b.md': 'old' },
+      remove: (paths) => {
+        if (paths[0] !== 'a/b.md') {
+          return { data: paths.map((name) => ({ name })), error: null };
+        }
+        lists.a = { data: null, error: { message: 'denied' } };
+        return { data: [], error: null };
+      },
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringContaining('copy at a/c was archived and removed'),
+    });
+    expect(calls.writes).toEqual([
+      'copy a/b.md -> a/c.md',
+      `copy a/b.md -> ${STAMPED}`,
+      'remove a/b.md',
+      `copy a/c.md -> ${C_STAMPED}`,
+      'remove a/c.md',
+    ]);
+  });
+
+  it('says so when the rollback itself fails', async () => {
+    const { client } = createMockClient({
+      ...liveOld,
+      remove: () => ({ data: [], error: null }),
+    });
+
+    const result = await renamePolicy({ client, from: 'a/b', to: 'a/c', at });
+    expect(result).toMatchObject({
+      reason: 'error',
+      message: expect.stringMatching(/could not be removed.*removed by hand/),
+    });
+  });
+
+  it('reports a conflict on the source and copies nothing', async () => {
+    const { client, calls } = createMockClient(liveOld);
+
+    const result = await renamePolicy({
+      client,
+      from: 'a/b',
+      to: 'a/c',
+      expectedVersion: await policyVersion('stale'),
+    });
+
+    expect(result).toMatchObject({ ok: false, reason: 'conflict' });
+    expect(calls.writes).toEqual([]);
+  });
+
+  it('fails closed when the target cannot be checked', async () => {
+    const { client, calls } = createMockClient({
+      lists: { a: { data: null, error: { message: 'denied' } } },
+    });
+
+    expect(
+      await renamePolicy({ client, from: 'a/b', to: 'a/c' }),
+    ).toMatchObject({
+      reason: 'error',
+      message: expect.stringContaining('a/c'),
+    });
+    expect(calls.writes).toEqual([]);
+  });
+
+  it('reports not-found for a source that is not there', async () => {
+    const { client, calls } = createMockClient({});
+
+    expect(await renamePolicy({ client, from: 'a/b', to: 'a/c' })).toEqual({
+      ok: false,
+      reason: 'not-found',
+    });
+    expect(calls.writes).toEqual([]);
+  });
+});
+
+describe('admin-only changes', () => {
+  it.each([
+    ['delete', (client: DataClient) => deletePolicy({ client, name: 'a/b' })],
+    [
+      'rename',
+      (client: DataClient) => renamePolicy({ client, from: 'a/b', to: 'a/c' }),
+    ],
+  ])(
+    'refuse to %s without harness.admin before touching storage',
+    async (_, run) => {
+      const { client, calls } = createMockClient({ ...liveOld, admin: false });
+
+      expect(await run(client)).toEqual({ ok: false, reason: 'forbidden' });
+      expect(calls.rpc).toEqual(['authorize:harness.admin']);
+      expect([...calls.list, ...calls.download, ...calls.writes]).toEqual([]);
+    },
+  );
+});
+
+describe('admin-only changes with an invalid name', () => {
+  it.each([
+    ['delete', (client: DataClient) => deletePolicy({ client, name: 'a' })],
+    [
+      'rename from',
+      (client: DataClient) =>
+        renamePolicy({ client, from: 'archive/b', to: 'a/c' }),
+    ],
+    [
+      'rename to',
+      (client: DataClient) =>
+        renamePolicy({ client, from: 'a/b', to: 'archive/x/y' }),
+    ],
+    [
+      'rename to a backslash name',
+      (client: DataClient) =>
+        renamePolicy({
+          client,
+          from: 'a/b',
+          to: 'archive\\d\\f.md/20260101T000000Z',
+        }),
+    ],
+    [
+      'rename from a backslash name',
+      (client: DataClient) =>
+        renamePolicy({ client, from: 'x/..\\..\\b\\c', to: 'a/c' }),
+    ],
+  ])('refuse to %s before any storage or permission call', async (_, run) => {
+    const { client, calls } = createMockClient(liveOld);
+
+    expect(await run(client)).toMatchObject({
+      reason: 'error',
+      message: expect.stringContaining('is not a valid policy name'),
+    });
+    expect([
+      ...calls.rpc,
+      ...calls.list,
+      ...calls.download,
+      ...calls.writes,
+    ]).toEqual([]);
+  });
 });
