@@ -9,7 +9,11 @@ import {
   POLICY_EDITOR_RESOURCE_URI,
   POLICY_TOOL_NAMES,
 } from './tools/harness';
-import type { McpPromptDefinition, McpToolDefinition } from './types';
+import type {
+  McpPromptDefinition,
+  McpResourceDefinition,
+  McpToolDefinition,
+} from './types';
 
 // Only the tool definitions are exercised; no handler runs.
 jest.mock('@eightyfourthousand/data-access', () => ({}));
@@ -163,5 +167,47 @@ describe('createMcpHandler prompt + tool surface', () => {
     }
     expect(byName[POLICY_TOOL_NAMES.read]._meta).toBeUndefined();
     expect(byName[POLICY_TOOL_NAMES.write]._meta).toBeUndefined();
+  });
+
+  it('lists and reads a resource, with its content _meta', async () => {
+    const resource: McpResourceDefinition = {
+      name: 'test-app',
+      uri: 'ui://test/app.html',
+      description: 'A test app',
+      mimeType: 'text/html;profile=mcp-app',
+      text: async () => '<html>hi</html>',
+      _meta: { ui: { prefersBorder: true } },
+    };
+    const handler = createMcpHandler({ tools: [], resources: [resource] });
+    await rpc(handler, init);
+    const listed = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'resources/list',
+      params: {},
+    });
+    const read = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'resources/read',
+      params: { uri: resource.uri },
+    });
+
+    expect((listed.result as { resources: unknown[] }).resources).toEqual([
+      {
+        name: 'test-app',
+        uri: 'ui://test/app.html',
+        description: 'A test app',
+        mimeType: 'text/html;profile=mcp-app',
+      },
+    ]);
+    expect((read.result as { contents: unknown[] }).contents).toEqual([
+      {
+        uri: 'ui://test/app.html',
+        mimeType: 'text/html;profile=mcp-app',
+        text: '<html>hi</html>',
+        _meta: { ui: { prefersBorder: true } },
+      },
+    ]);
   });
 });
