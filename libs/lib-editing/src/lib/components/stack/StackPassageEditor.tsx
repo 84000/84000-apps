@@ -6,6 +6,7 @@ import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
 import { PassageSkeleton } from './PassageSkeleton';
+import { rowContentClass } from './row-classes';
 import { StackRow } from './StackRow';
 import { stackPerf } from './perf';
 
@@ -97,7 +98,10 @@ export const StackPassageEditor = memo(
           that failed rather than content arriving.
         */}
         {editor ? (
-          <EditorContent editor={editor} />
+          <EditorContent
+            editor={editor}
+            className={rowContentClass(!controller.isReadOnly())}
+          />
         ) : (
           <PassageSkeleton
             height={controller.estimateContentHeight(uuid)}

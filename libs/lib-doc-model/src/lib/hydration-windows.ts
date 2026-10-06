@@ -46,20 +46,22 @@ export class HydrationWindows {
 
     const placed = new Set(this.spine.uuids());
     const docs = await this.store.hydrateMany(
-      [...this.wanted()].filter(
+      [...this.wanted(placed)].filter(
         (uuid) => placed.has(uuid) || this.store.has(uuid),
       ),
     );
     // Taken again after the load: another view may have opened or moved its
     // window meanwhile, and what it loaded is not this call's to release.
-    this.store.releaseOutside(this.wanted());
+    this.store.releaseOutside(this.wanted(new Set(this.spine.uuids())));
     this.notify();
 
-    // Only this window's documents come back: a consumer attaches its own
-    // bookkeeping to what it draws, and two of them observing one document
-    // would record every edit to it twice.
+    // Only this window's documents come back, and only those still held: a
+    // consumer attaches its own bookkeeping to what it draws, and two of them
+    // observing one document would record every edit to it twice.
     const drawn = new Set(mine);
-    return docs.filter((doc) => drawn.has(doc.uuid));
+    return docs.filter(
+      (doc) => drawn.has(doc.uuid) && this.store.has(doc.uuid),
+    );
   }
 
   /** Forget a window, so what only it held can be released. */
@@ -80,8 +82,7 @@ export class HydrationWindows {
    * section's run was swapped. No source can place those, so they are neither
    * asked for nor kept.
    */
-  private wanted(): Set<string> {
-    const placed = new Set(this.spine.uuids());
+  private wanted(placed: Set<string>): Set<string> {
     const wanted = new Set<string>();
     this.windows.forEach((window) => {
       window.uuids.forEach((uuid) => {

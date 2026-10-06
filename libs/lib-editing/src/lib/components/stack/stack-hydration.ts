@@ -99,7 +99,11 @@ export class StackHydration {
     this.visibleRange = range;
     // The spine covers only the pages fetched so far, so approaching either
     // end has to pull the next one before there is anything to hydrate.
-    this.spineFeed?.maybeExtend(range.end);
+    // A feed can end without changing the spine (an empty last page), and the
+    // stack's footer reads whether it has, so say so once the page settles.
+    if (this.spineFeed?.maybeExtend(range.end)) {
+      void this.spineFeed.extend?.().then(this.bump);
+    }
     if (range.start > 0) this.earlierArmed = true;
     // Disarmed again by the page it starts: until the view re-anchors on the
     // row that used to be first, the range still reads as index 0 and would

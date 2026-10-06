@@ -100,6 +100,8 @@ export type PassageStackControllerOptions = {
   spineFeed?: {
     hasMore: boolean;
     maybeExtend: (visibleEnd: number) => boolean;
+    /** The page `maybeExtend` started, shared rather than fetched again. */
+    extend?: () => Promise<number>;
     /** Characters of text in a passage, for estimating an unhydrated row. */
     contentLength?: (uuid: string) => number | undefined;
     /** Only a feed that can read backward supplies these. */

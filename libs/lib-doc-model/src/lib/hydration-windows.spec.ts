@@ -193,6 +193,42 @@ describe('WorkDocument hydration window', () => {
     ]);
   });
 
+  // A jump in another view can swap this window's passages out of the spine
+  // while they load. Handing one back would have the caller observe a
+  // document the store has already let go of.
+  it("doesn't return a passage that left the spine during the load", async () => {
+    let open: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => (open = resolve));
+    const base = source(3);
+    const work = new WorkDocument({
+      workUuid: 'work-1',
+      schema: testSchema,
+      loader: new PassageLoader({
+        sources: [
+          {
+            ...base,
+            loadPassages: async (workUuid, uuids) => {
+              await gate;
+              return base.loadPassages(workUuid, uuids);
+            },
+          },
+        ],
+        buffer: 0,
+      }),
+    });
+    work.seedSpine(
+      Array.from({ length: 3 }, (_, i) => meta(`p${i}`, `${i + 1}`)),
+    );
+
+    const loading = work.hydrateWindow({ start: 0, end: 3 });
+    work.spine.remove(['p1'], { renumber: false });
+    open();
+    const docs = await loading;
+
+    expect(docs.map((doc) => doc.uuid)).toEqual(['p0', 'p2']);
+    expect(work.store.has('p1')).toBe(false);
+  });
+
   it('widens the window by the loader buffer', async () => {
     const work = windowed(6, 1);
     await work.hydrateWindow({ start: 2, end: 3 });

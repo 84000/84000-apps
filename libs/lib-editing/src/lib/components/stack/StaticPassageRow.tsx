@@ -2,10 +2,10 @@
 
 import { memo, useMemo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
-import { cn } from '@eightyfourthousand/lib-utils';
 
 import { PassageStackController } from './PassageStackController';
 import { PassageSkeleton } from './PassageSkeleton';
+import { rowContentClass } from './row-classes';
 import { StackRow } from './StackRow';
 
 /**
@@ -58,11 +58,9 @@ export const StaticPassageRow = memo(
           />
         ) : (
           <div
-            className={cn(
+            className={rowContentClass(
+              !controller.isReadOnly(),
               'tiptap pm-text-metrics',
-              // The editor's mention node view tints mentions while editable.
-              !controller.isReadOnly() &&
-                '[&_.mention-container]:bg-primary/10 [&_.mention-container]:rounded-sm',
             )}
             dangerouslySetInnerHTML={inner}
           />
