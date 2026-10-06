@@ -340,6 +340,11 @@ export class SpineFeed {
     if (!page.metas.length) return;
 
     this.record(page.metas);
+    // Edited while the page was on its way.
+    if (this.holdsUnsaved()) {
+      while (!this.noneBefore) await this.extendBefore();
+      return;
+    }
     this.startCursor = undefined;
     this.endCursor = page.nextCursor;
     this.noneBefore = true;

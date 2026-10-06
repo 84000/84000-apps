@@ -653,6 +653,56 @@ describe('SpineFeed', () => {
         expect(payload(w)).toEqual(before);
       });
 
+      it('keeps an edit made while moving to the start', async () => {
+        const w = work();
+        const front = new SpineFeed(w, client, FRONT);
+        clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+          ...metaPage(4, 2, true, 'introduction', 'f'),
+          prevCursor: 'f4',
+          hasMoreBefore: true,
+        });
+        await front.reveal('f4');
+        w.store.create('f4', [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'front text' }],
+          },
+        ]);
+        w.store.peek('f4')?.markSynced();
+        let reply: (page: ReturnType<typeof metaPage>) => void = () =>
+          undefined;
+        clientGraphql.getPassageMetaPage
+          .mockImplementationOnce(
+            () =>
+              new Promise((resolve) => {
+                reply = resolve;
+              }),
+          )
+          .mockResolvedValueOnce({
+            ...metaPage(0, 4, false, 'introduction', 'f'),
+            hasMoreBefore: false,
+          });
+
+        // Clean when the move starts, edited before its page arrives.
+        const move = front.revealStart();
+        const split = w.split('f4', 4)?.uuid as string;
+        const before = payload(w);
+        expect(before.map((p) => p.uuid)).toEqual(['f4', split]);
+        reply(metaPage(0, 2, true, 'introduction', 'f'));
+        await move;
+
+        expect(w.spine.uuids()).toEqual([
+          'f0',
+          'f1',
+          'f2',
+          'f3',
+          'f4',
+          split,
+          'f5',
+        ]);
+        expect(payload(w)).toEqual(before);
+      });
+
       it('keeps them when revealing a passage past the window', async () => {
         const { w, front, split } = await editedMidRun();
         const before = payload(w);
