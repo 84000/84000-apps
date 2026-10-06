@@ -15,6 +15,17 @@ const SETTLE_QUIET_FRAMES = 20;
 /** Hard stop, however much keeps arriving. */
 const SETTLE_TIMEOUT_MS = 5000;
 
+/** Matches the rows' `scroll-mt-20`, for a row not drawn yet. */
+const REVEAL_MARGIN_PX = 80;
+
+const revealMargin = (scroller: HTMLElement | null, uuid?: string) => {
+  const row = Array.from(
+    scroller?.querySelectorAll<HTMLElement>('[data-stack-passage]') ?? [],
+  ).find((element) => element.dataset['stackPassage'] === uuid);
+  const margin = row ? parseFloat(getComputedStyle(row).scrollMarginTop) : NaN;
+  return Number.isNaN(margin) ? REVEAL_MARGIN_PX : margin;
+};
+
 /** Install the controller's scroll handler: plain, or held until settled. */
 export const useStackScrollHandler = (
   controller: PassageStackController,
@@ -43,6 +54,15 @@ export const useStackScrollHandler = (
       // scrolls: holding a position against someone trying to leave it is
       // worse than the drift.
       const uuid = controller.getOrder()[index];
+      // Keep the row's scroll margin above it, as `scrollIntoView` does for
+      // the paginated editor, rather than pinning it to the panel's edge.
+      const scrollToReveal = (at: number) => {
+        const item = virtualizer.measurementsCache[at];
+        if (!item) return virtualizer.scrollToIndex(at, { align: 'start' });
+        virtualizer.scrollToOffset(item.start - revealMargin(scroller, uuid), {
+          align: 'start',
+        });
+      };
       const deadline = performance.now() + SETTLE_TIMEOUT_MS;
       let quiet = 0;
       let lastOffset: number | null = null;
@@ -68,7 +88,7 @@ export const useStackScrollHandler = (
         // so the number this started with can name a different passage.
         const at = uuid ? controller.getOrder().indexOf(uuid) : index;
         if (at < 0) return release();
-        virtualizer.scrollToIndex(at, { align: 'start' });
+        scrollToReveal(at);
 
         const offset = scroller?.scrollTop ?? null;
         const version = controller.getVersion();
