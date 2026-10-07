@@ -28,6 +28,16 @@ describe('selfContainedProblems', () => {
       page({ js: escapeScriptClose('x("</SCRIPT>")') }),
       undefined,
     ],
+    [
+      'a <script> string inside the JS, as React DOM ships',
+      page({ js: escapeScriptClose('x("<script></script>")') }),
+      undefined,
+    ],
+    [
+      'a second script tag',
+      `${page()}<script>y()</script>`,
+      'one inlined script',
+    ],
     ['a <link>', page({ head: '<link rel="stylesheet">' }), 'a <link>'],
     [
       'a remote url()',

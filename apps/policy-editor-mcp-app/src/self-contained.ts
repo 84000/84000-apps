@@ -7,19 +7,22 @@ export const escapeScriptClose = (code: string) =>
 /** Why `html` is not one self-contained document; empty when it is. */
 export function selfContainedProblems(html: string): string[] {
   const problems: string[] = [];
-  const opens = html.match(/<script\b/gi)?.length ?? 0;
+  const styles = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)];
+  const css = styles.map((match) => match[1]).join('\n');
+  const markup = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
+
+  // Openings are counted in the markup, where script bodies are collapsed, so
+  // a `<script` string inside the JS (React DOM ships one) is not a second tag.
+  // Every `</script` counts: an unescaped one in the JS would end the tag.
+  const opens = markup.match(/<script\b/gi)?.length ?? 0;
   const closes = html.match(/<\/script/gi)?.length ?? 0;
   if (opens !== 1 || closes !== 1) {
     problems.push(
       `expected one inlined script, found ${opens} <script and ${closes} </script`,
     );
   }
-
-  const styles = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)];
-  const css = styles.map((match) => match[1]).join('\n');
-  const markup = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
 
   if (/<link\b/i.test(markup)) problems.push('a <link> survived inlining');
   if (/\s(?:src|href|srcset|poster|action)\s*=/i.test(markup)) {
