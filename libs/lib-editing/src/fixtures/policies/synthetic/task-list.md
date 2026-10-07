@@ -1,0 +1,2 @@
+- [ ] Check the glossary
+- [x] Check the source
