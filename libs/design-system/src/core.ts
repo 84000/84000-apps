@@ -19,6 +19,7 @@ export * from './lib/Card/CardFooter';
 export * from './lib/Card/CardTitle';
 export * from './lib/DatePicker/DatePicker';
 export * from './lib/Dialog/Dialog';
+export * from './lib/DiffView/DiffView';
 export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
 export * from './lib/HoverCard/HoverCard';
