@@ -8,48 +8,20 @@ import { gzipSync } from 'node:zlib';
 import tailwindcss from '@tailwindcss/postcss';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import {
+  escapeScriptClose,
+  selfContainedProblems,
+} from './src/self-contained.ts';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const outDir = join(root, '../../dist/apps/policy-editor-mcp-app');
 const htmlModule = join(root, 'generated/app-html.ts');
 
-/** Escapes every `</script`, in any case, so inlined JS cannot end its tag. */
-const escapeScriptClose = () => ({
+/** Escapes `</script` in every chunk before it is inlined. */
+const escapeScriptCloseInChunks = () => ({
   name: 'policy-editor:escape-script-close',
-  renderChunk: (code) => ({
-    code: code.replace(/<\/(script)/gi, '<\\/$1'),
-    map: null,
-  }),
+  renderChunk: (code) => ({ code: escapeScriptClose(code), map: null }),
 });
-
-/** Why `html` is not self-contained; empty when it is. */
-const selfContainedProblems = (html) => {
-  const problems = [];
-  const opens = html.match(/<script\b/gi)?.length ?? 0;
-  const closes = html.match(/<\/script/gi)?.length ?? 0;
-  if (opens !== closes) problems.push('an inlined script contains </script');
-
-  const styles = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)];
-  const css = styles.map((match) => match[1]).join('\n');
-  const markup = html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '<style></style>');
-
-  if (/<link\b/i.test(markup)) problems.push('a <link> survived inlining');
-  if (/\s(?:src|href|srcset|poster|action)\s*=/i.test(markup)) {
-    problems.push('the markup references a URL');
-  }
-  for (const [, url] of css.matchAll(/url\(\s*['"]?([^'")\s]+)/gi)) {
-    if (!url.startsWith('data:') && !url.startsWith('#')) {
-      problems.push(`the CSS loads ${url}`);
-    }
-  }
-  if (/@import\b/i.test(css)) problems.push('the CSS has an @import');
-  if (!css.includes('data:font/woff2;base64,')) {
-    problems.push('the Monlam font is not inlined');
-  }
-  return problems;
-};
 
 /** Checks the inlined HTML and writes it as `POLICY_EDITOR_APP_HTML`. */
 const emitHtmlModule = () => ({
@@ -90,5 +62,5 @@ export default defineConfig({
     sourcemap: false,
     reportCompressedSize: false,
   },
-  plugins: [escapeScriptClose(), viteSingleFile(), emitHtmlModule()],
+  plugins: [escapeScriptCloseInChunks(), viteSingleFile(), emitHtmlModule()],
 });
