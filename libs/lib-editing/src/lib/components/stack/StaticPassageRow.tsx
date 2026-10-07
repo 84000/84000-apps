@@ -29,12 +29,15 @@ export const StaticPassageRow = memo(
     meta,
     selected,
     tibetan,
+    tibetanLead,
   }: {
     controller: PassageStackController;
     meta: PassageMeta;
     selected?: boolean;
     /** The Tibetan source, in Compare; undefined outside it. */
     tibetan?: string;
+    /** The Compare column's top margin, from the passage's first block. */
+    tibetanLead?: string;
   }) => {
     const html = controller.getStaticHTML(meta.uuid);
     // Held by the string: React compares this object by identity, and a new
@@ -49,6 +52,7 @@ export const StaticPassageRow = memo(
         bookmarked={controller.showsBookmark(meta.uuid)}
         selected={selected}
         tibetan={tibetan}
+        tibetanLead={tibetanLead}
         references={controller.getReferences(meta.uuid)}
       >
         {html === null ? (

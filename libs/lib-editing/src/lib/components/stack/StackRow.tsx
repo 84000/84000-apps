@@ -10,6 +10,7 @@ import {
   PASSAGE_REFERENCES_CLASS,
 } from '../editor/extensions/Passage/classes';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
+import { COMPARE_LEAD_DEFAULT } from '../editor/extensions/Passage/passage-chrome';
 
 /**
  * The shared frame of one stack row: the label gutter and the content column.
@@ -26,6 +27,7 @@ export const StackRow = ({
   selected,
   references,
   tibetan,
+  tibetanLead = COMPARE_LEAD_DEFAULT,
   className,
   children,
 }: {
@@ -38,6 +40,8 @@ export const StackRow = ({
    * Compare, and empty for a passage with no alignment.
    */
   tibetan?: string;
+  /** The Tibetan column's top margin, lined up with the first block. */
+  tibetanLead?: string;
   bookmarked?: boolean;
   /** Part of a passage selection, which the stack draws itself. */
   selected?: boolean;
@@ -119,8 +123,8 @@ export const StackRow = ({
         // The column `PassageNode` draws in Compare, kept out of the editor.
         <div
           className={cn(
-            'passage-compare-source w-full md:mt-1',
-            !tibetan && 'hidden',
+            'passage-compare-source w-full',
+            tibetan ? tibetanLead : `${COMPARE_LEAD_DEFAULT} hidden`,
           )}
           contentEditable={false}
           data-compare-source=""

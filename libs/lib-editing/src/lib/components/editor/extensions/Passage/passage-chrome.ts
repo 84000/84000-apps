@@ -19,13 +19,17 @@ const selectionInCompareSource = () => {
 // copies the selected Tibetan text.
 export const handleCompareSourceClipboard = () => selectionInCompareSource();
 
-const compareLeadingSpaceClass = (node: PMNode): string => {
+/** The Compare column's top margin when the first block adds no space. */
+export const COMPARE_LEAD_DEFAULT = 'md:mt-1';
+
+/** The Compare column's top margin, lined up with the passage's first block. */
+export const compareLeadingSpaceClass = (node: PMNode): string => {
   const firstChild = node.content.firstChild;
   if (firstChild?.attrs.leadingSpace) return 'md:mt-5';
   if (['lineGroup', 'list'].includes(firstChild?.type.name || '')) {
     return 'md:mt-2';
   }
-  return 'md:mt-1';
+  return COMPARE_LEAD_DEFAULT;
 };
 
 // Imperatively populates the per-passage chrome (compare-mode Tibetan source and
@@ -69,7 +73,9 @@ export const syncPassageChrome = (
       if (csDiv.classList.contains('hidden') !== shouldHide) {
         csDiv.classList.toggle('hidden', shouldHide);
       }
-      const leading = tibetan ? compareLeadingSpaceClass(node) : 'md:mt-1';
+      const leading = tibetan
+        ? compareLeadingSpaceClass(node)
+        : COMPARE_LEAD_DEFAULT;
       for (const cls of ['md:mt-1', 'md:mt-2', 'md:mt-5']) {
         const want = cls === leading;
         if (csDiv.classList.contains(cls) !== want) {

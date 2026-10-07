@@ -278,6 +278,9 @@ export class PassageStackController {
   getStaticHTML = (uuid: string): string | null =>
     this.content.getStaticHTML(uuid);
 
+  /** The Compare column's top margin for a passage, from its first block. */
+  getCompareLead = (uuid: string): string => this.content.getCompareLead(uuid);
+
   /** Tell the controller which rows the virtualizer is drawing. */
   setVisibleRange = (range: SpineRange) =>
     this.hydration.setVisibleRange(range);
