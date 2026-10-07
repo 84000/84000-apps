@@ -3,6 +3,11 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useStackDeepLink } from './useStackDeepLink';
 import type { PassageStackController } from './PassageStackController';
 
+// jsdom has no CSS.escape; the ids here need no escaping.
+if (typeof CSS === 'undefined') {
+  (globalThis as { CSS?: unknown }).CSS = { escape: (value: string) => value };
+}
+
 const mockNavigation = {
   panels: {} as Record<string, { open: boolean; tab?: string; hash?: string }>,
   updatePanel: jest.fn(),
@@ -12,6 +17,8 @@ const mockNavigation = {
 jest.mock('@eightyfourthousand/lib-utils', () => ({
   highlightTextRange: jest.fn(() => true),
   clearTextRangeHighlight: jest.fn(),
+  // The fixtures name passages with short ids; these name something else.
+  isUuid: (value: string) => !['imprint', 'nowhere'].includes(value),
 }));
 
 const libUtils = jest.requireMock('@eightyfourthousand/lib-utils') as {
@@ -31,6 +38,7 @@ const controllerFor = (tab?: string) => {
       revealed.push(uuid);
       return true;
     }),
+    revealStart: jest.fn(async () => undefined),
   } as unknown as PassageStackController;
   return { controller, revealed };
 };
@@ -133,6 +141,31 @@ describe('useStackDeepLink with several stacks in a panel', () => {
     expect(front.revealed).toEqual([]);
   });
 
+  // `?main=open` with no tab shows Translation; Front must not take its hash.
+  it('reads a panel naming no tab as showing its default', async () => {
+    const front = controllerFor('front');
+    const translation = controllerFor('translation');
+    mockNavigation.panels = { main: { open: true, hash: 'p-1' } };
+
+    renderHook(() => useStackDeepLink(front.controller));
+    renderHook(() => useStackDeepLink(translation.controller));
+
+    await waitFor(() => expect(translation.revealed).toEqual(['p-1']));
+    expect(front.revealed).toEqual([]);
+  });
+
+  it('watches the main panel for the front tab', async () => {
+    const { controller, revealed } = controllerFor('front');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'front', hash: 'f-1' },
+      right: { open: true, tab: 'front', hash: 'n-1' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() => expect(revealed).toEqual(['f-1']));
+  });
+
   it('answers for Compare, which draws the translation stack', async () => {
     const { controller, revealed } = controllerFor('translation');
     mockNavigation.panels = {
@@ -161,7 +194,115 @@ describe('useStackDeepLink with several stacks in a panel', () => {
   });
 });
 
+// The table of contents links the imprint by name rather than by uuid.
+describe('useStackDeepLink to something that is not a passage', () => {
+  it('moves the run to its start and scrolls to the element', async () => {
+    const { controller, revealed } = controllerFor('front');
+    const imprint = document.createElement('div');
+    imprint.id = 'imprint';
+    imprint.getClientRects = () => [{}] as unknown as DOMRectList;
+    imprint.scrollIntoView = jest.fn();
+    document.body.append(imprint);
+    mockNavigation.panels = {
+      main: { open: true, tab: 'front', hash: 'imprint' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() => expect(imprint.scrollIntoView).toHaveBeenCalled());
+    expect(controller.revealStart).toHaveBeenCalled();
+    expect(revealed).toEqual([]);
+    expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'front', hash: undefined },
+    });
+    imprint.remove();
+  });
+
+  // Kept, it would stay in the URL for good: no stack can answer it.
+  it('clears the hash even when nothing carries that id', async () => {
+    jest.useFakeTimers();
+    const { controller, revealed } = controllerFor('front');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'front', hash: 'nowhere' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+    await jest.advanceTimersByTimeAsync(3000);
+
+    expect(revealed).toEqual([]);
+    expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'front', hash: undefined },
+    });
+    jest.useRealTimers();
+  });
+
+  // Only the front matter has anything drawn above its run.
+  it('clears it without moving the run of any other tab', async () => {
+    const { controller, revealed } = controllerFor('translation');
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'nowhere' },
+    };
+
+    renderHook(() => useStackDeepLink(controller));
+
+    await waitFor(() =>
+      expect(mockNavigation.updatePanel).toHaveBeenCalledWith({
+        name: 'main',
+        state: { open: true, tab: 'translation', hash: undefined },
+      }),
+    );
+    expect(controller.revealStart).not.toHaveBeenCalled();
+    expect(revealed).toEqual([]);
+  });
+});
+
 describe('useStackDeepLink highlight', () => {
+  // jsdom lays nothing out: count an element as drawn unless it sits in a
+  // hidden layout copy.
+  const getClientRects = Element.prototype.getClientRects;
+  beforeAll(() => {
+    Element.prototype.getClientRects = function (this: Element) {
+      return (this.closest('[hidden]') ? [] : [{}]) as unknown as DOMRectList;
+    };
+  });
+  afterAll(() => {
+    Element.prototype.getClientRects = getClientRects;
+  });
+
+  // The layout is drawn twice, and the hidden copy can come first.
+  it('paints into the copy of the row that is on show', async () => {
+    const { controller } = controllerFor('translation');
+    const copies = [true, false].map((hidden) => {
+      const host = document.createElement('div');
+      host.hidden = hidden;
+      host.innerHTML =
+        '<div id="p-3"><div class="passage is-editable"><p>text</p></div></div>';
+      document.body.append(host);
+      return host;
+    });
+    mockNavigation.highlight = { start: 0, end: 3 };
+    mockNavigation.panels = {
+      main: { open: true, tab: 'translation', hash: 'p-3' },
+    };
+    libUtils.highlightTextRange.mockClear();
+
+    renderHook(() => useStackDeepLink(controller, 'main'));
+
+    await waitFor(() => expect(libUtils.highlightTextRange).toHaveBeenCalled());
+    libUtils.highlightTextRange.mock.calls.forEach(([{ container }]) =>
+      expect(container).toBe(copies[1].querySelector('.passage')),
+    );
+    // Repainted into the same copy as the row settles.
+    copies[1].querySelector('p')?.append('!');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    libUtils.highlightTextRange.mock.calls.forEach(([{ container }]) =>
+      expect(container).toBe(copies[1].querySelector('.passage')),
+    );
+    copies.forEach((copy) => copy.remove());
+  });
+
   // The window is still moving right after a reveal, so the row's content can
   // be replaced (released, then hydrated again) after the first paint.
   it('repaints when the row it highlighted is redrawn', async () => {

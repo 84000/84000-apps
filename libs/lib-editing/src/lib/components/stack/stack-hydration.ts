@@ -4,6 +4,7 @@ import type {
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
+import type { BeyondPage } from './spine-feed';
 import type { PassageStackControllerOptions } from './types';
 
 /**
@@ -41,6 +42,7 @@ export class StackHydration {
   private earlierArmed = true;
   /** In-flight reveals, so a remount does not fetch the same window twice. */
   private revealing = new Map<string, Promise<boolean>>();
+  private revealingStart: Promise<void> | null = null;
 
   constructor(host: {
     work: WorkDocument;
@@ -132,6 +134,13 @@ export class StackHydration {
   /** Whether the work has passages the spine has not loaded yet. */
   hasMorePassages = () => this.spineFeed?.hasMore ?? false;
 
+  /** A page of this run's section past `cursor`. Null when it can't be read. */
+  readBeyond = async (
+    direction: 'before' | 'after',
+    cursor: string,
+  ): Promise<BeyondPage | null> =>
+    (await this.spineFeed?.readBeyond?.(direction, cursor)) ?? null;
+
   private async runHydration() {
     if (this.hydrating) {
       this.hydrationQueued = true;
@@ -201,6 +210,23 @@ export class StackHydration {
     // estimated, and measuring them moves it — by a screenful, on a deep link.
     this.scrollTo(index, { settle: true });
     return true;
+  }
+
+  /** Move the window back to the run's first passage, if it starts later. */
+  revealStart = (): Promise<void> => {
+    // Shared, as reveals are: each layout copy answers the same hash.
+    this.revealingStart ??= this.toStart().finally(() => {
+      this.revealingStart = null;
+    });
+    return this.revealingStart;
+  };
+
+  private async toStart() {
+    if (!this.spineFeed?.hasMoreBefore || !this.spineFeed.revealStart) return;
+    await this.spineFeed.revealStart();
+    this.invalidateOrder();
+    this.resetLive();
+    this.bump();
   }
 
   /** Hydrate one passage on demand — the path focus takes ahead of mounting. */

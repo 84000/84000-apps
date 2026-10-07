@@ -348,6 +348,44 @@ describe('saveStackWork', () => {
     ]);
   });
 
+  it('saves a front matter edit as front matter, placed within its tab', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'head', label: 's', type: 'summaryHeader', sort: 10 },
+      { uuid: 'sum', label: 's.1', type: 'summary', sort: 11 },
+      { uuid: 'body', label: '1.1', type: 'translation', sort: 170 },
+    ]);
+    ['head', 'sum', 'body'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    edit(work, 'head', 'Summary');
+    const split = work.split('sum', 1)?.uuid ?? '';
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    dataAccess.getPassageSorts.mockResolvedValue(new Map());
+
+    await saveStackWork(work);
+
+    const call = dataAccess.savePassagesWithDeletions.mock.calls[0][0];
+    const sent = Object.fromEntries(
+      call.passages.map(
+        (p: { uuid: string; type: string; label: string; sort: number }) => [
+          p.uuid,
+          { type: p.type, label: p.label, sort: p.sort },
+        ],
+      ),
+    );
+    expect(sent['head']).toEqual({
+      type: 'summaryHeader',
+      label: 's',
+      sort: 10,
+    });
+    expect(sent['sum']).toMatchObject({ type: 'summary', sort: 11 });
+    expect(sent[split]).toMatchObject({ type: 'summary' });
+    // Next to the front passage it was split from, not the body after it.
+    expect(call.anchors).toEqual({ [split]: { after: 'sum' } });
+  });
+
   // A spine loads its tabs in turn, so a lower-sorted tab can follow a
   // higher one. A new first passage there takes its own sort from the tab
   // before it, above where its anchor puts it, and reading back only from

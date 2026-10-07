@@ -1,5 +1,9 @@
+import type { JSONContent } from '@tiptap/core';
 import type { GraphQLClient } from 'graphql-request';
-import { getPassageMetaPage } from '@eightyfourthousand/client-graphql';
+import {
+  getPassageMetaPage,
+  getTranslationBlocks,
+} from '@eightyfourthousand/client-graphql';
 import type {
   Spine,
   SpineSeed,
@@ -21,8 +25,17 @@ type Meta = {
   uuid: string;
   label: string;
   type: string;
+  sort?: number;
   toh?: string;
   contentLength?: number;
+};
+
+/** A page of passage content read past one end of a run. */
+export type BeyondPage = {
+  /** In the work's order, whichever way the page was read. */
+  passages: { uuid: string; content: JSONContent[] }[];
+  /** Where the next page in the same direction starts, if there is one. */
+  next?: string;
 };
 
 /** What a feed reads, and where its passages sit in the spine. */
@@ -207,16 +220,136 @@ export class SpineFeed {
       direction: 'AROUND',
       type: this.section?.type,
     });
-    if (!page.metas.length) return -1;
+    // The server centres a filtered page on the cursor's *position*, so a
+    // passage from another section still comes back with a page of this one
+    // around it. Taking that would re-window this run for a passage it does
+    // not hold — and with two stacks in one panel, that is a run on show.
+    if (
+      !withoutDeleted(this.work.spine, page.metas).some((m) => m.uuid === uuid)
+    ) {
+      return -1;
+    }
 
     this.record(page.metas);
-    this.replaceRun(page.metas);
+    if (this.holdsUnsaved()) {
+      await this.bridgeTo(uuid, page.metas);
+      return this.work.spine.indexOf(uuid);
+    }
     this.startCursor = page.prevCursor;
     this.endCursor = page.nextCursor;
     this.noneBefore = !page.hasMoreBefore || !page.prevCursor;
     this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
 
     return this.work.spine.indexOf(uuid);
+  }
+
+  /**
+   * Whether this run holds a passage with changes the server does not have:
+   * an edited document, or a passage created here and not saved yet.
+   *
+   * Replacing such a run would take those passages out of the spine, and a
+   * passage out of the spine is out of the save — its edits stay in the store
+   * with nothing left to say where it goes, what it is labelled, or what sort
+   * it takes. A new passage's sort comes from its neighbours, so even keeping
+   * its own entry would not be enough without them.
+   */
+  private holdsUnsaved(): boolean {
+    const dirty = new Set(this.work.store.dirty());
+    return this.runEntries().some(
+      (entry) => entry.sort === undefined || dirty.has(entry.uuid),
+    );
+  }
+
+  private runEntries() {
+    const tab = this.section?.tab;
+    return tab ? this.work.spine.tab(tab) : this.work.spine.entries();
+  }
+
+  /**
+   * Reach a passage by growing the window toward it rather than replacing it,
+   * so unsaved passages keep their place, their neighbours and their sorts.
+   *
+   * Costs a page per hundred passages between the window and the target,
+   * which replacing exists to avoid. Paid only while there is something
+   * unsaved to keep, and the alternative is losing it from the save. Stops
+   * where the feed stops — at the run's end, or a failed page — so a target
+   * it cannot reach is not found rather than guessed at.
+   */
+  private async bridgeTo(uuid: string, around: Meta[]) {
+    const target = around.find((meta) => meta.uuid === uuid);
+    const first = this.runEntries().find((entry) => entry.sort !== undefined);
+    const backward =
+      target?.sort !== undefined &&
+      first?.sort !== undefined &&
+      target.sort < first.sort;
+    while (this.work.spine.indexOf(uuid) < 0) {
+      if (backward ? this.noneBefore : this.noneAfter) return;
+      await (backward ? this.extendBefore() : this.extend());
+    }
+  }
+
+  /**
+   * A page of this section's content past `cursor`, read without moving the
+   * window — for a caller that needs what lies outside it, such as the link
+   * an endnote follows. Null when the read failed.
+   */
+  async readBeyond(
+    direction: 'before' | 'after',
+    cursor: string,
+  ): Promise<BeyondPage | null> {
+    const page = await getTranslationBlocks({
+      client: this.client,
+      uuid: this.work.workUuid,
+      type: this.section?.type,
+      cursor,
+      maxPassages: NEXT_PAGE,
+      direction: direction === 'before' ? 'backward' : 'forward',
+    });
+    if (page.failed) return null;
+    const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+    const passages = blocks.flatMap((block) => {
+      const uuid = block.attrs?.uuid;
+      return uuid ? [{ uuid, content: block.content ?? [] }] : [];
+    });
+    const more =
+      direction === 'before' ? page.hasMoreBefore : page.hasMoreAfter;
+    const next = direction === 'before' ? page.prevCursor : page.nextCursor;
+    return { passages, ...(more && next ? { next } : {}) };
+  }
+
+  /**
+   * Rebuild the run from its first passage, when a reveal opened it part way.
+   *
+   * What a link to something above the run needs — the titles and imprint
+   * over the front matter are drawn only once it starts at the top.
+   */
+  async revealStart(): Promise<void> {
+    if (this.noneBefore) return;
+    // Grown back to the start instead, for the same reason `reveal` is.
+    if (this.holdsUnsaved()) {
+      while (!this.noneBefore) await this.extendBefore();
+      return;
+    }
+    const page = await getPassageMetaPage({
+      client: this.client,
+      uuid: this.work.workUuid,
+      limit: FIRST_PAGE,
+      type: this.section?.type,
+    });
+    if (!page.metas.length) return;
+
+    this.record(page.metas);
+    // Edited while the page was on its way.
+    if (this.holdsUnsaved()) {
+      while (!this.noneBefore) await this.extendBefore();
+      return;
+    }
+    this.startCursor = undefined;
+    this.endCursor = page.nextCursor;
+    this.noneBefore = true;
+    this.noneAfter = !page.hasMoreAfter || !page.nextCursor;
+    this.replaceRun(page.metas);
   }
 
   /**
@@ -287,9 +420,11 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
-    prependToSpine(this.work.spine, page.metas, this.section?.tab);
+    // Before the write: the spine notifies synchronously, and a view reading
+    // `hasMoreBefore` then must see the page it just got.
     this.startCursor = page.prevCursor;
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
+    prependToSpine(this.work.spine, page.metas, this.section?.tab);
 
     return this.work.spine.length;
   }

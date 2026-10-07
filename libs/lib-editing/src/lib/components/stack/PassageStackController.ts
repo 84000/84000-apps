@@ -289,11 +289,21 @@ export class PassageStackController {
   hasMorePassages = () => this.hydration.hasMorePassages();
 
   /**
+   * A page of this tab's passages past `cursor`, read without moving the
+   * window. Null when it can't be read.
+   */
+  readBeyond = (direction: 'before' | 'after', cursor: string) =>
+    this.hydration.readBeyond(direction, cursor);
+
+  /**
    * Scroll a passage into view, loading it into the spine if the window does
    * not hold it.
    */
   revealPassage = (uuid: string): Promise<boolean> =>
     this.hydration.revealPassage(uuid);
+
+  /** Move the window to the start of this tab's run, if it opens later. */
+  revealStart = (): Promise<void> => this.hydration.revealStart();
 
   // ------------------------------------------------------------- editors
 

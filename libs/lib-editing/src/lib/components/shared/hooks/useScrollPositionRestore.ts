@@ -127,20 +127,40 @@ function settleOnAnchor(container: HTMLElement, anchor: PassageAnchor) {
 }
 
 /** Tabs whose content contains passage elements. */
-const PASSAGE_TABS = ['translation', 'compare'];
+const PASSAGE_TABS = ['front', 'translation', 'compare'];
+
+/**
+ * One anchor per tab, keyed as scroll positions are. One slot would not do:
+ * leaving Front for Translation would overwrite the anchor Translation left.
+ */
+export type PassageAnchors = Partial<Record<string, PassageAnchor>>;
+
+/** Capture the anchor of a tab being left, if it is a passage tab. */
+export function recordPassageAnchor(
+  anchors: PassageAnchors,
+  tab: string,
+  container: HTMLElement,
+) {
+  if (!PASSAGE_TABS.includes(tab)) return;
+  anchors[normalizeTabKey(tab)] = capturePassageAnchor(container) ?? undefined;
+}
 
 export function usePassageAnchorRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
   panelId = 'main',
   hasHash = false,
-): RefObject<PassageAnchor | null> {
-  const anchorRef = useRef<PassageAnchor | null>(null);
+): RefObject<PassageAnchors> {
+  const anchorRef = useRef<PassageAnchors>({});
   const prevTabRef = useRef<string | undefined>(undefined);
   const stopSettlingRef = useRef<(() => void) | null>(null);
+  // Read by the tab effect, which must not re-run when only the hash changes.
+  // Declared first, so it is current by the time that effect runs.
+  const hasHashRef = useRef(hasHash);
 
   // A hash scrolls to its own target; settling would pull it back.
   useEffect(() => {
+    hasHashRef.current = hasHash;
     if (!hasHash) return;
     stopSettlingRef.current?.();
     stopSettlingRef.current = null;
@@ -152,20 +172,25 @@ export function usePassageAnchorRestore(
     stopSettlingRef.current?.();
     stopSettlingRef.current = null;
 
-    // Only restore when arriving at a passage tab (translation/compare).
-    // When switching to front/source, keep the anchor so it's available
-    // when the user eventually returns to a passage tab.
+    // Only restore when arriving at a passage tab, and with its own anchor.
     if (!PASSAGE_TABS.includes(activeTab || '')) return;
 
     const container = scrollContainerRef.current;
-    const anchor = anchorRef.current;
+    const key = normalizeTabKey(activeTab || '');
+    // Arriving by a link: it scrolls to its own target, and the anchor left
+    // here earlier would pull it back.
+    if (hasHashRef.current) {
+      delete anchorRef.current[key];
+      return;
+    }
+    const anchor = anchorRef.current[key];
     if (!container || !anchor) return;
 
     // Clear inside rAF, not here — useScrollPositionRestore reads the ref
     // synchronously (in its effect, which runs after this one) to decide
     // whether to skip its own restore.
     const frame = requestAnimationFrame(() => {
-      anchorRef.current = null;
+      delete anchorRef.current[key];
       if (!container.isConnected) return;
       if (!restorePassageAnchor(container, anchor)) {
         // A virtualized list draws only the rows near its scroll position, so
@@ -311,7 +336,7 @@ export function useScrollPositionRestore(
   scrollContainerRef: RefObject<HTMLElement | null>,
   activeTab: string | undefined,
   hasHash: boolean,
-  passageAnchorRef?: RefObject<PassageAnchor | null>,
+  passageAnchorRef?: RefObject<PassageAnchors>,
 ) {
   const prevTabRef = useRef<string | undefined>(undefined);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -348,7 +373,8 @@ export function useScrollPositionRestore(
     // tab — the passage anchor restore is more accurate (immune to scrollTop
     // clamping from hidden content) and will handle positioning instead.
     const passageAnchorWillRestore =
-      !!passageAnchorRef?.current && PASSAGE_TABS.includes(activeTab || '');
+      !!passageAnchorRef?.current?.[currentKey] &&
+      PASSAGE_TABS.includes(activeTab || '');
     if (
       prevKey !== currentKey &&
       !hasHash &&

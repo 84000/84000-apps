@@ -3,15 +3,18 @@ import { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 import { Schema } from '@tiptap/pm/model';
 
 import { SpineFeed } from './spine-feed';
+import { dirtyPassages } from './stack-save';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetaPage: jest.fn(),
+  getTranslationBlocks: jest.fn(),
 }));
 
 const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   getPassageMetaPage: jest.Mock;
+  getTranslationBlocks: jest.Mock;
 };
 
 /** Minimal schema — the feed touches the spine only, never a passage document. */
@@ -68,7 +71,72 @@ const aroundPage = (
   hasMoreAfter: after,
 });
 
-beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
+beforeEach(() => {
+  clientGraphql.getPassageMetaPage.mockReset();
+  clientGraphql.getTranslationBlocks.mockReset();
+});
+
+describe('SpineFeed.readBeyond', () => {
+  const FRONT = { type: '(introduction)', tab: 'front' };
+  const block = (uuid: string) => ({
+    type: 'passage',
+    attrs: { uuid },
+    content: [{ type: 'paragraph' }],
+  });
+
+  it('reads its own section past the cursor, leaving the spine alone', async () => {
+    const w = work();
+    const feed = new SpineFeed(w, client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [block('f1'), block('f2')],
+      prevCursor: 'f1',
+      hasMoreBefore: true,
+      hasMoreAfter: true,
+    });
+
+    expect(await feed.readBeyond('before', 'f3')).toEqual({
+      passages: [
+        { uuid: 'f1', content: [{ type: 'paragraph' }] },
+        { uuid: 'f2', content: [{ type: 'paragraph' }] },
+      ],
+      next: 'f1',
+    });
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: '(introduction)',
+        cursor: 'f3',
+        direction: 'backward',
+      }),
+    );
+    expect(w.spine.length).toBe(0);
+  });
+
+  it('says where nothing more lies that way', async () => {
+    const feed = new SpineFeed(work(), client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [block('f9')],
+      nextCursor: 'f9',
+      hasMoreBefore: true,
+      hasMoreAfter: false,
+    });
+
+    expect(await feed.readBeyond('after', 'f8')).toEqual({
+      passages: [{ uuid: 'f9', content: [{ type: 'paragraph' }] }],
+    });
+  });
+
+  it('tells a failed read from an empty one', async () => {
+    const feed = new SpineFeed(work(), client, FRONT);
+    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
+      blocks: [],
+      hasMoreBefore: false,
+      hasMoreAfter: false,
+      failed: true,
+    });
+
+    expect(await feed.readBeyond('before', 'f1')).toBeNull();
+  });
+});
 
 describe('SpineFeed content lengths', () => {
   it('records the content length of every passage a page reports', async () => {
@@ -266,6 +334,58 @@ describe('SpineFeed', () => {
       return { w, feed };
     };
 
+    // The titles over the front matter follow `hasMoreBefore`, read when the
+    // spine notifies.
+    it.each([
+      ['prepending the first page', (feed: SpineFeed) => feed.extendBefore()],
+      ['going back to the start', (feed: SpineFeed) => feed.revealStart()],
+    ])('reports no more before by the time %s lands', async (_, move) => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        aroundPage(497, 3, { before: false }),
+      );
+      const seen: boolean[] = [];
+      w.spine.observe(() => seen.push(feed.hasMoreBefore));
+
+      await move(feed);
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.at(-1)).toBe(false);
+    });
+
+    // A link to the imprint, over a front matter window opened part way.
+    it('goes back to the start of the run', async () => {
+      const { w, feed } = await revealed();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, true),
+      );
+
+      await feed.revealStart();
+
+      // No cursor: from the beginning.
+      expect(
+        clientGraphql.getPassageMetaPage.mock.calls[0][0].cursor,
+      ).toBeUndefined();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+      expect(feed.hasMoreBefore).toBe(false);
+      expect(feed.hasMore).toBe(true);
+    });
+
+    it('asks for nothing when the run already starts at the top', async () => {
+      const w = work();
+      const feed = new SpineFeed(w, client);
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(0, 2, false),
+      );
+      await feed.seed();
+      clientGraphql.getPassageMetaPage.mockReset();
+
+      await feed.revealStart();
+
+      expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+      expect(w.spine.uuids()).toEqual(['p0', 'p1']);
+    });
+
     it('prepends the previous page, keeping the order', async () => {
       const { w, feed } = await revealed();
       clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
@@ -353,6 +473,30 @@ describe('SpineFeed', () => {
       return { w, main, notes };
     };
 
+    it('keeps the front matter ahead of the body as both grow', async () => {
+      const w = work();
+      const front = new SpineFeed(w, client, {
+        type: '(introduction)',
+        tab: 'front',
+      });
+      const main = new SpineFeed(w, client, TRANSLATION);
+      const notes = new SpineFeed(w, client, ENDNOTES);
+      clientGraphql.getPassageMetaPage
+        .mockResolvedValueOnce(metaPage(0, 2, true, 'introduction', 'f'))
+        .mockResolvedValueOnce(metaPage(0, 2, true))
+        .mockResolvedValueOnce(metaPage(0, 1, false, 'endnotes', 'n'));
+      await front.seed();
+      await main.seed();
+      await notes.seed();
+
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+        metaPage(2, 1, false, 'introduction', 'f'),
+      );
+      await front.extend();
+
+      expect(w.spine.uuids()).toEqual(['f0', 'f1', 'f2', 'p0', 'p1', 'n0']);
+    });
+
     it('asks the server for its own section', async () => {
       const w = work();
       const notes = new SpineFeed(w, client, ENDNOTES);
@@ -400,6 +544,22 @@ describe('SpineFeed', () => {
       expect(w.spine.removedSinceSave()).toEqual([]);
     });
 
+    // A filtered `AROUND` centres on the cursor's position, so a passage of
+    // another section still returns a page of this one.
+    it('leaves its run alone when the passage is in another section', async () => {
+      const { w, main } = await both();
+      clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+        ...metaPage(40, 2, false),
+        prevCursor: 'p40',
+        hasMoreBefore: true,
+      });
+
+      expect(await main.reveal('n1-elsewhere')).toBe(-1);
+
+      expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n1']);
+      expect(main.hasMoreBefore).toBe(false);
+    });
+
     // Following a link reloaded a passage deleted but not saved yet, which
     // cancelled the deletion; after a merge its text was saved twice.
     it('does not bring back a passage deleted but not saved', async () => {
@@ -426,6 +586,204 @@ describe('SpineFeed', () => {
 
       expect(w.spine.uuids()).toEqual(['p0', 'p1', 'n0', 'n2']);
       expect(w.spine.removedSinceSave()).toEqual(['n1']);
+    });
+
+    // Moving the window used to replace the run, which took unsaved passages
+    // out of the spine and so out of the save: an edit and a split in Front
+    // vanished from Save after following a link to the Imprint.
+    describe('with unsaved passages in the run', () => {
+      const FRONT = { type: '(introduction)', tab: 'front' };
+
+      /** Front opened at f4 by a reveal, with f4 edited and split. */
+      const editedMidRun = async () => {
+        const w = work();
+        const front = new SpineFeed(w, client, FRONT);
+        clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+          ...metaPage(4, 2, true, 'introduction', 'f'),
+          prevCursor: 'f4',
+          hasMoreBefore: true,
+        });
+        await front.reveal('f4');
+        w.store.create('f4', [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'front text' }],
+          },
+        ]);
+        w.store.peek('f4')?.markSynced();
+        const split = w.split('f4', 4)?.uuid as string;
+        return { w, front, split };
+      };
+
+      /** What the save would send, by the fields a reload depends on. */
+      const payload = (w: ReturnType<typeof work>) =>
+        dirtyPassages(w).map(({ uuid, label, sort, type }) => ({
+          uuid,
+          label,
+          sort,
+          type,
+        }));
+
+      it('keeps an edit and a split saveable when moving to the start', async () => {
+        const { w, front, split } = await editedMidRun();
+        const before = payload(w);
+        expect(before.map((p) => p.uuid)).toEqual(['f4', split]);
+        clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+          ...metaPage(0, 4, false, 'introduction', 'f'),
+          hasMoreBefore: false,
+        });
+
+        await front.revealStart();
+
+        // Grown back to the start rather than replaced from it.
+        expect(clientGraphql.getPassageMetaPage).toHaveBeenLastCalledWith(
+          expect.objectContaining({ cursor: 'f4', direction: 'BACKWARD' }),
+        );
+        expect(w.spine.uuids()).toEqual([
+          'f0',
+          'f1',
+          'f2',
+          'f3',
+          'f4',
+          split,
+          'f5',
+        ]);
+        expect(front.hasMoreBefore).toBe(false);
+        // The same rows, labels and sorts: what a reload would read back.
+        expect(payload(w)).toEqual(before);
+      });
+
+      it('keeps an edit made while moving to the start', async () => {
+        const w = work();
+        const front = new SpineFeed(w, client, FRONT);
+        clientGraphql.getPassageMetaPage.mockResolvedValueOnce({
+          ...metaPage(4, 2, true, 'introduction', 'f'),
+          prevCursor: 'f4',
+          hasMoreBefore: true,
+        });
+        await front.reveal('f4');
+        w.store.create('f4', [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'front text' }],
+          },
+        ]);
+        w.store.peek('f4')?.markSynced();
+        let reply: (page: ReturnType<typeof metaPage>) => void = () =>
+          undefined;
+        clientGraphql.getPassageMetaPage
+          .mockImplementationOnce(
+            () =>
+              new Promise((resolve) => {
+                reply = resolve;
+              }),
+          )
+          .mockResolvedValueOnce({
+            ...metaPage(0, 4, false, 'introduction', 'f'),
+            hasMoreBefore: false,
+          });
+
+        // Clean when the move starts, edited before its page arrives.
+        const move = front.revealStart();
+        const split = w.split('f4', 4)?.uuid as string;
+        const before = payload(w);
+        expect(before.map((p) => p.uuid)).toEqual(['f4', split]);
+        reply(metaPage(0, 2, true, 'introduction', 'f'));
+        await move;
+
+        expect(w.spine.uuids()).toEqual([
+          'f0',
+          'f1',
+          'f2',
+          'f3',
+          'f4',
+          split,
+          'f5',
+        ]);
+        expect(payload(w)).toEqual(before);
+      });
+
+      it('keeps them when revealing a passage past the window', async () => {
+        const { w, front, split } = await editedMidRun();
+        const before = payload(w);
+        clientGraphql.getPassageMetaPage
+          .mockResolvedValueOnce({
+            ...metaPage(9, 2, true, 'introduction', 'f'),
+            prevCursor: 'f9',
+            hasMoreBefore: true,
+          })
+          .mockResolvedValueOnce(metaPage(6, 2, true, 'introduction', 'f'))
+          .mockResolvedValueOnce(metaPage(8, 2, true, 'introduction', 'f'));
+
+        expect(await front.reveal('f9')).toBe(6);
+
+        expect(w.spine.uuids()).toEqual([
+          'f4',
+          split,
+          'f5',
+          'f6',
+          'f7',
+          'f8',
+          'f9',
+        ]);
+        expect(payload(w)).toEqual(before);
+      });
+
+      it('grows backward toward a passage before the window', async () => {
+        const { w, front, split } = await editedMidRun();
+        clientGraphql.getPassageMetaPage
+          .mockResolvedValueOnce({
+            ...metaPage(1, 2, true, 'introduction', 'f'),
+            prevCursor: 'f1',
+            hasMoreBefore: true,
+          })
+          .mockResolvedValueOnce({
+            ...metaPage(2, 2, true, 'introduction', 'f'),
+            prevCursor: 'f2',
+            hasMoreBefore: true,
+          });
+
+        expect(await front.reveal('f2')).toBe(0);
+
+        expect(w.spine.uuids()).toEqual(['f2', 'f3', 'f4', split, 'f5']);
+        expect(front.hasMoreBefore).toBe(true);
+      });
+
+      it('does not find a passage it cannot reach, and keeps them', async () => {
+        const { w, front, split } = await editedMidRun();
+        const before = payload(w);
+        clientGraphql.getPassageMetaPage
+          .mockResolvedValueOnce({
+            ...metaPage(9, 2, true, 'introduction', 'f'),
+            prevCursor: 'f9',
+            hasMoreBefore: true,
+          })
+          // A failed page: no passages, nothing more either side.
+          .mockResolvedValueOnce({
+            metas: [],
+            hasMoreAfter: false,
+            hasMoreBefore: false,
+          });
+
+        expect(await front.reveal('f9')).toBe(-1);
+
+        expect(w.spine.uuids()).toEqual(['f4', split, 'f5']);
+        expect(payload(w)).toEqual(before);
+      });
+
+      it('still replaces the run once the changes are saved', async () => {
+        const { w, front, split } = await editedMidRun();
+        w.store.peek('f4')?.markSynced();
+        w.store.peek(split)?.markSynced();
+        w.spine.adoptSorts(new Map([[split, 9]]));
+        clientGraphql.getPassageMetaPage.mockResolvedValueOnce(
+          metaPage(0, 2, true, 'introduction', 'f'),
+        );
+
+        await front.revealStart();
+
+        expect(w.spine.uuids()).toEqual(['f0', 'f1']);
+      });
     });
   });
 });

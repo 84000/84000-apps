@@ -2,6 +2,7 @@ import { Editor } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import type {
+  PassageLoader,
   SpineSeed,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
@@ -10,6 +11,7 @@ import { createStackEndnote, deleteStackEndnote } from './stack-endnotes';
 import { buildStackSchemaExtensions } from './stack-extensions';
 import { createStackWorkDocument } from './stack-work';
 import type { PassageStackController } from './PassageStackController';
+import type { BeyondPage } from './spine-feed';
 import type { StackWork } from './StackWorkProvider';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
@@ -57,11 +59,40 @@ const SPINE: SpineSeed[] = [
   { uuid: 'n2', label: 'n.2', type: 'endnotes' },
 ];
 
+/** Content past an end of a tab's run, as the server would serve it. */
+type Beyond = (
+  direction: 'before' | 'after',
+  cursor: string,
+) => BeyondPage | null;
+
 /**
  * 1.1 links n.1; 1.2 has none. The endnotes n.1 and n.2 follow the body.
  */
-const build = (spine: SpineSeed[] = SPINE) => {
-  const work = createStackWorkDocument({ workUuid: 'w1' });
+const build = (
+  spine: SpineSeed[] = SPINE,
+  /** Tabs whose runs the stack has not loaded to an end. */
+  partial: Record<string, { before?: boolean; after?: boolean }> = {},
+  {
+    server = {},
+    beyond = {},
+  }: {
+    /** What the store hydrates a passage it doesn't hold from. */
+    server?: Record<string, JSONContent[]>;
+    /** What each tab reads past an end of its run. */
+    beyond?: Record<string, Beyond>;
+  } = {},
+) => {
+  const loader = {
+    load: jest.fn(async (_: string, uuids: string[]) => ({
+      snapshots: new Map(
+        uuids
+          .filter((uuid) => server[uuid])
+          .map((uuid) => [uuid, { uuid, content: server[uuid] }]),
+      ),
+      report: {},
+    })),
+  } as unknown as PassageLoader;
+  const work = createStackWorkDocument({ workUuid: 'w1', loader });
   work.seedSpine(spine);
   work.store.create('b1', [
     para('b1p', 'first', [{ endNote: 'n1', label: 'n.1' }]),
@@ -77,11 +108,25 @@ const build = (spine: SpineSeed[] = SPINE) => {
     revealPassage: jest.fn(async () => true),
     removePassage: jest.fn((uuid: string) => work.remove([uuid])),
   } as unknown as PassageStackController;
+  const views = new Map<string, PassageStackController>();
+  const viewOf = (tab: string) => {
+    if (!views.has(tab)) {
+      views.set(tab, {
+        hasEarlierPassages: () => !!partial[tab]?.before,
+        hasMorePassages: () => !!partial[tab]?.after,
+        readBeyond: jest.fn(
+          async (direction: 'before' | 'after', cursor: string) =>
+            beyond[tab]?.(direction, cursor) ?? null,
+        ),
+      } as unknown as PassageStackController);
+    }
+    return views.get(tab) as PassageStackController;
+  };
   const stack: StackWork = {
     work,
-    controllerFor: (tab) => (tab === 'endnotes' ? endnotes : null),
+    controllerFor: (tab) => (tab === 'endnotes' ? endnotes : viewOf(tab)),
   };
-  return { work, stack, endnotes };
+  return { work, stack, endnotes, loader, viewOf };
 };
 
 /** An editor over a passage's content, inside its row, with a selection. */
@@ -183,17 +228,219 @@ describe('createStackEndnote', () => {
     editor.destroy();
   });
 
-  it('refuses when a passage before it is not held', async () => {
-    const { work, stack } = build();
+  describe('with front matter before the body', () => {
+    const WITH_FRONT: SpineSeed[] = [
+      { uuid: 'f1', label: 'i.1', type: 'introduction', sort: 1 },
+      { uuid: 'b2', label: '1.1', type: 'translation', sort: 2 },
+      { uuid: 'n1', label: 'n.1', type: 'endnotes', sort: 3 },
+      { uuid: 'n2', label: 'n.2', type: 'endnotes', sort: 4 },
+    ];
+    const LINKS_N1 = [para('f1p', 'intro', [{ endNote: 'n1', label: 'n.1' }])];
+    /** f1 links n.1; the body's first passage, b2, links nothing. */
+    const withFront = (
+      partial = {},
+      options: Parameters<typeof build>[2] = {},
+    ) => {
+      const built = build(WITH_FRONT, partial, options);
+      built.work.store.create('f1', LINKS_N1);
+      built.work.store.peek('f1')?.markSynced();
+      return built;
+    };
+    /** One page past a run's end, and nothing after it. */
+    const page = (
+      ...passages: { uuid: string; content: JSONContent[] }[]
+    ): BeyondPage => ({ passages });
+
+    it('follows a link in the front matter', async () => {
+      const { work, stack } = withFront();
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+      const uuid = (result as { uuid: string }).uuid;
+      expect(work.spine.uuids()).toEqual(['f1', 'b2', 'n1', uuid, 'n2']);
+      editor.destroy();
+    });
+
+    // A Front tab never shown holds no documents, which is no reason to
+    // refuse: they are loaded to look.
+    it('loads front passages it does not hold to look for a link', async () => {
+      const { work, stack, loader } = build(
+        WITH_FRONT,
+        {},
+        {
+          server: { f1: [para('f1p', 'plain intro')] },
+        },
+      );
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(loader.load).toHaveBeenCalledWith('w1', ['f1']);
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.1' });
+      const uuid = (result as { uuid: string }).uuid;
+      expect(work.spine.uuids()).toEqual(['f1', 'b2', uuid, 'n1', 'n2']);
+      editor.destroy();
+    });
+
+    it('follows a link in a front passage it loaded', async () => {
+      const { work, stack } = build(
+        WITH_FRONT,
+        {},
+        {
+          server: { f1: LINKS_N1 },
+        },
+      );
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+      editor.destroy();
+    });
+
+    it('refuses when a passage before it cannot be loaded', async () => {
+      const { work, stack } = build(WITH_FRONT);
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({
+        error: expect.stringMatching(/Could not read/),
+      });
+      expect(work.spine.length).toBe(4);
+      editor.destroy();
+    });
+
+    it('reads past the end of a front run not loaded to its end', async () => {
+      const { work, stack, viewOf } = withFront(
+        { front: { after: true } },
+        {
+          beyond: {
+            front: () =>
+              page(
+                { uuid: 'f8', content: [para('f8p', 'later intro')] },
+                {
+                  uuid: 'f9',
+                  content: [
+                    para('f9p', 'last intro', [
+                      { endNote: 'n2', label: 'n.2' },
+                    ]),
+                  ],
+                },
+                { uuid: 'f10', content: [para('f10p', 'closing')] },
+              ),
+          },
+        },
+      );
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(viewOf('front').readBeyond).toHaveBeenCalledWith('after', 'f1');
+      // After n.2, which the front's last passages link.
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.3' });
+      editor.destroy();
+    });
+
+    it('reads before a body run that starts mid-work, then on into front', async () => {
+      const { work, stack, viewOf } = withFront(
+        { translation: { before: true } },
+        {
+          beyond: {
+            translation: () =>
+              page({ uuid: 'b1', content: [para('b1p', 'no links here')] }),
+          },
+        },
+      );
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(viewOf('translation').readBeyond).toHaveBeenCalledWith(
+        'before',
+        'b2',
+      );
+      // Nothing linked before the body's window: f1's link to n.1 decides.
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+      editor.destroy();
+    });
+
+    // A held copy may carry a link the server does not have yet.
+    it('prefers a held copy of a passage it reads from the server', async () => {
+      const { work, stack } = withFront(
+        { front: { after: true } },
+        {
+          beyond: {
+            front: () => page({ uuid: 'f9', content: [para('f9p', 'saved')] }),
+          },
+        },
+      );
+      work.store.create('f9', [
+        para('f9p', 'edited', [{ endNote: 'n2', label: 'n.2' }]),
+      ]);
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.3' });
+      editor.destroy();
+    });
+
+    it.each([
+      ['the front run is not loaded to its end', { front: { after: true } }],
+      ['the body run starts mid-work', { translation: { before: true } }],
+    ])('refuses when it cannot read past %s', async (_, partial) => {
+      const { work, stack } = withFront(partial);
+      const editor = editorFor(work, 'b2', 1, 7);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      expect(result).toEqual({
+        error: expect.stringMatching(/Could not read/),
+      });
+      expect(work.spine.length).toBe(4);
+      editor.destroy();
+    });
+
+    it('reads before a front run that starts mid-work', async () => {
+      const { work, stack, viewOf } = withFront(
+        { front: { before: true } },
+        { beyond: { front: () => page() } },
+      );
+      work.store.create('f0', [para('f0p', 'plain front text')]);
+      work.spine.insert({ uuid: 'f0', label: 'i.0', type: 'introduction' }, 0, {
+        renumber: false,
+      });
+      // The first front passage held, with no link before the selection.
+      const editor = editorFor(work, 'f0', 1, 6);
+
+      const result = await createStackEndnote({ stack, editor });
+
+      // From the run's first saved passage: f0 is new, so not on the server.
+      expect(viewOf('front').readBeyond).toHaveBeenCalledWith('before', 'f1');
+      expect(result).toEqual({ uuid: expect.any(String), label: 'n.1' });
+      editor.destroy();
+    });
+  });
+
+  it('loads a body passage before it that it does not hold', async () => {
+    const { work, stack } = build(
+      SPINE,
+      {},
+      {
+        server: {
+          b1: [para('b1p', 'first', [{ endNote: 'n1', label: 'n.1' }])],
+        },
+      },
+    );
     work.store.release('b1');
     const editor = editorFor(work, 'b2', 1, 7);
 
     const result = await createStackEndnote({ stack, editor });
 
-    expect(result).toEqual({
-      error: expect.stringMatching(/Jump to the note/),
-    });
-    expect(work.spine.length).toBe(4);
+    expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
     editor.destroy();
   });
 });

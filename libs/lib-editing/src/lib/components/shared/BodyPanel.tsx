@@ -20,9 +20,9 @@ import { Imprint } from './Imprint';
 import { TranslationPlaceholder } from './TranslationPlaceholder';
 import { TitleDetails } from './titles';
 import {
-  capturePassageAnchor,
   findScrollParent,
   usePassageAnchorRestore,
+  recordPassageAnchor,
   recordScrollPosition,
   useScrollPositionRestore,
 } from './hooks/useScrollPositionRestore';
@@ -121,17 +121,16 @@ export const BodyPanel = ({
       value={safeTab}
       onValueChange={(tabName) => {
         const tab = tabName as 'translation' | 'source' | 'compare' | 'front';
-        // Capture a passage anchor when leaving translation or compare.
-        // These tabs contain passage elements whose UUID lets us realign
-        // scroll position after the tab switch — immune to the scrollTop
-        // clamping that happens when hidden content changes scroll height.
+        // Capture a passage anchor when leaving a tab of passages. Their
+        // UUIDs let us realign scroll position after the tab switch — immune
+        // to the scrollTop clamping that happens when hidden content changes
+        // scroll height.
         const current = safeTab;
         if (scrollContainerRef.current) {
           recordScrollPosition('main', current, scrollContainerRef.current);
-        }
-        const passageTabs = ['translation', 'compare'];
-        if (scrollContainerRef.current && passageTabs.includes(current)) {
-          passageAnchorRef.current = capturePassageAnchor(
+          recordPassageAnchor(
+            passageAnchorRef.current,
+            current,
             scrollContainerRef.current,
           );
         }

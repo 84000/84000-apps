@@ -81,6 +81,8 @@ export type TranslationBlocksPage = {
   prevCursor?: string;
   hasMoreAfter: boolean;
   hasMoreBefore: boolean;
+  /** Set when the read failed, which an empty page alone can't tell apart. */
+  failed?: boolean;
 };
 
 /**
@@ -153,6 +155,7 @@ export async function getTranslationBlocks({
       blocks: [],
       hasMoreAfter: false,
       hasMoreBefore: false,
+      failed: true,
     };
   }
 }

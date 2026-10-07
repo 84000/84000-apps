@@ -1,9 +1,14 @@
-import type { Editor } from '@tiptap/core';
-import type { Node as PMNode } from '@tiptap/pm/model';
+import type { Editor, JSONContent } from '@tiptap/core';
+import { Node as PMNode } from '@tiptap/pm/model';
+import type { EditorState } from '@tiptap/pm/state';
 import { v4 as uuidv4 } from 'uuid';
-import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
+import {
+  incrementLabel,
+  type PassageDoc,
+} from '@eightyfourthousand/lib-doc-model';
 
 import { endNoteLinkTransaction } from '../editor/extensions/EndNoteLink/EndNoteLinkMark';
+import type { PassageStackController } from './PassageStackController';
 import type { StackWork } from './StackWorkProvider';
 
 const ENDNOTES_TAB = 'endnotes';
@@ -57,21 +62,125 @@ const slotEnd = ({ work }: StackWork, uuid: string) => {
 
 type Placement = { after: string } | { before: string } | { error: string };
 
+const UNKNOWN: Placement = {
+  error: 'Jump to the note just before this position, then add the new note.',
+};
+
+const UNREADABLE: Placement = {
+  error: 'Could not read the passages before this position. Try again.',
+};
+
+/** How many unheld passages to hydrate at a time while searching back. */
+const HYDRATE_CHUNK = 50;
+
+/** A link found, none in what was searched, or the search could not tell. */
+type Found = string | undefined | null;
+
+/** The last link in passages the server served, preferring held copies. */
+const lastLinkIn = (
+  { work }: StackWork,
+  passages: { uuid: string; content: JSONContent[] }[],
+): Found => {
+  const deleted = new Set(work.spine.removedSinceSave());
+  for (let i = passages.length - 1; i >= 0; i--) {
+    const { uuid, content } = passages[i];
+    if (deleted.has(uuid)) continue;
+    let node: PMNode;
+    try {
+      node =
+        work.store.peek(uuid)?.toNode() ??
+        PMNode.fromJSON(work.schema, { type: 'doc', content });
+    } catch {
+      return null;
+    }
+    const link = lastLinkBefore(node);
+    if (link) return link;
+  }
+  return undefined;
+};
+
+/** The last link in a run's loaded entries, hydrating any it doesn't hold. */
+const lastLinkInLoaded = async (
+  { work }: StackWork,
+  entries: Entry[],
+): Promise<Found> => {
+  for (let end = entries.length; end > 0; end -= HYDRATE_CHUNK) {
+    const chunk = entries.slice(Math.max(0, end - HYDRATE_CHUNK), end);
+    const missing = chunk
+      .map((entry) => entry.uuid)
+      .filter((uuid) => !work.store.has(uuid));
+    let loaded: PassageDoc[] = [];
+    try {
+      if (missing.length) loaded = await work.store.hydrateMany(missing);
+    } catch {
+      return null;
+    }
+    const byUuid = new Map(loaded.map((doc) => [doc.uuid, doc]));
+    for (let i = chunk.length - 1; i >= 0; i--) {
+      const doc = work.store.peek(chunk[i].uuid) ?? byUuid.get(chunk[i].uuid);
+      if (!doc) return null;
+      const link = lastLinkBefore(doc.toNode());
+      if (link) return link;
+    }
+  }
+  return undefined;
+};
+
+/** The last link in the passages before a run's first saved one. */
+const lastLinkInHead = async (
+  stack: StackWork,
+  view: PassageStackController,
+  from: string,
+): Promise<Found> => {
+  let cursor: string | undefined = from;
+  while (cursor) {
+    const page = await view.readBeyond('before', cursor);
+    if (!page) return null;
+    const link = lastLinkIn(stack, page.passages);
+    if (link !== undefined) return link;
+    cursor = page.next;
+  }
+  return undefined;
+};
+
+/** The last link in the passages after a run's last saved one. */
+const lastLinkInTail = async (
+  stack: StackWork,
+  view: PassageStackController,
+  from: string,
+): Promise<Found> => {
+  let last: string | undefined;
+  let cursor: string | undefined = from;
+  while (cursor) {
+    const page = await view.readBeyond('after', cursor);
+    if (!page) return null;
+    const link = lastLinkIn(stack, page.passages);
+    if (link === null) return null;
+    last = link ?? last;
+    cursor = page.next;
+  }
+  return last;
+};
+
+const isSaved = (entry: Entry) => entry.sort !== undefined;
+
 /**
  * Where a new endnote for the selection goes: next to the one whose link sits
- * nearest before it.
+ * nearest before it in reading order, which runs back through earlier tabs —
+ * front matter links notes too.
  *
- * Earlier passages are searched while the stack holds them. Past one it
- * doesn't hold, the nearest link is unknown, and guessing would give the note
- * a number another note already has.
+ * What the stack holds is read first, since it may hold unsaved links. The
+ * rest is loaded as the search reaches it: passages in the spine through the
+ * store, and those past an end of a run straight from the server. A read that
+ * fails leaves the nearest link unknown, and guessing would give the note a
+ * number another note already has.
  */
-const placementFor = (
+const placementFor = async (
   stack: StackWork,
-  editor: Editor,
+  state: EditorState,
   passageUuid: string,
-): Placement => {
+): Promise<Placement> => {
   const { work } = stack;
-  const { state } = editor;
   const { from, to } = state.selection;
 
   // A link already ending at the selection's end: the new note follows its
@@ -87,32 +196,52 @@ const placementFor = (
 
   const entries = work.spine.entries();
   const index = entries.findIndex((entry) => entry.uuid === passageUuid);
-  const tab = entries[index]?.tab;
-  for (let i = index - 1; i >= 0 && entries[i].tab === tab; i--) {
-    const doc = work.store.peek(entries[i].uuid);
-    if (!doc) {
-      return {
-        error:
-          'Jump to the note just before this position, then add the new note.',
-      };
+  if (index < 0) return UNKNOWN;
+
+  // Each tab's run, nearest first. The spine holds runs, not the work between
+  // them, so a run may be missing passages past either end.
+  for (let at = index; at >= 0; ) {
+    const { tab } = entries[at];
+    let start = at;
+    while (start > 0 && entries[start - 1].tab === tab) start--;
+    let stop = at + 1;
+    while (stop < entries.length && entries[stop].tab === tab) stop++;
+    const run = entries.slice(start, stop);
+    const own = at === index;
+    const view = stack.controllerFor(tab);
+
+    const searches: (() => Promise<Found>)[] = [];
+    if (!own && view?.hasMorePassages()) {
+      const last = run.filter(isSaved).at(-1);
+      searches.push(async () =>
+        last ? lastLinkInTail(stack, view, last.uuid) : null,
+      );
     }
-    const link = lastLinkBefore(doc.toNode());
-    if (link) return { after: link };
+    searches.push(() =>
+      lastLinkInLoaded(stack, own ? entries.slice(start, index) : run),
+    );
+    if (view?.hasEarlierPassages()) {
+      const first = run.find(isSaved);
+      searches.push(async () =>
+        first ? lastLinkInHead(stack, view, first.uuid) : null,
+      );
+    }
+    for (const search of searches) {
+      const found = await search();
+      if (found === null) return UNREADABLE;
+      if (found) return { after: found };
+    }
+    at = start - 1;
   }
 
-  // No link before it in the section: the first note, if the notes the stack
+  // No link before it in the work: the first note, if the notes the stack
   // holds start at the true first one.
-  const first = entries.find(
+  const firstNote = entries.find(
     (entry) => entry.tab === ENDNOTES_TAB && entry.type === 'endnotes',
   );
-  if (first && first.label !== 'n.1') {
-    return {
-      error:
-        'Jump to the note just before this position, then add the new note.',
-    };
-  }
-  if (!first) return { error: 'Open the Notes panel to add an endnote.' };
-  return { before: first.uuid };
+  if (firstNote && firstNote.label !== 'n.1') return UNKNOWN;
+  if (!firstNote) return { error: 'Open the Notes panel to add an endnote.' };
+  return { before: firstNote.uuid };
 };
 
 /**
@@ -140,7 +269,7 @@ export const createStackEndnote = async ({
 
   // Read before any await: the editor's selection can move meanwhile.
   const initial = editor.state;
-  const placement = placementFor(stack, editor, passageUuid);
+  const placement = await placementFor(stack, initial, passageUuid);
   if ('error' in placement) return placement;
 
   const anchor = 'after' in placement ? placement.after : placement.before;
