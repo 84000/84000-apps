@@ -337,6 +337,44 @@ describe('PolicyEditor', () => {
     expect(source.read).toHaveBeenCalledTimes(1);
   });
 
+  it('locks restore while there are unsaved changes, and says why', async () => {
+    const { source } = setup();
+    await source.write({ name: 'a', content: 'A\n' });
+    await openPolicy('a');
+    const [revision] = await source.history('a');
+    type('Mine\n');
+    fireEvent.click(
+      await screen.findByRole('button', { name: stamp(revision) }),
+    );
+    await screen.findByRole('region', { name: 'Revision' });
+
+    const restore = screen.getByRole('button', { name: 'Restore' });
+    expect(restore).toHaveProperty('disabled', true);
+    const status = screen.getByRole('status');
+    expect(status.textContent).toBe('Save or discard your changes first.');
+    expect(restore.getAttribute('aria-describedby')).toBe(status.id);
+  });
+
+  it('unlocks the list when edit is revoked while there are unsaved changes', async () => {
+    const { rerender, source } = setup();
+    await openPolicy('a');
+    type('Mine\n');
+    const other = screen.getByRole('button', { name: 'b' });
+    expect(other).toHaveProperty('disabled', true);
+
+    rerender(
+      <PolicyEditor
+        source={source}
+        permissions={{ read: true, edit: false, admin: false }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'b' })).toHaveProperty(
+      'disabled',
+      false,
+    );
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
   it('shows a missing policy as not found', async () => {
     setup({ initialName: 'missing' });
     expect(await screen.findByText('Policy not found.')).toBeTruthy();
