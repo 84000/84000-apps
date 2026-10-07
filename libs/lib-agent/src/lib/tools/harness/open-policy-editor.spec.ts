@@ -19,6 +19,7 @@ import {
 jest.mock('@eightyfourthousand/data-access', () => ({
   hasPermission: jest.fn(),
   isValidPolicyName: jest.fn(),
+  policyName: jest.requireActual('@eightyfourthousand/data-access').policyName,
 }));
 
 const mockedHasPermission = jest.mocked(hasPermission);
@@ -93,6 +94,14 @@ describe('open-policy-editor', () => {
       permissions: { read: true, edit: false, admin: false },
       message: expect.stringContaining('on `shared-policies/terminology`'),
     });
+  });
+
+  it('drops a trailing .md from the name it echoes', async () => {
+    const body = parse(await call({ name: 'shared-policies/terminology.md' }));
+
+    expect(body.name).toBe('shared-policies/terminology');
+    expect(body.message).toContain('on `shared-policies/terminology`.');
+    expect(body.message).not.toContain('terminology.md');
   });
 
   it('opens on the list without a name', async () => {

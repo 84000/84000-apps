@@ -3,6 +3,7 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import {
   hasPermission,
   isValidPolicyName,
+  policyName,
 } from '@eightyfourthousand/data-access';
 import type { McpResourceDefinition, McpToolDefinition } from '../../types';
 import { jsonResult } from '../read/util';
@@ -34,7 +35,7 @@ const OPEN_POLICY_EDITOR_TOOL_META = Object.freeze({
   'ui/resourceUri': POLICY_EDITOR_RESOURCE_URI,
 });
 
-const FALLBACK_NOTE = `Saves the user makes there are reported back to this conversation when the client supports it, best-effort: ${POLICY_TOOL_NAMES.read} before acting on a policy. If nothing appeared, the client does not display MCP Apps (Claude Code in a terminal, for one): say so, suggest opening it from Claude Desktop or Cowork, and fall back to ${POLICY_TOOL_NAMES.read} and ${POLICY_TOOL_NAMES.write}.`;
+const FALLBACK_NOTE = `Saves the user makes there are reported back to this conversation when the client supports it, best-effort: ${POLICY_TOOL_NAMES.read} before acting on a policy. If the user says nothing appeared, the client does not display MCP Apps (Claude Code in a terminal, for one): say so, suggest opening it from Claude Desktop or Cowork, and fall back to ${POLICY_TOOL_NAMES.read} and ${POLICY_TOOL_NAMES.write}.`;
 
 /**
  * The policy editor MCP App, as the `ui://` resource `open-policy-editor`
@@ -57,8 +58,11 @@ export function createPolicyEditorResource(
 /**
  * Model-visible tool opening the policy editor MCP App, on the named policy or
  * the list. Requires `harness.read`. Returns, as JSON text the app parses,
- * `{ name?, permissions: { read, edit, admin }, message }`; it reads no
- * policy content, which the app fetches itself.
+ * `{ name?, permissions: { read, edit, admin }, message }`, with `name`
+ * normalized to drop a trailing `.md`; it reads no policy content, which the
+ * app fetches itself. Without `harness.read` it returns
+ * `{ ok: false, reason: 'forbidden', message }` as the content text, with
+ * `isError` set — the app mounts on error results too, so it must handle both.
  *
  * Not part of {@link createHarnessTools}: only a server that also serves
  * {@link createPolicyEditorResource} should list it.
@@ -90,8 +94,9 @@ export function createOpenPolicyEditorTool(
         hasPermission({ client, permission: 'harness.admin' }),
       ]);
       const valid = name !== undefined && isValidPolicyName(name);
-      const opened = valid
-        ? `The policy editor is open for the user on \`${name}\`.`
+      const normalized = valid ? policyName(name) : undefined;
+      const opened = normalized
+        ? `The policy editor is open for the user on \`${normalized}\`.`
         : 'The policy editor is open for the user on the list of policies.';
       const invalid =
         name !== undefined && !valid
@@ -102,7 +107,7 @@ export function createOpenPolicyEditorTool(
         : ' The user lacks harness.edit, so the editor is read-only for them.';
 
       return jsonResult({
-        ...(valid && { name }),
+        ...(normalized && { name: normalized }),
         permissions: { read: true, edit, admin },
         message: `${opened}${invalid}${readOnly} ${FALLBACK_NOTE}`,
       });
