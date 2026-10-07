@@ -50,6 +50,7 @@ export const EditorBackMatterPage = () => {
   const perPassageDocs = usePerPassageDocs();
   // The stack reads these tabs itself, so the panel need not wait on them.
   const stacked = perPassageDocs.ready && perPassageDocs.enabled;
+  const unstacked = perPassageDocs.ready && !perPassageDocs.enabled;
   const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
   const [abbreviations, setAbbreviations] =
     useState<TranslationEditorContent>();
@@ -117,9 +118,10 @@ export const EditorBackMatterPage = () => {
     };
   }, [work.uuid, stacked]);
 
-  // Under the stack the panel only needs to know which tabs to show.
+  // Under the stack the panel only needs to know which tabs to show. Asked
+  // while the flag is unresolved too, so the stack need not wait on it.
   useEffect(() => {
-    if (!stacked) return;
+    if (unstacked) return;
     let cancelled = false;
     (async () => {
       const [endnotes, abbreviations] = await Promise.all([
@@ -132,7 +134,7 @@ export const EditorBackMatterPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [work.uuid, stacked]);
+  }, [work.uuid, unstacked]);
 
   const renderTranslation = useCallback(
     ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>

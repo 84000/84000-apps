@@ -41,12 +41,13 @@ const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as { getPassageMetaPage: jest.Mock; getTranslationBlocks: jest.Mock };
 
-/** A work whose abbreviations number `count`, and with no endnotes. */
-const withAbbreviations = (count: number) => {
+/** A work whose abbreviations and endnotes number as given. */
+const withAbbreviations = (count: number, notes = 0) => {
   const of = (type: string) =>
-    type === 'abbreviations'
-      ? Array.from({ length: count }, (_, i) => `a${i}`)
-      : [];
+    Array.from(
+      { length: type === 'abbreviations' ? count : notes },
+      (_, i) => `${type}${i}`,
+    );
   clientGraphql.getTranslationBlocks.mockImplementation(
     async ({ type }: { type: string }) => ({
       blocks: of(type).map((uuid) => ({ type: 'passage', attrs: { uuid } })),
@@ -124,6 +125,36 @@ describe('EditorBackMatterPage', () => {
     expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'endnotes', limit: 1 }),
     );
+  });
+
+  it('shows Notes under the flag for a work with endnotes', async () => {
+    mockFlag.enabled = true;
+    mockFlag.ready = true;
+    withAbbreviations(0, 4);
+    render(<EditorBackMatterPage />);
+
+    expect(await screen.findByRole('tab', { name: 'Notes' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Abbr' })).toBeNull();
+  });
+
+  it('shows the tabs the probe finds once the flag settles on', async () => {
+    withAbbreviations(2);
+    // The page's content says there are no abbreviations; the probe, which
+    // reads what the stack reads, says there are.
+    clientGraphql.getTranslationBlocks.mockResolvedValue({
+      blocks: [],
+      hasMoreAfter: false,
+    });
+    const { rerender } = render(<EditorBackMatterPage />);
+    await waitFor(() =>
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalled(),
+    );
+
+    mockFlag.enabled = true;
+    mockFlag.ready = true;
+    rerender(<EditorBackMatterPage />);
+
+    expect(await screen.findByRole('tab', { name: 'Abbr' })).toBeTruthy();
   });
 
   it('shows the Abbr tab from its content without the flag', async () => {
