@@ -157,6 +157,24 @@ describe('EditorBackMatterPage', () => {
     expect(await screen.findByRole('tab', { name: 'Abbr' })).toBeTruthy();
   });
 
+  it('ignores the probe once the flag settles off', async () => {
+    withAbbreviations(2);
+    clientGraphql.getTranslationBlocks.mockResolvedValue({
+      blocks: [],
+      hasMoreAfter: false,
+    });
+    const { rerender } = render(<EditorBackMatterPage />);
+    await waitFor(() =>
+      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalled(),
+    );
+
+    mockFlag.ready = true;
+    rerender(<EditorBackMatterPage />);
+
+    await screen.findByRole('tablist');
+    expect(screen.queryByRole('tab', { name: 'Abbr' })).toBeNull();
+  });
+
   it('shows the Abbr tab from its content without the flag', async () => {
     mockFlag.ready = true;
     withAbbreviations(2);
