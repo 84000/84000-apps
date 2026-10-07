@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/design-system",
-  "version": "2026.9.0",
+  "version": "2026.10.0",
   "description": "Shared React UI components and theme assets for 84000 applications.",
   "private": false,
   "repository": {
@@ -51,6 +51,11 @@
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "type": "module",
   "main": "./index.js",

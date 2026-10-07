@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-editing",
-  "version": "2026.9.0",
+  "version": "2026.10.0",
   "description": "Shared editing and reader components for 84000 translation workflows.",
   "private": false,
   "repository": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "@eightyfourthousand/client-graphql": "^2026.9.0",
     "@eightyfourthousand/data-access": "^2026.9.0",
-    "@eightyfourthousand/design-system": "^2026.9.0",
+    "@eightyfourthousand/design-system": "^2026.10.0",
     "@eightyfourthousand/lib-doc-model": "^2026.9.0",
     "@eightyfourthousand/lib-instr": "^2026.9.0",
     "@eightyfourthousand/lib-search": "^2026.9.0",
@@ -61,6 +61,11 @@
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "type": "module",
   "main": "./index.js",
