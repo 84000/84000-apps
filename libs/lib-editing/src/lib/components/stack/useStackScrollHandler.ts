@@ -15,6 +15,20 @@ const SETTLE_QUIET_FRAMES = 20;
 /** Hard stop, however much keeps arriving. */
 const SETTLE_TIMEOUT_MS = 5000;
 
+/**
+ * The scroll margin a revealed row keeps above it: the row's own
+ * `scroll-mt-20`, or that class's 5rem when the row isn't drawn yet.
+ */
+const revealMargin = (scroller: HTMLElement | null, uuid?: string) => {
+  const row = Array.from(
+    scroller?.querySelectorAll<HTMLElement>('[data-stack-passage]') ?? [],
+  ).find((element) => element.dataset['stackPassage'] === uuid);
+  const drawn = row ? parseFloat(getComputedStyle(row).scrollMarginTop) : NaN;
+  if (!Number.isNaN(drawn)) return { margin: drawn, drawn: true };
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return { margin: 5 * (Number.isNaN(rem) ? 16 : rem), drawn: false };
+};
+
 /** Install the controller's scroll handler: plain, or held until settled. */
 export const useStackScrollHandler = (
   controller: PassageStackController,
@@ -43,6 +57,18 @@ export const useStackScrollHandler = (
       // scrolls: holding a position against someone trying to leave it is
       // worse than the drift.
       const uuid = controller.getOrder()[index];
+      // Keep the row's scroll margin above it, as `scrollIntoView` does for
+      // the paginated editor, rather than pinning it to the panel's edge.
+      // Read until the row is drawn, then kept: the loop runs every frame.
+      let margin: { margin: number; drawn: boolean } | null = null;
+      const scrollToReveal = (at: number) => {
+        const item = virtualizer.measurementsCache[at];
+        if (!item) return virtualizer.scrollToIndex(at, { align: 'start' });
+        if (!margin?.drawn) margin = revealMargin(scroller, uuid);
+        virtualizer.scrollToOffset(item.start - margin.margin, {
+          align: 'start',
+        });
+      };
       const deadline = performance.now() + SETTLE_TIMEOUT_MS;
       let quiet = 0;
       let lastOffset: number | null = null;
@@ -68,7 +94,7 @@ export const useStackScrollHandler = (
         // so the number this started with can name a different passage.
         const at = uuid ? controller.getOrder().indexOf(uuid) : index;
         if (at < 0) return release();
-        virtualizer.scrollToIndex(at, { align: 'start' });
+        scrollToReveal(at);
 
         const offset = scroller?.scrollTop ?? null;
         const version = controller.getVersion();
