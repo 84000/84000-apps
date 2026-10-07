@@ -141,8 +141,8 @@ Abbreviation entries are plain paragraphs whose key is an inline
 `abbreviation` node, so the design system's
 `.paragraph:has(> [type='abbreviation'])` rule draws them in two columns in both
 tiers. Abbreviations carry no label, so a new entry or header is given none.
-The panel still reads the abbreviations at mount, as the paginated editor does,
-to know whether to show the tab at all.
+Under the stack the panel reads neither tab's content: it asks only whether
+each has any passages, to know whether to show it.
 
 Tabs in one panel share its scroller, and an inactive tab stays mounted, only
 hidden. A hidden stack still reads the shown tab's scroll offset, so it reports

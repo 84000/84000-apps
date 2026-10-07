@@ -30,6 +30,8 @@ export const BackMatterPanel = ({
   abbreviations,
   endnotesHasMore,
   abbreviationsHasMore,
+  hasEndnotes = endnotes.length > 0,
+  hasAbbreviations = abbreviations.length > 0,
   isEditor = false,
   withAttestations = false,
   renderTranslation,
@@ -41,6 +43,10 @@ export const BackMatterPanel = ({
   abbreviations: TranslationEditorContent;
   endnotesHasMore?: boolean;
   abbreviationsHasMore?: boolean;
+  /** Whether to show Notes, when that is known without its content. */
+  hasEndnotes?: boolean;
+  /** Whether to show Abbr, when that is known without its content. */
+  hasAbbreviations?: boolean;
   isEditor?: boolean;
   withAttestations?: boolean;
   renderTranslation: (
@@ -99,14 +105,14 @@ export const BackMatterPanel = ({
             isMobile && 'ps-12',
           )}
         >
-          {endnotes.length > 0 && (
+          {hasEndnotes && (
             <TabsTrigger value="endnotes">Notes</TabsTrigger>
           )}
           {hasGlossary && <TabsTrigger value="glossary">Glossary</TabsTrigger>}
           {bibliography.length > 0 && (
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
-          {abbreviations.length > 0 && (
+          {hasAbbreviations && (
             <TabsTrigger value="abbreviations">Abbr</TabsTrigger>
           )}
         </TabsList>
@@ -118,7 +124,7 @@ export const BackMatterPanel = ({
           data-panel="right"
         >
           <div className="rounded ps-10 pe-4 max-w-readable mx-auto">
-            {endnotes.length > 0 && (
+            {hasEndnotes && (
               <TabsContent
                 value="endnotes"
                 forceMount
@@ -157,7 +163,7 @@ export const BackMatterPanel = ({
                 <BibliographyList content={bibliography} />
               </TabsContent>
             )}
-            {abbreviations.length > 0 && (
+            {hasAbbreviations && (
               <TabsContent
                 value="abbreviations"
                 forceMount
