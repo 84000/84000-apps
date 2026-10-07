@@ -312,9 +312,15 @@ export const PolicyEditor = ({
     }
   };
 
+  /** Whether `permissions` allow the action now, whatever dialog is open. */
+  const allowed = (action: Action) =>
+    action === 'save' || action === 'restore'
+      ? permissions.edit
+      : permissions.admin;
+
   const save = async (expectedVersion = doc?.version) => {
     // Never write an unchanged document, or one the editor cannot reproduce.
-    if (!doc || !draft.dirty || !draft.exact || busy) {
+    if (!doc || !draft.dirty || !draft.exact || busy || !allowed('save')) {
       return;
     }
     const { name } = doc;
@@ -350,7 +356,7 @@ export const PolicyEditor = ({
     content: string,
     expectedVersion = doc?.version,
   ) => {
-    if (!doc || busy) {
+    if (!doc || busy || !allowed('restore')) {
       return;
     }
     const { name } = doc;
@@ -367,7 +373,7 @@ export const PolicyEditor = ({
   };
 
   const remove = async (expectedVersion = doc?.version) => {
-    if (!doc || busy) {
+    if (!doc || busy || !allowed('delete')) {
       return;
     }
     const { name, content } = doc;
@@ -397,7 +403,7 @@ export const PolicyEditor = ({
   };
 
   const rename = async (to: string, expectedVersion = doc?.version) => {
-    if (!doc || busy) {
+    if (!doc || busy || !allowed('rename')) {
       return;
     }
     const { name: from, content } = doc;
@@ -578,7 +584,9 @@ export const PolicyEditor = ({
               <MarkdownEditor
                 key={generation}
                 source={doc.content}
-                editable={permissions.edit}
+                // A delete, rename or restore replaces the document, so typing
+                // during one would be lost; typing during a save is kept.
+                editable={permissions.edit && (!busy || busy === 'save')}
                 onChange={(markdown, dirty, exact) =>
                   setDraft({ markdown, dirty, exact })
                 }
@@ -627,7 +635,7 @@ export const PolicyEditor = ({
               selectedId={viewing?.revision.path}
               onSelect={viewRevision}
             />
-            {conflict && (
+            {conflict && allowed(conflict.action) && (
               <ConflictDialog
                 // Overwriting a save writes the draft as it is now.
                 conflict={
@@ -647,7 +655,7 @@ export const PolicyEditor = ({
               />
             )}
             <Dialog
-              open={confirming === 'delete'}
+              open={confirming === 'delete' && permissions.admin}
               onOpenChange={(open) =>
                 !open && !busy && setConfirming(undefined)
               }
@@ -677,12 +685,12 @@ export const PolicyEditor = ({
               </DialogContent>
             </Dialog>
             <Dialog
-              open={confirming === 'rename'}
+              open={confirming === 'rename' && permissions.admin}
               onOpenChange={(open) =>
                 !open && !busy && setConfirming(undefined)
               }
             >
-              {confirming === 'rename' && (
+              {confirming === 'rename' && permissions.admin && (
                 <RenameDialogContent
                   from={doc.name}
                   busy={busy === 'rename'}
@@ -803,7 +811,8 @@ const RenameDialogContent = ({
           <Input
             id={inputId}
             name="name"
-            defaultValue={from}
+            // Input keeps its own state, starting from `value`.
+            value={from}
             autoComplete="off"
             aria-invalid={Boolean(message)}
             aria-describedby={message && `${inputId}-error`}

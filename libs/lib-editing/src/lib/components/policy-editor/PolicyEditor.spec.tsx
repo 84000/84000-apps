@@ -451,7 +451,7 @@ describe('PolicyEditor', () => {
   });
 
   it('reopens the rename dialog when a repeated rename finds the name taken', async () => {
-    const { source, dialog } = await openDialog('Rename');
+    const { source } = await openDialog('Rename');
     await source.write({ name: 'a', content: 'Theirs\n' });
     renameTo('x/c');
     const conflict = await screen.findByRole('dialog', {
@@ -466,8 +466,77 @@ describe('PolicyEditor', () => {
       'A policy with that name already exists.',
     );
     expect(screen.getByRole('dialog', { name: 'Rename a' })).toBeTruthy();
-    expect(dialog).toBeTruthy();
   });
+
+  it('starts the rename field with the current name', async () => {
+    await openDialog('Rename');
+    expect((screen.getByLabelText('New name') as HTMLInputElement).value).toBe(
+      'a',
+    );
+  });
+
+  it.each(['Delete', 'Rename'] as const)(
+    'locks the editor while a repeated %s is in flight',
+    async (action) => {
+      const { source } = await openDialog(action);
+      await source.write({ name: 'a', content: 'Theirs\n' });
+      if (action === 'Rename') {
+        renameTo('x/a');
+      } else {
+        click('Delete');
+      }
+      const conflict = await screen.findByRole('dialog', {
+        name: 'This policy changed after you opened it',
+      });
+      const held = deferred<{ ok: true; archivedPath: string }>();
+      jest
+        .mocked(action === 'Delete' ? source.delete : source.rename)
+        .mockReturnValueOnce(held.promise);
+      fireEvent.click(
+        within(conflict).getByRole('button', { name: `${action} anyway` }),
+      );
+
+      await waitFor(() =>
+        expect(screen.getByLabelText('Policy')).toHaveProperty(
+          'readOnly',
+          true,
+        ),
+      );
+      await held.resolve({ ok: true, archivedPath: 'p' });
+    },
+  );
+
+  it('closes a conflict dialog and refuses its overwrite when edit is revoked', async () => {
+    const { source, rerender } = await conflictOnSave();
+    rerender(
+      <PolicyEditor
+        source={source}
+        permissions={{ read: true, edit: false, admin: false }}
+        initialName="a"
+      />,
+    );
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(source.write).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['Delete', 'Rename'] as const)(
+    'closes the %s dialog and refuses it when admin is revoked',
+    async (action) => {
+      const { source, rerender } = await openDialog(action);
+      rerender(
+        <PolicyEditor
+          source={source}
+          permissions={{ read: true, edit: true, admin: false }}
+          initialName="a"
+        />,
+      );
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(source.delete).not.toHaveBeenCalled();
+      expect(source.rename).not.toHaveBeenCalled();
+    },
+  );
 
   it('forgets a refused rename name when the dialog is reopened', async () => {
     await openDialog('Rename');
