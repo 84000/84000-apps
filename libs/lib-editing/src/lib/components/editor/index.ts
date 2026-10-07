@@ -1,4 +1,5 @@
 export * from './BlockEditor';
+export * from './EditorCore';
 export * from './EditorBackMatterPage';
 export * from './EditorBodyPage';
 export * from './EditorLeftPanelPage';
