@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { webcrypto } from 'node:crypto';
 import { TextEncoder } from 'node:util';
 import type { MarkdownEditorProps } from '../editor/markdown/MarkdownEditor';
@@ -33,7 +39,11 @@ Object.assign(globalThis, { TextEncoder });
 Object.defineProperty(globalThis.crypto, 'subtle', { value: webcrypto.subtle });
 
 const setup = (props: Partial<PolicyEditorProps> = {}) => {
-  const source = createMemoryPolicySource({ a: 'Old\n', b: 'B\n' });
+  const source = createMemoryPolicySource({
+    a: 'Old\n',
+    b: 'B\n',
+    'x/b': 'XB\n',
+  });
   for (const key of Object.keys(source) as (keyof PolicySource)[]) {
     jest.spyOn(source, key);
   }
@@ -73,6 +83,46 @@ const text = () =>
   (screen.getByLabelText('Policy') as HTMLTextAreaElement).value;
 
 const saveButton = () => screen.getByRole('button', { name: 'Save' });
+
+const click = (name: string) =>
+  fireEvent.click(screen.getByRole('button', { name }));
+
+const admin = { read: true, edit: true, admin: true };
+
+/** Saves "Mine" over policy `a` after someone else saved "Theirs". */
+const conflictOnSave = async () => {
+  const view = setup();
+  await openPolicy('a');
+  await view.source.write({ name: 'a', content: 'Theirs\n' });
+  type('Mine\n');
+  fireEvent.click(saveButton());
+  const dialog = await screen.findByRole('dialog', {
+    name: 'This policy changed after you opened it',
+  });
+  return { ...view, dialog };
+};
+
+/** Opens policy `a` as an admin and opens the `action` dialog. */
+const openDialog = async (
+  action: 'Delete' | 'Rename',
+  props: Partial<PolicyEditorProps> = {},
+) => {
+  const view = setup({ permissions: admin, ...props });
+  await openPolicy('a');
+  click(action);
+  const dialog = await screen.findByRole('dialog', {
+    name: action === 'Delete' ? 'Delete a?' : 'Rename a',
+  });
+  return { ...view, dialog };
+};
+
+const renameTo = (name: string) => {
+  fireEvent.input(screen.getByLabelText('New name'), {
+    target: { value: name },
+  });
+  // The header's Rename button is hidden behind the modal dialog.
+  click('Rename');
+};
 
 /** Opens policy `a`, which has one archived revision ("Old"), and shows that revision. */
 const viewRevision = async (props: Partial<PolicyEditorProps> = {}) => {
@@ -196,19 +246,193 @@ describe('PolicyEditor', () => {
     );
   });
 
-  it('refuses a stale save and reloads the current policy', async () => {
-    const { source } = setup();
-    await openPolicy('a');
-    await source.write({ name: 'a', content: 'Theirs\n' });
+  it('shows a stale save as a diff and reloads the stored policy', async () => {
+    const { dialog } = await conflictOnSave();
+    expect(dialog.querySelector('del')?.textContent).toContain('Theirs');
+    expect(dialog.querySelector('ins')?.textContent).toContain('Mine');
 
-    type('Mine\n');
-    fireEvent.click(saveButton());
-    await screen.findByText(/changed after you opened it/);
-    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reload' }));
 
     await waitFor(() => expect(text()).toBe('Theirs\n'));
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(saveButton()).toHaveProperty('disabled', true);
+  });
+
+  it('overwrites a stale save against the stored version', async () => {
+    const { source, onSaved, dialog } = await conflictOnSave();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Overwrite' }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(source.write).toHaveBeenLastCalledWith({
+      name: 'a',
+      content: 'Mine\n',
+      expectedVersion: await policyVersion('Theirs\n'),
+    });
+    expect((await source.read('a'))?.content).toBe('Mine\n');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('overwrites a stale restore with the revision', async () => {
+    const { source, revision } = await viewRevision();
+    await source.write({ name: 'a', content: 'Theirs\n' });
+    click('Restore');
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.querySelector('ins')?.textContent).toContain('Old');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Overwrite' }));
+
+    await waitFor(() => expect(text()).toBe('Old\n'));
+    expect(source.restore).toHaveBeenLastCalledWith({
+      name: 'a',
+      revisionPath: revision.path,
+      expectedVersion: await policyVersion('Theirs\n'),
+    });
+  });
+
+  it('keeps the draft when the conflict dialog is dismissed', async () => {
+    const { source } = await conflictOnSave();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(text()).toBe('Mine\n');
+    expect(source.write).toHaveBeenCalledTimes(2);
+  });
+
+  it('deletes after confirming, clearing the selection', async () => {
+    const onDeleted = jest.fn();
+    const { source, dialog } = await openDialog('Delete', { onDeleted });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Select a policy to open it.')).toBeTruthy();
+    expect(source.delete).toHaveBeenCalledWith({
+      name: 'a',
+      expectedVersion: await policyVersion('Old\n'),
+    });
+    expect(onDeleted).toHaveBeenCalledWith({
+      name: 'a',
+      archivedPath: expect.any(String),
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'a' })).toBeNull(),
+    );
+  });
+
+  it('cancels a delete with Escape', async () => {
+    const { source } = await openDialog('Delete');
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(source.delete).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'a' })).toBeTruthy();
+  });
+
+  it.each([
+    ['forbidden', 'You do not have permission to do that.'],
+    ['not-found', 'This policy no longer exists.'],
+    ['error', 'Something went wrong. boom'],
+  ] as const)('shows a failed delete (%s)', async (reason, message) => {
+    const { source, dialog } = await openDialog('Delete');
+    jest
+      .mocked(source.delete)
+      .mockResolvedValueOnce({ ok: false, reason, message: 'boom' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(message);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'a' })).toBeTruthy();
+  });
+
+  it.each(['Delete', 'Rename'] as const)(
+    'repeats a refused %s over the stored version',
+    async (action) => {
+      const { source, dialog } = await openDialog(action);
+      await source.write({ name: 'a', content: 'Theirs\n' });
+      if (action === 'Rename') {
+        renameTo('x/a');
+      } else {
+        fireEvent.click(within(dialog).getByRole('button', { name: action }));
+      }
+      const conflict = await screen.findByRole('dialog', {
+        name: 'This policy changed after you opened it',
+      });
+      fireEvent.click(
+        within(conflict).getByRole('button', { name: `${action} anyway` }),
+      );
+
+      await waitFor(async () => expect(await source.read('a')).toBeUndefined());
+      const method = action === 'Delete' ? source.delete : source.rename;
+      expect(method).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          expectedVersion: await policyVersion('Theirs\n'),
+        }),
+      );
+    },
+  );
+
+  it('renames to a valid, free name and opens it', async () => {
+    const onRenamed = jest.fn();
+    const { source } = await openDialog('Rename', { onRenamed });
+
+    renameTo('not a name');
+    expect(screen.getByRole('alert').textContent).toMatch(/^Use folder\/name/);
+    renameTo('a');
+    expect(screen.getByRole('alert').textContent).toMatch(/^Use folder\/name/);
+    expect(source.rename).not.toHaveBeenCalled();
+
+    renameTo('x/b');
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'A policy with that name already exists.',
+    );
+    expect(screen.getByRole('dialog', { name: 'Rename a' })).toBeTruthy();
+
+    renameTo('x/a');
+    expect(await screen.findByRole('heading', { name: 'x/a' })).toBeTruthy();
+    expect(source.rename).toHaveBeenLastCalledWith({
+      from: 'a',
+      to: 'x/a',
+      expectedVersion: await policyVersion('Old\n'),
+    });
+    expect(onRenamed).toHaveBeenCalledWith({
+      from: 'a',
+      to: 'x/a',
+      archivedPath: expect.any(String),
+    });
+    expect(await screen.findByRole('button', { name: 'x/a' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'a' })).toBeNull();
+  });
+
+  it('drops a delete that settles after another source opens', async () => {
+    const { source, dialog, rerender } = await openDialog('Delete');
+    const removal = deferred<{ ok: true; archivedPath: string }>();
+    jest.mocked(source.delete).mockReturnValueOnce(removal.promise);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    rerender(
+      <PolicyEditor
+        source={createMemoryPolicySource({ c: 'C\n' })}
+        permissions={admin}
+        initialName="c"
+      />,
+    );
+    await screen.findByRole('heading', { name: 'c' });
+    await removal.resolve({ ok: true, archivedPath: 'p' });
+    expect(screen.getByRole('heading', { name: 'c' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'c' })).toBeTruthy();
+  });
+
+  it('refuses to delete or rename while there are unsaved changes', async () => {
+    setup({ permissions: admin });
+    await openPolicy('a');
+    type('Mine\n');
+    for (const name of ['Delete', 'Rename']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveProperty('disabled', true);
+      expect(button.getAttribute('aria-describedby')).toBe(
+        screen.getByRole('status').id,
+      );
+    }
   });
 
   it.each([
@@ -389,20 +613,34 @@ describe('PolicyEditor', () => {
   });
 
   it.each([
-    ['read', { read: true, edit: false, admin: false }, false],
-    ['edit', { read: true, edit: true, admin: false }, true],
-    ['admin without edit', { read: true, edit: false, admin: true }, false],
-  ])('renders only the controls %s allows', async (_, permissions, canEdit) => {
-    await viewRevision({ permissions });
+    ['read', { read: true, edit: false, admin: false }, false, false],
+    ['edit', { read: true, edit: true, admin: false }, true, false],
+    [
+      'admin without edit',
+      { read: true, edit: false, admin: true },
+      false,
+      true,
+    ],
+    ['admin', admin, true, true],
+  ])(
+    'renders only the controls %s allows',
+    async (_, permissions, canEdit, canAdmin) => {
+      await viewRevision({ permissions });
 
-    for (const control of ['Save', 'Restore']) {
-      expect(screen.queryByRole('button', { name: control }) !== null).toBe(
-        canEdit,
+      for (const [control, allowed] of [
+        ['Save', canEdit],
+        ['Restore', canEdit],
+        ['Delete', canAdmin],
+        ['Rename', canAdmin],
+      ] as const) {
+        expect(screen.queryByRole('button', { name: control }) !== null).toBe(
+          allowed,
+        );
+      }
+      expect(screen.getByLabelText('Policy')).toHaveProperty(
+        'readOnly',
+        !canEdit,
       );
-    }
-    expect(screen.getByLabelText('Policy')).toHaveProperty(
-      'readOnly',
-      !canEdit,
-    );
-  });
+    },
+  );
 });
