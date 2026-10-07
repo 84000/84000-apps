@@ -44,32 +44,24 @@ export class HydrationWindows {
     const mine = this.windowUuids(range);
     this.windows.set(key, { uuids: mine, keep: new Set(options.keep ?? []) });
 
-    // The union of every open window. Views onto one work scroll
-    // independently — the editor draws a tab per panel — so releasing what
-    // this one has left behind would release what another one is drawing.
-    // A window can name passages that have since left the spine, as when
-    // another view jumped and its section's run was swapped. No source can
-    // place those, so they are neither asked for nor kept.
     const placed = new Set(this.spine.uuids());
-    const wanted = new Set<string>();
-    this.windows.forEach((window) => {
-      window.uuids.forEach((uuid) => {
-        if (placed.has(uuid)) wanted.add(uuid);
-      });
-      window.keep.forEach((uuid) => wanted.add(uuid));
-    });
-
     const docs = await this.store.hydrateMany(
-      [...wanted].filter((uuid) => placed.has(uuid) || this.store.has(uuid)),
+      [...this.wanted(placed)].filter(
+        (uuid) => placed.has(uuid) || this.store.has(uuid),
+      ),
     );
-    this.store.releaseOutside(wanted);
+    // Taken again after the load: another view may have opened or moved its
+    // window meanwhile, and what it loaded is not this call's to release.
+    this.store.releaseOutside(this.wanted(new Set(this.spine.uuids())));
     this.notify();
 
-    // Only this window's documents come back: a consumer attaches its own
-    // bookkeeping to what it draws, and two of them observing one document
-    // would record every edit to it twice.
+    // Only this window's documents come back, and only those still held: a
+    // consumer attaches its own bookkeeping to what it draws, and two of them
+    // observing one document would record every edit to it twice.
     const drawn = new Set(mine);
-    return docs.filter((doc) => drawn.has(doc.uuid));
+    return docs.filter(
+      (doc) => drawn.has(doc.uuid) && this.store.has(doc.uuid),
+    );
   }
 
   /** Forget a window, so what only it held can be released. */
@@ -80,6 +72,25 @@ export class HydrationWindows {
   /** Forget every window. */
   clear() {
     this.windows.clear();
+  }
+
+  /**
+   * The union of every open window. Views onto one work scroll independently
+   * — the editor draws a tab per panel — so releasing what one has left
+   * behind would release what another is drawing. A window can name passages
+   * that have since left the spine, as when another view jumped and its
+   * section's run was swapped. No source can place those, so they are neither
+   * asked for nor kept.
+   */
+  private wanted(placed: Set<string>): Set<string> {
+    const wanted = new Set<string>();
+    this.windows.forEach((window) => {
+      window.uuids.forEach((uuid) => {
+        if (placed.has(uuid)) wanted.add(uuid);
+      });
+      window.keep.forEach((uuid) => wanted.add(uuid));
+    });
+    return wanted;
   }
 
   private windowUuids(range: SpineRange): string[] {

@@ -19,6 +19,7 @@ import {
   StackPassageMenu,
   type StackPassageMenuTarget,
 } from './StackPassageMenu';
+import { StackEnd } from './StackEnd';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
@@ -335,6 +336,7 @@ export const PassageStack = ({
           );
         })}
       </div>
+      {order.length > 0 && <StackEnd hasMore={controller.hasMorePassages()} />}
     </div>
   );
 };

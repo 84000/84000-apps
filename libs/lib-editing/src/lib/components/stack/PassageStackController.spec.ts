@@ -135,6 +135,51 @@ describe('PassageStackController spine view', () => {
   });
 });
 
+describe('PassageStackController end of the work', () => {
+  // The stack's footer switches from placeholders to the end-of-work mark on
+  // `hasMorePassages`, so learning the work has ended must re-render it even
+  // when the last page added nothing.
+  it('notifies when a page ends the work without growing the spine', async () => {
+    const work = createStackWorkDocument({ workUuid: 'work-1' });
+    work.seedSpine([seed('p0', '1', 'text').meta]);
+    let hasMore = true;
+    let land!: () => void;
+    const page = new Promise<number>((resolve) => {
+      land = () => {
+        hasMore = false;
+        resolve(1);
+      };
+    });
+    let started = false;
+    const controller = new PassageStackController({
+      work,
+      spineFeed: {
+        get hasMore() {
+          return hasMore;
+        },
+        maybeExtend: () => {
+          if (started) return false;
+          started = true;
+          return true;
+        },
+        extend: () => page,
+      },
+    });
+    const listener = jest.fn();
+    controller.subscribe(listener);
+
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+    listener.mockClear();
+
+    land();
+    await flush();
+
+    expect(controller.hasMorePassages()).toBe(false);
+    expect(listener).toHaveBeenCalled();
+  });
+});
+
 describe('PassageStackController toh scoping', () => {
   /** A spine holding one unscoped row and one per toh, as toh145's does. */
   const scoped = () => {

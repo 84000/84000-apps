@@ -149,6 +149,32 @@ describe('StaticPassageRow', () => {
     expect(container.querySelector('.passage.is-editable')).not.toBeNull();
   });
 
+  // A live editor's mention node view tints mentions while editable, so a
+  // static row has to match or focusing a passage changes how it looks.
+  describe('the mention tint', () => {
+    const tint = '[&_.mention-container]:bg-primary/10';
+
+    it('applies in an editable stack', async () => {
+      const controller = build();
+      controller.setVisibleRange({ start: 0, end: 1 });
+      await flush();
+      const { container } = render(
+        <StaticPassageRow controller={controller} meta={meta} />,
+      );
+      expect(container.querySelector('.tiptap')?.classList).toContain(tint);
+    });
+
+    it('stays off in a read-only stack', async () => {
+      const controller = build(true);
+      controller.setVisibleRange({ start: 0, end: 1 });
+      await flush();
+      const { container } = render(
+        <StaticPassageRow controller={controller} meta={meta} />,
+      );
+      expect(container.querySelector('.tiptap')?.classList).not.toContain(tint);
+    });
+  });
+
   // Reader chrome: production paints it from `syncPassageChrome`, which shows
   // it only when the editor is not editable.
   describe('the bookmark indicator', () => {
