@@ -1,7 +1,7 @@
 import {
   describePolicyChange,
+  createPolicyChangeReporter,
   type PolicyChange,
-  reportPolicyChange,
   tellClaude,
 } from './model-context';
 
@@ -44,12 +44,32 @@ describe('describePolicyChange', () => {
   });
 });
 
-describe('reportPolicyChange', () => {
+describe('createPolicyChangeReporter', () => {
+  const text = (change: PolicyChange) => ({
+    type: 'text',
+    text: describePolicyChange(change),
+  });
+
   it('sends the description as model context', async () => {
     const app = { updateModelContext: jest.fn(async () => ({})) };
-    await expect(reportPolicyChange(app, saved)).resolves.toBe(true);
+    await expect(createPolicyChangeReporter(app)(saved)).resolves.toBe(true);
     expect(app.updateModelContext).toHaveBeenCalledWith({
-      content: [{ type: 'text', text: describePolicyChange(saved) }],
+      content: [text(saved)],
+    });
+  });
+
+  it("resends the session's earlier changes, keeping the last few", async () => {
+    const app = { updateModelContext: jest.fn(async () => ({})) };
+    const report = createPolicyChangeReporter(app, { limit: 2 });
+    const changes = ['v2', 'v3', 'v4'].map(
+      (version): PolicyChange => ({ kind: 'saved', name: 'a/b', version }),
+    );
+    for (const change of changes) await report(change);
+    expect(app.updateModelContext).toHaveBeenNthCalledWith(2, {
+      content: [text(changes[0]), text(changes[1])],
+    });
+    expect(app.updateModelContext).toHaveBeenLastCalledWith({
+      content: [text(changes[1]), text(changes[2])],
     });
   });
 
@@ -59,7 +79,7 @@ describe('reportPolicyChange', () => {
         throw new Error('Method not found');
       }),
     };
-    await expect(reportPolicyChange(app, saved)).resolves.toBe(false);
+    await expect(createPolicyChangeReporter(app)(saved)).resolves.toBe(false);
   });
 });
 

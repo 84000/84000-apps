@@ -52,21 +52,31 @@ const content = (change: PolicyChange): TextContent[] => [
   { type: 'text', text: describePolicyChange(change) },
 ];
 
+/** How many of this session's changes the model context repeats. */
+export const MODEL_CONTEXT_CHANGE_LIMIT = 10;
+
 /**
- * Tells the model about a change through the host's model context, without a
- * visible message. Best-effort: some hosts ignore it, and a host may keep only
- * the latest update. Never throws; resolves `true` when the host accepted it.
+ * Tells the model about changes through the host's model context, without a
+ * visible message. Each update replaces the previous one, so every call sends
+ * this session's last `limit` changes, oldest first. Best-effort: some hosts
+ * ignore it. The returned function never throws; it resolves `true` when the
+ * host accepted the update.
  */
-export async function reportPolicyChange(
+export function createPolicyChangeReporter(
   app: ModelContextApp,
-  change: PolicyChange,
-): Promise<boolean> {
-  try {
-    await app.updateModelContext({ content: content(change) });
-    return true;
-  } catch {
-    return false;
-  }
+  { limit = MODEL_CONTEXT_CHANGE_LIMIT }: { limit?: number } = {},
+) {
+  const changes: PolicyChange[] = [];
+  return async (change: PolicyChange): Promise<boolean> => {
+    changes.push(change);
+    if (changes.length > limit) changes.splice(0, changes.length - limit);
+    try {
+      await app.updateModelContext({ content: changes.flatMap(content) });
+      return true;
+    } catch {
+      return false;
+    }
+  };
 }
 
 /**
