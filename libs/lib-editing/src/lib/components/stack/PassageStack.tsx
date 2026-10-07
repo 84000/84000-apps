@@ -289,6 +289,9 @@ export const PassageStack = ({
       // virtual rows after a scrollbar jump, compounding with the
       // virtualizer's own offset math into an endless scroll drift.
       className={cn('w-full [overflow-anchor:none]', className)}
+      // As the paginated editor does: a browser translating the page would
+      // rewrite text an editor then reads back as an edit.
+      translate={controller.isReadOnly() ? 'yes' : 'no'}
     >
       {/*
         One of each for the whole stack, bound to the focused passage: only one
