@@ -383,6 +383,10 @@ export const PolicyEditor = ({
       }
       if (result.ok) {
         open(undefined);
+      } else if (result.reason === 'not-found') {
+        // It is gone, so stop showing it.
+        open(undefined);
+        setFailure(result);
       } else {
         refuse(result, { action: 'delete', mine: content });
       }
@@ -408,6 +412,8 @@ export const PolicyEditor = ({
         loadList();
         open(to);
       } else if (result.reason === 'exists') {
+        // A repeat after a conflict closed the dialog, so reopen it.
+        setConfirming('rename');
         setRenameError(MESSAGES.exists);
       } else {
         refuse(result, { action: 'rename', mine: content, to });
@@ -423,6 +429,9 @@ export const PolicyEditor = ({
   /** Repeats the refused change over the stored version it conflicted with. */
   const overwrite = ({ action, current, mine, revisionPath, to }: Conflict) => {
     setConflict(undefined);
+    if (current.name !== doc?.name) {
+      return;
+    }
     const { version } = current;
     if (action === 'save') {
       save(version);
@@ -556,7 +565,10 @@ export const PolicyEditor = ({
                     disabled={Boolean(lock)}
                     title={lock}
                     aria-describedby={lock && lockId}
-                    onClick={() => setConfirming(action)}
+                    onClick={() => {
+                      setRenameError(undefined);
+                      setConfirming(action);
+                    }}
                   >
                     {action === 'rename' ? 'Rename' : 'Delete'}
                   </Button>
@@ -623,6 +635,12 @@ export const PolicyEditor = ({
                     ? { ...conflict, mine: draft.markdown }
                     : conflict
                 }
+                // `save` writes only a changed draft that serializes exactly.
+                blocked={
+                  conflict.action === 'save' && !(draft.dirty && draft.exact)
+                    ? 'Your changes can no longer be saved as they are.'
+                    : undefined
+                }
                 onReload={() => show(conflict.current)}
                 onOverwrite={() => overwrite(conflict)}
                 onCancel={() => setConflict(undefined)}
@@ -684,16 +702,20 @@ export const PolicyEditor = ({
 /** Shows how a refused change differs from the stored policy, offering a reload or an overwrite. */
 const ConflictDialog = ({
   conflict: { action, current, mine },
+  blocked,
   onReload,
   onOverwrite,
   onCancel,
 }: {
   conflict: Conflict;
+  /** Why the overwrite is unavailable, if it is. */
+  blocked?: string;
   onReload: () => void;
   onOverwrite: () => void;
   onCancel: () => void;
 }) => {
   const [mineLabel, offer, act] = CONFLICT_TEXT[action];
+  const reason = useId();
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-3xl">
@@ -711,11 +733,21 @@ const ConflictDialog = ({
           newLabel={mineLabel}
           className="max-h-[50vh]"
         />
+        {blocked && (
+          <p id={reason} className="text-sm text-destructive">
+            {blocked}
+          </p>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onReload}>
             Reload
           </Button>
-          <Button variant="destructive" onClick={onOverwrite}>
+          <Button
+            variant="destructive"
+            disabled={Boolean(blocked)}
+            aria-describedby={blocked && reason}
+            onClick={onOverwrite}
+          >
             {act}
           </Button>
         </DialogFooter>
@@ -771,7 +803,7 @@ const RenameDialogContent = ({
           <Input
             id={inputId}
             name="name"
-            value={from}
+            defaultValue={from}
             autoComplete="off"
             aria-invalid={Boolean(message)}
             aria-describedby={message && `${inputId}-error`}

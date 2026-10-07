@@ -38,9 +38,10 @@ export const diffLines = (oldText: string, newText: string): DiffLine[] => {
   }
   const x = a.slice(start, endA);
   const y = b.slice(start, endB);
-  const middle: DiffLine[] = [];
+  let middle: DiffLine[] = [];
   if (x.length * y.length > MAX_CELLS) {
-    middle.push(...x.map(line('removed')), ...y.map(line('added')));
+    // Not push(...): that overflows the stack on a very long text.
+    middle = [...x.map(line('removed')), ...y.map(line('added'))];
   } else {
     // common[i * w + j] is the LCS length of x[i..] and y[j..].
     const w = y.length + 1;
@@ -123,7 +124,11 @@ export const DiffView = ({
         </span>
       </figcaption>
       {changed ? (
-        <pre className="min-h-0 overflow-auto rounded-md border py-2 font-mono text-sm">
+        <pre
+          // Focusable so the keyboard can scroll it.
+          tabIndex={0}
+          className="min-h-0 overflow-auto rounded-md border py-2 font-mono text-sm"
+        >
           {lines.map(({ type, text }, index) => {
             const Line =
               type === 'removed' ? 'del' : type === 'added' ? 'ins' : 'span';

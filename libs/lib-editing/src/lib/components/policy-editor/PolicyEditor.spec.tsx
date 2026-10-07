@@ -273,6 +273,49 @@ describe('PolicyEditor', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('diffs a save conflict against the draft an overwrite would write', async () => {
+    const { source } = setup();
+    await openPolicy('a');
+    await source.write({ name: 'a', content: 'Theirs\n' });
+    const held = deferred();
+    jest.mocked(source.write).mockReturnValueOnce(held.promise);
+    type('Mine\n');
+    fireEvent.click(saveButton());
+    type('Mine, and later\n');
+    await held.resolve({
+      ok: false,
+      reason: 'conflict',
+      current: (await source.read('a'))!,
+    });
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'This policy changed after you opened it',
+    });
+    expect(dialog.querySelector('ins')?.textContent).toContain(
+      'Mine, and later',
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Overwrite' }));
+
+    await waitFor(async () =>
+      expect((await source.read('a'))?.content).toBe('Mine, and later\n'),
+    );
+  });
+
+  it('cannot overwrite with a draft that no longer saves exactly', async () => {
+    const { dialog } = await conflictOnSave();
+    type('inexact\n');
+
+    expect(
+      within(dialog).getByRole('button', { name: 'Overwrite' }),
+    ).toHaveProperty('disabled', true);
+    expect(within(dialog).getByText(/can no longer be saved/)).toBeTruthy();
+
+    type('Mine again\n');
+    expect(
+      within(dialog).getByRole('button', { name: 'Overwrite' }),
+    ).toHaveProperty('disabled', false);
+  });
+
   it('overwrites a stale restore with the revision', async () => {
     const { source, revision } = await viewRevision();
     await source.write({ name: 'a', content: 'Theirs\n' });
@@ -342,7 +385,10 @@ describe('PolicyEditor', () => {
 
     expect((await screen.findByRole('alert')).textContent).toBe(message);
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'a' })).toBeTruthy();
+    // A policy that is gone stops being shown; any other failure keeps it.
+    expect(!!screen.queryByRole('heading', { name: 'a' })).toBe(
+      reason !== 'not-found',
+    );
   });
 
   it.each(['Delete', 'Rename'] as const)(
@@ -402,6 +448,83 @@ describe('PolicyEditor', () => {
     });
     expect(await screen.findByRole('button', { name: 'x/a' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'a' })).toBeNull();
+  });
+
+  it('reopens the rename dialog when a repeated rename finds the name taken', async () => {
+    const { source, dialog } = await openDialog('Rename');
+    await source.write({ name: 'a', content: 'Theirs\n' });
+    renameTo('x/c');
+    const conflict = await screen.findByRole('dialog', {
+      name: 'This policy changed after you opened it',
+    });
+    await source.write({ name: 'x/c', content: 'Taken\n' });
+    fireEvent.click(
+      within(conflict).getByRole('button', { name: 'Rename anyway' }),
+    );
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'A policy with that name already exists.',
+    );
+    expect(screen.getByRole('dialog', { name: 'Rename a' })).toBeTruthy();
+    expect(dialog).toBeTruthy();
+  });
+
+  it('forgets a refused rename name when the dialog is reopened', async () => {
+    await openDialog('Rename');
+    renameTo('x/b');
+    expect((await screen.findByRole('alert')).textContent).toMatch(/exists/);
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    click('Rename');
+    await screen.findByRole('dialog', { name: 'Rename a' });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it.each(['Delete', 'Rename'] as const)(
+    'keeps the %s dialog open while it is in flight',
+    async (action) => {
+      const { source } = await openDialog(action);
+      const held = deferred<{ ok: true; archivedPath: string }>();
+      jest
+        .mocked(action === 'Delete' ? source.delete : source.rename)
+        .mockReturnValueOnce(held.promise);
+      if (action === 'Rename') {
+        renameTo('x/a');
+      } else {
+        click('Delete');
+      }
+
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        key: 'Escape',
+      });
+      expect(screen.getByRole('dialog')).toBeTruthy();
+
+      await held.resolve({ ok: true, archivedPath: 'p' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    },
+  );
+
+  it('shows only the latest policy list when responses arrive out of order', async () => {
+    const { source } = await openDialog('Delete');
+    // The list refreshed by the first delete is answered last.
+    const stale = deferred<string[]>();
+    jest.mocked(source.list).mockReturnValueOnce(stale.promise);
+    click('Delete');
+    await screen.findByText('Select a policy to open it.');
+
+    await openPolicy('b');
+    click('Delete');
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'b' })).toBeNull(),
+    );
+
+    await stale.resolve(['a', 'b']);
+    expect(screen.queryByRole('button', { name: 'a' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'b' })).toBeNull();
   });
 
   it('drops a delete that settles after another source opens', async () => {

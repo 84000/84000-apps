@@ -38,7 +38,26 @@ describe('diffLines', () => {
   });
 });
 
+describe('diffLines on very long, entirely different texts', () => {
+  it('shows the old lines removed and the new added without overflowing the stack', () => {
+    const lines = (prefix: string) =>
+      Array.from({ length: 150_000 }, (_, index) => `${prefix}${index}`).join(
+        '\n',
+      );
+    const result = diffLines(lines('old'), lines('new'));
+
+    expect(result).toHaveLength(300_000);
+    expect(result[0]).toEqual({ type: 'removed', text: 'old0' });
+    expect(result[299_999]).toEqual({ type: 'added', text: 'new149999' });
+  });
+});
+
 describe('DiffView', () => {
+  it('can be scrolled with the keyboard', () => {
+    const { container } = render(<DiffView oldText="a" newText="b" />);
+    expect(container.querySelector('pre')?.getAttribute('tabindex')).toBe('0');
+  });
+
   it('marks lines with text, not only colour, and names each side', () => {
     const { container } = render(
       <DiffView
