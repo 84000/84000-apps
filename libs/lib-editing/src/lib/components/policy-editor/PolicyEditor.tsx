@@ -94,7 +94,7 @@ type Action = 'save' | 'restore' | 'delete' | 'rename';
 type Conflict = {
   action: Action;
   current: PolicyDocument;
-  /** What the refused change would have written, or the version it expected. */
+  /** What the change would write; for a delete or rename, what it expected. */
   mine: string;
   revisionPath?: string;
   to?: string;
@@ -617,7 +617,12 @@ export const PolicyEditor = ({
             />
             {conflict && (
               <ConflictDialog
-                conflict={conflict}
+                // Overwriting a save writes the draft as it is now.
+                conflict={
+                  conflict.action === 'save'
+                    ? { ...conflict, mine: draft.markdown }
+                    : conflict
+                }
                 onReload={() => show(conflict.current)}
                 onOverwrite={() => overwrite(conflict)}
                 onCancel={() => setConflict(undefined)}
