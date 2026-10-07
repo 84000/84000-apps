@@ -9,5 +9,6 @@ export * from './TranslationBuilder';
 export * from './TranslationEditor';
 export * from './hooks';
 export * from './menus';
+export * from './markdown/MarkdownEditor';
 export * from './markdown/markdown-codec';
 export * from './markdown/markdown-extensions';
