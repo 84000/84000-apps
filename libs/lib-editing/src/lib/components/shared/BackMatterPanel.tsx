@@ -15,7 +15,12 @@ import { useNavigation } from './NavigationProvider';
 import { GlossaryTermList, GlossaryPaginationProvider } from './glossary';
 import { BibliographyList } from './bibliography';
 import { cn, useIsMobile } from '@eightyfourthousand/lib-utils';
-import { useScrollPositionRestore } from './hooks/useScrollPositionRestore';
+import {
+  recordPassageAnchor,
+  recordScrollPosition,
+  usePassageAnchorRestore,
+  useScrollPositionRestore,
+} from './hooks/useScrollPositionRestore';
 
 export const BackMatterPanel = ({
   workUuid,
@@ -45,24 +50,43 @@ export const BackMatterPanel = ({
   const { panels, updatePanel } = useNavigation();
   const isMobile = useIsMobile();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const activeTab = panels.right.tab || 'endnotes';
+  // Notes and Abbreviations share this scroller with the other tabs, and are
+  // realigned by the passage at the top, as the main panel's are.
+  const passageAnchorRef = usePassageAnchorRestore(
+    scrollContainerRef,
+    activeTab,
+    'right',
+    !!panels.right.hash,
+  );
   useScrollPositionRestore(
     'right',
     scrollContainerRef,
-    panels.right.tab,
+    activeTab,
     !!panels.right.hash,
+    passageAnchorRef,
   );
 
   const hasGlossary = glossary.terms.length > 0 || glossary.hasMoreAfter;
 
   return (
     <Tabs
-      value={panels.right.tab || 'endnotes'}
+      value={activeTab}
       onValueChange={(tabName) => {
         const tab = tabName as
           | 'endnotes'
           | 'glossary'
           | 'bibliography'
           | 'abbreviations';
+        // Recorded before the switch, which can clamp the scroll position.
+        if (scrollContainerRef.current) {
+          recordScrollPosition('right', activeTab, scrollContainerRef.current);
+          recordPassageAnchor(
+            passageAnchorRef.current,
+            activeTab,
+            scrollContainerRef.current,
+          );
+        }
         updatePanel({ name: 'right', state: { open: true, tab } });
       }}
       defaultValue="endnotes"

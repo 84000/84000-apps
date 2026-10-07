@@ -107,6 +107,12 @@ const build = (
   const endnotes = {
     revealPassage: jest.fn(async () => true),
     removePassage: jest.fn((uuid: string) => work.remove([uuid])),
+    hasEarlierPassages: () => !!partial['endnotes']?.before,
+    hasMorePassages: () => !!partial['endnotes']?.after,
+    readBeyond: jest.fn(
+      async (direction: 'before' | 'after', cursor: string) =>
+        beyond['endnotes']?.(direction, cursor) ?? null,
+    ),
   } as unknown as PassageStackController;
   const views = new Map<string, PassageStackController>();
   const viewOf = (tab: string) => {
@@ -441,6 +447,167 @@ describe('createStackEndnote', () => {
     const result = await createStackEndnote({ stack, editor });
 
     expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+    editor.destroy();
+  });
+});
+
+// A note added inside the notes looks back past the abbreviations. They are
+// searched like any other tab: nothing assumes a stored one links no note.
+describe('createStackEndnote with abbreviations between the body and the notes', () => {
+  const WITH_ABBREVIATIONS: SpineSeed[] = [
+    { uuid: 'b1', label: '1.1', type: 'translation', sort: 1 },
+    { uuid: 'b2', label: '1.2', type: 'translation', sort: 2 },
+    { uuid: 'ah', label: 'ab.', type: 'abbreviationsHeader', sort: 3 },
+    { uuid: 'a1', label: '', type: 'abbreviations', sort: 4 },
+    { uuid: 'n1', label: 'n.1', type: 'endnotes', sort: 5 },
+    { uuid: 'n2', label: 'n.2', type: 'endnotes', sort: 6 },
+  ];
+  const ABBREVIATIONS = {
+    ah: [para('ahp', 'Abbreviations')],
+    a1: [para('a1p', 'DN')],
+  };
+  const LINKS_N2 = [para('a1p', 'DN', [{ endNote: 'n2', label: 'n.2' }])];
+
+  it('loads abbreviations it does not hold, and looks past them', async () => {
+    const { work, stack, loader } = build(
+      WITH_ABBREVIATIONS,
+      {},
+      {
+        server: ABBREVIATIONS,
+      },
+    );
+    // "note two" in n.2: the last link before it is 1.1's, to n.1.
+    const editor = editorFor(work, 'n2', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    expect(loader.load).toHaveBeenCalledWith('w1', ['ah', 'a1']);
+    expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+    const uuid = (result as { uuid: string }).uuid;
+    expect(work.spine.uuids()).toEqual([
+      'b1',
+      'b2',
+      'ah',
+      'a1',
+      'n1',
+      uuid,
+      'n2',
+    ]);
+    editor.destroy();
+  });
+
+  it('reads past both ends of an abbreviations run it has not loaded', async () => {
+    const { work, stack, viewOf } = build(
+      WITH_ABBREVIATIONS,
+      { abbreviations: { before: true, after: true } },
+      {
+        server: ABBREVIATIONS,
+        beyond: { abbreviations: () => ({ passages: [] }) },
+      },
+    );
+    const editor = editorFor(work, 'n2', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    expect(viewOf('abbreviations').readBeyond).toHaveBeenCalledWith(
+      'after',
+      'a1',
+    );
+    expect(viewOf('abbreviations').readBeyond).toHaveBeenCalledWith(
+      'before',
+      'ah',
+    );
+    expect(result).toEqual({ uuid: expect.any(String), label: 'n.2' });
+    editor.destroy();
+  });
+
+  it('follows a link added to one it holds', async () => {
+    const { work, stack } = build(
+      WITH_ABBREVIATIONS,
+      {},
+      {
+        server: ABBREVIATIONS,
+      },
+    );
+    work.store.create('a1', LINKS_N2);
+    const editor = editorFor(work, 'n1', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    const uuid = (result as { uuid: string }).uuid;
+    expect(work.spine.uuids()).toEqual([
+      'b1',
+      'b2',
+      'ah',
+      'a1',
+      'n1',
+      'n2',
+      uuid,
+    ]);
+    editor.destroy();
+  });
+
+  // Saved, then released: placement must not depend on it still being held.
+  it('follows a saved link in one it has released', async () => {
+    const { work, stack } = build(
+      WITH_ABBREVIATIONS,
+      {},
+      {
+        server: { ...ABBREVIATIONS, a1: LINKS_N2 },
+      },
+    );
+    work.store.create('a1', LINKS_N2);
+    work.store.peek('a1')?.markSynced();
+    expect(work.store.release('a1')).toBe(true);
+    const editor = editorFor(work, 'n1', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    expect(result).toEqual({ uuid: expect.any(String), label: 'n.3' });
+    const uuid = (result as { uuid: string }).uuid;
+    expect(work.spine.uuids().slice(-3)).toEqual(['n1', 'n2', uuid]);
+    editor.destroy();
+  });
+
+  it('follows a saved link past the end of the run it has loaded', async () => {
+    const { work, stack } = build(
+      WITH_ABBREVIATIONS,
+      { abbreviations: { after: true } },
+      {
+        server: ABBREVIATIONS,
+        beyond: {
+          abbreviations: (direction) => ({
+            passages:
+              direction === 'after'
+                ? [
+                    {
+                      uuid: 'a2',
+                      content: [
+                        para('a2p', 'MS', [{ endNote: 'n2', label: 'n.2' }]),
+                      ],
+                    },
+                  ]
+                : [],
+          }),
+        },
+      },
+    );
+    const editor = editorFor(work, 'n1', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    expect(result).toEqual({ uuid: expect.any(String), label: 'n.3' });
+    editor.destroy();
+  });
+
+  it('refuses when an abbreviation before it cannot be loaded', async () => {
+    const { work, stack } = build(WITH_ABBREVIATIONS);
+    const editor = editorFor(work, 'n2', 1, 5);
+
+    const result = await createStackEndnote({ stack, editor });
+
+    expect(result).toEqual({ error: expect.stringMatching(/Could not read/) });
+    expect(work.spine.length).toBe(6);
     editor.destroy();
   });
 });

@@ -19,6 +19,12 @@
     @apply grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-x-2;
   }
 
+  /* ProseMirror's trailing break would wrap onto a new grid row while editing. */
+  .paragraph:has(> [type='abbreviation']) > .ProseMirror-trailingBreak,
+  .paragraph:has(> [type='abbreviation']) > .ProseMirror-separator {
+    display: none;
+  }
+
   a {
     @apply text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer;
   }

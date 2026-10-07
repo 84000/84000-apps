@@ -132,9 +132,17 @@ the Backspace above misbehave in the first place.
 
 ### Sections
 
-`StackWorkProvider` seeds one run per tab — Front, Translation, Endnotes — in
-the order the work reads, since an empty run is placed at the end of the spine.
-Abbreviations are still the paginated editor's.
+`StackWorkProvider` seeds one run per tab — Front, Translation, Abbreviations,
+Endnotes — in the order the work reads, since an empty run is placed at the end
+of the spine. Every work with abbreviations has them between the body and the
+notes.
+
+Abbreviation entries are plain paragraphs whose key is an inline
+`abbreviation` node, so the design system's
+`.paragraph:has(> [type='abbreviation'])` rule draws them in two columns in both
+tiers. Abbreviations carry no label, so a new entry or header is given none.
+The panel still reads the abbreviations at mount, as the paginated editor does,
+to know whether to show the tab at all.
 
 Tabs in one panel share its scroller, and an inactive tab stays mounted, only
 hidden. A hidden stack still reads the shown tab's scroll offset, so it reports
@@ -151,6 +159,10 @@ does not depend on which tabs have been visited. Passages in the spine that the
 stack does not hold are hydrated through the store, and passages past either
 end of a run are read through that run's controller (`readBeyond`) without
 moving its window. A read that fails refuses, instead of guessing a number.
+
+The right panel's Notes and Abbreviations are both stacks, so a hash there is
+answered only by the one shown, and each is restored by its passage anchor on
+a tab switch, as the main panel's tabs are.
 
 ### The stack does not own a scroller
 

@@ -52,6 +52,14 @@ const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
         </div>
       </div>
       <div
+        className="h-full w-1/4 overflow-y-auto border-r px-12"
+        data-testid="tab-abbreviations"
+      >
+        <div className="mx-auto mt-8 w-full max-w-readable">
+          <StackTab tab="abbreviations" />
+        </div>
+      </div>
+      <div
         className="h-full w-1/4 overflow-y-auto px-12"
         data-testid="tab-endnotes"
       >

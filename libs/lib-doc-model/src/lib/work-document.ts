@@ -21,6 +21,29 @@ import {
 } from './work-document-helpers';
 import { WorkHistory } from './work-history';
 
+/**
+ * Passage types stored without labels. Production's abbreviations carry none,
+ * the header included in effect: numbering a new one from its neighbour would
+ * write `ab.1` or `1` to a row that never had a label.
+ */
+export const UNLABELLED_PASSAGE_TYPES: ReadonlySet<string> = new Set([
+  'abbreviations',
+  'abbreviationsHeader',
+]);
+
+/**
+ * The label for a new passage of `type` following `previous`: empty for an
+ * unlabelled type, otherwise numbered from the passage before, as it always
+ * was, even from an empty label.
+ */
+const labelFor = (
+  type: string,
+  previous: { label: string } | null | undefined,
+): string => {
+  if (UNLABELLED_PASSAGE_TYPES.has(type)) return '';
+  return previous ? incrementLabel(previous.label) : '1';
+};
+
 export type WorkDocumentOptions = {
   workUuid: string;
   /** See `PassageDocOptions.schema` — injected for the same reason. */
@@ -165,7 +188,9 @@ export class WorkDocument {
     const newMeta: SpineSeed = {
       uuid: this.newUuid(),
       type: meta.type,
-      label: incrementLabel(meta.label),
+      // The tail of an unlabelled passage, such as toh145's introduction
+      // header, is unlabelled too.
+      label: meta.label ? labelFor(meta.type, meta) : '',
       toh: meta.toh,
     };
 
@@ -265,7 +290,7 @@ export class WorkDocument {
     const meta: SpineSeed = {
       uuid: passage.uuid ?? this.newUuid(),
       type: passage.type,
-      label: passage.label ?? (previous ? incrementLabel(previous.label) : '1'),
+      label: passage.label ?? labelFor(passage.type, previous),
       toh: passage.toh,
     };
 
@@ -368,15 +393,26 @@ export class WorkDocument {
 
     // Seeded before the spine changes, so each new label follows the one
     // before it rather than the run that is about to leave.
-    let label = previous ? incrementLabel(previous.label) : '1';
-    const seeds: SpineSeed[] = replacements.map((passage) => {
+    // The first continues the series it replaces, which the passage before
+    // need not belong to, such as an unlabelled header.
+    const replaced = removed[0].meta;
+    const continues =
+      !!replaced.label &&
+      replaced.type === replacements[0]?.type &&
+      !UNLABELLED_PASSAGE_TYPES.has(replaced.type);
+    let before: { label: string } | null | undefined = previous;
+    const seeds: SpineSeed[] = replacements.map((passage, i) => {
       const seed: SpineSeed = {
         uuid: passage.uuid ?? this.newUuid(),
         type: passage.type,
-        label: passage.label ?? label,
+        label:
+          passage.label ??
+          (i === 0 && continues
+            ? replaced.label
+            : labelFor(passage.type, before)),
         toh: passage.toh,
       };
-      label = incrementLabel(seed.label);
+      before = seed;
       return seed;
     });
 
