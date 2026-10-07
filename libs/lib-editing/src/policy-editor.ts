@@ -7,6 +7,7 @@
  * `@eightyfourthousand/lib-utils`, never from a barrel.
  */
 export * from './lib/components/policy-editor/policy-source';
+export * from './lib/components/policy-editor/memory-policy-source';
 export {
   MarkdownEditor,
   type MarkdownEditorMode,
