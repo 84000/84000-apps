@@ -17,7 +17,9 @@ import {
   withCorsHeaders,
 } from '@eightyfourthousand/lib-agent';
 // The app's build output, a generated HTML string, not its source; `build` and
-// `dev` depend on `policy-editor-mcp-app:build` to generate it.
+// `dev` depend on `policy-editor-mcp-app:build` to generate it. `dev` builds it
+// once and does not watch it: rerun `nx run policy-editor-mcp-app:build` after
+// editing the app.
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { POLICY_EDITOR_APP_HTML } from '@eightyfourthousand/policy-editor-mcp-app/html';
 
@@ -37,7 +39,7 @@ All requests require a valid Bearer token (Supabase JWT). Unauthenticated reques
 
 \`read-policies\` resolves 84000's translation policies — house style, text-critical practice, and the rest of the governing guidance — from their current text. Read the ones your task depends on at the start of a session rather than working from remembered guidance or a copy shipped with a plugin: an editor can change a policy at any time, and the change binds from the next session. \`write-policy\` edits one, archiving the revision it replaces.
 
-\`open-policy-editor\` opens the policy editor for the user, in the conversation: they can browse policies, edit them, and see and restore their history, and with \`harness.admin\` delete and rename them. A client that does not display MCP Apps shows nothing; fall back to \`read-policies\` and \`write-policy\` there.`,
+\`open-policy-editor\` opens the policy editor for the user, in the conversation: they can browse policies and see their history, with \`harness.edit\` edit them and restore earlier revisions, and with \`harness.admin\` delete and rename them. A client that does not display MCP Apps shows nothing; fall back to \`read-policies\` and \`write-policy\` there.`,
   `## Session documents
 
 A translation session's working files — Stage 0 records, Stage 1 drafts, collation reports, alignment records — live in storage, keyed by work and stage. Read the previous stage with \`read-session-documents\` rather than assuming a local file survived from an earlier session: markdown comes back as text, and a \`.docx\` as a URL to fetch. \`write-session-documents\` authorizes a save and returns an upload URL per file for the client to PUT, archiving any revision it replaces and recording a manifest of who saved the set and when.`,
