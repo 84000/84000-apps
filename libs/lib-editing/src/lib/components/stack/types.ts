@@ -107,6 +107,8 @@ export type PassageStackControllerOptions = {
     /** Only a feed that can read backward supplies these. */
     hasMoreBefore?: boolean;
     maybeExtendBefore?: (visibleStart: number) => boolean;
+    /** The page `maybeExtendBefore` started, shared rather than fetched again. */
+    extendBefore?: () => Promise<number>;
     reveal?: (uuid: string) => Promise<number>;
     revealStart?: () => Promise<void>;
     /** Content past an end of the run, without moving it; null on failure. */

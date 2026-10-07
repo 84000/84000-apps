@@ -7,6 +7,39 @@ import { PassageSkeleton } from '../shared/PassageSkeleton';
 const LOADING_SKELETONS_COUNT = 3;
 
 /**
+ * The height `StackStart` takes, in rem: its top padding plus three skeletons
+ * and the gaps between them. Fixed, because the list's rows are placed below
+ * it.
+ */
+const STACK_START_REM = 1.5 + 3 * 8 + 2 * 1;
+
+/** `StackStart`'s height in pixels, at the document's root font size. */
+export const stackStartPx = () => {
+  const root =
+    typeof document === 'undefined'
+      ? NaN
+      : parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return STACK_START_REM * (Number.isNaN(root) ? 16 : root);
+};
+
+/**
+ * What precedes the first row while the work has passages before it: the
+ * placeholders the paginated editor draws above a window that starts mid-work.
+ * Absolutely placed in the space the list reserves for it.
+ */
+export const StackStart = () => (
+  <div
+    className="absolute left-0 top-0 flex w-full flex-col gap-4 overflow-hidden pt-6"
+    style={{ height: `${STACK_START_REM}rem` }}
+    data-stack-start="loading"
+  >
+    {Array.from({ length: LOADING_SKELETONS_COUNT }).map((_, i) => (
+      <PassageSkeleton key={i} />
+    ))}
+  </div>
+);
+
+/**
  * What follows the last row: placeholders while the work has more to load,
  * and the lotus pond once it doesn't — the same close the paginated editor
  * and the reader draw. In the right panel the pond is hidden and only its
