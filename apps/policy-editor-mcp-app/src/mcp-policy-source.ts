@@ -12,7 +12,8 @@ import { isRecord, parseToolResult, type ToolCaller } from './tool-result';
 /**
  * Thrown by the reading methods (`list`, `read`, `history`, `readRevision`)
  * when the server refused or the call failed. A failed listing is never an
- * empty list, and a failed read is never "not found".
+ * empty list. A transport or parse failure is never "not found", though the
+ * server may itself report a storage error as `not-found`.
  */
 export class PolicySourceError extends Error {
   constructor(readonly failure: PolicyFailure) {
@@ -120,6 +121,10 @@ const orThrow = <T>(value: T | NotFound): T => {
   return value;
 };
 
+/** The server returns names without one trailing `.md`. */
+const sameName = (a: string, b: string) =>
+  a.replace(/\.md$/, '') === b.replace(/\.md$/, '');
+
 const withVersion = (expectedVersion: PolicyVersion | undefined) =>
   expectedVersion === undefined ? {} : { expectedVersion };
 
@@ -214,7 +219,10 @@ export function createMcpPolicySource(caller: ToolCaller): PolicySource {
         await query(POLICY_TOOL_NAMES.read, { names: [name] }, (body) => {
           if (!Array.isArray(body.policies)) return undefined;
           const match = body.policies.find(
-            (policy) => isRecord(policy) && policy.name === name,
+            (policy) =>
+              isRecord(policy) &&
+              isString(policy.name) &&
+              sameName(policy.name, name),
           );
           return match === undefined ? NOT_FOUND : toDocument(match);
         }),
@@ -235,6 +243,7 @@ export function createMcpPolicySource(caller: ToolCaller): PolicySource {
       orThrow(
         await query(POLICY_TOOL_NAMES.history, { name }, (body) => {
           if (!Array.isArray(body.revisions)) return undefined;
+          // Server order: archive path descending, which is newest first.
           const revisions = body.revisions.map(toRevision);
           return revisions.every(
             (revision): revision is PolicyRevision => revision !== undefined,

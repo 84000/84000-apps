@@ -151,6 +151,17 @@ describe('createMcpPolicySource', () => {
       await expect(source.read('a/b')).resolves.toBeUndefined();
     });
 
+    it('matches a name given with a trailing .md', async () => {
+      const { source } = setup(json({ policies: [doc] }));
+      await expect(source.read('a/b.md')).resolves.toEqual(doc);
+    });
+
+    it('throws on forbidden', async () => {
+      const { source } = setup(failure({ ok: false, reason: 'forbidden' }));
+      const error = await rejection(source.read('a/b'));
+      expect(error.failure).toEqual({ ok: false, reason: 'forbidden' });
+    });
+
     it('throws, rather than reporting not-found, when the call fails', async () => {
       const { source } = setup(new Error('bridge closed'));
       await expect(source.read('a/b')).rejects.toThrow(PolicySourceError);
@@ -341,7 +352,21 @@ describe('createMcpPolicySource', () => {
       ['rename', (s) => s.rename({ from: 'a/b', to: 'a/c' })],
     ];
 
+  it.each(mutations.filter(([m]) => ['delete', 'rename'].includes(m)))(
+    '%s maps a success without archivedPath to error',
+    async (_method, run) => {
+      const { source } = setup(json({ ok: true }));
+      await expect(run(source)).resolves.toMatchObject({ reason: 'error' });
+    },
+  );
+
   describe.each(mutations)('%s failures', (_method, run) => {
+    it('returns error for a success body flagged isError', async () => {
+      const success = { ok: true, version: 'v2', created: false };
+      const { source } = setup(json(success, { isError: true }));
+      await expect(run(source)).resolves.toMatchObject({ reason: 'error' });
+    });
+
     it('returns conflict with only the current document', async () => {
       const { source } = setup(
         failure({
