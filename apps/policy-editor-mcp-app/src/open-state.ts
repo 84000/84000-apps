@@ -40,8 +40,10 @@ export function parseOpenState(result: unknown): OpenState | undefined {
 /**
  * Resolves the editor's open state. Feed it the host's tool input and tool
  * result as they arrive; `resolve` waits up to `timeoutMs` for a usable
- * result, then calls `open-policy-editor` itself. If that fails too, the
- * state has no permissions.
+ * result, then calls `open-policy-editor` itself. A parsed result's `name` is
+ * trusted as is: the server omits it when the input name was missing or
+ * invalid. If the fallback fails too, the state has the input name and no
+ * permissions.
  */
 export function createOpenState(
   caller: ToolCaller,
@@ -50,11 +52,16 @@ export function createOpenState(
   let inputName: string | undefined;
   let delivered: OpenState | undefined;
   let onDelivered: ((state: OpenState) => void) | undefined;
+  let resolving: Promise<OpenState> | undefined;
 
-  const withInputName = (state: OpenState): OpenState => {
-    const name = state.name ?? inputName;
-    return { ...(name ? { name } : {}), permissions: state.permissions };
-  };
+  const waitForResult = () =>
+    new Promise<OpenState | undefined>((settle) => {
+      const timer = setTimeout(() => settle(undefined), timeoutMs);
+      onDelivered = (arrived) => {
+        clearTimeout(timer);
+        settle(arrived);
+      };
+    });
 
   const fetchState = async (): Promise<OpenState> => {
     try {
@@ -63,11 +70,14 @@ export function createOpenState(
         arguments: inputName ? { name: inputName } : {},
       });
       const state = parseOpenState(result);
-      if (state) return withInputName(state);
+      if (state) return state;
     } catch {
       // Fall through to the closed state.
     }
-    return withInputName({ permissions: noPermissions() });
+    return {
+      ...(inputName ? { name: inputName } : {}),
+      permissions: noPermissions(),
+    };
   };
 
   return {
@@ -84,17 +94,11 @@ export function createOpenState(
       onDelivered?.(state);
     },
 
-    async resolve(): Promise<OpenState> {
-      const state =
-        delivered ??
-        (await new Promise<OpenState | undefined>((settle) => {
-          const timer = setTimeout(() => settle(undefined), timeoutMs);
-          onDelivered = (arrived) => {
-            clearTimeout(timer);
-            settle(arrived);
-          };
-        }));
-      return state ? withInputName(state) : fetchState();
+    /** The open state; every call shares the first call's resolution. */
+    resolve(): Promise<OpenState> {
+      resolving ??= (async () =>
+        delivered ?? (await waitForResult()) ?? fetchState())();
+      return resolving;
     },
   };
 }

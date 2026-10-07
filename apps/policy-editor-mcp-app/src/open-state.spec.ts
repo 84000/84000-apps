@@ -83,14 +83,22 @@ describe('createOpenState', () => {
     expect(caller.callServerTool).not.toHaveBeenCalled();
   });
 
-  it('keeps the tool input name when the result has none', async () => {
+  it('trusts a result without a name over the tool input name', async () => {
     const open = createOpenState(fakeCaller());
-    open.toolInput({ name: 'a/b' });
+    open.toolInput({ name: 'not a policy' });
     open.toolResult(json({ permissions: readOnly }));
-    await expect(open.resolve()).resolves.toEqual({
-      name: 'a/b',
-      permissions: readOnly,
-    });
+    await expect(open.resolve()).resolves.toEqual({ permissions: readOnly });
+  });
+
+  it('shares one resolution between concurrent calls', async () => {
+    const caller = fakeCaller(json({ permissions: readOnly }));
+    const open = createOpenState(caller, { timeoutMs: 10 });
+    const first = open.resolve();
+    const second = open.resolve();
+    await jest.advanceTimersByTimeAsync(10);
+    await expect(first).resolves.toEqual({ permissions: readOnly });
+    await expect(second).resolves.toEqual({ permissions: readOnly });
+    expect(caller.callServerTool).toHaveBeenCalledTimes(1);
   });
 
   it('calls open-policy-editor with the input name after the timeout', async () => {
