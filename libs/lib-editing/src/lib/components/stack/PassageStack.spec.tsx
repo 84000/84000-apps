@@ -13,6 +13,11 @@ jest.mock('next/server', () => ({
   NextResponse: class {},
 }));
 jest.mock('resend', () => ({ Resend: class {} }));
+// The footer's image needs Next's loader.
+jest.mock('@eightyfourthousand/design-system', () => ({
+  ...jest.requireActual('@eightyfourthousand/design-system'),
+  LotusPond: () => null,
+}));
 
 // jsdom has no ResizeObserver; nothing here depends on sizes.
 beforeAll(() => {
