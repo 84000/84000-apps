@@ -1,5 +1,6 @@
 import {
   ANNOTATIONS_TO_IGNORE,
+  AnnotationDTO,
   BodyItemType,
   DataClient,
   Passage,
@@ -42,6 +43,7 @@ export const savePassagesWithDeletions = async ({
   deletedUuids = [],
   anchors,
   deletableAnnotationUuids,
+  annotationRows = [],
 }: {
   client: DataClient;
   passages: Passage[];
@@ -58,6 +60,11 @@ export const savePassagesWithDeletions = async ({
    * sends only the annotations it changed.
    */
   deletableAnnotationUuids?: readonly string[];
+  /**
+   * Annotation rows to write as given, alongside the passages' own
+   * annotations, bypassing domain serialization.
+   */
+  annotationRows?: AnnotationDTO[];
 }): Promise<SavePassagesWithDeletionsResult> => {
   const inputUuids = passages.map((p) => p.uuid);
   const { data: existingRows } =
@@ -101,7 +108,10 @@ export const savePassagesWithDeletions = async ({
   const dtos = passagesToDTO(toSave);
   const passageRowDtos = passagesToRowDTO(toSave);
   const passageUuids = passages.map((p) => p.uuid);
-  const annotations = dtos.flatMap((p) => p.annotations || []);
+  const annotations = [
+    ...dtos.flatMap((p) => p.annotations || []),
+    ...annotationRows,
+  ];
   const { data: existingAnnotations } =
     passageUuids.length > 0
       ? await client

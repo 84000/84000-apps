@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
   type Annotation,
+  type AnnotationDTO,
   type Annotations,
   type BodyItemType,
   type DataClient,
@@ -414,37 +415,38 @@ export const applyPassageEdits = async ({
     return { success: true, dryRun, passages, warnings };
   }
 
-  // Send only the annotations an edit added or moved, and let the save delete
-  // only what an edit dropped. Everything else stays exactly as stored: the
-  // DTO round-trip is not lossless, and rows written since the read survive.
-  const storedByUuid = new Map(
-    stored.map((passage) => [passage.uuid, passage]),
+  // Send only what an edit added or moved, and let the save delete only what
+  // an edit dropped. Everything else stays exactly as stored, and rows written
+  // since the read survive. A moved annotation is written from its stored row
+  // with only the offsets changed: the domain round-trip is not lossless.
+  const storedRows = new Map(
+    [...annotationsByPassage.values()].flat().map((row) => [row.uuid, row]),
   );
-  const toSave = passages.map((passage) => {
-    const before = new Map(
-      (storedByUuid.get(passage.uuid)?.annotations ?? []).map((a) => [
-        a.uuid,
-        a,
-      ]),
-    );
-    return {
-      ...passage,
-      annotations: passage.annotations.filter((annotation) => {
-        const original = before.get(annotation.uuid);
-        return (
-          !original ||
-          original.start !== annotation.start ||
-          original.end !== annotation.end
-        );
-      }),
-    };
-  });
+  const movedRows: AnnotationDTO[] = [];
+  const toSave = passages.map((passage) => ({
+    ...passage,
+    annotations: passage.annotations.filter((annotation) => {
+      const row = storedRows.get(annotation.uuid);
+      if (!row) {
+        return true;
+      }
+      if (row.start !== annotation.start || row.end !== annotation.end) {
+        movedRows.push({
+          ...row,
+          start: annotation.start,
+          end: annotation.end,
+        });
+      }
+      return false;
+    }),
+  }));
 
   const result = await savePassagesWithDeletions({
     client,
     passages: toSave,
     anchors,
     deletableAnnotationUuids: droppedAnnotationUuids,
+    annotationRows: movedRows,
   });
 
   return {

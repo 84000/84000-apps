@@ -247,6 +247,40 @@ describe('applyPassageEdits', () => {
     expect(log.deletes.flat()).toEqual(['a-marker']);
   });
 
+  it('moves an annotation without touching anything but its offsets', async () => {
+    const link = annotation('a-link', 'internal-link', 23, 27, [
+      { type: 'passage' },
+      { label: '1.55' },
+      { uuid: 'p9' },
+      { href: 'UT-9' },
+      { 'link-text-lookup': 'passageLabel' },
+      { same_work: false },
+      { subtype: 'translation' },
+      { toh: 'toh847' },
+    ]);
+    const tables = tablesFor(published());
+    tables.passage_annotations.push({ ...link, toh: 'toh145' } as Row);
+    const { client } = fakeClient(tables);
+
+    // Cut "Then " — before the glossary instance and the link.
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 5 }],
+    });
+
+    expect(result.success).toBe(true);
+    const row = (uuid: string) =>
+      tables.passage_annotations.find((r) => r.uuid === uuid);
+    expect(row('a-glossary')).toEqual({ ...glossary, start: 0, end: 3 });
+    expect(row('a-link')).toEqual({
+      ...link,
+      toh: 'toh145',
+      start: 18,
+      end: 22,
+    });
+  });
+
   it('does not rewrite an annotation the edits leave in place', async () => {
     const tables = tablesFor(published());
     const { client, log } = fakeClient(tables);
