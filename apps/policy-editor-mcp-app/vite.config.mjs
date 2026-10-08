@@ -52,7 +52,20 @@ const emitHtmlModule = () => ({
 
 export default defineConfig({
   root,
-  css: { postcss: { plugins: [tailwindcss()] } },
+  css: {
+    postcss: {
+      plugins: [
+        tailwindcss({
+          // Automatic class detection covers only `src`; styles.css adds the rest.
+          base: join(root, 'src'),
+          // Keeps each rule's source file, so Vite resolves the url() of an
+          // imported stylesheet (the theme's font) from that file. Vite
+          // minifies the CSS afterwards.
+          optimize: false,
+        }),
+      ],
+    },
+  },
   build: {
     outDir,
     emptyOutDir: true,

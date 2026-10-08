@@ -1,58 +1,14 @@
 /*
- * Compiled by Tailwind at build time. Automatic source detection is off, so
- * the scan covers exactly the @source globs below.
+ * Compiled by Tailwind at build time over the design-system theme. Automatic
+ * source detection is limited to this app's `src` (see vite.config.mjs); the
+ * editor's own sources are scanned by the @source globs below, because the
+ * published design-system CSS lacks the classes only lib-editing uses.
+ * Fonts: Monlam is inlined as a data: URL by the build (hosts block remote
+ * fonts); the theme's other faces fall back to system fonts.
  */
-@import 'tailwindcss' source(none);
+@import '../../../libs/design-system/src/lib/theme/global.css';
 
-@source './**/*.ts';
 @source '../index.html';
-
-/*
- * DEV-811 phase 2: add @source globs here for the .ts/.tsx sources of the
- * editor composite, under ../../../libs/lib-editing/src and
- * ../../../libs/design-system/src. design-system's published CSS lacks the
- * classes only lib-editing uses, so both need scanning.
- */
-
-/* Inlined as a data: URL by the build; hosts block remote fonts. */
-@font-face {
-  font-family: 'Monlam OuChan 2';
-  src: url('../../../libs/design-system/src/lib/assets/fonts/MonlamUniOuChan2.woff2')
-    format('woff2');
-  font-display: swap;
-  unicode-range: U+0F00-0FFF;
-}
-
-/*
- * Host colours when the host provides them (see main.ts), else these
- * defaults for the theme main.ts sets as `data-theme`.
- */
-:root {
-  --default-surface: #fff;
-  --default-panel: #f5f5f4;
-  --default-ink: #1c1917;
-  --default-muted: #57534e;
-  --default-danger: #b91c1c;
-  --default-line: #e7e5e4;
-  color-scheme: light;
-}
-
-:root[data-theme='dark'] {
-  --default-surface: #1f1e1d;
-  --default-panel: #2b2a28;
-  --default-ink: #f5f5f4;
-  --default-muted: #a8a29e;
-  --default-danger: #f87171;
-  --default-line: #3f3d3a;
-  color-scheme: dark;
-}
-
-@theme {
-  --font-sans: 'Monlam OuChan 2', ui-sans-serif, system-ui, sans-serif;
-  --color-surface: var(--color-background-primary, var(--default-surface));
-  --color-panel: var(--color-background-secondary, var(--default-panel));
-  --color-ink: var(--color-text-primary, var(--default-ink));
-  --color-muted: var(--color-text-secondary, var(--default-muted));
-  --color-danger: var(--color-text-danger, var(--default-danger));
-  --color-line: var(--color-border-primary, var(--default-line));
-}
+@source '../../../libs/design-system/src/lib/**/*.{ts,tsx}';
+@source '../../../libs/lib-editing/src/lib/components/{editor,policy-editor}/**/*.{ts,tsx}';
+@source not '../../../libs/**/*.{spec,stories}.{ts,tsx}';

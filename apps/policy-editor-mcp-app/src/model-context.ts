@@ -1,4 +1,7 @@
-import type { PolicyVersion } from './policy-source.contract';
+import type {
+  PolicySaved,
+  PolicyVersion,
+} from '@eightyfourthousand/lib-editing/policy-editor';
 
 /** A change the user made in the editor, as reported to the conversation. */
 export type PolicyChange =
@@ -12,6 +15,19 @@ export type PolicyChange =
     }
   | { kind: 'deleted'; name: string; archivedPath: string }
   | { kind: 'renamed'; from: string; to: string; archivedPath: string };
+
+/** The change a successful save or restore in the editor made. */
+export function changeFromSaved({
+  name,
+  version,
+  created,
+  restoredFrom,
+}: PolicySaved): PolicyChange {
+  if (restoredFrom) {
+    return { kind: 'restored', name, version, revisionPath: restoredFrom };
+  }
+  return { kind: created ? 'created' : 'saved', name, version };
+}
 
 type TextContent = { type: 'text'; text: string };
 

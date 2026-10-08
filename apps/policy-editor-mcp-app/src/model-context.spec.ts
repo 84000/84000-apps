@@ -1,4 +1,5 @@
 import {
+  changeFromSaved,
   describePolicyChange,
   createPolicyChangeReporter,
   type PolicyChange,
@@ -6,6 +7,38 @@ import {
 } from './model-context';
 
 const saved: PolicyChange = { kind: 'saved', name: 'a/b', version: 'v2' };
+
+describe('changeFromSaved', () => {
+  it('reports a save of an existing policy as saved', () => {
+    expect(
+      changeFromSaved({ ok: true, name: 'a/b', version: 'v2', created: false }),
+    ).toEqual(saved);
+  });
+
+  it('reports a save of a new policy as created', () => {
+    expect(
+      changeFromSaved({ ok: true, name: 'a/c', version: 'v1', created: true }),
+    ).toEqual({ kind: 'created', name: 'a/c', version: 'v1' });
+  });
+
+  it('reports a restore with the revision it wrote back', () => {
+    expect(
+      changeFromSaved({
+        ok: true,
+        name: 'a/b',
+        version: 'v3',
+        created: false,
+        archivedPath: 'archive/a/b.md/2.md',
+        restoredFrom: 'archive/a/b.md/1.md',
+      }),
+    ).toEqual({
+      kind: 'restored',
+      name: 'a/b',
+      version: 'v3',
+      revisionPath: 'archive/a/b.md/1.md',
+    });
+  });
+});
 
 describe('describePolicyChange', () => {
   it.each<[PolicyChange, string]>([
