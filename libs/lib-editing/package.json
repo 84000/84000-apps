@@ -82,6 +82,11 @@
       "import": "./stack.js",
       "default": "./stack.js"
     },
+    "./policy-editor": {
+      "types": "./policy-editor.d.ts",
+      "import": "./policy-editor.js",
+      "default": "./policy-editor.js"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,
