@@ -120,6 +120,45 @@ describe('PolicyEditorApp', () => {
     expect(screen.getByText('Could not tell Claude.')).toBeTruthy();
     expect((button as HTMLButtonElement).disabled).toBe(false);
   });
+
+  it('keeps Tell Claude open for a change made while a message was sending', async () => {
+    let finish: (result: object) => void = () => undefined;
+    setup(
+      jest.fn(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      ),
+    );
+    await act(async () => {
+      editorProps.onSaved?.({
+        ok: true,
+        name: 'a/b',
+        version: 'v2',
+        created: false,
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Tell Claude' }));
+    });
+    await act(async () => {
+      editorProps.onSaved?.({
+        ok: true,
+        name: 'a/b',
+        version: 'v3',
+        created: false,
+      });
+    });
+    await act(async () => {
+      finish({});
+    });
+
+    expect(screen.queryByText('Claude was told.')).toBeNull();
+    const button = screen.getByRole('button', { name: 'Tell Claude' });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(button.getAttribute('title')).toContain('version v3');
+  });
 });
 
 describe('permissionLabel', () => {

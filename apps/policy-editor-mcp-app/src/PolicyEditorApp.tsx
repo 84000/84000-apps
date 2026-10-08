@@ -8,7 +8,7 @@ import {
   type PolicyPermissions,
   type PolicySource,
 } from '@eightyfourthousand/lib-editing/policy-editor';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   changeFromSaved,
   createPolicyChangeReporter,
@@ -58,8 +58,11 @@ export const PolicyEditorApp = ({
   const report = useMemo(() => createPolicyChangeReporter(app), [app]);
   const [last, setLast] = useState<PolicyChange>();
   const [telling, setTelling] = useState<Telling>('idle');
+  // The change `telling` describes; a later change makes a pending send stale.
+  const current = useRef<PolicyChange>(undefined);
 
   const changed = (change: PolicyChange) => {
+    current.current = change;
     setLast(change);
     setTelling('idle');
     void report(change);
@@ -68,7 +71,8 @@ export const PolicyEditorApp = ({
   const tell = async () => {
     if (!last) return;
     setTelling('sending');
-    setTelling((await tellClaude(app, last)) ? 'sent' : 'failed');
+    const sent = await tellClaude(app, last);
+    if (current.current === last) setTelling(sent ? 'sent' : 'failed');
   };
 
   return (
