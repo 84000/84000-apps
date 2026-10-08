@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import type { DataClient, PassageEdit } from '@eightyfourthousand/data-access';
-import {
-  applyPassageEdits,
-  hasPermission,
-} from '@eightyfourthousand/data-access';
+import { applyPassageEdits, hasPermission } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
 
@@ -85,14 +82,14 @@ const inputSchema = {
     .boolean()
     .optional()
     .describe(
-      'Must be true: compute and return the result without writing it. Writes are not available yet.',
+      'Compute and return the result without writing it. Use this to show the editor what would change.',
     ),
 };
 
 /**
- * Previews edits to passages of a work that already has content, expressed as
- * deltas rather than whole passages. Refuses to write until the save is
- * transactional. Requires `editor.edit`.
+ * Write tool that edits passages of a work that already has content, expressed
+ * as deltas rather than whole passages. Offset re-mapping, annotation
+ * preservation and the save are handled here. Requires `editor.edit`.
  */
 export function createApplyPassageEditsTool(
   client: DataClient,
@@ -100,7 +97,7 @@ export function createApplyPassageEditsTool(
   return {
     name: 'apply-passage-edits',
     description:
-      'Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Preview only for now: call it with dryRun: true and show the editor the result. A call without dryRun: true is refused, because the save cannot yet write the text and its annotations as one transaction. The editor makes the change in the editor. Use apply-entity-import instead to fill an empty work. Requires editor permissions.',
+      'Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Use apply-entity-import instead to fill an empty work. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
     inputSchema,
     annotations: {
       title: 'Apply Passage Edits',
@@ -110,12 +107,6 @@ export function createApplyPassageEditsTool(
       openWorldHint: false,
     },
     handler: async ({ workUuid, edits, dryRun }) => {
-      if (dryRun !== true) {
-        return errorResult(
-          'apply-passage-edits is preview-only for now: call it with dryRun: true. It cannot write yet, because the save does not commit the text and its annotations as one transaction. Show the editor the preview and let them make the change in the editor.',
-        );
-      }
-
       const allowed = await hasPermission({
         client,
         permission: 'editor.edit',

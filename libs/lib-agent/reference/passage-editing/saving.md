@@ -4,12 +4,6 @@ Use **`apply-passage-edits`**. You send what you want changed and it works out
 the consequences: the offsets of every other annotation on those passages, the
 annotations you did not mention, the content, the sort of a passage you insert.
 
-**For now it only previews.** Call it with `dryRun: true`; a call without that
-is refused. The save cannot yet commit a passage's text and its annotations as
-one transaction, so a failure partway could leave text cut and its annotations
-not moved. Hand the editor the preview and let them make the change in the
-editor. Do not reach for `apply-entity-import` to write it instead.
-
 `apply-entity-import` is the other tool, and it is for filling a work that has
 no passages yet. It takes a passage's whole end state, which on a populated work
 means reconstructing everything you are not changing — see *Why not the import
@@ -51,8 +45,8 @@ Read `offsets.md` for why this is the part worth getting right.
 
 ## Preview with `dryRun`
 
-`dryRun: true` computes the result and returns it without writing. It is the
-only mode the tool accepts for now. That is the preview: the content as it would stand, the annotation counts, and any warnings.
+`dryRun: true` computes the result and returns it without writing. That is the
+preview: the content as it would stand, the annotation counts, and any warnings.
 Show the editor that, not a description of your intentions. See `preview.md`.
 
 ## Inserting a passage
