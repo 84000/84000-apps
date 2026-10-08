@@ -1,6 +1,6 @@
 ---
 name: resolve-folio-mentions
-description: Turn the folio break markers in a work's passages into folio mention annotations. Use when an editor wants the `[F.123.a]` markers in a translation — left as plain text, wrapped in a deprecated reference, or imported as an ordinary link — converted into the zero-length `mention` annotations the reader renders as folio breaks. Reads the work by Tohoku number, resolves each marker to a folio UUID, shows a preview for review, then writes through the passage save.
+description: Turn the folio break markers in a work's passages into folio mention annotations. Use when an editor wants the `[F.123.a]` markers in a translation — left as plain text, wrapped in a deprecated reference, or imported as an ordinary link — converted into the zero-length `mention` annotations the reader renders as folio breaks. Reads the work by Tohoku number, resolves each marker to a folio UUID, shows a preview for review. Writing is not available yet: the editor makes the change.
 ---
 
 # Resolve folio mentions
@@ -179,10 +179,10 @@ carried through for you.
 Read `reference/passage-editing/offsets.md` if you need to reason about what a
 cut does, but do not do the shifting yourself.
 
-### 7. Preview before writing (required)
+### 7. Preview before any change (required)
 
-Follow `reference/passage-editing/preview.md`. Do not write until the editor
-confirms, and do not resolve an ask by choosing for them.
+Follow `reference/passage-editing/preview.md`. Do not hand over the edit until
+the editor confirms, and do not resolve an ask by choosing for them.
 
 What this conversion specifically owes the editor:
 
@@ -194,25 +194,25 @@ What this conversion specifically owes the editor:
 - any folio number that did not resolve, and any gap in the folio sequence — a
   gap usually means a marker was missed rather than a folio missing.
 
-### 8. Apply
+### 8. Hand over the edit
 
-Call `apply-passage-edits` with `dryRun: true` first — its result **is** the
-preview in step 7. Then call it again without `dryRun` once the editor confirms.
+Call `apply-passage-edits` with `dryRun: true` — its result **is** the preview
+in step 7. The tool does not write yet and refuses a call without `dryRun: true`
+(see `reference/passage-editing/saving.md`). Once the editor confirms, give them
+the edits to make in the editor, per passage, and do not try to write them
+another way.
 
 The new first-folio passage is an `insert-passage` edit: give it the passage it
-goes **before**, the bracketed text as content, and no label. Then add its
-mention at offset 0 of the new passage in a second call, once the insert has
-given it a uuid.
-
-`reference/passage-editing/saving.md` covers the rest.
+goes **before**, the bracketed text as content, and no label. Its mention goes at
+offset 0 of the new passage.
 
 ### 9. Verify
 
-Re-read the passages and check that:
+Once the editor has made the change, re-read the passages and check that:
 
 - no `[F.<n>.<side>]` text remains, and every reference the editor declined still does;
 - the mention count matches the preview;
 - every mention has `start == end`;
-- the warnings returned by the write are empty, or each one is something you
+- the warnings the preview returned are empty, or each one is something you
   intended — a dropped annotation means a cut swallowed text you did not mean to
   take.

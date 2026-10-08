@@ -32,7 +32,7 @@ describe('apply-passage-edits tool', () => {
 
   const applied = {
     success: true,
-    dryRun: false,
+    dryRun: true,
     warnings: [],
     passages: [
       {
@@ -53,11 +53,30 @@ describe('apply-passage-edits tool', () => {
     expect(tool.annotations?.destructiveHint).toBe(true);
   });
 
+  it.each([undefined, false])(
+    'refuses a call with dryRun %s and does not touch the data layer',
+    async (dryRun) => {
+      mockedHasPermission.mockResolvedValue(true);
+
+      const result = await tool.handler(
+        { workUuid: 'work-1', edits, dryRun } as never,
+        extra,
+      );
+
+      expect(result.isError).toBe(true);
+      expect((result.content[0] as { text: string }).text).toContain(
+        'dryRun: true',
+      );
+      expect(mockedApply).not.toHaveBeenCalled();
+      expect(mockedHasPermission).not.toHaveBeenCalled();
+    },
+  );
+
   it('denies callers without editor.edit and does not write', async () => {
     mockedHasPermission.mockResolvedValue(false);
 
     const result = await tool.handler(
-      { workUuid: 'work-1', edits } as never,
+      { workUuid: 'work-1', edits, dryRun: true } as never,
       extra,
     );
 
@@ -69,13 +88,16 @@ describe('apply-passage-edits tool', () => {
     mockedHasPermission.mockResolvedValue(true);
     mockedApply.mockResolvedValue(applied as never);
 
-    await tool.handler({ workUuid: 'work-1', edits } as never, extra);
+    await tool.handler(
+      { workUuid: 'work-1', edits, dryRun: true } as never,
+      extra,
+    );
 
     expect(mockedApply).toHaveBeenCalledWith({
       client,
       workUuid: 'work-1',
       edits,
-      dryRun: undefined,
+      dryRun: true,
     });
   });
 
@@ -97,7 +119,7 @@ describe('apply-passage-edits tool', () => {
     mockedApply.mockResolvedValue(applied as never);
 
     const result = await tool.handler(
-      { workUuid: 'work-1', edits } as never,
+      { workUuid: 'work-1', edits, dryRun: true } as never,
       extra,
     );
 
@@ -122,7 +144,7 @@ describe('apply-passage-edits tool', () => {
     } as never);
 
     const result = await tool.handler(
-      { workUuid: 'work-1', edits } as never,
+      { workUuid: 'work-1', edits, dryRun: true } as never,
       extra,
     );
 
@@ -138,7 +160,7 @@ describe('apply-passage-edits tool', () => {
     } as never);
 
     const result = await tool.handler(
-      { workUuid: 'work-1', edits } as never,
+      { workUuid: 'work-1', edits, dryRun: true } as never,
       extra,
     );
 
