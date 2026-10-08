@@ -1,5 +1,6 @@
 import {
   ANNOTATIONS_TO_IGNORE,
+  AnnotationDTO,
   BodyItemType,
   DataClient,
   Passage,
@@ -41,6 +42,8 @@ export const savePassagesWithDeletions = async ({
   passages,
   deletedUuids = [],
   anchors,
+  deletableAnnotationUuids,
+  annotationRows = [],
 }: {
   client: DataClient;
   passages: Passage[];
@@ -51,6 +54,17 @@ export const savePassagesWithDeletions = async ({
    * see `placeNewPassages`.
    */
   anchors?: Record<string, NewPassageAnchor>;
+  /**
+   * When given, only these stored annotations may be deleted; any other
+   * annotation absent from the payload is left as stored. For a caller that
+   * sends only the annotations it changed.
+   */
+  deletableAnnotationUuids?: readonly string[];
+  /**
+   * Annotation rows to write as given, alongside the passages' own
+   * annotations, bypassing domain serialization.
+   */
+  annotationRows?: AnnotationDTO[];
 }): Promise<SavePassagesWithDeletionsResult> => {
   const inputUuids = passages.map((p) => p.uuid);
   const { data: existingRows } =
@@ -94,7 +108,10 @@ export const savePassagesWithDeletions = async ({
   const dtos = passagesToDTO(toSave);
   const passageRowDtos = passagesToRowDTO(toSave);
   const passageUuids = passages.map((p) => p.uuid);
-  const annotations = dtos.flatMap((p) => p.annotations || []);
+  const annotations = [
+    ...dtos.flatMap((p) => p.annotations || []),
+    ...annotationRows,
+  ];
   const { data: existingAnnotations } =
     passageUuids.length > 0
       ? await client
@@ -134,9 +151,13 @@ export const savePassagesWithDeletions = async ({
       .filter((passage) => passage.annotationsIncomplete)
       .map((passage) => passage.uuid),
   );
+  const deletable = deletableAnnotationUuids
+    ? new Set(deletableAnnotationUuids)
+    : undefined;
   const annotationsToDelete = existingAnnotations?.filter(
     (existingAnnotation) =>
       !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
+      (!deletable || deletable.has(existingAnnotation.uuid)) &&
       !annotations.find(
         (annotation) => annotation.uuid === existingAnnotation.uuid,
       ),
