@@ -41,6 +41,7 @@ export const savePassagesWithDeletions = async ({
   passages,
   deletedUuids = [],
   anchors,
+  deletableAnnotationUuids,
 }: {
   client: DataClient;
   passages: Passage[];
@@ -51,6 +52,12 @@ export const savePassagesWithDeletions = async ({
    * see `placeNewPassages`.
    */
   anchors?: Record<string, NewPassageAnchor>;
+  /**
+   * When given, only these stored annotations may be deleted; any other
+   * annotation absent from the payload is left as stored. For a caller that
+   * sends only the annotations it changed.
+   */
+  deletableAnnotationUuids?: readonly string[];
 }): Promise<SavePassagesWithDeletionsResult> => {
   const inputUuids = passages.map((p) => p.uuid);
   const { data: existingRows } =
@@ -134,9 +141,13 @@ export const savePassagesWithDeletions = async ({
       .filter((passage) => passage.annotationsIncomplete)
       .map((passage) => passage.uuid),
   );
+  const deletable = deletableAnnotationUuids
+    ? new Set(deletableAnnotationUuids)
+    : undefined;
   const annotationsToDelete = existingAnnotations?.filter(
     (existingAnnotation) =>
       !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
+      (!deletable || deletable.has(existingAnnotation.uuid)) &&
       !annotations.find(
         (annotation) => annotation.uuid === existingAnnotation.uuid,
       ),

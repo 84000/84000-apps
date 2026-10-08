@@ -10,7 +10,7 @@ import {
   annotationsFromDTO,
   passageFromDTO,
 } from '../types';
-import { getAnnotationsByPassageUuids } from './batch';
+import { readAnnotationsByPassageUuids } from './batch';
 import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
 
 /** Remove a span of text from a passage. Offsets are in the stored content. */
@@ -117,19 +117,6 @@ const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
   edit.op !== 'insert-passage' && edit.passageUuid === uuid;
 
 /**
- * Apply a set of edits to the passages they name and persist the result.
- *
- * Every offset in `edits` is read in the coordinates of the **stored** content,
- * before any edit is applied. Deletions are cut, the surviving annotations are
- * re-mapped onto the shortened content, and added annotations land at the
- * mapped position of the offset given — so a caller describes what it wants
- * changed and never has to track what its own edits moved.
- *
- * Annotations the edits do not mention are carried through untouched, which is
- * what makes this safe on a passage that already has content: the save path
- * deletes annotations absent from the payload.
- */
-/**
  * Compute the edited passages without touching the database.
  *
  * Every offset in `edits` is read in the coordinates of the passage as given,
@@ -138,9 +125,9 @@ const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
  * mapped position of the offset supplied — so a caller describes what it wants
  * changed and never tracks what its own edits moved.
  *
- * Annotations the edits do not mention are carried through untouched. That is
- * what makes this safe on a passage that already has content: the save path
- * deletes annotations absent from the payload.
+ * Annotations the edits do not mention are carried through, re-mapped where a
+ * deletion moved them. `droppedAnnotationUuids` lists the stored annotations
+ * the edits removed or swallowed: the only ones a save may delete.
  */
 export const applyEditsToPassages = ({
   workUuid,
@@ -155,10 +142,12 @@ export const applyEditsToPassages = ({
   warnings: PassageEditWarning[];
   /** Each inserted passage's neighbour, for the save to place it by. */
   anchors: Record<string, NewPassageAnchor>;
+  droppedAnnotationUuids: string[];
   error?: string;
 } => {
   const warnings: PassageEditWarning[] = [];
   const anchors: Record<string, NewPassageAnchor> = {};
+  const dropped: string[] = [];
   const stored = new Map(passages.map((passage) => [passage.uuid, passage]));
   const edited: Passage[] = [];
 
@@ -184,12 +173,23 @@ export const applyEditsToPassages = ({
     const content = applyDeletions(passage.content, deletions);
     const kept: Annotations = [];
 
+    for (const annotationUuid of removed) {
+      if (!passage.annotations.some((a) => a.uuid === annotationUuid)) {
+        warnings.push({
+          passageUuid: uuid,
+          message: `Did not remove annotation ${annotationUuid}: it is not on this passage, or is a type edits cannot change.`,
+        });
+      }
+    }
+
     for (const annotation of passage.annotations) {
       if (removed.has(annotation.uuid)) {
+        dropped.push(annotation.uuid);
         continue;
       }
       const remapped = remapAnnotation(annotation, deletions);
       if (!remapped) {
+        dropped.push(annotation.uuid);
         warnings.push({
           passageUuid: uuid,
           message: `Dropped ${annotation.type} annotation ${annotation.uuid}: the text it marked was deleted.`,
@@ -216,6 +216,7 @@ export const applyEditsToPassages = ({
           passages: [],
           warnings,
           anchors,
+          droppedAnnotationUuids: [],
           error: `Cannot build a "${edit.kind}" annotation for passage ${uuid}. The kind has no importer, or required data is missing.`,
         };
       }
@@ -236,6 +237,7 @@ export const applyEditsToPassages = ({
         passages: [],
         warnings,
         anchors,
+        droppedAnnotationUuids: [],
         error: `Cannot insert before ${edit.before}: no such passage.`,
       };
     }
@@ -255,7 +257,12 @@ export const applyEditsToPassages = ({
     });
   }
 
-  return { passages: edited, warnings, anchors };
+  return {
+    passages: edited,
+    warnings,
+    anchors,
+    droppedAnnotationUuids: dropped,
+  };
 };
 
 /**
@@ -311,10 +318,23 @@ export const applyPassageEdits = async ({
     };
   }
 
-  const annotationsByPassage = await getAnnotationsByPassageUuids({
+  // The draft copy, legacy rows included: this is what the save writes over.
+  const annotationsRead = await readAnnotationsByPassageUuids({
     client,
     passageUuids: targetUuids,
+    source: 'draft',
+    includeDeprecated: true,
   });
+  if ('error' in annotationsRead) {
+    return {
+      success: false,
+      dryRun,
+      passages: [],
+      warnings: [],
+      error: `Failed to read annotations: ${annotationsRead.error}`,
+    };
+  }
+  const annotationsByPassage = annotationsRead.data;
 
   const stored = rows.map((row) =>
     passageFromDTO(
@@ -330,6 +350,7 @@ export const applyPassageEdits = async ({
     passages,
     warnings,
     anchors,
+    droppedAnnotationUuids,
     error: editError,
   } = applyEditsToPassages({
     workUuid,
@@ -345,10 +366,37 @@ export const applyPassageEdits = async ({
     return { success: true, dryRun, passages, warnings };
   }
 
+  // Send only the annotations an edit added or moved, and let the save delete
+  // only what an edit dropped. Everything else stays exactly as stored: the
+  // DTO round-trip is not lossless, and rows written since the read survive.
+  const storedByUuid = new Map(
+    stored.map((passage) => [passage.uuid, passage]),
+  );
+  const toSave = passages.map((passage) => {
+    const before = new Map(
+      (storedByUuid.get(passage.uuid)?.annotations ?? []).map((a) => [
+        a.uuid,
+        a,
+      ]),
+    );
+    return {
+      ...passage,
+      annotations: passage.annotations.filter((annotation) => {
+        const original = before.get(annotation.uuid);
+        return (
+          !original ||
+          original.start !== annotation.start ||
+          original.end !== annotation.end
+        );
+      }),
+    };
+  });
+
   const result = await savePassagesWithDeletions({
     client,
-    passages,
+    passages: toSave,
     anchors,
+    deletableAnnotationUuids: droppedAnnotationUuids,
   });
 
   return {

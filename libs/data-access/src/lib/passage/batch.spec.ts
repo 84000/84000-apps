@@ -167,6 +167,26 @@ describe('getAnnotationsByPassageUuids', () => {
     expect(state.notCalls.map(([, operator]) => operator)).not.toContain('in');
   });
 
+  it('excludes deprecated annotations unless asked to keep them', async () => {
+    const excluded = createState([annotationRow('a-1', 'p-1')]);
+    await getAnnotationsByPassageUuids({
+      client: createFakeClient(excluded),
+      passageUuids: ['p-1'],
+      source: 'draft',
+    });
+
+    const kept = createState([annotationRow('a-1', 'p-1')]);
+    await getAnnotationsByPassageUuids({
+      client: createFakeClient(kept),
+      passageUuids: ['p-1'],
+      source: 'draft',
+      includeDeprecated: true,
+    });
+
+    expect(excluded.notCalls).toContainEqual(['type', 'like', 'deprecated%']);
+    expect(kept.notCalls).toEqual([]);
+  });
+
   it('returns an empty map on query error', async () => {
     const state = createState([annotationRow('a-1', 'p-1')]);
     state.error = { message: 'boom' };

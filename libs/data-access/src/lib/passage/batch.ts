@@ -16,19 +16,26 @@ import {
   type ContentSource,
 } from '../content-source';
 
-export const getAnnotationsByPassageUuids = async ({
+/**
+ * Like `getAnnotationsByPassageUuids`, but reports a failed read instead of
+ * returning an empty map, for a caller that writes based on what it read.
+ */
+export const readAnnotationsByPassageUuids = async ({
   client,
   passageUuids,
   source = DEFAULT_CONTENT_SOURCE,
+  includeDeprecated = false,
 }: {
   client: DataClient;
   passageUuids: readonly string[];
   source?: ContentSource;
-}): Promise<Map<string, AnnotationDTO[]>> => {
+  /** Keep legacy `deprecated-*` rows. For a write path that must carry them. */
+  includeDeprecated?: boolean;
+}): Promise<{ data: Map<string, AnnotationDTO[]> } | { error: string }> => {
   const annotationsByPassage = new Map<string, AnnotationDTO[]>();
 
   if (passageUuids.length === 0) {
-    return annotationsByPassage;
+    return { data: annotationsByPassage };
   }
 
   const pageSize = 1000;
@@ -40,15 +47,18 @@ export const getAnnotationsByPassageUuids = async ({
     let query = client
       .from(relationFor('passageAnnotations', source))
       .select('uuid, passage_uuid, type, start, end, content, toh')
-      .in('passage_uuid', passageUuids as string[])
-      // The published snapshot already excludes `deprecated%` types, so this is
-      // a no-op there; it stays unconditional to keep one code path.
-      .not('type', 'like', 'deprecated%');
+      .in('passage_uuid', passageUuids as string[]);
 
-    // Draft-only annotations must never reach a reader. Conditional, unlike the
-    // filter above, because the editor loads through this same function and
-    // needs them — excluding them everywhere would make a comment anchor
-    // invisible to the surface that owns it.
+    // The published snapshot already excludes `deprecated%` types, so this is
+    // a no-op there.
+    if (!includeDeprecated) {
+      query = query.not('type', 'like', 'deprecated%');
+    }
+
+    // Draft-only annotations must never reach a reader. Conditional on source
+    // because the editor loads through this same function and needs them —
+    // excluding them everywhere would make a comment anchor invisible to the
+    // surface that owns it.
     if (source === 'published') {
       query = query.not('type', 'in', `(${DRAFT_ONLY_ANNOTATIONS.join(',')})`);
     }
@@ -62,8 +72,7 @@ export const getAnnotationsByPassageUuids = async ({
       .range(offset, offset + pageSize - 1);
 
     if (error) {
-      console.error('Error batch loading annotations:', error);
-      return new Map();
+      return { error: error.message };
     }
 
     allData = allData.concat((data ?? []) as AnnotationDTO[]);
@@ -89,7 +98,19 @@ export const getAnnotationsByPassageUuids = async ({
     });
   }
 
-  return annotationsByPassage;
+  return { data: annotationsByPassage };
+};
+
+/** Annotations grouped by passage; an empty map if the read fails. */
+export const getAnnotationsByPassageUuids = async (
+  params: Parameters<typeof readAnnotationsByPassageUuids>[0],
+): Promise<Map<string, AnnotationDTO[]>> => {
+  const result = await readAnnotationsByPassageUuids(params);
+  if ('error' in result) {
+    console.error('Error batch loading annotations:', result.error);
+    return new Map();
+  }
+  return result.data;
 };
 
 export const getAlignmentsByPassageUuids = async ({
