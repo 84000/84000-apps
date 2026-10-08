@@ -1,9 +1,5 @@
 import { Extension, type Extensions } from '@tiptap/core';
-import {
-  DOMParser,
-  type Node as DOMNode,
-  type ParseOptions,
-} from '@tiptap/pm/model';
+import { DOMParser, type ParseOptions } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -46,11 +42,11 @@ const keepingNewlines = (options: ParseOptions = {}): ParseOptions =>
  * pastes a slice copied from a ProseMirror editor.
  */
 class NewlinePreservingParser extends DOMParser {
-  override parse(dom: DOMNode, options?: ParseOptions) {
+  override parse(dom: globalThis.Node, options?: ParseOptions) {
     return super.parse(dom, keepingNewlines(options));
   }
 
-  override parseSlice(dom: DOMNode, options?: ParseOptions) {
+  override parseSlice(dom: globalThis.Node, options?: ParseOptions) {
     return super.parseSlice(dom, keepingNewlines(options));
   }
 }

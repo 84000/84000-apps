@@ -12,7 +12,7 @@ const FORBIDDEN =
 
 /** Packages the policy editor leaves to its host; a new one fails until listed here. */
 const ALLOWED_EXTERNALS =
-  /^(?:react(?:\/jsx-runtime)?|@tiptap\/(?:core|react|starter-kit|markdown|extension-table|pm\/model)|clsx|tailwind-merge|react-day-picker|react-resizable-panels|@radix-ui\/react-[\w-]+|@tanstack\/(?:react-table|match-sorter-utils)|class-variance-authority|lucide-react|use-debounce)$/;
+  /^(?:react(?:\/jsx-runtime)?|@tiptap\/(?:core|react|starter-kit|markdown|extension-table|pm\/(?:model|state))|clsx|tailwind-merge|react-day-picker|react-resizable-panels|@radix-ui\/react-[\w-]+|@tanstack\/(?:react-table|match-sorter-utils)|class-variance-authority|lucide-react|use-debounce)$/;
 
 /**
  * Fails the build on any forbidden import or unlisted package. Listed packages
