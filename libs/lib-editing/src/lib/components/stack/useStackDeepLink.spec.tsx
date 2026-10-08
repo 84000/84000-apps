@@ -88,6 +88,26 @@ describe('useStackDeepLink panel', () => {
     await waitFor(() => expect(revealed).toEqual(['p-7']));
   });
 
+  // On mobile the hidden desktop copy sees the hash before the sheet mounts.
+  it('leaves the hash to the copy on show', async () => {
+    const { controller, revealed } = controllerFor('endnotes');
+    mockNavigation.panels = {
+      right: { open: true, tab: 'endnotes', hash: 'n-1' },
+    };
+
+    const { rerender } = renderHook(
+      ({ drawn }) => useStackDeepLink(controller, 'right', drawn),
+      { initialProps: { drawn: false } },
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(revealed).toEqual([]);
+    expect(mockNavigation.updatePanel).not.toHaveBeenCalled();
+
+    rerender({ drawn: true });
+    await waitFor(() => expect(revealed).toEqual(['n-1']));
+  });
+
   it('lets a host name the panel when it draws a tab somewhere else', async () => {
     const { controller, revealed } = controllerFor('endnotes');
     mockNavigation.panels = {

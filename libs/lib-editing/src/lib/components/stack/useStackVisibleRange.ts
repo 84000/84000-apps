@@ -32,6 +32,8 @@ const useStackDrawn = (ref: RefObject<HTMLElement | null>) => {
  * A panel's tabs share one scroller, so a hidden stack still reads the shown
  * tab's scroll offset. Following it would page and hydrate a tab nobody is
  * looking at, at whatever depth the other tab is scrolled to.
+ *
+ * @returns Whether the stack is drawn.
  */
 export const useStackVisibleRange = (
   controller: PassageStackController,
@@ -44,4 +46,6 @@ export const useStackVisibleRange = (
     if (!count || !drawn) return;
     controller.setVisibleRange({ start, end });
   }, [controller, count, start, end, drawn]);
+
+  return drawn;
 };

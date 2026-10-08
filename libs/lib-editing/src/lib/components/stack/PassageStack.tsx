@@ -190,7 +190,7 @@ export const PassageStack = ({
   const items = virtualizer.getVirtualItems();
   const firstIndex = items[0]?.index ?? 0;
   const lastIndex = items[items.length - 1]?.index ?? 0;
-  useStackVisibleRange(controller, parentRef, {
+  const drawn = useStackVisibleRange(controller, parentRef, {
     count: order.length,
     start: firstIndex,
     end: lastIndex + 1,
@@ -231,7 +231,7 @@ export const PassageStack = ({
   }, [hasEarlier, firstUuid, scroller, scrollMargin, startPx]);
 
   useStackSelection(controller);
-  useStackDeepLink(controller, panel);
+  useStackDeepLink(controller, panel, drawn);
 
   useStackRowPointer({
     parentRef,
