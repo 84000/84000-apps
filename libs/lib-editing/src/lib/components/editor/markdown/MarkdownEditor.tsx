@@ -83,6 +83,51 @@ const useLatest = <T,>(value: T) => {
 /** What a mode reports: its markdown, and whether that parses back exactly. */
 type Report = (markdown: string, exact: boolean) => void;
 
+/**
+ * Prose styles for the rich editor's content, which Tailwind's preflight
+ * leaves unstyled. Scoped to the editor so every host gets them.
+ */
+const PROSE_CLASS = [
+  'relative flex flex-col flex-1 h-full',
+  '[&_.tiptap_:is(p,ul,ol,blockquote,pre,table,hr)]:my-3',
+  '[&_.tiptap_:is(li,th,td)>p]:my-1',
+  '[&_.tiptap>:first-child]:mt-0',
+  '[&_.tiptap_:is(h1,h2,h3,h4,h5,h6)]:mt-6',
+  '[&_.tiptap_:is(h1,h2,h3,h4,h5,h6)]:mb-2',
+  '[&_.tiptap_:is(h1,h2,h3,h4,h5,h6)]:font-semibold',
+  '[&_.tiptap_:is(h1,h2,h3,h4,h5,h6)]:leading-tight',
+  '[&_.tiptap_h1]:text-3xl',
+  '[&_.tiptap_h2]:text-2xl',
+  '[&_.tiptap_h3]:text-xl',
+  '[&_.tiptap_h4]:text-lg',
+  '[&_.tiptap_blockquote]:border-l-4',
+  '[&_.tiptap_blockquote]:border-border',
+  '[&_.tiptap_blockquote]:pl-4',
+  '[&_.tiptap_blockquote]:text-foreground/80',
+  '[&_.tiptap_ul]:list-disc',
+  '[&_.tiptap_ol]:list-decimal',
+  '[&_.tiptap_:is(ul,ol)]:pl-6',
+  '[&_.tiptap_li]:my-1',
+  '[&_.tiptap_code]:font-mono',
+  '[&_.tiptap_code]:text-[0.9em]',
+  '[&_.tiptap_:not(pre)>code]:rounded',
+  '[&_.tiptap_:not(pre)>code]:bg-muted',
+  '[&_.tiptap_:not(pre)>code]:px-1',
+  '[&_.tiptap_pre]:rounded-md',
+  '[&_.tiptap_pre]:bg-muted',
+  '[&_.tiptap_pre]:p-3',
+  '[&_.tiptap_a]:text-primary',
+  '[&_.tiptap_a]:underline',
+  '[&_.tiptap_hr]:border-border',
+  '[&_.tiptap_table]:border-collapse',
+  '[&_.tiptap_:is(th,td)]:border',
+  '[&_.tiptap_:is(th,td)]:border-border',
+  '[&_.tiptap_:is(th,td)]:px-2',
+  '[&_.tiptap_:is(th,td)]:align-top',
+  '[&_.tiptap_th]:text-left',
+  '[&_.tiptap_th]:font-semibold',
+].join(' ');
+
 const WARNING_CLASS =
   'mb-2 rounded-md border border-warning/40 bg-warning/5 px-3 py-2 text-sm';
 
@@ -255,6 +300,7 @@ const RichMarkdown = ({
 
   return (
     <EditorCore
+      className={PROSE_CLASS}
       content={initial}
       extensions={extensions}
       isEditable={editable}
