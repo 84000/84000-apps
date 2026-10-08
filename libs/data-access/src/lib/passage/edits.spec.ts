@@ -200,3 +200,75 @@ describe('applyEditsToPassages', () => {
     expect(result.error).toContain('nope');
   });
 });
+
+describe('applyEditsToPassages with overlapping cuts', () => {
+  const TEXT = 'abcdefghij';
+  const letters = (): Passage => ({
+    uuid: 'p1',
+    workUuid: WORK,
+    content: TEXT,
+    label: '1',
+    sort: 1,
+    type: 'translation',
+    annotations: annotationsFromDTO(
+      [
+        {
+          uuid: 'on-h',
+          passage_uuid: 'p1',
+          type: 'span',
+          start: 7,
+          end: 8,
+          content: [],
+        },
+        {
+          uuid: 'on-b',
+          passage_uuid: 'p1',
+          type: 'span',
+          start: 1,
+          end: 2,
+          content: [],
+        },
+      ],
+      TEXT.length,
+    ),
+  });
+  const cut = (...ranges: [number, number][]) =>
+    applyEditsToPassages({
+      workUuid: WORK,
+      passages: [letters()],
+      edits: ranges.map(([start, end]) => ({
+        op: 'delete-text' as const,
+        passageUuid: 'p1',
+        start,
+        end,
+      })),
+    });
+
+  it('removes the union of overlapping cuts', () => {
+    const result = cut([2, 5], [4, 7]);
+    const [passage] = result.passages;
+    expect(passage.content).toBe('abhij');
+    const h = passage.annotations.find((a) => a.uuid === 'on-h');
+    expect(h).toMatchObject({ start: 2, end: 3 });
+    expect(passage.content.slice(h?.start, h?.end)).toBe('h');
+  });
+
+  it('counts a repeated cut once and never goes negative', () => {
+    const [passage] = cut([0, 2], [0, 2]).passages;
+    expect(passage.content).toBe('cdefghij');
+    expect(passage.annotations.find((a) => a.uuid === 'on-h')).toMatchObject({
+      start: 5,
+      end: 6,
+    });
+    for (const annotation of passage.annotations) {
+      expect(annotation.start).toBeGreaterThanOrEqual(0);
+      expect(annotation.end).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('refuses a reversed or out-of-bounds range', () => {
+    expect(cut([5, 2]).error).toMatch(/ordered and within/);
+    expect(cut([8, 11]).error).toMatch(/ordered and within/);
+    expect(cut([-1, 2]).error).toMatch(/ordered and within/);
+  });
+});

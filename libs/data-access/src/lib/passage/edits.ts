@@ -84,6 +84,39 @@ const mapOffset = (offset: number, deletions: Deletion[]): number => {
   return mapped;
 };
 
+/**
+ * Sort the cuts and merge overlapping or repeated ones into their union, so
+ * each character is removed and counted once. Returns an error message for a
+ * range that is reversed or outside the content.
+ */
+const mergeDeletions = (
+  deletions: Deletion[],
+  length: number,
+): Deletion[] | string => {
+  const invalid = deletions.find(
+    ({ start, end }) =>
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < 0 ||
+      end < start ||
+      end > length,
+  );
+  if (invalid) {
+    return `Cannot delete ${invalid.start}–${invalid.end}: the range must be ordered and within the passage (length ${length}).`;
+  }
+
+  const merged: Deletion[] = [];
+  for (const cut of [...deletions].sort((a, b) => a.start - b.start)) {
+    const last = merged[merged.length - 1];
+    if (last && cut.start <= last.end) {
+      last.end = Math.max(last.end, cut.end);
+    } else {
+      merged.push({ ...cut });
+    }
+  }
+  return merged;
+};
+
 /** Cut every deletion out of `content`, working right to left. */
 const applyDeletions = (content: string, deletions: Deletion[]): string =>
   [...deletions]
@@ -157,9 +190,21 @@ export const applyEditsToPassages = ({
       continue;
     }
 
-    const deletions = forPassage
-      .filter((edit): edit is DeleteTextEdit => edit.op === 'delete-text')
-      .map(({ start, end }) => ({ start, end }));
+    const deletions = mergeDeletions(
+      forPassage
+        .filter((edit): edit is DeleteTextEdit => edit.op === 'delete-text')
+        .map(({ start, end }) => ({ start, end })),
+      passage.content.length,
+    );
+    if (typeof deletions === 'string') {
+      return {
+        passages: [],
+        warnings,
+        anchors,
+        droppedAnnotationUuids: [],
+        error: `Passage ${uuid}: ${deletions}`,
+      };
+    }
 
     const removed = new Set(
       forPassage
