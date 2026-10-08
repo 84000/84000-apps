@@ -21,8 +21,10 @@ const inputSchema = {
 
 /**
  * App-only tool reading one archived revision as `{ revision, content }`.
- * Requires `harness.read`. Anything that is not a readable archived revision —
- * including a live policy's key — is `not-found`.
+ * Requires `harness.read`. Anything that is not an archived revision —
+ * including a live policy's key — or that is not there is `not-found`; a
+ * storage failure is `error`, so the app can retry instead of showing the
+ * revision as gone.
  */
 export function createReadPolicyRevisionTool(
   client: DataClient,
@@ -42,12 +44,10 @@ export function createReadPolicyRevisionTool(
       const refused = await authorizePolicyTool(client, 'harness.read');
       if (refused) return refused;
 
-      const revision = await readPolicyRevision({ client, path });
-      if (!revision) {
-        return policyFailureResult({ ok: false, reason: 'not-found' });
-      }
+      const result = await readPolicyRevision({ client, path });
+      if (!result.ok) return policyFailureResult(result);
 
-      return jsonResult(revision);
+      return jsonResult({ revision: result.revision, content: result.content });
     },
   };
 }
