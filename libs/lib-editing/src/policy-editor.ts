@@ -8,6 +8,7 @@
  */
 export * from './lib/components/policy-editor/policy-source';
 export * from './lib/components/policy-editor/memory-policy-source';
+export * from './lib/components/policy-editor/PolicyEditor';
 export {
   MarkdownEditor,
   type MarkdownEditorMode,
