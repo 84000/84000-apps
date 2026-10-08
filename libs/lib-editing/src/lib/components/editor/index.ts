@@ -1,4 +1,5 @@
 export * from './BlockEditor';
+export * from './EditorCore';
 export * from './EditorBackMatterPage';
 export * from './EditorBodyPage';
 export * from './EditorLeftPanelPage';
@@ -8,3 +9,5 @@ export * from './TranslationBuilder';
 export * from './TranslationEditor';
 export * from './hooks';
 export * from './menus';
+export * from './markdown/markdown-codec';
+export * from './markdown/markdown-extensions';

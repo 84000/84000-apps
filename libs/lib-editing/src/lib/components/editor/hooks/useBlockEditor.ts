@@ -22,6 +22,7 @@ export const useBlockEditor = ({
   // its container — last mount wins and the viewport jumps. Only the
   // primary editor should opt in.
   autofocus = false,
+  undoableInitialContent = true,
   onCreate,
   ...rest
 }: UseEditorOptions & {
@@ -29,6 +30,11 @@ export const useBlockEditor = ({
   extensions?: Extensions;
   isEditable?: boolean;
   autofocus?: boolean;
+  /**
+   * Whether undo can take the editor back past the content it loaded with,
+   * to an empty document.
+   */
+  undoableInitialContent?: boolean;
 }) => {
   const editor = useEditor({
     extensions,
@@ -48,7 +54,16 @@ export const useBlockEditor = ({
     },
     onCreate: (ctx) => {
       if (ctx.editor.isEmpty) {
-        ctx.editor.commands.setContent(content);
+        if (undoableInitialContent) {
+          ctx.editor.commands.setContent(content);
+        } else {
+          // Loading is not an edit: neither undoable nor reported as one.
+          ctx.editor
+            .chain()
+            .setMeta('addToHistory', false)
+            .setContent(content, { emitUpdate: false })
+            .run();
+        }
         if (autofocus) {
           ctx.editor.commands.focus('start', { scrollIntoView: true });
         }
