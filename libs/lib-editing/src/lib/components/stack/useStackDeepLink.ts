@@ -107,6 +107,12 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
 export const useStackDeepLink = (
   controller: PassageStackController,
   panel: PanelName = panelForTab(controller.getTab()),
+  /**
+   * Whether this stack is laid out. The hash is consumed once, so a hidden
+   * layout copy must leave it to the copy on show, which on mobile mounts
+   * later, in the sheet.
+   */
+  isDrawn = true,
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
   // A hash is addressed to the panel's active tab, and every stack drawn in
@@ -120,7 +126,7 @@ export const useStackDeepLink = (
     !activeTab ||
     tab === activeTab ||
     (tab === 'translation' && activeTab === 'compare');
-  const target = answers ? panels[panel]?.hash : undefined;
+  const target = answers && isDrawn ? panels[panel]?.hash : undefined;
   const handled = useRef<string>(undefined);
 
   useEffect(() => {
