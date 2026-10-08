@@ -117,6 +117,29 @@ export type PolicyFailure =
   | { ok: false; reason: 'forbidden' }
   | { ok: false; reason: 'error'; message: string };
 
+/**
+ * The failures a read can report. Anything else a caller might know about
+ * (`conflict`, `exists`, `forbidden`) belongs to a write: storage reports a
+ * read that RLS denies as "not found", so a read cannot tell a hidden object
+ * from an absent one and never returns `forbidden`.
+ */
+export type PolicyReadFailure = Extract<
+  PolicyFailure,
+  { reason: 'not-found' | 'error' }
+>;
+
+/**
+ * Outcome of `readPolicy`. `not-found` means the policy is not there (or the
+ * name cannot name one); `error` means storage failed, so nothing is known
+ * about whether it exists and the read is safe to retry.
+ */
+export type PolicyReadResult =
+  { ok: true; policy: PolicyDocument } | PolicyReadFailure;
+
+/** Outcome of `readPolicyRevision`, distinguishing `not-found` from `error` as {@link PolicyReadResult} does. */
+export type PolicyRevisionReadResult =
+  { ok: true; revision: PolicyRevision; content: string } | PolicyReadFailure;
+
 /** Outcome of `writePolicy` and `restorePolicy`. */
 export type PolicyWriteResult =
   | {
@@ -168,16 +191,21 @@ const downloadText = async ({
   return { content: await data.text() };
 };
 
+/**
+ * Reads a live policy. A storage failure other than "not found" is `error`,
+ * never `not-found`: callers use `not-found` to mean the policy is gone, and a
+ * transient failure must not be read that way.
+ */
 export const readPolicy = async ({
   client,
   name,
 }: {
   client: DataClient;
   name: string;
-}): Promise<PolicyDocument | undefined> => {
+}): Promise<PolicyReadResult> => {
   // An invalid name cannot name a policy, so it is reported as missing
   // without a storage call that URL normalisation could redirect.
-  if (!isValidPolicyName(name)) return undefined;
+  if (!isValidPolicyName(name)) return NOT_FOUND;
   const { content, error } = await downloadText({
     client,
     path: policyPath(name),
@@ -187,20 +215,28 @@ export const readPolicy = async ({
     // Absence is reported by the caller — `readPolicies` as `missing`, and
     // `writePolicy` as the difference between creating and replacing. Only a
     // real failure is worth a log line.
-    if (!isNotFound(error)) {
-      console.error(`Error reading policy ${name}:`, error?.message);
-    }
-    return undefined;
+    if (isNotFound(error)) return NOT_FOUND;
+    console.error(`Error reading policy ${name}:`, error?.message);
+    return failed(
+      `Could not read ${policyName(name)} (${error?.message ?? 'no content'}).`,
+    );
   }
 
   return {
-    name: policyName(name),
-    content,
-    version: await policyVersion(content),
+    ok: true,
+    policy: {
+      name: policyName(name),
+      content,
+      version: await policyVersion(content),
+    },
   };
 };
 
-/** Resolves each name independently, reporting the ones that did not resolve. */
+/**
+ * Resolves each name independently. A name that is not there lands in
+ * `missing`; one whose read failed lands in `failed` with the reason, so a
+ * storage error is never reported as an absent policy.
+ */
 export const readPolicies = async ({
   client,
   names,
@@ -212,9 +248,16 @@ export const readPolicies = async ({
     names.map((name) => readPolicy({ client, name })),
   );
 
-  const policies = results.filter((p): p is PolicyDocument => !!p);
-  const missing = names.filter((_, i) => !results[i]);
-  return { policies, missing };
+  const policies: PolicyDocument[] = [];
+  const missing: string[] = [];
+  const failures: { name: string; message: string }[] = [];
+  results.forEach((result, i) => {
+    if (result.ok) policies.push(result.policy);
+    else if (result.reason === 'error') {
+      failures.push({ name: names[i], message: result.message });
+    } else missing.push(names[i]);
+  });
+  return { policies, missing, failed: failures };
 };
 
 /** Copies the current revision into the archive. */
@@ -363,8 +406,8 @@ export const writePolicy = async ({
     // Someone created the policy since we looked. Hand back what they wrote
     // so the caller can compare, rather than overwriting it.
     const current = await readPolicy({ client, name });
-    return current
-      ? { ok: false, reason: 'conflict', current }
+    return current.ok
+      ? { ok: false, reason: 'conflict', current: current.policy }
       : failed(
           `${policyName(name)} was created by someone else during this write, and could not be read back; nothing was written.`,
         );
@@ -443,9 +486,9 @@ const parseRevisionPath = (path: string): PolicyRevision | undefined => {
 };
 
 /**
- * Reads one archived revision by its archive key. Returns `undefined` for a key
- * that is not an archived policy revision, for one that is not there, and for a
- * failed read (which is logged).
+ * Reads one archived revision by its archive key. `not-found` is a key that is
+ * not an archived policy revision or one that is not there; any other failed
+ * read is `error` (and logged), so it is never mistaken for a missing revision.
  */
 export const readPolicyRevision = async ({
   client,
@@ -453,19 +496,20 @@ export const readPolicyRevision = async ({
 }: {
   client: DataClient;
   path: string;
-}): Promise<{ revision: PolicyRevision; content: string } | undefined> => {
+}): Promise<PolicyRevisionReadResult> => {
   const revision = parseRevisionPath(path);
-  if (!revision) return undefined;
+  if (!revision) return NOT_FOUND;
 
   const { content, error } = await downloadText({ client, path });
   if (content === undefined) {
-    if (!isNotFound(error)) {
-      console.error(`Error reading policy revision ${path}:`, error?.message);
-    }
-    return undefined;
+    if (isNotFound(error)) return NOT_FOUND;
+    console.error(`Error reading policy revision ${path}:`, error?.message);
+    return failed(
+      `Could not read the revision ${path} (${error?.message ?? 'no content'}).`,
+    );
   }
 
-  return { revision, content };
+  return { ok: true, revision, content };
 };
 
 /**
@@ -490,7 +534,7 @@ export const restorePolicy = async ({
 }): Promise<PolicyWriteResult> => {
   if (!isValidPolicyName(name)) return invalidName(name);
   const revision = await readPolicyRevision({ client, path: revisionPath });
-  if (!revision) return NOT_FOUND;
+  if (!revision.ok) return revision;
 
   return writePolicy({
     client,

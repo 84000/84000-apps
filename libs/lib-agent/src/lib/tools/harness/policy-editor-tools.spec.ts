@@ -191,20 +191,43 @@ describe('read-policy-revision', () => {
   const tool = createReadPolicyRevisionTool(client);
 
   it('returns the revision and its content', async () => {
-    mockedReadRevision.mockResolvedValue({ revision, content: '## Old' });
+    mockedReadRevision.mockResolvedValue({
+      ok: true,
+      revision,
+      content: '## Old',
+    });
 
     const result = await call(tool, { path: revisionPath });
 
+    expect(result.isError).toBeUndefined();
+    // Exactly the fields the tool has always returned; `ok` stays internal.
     expect(parse(result)).toEqual({ revision, content: '## Old' });
   });
 
-  it('reports an unreadable revision as not-found', async () => {
-    mockedReadRevision.mockResolvedValue(undefined);
+  it('reports a revision that is not there as not-found', async () => {
+    mockedReadRevision.mockResolvedValue({ ok: false, reason: 'not-found' });
 
     const result = await call(tool, { path: 'policies/a/b.md' });
 
     expect(result.isError).toBe(true);
     expect(parse(result)).toEqual({ ok: false, reason: 'not-found' });
+  });
+
+  it('reports a storage failure as an error, not as not-found', async () => {
+    mockedReadRevision.mockResolvedValue({
+      ok: false,
+      reason: 'error',
+      message: `Could not read the revision ${revisionPath} (Internal error).`,
+    });
+
+    const result = await call(tool, { path: revisionPath });
+
+    expect(result.isError).toBe(true);
+    expect(parse(result)).toEqual({
+      ok: false,
+      reason: 'error',
+      message: `Could not read the revision ${revisionPath} (Internal error).`,
+    });
   });
 });
 
@@ -246,6 +269,25 @@ describe('restore-policy', () => {
 
     expect(result.isError).toBe(true);
     expect(parse(result)).toEqual({ ok: false, reason: 'conflict', current });
+  });
+
+  it('keeps a failed revision read apart from a missing revision', async () => {
+    mockedRestore.mockResolvedValueOnce({ ok: false, reason: 'not-found' });
+    mockedRestore.mockResolvedValueOnce({
+      ok: false,
+      reason: 'error',
+      message: 'Could not read the revision (Internal error).',
+    });
+
+    const gone = await call(tool, { name: 'a/b', revisionPath });
+    const failed = await call(tool, { name: 'a/b', revisionPath });
+
+    expect(parse(gone)).toEqual({ ok: false, reason: 'not-found' });
+    expect(parse(failed)).toEqual({
+      ok: false,
+      reason: 'error',
+      message: 'Could not read the revision (Internal error).',
+    });
   });
 });
 

@@ -56,7 +56,7 @@ describe('read-policies tool', () => {
 
   it('resolves the names it was given', async () => {
     const policies = [{ name: 'a/b', content: '## B', version: 'v1' }];
-    mockedRead.mockResolvedValue({ policies, missing: [] });
+    mockedRead.mockResolvedValue({ policies, missing: [], failed: [] });
 
     const result = await tool.handler({ names: ['a/b'] }, extra);
 
@@ -68,6 +68,7 @@ describe('read-policies tool', () => {
     mockedRead.mockResolvedValue({
       policies: [{ name: 'a/b', content: '## B', version: 'v1' }],
       missing: ['a/gone'],
+      failed: [],
     });
 
     const result = await tool.handler({ names: ['a/b', 'a/gone'] }, extra);
@@ -77,12 +78,91 @@ describe('read-policies tool', () => {
   });
 
   it('errors when nothing resolved', async () => {
-    mockedRead.mockResolvedValue({ policies: [], missing: ['a/gone'] });
+    mockedRead.mockResolvedValue({
+      policies: [],
+      missing: ['a/gone'],
+      failed: [],
+    });
 
     const result = await tool.handler({ names: ['a/gone'] }, extra);
 
     expect(result.isError).toBe(true);
     expect(parse(result)).toMatchObject({ ok: false, reason: 'not-found' });
+  });
+
+  describe('storage errors', () => {
+    const flaky = {
+      name: 'a/flaky',
+      message: 'Could not read a/flaky (upstream timed out).',
+    };
+
+    it('lists failed reads next to what resolved, without failing the call', async () => {
+      const policies = [{ name: 'a/b', content: '## B', version: 'v1' }];
+      mockedRead.mockResolvedValue({
+        policies,
+        missing: ['a/gone'],
+        failed: [flaky],
+      });
+
+      const result = await tool.handler(
+        { names: ['a/b', 'a/gone', 'a/flaky'] },
+        extra,
+      );
+
+      expect(result.isError).toBeUndefined();
+      expect(parse(result)).toEqual({
+        policies,
+        missing: ['a/gone'],
+        failed: [flaky],
+      });
+    });
+
+    it('omits `failed` when every read resolved or was absent', async () => {
+      mockedRead.mockResolvedValue({
+        policies: [{ name: 'a/b', content: '## B', version: 'v1' }],
+        missing: [],
+        failed: [],
+      });
+
+      const result = await tool.handler({ names: ['a/b'] }, extra);
+
+      expect(parse(result)).not.toHaveProperty('failed');
+      expect(parse(result)).not.toHaveProperty('missing');
+    });
+
+    it('returns an error, not not-found, when the only read failed', async () => {
+      mockedRead.mockResolvedValue({
+        policies: [],
+        missing: [],
+        failed: [flaky],
+      });
+
+      const result = await tool.handler({ names: ['a/flaky'] }, extra);
+
+      expect(result.isError).toBe(true);
+      const body = parse(result);
+      expect(body).toMatchObject({ ok: false, reason: 'error' });
+      expect(body.message).toContain(flaky.message);
+      expect(body.message).toContain('not a missing policy');
+    });
+
+    it('prefers the error when one name failed and another is missing', async () => {
+      mockedRead.mockResolvedValue({
+        policies: [],
+        missing: ['a/gone'],
+        failed: [flaky],
+      });
+
+      const result = await tool.handler(
+        { names: ['a/gone', 'a/flaky'] },
+        extra,
+      );
+
+      expect(result.isError).toBe(true);
+      const body = parse(result);
+      expect(body.reason).toBe('error');
+      expect(body.message).toContain('No policy matched a/gone');
+    });
   });
 
   it('reports a failed listing as an error rather than an empty list', async () => {

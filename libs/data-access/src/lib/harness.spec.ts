@@ -49,6 +49,7 @@ const createMockClient = ({
   lists = {},
   downloads = {},
   downloadError = null,
+  downloadErrors = {},
   copyError = null,
   uploadError = null,
   remove = (paths) => ({
@@ -60,6 +61,8 @@ const createMockClient = ({
   lists?: Record<string, ListResult>;
   downloads?: Record<string, string | null>;
   downloadError?: { message: string; status?: number } | null;
+  /** Fails the download of one key, leaving the rest to `downloads`. */
+  downloadErrors?: Record<string, { message: string; status?: number }>;
   copyError?:
     | StorageError
     | null
@@ -97,6 +100,9 @@ const createMockClient = ({
         download: async (path: string) => {
           calls.download.push(path);
           if (downloadError) return { data: null, error: downloadError };
+          if (downloadErrors[path]) {
+            return { data: null, error: downloadErrors[path] };
+          }
           const content = downloads[path];
           // Only `.text()` is consumed, and jsdom's Blob does not implement it.
           return content == null
@@ -231,57 +237,109 @@ describe('policyVersion', () => {
 });
 
 describe('readPolicy', () => {
+  const silenceLog = () =>
+    jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+
   it('resolves a name to its current markdown', async () => {
     const { client } = createMockClient({
       downloads: { 'a/b.md': '## B. Proper names' },
     });
     expect(await readPolicy({ client, name: 'a/b' })).toEqual({
-      name: 'a/b',
-      content: '## B. Proper names',
-      version: await policyVersion('## B. Proper names'),
+      ok: true,
+      policy: {
+        name: 'a/b',
+        content: '## B. Proper names',
+        version: await policyVersion('## B. Proper names'),
+      },
     });
   });
 
-  it('stays quiet about a policy that does not exist yet', async () => {
-    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
-      /* silence */
-    });
+  it('reports a policy that does not exist as not-found, quietly', async () => {
+    const logged = silenceLog();
     const { client } = createMockClient({ downloads: {} });
 
-    expect(await readPolicy({ client, name: 'a/absent' })).toBeUndefined();
+    expect(await readPolicy({ client, name: 'a/absent' })).toEqual({
+      ok: false,
+      reason: 'not-found',
+    });
     expect(logged).not.toHaveBeenCalled();
 
     logged.mockRestore();
   });
 
-  it('still logs a failure that is not an absent object', async () => {
-    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
-      /* silence */
-    });
-    const { client } = createMockClient({
-      downloadError: { message: 'network unreachable' },
-    });
+  it.each([
+    ['a transport failure', { message: 'network unreachable' }],
+    ['a server error', { message: 'Internal error', status: 500 }],
+    ['a gateway timeout', { message: 'upstream timed out', status: 504 }],
+  ])('reports %s as an error, not as not-found', async (_, downloadError) => {
+    const logged = silenceLog();
+    const { client } = createMockClient({ downloadError });
 
-    expect(await readPolicy({ client, name: 'a/b' })).toBeUndefined();
+    expect(await readPolicy({ client, name: 'a/b' })).toEqual({
+      ok: false,
+      reason: 'error',
+      message: `Could not read a/b (${downloadError.message}).`,
+    });
     expect(logged).toHaveBeenCalled();
 
     logged.mockRestore();
   });
 
-  it('reports the names it could not resolve without losing the rest', async () => {
-    const { client } = createMockClient({ downloads: { 'a/b.md': 'kept' } });
-    expect(await readPolicies({ client, names: ['a/b', 'a/missing'] })).toEqual(
-      {
-        policies: [
-          {
-            name: 'a/b',
-            content: 'kept',
-            version: await policyVersion('kept'),
-          },
-        ],
-        missing: ['a/missing'],
+  it('reports a download that returns neither data nor an error as an error', async () => {
+    const logged = silenceLog();
+    const client = {
+      storage: {
+        from: () => ({ download: async () => ({ data: null, error: null }) }),
       },
-    );
+    } as unknown as DataClient;
+
+    expect(await readPolicy({ client, name: 'a/b' })).toEqual({
+      ok: false,
+      reason: 'error',
+      message: 'Could not read a/b (no content).',
+    });
+
+    logged.mockRestore();
+  });
+
+  it('sorts the names it was given into policies, missing and failed', async () => {
+    const logged = silenceLog();
+    const { client } = createMockClient({
+      downloads: { 'a/b.md': 'kept' },
+      downloadErrors: { 'a/flaky.md': { message: 'connection reset' } },
+    });
+
+    expect(
+      await readPolicies({
+        client,
+        names: ['a/b', 'a/missing', 'a/flaky', 'not-a-policy'],
+      }),
+    ).toEqual({
+      policies: [
+        { name: 'a/b', content: 'kept', version: await policyVersion('kept') },
+      ],
+      // An invalid name cannot name a policy, so it is missing, not failed.
+      missing: ['a/missing', 'not-a-policy'],
+      failed: [
+        {
+          name: 'a/flaky',
+          message: 'Could not read a/flaky (connection reset).',
+        },
+      ],
+    });
+
+    logged.mockRestore();
+  });
+
+  it('reports no failures when every read resolved or was absent', async () => {
+    const { client } = createMockClient({ downloads: { 'a/b.md': 'kept' } });
+    const result = await readPolicies({ client, names: ['a/b', 'a/missing'] });
+
+    expect(result.failed).toEqual([]);
+    expect(result.missing).toEqual(['a/missing']);
+    expect(result.policies).toHaveLength(1);
   });
 });
 
@@ -538,6 +596,7 @@ describe('readPolicyRevision', () => {
     });
 
     expect(await readPolicyRevision({ client, path: STAMPED })).toEqual({
+      ok: true,
       revision: {
         name: 'a/b',
         path: STAMPED,
@@ -562,13 +621,44 @@ describe('readPolicyRevision', () => {
       downloads: { [path]: 'text' },
     });
 
-    expect(await readPolicyRevision({ client, path })).toBeUndefined();
+    expect(await readPolicyRevision({ client, path })).toEqual({
+      ok: false,
+      reason: 'not-found',
+    });
     expect(calls.download).toEqual([]);
   });
 
-  it('returns undefined for a revision that is not there', async () => {
+  it('reports a revision that is not there as not-found, quietly', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
     const { client } = createMockClient({});
-    expect(await readPolicyRevision({ client, path: STAMPED })).toBeUndefined();
+
+    expect(await readPolicyRevision({ client, path: STAMPED })).toEqual({
+      ok: false,
+      reason: 'not-found',
+    });
+    expect(logged).not.toHaveBeenCalled();
+
+    logged.mockRestore();
+  });
+
+  it('reports a storage failure as an error, not as not-found', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client } = createMockClient({
+      downloadError: { message: 'Internal error', status: 500 },
+    });
+
+    expect(await readPolicyRevision({ client, path: STAMPED })).toEqual({
+      ok: false,
+      reason: 'error',
+      message: `Could not read the revision ${STAMPED} (Internal error).`,
+    });
+    expect(logged).toHaveBeenCalled();
+
+    logged.mockRestore();
   });
 });
 
@@ -631,6 +721,34 @@ describe('restorePolicy', () => {
     expect(result).toEqual({ ok: false, reason: 'not-found' });
     expect(calls.writes).toEqual([]);
   });
+
+  it('reports a failed revision read as an error and writes nothing', async () => {
+    const logged = jest.spyOn(console, 'error').mockImplementation(() => {
+      /* silence */
+    });
+    const { client, calls } = createMockClient({
+      lists: live,
+      downloads: { 'a/b.md': 'current' },
+      downloadErrors: {
+        [OLDER]: { message: 'upstream timed out', status: 504 },
+      },
+    });
+
+    const result = await restorePolicy({
+      client,
+      name: 'a/b',
+      revisionPath: OLDER,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'error',
+      message: `Could not read the revision ${OLDER} (upstream timed out).`,
+    });
+    expect(calls.writes).toEqual([]);
+
+    logged.mockRestore();
+  });
 });
 
 describe('policy name validation', () => {
@@ -684,7 +802,10 @@ describe('policy name validation', () => {
       const { client, calls } = createMockClient({
         downloads: { 'archive/d/f.md/20260101T000000Z.md': 'forged' },
       });
-      expect(await readPolicy({ client, name })).toBeUndefined();
+      expect(await readPolicy({ client, name })).toEqual({
+        ok: false,
+        reason: 'not-found',
+      });
       expect(calls.download).toEqual([]);
     },
   );

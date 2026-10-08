@@ -24,15 +24,17 @@ const inputSchema = {
  *
  * Called with no names it lists what is available, so a session can discover
  * the tree before deciding what to load; called with names it returns content.
- * Both come from the bucket on every call — the point of moving policies out of
- * the plugin is that a session sees the current text, not the text as of the
- * last release.
+ * When only some names resolve, the others are listed: `missing` for policies
+ * that are not there, `failed` (name and message) for reads that hit a storage
+ * error and can be retried. Both modes read the bucket on every call — the
+ * point of moving policies out of the plugin is that a session sees the
+ * current text, not the text as of the last release.
  */
 export function createReadPoliciesTool(client: DataClient): McpToolDefinition {
   return {
     name: POLICY_TOOL_NAMES.read,
     description:
-      "Read 84000's translation policies — house style, text-critical practice, and the rest of the governing guidance — as they stand right now. Call with no arguments to list the available policy names; call with names to get their markdown, each with a `version` to pass to write-policy as `expectedVersion` when you edit it. Read the policies your task depends on at the start of a session rather than relying on remembered guidance.",
+      "Read 84000's translation policies — house style, text-critical practice, and the rest of the governing guidance — as they stand right now. Call with no arguments to list the available policy names; call with names to get their markdown, each with a `version` to pass to write-policy as `expectedVersion` when you edit it. A name listed under `missing` does not exist; one under `failed` could not be read because of a storage error, so retry it rather than treating it as absent. Read the policies your task depends on at the start of a session rather than relying on remembered guidance.",
     inputSchema,
     annotations: {
       title: 'Read Policies',
@@ -56,15 +58,33 @@ export function createReadPoliciesTool(client: DataClient): McpToolDefinition {
         return jsonResult({ policies: available });
       }
 
-      const { policies, missing } = await readPolicies({ client, names });
+      const { policies, missing, failed } = await readPolicies({
+        client,
+        names,
+      });
       if (!policies.length) {
+        // A failed read outranks a missing one: the caller cannot conclude a
+        // policy is gone when storage could not say, and may retry.
+        if (failed.length) {
+          return policyFailureResult({
+            ok: false,
+            reason: 'error',
+            message: `${failed.map((f) => f.message).join(' ')} This is a storage failure, not a missing policy; try again.${
+              missing.length ? ` No policy matched ${missing.join(', ')}.` : ''
+            }`,
+          });
+        }
         return policyFailureResult(
           { ok: false, reason: 'not-found' },
           `No policy matched ${missing.join(', ')}. Call this tool with no arguments to list the available names.`,
         );
       }
 
-      return jsonResult({ policies, ...(missing.length ? { missing } : {}) });
+      return jsonResult({
+        policies,
+        ...(missing.length ? { missing } : {}),
+        ...(failed.length ? { failed } : {}),
+      });
     },
   };
 }
