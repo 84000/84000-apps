@@ -204,6 +204,9 @@ export const applyEditsToPassages = ({
         continue;
       }
       const annotation = annotationFromImport(edit.kind, {
+        // The importer's fallback id is derived, not a uuid, and would also
+        // collide with an annotation removed from the same range.
+        uuid: uuidv4(),
         start: mapOffset(edit.start, deletions),
         end: mapOffset(edit.end ?? edit.start, deletions),
         passageUuid: uuid,

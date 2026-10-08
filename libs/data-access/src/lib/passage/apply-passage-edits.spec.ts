@@ -280,6 +280,67 @@ describe('applyPassageEdits', () => {
     expect(log.deletes).toEqual([]);
   });
 
+  it('saves an added annotation under a fresh uuid', async () => {
+    const tables = tablesFor(published());
+    const { client } = fakeClient(tables);
+
+    await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 13,
+          data: { endNote: 'n2' },
+        },
+      ],
+    });
+
+    const added = tables.passage_annotations.filter(
+      (row) => row.type === 'end-note-link' && row.start === 13,
+    );
+    expect(added).toHaveLength(1);
+    expect(added[0].uuid).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(storedUuids(tables)).toEqual(
+      expect.arrayContaining(['a-comment', 'a-glossary', 'a-marker', 'a-note']),
+    );
+  });
+
+  it('replaces an annotation removed and re-added at the same range', async () => {
+    const tables = tablesFor(published());
+    const { client } = fakeClient(tables);
+
+    await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [
+        {
+          op: 'remove-annotation',
+          passageUuid: 'p1',
+          annotationUuid: 'a-note',
+        },
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 32,
+          data: { endNote: 'n2' },
+        },
+      ],
+    });
+
+    const notes = tables.passage_annotations.filter(
+      (row) => row.type === 'end-note-link',
+    );
+    expect(notes).toHaveLength(1);
+    expect(notes[0].uuid).not.toBe('a-note');
+    expect(notes[0]).toMatchObject({ start: 32, end: 32 });
+  });
+
   it('removes an annotation named by uuid', async () => {
     const tables = tablesFor(published());
     const { client } = fakeClient(tables);
