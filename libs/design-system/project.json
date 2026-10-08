@@ -14,7 +14,10 @@
         "tsConfig": "libs/design-system/tsconfig.lib.json",
         "rootDir": "libs/design-system/src",
         "generateExportsField": false,
-        "additionalEntryPoints": ["libs/design-system/src/ssr.ts"],
+        "additionalEntryPoints": [
+          "libs/design-system/src/ssr.ts",
+          "libs/design-system/src/core.ts"
+        ],
         "assets": [
           {
             "glob": "**/*.css",

@@ -1,6 +1,12 @@
+/**
+ * Next-free entry point: every component whose module graph imports no `next`, `next/*`, or
+ * `next-themes`, for bundlers outside Next. The main entry adds the ones that do:
+ *
+ * - AppleLogo, Avatar, GoogleLogo, LotusPond, Vajrasattva (`next/image`)
+ * - MainLogo (`next/link`), and Header, which renders it
+ * - Sonner (`next-themes`)
+ */
 export * from './lib/Accordion/Accordion';
-export * from './lib/AppleLogo/AppleLogo';
-export * from './lib/Avatar/Avatar';
 export * from './lib/Badge/Badge';
 export * from './lib/Breadcrumb/Breadcrumb';
 export * from './lib/Button/Button';
@@ -15,13 +21,9 @@ export * from './lib/DatePicker/DatePicker';
 export * from './lib/Dialog/Dialog';
 export * from './lib/Collapsible/Collapsible';
 export * from './lib/Dropdown/Dropdown';
-export * from './lib/GoogleLogo/GoogleLogo';
-export * from './lib/Header/Header';
 export * from './lib/HoverCard/HoverCard';
 export * from './lib/Input/Input';
 export * from './lib/Label/Label';
-export * from './lib/LotusPond/LotusPond';
-export * from './lib/MainLogo/MainLogo';
 export * from './lib/MainLogo/MainLogoSvg';
 export * from './lib/MiniLogo/MiniLogo';
 export * from './lib/NavigationMenu/NavigationMenu';
@@ -36,7 +38,6 @@ export * from './lib/Sheet/Sheet';
 export * from './lib/Sidebar/Sidebar';
 export * from './lib/Skeleton/Skeleton';
 export * from './lib/Slider/Slider';
-export * from './lib/Sonner/Sonner';
 export * from './lib/Switch/Switch';
 export * from './lib/Table';
 export * from './lib/Tabs/Tabs';
@@ -45,5 +46,4 @@ export * from './lib/Toggle/Toggle';
 export * from './lib/ToggleGroup/ToggleGroup';
 export * from './lib/Tooltip/Tooltip';
 export * from './lib/Typography/Typography';
-export * from './lib/Vajrasattva/Vajrasattva';
 export * from './lib/Fonts/Fonts';
