@@ -729,7 +729,7 @@ export const PolicyEditor = ({
                   !open && !busy && setConfirming(undefined)
                 }
               >
-                <DialogContent showCloseButton={false}>
+                <DialogContent showCloseButton={false} className="sm:max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Delete {doc.name}?</DialogTitle>
                     <DialogDescription>
@@ -775,7 +775,7 @@ export const PolicyEditor = ({
             open={pending !== undefined}
             onOpenChange={(open) => !open && setPending(undefined)}
           >
-            <DialogContent showCloseButton={false}>
+            <DialogContent showCloseButton={false} className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Discard unsaved changes?</DialogTitle>
                 <DialogDescription>
@@ -930,7 +930,7 @@ const RenameDialogContent = ({
   };
 
   return (
-    <DialogContent showCloseButton={false}>
+    <DialogContent showCloseButton={false} className="sm:max-w-lg">
       <form onSubmit={submit} className="grid gap-4">
         <DialogHeader>
           <DialogTitle>Rename {from}</DialogTitle>
