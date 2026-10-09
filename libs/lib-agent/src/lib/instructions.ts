@@ -45,7 +45,7 @@ export const joinInstructions = (sections: string[]): string =>
 /** Instructions for the public, read-only MCP API. */
 export const publicInstructions = joinInstructions([
   'This server provides read-only access to the 84000 translation library — a long-term initiative to translate the Tibetan Buddhist canon (Kangyur and Tengyur) into modern languages.',
-  readToolInstructions({ translations: 'published only' }),
+  readToolInstructions({ translations: 'published' }),
 ]);
 
 /**
@@ -63,7 +63,7 @@ A session's working files (Stage 0 records, Stage 1 drafts, collation and alignm
   readToolInstructions({ translations: 'published and in progress' }),
   `## Draft versus published
 
-Glossary reads default to the published snapshot, which binds a translator. \`source: "draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,
+Glossary term and search reads take \`source\`. The default, published, binds a translator; \`"draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,
   `## Feedback
 
 \`submit-feedback\`, \`submit-bug-report\` and \`submit-feature-request\` reach the 84000 team. Get the user's go-ahead on the exact draft first.`,
