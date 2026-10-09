@@ -19,6 +19,7 @@ import {
   type MarkdownFallbackReason,
 } from './markdown-codec';
 import { createMarkdownExtensions } from './markdown-extensions';
+import { MarkdownToolbar } from './MarkdownToolbar';
 
 /**
  * `rich` edits in the markdown subset; `raw` edits the markdown text, used
@@ -68,6 +69,8 @@ export type MarkdownEditorProps = {
   ) => void;
   /** Optional menu for the rich editor, e.g. a bubble menu. */
   menu?: EditorMenuSlot;
+  /** Show a formatting toolbar above the rich editor while it is editable. */
+  toolbar?: boolean;
   className?: string;
 };
 
@@ -88,7 +91,7 @@ type Report = (markdown: string, exact: boolean) => void;
  * leaves unstyled. Scoped to the editor so every host gets them.
  */
 const PROSE_CLASS = [
-  'relative flex flex-col flex-1 h-full',
+  'relative flex flex-col flex-1 min-h-0 overflow-auto',
   '[&_.tiptap_:is(p,ul,ol,blockquote,pre,table,hr)]:my-3',
   '[&_.tiptap_:is(li,th,td)>p]:my-1',
   '[&_.tiptap>:first-child]:mt-0',
@@ -144,6 +147,7 @@ export const MarkdownEditor = ({
   onChange,
   onModeChange,
   menu,
+  toolbar = false,
   className,
 }: MarkdownEditorProps) => {
   // The source the content was last replaced with, and how many times it has
@@ -238,6 +242,7 @@ export const MarkdownEditor = ({
             editable={editable}
             onReport={report}
             menu={menu}
+            toolbar={toolbar}
           />
         </>
       ) : (
@@ -253,7 +258,7 @@ export const MarkdownEditor = ({
   );
 };
 
-type ModeProps = Pick<MarkdownEditorProps, 'editable' | 'menu'> & {
+type ModeProps = Pick<MarkdownEditorProps, 'editable' | 'menu' | 'toolbar'> & {
   /** The source of the current load generation. */
   source: string;
   /** Bumped by every replacement: the content is reset to `source`. */
@@ -268,6 +273,7 @@ const RichMarkdown = ({
   editable,
   onReport,
   menu,
+  toolbar,
 }: ModeProps & { doc: JSONContent }) => {
   const extensions = useMemo(() => createMarkdownExtensions(), []);
   const [initial] = useState(doc);
@@ -299,19 +305,25 @@ const RichMarkdown = ({
   }, [editor, generation, source, doc, format]);
 
   return (
-    <EditorCore
-      className={PROSE_CLASS}
-      content={initial}
-      extensions={extensions}
-      isEditable={editable}
-      undoableInitialContent={false}
-      menu={menu}
-      onCreate={({ editor }) => setEditor(editor)}
-      onUpdate={({ editor }) => {
-        const { markdown, exact } = serializeMarkdown(editor.getJSON(), format);
-        onReport(markdown, exact);
-      }}
-    />
+    <>
+      {toolbar && editable && editor && <MarkdownToolbar editor={editor} />}
+      <EditorCore
+        className={PROSE_CLASS}
+        content={initial}
+        extensions={extensions}
+        isEditable={editable}
+        undoableInitialContent={false}
+        menu={menu}
+        onCreate={({ editor }) => setEditor(editor)}
+        onUpdate={({ editor }) => {
+          const { markdown, exact } = serializeMarkdown(
+            editor.getJSON(),
+            format,
+          );
+          onReport(markdown, exact);
+        }}
+      />
+    </>
   );
 };
 
@@ -333,7 +345,9 @@ const RawMarkdown = ({
   editable,
   reason,
   onReport,
-}: Omit<ModeProps, 'menu'> & { reason: MarkdownFallbackReason }) => {
+}: Omit<ModeProps, 'menu' | 'toolbar'> & {
+  reason: MarkdownFallbackReason;
+}) => {
   const [text, setText] = useState(source);
   const { lineEnding } = markdownFormatOf(source);
 

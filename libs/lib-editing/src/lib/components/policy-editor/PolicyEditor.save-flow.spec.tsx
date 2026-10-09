@@ -12,6 +12,13 @@ import type { PolicySource, PolicyWriteResult } from './policy-source';
 Object.assign(globalThis, { TextEncoder });
 Object.defineProperty(globalThis.crypto, 'subtle', { value: webcrypto.subtle });
 
+// jsdom has no ResizeObserver; the resizable policy list needs one.
+globalThis.ResizeObserver ??= class {
+  observe = () => undefined;
+  unobserve = () => undefined;
+  disconnect = () => undefined;
+};
+
 // An HTML block does not round-trip, so the policy opens as raw markdown.
 const A1 = '<div>x</div>\n';
 const A2 = `${A1}second\n`;

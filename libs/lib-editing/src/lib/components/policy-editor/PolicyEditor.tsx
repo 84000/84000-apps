@@ -13,10 +13,28 @@ import {
   Input,
   Label,
   MutedText,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
   RevisionList,
 } from '@eightyfourthousand/design-system/core';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  LoaderCircleIcon,
+  PencilIcon,
+  RotateCcwIcon,
+  SaveIcon,
+  Trash2Icon,
+} from 'lucide-react';
+import {
+  type ComponentProps,
+  type ComponentType,
+  type FormEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { MarkdownEditor } from '../editor/markdown/MarkdownEditor';
 import { hasMarkdownChanges } from '../editor/markdown/markdown-codec';
 import type {
@@ -85,6 +103,15 @@ const unavailable = (error: unknown) => {
 
 const formatStamp = (iso: string) => new Date(iso).toLocaleString();
 
+/** Wraps a policy name after its folder before breaking either part. */
+const wrapAfterFolder = (name: string) =>
+  name.split('/').map((part, index, parts) => (
+    <span key={index} className="inline-block">
+      {part}
+      {index < parts.length - 1 && '/'}
+    </span>
+  ));
+
 /** The policy name rule the server enforces: `<folder>/<name>`. */
 const POLICY_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -145,6 +172,8 @@ export const PolicyEditor = ({
   const [failure, setFailure] = useState<PolicyFailure>();
   const [conflict, setConflict] = useState<Conflict>();
   const [confirming, setConfirming] = useState<'delete' | 'rename'>();
+  // A policy chosen from the list while there were unsaved changes.
+  const [pending, setPending] = useState<string>();
   // Why the rename dialog's name was refused.
   const [renameError, setRenameError] = useState<string>();
   const [viewing, setViewing] =
@@ -225,6 +254,7 @@ export const PolicyEditor = ({
   const open = async (name: string | undefined) => {
     opened.current += 1;
     const fresh = stillOpen();
+    setPending(undefined);
     setSelected(name);
     setDoc(undefined);
     setDraft(clean(''));
@@ -262,6 +292,18 @@ export const PolicyEditor = ({
     // Only on mount and when the source changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source, permissions.read]);
+
+  /** Opens `name` from the list, first asking to discard unsaved changes. */
+  const navigate = (name: string) => {
+    if (name === doc?.name) {
+      return;
+    }
+    if (permissions.edit && draft.dirty) {
+      setPending(name);
+    } else {
+      open(name);
+    }
+  };
 
   /** Shows a refused change, offering a conflict's reload or overwrite. */
   const refuse = (
@@ -464,7 +506,7 @@ export const PolicyEditor = ({
     }
   };
 
-  // Why the list cannot open another policy now, if it cannot.
+  // Why the open policy cannot be restored, renamed or deleted now, if it cannot.
   const lock =
     permissions.edit && draft.dirty
       ? 'Save or discard your changes first.'
@@ -481,231 +523,321 @@ export const PolicyEditor = ({
   }
 
   return (
-    <div className={cn('flex h-full min-h-0', className)}>
-      <nav
-        aria-label="Policies"
-        className="flex w-64 shrink-0 flex-col overflow-auto border-r p-4"
+    <ResizablePanelGroup
+      orientation="horizontal"
+      className={cn('min-h-0', className)}
+    >
+      <ResizablePanel
+        id="policies"
+        defaultSize="16rem"
+        minSize="10rem"
+        maxSize="50%"
+        groupResizeBehavior="preserve-pixel-size"
       >
-        <MutedText id={lockId} role="status" className="empty:hidden">
-          {lock}
-        </MutedText>
-        {!names?.length ? (
-          <MutedText>
-            {names === null
-              ? 'The policies could not be loaded.'
-              : names
-                ? 'There are no policies yet.'
-                : 'Loading policies…'}
-          </MutedText>
-        ) : (
-          names.map((name) => (
-            <Button
-              key={name}
-              variant={name === selected ? 'active' : 'ghost'}
-              size="sm"
-              className="justify-start"
-              aria-current={name === selected ? 'true' : undefined}
-              disabled={Boolean(lock)}
-              title={lock}
-              aria-describedby={lock && lockId}
-              onClick={() => open(name)}
+        <nav aria-label="Policies" className="h-full overflow-auto p-4">
+          {!names?.length ? (
+            <MutedText>
+              {names === null
+                ? 'The policies could not be loaded.'
+                : names
+                  ? 'There are no policies yet.'
+                  : 'Loading policies…'}
+            </MutedText>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {names.map((name) => (
+                <Button
+                  key={name}
+                  variant="ghost"
+                  size="sm"
+                  // A long name wraps, so its highlight covers all of it.
+                  className={cn(
+                    'h-auto min-h-9 justify-start rounded py-2 text-left font-normal whitespace-normal [overflow-wrap:anywhere] hover:bg-primary/5 hover:text-foreground',
+                    name === selected &&
+                      'bg-primary/10 font-semibold text-primary hover:bg-primary/10 hover:text-primary',
+                  )}
+                  // The wrapped parts would otherwise be read with a space between.
+                  aria-label={name}
+                  aria-current={name === selected ? 'true' : undefined}
+                  onClick={() => navigate(name)}
+                >
+                  <span>{wrapAfterFolder(name)}</span>
+                </Button>
+              ))}
+            </div>
+          )}
+        </nav>
+      </ResizablePanel>
+      <ResizableHandle aria-label="Resize policy list" className="bg-border" />
+      <ResizablePanel id="policy" minSize="20rem">
+        <section
+          aria-label="Policy editor"
+          className="flex h-full min-w-0 flex-col gap-3 p-4"
+        >
+          <span id={lockId} role="status" className="sr-only">
+            {lock}
+          </span>
+          {failure && (
+            <div
+              role="alert"
+              className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
             >
-              {name}
-            </Button>
-          ))
-        )}
-      </nav>
-      <section
-        aria-label="Policy editor"
-        className="flex min-w-0 flex-1 flex-col gap-3 p-4"
-      >
-        {failure && (
-          <div
-            role="alert"
-            className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
-          >
-            {MESSAGES[failure.reason]}
-            {failure.reason === 'error' && ` ${failure.message}`}
-          </div>
-        )}
-        {!doc ? (
-          <MutedText>
-            {loading
-              ? 'Loading policy…'
-              : !selected
-                ? 'Select a policy to open it.'
-                : failure
-                  ? 'The policy could not be loaded.'
-                  : 'Policy not found.'}
-          </MutedText>
-        ) : (
-          <>
-            <header className="flex items-center gap-2">
-              <h2 className="me-auto text-lg font-semibold">{doc.name}</h2>
-              {permissions.edit && draft.dirty && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  // A save in flight settles against the text it sent.
-                  disabled={Boolean(busy)}
-                  onClick={() => show(doc)}
-                >
-                  Discard changes
-                </Button>
-              )}
-              {permissions.edit && (
-                <Button
-                  size="sm"
-                  disabled={!draft.dirty || !draft.exact || Boolean(busy)}
-                  onClick={() => save()}
-                >
-                  {busy === 'save' ? 'Saving…' : 'Save'}
-                </Button>
-              )}
-              {permissions.admin &&
-                (['rename', 'delete'] as const).map((action) => (
-                  <Button
-                    key={action}
-                    variant="outline"
-                    size="sm"
-                    disabled={Boolean(lock)}
-                    title={lock}
-                    aria-describedby={lock && lockId}
+              {MESSAGES[failure.reason]}
+              {failure.reason === 'error' && ` ${failure.message}`}
+            </div>
+          )}
+          {!doc ? (
+            <MutedText>
+              {loading
+                ? 'Loading policy…'
+                : !selected
+                  ? 'Select a policy to open it.'
+                  : failure
+                    ? 'The policy could not be loaded.'
+                    : 'Policy not found.'}
+            </MutedText>
+          ) : (
+            <>
+              <header className="flex items-center gap-1">
+                <h2 className="text-lg font-semibold [overflow-wrap:anywhere]">
+                  {doc.name}
+                </h2>
+                {permissions.admin && (
+                  <IconButton
+                    label="Rename"
+                    icon={PencilIcon}
+                    lock={lock}
+                    lockId={lockId}
                     onClick={() => {
                       setRenameError(undefined);
-                      setConfirming(action);
+                      setConfirming('rename');
                     }}
-                  >
-                    {action === 'rename' ? 'Rename' : 'Delete'}
-                  </Button>
-                ))}
-            </header>
-            <div className={cn('flex min-h-0 flex-1', viewing && 'hidden')}>
-              <MarkdownEditor
-                key={generation}
-                source={doc.content}
-                // A delete, rename or restore replaces the document, so typing
-                // during one would be lost; typing during a save is kept.
-                editable={permissions.edit && (!busy || busy === 'save')}
-                onChange={(markdown, dirty, exact) =>
-                  setDraft({ markdown, dirty, exact })
-                }
-              />
-            </div>
-            {viewing && (
-              <section
-                aria-label="Revision"
-                className="flex min-h-0 flex-1 flex-col gap-2"
-              >
-                <div className="flex items-center gap-2">
-                  <MutedText className="me-auto">
-                    Revision from {formatStamp(viewing.revision.archivedAt)}
-                  </MutedText>
-                  <Button variant="outline" size="sm" onClick={closeRevision}>
-                    Back to current
-                  </Button>
+                  />
+                )}
+                <div className="ms-auto flex shrink-0 items-center gap-1">
+                  {permissions.edit && draft.dirty && (
+                    <IconButton
+                      label="Discard changes"
+                      icon={RotateCcwIcon}
+                      // A save in flight settles against the text it sent.
+                      disabled={Boolean(busy)}
+                      onClick={() => show(doc)}
+                    />
+                  )}
                   {permissions.edit && (
-                    <Button
-                      size="sm"
-                      disabled={Boolean(lock)}
-                      title={lock}
-                      aria-describedby={lock && lockId}
-                      onClick={() =>
-                        restore(viewing.revision.path, viewing.content)
-                      }
-                    >
-                      Restore
-                    </Button>
+                    <IconButton
+                      label={busy === 'save' ? 'Saving…' : 'Save'}
+                      icon={busy === 'save' ? SavingIcon : SaveIcon}
+                      variant="default"
+                      disabled={!draft.dirty || !draft.exact || Boolean(busy)}
+                      onClick={() => save()}
+                    />
+                  )}
+                  {permissions.admin && (
+                    <IconButton
+                      label="Delete"
+                      icon={Trash2Icon}
+                      lock={lock}
+                      lockId={lockId}
+                      className="hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setRenameError(undefined);
+                        setConfirming('delete');
+                      }}
+                    />
                   )}
                 </div>
-                <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded-md border p-3 font-mono text-sm">
-                  {viewing.content}
-                </pre>
-              </section>
-            )}
-            <RevisionList
-              title="History"
-              defaultOpen
-              items={history ?? []}
-              unavailable={history === null}
-              toRevision={(revision) => ({
-                id: revision.path,
-                label: formatStamp(revision.archivedAt),
-              })}
-              selectedId={viewing?.revision.path}
-              onSelect={viewRevision}
-            />
-            {conflict && allowed(conflict.action) && (
-              <ConflictDialog
-                // Overwriting a save writes the draft as it is now.
-                conflict={
-                  conflict.action === 'save'
-                    ? { ...conflict, mine: draft.markdown }
-                    : conflict
-                }
-                // `save` writes only a changed draft that serializes exactly.
-                blocked={
-                  conflict.action === 'save' && !(draft.dirty && draft.exact)
-                    ? 'Your changes can no longer be saved as they are.'
-                    : undefined
-                }
-                onReload={() => show(conflict.current)}
-                onOverwrite={() => overwrite(conflict)}
-                onCancel={() => setConflict(undefined)}
-              />
-            )}
-            <Dialog
-              open={confirming === 'delete' && permissions.admin}
-              onOpenChange={(open) =>
-                !open && !busy && setConfirming(undefined)
-              }
-            >
-              <DialogContent showCloseButton={false}>
-                <DialogHeader>
-                  <DialogTitle>Delete {doc.name}?</DialogTitle>
-                  <DialogDescription>
-                    It leaves the list of policies. Its content and history stay
-                    in the archive.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline" disabled={Boolean(busy)}>
-                      Cancel
+              </header>
+              <div className={cn('flex min-h-0 flex-1', viewing && 'hidden')}>
+                <MarkdownEditor
+                  key={generation}
+                  source={doc.content}
+                  toolbar
+                  // A delete, rename or restore replaces the document, so typing
+                  // during one would be lost; typing during a save is kept.
+                  editable={permissions.edit && (!busy || busy === 'save')}
+                  onChange={(markdown, dirty, exact) =>
+                    setDraft({ markdown, dirty, exact })
+                  }
+                />
+              </div>
+              {viewing && (
+                <section
+                  aria-label="Revision"
+                  className="flex min-h-0 flex-1 flex-col gap-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <MutedText className="me-auto">
+                      Revision from {formatStamp(viewing.revision.archivedAt)}
+                    </MutedText>
+                    <Button variant="outline" size="sm" onClick={closeRevision}>
+                      Back to current
                     </Button>
-                  </DialogClose>
-                  <Button
-                    variant="destructive"
-                    disabled={Boolean(busy)}
-                    onClick={() => remove()}
-                  >
-                    {busy === 'delete' ? 'Deleting…' : 'Delete'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Dialog
-              open={confirming === 'rename' && permissions.admin}
-              onOpenChange={(open) =>
-                !open && !busy && setConfirming(undefined)
-              }
-            >
-              {confirming === 'rename' && permissions.admin && (
-                <RenameDialogContent
-                  from={doc.name}
-                  busy={busy === 'rename'}
-                  error={renameError}
-                  onRename={rename}
-                  onEdit={() => setRenameError(undefined)}
+                    {permissions.edit && (
+                      <Button
+                        size="sm"
+                        disabled={Boolean(lock)}
+                        title={lock}
+                        aria-describedby={lock && lockId}
+                        onClick={() =>
+                          restore(viewing.revision.path, viewing.content)
+                        }
+                      >
+                        Restore
+                      </Button>
+                    )}
+                  </div>
+                  <pre className="flex-1 overflow-auto whitespace-pre-wrap rounded-md border p-3 font-mono text-sm">
+                    {viewing.content}
+                  </pre>
+                </section>
+              )}
+              <RevisionList
+                title="History"
+                defaultOpen
+                items={history ?? []}
+                unavailable={history === null}
+                toRevision={(revision) => ({
+                  id: revision.path,
+                  label: formatStamp(revision.archivedAt),
+                })}
+                selectedId={viewing?.revision.path}
+                onSelect={viewRevision}
+              />
+              {conflict && allowed(conflict.action) && (
+                <ConflictDialog
+                  // Overwriting a save writes the draft as it is now.
+                  conflict={
+                    conflict.action === 'save'
+                      ? { ...conflict, mine: draft.markdown }
+                      : conflict
+                  }
+                  // `save` writes only a changed draft that serializes exactly.
+                  blocked={
+                    conflict.action === 'save' && !(draft.dirty && draft.exact)
+                      ? 'Your changes can no longer be saved as they are.'
+                      : undefined
+                  }
+                  onReload={() => show(conflict.current)}
+                  onOverwrite={() => overwrite(conflict)}
+                  onCancel={() => setConflict(undefined)}
                 />
               )}
-            </Dialog>
-          </>
-        )}
-      </section>
-    </div>
+              <Dialog
+                open={confirming === 'delete' && permissions.admin}
+                onOpenChange={(open) =>
+                  !open && !busy && setConfirming(undefined)
+                }
+              >
+                <DialogContent showCloseButton={false}>
+                  <DialogHeader>
+                    <DialogTitle>Delete {doc.name}?</DialogTitle>
+                    <DialogDescription>
+                      It leaves the list of policies. Its content and history
+                      stay in the archive.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={Boolean(busy)}>
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button
+                      variant="destructive"
+                      disabled={Boolean(busy)}
+                      onClick={() => remove()}
+                    >
+                      {busy === 'delete' ? 'Deleting…' : 'Delete'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Dialog
+                open={confirming === 'rename' && permissions.admin}
+                onOpenChange={(open) =>
+                  !open && !busy && setConfirming(undefined)
+                }
+              >
+                {confirming === 'rename' && permissions.admin && (
+                  <RenameDialogContent
+                    from={doc.name}
+                    busy={busy === 'rename'}
+                    error={renameError}
+                    onRename={rename}
+                    onEdit={() => setRenameError(undefined)}
+                  />
+                )}
+              </Dialog>
+            </>
+          )}
+          <Dialog
+            open={pending !== undefined}
+            onOpenChange={(open) => !open && setPending(undefined)}
+          >
+            <DialogContent showCloseButton={false}>
+              <DialogHeader>
+                <DialogTitle>Discard unsaved changes?</DialogTitle>
+                <DialogDescription>
+                  Your changes to {doc?.name} have not been saved. Opening{' '}
+                  {pending} discards them.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Keep editing</Button>
+                </DialogClose>
+                <Button variant="destructive" onClick={() => open(pending)}>
+                  Discard changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </section>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 };
+
+const SavingIcon = ({ className }: { className?: string }) => (
+  <LoaderCircleIcon className={cn('animate-spin', className)} />
+);
+
+/** A header action shown as an icon, named and titled by `label`. */
+const IconButton = ({
+  label,
+  icon: Icon,
+  lock,
+  lockId,
+  variant = 'ghost',
+  className,
+  disabled,
+  ...props
+}: Omit<ComponentProps<typeof Button>, 'children' | 'title'> & {
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  /** Why the action is unavailable now, if it is. */
+  lock?: string;
+  /** The status element that announces `lock`. */
+  lockId?: string;
+}) => (
+  <Button
+    variant={variant}
+    size="icon"
+    aria-label={label}
+    title={lock ?? label}
+    aria-describedby={lock && lockId}
+    disabled={disabled || Boolean(lock)}
+    className={cn(
+      'size-8 shrink-0 rounded',
+      variant === 'ghost' && 'hover:bg-primary/5 hover:text-foreground',
+      className,
+    )}
+    {...props}
+  >
+    <Icon />
+  </Button>
+);
 
 /** Shows how a refused change differs from the stored policy, offering a reload or an overwrite. */
 const ConflictDialog = ({
