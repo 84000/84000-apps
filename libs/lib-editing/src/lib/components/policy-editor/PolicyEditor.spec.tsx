@@ -38,6 +38,13 @@ jest.mock('../editor/markdown/MarkdownEditor', () => ({
 Object.assign(globalThis, { TextEncoder });
 Object.defineProperty(globalThis.crypto, 'subtle', { value: webcrypto.subtle });
 
+// jsdom has no ResizeObserver; the resizable policy list needs one.
+globalThis.ResizeObserver ??= class {
+  observe = () => undefined;
+  unobserve = () => undefined;
+  disconnect = () => undefined;
+};
+
 const setup = (props: Partial<PolicyEditorProps> = {}) => {
   const source = createMemoryPolicySource({
     a: 'Old\n',
@@ -147,19 +154,55 @@ describe('PolicyEditor', () => {
     type('Old\n');
     expect(saveButton()).toHaveProperty('disabled', true);
 
-    // Unsaved changes are discarded before opening another policy.
     type('Mine\n');
-    const other = screen.getByRole('button', { name: 'b' });
-    expect(other).toHaveProperty('disabled', true);
-    const status = screen.getByRole('status');
-    expect(status.textContent).toBe('Save or discard your changes first.');
-    expect(other.getAttribute('aria-describedby')).toBe(status.id);
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
     expect(text()).toBe('Old\n');
-    expect(other).toHaveProperty('disabled', false);
 
     await openPolicy('b');
     expect(source.write).not.toHaveBeenCalled();
+  });
+
+  it('asks before discarding unsaved changes to open another policy', async () => {
+    const onDirtyChange = jest.fn();
+    const { source } = setup({ onDirtyChange });
+    await openPolicy('a');
+    type('Mine\n');
+
+    click('b');
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Discard unsaved changes?',
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Keep editing' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('heading', { name: 'a' })).toBeTruthy();
+    expect(text()).toBe('Mine\n');
+
+    click('b');
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: 'Discard unsaved changes?' }),
+      ).getByRole('button', { name: 'Discard changes' }),
+    );
+    await screen.findByRole('heading', { name: 'b' });
+    expect(text()).toBe('B\n');
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+    expect(source.write).not.toHaveBeenCalled();
+  });
+
+  it('opens another policy while one is still loading', async () => {
+    const { source } = setup();
+    const read = deferred<Awaited<ReturnType<PolicySource['read']>>>();
+    jest.mocked(source.read).mockReturnValueOnce(read.promise);
+    fireEvent.click(await screen.findByRole('button', { name: 'a' }));
+    expect(screen.getByText('Loading policy…')).toBeTruthy();
+
+    const other = screen.getByRole('button', { name: 'b' });
+    expect(other).toHaveProperty('disabled', false);
+    await openPolicy('b');
+    await read.resolve({ name: 'a', content: 'Stale\n', version: 'v' });
+    expect(screen.getByRole('heading', { name: 'b' })).toBeTruthy();
   });
 
   it('saves against the loaded version, then against the saved one', async () => {
@@ -728,19 +771,23 @@ describe('PolicyEditor', () => {
     expect(region()).toBeNull();
   });
 
-  it('locks the list during a restore and drops it once another source opens', async () => {
+  it('locks the policy during a restore and drops it once another source opens', async () => {
     const { source, rerender } = await viewRevision();
     const restore = deferred();
     jest.mocked(source.restore).mockReturnValueOnce(restore.promise);
 
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
     // The save button does not claim a restore as a save.
-    for (const name of ['b', 'Restore', 'Save']) {
+    for (const name of ['Restore', 'Save']) {
       expect(screen.getByRole('button', { name })).toHaveProperty(
         'disabled',
         true,
       );
     }
+    expect(screen.getByRole('button', { name: 'b' })).toHaveProperty(
+      'disabled',
+      false,
+    );
 
     rerender(
       <PolicyEditor
@@ -771,12 +818,13 @@ describe('PolicyEditor', () => {
     expect(restore.getAttribute('aria-describedby')).toBe(status.id);
   });
 
-  it('unlocks the list when edit is revoked while there are unsaved changes', async () => {
+  it('opens another policy without asking once edit is revoked', async () => {
     const { rerender, source } = setup();
     await openPolicy('a');
     type('Mine\n');
-    const other = screen.getByRole('button', { name: 'b' });
-    expect(other).toHaveProperty('disabled', true);
+    expect(screen.getByRole('status').textContent).toBe(
+      'Save or discard your changes first.',
+    );
 
     rerender(
       <PolicyEditor
@@ -784,11 +832,9 @@ describe('PolicyEditor', () => {
         permissions={{ read: true, edit: false, admin: false }}
       />,
     );
-    expect(screen.getByRole('button', { name: 'b' })).toHaveProperty(
-      'disabled',
-      false,
-    );
     expect(screen.getByRole('status').textContent).toBe('');
+    await openPolicy('b');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('shows a missing policy as not found', async () => {
