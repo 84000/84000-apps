@@ -5,7 +5,7 @@ import type {
   PolicySource,
   PolicyVersion,
   PolicyWriteResult,
-} from './policy-source.contract';
+} from '@eightyfourthousand/lib-editing/policy-editor';
 import { POLICY_TOOL_NAMES } from './tool-names';
 import { isRecord, parseToolResult, type ToolCaller } from './tool-result';
 

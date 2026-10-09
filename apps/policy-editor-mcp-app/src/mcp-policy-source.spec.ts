@@ -1,5 +1,5 @@
 import { createMcpPolicySource, PolicySourceError } from './mcp-policy-source';
-import type { PolicySource } from './policy-source.contract';
+import type { PolicySource } from '@eightyfourthousand/lib-editing/policy-editor';
 import type { ToolCaller } from './tool-result';
 
 /** A tool result as lib-agent's `jsonResult` builds it. */

@@ -10,6 +10,7 @@
       "cache": true,
       "inputs": [
         "production",
+        "^production",
         "!{projectRoot}/generated/**/*",
         "{workspaceRoot}/libs/design-system/src/lib/assets/fonts/MonlamUniOuChan2.woff2",
         {
@@ -18,6 +19,7 @@
             "vite-plugin-singlefile",
             "tailwindcss",
             "@tailwindcss/postcss",
+            "tw-animate-css",
             "@modelcontextprotocol/ext-apps"
           ]
         }

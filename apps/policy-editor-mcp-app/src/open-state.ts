@@ -1,4 +1,4 @@
-import type { PolicyPermissions } from './policy-source.contract';
+import type { PolicyPermissions } from '@eightyfourthousand/lib-editing/policy-editor';
 import { POLICY_TOOL_NAMES } from './tool-names';
 import { isRecord, parseToolResult, type ToolCaller } from './tool-result';
 
