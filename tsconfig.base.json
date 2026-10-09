@@ -104,6 +104,9 @@
       ],
       "@eightyfourthousand/lib-agent": [
         "./libs/lib-agent/src/index.ts"
+      ],
+      "@eightyfourthousand/policy-editor-mcp-app/html": [
+        "./apps/policy-editor-mcp-app/generated/app-html.ts"
       ]
     }
   },

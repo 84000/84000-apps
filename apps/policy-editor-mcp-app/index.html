@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Policy editor</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body class="bg-surface font-sans text-sm text-ink antialiased">
+    <header
+      class="flex items-center justify-between gap-2 border-b border-line px-3 py-2"
+    >
+      <h1 class="text-sm font-semibold">Translation policies</h1>
+      <span
+        id="badge"
+        class="rounded-full border border-line px-2 py-0.5 text-xs text-muted"
+      ></span>
+    </header>
+    <p id="status" class="px-3 pt-2 text-xs text-muted" role="status">
+      Connecting…
+    </p>
+    <main class="grid gap-3 p-3 sm:grid-cols-[minmax(10rem,1fr)_2fr]">
+      <nav aria-label="Policies">
+        <ul id="list" class="flex flex-col gap-0.5"></ul>
+      </nav>
+      <section id="detail" class="hidden min-w-0 flex-col gap-2">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="title" class="font-semibold break-all"></h2>
+          <span id="version" class="font-mono text-xs text-muted"></span>
+        </div>
+        <pre
+          id="content"
+          class="max-h-[70vh] overflow-auto rounded-md border border-line bg-panel p-3 font-sans text-xs leading-relaxed break-words whitespace-pre-wrap"
+        ></pre>
+      </section>
+    </main>
+    <footer class="px-3 pb-3 text-xs text-muted">
+      Read-only preview. The full editor arrives with DEV-810.
+    </footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

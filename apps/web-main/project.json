@@ -13,10 +13,10 @@
       }
     },
     "dev": {
-      "dependsOn": ["copy-assets"]
+      "dependsOn": ["copy-assets", "policy-editor-mcp-app:build"]
     },
     "build": {
-      "dependsOn": ["copy-assets"]
+      "dependsOn": ["copy-assets", "policy-editor-mcp-app:build"]
     }
   }
 }
