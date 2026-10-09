@@ -18,6 +18,22 @@ export {
 } from './lib/tools/harness';
 export { createSessionTools } from './lib/tools/sessions';
 export {
+  createFeedbackTools,
+  createFeedbackIssue,
+  linearFeedbackConfigFromEnv,
+  FEEDBACK_TOOL_NAMES,
+  FEEDBACK_LABEL_IDS,
+  AI_TRANSLATION_TEAM_ID,
+  AI_TRANSLATION_BACKLOG_STATE_ID,
+} from './lib/tools/feedback';
+export type {
+  CreateFeedbackIssueResult,
+  FeedbackKind,
+  FeedbackSubmitter,
+  FeedbackToolOptions,
+  LinearFeedbackConfig,
+} from './lib/tools/feedback';
+export {
   validateBearerToken,
   requirePermission,
   decodeRole,

@@ -28,6 +28,11 @@ Repeat for any app you're working on (`api-mcp`, `api-graphql`, etc.). Key varia
 - `NEXT_PUBLIC_GRAPHQL_URL` — GraphQL API endpoint (defaults to `http://localhost:3001/api/graphql` in dev)
 - `NEXT_PUBLIC_POSTHOG_KEY` — PostHog analytics key
 - `NEXT_PUBLIC_POSTHOG_HOST` — PostHog host URL
+- `LINEAR_API_KEY` — server-only (`web-main`). Lets the studio MCP's feedback
+  tools file Linear issues; without it they report that feedback is not set
+  up. `LINEAR_FEEDBACK_TEAM_ID`, `LINEAR_FEEDBACK_STATE_ID` and
+  `LINEAR_FEEDBACK_LABEL_{FEATURE,BUG,FEEDBACK}` override the defaults (the
+  AI Translation team's Backlog and the Feature, Bug and Feedback labels).
 
 ## Running Apps
 
