@@ -11,9 +11,14 @@ translator, without a release. That is the reason the conventions below matter
 more than they would for a file in a codebase: there is no review step between
 your write and someone else's next session.
 
-Two studio tools reach them from chat. `read-policies` lists and reads;
-`write-policy` creates or replaces. **Delete and rename are not chat tools** —
-they live in the policy editor (see "Names are permanent" below).
+Two studio tools read and write them from chat. `read-policies` lists and
+reads; `write-policy` creates or replaces. **Delete and rename are not chat
+tools** — they live in the policy editor (see "Names are permanent" below),
+which `open-policy-editor` opens for the person, on one policy when you pass its
+`name` or on the list otherwise. There they browse, edit, view history,
+restore, and — with `harness.admin` — delete and rename. If `open-policy-editor`
+is not among your tools, tell them delete and rename are not available from
+chat yet.
 
 ## Always read before you write
 
@@ -173,8 +178,11 @@ name with a pointer, so existing references resolve and read where to go:
 
 If the person wants the old name gone instead, that is done in the policy
 editor: open it with the `open-policy-editor` tool and let them rename or delete
-there (it takes the `harness.admin` permission). If that tool is not available,
-tell them delete and rename are not available from chat yet. A renamed or
+there (it takes the `harness.admin` permission). Clients that do not display
+MCP Apps, such as Claude Code in a terminal, show nothing when it is called;
+tell the person to open it from Claude Desktop or Cowork. If
+`open-policy-editor` is not among your tools, tell them delete and rename are
+not available from chat yet. A renamed or
 deleted name stops resolving, so any citation you could not fix breaks — prefer
 the pointer whenever one might remain.
 

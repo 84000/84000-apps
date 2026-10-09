@@ -5,11 +5,12 @@ import type { McpHandlerOptions } from './types';
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
-    version = '2026.10.1',
+    version = '2026.10.2',
     description,
     instructions,
     tools,
     prompts = [],
+    resources = [],
   } = options;
 
   function buildServer(): McpServer {
@@ -46,7 +47,26 @@ export function createMcpHandler(options: McpHandlerOptions) {
       server.registerPrompt(name, { title, description, argsSchema }, handler);
     }
 
-    if (tools.length === 0 && prompts.length === 0) {
+    for (const resource of resources) {
+      const { name, uri, title, description, mimeType, text, _meta } = resource;
+      server.registerResource(
+        name,
+        uri,
+        { title, description, mimeType },
+        async () => ({
+          contents: [
+            {
+              uri,
+              mimeType,
+              text: typeof text === 'function' ? await text() : text,
+              ...(_meta && { _meta }),
+            },
+          ],
+        }),
+      );
+    }
+
+    if (tools.length === 0 && prompts.length === 0 && resources.length === 0) {
       const placeholder = server.registerTool(
         '_init',
         { description: 'placeholder' },

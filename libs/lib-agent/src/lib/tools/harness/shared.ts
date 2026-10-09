@@ -13,6 +13,9 @@ import { jsonResult } from '../read/util';
  */
 export const POLICY_EDITOR_RESOURCE_URI = 'ui://policy-editor/app.html';
 
+/** The MIME type MCP Apps hosts expect on a `ui://` HTML resource. */
+export const MCP_APP_MIME_TYPE = 'text/html;profile=mcp-app';
+
 /** Names of the policy tools, for clients that call them by name. */
 export const POLICY_TOOL_NAMES = {
   read: 'read-policies',
@@ -22,7 +25,10 @@ export const POLICY_TOOL_NAMES = {
   restore: 'restore-policy',
   delete: 'delete-policy',
   rename: 'rename-policy',
-  /** Served with the policy editor app (DEV-811), not by this library. */
+  /**
+   * Model-visible; opens the policy editor app. Listed only by a server that
+   * also serves its resource, so it is not in `createHarnessTools`.
+   */
   openEditor: 'open-policy-editor',
 } as const;
 

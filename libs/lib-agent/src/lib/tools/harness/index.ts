@@ -19,6 +19,9 @@ import { createWritePolicyTool } from './write-policy';
  * app-only for the policy editor, and are registered unconditionally: the
  * stateless route builds a server per request and cannot see whether the
  * client renders MCP Apps.
+ *
+ * `open-policy-editor` is not here: a server lists it alongside the editor's
+ * resource, with `createOpenPolicyEditorTool` and `createPolicyEditorResource`.
  */
 export function createHarnessTools(client: DataClient): McpToolDefinition[] {
   return [
@@ -40,6 +43,11 @@ export { createRestorePolicyTool } from './restore-policy';
 export { createDeletePolicyTool } from './delete-policy';
 export { createRenamePolicyTool } from './rename-policy';
 export {
+  createOpenPolicyEditorTool,
+  createPolicyEditorResource,
+} from './open-policy-editor';
+export {
+  MCP_APP_MIME_TYPE,
   POLICY_EDITOR_RESOURCE_URI,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,

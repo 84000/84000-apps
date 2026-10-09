@@ -3,6 +3,7 @@ export type {
   McpToolDefinition,
   McpPromptDefinition,
   McpHandlerOptions,
+  McpResourceDefinition,
 } from './lib/types';
 export { readToolInstructions, joinInstructions } from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
@@ -10,6 +11,9 @@ export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export {
   createHarnessTools,
+  createOpenPolicyEditorTool,
+  createPolicyEditorResource,
+  MCP_APP_MIME_TYPE,
   POLICY_EDITOR_RESOURCE_URI,
   POLICY_EDITOR_TOOL_META,
   POLICY_TOOL_NAMES,

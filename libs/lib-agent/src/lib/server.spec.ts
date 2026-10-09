@@ -9,7 +9,11 @@ import {
   POLICY_EDITOR_RESOURCE_URI,
   POLICY_TOOL_NAMES,
 } from './tools/harness';
-import type { McpPromptDefinition, McpToolDefinition } from './types';
+import type {
+  McpPromptDefinition,
+  McpResourceDefinition,
+  McpToolDefinition,
+} from './types';
 
 // Only the tool definitions are exercised; no handler runs.
 jest.mock('@eightyfourthousand/data-access', () => ({}));
@@ -28,7 +32,10 @@ const askPrompt: McpPromptDefinition = {
   argsSchema: { query: z.string().optional() },
   handler: () => ({
     messages: [
-      { role: 'user', content: { type: 'text', text: 'You are a test agent.' } },
+      {
+        role: 'user',
+        content: { type: 'text', text: 'You are a test agent.' },
+      },
     ],
   }),
 };
@@ -49,9 +56,7 @@ async function rpc(
   );
   const text = await res.text();
   // Response is either JSON or an SSE frame ("event: message\ndata: {...}")
-  const dataLine = text
-    .split('\n')
-    .find((l) => l.startsWith('data: '));
+  const dataLine = text.split('\n').find((l) => l.startsWith('data: '));
   return JSON.parse(dataLine ? dataLine.slice(6) : text);
 }
 
@@ -68,7 +73,10 @@ const init = {
 
 describe('createMcpHandler prompt + tool surface', () => {
   it('lists registered prompts over JSON-RPC', async () => {
-    const handler = createMcpHandler({ tools: [askTool], prompts: [askPrompt] });
+    const handler = createMcpHandler({
+      tools: [askTool],
+      prompts: [askPrompt],
+    });
     await rpc(handler, init);
     const listed = await rpc(handler, {
       jsonrpc: '2.0',
@@ -81,7 +89,10 @@ describe('createMcpHandler prompt + tool surface', () => {
   });
 
   it('returns prompt messages on prompts/get', async () => {
-    const handler = createMcpHandler({ tools: [askTool], prompts: [askPrompt] });
+    const handler = createMcpHandler({
+      tools: [askTool],
+      prompts: [askPrompt],
+    });
     await rpc(handler, init);
     const got = await rpc(handler, {
       jsonrpc: '2.0',
@@ -89,13 +100,17 @@ describe('createMcpHandler prompt + tool surface', () => {
       method: 'prompts/get',
       params: { name: 'test-agent', arguments: {} },
     });
-    const messages = (got.result as { messages: { content: { text: string } }[] })
-      .messages;
+    const messages = (
+      got.result as { messages: { content: { text: string } }[] }
+    ).messages;
     expect(messages[0].content.text).toContain('You are a test agent.');
   });
 
   it('lists the agent tool alongside prompts', async () => {
-    const handler = createMcpHandler({ tools: [askTool], prompts: [askPrompt] });
+    const handler = createMcpHandler({
+      tools: [askTool],
+      prompts: [askPrompt],
+    });
     await rpc(handler, init);
     const listed = await rpc(handler, {
       jsonrpc: '2.0',
@@ -163,5 +178,74 @@ describe('createMcpHandler prompt + tool surface', () => {
     }
     expect(byName[POLICY_TOOL_NAMES.read]._meta).toBeUndefined();
     expect(byName[POLICY_TOOL_NAMES.write]._meta).toBeUndefined();
+  });
+
+  it('lists and reads resources, static or computed, with content _meta', async () => {
+    const resource: McpResourceDefinition = {
+      name: 'test-app',
+      uri: 'ui://test/app.html',
+      description: 'A test app',
+      mimeType: 'text/html;profile=mcp-app',
+      text: async () => '<html>hi</html>',
+      _meta: { ui: { prefersBorder: true } },
+    };
+    const staticResource: McpResourceDefinition = {
+      name: 'static-app',
+      uri: 'ui://test/static.html',
+      mimeType: 'text/html',
+      text: '<html>static</html>',
+    };
+    const handler = createMcpHandler({
+      tools: [],
+      resources: [resource, staticResource],
+    });
+    await rpc(handler, init);
+    const listed = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'resources/list',
+      params: {},
+    });
+    const read = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'resources/read',
+      params: { uri: resource.uri },
+    });
+    const readStatic = await rpc(handler, {
+      jsonrpc: '2.0',
+      id: 8,
+      method: 'resources/read',
+      params: { uri: staticResource.uri },
+    });
+
+    expect((listed.result as { resources: unknown[] }).resources).toEqual([
+      {
+        name: 'test-app',
+        uri: 'ui://test/app.html',
+        description: 'A test app',
+        mimeType: 'text/html;profile=mcp-app',
+      },
+      {
+        name: 'static-app',
+        uri: 'ui://test/static.html',
+        mimeType: 'text/html',
+      },
+    ]);
+    expect((readStatic.result as { contents: unknown[] }).contents).toEqual([
+      {
+        uri: 'ui://test/static.html',
+        mimeType: 'text/html',
+        text: '<html>static</html>',
+      },
+    ]);
+    expect((read.result as { contents: unknown[] }).contents).toEqual([
+      {
+        uri: 'ui://test/app.html',
+        mimeType: 'text/html;profile=mcp-app',
+        text: '<html>hi</html>',
+        _meta: { ui: { prefersBorder: true } },
+      },
+    ]);
   });
 });
