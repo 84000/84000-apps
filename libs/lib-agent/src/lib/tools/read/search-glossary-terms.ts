@@ -24,7 +24,7 @@ const inputSchema = {
     .enum(CONTENT_SOURCES)
     .optional()
     .describe(
-      'Which copy to read: "published" (default) is the house rendering as published, which is what binds a translator; "draft" is the editor\u2019s current state, including terminology still under editorial review. A work still in preparation is reachable only under "draft".',
+      'Which copy to read: "published" (default) is the house rendering as published, which is what binds a translator; "draft" is the editor\u2019s current state, including terminology still under editorial review. A work still in preparation is reachable only under "draft". An empty published result does not tell an unglossed work from an unpublished glossary, so re-read with "draft" before concluding a term is unglossed.',
     ),
 };
 
