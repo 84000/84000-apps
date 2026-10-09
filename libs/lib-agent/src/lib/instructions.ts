@@ -1,62 +1,38 @@
 /**
+ * Claude Code truncates a server's MCP `instructions` to this many characters,
+ * so anything past it never reaches the model. Detail belongs in the tool
+ * descriptions, which are not truncated.
+ */
+export const MCP_INSTRUCTIONS_MAX_LENGTH = 2048;
+
+/**
  * The parts of a server's MCP `instructions` that describe the read tools rather
  * than the deployment serving them.
  *
  * Both servers expose `createReadTools`, so the guidance a client needs in order
- * to use them well is the same for both — and while it was duplicated in each app
- * route it drifted: both copies told clients that `search-glossary-terms` searched
- * the entire library, long after it had come to require a `workUuid`. Keeping this
- * beside the tools means a tool and its documentation move together.
- *
- * What stays with each app is what genuinely differs: how it introduces itself,
- * whether it authenticates, and which copy of the corpus it serves.
+ * to use them well is the same for both. Keeping this beside the tools means a
+ * tool and its documentation move together.
  */
 export type ReadToolInstructionsOptions = {
   /**
-   * How this deployment's corpus is scoped, completing the Translations bullet.
-   * The public API serves the published snapshot; the studio also sees work in
-   * progress.
+   * How this deployment's corpus is scoped. The public API serves the
+   * published snapshot; the studio also sees work in progress.
    */
   translations: string;
 };
 
 export const readToolInstructions = ({
   translations,
-}: ReadToolInstructionsOptions): string => `## Content available
+}: ReadToolInstructionsOptions): string => `## Content
 
-- **Translations** — ${translations}
-- **Glossary** — standardized terms with names in multiple languages (Sanskrit, Tibetan, English, Chinese), definitions, and attestations across translations
-- **Bibliographies** — source references and scholarly citations associated with each work
-- **Imprints** — publication metadata (edition, license, revision history)
-- **Table of contents** — hierarchical structure of each translation
+Translations (${translations}) with their glossaries, bibliographies and imprints. Works are keyed by UUID or Tohoku number ("toh1").
 
-## How works are identified
+## Using the read tools
 
-Works can be looked up by **UUID** or **Tohoku catalog number** (e.g. "toh1", "toh44", "toh123"). The Tohoku number is the standard scholarly reference for texts in the Kangyur and Tengyur collections.
-
-## Typical usage
-
-Start with \`get-translation\` to retrieve metadata for a work, then drill into passages, glossary terms, or bibliographies. Use \`search-translation\` for full-text search within a specific work.
-
-## Glossary lookups are scoped, not global
-
-\`get-glossary-instances\`, \`list-glossary-terms\` and \`search-glossary-terms\` each cover a single work. There is no library-wide glossary search — do not treat a per-work result as evidence that the library has been checked. When a term is not glossed in the work at hand, escalate to that work's canonical section: \`search-canon-sections\` resolves a section name to a uuid, then \`search-canon-section-glossary\` reports how every work in that section glosses the term, grouped one entry per work. Canon-section neighbours are the closest comparable authority for a term the work itself does not gloss.
-
-## Tohoku numbers are not all catalogue entries
-
-A number a source cites is often not an entry of its own. It may be superseded (Toh 418 is catalogued as Toh 417), or one of several numbers a single entry covers (Toh 1069 covers Toh 1069–1073; Toh 539 covers Toh 539a–d). Entries also come in subdivided and lettered forms — \`toh1-1\`, \`toh1059a\` — which are 123 of the catalogue's entries.
-
-Folio and passage reads key on the catalogued number, so all of the above read as a missing work. \`resolve-toh\` resolves any of them, accepts any written form ("Toh 312", "T. 312", "312"), reports whether the number was reached through an entry's note, and lists every point in the canon the work is placed at — separate placements with their own folios, not duplicates. Run it before concluding that a cited number does not exist.
-
-## Alignments are recorded, not derived
-
-Most published works carry stored alignments: for each translated passage, the span of Tibetan source text it renders, with the folio and volume it falls on. Reach for them before reading folios and matching the Tibetan by hand — a recorded alignment is editorial data, and a derived one is a guess.
-
-\`get-passage-alignments\` reads them on their own, Tibetan-only by default, which is the cheap way to add the source to English already in hand. \`get-translation-passages\` also embeds them in each passage; they fall outside its \`maxCharacters\` budget, so pass \`includeAlignments: false\` there when only the English is wanted. A work with no alignments still has folios — reach for \`get-translation-folios\` and align by hand only then.
-
-## Addressing source folios
-
-\`get-translation-folios\` takes \`folioNumber\` plus \`side\` to address a folio the way it is cited (the "157" and "b" of \`F.157b\`), and widens into a range with \`before\`/\`after\`. Prefer that over paging to find a known folio.`;
+- Start with \`get-translation\`, then drill in. \`search-translation\` searches within one work.
+- Glossary tools cover one work. There is no library-wide glossary search, so a miss in one work is not a miss in the library: escalate with \`search-canon-sections\`, then \`search-canon-section-glossary\`.
+- A cited Tohoku number may be superseded, covered by another entry, or lettered, and then reads as a missing work. Run \`resolve-toh\` before concluding it does not exist.
+- Prefer recorded alignments (\`get-passage-alignments\`) to matching Tibetan folios by hand.`;
 
 /**
  * Join an intro, the shared tool guidance, and any deployment-specific sections
@@ -65,3 +41,30 @@ Most published works carry stored alignments: for each translated passage, the s
  */
 export const joinInstructions = (sections: string[]): string =>
   sections.filter(Boolean).join('\n\n');
+
+/** Instructions for the public, read-only MCP API. */
+export const publicInstructions = joinInstructions([
+  'This server provides read-only access to the 84000 translation library — a long-term initiative to translate the Tibetan Buddhist canon (Kangyur and Tengyur) into modern languages.',
+  readToolInstructions({ translations: 'published only' }),
+]);
+
+/**
+ * Instructions for the authenticated studio MCP, which adds the policy,
+ * session and feedback tools. Sections run most important first.
+ */
+export const studioInstructions = joinInstructions([
+  'Authenticated access to the 84000 studio, the internal platform for translating the Tibetan Buddhist canon (Kangyur and Tengyur).',
+  `## Policies are live
+
+84000's translation policies (house style, text-critical practice, etc.) change without a release. At the start of each session, read the ones your task depends on with \`read-policies\`, not from memory or a plugin's copy. \`write-policy\` edits one; \`open-policy-editor\` opens an editor for the user.`,
+  `## Session documents
+
+A session's working files (Stage 0 records, Stage 1 drafts, collation and alignment records) live in storage by work and stage. Read the previous stage with \`read-session-documents\`, not a local file from an earlier session; save with \`write-session-documents\`.`,
+  readToolInstructions({ translations: 'published and in progress' }),
+  `## Draft versus published
+
+Glossary reads default to the published snapshot, which binds a translator. \`source: "draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,
+  `## Feedback
+
+\`submit-feedback\`, \`submit-bug-report\` and \`submit-feature-request\` reach the 84000 team. Get the user's go-ahead on the exact draft first.`,
+]);
