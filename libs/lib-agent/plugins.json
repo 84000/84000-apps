@@ -104,6 +104,16 @@
       "agents": [],
       "renames": {},
       "sharedReference": {}
+    },
+    {
+      "name": "84000-core",
+      "displayName": "84000 Core",
+      "description": "Core tooling for everyone using the 84000 plugins. Send feature requests, bug reports and feedback to the 84000 team from the conversation, drafted for review before anything is filed.",
+      "keywords": ["84000", "feedback", "bug-report", "feature-request"],
+      "skills": ["libs/lib-agent/skills/send-feedback"],
+      "agents": [],
+      "renames": {},
+      "sharedReference": {}
     }
   ]
 }
