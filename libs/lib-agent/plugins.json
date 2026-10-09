@@ -53,7 +53,7 @@
     {
       "name": "84000-translator-tools",
       "displayName": "84000 Translator Tools",
-      "description": "Translation tooling for the 84000 library of Tibetan Buddhist texts. Research access to translations, folios, glossaries, bibliographies and metadata, the Stage 0 text-analysis, Stage 1 first-draft translation and Stage 2 editorial review workflows, copyediting, and authoring of the translation policies that govern them.",
+      "description": "Translation tooling for the 84000 library of Tibetan Buddhist texts. Research access to translations, folios, glossaries, bibliographies and metadata, the Stage 0 text-analysis, Stage 1 first-draft translation and Stage 2 editorial review workflows, and copyediting.",
       "keywords": [
         "84000",
         "translation",
@@ -64,8 +64,7 @@
         "drafting",
         "review",
         "editorial",
-        "copyediting",
-        "policies"
+        "copyediting"
       ],
       "skills": [
         "libs/lib-agent/skills/text-analysis-and-retrieval",
@@ -74,8 +73,7 @@
         "libs/lib-agent/skills/copyediting",
         "libs/lib-agent/skills/tibetan-source-text",
         "libs/lib-agent/skills/tibetan-english-passage-alignment",
-        "libs/lib-agent/skills/glossary-by-canon-section",
-        "libs/lib-agent/skills/policy-authoring"
+        "libs/lib-agent/skills/glossary-by-canon-section"
       ],
       "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
@@ -89,6 +87,23 @@
         "editorial-review": ["libs/lib-agent/reference/session-documents"],
         "copyediting": ["libs/lib-agent/reference/session-documents"]
       }
+    },
+    {
+      "name": "84000-admin",
+      "displayName": "84000 Admin",
+      "description": "Administrative tooling for the 84000 translation harness. Author and revise the translation policies that govern the translation workflows, with the naming, provenance and versioning conventions they depend on.",
+      "keywords": [
+        "84000",
+        "admin",
+        "administration",
+        "policies",
+        "harness",
+        "authoring"
+      ],
+      "skills": ["libs/lib-agent/skills/policy-authoring"],
+      "agents": [],
+      "renames": {},
+      "sharedReference": {}
     }
   ]
 }
