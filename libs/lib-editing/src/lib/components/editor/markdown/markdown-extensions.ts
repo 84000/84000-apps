@@ -1,4 +1,6 @@
 import { Extension, type Extensions } from '@tiptap/core';
+import { DOMParser, type ParseOptions } from '@tiptap/pm/model';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import {
   renderTableToMarkdown,
@@ -28,6 +30,52 @@ const MarkdownEscape = Extension.create({
   parseMarkdown: (token) => ({ type: 'text', text: token.text ?? '' }),
 });
 
+/** Asks for every newline in the parsed DOM to be kept as text. */
+const keepingNewlines = (options: ParseOptions = {}): ParseOptions =>
+  options.preserveWhitespace === true
+    ? { ...options, preserveWhitespace: 'full' }
+    : options;
+
+/**
+ * A DOM parser that keeps newlines in text where ProseMirror's default turns
+ * them into hard breaks: when it re-reads the DOM after an edit, and when it
+ * pastes a slice copied from a ProseMirror editor.
+ */
+class NewlinePreservingParser extends DOMParser {
+  override parse(dom: globalThis.Node, options?: ParseOptions) {
+    return super.parse(dom, keepingNewlines(options));
+  }
+
+  override parseSlice(dom: globalThis.Node, options?: ParseOptions) {
+    return super.parseSlice(dom, keepingNewlines(options));
+  }
+}
+
+/**
+ * Keeps a source's soft line breaks, which parse as newlines in text, when a
+ * paragraph is edited. ProseMirror re-reads an edited paragraph from the DOM
+ * with `preserveWhitespace: true`, which turns each newline into a hard break,
+ * so one keystroke would rewrite every wrap in the paragraph as `  \n`. The
+ * wraps are kept rather than reflowed, so an edit changes only its own lines.
+ * External HTML still collapses its newlines; a typed hard break is a `<br>`.
+ */
+const MarkdownSoftBreaks = Extension.create({
+  name: 'markdownSoftBreaks',
+  addProseMirrorPlugins() {
+    const { schema } = this.editor;
+    const parser = new NewlinePreservingParser(
+      schema,
+      DOMParser.fromSchema(schema).rules,
+    );
+    return [
+      new Plugin({
+        key: new PluginKey('markdownSoftBreaks'),
+        props: { domParser: parser },
+      }),
+    ];
+  },
+});
+
 /**
  * The markdown-safe extension subset for editing policies: stock `@tiptap/*`
  * extensions only. Nothing from the translation editor -- its extensions add
@@ -54,4 +102,5 @@ export const createMarkdownExtensions = (): Extensions => [
   TableHeader,
   TableCell,
   MarkdownEscape,
+  MarkdownSoftBreaks,
 ];

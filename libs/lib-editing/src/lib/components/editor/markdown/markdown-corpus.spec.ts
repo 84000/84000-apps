@@ -3,8 +3,11 @@ import { join, relative } from 'node:path';
 import {
   checkMarkdownRoundTrip,
   hasMarkdownChanges,
+  markdownFormatOf,
+  serializeMarkdown,
   type MarkdownFallbackReason,
 } from './markdown-codec';
+import { editTextNodes, mountMarkdown } from './markdown-editing.fixture';
 
 /**
  * Round-trips a corpus of policies through the markdown subset.
@@ -29,6 +32,7 @@ const EXPECTED: Record<string, Outcome> = {
   'seed/translator-guidelines/IV.A-spelling.md': 'round-trips',
   'seed/translator-guidelines/IV.G-mantras-and-dharanis.md': 'round-trips',
   'synthetic/rich.md': 'round-trips',
+  'synthetic/soft-wraps.md': 'round-trips',
   // Re-padded to the widest cell.
   'synthetic/table-unpadded.md': 'not-identical',
   // Re-written as * and **.
@@ -83,6 +87,50 @@ const expectGuardInvariants = (results: ReturnType<typeof run>) => {
   }
 };
 
+const EDIT = ' edited';
+
+/**
+ * Edits every wrapped line of every policy that opens in the rich editor, the
+ * way typing does, and returns how many lines it edited. Each edit must change
+ * only its own line: a soft break must not come back as a hard break, or move.
+ */
+const expectEditsKeepLines = (results: ReturnType<typeof run>) => {
+  let edits = 0;
+  for (const { path, source, ok } of results) {
+    if (!ok) {
+      continue;
+    }
+    const editor = mountMarkdown(source);
+    edits += editTextNodes(editor, (text) =>
+      text.includes('\n') ? text.replace('\n', `${EDIT}\n`) : null,
+    );
+    const { markdown, exact } = serializeMarkdown(
+      editor.getJSON(),
+      markdownFormatOf(source),
+    );
+    editor.destroy();
+
+    const before = source.split('\n');
+    const after = markdown.split('\n');
+    const changed = after.flatMap((line, index) =>
+      line === before[index] ? [] : [{ line: index + 1, text: line }],
+    );
+    expect({ path, exact, lines: after.length }).toEqual({
+      path,
+      exact: true,
+      lines: before.length,
+    });
+    for (const { line, text } of changed) {
+      expect({ path, line, text: text.replace(EDIT, '') }).toEqual({
+        path,
+        line,
+        text: before[line - 1],
+      });
+    }
+  }
+  return edits;
+};
+
 const corpusDir = process.env['POLICY_CORPUS_DIR'];
 
 (corpusDir ? describe.skip : describe)('markdown fixture corpus', () => {
@@ -105,6 +153,10 @@ const corpusDir = process.env['POLICY_CORPUS_DIR'];
   });
 
   it('holds the guard invariants', () => expectGuardInvariants(results));
+
+  it('keeps soft and hard breaks where they are through an edit', () => {
+    expect(expectEditsKeepLines(results)).toBeGreaterThan(0);
+  });
 });
 
 (corpusDir ? describe : describe.skip)('markdown corpus report', () => {
@@ -131,5 +183,6 @@ const corpusDir = process.env['POLICY_CORPUS_DIR'];
     );
     expect(results.length).toBeGreaterThan(0);
     expectGuardInvariants(results);
+    expectEditsKeepLines(results);
   });
 });

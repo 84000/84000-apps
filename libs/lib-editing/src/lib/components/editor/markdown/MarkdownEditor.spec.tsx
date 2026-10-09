@@ -9,6 +9,7 @@ import type { Editor } from '@tiptap/core';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { markdownFormatOf, serializeMarkdown } from './markdown-codec';
+import { editTextNodes } from './markdown-editing.fixture';
 import { MarkdownEditor } from './MarkdownEditor';
 
 const ROUND_TRIPS = '# Title\n\nA *short* policy.\n';
@@ -87,6 +88,24 @@ describe('MarkdownEditor', () => {
         exact: true,
       });
       expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('keeps soft wraps when a wrapped paragraph is typed in', async () => {
+      const source = '# Title\n\nAn excerpt\nfrom the source.\n';
+      const { onChange, editor } = setup(source);
+      await waitFor(() => expect(editor()).not.toBeNull());
+
+      act(() => {
+        editTextNodes(editor() as Editor, (text) =>
+          text.endsWith('source.') ? `${text.slice(0, -1)}, edited.` : null,
+        );
+      });
+
+      expect(onChange).toHaveBeenLastCalledWith(
+        '# Title\n\nAn excerpt\nfrom the source, edited.\n',
+        true,
+        true,
+      );
     });
 
     it('follows a new source, switching mode when it must', async () => {
