@@ -1,10 +1,14 @@
 import {
   compareIgnoringArticles,
   compareToh,
+  decodeHtmlEntities,
   escapeHtml,
   escapeHtmlAttribute,
+  htmlToText,
   parseToh,
+  removeSoftHyphens,
   stripLeadingArticles,
+  toSingleLine,
 } from './string';
 
 describe('parseToh', () => {
@@ -133,5 +137,45 @@ describe('escapeHtmlAttribute', () => {
     expect(escapeHtmlAttribute('say "hi" & <bye>')).toBe(
       'say &quot;hi&quot; &amp; &lt;bye&gt;',
     );
+  });
+});
+
+describe('decodeHtmlEntities', () => {
+  it('decodes the common named entities', () => {
+    expect(
+      decodeHtmlEntities('&lt;a&gt; &quot;b&#39; &apos;c&nbsp;&amp;'),
+    ).toBe("<a> \"b' 'c &");
+  });
+
+  it('decodes &amp; last, so an escaped entity stays escaped', () => {
+    expect(decodeHtmlEntities('&amp;lt;')).toBe('&lt;');
+  });
+});
+
+describe('htmlToText', () => {
+  it('drops tags, decodes entities and collapses whitespace', () => {
+    expect(
+      htmlToText(
+        '<p class="def">A &amp; B\n  <i>&lt;c&gt;</i>&nbsp;&quot;d&#39;</p>',
+      ),
+    ).toBe('A & B <c> "d\'');
+  });
+
+  it('does not turn a decoded entity into a tag', () => {
+    expect(htmlToText('&lt;b&gt;bold&lt;/b&gt;')).toBe('<b>bold</b>');
+  });
+});
+
+describe('removeSoftHyphens', () => {
+  it('removes soft hyphens and nothing else', () => {
+    expect(removeSoftHyphens('Samanta\u00ADbhadra Mañju\u00ADśrī')).toBe(
+      'Samantabhadra Mañjuśrī',
+    );
+  });
+});
+
+describe('toSingleLine', () => {
+  it('replaces each line break and tab with exactly one space', () => {
+    expect(toSingleLine('a\nb\r\nc\td')).toBe('a b  c d');
   });
 });
