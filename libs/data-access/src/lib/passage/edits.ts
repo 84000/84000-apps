@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { readAnnotationsByPassageUuids } from './batch';
 import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
+import { inBatches } from './save/reads';
 
 /** Remove a span of text from a passage. Offsets are in the stored content. */
 export type DeleteTextEdit = {
@@ -337,23 +338,25 @@ export const applyPassageEdits = async ({
     ),
   ];
 
-  const { data, error } = await client
-    .from('passages')
-    .select('uuid, content, label, sort, type, work_uuid, xmlId, parent, toh')
-    .eq('work_uuid', workUuid)
-    .in('uuid', targetUuids);
+  const rows: PassageDTO[] = [];
+  for (const batch of inBatches(targetUuids)) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, content, label, sort, type, work_uuid, xmlId, parent, toh')
+      .eq('work_uuid', workUuid)
+      .in('uuid', batch);
 
-  if (error) {
-    return {
-      success: false,
-      dryRun,
-      passages: [],
-      warnings: [],
-      error: `Failed to read passages: ${error.message}`,
-    };
+    if (error) {
+      return {
+        success: false,
+        dryRun,
+        passages: [],
+        warnings: [],
+        error: `Failed to read passages: ${error.message}`,
+      };
+    }
+    rows.push(...((data ?? []) as PassageDTO[]));
   }
-
-  const rows = (data ?? []) as PassageDTO[];
   const missing = targetUuids.filter(
     (uuid) => !rows.some((row) => row.uuid === uuid),
   );
