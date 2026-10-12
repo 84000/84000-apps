@@ -22,6 +22,10 @@ type FakeState = {
   annotationUpserts: AnnotationDTO[][];
   ops: string[];
   failOn?: Partial<Record<string, string>>;
+  /** Rows a delete silently skips, as row-level security does. */
+  protectedUuids: Set<string>;
+  /** Annotations removed by someone else just before any delete runs. */
+  vanishOnDelete: Set<string>;
   /** The longest `in` list any request carried. */
   maxInLength: number;
 };
@@ -53,6 +57,7 @@ class FakeQueryBuilder {
   private rowLimit?: number;
   private rangeFrom?: number;
   private rangeTo?: number;
+  private returning = false;
   private filterContentUuid?: string;
 
   constructor(
@@ -63,6 +68,10 @@ class FakeQueryBuilder {
   private columns?: string;
 
   select(columns?: string) {
+    if (this.action === 'delete') {
+      this.returning = true;
+      return this;
+    }
     this.action = 'select';
     this.columns = columns;
     return this;
@@ -231,8 +240,15 @@ class FakeQueryBuilder {
     }
 
     if (this.action === 'delete') {
+      // Another save got there first.
+      const vanished = this.state.vanishOnDelete;
+      this.state.annotations = this.state.annotations.filter(
+        (annotation) => !vanished.has(annotation.uuid),
+      );
+      const permitted = (uuid: string) => !this.state.protectedUuids.has(uuid);
+      let removed: string[];
       if (this.table === 'passage_annotations') {
-        const removed = this.state.annotations
+        removed = this.state.annotations
           .filter((annotation) =>
             this.inValues.includes(
               (this.inColumn === 'passage_uuid'
@@ -240,7 +256,8 @@ class FakeQueryBuilder {
                 : annotation.uuid) ?? '',
             ),
           )
-          .map((annotation) => annotation.uuid);
+          .map((annotation) => annotation.uuid)
+          .filter(permitted);
         this.state.deletedAnnotationUuids.push(...removed);
         this.state.annotations = this.state.annotations.filter(
           (annotation) => !removed.includes(annotation.uuid),
@@ -257,15 +274,19 @@ class FakeQueryBuilder {
             error: { message: 'violates foreign key constraint' },
           };
         }
-        const removed = this.state.passages
+        removed = this.state.passages
           .map((passage) => passage.uuid)
-          .filter((uuid) => this.inValues.includes(uuid));
+          .filter((uuid) => this.inValues.includes(uuid))
+          .filter(permitted);
         this.state.deletedPassageUuids.push(...removed);
         this.state.passages = this.state.passages.filter(
           (passage) => !removed.includes(passage.uuid),
         );
       }
-      return { data: [], error: null };
+      return {
+        data: this.returning ? removed.map((uuid) => ({ uuid })) : null,
+        error: null,
+      };
     }
 
     if (this.table === 'passage_annotations') {
@@ -290,7 +311,11 @@ class FakeQueryBuilder {
         data: this.paged(
           this.state.annotations
             .filter((annotation) =>
-              this.inValues.includes(annotation.passage_uuid ?? ''),
+              this.inValues.includes(
+                (this.inColumn === 'uuid'
+                  ? annotation.uuid
+                  : annotation.passage_uuid) ?? '',
+              ),
             )
             .sort(
               (a, b) =>
@@ -372,10 +397,12 @@ const createState = ({
   annotations = [],
   passages = [],
   failOn,
+  protectedUuids = [],
 }: {
   annotations?: AnnotationDTO[];
   passages?: PassageRowDTO[];
   failOn?: Partial<Record<string, string>>;
+  protectedUuids?: string[];
 }): FakeState => ({
   annotations,
   deletedAnnotationUuids: [],
@@ -386,6 +413,8 @@ const createState = ({
   annotationUpserts: [],
   ops: [],
   failOn,
+  protectedUuids: new Set(protectedUuids),
+  vanishOnDelete: new Set(),
   maxInLength: 0,
 });
 
@@ -464,7 +493,10 @@ describe('savePassagesWithDeletions', () => {
 
     expect(result.success).toBe(true);
     expect(state.passageUpserts).toEqual([]);
-    expect(state.annotationUpserts).toEqual([[annotationRow]]);
+    // Complete rows: an absent `toh` is written as null, not omitted.
+    expect(state.annotationUpserts).toEqual([
+      [{ ...annotationRow, toh: null }],
+    ]);
     expect(state.deletedAnnotationUuids).toEqual([]);
   });
 
@@ -619,7 +651,9 @@ describe('savePassagesWithDeletions sort shifts', () => {
     expect(state.ops).not.toContain('select:passages:sorts');
   });
 
-  it('still writes a sort the client changed', async () => {
+  // A client holding a sort from before a shift (a retry after a failed
+  // save, or a neighbour it never reloaded) must not move the passage back.
+  it('keeps the stored sort of an existing passage whatever the client sent', async () => {
     const state = createState({
       passages: [row('a', 169), row('b', 170), row('c', 180)],
     });
@@ -632,7 +666,45 @@ describe('savePassagesWithDeletions sort shifts', () => {
     const upserted = new Map(
       state.passageUpserts.flat().map((upsert) => [upsert.uuid, upsert.sort]),
     );
-    expect(upserted.get('c')).toBe(175);
+    expect(upserted.get('new')).toBe(170);
+    expect(upserted.get('c')).toBe(180);
+  });
+
+  it('does not tie a retried passage with the one a failed save made room for', async () => {
+    const state = createState({
+      passages: [row('b', 1), row('c', 2)],
+      failOn: { 'upsert:passages': 'commit failed' },
+    });
+    const save = () =>
+      savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [edited('b', 1), edited('x', 1)],
+      });
+
+    expect((await save()).success).toBe(false);
+    state.failOn = undefined;
+    expect((await save()).success).toBe(true);
+
+    const sorts = new Map(state.passages.map((r) => [r.uuid, r.sort]));
+    state.passageUpserts.flat().forEach((r) => sorts.set(r.uuid, r.sort));
+    expect(sorts.get('x')).toBe(1);
+    expect(sorts.get('b')).toBe(2);
+  });
+
+  it('does not move a passage the client last saw before a shift', async () => {
+    const state = createState({ passages: [row('b', 1)] });
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('x', 1)],
+    });
+    // The client never reloaded b, so still holds sort 1.
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [{ ...edited('b', 1), content: 'b again' }],
+    });
+
+    const bUpserts = state.passageUpserts.flat().filter((r) => r.uuid === 'b');
+    expect(bUpserts.map((r) => r.sort)).toEqual([2]);
   });
 });
 
@@ -1530,5 +1602,310 @@ describe('savePassagesWithDeletions hardening', () => {
 
     expect(result.success).toBe(true);
     expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  describe('offsets', () => {
+    it('rejects a written annotation past the end of its passage', async () => {
+      const state = createState({ passages: [passageRow] });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [
+          {
+            ...passage,
+            annotations: [{ ...passage.annotations[0], end: 10 }],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('annotation-1');
+      expect(writes(state)).toEqual([]);
+    });
+
+    it('measures content in UTF-16 units', async () => {
+      // One astral character is two UTF-16 units.
+      const content = 'a\u{1F600}b';
+      const state = createState({
+        passages: [{ ...passageRow, content: 'old' }],
+      });
+      const save = (end: number) =>
+        savePassagesWithDeletions({
+          client: createFakeClient(state),
+          passages: [
+            {
+              ...passage,
+              content,
+              annotations: [{ ...passage.annotations[0], end }],
+            },
+          ],
+        });
+
+      expect((await save(4)).success).toBe(true);
+      expect((await save(5)).success).toBe(false);
+    });
+
+    it('rejects a reversed range', async () => {
+      const state = createState({ passages: [passageRow] });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [
+          {
+            ...passage,
+            annotations: [{ ...passage.annotations[0], start: 5, end: 2 }],
+          },
+        ],
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('does not check a stored row the save leaves alone', async () => {
+      const state = createState({
+        passages: [passageRow],
+        annotations: [
+          annotationRow,
+          { ...annotationRow, uuid: 'overrun', start: 0, end: 40 },
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [
+          {
+            ...passage,
+            content: 'Body text!',
+            annotationsIncomplete: true,
+          },
+        ],
+      });
+
+      expect(result.success).toBe(true);
+      expect(state.deletedAnnotationUuids).toEqual([]);
+    });
+  });
+
+  it('fails when a delete is silently filtered', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [annotationRow, { ...annotationRow, uuid: 'annotation-2' }],
+      protectedUuids: ['annotation-2'],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [passage],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('not permitted');
+  });
+
+  it('accepts a delete of a row another save already removed', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [annotationRow, { ...annotationRow, uuid: 'annotation-2' }],
+    });
+    state.vanishOnDelete.add('annotation-2');
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [passage],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('fails a passage delete whose annotations were not all removed', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [annotationRow],
+      protectedUuids: ['annotation-1'],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [],
+      deletedUuids: ['passage-1'],
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.passages.map((row) => row.uuid)).toEqual(['passage-1']);
+  });
+
+  it('rejects an unchanged annotation that shortened content no longer fits', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [annotationRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [{ ...passage, content: 'Body' }],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('annotation-1');
+    expect(state.passageUpserts).toEqual([]);
+  });
+
+  it('fails when a passage delete is silently filtered', async () => {
+    const state = createState({
+      passages: [passageRow],
+      protectedUuids: ['passage-1'],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [],
+      deletedUuids: ['passage-1'],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Failed to delete passages');
+  });
+
+  it('keeps the stored columns a row in a mixed batch leaves out', async () => {
+    const state = createState({
+      passages: [
+        { ...passageRow, xmlId: 'x-1', toh: 'toh1' as never },
+        { ...passageRow, uuid: 'passage-2', sort: 2 },
+      ],
+    });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        { ...passage, content: 'changed', annotations: [] },
+        {
+          ...passage,
+          uuid: 'passage-2',
+          sort: 2,
+          content: 'changed',
+          xmlId: 'x-2',
+          annotations: [],
+        },
+      ],
+    });
+
+    const rows = new Map(
+      state.passageUpserts.flat().map((row) => [row.uuid, row]),
+    );
+    expect(rows.get('passage-1')).toMatchObject({
+      xmlId: 'x-1',
+      toh: 'toh1',
+      parent: null,
+    });
+    expect(rows.get('passage-2')).toMatchObject({ xmlId: 'x-2', toh: null });
+  });
+
+  it('keeps the stored toh of an annotation that leaves it out', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [{ ...annotationRow, toh: 'toh1' }],
+    });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        { ...passage, annotations: [{ ...passage.annotations[0], end: 4 }] },
+      ],
+    });
+
+    expect(state.annotationUpserts.flat()[0]).toMatchObject({
+      end: 4,
+      toh: 'toh1',
+    });
+  });
+
+  it('keeps the stored row of an annotation sent but not serializable', async () => {
+    const state = createState({
+      passages: [passageRow],
+      annotations: [
+        annotationRow,
+        { ...annotationRow, uuid: 'odd', type: 'unknown' },
+      ],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        {
+          ...passage,
+          annotations: [
+            ...passage.annotations,
+            {
+              uuid: 'odd',
+              passageUuid: 'passage-1',
+              start: 0,
+              end: 1,
+              type: 'no-such-type' as never,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  it('deletes a link citing two deleted notes once', async () => {
+    const link: AnnotationDTO = {
+      uuid: 'ref-1',
+      passage_uuid: 'passage-1',
+      start: 4,
+      end: 4,
+      type: 'end-note-link',
+      content: [{ uuid: 'note-1' }, { uuid: 'note-2' }],
+    };
+    const note = (uuid: string, sort: number): PassageRowDTO => ({
+      ...passageRow,
+      uuid,
+      sort,
+      label: '',
+      type: 'endnotes',
+    });
+    const state = createState({
+      passages: [passageRow, note('note-1', 5), note('note-2', 6)],
+      annotations: [link],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [],
+      deletedUuids: ['note-1', 'note-2'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['ref-1']);
+  });
+
+  it('removes a link the editor dropped while deleting its note', async () => {
+    const link: AnnotationDTO = {
+      uuid: 'ref-1',
+      passage_uuid: 'passage-1',
+      start: 4,
+      end: 4,
+      type: 'end-note-link',
+      content: [{ uuid: 'note-1' }],
+    };
+    const state = createState({
+      passages: [
+        passageRow,
+        { ...passageRow, uuid: 'note-1', sort: 5, label: '', type: 'endnotes' },
+      ],
+      annotations: [annotationRow, link],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [passage],
+      deletedUuids: ['note-1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['ref-1']);
   });
 });

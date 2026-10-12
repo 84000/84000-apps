@@ -1,4 +1,5 @@
 import type { AnnotationDTO, PassageRowDTO } from '../../types';
+import type { AnnotationWriteRow, PassageWriteRow } from './types';
 
 export type ExistingPassageRow = PassageRowDTO;
 
@@ -28,7 +29,7 @@ const nullableEqual = (a: unknown, b: unknown) => (a ?? null) === (b ?? null);
 
 /** Whether a passage row differs from what is stored, so needs writing. */
 export const passageRowHasChanged = (
-  incoming: PassageRowDTO,
+  incoming: PassageRowDTO | PassageWriteRow,
   existing?: ExistingPassageRow,
 ) => {
   if (!existing) {
@@ -50,7 +51,7 @@ export const passageRowHasChanged = (
 
 /** Whether an annotation differs from what is stored, so needs writing. */
 export const annotationHasChanged = (
-  incoming: AnnotationDTO,
+  incoming: AnnotationDTO | AnnotationWriteRow,
   existing?: ExistingAnnotationRow,
 ) => {
   if (!existing) {
@@ -61,8 +62,9 @@ export const annotationHasChanged = (
     incoming.start !== existing.start ||
     incoming.end !== existing.end ||
     incoming.type !== existing.type ||
-    (incoming.passage_uuid ?? incoming.passageUuid ?? '') !==
-      existing.passage_uuid ||
+    (incoming.passage_uuid ??
+      ('passageUuid' in incoming ? incoming.passageUuid : undefined) ??
+      '') !== existing.passage_uuid ||
     stableStringify(incoming.content ?? []) !==
       stableStringify(existing.content ?? []) ||
     stableStringify(incoming.toh ?? null) !==

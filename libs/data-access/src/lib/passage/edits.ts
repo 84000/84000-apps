@@ -8,6 +8,7 @@ import {
   type Passage,
   type PassageDTO,
   annotationFromImport,
+  annotationRangeFits,
   annotationsFromDTO,
   passageFromDTO,
 } from '../types';
@@ -232,6 +233,23 @@ export const applyEditsToPassages = ({
     for (const annotation of passage.annotations) {
       if (removed.has(annotation.uuid)) {
         dropped.push(annotation.uuid);
+        continue;
+      }
+      // A stored row already out of range cannot be moved meaningfully; it
+      // is carried as stored.
+      if (
+        deletions.length > 0 &&
+        !annotationRangeFits(
+          annotation.start,
+          annotation.end,
+          passage.content.length,
+        )
+      ) {
+        kept.push(annotation);
+        warnings.push({
+          passageUuid: uuid,
+          message: `Left ${annotation.type} annotation ${annotation.uuid} as stored: its range [${annotation.start}, ${annotation.end}) was already outside the passage.`,
+        });
         continue;
       }
       const remapped = remapAnnotation(annotation, deletions);

@@ -1,17 +1,15 @@
 import {
-  ANNOTATIONS_TO_IGNORE,
   AnnotationDTO,
   BodyItemType,
   DataClient,
   Passage,
   TohokuCatalogEntry,
-  passagesToDTO,
   passagesToRowDTO,
 } from '../../types';
-import { deletePassages } from './deletion';
-import { annotationHasChanged, passageRowHasChanged } from './diff';
+import { deleteByUuid, deletePassages } from './deletion';
 import { normalizePassageLabelsAfter } from './labels';
 import { makeRoomForNewPassages, sortsAfterShift } from './placement';
+import { findOutOfRange, planAnnotations, planPassages } from './plan';
 import { inBatches } from '../in-batches';
 import {
   readDeletedPassages,
@@ -35,11 +33,9 @@ import { validateSave } from './validate';
  * The input is validated and every row the save depends on is read before
  * anything is written, so a failure up to that point saved nothing. Writes
  * then run as a sequence ordered to keep the partial-failure window small:
- * sort shifts, then core content upserts, then cosmetic label renumbering,
- * then deletions (labels renumbered only after the delete succeeds), then
- * orphaned annotation cleanup. Every write is an idempotent upsert/delete
- * keyed by uuid, so any failure reported to the client converges when the
- * client retries the same save.
+ * sort shifts, content upserts, label renumbering, stale annotation deletes,
+ * then passage deletions. Every write is an idempotent upsert or delete keyed
+ * by uuid, so a retry of the same save converges.
  */
 export const savePassagesWithDeletions = async ({
   client,
@@ -90,17 +86,13 @@ export const savePassagesWithDeletions = async ({
   const existingUuidSet = new Set(existingRows.map((r) => r.uuid));
   const newPassages = passages.filter((p) => !existingUuidSet.has(p.uuid));
 
-  // New passages have no stored annotations. Types editors never load are
-  // left out: they are never sent, so must not read as deleted.
+  // New passages have no stored annotations.
   const annotationsRead = await readExistingAnnotations(client, [
     ...existingUuidSet,
   ]);
   if ('error' in annotationsRead) {
     return notSaved(annotationsRead.error);
   }
-  const existingAnnotations = annotationsRead.data.filter(
-    (row) => !ANNOTATIONS_TO_IGNORE.includes(row.type),
-  );
 
   let deletedPassages: DeletedPassageRow[] = [];
   if (deletedUuids.length > 0) {
@@ -109,6 +101,28 @@ export const savePassagesWithDeletions = async ({
       return notSaved(deletedRead.error);
     }
     deletedPassages = deletedRead.data;
+  }
+
+  const {
+    upserts: annotationsToUpsert,
+    unchanged: annotationsUnchanged,
+    deletes: annotationsToDelete,
+  } = planAnnotations({
+    passages,
+    annotationRows,
+    existing: annotationsRead.data,
+    deletable: deletableAnnotationUuids,
+  });
+  const outOfRange = findOutOfRange({
+    upserts: annotationsToUpsert,
+    unchanged: annotationsUnchanged,
+    contentByPassage: new Map(passages.map((p) => [p.uuid, p.content])),
+    storedContentByPassage: new Map(
+      existingRows.map((row) => [row.uuid, row.content]),
+    ),
+  });
+  if (outOfRange) {
+    return failure(`Invalid save, nothing was saved: ${outOfRange}`);
   }
 
   // Make room for new passages before their rows are inserted; a sort
@@ -135,56 +149,18 @@ export const savePassagesWithDeletions = async ({
   }
   const { toSave, shiftedSorts } = sorted;
 
-  // Compute row/annotation diffs against the pre-save state before any
-  // content writes happen.
-  const dtos = passagesToDTO(toSave);
-  const passageRowDtos = passagesToRowDTO(toSave);
-  const annotations = [
-    ...dtos.flatMap((p) => p.annotations || []),
-    ...annotationRows,
-  ];
-  const existingRowsByUuid = new Map(
-    existingRows.map((row) => [
-      row.uuid,
-      { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
-    ]),
-  );
-  const passageRowsToUpsert = passageRowDtos.filter((row) =>
-    passageRowHasChanged(row, existingRowsByUuid.get(row.uuid)),
-  );
-  const existingAnnotationsByUuid = new Map(
-    existingAnnotations.map((annotation) => [annotation.uuid, annotation]),
-  );
-  const annotationsToUpsert = annotations.filter((annotation) =>
-    annotationHasChanged(
-      annotation,
-      existingAnnotationsByUuid.get(annotation.uuid),
+  const passageRowsToUpsert = planPassages(
+    passagesToRowDTO(toSave),
+    new Map(
+      existingRows.map((row) => [
+        row.uuid,
+        { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
+      ]),
     ),
   );
 
-  // A passage whose annotation set is incomplete (serialization gap on the
-  // client) must not have its stored annotations treated as deletions —
-  // deleting them would turn a transient export failure into permanent data
-  // loss. They are cleaned up by the next complete export.
-  const incompletePassageUuids = new Set(
-    passages
-      .filter((passage) => passage.annotationsIncomplete)
-      .map((passage) => passage.uuid),
-  );
-  const deletable = deletableAnnotationUuids
-    ? new Set(deletableAnnotationUuids)
-    : undefined;
-  const annotationsToDelete = existingAnnotations.filter(
-    (existingAnnotation) =>
-      !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
-      (!deletable || deletable.has(existingAnnotation.uuid)) &&
-      !annotations.find(
-        (annotation) => annotation.uuid === existingAnnotation.uuid,
-      ),
-  );
-
-  // Core content commits first — everything after this point is cosmetic
-  // renumbering or cleanup.
+  // Core content commits first — everything after this point is renumbering
+  // or cleanup.
   if (passageRowsToUpsert.length > 0) {
     const { error: passageError } = await client
       .from('passages')
@@ -239,6 +215,25 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  // Stale rows left behind here resurrect deleted markup on the next load,
+  // so a failure must reach the client even though the content upserts
+  // already committed. Before the passage deletes, whose endnote cleanup
+  // could otherwise remove some of these first.
+  if (annotationsToDelete.length > 0) {
+    const removed = await deleteByUuid(
+      client,
+      'passage_annotations',
+      annotationsToDelete,
+    );
+    if ('error' in removed) {
+      console.error('Error deleting annotations:', removed.error);
+      return failure(
+        `Passages saved but stale annotations could not be removed: ${removed.error}`,
+        passages.length,
+      );
+    }
+  }
+
   // Inserting shifted and relabelled the passages to delete since they were
   // read; renumbering after them starts from where they are now.
   if (newPassages.length > 0 && deletedPassages.length > 0) {
@@ -271,27 +266,6 @@ export const savePassagesWithDeletions = async ({
     );
   }
 
-  // Stale rows left behind here resurrect deleted markup on the next load,
-  // so a failure must reach the client even though the content upserts
-  // already committed.
-  for (const batch of inBatches(
-    annotationsToDelete.map((annotation) => annotation.uuid),
-  )) {
-    const { error: deleteError } = await client
-      .from('passage_annotations')
-      .delete()
-      .in('uuid', batch);
-
-    if (deleteError) {
-      console.error('Error deleting annotations:', deleteError);
-      return failure(
-        `Passages saved but stale annotations could not be removed: ${deleteError.message}`,
-        passages.length,
-      );
-    }
-  }
-
-  // The content is saved by now: a failed read-back is a warning.
   const warnings: string[] = [];
   const savedPassages: SavedPassageRow[] = [];
   for (const batch of inBatches(inputUuids)) {

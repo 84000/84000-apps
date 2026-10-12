@@ -94,7 +94,11 @@ class FakeQuery {
     if (this.action === 'delete') {
       this.tables[this.table] = rows.filter((row) => !matched.includes(row));
       this.log.deletes.push(matched.map((row) => row.uuid as string));
-      return Promise.resolve({ data: [], error: null }).then(onfulfilled);
+      // As `.delete().select('uuid')`: the rows removed.
+      return Promise.resolve({
+        data: matched.map((row) => ({ uuid: row.uuid })),
+        error: null,
+      }).then(onfulfilled);
     }
     const data = matched
       .slice(this.from_, this.to_ + 1)
@@ -230,7 +234,7 @@ describe('applyPassageEdits', () => {
     const { client, log } = fakeClient(tables);
 
     // Cut the marker text together with the marker.
-    await applyPassageEdits({
+    const result = await applyPassageEdits({
       client,
       workUuid: WORK,
       edits: [{ op: 'delete-text', passageUuid: 'p1', start: 14, end: 22 }],
@@ -245,6 +249,31 @@ describe('applyPassageEdits', () => {
     expect(byUuid.get('a-comment')).toMatchObject({ start: 15, end: 19 });
     expect(byUuid.get('a-note')).toMatchObject({ start: 24, end: 24 });
     expect(log.deletes.flat()).toEqual(['a-marker']);
+    expect(result.success).toBe(true);
+  });
+
+  it('cuts text in a passage that holds a row already out of range', async () => {
+    const tables = tablesFor(published());
+    const overrun = annotation('a-overrun', 'span', 2, CONTENT.length + 1, [
+      { 'text-style': 'emphasis' },
+    ]);
+    tables.passage_annotations.push({ ...overrun } as Row);
+    const { client, log } = fakeClient(tables);
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 1 }],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.warnings.map((w) => w.message).join()).toContain('a-overrun');
+    expect(log.upserts.flat().map((row) => row.uuid)).not.toContain(
+      'a-overrun',
+    );
+    expect(
+      tables.passage_annotations.find((row) => row.uuid === 'a-overrun'),
+    ).toEqual(overrun);
   });
 
   it('moves an annotation without touching anything but its offsets', async () => {

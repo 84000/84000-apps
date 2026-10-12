@@ -156,11 +156,11 @@ export const makeRoomForNewPassages = async ({
  * The passages with the sorts to save them at, and the stored sorts of the
  * existing ones after any shift.
  *
- * `existingRows` predates the shifts. An existing passage sent with its
- * stored sort unchanged is read as "leave it where it is", and takes the
- * sort a shift gave it; writing its old sort back would tie it with the
- * passage the shift made room for. A caller that means to set an absolute
- * sort equal to the stored one cannot express that here.
+ * A save places new passages; it never moves an existing one. An existing
+ * passage keeps the sort the server holds, whatever the client sent: a client
+ * that saved before a shift, or before a failed save that shifted, still
+ * holds the old sort, and writing it back would tie the passage with its
+ * neighbour.
  */
 export const sortsAfterShift = async ({
   client,
@@ -189,15 +189,13 @@ export const sortsAfterShift = async ({
     }
     shiftedSorts = sorts;
   }
-  const sortBefore = new Map(existingRows.map((row) => [row.uuid, row.sort]));
+  const storedSorts = new Map(existingRows.map((row) => [row.uuid, row.sort]));
   const toSave = passages.map((passage) => {
-    const placed = placedSorts.get(passage.uuid);
-    if (placed !== undefined) return { ...passage, sort: placed };
-    const shiftedSort = shiftedSorts.get(passage.uuid);
-    return shiftedSort !== undefined &&
-      passage.sort === sortBefore.get(passage.uuid)
-      ? { ...passage, sort: shiftedSort }
-      : passage;
+    const sort =
+      placedSorts.get(passage.uuid) ??
+      shiftedSorts.get(passage.uuid) ??
+      storedSorts.get(passage.uuid);
+    return sort === undefined ? passage : { ...passage, sort };
   });
   return { toSave, shiftedSorts };
 };
