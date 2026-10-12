@@ -87,16 +87,14 @@ describe('profile tools', () => {
       });
     });
 
-    it('still answers when the profile row cannot be read', async () => {
+    it('fails when the profile cannot be read, rather than reporting no tags', async () => {
       mockedProfile.mockResolvedValue(null);
-      mockedAccess.mockResolvedValue({ role: 'reader', permissions: [] });
+      mockedAccess.mockResolvedValue({ role: 'manager', permissions: [] });
 
-      expect(parse(await tool().handler({}, extra))).toEqual({
-        name: null,
-        role: 'reader',
-        permissions: [],
-        tags: [],
-      });
+      const result = await tool().handler({}, extra);
+
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).not.toContain('tags');
     });
 
     it('fails when the role cannot be read, rather than guessing one', async () => {

@@ -50,13 +50,15 @@ export function createGetMyProfileTool(
         getMyProfile({ client, userId }),
         getMyAccess({ client }),
       ]);
-      if (!access) return errorResult(READ_FAILED);
+      // Without the profile the tags are unknown, and reporting none would
+      // read as "not onboarded" — so fail rather than guess.
+      if (!access || !profile) return errorResult(READ_FAILED);
 
       return jsonResult({
-        name: profile?.fullName ?? profile?.username ?? null,
+        name: profile.fullName ?? profile.username ?? null,
         role: access.role,
         permissions: access.permissions,
-        tags: profile?.tags ?? [],
+        tags: profile.tags,
       });
     },
   };
