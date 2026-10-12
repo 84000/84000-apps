@@ -1,16 +1,8 @@
 import type { AnnotationDTO, DataClient } from '../../types';
-import { IN_BATCH_SIZE, readAnnotationsByPassageUuids } from '../batch';
+import { readAnnotationsByPassageUuids } from '../batch';
+import { inBatches } from '../in-batches';
 import type { ExistingAnnotationRow, ExistingPassageRow } from './diff';
 import type { StepError } from './types';
-
-/** The values of an `in` filter, in batches small enough for the URL. */
-export const inBatches = <T>(values: readonly T[]): T[][] => {
-  const batches: T[][] = [];
-  for (let i = 0; i < values.length; i += IN_BATCH_SIZE) {
-    batches.push(values.slice(i, i + IN_BATCH_SIZE));
-  }
-  return batches;
-};
 
 /** A stored passage about to be deleted: what renumbering needs of it. */
 export type DeletedPassageRow = {

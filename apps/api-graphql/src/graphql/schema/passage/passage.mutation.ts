@@ -47,6 +47,7 @@ interface SavePassagesResult {
   passages: SavedPassageRow[];
   renumberedPassages: RenumberedPassageRow[];
   error?: string;
+  warnings?: string[];
 }
 
 /**

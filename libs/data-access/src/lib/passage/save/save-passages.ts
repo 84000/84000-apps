@@ -9,14 +9,16 @@ import {
   passagesToRowDTO,
 } from '../../types';
 import { deletePassages } from './deletion';
-import {
-  annotationHasChanged,
-  passageRowHasChanged,
-  type ExistingAnnotationRow,
-  type ExistingPassageRow,
-} from './diff';
+import { annotationHasChanged, passageRowHasChanged } from './diff';
 import { normalizePassageLabelsAfter } from './labels';
 import { makeRoomForNewPassages, sortsAfterShift } from './placement';
+import { inBatches } from '../in-batches';
+import {
+  readDeletedPassages,
+  readExistingAnnotations,
+  readExistingPassages,
+  type DeletedPassageRow,
+} from './reads';
 import {
   failure,
   type NewPassageAnchor,
@@ -24,26 +26,28 @@ import {
   type SavePassagesWithDeletionsResult,
   type SavedPassageRow,
 } from './types';
+import { validateSave } from './validate';
 
 /**
  * Persists edited passages and their annotations, and removes deleted
  * passages.
  *
- * supabase-js provides no transactions, so this runs as a sequence of
- * independent writes ordered to keep the partial-failure window small: sort
- * shifts, then core content upserts, then cosmetic label renumbering, then
- * deletions (labels renumbered only after the delete succeeds), then orphaned
- * annotation cleanup. Every write is an idempotent upsert/delete keyed by
- * uuid, so any failure reported to the client converges when the client
- * retries the same save.
+ * The input is validated and every row the save depends on is read before
+ * anything is written, so a failure up to that point saved nothing. Writes
+ * then run as a sequence ordered to keep the partial-failure window small:
+ * sort shifts, then core content upserts, then cosmetic label renumbering,
+ * then deletions (labels renumbered only after the delete succeeds), then
+ * orphaned annotation cleanup. Every write is an idempotent upsert/delete
+ * keyed by uuid, so any failure reported to the client converges when the
+ * client retries the same save.
  */
 export const savePassagesWithDeletions = async ({
   client,
-  passages,
-  deletedUuids = [],
+  passages: inputPassages,
+  deletedUuids: inputDeletedUuids = [],
   anchors,
   deletableAnnotationUuids,
-  annotationRows = [],
+  annotationRows: inputAnnotationRows = [],
 }: {
   client: DataClient;
   passages: Passage[];
@@ -66,18 +70,46 @@ export const savePassagesWithDeletions = async ({
    */
   annotationRows?: AnnotationDTO[];
 }): Promise<SavePassagesWithDeletionsResult> => {
+  const valid = validateSave({
+    passages: inputPassages,
+    deletedUuids: inputDeletedUuids,
+    annotationRows: inputAnnotationRows,
+  });
+  if ('error' in valid) {
+    return failure(valid.error);
+  }
+  const { passages, deletedUuids, annotationRows } = valid;
   const inputUuids = passages.map((p) => p.uuid);
-  const { data: existingRows } =
-    inputUuids.length > 0
-      ? await client
-          .from('passages')
-          .select(
-            'uuid, content, label, sort, type, work_uuid, xmlId, parent, toh',
-          )
-          .in('uuid', inputUuids)
-      : { data: [] };
-  const existingUuidSet = new Set((existingRows ?? []).map((r) => r.uuid));
+
+  const notSaved = (error: string) => failure(`${error}; nothing was saved`);
+  const existingRead = await readExistingPassages(client, inputUuids);
+  if ('error' in existingRead) {
+    return notSaved(existingRead.error);
+  }
+  const existingRows = existingRead.data;
+  const existingUuidSet = new Set(existingRows.map((r) => r.uuid));
   const newPassages = passages.filter((p) => !existingUuidSet.has(p.uuid));
+
+  // New passages have no stored annotations. Types editors never load are
+  // left out: they are never sent, so must not read as deleted.
+  const annotationsRead = await readExistingAnnotations(client, [
+    ...existingUuidSet,
+  ]);
+  if ('error' in annotationsRead) {
+    return notSaved(annotationsRead.error);
+  }
+  const existingAnnotations = annotationsRead.data.filter(
+    (row) => !ANNOTATIONS_TO_IGNORE.includes(row.type),
+  );
+
+  let deletedPassages: DeletedPassageRow[] = [];
+  if (deletedUuids.length > 0) {
+    const deletedRead = await readDeletedPassages(client, deletedUuids);
+    if ('error' in deletedRead) {
+      return notSaved(deletedRead.error);
+    }
+    deletedPassages = deletedRead.data;
+  }
 
   // Make room for new passages before their rows are inserted; a sort
   // collision here would corrupt ordering, so abort on failure.
@@ -94,7 +126,7 @@ export const savePassagesWithDeletions = async ({
   const sorted = await sortsAfterShift({
     client,
     passages,
-    existingRows: (existingRows ?? []) as ExistingPassageRow[],
+    existingRows,
     placedSorts,
     shifted: newPassages.length > 0,
   });
@@ -107,22 +139,12 @@ export const savePassagesWithDeletions = async ({
   // content writes happen.
   const dtos = passagesToDTO(toSave);
   const passageRowDtos = passagesToRowDTO(toSave);
-  const passageUuids = passages.map((p) => p.uuid);
   const annotations = [
     ...dtos.flatMap((p) => p.annotations || []),
     ...annotationRows,
   ];
-  const { data: existingAnnotations } =
-    passageUuids.length > 0
-      ? await client
-          .from('passage_annotations')
-          .select('uuid, passage_uuid, start, end, type, content, toh')
-          .in('passage_uuid', passageUuids)
-          .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`)
-      : { data: [] };
-
   const existingRowsByUuid = new Map(
-    ((existingRows ?? []) as ExistingPassageRow[]).map((row) => [
+    existingRows.map((row) => [
       row.uuid,
       { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
     ]),
@@ -131,9 +153,7 @@ export const savePassagesWithDeletions = async ({
     passageRowHasChanged(row, existingRowsByUuid.get(row.uuid)),
   );
   const existingAnnotationsByUuid = new Map(
-    ((existingAnnotations ?? []) as ExistingAnnotationRow[]).map(
-      (annotation) => [annotation.uuid, annotation],
-    ),
+    existingAnnotations.map((annotation) => [annotation.uuid, annotation]),
   );
   const annotationsToUpsert = annotations.filter((annotation) =>
     annotationHasChanged(
@@ -154,7 +174,7 @@ export const savePassagesWithDeletions = async ({
   const deletable = deletableAnnotationUuids
     ? new Set(deletableAnnotationUuids)
     : undefined;
-  const annotationsToDelete = existingAnnotations?.filter(
+  const annotationsToDelete = existingAnnotations.filter(
     (existingAnnotation) =>
       !incompletePassageUuids.has(existingAnnotation.passage_uuid) &&
       (!deletable || deletable.has(existingAnnotation.uuid)) &&
@@ -219,11 +239,27 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  // Inserting shifted and relabelled the passages to delete since they were
+  // read; renumbering after them starts from where they are now.
+  if (newPassages.length > 0 && deletedPassages.length > 0) {
+    const reread = await readDeletedPassages(
+      client,
+      deletedPassages.map((row) => row.uuid),
+    );
+    if ('error' in reread) {
+      return failure(
+        `Content saved but passages were not deleted: ${reread.error}`,
+        passages.length,
+      );
+    }
+    deletedPassages = reread.data;
+  }
+
   let deletedCount = 0;
-  if (deletedUuids.length > 0) {
+  if (deletedPassages.length > 0) {
     const deleted = await deletePassages({
       client,
-      deletedUuids,
+      deletedPassages,
       clientRenumberedUuids,
     });
     if ('error' in deleted) {
@@ -238,14 +274,13 @@ export const savePassagesWithDeletions = async ({
   // Stale rows left behind here resurrect deleted markup on the next load,
   // so a failure must reach the client even though the content upserts
   // already committed.
-  if (annotationsToDelete && annotationsToDelete.length > 0) {
+  for (const batch of inBatches(
+    annotationsToDelete.map((annotation) => annotation.uuid),
+  )) {
     const { error: deleteError } = await client
       .from('passage_annotations')
       .delete()
-      .in(
-        'uuid',
-        annotationsToDelete.map((annotation) => annotation.uuid),
-      );
+      .in('uuid', batch);
 
     if (deleteError) {
       console.error('Error deleting annotations:', deleteError);
@@ -256,24 +291,35 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
-  const { data: savedRows } =
-    inputUuids.length > 0
-      ? await client
-          .from('passages')
-          .select('uuid, work_uuid, content, label, sort, type, xmlId, toh')
-          .in('uuid', inputUuids)
-      : { data: [] };
-
-  const savedPassages: SavedPassageRow[] = (savedRows ?? []).map((row) => ({
-    uuid: row.uuid,
-    workUuid: row.work_uuid,
-    content: row.content,
-    label: row.label ?? '',
-    sort: row.sort,
-    type: row.type as BodyItemType,
-    xmlId: row.xmlId ?? null,
-    toh: (row.toh as TohokuCatalogEntry) ?? null,
-  }));
+  // The content is saved by now: a failed read-back is a warning.
+  const warnings: string[] = [];
+  const savedPassages: SavedPassageRow[] = [];
+  for (const batch of inBatches(inputUuids)) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, work_uuid, content, label, sort, type, xmlId, toh')
+      .in('uuid', batch);
+    if (error) {
+      console.error('Error reading saved passages:', error);
+      warnings.push(
+        `Saved, but the saved passages could not be read back: ${error.message}`,
+      );
+      savedPassages.length = 0;
+      break;
+    }
+    (data ?? []).forEach((row) =>
+      savedPassages.push({
+        uuid: row.uuid,
+        workUuid: row.work_uuid,
+        content: row.content,
+        label: row.label ?? '',
+        sort: row.sort,
+        type: row.type as BodyItemType,
+        xmlId: row.xmlId ?? null,
+        toh: (row.toh as TohokuCatalogEntry) ?? null,
+      }),
+    );
+  }
 
   // Rows returned in `passages` already carry their final label, so reporting
   // them again as renumbered would be redundant.
@@ -290,5 +336,6 @@ export const savePassagesWithDeletions = async ({
     deletedCount,
     passages: savedPassages,
     renumberedPassages,
+    ...(warnings.length ? { warnings } : {}),
   };
 };

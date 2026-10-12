@@ -15,9 +15,7 @@ import {
   rpcFor,
   type ContentSource,
 } from '../content-source';
-
-/** How many uuids one `in` filter carries; see `readAnnotationsByPassageUuids`. */
-export const IN_BATCH_SIZE = 200;
+import { inBatches } from './in-batches';
 
 /**
  * Like `getAnnotationsByPassageUuids`, but reports a failed read instead of
@@ -46,8 +44,7 @@ export const readAnnotationsByPassageUuids = async ({
   const pageSize = 1000;
   let allData: AnnotationDTO[] = [];
 
-  for (let i = 0; i < passageUuids.length; i += IN_BATCH_SIZE) {
-    const batch = passageUuids.slice(i, i + IN_BATCH_SIZE) as string[];
+  for (const batch of inBatches(passageUuids as string[])) {
     let offset = 0;
     let hasMore = true;
 

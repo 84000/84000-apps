@@ -262,6 +262,11 @@ type SavePassagesResult {
   Error message if the save failed
   """
   error: String
+
+  """
+  Problems after the content was saved. The save still succeeded.
+  """
+  warnings: [String!]
 }
 
 """

@@ -13,7 +13,7 @@ import {
 } from '../types';
 import { readAnnotationsByPassageUuids } from './batch';
 import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
-import { inBatches } from './save/reads';
+import { inBatches } from './in-batches';
 
 /** Remove a span of text from a passage. Offsets are in the stored content. */
 export type DeleteTextEdit = {
