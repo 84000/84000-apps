@@ -37,7 +37,8 @@
         "annotations"
       ],
       "audience": {
-        "roles": ["editor", "admin"]
+        "roles": ["editor", "admin"],
+        "permissions": ["editor.edit"]
       },
       "skills": [
         "libs/lib-agent/skills/docx-import",
@@ -70,8 +71,7 @@
         "copyediting"
       ],
       "audience": {
-        "roles": ["translator", "editor", "admin"],
-        "permissions": ["harness.edit"]
+        "roles": ["translator", "editor", "admin"]
       },
       "skills": [
         "libs/lib-agent/skills/text-analysis-and-retrieval",
