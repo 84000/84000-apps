@@ -2,12 +2,7 @@
  * Every value of the database's `app_role` enum.
  */
 export type UserRole =
-  | 'reader'
-  | 'scholar'
-  | 'translator'
-  | 'editor'
-  | 'manager'
-  | 'admin';
+  'reader' | 'scholar' | 'translator' | 'editor' | 'manager' | 'admin';
 export type UserClaims = {
   role: UserRole;
 };

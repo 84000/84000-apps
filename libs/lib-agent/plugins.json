@@ -36,6 +36,10 @@
         "folio",
         "annotations"
       ],
+      "audience": {
+        "roles": ["editor", "admin"],
+        "permissions": ["editor.edit"]
+      },
       "skills": [
         "libs/lib-agent/skills/docx-import",
         "libs/lib-agent/skills/resolve-folio-mentions"
@@ -66,6 +70,9 @@
         "editorial",
         "copyediting"
       ],
+      "audience": {
+        "roles": ["translator", "editor", "admin"]
+      },
       "skills": [
         "libs/lib-agent/skills/text-analysis-and-retrieval",
         "libs/lib-agent/skills/first-draft-translation",
@@ -100,6 +107,10 @@
         "harness",
         "authoring"
       ],
+      "audience": {
+        "roles": ["admin"],
+        "permissions": ["harness.admin"]
+      },
       "skills": ["libs/lib-agent/skills/policy-authoring"],
       "agents": [],
       "renames": {},
@@ -108,12 +119,25 @@
     {
       "name": "84000-core",
       "displayName": "84000 Core",
-      "description": "Core tooling for everyone using the 84000 plugins. Send feature requests, bug reports and feedback to the 84000 team from the conversation, drafted for review before anything is filed.",
-      "keywords": ["84000", "feedback", "bug-report", "feature-request"],
-      "skills": ["libs/lib-agent/skills/send-feedback"],
+      "description": "Core tooling for everyone using the 84000 plugins. Onboarding that recommends the 84000 plugins for the user's role, and feature requests, bug reports and feedback sent to the 84000 team from the conversation, drafted for review before anything is filed.",
+      "keywords": [
+        "84000",
+        "onboarding",
+        "feedback",
+        "bug-report",
+        "feature-request"
+      ],
+      "audience": {
+        "everyone": true
+      },
+      "skills": [
+        "libs/lib-agent/skills/send-feedback",
+        "libs/lib-agent/skills/onboarding"
+      ],
       "agents": [],
       "renames": {},
-      "sharedReference": {}
+      "sharedReference": {},
+      "pluginCatalog": ["onboarding"]
     }
   ]
 }

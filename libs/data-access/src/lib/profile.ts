@@ -59,9 +59,7 @@ export const getMyAccess = async ({
   }
 
   const row = (Array.isArray(data) ? data[0] : data) as
-    | { role?: string | null; permissions?: string[] | null }
-    | null
-    | undefined;
+    { role?: string | null; permissions?: string[] | null } | null | undefined;
   if (!row?.role) return null;
 
   return {
