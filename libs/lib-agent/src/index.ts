@@ -50,6 +50,12 @@ export {
   PROFILE_TOOL_NAMES,
 } from './lib/tools/profile';
 export {
+  onboardingCheck,
+  withOnboardingNote,
+  ONBOARDING_NOTE,
+  ONBOARDING_COMPLETED_TAG,
+} from './lib/tools/profile/onboarding-note';
+export {
   validateBearerToken,
   requirePermission,
   decodeRole,

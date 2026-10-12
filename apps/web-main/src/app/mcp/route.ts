@@ -12,9 +12,11 @@ import {
   createWriteTools,
   hasRole,
   linearFeedbackConfigFromEnv,
+  onboardingCheck,
   studioInstructions,
   validateBearerToken,
   withCorsHeaders,
+  withOnboardingNote,
 } from '@eightyfourthousand/lib-agent';
 // The app's build output, a generated HTML string, not its source; `build` and
 // `dev` depend on `policy-editor-mcp-app:build` to generate it. `dev` builds it
@@ -66,10 +68,17 @@ export async function POST(req: Request) {
     ...createProfileTools(auth.client, auth.userId),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];
+  // Until an internal user (manager and above) is onboarded, tool results
+  // carry a short note offering onboarding. Scholars and readers are not
+  // internal users and are never prompted. The tag is read lazily, once per
+  // request.
+  const servedTools = hasRole(auth.role, 'manager')
+    ? withOnboardingNote(tools, onboardingCheck(auth.client, auth.userId))
+    : tools;
   const handler = createMcpHandler({
     description,
     instructions: studioInstructions,
-    tools,
+    tools: servedTools,
     resources: [createPolicyEditorResource(POLICY_EDITOR_APP_HTML)],
   });
   return withCorsHeaders(await handler.POST(req));
