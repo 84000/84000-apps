@@ -66,6 +66,20 @@ timeout when it is configured but silent — an ad blocker stops the flags
 arriving at all, and a caller holding a skeleton until they do would hold it
 for good.
 
+## Capturing server events
+
+`createServerCapture` (from `@eightyfourthousand/lib-instr/ssr`) sends an
+event from a request handler on the shared server client. Create one per
+request, call `capture` freely (it never throws and does not wait), and run
+`flush` after the response, e.g. inside `after()`, so a serverless function is
+not frozen before the events leave. It does nothing when PostHog is not
+configured. Use a stable, non-sensitive `distinctId` such as a user uuid, never
+an email or a token, and pass `anonymous: true` for a throwaway id so no person
+profile is built.
+
+The studio MCP route uses it with `withInstrumentation` from
+`@eightyfourthousand/lib-agent` to report `mcp_tool_call` and `mcp_write`.
+
 ## Running unit tests
 
 Run `nx test lib-instr` to execute the unit tests via [Jest](https://jestjs.io).
