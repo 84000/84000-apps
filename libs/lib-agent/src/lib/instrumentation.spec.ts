@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { McpToolDefinition } from './types';
 import {
-  MAX_STATUS_MESSAGE_LENGTH,
   MCP_TOOL_CALL_EVENT,
   MCP_WRITE_EVENT,
   withInstrumentation,
@@ -17,7 +16,11 @@ const tool = (
 ): McpToolDefinition => ({
   name,
   description: name,
-  inputSchema: { workUuid: z.string(), text: z.string() },
+  inputSchema: {
+    workUuid: z.string(),
+    text: z.string(),
+    dryRun: z.boolean().optional(),
+  },
   annotations: { readOnlyHint: true },
   handler: handler as McpToolDefinition['handler'],
   ...extra,
@@ -102,6 +105,43 @@ describe('withInstrumentation', () => {
     });
   });
 
+  it('accepts the real shapes of a toh and nothing looser', async () => {
+    const { events, wrapped } = setup([
+      tool('t', ok, { inputSchema: { toh: z.string() } }),
+    ]);
+
+    for (const toh of [
+      'toh345',
+      'Toh 1069-1073',
+      'toh539a',
+      'my password is x',
+    ]) {
+      await call(wrapped[0], { toh });
+    }
+
+    expect(events.map((e) => e.properties['toh'])).toEqual([
+      'toh345',
+      'Toh 1069-1073',
+      'toh539a',
+      undefined,
+    ]);
+  });
+
+  it('reports a dry run as a call only, never as a write', async () => {
+    const { events, wrapped } = setup([writeTool('apply-passage-edits', ok)]);
+
+    await call(wrapped[0], { workUuid: UUID, dryRun: true });
+    await call(wrapped[0], { workUuid: UUID, dryRun: false });
+
+    expect(events.map((e) => e.event)).toEqual([
+      MCP_TOOL_CALL_EVENT,
+      MCP_TOOL_CALL_EVENT,
+      MCP_WRITE_EVENT,
+    ]);
+    expect(events[0].properties.dry_run).toBe(true);
+    expect(events[2].properties.dry_run).toBe(false);
+  });
+
   it('drops an identifier argument that does not look like one', async () => {
     const { events, wrapped } = setup([tool('t', ok)]);
 
@@ -117,7 +157,7 @@ describe('withInstrumentation', () => {
       tool('no-args', ok, { inputSchema: {} }),
     ]);
 
-    // Such a tool is called with the request extras first, not arguments.
+    // With no schema there is nothing to read, whatever is passed first.
     await call(wrapped[0], { signal: {}, requestId: 'x' });
 
     expect(events[0].properties.arg_keys).toEqual([]);
@@ -141,22 +181,28 @@ describe('withInstrumentation', () => {
     });
   });
 
-  it('reports a failed write with a truncated plain-text message', async () => {
-    const long = 'x'.repeat(MAX_STATUS_MESSAGE_LENGTH * 2);
+  it('reports a failed write without repeating its error text', async () => {
     const { events, wrapped } = setup([
-      writeTool('w', async () => ({
-        content: [{ type: 'text' as const, text: long }],
+      writeTool('write-session-documents', async () => ({
+        content: [
+          {
+            type: 'text' as const,
+            text: 'Unknown toh "my password is hunter2" in report.docx',
+          },
+        ],
         isError: true,
       })),
     ]);
 
-    await call(wrapped[0]);
+    await call(wrapped[0], { toh: 'my password is hunter2' });
 
     expect(events[0].properties.is_error).toBe(true);
-    expect(events[1].properties.success).toBe(false);
-    expect(
-      (events[1].properties.status_message as string).length,
-    ).toBeLessThanOrEqual(MAX_STATUS_MESSAGE_LENGTH);
+    expect(events[1].properties).toMatchObject({
+      success: false,
+      status_message: 'error',
+    });
+    expect(JSON.stringify(events)).not.toContain('hunter2');
+    expect(JSON.stringify(events)).not.toContain('report.docx');
   });
 
   it('reduces a JSON failure to its reason, so policy text never leaves', async () => {
@@ -229,8 +275,9 @@ describe('withInstrumentation', () => {
     expect(events[0].properties.is_error).toBe(true);
     expect(events[1].properties).toMatchObject({
       success: false,
-      status_message: 'TypeError: database is down',
+      status_message: 'threw TypeError',
     });
+    expect(JSON.stringify(events)).not.toContain('database is down');
   });
 
   it('passes every handler argument through unchanged', async () => {

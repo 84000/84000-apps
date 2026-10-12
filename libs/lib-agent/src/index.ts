@@ -59,7 +59,6 @@ export {
   withInstrumentation,
   MCP_TOOL_CALL_EVENT,
   MCP_WRITE_EVENT,
-  MAX_STATUS_MESSAGE_LENGTH,
 } from './lib/instrumentation';
 export type {
   McpEventValue,

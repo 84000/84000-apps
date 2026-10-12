@@ -74,6 +74,16 @@ describe('createServerCapture', () => {
     expect(flushed).toBe(true);
   });
 
+  it('stops waiting on flush after the timeout', async () => {
+    const send = jest.fn(() => new Promise<void>(() => undefined));
+    mockedClient.mockReturnValue(fakeClient(send));
+    const { capture, flush } = createServerCapture();
+
+    capture({ event: 'e', distinctId: 'u' });
+
+    await expect(flush(10)).resolves.toBeUndefined();
+  });
+
   it('swallows a failed send, and one that throws synchronously', async () => {
     const send = jest
       .fn()

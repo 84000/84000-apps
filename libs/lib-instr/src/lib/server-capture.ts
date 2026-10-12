@@ -16,11 +16,12 @@ export interface ServerCapture {
   /** Sends an event without waiting. Never throws. */
   capture: (event: ServerCaptureEvent) => void;
   /**
-   * Resolves when every event captured so far has been sent or has failed.
-   * Never rejects. A serverless function is frozen once its response is sent,
+   * Resolves when every event captured so far has been sent or has failed, or
+   * after `timeoutMs` (default 3s) if PostHog is slow, so an outage cannot
+   * hold a function open on retries. Never rejects. A serverless function is frozen once its response is sent,
    * so run this after the response, e.g. inside `after()`.
    */
-  flush: () => Promise<void>;
+  flush: (timeoutMs?: number) => Promise<void>;
 }
 
 /**
@@ -61,8 +62,16 @@ export const createServerCapture = (): ServerCapture => {
     }
   };
 
-  const flush = async () => {
-    await Promise.allSettled([...pending]);
+  const flush = async (timeoutMs = 3000) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, timeoutMs);
+    });
+    try {
+      await Promise.race([Promise.allSettled([...pending]), timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
   };
 
   return { capture, flush };

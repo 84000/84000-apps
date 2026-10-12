@@ -6,9 +6,6 @@ export const MCP_TOOL_CALL_EVENT = 'mcp_tool_call';
 /** Fired in addition to {@link MCP_TOOL_CALL_EVENT} for tools that write. */
 export const MCP_WRITE_EVENT = 'mcp_write';
 
-/** The longest status message sent, so an error can never carry a document. */
-export const MAX_STATUS_MESSAGE_LENGTH = 200;
-
 export type McpEventValue = string | number | boolean | string[] | null;
 
 export interface McpInstrumentationEvent {
@@ -52,7 +49,11 @@ const isWriteTool = (tool: McpToolDefinition): boolean =>
  */
 const IDENTIFIER_ARGS: Record<string, { property: string; pattern: RegExp }> = {
   workUuid: { property: 'work_uuid', pattern: /^[0-9a-f-]{32,36}$/i },
-  toh: { property: 'toh', pattern: /^[A-Za-z0-9._ -]{1,24}$/ },
+  // The shape of a catalogue number: toh345, Toh 1069-1073, toh539a.
+  toh: {
+    property: 'toh',
+    pattern: /^toh\s?\d{1,5}[a-z]{0,2}(?:[-–]\d{1,5}[a-z]{0,2})?$/i,
+  },
 };
 
 const argumentsOf = (
@@ -60,8 +61,8 @@ const argumentsOf = (
   args: unknown[],
 ): Record<string, unknown> => {
   const first = args[0];
-  // A tool without an input schema is called with the request extras first,
-  // not arguments; those must never be mistaken for them.
+  // No schema, no arguments to read; and a handler's first parameter must
+  // never be mistaken for them.
   if (Object.keys(tool.inputSchema ?? {}).length === 0) return {};
   return first && typeof first === 'object' && !Array.isArray(first)
     ? (first as Record<string, unknown>)
@@ -74,6 +75,9 @@ const argumentProperties = (
   const properties: Record<string, McpEventValue> = {
     arg_keys: Object.keys(given).sort(),
   };
+  // Not sensitive, and what tells a rehearsal from a write.
+  if (typeof given['dryRun'] === 'boolean')
+    properties['dry_run'] = given['dryRun'];
   for (const [key, { property, pattern }] of Object.entries(IDENTIFIER_ARGS)) {
     const value = given[key];
     if (typeof value === 'string' && pattern.test(value)) {
@@ -83,41 +87,35 @@ const argumentProperties = (
   return properties;
 };
 
-const truncate = (text: string): string => {
-  const line = text.replace(/\s+/g, ' ').trim();
-  return line.length > MAX_STATUS_MESSAGE_LENGTH
-    ? `${line.slice(0, MAX_STATUS_MESSAGE_LENGTH - 1)}…`
-    : line;
-};
-
 /**
- * A short status for a failed result. A plain-text error is sent truncated.
- * A JSON error (a policy conflict carries the live policy text) is reduced to
- * its `reason`, or to a bare `error` when it has none, so content never leaves.
+ * A status for a failed result, which never repeats the error text. Tools echo
+ * their arguments into error messages (a toh, a filename) and the database
+ * echoes the value it rejected, so any message could carry what was sent.
+ * Only a JSON error's `reason` is used, since a reason is a fixed code (a
+ * policy conflict also carries the live policy text, which never leaves);
+ * anything else is a bare `error`.
  */
-const failureMessage = (result: CallToolResult): string => {
+const failureStatus = (result: CallToolResult): string => {
   const first = (result.content ?? []).find((part) => part.type === 'text') as
     | { text?: unknown }
     | undefined;
   const text = typeof first?.text === 'string' ? first.text.trim() : '';
-  if (!text) return 'error';
-  if (text.startsWith('{') || text.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(text) as { reason?: unknown };
-      return typeof parsed?.reason === 'string'
-        ? truncate(parsed.reason)
-        : 'error';
-    } catch {
-      return 'error';
-    }
+  if (!text.startsWith('{')) return 'error';
+  try {
+    const { reason } = JSON.parse(text) as { reason?: unknown };
+    return typeof reason === 'string' && /^[\w.-]{1,64}$/.test(reason)
+      ? reason
+      : 'error';
+  } catch {
+    return 'error';
   }
-  return truncate(text);
 };
 
-const thrownMessage = (error: unknown): string =>
-  error instanceof Error
-    ? truncate(`${error.name}: ${error.message}`)
-    : 'threw a non-error value';
+/** The error's class only: its message may repeat what the caller sent. */
+const thrownStatus = (error: unknown): string =>
+  error instanceof Error && /^\w{1,64}$/.test(error.name)
+    ? `threw ${error.name}`
+    : 'threw';
 
 const emitSafely = (
   context: McpInstrumentationContext,
@@ -158,7 +156,8 @@ const report = (
       anonymous,
       properties,
     });
-    if (write) {
+    // A dry run rehearses a write and changes nothing, so it is not one.
+    if (write && properties['dry_run'] !== true) {
       emitSafely(context, {
         event: MCP_WRITE_EVENT,
         distinctId,
@@ -188,6 +187,19 @@ const randomId = (): string =>
  * thrown error is rethrown as is, and the event is emitted without being
  * awaited, with any failure of `emit` swallowed.
  *
+ * A call the MCP SDK rejects before the handler runs (an unknown tool, invalid
+ * arguments) is not seen. A write tool is one annotated `readOnlyHint: false`,
+ * which includes policy, session-document, feedback and profile-tag writes as
+ * well as passage edits and imports; filter on `tool_name` for a subset. A
+ * `dryRun: true` call reports `mcp_tool_call` only, with `dry_run: true`.
+ *
+ * Failures report a status and never an error message, which may repeat
+ * argument values: the JSON `reason` of a failed result, else `error`, or
+ * `threw <ErrorName>` for an exception.
+ *
+ * The wrapped handler is a plain async function; the SDK's task-style
+ * handlers are not supported.
+ *
  * Properties are the tool name, duration, whether it errored, the argument
  * keys (never values), the work uuid or toh when given as such, and whatever
  * `context.properties` adds. Wrap the tools before other wrappers so the
@@ -211,14 +223,14 @@ export function withInstrumentation(
         } catch (error) {
           report(context, tool, args, startedAt, {
             isError: true,
-            message: thrownMessage(error),
+            message: thrownStatus(error),
           });
           throw error;
         }
         const isError = result?.isError === true;
         report(context, tool, args, startedAt, {
           isError,
-          message: isError ? failureMessage(result) : undefined,
+          message: isError ? failureStatus(result) : undefined,
         });
         return result;
       }) as McpToolDefinition['handler'],
