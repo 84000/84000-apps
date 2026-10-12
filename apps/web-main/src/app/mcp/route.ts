@@ -5,6 +5,7 @@ import {
   createMcpHandler,
   createHarnessTools,
   createOpenPolicyEditorTool,
+  createProfileTools,
   createPolicyEditorResource,
   createReadTools,
   createSessionTools,
@@ -46,11 +47,12 @@ export async function POST(req: Request) {
   // roles; each write handler still performs its own `hasPermission` check as
   // the authoritative gate.
   //
-  // Policy, session and feedback tools are listed for everyone, because their audience
+  // Policy, session, feedback and profile tools are listed for everyone, because their audience
   // does not follow the role hierarchy: translators author policy and drive the
   // sessions, and managers read policy without appearing in ROLE_HIERARCHY at
   // all. Their `harness.*` checks decide. `open-policy-editor` is listed with
-  // them, and with the editor app's resource it links to.
+  // them, and with the editor app's resource it links to. The profile tools
+  // need no permission: they read and tag only the caller's own profile.
   const tools = [
     ...createReadTools(auth.client),
     ...createHarnessTools(auth.client),
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
       submitter: { userId: auth.userId, email: auth.email },
       linear: linearFeedbackConfigFromEnv(),
     }),
+    ...createProfileTools(auth.client, auth.userId),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];
   const handler = createMcpHandler({

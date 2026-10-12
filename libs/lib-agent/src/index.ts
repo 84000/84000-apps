@@ -44,6 +44,12 @@ export type {
   LinearFeedbackConfig,
 } from './lib/tools/feedback';
 export {
+  createProfileTools,
+  createGetMyProfileTool,
+  createAddProfileTagTool,
+  PROFILE_TOOL_NAMES,
+} from './lib/tools/profile';
+export {
   validateBearerToken,
   requirePermission,
   decodeRole,
