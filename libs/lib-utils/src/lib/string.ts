@@ -7,6 +7,32 @@ export const removeHtmlTags = (str: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+/**
+ * Decodes the common named HTML entities. `&amp;` is decoded last, so `&amp;lt;`
+ * becomes `&lt;`, not `<`.
+ */
+export const decodeHtmlEntities = (str: string) =>
+  str
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&');
+
+/** Plain text from an HTML fragment: tags dropped, entities decoded, whitespace collapsed. */
+export const htmlToText = (html: string) =>
+  decodeHtmlEntities(html.replace(/<[^>]*>/g, ''))
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** Removes soft hyphens (U+00AD), which are invisible but break text search. */
+export const removeSoftHyphens = (str: string) => str.replace(/\u00AD/g, '');
+
+/** Replaces each line break and tab with one space, so text stays on one line. */
+export const toSingleLine = (str: string) =>
+  str.replace(/[\r\n\t\v\f\u2028\u2029]/g, ' ');
+
 export const camelCaseToHuman = (str: string) => {
   const result = str.replace(/([A-Z])/g, ' $1').trim();
   return result.charAt(0).toUpperCase() + result.slice(1);

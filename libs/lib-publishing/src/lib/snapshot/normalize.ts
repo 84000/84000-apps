@@ -8,37 +8,25 @@
  *   inside a word, so they are dropped.
  */
 
-export const SOFT_HYPHEN = '\u00AD';
+import {
+  htmlToText as plainText,
+  removeSoftHyphens,
+  toSingleLine,
+} from '@eightyfourthousand/lib-utils';
 
-const SOFT_HYPHENS = /\u00AD/g;
-const BREAKS = /[\r\n\t\v\f\u2028\u2029]/g;
+export const SOFT_HYPHEN = '\u00AD';
 
 /** One physical line: soft hyphens removed, breaks and tabs replaced by spaces. */
 export const normalizeText = (text: string | null | undefined): string =>
-  (text ?? '').replace(SOFT_HYPHENS, '').replace(BREAKS, ' ');
+  toSingleLine(removeSoftHyphens(text ?? ''));
 
 /** Tibetan folio text on one line: folio line breaks dropped, not spaced. */
 export const normalizeTibetan = (text: string | null | undefined): string =>
   normalizeText((text ?? '').replace(/\r?\n|\r/g, ''));
 
-/**
- * Plain text from a stored HTML fragment (glossary definitions, bibliography entries),
- * mirroring the database's `strip_html`: tags dropped, the common entities decoded,
- * whitespace collapsed.
- */
+/** Plain text from a stored HTML fragment, without soft hyphens. */
 export const htmlToText = (html: string | null | undefined): string =>
-  normalizeText(
-    (html ?? '')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;|&apos;/g, "'")
-      .replace(/&amp;/g, '&'),
-  )
-    .replace(/\s+/g, ' ')
-    .trim();
+  plainText(removeSoftHyphens(html ?? ''));
 
 /** A TSV cell: normalized, so it cannot carry a tab or a line break. */
 export const tsvCell = (value: string | number | null | undefined): string =>
