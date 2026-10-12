@@ -1,10 +1,10 @@
 import {
-  type AppRole,
   type DataClient,
   type UserAccess,
   type UserPermission,
   type UserProfile,
   type UserProfileDTO,
+  type UserRole,
   userProfileFromDTO,
 } from './types';
 
@@ -65,7 +65,7 @@ export const getMyAccess = async ({
   if (!row?.role) return null;
 
   return {
-    role: row.role as AppRole,
+    role: row.role as UserRole,
     permissions: (Array.isArray(row.permissions)
       ? row.permissions
       : []) as UserPermission[],

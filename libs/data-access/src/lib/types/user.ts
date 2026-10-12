@@ -1,12 +1,14 @@
-export type UserRole = 'reader' | 'scholar' | 'translator' | 'editor' | 'admin';
-
 /**
- * Every value of the database's `app_role` enum. Wider than {@link UserRole},
- * which is the apps' role hierarchy and has no place for `manager`: a manager
- * is not above or below an editor, they hold a different set of permissions.
- * Use this where the real stored role matters, not for hierarchy checks.
+ * Every value of the database's `app_role` enum. `manager` sits outside the
+ * apps' role hierarchy (`ROLE_HIERARCHY`), so hierarchy checks never pass for it.
  */
-export type AppRole = UserRole | 'manager';
+export type UserRole =
+  | 'reader'
+  | 'scholar'
+  | 'translator'
+  | 'editor'
+  | 'manager'
+  | 'admin';
 export type UserClaims = {
   role: UserRole;
 };
@@ -124,6 +126,6 @@ export const userProfileFromDTO = (dto: UserProfileDTO): UserProfile => {
  * permission checks go through `hasPermission`.
  */
 export type UserAccess = {
-  role: AppRole;
+  role: UserRole;
   permissions: UserPermission[];
 };
