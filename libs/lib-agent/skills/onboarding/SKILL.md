@@ -48,7 +48,7 @@ cannot tell whether you are in Claude Code or Cowork, ask.
 
 ## 4. Getting started
 
-Read the `shared-policy/onboarding` policy for additional recommendations and
+Read the `shared-policies/onboarding` policy for additional recommendations and
 guide users through its steps. They may or may not vary by role.
 
 ## 5. Record the outcome
