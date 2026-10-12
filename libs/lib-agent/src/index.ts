@@ -56,6 +56,17 @@ export {
   ONBOARDING_COMPLETED_TAG,
 } from './lib/tools/profile/onboarding-note';
 export {
+  withInstrumentation,
+  MCP_TOOL_CALL_EVENT,
+  MCP_WRITE_EVENT,
+  MAX_STATUS_MESSAGE_LENGTH,
+} from './lib/instrumentation';
+export type {
+  McpEventValue,
+  McpInstrumentationContext,
+  McpInstrumentationEvent,
+} from './lib/instrumentation';
+export {
   validateBearerToken,
   requirePermission,
   decodeRole,

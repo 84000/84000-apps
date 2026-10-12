@@ -22,3 +22,17 @@ export const createInstrumentationClient = () => {
     flushInterval: 0,
   });
 };
+
+let sharedClient: ReturnType<typeof createInstrumentationClient> | null;
+
+/**
+ * One client for the life of the server process, or `undefined` when PostHog is
+ * not configured. `createInstrumentationClient` builds a new client, and its
+ * missing-config warning, on every call; use this from request handlers.
+ */
+export const getInstrumentationClient = () => {
+  if (sharedClient === undefined) {
+    sharedClient = createInstrumentationClient() ?? null;
+  }
+  return sharedClient ?? undefined;
+};
