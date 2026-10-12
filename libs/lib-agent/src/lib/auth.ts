@@ -27,9 +27,15 @@ export type AuthResult = AuthSuccess | AuthFailure;
 
 export type PermissionResult = { ok: true } | { ok: false; response: Response };
 
+/**
+ * Roles from least to most privileged, for coarse gates such as listing the
+ * write tools. `manager` sits below `translator` because it holds no
+ * `editor.edit`; its project permissions are checked with `hasPermission`.
+ */
 export const ROLE_HIERARCHY: UserRole[] = [
   'reader',
   'scholar',
+  'manager',
   'translator',
   'editor',
   'admin',

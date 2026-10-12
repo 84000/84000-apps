@@ -117,9 +117,10 @@ export function requireAuth(ctx: GraphQLContext): NonNullable<GraphQLContext['se
 
 /**
  * Helper to require a specific role or higher
- * Role hierarchy: reader < scholar < translator < editor < admin
+ * Role hierarchy: reader < scholar < manager < translator < editor < admin.
+ * `manager` sits below `translator` because it holds no `editor.edit`.
  */
-const ROLE_HIERARCHY: UserRole[] = ['reader', 'scholar', 'translator', 'editor', 'admin'];
+const ROLE_HIERARCHY: UserRole[] = ['reader', 'scholar', 'manager', 'translator', 'editor', 'admin'];
 
 export function requireRole(ctx: GraphQLContext, requiredRole: UserRole): NonNullable<GraphQLContext['session']> {
   const session = requireAuth(ctx);
