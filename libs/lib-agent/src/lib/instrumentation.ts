@@ -76,8 +76,9 @@ const argumentProperties = (
     arg_keys: Object.keys(given).sort(),
   };
   // Not sensitive, and what tells a rehearsal from a write.
-  if (typeof given['dryRun'] === 'boolean')
+  if (typeof given['dryRun'] === 'boolean') {
     properties['dry_run'] = given['dryRun'];
+  }
   for (const [key, { property, pattern }] of Object.entries(IDENTIFIER_ARGS)) {
     const value = given[key];
     if (typeof value === 'string' && pattern.test(value)) {

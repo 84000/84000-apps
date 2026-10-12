@@ -18,8 +18,9 @@ export interface ServerCapture {
   /**
    * Resolves when every event captured so far has been sent or has failed, or
    * after `timeoutMs` (default 3s) if PostHog is slow, so an outage cannot
-   * hold a function open on retries. Never rejects. A serverless function is frozen once its response is sent,
-   * so run this after the response, e.g. inside `after()`.
+   * hold a function open on retries. Never rejects. A serverless function is
+   * frozen once its response is sent, so run this after the response, e.g.
+   * inside `after()`.
    */
   flush: (timeoutMs?: number) => Promise<void>;
 }
