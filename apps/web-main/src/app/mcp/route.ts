@@ -68,12 +68,17 @@ export async function POST(req: Request) {
     ...createProfileTools(auth.client, auth.userId),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];
-  // Until the caller is onboarded, tool results carry a short note offering
-  // onboarding. The tag is read lazily, once per request.
+  // Until an internal user (manager and above) is onboarded, tool results
+  // carry a short note offering onboarding. Scholars and readers are not
+  // internal users and are never prompted. The tag is read lazily, once per
+  // request.
+  const servedTools = hasRole(auth.role, 'manager')
+    ? withOnboardingNote(tools, onboardingCheck(auth.client, auth.userId))
+    : tools;
   const handler = createMcpHandler({
     description,
     instructions: studioInstructions,
-    tools: withOnboardingNote(tools, onboardingCheck(auth.client, auth.userId)),
+    tools: servedTools,
     resources: [createPolicyEditorResource(POLICY_EDITOR_APP_HTML)],
   });
   return withCorsHeaders(await handler.POST(req));
