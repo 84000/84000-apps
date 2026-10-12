@@ -13,6 +13,7 @@ export * from './lib/harness';
 export * from './lib/imprint';
 export * from './lib/import-preview';
 export * from './lib/panel-url';
+export * from './lib/profile';
 export * from './lib/library';
 export * from './lib/passage';
 export * from './lib/publications';

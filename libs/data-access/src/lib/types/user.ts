@@ -1,4 +1,12 @@
 export type UserRole = 'reader' | 'scholar' | 'translator' | 'editor' | 'admin';
+
+/**
+ * Every value of the database's `app_role` enum. Wider than {@link UserRole},
+ * which is the apps' role hierarchy and has no place for `manager`: a manager
+ * is not above or below an editor, they hold a different set of permissions.
+ * Use this where the real stored role matters, not for hierarchy checks.
+ */
+export type AppRole = UserRole | 'manager';
 export type UserClaims = {
   role: UserRole;
 };
@@ -65,3 +73,57 @@ export const unknownUser = (id: string): UserInfo => ({
   id,
   displayName: UNKNOWN_USER,
 });
+
+/**
+ * The tags a user (or an agent acting for them) may set on their own profile.
+ *
+ * Tags are SELF-ASSERTED: `user_profiles` lets a user write their own row
+ * directly, so a tag records what the user said and nothing more. Never gate a
+ * permission, role or feature on one. The allowlist only keeps the column
+ * tidy; it is enforced by the tools that write tags, not by the database.
+ */
+export const PROFILE_TAGS = ['harness.onboarding.completed'] as const;
+
+export type ProfileTag = (typeof PROFILE_TAGS)[number];
+
+/** The caller's own `user_profiles` row, as selected by `getMyProfile`. */
+export type UserProfileDTO = {
+  id: string;
+  username?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  tags?: string[] | null;
+};
+
+/** The caller's own profile. `tags` is never null; see {@link PROFILE_TAGS}. */
+export type UserProfile = {
+  id: string;
+  username?: string;
+  fullName?: string;
+  avatarUrl?: string;
+  tags: string[];
+};
+
+export const userProfileFromDTO = (dto: UserProfileDTO): UserProfile => {
+  const profile: UserProfile = {
+    id: dto.id,
+    tags: Array.isArray(dto.tags) ? dto.tags : [],
+  };
+
+  if (dto.username) profile.username = dto.username;
+  if (dto.full_name) profile.fullName = dto.full_name;
+  if (dto.avatar_url) profile.avatarUrl = dto.avatar_url;
+
+  return profile;
+};
+
+/**
+ * The caller's stored role and effective permissions, from the `get_my_access`
+ * definer function: the role as `user_roles` holds it (so `manager` survives),
+ * and the role's permissions plus any individual grants. Informational only:
+ * permission checks go through `hasPermission`.
+ */
+export type UserAccess = {
+  role: AppRole;
+  permissions: UserPermission[];
+};
