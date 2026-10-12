@@ -36,7 +36,7 @@ const inputSchema = {
     .enum(CONTENT_SOURCES)
     .optional()
     .describe(
-      'Which copy to read: "published" (default) is the house rendering as published; "draft" also surfaces terminology in translations still under editorial review, which is not yet binding.',
+      'Which copy to read: "published" (default) is the house rendering as published; "draft" also surfaces terminology in translations still under editorial review, which is not yet binding. A work still in preparation is reachable only under "draft", so re-read with it before concluding a term is unglossed in the section.',
     ),
 };
 

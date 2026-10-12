@@ -5,7 +5,13 @@ export type {
   McpHandlerOptions,
   McpResourceDefinition,
 } from './lib/types';
-export { readToolInstructions, joinInstructions } from './lib/instructions';
+export {
+  MCP_INSTRUCTIONS_MAX_LENGTH,
+  joinInstructions,
+  publicInstructions,
+  readToolInstructions,
+  studioInstructions,
+} from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
