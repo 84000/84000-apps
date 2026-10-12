@@ -9,7 +9,9 @@ Claude Code, so the Claude app is the one place to install them.
 
 1. Open the **Cowork** tab.
 2. Open **Customize** in the sidebar, then **Plugins**.
-3. Under **Discover**, select the 84000 plugin.
+3. Under **Discover**, select the 84000 plugin. If the plugin is not visible,
+   click the Filter icon, then Source and "Your organization" to see only 84000
+   plugins.
 4. Click **Install** (some versions label it **Add**).
 
 The plugin is available from the next task. Plugins the organization has

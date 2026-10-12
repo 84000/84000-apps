@@ -46,7 +46,12 @@ Read it only if the user asks what a plugin is for in their work.
 Give the steps for the user's surface from `reference/install.md`. If you
 cannot tell whether you are in Claude Code or Cowork, ask.
 
-## 4. Record the outcome
+## 4. Getting started
+
+Read the `shared-policy/onboarding` policy for additional recommendations and
+guide users through its steps. They may or may not vary by role.
+
+## 5. Record the outcome
 
 Ask whether they are done, unless step 2 already finished it. Then:
 
