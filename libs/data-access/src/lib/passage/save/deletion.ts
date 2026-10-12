@@ -1,8 +1,6 @@
 import type { DataClient } from '../../types';
-import { normalizePassageLabelsAfter } from './labels';
 import { inBatches } from '../in-batches';
-import type { DeletedPassageRow } from './reads';
-import type { RenumberedPassageRow, StepError } from './types';
+import type { StepError } from './types';
 
 const PAGE_SIZE = 1000;
 
@@ -64,31 +62,20 @@ const readEndNoteReferences = async (
 
 /**
  * Delete passages, their annotations and the endnote links that point at
- * them, then renumber the labels after each.
+ * them.
  *
  * All annotation cleanup runs before the passage delete, so a failure aborts
  * while the passage rows still exist and a retry can redo the whole sequence.
  */
 export const deletePassages = async ({
   client,
-  deletedPassages,
-  clientRenumberedUuids,
+  deletedUuids,
 }: {
   client: DataClient;
-  /** The stored rows of the passages to delete, read before any write. */
-  deletedPassages: DeletedPassageRow[];
-  /** Passages in the save's payload; see `normalizePassageLabelsAfter`. */
-  clientRenumberedUuids: Set<string>;
-}): Promise<
-  { deletedCount: number; renumbered: RenumberedPassageRow[] } | StepError
-> => {
-  const renumberedRows: RenumberedPassageRow[] = [];
-  if (deletedPassages.length === 0) {
-    return { deletedCount: 0, renumbered: renumberedRows };
-  }
-  const deletedUuids = deletedPassages.map((row) => row.uuid);
-  const sortedDeleted = [...deletedPassages].sort((a, b) => b.sort - a.sort);
-
+  /** Stored passages only. */
+  deletedUuids: string[];
+}): Promise<{ deletedCount: number } | StepError> => {
+  if (deletedUuids.length === 0) return { deletedCount: 0 };
   // Not counted: a filtered delete leaves rows behind, and the passage
   // delete below then fails on the foreign key.
   for (const batch of inBatches(deletedUuids)) {
@@ -146,27 +133,5 @@ export const deletePassages = async ({
     return { error: `Failed to delete passages: ${removed.error}` };
   }
 
-  // Renumber only after the delete succeeded: renumbering first would leave
-  // labels shifted around a passage that still exists.
-  for (const deletedPassage of sortedDeleted) {
-    const { error, renumbered } = await normalizePassageLabelsAfter({
-      client,
-      workUuid: deletedPassage.work_uuid,
-      fromSort: deletedPassage.sort,
-      fromLabel: deletedPassage.label,
-      delta: -1,
-      clientRenumberedUuids,
-    });
-    renumbered.forEach((row) => renumberedRows.push(row));
-    if (error) {
-      return {
-        error: `Passages deleted but labels were not renumbered: ${error}`,
-      };
-    }
-  }
-
-  return {
-    deletedCount: deletedPassages.length,
-    renumbered: renumberedRows,
-  };
+  return { deletedCount: deletedUuids.length };
 };

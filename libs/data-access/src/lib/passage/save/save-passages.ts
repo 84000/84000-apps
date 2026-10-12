@@ -7,7 +7,7 @@ import {
   passagesToRowDTO,
 } from '../../types';
 import { deleteByUuid, deletePassages } from './deletion';
-import { normalizePassageLabelsAfter } from './labels';
+import { planSaveLabels } from './labels';
 import { makeRoomForNewPassages, sortsAfterShift } from './placement';
 import { findOutOfRange, planAnnotations, planPassages } from './plan';
 import { inBatches } from '../in-batches';
@@ -33,9 +33,10 @@ import { validateSave } from './validate';
  * The input is validated and every row the save depends on is read before
  * anything is written, so a failure up to that point saved nothing. Writes
  * then run as a sequence ordered to keep the partial-failure window small:
- * sort shifts, content upserts, label renumbering, stale annotation deletes,
- * then passage deletions. Every write is an idempotent upsert or delete keyed
- * by uuid, so a retry of the same save converges.
+ * sort shifts, content upserts, stale annotation deletes, passage deletions,
+ * then the labels of other passages that inserting or deleting renumbered,
+ * which are planned before any write. Every write is an idempotent upsert or
+ * delete keyed by uuid, so a retry of the same save converges.
  *
  * A save places new passages but never moves an existing one: a changed
  * `sort` on an existing passage is ignored, and moving one needs an explicit
@@ -151,7 +152,27 @@ export const savePassagesWithDeletions = async ({
   if ('error' in sorted) {
     return failure(sorted.error);
   }
-  const { toSave, shiftedSorts } = sorted;
+  const { shiftedSorts } = sorted;
+
+  // Planned in full before anything is written: payload passages take their
+  // new labels with their content, the rest are written after it.
+  const plannedLabels = await planSaveLabels({
+    client,
+    toSave: sorted.toSave,
+    newUuids: new Set(newPassages.map((p) => p.uuid)),
+    deleted: deletedPassages,
+  });
+  if ('error' in plannedLabels) {
+    return failure(plannedLabels.error);
+  }
+  const toSave = sorted.toSave.map((passage) => {
+    const label = plannedLabels.data.get(passage.uuid);
+    return label === undefined ? passage : { ...passage, label };
+  });
+  const payloadUuids = new Set(inputUuids);
+  const labelRows: RenumberedPassageRow[] = [...plannedLabels.data]
+    .filter(([uuid]) => !payloadUuids.has(uuid))
+    .map(([uuid, label]) => ({ uuid, label }));
 
   const passageRowsToUpsert = planPassages(
     passagesToRowDTO(toSave),
@@ -190,35 +211,6 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
-  // Renumber neighbors of inserted passages now that the content is safe.
-  const renumberedByUuid = new Map<string, string>();
-  const clientRenumberedUuids = new Set(inputUuids);
-  const placedSort = (passage: Passage) =>
-    placedSorts.get(passage.uuid) ?? passage.sort;
-  const renumberOrder = [...newPassages].sort(
-    (a, b) => placedSort(b) - placedSort(a),
-  );
-  for (const passage of renumberOrder) {
-    // An unlabelled passage (the MCP inserts them) is in no numbered series,
-    // and there is no number to count on from.
-    if (!passage.label) continue;
-    const { error, renumbered } = await normalizePassageLabelsAfter({
-      client,
-      workUuid: passage.workUuid,
-      fromSort: placedSort(passage),
-      fromLabel: passage.label,
-      delta: 1,
-      clientRenumberedUuids,
-    });
-    renumbered.forEach((row) => renumberedByUuid.set(row.uuid, row.label));
-    if (error) {
-      return failure(
-        `Content saved but passage labels were not renumbered: ${error}`,
-        passages.length,
-      );
-    }
-  }
-
   // Stale rows left behind here resurrect deleted markup on the next load,
   // so a failure must reach the client even though the content upserts
   // already committed. Before the passage deletes, whose endnote cleanup
@@ -238,36 +230,29 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
-  // Inserting shifted and relabelled the passages to delete since they were
-  // read; renumbering after them starts from where they are now.
-  if (newPassages.length > 0 && deletedPassages.length > 0) {
-    const reread = await readDeletedPassages(
-      client,
-      deletedPassages.map((row) => row.uuid),
-    );
-    if ('error' in reread) {
-      return failure(
-        `Content saved but passages were not deleted: ${reread.error}`,
-        passages.length,
-      );
-    }
-    deletedPassages = reread.data;
-  }
-
   let deletedCount = 0;
   if (deletedPassages.length > 0) {
     const deleted = await deletePassages({
       client,
-      deletedPassages,
-      clientRenumberedUuids,
+      deletedUuids: deletedPassages.map((row) => row.uuid),
     });
     if ('error' in deleted) {
       return failure(deleted.error, passages.length);
     }
     deletedCount = deleted.deletedCount;
-    deleted.renumbered.forEach((row) =>
-      renumberedByUuid.set(row.uuid, row.label),
-    );
+  }
+
+  if (labelRows.length > 0) {
+    const { error: labelError } = await client
+      .from('passages')
+      .upsert(labelRows, { onConflict: 'uuid' });
+    if (labelError) {
+      console.error('Error renumbering passage labels:', labelError);
+      return failure(
+        `Content saved but passage labels were not renumbered: ${labelError.message}`,
+        passages.length,
+      );
+    }
   }
 
   const warnings: string[] = [];
@@ -302,11 +287,9 @@ export const savePassagesWithDeletions = async ({
   // Rows returned in `passages` already carry their final label, so reporting
   // them again as renumbered would be redundant.
   const savedUuidSet = new Set(savedPassages.map((row) => row.uuid));
-  const renumberedPassages: RenumberedPassageRow[] = Array.from(
-    renumberedByUuid.entries(),
-  )
-    .filter(([uuid]) => !savedUuidSet.has(uuid))
-    .map(([uuid, label]) => ({ uuid, label }));
+  const renumberedPassages = labelRows.filter(
+    (row) => !savedUuidSet.has(row.uuid),
+  );
 
   return {
     success: true,

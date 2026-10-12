@@ -6,7 +6,7 @@ type TableName = 'passages' | 'passage_annotations';
 /**
  * Operation names recorded in `state.ops` and accepted by `state.failOn`:
  * - rpc:shift_passage_sorts / rpc:rename_passage_label_prefix
- * - select:passages / select:passages:renumber / select:passages:sorts /
+ * - select:passages / select:passages:labels / select:passages:sorts /
  *   select:passages:deleted / select:passages:saved / select:annotations /
  *   select:annotations:endnote-refs
  * - upsert:passages / upsert:passages:labels / upsert:annotations
@@ -207,6 +207,9 @@ class FakeQueryBuilder {
         return 'select:passages:renumber';
       }
       if (this.columns === 'uuid, sort') return 'select:passages:sorts';
+      if (this.columns === 'uuid, sort, label, toh') {
+        return 'select:passages:labels';
+      }
       if (this.columns === 'uuid, sort, label, work_uuid') {
         return 'select:passages:deleted';
       }
@@ -347,6 +350,17 @@ class FakeQueryBuilder {
           this.rowLimit === undefined
             ? matching
             : matching.slice(0, this.rowLimit),
+        error: null,
+      };
+    }
+
+    if (this.eqWorkUuid !== undefined && !this.inColumn) {
+      return {
+        data: this.paged(
+          this.state.passages
+            .filter((passage) => passage.work_uuid === this.eqWorkUuid)
+            .sort((a, b) => a.sort - b.sort || a.uuid.localeCompare(b.uuid)),
+        ),
         error: null,
       };
     }
@@ -1033,10 +1047,13 @@ describe('savePassagesWithDeletions failure propagation', () => {
     expect(state.deletedPassageUuids).toEqual([]);
   });
 
-  it('renumbers labels only after the passage delete succeeds', async () => {
+  it('writes renumbered labels only after the passage delete succeeds', async () => {
     const state = createState({
       annotations: [],
-      passages: [passageRow],
+      passages: [
+        passageRow,
+        { ...passageRow, uuid: 'passage-2', label: '2', sort: 2 },
+      ],
     });
 
     const result = await savePassagesWithDeletions({
@@ -1046,10 +1063,13 @@ describe('savePassagesWithDeletions failure propagation', () => {
     });
 
     expect(result.success).toBe(true);
+    expect(result.renumberedPassages).toEqual([
+      { uuid: 'passage-2', label: '1' },
+    ]);
     const deleteIndex = state.ops.indexOf('delete:passages');
-    const renumberIndex = state.ops.indexOf('select:passages:renumber');
+    const labelsIndex = state.ops.indexOf('upsert:passages:labels');
     expect(deleteIndex).toBeGreaterThanOrEqual(0);
-    expect(renumberIndex).toBeGreaterThan(deleteIndex);
+    expect(labelsIndex).toBeGreaterThan(deleteIndex);
   });
 
   it('preserves stored annotations for passages with an incomplete export', async () => {
@@ -1247,7 +1267,7 @@ describe('savePassagesWithDeletions failure propagation', () => {
     // sharing the last row's sort — and per-text variants of one label routinely
     // share a sort. Only reachable past a full page, so this fills one exactly.
     it('does not skip passages sharing the sort of the last paged row', async () => {
-      const pageSize = 500;
+      const pageSize = 1000;
       const passages: PassageRowDTO[] = [];
 
       // A full page of notes each holding the label of the note before it, so
@@ -1282,13 +1302,58 @@ describe('savePassagesWithDeletions failure propagation', () => {
 
       // It took more than one page to get there...
       expect(
-        state.ops.filter((op) => op === 'select:passages:renumber').length,
+        state.ops.filter((op) => op === 'select:passages:labels').length,
       ).toBeGreaterThan(1);
       // ...and the variant landed on the same number as the sibling it shares a
       // slot with, rather than being read past and left stale.
       const siblingLabel = renumbered.get(`bulk-${pageSize - 1}`);
       expect(siblingLabel).toBe(`n.${844 + pageSize - 1}`);
       expect(renumbered.get('variant-sharing-sort')).toBe(siblingLabel);
+    });
+
+    it('renames each child label once when an insert renumbers its parent', async () => {
+      const state = createState({
+        passages: [
+          endnoteRow('a', 'n.843', 844),
+          endnoteRow('a1', 'n.843.1', 845),
+          endnoteRow('b', 'n.844', 846),
+          endnoteRow('b1', 'n.844.1', 847),
+        ],
+      });
+
+      const result = await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [insertedNote],
+      });
+
+      expect(result.success).toBe(true);
+      const labels = Object.fromEntries(
+        state.passages.map((row) => [row.uuid, row.label]),
+      );
+      expect(labels).toMatchObject({
+        'note-new': 'n.843',
+        a: 'n.844',
+        a1: 'n.844.1',
+        b: 'n.845',
+        b1: 'n.845.1',
+      });
+      expect(state.ops).not.toContain('rpc:rename_passage_label_prefix');
+    });
+
+    it("writes a payload passage's new label with its content", async () => {
+      const state = createState({
+        passages: [endnoteRow('note-843', 'n.843', 844)],
+      });
+
+      await savePassagesWithDeletions({
+        client: createFakeClient(state),
+        passages: [insertedNote, { ...clientRenumbered, label: 'n.843' }],
+      });
+
+      expect(
+        state.passageUpserts.flat().find((row) => row.uuid === 'note-843'),
+      ).toMatchObject({ label: 'n.844' });
+      expect(state.labelUpserts).toEqual([]);
     });
 
     it('omits passages returned in `passages` from `renumberedPassages`', async () => {
