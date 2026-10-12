@@ -34,6 +34,11 @@ are not compiled:
 - **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
 - **Shared reference**: `libs/lib-agent/reference/<name>/`, vendored into each
   skill that cites it by the `sharedReference` entries in `plugins.json`
+- **Hooks**: `libs/lib-agent/hooks/<plugin>/` (`hooks.json` plus the scripts it
+  runs), copied to the plugin's `hooks/` by its `hooks` entry in `plugins.json`
+- **Audience**: each plugin's `audience` in `plugins.json` (roles and/or
+  permissions); the generator renders it into the onboarding skill's
+  `reference/plugins.md`
 
 The **translation policies are not in this repo.** They live in the private
 `translation-harness` storage bucket and are read and edited through the studio

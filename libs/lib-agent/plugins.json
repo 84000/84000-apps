@@ -137,7 +137,8 @@
       "agents": [],
       "renames": {},
       "sharedReference": {},
-      "pluginCatalog": ["onboarding"]
+      "pluginCatalog": ["onboarding"],
+      "hooks": "libs/lib-agent/hooks/84000-core"
     }
   ]
 }

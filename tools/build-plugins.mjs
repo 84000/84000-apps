@@ -256,6 +256,23 @@ function buildPluginTree(plugin, defaults, allPlugins) {
     );
   }
 
+  // Hooks: a directory holding hooks.json and the scripts it runs, copied to
+  // the plugin's hooks/ where Claude Code looks for hooks/hooks.json.
+  if (plugin.hooks) {
+    const abs = join(REPO_ROOT, plugin.hooks);
+    const manifest = join(abs, 'hooks.json');
+    if (!existsSync(manifest)) {
+      throw new Error(`${plugin.name}: hooks source has no hooks.json: ${plugin.hooks}`);
+    }
+    const parsed = JSON.parse(readFileSync(manifest, 'utf-8'));
+    if (!parsed.hooks || typeof parsed.hooks !== 'object') {
+      throw new Error(`${plugin.name}: hooks.json needs a top-level "hooks" object`);
+    }
+    for (const [rel, contents] of readTree(abs)) {
+      tree.set(`hooks/${rel}`, contents);
+    }
+  }
+
   for (const source of plugin.agents ?? []) {
     const abs = join(REPO_ROOT, source);
     if (!existsSync(abs)) throw new Error(`${plugin.name}: agent source not found: ${source}`);
