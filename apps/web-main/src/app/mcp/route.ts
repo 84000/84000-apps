@@ -49,8 +49,8 @@ export async function POST(req: Request) {
   //
   // Policy, session, feedback and profile tools are listed for everyone, because their audience
   // does not follow the role hierarchy: translators author policy and drive the
-  // sessions, and managers read policy without appearing in ROLE_HIERARCHY at
-  // all. Their `harness.*` checks decide. `open-policy-editor` is listed with
+  // sessions, and managers read policy though they rank below translators.
+  // Their `harness.*` checks decide. `open-policy-editor` is listed with
   // them, and with the editor app's resource it links to. The profile tools
   // need no permission: they read and tag only the caller's own profile.
   const tools = [

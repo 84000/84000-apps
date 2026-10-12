@@ -179,6 +179,11 @@ describe('decodeRole', () => {
     expect(decodeRole('some.token')).toBe('admin');
   });
 
+  it('keeps the manager role', () => {
+    mockedJwtDecode.mockReturnValue({ user_role: 'manager' });
+    expect(decodeRole('some.token')).toBe('manager');
+  });
+
   it('defaults to reader when role is missing', () => {
     mockedJwtDecode.mockReturnValue({});
     expect(decodeRole('some.token')).toBe('reader');
@@ -197,6 +202,7 @@ describe('ROLE_HIERARCHY', () => {
     expect(ROLE_HIERARCHY).toEqual([
       'reader',
       'scholar',
+      'manager',
       'translator',
       'editor',
       'admin',

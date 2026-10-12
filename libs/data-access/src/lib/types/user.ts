@@ -1,6 +1,5 @@
 /**
- * Every value of the database's `app_role` enum. `manager` sits outside the
- * apps' role hierarchy (`ROLE_HIERARCHY`), so hierarchy checks never pass for it.
+ * Every value of the database's `app_role` enum.
  */
 export type UserRole =
   | 'reader'
