@@ -5,7 +5,7 @@ type TableName = 'passages' | 'passage_annotations';
 
 /**
  * Operation names recorded in `state.ops` and accepted by `state.failOn`:
- * - rpc:shift_passage_sorts / rpc:rename_passage_label_prefix
+ * - rpc:shift_passage_sorts
  * - select:passages / select:passages:labels / select:passages:sorts /
  *   select:passages:deleted / select:passages:saved / select:annotations /
  *   select:annotations:endnote-refs
@@ -52,9 +52,6 @@ class FakeQueryBuilder {
   private inValues: string[] = [];
   private eqType?: string;
   private eqWorkUuid?: string;
-  private gtSort?: number;
-  private gteSort?: number;
-  private rowLimit?: number;
   private rangeFrom?: number;
   private rangeTo?: number;
   private returning = false;
@@ -157,26 +154,11 @@ class FakeQueryBuilder {
     return this;
   }
 
-  gt(column: string, value: number) {
-    if (column === 'sort') {
-      this.gtSort = value;
-    }
-    return this;
-  }
-
-  gte(column: string, value: number) {
-    if (column === 'sort') {
-      this.gteSort = value;
-    }
+  neq() {
     return this;
   }
 
   order() {
-    return this;
-  }
-
-  limit(value?: number) {
-    this.rowLimit = value;
     return this;
   }
 
@@ -203,9 +185,6 @@ class FakeQueryBuilder {
     }
 
     if (this.table === 'passages') {
-      if (this.gtSort !== undefined || this.gteSort !== undefined) {
-        return 'select:passages:renumber';
-      }
       if (this.columns === 'uuid, sort') return 'select:passages:sorts';
       if (this.columns === 'uuid, sort, label, toh') {
         return 'select:passages:labels';
@@ -330,35 +309,14 @@ class FakeQueryBuilder {
       };
     }
 
-    if (
-      this.eqWorkUuid !== undefined &&
-      (this.gtSort !== undefined || this.gteSort !== undefined)
-    ) {
-      const gtSort = this.gtSort;
-      const gteSort = this.gteSort;
-      const matching = this.state.passages
-        .filter(
-          (passage) =>
-            passage.work_uuid === this.eqWorkUuid &&
-            (gtSort !== undefined
-              ? passage.sort > gtSort
-              : passage.sort >= (gteSort as number)),
-        )
-        .sort((a, b) => a.sort - b.sort);
-      return {
-        data:
-          this.rowLimit === undefined
-            ? matching
-            : matching.slice(0, this.rowLimit),
-        error: null,
-      };
-    }
-
-    if (this.eqWorkUuid !== undefined && !this.inColumn) {
+    if (op === 'select:passages:labels') {
       return {
         data: this.paged(
           this.state.passages
-            .filter((passage) => passage.work_uuid === this.eqWorkUuid)
+            .filter(
+              (passage) =>
+                passage.work_uuid === this.eqWorkUuid && passage.label,
+            )
             .sort((a, b) => a.sort - b.sort || a.uuid.localeCompare(b.uuid)),
         ),
         error: null,

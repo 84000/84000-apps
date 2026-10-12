@@ -1,7 +1,8 @@
 import type { DataClient, Passage } from '../../types';
 import type { StepError } from './types';
 
-const PAGE_SIZE = 1000;
+/** Below PostgREST's row cap, so a short page always means the last one. */
+const PAGE_SIZE = 500;
 
 /** One passage of a work, as label renumbering sees it. */
 export type LabelRow = {
@@ -11,7 +12,10 @@ export type LabelRow = {
   toh: unknown;
 };
 
-/** Every passage of a work, in order, for planning label renumbering. */
+/**
+ * Every labelled passage of a work, in order, for planning label renumbering.
+ * Unlabelled passages hold no slot and have no children.
+ */
 export const readLabelIndex = async (
   client: DataClient,
   workUuid: string,
@@ -22,6 +26,8 @@ export const readLabelIndex = async (
       .from('passages')
       .select('uuid, sort, label, toh')
       .eq('work_uuid', workUuid)
+      .not('label', 'is', null)
+      .neq('label', '')
       .order('sort', { ascending: true })
       .order('uuid', { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1);
@@ -110,7 +116,11 @@ export const renumberAfter = (
       if (!clientRenumberedUuids.has(row.uuid)) break;
     } else if (row.label !== expectedLabel) {
       relabelled.set(row.uuid, expectedLabel);
-      if (!isSameSlot) prefixRenames.set(`${row.label}.`, `${expectedLabel}.`);
+      // Two rows holding one stale label: children follow the first.
+      const oldPrefix = `${row.label}.`;
+      if (!isSameSlot && !prefixRenames.has(oldPrefix)) {
+        prefixRenames.set(oldPrefix, `${expectedLabel}.`);
+      }
     }
 
     previousLabel = row.label;
@@ -135,12 +145,22 @@ export const renumberAfter = (
   }
 };
 
+/** The labels a save changes, in the two steps it writes them. */
+export type LabelPlan = {
+  /** After the inserts' walks, deleted passages included. */
+  afterInserts: Map<string, string>;
+  /** After the deletes' walks, over what the inserts left. */
+  afterDeletes: Map<string, string>;
+  /** Every passage left whose label changes, with its final label. */
+  final: Map<string, string>;
+};
+
 /**
  * The labels a save leaves on a work's passages: `index` holds the work as it
  * will stand once written, new passages included. Each insert renumbers the
  * series after it, highest first, while the deleted passages are still there;
  * then the deleted passages are taken out and the series after each is
- * renumbered, highest first. Returns the passages whose label changes.
+ * renumbered, highest first.
  */
 export const planLabels = ({
   index,
@@ -153,9 +173,15 @@ export const planLabels = ({
   inserts: { sort: number; label: string }[];
   deletedUuids: Set<string>;
   clientRenumberedUuids: Set<string>;
-}): Map<string, string> => {
+}): LabelPlan => {
   const rows = index.map((row) => ({ ...row })).sort(byPosition);
   const before = new Map(rows.map((row) => [row.uuid, row.label]));
+  const changedSince = (labels: Map<string, string>, list: LabelRow[]) =>
+    new Map(
+      list
+        .filter((row) => row.label !== labels.get(row.uuid))
+        .map((row) => [row.uuid, row.label]),
+    );
 
   [...inserts]
     .filter((insert) => insert.label)
@@ -168,6 +194,8 @@ export const planLabels = ({
         clientRenumberedUuids,
       }),
     );
+  const afterInserts = changedSince(before, rows);
+  const inserted = new Map(rows.map((row) => [row.uuid, row.label]));
 
   const deleted = rows
     .filter((row) => deletedUuids.has(row.uuid))
@@ -175,6 +203,14 @@ export const planLabels = ({
   const remaining = rows.filter((row) => !deletedUuids.has(row.uuid));
   deleted
     .filter((row) => row.label)
+    // Another per-text variant still holds the slot, so nothing moves up.
+    .filter(
+      (row) =>
+        row.toh === null ||
+        !remaining.some(
+          (other) => other.label === row.label && other.toh !== null,
+        ),
+    )
     .forEach((row) =>
       renumberAfter(remaining, {
         fromSort: row.sort,
@@ -184,11 +220,11 @@ export const planLabels = ({
       }),
     );
 
-  const changed = new Map<string, string>();
-  remaining.forEach((row) => {
-    if (row.label !== before.get(row.uuid)) changed.set(row.uuid, row.label);
-  });
-  return changed;
+  return {
+    afterInserts,
+    afterDeletes: changedSince(inserted, remaining),
+    final: changedSince(before, remaining),
+  };
 };
 
 /**
@@ -206,7 +242,7 @@ export const planSaveLabels = async ({
   toSave: Passage[];
   newUuids: Set<string>;
   deleted: { uuid: string; label: string; work_uuid: string }[];
-}): Promise<{ data: Map<string, string> } | StepError> => {
+}): Promise<{ data: LabelPlan } | StepError> => {
   const works = new Set([
     ...toSave
       .filter((passage) => newUuids.has(passage.uuid) && passage.label)
@@ -214,7 +250,11 @@ export const planSaveLabels = async ({
     ...deleted.filter((row) => row.label).map((row) => row.work_uuid),
   ]);
   const clientRenumberedUuids = new Set(toSave.map((passage) => passage.uuid));
-  const changed = new Map<string, string>();
+  const plan: LabelPlan = {
+    afterInserts: new Map(),
+    afterDeletes: new Map(),
+    final: new Map(),
+  };
 
   for (const workUuid of works) {
     const read = await readLabelIndex(client, workUuid);
@@ -229,7 +269,7 @@ export const planSaveLabels = async ({
         toh: passage.toh ?? index.get(passage.uuid)?.toh ?? null,
       }),
     );
-    planLabels({
+    const work = planLabels({
       index: [...index.values()],
       inserts: inWork.filter((passage) => newUuids.has(passage.uuid)),
       deletedUuids: new Set(
@@ -238,7 +278,10 @@ export const planSaveLabels = async ({
           .map((row) => row.uuid),
       ),
       clientRenumberedUuids,
-    }).forEach((label, uuid) => changed.set(uuid, label));
+    });
+    (['afterInserts', 'afterDeletes', 'final'] as const).forEach((step) =>
+      work[step].forEach((label, uuid) => plan[step].set(uuid, label)),
+    );
   }
-  return { data: changed };
+  return { data: plan };
 };

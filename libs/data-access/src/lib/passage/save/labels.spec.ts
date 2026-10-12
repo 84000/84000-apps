@@ -12,7 +12,7 @@ const labelsAfter = (
   index: LabelRow[],
   plan: Omit<Parameters<typeof planLabels>[0], 'index'>,
 ) => {
-  const changed = planLabels({ index, ...plan });
+  const changed = planLabels({ index, ...plan }).final;
   return Object.fromEntries(
     index
       .filter((r) => !plan.deletedUuids.has(r.uuid))
@@ -37,7 +37,7 @@ describe('planLabels', () => {
       inserts: [{ sort: 2, label: 'n.2' }],
       deletedUuids: none,
       clientRenumberedUuids: new Set(['new']),
-    });
+    }).final;
 
     expect(Object.fromEntries(changed)).toEqual({ a: 'n.3', b: 'n.4' });
   });
@@ -158,7 +158,7 @@ describe('planLabels', () => {
         inserts: [],
         deletedUuids: new Set(['gone']),
         clientRenumberedUuids: none,
-      }).size,
+      }).final.size,
     ).toBe(0);
   });
 
@@ -175,7 +175,119 @@ describe('planLabels', () => {
         inserts: [{ sort: 2, label: 'n.2' }],
         deletedUuids: none,
         clientRenumberedUuids: new Set(['new']),
-      }).size,
+      }).final.size,
     ).toBe(0);
+  });
+
+  it('stops at a shallower label', () => {
+    const index = [
+      row('new', 'n.2.1', 2),
+      row('a', 'n.2.1', 3),
+      row('b', 'n.3', 4),
+      row('c', 'n.2.2', 5),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: 'n.2.1' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({ new: 'n.2.1', a: 'n.2.2', b: 'n.3', c: 'n.2.2' });
+  });
+
+  it('renames children as the database prefix rename does, wherever they sit', () => {
+    const index = [
+      row('early', '3.9', 1),
+      row('new', '3', 3),
+      row('a', '3', 4),
+      row('dot', '3.', 5),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 3, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({ early: '4.9', new: '3', a: '4', dot: '4.' });
+  });
+
+  it('does not walk from a label without a number', () => {
+    const index = [row('new', 'n.x', 2), row('a', 'n.x', 3)];
+
+    expect(
+      planLabels({
+        index,
+        inserts: [{ sort: 2, label: 'n.x' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }).final.size,
+    ).toBe(0);
+  });
+
+  it('sends the children of two rows sharing a stale label after the first', () => {
+    const index = [
+      row('new', 'n.3', 2),
+      row('x', 'n.3', 3),
+      row('x1', 'n.3.1', 4),
+      row('y', 'n.3', 5),
+      row('z', 'n.4', 6),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: 'n.3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toMatchObject({ x: 'n.4', x1: 'n.4.1', y: 'n.5' });
+  });
+
+  it('keeps the series when one per-text variant of a slot is deleted', () => {
+    const index = [
+      row('a', 'n.1', 1),
+      row('v1', 'n.2', 2, 'toh1'),
+      row('v2', 'n.2', 2, 'toh2'),
+      row('c', 'n.3', 3),
+    ];
+
+    expect(
+      planLabels({
+        index,
+        inserts: [],
+        deletedUuids: new Set(['v2']),
+        clientRenumberedUuids: none,
+      }).final.size,
+    ).toBe(0);
+  });
+
+  it('plans two inserts and two deletes, and splits the steps', () => {
+    const index = [
+      row('n1', 'n.1', 1),
+      row('x', 'n.2', 2),
+      row('n2', 'n.2', 3),
+      row('n3', 'n.3', 4),
+      row('y', 'n.4', 5),
+      row('n4', 'n.4', 6),
+      row('n5', 'n.5', 7),
+      row('n6', 'n.6', 8),
+    ];
+
+    const plan = planLabels({
+      index,
+      inserts: [
+        { sort: 2, label: 'n.2' },
+        { sort: 5, label: 'n.4' },
+      ],
+      deletedUuids: new Set(['n3', 'n5']),
+      clientRenumberedUuids: new Set(['x', 'y']),
+    });
+
+    // The inserts move n5 to n.7 (written first); the deletes then bring it
+    // all back down, leaving only n2 and n4 changed from where they began.
+    expect(plan.afterInserts.get('n5')).toBe('n.7');
+    expect(plan.afterInserts.get('y')).toBe('n.5');
+    expect(Object.fromEntries(plan.final)).toEqual({ n2: 'n.3', n4: 'n.5' });
   });
 });
