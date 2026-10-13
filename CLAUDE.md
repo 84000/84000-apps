@@ -27,15 +27,19 @@
 
 ## Claude Code Plugins
 
-Skills and agents are content rather than code, so they live outside `src/` and
+Skills, agents, commands and hooks are content rather than code, so they live outside `src/` and
 are not compiled:
 
 - **Skills**: `libs/lib-agent/skills/<name>/SKILL.md` (plus a `reference/` folder)
 - **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
 - **Shared reference**: `libs/lib-agent/reference/<name>/`, vendored into each
   skill that cites it by the `sharedReference` entries in `plugins.json`
+- **Commands**: `libs/lib-agent/commands/<name>.md` (slash commands), listed in
+  a plugin's `commands` in `plugins.json` and copied to its `commands/`
 - **Hooks**: `libs/lib-agent/hooks/<plugin>/` (`hooks.json` plus the scripts it
-  runs), copied to the plugin's `hooks/` by its `hooks` entry in `plugins.json`
+  runs), copied to the plugin's `hooks/` by its `hooks` entry in `plugins.json`.
+  The generator fails if `hooks.json` runs a `${CLAUDE_PLUGIN_ROOT}/hooks/`
+  script that is not in that directory
 - **Audience**: each plugin's `audience` in `plugins.json` (roles and/or
   permissions); the generator renders it into the onboarding skill's
   `reference/plugins.md`

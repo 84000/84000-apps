@@ -268,9 +268,32 @@ function buildPluginTree(plugin, defaults, allPlugins) {
     if (!parsed.hooks || typeof parsed.hooks !== 'object') {
       throw new Error(`${plugin.name}: hooks.json needs a top-level "hooks" object`);
     }
-    for (const [rel, contents] of readTree(abs)) {
+    const hookFiles = readTree(abs);
+    for (const [rel, contents] of hookFiles) {
       tree.set(`hooks/${rel}`, contents);
     }
+    // A script that hooks.json names but the tree lacks fails silently at run
+    // time, and `claude plugin validate` does not look.
+    for (const [, path] of JSON.stringify(parsed).matchAll(/\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/([^\s"\\]+)/g)) {
+      if (!hookFiles.has(path)) {
+        throw new Error(`${plugin.name}: hooks.json runs hooks/${path}, which is not in ${plugin.hooks}`);
+      }
+    }
+  }
+
+  // Slash commands: one markdown file each, copied to the plugin's commands/.
+  const commandNames = new Set();
+  for (const source of plugin.commands ?? []) {
+    const abs = join(REPO_ROOT, source);
+    if (!existsSync(abs)) throw new Error(`${plugin.name}: command source not found: ${source}`);
+    if (!source.endsWith('.md')) {
+      throw new Error(`${plugin.name}: command source must be a .md file: ${source}`);
+    }
+    if (commandNames.has(basename(source))) {
+      throw new Error(`${plugin.name}: two commands are named ${basename(source)}`);
+    }
+    commandNames.add(basename(source));
+    tree.set(`commands/${basename(source)}`, readFileSync(abs));
   }
 
   for (const source of plugin.agents ?? []) {
