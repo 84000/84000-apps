@@ -195,6 +195,39 @@ describe('applyEditsToPassages', () => {
     expect(result.passages).toHaveLength(0);
   });
 
+  it('refuses a cut whose text is not what the range holds', () => {
+    const result = run([
+      {
+        op: 'delete-text',
+        passageUuid: 'p1',
+        start: 14,
+        end: 23,
+        text: 'nope',
+      },
+    ]);
+    expect(result.error).toMatch(/expected "nope" at 14–23 but found/);
+    expect(result.passages).toEqual([]);
+  });
+
+  it('cannot tell a repeated cut from a new one when the text repeats', () => {
+    // Cutting one "x" from "xx" leaves an "x" at the same offsets.
+    const once = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [{ ...passage(), content: 'xx' }],
+      annotations: new Map(),
+      edits: [cut(1, 2, 'xx')],
+    });
+    expect(once.passages[0].content).toBe('x');
+    const twice = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [{ ...passage(), content: 'x' }],
+      annotations: new Map(),
+      edits: [cut(0, 1, 'xx')],
+    });
+    expect(twice.error).toBeUndefined();
+    expect(twice.passages[0].content).toBe('');
+  });
+
   it('reports an insert anchored to a passage that was not read', () => {
     const result = run([
       { op: 'insert-passage', before: 'nope', content: 'x' },

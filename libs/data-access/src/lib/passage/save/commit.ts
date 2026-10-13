@@ -91,16 +91,17 @@ const rolledBack = (code: unknown) =>
 
 /**
  * Writes a planned save through `apply_passage_save`, which applies each call
- * in one transaction. A large save that only writes rows is written in
- * chunks (see `chunkCommit`), so is not all-or-nothing: on a failure, the
- * chunks before it stay written.
+ * in one transaction. With `chunked`, a large save that only writes rows is
+ * written in chunks (see `chunkCommit`), so is not all-or-nothing: on a
+ * failure, the chunks before it stay written.
  */
 export const commitSave = async (
   client: DataClient,
   commit: SaveCommit,
+  { chunked = false }: { chunked?: boolean } = {},
 ): Promise<{ savedPassages: number } | CommitFailure> => {
   let savedPassages = 0;
-  for (const chunk of chunkCommit(commit)) {
+  for (const chunk of chunked ? chunkCommit(commit) : [commit]) {
     const { error } = await client.rpc('apply_passage_save', {
       p_passages: chunk.passages,
       p_labels: chunk.labels,

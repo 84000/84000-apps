@@ -63,10 +63,14 @@ A write is **all or nothing**: the content, every annotation and any label the
 insert renumbers land together, or none of them do. The result says which:
 
 - **`applied: true`** — written.
-- **an error** — nothing was written. Fix what it names and send the call again.
-- **`applied: "unknown"`** — the write may have landed, but its answer was lost.
-  **Re-read the passages with `get-passage` and compare them with what you sent
-  before you issue anything again.** Send only what is missing.
+- **an error that begins `applied: "unknown"`** — the write may have landed,
+  but its answer was lost. **Re-read the passages with `get-passage` and compare
+  them with what you sent before you issue anything again.** Send only what is
+  missing.
+- **any other error** — nothing was written. Fix what it names and send the
+  call again.
+
+With `dryRun`, the result says `applied: false`: nothing was written.
 
 The tool never retries for you. After `"unknown"`, do not resend the same call
 blindly:
@@ -132,8 +136,8 @@ say what they are beyond "unmodelled".
 
 They are kept verbatim through an edit, moved exactly with your cuts like any
 other annotation, and written back as they were. You do not need to do anything
-about them, and you do not need to avoid a passage that has one. If you deliberately want one gone, remove it by uuid like any other
-annotation.
+about them, and you do not need to avoid a passage that has one. If you
+deliberately want one gone, remove it by uuid like any other annotation.
 
 One of them is worth knowing about: `deprecated-temp-mention` holds content in
 exactly the shape of a folio mention. Those are not folio mentions and a reader

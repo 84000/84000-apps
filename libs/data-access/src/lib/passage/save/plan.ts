@@ -54,9 +54,9 @@ const ignored = new Set<string>(ANNOTATIONS_TO_IGNORE);
 /**
  * The annotation writes a save makes: rows that differ from what is stored,
  * and stored rows on a saved passage that the save no longer has. Stored
- * rows are kept when their passage's export was incomplete, when the caller
- * keeps them as stored, when they are of a type editors never load and the
- * passage was not sent as raw rows, or when the caller sent them but they
+ * rows on a passage not sent as raw rows are kept when its export was
+ * incomplete, when the caller keeps them as stored, or when they are of a
+ * type editors never load; and any row the caller sent is kept even if it
  * could not be serialized. Rows of a type editors never load follow their
  * passage's text where they safely can; see `remapIgnoredRows`.
  */
@@ -106,12 +106,12 @@ export const planAnnotations = ({
       .map((passage) => passage.uuid),
   );
   const kept = new Set(keep);
-  const leftAlone = (row: ExistingAnnotationRow) =>
-    sent.has(row.uuid) ||
-    kept.has(row.uuid) ||
-    incomplete.has(row.passage_uuid);
   const raw = (row: ExistingAnnotationRow) =>
     rawPassageUuids.has(row.passage_uuid);
+  // A raw passage's list is its whole state, so nothing else keeps a row.
+  const leftAlone = (row: ExistingAnnotationRow) =>
+    sent.has(row.uuid) ||
+    (!raw(row) && (kept.has(row.uuid) || incomplete.has(row.passage_uuid)));
   const deletes = existing
     .filter((row) => !leftAlone(row) && (raw(row) || !ignored.has(row.type)))
     .map((row) => row.uuid);

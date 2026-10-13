@@ -24,7 +24,7 @@ const editSchema = z.discriminatedUnion('op', [
     text: z
       .string()
       .describe(
-        'The exact text start–end covers in the stored content. The edit is refused if it is not there, so a cut already made is not made twice.',
+        'The exact text start–end covers in the stored content. The edit is refused if it is not there. That catches most cuts sent twice, not all, so re-read before resending.',
       ),
   }),
   z.object({
@@ -95,9 +95,8 @@ const inputSchema = {
 };
 
 /**
- * Write tool that edits passages of a work that already has content, expressed
- * as deltas rather than whole passages. Offset re-mapping, annotation
- * preservation and the save are handled here. Requires `editor.edit`.
+ * Write tool that edits passages of a work that already has content, from a
+ * list of edits. Requires `editor.edit`.
  */
 export function createApplyPassageEditsTool(
   client: DataClient,
@@ -139,7 +138,13 @@ export function createApplyPassageEditsTool(
           );
         }
         if (!result.success) {
-          return errorResult(result.error ?? 'Failed to apply passage edits.');
+          const warnings = result.warnings.map((w) => w.message);
+          return errorResult(
+            [
+              result.error ?? 'Failed to apply passage edits.',
+              ...warnings,
+            ].join('\n'),
+          );
         }
 
         return jsonResult({

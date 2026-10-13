@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { createApplyPassageEditsTool } from './apply-passage-edits';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
@@ -128,7 +129,7 @@ describe('apply-passage-edits tool', () => {
       success: false,
       dryRun: false,
       passages: [],
-      warnings: [],
+      warnings: [{ passageUuid: 'p1', message: 'Dropped span a2.' }],
       error: 'Not in work work-1: p9',
     } as never);
 
@@ -138,7 +139,21 @@ describe('apply-passage-edits tool', () => {
     );
 
     expect(result.isError).toBe(true);
-    expect((result.content[0] as { text: string }).text).toContain('p9');
+    const text = (result.content[0] as { text: string }).text;
+    expect(text).toContain('p9');
+    expect(text).toContain('Dropped span a2.');
+  });
+
+  it('requires the text a delete-text cuts', () => {
+    const schema = z.object(tool.inputSchema as z.ZodRawShape);
+    const [cutEdit] = edits;
+    expect(schema.safeParse({ workUuid: 'w', edits: [cutEdit] }).success).toBe(
+      true,
+    );
+    const { text: _text, ...withoutText } = cutEdit;
+    expect(
+      schema.safeParse({ workUuid: 'w', edits: [withoutText] }).success,
+    ).toBe(false);
   });
 
   it('returns the warnings the edit produced', async () => {

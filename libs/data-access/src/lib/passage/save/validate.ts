@@ -31,8 +31,8 @@ const firstDuplicate = (values: readonly string[]) => {
 /**
  * Checks a save's input before anything is read or written: every passage
  * and annotation once, no passage both saved and deleted, every annotation
- * on a passage in the save, a passage's annotations sent one way only, and
- * none both sent and kept as stored.
+ * on a passage in the save, a passage's annotations sent one way only and
+ * raw ones complete, and none both sent and kept as stored.
  */
 export const validateSave = ({
   passages,
@@ -87,11 +87,22 @@ export const validateSave = ({
       `passage ${both.uuid} sends both annotations and raw annotations`,
     );
   }
+  const partial = filled.find(
+    (passage) =>
+      rawPassageUuids.has(passage.uuid) && passage.annotationsIncomplete,
+  );
+  if (partial) {
+    return reject(
+      `passage ${partial.uuid} sends raw annotations but marks them incomplete`,
+    );
+  }
   let misfiled: string | undefined;
   const rows = Object.entries(rawAnnotations).flatMap(([passageUuid, list]) =>
     list.map((row) => {
-      const named = row.passage_uuid ?? row.passageUuid;
-      if (named && named !== passageUuid && !misfiled) {
+      const named = [row.passage_uuid, row.passageUuid].find(
+        (uuid) => uuid && uuid !== passageUuid,
+      );
+      if (named && !misfiled) {
         misfiled = `annotation ${row.uuid} names passage ${named} but is sent with ${passageUuid}`;
       }
       return { ...row, passage_uuid: passageUuid };

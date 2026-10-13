@@ -57,6 +57,10 @@ from the exact list of your cuts. It drops an annotation whose text you cut
 entirely, and leaves one that was already out of range where it was. Both come
 back as warnings, so read them.
 
+So send every offset as stored: do not order your edits or adjust their offsets.
+A position marker at or inside a cut ends up at the cut's start. If it belongs
+elsewhere, remove it and add it again where it belongs.
+
 ## Verify by re-slicing
 
 After an edit, take each annotation that carries text and check that

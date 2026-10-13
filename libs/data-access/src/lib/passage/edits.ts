@@ -20,7 +20,7 @@ import { inBatches } from './in-batches';
 /**
  * Remove a span of text from a passage. Offsets are in the stored content,
  * and `text` is exactly what they cover: an edit whose text is not there is
- * refused, so one already applied is not applied again.
+ * refused, which catches most cuts sent twice, though not all.
  */
 export type DeleteTextEdit = {
   op: 'delete-text';

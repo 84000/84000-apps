@@ -484,13 +484,15 @@ describe('applyPassageEdits', () => {
 
   it('refuses the same cut a second time', async () => {
     const tables = tablesFor(published());
-    const { client } = fakeClient(tables);
+    const { client, log } = fakeClient(tables);
     const apply = () =>
       applyPassageEdits({ client, workUuid: WORK, edits: [cut(14, 22)] });
 
     expect((await apply()).applied).toBe(true);
     const again = await apply();
-    expect(again.success).toBe(false);
+    expect(again).toMatchObject({ success: false, applied: false });
+    expect(again.error).toMatch(/expected .* but found/);
+    expect(log.upserts).toHaveLength(1);
     expect(tables.passages[0].content).toBe(
       CONTENT.slice(0, 14) + CONTENT.slice(22),
     );
@@ -533,6 +535,38 @@ describe('applyPassageEdits', () => {
     ).toHaveLength(1);
     expect(result.warnings.map((w) => w.message)).toEqual([
       expect.stringContaining('Skipped add-annotation'),
+      expect.stringContaining('Skipped add-annotation'),
+    ]);
+  });
+
+  it('matches a stored row written with another key set as the same add', async () => {
+    const tables = tablesFor(published());
+    tables.passage_annotations = tables.passage_annotations.map((row) =>
+      row.uuid === 'a-note'
+        ? { ...row, content: [{ uuid: 'n1' }, { label: '3' }] }
+        : row,
+    );
+    const { client } = fakeClient(tables);
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 32,
+          data: { endNote: 'n1' },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      tables.passage_annotations.filter((row) => row.type === 'end-note-link'),
+    ).toHaveLength(1);
+    expect(result.warnings.map((w) => w.message)).toEqual([
       expect.stringContaining('Skipped add-annotation'),
     ]);
   });

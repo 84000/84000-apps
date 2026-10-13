@@ -162,11 +162,23 @@ describe('commitSave', () => {
     const result = await commitSave(
       clientFailing(2, { message: 'timeout', code: '57014' }),
       commitOf(CHUNK_PASSAGES + 1),
+      { chunked: true },
     );
     expect(result).toEqual({
       error: `Partly saved: the first ${CHUNK_PASSAGES} of ${CHUNK_PASSAGES + 1} passages were saved, and the rest were not: timeout`,
       savedPassages: CHUNK_PASSAGES,
       outcomeUnknown: false,
     });
+  });
+
+  it('commits a large save in one call unless asked to chunk it', async () => {
+    const client = clientFailing(0, { message: '', code: '' }) as unknown as {
+      rpc: jest.Mock;
+    };
+    const commit = commitOf(CHUNK_PASSAGES * 2, 1);
+    expect(await commitSave(client as never, commit)).toEqual({
+      savedPassages: CHUNK_PASSAGES * 2,
+    });
+    expect(client.rpc).toHaveBeenCalledTimes(1);
   });
 });

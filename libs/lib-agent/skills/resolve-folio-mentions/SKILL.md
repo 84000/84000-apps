@@ -200,8 +200,8 @@ What this conversion specifically owes the editor:
 Call `apply-passage-edits` with `dryRun: true` first — its result **is** the
 preview in step 7. Then call it again without `dryRun` once the editor confirms.
 
-If the write comes back `applied: "unknown"`, re-read the passages before doing
-anything else. Compare them with what you sent, and send again only the markers
+If the write comes back as an error that begins `applied: "unknown"`, re-read
+the passages before doing anything else. Compare them with what you sent, and send again only the markers
 that are still there. Never resend an `insert-passage` without checking that the
 first one did not land.
 
