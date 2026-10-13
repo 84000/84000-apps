@@ -314,6 +314,25 @@ describe('getWorkSnapshot', () => {
     expect(t.scheduled).toHaveLength(2);
   });
 
+  it('still serves a stale snapshot when the refresh claim errors', async () => {
+    const t = setup();
+    await t.call();
+    t.state.liveKey = '2026-10-13T10:01:00+00:00';
+    const rpc = t.client.rpc.bind(t.client);
+    (t.client as unknown as { rpc: unknown }).rpc = async (
+      name: string,
+      params: Record<string, unknown>,
+    ) =>
+      name === 'claim_work_snapshot'
+        ? { data: null, error: { message: 'connection reset' } }
+        : rpc(name, params);
+    expect(await t.call()).toMatchObject({
+      status: 'ready',
+      freshness: { current: false, refreshing: false },
+    });
+    expect(t.scheduled).toHaveLength(0);
+  });
+
   it('refreshes an archive older than maxAge even when the key matches', async () => {
     const t = setup();
     await t.call();

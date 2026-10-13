@@ -79,7 +79,8 @@ export interface RetiredEntry {
   retired_at: string;
 }
 
-interface SnapshotRow {
+/** A `work_snapshots` row. */
+export interface WorkSnapshotRow {
   work_uuid: string;
   object_path: string | null;
   draft_touched_at: string | null;
@@ -135,20 +136,20 @@ export const sameDraftKey = (
 const readRow = async (
   client: DataClient,
   workUuid: string,
-): Promise<SnapshotRow | null> => {
+): Promise<WorkSnapshotRow | null> => {
   const { data, error } = await client
     .from('work_snapshots')
     .select(ROW_COLUMNS)
     .eq('work_uuid', workUuid)
     .maybeSingle();
   if (error) throw new Error(`Reading work_snapshots: ${error.message}`);
-  return (data as SnapshotRow | null) ?? null;
+  return (data as WorkSnapshotRow | null) ?? null;
 };
 
-const leaseHeld = (row: SnapshotRow, now: number) =>
+const leaseHeld = (row: WorkSnapshotRow, now: number) =>
   !!row.lease_id && !!row.lease_until && Date.parse(row.lease_until) > now;
 
-const refOf = (row: SnapshotRow): WorkSnapshotRef | null => {
+const refOf = (row: WorkSnapshotRow): WorkSnapshotRef | null => {
   if (!row.object_path || !row.manifest || !row.generated_at) return null;
   return {
     workUuid: row.work_uuid,
@@ -167,7 +168,7 @@ const freshnessOf = ({
   settings,
   refreshing,
 }: {
-  row: SnapshotRow;
+  row: WorkSnapshotRow;
   liveKey: string | null;
   now: number;
   settings: SnapshotStoreSettings;
@@ -216,7 +217,7 @@ const settle = ({
   now,
   settings,
 }: {
-  row: SnapshotRow | null;
+  row: WorkSnapshotRow | null;
   liveKey: string | null;
   now: number;
   settings: SnapshotStoreSettings;
@@ -284,20 +285,25 @@ export const getWorkSnapshot = async ({
   const ref = row && refOf(row);
 
   if (row && ref) {
+    const at = now();
     const freshness = freshnessOf({
       row,
       liveKey: resolved.draftTouchedAt,
-      now: now(),
+      now: at,
       settings,
-      refreshing: leaseHeld(row, now()),
+      refreshing: leaseHeld(row, at),
     });
     if (freshness.current) return { status: 'ready', snapshot: ref, freshness };
 
+    // A stale snapshot is still worth serving if the refresh cannot be claimed.
     const lease = await claim({
       client,
       workUuid,
       expectedPath: ref.snapshotId,
       settings,
+    }).catch((error) => {
+      log(`Claiming a refresh of ${workUuid}`, error);
+      return null;
     });
     if (lease) {
       schedule(async () => {
@@ -408,7 +414,7 @@ export const regenerate = async ({
 
   if (completeError) {
     // The update may have committed or still be pending, so keep the upload; a later
-    // prune classifies it.
+    // prune classifies it. The lease is left to expire.
     log(`Completing ${workUuid} (outcome unknown)`, completeError.message);
     const after = await readRow(client, workUuid).catch(() => null);
     return after?.object_path === path ? 'completed' : 'ambiguous';
@@ -433,7 +439,7 @@ export const prune = async ({
   settings,
 }: {
   client: DataClient;
-  row: SnapshotRow;
+  row: WorkSnapshotRow;
   now: number;
   settings: SnapshotStoreSettings;
 }): Promise<string[]> => {
