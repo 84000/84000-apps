@@ -1147,6 +1147,37 @@ describe('savePassagesWithDeletions failure propagation', () => {
     expect(labelsIndex).toBeGreaterThan(deleteIndex);
   });
 
+  it('writes what a delete renumbers on a payload passage after the delete', async () => {
+    const state = createState({
+      annotations: [],
+      passages: [
+        { ...passageRow, uuid: 'gone', label: '2', sort: 2 },
+        { ...passageRow, uuid: 'p3', label: '3', sort: 3 },
+        { ...passageRow, uuid: 'p4', label: '4', sort: 4 },
+      ],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        { ...passage, uuid: 'p3', label: '3', sort: 3, annotations: [] },
+      ],
+      deletedUuids: ['gone'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.labelUpserts.flat()).toEqual(
+      expect.arrayContaining([
+        { uuid: 'p3', label: '2' },
+        { uuid: 'p4', label: '3' },
+      ]),
+    );
+    expect(state.ops.indexOf('upsert:passages:labels')).toBeGreaterThan(
+      state.ops.indexOf('delete:passages'),
+    );
+    expect(result.passages.find((row) => row.uuid === 'p3')?.label).toBe('2');
+  });
+
   it('preserves stored annotations for passages with an incomplete export', async () => {
     const state = createState({
       annotations: [

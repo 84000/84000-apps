@@ -340,6 +340,98 @@ describe('planLabels', () => {
     ).toBe(0);
   });
 
+  it('passes over an unlabelled passage among the children', () => {
+    const index = [
+      row('new', '3', 2),
+      row('a', '3', 3),
+      row('a1', '3.1', 4),
+      row('blank', '', 5),
+      row('a2', '3.2', 6),
+      row('b', '4', 7),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({ new: '3', a: '4', a1: '4.1', blank: '', a2: '4.2', b: '5' });
+  });
+
+  it('passes over a child the client already moved with its parent', () => {
+    const index = [
+      row('new', '3', 2),
+      row('a', '3', 3),
+      row('a1', '4.1', 4),
+      row('a2', '3.2', 5),
+      row('b', '4', 6),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new', 'a1']),
+      }),
+    ).toEqual({ new: '3', a: '4', a1: '4.1', a2: '4.2', b: '5' });
+  });
+
+  it('renames the per-Toh children of a passage without a Toh', () => {
+    const index = [
+      row('new', '3', 2),
+      row('a', '3', 3),
+      row('a1', '3.1', 4, 'toh1'),
+      row('a1v', '3.1', 5, 'toh2'),
+      row('b', '4', 6),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({ new: '3', a: '4', a1: '4.1', a1v: '4.1', b: '5' });
+  });
+
+  it('keeps the slot of a deleted variant whose sibling sits past its children', () => {
+    const index = [
+      row('a', 'n.1', 1),
+      row('v1', 'n.2', 2, 'toh1'),
+      row('v1a', 'n.2.1', 3, 'toh1'),
+      row('v2', 'n.2', 4, 'toh2'),
+      row('c', 'n.3', 5),
+    ];
+
+    expect(
+      planLabels({
+        index,
+        inserts: [],
+        deletedUuids: new Set(['v1']),
+        clientRenumberedUuids: none,
+      }).final.size,
+    ).toBe(0);
+  });
+
+  it('closes the slot when the only namesake of another Toh is elsewhere', () => {
+    const index = [
+      row('far', 'n.2', 0, 'toh2'),
+      row('a', 'n.1', 1),
+      row('gone', 'n.2', 2, 'toh1'),
+      row('c', 'n.3', 3),
+      row('d', 'n.4', 4),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [],
+        deletedUuids: new Set(['gone']),
+        clientRenumberedUuids: none,
+      }),
+    ).toEqual({ far: 'n.2', a: 'n.1', c: 'n.2', d: 'n.3' });
+  });
+
   it('walks from a deleted variant whose slot the client moved another onto', () => {
     // E was stored as n.6 and sent as n.5, so D's slot is not still held.
     const index = [

@@ -140,11 +140,46 @@ export const renumberAfter = (
     for (let next = at + 1; next < rows.length; next++) {
       const child = rows[next];
       if (!before[next] || otherToh(child.toh, row.toh)) continue;
+      // The client already moved this child with its parent.
+      if (
+        clientRenumberedUuids.has(child.uuid) &&
+        before[next].startsWith(`${label}.`)
+      ) {
+        continue;
+      }
       if (!before[next].startsWith(oldPrefix)) break;
       renamed.set(next, `${label}.${before[next].slice(oldPrefix.length)}`);
     }
   });
   renamed.forEach((label, at) => (rows[at].label = label));
+};
+
+/**
+ * Whether a per-text variant of `row`'s slot survives the delete: a row of
+ * another Toh holding the same stored label, next to `row` in position with
+ * only deeper or unlabelled rows between them. A namesake further off is
+ * another slot.
+ */
+const variantRemains = (
+  rows: LabelRow[],
+  row: LabelRow,
+  storedLabels: Map<string, string>,
+  deletedUuids: Set<string>,
+): boolean => {
+  const stored = storedLabels.get(row.uuid);
+  if (stored === undefined) return false;
+  const depth = stored.split('.').length;
+  const at = rows.indexOf(row);
+  for (const step of [-1, 1]) {
+    for (let next = at + step; next >= 0 && next < rows.length; next += step) {
+      const other = rows[next];
+      const label = storedLabels.get(other.uuid) ?? other.label;
+      if (!label || label.split('.').length > depth) continue;
+      if (label !== stored || other.toh === null) break;
+      if (!deletedUuids.has(other.uuid)) return true;
+    }
+  }
+  return false;
 };
 
 /** The labels a save changes, in the two steps it writes them. */
@@ -213,17 +248,11 @@ export const planLabels = ({
   deleted
     .filter((row) => row.label)
     // Another per-text variant still holds the slot, so nothing moves up.
-    .filter((row) => {
-      const stored = storedLabels.get(row.uuid);
-      return (
+    .filter(
+      (row) =>
         row.toh === null ||
-        stored === undefined ||
-        !remaining.some(
-          (other) =>
-            other.toh !== null && storedLabels.get(other.uuid) === stored,
-        )
-      );
-    })
+        !variantRemains(rows, row, storedLabels, deletedUuids),
+    )
     .forEach((row) =>
       renumberAfter(remaining, {
         fromSort: row.sort,

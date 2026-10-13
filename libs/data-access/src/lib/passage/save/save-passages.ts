@@ -37,7 +37,10 @@ import { validateSave } from './validate';
  * upserts, stale annotation deletes, passage deletions, then the labels
  * deleting renumbered.
  * Labels are planned before any write. Every write is an idempotent upsert or
- * delete keyed by uuid, so a retry of the same save converges.
+ * delete keyed by uuid, so a retry of the same save converges on content.
+ * Label renumbering does not: a retry no longer sees the inserts as new or
+ * the deleted passages as there, so a label step that failed is not redone,
+ * and a payload passage is written back with the label the client sent.
  *
  * A save places new passages but never moves an existing one: a changed
  * `sort` on an existing passage is ignored, and moving one needs an explicit
