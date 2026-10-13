@@ -3,7 +3,17 @@ import { join, relative, sep } from 'path';
 
 const root = join(__dirname, '../../../../../..');
 const saveDir = join('libs', 'data-access', 'src', 'lib', 'passage', 'save');
-const skipped = new Set(['node_modules', 'dist', '.next', '__generated__']);
+const skipped = new Set([
+  'node_modules',
+  'dist',
+  'out',
+  'coverage',
+  'public',
+  'storybook-static',
+  '.next',
+  '.vercel',
+  '__generated__',
+]);
 
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -11,18 +21,25 @@ const sourceFiles = (dir: string): string[] =>
     if (entry.isDirectory()) {
       return skipped.has(entry.name) ? [] : sourceFiles(path);
     }
-    return /\.tsx?$/.test(entry.name) && !/\.spec\.tsx?$/.test(entry.name)
+    return /\.(?:tsx?|m?js)$/.test(entry.name) &&
+      !/\.spec\.(?:tsx?|m?js)$/.test(entry.name)
       ? [path]
       : [];
   });
 
-const passageTable =
-  /\.from\(\s*(?:'(?:passages|passage_annotations)'|relationFor\(\s*'(?:passages|passageAnnotations)'[^)]*\))\s*\)[^;]*?\.(?:upsert|insert|update|delete)\(/g;
-const passageRpc = /\.rpc\(\s*'(?:apply_passage_save|shift_passage_sorts)'/g;
+const q = `['"\`]`;
+const passageTable = new RegExp(
+  `\\.from\\(\\s*(?:${q}(?:passages|passage_annotations)${q}|relationFor\\(\\s*${q}(?:passages|passageAnnotations)${q}[^)]*\\))\\s*\\)[^;]*?\\.(?:upsert|insert|update|delete)\\(`,
+  'g',
+);
+const passageRpc = new RegExp(
+  `\\.rpc\\(\\s*${q}(?:apply_passage_save|shift_passage_sorts)${q}`,
+  'g',
+);
 
 describe('passage writes', () => {
   it('all go through the shared save', () => {
-    const writers = ['libs', 'apps']
+    const writers = ['libs', 'apps', 'tools']
       .flatMap((dir) => sourceFiles(join(root, dir)))
       .filter((file) => {
         const text = readFileSync(file, 'utf8');

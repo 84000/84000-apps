@@ -28,14 +28,47 @@ const remap = (
   });
 
 describe('offsetMap', () => {
+  const offsets = (
+    before: string,
+    after: string,
+    start: number,
+    end: number,
+  ) => {
+    const map = offsetMap(before, after);
+    return [map(start, 'start'), map(end, 'end')];
+  };
+
   it('moves offsets after a single edit exactly', () => {
-    const map = offsetMap('Body text', 'My body text');
-    expect([map(5, 'start'), map(9, 'end')]).toEqual([8, 12]);
+    expect(offsets('Body text', 'My body text', 5, 9)).toEqual([
+      { offset: 8, exact: true },
+      { offset: 12, exact: true },
+    ]);
   });
 
-  it('sends offsets inside the changed region to its edges', () => {
-    const map = offsetMap('abcXYZdef', 'abcQdef');
-    expect([map(4, 'start'), map(5, 'end')]).toEqual([3, 4]);
+  it('sends offsets inside the changed region to its edges, inexactly', () => {
+    expect(offsets('abcXYZdef', 'abcQdef', 4, 5)).toEqual([
+      { offset: 3, exact: false },
+      { offset: 4, exact: false },
+    ]);
+  });
+
+  it('puts text inserted where a row starts before it, and where it ends after', () => {
+    expect(offsets('Body text', 'Body Xtext', 5, 9)).toEqual([
+      { offset: 6, exact: true },
+      { offset: 10, exact: true },
+    ]);
+    expect(offsets('Body text', 'BodyX text', 0, 4)[1]).toEqual({
+      offset: 4,
+      exact: true,
+    });
+  });
+
+  it('does not split a surrogate pair', () => {
+    // The second emoji, at [3, 5), becomes the new one at [1, 3).
+    expect(offsets('x\u{1F600}\u{1F600}y', 'x\u{1F601}y', 3, 5)).toEqual([
+      { offset: 1, exact: false },
+      { offset: 3, exact: true },
+    ]);
   });
 });
 
@@ -48,9 +81,24 @@ describe('remapIgnoredRows', () => {
     expect(warnings).toEqual([]);
   });
 
-  it('keeps a row in range across an edit in two places', () => {
-    const { moved } = remap('Body text', 'Bodies texts', [quote('q', 5, 9)]);
-    expect(moved).toEqual([expect.objectContaining({ start: 3, end: 12 })]);
+  it('leaves a row inside text changed in two places as stored', () => {
+    // Stretching it over the whole changed region would lose where it was.
+    const { moved, warnings } = remap('foo X foo', 'bar X bar', [
+      quote('x', 4, 5),
+      quote('first', 0, 3),
+    ]);
+    expect(moved).toEqual([]);
+    expect(warnings).toHaveLength(2);
+  });
+
+  it('clamps a row an edit cut through when it would not fit as stored', () => {
+    const { moved } = remap('Body text', 'Body', [quote('q', 2, 7)]);
+    expect(moved).toEqual([expect.objectContaining({ start: 2, end: 4 })]);
+  });
+
+  it('keeps a zero-length row zero-length at an insertion', () => {
+    const { moved } = remap('Body text', 'Body Xtext', [quote('q', 5, 5)]);
+    expect(moved).toEqual([expect.objectContaining({ start: 6, end: 6 })]);
   });
 
   it('leaves a row that would collapse as stored, with a warning', () => {

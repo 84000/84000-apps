@@ -2215,7 +2215,11 @@ describe('replace on the shared save', () => {
     jest.restoreAllMocks();
   });
 
-  const replaceIn = async (state: FakeState, searchText: string) => {
+  const replaceIn = async (
+    state: FakeState,
+    searchText: string,
+    replaceText = '',
+  ) => {
     const client = createFakeClient(state);
     const rows = await fetchReplaceRows({ client, targetUuids: ['passage-1'] });
     if (!rows.ok) throw new Error(rows.error);
@@ -2235,7 +2239,7 @@ describe('replace on the shared save', () => {
         ) as Annotation[],
       },
       searchText,
-      replaceText: '',
+      replaceText,
     });
     return {
       read,
@@ -2267,6 +2271,67 @@ describe('replace on the shared save', () => {
         expect.objectContaining({ uuid: 'annotation-1', start: 0, end: 5 }),
         expect.objectContaining({ uuid: 'reversed', start: 5, end: 2 }),
       ]),
+    );
+  });
+
+  it('keeps overrun and unknown-type rows that do not fit', async () => {
+    const state = createState({
+      annotations: [
+        annotationRow,
+        { ...annotationRow, uuid: 'overrun', end: 50 },
+        { ...annotationRow, uuid: 'odd', type: 'mystery' as never, end: 40 },
+      ],
+      passages: [passageRow],
+    });
+
+    const { read, result } = await replaceIn(state, 'text');
+
+    expect(read.keepAnnotationUuids.sort()).toEqual(['odd', 'overrun']);
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  it('keeps a comment anchor and moves an ignored row with the text', async () => {
+    const state = createState({
+      annotations: [
+        {
+          ...annotationRow,
+          uuid: 'comment',
+          type: 'comment',
+          start: 5,
+          end: 9,
+        },
+        { ...annotationRow, uuid: 'quote', type: 'quote', start: 5, end: 9 },
+      ],
+      passages: [passageRow],
+    });
+
+    const { result } = await replaceIn(state, 'Body ');
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+    ['comment', 'quote'].forEach((uuid) =>
+      expect(state.annotations.find((row) => row.uuid === uuid)).toMatchObject({
+        start: 0,
+        end: 4,
+      }),
+    );
+  });
+
+  it('leaves an ignored row between two replaced occurrences as stored', async () => {
+    const state = createState({
+      annotations: [
+        { ...annotationRow, uuid: 'quote', type: 'quote', start: 4, end: 5 },
+      ],
+      passages: [{ ...passageRow, content: 'foo X foo' }],
+    });
+
+    const { result } = await replaceIn(state, 'foo', 'bar');
+
+    expect(result.success).toBe(true);
+    expect(result.warnings).toEqual([expect.stringContaining('quote')]);
+    expect(state.annotations.find((row) => row.uuid === 'quote')).toMatchObject(
+      { start: 4, end: 5 },
     );
   });
 
