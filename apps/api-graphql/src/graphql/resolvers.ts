@@ -21,6 +21,10 @@ import { passageQueries } from './schema/passage/passage.query';
 import { publishMutations } from './schema/publish/publish.mutation';
 import { publishQueries } from './schema/publish/publish.query';
 import {
+  snapshotMutations,
+  workSnapshotResolvers,
+} from './schema/snapshot/snapshot.mutation';
+import {
   replaceMutation,
   savePassagesMutation,
 } from './schema/passage/passage.mutation';
@@ -74,6 +78,7 @@ export const resolvers = {
   Mutation: {
     ...commentMutations,
     ...publishMutations,
+    ...snapshotMutations,
     replace: replaceMutation,
     savePassages: savePassagesMutation,
   },
@@ -105,6 +110,8 @@ export const resolvers = {
     comments: passageCommentsResolver,
     unanchoredComments: passageUnanchoredCommentsResolver,
   },
+
+  WorkSnapshot: workSnapshotResolvers,
 
   Comment: {
     author: commentAuthorResolver,

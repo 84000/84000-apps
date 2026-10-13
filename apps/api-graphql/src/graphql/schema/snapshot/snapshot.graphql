@@ -1,0 +1,76 @@
+"""
+A work's draft as a file tree, packed as a tar.gz, cached until the draft changes.
+"""
+type WorkSnapshot {
+  status: WorkSnapshotStatus!
+
+  """
+  Identifies one stored archive; it never changes content. Null unless READY.
+  """
+  snapshotId: String
+  workUuid: ID
+
+  """
+  The archive's top-level directory: the work's first Toh, else its uuid.
+  """
+  root: String
+  generatedAt: String
+
+  """
+  Built from the current draft (as tracked) and not older than a day.
+  """
+  current: Boolean
+
+  """
+  The draft has been edited since this snapshot was built.
+  """
+  draftChangedSince: Boolean
+  ageMinutes: Int
+
+  """
+  A newer snapshot is being built.
+  """
+  refreshing: Boolean
+
+  """
+  Compressed size in bytes.
+  """
+  archiveBytes: Float
+
+  """
+  Per-file bytes, lines and sha256, and row counts.
+  """
+  manifest: JSON
+
+  """
+  When GENERATING or FAILED: seconds to wait before asking again.
+  """
+  retryAfterSeconds: Int
+  error: String
+
+  """
+  A short-lived download URL for this exact archive. Signed only when selected.
+  """
+  download: SnapshotDownload
+}
+
+enum WorkSnapshotStatus {
+  READY
+  GENERATING
+  FAILED
+  NOT_FOUND
+}
+
+type SnapshotDownload {
+  url: String!
+  expiresAt: String!
+  filename: String!
+}
+
+extend type Mutation {
+  """
+  The work's draft snapshot, built on first request. A stale one is returned at once
+  while a newer one is built. Requires editor.read.
+  """
+  ensureWorkSnapshot(work: String!): WorkSnapshot!
+}
