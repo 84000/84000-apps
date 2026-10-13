@@ -55,10 +55,10 @@ const ignored = new Set<string>(ANNOTATIONS_TO_IGNORE);
  * The annotation writes a save makes: rows that differ from what is stored,
  * and stored rows on a saved passage that the save no longer has. Stored
  * rows are kept when their passage's export was incomplete, when the caller
- * keeps them as stored or limits deletes to `deletable`, when they are of a
- * type editors never load, or when the caller sent them but they could not
- * be serialized. Rows of a type editors never load follow their passage's
- * text where they safely can; see `remapIgnoredRows`.
+ * keeps them as stored, when they are of a type editors never load and the
+ * passage was not sent as raw rows, or when the caller sent them but they
+ * could not be serialized. Rows of a type editors never load follow their
+ * passage's text where they safely can; see `remapIgnoredRows`.
  */
 export const planAnnotations = ({
   passages,
@@ -66,7 +66,7 @@ export const planAnnotations = ({
   existing,
   storedContent,
   keep = [],
-  deletable,
+  rawPassageUuids = new Set(),
 }: {
   passages: Passage[];
   annotationRows: AnnotationDTO[];
@@ -74,7 +74,8 @@ export const planAnnotations = ({
   /** Stored content of each saved passage that already exists. */
   storedContent: Map<string, string>;
   keep?: readonly string[];
-  deletable?: readonly string[];
+  /** Passages sent as their full raw state, every type included. */
+  rawPassageUuids?: Set<string>;
 }): {
   upserts: AnnotationWriteRow[];
   unchanged: AnnotationWriteRow[];
@@ -109,14 +110,10 @@ export const planAnnotations = ({
     sent.has(row.uuid) ||
     kept.has(row.uuid) ||
     incomplete.has(row.passage_uuid);
-  const allowed = deletable ? new Set(deletable) : undefined;
+  const raw = (row: ExistingAnnotationRow) =>
+    rawPassageUuids.has(row.passage_uuid);
   const deletes = existing
-    .filter(
-      (row) =>
-        !leftAlone(row) &&
-        !ignored.has(row.type) &&
-        (!allowed || allowed.has(row.uuid)),
-    )
+    .filter((row) => !leftAlone(row) && (raw(row) || !ignored.has(row.type)))
     .map((row) => row.uuid);
 
   const { moved, warnings } = remapIgnoredRows({
@@ -125,7 +122,7 @@ export const planAnnotations = ({
     content: new Map(
       passages.map((passage) => [passage.uuid, passage.content]),
     ),
-    skip: leftAlone,
+    skip: (row) => leftAlone(row) || raw(row),
   });
   moved.forEach((row) =>
     upserts.push(annotationWriteRow(row, stored.get(row.uuid))),

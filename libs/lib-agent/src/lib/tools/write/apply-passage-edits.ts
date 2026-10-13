@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import type { DataClient, PassageEdit } from '@eightyfourthousand/data-access';
-import { applyPassageEdits, hasPermission } from '@eightyfourthousand/data-access';
+import {
+  applyPassageEdits,
+  hasPermission,
+} from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
 
@@ -18,6 +21,11 @@ const editSchema = z.discriminatedUnion('op', [
       .int()
       .nonnegative()
       .describe('Exclusive offset into the stored content.'),
+    text: z
+      .string()
+      .describe(
+        'The exact text start–end covers in the stored content. The edit is refused if it is not there, so a cut already made is not made twice.',
+      ),
   }),
   z.object({
     op: z.literal('add-annotation'),
@@ -97,7 +105,7 @@ export function createApplyPassageEditsTool(
   return {
     name: 'apply-passage-edits',
     description:
-      'Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Use apply-entity-import instead to fill an empty work. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
+      'Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Every write is all-or-nothing. If the result says applied "unknown", re-read the passages before issuing anything again. Use apply-entity-import instead to fill an empty work. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
     inputSchema,
     annotations: {
       title: 'Apply Passage Edits',
@@ -125,12 +133,17 @@ export function createApplyPassageEditsTool(
           dryRun,
         });
 
+        if (result.applied === 'unknown') {
+          return errorResult(
+            `applied: "unknown". ${result.error ?? 'The save may have been applied.'} Re-read the passages with get-passage and compare them with what you sent before issuing any edit again; do not retry blindly.`,
+          );
+        }
         if (!result.success) {
           return errorResult(result.error ?? 'Failed to apply passage edits.');
         }
 
         return jsonResult({
-          applied: !result.dryRun,
+          applied: result.applied,
           dryRun: result.dryRun,
           warnings: result.warnings,
           passages: result.passages.map((passage) => ({

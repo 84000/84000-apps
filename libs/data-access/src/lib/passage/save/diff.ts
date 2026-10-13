@@ -7,7 +7,7 @@ export type ExistingAnnotationRow = AnnotationDTO & {
   passage_uuid: string;
 };
 
-const stableStringify = (value: unknown): string => {
+export const stableStringify = (value: unknown): string => {
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(',')}]`;
   }

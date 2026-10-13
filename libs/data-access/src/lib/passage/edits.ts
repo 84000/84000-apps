@@ -1,27 +1,33 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
-  type Annotation,
   type AnnotationDTO,
-  type Annotations,
   type BodyItemType,
   type DataClient,
   type Passage,
   type PassageDTO,
+  annotationFromDTO,
   annotationFromImport,
   annotationRangeFits,
+  annotationToDTO,
   annotationsFromDTO,
   passageFromDTO,
 } from '../types';
 import { readAnnotationsByPassageUuids } from './batch';
 import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
+import { stableStringify } from './save/diff';
 import { inBatches } from './in-batches';
 
-/** Remove a span of text from a passage. Offsets are in the stored content. */
+/**
+ * Remove a span of text from a passage. Offsets are in the stored content,
+ * and `text` is exactly what they cover: an edit whose text is not there is
+ * refused, so one already applied is not applied again.
+ */
 export type DeleteTextEdit = {
   op: 'delete-text';
   passageUuid: string;
   start: number;
   end: number;
+  text: string;
 };
 
 /** Add an annotation. `end` defaults to `start`, giving a zero-length marker. */
@@ -57,13 +63,19 @@ export type PassageEdit =
   | InsertPassageEdit;
 
 export type PassageEditWarning = {
-  passageUuid: string;
+  /** Absent for a warning about the save as a whole. */
+  passageUuid?: string;
   message: string;
 };
 
 export type ApplyPassageEditsResult = {
   success: boolean;
   dryRun: boolean;
+  /**
+   * Whether the edits were written. `'unknown'` when the save's response was
+   * lost: re-read the passages before issuing anything again.
+   */
+  applied: boolean | 'unknown';
   passages: Passage[];
   warnings: PassageEditWarning[];
   error?: string;
@@ -129,25 +141,29 @@ const applyDeletions = (content: string, deletions: Deletion[]): string =>
       content,
     );
 
-/**
- * Re-map an annotation onto the edited content. Returns null when the
- * annotation is swallowed by a deletion: a range that collapses to nothing
- * marked text that no longer exists, and keeping it as a zero-length
- * annotation would silently change what it means.
- */
-const remapAnnotation = (
-  annotation: Annotation,
-  deletions: Deletion[],
-): Annotation | null => {
-  const start = mapOffset(annotation.start, deletions);
-  const end = mapOffset(annotation.end, deletions);
-
-  if (annotation.start !== annotation.end && start === end) {
-    return null;
-  }
-
-  return { ...annotation, start, end };
+/** A row's content as its domain type would write it back. */
+const normalizedContent = (row: AnnotationDTO, length: number) => {
+  const dto = annotationToDTO(annotationFromDTO(row, length)) ?? row;
+  return stableStringify([dto.content ?? [], dto.toh ?? null]);
 };
+
+/**
+ * The row in `rows` that `row` duplicates: the same type and range, and the
+ * same content once both are normalized, so rows written by older importers
+ * with other key sets still match.
+ */
+const duplicateOf = (
+  rows: AnnotationDTO[],
+  row: AnnotationDTO,
+  length: number,
+) =>
+  rows.find(
+    (other) =>
+      other.type === row.type &&
+      other.start === row.start &&
+      other.end === row.end &&
+      normalizedContent(other, length) === normalizedContent(row, length),
+  );
 
 const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
   edit.op !== 'insert-passage' && edit.passageUuid === uuid;
@@ -156,36 +172,46 @@ const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
  * Compute the edited passages without touching the database.
  *
  * Every offset in `edits` is read in the coordinates of the passage as given,
- * before any edit is applied. Deletions are cut, surviving annotations are
- * re-mapped onto the shortened content, and added annotations land at the
- * mapped position of the offset supplied — so a caller describes what it wants
- * changed and never tracks what its own edits moved.
+ * before any edit is applied. Deletions are cut, the stored annotation rows
+ * of every type are moved onto the shortened content, and added annotations
+ * land at the mapped position of the offset supplied, so a caller describes
+ * what it wants changed and never tracks what its own edits moved.
  *
- * Annotations the edits do not mention are carried through, re-mapped where a
- * deletion moved them. `droppedAnnotationUuids` lists the stored annotations
- * the edits removed or swallowed: the only ones a save may delete.
+ * Returns each edited passage's full annotation state as stored rows, written
+ * back verbatim apart from their offsets, and the same as domain annotations
+ * for display.
  */
 export const applyEditsToPassages = ({
   workUuid,
   passages,
+  annotations,
   edits,
 }: {
   workUuid: string;
   passages: Passage[];
+  /** Every stored annotation row of each passage, by passage uuid. */
+  annotations: Map<string, AnnotationDTO[]>;
   edits: PassageEdit[];
 }): {
   passages: Passage[];
+  rawAnnotations: Record<string, AnnotationDTO[]>;
   warnings: PassageEditWarning[];
   /** Each inserted passage's neighbour, for the save to place it by. */
   anchors: Record<string, NewPassageAnchor>;
-  droppedAnnotationUuids: string[];
   error?: string;
 } => {
   const warnings: PassageEditWarning[] = [];
   const anchors: Record<string, NewPassageAnchor> = {};
-  const dropped: string[] = [];
+  const rawAnnotations: Record<string, AnnotationDTO[]> = {};
   const stored = new Map(passages.map((passage) => [passage.uuid, passage]));
   const edited: Passage[] = [];
+  const fail = (error: string) => ({
+    passages: [],
+    rawAnnotations: {},
+    warnings,
+    anchors,
+    error,
+  });
 
   for (const [uuid, passage] of stored) {
     const forPassage = edits.filter((edit) => isPassageEditFor(edit, uuid));
@@ -193,20 +219,24 @@ export const applyEditsToPassages = ({
       continue;
     }
 
+    const cuts = forPassage.filter(
+      (edit): edit is DeleteTextEdit => edit.op === 'delete-text',
+    );
     const deletions = mergeDeletions(
-      forPassage
-        .filter((edit): edit is DeleteTextEdit => edit.op === 'delete-text')
-        .map(({ start, end }) => ({ start, end })),
+      cuts.map(({ start, end }) => ({ start, end })),
       passage.content.length,
     );
     if (typeof deletions === 'string') {
-      return {
-        passages: [],
-        warnings,
-        anchors,
-        droppedAnnotationUuids: [],
-        error: `Passage ${uuid}: ${deletions}`,
-      };
+      return fail(`Passage ${uuid}: ${deletions}`);
+    }
+    const misread = cuts.find(
+      (cut) => passage.content.slice(cut.start, cut.end) !== cut.text,
+    );
+    if (misread) {
+      const found = passage.content.slice(misread.start, misread.end);
+      return fail(
+        `Passage ${uuid}: expected ${JSON.stringify(misread.text)} at ${misread.start}–${misread.end} but found ${JSON.stringify(found)}. If this edit was already applied, re-read the passage.`,
+      );
     }
 
     const removed = new Set(
@@ -219,49 +249,47 @@ export const applyEditsToPassages = ({
     );
 
     const content = applyDeletions(passage.content, deletions);
-    const kept: Annotations = [];
+    const storedRows = annotations.get(uuid) ?? [];
+    const rows: AnnotationDTO[] = [];
 
     for (const annotationUuid of removed) {
-      if (!passage.annotations.some((a) => a.uuid === annotationUuid)) {
+      if (!storedRows.some((row) => row.uuid === annotationUuid)) {
         warnings.push({
           passageUuid: uuid,
-          message: `Did not remove annotation ${annotationUuid}: it is not on this passage, or is a type edits cannot change.`,
+          message: `Did not remove annotation ${annotationUuid}: it is not on this passage.`,
         });
       }
     }
 
-    for (const annotation of passage.annotations) {
-      if (removed.has(annotation.uuid)) {
-        dropped.push(annotation.uuid);
+    for (const row of storedRows) {
+      if (removed.has(row.uuid)) {
         continue;
       }
       // A stored row already out of range cannot be moved meaningfully; it
       // is carried as stored.
       if (
         deletions.length > 0 &&
-        !annotationRangeFits(
-          annotation.start,
-          annotation.end,
-          passage.content.length,
-        )
+        !annotationRangeFits(row.start, row.end, passage.content.length)
       ) {
-        kept.push(annotation);
+        rows.push(row);
         warnings.push({
           passageUuid: uuid,
-          message: `Left ${annotation.type} annotation ${annotation.uuid} as stored: its range [${annotation.start}, ${annotation.end}) was already outside the passage.`,
+          message: `Left ${row.type} annotation ${row.uuid} as stored: its range [${row.start}, ${row.end}) was already outside the passage.`,
         });
         continue;
       }
-      const remapped = remapAnnotation(annotation, deletions);
-      if (!remapped) {
-        dropped.push(annotation.uuid);
+      const start = mapOffset(row.start, deletions);
+      const end = mapOffset(row.end, deletions);
+      // A range that collapses marked text that no longer exists; keeping it
+      // as a zero-length annotation would change what it means.
+      if (row.start !== row.end && start === end) {
         warnings.push({
           passageUuid: uuid,
-          message: `Dropped ${annotation.type} annotation ${annotation.uuid}: the text it marked was deleted.`,
+          message: `Dropped ${row.type} annotation ${row.uuid}: the text it marked was deleted.`,
         });
         continue;
       }
-      kept.push(remapped);
+      rows.push({ ...row, start, end });
     }
 
     for (const edit of forPassage) {
@@ -278,21 +306,29 @@ export const applyEditsToPassages = ({
         passageText: content,
         data: edit.data,
       });
-
-      if (!annotation) {
-        return {
-          passages: [],
-          warnings,
-          anchors,
-          droppedAnnotationUuids: [],
-          error: `Cannot build a "${edit.kind}" annotation for passage ${uuid}. The kind has no importer, or required data is missing.`,
-        };
+      const row = annotation && annotationToDTO(annotation);
+      if (!row) {
+        return fail(
+          `Cannot build a "${edit.kind}" annotation for passage ${uuid}. The kind has no importer, or required data is missing.`,
+        );
       }
-
-      kept.push(annotation);
+      const existing = duplicateOf(rows, row, content.length);
+      if (existing) {
+        warnings.push({
+          passageUuid: uuid,
+          message: `Skipped add-annotation: identical ${edit.kind} ${existing.uuid} already at ${row.start}–${row.end}.`,
+        });
+        continue;
+      }
+      rows.push({ ...row, passage_uuid: uuid });
     }
 
-    edited.push({ ...passage, content, annotations: kept });
+    rawAnnotations[uuid] = rows;
+    edited.push({
+      ...passage,
+      content,
+      annotations: annotationsFromDTO(rows, content.length),
+    });
   }
 
   for (const edit of edits) {
@@ -301,18 +337,13 @@ export const applyEditsToPassages = ({
     }
     const anchor = stored.get(edit.before);
     if (!anchor) {
-      return {
-        passages: [],
-        warnings,
-        anchors,
-        droppedAnnotationUuids: [],
-        error: `Cannot insert before ${edit.before}: no such passage.`,
-      };
+      return fail(`Cannot insert before ${edit.before}: no such passage.`);
     }
     // Placed by the passage it goes before: several inserts in one save
     // would otherwise share this sort and tie.
     const uuid = uuidv4();
     anchors[uuid] = { before: edit.before };
+    rawAnnotations[uuid] = [];
     edited.push({
       uuid,
       workUuid,
@@ -325,17 +356,13 @@ export const applyEditsToPassages = ({
     });
   }
 
-  return {
-    passages: edited,
-    warnings,
-    anchors,
-    droppedAnnotationUuids: dropped,
-  };
+  return { passages: edited, rawAnnotations, warnings, anchors };
 };
 
 /**
- * Read the passages an edit set names, apply the edits, and persist the result.
- * `dryRun` returns what would be written without writing it.
+ * Read the passages an edit set names, apply the edits, and persist the result
+ * in one commit. `dryRun` returns what would be written without writing it.
+ * Never retries: after `applied: 'unknown'`, the caller re-reads first.
  */
 export const applyPassageEdits = async ({
   client,
@@ -348,6 +375,17 @@ export const applyPassageEdits = async ({
   edits: PassageEdit[];
   dryRun?: boolean;
 }): Promise<ApplyPassageEditsResult> => {
+  const failed = (
+    error: string,
+    warnings: PassageEditWarning[] = [],
+  ): ApplyPassageEditsResult => ({
+    success: false,
+    dryRun,
+    applied: false,
+    passages: [],
+    warnings,
+    error,
+  });
   const targetUuids = [
     ...new Set(
       edits.flatMap((edit) =>
@@ -365,13 +403,7 @@ export const applyPassageEdits = async ({
       .in('uuid', batch);
 
     if (error) {
-      return {
-        success: false,
-        dryRun,
-        passages: [],
-        warnings: [],
-        error: `Failed to read passages: ${error.message}`,
-      };
+      return failed(`Failed to read passages: ${error.message}`);
     }
     rows.push(...((data ?? []) as PassageDTO[]));
   }
@@ -379,16 +411,11 @@ export const applyPassageEdits = async ({
     (uuid) => !rows.some((row) => row.uuid === uuid),
   );
   if (missing.length > 0) {
-    return {
-      success: false,
-      dryRun,
-      passages: [],
-      warnings: [],
-      error: `Not in work ${workUuid}: ${missing.join(', ')}`,
-    };
+    return failed(`Not in work ${workUuid}: ${missing.join(', ')}`);
   }
 
-  // The draft copy, legacy rows included: this is what the save writes over.
+  // Every row of every type in the draft copy: the full state the save
+  // writes, so a row left out of it is one an edit removed.
   const annotationsRead = await readAnnotationsByPassageUuids({
     client,
     passageUuids: targetUuids,
@@ -396,83 +423,42 @@ export const applyPassageEdits = async ({
     includeDeprecated: true,
   });
   if ('error' in annotationsRead) {
-    return {
-      success: false,
-      dryRun,
-      passages: [],
-      warnings: [],
-      error: `Failed to read annotations: ${annotationsRead.error}`,
-    };
+    return failed(`Failed to read annotations: ${annotationsRead.error}`);
   }
-  const annotationsByPassage = annotationsRead.data;
-
-  const stored = rows.map((row) =>
-    passageFromDTO(
-      row,
-      annotationsFromDTO(
-        annotationsByPassage.get(row.uuid) ?? [],
-        row.content?.length ?? 0,
-      ),
-    ),
-  );
 
   const {
     passages,
+    rawAnnotations,
     warnings,
     anchors,
-    droppedAnnotationUuids,
     error: editError,
   } = applyEditsToPassages({
     workUuid,
-    passages: stored,
+    passages: rows.map((row) => passageFromDTO(row, [])),
+    annotations: annotationsRead.data,
     edits,
   });
 
   if (editError) {
-    return { success: false, dryRun, passages: [], warnings, error: editError };
+    return failed(editError, warnings);
   }
 
   if (dryRun) {
-    return { success: true, dryRun, passages, warnings };
+    return { success: true, dryRun, applied: false, passages, warnings };
   }
-
-  // Send only what an edit added or moved, and let the save delete only what
-  // an edit dropped. Everything else stays exactly as stored, and rows written
-  // since the read survive. A moved annotation is written from its stored row
-  // with only the offsets changed: the domain round-trip is not lossless.
-  const storedRows = new Map(
-    [...annotationsByPassage.values()].flat().map((row) => [row.uuid, row]),
-  );
-  const movedRows: AnnotationDTO[] = [];
-  const toSave = passages.map((passage) => ({
-    ...passage,
-    annotations: passage.annotations.filter((annotation) => {
-      const row = storedRows.get(annotation.uuid);
-      if (!row) {
-        return true;
-      }
-      if (row.start !== annotation.start || row.end !== annotation.end) {
-        movedRows.push({
-          ...row,
-          start: annotation.start,
-          end: annotation.end,
-        });
-      }
-      return false;
-    }),
-  }));
 
   const result = await savePassagesWithDeletions({
     client,
-    passages: toSave,
+    passages: passages.map((passage) => ({ ...passage, annotations: [] })),
     anchors,
-    deletableAnnotationUuids: droppedAnnotationUuids,
-    annotationRows: movedRows,
+    rawAnnotations,
   });
+  (result.warnings ?? []).forEach((message) => warnings.push({ message }));
 
   return {
     success: result.success,
     dryRun,
+    applied: result.success ? true : result.outcomeUnknown ? 'unknown' : false,
     passages,
     warnings,
     error: result.error ?? undefined,

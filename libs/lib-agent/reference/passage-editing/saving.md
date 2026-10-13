@@ -13,10 +13,13 @@ tool* below.
 
 | op | what it does |
 |---|---|
-| `delete-text` | cuts `start`–`end` out of the passage content |
+| `delete-text` | cuts `start`–`end` out of the passage content; `text` must be exactly what that range holds |
 | `add-annotation` | adds an annotation of `kind` at `start` (and `end`, if it spans) |
 | `remove-annotation` | removes the annotation with that uuid |
 | `insert-passage` | inserts a passage before an existing one |
+
+`delete-text` refuses the whole call when its `text` is not what the stored
+passage holds at `start`–`end`. Copy it from the passage you read.
 
 `add-annotation` without `end` makes a zero-length marker, which is what a folio
 mention or an end-note link is. See `reference/import-model/annotations.md` for
@@ -39,7 +42,12 @@ What the tool does with the annotations you did not name:
 - one that **spans** the cut keeps its start and loses the cut from its end;
 - one whose text was **entirely** deleted is dropped, with a warning naming it —
   keeping it would turn a range into a zero-length marker, which means something
-  else. If that surprises you, your edit was wrong.
+  else. If that surprises you, your edit was wrong;
+- one whose range was **already** outside the passage is left as stored, with a
+  warning: there is no right place to move it to.
+
+An `add-annotation` identical to one already there — same kind, same position,
+same data — is skipped with a warning, so sending the same add twice is safe.
 
 Read `offsets.md` for why this is the part worth getting right.
 
@@ -48,6 +56,25 @@ Read `offsets.md` for why this is the part worth getting right.
 `dryRun: true` computes the result and returns it without writing. That is the
 preview: the content as it would stand, the annotation counts, and any warnings.
 Show the editor that, not a description of your intentions. See `preview.md`.
+
+## What a write guarantees
+
+A write is **all or nothing**: the content, every annotation and any label the
+insert renumbers land together, or none of them do. The result says which:
+
+- **`applied: true`** — written.
+- **an error** — nothing was written. Fix what it names and send the call again.
+- **`applied: "unknown"`** — the write may have landed, but its answer was lost.
+  **Re-read the passages with `get-passage` and compare them with what you sent
+  before you issue anything again.** Send only what is missing.
+
+The tool never retries for you. After `"unknown"`, do not resend the same call
+blindly:
+
+- a repeated `delete-text` is usually refused, because its `text` is gone — but
+  not always: cutting one "x" out of "xx" leaves an "x" at the same offsets;
+- a repeated `insert-passage` inserts a second passage. Inserts are never
+  treated as duplicates, because two identical neighbours can be deliberate.
 
 ## Inserting a passage
 
@@ -103,9 +130,9 @@ Some passages carry `deprecated-*` annotations — around 23,000 rows across the
 library, left by earlier migrations. They have no domain model, so a read cannot
 say what they are beyond "unmodelled".
 
-They are kept verbatim through an edit and written back as they were. You do not
-need to do anything about them, and you do not need to avoid a passage that has
-one. If you deliberately want one gone, remove it by uuid like any other
+They are kept verbatim through an edit, moved exactly with your cuts like any
+other annotation, and written back as they were. You do not need to do anything
+about them, and you do not need to avoid a passage that has one. If you deliberately want one gone, remove it by uuid like any other
 annotation.
 
 One of them is worth knowing about: `deprecated-temp-mention` holds content in

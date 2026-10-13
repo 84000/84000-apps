@@ -1,11 +1,22 @@
 import type { AnnotationDTO, Passage } from '../../types';
 
+/** A save's input. */
+export type SaveInput = {
+  passages: Passage[];
+  deletedUuids: string[];
+  rawAnnotations?: Record<string, AnnotationDTO[]>;
+  keepAnnotationUuids?: readonly string[];
+};
+
 /** A save's input, checked and with each annotation's passage filled in. */
 export type ValidatedSave = {
   passages: Passage[];
   deletedUuids: string[];
+  /** The raw annotation rows, every passage's together. */
   annotationRows: AnnotationDTO[];
-  keepAnnotationUuids?: readonly string[];
+  /** Passages whose full annotation state is in `annotationRows`. */
+  rawPassageUuids: Set<string>;
+  keepAnnotationUuids: string[];
 };
 
 const firstDuplicate = (values: readonly string[]) => {
@@ -20,14 +31,15 @@ const firstDuplicate = (values: readonly string[]) => {
 /**
  * Checks a save's input before anything is read or written: every passage
  * and annotation once, no passage both saved and deleted, every annotation
- * on a passage in the save, and none both sent and kept as stored.
+ * on a passage in the save, a passage's annotations sent one way only, and
+ * none both sent and kept as stored.
  */
 export const validateSave = ({
   passages,
   deletedUuids,
-  annotationRows,
+  rawAnnotations = {},
   keepAnnotationUuids = [],
-}: ValidatedSave): ValidatedSave | { error: string } => {
+}: SaveInput): ValidatedSave | { error: string } => {
   const reject = (reason: string) => ({
     error: `Invalid save, nothing was saved: ${reason}`,
   });
@@ -59,15 +71,33 @@ export const validateSave = ({
   }));
   if (mismatch) return reject(mismatch);
 
-  let stray: string | undefined;
-  const rows = annotationRows.map((row) => {
-    const passageUuid = row.passage_uuid ?? row.passageUuid ?? '';
-    if (!saved.has(passageUuid) && !stray) {
-      stray = `annotation ${row.uuid} is on passage ${passageUuid || '(none)'}, which is not in the save`;
-    }
-    return { ...row, passage_uuid: passageUuid };
-  });
-  if (stray) return reject(stray);
+  const rawPassageUuids = new Set(Object.keys(rawAnnotations));
+  const stray = [...rawPassageUuids].find((uuid) => !saved.has(uuid));
+  if (stray) {
+    return reject(
+      `raw annotations are sent for passage ${stray}, which is not in the save`,
+    );
+  }
+  const both = filled.find(
+    (passage) =>
+      rawPassageUuids.has(passage.uuid) && passage.annotations.length > 0,
+  );
+  if (both) {
+    return reject(
+      `passage ${both.uuid} sends both annotations and raw annotations`,
+    );
+  }
+  let misfiled: string | undefined;
+  const rows = Object.entries(rawAnnotations).flatMap(([passageUuid, list]) =>
+    list.map((row) => {
+      const named = row.passage_uuid ?? row.passageUuid;
+      if (named && named !== passageUuid && !misfiled) {
+        misfiled = `annotation ${row.uuid} names passage ${named} but is sent with ${passageUuid}`;
+      }
+      return { ...row, passage_uuid: passageUuid };
+    }),
+  );
+  if (misfiled) return reject(misfiled);
 
   const sentAnnotations = [
     ...filled.flatMap((passage) => passage.annotations.map((a) => a.uuid)),
@@ -87,6 +117,7 @@ export const validateSave = ({
     passages: filled,
     deletedUuids: deleted,
     annotationRows: rows,
+    rawPassageUuids,
     keepAnnotationUuids: [...keep],
   };
 };

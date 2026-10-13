@@ -53,8 +53,7 @@ export const savePassagesWithDeletions = async ({
   passages: inputPassages,
   deletedUuids: inputDeletedUuids = [],
   anchors,
-  deletableAnnotationUuids,
-  annotationRows: inputAnnotationRows = [],
+  rawAnnotations,
   keepAnnotationUuids: inputKeepAnnotationUuids,
 }: {
   client: DataClient;
@@ -67,16 +66,11 @@ export const savePassagesWithDeletions = async ({
    */
   anchors?: Record<string, NewPassageAnchor>;
   /**
-   * When given, only these stored annotations may be deleted; any other
-   * annotation absent from the payload is left as stored. For a caller that
-   * sends only the annotations it changed.
+   * Passages' full annotation state as stored rows, every type included, by
+   * passage uuid. Rows are written as given, and a stored row absent from its
+   * passage's list is deleted. Such a passage sends `annotations: []`.
    */
-  deletableAnnotationUuids?: readonly string[];
-  /**
-   * Annotation rows to write as given, alongside the passages' own
-   * annotations, bypassing domain serialization.
-   */
-  annotationRows?: AnnotationDTO[];
+  rawAnnotations?: Record<string, AnnotationDTO[]>;
   /**
    * Stored annotations to leave exactly as stored: not deleted, moved or
    * checked. For rows a caller could not load, such as ones out of range.
@@ -86,13 +80,19 @@ export const savePassagesWithDeletions = async ({
   const valid = validateSave({
     passages: inputPassages,
     deletedUuids: inputDeletedUuids,
-    annotationRows: inputAnnotationRows,
+    rawAnnotations,
     keepAnnotationUuids: inputKeepAnnotationUuids,
   });
   if ('error' in valid) {
     return failure(valid.error);
   }
-  const { passages, deletedUuids, annotationRows, keepAnnotationUuids } = valid;
+  const {
+    passages,
+    deletedUuids,
+    annotationRows,
+    rawPassageUuids,
+    keepAnnotationUuids,
+  } = valid;
   const inputUuids = passages.map((p) => p.uuid);
 
   const notSaved = (error: string) => failure(`${error}; nothing was saved`);
@@ -140,7 +140,7 @@ export const savePassagesWithDeletions = async ({
     existing: annotationsRead.data,
     storedContent,
     keep: keepAnnotationUuids,
-    deletable: deletableAnnotationUuids,
+    rawPassageUuids,
   });
   const endNotes = planEndNoteCleanup({
     storedReferences: references.data,
