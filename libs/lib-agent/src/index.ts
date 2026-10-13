@@ -28,6 +28,27 @@ export {
 } from './lib/tools/harness';
 export { createSessionTools } from './lib/tools/sessions';
 export {
+  createWorkSnapshotCache,
+  createWorkSnapshotSource,
+  notReadyResult,
+  openSnapshot,
+  openSnapshotFiles,
+  toWorkSnapshotStatus,
+  DEFAULT_SNAPSHOT_CACHE_BYTES,
+} from './lib/tools/snapshot';
+export type {
+  EnsureWorkSnapshotResponse,
+  Opened,
+  ReadyWorkSnapshot,
+  WorkSnapshotCache,
+  WorkSnapshotDownload,
+  WorkSnapshotFile,
+  WorkSnapshotFiles,
+  WorkSnapshotManifest,
+  WorkSnapshotSource,
+  WorkSnapshotStatus,
+} from './lib/tools/snapshot';
+export {
   createFeedbackTools,
   createFeedbackIssue,
   linearFeedbackConfigFromEnv,
