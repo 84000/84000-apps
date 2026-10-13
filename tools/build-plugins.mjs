@@ -14,7 +14,7 @@
  * (or $GITHUB_OUTPUT when --github-output is passed) to decide about committing.
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, statSync, existsSync, appendFileSync } from 'node:fs';
-import { join, dirname, resolve, basename } from 'node:path';
+import { join, dirname, resolve, basename, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -268,9 +268,37 @@ function buildPluginTree(plugin, defaults, allPlugins) {
     if (!parsed.hooks || typeof parsed.hooks !== 'object') {
       throw new Error(`${plugin.name}: hooks.json needs a top-level "hooks" object`);
     }
-    for (const [rel, contents] of readTree(abs)) {
+    const hookFiles = readTree(abs);
+    for (const [rel, contents] of hookFiles) {
       tree.set(`hooks/${rel}`, contents);
     }
+    // A script that hooks.json names but the tree lacks fails silently at run
+    // time, and `claude plugin validate` does not look.
+    const scriptRef = /\$\{?CLAUDE_PLUGIN_ROOT\}?\/hooks\/([^\s"'\\;&|<>()$`]+)/g;
+    for (const [, ref] of JSON.stringify(parsed).matchAll(scriptRef)) {
+      const path = posix.normalize(ref).replace(/\/+$/, '');
+      const present = [...hookFiles.keys()].some((k) => k === path || k.startsWith(`${path}/`));
+      if (!present) {
+        throw new Error(`${plugin.name}: hooks.json runs hooks/${ref}, which is not in ${plugin.hooks}`);
+      }
+    }
+  }
+
+  // Slash commands: one markdown file each, copied to the plugin's commands/.
+  // A command and a skill of the same name would both answer to /<plugin>:<name>.
+  const skillNames = new Set((plugin.skills ?? []).map((s) => basename(s).toLowerCase()));
+  const commandNames = new Set();
+  for (const source of plugin.commands ?? []) {
+    const abs = join(REPO_ROOT, source);
+    if (!existsSync(abs)) throw new Error(`${plugin.name}: command source not found: ${source}`);
+    if (!source.endsWith('.md')) {
+      throw new Error(`${plugin.name}: command source must be a .md file: ${source}`);
+    }
+    const key = basename(source, '.md').toLowerCase();
+    if (commandNames.has(key)) throw new Error(`${plugin.name}: two commands are named ${key}`);
+    if (skillNames.has(key)) throw new Error(`${plugin.name}: command ${key} has the same name as a skill`);
+    commandNames.add(key);
+    tree.set(`commands/${basename(source)}`, readFileSync(abs));
   }
 
   for (const source of plugin.agents ?? []) {

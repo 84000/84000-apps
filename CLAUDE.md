@@ -14,7 +14,7 @@
 - **GraphQL client queries**: `libs/client-graphql/src/lib/graphql/` (queries, fragments, mutations)
 - **Design system components**: `libs/design-system/src/lib/<ComponentName>/` — check these before building custom UI. Preview with `npx nx storybook design-system`
 - **Deeper documentation**: `docs/` folder at the repo root — domain model, data flow, app guide, common tasks
-- **Skills and agents**: `libs/lib-agent/skills/` and `libs/lib-agent/agents/` — prose, not code, shipped to the org as Claude Code plugins
+- **Skills, agents, commands and hooks**: `libs/lib-agent/{skills,agents,commands,hooks}/` — prose and shell, not app code, shipped to the org as Claude Code plugins
 
 ## Architectural Constraints
 
@@ -27,15 +27,19 @@
 
 ## Claude Code Plugins
 
-Skills and agents are content rather than code, so they live outside `src/` and
-are not compiled:
+Skills, agents, commands and hooks are content rather than code, so they live
+outside `src/` and are not compiled:
 
 - **Skills**: `libs/lib-agent/skills/<name>/SKILL.md` (plus a `reference/` folder)
 - **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
 - **Shared reference**: `libs/lib-agent/reference/<name>/`, vendored into each
   skill that cites it by the `sharedReference` entries in `plugins.json`
+- **Commands**: `libs/lib-agent/commands/<name>.md` (slash commands), listed in
+  a plugin's `commands` in `plugins.json` and copied to its `commands/`
 - **Hooks**: `libs/lib-agent/hooks/<plugin>/` (`hooks.json` plus the scripts it
-  runs), copied to the plugin's `hooks/` by its `hooks` entry in `plugins.json`
+  runs), copied to the plugin's `hooks/` by its `hooks` entry in `plugins.json`.
+  The generator fails if `hooks.json` runs a `${CLAUDE_PLUGIN_ROOT}/hooks/`
+  script that is not in that directory
 - **Audience**: each plugin's `audience` in `plugins.json` (roles and/or
   permissions); the generator renders it into the onboarding skill's
   `reference/plugins.md`
