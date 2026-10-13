@@ -24,6 +24,7 @@ const toGraphQL = (result: GetWorkSnapshotResult) => {
   switch (result.status) {
     case 'ready':
       return {
+        ...result.freshness,
         status: 'READY',
         ref: result.snapshot,
         snapshotId: result.snapshot.snapshotId,
@@ -32,7 +33,6 @@ const toGraphQL = (result: GetWorkSnapshotResult) => {
         generatedAt: result.snapshot.generatedAt,
         archiveBytes: result.snapshot.archiveBytes,
         manifest: result.snapshot.manifest,
-        ...result.freshness,
       };
     case 'generating':
       return {
