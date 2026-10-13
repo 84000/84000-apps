@@ -141,3 +141,19 @@ export const annotationShape = (
   text: coveredText(passage, a),
   toh: a.toh,
 });
+
+/**
+ * The numbered passages of a section, such as chapter `1`, in `sort` order.
+ * Per-Toh variants share a label and a sort, so only one per pair is kept.
+ */
+export const sectionPassages = async (
+  prefix: string,
+  type = 'translation',
+): Promise<StoredPassage[]> =>
+  (await workPassages()).filter(
+    (p) =>
+      p.type === type &&
+      p.label.startsWith(`${prefix}.`) &&
+      /^\d+$/.test(p.label.slice(prefix.length + 1)) &&
+      (p.toh === null || p.toh === TEST_WORK.toh),
+  );

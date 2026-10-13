@@ -44,13 +44,16 @@
 - Fixture: `1.11` "When the assembly heard the mantra oṃ padme svāhā recited
   aloud, the sound filled the ten directions." and `1.12` "Mañjuśrī
   explained…".
-- Do: select from just after "recited aloud" in `1.11` to just before "is used
+- Do: drag from just after "recited aloud" in `1.11` to just before "is used
   here" in `1.12`, press Delete, and Save.
-- Screen: one passage remains where the two were: `1.11`, reading
-  "When the assembly heard the mantra oṃ padme svāhā recited aloudis used
-  here…". Later labels move down by one.
-- Stored: matches the screen. `1.12`'s row is gone, and the `mantra` row on
-  `1.11` and the remaining part of `1.12`'s annotations are kept.
+- Screen: a drag across a passage boundary selects whole passages, so both
+  `1.11` and `1.12` are removed. The old `1.13` is labelled `1.11`, and later
+  labels move down by two.
+- Stored: both rows and their annotations are gone, and the labels match the
+  screen.
+- This is intended: like Notion, a selection that crosses passages selects
+  complete passages, since each row is its own editor. The paginated editor
+  deleted only the dragged range and joined the two passages.
 
 ### ED-EDT-04 Arrow keys across passage boundaries (J)
 
