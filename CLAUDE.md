@@ -14,7 +14,7 @@
 - **GraphQL client queries**: `libs/client-graphql/src/lib/graphql/` (queries, fragments, mutations)
 - **Design system components**: `libs/design-system/src/lib/<ComponentName>/` — check these before building custom UI. Preview with `npx nx storybook design-system`
 - **Deeper documentation**: `docs/` folder at the repo root — domain model, data flow, app guide, common tasks
-- **Skills and agents**: `libs/lib-agent/skills/` and `libs/lib-agent/agents/` — prose, not code, shipped to the org as Claude Code plugins
+- **Skills, agents, commands and hooks**: `libs/lib-agent/{skills,agents,commands,hooks}/` — prose and shell, not app code, shipped to the org as Claude Code plugins
 
 ## Architectural Constraints
 
@@ -27,8 +27,8 @@
 
 ## Claude Code Plugins
 
-Skills, agents, commands and hooks are content rather than code, so they live outside `src/` and
-are not compiled:
+Skills, agents, commands and hooks are content rather than code, so they live
+outside `src/` and are not compiled:
 
 - **Skills**: `libs/lib-agent/skills/<name>/SKILL.md` (plus a `reference/` folder)
 - **Agents**: `libs/lib-agent/agents/<name>.md` (YAML frontmatter + system prompt)
