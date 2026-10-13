@@ -72,6 +72,15 @@ export const resolveDraftWork = async ({
     workUuid = data.work_uuid;
   }
 
+  // Read the key before anything rendered, this row included, so an edit landing
+  // between reads makes the snapshot look stale rather than current.
+  const { data: status, error: statusError } = await client
+    .from('work_publish_status')
+    .select('draft_touched_at')
+    .eq('work_uuid', workUuid)
+    .maybeSingle();
+  if (statusError) fail('publish status', statusError);
+
   const { data, error } = await client
     .from('works')
     .select('uuid, toh, title')
@@ -79,13 +88,6 @@ export const resolveDraftWork = async ({
     .maybeSingle();
   if (error) fail('work', error);
   if (!data) return null;
-
-  const { data: status, error: statusError } = await client
-    .from('work_publish_status')
-    .select('draft_touched_at')
-    .eq('work_uuid', data.uuid)
-    .maybeSingle();
-  if (statusError) fail('publish status', statusError);
 
   return {
     uuid: data.uuid,

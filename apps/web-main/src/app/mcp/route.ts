@@ -28,6 +28,12 @@ import { createServerCapture } from '@eightyfourthousand/lib-instr/ssr';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { POLICY_EDITOR_APP_HTML } from '@eightyfourthousand/policy-editor-mcp-app/html';
 
+/**
+ * Explicit rather than the plan default: a tool call may wait on an inline work
+ * snapshot generation in api-graphql, then download and unpack the archive.
+ */
+export const maxDuration = 300;
+
 const description =
   'Authenticated access to the 84000 translation studio — reading, glossary, bibliography, and entity tools scoped to the current user.';
 

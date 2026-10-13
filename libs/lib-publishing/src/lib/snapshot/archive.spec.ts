@@ -1,27 +1,5 @@
-import { gunzipSync } from 'node:zlib';
-import { tarGzTree } from './archive';
-
-/** Minimal ustar reader: path -> content. */
-const untar = (archive: Buffer): Map<string, string> => {
-  const tar = gunzipSync(archive);
-  const files = new Map<string, string>();
-  for (let offset = 0; offset + 512 <= tar.length; ) {
-    const header = tar.subarray(offset, offset + 512);
-    if (header.every((b) => b === 0)) break;
-    const field = (start: number, length: number) =>
-      header
-        .subarray(start, start + length)
-        .toString('utf8')
-        .replace(/\0.*$/s, '');
-    const prefix = field(345, 155);
-    const name = prefix ? `${prefix}/${field(0, 100)}` : field(0, 100);
-    const size = parseInt(field(124, 12), 8);
-    offset += 512;
-    files.set(name, tar.subarray(offset, offset + size).toString('utf8'));
-    offset += Math.ceil(size / 512) * 512;
-  }
-  return files;
-};
+import { gunzipSync, gzipSync } from 'node:zlib';
+import { tarGzTree, untarGzTree } from './archive';
 
 describe('tarGzTree', () => {
   const longDir = 'text/04-translation/' + 'x'.repeat(60);
@@ -36,13 +14,13 @@ describe('tarGzTree', () => {
   ]);
 
   it('round-trips every file under the root, multibyte text included', () => {
-    const files = untar(tarGzTree({ tree, root: 'toh145', mtime: 1760000000 }));
-    expect([...files.keys()].sort()).toEqual(
-      [...tree.keys()].map((p) => `toh145/${p}`).sort(),
+    const unpacked = untarGzTree(
+      tarGzTree({ tree, root: 'toh145', mtime: 1760000000 }),
     );
-    for (const [path, text] of tree) {
-      expect(files.get(`toh145/${path}`)).toBe(text);
-    }
+    expect(unpacked.root).toBe('toh145');
+    expect(new Map([...unpacked.tree].sort())).toEqual(
+      new Map([...tree].sort()),
+    );
   });
 
   it('is byte-identical for the same tree and mtime', () => {
@@ -56,5 +34,46 @@ describe('tarGzTree', () => {
     expect(() => tarGzTree({ tree: tooLong, root: 'r', mtime: 0 })).toThrow(
       /too long/,
     );
+  });
+});
+
+describe('untarGzTree', () => {
+  const tree = new Map([
+    ['README.md', '# Title\n'],
+    ['notes.md', ''],
+    ['text/a.md', 'x'.repeat(1300)],
+  ]);
+  const archive = tarGzTree({ tree, root: 'toh8', mtime: 0 });
+
+  it('strips the root and keeps empty and multi-block files', () => {
+    const { root, tree: out } = untarGzTree(archive);
+    expect(root).toBe('toh8');
+    expect(out.get('notes.md')).toBe('');
+    expect(out.get('text/a.md')).toHaveLength(1300);
+    expect(out.size).toBe(3);
+  });
+
+  it('throws on a truncated archive rather than returning part of it', () => {
+    const tar = gunzipSync(archive);
+    const cut = gzipSync(tar.subarray(0, 512 + 100));
+    expect(() => untarGzTree(cut)).toThrow(/truncated/);
+  });
+
+  it('throws on an archive with no entries', () => {
+    expect(() => untarGzTree(gzipSync(Buffer.alloc(1024)))).toThrow(/empty/);
+  });
+
+  it('throws on a second root', () => {
+    const a = gunzipSync(tarGzTree({ tree, root: 'a', mtime: 0 }));
+    const b = gunzipSync(tarGzTree({ tree, root: 'b', mtime: 0 }));
+    // a's entries without its end-of-archive blocks, then all of b.
+    const mixed = Buffer.concat([a.subarray(0, a.length - 1024), b]);
+    expect(() => untarGzTree(gzipSync(mixed))).toThrow(/more than one root/);
+  });
+
+  it('throws on a non-file entry', () => {
+    const tar = Buffer.from(gunzipSync(archive));
+    tar.write('5', 156, 1, 'utf8'); // directory
+    expect(() => untarGzTree(gzipSync(tar))).toThrow(/entry type/);
   });
 });
