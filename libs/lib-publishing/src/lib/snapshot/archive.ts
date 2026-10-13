@@ -123,7 +123,7 @@ export const untarGzTree = (
     }
     const path = name.slice(slash + 1);
     if (
-      path
+      name
         .split('/')
         .some((part) => part === '' || part === '.' || part === '..')
     ) {

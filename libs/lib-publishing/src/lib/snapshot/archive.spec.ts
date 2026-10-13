@@ -71,12 +71,12 @@ describe('untarGzTree', () => {
     expect(() => untarGzTree(gzipSync(mixed))).toThrow(/more than one root/);
   });
 
-  it.each(['a/../../etc/passwd', 'a//b', 'a/./b'])(
+  it.each(['a/../../etc/passwd', 'a//b', 'a/./b', '../x'])(
     'throws on an unsafe path: %s',
     (path) => {
       const tar = Buffer.from(gunzipSync(archive));
       const name = Buffer.alloc(100);
-      name.write(`toh8/${path}`);
+      name.write(path.startsWith('..') ? path : `toh8/${path}`);
       name.copy(tar, 0);
       // Recompute the header checksum so only the path is wrong.
       tar.write('        ', 148, 8, 'utf8');
