@@ -9,14 +9,12 @@ import {
   findRegexOccurrences,
   fetchReplaceAnnotations,
   fetchReplaceRows,
-  persistReplaceChanges,
   replacePassageText,
   savePassagesWithDeletions,
   type RenumberedPassageRow,
   type SavedPassageRow,
 } from '@eightyfourthousand/data-access';
 import {
-  buildAnnotationsByPassageUuid,
   buildReplacePassage,
   buildReplaceResponsePassages,
   findNextReplaceCursor,
@@ -140,17 +138,15 @@ export const replaceMutation = async (
       return replaceFailure(rowsResult.error);
     }
 
+    const orderedRows = rowsResult.orderedRows;
     const annotationsResult = await fetchReplaceAnnotations({
       client: ctx.supabase,
-      targetUuids,
+      rows: orderedRows,
     });
     if (!annotationsResult.ok) {
       return replaceFailure(annotationsResult.error);
     }
-
-    const orderedRows = rowsResult.orderedRows;
-    const rawAnnotations = annotationsResult.rawAnnotations;
-    const annotationsByPassageUuid = buildAnnotationsByPassageUuid(rawAnnotations);
+    const { annotationsByPassageUuid, keepAnnotationUuids } = annotationsResult;
 
     const updatedPassages: Passage[] = [];
     let updatedAnnotationCount = 0;
@@ -183,11 +179,15 @@ export const replaceMutation = async (
           }
         }
 
-        const findOccurrences = args.useRegex ? findRegexOccurrences : findLiteralOccurrences;
+        const findOccurrences = args.useRegex
+          ? findRegexOccurrences
+          : findLiteralOccurrences;
         const occurrences = findOccurrences(row.content, args.searchText);
         occurrenceIndex =
           row.uuid === cursorPassageUuid
-            ? occurrences.findIndex((occurrence) => occurrence.start >= cursorStart)
+            ? occurrences.findIndex(
+                (occurrence) => occurrence.start >= cursorStart,
+              )
             : occurrences.length > 0
               ? 0
               : -1;
@@ -196,7 +196,9 @@ export const replaceMutation = async (
           continue;
         }
       } else if (remainingOccurrenceIndex !== undefined) {
-        const findOccurrences = args.useRegex ? findRegexOccurrences : findLiteralOccurrences;
+        const findOccurrences = args.useRegex
+          ? findRegexOccurrences
+          : findLiteralOccurrences;
         const occurrences = findOccurrences(row.content, args.searchText);
         if (remainingOccurrenceIndex >= occurrences.length) {
           remainingOccurrenceIndex -= occurrences.length;
@@ -252,14 +254,15 @@ export const replaceMutation = async (
       return replaceSuccess({});
     }
 
-    const persistResult = await persistReplaceChanges({
+    const saved = await savePassagesWithDeletions({
       client: ctx.supabase,
-      rawAnnotations,
-      updatedPassages,
+      passages: updatedPassages,
+      keepAnnotationUuids,
     });
-    if (!persistResult.ok) {
-      return replaceFailure(persistResult.error);
+    if (!saved.success) {
+      return replaceFailure(saved.error ?? 'Failed to save replaced passages');
     }
+    saved.warnings?.forEach((warning) => console.warn(warning));
 
     return replaceSuccess({
       updatedCount: updatedPassages.length,

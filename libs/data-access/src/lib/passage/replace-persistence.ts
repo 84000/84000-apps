@@ -2,10 +2,10 @@ import {
   ANNOTATIONS_TO_IGNORE,
   AnnotationDTO,
   DataClient,
-  Passage,
-  passagesToDTO,
-  passagesToRowDTO,
+  annotationRangeFits,
 } from '../types';
+import { readAnnotationsByPassageUuids } from './batch';
+import { inBatches } from './in-batches';
 
 export type ReplacePassageRow = {
   content: string;
@@ -25,20 +25,25 @@ export const fetchReplaceRows = async ({
   client: DataClient;
   targetUuids: string[];
 }) => {
-  const { data, error } = await client
-    .from('passages')
-    .select('uuid, work_uuid, content, label, sort, type, toh, xmlId')
-    .in('uuid', targetUuids);
+  const rowsByUuid = new Map<string, ReplacePassageRow>();
+  for (const batch of inBatches(targetUuids)) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, work_uuid, content, label, sort, type, toh, xmlId')
+      .in('uuid', batch);
 
-  if (error) {
-    console.error('Error fetching replace targets:', error);
-    return {
-      ok: false as const,
-      error: `Failed to fetch replace targets: ${error.message}`,
-    };
+    if (error) {
+      console.error('Error fetching replace targets:', error);
+      return {
+        ok: false as const,
+        error: `Failed to fetch replace targets: ${error.message}`,
+      };
+    }
+    (data ?? []).forEach((row) =>
+      rowsByUuid.set(row.uuid, row as ReplacePassageRow),
+    );
   }
 
-  const rowsByUuid = new Map((data ?? []).map((row) => [row.uuid, row]));
   const missingUuids = targetUuids.filter((uuid) => !rowsByUuid.has(uuid));
   if (missingUuids.length > 0) {
     return {
@@ -55,99 +60,57 @@ export const fetchReplaceRows = async ({
   };
 };
 
+const ignored = new Set<string>(ANNOTATIONS_TO_IGNORE);
+
+/**
+ * The stored annotations a replace moves, by passage, and the ones it must
+ * leave exactly as stored because they do not fit their passage's text. A
+ * save writes a passage's full annotation state, so every row is read.
+ */
 export const fetchReplaceAnnotations = async ({
   client,
-  targetUuids,
+  rows,
 }: {
   client: DataClient;
-  targetUuids: string[];
+  rows: ReplacePassageRow[];
 }) => {
-  const { data, error } = await client
-    .from('passage_annotations')
-    .select('uuid, content, end, start, type, passage_uuid, toh')
-    .in('passage_uuid', targetUuids)
-    .not('type', 'in', `(${ANNOTATIONS_TO_IGNORE.join(',')})`);
-
-  if (error) {
-    console.error('Error fetching annotations for replace:', error);
+  const read = await readAnnotationsByPassageUuids({
+    client,
+    passageUuids: rows.map((row) => row.uuid),
+    source: 'draft',
+  });
+  if ('error' in read) {
+    console.error('Error fetching annotations for replace:', read.error);
     return {
       ok: false as const,
-      error: `Failed to fetch annotations: ${error.message}`,
+      error: `Failed to fetch annotations: ${read.error}`,
     };
   }
 
-  return {
-    ok: true as const,
-    rawAnnotations: (data ?? []) as AnnotationDTO[],
-  };
-};
-
-export const persistReplaceChanges = async ({
-  client,
-  rawAnnotations,
-  updatedPassages,
-}: {
-  client: DataClient;
-  rawAnnotations: AnnotationDTO[];
-  updatedPassages: Passage[];
-}) => {
-  const passageRowDtos = passagesToRowDTO(updatedPassages);
-  const annotationDtos = passagesToDTO(updatedPassages).flatMap(
-    (passage) => passage.annotations || [],
-  );
-  const updatedPassageUuids = updatedPassages.map((passage) => passage.uuid);
-  const updatedAnnotationUuids = new Set(annotationDtos.map((a) => a.uuid));
-  const annotationsToDelete = rawAnnotations.filter(
-    (annotation) =>
-      updatedPassageUuids.includes(annotation.passage_uuid || '') &&
-      !updatedAnnotationUuids.has(annotation.uuid),
-  );
-
-  const { error: passageError } = await client
-    .from('passages')
-    .upsert(passageRowDtos, { onConflict: 'uuid' });
-
-  if (passageError) {
-    console.error('Error saving replaced passages:', passageError);
-    return {
-      ok: false as const,
-      error: `Failed to save replaced passages: ${passageError.message}`,
-    };
-  }
-
-  if (annotationDtos.length > 0) {
-    const { error: annotationError } = await client
-      .from('passage_annotations')
-      .upsert(annotationDtos, { onConflict: 'uuid' });
-
-    if (annotationError) {
-      console.error('Error saving replaced annotations:', annotationError);
-      return {
-        ok: false as const,
-        error: `Failed to save replaced annotations: ${annotationError.message}`,
-      };
-    }
-  }
-
-  if (annotationsToDelete.length > 0) {
-    const { error: deleteError } = await client
-      .from('passage_annotations')
-      .delete()
-      .in(
-        'uuid',
-        annotationsToDelete.map((annotation) => annotation.uuid),
-      );
-
-    if (deleteError) {
-      console.error('Error deleting replaced annotations:', deleteError);
-      return {
-        ok: false as const,
-        error: `Failed to delete replaced annotations: ${deleteError.message}`,
-      };
-    }
-  }
+  const lengths = new Map(rows.map((row) => [row.uuid, row.content.length]));
+  const annotationsByPassageUuid = new Map<string, AnnotationDTO[]>();
+  const keepAnnotationUuids: string[] = [];
+  read.data.forEach((annotations, passageUuid) => {
+    const length = lengths.get(passageUuid) ?? 0;
+    annotationsByPassageUuid.set(
+      passageUuid,
+      annotations.filter((annotation) => {
+        const fits = annotationRangeFits(
+          annotation.start,
+          annotation.end,
+          length,
+        );
+        if (!fits && !ignored.has(annotation.type)) {
+          keepAnnotationUuids.push(annotation.uuid);
+        }
+        return fits;
+      }),
+    );
+  });
 
   return {
     ok: true as const,
+    annotationsByPassageUuid,
+    keepAnnotationUuids,
   };
 };
