@@ -6,7 +6,8 @@ import {
   TohokuCatalogEntry,
   passagesToRowDTO,
 } from '../../types';
-import { deleteByUuid, deletePassages } from './deletion';
+import { commitSave } from './commit';
+import { planEndNoteCleanup, readEndNoteReferences } from './deletion';
 import { planSaveLabels } from './labels';
 import { makeRoomForNewPassages, sortsAfterShift } from './placement';
 import { findOutOfRange, planAnnotations, planPassages } from './plan';
@@ -20,7 +21,6 @@ import {
 import {
   failure,
   type NewPassageAnchor,
-  type RenumberedPassageRow,
   type SavePassagesWithDeletionsResult,
   type SavedPassageRow,
 } from './types';
@@ -30,17 +30,17 @@ import { validateSave } from './validate';
  * Persists edited passages and their annotations, and removes deleted
  * passages.
  *
- * The input is validated and every row the save depends on is read before
- * anything is written, so a failure up to that point saved nothing. Writes
- * then run as a sequence ordered to keep the partial-failure window small:
- * sort shifts, passage upserts, the labels inserting renumbered, annotation
- * upserts, stale annotation deletes, passage deletions, then the labels
- * deleting renumbered.
- * Labels are planned before any write. Every write is an idempotent upsert or
- * delete keyed by uuid, so a retry of the same save converges on content.
- * Label renumbering does not: a retry no longer sees the inserts as new or
- * the deleted passages as there, so a label step that failed is not redone,
- * and a payload passage is written back with the label the client sent.
+ * The input is validated, every row the save depends on is read, and every
+ * write is planned, labels and endnote cleanup included, before anything is
+ * written. Room is then made for new passages (sort shifts, which only open
+ * gaps), and the rest is committed in one transaction by
+ * `apply_passage_save`: all of it lands, or none of it. A large save without
+ * passage deletions, such as an import, is committed in chunks, and a failure
+ * leaves the chunks before it written; see `commitSave`.
+ *
+ * A failure that may have been applied, because the commit's response was
+ * lost, sets `outcomeUnknown`. Every write is an upsert or delete keyed by
+ * uuid, so a retry of the same save converges.
  *
  * A save places new passages but never moves an existing one: a changed
  * `sort` on an existing passage is ignored, and moving one needs an explicit
@@ -118,14 +118,19 @@ export const savePassagesWithDeletions = async ({
     }
     deletedPassages = deletedRead.data;
   }
+  const deletedPassageUuids = deletedPassages.map((row) => row.uuid);
+  const references = await readEndNoteReferences(client, deletedPassageUuids);
+  if ('error' in references) {
+    return notSaved(references.error);
+  }
 
   const storedContent = new Map(
     existingRows.map((row) => [row.uuid, row.content]),
   );
   const {
-    upserts: annotationsToUpsert,
+    upserts: plannedUpserts,
     unchanged: annotationsUnchanged,
-    deletes: annotationsToDelete,
+    deletes: staleAnnotations,
     warnings: planWarnings,
   } = planAnnotations({
     passages,
@@ -135,6 +140,17 @@ export const savePassagesWithDeletions = async ({
     keep: keepAnnotationUuids,
     deletable: deletableAnnotationUuids,
   });
+  const endNotes = planEndNoteCleanup({
+    storedReferences: references.data,
+    sent: [...plannedUpserts, ...annotationsUnchanged],
+    upserts: plannedUpserts,
+    stored: new Set(annotationsRead.data.map((row) => row.uuid)),
+    deletedPassageUuids,
+  });
+  const annotationsToUpsert = endNotes.upserts;
+  const annotationsToDelete = [
+    ...new Set([...staleAnnotations, ...endNotes.deletes]),
+  ];
   const outOfRange = findOutOfRange({
     upserts: annotationsToUpsert,
     unchanged: annotationsUnchanged,
@@ -169,11 +185,6 @@ export const savePassagesWithDeletions = async ({
   }
   const { shiftedSorts } = sorted;
 
-  // Planned in full before anything is written, and written in two steps as
-  // the walks would run. What the inserts renumber goes with and right after
-  // the passage rows, so a later failure cannot lose it: a retry no longer
-  // sees the inserts as new. What the deletes renumber goes once the
-  // passages are gone.
   const plannedLabels = await planSaveLabels({
     client,
     toSave: sorted.toSave,
@@ -183,108 +194,38 @@ export const savePassagesWithDeletions = async ({
   if ('error' in plannedLabels) {
     return failure(plannedLabels.error);
   }
-  const labelPlan = plannedLabels.data;
+  const labels = plannedLabels.data.final;
   const toSave = sorted.toSave.map((passage) => {
-    const label = labelPlan.afterInserts.get(passage.uuid);
+    const label = labels.get(passage.uuid);
     return label === undefined ? passage : { ...passage, label };
   });
   const payloadUuids = new Set(inputUuids);
-  const writeLabels = async (
-    labels: Map<string, string>,
-    skip: Set<string> = new Set(),
-  ) => {
-    const rows: RenumberedPassageRow[] = [...labels]
-      .filter(([uuid]) => !skip.has(uuid))
-      .map(([uuid, label]) => ({ uuid, label }));
-    if (rows.length === 0) return null;
-    const { error } = await client
-      .from('passages')
-      .upsert(rows, { onConflict: 'uuid' });
-    if (!error) return null;
-    console.error('Error renumbering passage labels:', error);
-    return failure(
-      `Content saved but passage labels were not renumbered: ${error.message}`,
-      passages.length,
-    );
-  };
 
-  const passageRowsToUpsert = planPassages(
-    passagesToRowDTO(toSave),
-    new Map(
-      existingRows.map((row) => [
-        row.uuid,
-        { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
-      ]),
+  const committed = await commitSave(client, {
+    passages: planPassages(
+      passagesToRowDTO(toSave),
+      new Map(
+        existingRows.map((row) => [
+          row.uuid,
+          { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
+        ]),
+      ),
     ),
-  );
-
-  // Core content commits first — everything after this point is renumbering
-  // or cleanup.
-  if (passageRowsToUpsert.length > 0) {
-    const { error: passageError } = await client
-      .from('passages')
-      .upsert(passageRowsToUpsert, { onConflict: 'uuid' });
-
-    if (passageError) {
-      console.error('Error saving passages:', passageError);
-      return failure(`Failed to save passages: ${passageError.message}`);
-    }
+    // Saved passages carry theirs.
+    labels: [...labels]
+      .filter(([uuid]) => !payloadUuids.has(uuid))
+      .map(([uuid, label]) => ({ uuid, label })),
+    annotations: annotationsToUpsert,
+    deleteAnnotations: annotationsToDelete,
+    deletePassages: deletedPassageUuids,
+  });
+  if ('error' in committed) {
+    return {
+      ...failure(committed.error, committed.savedPassages),
+      ...(committed.outcomeUnknown ? { outcomeUnknown: true } : {}),
+    };
   }
-
-  // Payload passages already carry theirs.
-  const insertLabelsFailed = await writeLabels(
-    labelPlan.afterInserts,
-    payloadUuids,
-  );
-  if (insertLabelsFailed) return insertLabelsFailed;
-
-  if (annotationsToUpsert.length > 0) {
-    const { error: annotationError } = await client
-      .from('passage_annotations')
-      .upsert(annotationsToUpsert, { onConflict: 'uuid' });
-
-    if (annotationError) {
-      console.error('Error saving annotations:', annotationError);
-      return failure(
-        `Passages saved but annotations failed: ${annotationError.message}`,
-        passages.length,
-      );
-    }
-  }
-
-  // Stale rows left behind here resurrect deleted markup on the next load,
-  // so a failure must reach the client even though the content upserts
-  // already committed. Before the passage deletes, whose endnote cleanup
-  // could otherwise remove some of these first.
-  if (annotationsToDelete.length > 0) {
-    const removed = await deleteByUuid(
-      client,
-      'passage_annotations',
-      annotationsToDelete,
-    );
-    if ('error' in removed) {
-      console.error('Error deleting annotations:', removed.error);
-      return failure(
-        `Passages saved but stale annotations could not be removed: ${removed.error}`,
-        passages.length,
-      );
-    }
-  }
-
-  let deletedCount = 0;
-  if (deletedPassages.length > 0) {
-    const deleted = await deletePassages({
-      client,
-      deletedUuids: deletedPassages.map((row) => row.uuid),
-    });
-    if ('error' in deleted) {
-      return failure(deleted.error, passages.length);
-    }
-    deletedCount = deleted.deletedCount;
-  }
-
-  const deleteLabelsFailed = await writeLabels(labelPlan.afterDeletes);
-  if (deleteLabelsFailed) return deleteLabelsFailed;
+  const deletedCount = deletedPassageUuids.length;
 
   const warnings = [...planWarnings];
   const savedPassages: SavedPassageRow[] = [];
@@ -318,7 +259,7 @@ export const savePassagesWithDeletions = async ({
   // Rows returned in `passages` already carry their final label, so reporting
   // them again as renumbered would be redundant.
   const savedUuidSet = new Set(savedPassages.map((row) => row.uuid));
-  const renumberedPassages: RenumberedPassageRow[] = [...labelPlan.final]
+  const renumberedPassages = [...labels]
     .filter(([uuid]) => !savedUuidSet.has(uuid))
     .map(([uuid, label]) => ({ uuid, label }));
 

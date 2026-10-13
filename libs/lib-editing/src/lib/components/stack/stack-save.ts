@@ -192,6 +192,8 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     return false;
   }
 
+  result.warnings?.forEach((warning) => console.warn(warning));
+
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.
   passages.forEach((passage) =>

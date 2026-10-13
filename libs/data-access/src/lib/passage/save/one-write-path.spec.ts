@@ -55,7 +55,7 @@ describe('passage writes', () => {
   });
 
   it('are found where they are', () => {
-    const text = readFileSync(join(root, saveDir, 'save-passages.ts'), 'utf8');
-    expect(text.match(passageTable)?.length).toBeGreaterThan(0);
+    const text = readFileSync(join(root, saveDir, 'commit.ts'), 'utf8');
+    expect(text.match(passageRpc)?.length).toBeGreaterThan(0);
   });
 });
