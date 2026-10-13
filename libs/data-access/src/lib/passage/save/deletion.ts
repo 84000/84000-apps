@@ -1,5 +1,7 @@
 import type { DataClient } from '../../types';
 import { normalizePassageLabelsAfter } from './labels';
+import { inBatches } from '../in-batches';
+import type { DeletedPassageRow } from './reads';
 import type { RenumberedPassageRow, StepError } from './types';
 
 /**
@@ -11,51 +13,41 @@ import type { RenumberedPassageRow, StepError } from './types';
  */
 export const deletePassages = async ({
   client,
-  deletedUuids,
+  deletedPassages,
   clientRenumberedUuids,
 }: {
   client: DataClient;
-  deletedUuids: string[];
+  /** The stored rows of the passages to delete, read before any write. */
+  deletedPassages: DeletedPassageRow[];
   /** Passages in the save's payload; see `normalizePassageLabelsAfter`. */
   clientRenumberedUuids: Set<string>;
 }): Promise<
   { deletedCount: number; renumbered: RenumberedPassageRow[] } | StepError
 > => {
   const renumberedRows: RenumberedPassageRow[] = [];
-  const { data: deletedPassages, error: deletedFetchError } = await client
-    .from('passages')
-    .select('uuid, sort, label, work_uuid')
-    .in('uuid', deletedUuids);
+  const deletedUuids = deletedPassages.map((row) => row.uuid);
 
-  if (deletedFetchError) {
-    console.error(
-      'Error fetching passages marked for deletion:',
-      deletedFetchError,
-    );
-    return {
-      error: `Failed to fetch passages marked for deletion: ${deletedFetchError.message}`,
-    };
-  }
-
-  if (deletedPassages && deletedPassages.length > 0) {
+  if (deletedPassages.length > 0) {
     const sortedDeleted = [...deletedPassages].sort((a, b) => b.sort - a.sort);
 
     // All annotation cleanup runs before the passage delete: if any step
     // fails we abort while the passage rows still exist, so a retry can
     // redo the whole sequence.
-    const { error: deleteAnnotationsError } = await client
-      .from('passage_annotations')
-      .delete()
-      .in('passage_uuid', deletedUuids);
+    for (const batch of inBatches(deletedUuids)) {
+      const { error: deleteAnnotationsError } = await client
+        .from('passage_annotations')
+        .delete()
+        .in('passage_uuid', batch);
 
-    if (deleteAnnotationsError) {
-      console.error(
-        'Error deleting annotations for deleted passages:',
-        deleteAnnotationsError,
-      );
-      return {
-        error: `Failed to delete annotations for deleted passages: ${deleteAnnotationsError.message}`,
-      };
+      if (deleteAnnotationsError) {
+        console.error(
+          'Error deleting annotations for deleted passages:',
+          deleteAnnotationsError,
+        );
+        return {
+          error: `Failed to delete annotations for deleted passages: ${deleteAnnotationsError.message}`,
+        };
+      }
     }
 
     // Cascade: remove `endNoteLink` annotations on OTHER passages that
@@ -87,11 +79,11 @@ export const deletePassages = async ({
         (annotation) => annotation.uuid,
       );
 
-      if (referenceUuids.length > 0) {
+      for (const batch of inBatches(referenceUuids)) {
         const { error: deleteReferencesError } = await client
           .from('passage_annotations')
           .delete()
-          .in('uuid', referenceUuids);
+          .in('uuid', batch);
 
         if (deleteReferencesError) {
           console.error(
@@ -105,16 +97,18 @@ export const deletePassages = async ({
       }
     }
 
-    const { error: deletePassagesError } = await client
-      .from('passages')
-      .delete()
-      .in('uuid', deletedUuids);
+    for (const batch of inBatches(deletedUuids)) {
+      const { error: deletePassagesError } = await client
+        .from('passages')
+        .delete()
+        .in('uuid', batch);
 
-    if (deletePassagesError) {
-      console.error('Error deleting passages:', deletePassagesError);
-      return {
-        error: `Failed to delete passages: ${deletePassagesError.message}`,
-      };
+      if (deletePassagesError) {
+        console.error('Error deleting passages:', deletePassagesError);
+        return {
+          error: `Failed to delete passages: ${deletePassagesError.message}`,
+        };
+      }
     }
 
     // Renumber neighbors only after the delete succeeded — renumbering
@@ -139,7 +133,7 @@ export const deletePassages = async ({
   }
 
   return {
-    deletedCount: deletedPassages?.length ?? 0,
+    deletedCount: deletedPassages.length,
     renumbered: renumberedRows,
   };
 };

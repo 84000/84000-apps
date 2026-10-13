@@ -15,6 +15,7 @@ import {
   rpcFor,
   type ContentSource,
 } from '../content-source';
+import { inBatches } from './in-batches';
 
 /**
  * Like `getAnnotationsByPassageUuids`, but reports a failed read instead of
@@ -38,46 +39,55 @@ export const readAnnotationsByPassageUuids = async ({
     return { data: annotationsByPassage };
   }
 
+  // An `in` list travels in the URL, and a read stops at 1000 rows without an
+  // error: batch the uuids and page each batch.
   const pageSize = 1000;
   let allData: AnnotationDTO[] = [];
-  let offset = 0;
-  let hasMore = true;
 
-  while (hasMore) {
-    let query = client
-      .from(relationFor('passageAnnotations', source))
-      .select('uuid, passage_uuid, type, start, end, content, toh')
-      .in('passage_uuid', passageUuids as string[]);
+  for (const batch of inBatches(passageUuids as string[])) {
+    let offset = 0;
+    let hasMore = true;
 
-    // The published snapshot already excludes `deprecated%` types, so this is
-    // a no-op there.
-    if (!includeDeprecated) {
-      query = query.not('type', 'like', 'deprecated%');
+    while (hasMore) {
+      let query = client
+        .from(relationFor('passageAnnotations', source))
+        .select('uuid, passage_uuid, type, start, end, content, toh')
+        .in('passage_uuid', batch);
+
+      // The published snapshot already excludes `deprecated%` types, so this
+      // is a no-op there.
+      if (!includeDeprecated) {
+        query = query.not('type', 'like', 'deprecated%');
+      }
+
+      // Draft-only annotations must never reach a reader. Conditional on
+      // source because the editor loads through this same function and needs
+      // them — excluding them everywhere would make a comment anchor invisible
+      // to the surface that owns it.
+      if (source === 'published') {
+        query = query.not(
+          'type',
+          'in',
+          `(${DRAFT_ONLY_ANNOTATIONS.join(',')})`,
+        );
+      }
+
+      const { data, error } = await query
+        // deterministic order is required for stable pagination; without it
+        // postgres may return rows in a different order per page, skipping or
+        // duplicating annotations
+        .order('passage_uuid', { ascending: true })
+        .order('uuid', { ascending: true })
+        .range(offset, offset + pageSize - 1);
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      allData = allData.concat((data ?? []) as AnnotationDTO[]);
+      hasMore = (data?.length ?? 0) === pageSize;
+      offset += pageSize;
     }
-
-    // Draft-only annotations must never reach a reader. Conditional on source
-    // because the editor loads through this same function and needs them —
-    // excluding them everywhere would make a comment anchor invisible to the
-    // surface that owns it.
-    if (source === 'published') {
-      query = query.not('type', 'in', `(${DRAFT_ONLY_ANNOTATIONS.join(',')})`);
-    }
-
-    const { data, error } = await query
-      // deterministic order is required for stable pagination; without it
-      // postgres may return rows in a different order per page, skipping or
-      // duplicating annotations
-      .order('passage_uuid', { ascending: true })
-      .order('uuid', { ascending: true })
-      .range(offset, offset + pageSize - 1);
-
-    if (error) {
-      return { error: error.message };
-    }
-
-    allData = allData.concat((data ?? []) as AnnotationDTO[]);
-    hasMore = (data?.length ?? 0) === pageSize;
-    offset += pageSize;
   }
 
   for (const annotation of allData) {

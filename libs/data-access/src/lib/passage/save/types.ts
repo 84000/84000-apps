@@ -29,6 +29,8 @@ export type SavePassagesWithDeletionsResult = {
   passages: SavedPassageRow[];
   renumberedPassages: RenumberedPassageRow[];
   error?: string;
+  /** Problems after the content was saved; the save still succeeded. */
+  warnings?: string[];
 };
 
 /**

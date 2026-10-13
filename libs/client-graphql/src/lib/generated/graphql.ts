@@ -1123,6 +1123,8 @@ export type SavePassagesResult = {
   savedCount: Scalars['Int']['output'];
   /** Whether the save was successful */
   success: Scalars['Boolean']['output'];
+  /** Problems after the content was saved. The save still succeeded. */
+  warnings?: Maybe<Array<Scalars['String']['output']>>;
 };
 
 /** A tagged comment, placed in its work and thread. */

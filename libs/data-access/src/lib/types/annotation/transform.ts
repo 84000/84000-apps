@@ -10,6 +10,7 @@ import type {
   AnnotationDTOType,
 } from './annotation-type';
 import { ANNOTATIONS_TO_IGNORE } from './annotation-type';
+import { annotationRangeFits } from './range';
 import { transformer as abbreviation } from './abbreviation';
 import { transformer as audio } from './audio';
 import { transformer as blockquote } from './blockquote';
@@ -85,21 +86,18 @@ export const annotationFromDTO = (
   dto: AnnotationDTO,
   passageLength: number,
 ): Annotation => {
-  const annotation = dtoToAnnotationMap[dto.type]?.(dto);
+  let annotation = dtoToAnnotationMap[dto.type]?.(dto);
   if (!annotation) {
     console.warn(`Unknown annotation type: ${dto.type}`);
     console.warn(dto);
     // Through the unknown transformer, not a bare cast: it keeps the stored
     // type and content so a save can put the row back as it was.
-    return unknown(dto) as UnknownAnnotation;
+    annotation = unknown(dto) as UnknownAnnotation;
   }
 
-  if (
-    annotation.start < 0 ||
-    annotation.start > passageLength ||
-    annotation.end < 0 ||
-    annotation.end > passageLength
-  ) {
+  // The stored row's offsets, not the transformed ones: an unknown type is
+  // checked too, and so is a reversed range.
+  if (!annotationRangeFits(dto.start, dto.end, passageLength)) {
     annotation.validated = false;
   }
 
