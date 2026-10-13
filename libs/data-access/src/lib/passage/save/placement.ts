@@ -160,7 +160,8 @@ export const makeRoomForNewPassages = async ({
  * passage keeps the sort the server holds, whatever the client sent: a client
  * that saved before a shift, or before a failed save that shifted, still
  * holds the old sort, and writing it back would tie the passage with its
- * neighbour.
+ * neighbour. Moving an existing passage needs an explicit move operation; a
+ * changed `sort` on one is ignored.
  */
 export const sortsAfterShift = async ({
   client,

@@ -36,6 +36,10 @@ import { validateSave } from './validate';
  * sort shifts, content upserts, label renumbering, stale annotation deletes,
  * then passage deletions. Every write is an idempotent upsert or delete keyed
  * by uuid, so a retry of the same save converges.
+ *
+ * A save places new passages but never moves an existing one: a changed
+ * `sort` on an existing passage is ignored, and moving one needs an explicit
+ * move operation.
  */
 export const savePassagesWithDeletions = async ({
   client,
