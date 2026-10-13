@@ -53,6 +53,7 @@ export const savePassagesWithDeletions = async ({
   anchors,
   deletableAnnotationUuids,
   annotationRows: inputAnnotationRows = [],
+  keepAnnotationUuids: inputKeepAnnotationUuids,
 }: {
   client: DataClient;
   passages: Passage[];
@@ -74,16 +75,22 @@ export const savePassagesWithDeletions = async ({
    * annotations, bypassing domain serialization.
    */
   annotationRows?: AnnotationDTO[];
+  /**
+   * Stored annotations to leave exactly as stored: not deleted, moved or
+   * checked. For rows a caller could not load, such as ones out of range.
+   */
+  keepAnnotationUuids?: readonly string[];
 }): Promise<SavePassagesWithDeletionsResult> => {
   const valid = validateSave({
     passages: inputPassages,
     deletedUuids: inputDeletedUuids,
     annotationRows: inputAnnotationRows,
+    keepAnnotationUuids: inputKeepAnnotationUuids,
   });
   if ('error' in valid) {
     return failure(valid.error);
   }
-  const { passages, deletedUuids, annotationRows } = valid;
+  const { passages, deletedUuids, annotationRows, keepAnnotationUuids } = valid;
   const inputUuids = passages.map((p) => p.uuid);
 
   const notSaved = (error: string) => failure(`${error}; nothing was saved`);
@@ -112,23 +119,27 @@ export const savePassagesWithDeletions = async ({
     deletedPassages = deletedRead.data;
   }
 
+  const storedContent = new Map(
+    existingRows.map((row) => [row.uuid, row.content]),
+  );
   const {
     upserts: annotationsToUpsert,
     unchanged: annotationsUnchanged,
     deletes: annotationsToDelete,
+    warnings: planWarnings,
   } = planAnnotations({
     passages,
     annotationRows,
     existing: annotationsRead.data,
+    storedContent,
+    keep: keepAnnotationUuids,
     deletable: deletableAnnotationUuids,
   });
   const outOfRange = findOutOfRange({
     upserts: annotationsToUpsert,
     unchanged: annotationsUnchanged,
     contentByPassage: new Map(passages.map((p) => [p.uuid, p.content])),
-    storedContentByPassage: new Map(
-      existingRows.map((row) => [row.uuid, row.content]),
-    ),
+    storedContentByPassage: storedContent,
   });
   if (outOfRange) {
     return failure(`Invalid save, nothing was saved: ${outOfRange}`);
@@ -275,7 +286,7 @@ export const savePassagesWithDeletions = async ({
   const deleteLabelsFailed = await writeLabels(labelPlan.afterDeletes);
   if (deleteLabelsFailed) return deleteLabelsFailed;
 
-  const warnings: string[] = [];
+  const warnings = [...planWarnings];
   const savedPassages: SavedPassageRow[] = [];
   for (const batch of inBatches(inputUuids)) {
     const { data, error } = await client

@@ -1,5 +1,16 @@
 import { savePassagesWithDeletions } from './save';
-import type { AnnotationDTO, Passage, PassageRowDTO } from '../types';
+import {
+  fetchReplaceAnnotations,
+  fetchReplaceRows,
+} from './replace-persistence';
+import { replacePassageText } from '../replace';
+import {
+  annotationsFromDTO,
+  type Annotation,
+  type AnnotationDTO,
+  type Passage,
+  type PassageRowDTO,
+} from '../types';
 
 type TableName = 'passages' | 'passage_annotations';
 
@@ -2078,5 +2089,215 @@ describe('savePassagesWithDeletions hardening', () => {
 
     expect(result.success).toBe(true);
     expect(state.deletedAnnotationUuids).toEqual(['ref-1']);
+  });
+});
+
+describe('savePassagesWithDeletions ignored rows and kept rows', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const quoteRow: AnnotationDTO = {
+    uuid: 'quote-1',
+    passage_uuid: 'passage-1',
+    start: 5,
+    end: 9,
+    type: 'quote',
+    content: [],
+  };
+  const edited = (content: string, extra: Partial<Passage> = {}): Passage => ({
+    ...passage,
+    content,
+    annotations: [],
+    ...extra,
+  });
+
+  it('moves an ignored row with the text and never deletes it', async () => {
+    const state = createState({
+      annotations: [quoteRow],
+      passages: [passageRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('My body text')],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.annotations).toEqual([
+      expect.objectContaining({ uuid: 'quote-1', start: 8, end: 12 }),
+    ]);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  it('leaves an ignored row it cannot place, and says so', async () => {
+    const state = createState({
+      annotations: [{ ...quoteRow, start: 2, end: 3 }],
+      passages: [{ ...passageRow, content: 'aaa' }],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('aa')],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.annotations).toEqual([
+      expect.objectContaining({ uuid: 'quote-1', start: 2, end: 3 }),
+    ]);
+    expect(result.warnings).toEqual([
+      expect.stringContaining('Annotation quote-1'),
+    ]);
+  });
+
+  it('does not move the rows of a passage with an incomplete export', async () => {
+    const state = createState({
+      annotations: [quoteRow],
+      passages: [passageRow],
+    });
+
+    await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [edited('My body text', { annotationsIncomplete: true })],
+    });
+
+    expect(state.annotationUpserts).toEqual([]);
+  });
+
+  it('leaves kept rows as stored and deletes the other absent ones', async () => {
+    const state = createState({
+      annotations: [
+        annotationRow,
+        { ...annotationRow, uuid: 'overrun', end: 50 },
+        { ...annotationRow, uuid: 'cut', start: 5 },
+      ],
+      passages: [passageRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [passage],
+      keepAnnotationUuids: ['overrun'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['cut']);
+    expect(state.annotations.map((row) => row.uuid)).toContain('overrun');
+  });
+
+  it('rejects an annotation both sent and kept', async () => {
+    const state = createState({ annotations: [annotationRow] });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [passage],
+      keepAnnotationUuids: ['annotation-1'],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('both sent and kept');
+    expect(state.ops).toEqual([]);
+  });
+});
+
+describe('replace on the shared save', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const replaceIn = async (state: FakeState, searchText: string) => {
+    const client = createFakeClient(state);
+    const rows = await fetchReplaceRows({ client, targetUuids: ['passage-1'] });
+    if (!rows.ok) throw new Error(rows.error);
+    const read = await fetchReplaceAnnotations({
+      client,
+      rows: rows.orderedRows,
+    });
+    if (!read.ok) throw new Error(read.error);
+    const [row] = rows.orderedRows;
+    const replaced = replacePassageText({
+      passage: {
+        ...passage,
+        content: row.content,
+        annotations: annotationsFromDTO(
+          read.annotationsByPassageUuid.get(row.uuid),
+          row.content.length,
+        ) as Annotation[],
+      },
+      searchText,
+      replaceText: '',
+    });
+    return {
+      read,
+      result: await savePassagesWithDeletions({
+        client,
+        passages: [replaced.passage],
+        keepAnnotationUuids: read.keepAnnotationUuids,
+      }),
+    };
+  };
+
+  it('keeps a stored row that does not fit, and deletes one whose text it cut', async () => {
+    const state = createState({
+      annotations: [
+        annotationRow,
+        { ...annotationRow, uuid: 'reversed', start: 5, end: 2 },
+        { ...annotationRow, uuid: 'cut', start: 5 },
+      ],
+      passages: [passageRow],
+    });
+
+    const { read, result } = await replaceIn(state, 'text');
+
+    expect(read.keepAnnotationUuids).toEqual(['reversed']);
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['cut']);
+    expect(state.annotations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ uuid: 'annotation-1', start: 0, end: 5 }),
+        expect.objectContaining({ uuid: 'reversed', start: 5, end: 2 }),
+      ]),
+    );
+  });
+
+  it('reads every annotation of a passage, past one page', async () => {
+    const many = Array.from({ length: 1001 }, (_, at) => ({
+      ...annotationRow,
+      uuid: `a-${String(at).padStart(4, '0')}`,
+    }));
+    const state = createState({ annotations: many, passages: [passageRow] });
+
+    const { read, result } = await replaceIn(state, 'text');
+
+    expect(read.annotationsByPassageUuid.get('passage-1')).toHaveLength(1001);
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual([]);
+  });
+
+  it('reads replace targets in batches', async () => {
+    const state = createState({
+      passages: Array.from({ length: 450 }, (_, at) => ({
+        ...passageRow,
+        uuid: `p-${at}`,
+      })),
+    });
+
+    const rows = await fetchReplaceRows({
+      client: createFakeClient(state),
+      targetUuids: state.passages.map((row) => row.uuid),
+    });
+
+    expect(rows.ok && rows.orderedRows).toHaveLength(450);
+    expect(state.maxInLength).toBeLessThanOrEqual(200);
   });
 });

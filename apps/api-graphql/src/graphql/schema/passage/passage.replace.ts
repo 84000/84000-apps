@@ -29,10 +29,7 @@ export interface ReplaceResult {
   updatedCount: number;
 }
 
-const EMPTY_REPLACE_RESULT: Omit<
-  ReplaceResult,
-  'error' | 'success'
-> = {
+const EMPTY_REPLACE_RESULT: Omit<ReplaceResult, 'error' | 'success'> = {
   updatedCount: 0,
   replacedOccurrenceCount: 0,
   updatedAnnotationCount: 0,
@@ -139,7 +136,9 @@ export const findNextReplaceCursor = ({
   const getContent = (uuid: string, fallback: string) =>
     updatedContentByUuid.get(uuid) ?? fallback;
 
-  const findOccurrences = useRegex ? findRegexOccurrences : findLiteralOccurrences;
+  const findOccurrences = useRegex
+    ? findRegexOccurrences
+    : findLiteralOccurrences;
 
   const findMatchInPassage = ({
     minStart,
@@ -206,25 +205,6 @@ export const findNextReplaceCursor = ({
   }
 
   return null;
-};
-
-export const buildAnnotationsByPassageUuid = (
-  rawAnnotations: AnnotationDTO[] | null | undefined,
-) => {
-  const annotationsByPassageUuid = new Map<string, AnnotationDTO[]>();
-
-  for (const annotation of rawAnnotations ?? []) {
-    const passageUuid = annotation.passage_uuid || annotation.passageUuid;
-    if (!passageUuid) {
-      continue;
-    }
-
-    const existing = annotationsByPassageUuid.get(passageUuid) || [];
-    existing.push(annotation);
-    annotationsByPassageUuid.set(passageUuid, existing);
-  }
-
-  return annotationsByPassageUuid;
 };
 
 export const buildReplacePassage = ({

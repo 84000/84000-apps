@@ -5,6 +5,7 @@ export type ValidatedSave = {
   passages: Passage[];
   deletedUuids: string[];
   annotationRows: AnnotationDTO[];
+  keepAnnotationUuids?: readonly string[];
 };
 
 const firstDuplicate = (values: readonly string[]) => {
@@ -18,13 +19,14 @@ const firstDuplicate = (values: readonly string[]) => {
 
 /**
  * Checks a save's input before anything is read or written: every passage
- * and annotation once, no passage both saved and deleted, and every
- * annotation on a passage in the save.
+ * and annotation once, no passage both saved and deleted, every annotation
+ * on a passage in the save, and none both sent and kept as stored.
  */
 export const validateSave = ({
   passages,
   deletedUuids,
   annotationRows,
+  keepAnnotationUuids = [],
 }: ValidatedSave): ValidatedSave | { error: string } => {
   const reject = (reason: string) => ({
     error: `Invalid save, nothing was saved: ${reason}`,
@@ -67,13 +69,24 @@ export const validateSave = ({
   });
   if (stray) return reject(stray);
 
-  const duplicateAnnotation = firstDuplicate([
+  const sentAnnotations = [
     ...filled.flatMap((passage) => passage.annotations.map((a) => a.uuid)),
     ...rows.map((row) => row.uuid),
-  ]);
+  ];
+  const duplicateAnnotation = firstDuplicate(sentAnnotations);
   if (duplicateAnnotation) {
     return reject(`annotation ${duplicateAnnotation} is sent more than once`);
   }
+  const keep = new Set(keepAnnotationUuids);
+  const sentAndKept = sentAnnotations.find((uuid) => keep.has(uuid));
+  if (sentAndKept) {
+    return reject(`annotation ${sentAndKept} is both sent and kept as stored`);
+  }
 
-  return { passages: filled, deletedUuids: deleted, annotationRows: rows };
+  return {
+    passages: filled,
+    deletedUuids: deleted,
+    annotationRows: rows,
+    keepAnnotationUuids: [...keep],
+  };
 };
