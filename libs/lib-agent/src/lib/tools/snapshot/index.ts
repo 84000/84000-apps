@@ -1,3 +1,30 @@
+import type { McpToolDefinition } from '../../types';
+import { createDownloadWorkSnapshotTool } from './download-work-snapshot';
+import type { WorkSnapshotSource } from './source';
+import { createWorkLsTool } from './work-ls';
+import { createWorkReadTool } from './work-read';
+
+/** Names of the work snapshot tools. */
+export const SNAPSHOT_TOOL_NAMES = [
+  'work-ls',
+  'work-read',
+  'download-work-snapshot',
+] as const;
+
+/**
+ * Tools over a work's draft snapshot: the whole work as a file tree, listed,
+ * read and searched in memory, or downloaded. `source` authorizes each call.
+ */
+export function createSnapshotTools(
+  source: WorkSnapshotSource,
+): McpToolDefinition[] {
+  return [
+    createWorkLsTool(source),
+    createWorkReadTool(source),
+    createDownloadWorkSnapshotTool(source),
+  ];
+}
+
 export {
   createWorkSnapshotCache,
   DEFAULT_SNAPSHOT_CACHE_BYTES,
