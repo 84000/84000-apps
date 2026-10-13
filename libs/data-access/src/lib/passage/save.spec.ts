@@ -1013,6 +1013,32 @@ describe('savePassagesWithDeletions failure propagation', () => {
     expect(labels).toMatchObject({ neighbor: '3', gone: '4' });
   });
 
+  it('writes what an insert renumbers before the annotations', async () => {
+    const state = createState({
+      passages: [{ ...passageRow, uuid: 'neighbor', label: '2', sort: 3 }],
+      failOn: { 'upsert:annotations': 'annotations failed' },
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        {
+          ...newPassage,
+          annotations: passage.annotations.map((a) => ({
+            ...a,
+            uuid: 'annotation-new',
+            passageUuid: 'passage-new',
+          })),
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(state.passages.find((row) => row.uuid === 'neighbor')?.label).toBe(
+      '3',
+    );
+  });
+
   it('plans labels per work when a save touches two', async () => {
     const state = createState({
       passages: [

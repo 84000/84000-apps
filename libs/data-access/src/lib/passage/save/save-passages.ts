@@ -33,8 +33,9 @@ import { validateSave } from './validate';
  * The input is validated and every row the save depends on is read before
  * anything is written, so a failure up to that point saved nothing. Writes
  * then run as a sequence ordered to keep the partial-failure window small:
- * sort shifts, content upserts, the labels inserting renumbered, stale
- * annotation deletes, passage deletions, then the labels deleting renumbered.
+ * sort shifts, passage upserts, the labels inserting renumbered, annotation
+ * upserts, stale annotation deletes, passage deletions, then the labels
+ * deleting renumbered.
  * Labels are planned before any write. Every write is an idempotent upsert or
  * delete keyed by uuid, so a retry of the same save converges.
  *
@@ -154,11 +155,11 @@ export const savePassagesWithDeletions = async ({
   }
   const { shiftedSorts } = sorted;
 
-  // Planned in full before anything is written. Payload passages take their
-  // final labels with their content. The rest are written in two steps, as
-  // the walks would run: what the inserts renumber right after the content,
-  // so a later failure cannot lose it (a retry no longer sees the inserts as
-  // new), and what the deletes renumber once the passages are gone.
+  // Planned in full before anything is written, and written in two steps as
+  // the walks would run. What the inserts renumber goes with and right after
+  // the passage rows, so a later failure cannot lose it: a retry no longer
+  // sees the inserts as new. What the deletes renumber goes once the
+  // passages are gone.
   const plannedLabels = await planSaveLabels({
     client,
     toSave: sorted.toSave,
@@ -170,16 +171,17 @@ export const savePassagesWithDeletions = async ({
   }
   const labelPlan = plannedLabels.data;
   const toSave = sorted.toSave.map((passage) => {
-    const label = labelPlan.final.get(passage.uuid);
+    const label = labelPlan.afterInserts.get(passage.uuid);
     return label === undefined ? passage : { ...passage, label };
   });
   const payloadUuids = new Set(inputUuids);
-  const labelRowsOf = (labels: Map<string, string>): RenumberedPassageRow[] =>
-    [...labels]
-      .filter(([uuid]) => !payloadUuids.has(uuid))
+  const writeLabels = async (
+    labels: Map<string, string>,
+    skip: Set<string> = new Set(),
+  ) => {
+    const rows: RenumberedPassageRow[] = [...labels]
+      .filter(([uuid]) => !skip.has(uuid))
       .map(([uuid, label]) => ({ uuid, label }));
-  const writeLabels = async (labels: Map<string, string>) => {
-    const rows = labelRowsOf(labels);
     if (rows.length === 0) return null;
     const { error } = await client
       .from('passages')
@@ -215,6 +217,13 @@ export const savePassagesWithDeletions = async ({
     }
   }
 
+  // Payload passages already carry theirs.
+  const insertLabelsFailed = await writeLabels(
+    labelPlan.afterInserts,
+    payloadUuids,
+  );
+  if (insertLabelsFailed) return insertLabelsFailed;
+
   if (annotationsToUpsert.length > 0) {
     const { error: annotationError } = await client
       .from('passage_annotations')
@@ -228,9 +237,6 @@ export const savePassagesWithDeletions = async ({
       );
     }
   }
-
-  const insertLabelsFailed = await writeLabels(labelPlan.afterInserts);
-  if (insertLabelsFailed) return insertLabelsFailed;
 
   // Stale rows left behind here resurrect deleted markup on the next load,
   // so a failure must reach the client even though the content upserts

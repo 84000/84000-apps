@@ -52,9 +52,10 @@ const byPosition = (a: LabelRow, b: LabelRow) =>
 
 /**
  * Renumber a series in `rows` after a passage was inserted into it (`delta`
- * 1) or removed from it (`delta` -1), from `fromSort` on. Changes `rows` in
- * place: the walked labels, and the labels of their children, renamed from
- * the labels as they stood before the walk so one rename never feeds another.
+ * 1) or removed from it (`delta` -1), from `fromSort` on. Changes `rows`, in
+ * position order, in place: the walked labels, and the labels of each walked
+ * passage's own children, renamed from the labels as they stood before the
+ * walk so one rename never feeds another.
  */
 export const renumberAfter = (
   rows: LabelRow[],
@@ -90,7 +91,6 @@ export const renumberAfter = (
   let previousAssignedLabel: string | undefined;
 
   const relabelled = new Map<string, string>();
-  const prefixRenames = new Map<string, string>();
 
   for (const row of rows) {
     if (row.sort <= fromSort) continue;
@@ -116,11 +116,6 @@ export const renumberAfter = (
       if (!clientRenumberedUuids.has(row.uuid)) break;
     } else if (row.label !== expectedLabel) {
       relabelled.set(row.uuid, expectedLabel);
-      // Two rows holding one stale label: children follow the first.
-      const oldPrefix = `${row.label}.`;
-      if (!isSameSlot && !prefixRenames.has(oldPrefix)) {
-        prefixRenames.set(oldPrefix, `${expectedLabel}.`);
-      }
     }
 
     previousLabel = row.label;
@@ -129,20 +124,27 @@ export const renumberAfter = (
     if (!isSameSlot) nextInt++;
   }
 
-  // Every renamed prefix has the walk's depth, so a label matches at most one.
-  const renameOf = (label: string) => {
-    const labelParts = label.split('.');
-    if (labelParts.length <= depth) return undefined;
-    const oldPrefix = `${labelParts.slice(0, depth).join('.')}.`;
-    const newPrefix = prefixRenames.get(oldPrefix);
-    return newPrefix === undefined
-      ? undefined
-      : newPrefix + label.slice(oldPrefix.length);
-  };
-  for (const row of rows) {
-    const label = relabelled.get(row.uuid) ?? renameOf(row.label);
-    if (label !== undefined) row.label = label;
-  }
+  // A passage's children are the passages after it, in the same Toh, whose
+  // labels carry its label as a prefix; the first one that does not ends
+  // them. Passages of another Toh, which may share its labels, are passed
+  // over.
+  const before = rows.map((row) => row.label);
+  const otherToh = (a: unknown, b: unknown) =>
+    a !== null && b !== null && a !== b;
+  const renamed = new Map<number, string>();
+  rows.forEach((row, at) => {
+    const label = relabelled.get(row.uuid);
+    if (label === undefined) return;
+    renamed.set(at, label);
+    const oldPrefix = `${before[at]}.`;
+    for (let next = at + 1; next < rows.length; next++) {
+      const child = rows[next];
+      if (!before[next] || otherToh(child.toh, row.toh)) continue;
+      if (!before[next].startsWith(oldPrefix)) break;
+      renamed.set(next, `${label}.${before[next].slice(oldPrefix.length)}`);
+    }
+  });
+  renamed.forEach((label, at) => (rows[at].label = label));
 };
 
 /** The labels a save changes, in the two steps it writes them. */
@@ -167,12 +169,19 @@ export const planLabels = ({
   inserts,
   deletedUuids,
   clientRenumberedUuids,
+  storedLabels = new Map(index.map((row) => [row.uuid, row.label])),
 }: {
   index: LabelRow[];
   /** The new passages, at the sorts the save placed them. */
   inserts: { sort: number; label: string }[];
   deletedUuids: Set<string>;
   clientRenumberedUuids: Set<string>;
+  /**
+   * Labels as stored, before the client's own renumbering, to tell a
+   * per-text variant from a slot the client moved onto the same label.
+   * Defaults to the labels in `index`.
+   */
+  storedLabels?: Map<string, string>;
 }): LabelPlan => {
   const rows = index.map((row) => ({ ...row })).sort(byPosition);
   const before = new Map(rows.map((row) => [row.uuid, row.label]));
@@ -204,13 +213,17 @@ export const planLabels = ({
   deleted
     .filter((row) => row.label)
     // Another per-text variant still holds the slot, so nothing moves up.
-    .filter(
-      (row) =>
+    .filter((row) => {
+      const stored = storedLabels.get(row.uuid);
+      return (
         row.toh === null ||
+        stored === undefined ||
         !remaining.some(
-          (other) => other.label === row.label && other.toh !== null,
-        ),
-    )
+          (other) =>
+            other.toh !== null && storedLabels.get(other.uuid) === stored,
+        )
+      );
+    })
     .forEach((row) =>
       renumberAfter(remaining, {
         fromSort: row.sort,
@@ -260,6 +273,7 @@ export const planSaveLabels = async ({
     const read = await readLabelIndex(client, workUuid);
     if ('error' in read) return read;
     const index = new Map(read.data.map((row) => [row.uuid, row]));
+    const storedLabels = new Map(read.data.map((row) => [row.uuid, row.label]));
     const inWork = toSave.filter((passage) => passage.workUuid === workUuid);
     inWork.forEach((passage) =>
       index.set(passage.uuid, {
@@ -278,6 +292,7 @@ export const planSaveLabels = async ({
           .map((row) => row.uuid),
       ),
       clientRenumberedUuids,
+      storedLabels,
     });
     (['afterInserts', 'afterDeletes', 'final'] as const).forEach((step) =>
       work[step].forEach((label, uuid) => plan[step].set(uuid, label)),

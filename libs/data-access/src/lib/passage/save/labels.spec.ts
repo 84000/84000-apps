@@ -196,7 +196,7 @@ describe('planLabels', () => {
     ).toEqual({ new: 'n.2.1', a: 'n.2.2', b: 'n.3', c: 'n.2.2' });
   });
 
-  it('renames children as the database prefix rename does, wherever they sit', () => {
+  it("renames only a passage's own children, not a namesake before it", () => {
     const index = [
       row('early', '3.9', 1),
       row('new', '3', 3),
@@ -210,7 +210,85 @@ describe('planLabels', () => {
         deletedUuids: none,
         clientRenumberedUuids: new Set(['new']),
       }),
-    ).toEqual({ early: '4.9', new: '3', a: '4', dot: '4.' });
+    ).toEqual({ early: '3.9', new: '3', a: '4', dot: '4.' });
+  });
+
+  it('ends the children at the first passage that is not one', () => {
+    const index = [
+      row('new', '3', 2),
+      row('a', '3', 3),
+      row('a1', '3.1', 4),
+      row('a2', '3.2', 5),
+      row('m', 'm.1', 6),
+      row('stray', '3.3', 7),
+      row('b', '4', 8),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 2, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({
+      new: '3',
+      a: '4',
+      a1: '4.1',
+      a2: '4.2',
+      m: 'm.1',
+      stray: '3.3',
+      b: '5',
+    });
+  });
+
+  it('renames each Toh its own children where Tohs share labels', () => {
+    const index = [
+      row('new', '3', 3),
+      row('v1', '3', 4, 'toh1'),
+      row('v2', '3', 4, 'toh2'),
+      row('v1a', '3.1', 5, 'toh1'),
+      row('v2a', '3.1', 6, 'toh2'),
+      row('v1b', '3.2', 7, 'toh1'),
+      row('v2b', '3.2', 8, 'toh2'),
+      row('next', '4', 9),
+      row('late', '3.9', 20, 'toh1'),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [{ sort: 3, label: '3' }],
+        deletedUuids: none,
+        clientRenumberedUuids: new Set(['new']),
+      }),
+    ).toEqual({
+      new: '3',
+      v1: '4',
+      v2: '4',
+      v1a: '4.1',
+      v2a: '4.1',
+      v1b: '4.2',
+      v2b: '4.2',
+      next: '5',
+      late: '3.9',
+    });
+  });
+
+  it("does not take a Toh's own children for another's on a delete", () => {
+    const index = [
+      row('a', '2', 1, 'toh1'),
+      row('gone', '3', 2, 'toh1'),
+      row('b', '4', 3, 'toh1'),
+      row('other', '4.1', 4, 'toh2'),
+      row('b1', '4.1', 5, 'toh1'),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [],
+        deletedUuids: new Set(['gone']),
+        clientRenumberedUuids: none,
+      }),
+    ).toEqual({ a: '2', b: '3', other: '4.1', b1: '3.1' });
   });
 
   it('does not walk from a label without a number', () => {
@@ -260,6 +338,50 @@ describe('planLabels', () => {
         clientRenumberedUuids: none,
       }).final.size,
     ).toBe(0);
+  });
+
+  it('walks from a deleted variant whose slot the client moved another onto', () => {
+    // E was stored as n.6 and sent as n.5, so D's slot is not still held.
+    const index = [
+      row('c', 'n.4', 4),
+      row('d', 'n.5', 5, 't1'),
+      row('e', 'n.5', 6, 't1'),
+      row('f', 'n.7', 7),
+      row('g', 'n.8', 8),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [],
+        deletedUuids: new Set(['d']),
+        clientRenumberedUuids: new Set(['e']),
+        storedLabels: new Map([
+          ['c', 'n.4'],
+          ['d', 'n.5'],
+          ['e', 'n.6'],
+          ['f', 'n.7'],
+          ['g', 'n.8'],
+        ]),
+      }),
+    ).toEqual({ c: 'n.4', e: 'n.5', f: 'n.6', g: 'n.7' });
+  });
+
+  it('closes the slot once when every variant of it is deleted', () => {
+    const index = [
+      row('a', 'n.1', 1),
+      row('v1', 'n.2', 2, 'toh1'),
+      row('v2', 'n.2', 2, 'toh2'),
+      row('c', 'n.3', 3),
+      row('d', 'n.4', 4),
+    ];
+
+    expect(
+      labelsAfter(index, {
+        inserts: [],
+        deletedUuids: new Set(['v1', 'v2']),
+        clientRenumberedUuids: none,
+      }),
+    ).toEqual({ a: 'n.1', c: 'n.2', d: 'n.3' });
   });
 
   it('plans two inserts and two deletes, and splits the steps', () => {
