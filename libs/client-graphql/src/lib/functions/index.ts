@@ -98,3 +98,9 @@ export {
   type CommentAnchor,
   type PassageComments,
 } from './get-passage-comments';
+export {
+  ensureWorkSnapshot,
+  type EnsureWorkSnapshotResult,
+  type SnapshotDownload,
+  type WorkSnapshot,
+} from './ensure-work-snapshot';
