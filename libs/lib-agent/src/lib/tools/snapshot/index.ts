@@ -1,6 +1,7 @@
 import type { McpToolDefinition } from '../../types';
 import { createDownloadWorkSnapshotTool } from './download-work-snapshot';
 import type { WorkSnapshotSource } from './source';
+import { createWorkGrepTool } from './work-grep';
 import { createWorkLsTool } from './work-ls';
 import { createWorkReadTool } from './work-read';
 
@@ -8,6 +9,7 @@ import { createWorkReadTool } from './work-read';
 export const SNAPSHOT_TOOL_NAMES = [
   'work-ls',
   'work-read',
+  'work-grep',
   'download-work-snapshot',
 ] as const;
 
@@ -21,6 +23,7 @@ export function createSnapshotTools(
   return [
     createWorkLsTool(source),
     createWorkReadTool(source),
+    createWorkGrepTool(source),
     createDownloadWorkSnapshotTool(source),
   ];
 }
@@ -50,3 +53,4 @@ export type {
   WorkSnapshotSource,
   WorkSnapshotStatus,
 } from './source';
+export { grepSnapshot, type GrepOptions } from './work-grep';
