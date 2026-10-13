@@ -1,4 +1,10 @@
-import type { BodyItemType, TohokuCatalogEntry } from '../../types';
+import type {
+  AnnotationDTOContent,
+  AnnotationDTOType,
+  BodyItemType,
+  PassageRowDTO,
+  TohokuCatalogEntry,
+} from '../../types';
 
 /**
  * A passage whose label the server changed while renumbering a series, rather
@@ -31,6 +37,27 @@ export type SavePassagesWithDeletionsResult = {
   error?: string;
   /** Problems after the content was saved; the save still succeeded. */
   warnings?: string[];
+};
+
+/** A passage row with every column, so a batch upsert nulls nothing. */
+export type PassageWriteRow = Omit<
+  PassageRowDTO,
+  'xmlId' | 'parent' | 'toh'
+> & {
+  xmlId: string | null;
+  parent: string | null;
+  toh: TohokuCatalogEntry | null;
+};
+
+/** An annotation row with every column, so a batch upsert nulls nothing. */
+export type AnnotationWriteRow = {
+  uuid: string;
+  passage_uuid: string;
+  type: AnnotationDTOType;
+  start: number;
+  end: number;
+  content: AnnotationDTOContent[];
+  toh: string | null;
 };
 
 /**
