@@ -107,7 +107,7 @@ class FakeQuery {
   }
 }
 
-const fakeClient = (tables: Tables) => {
+const fakeClient = (tables: Tables, { loseResponse = false } = {}) => {
   const log = { upserts: [] as Row[][], deletes: [] as string[][] };
   const upsert = (table: string, rows: Row[]) => {
     const stored = (tables[table] ??= []);
@@ -137,7 +137,11 @@ const fakeClient = (tables: Tables) => {
         );
         log.deletes.push(gone);
       }
-      return Promise.resolve({ data: {}, error: null });
+      return Promise.resolve(
+        loseResponse
+          ? { data: null, error: { message: 'fetch failed', code: '' } }
+          : { data: {}, error: null },
+      );
     },
   } as never;
   return { client, log };
@@ -203,6 +207,15 @@ const tablesFor = (publishedRows: AnnotationDTO[]): Tables => ({
 const storedUuids = (tables: Tables) =>
   tables.passage_annotations.map((row) => row.uuid).sort();
 
+/** A cut of the stored text at `start`–`end`, naming what it removes. */
+const cut = (start: number, end: number) => ({
+  op: 'delete-text' as const,
+  passageUuid: 'p1',
+  start,
+  end,
+  text: CONTENT.slice(start, end),
+});
+
 // Names an annotation that is not there: the passage is saved, nothing changes.
 const noOp = [
   { op: 'remove-annotation' as const, passageUuid: 'p1', annotationUuid: 'x' },
@@ -265,7 +278,7 @@ describe('applyPassageEdits', () => {
     const result = await applyPassageEdits({
       client,
       workUuid: WORK,
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 14, end: 22 }],
+      edits: [cut(14, 22)],
     });
 
     const byUuid = new Map(
@@ -291,7 +304,7 @@ describe('applyPassageEdits', () => {
     const result = await applyPassageEdits({
       client,
       workUuid: WORK,
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 1 }],
+      edits: [cut(0, 1)],
     });
 
     expect(result.success).toBe(true);
@@ -323,7 +336,7 @@ describe('applyPassageEdits', () => {
     const result = await applyPassageEdits({
       client,
       workUuid: WORK,
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 5 }],
+      edits: [cut(0, 5)],
     });
 
     expect(result.success).toBe(true);
@@ -345,7 +358,7 @@ describe('applyPassageEdits', () => {
     await applyPassageEdits({
       client,
       workUuid: WORK,
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 14, end: 22 }],
+      edits: [cut(14, 22)],
     });
 
     const written = log.upserts.flat().map((row) => row.uuid);
@@ -363,7 +376,7 @@ describe('applyPassageEdits', () => {
     const result = await applyPassageEdits({
       client,
       workUuid: WORK,
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 14, end: 22 }],
+      edits: [cut(14, 22)],
     });
 
     expect(result.success).toBe(false);
@@ -451,5 +464,123 @@ describe('applyPassageEdits', () => {
     expect(storedUuids(tables)).toEqual(
       ['a-comment', 'a-glossary', 'a-note'].sort(),
     );
+  });
+
+  it('refuses a cut whose text is not there, writing nothing', async () => {
+    const tables = tablesFor(published());
+    const { client, log } = fakeClient(tables);
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [{ ...cut(14, 22), text: '[F.91.a]' }],
+    });
+
+    expect(result).toMatchObject({ success: false, applied: false });
+    expect(result.error).toContain('re-read the passage');
+    expect(tables.passages[0].content).toBe(CONTENT);
+    expect(log.upserts).toEqual([]);
+  });
+
+  it('refuses the same cut a second time', async () => {
+    const tables = tablesFor(published());
+    const { client, log } = fakeClient(tables);
+    const apply = () =>
+      applyPassageEdits({ client, workUuid: WORK, edits: [cut(14, 22)] });
+
+    expect((await apply()).applied).toBe(true);
+    const again = await apply();
+    expect(again).toMatchObject({ success: false, applied: false });
+    expect(again.error).toMatch(/expected .* but found/);
+    expect(log.upserts).toHaveLength(1);
+    expect(tables.passages[0].content).toBe(
+      CONTENT.slice(0, 14) + CONTENT.slice(22),
+    );
+  });
+
+  it('moves a row of a type editors never load exactly with the cut', async () => {
+    const tables = tablesFor(published());
+    tables.passage_annotations.push({
+      ...annotation('a-quote', 'quote', 28, 32),
+    } as Row);
+    const { client } = fakeClient(tables);
+
+    await applyPassageEdits({ client, workUuid: WORK, edits: [cut(14, 22)] });
+
+    expect(
+      tables.passage_annotations.find((row) => row.uuid === 'a-quote'),
+    ).toMatchObject({ start: 20, end: 24 });
+  });
+
+  it('skips an add identical to an annotation already there', async () => {
+    const tables = tablesFor(published());
+    const { client } = fakeClient(tables);
+    const add = {
+      op: 'add-annotation' as const,
+      passageUuid: 'p1',
+      kind: 'end-note-link',
+      start: 32,
+      data: { endNote: 'n1' },
+    };
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [add, add],
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      tables.passage_annotations.filter((row) => row.type === 'end-note-link'),
+    ).toHaveLength(1);
+    expect(result.warnings.map((w) => w.message)).toEqual([
+      expect.stringContaining('Skipped add-annotation'),
+      expect.stringContaining('Skipped add-annotation'),
+    ]);
+  });
+
+  it('matches a stored row written with another key set as the same add', async () => {
+    const tables = tablesFor(published());
+    tables.passage_annotations = tables.passage_annotations.map((row) =>
+      row.uuid === 'a-note'
+        ? { ...row, content: [{ uuid: 'n1' }, { label: '3' }] }
+        : row,
+    );
+    const { client } = fakeClient(tables);
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 32,
+          data: { endNote: 'n1' },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      tables.passage_annotations.filter((row) => row.type === 'end-note-link'),
+    ).toHaveLength(1);
+    expect(result.warnings.map((w) => w.message)).toEqual([
+      expect.stringContaining('Skipped add-annotation'),
+    ]);
+  });
+
+  it('reports a write whose response was lost as applied unknown', async () => {
+    const tables = tablesFor(published());
+    const { client } = fakeClient(tables, { loseResponse: true });
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [cut(14, 22)],
+    });
+
+    expect(result).toMatchObject({ success: false, applied: 'unknown' });
   });
 });

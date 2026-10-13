@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { createApplyPassageEditsTool } from './apply-passage-edits';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
@@ -20,7 +21,13 @@ describe('apply-passage-edits tool', () => {
   const extra = {} as Parameters<typeof tool.handler>[1];
 
   const edits = [
-    { op: 'delete-text', passageUuid: 'p1', start: 14, end: 23 },
+    {
+      op: 'delete-text',
+      passageUuid: 'p1',
+      start: 14,
+      end: 23,
+      text: '[F.90.a] ',
+    },
     {
       op: 'add-annotation',
       passageUuid: 'p1',
@@ -33,6 +40,7 @@ describe('apply-passage-edits tool', () => {
   const applied = {
     success: true,
     dryRun: false,
+    applied: true,
     warnings: [],
     passages: [
       {
@@ -81,7 +89,11 @@ describe('apply-passage-edits tool', () => {
 
   it('reports a dry run as not applied', async () => {
     mockedHasPermission.mockResolvedValue(true);
-    mockedApply.mockResolvedValue({ ...applied, dryRun: true } as never);
+    mockedApply.mockResolvedValue({
+      ...applied,
+      dryRun: true,
+      applied: false,
+    } as never);
 
     const result = await tool.handler(
       { workUuid: 'work-1', edits, dryRun: true } as never,
@@ -117,7 +129,7 @@ describe('apply-passage-edits tool', () => {
       success: false,
       dryRun: false,
       passages: [],
-      warnings: [],
+      warnings: [{ passageUuid: 'p1', message: 'Dropped span a2.' }],
       error: 'Not in work work-1: p9',
     } as never);
 
@@ -127,7 +139,21 @@ describe('apply-passage-edits tool', () => {
     );
 
     expect(result.isError).toBe(true);
-    expect((result.content[0] as { text: string }).text).toContain('p9');
+    const text = (result.content[0] as { text: string }).text;
+    expect(text).toContain('p9');
+    expect(text).toContain('Dropped span a2.');
+  });
+
+  it('requires the text a delete-text cuts', () => {
+    const schema = z.object(tool.inputSchema as z.ZodRawShape);
+    const [cutEdit] = edits;
+    expect(schema.safeParse({ workUuid: 'w', edits: [cutEdit] }).success).toBe(
+      true,
+    );
+    const { text: _text, ...withoutText } = cutEdit;
+    expect(
+      schema.safeParse({ workUuid: 'w', edits: [withoutText] }).success,
+    ).toBe(false);
   });
 
   it('returns the warnings the edit produced', async () => {
@@ -144,5 +170,27 @@ describe('apply-passage-edits tool', () => {
 
     const payload = JSON.parse((result.content[0] as { text: string }).text);
     expect(payload.warnings[0].message).toContain('a2');
+  });
+
+  it('tells the caller to re-read when the outcome is unknown', async () => {
+    mockedHasPermission.mockResolvedValue(true);
+    mockedApply.mockResolvedValue({
+      success: false,
+      dryRun: false,
+      applied: 'unknown',
+      passages: [],
+      warnings: [],
+      error: 'The save may have been applied: fetch failed',
+    } as never);
+
+    const result = await tool.handler(
+      { workUuid: 'work-1', edits } as never,
+      extra,
+    );
+
+    expect(result.isError).toBe(true);
+    const text = (result.content[0] as { text: string }).text;
+    expect(text).toContain('applied: "unknown"');
+    expect(text).toContain('Re-read');
   });
 });

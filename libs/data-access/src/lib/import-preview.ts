@@ -241,6 +241,7 @@ export const upsertPassagesFromPreview = async ({
   const result = await savePassagesWithDeletions({
     client,
     passages,
+    chunked: true,
   });
 
   if (!result.success) {

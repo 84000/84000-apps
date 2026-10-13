@@ -1,5 +1,4 @@
 import { applyEditsToPassages, type PassageEdit } from './edits';
-import { annotationsFromDTO } from '../types';
 import type { AnnotationDTO, Passage } from '../types';
 
 const WORK = 'w1';
@@ -43,17 +42,31 @@ const passage = (): Passage => ({
   sort: 548,
   type: 'translation',
   xmlId: 'x-1',
-  annotations: annotationsFromDTO(annotationDtos, CONTENT.length),
+  annotations: [],
 });
 
 const run = (edits: PassageEdit[]) =>
-  applyEditsToPassages({ workUuid: WORK, passages: [passage()], edits });
+  applyEditsToPassages({
+    workUuid: WORK,
+    passages: [passage()],
+    annotations: new Map([['p1', annotationDtos]]),
+    edits,
+  });
+
+/** A cut of the stored text at `start`–`end`, naming what it removes. */
+const cut = (start: number, end: number, content = CONTENT): PassageEdit => ({
+  op: 'delete-text',
+  passageUuid: 'p1',
+  start,
+  end,
+  text: content.slice(start, end),
+});
 
 const at = (result: ReturnType<typeof run>, uuid: string) =>
   result.passages[0].annotations.find((a) => a.uuid === uuid);
 
 const REMOVE_MARKER: PassageEdit[] = [
-  { op: 'delete-text', passageUuid: 'p1', start: 14, end: 23 },
+  cut(14, 23),
   { op: 'remove-annotation', passageUuid: 'p1', annotationUuid: 'a-marker' },
   {
     op: 'add-annotation',
@@ -101,9 +114,7 @@ describe('applyEditsToPassages', () => {
   });
 
   it('carries through annotations the edits never mention', () => {
-    const result = run([
-      { op: 'delete-text', passageUuid: 'p1', start: 0, end: 0 },
-    ]);
+    const result = run([cut(0, 0)]);
     expect(result.passages[0].annotations.map((a) => a.uuid).sort()).toEqual([
       'a-glossary',
       'a-marker',
@@ -112,10 +123,7 @@ describe('applyEditsToPassages', () => {
   });
 
   it('keeps an unmodelled annotation recoverable as the type it was stored with', () => {
-    const marker = at(
-      run([{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 0 }]),
-      'a-marker',
-    );
+    const marker = at(run([cut(0, 0)]), 'a-marker');
     expect(marker).toMatchObject({
       type: 'unknown',
       dtoType: 'deprecated-reference',
@@ -124,25 +132,18 @@ describe('applyEditsToPassages', () => {
   });
 
   it('drops an annotation whose text was entirely deleted, and says why', () => {
-    const result = run([
-      { op: 'delete-text', passageUuid: 'p1', start: 9, end: 13 },
-    ]);
+    const result = run([cut(9, 13)]);
     expect(at(result, 'a-glossary')).toBeUndefined();
     expect(result.warnings[0].message).toContain('a-glossary');
   });
 
   it('keeps a zero-length annotation that sits inside no deletion', () => {
-    const result = run([
-      { op: 'delete-text', passageUuid: 'p1', start: 0, end: 5 },
-    ]);
+    const result = run([cut(0, 5)]);
     expect(at(result, 'a-note')).toMatchObject({ start: 22, end: 22 });
   });
 
   it('applies several deletions in one passage without drift', () => {
-    const result = run([
-      { op: 'delete-text', passageUuid: 'p1', start: 14, end: 23 },
-      { op: 'delete-text', passageUuid: 'p1', start: 0, end: 5 },
-    ]);
+    const result = run([cut(14, 23), cut(0, 5)]);
     expect(result.passages[0].content).toBe('the lord said this');
     // 27 - 9 - 5.
     expect(at(result, 'a-note')).toMatchObject({ start: 13 });
@@ -152,7 +153,8 @@ describe('applyEditsToPassages', () => {
     const result = applyEditsToPassages({
       workUuid: WORK,
       passages: [passage(), { ...passage(), uuid: 'p2' }],
-      edits: [{ op: 'delete-text', passageUuid: 'p1', start: 0, end: 1 }],
+      annotations: new Map(),
+      edits: [cut(0, 1)],
     });
     expect(result.passages.map((p) => p.uuid)).toEqual(['p1']);
   });
@@ -193,6 +195,39 @@ describe('applyEditsToPassages', () => {
     expect(result.passages).toHaveLength(0);
   });
 
+  it('refuses a cut whose text is not what the range holds', () => {
+    const result = run([
+      {
+        op: 'delete-text',
+        passageUuid: 'p1',
+        start: 14,
+        end: 23,
+        text: 'nope',
+      },
+    ]);
+    expect(result.error).toMatch(/expected "nope" at 14–23 but found/);
+    expect(result.passages).toEqual([]);
+  });
+
+  it('cannot tell a repeated cut from a new one when the text repeats', () => {
+    // Cutting one "x" from "xx" leaves an "x" at the same offsets.
+    const once = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [{ ...passage(), content: 'xx' }],
+      annotations: new Map(),
+      edits: [cut(1, 2, 'xx')],
+    });
+    expect(once.passages[0].content).toBe('x');
+    const twice = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [{ ...passage(), content: 'x' }],
+      annotations: new Map(),
+      edits: [cut(0, 1, 'xx')],
+    });
+    expect(twice.error).toBeUndefined();
+    expect(twice.passages[0].content).toBe('');
+  });
+
   it('reports an insert anchored to a passage that was not read', () => {
     const result = run([
       { op: 'insert-passage', before: 'nope', content: 'x' },
@@ -210,42 +245,36 @@ describe('applyEditsToPassages with overlapping cuts', () => {
     label: '1',
     sort: 1,
     type: 'translation',
-    annotations: annotationsFromDTO(
-      [
-        {
-          uuid: 'on-h',
-          passage_uuid: 'p1',
-          type: 'span',
-          start: 7,
-          end: 8,
-          content: [],
-        },
-        {
-          uuid: 'on-b',
-          passage_uuid: 'p1',
-          type: 'span',
-          start: 1,
-          end: 2,
-          content: [],
-        },
-      ],
-      TEXT.length,
-    ),
+    annotations: [],
   });
-  const cut = (...ranges: [number, number][]) =>
+  const rows: AnnotationDTO[] = [
+    {
+      uuid: 'on-h',
+      passage_uuid: 'p1',
+      type: 'span',
+      start: 7,
+      end: 8,
+      content: [],
+    },
+    {
+      uuid: 'on-b',
+      passage_uuid: 'p1',
+      type: 'span',
+      start: 1,
+      end: 2,
+      content: [],
+    },
+  ];
+  const cuts = (...ranges: [number, number][]) =>
     applyEditsToPassages({
       workUuid: WORK,
       passages: [letters()],
-      edits: ranges.map(([start, end]) => ({
-        op: 'delete-text' as const,
-        passageUuid: 'p1',
-        start,
-        end,
-      })),
+      annotations: new Map([['p1', rows]]),
+      edits: ranges.map(([start, end]) => cut(start, end, TEXT)),
     });
 
   it('removes the union of overlapping cuts', () => {
-    const result = cut([2, 5], [4, 7]);
+    const result = cuts([2, 5], [4, 7]);
     const [passage] = result.passages;
     expect(passage.content).toBe('abhij');
     const h = passage.annotations.find((a) => a.uuid === 'on-h');
@@ -254,7 +283,7 @@ describe('applyEditsToPassages with overlapping cuts', () => {
   });
 
   it('counts a repeated cut once and never goes negative', () => {
-    const [passage] = cut([0, 2], [0, 2]).passages;
+    const [passage] = cuts([0, 2], [0, 2]).passages;
     expect(passage.content).toBe('cdefghij');
     expect(passage.annotations.find((a) => a.uuid === 'on-h')).toMatchObject({
       start: 5,
@@ -267,8 +296,8 @@ describe('applyEditsToPassages with overlapping cuts', () => {
   });
 
   it('refuses a reversed or out-of-bounds range', () => {
-    expect(cut([5, 2]).error).toMatch(/ordered and within/);
-    expect(cut([8, 11]).error).toMatch(/ordered and within/);
-    expect(cut([-1, 2]).error).toMatch(/ordered and within/);
+    expect(cuts([5, 2]).error).toMatch(/ordered and within/);
+    expect(cuts([8, 11]).error).toMatch(/ordered and within/);
+    expect(cuts([-1, 2]).error).toMatch(/ordered and within/);
   });
 });

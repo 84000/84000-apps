@@ -565,7 +565,7 @@ describe('savePassagesWithDeletions', () => {
     const result = await savePassagesWithDeletions({
       client: createFakeClient(state),
       passages: [{ ...passage, content: 'Body', annotations: [] }],
-      annotationRows: [link],
+      rawAnnotations: { 'passage-1': [link] },
       deletedUuids: ['endnote-1'],
     });
 
@@ -1677,21 +1677,67 @@ describe('savePassagesWithDeletions hardening', () => {
         },
       ],
       [
-        'a row on a passage outside the save',
+        'raw rows for a passage outside the save',
         {
           client: null as never,
-          passages: [passage],
-          annotationRows: [
-            { ...annotationRow, uuid: 'row-1', passage_uuid: 'passage-2' },
-          ],
+          passages: [{ ...passage, annotations: [] }],
+          rawAnnotations: {
+            'passage-2': [{ ...annotationRow, uuid: 'row-1' }],
+          },
         },
       ],
       [
-        'a row repeating a nested annotation',
+        'a passage sending both annotations and raw rows',
         {
           client: null as never,
           passages: [passage],
-          annotationRows: [annotationRow],
+          rawAnnotations: {
+            'passage-1': [{ ...annotationRow, uuid: 'row-1' }],
+          },
+        },
+      ],
+      [
+        'a raw row naming another passage',
+        {
+          client: null as never,
+          passages: [{ ...passage, annotations: [] }],
+          rawAnnotations: {
+            'passage-1': [{ ...annotationRow, passage_uuid: 'passage-2' }],
+          },
+        },
+      ],
+      [
+        'a raw row whose second passage field names another passage',
+        {
+          client: null as never,
+          passages: [{ ...passage, annotations: [] }],
+          rawAnnotations: {
+            'passage-1': [
+              {
+                ...annotationRow,
+                passage_uuid: 'passage-1',
+                passageUuid: 'passage-2',
+              },
+            ],
+          },
+        },
+      ],
+      [
+        'raw rows marked incomplete',
+        {
+          client: null as never,
+          passages: [
+            { ...passage, annotations: [], annotationsIncomplete: true },
+          ],
+          rawAnnotations: { 'passage-1': [] },
+        },
+      ],
+      [
+        'a raw row sent twice',
+        {
+          client: null as never,
+          passages: [{ ...passage, annotations: [] }],
+          rawAnnotations: { 'passage-1': [annotationRow, annotationRow] },
         },
       ],
     ])('%s', async (_, args) => {
@@ -2440,6 +2486,7 @@ describe('savePassagesWithDeletions large saves', () => {
     const result = await savePassagesWithDeletions({
       client: createFakeClient(state),
       passages: imported(501),
+      chunked: true,
     });
 
     expect(result.success).toBe(true);
@@ -2447,6 +2494,18 @@ describe('savePassagesWithDeletions large saves', () => {
       500, 1,
     ]);
     expect(state.passages).toHaveLength(501);
+  });
+
+  it('commits a large save in one call unless it asks for chunks', async () => {
+    const state = createState({});
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: imported(501),
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.commits.map((call) => call.p_passages.length)).toEqual([501]);
   });
 
   it('keeps the chunks written before a failure, and says so', async () => {
@@ -2468,6 +2527,7 @@ describe('savePassagesWithDeletions large saves', () => {
     const result = await savePassagesWithDeletions({
       client: client as never,
       passages: imported(501),
+      chunked: true,
     });
 
     expect(result).toMatchObject({ success: false, savedCount: 500 });
@@ -2478,10 +2538,65 @@ describe('savePassagesWithDeletions large saves', () => {
     const retry = await savePassagesWithDeletions({
       client: client as never,
       passages: imported(501),
+      chunked: true,
     });
     expect(retry.success).toBe(true);
     expect(state.passages.map((row) => row.sort)).toEqual(
       imported(501).map((p) => p.sort),
     );
+  });
+});
+
+describe('savePassagesWithDeletions raw annotation state', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('writes raw rows as given and deletes the stored rows they leave out, of every type', async () => {
+    const quote: AnnotationDTO = {
+      ...annotationRow,
+      uuid: 'quote-1',
+      type: 'quote',
+      start: 5,
+      end: 9,
+    };
+    const state = createState({
+      annotations: [annotationRow, quote],
+      passages: [passageRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [{ ...passage, content: 'Body', annotations: [] }],
+      rawAnnotations: { 'passage-1': [{ ...annotationRow, end: 4 }] },
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['quote-1']);
+    expect(state.annotations).toEqual([
+      expect.objectContaining({ uuid: 'annotation-1', start: 0, end: 4 }),
+    ]);
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('deletes a kept row on a raw passage when its list leaves it out', async () => {
+    const state = createState({
+      annotations: [annotationRow],
+      passages: [passageRow],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [{ ...passage, annotations: [] }],
+      rawAnnotations: { 'passage-1': [] },
+      keepAnnotationUuids: ['annotation-1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['annotation-1']);
   });
 });

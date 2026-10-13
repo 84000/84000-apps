@@ -50,6 +50,17 @@ which you chose in the preview. Two markers at the same offset — an end-note
 link and a folio break commonly collide — keep their relative order only if you
 preserve it explicitly.
 
+## What `apply-passage-edits` does for you
+
+It applies these rules to every annotation on the passage, legacy rows included,
+from the exact list of your cuts. It drops an annotation whose text you cut
+entirely, and leaves one that was already out of range where it was. Both come
+back as warnings, so read them.
+
+So send every offset as stored: do not order your edits or adjust their offsets.
+A position marker at or inside a cut ends up at the cut's start. If it belongs
+elsewhere, remove it and add it again where it belongs.
+
 ## Verify by re-slicing
 
 After an edit, take each annotation that carries text and check that

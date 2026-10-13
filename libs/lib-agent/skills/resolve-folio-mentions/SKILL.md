@@ -164,8 +164,9 @@ treat it as evidence you have mis-read a work.
 edits on its passage, with every offset in the **stored** coordinates — the
 passage as you read it, before any of your edits:
 
-1. `delete-text` over the marker, and the single space that usually trails it.
-   Do not leave a double space, or a space before punctuation.
+1. `delete-text` over the marker, and the single space that usually trails it,
+   with `text` set to exactly that: the marker and its space as the passage
+   holds them. Do not leave a double space, or a space before punctuation.
 2. `remove-annotation` for the `deprecated-reference` or `link` that covered it.
 3. `add-annotation` of kind `mention` at the marker's start offset, with
    `data: { entity, linkType: "folio", isSameWork: true, linkToh }`. No `end` —
@@ -198,6 +199,11 @@ What this conversion specifically owes the editor:
 
 Call `apply-passage-edits` with `dryRun: true` first — its result **is** the
 preview in step 7. Then call it again without `dryRun` once the editor confirms.
+
+If the write comes back as an error that begins `applied: "unknown"`, re-read
+the passages before doing anything else. Compare them with what you sent, and send again only the markers
+that are still there. Never resend an `insert-passage` without checking that the
+first one did not land.
 
 The new first-folio passage is an `insert-passage` edit: give it the passage it
 goes **before**, the bracketed text as content, and no label. Then add its

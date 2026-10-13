@@ -34,9 +34,9 @@ import { validateSave } from './validate';
  * write is planned, labels and endnote cleanup included, before anything is
  * written. Room is then made for new passages (sort shifts, which only open
  * gaps), and the rest is committed in one transaction by
- * `apply_passage_save`: all of it lands, or none of it. A large save without
- * passage deletions, such as an import, is committed in chunks, and a failure
- * leaves the chunks before it written; see `commitSave`.
+ * `apply_passage_save`: all of it lands, or none of it. With `chunked`, a
+ * large save that only writes rows is committed in chunks instead, and a
+ * failure leaves the chunks before it written; see `commitSave`.
  *
  * A failure that may have been applied, because the commit's response was
  * lost, sets `outcomeUnknown`. Every write is an upsert or delete keyed by
@@ -53,9 +53,9 @@ export const savePassagesWithDeletions = async ({
   passages: inputPassages,
   deletedUuids: inputDeletedUuids = [],
   anchors,
-  deletableAnnotationUuids,
-  annotationRows: inputAnnotationRows = [],
+  rawAnnotations,
   keepAnnotationUuids: inputKeepAnnotationUuids,
+  chunked = false,
 }: {
   client: DataClient;
   passages: Passage[];
@@ -67,32 +67,40 @@ export const savePassagesWithDeletions = async ({
    */
   anchors?: Record<string, NewPassageAnchor>;
   /**
-   * When given, only these stored annotations may be deleted; any other
-   * annotation absent from the payload is left as stored. For a caller that
-   * sends only the annotations it changed.
+   * Passages' full annotation state as stored rows, every type included, by
+   * passage uuid. Rows are written as given, and a stored row absent from its
+   * passage's list is deleted. Such a passage sends `annotations: []`.
    */
-  deletableAnnotationUuids?: readonly string[];
-  /**
-   * Annotation rows to write as given, alongside the passages' own
-   * annotations, bypassing domain serialization.
-   */
-  annotationRows?: AnnotationDTO[];
+  rawAnnotations?: Record<string, AnnotationDTO[]>;
   /**
    * Stored annotations to leave exactly as stored: not deleted, moved or
    * checked. For rows a caller could not load, such as ones out of range.
+   * Does not apply to passages sent as `rawAnnotations`.
    */
   keepAnnotationUuids?: readonly string[];
+  /**
+   * Commit a large save that only writes rows, such as an import, in chunks
+   * small enough to finish within the statement timeout. Such a save is not
+   * all-or-nothing.
+   */
+  chunked?: boolean;
 }): Promise<SavePassagesWithDeletionsResult> => {
   const valid = validateSave({
     passages: inputPassages,
     deletedUuids: inputDeletedUuids,
-    annotationRows: inputAnnotationRows,
+    rawAnnotations,
     keepAnnotationUuids: inputKeepAnnotationUuids,
   });
   if ('error' in valid) {
     return failure(valid.error);
   }
-  const { passages, deletedUuids, annotationRows, keepAnnotationUuids } = valid;
+  const {
+    passages,
+    deletedUuids,
+    annotationRows,
+    rawPassageUuids,
+    keepAnnotationUuids,
+  } = valid;
   const inputUuids = passages.map((p) => p.uuid);
 
   const notSaved = (error: string) => failure(`${error}; nothing was saved`);
@@ -140,7 +148,7 @@ export const savePassagesWithDeletions = async ({
     existing: annotationsRead.data,
     storedContent,
     keep: keepAnnotationUuids,
-    deletable: deletableAnnotationUuids,
+    rawPassageUuids,
   });
   const endNotes = planEndNoteCleanup({
     storedReferences: references.data,
@@ -204,24 +212,28 @@ export const savePassagesWithDeletions = async ({
   });
   const payloadUuids = new Set(inputUuids);
 
-  const committed = await commitSave(client, {
-    passages: planPassages(
-      passagesToRowDTO(toSave),
-      new Map(
-        existingRows.map((row) => [
-          row.uuid,
-          { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
-        ]),
+  const committed = await commitSave(
+    client,
+    {
+      passages: planPassages(
+        passagesToRowDTO(toSave),
+        new Map(
+          existingRows.map((row) => [
+            row.uuid,
+            { ...row, sort: shiftedSorts.get(row.uuid) ?? row.sort },
+          ]),
+        ),
       ),
-    ),
-    // Saved passages carry theirs.
-    labels: [...labels]
-      .filter(([uuid]) => !payloadUuids.has(uuid))
-      .map(([uuid, label]) => ({ uuid, label })),
-    annotations: annotationsToUpsert,
-    deleteAnnotations: annotationsToDelete,
-    deletePassages: deletedPassageUuids,
-  });
+      // Saved passages carry theirs.
+      labels: [...labels]
+        .filter(([uuid]) => !payloadUuids.has(uuid))
+        .map(([uuid, label]) => ({ uuid, label })),
+      annotations: annotationsToUpsert,
+      deleteAnnotations: annotationsToDelete,
+      deletePassages: deletedPassageUuids,
+    },
+    { chunked },
+  );
   if ('error' in committed) {
     return {
       ...failure(committed.error, committed.savedPassages),
