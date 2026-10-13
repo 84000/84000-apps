@@ -987,6 +987,97 @@ describe('savePassagesWithDeletions failure propagation', () => {
     );
   });
 
+  // A retry no longer sees the passage as new, so nothing would renumber
+  // the series behind it again.
+  it('writes what an insert renumbers before a delete that fails', async () => {
+    const state = createState({
+      passages: [
+        { ...passageRow, uuid: 'neighbor', label: '2', sort: 3 },
+        { ...passageRow, uuid: 'gone', label: '3', sort: 4 },
+      ],
+      failOn: { 'delete:passages': 'delete failed' },
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [newPassage],
+      deletedUuids: ['gone'],
+    });
+
+    expect(result.success).toBe(false);
+    const labels = Object.fromEntries(
+      state.passages.map((row) => [row.uuid, row.label]),
+    );
+    // The deleted passage keeps the label the insert gave it, so a retry's
+    // delete walk starts from the right number.
+    expect(labels).toMatchObject({ neighbor: '3', gone: '4' });
+  });
+
+  it('plans labels per work when a save touches two', async () => {
+    const state = createState({
+      passages: [
+        { ...passageRow, uuid: 'a2', label: '2', sort: 3 },
+        { ...passageRow, uuid: 'b1', work_uuid: 'work-2', label: '1', sort: 1 },
+        { ...passageRow, uuid: 'b2', work_uuid: 'work-2', label: '2', sort: 2 },
+      ],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [newPassage],
+      deletedUuids: ['b1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(
+      Object.fromEntries(state.passages.map((row) => [row.uuid, row.label])),
+    ).toMatchObject({ 'passage-new': '2', a2: '3', b2: '1' });
+  });
+
+  it('keeps the stored toh of a payload passage that leaves it out when grouping variants', async () => {
+    const state = createState({
+      passages: [
+        {
+          ...passageRow,
+          uuid: 'v1',
+          label: 'n.2',
+          sort: 3,
+          toh: 'toh1' as never,
+        },
+        {
+          ...passageRow,
+          uuid: 'v2',
+          label: 'n.2',
+          sort: 3,
+          toh: 'toh2' as never,
+        },
+        { ...passageRow, uuid: 'c', label: 'n.3', sort: 4 },
+      ],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [
+        { ...newPassage, label: 'n.2' },
+        // Sent without its toh, as the GraphQL input does.
+        {
+          ...passage,
+          uuid: 'v1',
+          label: 'n.2',
+          sort: 3,
+          content: 'edited',
+          annotations: [],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    // Both variants still share one slot.
+    expect(
+      Object.fromEntries(state.passages.map((row) => [row.uuid, row.label])),
+    ).toMatchObject({ v1: 'n.3', v2: 'n.3', c: 'n.4' });
+  });
+
   it('aborts the deletion sequence while passages still exist when annotation cleanup fails', async () => {
     const state = createState({
       annotations: [annotationRow],
@@ -1221,22 +1312,22 @@ describe('savePassagesWithDeletions failure propagation', () => {
       ]);
     });
 
-    // Paging read the next page with `sort > lastSort`, which drops any row
-    // sharing the last row's sort — and per-text variants of one label routinely
-    // share a sort. Only reachable past a full page, so this fills one exactly.
+    // Per-text variants of one label routinely share a sort, so the label
+    // index must page by a total order or it drops one that falls on a page
+    // boundary.
     it('does not skip passages sharing the sort of the last paged row', async () => {
-      const pageSize = 1000;
+      const pageSize = 500;
       const passages: PassageRowDTO[] = [];
 
-      // A full page of notes each holding the label of the note before it, so
-      // every one of them needs renumbering and the walk cannot exit early.
+      // Notes each holding the label of the note before it, so every one of
+      // them needs renumbering and the walk cannot exit early.
       for (let i = 0; i < pageSize; i++) {
         passages.push(endnoteRow(`bulk-${i}`, `n.${843 + i}`, 844 + i));
       }
       const lastPagedSort = 844 + pageSize - 1;
       const lastPagedLabel = `n.${843 + pageSize - 1}`;
-      // The final row of the page and a per-text variant of it share a sort, so
-      // the variant falls on page two.
+      // The last of them and a per-text variant of it share a sort, across the
+      // boundary of the second page.
       passages[pageSize - 1] = {
         ...passages[pageSize - 1],
         toh: 'toh526',
