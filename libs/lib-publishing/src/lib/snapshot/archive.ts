@@ -121,10 +121,15 @@ export const untarGzTree = (
     if (offset + size > tar.length) {
       throw new Error('Snapshot archive is truncated');
     }
-    tree.set(
-      name.slice(slash + 1),
-      tar.subarray(offset, offset + size).toString('utf8'),
-    );
+    const path = name.slice(slash + 1);
+    if (
+      path
+        .split('/')
+        .some((part) => part === '' || part === '.' || part === '..')
+    ) {
+      throw new Error(`Unsafe path in tar entry: ${name}`);
+    }
+    tree.set(path, tar.subarray(offset, offset + size).toString('utf8'));
     offset += Math.ceil(size / BLOCK) * BLOCK;
   }
 
