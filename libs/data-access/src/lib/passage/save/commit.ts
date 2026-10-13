@@ -28,41 +28,43 @@ export type CommitFailure = {
 };
 
 /**
- * A large save without passage deletions, split into calls small enough to
- * finish within the statement timeout. Each passage's annotations go with it;
- * labels and annotation deletes go with the first call. A passage with more
- * annotations than a chunk holds goes alone.
+ * A large save that only writes rows, such as an import, split into calls
+ * small enough to finish within the statement timeout. Each passage's
+ * annotations go with it, and a passage with more annotations than a call
+ * holds goes alone. A save that deletes or renumbers is never split: a
+ * failure partway would leave those half done, so it commits in one call.
  */
 export const chunkCommit = (commit: SaveCommit): SaveCommit[] => {
   if (
     commit.deletePassages.length > 0 ||
+    commit.deleteAnnotations.length > 0 ||
+    commit.labels.length > 0 ||
     (commit.passages.length <= CHUNK_PASSAGES &&
       commit.annotations.length <= CHUNK_ANNOTATIONS)
   ) {
     return [commit];
   }
-  const byPassage = new Map<string, AnnotationWriteRow[]>();
-  commit.annotations.forEach((row) =>
-    byPassage.set(row.passage_uuid, [
-      ...(byPassage.get(row.passage_uuid) ?? []),
-      row,
-    ]),
+  // By passage, the rewritten ones first, then those only their annotations
+  // change on.
+  const groups = new Map<
+    string,
+    { passage?: PassageWriteRow; annotations: AnnotationWriteRow[] }
+  >(
+    commit.passages.map((row) => [row.uuid, { passage: row, annotations: [] }]),
   );
-  // Annotations whose passage is not rewritten, such as moved marks, go
-  // first, with the labels.
-  const passageUuids = new Set(commit.passages.map((row) => row.uuid));
-  const loose = commit.annotations.filter(
-    (row) => !passageUuids.has(row.passage_uuid),
-  );
-  const chunks: SaveCommit[] = [
-    { ...commit, passages: [], annotations: loose },
-  ];
-  commit.passages.forEach((row) => {
-    const annotations = byPassage.get(row.uuid) ?? [];
-    let chunk = chunks[chunks.length - 1];
+  commit.annotations.forEach((row) => {
+    const group = groups.get(row.passage_uuid);
+    if (group) group.annotations.push(row);
+    else groups.set(row.passage_uuid, { annotations: [row] });
+  });
+
+  const chunks: SaveCommit[] = [];
+  let chunk: SaveCommit | undefined;
+  groups.forEach(({ passage, annotations }) => {
     if (
-      chunk.passages.length > 0 &&
-      (chunk.passages.length >= CHUNK_PASSAGES ||
+      !chunk ||
+      chunk.passages.length >= CHUNK_PASSAGES ||
+      (chunk.annotations.length > 0 &&
         chunk.annotations.length + annotations.length > CHUNK_ANNOTATIONS)
     ) {
       chunk = {
@@ -74,7 +76,7 @@ export const chunkCommit = (commit: SaveCommit): SaveCommit[] => {
       };
       chunks.push(chunk);
     }
-    chunk.passages.push(row);
+    if (passage) chunk.passages.push(passage);
     chunk.annotations.push(...annotations);
   });
   return chunks;
@@ -89,7 +91,7 @@ const rolledBack = (code: unknown) =>
 
 /**
  * Writes a planned save through `apply_passage_save`, which applies each call
- * in one transaction. A large save without passage deletions is written in
+ * in one transaction. A large save that only writes rows is written in
  * chunks (see `chunkCommit`), so is not all-or-nothing: on a failure, the
  * chunks before it stay written.
  */

@@ -58,12 +58,7 @@ describe('chunkCommit', () => {
   });
 
   it('splits a large save by passages, each with its annotations', () => {
-    const chunks = chunkCommit(
-      commitOf(CHUNK_PASSAGES * 2 + 1, 1, {
-        labels: [{ uuid: 'other', label: '9' }],
-        deleteAnnotations: ['stale'],
-      }),
-    );
+    const chunks = chunkCommit(commitOf(CHUNK_PASSAGES * 2 + 1, 1));
 
     expect(chunks.map((chunk) => chunk.passages.length)).toEqual([
       CHUNK_PASSAGES,
@@ -77,11 +72,6 @@ describe('chunkCommit', () => {
         ),
       ).toBe(true),
     );
-    expect(chunks[0]).toMatchObject({
-      labels: [{ uuid: 'other', label: '9' }],
-      deleteAnnotations: ['stale'],
-    });
-    expect(chunks[1]).toMatchObject({ labels: [], deleteAnnotations: [] });
   });
 
   it('splits by annotations, and puts a passage with too many alone', () => {
@@ -97,9 +87,28 @@ describe('chunkCommit', () => {
     ).toEqual([['p0'], ['p1'], ['p2']]);
   });
 
-  it('never splits a save that deletes passages', () => {
-    const commit = commitOf(CHUNK_PASSAGES + 1, 0, { deletePassages: ['x'] });
-    expect(chunkCommit(commit)).toEqual([commit]);
+  it('counts the annotations of passages it does not rewrite', () => {
+    const commit = commitOf(0);
+    commit.annotations = ['a', 'b'].flatMap((passage) =>
+      Array.from({ length: CHUNK_ANNOTATIONS }, (_, at) =>
+        annotationRow(`${passage}-${at}`, passage),
+      ),
+    );
+
+    expect(
+      chunkCommit(commit).map((chunk) => chunk.annotations.length),
+    ).toEqual([CHUNK_ANNOTATIONS, CHUNK_ANNOTATIONS]);
+  });
+
+  it('never splits a save that deletes or renumbers', () => {
+    [
+      { deletePassages: ['x'] },
+      { deleteAnnotations: ['x'] },
+      { labels: [{ uuid: 'x', label: '1' }] },
+    ].forEach((extra) => {
+      const commit = commitOf(CHUNK_PASSAGES + 1, 0, extra);
+      expect(chunkCommit(commit)).toEqual([commit]);
+    });
   });
 });
 

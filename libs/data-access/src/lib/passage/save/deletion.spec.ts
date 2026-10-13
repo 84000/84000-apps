@@ -21,13 +21,13 @@ describe('planEndNoteCleanup', () => {
     const plan = planEndNoteCleanup({
       // Stored links that cite the deleted note.
       storedReferences: ['untouched', 'retargeted'],
-      sent: [retargeted, pointedAt, fresh, other],
-      upserts: [retargeted, pointedAt, fresh, other],
+      upserts: [retargeted, pointedAt, fresh],
+      unchanged: [other],
       stored: new Set(['retargeted', 'pointed-at', 'other']),
       deletedPassageUuids: ['gone-note'],
     });
 
-    expect(plan.upserts).toEqual([retargeted, other]);
+    expect(plan.upserts).toEqual([retargeted]);
     expect(plan.deletes.sort()).toEqual(['pointed-at', 'untouched']);
   });
 
@@ -36,8 +36,8 @@ describe('planEndNoteCleanup', () => {
     expect(
       planEndNoteCleanup({
         storedReferences: [],
-        sent: upserts,
         upserts,
+        unchanged: [],
         stored: new Set(),
         deletedPassageUuids: [],
       }),

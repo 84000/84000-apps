@@ -73,6 +73,10 @@ class Raise extends Error {
 /** `apply_passage_save`, applied to a copy of the state that replaces it only if every statement succeeds. */
 const applyPassageSave = (state: FakeState, args: ApplyArgs) => {
   state.commits.push(args);
+  // Another save got there first, and committed.
+  state.annotations = state.annotations.filter(
+    (row) => !state.vanishOnDelete.has(row.uuid),
+  );
   let passages = [...state.passages];
   let annotations = [...state.annotations];
   const deletedAnnotations: string[] = [];
@@ -105,10 +109,6 @@ const applyPassageSave = (state: FakeState, args: ApplyArgs) => {
       annotations = upsertInto(annotations, args.p_annotations);
     }
     if (statement('delete:annotations', args.p_delete_annotations)) {
-      // Another save got there first.
-      annotations = annotations.filter(
-        (row) => !state.vanishOnDelete.has(row.uuid),
-      );
       const removed = annotations
         .filter((row) => args.p_delete_annotations.includes(row.uuid))
         .map((row) => row.uuid)
@@ -537,6 +537,40 @@ describe('savePassagesWithDeletions', () => {
     expect(state.annotationUpserts).toEqual([]);
     expect(state.deletedAnnotationUuids).toEqual(['annotation-1']);
     expect(state.deletedPassageUuids).toEqual(['passage-1']);
+  });
+
+  it('does not range-check a link it deletes for citing a deleted note', async () => {
+    const link: AnnotationDTO = {
+      uuid: 'ref-1',
+      passage_uuid: 'passage-1',
+      start: 9,
+      end: 9,
+      type: 'end-note-link',
+      content: [{ uuid: 'endnote-1' }],
+    };
+    const state = createState({
+      annotations: [link],
+      passages: [
+        passageRow,
+        {
+          ...passageRow,
+          uuid: 'endnote-1',
+          type: 'endnotes',
+          sort: 5,
+          label: '',
+        },
+      ],
+    });
+
+    const result = await savePassagesWithDeletions({
+      client: createFakeClient(state),
+      passages: [{ ...passage, content: 'Body', annotations: [] }],
+      annotationRows: [link],
+      deletedUuids: ['endnote-1'],
+    });
+
+    expect(result.success).toBe(true);
+    expect(state.deletedAnnotationUuids).toEqual(['ref-1']);
   });
 
   it('cascades deletion of endnote-link references on other passages', async () => {
@@ -1910,9 +1944,6 @@ describe('savePassagesWithDeletions hardening', () => {
       });
 
     expect((await save()).success).toBe(false);
-    state.annotations = state.annotations.filter(
-      (row) => row.uuid !== 'annotation-2',
-    );
     expect((await save()).success).toBe(true);
   });
 
@@ -2442,5 +2473,15 @@ describe('savePassagesWithDeletions large saves', () => {
     expect(result).toMatchObject({ success: false, savedCount: 500 });
     expect(result.error).toContain('Partly saved');
     expect(state.passages).toHaveLength(500);
+
+    calls = 2;
+    const retry = await savePassagesWithDeletions({
+      client: client as never,
+      passages: imported(501),
+    });
+    expect(retry.success).toBe(true);
+    expect(state.passages.map((row) => row.sort)).toEqual(
+      imported(501).map((p) => p.sort),
+    );
   });
 });

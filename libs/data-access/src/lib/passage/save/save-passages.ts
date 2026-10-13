@@ -40,7 +40,9 @@ import { validateSave } from './validate';
  *
  * A failure that may have been applied, because the commit's response was
  * lost, sets `outcomeUnknown`. Every write is an upsert or delete keyed by
- * uuid, so a retry of the same save converges.
+ * uuid, so retrying the same save converges on content. Labels the server
+ * gave the saved passages may not survive: once those passages exist, a
+ * retry writes back the labels the client sent.
  *
  * A save places new passages but never moves an existing one: a changed
  * `sort` on an existing passage is ignored, and moving one needs an explicit
@@ -142,8 +144,8 @@ export const savePassagesWithDeletions = async ({
   });
   const endNotes = planEndNoteCleanup({
     storedReferences: references.data,
-    sent: [...plannedUpserts, ...annotationsUnchanged],
     upserts: plannedUpserts,
+    unchanged: annotationsUnchanged,
     stored: new Set(annotationsRead.data.map((row) => row.uuid)),
     deletedPassageUuids,
   });
@@ -151,9 +153,10 @@ export const savePassagesWithDeletions = async ({
   const annotationsToDelete = [
     ...new Set([...staleAnnotations, ...endNotes.deletes]),
   ];
+  const goes = new Set(endNotes.deletes);
   const outOfRange = findOutOfRange({
     upserts: annotationsToUpsert,
-    unchanged: annotationsUnchanged,
+    unchanged: annotationsUnchanged.filter((row) => !goes.has(row.uuid)),
     contentByPassage: new Map(passages.map((p) => [p.uuid, p.content])),
     storedContentByPassage: storedContent,
   });

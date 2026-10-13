@@ -53,22 +53,23 @@ const citesAny = (row: AnnotationWriteRow, deleted: Set<string>) =>
  */
 export const planEndNoteCleanup = ({
   storedReferences,
-  sent,
   upserts,
+  unchanged,
   stored,
   deletedPassageUuids,
 }: {
   /** Stored links that cite a deleted passage. */
   storedReferences: readonly string[];
-  /** Every annotation the save sends, written or unchanged. */
-  sent: AnnotationWriteRow[];
   upserts: AnnotationWriteRow[];
+  /** The annotations the save sends unchanged. */
+  unchanged: AnnotationWriteRow[];
   /** Uuids of the stored annotations of the saved passages. */
   stored: Set<string>;
   deletedPassageUuids: readonly string[];
 }): { upserts: AnnotationWriteRow[]; deletes: string[] } => {
   const deleted = new Set(deletedPassageUuids);
   if (deleted.size === 0) return { upserts, deletes: [] };
+  const sent = [...upserts, ...unchanged];
   const sentByUuid = new Map(sent.map((row) => [row.uuid, row]));
   const goes = new Set([
     ...storedReferences.filter((uuid) => {
