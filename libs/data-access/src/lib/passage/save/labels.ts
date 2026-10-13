@@ -182,12 +182,8 @@ const variantRemains = (
   return false;
 };
 
-/** The labels a save changes, in the two steps it writes them. */
+/** The labels a save changes. */
 export type LabelPlan = {
-  /** After the inserts' walks, deleted passages included. */
-  afterInserts: Map<string, string>;
-  /** After the deletes' walks, over what the inserts left. */
-  afterDeletes: Map<string, string>;
   /** Every passage left whose label changes, with its final label. */
   final: Map<string, string>;
 };
@@ -238,8 +234,6 @@ export const planLabels = ({
         clientRenumberedUuids,
       }),
     );
-  const afterInserts = changedSince(before, rows);
-  const inserted = new Map(rows.map((row) => [row.uuid, row.label]));
 
   const deleted = rows
     .filter((row) => deletedUuids.has(row.uuid))
@@ -262,11 +256,7 @@ export const planLabels = ({
       }),
     );
 
-  return {
-    afterInserts,
-    afterDeletes: changedSince(inserted, remaining),
-    final: changedSince(before, remaining),
-  };
+  return { final: changedSince(before, remaining) };
 };
 
 /**
@@ -292,11 +282,7 @@ export const planSaveLabels = async ({
     ...deleted.filter((row) => row.label).map((row) => row.work_uuid),
   ]);
   const clientRenumberedUuids = new Set(toSave.map((passage) => passage.uuid));
-  const plan: LabelPlan = {
-    afterInserts: new Map(),
-    afterDeletes: new Map(),
-    final: new Map(),
-  };
+  const plan: LabelPlan = { final: new Map() };
 
   for (const workUuid of works) {
     const read = await readLabelIndex(client, workUuid);
@@ -323,9 +309,7 @@ export const planSaveLabels = async ({
       clientRenumberedUuids,
       storedLabels,
     });
-    (['afterInserts', 'afterDeletes', 'final'] as const).forEach((step) =>
-      work[step].forEach((label, uuid) => plan[step].set(uuid, label)),
-    );
+    work.final.forEach((label, uuid) => plan.final.set(uuid, label));
   }
   return { data: plan };
 };

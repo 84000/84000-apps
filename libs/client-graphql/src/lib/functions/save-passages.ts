@@ -18,6 +18,7 @@ const SAVE_PASSAGES_MUTATION = gql`
         uuid
         label
       }
+      warnings
     }
   }
 `;
@@ -40,6 +41,7 @@ interface SavePassagesResponse {
     passages: ReplacedPassage[];
     renumberedPassages: RenumberedPassage[];
     error?: string;
+    warnings?: string[] | null;
   };
 }
 
@@ -89,6 +91,8 @@ export const savePassages = async ({
   passages: ReplacedPassage[];
   renumberedPassages: RenumberedPassage[];
   error?: string;
+  /** Problems that did not stop the save. */
+  warnings?: string[] | null;
 }> => {
   const passageInputs = passages.map(passageToInput);
 

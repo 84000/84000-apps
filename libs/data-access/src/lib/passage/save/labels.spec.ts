@@ -476,7 +476,7 @@ describe('planLabels', () => {
     ).toEqual({ a: 'n.1', c: 'n.2', d: 'n.3' });
   });
 
-  it('plans two inserts and two deletes, and splits the steps', () => {
+  it('plans two inserts and two deletes', () => {
     const index = [
       row('n1', 'n.1', 1),
       row('x', 'n.2', 2),
@@ -498,10 +498,8 @@ describe('planLabels', () => {
       clientRenumberedUuids: new Set(['x', 'y']),
     });
 
-    // The inserts move n5 to n.7 (written first); the deletes then bring it
-    // all back down, leaving only n2 and n4 changed from where they began.
-    expect(plan.afterInserts.get('n5')).toBe('n.7');
-    expect(plan.afterInserts.get('y')).toBe('n.5');
+    // The inserts move n5 to n.7; the deletes bring it all back down,
+    // leaving only n2 and n4 changed from where they began.
     expect(Object.fromEntries(plan.final)).toEqual({ n2: 'n.3', n4: 'n.5' });
   });
 });

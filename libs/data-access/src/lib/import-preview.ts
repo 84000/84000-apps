@@ -217,6 +217,13 @@ export const updateFolioAnnotationsFromPreview = async ({
   };
 };
 
+/**
+ * Saves an import's passages. A large import is committed in chunks, so it is
+ * not all-or-nothing: a failure partway leaves the chunks before it saved, and
+ * the error says how many passages were. Re-running it converges only when
+ * its passages carry uuids; without them, the passages already saved are
+ * saved again under new uuids.
+ */
 export const upsertPassagesFromPreview = async ({
   client,
   preview,

@@ -185,12 +185,15 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const createdUuids = new Set(created.map((passage) => passage.uuid));
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
-    // The save may have shifted sorts and inserted rows before it failed; a
-    // retry must send the sorts the server holds, not the ones sent here.
+    // The save may have shifted sorts before it failed, and inserted the
+    // rows if only its response was lost; a retry must send the sorts the
+    // server holds, not the ones sent here.
     if (created.length)
       await refreshSorts(work, client, createdFrom, createdUuids);
     return false;
   }
+
+  result.warnings?.forEach((warning) => console.warn(warning));
 
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.

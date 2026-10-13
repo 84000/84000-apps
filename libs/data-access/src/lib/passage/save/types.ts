@@ -35,8 +35,10 @@ export type SavePassagesWithDeletionsResult = {
   passages: SavedPassageRow[];
   renumberedPassages: RenumberedPassageRow[];
   error?: string;
-  /** Problems after the content was saved; the save still succeeded. */
+  /** Problems that did not stop the save; it still succeeded. */
   warnings?: string[];
+  /** The save failed, but may have been applied: its response was lost. */
+  outcomeUnknown?: boolean;
 };
 
 /** A passage row with every column, so a batch upsert nulls nothing. */

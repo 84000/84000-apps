@@ -1,137 +1,88 @@
 import type { DataClient } from '../../types';
-import { inBatches } from '../in-batches';
-import type { StepError } from './types';
+import type { AnnotationWriteRow, StepError } from './types';
 
 const PAGE_SIZE = 1000;
 
 /**
- * Delete rows by uuid in batches. A delete that row-level security filters
- * reports no error, so a row it did not remove is looked up again: gone
- * (another save removed it) is fine, still there is a failure.
+ * The stored `end-note-link` annotations, on any passage, that point at one
+ * of the given passages. Endnote links to a deleted note live on the
+ * passages that cite it, which deleting the note's own annotations never
+ * reaches; left behind, they render as a stray "*".
  */
-export const deleteByUuid = async (
+export const readEndNoteReferences = async (
   client: DataClient,
-  table: 'passages' | 'passage_annotations',
-  uuids: readonly string[],
-): Promise<{ deleted: number } | { error: string }> => {
-  const removed = new Set<string>();
-  for (const batch of inBatches(uuids)) {
-    const { data, error } = await client
-      .from(table)
-      .delete()
-      .in('uuid', batch)
-      .select('uuid');
-    if (error) return { error: error.message };
-    (data ?? []).forEach((row) => removed.add(row.uuid as string));
-  }
-  const missed = uuids.filter((uuid) => !removed.has(uuid));
-  for (const batch of inBatches(missed)) {
-    const { data, error } = await client
-      .from(table)
-      .select('uuid')
-      .in('uuid', batch);
-    if (error) return { error: error.message };
-    if (data?.length) {
-      return {
-        error: `some of ${uuids.length} rows were not deleted; the delete is not permitted`,
-      };
+  passageUuids: readonly string[],
+): Promise<{ data: string[] } | StepError> => {
+  const uuids = new Set<string>();
+  for (const uuid of passageUuids) {
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await client
+        .from('passage_annotations')
+        .select('uuid')
+        .eq('type', 'end-note-link')
+        .filter('content', 'cs', JSON.stringify([{ uuid }]))
+        .order('uuid', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) {
+        console.error(
+          'Error finding endnote links to deleted passages:',
+          error,
+        );
+        return {
+          error: `Failed to find endnote links to deleted passages: ${error.message}`,
+        };
+      }
+      (data ?? []).forEach((row) => uuids.add(row.uuid as string));
+      if ((data?.length ?? 0) < PAGE_SIZE) break;
     }
   }
-  return { deleted: removed.size };
+  return { data: [...uuids] };
 };
 
-/** The `end-note-link` annotations on any passage that point at `uuid`. */
-const readEndNoteReferences = async (
-  client: DataClient,
-  uuid: string,
-): Promise<{ data: string[] } | { error: string }> => {
-  const uuids: string[] = [];
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await client
-      .from('passage_annotations')
-      .select('uuid')
-      .eq('type', 'end-note-link')
-      .filter('content', 'cs', JSON.stringify([{ uuid }]))
-      .order('uuid', { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
-    if (error) return { error: error.message };
-    uuids.push(...(data ?? []).map((row) => row.uuid as string));
-    if ((data?.length ?? 0) < PAGE_SIZE) return { data: uuids };
-  }
-};
+const citesAny = (row: AnnotationWriteRow, deleted: Set<string>) =>
+  row.type === 'end-note-link' &&
+  row.content.some((entry) =>
+    deleted.has((entry as { uuid?: string })?.uuid ?? ''),
+  );
 
 /**
- * Delete passages, their annotations and the endnote links that point at
- * them.
- *
- * All annotation cleanup runs before the passage delete, so a failure aborts
- * while the passage rows still exist and a retry can redo the whole sequence.
+ * The endnote links a save removes because they cite a deleted passage, by
+ * the content they will have once saved: a link this save sends is judged by
+ * what it sends, so one retargeted away from the deleted note is kept and one
+ * newly pointed at it goes. A link that goes is not written.
  */
-export const deletePassages = async ({
-  client,
-  deletedUuids,
+export const planEndNoteCleanup = ({
+  storedReferences,
+  upserts,
+  unchanged,
+  stored,
+  deletedPassageUuids,
 }: {
-  client: DataClient;
-  /** Stored passages only. */
-  deletedUuids: string[];
-}): Promise<{ deletedCount: number } | StepError> => {
-  if (deletedUuids.length === 0) return { deletedCount: 0 };
-  // Not counted: a filtered delete leaves rows behind, and the passage
-  // delete below then fails on the foreign key.
-  for (const batch of inBatches(deletedUuids)) {
-    const { error: deleteAnnotationsError } = await client
-      .from('passage_annotations')
-      .delete()
-      .in('passage_uuid', batch);
-
-    if (deleteAnnotationsError) {
-      console.error(
-        'Error deleting annotations for deleted passages:',
-        deleteAnnotationsError,
-      );
-      return {
-        error: `Failed to delete annotations for deleted passages: ${deleteAnnotationsError.message}`,
-      };
-    }
-  }
-
-  // Endnote links to a deleted note live on the passages that cite it, which
-  // the delete by passage above never reaches. Left behind, they render as a
-  // stray "*". A link can cite more than one deleted note.
-  const references = new Set<string>();
-  for (const deletedUuid of deletedUuids) {
-    const found = await readEndNoteReferences(client, deletedUuid);
-    if ('error' in found) {
-      console.error(
-        'Error finding endnote-link references to deleted passage:',
-        found.error,
-      );
-      return {
-        error: `Failed to find endnote-link references to deleted passage: ${found.error}`,
-      };
-    }
-    found.data.forEach((uuid) => references.add(uuid));
-  }
-  if (references.size > 0) {
-    const removed = await deleteByUuid(client, 'passage_annotations', [
-      ...references,
-    ]);
-    if ('error' in removed) {
-      console.error(
-        'Error deleting endnote-link references to deleted passage:',
-        removed.error,
-      );
-      return {
-        error: `Failed to delete endnote-link references to deleted passage: ${removed.error}`,
-      };
-    }
-  }
-
-  const removed = await deleteByUuid(client, 'passages', deletedUuids);
-  if ('error' in removed) {
-    console.error('Error deleting passages:', removed.error);
-    return { error: `Failed to delete passages: ${removed.error}` };
-  }
-
-  return { deletedCount: deletedUuids.length };
+  /** Stored links that cite a deleted passage. */
+  storedReferences: readonly string[];
+  upserts: AnnotationWriteRow[];
+  /** The annotations the save sends unchanged. */
+  unchanged: AnnotationWriteRow[];
+  /** Uuids of the stored annotations of the saved passages. */
+  stored: Set<string>;
+  deletedPassageUuids: readonly string[];
+}): { upserts: AnnotationWriteRow[]; deletes: string[] } => {
+  const deleted = new Set(deletedPassageUuids);
+  if (deleted.size === 0) return { upserts, deletes: [] };
+  const sent = [...upserts, ...unchanged];
+  const sentByUuid = new Map(sent.map((row) => [row.uuid, row]));
+  const goes = new Set([
+    ...storedReferences.filter((uuid) => {
+      const row = sentByUuid.get(uuid);
+      return !row || citesAny(row, deleted);
+    }),
+    ...sent.filter((row) => citesAny(row, deleted)).map((row) => row.uuid),
+  ]);
+  const storedReferenceSet = new Set(storedReferences);
+  return {
+    upserts: upserts.filter((row) => !goes.has(row.uuid)),
+    deletes: [...goes].filter(
+      (uuid) => storedReferenceSet.has(uuid) || stored.has(uuid),
+    ),
+  };
 };

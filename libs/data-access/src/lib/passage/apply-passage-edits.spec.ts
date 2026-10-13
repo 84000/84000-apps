@@ -109,8 +109,36 @@ class FakeQuery {
 
 const fakeClient = (tables: Tables) => {
   const log = { upserts: [] as Row[][], deletes: [] as string[][] };
+  const upsert = (table: string, rows: Row[]) => {
+    const stored = (tables[table] ??= []);
+    for (const row of rows) {
+      const at = stored.findIndex((r) => r.uuid === row.uuid);
+      if (at >= 0) stored[at] = { ...stored[at], ...row };
+      else stored.push({ ...row });
+    }
+  };
   const client = {
     from: (table: string) => new FakeQuery(tables, table, log),
+    // The save's commit; this fake never fails it.
+    rpc: (name: string, args: Record<string, Row[] | string[]>) => {
+      if (name !== 'apply_passage_save') {
+        return Promise.resolve({ error: { message: `unknown rpc ${name}` } });
+      }
+      upsert('passages', args.p_passages as Row[]);
+      upsert('passages', args.p_labels as Row[]);
+      upsert('passage_annotations', args.p_annotations as Row[]);
+      if (args.p_annotations.length) {
+        log.upserts.push(args.p_annotations as Row[]);
+      }
+      const gone = args.p_delete_annotations as string[];
+      if (gone.length) {
+        tables.passage_annotations = (tables.passage_annotations ?? []).filter(
+          (row) => !gone.includes(row.uuid as string),
+        );
+        log.deletes.push(gone);
+      }
+      return Promise.resolve({ data: {}, error: null });
+    },
   } as never;
   return { client, log };
 };

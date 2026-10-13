@@ -170,6 +170,8 @@ export const useSaveLifecycle = ({
         return { outcome: 'failed', dirty: true };
       }
 
+      result.warnings?.forEach((warning) => console.warn(warning));
+
       // Baselines become the uuid sets captured at save start — not the live
       // editor — so passages added or deleted during the flight are still
       // detected by the next save. Skip editors swapped out mid-flight.
