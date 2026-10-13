@@ -29,8 +29,10 @@ not depend on how the save is carried out.
   `mention`) either stay before the new character or move after it, as the
   editor places the caret, but are not lost. No annotation type disappears.
 - Known: the stack editor adds a root `paragraph` row to passages whose
-  stored data has none. Until that is fixed, this item only checks that
-  nothing is lost.
+  stored data has none, so this item only checks that nothing is lost. Open:
+  a save drops attributes the editor does not model, the link `title` on
+  `ac.1` and the internal-link `toh`, `subtype`, `label` and `same_work` on
+  `i.2` and `p.1`.
 
 ### ED-SAV-03 New, merged and deleted passages persist (D)
 
@@ -76,15 +78,17 @@ not depend on how the save is carried out.
 
 ### ED-SAV-08 Overlapping annotations save (D)
 
-- Fixture: thread `t6` on `1.110` has two anchors, on "perfection" and on " of
-  wisdom". `1.110` also has glossary instances.
-- Do: add a comment over a range that overlaps a glossary instance in `1.110`
-  (part of the instance and the text after it), edit a word elsewhere in
-  `1.110`, and Save.
+- Fixture: `1.20` has a glossary instance on "great compassion". In `1.13`,
+  thread `t1` is anchored on exactly the text of its glossary instance, "great
+  compassion".
+- Do: type at the end of `1.13`. In `1.20`, add a comment on "compassion is
+  their" (part of the instance and the text after it), type at the end of
+  `1.20`, and Save.
 - Screen: "Content saved".
-- Stored: the edit is stored. The glossary instance is stored as one or more
-  rows that together cover its original text, the new comment anchor covers its
-  range, and `t6`'s anchors are unchanged.
+- Stored: both edits are stored. In `1.20`, the glossary instance is stored as
+  one or more rows that together cover "great compassion", and the new comment
+  rows together cover "compassion is their". `1.13`'s comment and glossary
+  instance are unchanged.
 - Known: overlapping annotations used to make the whole save fail (fixed).
 
 ### ED-SAV-09 Deleting an endnote does not bring its links back (D)
@@ -94,4 +98,5 @@ not depend on how the save is carried out.
   again.
 - Stored: no `end-note-link` on `1.20` or any other passage names `n.6`'s uuid,
   and `n.6`'s row is gone.
-- Known: open. A later save writes the link back.
+- Known: a later save used to write the link back. Passes in the stack
+  editor.

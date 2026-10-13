@@ -53,6 +53,10 @@ passage's stored `content`.
   claim that something worked is not evidence.
 - **"Unchanged"** means the same rows with the same type, range and content,
   ignoring `updated_at`.
+- An annotation's **content** is compared as attributes: a list of single-key
+  objects and one object with the same keys are the same content, and an
+  attribute the save adds is not a change.
+- The side panel labels the Endnotes and Abbreviations tabs "Notes" and "Abbr".
 - **Screen checks** use the visible copy of an element. web-main renders a
   hidden mobile layout and force-mounted inactive tabs, so every passage
   exists more than once in the DOM.
