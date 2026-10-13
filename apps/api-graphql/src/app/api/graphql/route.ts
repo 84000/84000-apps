@@ -51,6 +51,13 @@ const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Max-Age': '3600',
 };
 
+/**
+ * Explicit rather than the plan default. Work continued through `after()` (publish
+ * ticks, snapshot refreshes) shares this budget, and a first work snapshot is
+ * generated inline.
+ */
+export const maxDuration = 300;
+
 const server = new ApolloServer({
   typeDefs,
   resolvers,

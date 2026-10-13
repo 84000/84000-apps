@@ -1,8 +1,9 @@
 /**
- * Packs a snapshot tree as a gzipped ustar archive that stock `tar xz` unpacks.
+ * Packs a snapshot tree as a gzipped ustar archive that stock `tar xz` unpacks, and
+ * unpacks one again.
  */
 
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
 const BLOCK = 512;
 
@@ -69,4 +70,69 @@ export const tarGzTree = ({
   }
   parts.push(Buffer.alloc(BLOCK * 2, 0));
   return gzipSync(Buffer.concat(parts), { level: 9 });
+};
+
+/**
+ * Unpacks a `tarGzTree` archive into its root directory and a tree keyed by the paths
+ * under it. Throws on anything `tarGzTree` would not write, rather than return a
+ * partial tree.
+ */
+export const untarGzTree = (
+  archive: Buffer,
+): { root: string; tree: Map<string, string> } => {
+  const tar = gunzipSync(archive);
+  const tree = new Map<string, string>();
+  let root: string | null = null;
+
+  for (let offset = 0; ; ) {
+    if (offset + BLOCK > tar.length) {
+      throw new Error('Snapshot archive is truncated');
+    }
+    const block = tar.subarray(offset, offset + BLOCK);
+    if (block.every((byte) => byte === 0)) break;
+
+    const field = (start: number, length: number) => {
+      const raw = block.subarray(start, start + length);
+      const end = raw.indexOf(0);
+      return raw.subarray(0, end === -1 ? length : end).toString('utf8');
+    };
+    const type = field(156, 1);
+    if (type !== '0' && type !== '') {
+      throw new Error(`Unexpected tar entry type "${type}"`);
+    }
+    const prefix = field(345, 155);
+    const base = field(0, 100);
+    const name = prefix ? `${prefix}/${base}` : base;
+    const size = parseInt(field(124, 12).trim(), 8);
+    if (!Number.isFinite(size) || size < 0) {
+      throw new Error(`Bad size in tar header for ${name}`);
+    }
+
+    const slash = name.indexOf('/');
+    if (slash <= 0)
+      throw new Error(`Tar entry outside a root directory: ${name}`);
+    const entryRoot = name.slice(0, slash);
+    if (root === null) root = entryRoot;
+    else if (entryRoot !== root) {
+      throw new Error(`Tar has more than one root: ${root}, ${entryRoot}`);
+    }
+
+    offset += BLOCK;
+    if (offset + size > tar.length) {
+      throw new Error('Snapshot archive is truncated');
+    }
+    const path = name.slice(slash + 1);
+    if (
+      name
+        .split('/')
+        .some((part) => part === '' || part === '.' || part === '..')
+    ) {
+      throw new Error(`Unsafe path in tar entry: ${name}`);
+    }
+    tree.set(path, tar.subarray(offset, offset + size).toString('utf8'));
+    offset += Math.ceil(size / BLOCK) * BLOCK;
+  }
+
+  if (root === null) throw new Error('Snapshot archive is empty');
+  return { root, tree };
 };
