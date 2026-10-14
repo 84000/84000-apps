@@ -17,6 +17,11 @@
 - Do (fresh fixture): delete `1.12` from its label menu, then undo, then Save
   and reload.
 - Stored: `1.12` is still there, with all of its annotations.
+- Known: once, under heavy machine load, the edits redone straight after a
+  Save that had nothing to write were missing from the next save. It did not
+  reproduce in isolation (typing in two passages, undo both, Save, redo both,
+  Save), so it is not filed. The test waits for the first save's response
+  before redoing.
 
 ### ED-EDT-02 Copy and paste (D + J)
 
