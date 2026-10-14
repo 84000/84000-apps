@@ -28,6 +28,7 @@ export {
 } from './lib/tools/harness';
 export { createSessionTools } from './lib/tools/sessions';
 export {
+  createSnapshotTools,
   createWorkSnapshotCache,
   createWorkSnapshotSource,
   notReadyResult,
@@ -35,6 +36,7 @@ export {
   openSnapshotFiles,
   toWorkSnapshotStatus,
   DEFAULT_SNAPSHOT_CACHE_BYTES,
+  SNAPSHOT_TOOL_NAMES,
 } from './lib/tools/snapshot';
 export type {
   EnsureWorkSnapshotResponse,
