@@ -96,7 +96,7 @@ export const buildStackSchemaExtensions = (): Extensions => [
   Paragraph,
   ParagraphIndent,
   PipeNotItalic,
-  Placeholder.configure({ placeholder: 'Empty passage' }),
+  Placeholder,
   SmallCaps,
   Subscript,
   Superscript,
