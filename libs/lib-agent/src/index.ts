@@ -15,6 +15,7 @@ export {
 export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
+export { createGlossaryResolveTools } from './lib/tools/glossary';
 export {
   createHarnessTools,
   createOpenPolicyEditorTool,

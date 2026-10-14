@@ -3,6 +3,7 @@ import {
   MCP_CORS_HEADERS,
   corsPreflightResponse,
   createFeedbackTools,
+  createGlossaryResolveTools,
   createMcpHandler,
   createHarnessTools,
   createOpenPolicyEditorTool,
@@ -88,6 +89,9 @@ export async function POST(req: Request) {
       linear: linearFeedbackConfigFromEnv(),
     }),
     ...createProfileTools(auth.client, auth.userId),
+    ...createGlossaryResolveTools(auth.client, auth.userId, {
+      write: hasRole(auth.role, 'editor'),
+    }),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];
   // Report each call to PostHog, keyed by the user's uuid. Innermost, so the

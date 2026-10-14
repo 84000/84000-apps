@@ -5,4 +5,5 @@ export * from './read';
 export * from './reanchor';
 export * from './review';
 export * from './review-batch';
+export * from './review-store';
 export * from './text';
