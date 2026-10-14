@@ -59,12 +59,14 @@ not depend on how the save is carried out.
 
 ### ED-SAV-06 A failed save can be retried (D)
 
-- Do: edit `1.4`, make the save request fail (the test rejects it), and
-  click Save.
+- Do: edit `1.4`, make the server reject the save request (the test answers it
+  with a 400 error), and click Save.
 - Screen: an "Error saving content." toast, and the Save button is still shown.
 - Stored: `1.4` is unchanged.
 - Do: let requests through again and click Save.
 - Stored: the edit is stored.
+- A rejection is a known failure. A request that never gets an answer is
+  `ED-SAV-10`.
 
 ### ED-SAV-07 Passages the user did not edit are not written (D)
 
@@ -100,3 +102,14 @@ not depend on how the save is carried out.
   and `n.6`'s row is gone.
 - Known: a later save used to write the link back. Passes in the stack
   editor.
+
+### ED-SAV-10 A save whose outcome is unknown is read back (D)
+
+- Do: edit `1.4`, make the save request fail without an answer (the test
+  aborts the connection), and click Save.
+- Screen: a toast says the save may have gone through, and the editor reloads
+  the passages from the server instead of sending the save again.
+- Stored: one save request at most; `1.4` is either unchanged or has the
+  edit, and the editor shows what is stored.
+- Known: pending DEV-836 (PR #668). Until it merges, an aborted save is treated
+  as a failed one, as in `ED-SAV-06`, and the test is skipped.

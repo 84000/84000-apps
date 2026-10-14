@@ -263,8 +263,21 @@ test.describe('Saving', () => {
   test('ED-SAV-06 A failed save can be retried', async ({ page }) => {
     const p = await passageByLabel('1.4');
     let failing = true;
+    // A 400 with a PostgREST error is a rejection the server reports, so the
+    // save is known to have failed. An aborted request is ED-SAV-10.
     await page.route(SAVE_ROUTE, (route) =>
-      failing ? route.abort('failed') : route.continue(),
+      failing
+        ? route.fulfill({
+            status: 400,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              code: 'P0001',
+              message: 'Rejected by the e2e test.',
+              details: null,
+              hint: null,
+            }),
+          })
+        : route.continue(),
     );
 
     await openEditor(page, { main: { tab: 'translation', hash: p.uuid } });
@@ -278,6 +291,30 @@ test.describe('Saving', () => {
     failing = false;
     await save(page);
     expect((await passageByUuid(p.uuid))?.content).toBe(`${p.content}Q`);
+  });
+
+  test('ED-SAV-10 A save whose outcome is unknown is read back', async ({
+    page,
+  }) => {
+    test.fixme(
+      true,
+      'Pending DEV-836 (PR #668): until it merges, an aborted save is a failed one, as in ED-SAV-06.',
+    );
+    const p = await passageByLabel('1.4');
+    let requests = 0;
+    await page.route(SAVE_ROUTE, (route) => {
+      requests++;
+      return route.abort('failed');
+    });
+
+    await openEditor(page, { main: { tab: 'translation', hash: p.uuid } });
+    await typeAtEnd(page, p.uuid, 'Q');
+    await markToasts(page);
+    await saveButton(page).click();
+    await expect(toast(page, /may have gone through/)).toBeVisible();
+    await expect(row(page, p.uuid)).toHaveText(p.content);
+    expect(requests).toBe(1);
+    expect((await passageByUuid(p.uuid))?.content).toBe(p.content);
   });
 
   test('ED-SAV-07 Passages the user did not edit are not written', async ({
