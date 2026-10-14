@@ -192,7 +192,7 @@ export const openLabelMenu = async (
     await expect(page.getByRole('menuitem').first()).toBeVisible({
       timeout: 2_000,
     });
-  }).toPass();
+  }).toPass({ timeout: 10_000 });
 };
 
 /** Picks an item from a passage's label menu. */

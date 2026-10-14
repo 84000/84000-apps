@@ -23,6 +23,7 @@ import {
   slashCommand,
   typeAtEnd,
   undo,
+  isSaveRequest,
 } from './support/editor';
 import { expect, test } from './support/fixtures';
 import { restoreTestWork } from './support/local-stack';
@@ -181,7 +182,7 @@ test.describe('Passage structure', () => {
           ['Copy Link', 'Edit Label', 'View Attributes', 'Delete'],
           { timeout: 2_000 },
         );
-      }).toPass();
+      }).toPass({ timeout: 30_000 });
       await page.keyboard.press('Escape');
     });
 
@@ -201,6 +202,7 @@ test.describe('Passage structure', () => {
       await labelMenuItem(page, twelve.uuid, 'View Attributes');
       const dialog = page.getByRole('dialog');
       await expect(dialog).toContainText(twelve.uuid);
+      await expect(dialog).toContainText('1.12');
       await expect(dialog).toContainText('translation');
       await page.keyboard.press('Escape');
     });
@@ -273,11 +275,21 @@ test.describe('Editing', () => {
     const seeded = JSON.stringify(await workPassages());
     const unchanged = async () =>
       expect(JSON.stringify(await workPassages())).toBe(seeded);
-    // A save with nothing to write shows no toast, so give it time instead.
+    // Undo may or may not leave the Save button up, and a save with nothing
+    // to write shows no toast and may send nothing. Wait for its request to
+    // be answered when there is one: keys pressed while it is in flight are
+    // lost.
     const saveIfShown = async () => {
       if (!(await saveButton(page).isVisible())) return;
+      const sent = page
+        .waitForResponse((r) => isSaveRequest(r.request()), { timeout: 5_000 })
+        .then(
+          () => undefined,
+          () => undefined,
+        );
       await saveButton(page).click();
-      await page.waitForTimeout(2_000);
+      await expect(saveButton(page)).toBeHidden();
+      await sent;
     };
 
     await test.step('typing', async () => {
