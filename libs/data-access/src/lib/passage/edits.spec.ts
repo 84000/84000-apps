@@ -209,6 +209,43 @@ describe('applyEditsToPassages', () => {
     expect(result.passages).toEqual([]);
   });
 
+  it('refuses an annotation whose text is not what the range holds', () => {
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 5,
+        end: 8,
+        text: 'lord',
+        data: { glossary: 'g1', authority: 'au1' },
+      },
+    ]);
+    expect(result.error).toMatch(/expected "lord" at 5–8 but found "the"/);
+    expect(result.passages).toEqual([]);
+  });
+
+  it('adds an annotation whose text matches the range', () => {
+    const result = run([
+      cut(14, 23),
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 28,
+        end: 32,
+        text: 'this',
+        data: { glossary: 'g2', authority: 'au2' },
+      },
+    ]);
+    expect(result.error).toBeUndefined();
+    const added = result.passages[0].annotations.find(
+      (a) => a.type === 'glossaryInstance' && a.start !== 9,
+    );
+    expect(added).toMatchObject({ start: 19, end: 23 });
+    expect(result.passages[0].content.slice(19, 23)).toBe('this');
+  });
+
   it('cannot tell a repeated cut from a new one when the text repeats', () => {
     // Cutting one "x" from "xx" leaves an "x" at the same offsets.
     const once = applyEditsToPassages({

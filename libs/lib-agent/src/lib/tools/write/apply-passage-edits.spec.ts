@@ -156,6 +156,20 @@ describe('apply-passage-edits tool', () => {
     ).toBe(false);
   });
 
+  it('keeps the optional text an add-annotation names', () => {
+    const schema = z.object(tool.inputSchema as z.ZodRawShape);
+    const add = { ...edits[1], kind: 'glossary-instance', end: 18 };
+    const parsed = schema.safeParse({
+      workUuid: 'w',
+      edits: [add, { ...add, text: 'lord' }],
+    });
+    expect(parsed.success).toBe(true);
+    const [without, withText] = (parsed.data as { edits: { text?: string }[] })
+      .edits;
+    expect(without.text).toBeUndefined();
+    expect(withText.text).toBe('lord');
+  });
+
   it('returns the warnings the edit produced', async () => {
     mockedHasPermission.mockResolvedValue(true);
     mockedApply.mockResolvedValue({
