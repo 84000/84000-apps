@@ -152,6 +152,12 @@ opening table.
 State the coverage of each check in the opening table. A check that covered
 part of the text is reported as partial, naming what was covered.
 
+When the work is held in the studio, `reference/whole-work-analysis/` shows how
+to run these over its draft snapshot (`work-grep`, `work-ls`, `work-read`) and
+how to split a long review by chapter across sub-agents. The snapshot is the
+studio's draft: if the text under review is a file from outside the studio, it
+may not be the same text, so say which one you checked.
+
 ## House style
 
 The report is an 84000 document and follows house style like anything else the

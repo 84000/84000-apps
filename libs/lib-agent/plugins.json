@@ -91,8 +91,14 @@
         "first-draft-translation": [
           "libs/lib-agent/reference/session-documents"
         ],
-        "editorial-review": ["libs/lib-agent/reference/session-documents"],
-        "copyediting": ["libs/lib-agent/reference/session-documents"]
+        "editorial-review": [
+          "libs/lib-agent/reference/session-documents",
+          "libs/lib-agent/reference/whole-work-analysis"
+        ],
+        "copyediting": [
+          "libs/lib-agent/reference/session-documents",
+          "libs/lib-agent/reference/whole-work-analysis"
+        ]
       }
     },
     {
