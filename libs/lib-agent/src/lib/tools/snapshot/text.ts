@@ -150,7 +150,7 @@ export const freshnessLine = (snapshot: ReadyWorkSnapshot): string => {
     );
   else
     parts.push(
-      `older than a day${snapshot.refreshing ? '; a refresh is running' : ''}`,
+      `out of date: older than a day or an older format${snapshot.refreshing ? '; a refresh is running' : ''}`,
     );
   return `[${parts.join(' · ')}]`;
 };

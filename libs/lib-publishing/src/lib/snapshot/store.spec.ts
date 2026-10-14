@@ -1,6 +1,6 @@
 import type { DataClient } from '@eightyfourthousand/data-access';
 import type { WorkSnapshot } from './generate';
-import type { SnapshotManifest } from './render';
+import { SNAPSHOT_FORMAT_VERSION, type SnapshotManifest } from './render';
 import {
   getWorkSnapshot,
   prune,
@@ -203,6 +203,7 @@ const fakeGenerate = (
     if (opts.fail?.()) throw new Error('read failed');
     return {
       manifest: {
+        formatVersion: SNAPSHOT_FORMAT_VERSION,
         tohs: ['toh1'],
         draftTouchedAt: key,
       } as unknown as SnapshotManifest,
@@ -339,6 +340,19 @@ describe('getWorkSnapshot', () => {
     t.clock.t += S.maxAgeMs + MIN;
     const old = await t.call();
     expect(old).toMatchObject({
+      freshness: { current: false, draftChangedSince: false, refreshing: true },
+    });
+    expect(t.scheduled).toHaveLength(1);
+  });
+
+  it('refreshes an archive in an older format even when the key matches', async () => {
+    const t = setup();
+    await t.call();
+    if (t.state.row?.manifest) t.state.row.manifest.formatVersion = 1;
+    t.clock.t += S.refreshIntervalSeconds * 1000 + MIN;
+    const old = await t.call();
+    expect(old).toMatchObject({
+      status: 'ready',
       freshness: { current: false, draftChangedSince: false, refreshing: true },
     });
     expect(t.scheduled).toHaveLength(1);

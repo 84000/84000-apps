@@ -26,6 +26,7 @@ const fixtureFiles = (): Map<string, string> =>
       'term\tpassage\nMañjuśrī\tp1\nMañjuśrī\tp2\nSamantabhadra\tp3\n',
     ],
     ['manifest.json', '{}\n'],
+    ['raw/passages.jsonl', '{"content":"Samantabhadra spoke."}\n'],
   ]);
 
 const grep = (pattern: string, options: Record<string, unknown> = {}) => {
@@ -43,6 +44,15 @@ describe('work-grep', () => {
       'text/04-translation/001-chapter-one.md:5:Mañjuśrī said to the Blessed One, “Blessed One, …”',
       '[4 matching lines in 2 files.]',
     ]);
+  });
+
+  it('searches raw/ only when the path names it', () => {
+    expect(grep('Samantabhadra', { mode: 'files' })).not.toContain(
+      'raw/passages.jsonl',
+    );
+    expect(grep('Samantabhadra', { mode: 'files', path: 'raw' })).toContain(
+      'raw/passages.jsonl',
+    );
   });
 
   it('matches diacritics exactly when folding is off', () => {

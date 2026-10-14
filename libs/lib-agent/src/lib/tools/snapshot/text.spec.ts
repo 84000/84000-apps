@@ -171,9 +171,9 @@ describe('freshnessLine', () => {
     ).toContain('generated 2026-10-13 17:05 UTC');
   });
 
-  it('says when the snapshot is only old', () => {
+  it('says when the snapshot is only old or in an older format', () => {
     expect(freshnessLine({ ...snapshot, current: false })).toContain(
-      'older than a day',
+      'out of date: older than a day or an older format',
     );
   });
 });

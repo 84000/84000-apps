@@ -197,6 +197,8 @@ describe('renderSnapshotTree', () => {
       'glossary.md',
       'manifest.json',
       'notes.md',
+      'raw/glossary.jsonl',
+      'raw/passages.jsonl',
       'text/00-summary.md',
       'text/04-translation/001-chapter-1.md',
       'text/04-translation/002-chapter-2-gifts.md',
@@ -309,15 +311,44 @@ describe('renderSnapshotTree', () => {
     expect(unresolved[6]).toBe('Blessed One');
   });
 
-  it('removes soft hyphens everywhere and keeps every value on one line', () => {
+  it('removes soft hyphens everywhere but raw/ and keeps every value on one line', () => {
     const { tree } = render();
-    for (const text of tree.values()) {
+    for (const [path, text] of tree) {
+      if (path.startsWith('raw/')) continue;
       expect(text).not.toContain(SOFT_HYPHEN);
     }
     expect(tree.get('notes.md')).toContain('A note over two lines.');
     expect(tree.get('tibetan/04-translation/001-chapter-1.md')).toContain(
       'F.34–35 འདི་སྐད་བདག་གིས་ ཐོས་པ།',
     );
+  });
+
+  it('writes passages and terms to raw/ exactly as stored, in order', () => {
+    const rows = fixture();
+    const { tree, anchors } = renderSnapshotTree({ rows, generatedAt: 'now' });
+    const raw = (tree.get('raw/passages.jsonl') ?? '')
+      .trimEnd()
+      .split('\n')
+      .map((l) => JSON.parse(l));
+    expect(raw).toEqual(
+      rows.passages.map((p) => ({
+        uuid: p.uuid,
+        anchor: expect.any(String),
+        content: p.content,
+      })),
+    );
+    for (const r of raw) expect(anchors.get(r.anchor)).toBe(r.uuid);
+    expect(raw[2].content).toContain(SOFT_HYPHEN);
+    expect(raw[5].content).toBe('A note\nover two lines.');
+
+    const [term] = rows.glossary;
+    expect(JSON.parse(tree.get('raw/glossary.jsonl') ?? '')).toEqual({
+      uuid: term.glossary_uuid,
+      authority: term.authority_uuid,
+      anchor: expect.stringMatching(/^g-[0-9a-f]{8}$/),
+      english: term.english,
+      alternatives: term.alternatives,
+    });
   });
 
   it('renders glossary and bibliography lines as plain text', () => {
