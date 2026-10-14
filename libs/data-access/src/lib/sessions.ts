@@ -24,6 +24,7 @@ export const SESSION_STAGES = [
   'stage1',
   'stage2',
   'copyedit',
+  'glossary-instances',
 ] as const;
 export type SessionStage = (typeof SESSION_STAGES)[number];
 
