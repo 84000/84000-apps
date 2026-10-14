@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { savePassagesWithDeletions } from './passage';
 import { importPassageUuid, occurrenceCounter } from './passage/derived-uuids';
+import { inBatches } from './passage/in-batches';
 import {
   DataClient,
   ImportOperation,
@@ -222,9 +223,9 @@ const IMPORT_XML_ID_PREFIX = 'docx-';
 const PAGE_SIZE = 1000;
 
 /**
- * Passages an earlier import saved to the work that are not among `saved`:
- * what a re-run with a shorter document leaves behind. Null when the read
- * fails.
+ * Passages an earlier import saved to the work, under the uuids it derived,
+ * that are not among `saved`: what a re-run with a shorter document leaves
+ * behind. Null when the read fails.
  */
 export const findLeftoverImportPassages = async ({
   client,
@@ -250,11 +251,53 @@ export const findLeftoverImportPassages = async ({
       return null;
     }
     const rows = (data ?? []) as { uuid: string; xmlId: string }[];
-    leftover.push(...rows.filter((row) => !saved.has(row.uuid)));
+    leftover.push(
+      ...rows.filter(
+        (row) =>
+          !saved.has(row.uuid) &&
+          row.uuid === importPassageUuid(workUuid, row.xmlId),
+      ),
+    );
     if (rows.length < PAGE_SIZE) {
       return leftover;
     }
   }
+};
+
+/**
+ * The stored passages a derived uuid would overwrite at another position:
+ * one an earlier import saved and an edit has since moved, so the incoming
+ * passage is not it. Throws when the read fails.
+ */
+export const findMovedImportPassages = async ({
+  client,
+  passages,
+}: {
+  client: DataClient;
+  passages: { uuid: string; sort: number; xmlId: string }[];
+}): Promise<{ xmlId: string; sort: number; storedSort: number }[]> => {
+  const incoming = new Map(passages.map((passage) => [passage.uuid, passage]));
+  const moved: { xmlId: string; sort: number; storedSort: number }[] = [];
+  for (const batch of inBatches([...incoming.keys()])) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, sort')
+      .in('uuid', batch);
+    if (error) {
+      throw new Error(`Failed to read stored passages: ${error.message}`);
+    }
+    for (const row of (data ?? []) as { uuid: string; sort: number }[]) {
+      const passage = incoming.get(row.uuid);
+      if (passage && passage.sort !== row.sort) {
+        moved.push({
+          xmlId: passage.xmlId,
+          sort: passage.sort,
+          storedSort: row.sort,
+        });
+      }
+    }
+  }
+  return moved;
 };
 
 /**
@@ -299,9 +342,8 @@ export const upsertPassagesFromPreview = async ({
 
 /**
  * Fills in the deterministic fields an agent should not have to supply: title
- * and passage UUIDs (a passage's derived from its work and xmlId, so a re-run
- * matches the rows an earlier run saved), the owning work reference, monotonic passage sort order,
- * and derived xmlIds. `update_work` and `update_folio_annotation` operations
+ * and passage UUIDs (a passage's derived from its work and xmlId), the owning
+ * work reference, monotonic passage sort order, and derived xmlIds. `update_work` and `update_folio_annotation` operations
  * pass through unchanged.
  */
 export const normalizeImportOperations = (
@@ -399,6 +441,36 @@ export const applyImportPreview = async ({
 
   const warnings: string[] = [];
 
+  // Passages whose uuid this call derived rather than received.
+  const derived = normalized.flatMap((operation, at) => {
+    const input = operations[at];
+    return operation.kind === 'upsert_passage' &&
+      input.kind === 'upsert_passage' &&
+      !input.passage.uuid
+      ? [operation.passage]
+      : [];
+  });
+
+  const moved = await findMovedImportPassages({
+    client,
+    passages: derived.map(({ uuid, sort, xmlId }) => ({
+      uuid,
+      sort,
+      xmlId: xmlId ?? '',
+    })),
+  });
+  if (moved.length > 0) {
+    const sample = moved
+      .slice(0, 10)
+      .map(
+        (row) => `${row.xmlId} (sort ${row.sort}, stored at ${row.storedSort})`,
+      )
+      .join(', ');
+    throw new Error(
+      `Nothing was saved: ${moved.length} passage(s) would overwrite a stored passage an earlier import saved and an edit has since moved: ${sample}. Send the uuid of each passage you mean to rewrite.`,
+    );
+  }
+
   const workUpdated = await updateWorkFromPreview({
     client,
     workUuid,
@@ -430,7 +502,7 @@ export const applyImportPreview = async ({
       operation.kind === 'upsert_passage' ? [operation.passage.uuid] : [],
     ),
   );
-  if (saved.size > 0) {
+  if (derived.length > 0) {
     const leftover = await findLeftoverImportPassages({
       client,
       workUuid,

@@ -2,6 +2,7 @@ import {
   derivedAnnotationUuid,
   occurrenceCounter,
 } from '../passage/derived-uuids';
+import { stableStringify } from '../passage/save/diff';
 import {
   Annotation,
   annotationFromImport,
@@ -195,7 +196,13 @@ export const previewDtoToPassage = (
       return annotation;
     }
     const nth = occurrence(
-      JSON.stringify([dto.type, dto.start, dto.end, dto.content, dto.toh]),
+      stableStringify([
+        dto.type,
+        dto.start,
+        dto.end,
+        dto.content ?? [],
+        dto.toh ?? null,
+      ]),
     );
     return {
       ...annotation,

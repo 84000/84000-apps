@@ -4,6 +4,7 @@ import {
   summarizeImportOperations,
 } from './import-preview';
 import { savePassagesWithDeletions } from './passage';
+import { importPassageUuid } from './passage/derived-uuids';
 import { validate as isUuid } from 'uuid';
 import {
   previewDtoToPassage,
@@ -30,6 +31,8 @@ interface FakeState {
   importedPassages?: { uuid: string; xmlId: string }[];
   /** Fail the read of earlier import passages. */
   failImportedRead?: boolean;
+  /** Stored passages read by uuid. */
+  storedPassages?: { uuid: string; sort: number }[];
   titleRows?: {
     uuid: string;
     type: string;
@@ -51,6 +54,7 @@ function makeFakeClient(state: FakeState): DataClient {
         eqs: [string, unknown][];
         like?: string;
         range?: [number, number];
+        in?: unknown[];
       } = { table, eqs: [] };
       const builder = {
         select(_cols: string, _opts?: unknown) {
@@ -71,6 +75,10 @@ function makeFakeClient(state: FakeState): DataClient {
           ctx.eqs.push([col, val]);
           return builder;
         },
+        in(_col: string, values: unknown[]) {
+          ctx.in = values;
+          return builder;
+        },
         like(_col: string, pattern: string) {
           ctx.like = pattern;
           return builder;
@@ -84,7 +92,15 @@ function makeFakeClient(state: FakeState): DataClient {
         },
         then(resolve: (value: unknown) => unknown) {
           let result: unknown = { data: [], count: 0, error: null };
-          if (ctx.table === 'passages' && ctx.like) {
+          if (ctx.table === 'passages' && ctx.in) {
+            const values = ctx.in;
+            result = {
+              data: (state.storedPassages ?? []).filter((row) =>
+                values.includes(row.uuid),
+              ),
+              error: null,
+            };
+          } else if (ctx.table === 'passages' && ctx.like) {
             const [from, to] = ctx.range ?? [0, Infinity];
             result = state.failImportedRead
               ? { data: null, error: { message: 'read failed' } }
@@ -462,8 +478,10 @@ describe('applyImportPreview leftover import passages', () => {
     const state: FakeState = {
       importedPassages: [
         { uuid: saved, xmlId: 'docx-0' },
-        { uuid: 'old-1', xmlId: 'docx-1' },
-        { uuid: 'old-2', xmlId: 'docx-2' },
+        { uuid: importPassageUuid('w1', 'docx-1'), xmlId: 'docx-1' },
+        { uuid: importPassageUuid('w1', 'docx-2'), xmlId: 'docx-2' },
+        // Saved by an import that did not derive its uuids.
+        { uuid: 'random', xmlId: 'docx-3' },
       ],
     };
 
@@ -477,6 +495,67 @@ describe('applyImportPreview leftover import passages', () => {
       expect.stringContaining('2 passage(s) saved by an earlier import'),
     ]);
     expect(result.warnings[0]).toContain('docx-1, docx-2');
+  });
+
+  it('does not look for leftovers when every passage carries its uuid', async () => {
+    const state: FakeState = {
+      importedPassages: [
+        { uuid: importPassageUuid('w1', 'docx-1'), xmlId: 'docx-1' },
+      ],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: [
+        {
+          kind: 'upsert_passage',
+          passage: {
+            uuid: 'stored',
+            label: '',
+            type: 'translation',
+            content: 'a',
+          },
+        },
+      ],
+    });
+
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('refuses to overwrite an imported passage an edit has moved', async () => {
+    const state: FakeState = {
+      titleInserts: [],
+      storedPassages: [{ uuid: importPassageUuid('w1', 'docx-0'), sort: 1 }],
+    };
+
+    await expect(
+      applyImportPreview({
+        client: makeFakeClient(state),
+        workUuid: 'w1',
+        operations: [
+          { kind: 'upsert_title', title: { content: 't', type: 'mainTitle' } },
+          ...passageOps,
+        ],
+      }),
+    ).rejects.toThrow('docx-0 (sort 0, stored at 1)');
+    expect(mockedSavePassages).not.toHaveBeenCalled();
+    expect(state.titleInserts).toEqual([]);
+  });
+
+  it('updates an imported passage still at its position', async () => {
+    const state: FakeState = {
+      storedPassages: [{ uuid: importPassageUuid('w1', 'docx-0'), sort: 0 }],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.counts.passages).toBe(1);
+    expect(mockedSavePassages).toHaveBeenCalledTimes(1);
   });
 
   it('says nothing when no earlier import passages are left', async () => {
