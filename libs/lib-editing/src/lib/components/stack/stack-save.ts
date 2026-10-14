@@ -183,20 +183,27 @@ export const saveStackWork = async (
   const anchors = anchorsFor(work, created);
   // Before the save, which moves the anchors' sorts.
   const createdFrom = shiftedFrom(work, created, anchors);
-  const result = await savePassagesWithDeletions({
-    client,
-    passages,
-    deletedUuids,
-    anchors,
-  });
-  const createdUuids = new Set(created.map((passage) => passage.uuid));
-  if (result?.outcomeUnknown) {
-    console.error('Save may have been applied:', result.error);
+  const unknown = (error: unknown): SaveReport => {
+    console.error('Save may have been applied:', error);
     return {
       outcome: 'unknown',
       affected: [...passages.map((passage) => passage.uuid), ...deletedUuids],
     };
+  };
+  let result: Awaited<ReturnType<typeof savePassagesWithDeletions>>;
+  try {
+    result = await savePassagesWithDeletions({
+      client,
+      passages,
+      deletedUuids,
+      anchors,
+    });
+  } catch (error) {
+    // It may have thrown after its commit.
+    return unknown(error);
   }
+  const createdUuids = new Set(created.map((passage) => passage.uuid));
+  if (result?.outcomeUnknown) return unknown(result.error);
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
     // The save may have shifted sorts before it failed, and inserted the

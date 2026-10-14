@@ -297,14 +297,14 @@ export const useSaveLifecycle = ({
    */
   const confirmUnknownSave = useCallback(
     async (affected: string[]) => {
-      if (!(await readBackSaved(affected))) {
+      if (!(await readBackSaved(client, affected))) {
         unconfirmedRef.current = affected;
         dirtyStore.setDirty(true);
         toast('Your last save may have gone through.', {
           description:
             'The server could not be reached to check, so saving is paused. ' +
             'Save again to check: the editor will then show what is saved, ' +
-            'and changes since will need making again.',
+            'and any changes made from now on will be lost.',
           icon: <CircleAlertIcon className="size-4 text-error" />,
           duration: Infinity,
           id: UNKNOWN_SAVE_TOAST,
@@ -322,7 +322,7 @@ export const useSaveLifecycle = ({
       });
       reload();
     },
-    [dirtyStore, reload],
+    [client, dirtyStore, reload],
   );
 
   // The stack, when it is mounted, and the paginated editors each save what
@@ -338,6 +338,15 @@ export const useSaveLifecycle = ({
         await confirmUnknownSave(unconfirmedRef.current);
         return;
       }
+      // Offline, a request fails before it is sent; saying so keeps it from
+      // looking like a save that may have been applied.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        toast('You are offline.', {
+          description: 'Your changes are kept. Save again once you are back.',
+          icon: <CircleAlertIcon className="size-4 text-error" />,
+        });
+        return;
+      }
 
       const stack = saveHandlerRef.current;
       const stackReport: SaveReport = stack
@@ -346,6 +355,11 @@ export const useSaveLifecycle = ({
             return { outcome: 'failed' as const };
           })
         : { outcome: 'none' };
+      // The work's state is uncertain: send nothing more until it is read.
+      if (stackReport.outcome === 'unknown') {
+        await confirmUnknownSave(stackReport.affected ?? []);
+        return;
+      }
       const paginated = await savePaginated();
       const outcome = combineSaveOutcomes([
         stackReport.outcome,

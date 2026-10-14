@@ -1,4 +1,4 @@
-import { ClientError } from 'graphql-request';
+import { ClientError, type GraphQLClient } from 'graphql-request';
 
 import { mayHaveBeenApplied, readBackSaved } from './save-outcome';
 
@@ -59,12 +59,19 @@ describe('mayHaveBeenApplied', () => {
 });
 
 describe('readBackSaved', () => {
-  beforeEach(() => dataAccess.getPassageSorts.mockReset());
+  const request = jest.fn();
+  const graphql = { request } as unknown as GraphQLClient;
+
+  beforeEach(() => {
+    dataAccess.getPassageSorts.mockReset();
+    request.mockReset();
+    request.mockResolvedValue({ __typename: 'Query' });
+  });
 
   it('reads the passages back', async () => {
     dataAccess.getPassageSorts.mockResolvedValue(new Map([['a', 1]]));
 
-    expect(await readBackSaved(['a', 'b'])).toBe(true);
+    expect(await readBackSaved(graphql, ['a', 'b'])).toBe(true);
     expect(dataAccess.getPassageSorts).toHaveBeenCalledWith(
       expect.objectContaining({ uuids: ['a', 'b'] }),
     );
@@ -72,9 +79,17 @@ describe('readBackSaved', () => {
 
   it('is false when the server cannot be read', async () => {
     dataAccess.getPassageSorts.mockResolvedValueOnce(null);
-    expect(await readBackSaved(['a'])).toBe(false);
+    expect(await readBackSaved(graphql, ['a'])).toBe(false);
 
     dataAccess.getPassageSorts.mockRejectedValueOnce(new Error('offline'));
-    expect(await readBackSaved(['a'])).toBe(false);
+    expect(await readBackSaved(graphql, ['a'])).toBe(false);
+  });
+
+  // The editors reload through it, and its readers return empty on failure.
+  it('is false when the API cannot be reached', async () => {
+    dataAccess.getPassageSorts.mockResolvedValue(new Map());
+    request.mockRejectedValueOnce(clientError(502));
+
+    expect(await readBackSaved(graphql, ['a'])).toBe(false);
   });
 });

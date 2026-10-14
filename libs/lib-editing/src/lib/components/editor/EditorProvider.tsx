@@ -29,6 +29,7 @@ export type { SaveHandler, SaveOutcome, SaveReport } from './editor-context';
 
 interface EditorContextProps {
   work: Work;
+  /** The initial document; a reload starts from an empty one. */
   doc?: Doc;
   children: React.ReactNode;
 }

@@ -1,3 +1,4 @@
+import type { GraphQLClient } from 'graphql-request';
 import {
   createBrowserClient,
   getPassageSorts,
@@ -23,20 +24,28 @@ export const mayHaveBeenApplied = (error: unknown): boolean => {
   if (!isClientError(error)) return true;
   const { status, errors } = error.response;
   if (status >= 500) return true;
+  // A 4xx means the request was refused before it ran.
   return (errors ?? []).some((e) => (e.path?.length ?? 0) > 0);
 };
 
 /**
- * Read back the passages a save with an unknown outcome touched. False when
- * the server cannot be read.
+ * Read back the passages a save with an unknown outcome touched, and check
+ * the API the editors reload through answers. False when either cannot be
+ * reached.
  */
-export const readBackSaved = async (uuids: string[]): Promise<boolean> => {
+export const readBackSaved = async (
+  graphql: GraphQLClient,
+  uuids: string[],
+): Promise<boolean> => {
   try {
     const sorts = await getPassageSorts({
       client: createBrowserClient(),
       uuids,
     });
-    return sorts !== null;
+    if (sorts === null) return false;
+    // Throws when the API cannot be reached, where its readers return empty.
+    await graphql.request('query SaveOutcomeCheck { __typename }');
+    return true;
   } catch (error) {
     console.error('Could not read back the saved passages:', error);
     return false;

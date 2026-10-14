@@ -36,8 +36,10 @@ jest.mock('../shared/RestrictionWarning', () => ({
   RestrictionWarning: () => null,
 }));
 
+const mockGraphqlRequest = jest.fn();
+
 jest.mock('@eightyfourthousand/client-graphql', () => ({
-  createGraphQLClient: jest.fn(() => ({})),
+  createGraphQLClient: jest.fn(() => ({ request: mockGraphqlRequest })),
   hasPermission: jest.fn(async () => true),
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
@@ -191,6 +193,8 @@ describe('a stack save whose answer was lost', () => {
     designSystem.toast.mockReset();
     dataAccess.savePassagesWithDeletions.mockReset();
     dataAccess.getPassageSorts.mockReset();
+    mockGraphqlRequest.mockReset();
+    mockGraphqlRequest.mockResolvedValue({ __typename: 'Query' });
     clientGraphql.getPassageMetaPage.mockReset();
     clientGraphql.getPassageMetaPage.mockImplementation(
       async ({ type }: { type?: string }) => ({
@@ -246,14 +250,33 @@ describe('a stack save whose answer was lost', () => {
 
     await act(() => editor.save());
 
-    const before = spine();
-    expect(before).toContain('@new');
+    expect(spine()).toContain('@new');
     expect(editor.dirtyStore.getSnapshot()).toBe(true);
 
     dataAccess.getPassageSorts.mockResolvedValueOnce(new Map());
     await act(() => editor.save());
 
     await waitFor(() => expect(spine()).toBe('1.1@0 1.2@1 1.3@2 1.40@3'));
+    expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a save that threw as one that may have been applied', async () => {
+    await mount();
+    splitFirst();
+    dataAccess.savePassagesWithDeletions.mockImplementation(async () => {
+      server = [
+        { uuid: 'p0', label: '1.1', sort: 0 },
+        { uuid: 'p1', label: '1.3', sort: 2 },
+        { uuid: 'p2', label: '1.40', sort: 3 },
+      ];
+      throw new Error('lost after the commit');
+    });
+    dataAccess.getPassageSorts.mockResolvedValue(new Map());
+
+    await act(() => editor.save());
+
+    await waitFor(() => expect(spine()).toBe('1.1@0 1.3@2 1.40@3'));
+    await act(() => editor.save());
     expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
   });
 });

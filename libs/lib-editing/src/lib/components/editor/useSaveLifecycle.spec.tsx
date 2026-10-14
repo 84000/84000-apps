@@ -34,8 +34,10 @@ jest.mock('../shared/RestrictionWarning', () => ({
   RestrictionWarning: () => null,
 }));
 
+const mockGraphqlRequest = jest.fn();
+
 jest.mock('@eightyfourthousand/client-graphql', () => ({
-  createGraphQLClient: jest.fn(() => ({})),
+  createGraphQLClient: jest.fn(() => ({ request: mockGraphqlRequest })),
   hasPermission: jest.fn(async () => true),
   savePassages: jest.fn(),
   getBibliographyEntry: jest.fn(),
@@ -167,6 +169,8 @@ describe('saving the paginated editors', () => {
     designSystem.toast.mockReset();
     clientGraphql.savePassages.mockReset();
     dataAccess.getPassageSorts.mockReset();
+    mockGraphqlRequest.mockReset();
+    mockGraphqlRequest.mockResolvedValue({ __typename: 'Query' });
     dataAccess.getPassageSorts.mockResolvedValue(new Map());
   });
 
@@ -200,6 +204,39 @@ describe('saving the paginated editors', () => {
 
     await waitFor(() => expect(mounts).toBe(2));
     expect(toasted()).toEqual(['Your last save may have gone through.']);
+  });
+
+  it('pauses saving until the server can be read', async () => {
+    await mount();
+    clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
+    mockGraphqlRequest.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await act(() => editorState.save());
+
+    expect(mounts).toBe(1);
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+
+    await act(() => editorState.save());
+
+    await waitFor(() => expect(mounts).toBe(2));
+    // The save is never sent again, only read back.
+    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+    expect(dataAccess.getPassageSorts).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends nothing while offline', async () => {
+    await mount();
+    const onLine = jest.spyOn(navigator, 'onLine', 'get');
+    onLine.mockReturnValue(false);
+    try {
+      await act(() => editorState.save());
+    } finally {
+      onLine.mockRestore();
+    }
+
+    expect(clientGraphql.savePassages).not.toHaveBeenCalled();
+    expect(toasted()).toEqual(['You are offline.']);
+    expect(mounts).toBe(1);
   });
 
   it('keeps the edits of a save the server refused', async () => {
