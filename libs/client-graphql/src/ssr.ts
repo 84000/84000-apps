@@ -2,6 +2,7 @@
 export {
   createServerGraphQLClient,
   createBuildGraphQLClient,
+  createBearerGraphQLClient,
 } from './lib/client-ssr';
 
 // Functions (same as browser)
@@ -35,6 +36,10 @@ export {
   type PublishStatusKind,
   type WorkPublishStatus,
   type FindingLocation,
+  ensureWorkSnapshot,
+  type EnsureWorkSnapshotResult,
+  type SnapshotDownload,
+  type WorkSnapshot,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

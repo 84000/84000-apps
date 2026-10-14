@@ -444,6 +444,11 @@ export type Mutation = {
    */
   deleteComment: DeleteCommentResult;
   /**
+   * The work's draft snapshot, built on first request. A stale one is returned at once
+   * while a newer one is built. Requires editor.read.
+   */
+  ensureWorkSnapshot: WorkSnapshot;
+  /**
    * Publish a work: validate, snapshot, write the immutable artifact, then flip the live
    * pointer. The pointer flip is the only commit point, so a failure at any earlier stage
    * leaves the previously published version live and serving.
@@ -508,6 +513,12 @@ export type MutationCreateCommentArgs = {
 /** Root Mutation type - extend this in other schema files */
 export type MutationDeleteCommentArgs = {
   uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationEnsureWorkSnapshotArgs = {
+  work: Scalars['String']['input'];
 };
 
 
@@ -1127,6 +1138,13 @@ export type SavePassagesResult = {
   warnings?: Maybe<Array<Scalars['String']['output']>>;
 };
 
+export type SnapshotDownload = {
+  __typename?: 'SnapshotDownload';
+  expiresAt: Scalars['String']['output'];
+  filename: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
 /** A tagged comment, placed in its work and thread. */
 export type TaggedComment = {
   __typename?: 'TaggedComment';
@@ -1458,6 +1476,40 @@ export type WorkPublishStatus = {
   warnings: Array<ValidationFinding>;
   workUuid: Scalars['ID']['output'];
 };
+
+/** A work's draft as a file tree, packed as a tar.gz, cached until the draft changes. */
+export type WorkSnapshot = {
+  __typename?: 'WorkSnapshot';
+  ageMinutes?: Maybe<Scalars['Int']['output']>;
+  /** Compressed size in bytes. */
+  archiveBytes?: Maybe<Scalars['Float']['output']>;
+  /** Built from the current draft (as tracked) and not older than a day. */
+  current?: Maybe<Scalars['Boolean']['output']>;
+  /** A short-lived download URL for this exact archive. Signed only when selected. */
+  download?: Maybe<SnapshotDownload>;
+  /** The draft has been edited since this snapshot was built. */
+  draftChangedSince?: Maybe<Scalars['Boolean']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  generatedAt?: Maybe<Scalars['String']['output']>;
+  /** Per-file bytes, lines and sha256, and row counts. */
+  manifest?: Maybe<Scalars['JSON']['output']>;
+  /** A newer snapshot is being built. */
+  refreshing?: Maybe<Scalars['Boolean']['output']>;
+  /** When GENERATING or FAILED: seconds to wait before asking again. */
+  retryAfterSeconds?: Maybe<Scalars['Int']['output']>;
+  /** The archive's top-level directory: the work's first Toh, else its uuid. */
+  root?: Maybe<Scalars['String']['output']>;
+  /** Identifies one stored archive; it never changes content. Null unless READY. */
+  snapshotId?: Maybe<Scalars['String']['output']>;
+  status: WorkSnapshotStatus;
+  workUuid?: Maybe<Scalars['ID']['output']>;
+};
+
+export type WorkSnapshotStatus =
+  | 'FAILED'
+  | 'GENERATING'
+  | 'NOT_FOUND'
+  | 'READY';
 
 /**
  * One published version of a work.
