@@ -175,16 +175,33 @@ describe('saving the paginated editors', () => {
     dataAccess.getPassageSorts.mockResolvedValue(new Map());
   });
 
-  it('sends a save that only changed content again', async () => {
+  // A load refreshes the baseline too, so it cannot show the passage is stored.
+  it('reads the editors again even when the passage is in the baseline', async () => {
     await mount();
-    // p0 is already stored: the baseline holds it, and an edit dirties it.
     act(() => editorState.startObserving('main'));
     const fragment = editorState.getFragment('main');
     const passage = new XmlElement('passage');
     fragment.doc?.transact(() => fragment.insert(0, [passage]));
     passage.setAttribute('uuid', 'p0');
     fragment.doc?.transact(() => passage.setAttribute('label', '1.1'));
+    act(() => editorState.refreshEditorBaseline('main'));
     clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
+
+    await act(() => editorState.save());
+
+    await waitFor(() => expect(mounts).toBe(2));
+    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a content-only stack save again', async () => {
+    await mount();
+    act(() => editorState.setEditor('main', undefined));
+    const save = jest.fn(async () => ({
+      outcome: 'unknown' as const,
+      affected: ['s1'],
+      replayable: true,
+    }));
+    act(() => editorState.registerSaveHandler({ save, isDirty: () => true }));
 
     await act(() => editorState.save());
 
@@ -192,12 +209,24 @@ describe('saving the paginated editors', () => {
     expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
     expect(toasted()).toEqual(['Your last save could not be confirmed.']);
     expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+  });
+
+  it('reads the editors again when the other half cannot be replayed', async () => {
+    await mount();
+    const save = jest.fn(async () => ({
+      outcome: 'unknown' as const,
+      affected: ['s1'],
+      replayable: true,
+    }));
+    act(() => editorState.registerSaveHandler({ save, isDirty: () => true }));
+    clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
 
     await act(() => editorState.save());
 
-    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(2);
-    const [[first], [second]] = clientGraphql.savePassages.mock.calls;
-    expect(second.passages).toEqual(first.passages);
+    await waitFor(() => expect(mounts).toBe(2));
+    expect(dataAccess.getPassageSorts).toHaveBeenCalledWith(
+      expect.objectContaining({ uuids: ['s1', 'p0'] }),
+    );
   });
 
   it('reads the editors again when the server lost the answer', async () => {
