@@ -2,6 +2,7 @@ import { act, render, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { Editor } from '@tiptap/react';
 import { ClientError } from 'graphql-request';
+import { XmlElement } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
 
 import { EditorContextProvider, useEditorState } from './EditorProvider';
@@ -172,6 +173,31 @@ describe('saving the paginated editors', () => {
     mockGraphqlRequest.mockReset();
     mockGraphqlRequest.mockResolvedValue({ __typename: 'Query' });
     dataAccess.getPassageSorts.mockResolvedValue(new Map());
+  });
+
+  it('sends a save that only changed content again', async () => {
+    await mount();
+    // p0 is already stored: the baseline holds it, and an edit dirties it.
+    act(() => editorState.startObserving('main'));
+    const fragment = editorState.getFragment('main');
+    const passage = new XmlElement('passage');
+    fragment.doc?.transact(() => fragment.insert(0, [passage]));
+    passage.setAttribute('uuid', 'p0');
+    fragment.doc?.transact(() => passage.setAttribute('label', '1.1'));
+    clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
+
+    await act(() => editorState.save());
+
+    expect(mounts).toBe(1);
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(toasted()).toEqual(['Your last save could not be confirmed.']);
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+
+    await act(() => editorState.save());
+
+    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(2);
+    const [[first], [second]] = clientGraphql.savePassages.mock.calls;
+    expect(second.passages).toEqual(first.passages);
   });
 
   it('reads the editors again when the server lost the answer', async () => {

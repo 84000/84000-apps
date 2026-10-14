@@ -25,6 +25,11 @@ export type SaveReport = {
    * have to be read back before anything is saved again.
    */
   affected?: string[];
+  /**
+   * When the outcome is unknown: the save neither created nor deleted a
+   * passage, so sending it again writes the same thing.
+   */
+  replayable?: boolean;
 };
 
 /** A second editing surface that saves alongside the paginated editors. */

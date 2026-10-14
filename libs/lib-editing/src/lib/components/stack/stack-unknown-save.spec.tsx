@@ -260,6 +260,48 @@ describe('a stack save whose answer was lost', () => {
     expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
   });
 
+  it('sends a save that only changed content again', async () => {
+    await mount();
+    const held = stack?.work;
+    if (!held) throw new Error('not seeded');
+    server.forEach(({ uuid }) => {
+      held.store.create(uuid, [para(`text of ${uuid}`)]);
+      held.store.peek(uuid)?.markSynced();
+    });
+    held.store.peek('p1')?.markDirty();
+    dataAccess.savePassagesWithDeletions.mockResolvedValueOnce({
+      success: false,
+      savedCount: 0,
+      passages: [],
+      renumberedPassages: [],
+      error: 'The save may have been applied: fetch failed',
+      outcomeUnknown: true,
+    });
+
+    await act(() => editor.save());
+
+    expect(designSystem.toast).toHaveBeenCalledWith(
+      'Your last save could not be confirmed.',
+      expect.anything(),
+    );
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(stack?.work).toBe(held);
+    expect(held.store.dirty()).toEqual(['p1']);
+
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({
+      success: true,
+      savedCount: 1,
+      passages: [],
+      renumberedPassages: [],
+    });
+    await act(() => editor.save());
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls.map(
+      ([{ passages }]) => passages.map((p: { uuid: string }) => p.uuid),
+    );
+    expect(sent).toEqual([['p1'], ['p1']]);
+  });
+
   it('treats a save that threw as one that may have been applied', async () => {
     await mount();
     splitFirst();
