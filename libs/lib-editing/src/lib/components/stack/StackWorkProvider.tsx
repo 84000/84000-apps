@@ -98,8 +98,8 @@ export const StackWorkProvider = ({
     const { work } = stack;
     registerSaveHandler({
       save: async () => {
-        if (!hasUnsavedStackChanges(work)) return 'none';
-        return (await saveStackWork(work)) ? 'saved' : 'failed';
+        if (!hasUnsavedStackChanges(work)) return { outcome: 'none' };
+        return saveStackWork(work);
       },
       isDirty: () => hasUnsavedStackChanges(work),
       applyReplaced: (passages) => applyServerPassages(work, passages),

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useContext, useRef } from 'react';
+import React, { useCallback, useContext, useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment, YEvent } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
@@ -25,7 +25,7 @@ import { EditorContext, type SaveHandler } from './editor-context';
 import { useSaveLifecycle } from './useSaveLifecycle';
 
 export { EditorContext } from './editor-context';
-export type { SaveHandler, SaveOutcome } from './editor-context';
+export type { SaveHandler, SaveOutcome, SaveReport } from './editor-context';
 
 interface EditorContextProps {
   work: Work;
@@ -33,11 +33,43 @@ interface EditorContextProps {
   children: React.ReactNode;
 }
 
+/**
+ * The editor's state and save lifecycle for one work.
+ *
+ * A save whose outcome is unknown replaces everything below with a fresh
+ * session, which reads the work from the server again. The toaster sits
+ * outside it so the notice explaining why survives.
+ */
 export const EditorContextProvider = ({
   work,
-  doc: initialDoc,
+  doc,
   children,
 }: EditorContextProps) => {
+  const [session, setSession] = useState(0);
+  const reload = useCallback(() => setSession((n) => n + 1), []);
+
+  return (
+    <>
+      <EditorSession
+        key={session}
+        work={work}
+        // A document handed in holds what was loaded before the reload.
+        doc={session === 0 ? doc : undefined}
+        reload={reload}
+      >
+        {children}
+      </EditorSession>
+      <Toaster />
+    </>
+  );
+};
+
+const EditorSession = ({
+  work,
+  doc: initialDoc,
+  reload,
+  children,
+}: EditorContextProps & { reload: () => void }) => {
   const client = createGraphQLClient();
 
   const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
@@ -379,6 +411,7 @@ export const EditorContextProvider = ({
     getEditorUuids,
     applyReplacedPassages,
     setNavigating,
+    reload,
   });
 
   return (
@@ -409,7 +442,6 @@ export const EditorContextProvider = ({
       <NavigationProvider uuid={work.uuid} initialToh={work.toh[0]} editable>
         {children}
       </NavigationProvider>
-      <Toaster />
     </EditorContext.Provider>
   );
 };
