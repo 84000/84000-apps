@@ -1,19 +1,30 @@
 import type { DataClient } from '@eightyfourthousand/data-access';
 import type { McpToolDefinition } from '../../types';
+import { createApplyGlossaryInstancesTool } from './apply-glossary-instances';
 import { createPlanGlossaryInstancesTool } from './plan-glossary-instances';
+import { createRecordGlossaryReviewTool } from './record-glossary-review';
 
 /**
- * Tools that resolve a work's glossary instances. Each checks its own
- * permission.
+ * Tools that resolve a work's glossary instances: plan (`editor.read`), and
+ * with `write`, record review decisions and apply them (`editor.edit`). Each
+ * checks its permission.
  */
 export function createGlossaryResolveTools(
   client: DataClient,
   userId: string,
-  // Taken now so the route does not change when the write tools join.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  options: { write?: boolean } = {},
+  { write = true }: { write?: boolean } = {},
 ): McpToolDefinition[] {
-  return [createPlanGlossaryInstancesTool(client)];
+  return [
+    createPlanGlossaryInstancesTool(client),
+    ...(write
+      ? [
+          createRecordGlossaryReviewTool(client, userId),
+          createApplyGlossaryInstancesTool(client, userId),
+        ]
+      : []),
+  ];
 }
 
+export { createApplyGlossaryInstancesTool } from './apply-glossary-instances';
 export { createPlanGlossaryInstancesTool } from './plan-glossary-instances';
+export { createRecordGlossaryReviewTool } from './record-glossary-review';
