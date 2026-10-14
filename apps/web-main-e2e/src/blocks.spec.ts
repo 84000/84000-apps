@@ -92,7 +92,9 @@ test.describe('Blocks', () => {
 
     await save(page);
     const types = (await annotationsOf(twelve.uuid)).map((a) => a.type);
-    expect(types).toContain('paragraph');
+    expect((await ofType(twelve.uuid, 'paragraph')).map(shape)).toEqual([
+      `paragraph 0-${length}`,
+    ]);
     for (const type of ['heading', 'blockquote', 'trailer']) {
       expect(types).not.toContain(type);
     }
@@ -194,11 +196,11 @@ test.describe('Blocks', () => {
     const before = await Promise.all(others.map((p) => annotationsOf(p.uuid)));
 
     await openAt(page, right.uuid, 'front');
-    expect(await textAlign(page, right.uuid)).toBe('right');
-    expect(await textAlign(page, justified.uuid)).toBe('justify');
+    await expect.poll(() => textAlign(page, right.uuid)).toBe('right');
+    await expect.poll(() => textAlign(page, justified.uuid)).toBe('justify');
     await openAt(page, homage.uuid);
-    expect(await textAlign(page, homage.uuid)).toBe('center');
-    expect(await textAlign(page, title.uuid)).toBe('center');
+    await expect.poll(() => textAlign(page, homage.uuid)).toBe('center');
+    await expect.poll(() => textAlign(page, title.uuid)).toBe('center');
 
     await openAt(page, twelve.uuid);
     await selectText(page, twelve.uuid, 'explained');
@@ -208,7 +210,7 @@ test.describe('Blocks', () => {
     const [paragraph] = await ofType(twelve.uuid, 'paragraph');
     expect(holds(paragraph, 'align', 'center')).toBe(true);
     await openAt(page, twelve.uuid);
-    expect(await textAlign(page, twelve.uuid)).toBe('center');
+    await expect.poll(() => textAlign(page, twelve.uuid)).toBe('center');
     expect(await Promise.all(others.map((p) => annotationsOf(p.uuid)))).toEqual(
       before,
     );
@@ -224,6 +226,11 @@ test.describe('Blocks', () => {
       (el) => el.scrollWidth - el.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(0);
+    expect(
+      await block(page, url.uuid).evaluate(
+        (el) => getComputedStyle(el).wordBreak,
+      ),
+    ).toBe('break-all');
 
     await selectText(page, justified.uuid, 'six perfections');
     await bubbleChoice(page, 'wordBreak', 'Break all');
@@ -320,9 +327,10 @@ test.describe('Blocks', () => {
     const audioSrc = (seeded.audio.content as { src?: string }[]).find(
       (c) => c.src,
     )?.src;
+    expect(audioSrc).toBeTruthy();
     await expect(row(page, recorded.uuid).locator('audio')).toHaveAttribute(
       'src',
-      audioSrc ?? '',
+      audioSrc as string,
     );
 
     for (const p of [pictured, recorded]) {

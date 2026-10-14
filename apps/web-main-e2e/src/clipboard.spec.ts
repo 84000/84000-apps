@@ -63,6 +63,7 @@ test.describe('Editing', () => {
       );
       expect(pasted).toHaveLength(1);
       expect(coveredText(stored ?? twelve, pasted[0])).toBe('great compassion');
+      expect(termOf(instance)).toBeTruthy();
       expect(termOf(pasted[0])).toBe(termOf(instance));
       expect(await passageByUuid(glossed.uuid)).toEqual(glossed);
       expect(await annotationsOf(glossed.uuid)).toEqual(glossedAnnotations);

@@ -108,11 +108,8 @@ test.describe('Compare tab', () => {
     }
   });
 
-  test('ED-CMP-02 Alignment search opens Compare', async ({ page }) => {
-    test.fail(
-      true,
-      'New bug, not filed yet: choosing a Translation Passages result opens Compare at the top, without scrolling to the passage.',
-    );
+  /** Searches for 1.10's aligned Tibetan and chooses its result. */
+  const chooseAlignmentResult = async (page: Page) => {
     const ten = await passageByLabel('1.10');
     const phrase = (await alignedTibetanStart(ten.uuid, TEST_WORK.toh, 60))
       .slice(25)
@@ -130,6 +127,22 @@ test.describe('Compare tab', () => {
     await expect
       .poll(() => new URL(page.url()).searchParams.get('main') ?? '')
       .toMatch(/^open:compare/);
+    return { ten, phrase };
+  };
+
+  test('ED-CMP-02 Alignment search opens Compare', async ({ page }) => {
+    await chooseAlignmentResult(page);
+  });
+
+  test('ED-CMP-02 Alignment search scrolls to the passage', async ({
+    page,
+  }) => {
+    const { ten, phrase } = await chooseAlignmentResult(page);
+    // Only the scroll is the known bug; the search itself is checked above.
+    test.fail(
+      true,
+      'New bug, not filed yet: choosing a Translation Passages result opens Compare at the top, without scrolling to the passage.',
+    );
     await expect(row(page, ten.uuid)).toBeInViewport({ timeout: 10_000 });
     await expect(source(page, ten.uuid)).toBeVisible();
     await expect(source(page, ten.uuid)).toContainText(phrase);
@@ -180,9 +193,8 @@ test.describe('Passage types', () => {
     const comment = (await annotationsOf(summary.uuid)).find(
       (a) => a.type === 'comment',
     );
-    expect(coveredText(stored ?? summary, comment ?? seeded[0])).toBe(
-      'the six perfections',
-    );
+    if (!comment) throw new Error('The comment annotation is gone.');
+    expect(coveredText(stored ?? summary, comment)).toBe('the six perfections');
     expect(othersOf(await workSnapshot(), [summary.uuid])).toEqual(
       othersOf(before, [summary.uuid]),
     );
@@ -314,9 +326,8 @@ test.describe('Passage types', () => {
       list: typeof seeded,
     ) => list.filter((a) => a.type === type).map((a) => coveredText(from, a));
     const after = await annotationsOf(degé.uuid);
-    expect(covered('abbreviation', stored ?? degé, after)).toEqual(
-      covered('abbreviation', degé, seeded),
-    );
+    expect(covered('abbreviation', degé, seeded)).toEqual(['D ']);
+    expect(covered('abbreviation', stored ?? degé, after)).toEqual(['D ']);
     expect(covered('has-abbreviation', stored ?? degé, after)).toEqual([
       'Degé Kangyur (edited)',
     ]);
