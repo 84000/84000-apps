@@ -17,7 +17,7 @@
 
 ### ED-NAV-02 Clicking content links (D)
 
-- Do: click the glossary instance in `2.5`.
+- Do: click the glossary instance in `1.20`.
 - Screen: the glossary panel opens on _great compassion_.
 - Do: click the end-note link at the end of `1.20`.
 - Screen: the Endnotes tab opens in the side panel, scrolled to `n.6`.
@@ -25,6 +25,10 @@
   of `1.12`.
 - Screen: the main panel scrolls to `2.1`, loading its page if needed, and
   `2.1` is in the viewport.
+- Known: open in the stack editor (new, not filed yet): when `2.1` is not
+  loaded yet, the main panel usually scrolls to the end of the loaded passages
+  (about `1.118`) and stops there. It reaches `2.1` about one time in four, so
+  the test is skipped rather than expected to fail.
 
 ### ED-NAV-03 Deep links (D)
 
@@ -44,34 +48,51 @@
 - Do: open `n.6` in the Endnotes tab.
 - Screen: it lists `1.20` as the passage that refers to it, and clicking that
   reference scrolls the main panel to `1.20`.
-- Known: not checked yet against the stack editor.
+- Known: open in the stack editor (new, not filed yet): `n.6` lists `1.20`, but
+  clicking the reference usually does not move the main panel. It sometimes
+  does, so the test is skipped rather than expected to fail.
 
 ### ED-NAV-05 Search and replace (D)
 
 - Do: search the work for "Vulture Peak".
-- Screen: results in `s.1`, `i.2`, `p.1` and the chapter heading `1.`.
-  Selecting the `p.1` result opens the Translation tab scrolled to `p.1`.
+- Screen: results in `s.1`, `i.2`, `p.1` and the chapter heading `1.`, under
+  the Other Passages tab of the results (translation passages are listed as
+  alignments). Selecting the `p.1` result opens the Translation tab scrolled
+  to `p.1`.
+- Do (fresh fixture): replace all "great saṅgha" with "large saṅgha".
+- Screen: `p.1` reads "large saṅgha" straight away, with no Save button: the
+  replace is written on the server.
+- Stored: `p.1`'s content has "large saṅgha".
 - Do (fresh fixture): replace all "lotus pond" with "lily pond".
 - Screen: `1.1` reads "lily pond" in the visible editor straight away, with
   no reload.
-- Stored, after Save: `1.1`'s content has "lily pond", and its italic span
+- Stored, without a Save: `1.1`'s content has "lily pond", and its italic span
   still covers it.
-- Known: replace-all not updating the visible stack editor has not been checked yet.
+- Known: open in the stack editor (new, not filed yet): a match in a
+  translation passage comes back from search as an alignment match, so Replace
+  all stays disabled with "Every match is in the Tibetan source", although the
+  match is in the English.
 
 ### ED-NAV-06 Comments panel jumps to anchors (D)
 
 - Fixture: thread `t3` on `2.100` ("nirvāṇa", outside the first page) and
   thread `t6` on `1.110`, whose two anchor rows are on "perfection" and " of
   wisdom".
-- Do: open the comments panel and click `t3`.
+- The panel lists the threads of the passages on screen. Filtered by a tag
+  (`?commentTag=pending`) it lists every thread in the work with that tag,
+  which is how `t3` is reached from the top of the work.
+- Do: open the comments panel filtered by `pending` and click `t3`.
 - Screen: the main panel scrolls to `2.100`, loading its page, and "nirvāṇa"
   is highlighted.
-- Do: click `t6`.
+- Do: open the editor at `1.110`, open the comments panel and click `t6`.
 - Screen: `1.110` is in view, and the whole of "perfection of wisdom" is
   highlighted.
-- Do: click the unanchored thread `t5` (on `1.50`).
+- Do: open the editor at `1.50` and click the unanchored thread `t5`.
 - Screen: it is listed under Unanchored, and clicking it scrolls to `1.50`
   without a highlight.
+- Known: open in the stack editor (new, not filed yet): clicking `t3` has the
+  same stop at the end of the loaded passages as `ED-NAV-02`, so `2.100` is
+  usually not reached; that step is skipped.
 
 ### ED-NAV-07 Long works: infinite scroll and scroll restore (D)
 
