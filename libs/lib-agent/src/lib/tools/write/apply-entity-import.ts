@@ -13,7 +13,7 @@ const annotationSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Existing annotation uuid. Omit on a first import; send the stored uuid when rewriting a passage so the row is updated rather than replaced.',
+      'Existing annotation uuid. Omit on a first import: one is derived from the passage, kind, range and data, so a re-run updates the same row. Send the stored uuid when rewriting a passage so the row is updated rather than replaced.',
     ),
   kind: z
     .string()
@@ -84,8 +84,18 @@ const operationSchema = z.discriminatedUnion('kind', [
         .int()
         .optional()
         .describe('Optional; assigned in source order when omitted.'),
-      uuid: z.string().optional().describe('Optional; generated when omitted.'),
-      xmlId: z.string().optional().describe('Optional source identifier.'),
+      uuid: z
+        .string()
+        .optional()
+        .describe(
+          'Optional; when omitted, derived from the work and xmlId, so re-running the same import updates the passages an earlier run saved.',
+        ),
+      xmlId: z
+        .string()
+        .optional()
+        .describe(
+          'Optional; leave unset. Defaults to docx-<sort>, which also keys the derived passage uuid.',
+        ),
     }),
     annotations: z
       .array(annotationSchema)
@@ -122,7 +132,7 @@ export function createApplyImportTool(client: DataClient): McpToolDefinition {
       title: 'Apply Enity Import',
       readOnlyHint: false,
       destructiveHint: false,
-      idempotentHint: false,
+      idempotentHint: true,
       openWorldHint: false,
     },
     handler: async ({ workUuid, operations }) => {

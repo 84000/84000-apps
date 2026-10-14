@@ -99,6 +99,22 @@ deleted or overwritten.
 That is what `apply-passage-edits` exists to do for you. Reach for the import
 tool only when the work has no passages at all.
 
+## Re-running an import
+
+A large `apply-entity-import` is saved in chunks, so it is not all or nothing: a
+failure partway leaves the earlier chunks written, and the error says how many
+passages were saved.
+
+**Send the same operations again.** A passage sent without a `uuid` gets one
+derived from the work and its position (its `docx-<sort>` xmlId), and an
+annotation sent without one gets one derived from its passage, kind, range and
+data. A re-run therefore updates the rows the failed run saved instead of adding
+them a second time, and ends with the rows one clean run would have written.
+
+If the operations changed between runs, the re-run still matches by position. A
+shorter run leaves the passages past its end in place, and the result warns
+about them by xmlId.
+
 ## A sort is a reading position, not a passage
 
 Two passages in one work may share a `sort`, and when they do they differ by

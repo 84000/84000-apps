@@ -1,4 +1,12 @@
-import { Annotation, annotationFromImport } from './annotation';
+import {
+  derivedAnnotationUuid,
+  occurrenceCounter,
+} from '../passage/derived-uuids';
+import {
+  Annotation,
+  annotationFromImport,
+  annotationToDTO,
+} from './annotation';
 import { BodyItemType, Passage } from './passage';
 
 /**
@@ -171,28 +179,51 @@ export const normalizePassageType = (type: string): BodyItemType => {
   return type as BodyItemType;
 };
 
+/**
+ * An import passage as a domain passage. An annotation sent without a uuid
+ * gets one derived from its passage, type, range and content, so a re-run
+ * of the same import matches the rows an earlier run saved.
+ */
 export const previewDtoToPassage = (
   operation: PassageInsertOperation,
 ): Passage => {
+  const passageUuid = operation.passage.uuid;
+  const occurrence = occurrenceCounter();
+  const withDerivedUuid = (annotation: Annotation): Annotation => {
+    const dto = annotationToDTO(annotation);
+    if (!dto) {
+      return annotation;
+    }
+    const nth = occurrence(
+      JSON.stringify([dto.type, dto.start, dto.end, dto.content, dto.toh]),
+    );
+    return {
+      ...annotation,
+      uuid: derivedAnnotationUuid(passageUuid, dto, nth),
+    };
+  };
+
   return {
-    uuid: operation.passage.uuid,
+    uuid: passageUuid,
     workUuid: operation.passage.workUuid,
     label: operation.passage.label,
     sort: operation.passage.sort,
     type: normalizePassageType(operation.passage.type),
     content: operation.passage.content,
     xmlId: operation.passage.xmlId,
-    annotations: operation.annotations
-      .map((annotation) =>
-        annotationFromImport(annotation.kind, {
-          start: annotation.start,
-          end: annotation.end,
-          data: annotation.data,
-          uuid: annotation.uuid,
-          passageUuid: operation.passage.uuid,
-          passageText: operation.passage.content,
-        }),
-      )
-      .filter((annotation): annotation is Annotation => annotation !== null),
+    annotations: operation.annotations.flatMap((input) => {
+      const annotation = annotationFromImport(input.kind, {
+        start: input.start,
+        end: input.end,
+        data: input.data,
+        uuid: input.uuid,
+        passageUuid,
+        passageText: operation.passage.content,
+      });
+      if (!annotation) {
+        return [];
+      }
+      return [input.uuid ? annotation : withDerivedUuid(annotation)];
+    }),
   };
 };

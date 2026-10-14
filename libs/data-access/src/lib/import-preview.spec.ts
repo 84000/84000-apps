@@ -4,7 +4,14 @@ import {
   summarizeImportOperations,
 } from './import-preview';
 import { savePassagesWithDeletions } from './passage';
-import type { DataClient, ImportOperationInput } from './types';
+import { validate as isUuid } from 'uuid';
+import {
+  previewDtoToPassage,
+  type DataClient,
+  type ImportOperation,
+  type ImportOperationInput,
+  type PassageInsertOperation,
+} from './types';
 
 jest.mock('./passage', () => ({
   savePassagesWithDeletions: jest.fn(),
@@ -19,6 +26,10 @@ const mockedSavePassages = jest.mocked(savePassagesWithDeletions);
  */
 interface FakeState {
   passagesCount?: number;
+  /** Stored passages an earlier import saved, by xmlId. */
+  importedPassages?: { uuid: string; xmlId: string }[];
+  /** Fail the read of earlier import passages. */
+  failImportedRead?: boolean;
   titleRows?: {
     uuid: string;
     type: string;
@@ -38,6 +49,8 @@ function makeFakeClient(state: FakeState): DataClient {
         op?: string;
         patch?: Record<string, unknown>;
         eqs: [string, unknown][];
+        like?: string;
+        range?: [number, number];
       } = { table, eqs: [] };
       const builder = {
         select(_cols: string, _opts?: unknown) {
@@ -58,9 +71,28 @@ function makeFakeClient(state: FakeState): DataClient {
           ctx.eqs.push([col, val]);
           return builder;
         },
+        like(_col: string, pattern: string) {
+          ctx.like = pattern;
+          return builder;
+        },
+        order() {
+          return builder;
+        },
+        range(from: number, to: number) {
+          ctx.range = [from, to];
+          return builder;
+        },
         then(resolve: (value: unknown) => unknown) {
           let result: unknown = { data: [], count: 0, error: null };
-          if (ctx.table === 'passages' && ctx.op === 'select') {
+          if (ctx.table === 'passages' && ctx.like) {
+            const [from, to] = ctx.range ?? [0, Infinity];
+            result = state.failImportedRead
+              ? { data: null, error: { message: 'read failed' } }
+              : {
+                  data: (state.importedPassages ?? []).slice(from, to + 1),
+                  error: null,
+                };
+          } else if (ctx.table === 'passages' && ctx.op === 'select') {
             result = { count: state.passagesCount ?? 0, error: null };
           } else if (ctx.table === 'titles' && ctx.op === 'select') {
             result = { data: state.titleRows ?? [], error: null };
@@ -182,6 +214,135 @@ describe('normalizeImportOperations', () => {
   });
 });
 
+const passageUuids = (ops: ImportOperation[]) =>
+  ops.flatMap((o) => (o.kind === 'upsert_passage' ? [o.passage.uuid] : []));
+
+describe('normalizeImportOperations passage uuids', () => {
+  const passages = (contents: string[]): ImportOperationInput[] =>
+    contents.map((content) => ({
+      kind: 'upsert_passage',
+      passage: { label: '', type: 'translation', content },
+    }));
+
+  it('derives the same valid uuids on every run', () => {
+    const first = passageUuids(
+      normalizeImportOperations('work-1', passages(['a', 'b'])),
+    );
+    const second = passageUuids(
+      normalizeImportOperations('work-1', passages(['a', 'b'])),
+    );
+
+    expect(first).toEqual(second);
+    expect(new Set(first).size).toBe(2);
+    expect(first.every((uuid) => isUuid(uuid))).toBe(true);
+  });
+
+  it('keys a passage by its position, not its content', () => {
+    const [before] = passageUuids(
+      normalizeImportOperations('work-1', passages(['typo'])),
+    );
+    const [after] = passageUuids(
+      normalizeImportOperations('work-1', passages(['fixed'])),
+    );
+    expect(after).toBe(before);
+  });
+
+  it('derives different uuids in different works', () => {
+    const [one] = passageUuids(
+      normalizeImportOperations('work-1', passages(['a'])),
+    );
+    const [two] = passageUuids(
+      normalizeImportOperations('work-2', passages(['a'])),
+    );
+    expect(one).not.toBe(two);
+  });
+
+  it('keeps an explicit uuid', () => {
+    const [uuid] = passageUuids(
+      normalizeImportOperations('work-1', [
+        {
+          kind: 'upsert_passage',
+          passage: {
+            uuid: 'stored',
+            label: '',
+            type: 'translation',
+            content: 'a',
+          },
+        },
+      ]),
+    );
+    expect(uuid).toBe('stored');
+  });
+
+  it('keeps passages that share an xmlId apart', () => {
+    const uuids = passageUuids(
+      normalizeImportOperations('work-1', [
+        {
+          kind: 'upsert_passage',
+          passage: { label: '', type: 'translation', content: 'a', sort: 3 },
+        },
+        {
+          kind: 'upsert_passage',
+          passage: { label: '', type: 'translation', content: 'b', sort: 3 },
+        },
+      ]),
+    );
+    expect(new Set(uuids).size).toBe(2);
+  });
+});
+
+describe('previewDtoToPassage annotation uuids', () => {
+  const operation = (
+    annotations: PassageInsertOperation['annotations'],
+  ): PassageInsertOperation => ({
+    kind: 'upsert_passage',
+    passage: {
+      uuid: 'f3e951bb-a80b-5e6c-a038-a56ee0caa25d',
+      workUuid: 'work-1',
+      label: '',
+      sort: 0,
+      type: 'translation',
+      content: 'Thus have I heard.',
+      xmlId: 'docx-0',
+    },
+    annotations,
+  });
+  const span = {
+    kind: 'span',
+    start: 0,
+    end: 4,
+    data: { textStyle: 'emphasis' },
+  };
+
+  it('derives a valid uuid, the same on every run', () => {
+    const first = previewDtoToPassage(operation([span])).annotations;
+    const second = previewDtoToPassage(operation([span])).annotations;
+
+    expect(first).toHaveLength(1);
+    expect(isUuid(first[0].uuid)).toBe(true);
+    expect(second[0].uuid).toBe(first[0].uuid);
+  });
+
+  it('derives different uuids for different content at one range', () => {
+    const [emphasis, foreign] = previewDtoToPassage(
+      operation([span, { ...span, data: { textStyle: 'foreign' } }]),
+    ).annotations;
+    expect(emphasis.uuid).not.toBe(foreign.uuid);
+  });
+
+  it('keeps identical annotations apart', () => {
+    const [one, two] = previewDtoToPassage(operation([span, span])).annotations;
+    expect(one.uuid).not.toBe(two.uuid);
+  });
+
+  it('keeps an explicit uuid', () => {
+    const [annotation] = previewDtoToPassage(
+      operation([{ ...span, uuid: 'stored' }]),
+    ).annotations;
+    expect(annotation.uuid).toBe('stored');
+  });
+});
+
 describe('applyImportPreview', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -279,6 +440,69 @@ describe('applyImportPreview', () => {
     expect(state.titleUpdates).toHaveLength(2);
     expect(result.counts.titles).toBe(0);
     expect(result.counts.titlesUpdated).toBe(2);
+    expect(result.counts.passages).toBe(1);
+  });
+});
+
+describe('applyImportPreview leftover import passages', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedSavePassages.mockResolvedValue({ success: true } as never);
+  });
+
+  const passageOps: ImportOperationInput[] = [
+    {
+      kind: 'upsert_passage',
+      passage: { label: '', type: 'translation', content: 'a' },
+    },
+  ];
+
+  it('warns about passages an earlier, longer import left', async () => {
+    const [saved] = passageUuids(normalizeImportOperations('w1', passageOps));
+    const state: FakeState = {
+      importedPassages: [
+        { uuid: saved, xmlId: 'docx-0' },
+        { uuid: 'old-1', xmlId: 'docx-1' },
+        { uuid: 'old-2', xmlId: 'docx-2' },
+      ],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.warnings).toEqual([
+      expect.stringContaining('2 passage(s) saved by an earlier import'),
+    ]);
+    expect(result.warnings[0]).toContain('docx-1, docx-2');
+  });
+
+  it('says nothing when no earlier import passages are left', async () => {
+    const [saved] = passageUuids(normalizeImportOperations('w1', passageOps));
+    const state: FakeState = {
+      importedPassages: [{ uuid: saved, xmlId: 'docx-0' }],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('still succeeds when the leftover read fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const result = await applyImportPreview({
+      client: makeFakeClient({ failImportedRead: true }),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.warnings).toEqual([]);
     expect(result.counts.passages).toBe(1);
   });
 });

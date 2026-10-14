@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { savePassagesWithDeletions } from './passage';
+import { importPassageUuid, occurrenceCounter } from './passage/derived-uuids';
 import {
   DataClient,
   ImportOperation,
@@ -217,12 +218,51 @@ export const updateFolioAnnotationsFromPreview = async ({
   };
 };
 
+const IMPORT_XML_ID_PREFIX = 'docx-';
+const PAGE_SIZE = 1000;
+
+/**
+ * Passages an earlier import saved to the work that are not among `saved`:
+ * what a re-run with a shorter document leaves behind. Null when the read
+ * fails.
+ */
+export const findLeftoverImportPassages = async ({
+  client,
+  workUuid,
+  saved,
+}: {
+  client: DataClient;
+  workUuid: string;
+  saved: Set<string>;
+}): Promise<{ uuid: string; xmlId: string }[] | null> => {
+  const leftover: { uuid: string; xmlId: string }[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, xmlId')
+      .eq('work_uuid', workUuid)
+      .like('xmlId', `${IMPORT_XML_ID_PREFIX}%`)
+      .order('sort')
+      .order('uuid')
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) {
+      console.error('Failed to read earlier import passages', error);
+      return null;
+    }
+    const rows = (data ?? []) as { uuid: string; xmlId: string }[];
+    leftover.push(...rows.filter((row) => !saved.has(row.uuid)));
+    if (rows.length < PAGE_SIZE) {
+      return leftover;
+    }
+  }
+};
+
 /**
  * Saves an import's passages. A large import is committed in chunks, so it is
  * not all-or-nothing: a failure partway leaves the chunks before it saved, and
- * the error says how many passages were. Re-running it converges only when
- * its passages carry uuids; without them, the passages already saved are
- * saved again under new uuids.
+ * the error says how many passages were. Re-running the same import converges:
+ * passages and annotations sent without uuids get derived ones, so the rows
+ * already saved are matched and updated rather than saved again.
  */
 export const upsertPassagesFromPreview = async ({
   client,
@@ -259,7 +299,8 @@ export const upsertPassagesFromPreview = async ({
 
 /**
  * Fills in the deterministic fields an agent should not have to supply: title
- * and passage UUIDs, the owning work reference, monotonic passage sort order,
+ * and passage UUIDs (a passage's derived from its work and xmlId, so a re-run
+ * matches the rows an earlier run saved), the owning work reference, monotonic passage sort order,
  * and derived xmlIds. `update_work` and `update_folio_annotation` operations
  * pass through unchanged.
  */
@@ -268,6 +309,7 @@ export const normalizeImportOperations = (
   operations: ImportOperationInput[],
 ): ImportOperation[] => {
   let nextSort = 0;
+  const occurrence = occurrenceCounter();
 
   return operations.map((operation) => {
     if (operation.kind === 'upsert_title') {
@@ -286,17 +328,22 @@ export const normalizeImportOperations = (
     if (operation.kind === 'upsert_passage') {
       const sort = operation.passage.sort ?? nextSort;
       nextSort = sort + 1;
+      const passageWorkUuid = operation.passage.workUuid ?? workUuid;
+      const xmlId = operation.passage.xmlId ?? `docx-${sort}`;
+      const nth = occurrence(JSON.stringify([passageWorkUuid, xmlId]));
 
       return {
         kind: 'upsert_passage',
         passage: {
-          uuid: operation.passage.uuid ?? uuidv4(),
-          workUuid: operation.passage.workUuid ?? workUuid,
+          uuid:
+            operation.passage.uuid ??
+            importPassageUuid(passageWorkUuid, xmlId, nth),
+          workUuid: passageWorkUuid,
           label: operation.passage.label,
           sort,
           type: operation.passage.type,
           content: operation.passage.content,
-          xmlId: operation.passage.xmlId ?? `docx-${sort}`,
+          xmlId,
         },
         annotations: operation.annotations ?? [],
       };
@@ -377,6 +424,28 @@ export const applyImportPreview = async ({
   }
 
   const passageResult = await upsertPassagesFromPreview({ client, preview });
+
+  const saved = new Set(
+    normalized.flatMap((operation) =>
+      operation.kind === 'upsert_passage' ? [operation.passage.uuid] : [],
+    ),
+  );
+  if (saved.size > 0) {
+    const leftover = await findLeftoverImportPassages({
+      client,
+      workUuid,
+      saved,
+    });
+    if (leftover && leftover.length > 0) {
+      const sample = leftover
+        .slice(0, 10)
+        .map((row) => row.xmlId)
+        .join(', ');
+      warnings.push(
+        `${leftover.length} passage(s) saved by an earlier import are not in this one and were left in place (${sample}${leftover.length > 10 ? ', …' : ''}).`,
+      );
+    }
+  }
 
   return {
     counts: {
