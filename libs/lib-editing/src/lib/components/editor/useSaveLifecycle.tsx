@@ -44,9 +44,8 @@ const UNKNOWN_SAVE_TOAST = 'save-outcome-unknown';
  *
  * A save whose answer was lost may have been applied. A stack save that only
  * changed content is sent again by the next save. Any other is never sent
- * again: once
- * its passages can be read back, `reload` replaces the editors with what the
- * server holds, and until then saving is paused.
+ * again: once its passages can be read back, `reload` replaces the editors
+ * with what the server holds, and until then saving is paused.
  */
 export const useSaveLifecycle = ({
   client,
@@ -128,11 +127,11 @@ export const useSaveLifecycle = ({
         inFlightDirty,
         dirtyUuidsRef.current,
       );
+      // Never replayable: the baseline is refreshed on load, so it cannot
+      // tell a stored passage from an inserted one.
       return {
         outcome: 'unknown',
         dirty: true,
-        // Never replayable: the baseline is refreshed on load, so it cannot
-        // tell a stored passage from an inserted one.
         affected: [...uuidsToSave, ...deletedUuids],
       };
     };
