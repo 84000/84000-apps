@@ -71,7 +71,8 @@ loses some of the data a test checks, the test pins the known losses instead
 npx nx spec-coverage web-main-e2e
 ```
 
-Lists the deterministic spec items that have no test, and fails if a test
-names an item the spec does not have. With `--strict`
-(`node apps/web-main-e2e/scripts/spec-coverage.mjs --strict`) a missing test
-fails it too.
+Fails if a deterministic spec item has no test, or if a test names an item
+the spec does not have. Every deterministic item has a test, so a new one
+needs its test in the same change. Without `--strict`
+(`node apps/web-main-e2e/scripts/spec-coverage.mjs`) a missing test is only
+a warning.
