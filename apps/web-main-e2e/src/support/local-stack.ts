@@ -89,9 +89,12 @@ export const localStack = (): LocalStack => {
   return cached;
 };
 
+/** The infra script that restores the test work, relative to infra. */
+export const RESTORE_SCRIPT = 'scripts/restore-test-work.sh';
+
 /** Put the test work back to its seeded state (infra `make restore-test-work`). */
 export const restoreTestWork = (): void => {
-  execFileSync('scripts/restore-test-work.sh', {
+  execFileSync(RESTORE_SCRIPT, {
     cwd: infraDir(),
     stdio: ['ignore', 'ignore', 'inherit'],
   });

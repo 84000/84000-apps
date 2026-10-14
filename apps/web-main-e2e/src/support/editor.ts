@@ -188,7 +188,7 @@ export const labelMenuItem = async (
     await page
       .getByRole('menuitem', { name: item, exact: true })
       .click({ timeout: 2_000 });
-  }).toPass();
+  }).toPass({ timeout: 30_000 });
 };
 
 /**

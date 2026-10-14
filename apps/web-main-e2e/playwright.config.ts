@@ -8,12 +8,33 @@ import {
   WEB_PORT,
 } from './src/support/local-stack';
 
-const { apiUrl, anonKey } = localStack();
+/**
+ * The local stack, or undefined when it is not running. Nx loads this file to
+ * build its project graph, so it must not throw here; `global-setup.ts`
+ * refuses to run the tests instead.
+ */
+const stack = (() => {
+  try {
+    return localStack();
+  } catch {
+    return undefined;
+  }
+})();
+
+/**
+ * Servers already listening on the ports are reused only on request, since
+ * the suite cannot tell which Supabase project they were started against.
+ */
+const reuseExistingServer = process.env.E2E_REUSE_SERVERS === '1';
 
 /** The app's env, pointed at the local stack whatever `.env.local` says. */
-const appEnv = {
-  NEXT_PUBLIC_SUPABASE_URL: apiUrl,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+const appEnv = stack && {
+  NEXT_PUBLIC_SUPABASE_URL: stack.apiUrl,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
+  // Server-side clients prefer these over the public ones.
+  SUPABASE_URL: stack.apiUrl,
+  SUPABASE_SERVICE_ROLE_KEY: stack.serviceRoleKey,
+  SUPABASE_SERVICE_KEY: stack.serviceRoleKey,
   NEXT_PUBLIC_GRAPHQL_URL: `http://localhost:${GRAPHQL_PORT}/api/graphql`,
   // The suite targets the passage-stack editor. Overrides apply under
   // `next dev` only, which is why the servers below run in dev mode.
@@ -26,6 +47,7 @@ const appEnv = {
  */
 export default defineConfig({
   testDir: './src',
+  globalSetup: './src/support/global-setup.ts',
   outputDir: './.playwright/results',
   // The tests share one database and restore it between them.
   fullyParallel: false,
@@ -64,13 +86,13 @@ export default defineConfig({
       dependencies: ['setup'],
     },
   ],
-  webServer: [
+  webServer: appEnv && [
     {
       command: `npx nx run api-graphql:dev --port=${GRAPHQL_PORT}`,
       cwd: REPO_ROOT,
       url: `http://localhost:${GRAPHQL_PORT}/api/graphql`,
       env: appEnv,
-      reuseExistingServer: true,
+      reuseExistingServer,
       timeout: 300_000,
     },
     {
@@ -78,7 +100,7 @@ export default defineConfig({
       cwd: REPO_ROOT,
       url: `${BASE_URL}/login`,
       env: appEnv,
-      reuseExistingServer: true,
+      reuseExistingServer,
       timeout: 300_000,
     },
   ],
