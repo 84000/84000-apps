@@ -8,33 +8,35 @@ plus `mantra` for mantras.
 - Fixture, already seeded: bold in `s.2` ("synthetic"), italic in `1.1` ("lotus pond"),
   underline ("underlined") and the _distinct_ style ("the testing lotus") in `i.6`, and small caps, subscript and
   superscript in `i.4` ("pāramitā", "66", "nd").
-- Screen: each renders with its style (`font-weight`, `font-style`,
-  `text-decoration`, `font-variant` / small caps, `vertical-align` sub / super).
+- Screen: each renders with its style: bold `font-weight`, italic
+  `font-style`, underline `text-decoration`, small caps as uppercase
+  (`text-transform`), and subscript and superscript as `sub` and `sup`.
 - Do: in `1.12`, select "ordinary" and apply bold, then italic, underline,
   subscript, superscript and small caps in turn, saving after each and removing
   the style again before the next.
 - Stored: after each save, `1.12` has exactly one new `span` row over
-  "ordinary" whose content names that style. After the style is removed and
-  saved, the row is gone.
+  "ordinary" whose content names that style (italic is stored as `emphasis`).
+  After the style is removed and saved, the row is gone.
 - J: the bubble menu shows the active styles for the selection, and the
   keyboard shortcuts (bold, italic, underline) toggle the same marks.
 
 ### ED-MRK-02 Foreign language and mantra (D)
 
-- Fixture: there are foreign spans in `ap1.1` (Sa-Ltn "karuṇā" and
-  "prajñāpāramitā"), `c.2` (Bo-Ltn), `h.1` (bo, Tibetan script), `i.3`
+- Fixture: there are foreign spans in `ap1.1` (Sa-Ltn "karuṇā"), `c.2` (Bo-Ltn), `h.1` (bo, Tibetan script), `i.3`
   (zh, "試蓮經"), and `pl.1` (Pi-Ltn "evaṃ me sutaṃ", plus "vajrapada" with no
   language). `1.12` has an English (en) span on "testing". There is a `mantra`
   in `1.11` on "oṃ padme svāhā".
-- Screen: each foreign span carries its `lang` attribute (`sa-Latn`,
-  `bo-Latn`, `bo`, `zh`, `pi-Latn`, or none) and its foreign styling. The
-  mantra shows its mantra styling.
+- Screen: each foreign span carries its stored language as its `lang`
+  attribute (`Sa-Ltn`, `Bo-Ltn`, `bo`, `zh`, `Pi-Ltn`, or none) and its
+  foreign styling. The mantra shows its mantra styling.
 - Do: in `1.12`, mark "great compassion" as foreign Sanskrit (Sa-Ltn) and
   Save.
 - Stored: `1.12` has one new `span` row over "great compassion" with
   the foreign style and language Sa-Ltn. The existing en span is unchanged.
 - Do: mark "great compassion" in `1.1` as a mantra and Save.
 - Stored: `1.1` has one `mantra` row over it.
+- Known: open in the stack editor (new, not filed yet): the span with no
+  language renders `lang="foreign"`.
 
 ### ED-MRK-03 Upright pipes and typography (D)
 

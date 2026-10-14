@@ -17,16 +17,21 @@ of them.
   compassion", whose `content[0].uuid` is the _great compassion_ glossary uuid.
   `1.1`'s `paragraph`, italic `span` and zero-length `image` are unchanged.
   No other passage changes.
+- Note: hover cards are behind the `translation-hover-cards` flag, which the
+  e2e suite does not turn on, so its test does not check the hover card.
 
 ### ED-ANN-02 Glossary instance: remove (D)
 
 - Fixture: `2.5` has one `glossary-instance` on "great compassion" and a
   zero-length glossary `mention` of _bodhisattva_ at the end.
-- Do: put the caret in the instance, remove it from the bubble menu, and Save.
+- Do: hover the instance, remove it from its hover card (the bubble menu has
+  no remove), and Save.
 - Screen: the glossary styling is gone, and the _bodhisattva_ mention still
   shows.
 - Stored: `2.5` has no `glossary-instance` row. Its `mention` and `paragraph`
   rows are unchanged.
+- Note: needs the `translation-hover-cards` flag, which the e2e suite does not
+  turn on, so its test is skipped.
 
 ### ED-ANN-03 Mention (D + J)
 
@@ -34,11 +39,12 @@ of them.
   in `i.3`, a quoted mention of toh251 passage 1.2, a work mention of toh251, and
   a bibliography mention; and the glossary mention at the end of `2.5`.
 - Screen: each mention renders as a chip with its target's display text.
-- Do: at the end of `1.4`, insert a mention of passage `2.1`, once from each
+- Do: at the end of `1.4`, type a space (the `/` and `@` triggers need one
+  before them) and insert a mention of passage `2.1`, once from each
   entry point (the bubble menu, the slash command "Mention", and the advanced
   overlay), saving after each one and removing it before the next.
-- Stored: each time, `1.4` has one new zero-length `mention` row at the
-  insertion point whose content names passage `2.1`'s uuid. All three entry
+- Stored: each time, `1.4`'s content gains only the space, and it has one new
+  zero-length `mention` row at the insertion point whose content names passage `2.1`'s uuid. All three entry
   points store the same shape.
 - J: each entry point's search finds passages, works and glossary terms, and
   the chosen target's text shows in the chip.
@@ -51,10 +57,13 @@ of them.
   `https://example.org/`, and Save.
 - Stored: `1.4` has one `link` row covering "dependent arising" with that
   href.
-- Do: select "the Dharma" in `1.4`, add an internal link to passage `1.12`, and
-  Save.
-- Stored: `1.4` has one `internal-link` row covering "the Dharma" whose content
-  names `1.12`'s uuid.
+- Do: the editor has no way to add a new internal link, only to edit one. Hover
+  `p.1`'s internal link, edit it from its hover card to point at passage
+  `1.12`'s uuid, and Save.
+- Stored: `p.1`'s `internal-link` row still covers "Mañjuśrī rises to speak",
+  and its content names `1.12`'s uuid.
+- Note: editing the link needs the `translation-hover-cards` flag, which the
+  e2e suite does not turn on, so that test is skipped.
 
 ### ED-ANN-05 Endnote link, and undoing it (D)
 
@@ -86,8 +95,9 @@ of them.
 - Screen: the selection shows comment highlighting, and the comments panel
   lists the new thread at that anchor.
 - Stored: one new row in `comments` with `parent_uuid` null and
-  `entity_uuid` = `1.12`'s uuid, whose content contains "Check this.", plus
-  one `comment` annotation on `1.12` covering "Mañjuśrī explained" whose
+  `entity_uuid` = `1.12`'s uuid, whose content contains "Check this.". After
+  a Save (the anchor reaches the server with the next passage save), one
+  `comment` annotation on `1.12` covering "Mañjuśrī explained" whose
   `content[0].uuid` is the comment's uuid.
 - Do: tag the new comment `pending`.
 - Screen: with the panel filter `?commentTag=pending`, the panel lists `t3`,
