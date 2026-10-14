@@ -103,7 +103,7 @@ const call = async (
 };
 
 describe('createSnapshotTools', () => {
-  it('registers the tools, all read-only', () => {
+  it('registers the four tools, all read-only', () => {
     const tools = createSnapshotTools(stubSource());
     expect(tools.map((t) => t.name)).toEqual([...SNAPSHOT_TOOL_NAMES]);
     expect(tools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
@@ -168,6 +168,15 @@ describe('createSnapshotTools', () => {
       },
     );
     expect(result.isError).toBe(true);
+  });
+
+  it('work-grep prefixes the freshness line', async () => {
+    const { text } = await call(stubSource(), 'work-grep', {
+      work: 'toh8',
+      pattern: 'Samantabhadra',
+      output_mode: 'count',
+    });
+    expect(text.split('\n')[0]).toBe(HEADER);
   });
 });
 
