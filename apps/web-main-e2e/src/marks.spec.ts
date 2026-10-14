@@ -51,6 +51,8 @@ const contentOf = (a: StoredAnnotation) => JSON.stringify(a.content);
 
 test.describe('Inline marks', () => {
   test('ED-MRK-01 Text styles', async ({ page }) => {
+    // Twelve saves, two per style.
+    test.setTimeout(240_000);
     const front = await openAt(page, 's.2', 'front');
     expect(await css(page, front, 'text-bold', 'font-weight')).toBe('700');
     const six = (await passageByLabel('i.6')).uuid;
@@ -158,7 +160,7 @@ test.describe('Inline marks', () => {
   test('ED-MRK-02 A foreign span with no language', async ({ page }) => {
     test.fail(
       true,
-      'New bug, not filed yet: a foreign span stored with no language renders lang="foreign".',
+      'DEV-854: a foreign span stored with no language renders lang="foreign".',
     );
     const uuid = await openAt(page, 'pl.1', 'translation');
     const span = styled(page, uuid, 'foreign').filter({ hasText: 'vajrapada' });

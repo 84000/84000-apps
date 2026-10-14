@@ -78,8 +78,24 @@ test.describe('Slash menu', () => {
       ['heading', 'Heading 2', ['heading:h2']],
       ['heading', 'Heading 3', ['heading:h3']],
       ['quote', 'Quote', ['blockquote', 'paragraph']],
-      ['bullet', 'Bullet List', ['list', 'list-item', 'paragraph']],
-      ['numbered', 'Numbered List', ['list', 'list-item', 'paragraph']],
+    ] as const) {
+      await test.step(entry[1], async () => {
+        restoreTestWork();
+        await insertAndCheck(page, twelve, entry);
+      });
+    }
+  });
+
+  test('ED-SLH-01 List entries', async ({ page }) => {
+    test.setTimeout(240_000);
+    test.fail(
+      true,
+      'DEV-856: a list made from the slash menu also stores a paragraph row inside its item.',
+    );
+    const twelve = await passageByLabel('1.12');
+    for (const entry of [
+      ['bullet', 'Bullet List', ['list', 'list-item']],
+      ['numbered', 'Numbered List', ['list', 'list-item']],
     ] as const) {
       await test.step(entry[1], async () => {
         restoreTestWork();
@@ -91,7 +107,7 @@ test.describe('Slash menu', () => {
   test('ED-SLH-01 Text entry', async ({ page }) => {
     test.fail(
       true,
-      'New bug, not filed yet: choosing Text from the slash menu leaves the typed "/text" in the passage.',
+      'DEV-855: choosing Text from the slash menu leaves the typed "/text" in the passage.',
     );
     const twelve = await passageByLabel('1.12');
     await insertAndCheck(page, twelve, ['text', 'Text', ['paragraph']]);
