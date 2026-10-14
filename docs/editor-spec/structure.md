@@ -43,7 +43,8 @@ sees. `sort` is what orders passages in the database.
   and the old `1.21`'s annotations now sit on `1.20`, shifted by `1.20`'s old
   length. The stored labels match the screen, and chapter 2 is unchanged.
 - Known: open in the stack editor: after the merge, `1.20` is no longer in
-  view.
+  view. Intermittent: the merged passage's row sometimes stays on
+  screen after Backspace.
 
 ### ED-STR-04 Passage label menu (D + J)
 
