@@ -6,9 +6,10 @@ searched and read like a repository. It is what `work-ls`, `work-read`,
 and is not the published text: it follows the draft.
 
 Every tool result opens with a freshness line: when the snapshot was generated,
-and whether it is `current`, behind the draft (edited since) or older than a
-day. Only successful results carry it. Findings from a snapshot that is behind
-the draft may already be fixed, so say which snapshot you read.
+and whether it is `current`, behind the draft (edited since) or out of date
+(older than a day, or built in an older snapshot format). Only successful
+results carry it. Findings from a snapshot that is behind the draft may already
+be fixed, so say which snapshot you read.
 The first call for a work may answer that the snapshot is being generated and
 to call again in a few seconds; that is not an error.
 
@@ -35,6 +36,7 @@ the data and is the authority on conventions if this file ever disagrees.
 | `annotations/annotations.jsonl`                                                                                               | Every other non-layout annotation, one JSON object per line                                                                                                                                                                           |
 | `annotations/layout.jsonl`                                                                                                    | Lines, line groups, paragraphs, leading space, indents, headings and trailers                                                                                                                                                         |
 | `anchors.tsv`                                                                                                                 | Every anchor with its `uuid`, `kind`, `label`, `type`, `sort`, `file` and `line`                                                                                                                                                      |
+| `raw/passages.jsonl`, `raw/glossary.jsonl`                                                                                    | For scripts on a downloaded copy: each passage `{uuid, anchor, content}` with `content` exactly as stored, and each term `{uuid, authority, anchor, english, alternatives}`. `work-grep` skips `raw/` unless `path` names it          |
 | `manifest.json`                                                                                                               | Counts, and every file's bytes and lines                                                                                                                                                                                              |
 
 ## Anchors and markers
@@ -60,7 +62,8 @@ folio line breaks are dropped). Nothing else is normalized.
 into the snapshot line.** The stored text may still hold soft hyphens, and the
 snapshot line also has note markers inserted, so a grep match position is not an
 annotation offset, so never derive one from a grep position. The `text` column
-or field is the normalized span the annotation covers.
+or field is the normalized span the annotation covers. To compute offsets in a
+script, read the stored text from `raw/passages.jsonl`.
 
 ## The tools
 
