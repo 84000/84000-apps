@@ -177,6 +177,13 @@ entry; the table cites it by number.
 A sweep that could not be run, or ran only in part, says so and why — a missing
 input, a failed retrieval. Never present a partial sweep as complete.
 
+When the work is held in the studio, `reference/whole-work-analysis/` shows how
+to run the glossary and terminology sweeps over its draft snapshot (`work-grep`,
+`work-ls`, `work-read`) and how to split a long review by chapter across
+sub-agents. The snapshot is the studio's draft: if the file under review has
+since been edited outside the studio, it may differ, so say which one you
+checked.
+
 ## House style in the review
 
 The review is an 84000 document and follows house style like anything else the

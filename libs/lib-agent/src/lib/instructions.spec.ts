@@ -13,6 +13,8 @@ import {
 } from './tools/harness';
 import { createReadTools } from './tools/read';
 import { createSessionTools } from './tools/sessions';
+import { createSnapshotTools } from './tools/snapshot';
+import type { WorkSnapshotSource } from './tools/snapshot';
 import { createWriteTools } from './tools/write';
 import type { DataClient } from '@eightyfourthousand/data-access';
 
@@ -91,6 +93,7 @@ describe('server instructions', () => {
           submitter: { userId: 'user', email: 'user@84000.co' },
           linear: {} as LinearFeedbackConfig,
         }),
+        ...createSnapshotTools({} as WorkSnapshotSource),
         ...createWriteTools(client),
       ].map((t) => t.name),
     );

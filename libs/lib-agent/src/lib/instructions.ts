@@ -61,6 +61,9 @@ export const studioInstructions = joinInstructions([
 
 A session's working files (Stage 0 records, Stage 1 drafts, collation and alignment records) live in storage by work and stage. Read the previous stage with \`read-session-documents\`, not a local file from an earlier session; save with \`write-session-documents\`.`,
   readToolInstructions({ translations: 'published and in progress' }),
+  `## Whole-work analysis
+
+\`work-grep\` finds every occurrence in a work's draft; \`work-ls\` and \`work-read\` browse it. \`download-work-snapshot\` gives a tar.gz for a shell.`,
   `## Draft versus published
 
 Glossary term and search reads take \`source\`. The default, published, binds a translator; \`"draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,
