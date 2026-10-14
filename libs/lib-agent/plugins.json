@@ -42,7 +42,8 @@
       },
       "skills": [
         "libs/lib-agent/skills/docx-import",
-        "libs/lib-agent/skills/resolve-folio-mentions"
+        "libs/lib-agent/skills/resolve-folio-mentions",
+        "libs/lib-agent/skills/resolve-glossary-instances"
       ],
       "agents": [],
       "renames": {},
@@ -51,6 +52,11 @@
         "resolve-folio-mentions": [
           "libs/lib-agent/reference/import-model",
           "libs/lib-agent/reference/passage-editing"
+        ],
+        "resolve-glossary-instances": [
+          "libs/lib-agent/reference/whole-work-analysis",
+          "libs/lib-agent/reference/passage-editing",
+          "libs/lib-agent/reference/session-documents"
         ]
       }
     },
