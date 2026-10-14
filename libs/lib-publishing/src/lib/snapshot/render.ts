@@ -5,7 +5,8 @@
  * Invariants:
  * - one passage, term or bibliography entry per line, each starting `[<anchor>…]`;
  * - every anchor is unique within the work and resolves to a uuid through `anchors.tsv`;
- * - text is normalized (see `normalize.ts`); annotation offsets index the stored text.
+ * - text is normalized (see `normalize.ts`); annotation offsets index the stored text,
+ *   which `raw/passages.jsonl` carries unchanged.
  */
 
 import type { PublishedAnnotation, PublishedGlossaryTerm } from '../types';
@@ -19,7 +20,8 @@ import {
 } from './normalize';
 import type { DraftAlignment, DraftRows } from './read-draft';
 
-export const SNAPSHOT_FORMAT_VERSION = 1;
+/** Bumped when the layout changes, so stored snapshots in an older format are refreshed. */
+export const SNAPSHOT_FORMAT_VERSION = 2;
 
 export type SnapshotTree = Map<string, string>;
 
@@ -195,7 +197,7 @@ const readme = (
     `# ${work.title ?? work.tohs.join(', ')} (${work.tohs.join(', ')})`,
     '',
     `Snapshot of the DRAFT, generated ${generatedAt} from the draft as of ${work.draftTouchedAt ?? 'unknown'}.`,
-    'Read-only. To change the text, cite anchors to the studio write tools.',
+    'Read-only. The studio write tools take uuids: resolve an anchor to its uuid with `anchors.tsv`.',
     '',
     '## Conventions',
     '- One passage per line, starting `[p-<id> <label>]`; headings add `## `.',
@@ -207,6 +209,7 @@ const readme = (
     '- `annotations/glossary-instances.tsv`: every glossary instance with the text it covers.',
     '- `annotations/annotations.jsonl`: every other non-layout annotation; `layout.jsonl` holds lines, paragraphs and headings.',
     '- Soft hyphens are removed; line breaks become spaces (Tibetan folio line breaks are dropped). Annotation `start`/`end` are offsets into the stored passage text, which may still contain soft hyphens; `text` is the normalized span.',
+    '- `raw/passages.jsonl`: one passage per line, `{"uuid", "anchor", "content"}`, in reading order, with `content` exactly as stored. Offsets for the write tools index this text. `raw/glossary.jsonl`: one term per line, `{"uuid", "authority", "anchor", "english", "alternatives"}`, as stored. For scripts; `work-grep` skips `raw/` unless its `path` names it.',
     '',
     '## Counts',
     ...Object.entries(counts).map(([k, v]) => `- ${k}: ${v}`),
@@ -261,6 +264,14 @@ export const renderSnapshotTree = ({
       ? `${note.label} ${anchorOf(pAnchor, note.uuid)}`
       : note.label;
   };
+
+  const raw = passages.map((p) =>
+    JSON.stringify({
+      uuid: p.uuid,
+      anchor: anchorOf(pAnchor, p.uuid),
+      content: p.content ?? '',
+    }),
+  );
 
   const files = new Map<string, string[]>();
   const location = new Map<string, { path: string; line: number }>();
@@ -318,6 +329,15 @@ export const renderSnapshotTree = ({
     }
   }
 
+  const rawGlossary = glossary.map((g) =>
+    JSON.stringify({
+      uuid: g.glossary_uuid,
+      authority: g.authority_uuid,
+      anchor: anchorOf(gAnchor, g.glossary_uuid),
+      english: g.english,
+      alternatives: g.alternatives,
+    }),
+  );
   const glossaryLines = glossary.map((g, i) => {
     location.set(g.glossary_uuid, { path: 'glossary.md', line: i + 1 });
     return termLine(anchorOf(gAnchor, g.glossary_uuid), g);
@@ -446,6 +466,8 @@ export const renderSnapshotTree = ({
   tree.set('annotations/glossary-instances.tsv', body(instances));
   tree.set('annotations/annotations.jsonl', body(other));
   tree.set('annotations/layout.jsonl', body(layout));
+  tree.set('raw/passages.jsonl', body(raw));
+  tree.set('raw/glossary.jsonl', body(rawGlossary));
   if (!tree.has('notes.md')) tree.set('notes.md', '');
 
   const lengthened = [
