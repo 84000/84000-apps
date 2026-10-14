@@ -101,9 +101,6 @@
         "{workspaceRoot}/.stylelintignore"
       ]
     },
-    "e2e-ci--**/*": {
-      "dependsOn": ["^build"]
-    },
     "nx-release-publish": {
       "options": {
         "packageRoot": "dist/libs/{projectName}"
