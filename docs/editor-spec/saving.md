@@ -29,8 +29,8 @@ not depend on how the save is carried out.
   `mention`) either stay before the new character or move after it, as the
   editor places the caret, but are not lost. No annotation type disappears.
 - Known: the stack editor adds a root `paragraph` row to passages whose
-  stored data has none, so this item only checks that nothing is lost. Open:
-  a save drops attributes the editor does not model, the link `title` on
+  stored data has none, so this item only checks that nothing is lost. Open
+  (DEV-840): a save drops attributes the editor does not model, the link `title` on
   `ac.1` and the internal-link `toh`, `subtype`, `label` and `same_work` on
   `i.2` and `p.1`.
 

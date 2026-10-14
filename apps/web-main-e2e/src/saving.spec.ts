@@ -187,8 +187,8 @@ test.describe('Saving', () => {
         }
       }
     }
-    // Attributes the stack editor does not model yet. Listed so the test still
-    // catches any new loss, and fails once one of these is fixed.
+    // Known bug DEV-840: attributes the stack editor does not model yet. Listed
+    // so the test still catches any new loss, and fails once DEV-840 is fixed.
     const known = [
       'ac.1: link on "84000.co" lost title',
       'i.2: internal-link on "The Noble Mahāyāna Sūtra on the Four Factors" lost toh',
