@@ -157,3 +157,37 @@ export const sectionPassages = async (
       /^\d+$/.test(p.label.slice(prefix.length + 1)) &&
       (p.toh === null || p.toh === TEST_WORK.toh),
   );
+
+/** A snapshot without the passages named, and without their annotations. */
+export const othersOf = (
+  { passages, annotations }: Awaited<ReturnType<typeof workSnapshot>>,
+  uuids: string[],
+) => ({
+  passages: passages.filter((p) => !uuids.includes(p['uuid'] as string)),
+  annotations: annotations.filter(
+    (a) => !uuids.includes(a['passage_uuid'] as string),
+  ),
+});
+
+/** The first characters of the Tibetan a passage is aligned to in a Toh. */
+export const alignedTibetanStart = async (
+  passageUuid: string,
+  toh: string,
+  length = 40,
+): Promise<string> => {
+  const { data, error } = await db()
+    .from('folio_annotations_passage_alignments')
+    .select('start_folio_uuid, start_character_position')
+    .eq('passage_uuid', passageUuid)
+    .eq('toh', toh.replace(/^toh/, ''))
+    .single();
+  fail(`read alignment of ${passageUuid}`, error);
+  const { data: folio, error: folioError } = await db()
+    .from('folios')
+    .select('content')
+    .eq('uuid', data?.start_folio_uuid)
+    .single();
+  fail('read folio', folioError);
+  const start = Number(data?.start_character_position);
+  return (folio?.content as string).slice(start, start + length);
+};

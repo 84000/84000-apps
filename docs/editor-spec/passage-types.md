@@ -7,7 +7,7 @@ Every tab that holds passages loads and saves its own passage types.
 - Fixture: `s.` `s.1` `s.2` (summary), `ac.` `ac.1` (acknowledgment), `i.`
   `i.1`–`i.6` (introduction).
 - Do: open the Front tab.
-- Screen: the 11 passages appear in sort order (10, 11, 12, 20, 21, 30–36),
+- Screen: the 12 passages appear in sort order (10, 11, 12, 20, 21, 30–36),
   each header shown as a section heading above its passages. No body passage
   (`h.1`, `1.1`) appears in this tab.
 - Do: type " Edited." at the end of `s.1`, then Save.
@@ -52,13 +52,12 @@ Every tab that holds passages loads and saves its own passage types.
 - Fixture: `ab.` plus five entries with empty labels: "D Degé Kangyur",
   "H Lhasa (zhol) Kangyur", "K Peking (Kangxi) Kangyur", "S Stok Palace
   Kangyur", "Toh Tōhoku catalogue…". Each entry has an `abbreviation`
-  annotation over the key (`D`) and a `has-abbreviation` annotation over the
-  expansion.
+  annotation over the key and the space after it (`D `) and a
+  `has-abbreviation` annotation over the expansion.
 - Do: open the Abbreviations tab.
 - Screen: the five entries appear in sort order, with the key and the expansion
   styled differently.
 - Do: change "Degé Kangyur" to "Degé Kangyur (edited)" and Save.
 - Stored: the D entry's `content` is "D Degé Kangyur (edited)". Its
-  `abbreviation` row still covers "D", and its `has-abbreviation` row covers
-  " Degé Kangyur (edited)" (or the same text without the leading space, if that
-  is how it was seeded). The other four entries are unchanged.
+  `abbreviation` row still covers "D ", and its `has-abbreviation` row covers
+  "Degé Kangyur (edited)". The other four entries are unchanged.

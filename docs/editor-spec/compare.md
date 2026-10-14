@@ -13,11 +13,11 @@
 - Do: switch to `toh90002`.
 - Screen: the same passages now show the `toh90002` spans, starting with
   `[F.100.b]`.
-- Known: a missing Tibetan column in the stack editor's Compare tab has not
-  been checked yet.
 
 ### ED-CMP-02 Alignment search opens Compare (D)
 
 - Do: search the work's source for a Tibetan phrase from `1.10`'s aligned span.
 - Screen: the result names `1.10`. Choosing it opens the Compare tab scrolled
   to `1.10`, with its Tibetan span visible.
+- Known: open in the stack editor (new, not filed yet): Compare opens at the
+  top, not at `1.10`.
