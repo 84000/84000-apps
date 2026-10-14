@@ -12,6 +12,14 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 skills_dir="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 link="$skills_dir/84000-dev"
 
+case "${1:-}" in
+  "" | --remove) ;;
+  *)
+    echo "usage: install.sh [--remove]" >&2
+    exit 1
+    ;;
+esac
+
 if [[ "${1:-}" == "--remove" ]]; then
   if [[ -L "$link" ]]; then
     rm "$link"

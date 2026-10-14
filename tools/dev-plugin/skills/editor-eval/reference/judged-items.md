@@ -63,7 +63,8 @@ so in the report's `note`.
 ## ED-ANN-03 Mention (D + J)
 
 - J part: from each entry point (bubble menu, slash command "Mention", the
-  advanced overlay), open the mention search at the end of 1.4 and search for
+  advanced overlay), open the mention search at the end of 1.4 (type a space
+  first: the `/` and `@` triggers need one) and search for
   a passage ("2.1"), a work ("toh251") and a glossary term ("great
   compassion").
 - Probe: the result list's entries for each search; after choosing 2.1, the

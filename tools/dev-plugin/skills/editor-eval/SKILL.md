@@ -15,8 +15,10 @@ checked. The format is in [reference/report-format.md](reference/report-format.m
 A verdict without evidence is not a verdict: "it worked" or "the editor said
 saved" never counts.
 
-Work from the root of an 84000-apps checkout. The helpers in
-`${CLAUDE_SKILL_DIR}/scripts/` find the repo with `git rev-parse`.
+Work from the root of an 84000-apps checkout, and run every command and
+script from there. The helpers in `${CLAUDE_SKILL_DIR}/scripts/` find the repo
+with `git rev-parse` from the current directory, or from `EDITOR_EVAL_REPO`
+when it is set. The checkout needs its `node_modules` installed.
 
 ## Rules
 
@@ -30,8 +32,12 @@ Work from the root of an 84000-apps checkout. The helpers in
 - **Sign in only as a seeded `@local.test` account**, through the e2e suite's
   setup project (a magic link minted by the local service role). Never type a
   password.
-- **SQL is read-only.** Use `${CLAUDE_SKILL_DIR}/scripts/sql.sh`; it refuses
-  non-local hosts and opens a read-only session.
+- **SQL is read-only.** Use `${CLAUDE_SKILL_DIR}/scripts/sql.sh "<select>"`.
+  It takes one `select`, `with` or `show` statement, refuses non-local hosts
+  and opens a read-only session. That guards against accidents; don't try to
+  get around it.
+- **Don't print the stack's keys.** Don't run `supabase status` yourself;
+  the scripts read only the values they need.
 - **Don't fix the editor.** Report what you see. If the user asks for a fix,
   that is a separate task.
 - Nobody else may be editing the test work in the same local stack while this
@@ -39,25 +45,36 @@ Work from the root of an 84000-apps checkout. The helpers in
 
 ## Scope
 
-Ask nothing if the request names a scope; otherwise check everything. A scope
-is a section (`ED-STR`), a list of IDs, or "judged only". Out-of-scope items
-are left out of the report, not marked pass.
+Ask nothing if the request names a scope; otherwise check every item except
+the ED-FUT section (not yet required). A scope is a section (`ED-STR`), a list
+of IDs, or "judged only". Out-of-scope items are left out of the report, not
+marked pass.
 
 ## Steps
 
 ### 1. Preflight
 
-1. `supabase status -o env` in the infra checkout (`E2E_INFRA_DIR`, else
-   `../infra` beside the repo): `API_URL` must be on `127.0.0.1` or
-   `localhost`. If the stack is down, stop and tell the user to run
-   `make start` in infra.
-2. The web app (port `E2E_WEB_PORT`, default 3804) and api-graphql
-   (`E2E_GRAPHQL_PORT`, default 3805) either are not running (the suite
-   starts them) or were started against the local stack, in dev mode, with
-   `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES=per-passage-docs,translation-hover-cards`
-   (without the second flag no hover card ever opens); then set
-   `E2E_REUSE_SERVERS=1`. If you can't tell how a server on those ports was
-   started, ask.
+1. Check the stack: `${CLAUDE_SKILL_DIR}/scripts/sql.sh "select 1"`. The
+   scripts find infra at `E2E_INFRA_DIR`, else `../infra` beside the repo,
+   else beside the workspace when the repo is an issue worktree. They refuse
+   a stack that is not on this machine. If the stack is down, stop and tell
+   the user to run `make start` in infra. Infra must have
+   `scripts/restore-test-work.sh`; if it doesn't, stop and say so.
+2. Start the app servers yourself, each in the background, so they keep
+   running between the suite and the judged items:
+
+   ```sh
+   ${CLAUDE_SKILL_DIR}/scripts/servers.sh api   # api-graphql on 3805
+   ${CLAUDE_SKILL_DIR}/scripts/servers.sh web   # web-main on 3804
+   ```
+
+   They get the same env as the e2e suite gives them: the local stack, dev
+   mode, and `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES=per-passage-docs,translation-hover-cards`
+   (without the second flag no hover card ever opens). Wait until
+   `curl -s -o /dev/null -w '%{http_code}' http://localhost:3804/` answers.
+   If something else already listens on those ports and you can't tell how
+   it was started, ask instead.
+
 3. `make restore-test-work` in infra.
 
 ### 2. Deterministic items
@@ -65,15 +82,20 @@ are left out of the report, not marked pass.
 Run the suite in Chromium for the scope, with a JSON report:
 
 ```sh
+E2E_REUSE_SERVERS=1 \
 PLAYWRIGHT_JSON_OUTPUT_FILE=apps/web-main-e2e/.playwright/results.json \
   npx playwright test -c apps/web-main-e2e/playwright.config.ts \
-  --project=chromium --reporter=list,json [-g ED-STR]
+  --project=chromium --reporter=list,json [-g 'ED-STR|ED-NAV-03']
 node ${CLAUDE_SKILL_DIR}/scripts/collect-results.mjs \
   apps/web-main-e2e/.playwright/results.json
 ```
 
-`collect-results.mjs` prints one entry per ID. Copy them into the report as
-they are. Don't rerun a failing test to get a pass; record the failure, and
+`-g` takes a regular expression over test titles, which start with their
+IDs. `collect-results.mjs` prints one entry per ID; copy them into the report.
+For a D + J item, merge the judged result into its entry: set `kind` to
+`both`, add the judged evidence, and keep the worse result. If the script
+exits non-zero, the run itself failed (stack down, sign-in failed): fix that
+rather than reporting items. Don't rerun a failing test to get a pass; record the failure, and
 if you rerun it, record both results. The suite takes several minutes for the
 whole spec. For a judged-only request, still run the `setup` project
 (`--project=setup`), which signs in and writes the session the browser
@@ -117,12 +139,13 @@ what is left, rather than guessing.
 ### 4. Finish
 
 1. `make restore-test-work` in infra.
-2. Write `editor-eval-report.json` in the current directory (or the path the
-   user gave) and check it parses (`node -e "JSON.parse(require('fs').readFileSync('editor-eval-report.json','utf8'))"`).
+2. Write the report to `apps/web-main-e2e/.playwright/editor-eval-report.json`
+   (ignored by git), or the path the user gave, and check it parses with
+   `node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" <path>`.
 3. Summarise for the user: counts of pass, fail and blocked; every fail with its
    ID, one line on what went wrong, and the known issue if the spec names one;
    anything new that is worth filing.
-4. Stop any servers you started.
+4. Stop the servers you started.
 
 ## Evals
 

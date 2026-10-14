@@ -15,7 +15,7 @@ layout and force-mounted inactive tabs), so always take the `:visible` copy.
 | Label menu                  | click the label, then `getByRole('menu')` / `getByRole('menuitem', { name })`                                                     |
 | Slash menu entries          | `div.bg-popover.w-72 p.font-medium`                                                                                               |
 | Bubble menu                 | `[data-slot="scroll-area"]:visible` that contains `svg.lucide-list-indent-increase`                                               |
-| Node selector               | the bubble menu's first `button`; entries are `[role=dialog] div.cursor-pointer`                                                  |
+| Node selector               | the bubble menu's first `button`; entries are `div.cursor-pointer` inside the bubble menu's own `[role=dialog]`                   |
 | Glossary instance           | `[type="glossaryInstance"]`                                                                                                       |
 | End-note link               | `[type="endNoteLink"]`                                                                                                            |
 | Mention                     | `[type="mention"]`                                                                                                                |

@@ -15,7 +15,8 @@ This links `~/.claude/skills/84000-dev` to this directory, so Claude Code
 loads it in your next session as `84000-dev@skills-dir`, and it follows
 whatever this checkout has checked out. `install.sh --remove` takes the link
 away. Set `CLAUDE_SKILLS_DIR` to install somewhere other than
-`~/.claude/skills`.
+`~/.claude/skills`. Install from your main checkout rather than an issue
+worktree: the link breaks when the worktree is removed.
 
 ## Skills
 
@@ -30,7 +31,8 @@ with DOM or SQL evidence for every verdict. Ask for it with, for example,
 
 It needs what the e2e suite needs (see its
 [README](../../apps/web-main-e2e/README.md)): the local Supabase stack from
-`infra` with the test work seeded, and `infra`'s `restore-test-work` script.
+`infra` with the test work seeded, and `infra`'s `restore-test-work` script
+(added by infra#59).
 It only works against localhost and never resets the database.
 
 ## Evals
