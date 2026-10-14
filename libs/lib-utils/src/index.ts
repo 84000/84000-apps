@@ -1,3 +1,4 @@
+export * from './lib/anchors';
 export * from './lib/compare';
 export * from './lib/style';
 export * from './lib/highlight';
