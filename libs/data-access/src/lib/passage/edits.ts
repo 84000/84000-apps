@@ -31,13 +31,18 @@ export type DeleteTextEdit = {
   text: string;
 };
 
-/** Add an annotation. `end` defaults to `start`, giving a zero-length marker. */
+/**
+ * Add an annotation. `end` defaults to `start`, giving a zero-length marker.
+ * When `text` is given, it is exactly what the range covers in the stored
+ * content: an edit whose text is not there is refused.
+ */
 export type AddAnnotationEdit = {
   op: 'add-annotation';
   passageUuid: string;
   kind: string;
   start: number;
   end?: number;
+  text?: string;
   data?: Record<string, unknown>;
 };
 
@@ -237,6 +242,19 @@ export const applyEditsToPassages = ({
       const found = passage.content.slice(misread.start, misread.end);
       return fail(
         `Passage ${uuid}: expected ${JSON.stringify(misread.text)} at ${misread.start}–${misread.end} but found ${JSON.stringify(found)}. If this edit was already applied, re-read the passage.`,
+      );
+    }
+    const misplaced = forPassage.find(
+      (edit): edit is AddAnnotationEdit =>
+        edit.op === 'add-annotation' &&
+        edit.text !== undefined &&
+        passage.content.slice(edit.start, edit.end ?? edit.start) !== edit.text,
+    );
+    if (misplaced) {
+      const end = misplaced.end ?? misplaced.start;
+      const found = passage.content.slice(misplaced.start, end);
+      return fail(
+        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but found ${JSON.stringify(found)}. If the passage has changed since it was read, re-read it.`,
       );
     }
 

@@ -48,6 +48,12 @@ const editSchema = z.discriminatedUnion('op', [
       .describe(
         'Exclusive end offset. Omit for a zero-length marker such as a folio mention.',
       ),
+    text: z
+      .string()
+      .optional()
+      .describe(
+        'The exact text start–end covers in the stored content. The edit is refused if it is not there. Send it whenever offsets come from an earlier read, such as a snapshot.',
+      ),
     data: z
       .record(z.string(), z.unknown())
       .optional()
