@@ -37,8 +37,9 @@
 - Stored: two italic `span` rows in `1.1`, one per copy.
 - Do: paste the HTML `<p>plain <b>bold</b> <i>italic</i></p>` from the
   clipboard at the end of `1.12`, and Save.
-- Stored: `1.12` gains "plain bold italic", with a bold `span` on "bold"
-  and an italic `span` on "italic".
+- Stored: `1.12` gains "plain bold italic", with a bold (`text-bold`) `span`
+  on "bold" and an `emphasis` `span` on "italic" (the editor reads `<i>` as
+  emphasis).
 - J: copying from the editor into another app (a plain text editor, a word
   processor) gives readable text with the passage breaks kept. Pasting from
   a word processor keeps bold and italic, and drops styling the editor does

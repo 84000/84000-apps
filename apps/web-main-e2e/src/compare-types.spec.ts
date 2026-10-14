@@ -122,11 +122,9 @@ test.describe('Compare tab', () => {
     await page.getByPlaceholder('Type to search...').fill(phrase);
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText(`Showing results for "${phrase}"`);
-    const result = dialog
-      .locator('div.cursor-pointer')
-      .filter({
-        has: page.locator('span.text-accent', { hasText: /^1\.10$/ }),
-      });
+    const result = dialog.locator('div.cursor-pointer').filter({
+      has: page.locator('span.text-accent', { hasText: /^1\.10$/ }),
+    });
     await expect(result).toHaveCount(1);
     await result.click();
     await expect

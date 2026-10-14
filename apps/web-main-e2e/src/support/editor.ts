@@ -85,7 +85,30 @@ export const caretAtEnd = async (
   const target = row(page, uuid);
   await target.scrollIntoViewIfNeeded();
   await settled(target);
-  await target.locator('.passage').first().click();
+  // A press on a content link follows it, so where the passage has links,
+  // press its first character outside them.
+  const passage = target.locator('.passage').first();
+  const plain = await passage.evaluate((el) => {
+    const links =
+      'a, [type="glossaryInstance"], [type="endNoteLink"], [type="mention"]';
+    if (!el.querySelector(links)) return undefined;
+    const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      if (!node.data.trim() || node.parentElement?.closest(links)) continue;
+      const range = el.ownerDocument.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, 1);
+      const char = range.getBoundingClientRect();
+      const box = el.getBoundingClientRect();
+      return {
+        x: char.left - box.left + char.width / 2,
+        y: char.top - box.top + char.height / 2,
+      };
+    }
+    return undefined;
+  });
+  await passage.click(plain && { position: plain });
   const editor = target.locator('.ProseMirror[contenteditable="true"]');
   await expect(editor).toBeFocused();
   await editor.evaluate((el) => {
@@ -143,16 +166,23 @@ export const selectText = async (
       let at = -1;
       for (let i = 0; i <= occurrence; i++) at = full.indexOf(text, at + 1);
       if (at < 0) throw new Error(`"${text}" not found`);
-      const point = (offset: number): [Text, number] => {
+      // A start at a node's end belongs to the next node, or the selection
+      // would begin in the block before.
+      const point = (offset: number, start: boolean): [Text, number] => {
         for (const node of nodes) {
-          if (offset <= node.data.length) return [node, offset];
+          if (
+            offset < node.data.length ||
+            (!start && offset === node.data.length)
+          ) {
+            return [node, offset];
+          }
           offset -= node.data.length;
         }
         throw new Error('offset out of range');
       };
       const range = el.ownerDocument.createRange();
-      range.setStart(...point(at));
-      range.setEnd(...point(at + text.length));
+      range.setStart(...point(at, true));
+      range.setEnd(...point(at + text.length, false));
       const selection = el.ownerDocument.getSelection();
       selection?.removeAllRanges();
       selection?.addRange(range);
@@ -347,3 +377,34 @@ export const pointAt = async (
 export const undo = (page: Page) => page.keyboard.press('ControlOrMeta+z');
 export const redo = (page: Page) =>
   page.keyboard.press('ControlOrMeta+Shift+z');
+
+/** The bubble menu over a selection in a translation passage. */
+export const bubbleMenu = (page: Page): Locator =>
+  page
+    .locator('[data-slot="scroll-area"]:visible')
+    .filter({ has: page.locator('svg.lucide-list-indent-increase') });
+
+/**
+ * Picks `item` from one of the bubble menu's dropdowns: `node` (block type),
+ * `align` or `wordBreak`.
+ */
+export const bubbleChoice = async (
+  page: Page,
+  menu: 'node' | 'align' | 'wordBreak',
+  item: string,
+): Promise<void> => {
+  const bubble = bubbleMenu(page);
+  const trigger = {
+    node: bubble.locator('button').first(),
+    align: bubble.locator('button:has(svg[class*="lucide-text-align"])'),
+    wordBreak: bubble.locator(
+      'button:has(svg.lucide-list-minus), button:has(svg.lucide-wrap-text)',
+    ),
+  }[menu];
+  await trigger.click();
+  await bubble
+    .getByRole('dialog')
+    .locator('div.cursor-pointer')
+    .filter({ hasText: new RegExp(`^${item}$`) })
+    .click();
+};
