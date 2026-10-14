@@ -6,8 +6,9 @@ searched and read like a repository. It is what `work-ls`, `work-read`,
 and is not the published text: it follows the draft.
 
 Every tool result opens with a freshness line: when the snapshot was generated,
-and whether it is `current` or behind the draft. Findings from a snapshot that
-is behind the draft may already be fixed, so say which snapshot you read.
+and whether it is `current`, behind the draft (edited since) or older than a
+day. Only successful results carry it. Findings from a snapshot that is behind
+the draft may already be fixed, so say which snapshot you read.
 The first call for a work may answer that the snapshot is being generated and
 to call again in a few seconds; that is not an error.
 
@@ -21,20 +22,20 @@ The root directory is named for the work (`toh8/`); tools accept paths with or
 without it. Start with `work-ls`, and read `README.md`, which is generated from
 the data and is the authority on conventions if this file ever disagrees.
 
-| Path                                                                                                                          | Holds                                                                                                                                             |
-| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text/00-summary.md`, `01-acknowledgment`, `02-introduction`, `03-prologue`, `05-colophon`, `06-appendix`, `07-abbreviations` | One file per section, in reading order. Unrecognised passage types land in `99-other.md`                                                          |
-| `text/04-translation/NNN-<slug>.md`                                                                                           | The translation, one file per chapter, when the work has chapters. Material before the first chapter is `000-opening.md`                          |
-| `text/04-translation.md`                                                                                                      | The translation as one file, when the work has no chapters                                                                                        |
-| `tibetan/`                                                                                                                    | Mirrors `text/` for the passages that have a recorded alignment, each line led by its folio where known (`F.12` or `F.12–13`)                     |
-| `notes.md`                                                                                                                    | The endnotes, one per line                                                                                                                        |
-| `glossary.md`                                                                                                                 | One term per line: `[g-<id> #<n>] en: … \| hw: … \| alt: … \| bo: … \| wylie: … \| sa: … \| pi: … \| zh: … \| def: …` (empty fields are left out) |
-| `bibliography.md`                                                                                                             | One entry per line, `[b-<id>]`; headings start `## `                                                                                              |
-| `annotations/glossary-instances.tsv`                                                                                          | Every glossary instance. Columns: `term`, `term_en`, `passage`, `label`, `start`, `end`, `text`, `uuid`                                           |
-| `annotations/annotations.jsonl`                                                                                               | Every other non-layout annotation, one JSON object per line                                                                                       |
-| `annotations/layout.jsonl`                                                                                                    | Lines, line groups, paragraphs, leading space, indents, headings and trailers                                                                     |
-| `anchors.tsv`                                                                                                                 | Every anchor with its `uuid`, `kind`, `label`, `type`, `sort`, `file` and `line`                                                                  |
-| `manifest.json`                                                                                                               | Counts, and every file's bytes and lines                                                                                                          |
+| Path                                                                                                                          | Holds                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text/00-summary.md`, `01-acknowledgment`, `02-introduction`, `03-prologue`, `05-colophon`, `06-appendix`, `07-abbreviations` | One file per section, in reading order. Unrecognised passage types land in `99-other.md`                                                                                                                                              |
+| `text/04-translation/NNN-<slug>.md`                                                                                           | The translation, one file per chapter, when the work has chapters. Material before the first chapter is `000-opening.md`                                                                                                              |
+| `text/04-translation.md`                                                                                                      | The translation as one file, when the work has no chapters                                                                                                                                                                            |
+| `tibetan/`                                                                                                                    | Mirrors `text/` for the passages that have a recorded alignment, same anchors; a line is `[p-<id> <label>] F.12 <tibetan>`, with `F.12–13` for a span and no folio where unknown                                                      |
+| `notes.md`                                                                                                                    | The endnotes, one per line                                                                                                                                                                                                            |
+| `glossary.md`                                                                                                                 | One term per line: `[g-<id> #<n>] en: … \| hw: … \| alt: … \| bo: … \| wylie: … \| sa: … \| pi: … \| zh: … \| def: …` (empty fields are left out; `hw` only when it differs from `en`; `sa` is the attested form, else the plain one) |
+| `bibliography.md`                                                                                                             | One entry per line, `[b-<id>]`; headings start `## `                                                                                                                                                                                  |
+| `annotations/glossary-instances.tsv`                                                                                          | Every glossary instance. Columns: `term`, `term_en`, `passage`, `label`, `start`, `end`, `text`, `uuid`                                                                                                                               |
+| `annotations/annotations.jsonl`                                                                                               | Every other non-layout annotation, one JSON object per line                                                                                                                                                                           |
+| `annotations/layout.jsonl`                                                                                                    | Lines, line groups, paragraphs, leading space, indents, headings and trailers                                                                                                                                                         |
+| `anchors.tsv`                                                                                                                 | Every anchor with its `uuid`, `kind`, `label`, `type`, `sort`, `file` and `line`                                                                                                                                                      |
+| `manifest.json`                                                                                                               | Counts, and every file's bytes and lines                                                                                                                                                                                              |
 
 ## Anchors and markers
 
@@ -44,7 +45,8 @@ the data and is the authority on conventions if this file ever disagrees.
   would collide. It is unique within the work. Cite anchors, not line numbers:
   line numbers move when the draft changes, anchors come from the uuid.
 - `anchors.tsv` maps an anchor to the uuid, file and line. The studio write
-  tools take anchors, not text positions.
+  tools take uuids, so resolve an anchor through `anchors.tsv` and pass the
+  uuid.
 - `[^n.12]` marks where endnote `n.12` attaches; the note is on the line of
   `notes.md` with that label. Where two notes share a label the marker adds the
   note's anchor, `[^n.12 p-<id>]`.
@@ -57,8 +59,8 @@ folio line breaks are dropped). Nothing else is normalized.
 **Annotation `start` and `end` are offsets into the stored passage text, not
 into the snapshot line.** The stored text may still hold soft hyphens, and the
 snapshot line also has note markers inserted, so a grep match position is not an
-annotation offset. The `text` column or field is the normalized span the
-annotation covers; use that, and leave offsets to whatever writes annotations.
+annotation offset, so never derive one from a grep position. The `text` column
+or field is the normalized span the annotation covers.
 
 ## The tools
 
@@ -79,6 +81,11 @@ says otherwise (at most 1,000). RE2 has no backreferences or lookaround. Latin
 diacritics are ignored in text and pattern unless `fold_diacritics` is false, so
 `Manjusri` finds `Mañjuśrī`. A passage is one line, so a pattern cannot span
 two passages.
+
+**Long lines are cut.** `work-read` cuts a line over 2,000 characters and ends
+it `… [N more chars]`; `work-grep` shows a window of about 500 characters
+around the first match. Read a truncated passage in full from a downloaded copy,
+or mark the finding partial.
 
 ## `work-grep` or `search-translation`
 

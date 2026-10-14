@@ -8,8 +8,9 @@ passage label for a reader.
 
 For one term, or a set of epithets and formulae, find every rendering used.
 
-1. Find the term's entry in `glossary.md` (`work-grep` on `^\[g-`) for its
-   `en` and `alt` forms. The snapshot glossary is the work's own; the binding
+1. Find the term's entry in `glossary.md` (`work-grep` for the term, with
+   `path: glossary.md`; results stop at 100 unless `head_limit` is raised) for
+   its `en` and `alt` forms. The snapshot glossary is the work's own; the binding
    house rendering is what the skill's terminology policy says.
 2. Tally the renderings: `work-grep` with `output_mode: tally`, `path: text`,
    case-insensitive, and a capture group over the variants, such as
@@ -55,7 +56,7 @@ that span the work are not.
    other `text/` sections, `notes.md` and the bibliography as units of their own.
 2. Launch one sub-agent per chapter, or per group of short ones, within the
    concurrency the session allows. Each brief names the work, the chapter's
-   file and its `tibetan/` counterpart, the checks to run, and the policies to
+   file and its `tibetan/` counterpart if it exists, the checks to run, and the policies to
    read with `read-policies`. A sub-agent does not share your context, so
    do not paraphrase the policies.
 3. Ask each for findings only, one per line, in a form you can merge:
