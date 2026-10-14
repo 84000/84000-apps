@@ -70,9 +70,6 @@ const chooseToh = async (page: Page, toh: string) => {
 /** The open hover card. */
 const hoverCard = (page: Page) => page.locator('div.z-100 > div.bg-popover');
 
-const HOVER_CARDS =
-  'Needs hover cards, behind the translation-hover-cards flag, which the suite does not turn on.';
-
 const GREAT_COMPASSION = '8c143eaa-317c-4947-8bf2-a4e887e8f534';
 
 test.describe('Annotations', () => {
@@ -95,6 +92,8 @@ test.describe('Annotations', () => {
     const instance = row(page, one.uuid).locator('[type="glossaryInstance"]');
     await expect(instance).toHaveText('great compassion');
     await save(page);
+    await instance.hover();
+    await expect(hoverCard(page)).toContainText('great compassion');
 
     const after = await annotationsOf(one.uuid);
     const added = after.filter((a) => !seeded.some((s) => s.uuid === a.uuid));
@@ -111,7 +110,6 @@ test.describe('Annotations', () => {
   });
 
   test('ED-ANN-02 Glossary instance: remove', async ({ page }) => {
-    test.fixme(true, HOVER_CARDS);
     const five = await passageByLabel('2.5');
     const kept = (await annotationsOf(five.uuid)).filter(
       (a) => a.type !== 'glossary-instance',
@@ -194,7 +192,6 @@ test.describe('Annotations', () => {
   });
 
   test('ED-ANN-04 Internal link', async ({ page }) => {
-    test.fixme(true, HOVER_CARDS);
     const prelude = await passageByLabel('p.1');
     const twelve = await passageByLabel('1.12');
     await openAt(page, prelude.uuid);

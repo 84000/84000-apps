@@ -18,7 +18,7 @@ of them.
   `1.1`'s `paragraph`, italic `span` and zero-length `image` are unchanged.
   No other passage changes.
 - Note: hover cards are behind the `translation-hover-cards` flag, which the
-  e2e suite does not turn on, so its test does not check the hover card.
+  e2e suite turns on.
 
 ### ED-ANN-02 Glossary instance: remove (D)
 
@@ -30,8 +30,7 @@ of them.
   shows.
 - Stored: `2.5` has no `glossary-instance` row. Its `mention` and `paragraph`
   rows are unchanged.
-- Note: needs the `translation-hover-cards` flag, which the e2e suite does not
-  turn on, so its test is skipped.
+- Note: needs the `translation-hover-cards` flag, which the e2e suite turns on.
 
 ### ED-ANN-03 Mention (D + J)
 
@@ -63,7 +62,7 @@ of them.
 - Stored: `p.1`'s `internal-link` row still covers "Mañjuśrī rises to speak",
   and its content names `1.12`'s uuid.
 - Note: editing the link needs the `translation-hover-cards` flag, which the
-  e2e suite does not turn on, so that test is skipped.
+  e2e suite turns on.
 
 ### ED-ANN-05 Endnote link, and undoing it (D)
 
