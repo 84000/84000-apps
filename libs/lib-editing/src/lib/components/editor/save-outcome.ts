@@ -24,7 +24,7 @@ export const mayHaveBeenApplied = (error: unknown): boolean => {
   if (!isClientError(error)) return true;
   const { status, errors } = error.response;
   if (status >= 500) return true;
-  // A 4xx means the request was refused before it ran.
+  // A 4xx without a resolver error (one with a `path`) was refused before it ran.
   return (errors ?? []).some((e) => (e.path?.length ?? 0) > 0);
 };
 
@@ -47,7 +47,7 @@ export const readBackSaved = async (
     await graphql.request('query SaveOutcomeCheck { __typename }');
     return true;
   } catch (error) {
-    console.error('Could not read back the saved passages:', error);
+    console.error('Could not confirm the save outcome:', error);
     return false;
   }
 };
