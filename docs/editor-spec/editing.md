@@ -17,6 +17,14 @@
 - Do (fresh fixture): delete `1.12` from its label menu, then undo, then Save
   and reload.
 - Stored: `1.12` is still there, with all of its annotations.
+- Known: once, under heavy machine load, the edits redone straight after a
+  Save that had nothing to write were missing from the next save. It did not
+  reproduce in isolation (typing in two passages, undo both, Save, redo both,
+  Save), so it is not filed. The test waits for the first save's response
+  before redoing.
+- Known: intermittent, possible data loss: about 1 run in 5, after
+  Delete, undo and Save, `1.12` is still shown but its annotations are stored
+  empty.
 
 ### ED-EDT-02 Copy and paste (D + J)
 
@@ -32,8 +40,9 @@
 - Stored: two italic `span` rows in `1.1`, one per copy.
 - Do: paste the HTML `<p>plain <b>bold</b> <i>italic</i></p>` from the
   clipboard at the end of `1.12`, and Save.
-- Stored: `1.12` gains "plain bold italic", with a bold `span` on "bold"
-  and an italic `span` on "italic".
+- Stored: `1.12` gains "plain bold italic", with a bold (`text-bold`) `span`
+  on "bold" and an `emphasis` `span` on "italic" (the editor reads `<i>` as
+  emphasis).
 - J: copying from the editor into another app (a plain text editor, a word
   processor) gives readable text with the passage breaks kept. Pasting from
   a word processor keeps bold and italic, and drops styling the editor does

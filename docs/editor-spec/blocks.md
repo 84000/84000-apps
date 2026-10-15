@@ -16,7 +16,8 @@ Each block type stores its own annotation, which covers the block's text.
   Quote and Trailer in turn with the node selector, saving after each.
 - Stored: after each save, `1.12` has one block annotation of the chosen
   type over its whole text (`heading` with the matching level for headings,
-  `blockquote`, `trailer`), and no `paragraph` annotation over the same range.
+  `blockquote`, `trailer`), and no `paragraph` annotation over the same range,
+  except that a quote keeps the `paragraph` it wraps, as `1.4` does.
 - Do: change it back to Text and Save.
 - Stored: `1.12` has its `paragraph` annotation again, and no `heading`,
   `blockquote` or `trailer` row.
