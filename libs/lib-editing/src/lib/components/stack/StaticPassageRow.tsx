@@ -44,6 +44,7 @@ export const StaticPassageRow = memo(
     // one on every render would replace the row's DOM, collapsing a deep-link
     // highlight and detaching any hover card anchored in it.
     const inner = useMemo(() => ({ __html: html ?? '' }), [html]);
+    const look = controller.rowStyle(meta);
 
     return (
       <StackRow
@@ -54,6 +55,8 @@ export const StaticPassageRow = memo(
         tibetan={tibetan}
         tibetanLead={tibetanLead}
         references={controller.getReferences(meta.uuid)}
+        className={look.className}
+        contentStyle={look.style}
       >
         {html === null ? (
           <PassageSkeleton

@@ -8,6 +8,10 @@ import type { StackKeyboardDelegate } from './types';
 type BoundaryKeymapOptions = {
   uuid: string;
   delegate: StackKeyboardDelegate;
+  /** Whether Enter and Backspace may split and merge rows. */
+  restructure: boolean;
+  /** Whether the row is one line, so Enter adds none. */
+  singleLine: boolean;
 };
 
 /**
@@ -77,11 +81,18 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
     return {
       uuid: '',
       delegate: null as unknown as StackKeyboardDelegate,
+      restructure: true,
+      singleLine: false,
     };
   },
 
   addKeyboardShortcuts() {
-    const { uuid, delegate } = this.options;
+    const {
+      uuid,
+      delegate,
+      restructure = true,
+      singleLine = false,
+    } = this.options;
 
     return {
       ArrowUp: ({ editor }) => {
@@ -108,7 +119,8 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
       },
       Enter: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
-        if (!atDocEnd(editor)) return false;
+        if (singleLine) return true;
+        if (!restructure || !atDocEnd(editor)) return false;
 
         // A single Enter belongs to the paragraph, not to the passage: at the
         // end of a passage it should do what it does everywhere else and start
@@ -123,12 +135,16 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
         return delegate.splitAtSelection(uuid);
       },
       'Mod-Enter': ({ editor }) =>
-        suggestionOpen(editor) ? false : delegate.splitAtSelection(uuid),
+        restructure && !suggestionOpen(editor)
+          ? delegate.splitAtSelection(uuid)
+          : singleLine,
       Backspace: ({ editor }) => {
         // A selection is the default's business: it deletes it.
         if (!editor.state.selection.empty) return false;
 
-        if (atDocStart(editor)) return delegate.mergeWithPrevious(uuid);
+        if (atDocStart(editor)) {
+          return restructure ? delegate.mergeWithPrevious(uuid) : true;
+        }
 
         // Inside the passage, and not at the start of a block: an ordinary
         // character delete.
