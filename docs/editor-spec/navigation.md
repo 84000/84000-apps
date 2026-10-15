@@ -14,6 +14,8 @@
   - mention and internal link: the opening of `2.1`
 - The check must read the card's own text in the visible DOM. Before calling a
   card missing, show that the same probe finds a card that is known to appear.
+- Note: hover cards are behind the `translation-hover-cards` flag. Locally,
+  turn it on with `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES` under `next dev`.
 
 ### ED-NAV-02 Clicking content links (D)
 

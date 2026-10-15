@@ -36,9 +36,11 @@ const appEnv = stack && {
   SUPABASE_SERVICE_ROLE_KEY: stack.serviceRoleKey,
   SUPABASE_SERVICE_KEY: stack.serviceRoleKey,
   NEXT_PUBLIC_GRAPHQL_URL: `http://localhost:${GRAPHQL_PORT}/api/graphql`,
-  // The suite targets the passage-stack editor. Overrides apply under
-  // `next dev` only, which is why the servers below run in dev mode.
-  NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES: 'per-passage-docs',
+  // The suite targets the passage-stack editor, with hover cards on (they
+  // are behind a PostHog flag, and PostHog does not run locally). Overrides
+  // apply under `next dev` only, which is why the servers below run in dev mode.
+  NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES:
+    'per-passage-docs,translation-hover-cards',
 };
 
 /**

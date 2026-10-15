@@ -10,7 +10,7 @@
     "spec-coverage": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node apps/web-main-e2e/scripts/spec-coverage.mjs"
+        "command": "node apps/web-main-e2e/scripts/spec-coverage.mjs --strict"
       }
     }
   }
