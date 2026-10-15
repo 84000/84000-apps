@@ -5,10 +5,6 @@ implementation is running. Each item says what a user does, what they then see,
 and what is stored in the database. None of it names a component, an extension
 or a save function, so an item stays true while the code under it changes.
 
-This spec started from the feature checklist in
-[DEV-802](https://linear.app/84000/issue/DEV-802) and is checked two ways
-([DEV-804](https://linear.app/84000/issue/DEV-804)):
-
 - **Deterministic items (D)** have one exact answer: the rows stored after a
   save, the labels on screen, whether a passage comes back after a reload. Each
   has a Playwright test in `apps/web-main-e2e`, run locally against the local
@@ -23,8 +19,7 @@ an interaction that the skill also walks through.
 
 ## The fixture: toh90001
 
-Every item runs against the synthetic test work seeded by
-[DEV-803](https://linear.app/84000/issue/DEV-803): _The Noble Sūtra of the
+Every item runs against the synthetic test work _The Noble Sūtra of the
 Testing Lotus_, work `f09e7249-07a1-496e-8662-665e80f5461c`, which covers both
 **Toh 90001** and **Toh 90002**. The seed files are in
 `infra/supabase/seed/toh90001_*.sql`, and each file's header has a coverage map.
