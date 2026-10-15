@@ -4,6 +4,8 @@ export { useTohToggle } from '../shared/hooks/useTohToggle';
 export { useStackTohVisibility } from './useStackTohVisibility';
 export { useStackDeepLink } from './useStackDeepLink';
 
+export * from './bibliography-codec';
+export * from './bibliography-extensions';
 export * from './passage-source';
 export * from './spine-feed';
 export * from './PassageStack';
