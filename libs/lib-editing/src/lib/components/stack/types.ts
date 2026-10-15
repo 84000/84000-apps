@@ -143,4 +143,12 @@ export type PassageStackControllerOptions = {
   tab?: string;
   /** Loaded passages' row data beyond their content, as the loader records it. */
   extras?: ReadonlyMap<string, PassageExtras>;
+  /**
+   * What the rows are. Bibliography rows are edited in place: they are
+   * never split, merged or deleted here. Defaults to passages.
+   */
+  rows?: StackRows;
 };
+
+/** The entity a stack's rows are. */
+export type StackRows = 'passages' | 'bibliography';

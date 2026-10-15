@@ -85,6 +85,8 @@ export const StackPassageEditor = memo(
       }
     }, [editor, focused]);
 
+    const look = controller.rowStyle(meta);
+
     return (
       <StackRow
         uuid={uuid}
@@ -94,6 +96,8 @@ export const StackPassageEditor = memo(
         tibetan={tibetan}
         tibetanLead={tibetanLead}
         references={controller.getReferences(uuid)}
+        className={look.className}
+        contentStyle={look.style}
       >
         {/*
           `immediatelyRender` is off, so there is a frame or more with no

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { BookmarkIcon } from 'lucide-react';
 import { cn } from '@eightyfourthousand/lib-utils';
 
@@ -29,6 +29,7 @@ export const StackRow = ({
   tibetan,
   tibetanLead = COMPARE_LEAD_DEFAULT,
   className,
+  contentStyle,
   children,
 }: {
   uuid: string;
@@ -46,6 +47,8 @@ export const StackRow = ({
   /** Part of a passage selection, which the stack draws itself. */
   selected?: boolean;
   className?: string;
+  /** Inline style for the content column, such as a nesting indent. */
+  contentStyle?: CSSProperties;
   children: ReactNode;
 }) => (
   <div
@@ -96,6 +99,7 @@ export const StackRow = ({
             selected && 'relative',
             className,
           )}
+          style={contentStyle}
         >
           {children}
         </div>

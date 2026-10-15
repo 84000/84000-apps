@@ -80,7 +80,8 @@ const items = [
   },
 ];
 
-export const TranslationTextButtons = ({ editor }: { editor: Editor }) => {
+/** Bold, italic, underline, subscript, superscript and small caps. */
+export const InlineMarkButtons = ({ editor }: { editor: Editor }) => {
   const editorState = useEditorState<SelectorResult>({
     editor,
     selector: (instance) => ({
@@ -118,14 +119,20 @@ export const TranslationTextButtons = ({ editor }: { editor: Editor }) => {
           </Button>
         );
       })}
-      <ForeignSelector editor={editor} />
-      <MantraSelector editor={editor} />
-      <Separator orientation="vertical" className="h-10" />
-      <GlossarySelector editor={editor} />
-      <MentionSelector editor={editor} />
-      <LinkSelector editor={editor} />
-      <EndNoteSelector editor={editor} />
-      <CommentSelector editor={editor} />
     </>
   );
 };
+
+export const TranslationTextButtons = ({ editor }: { editor: Editor }) => (
+  <>
+    <InlineMarkButtons editor={editor} />
+    <ForeignSelector editor={editor} />
+    <MantraSelector editor={editor} />
+    <Separator orientation="vertical" className="h-10" />
+    <GlossarySelector editor={editor} />
+    <MentionSelector editor={editor} />
+    <LinkSelector editor={editor} />
+    <EndNoteSelector editor={editor} />
+    <CommentSelector editor={editor} />
+  </>
+);

@@ -1,4 +1,7 @@
 import { Node, type Extensions } from '@tiptap/core';
+import { Collaboration } from '@tiptap/extension-collaboration';
+import type { StackRowKind } from '@eightyfourthousand/lib-doc-model';
+import type { UndoManager, XmlFragment } from 'yjs';
 
 import { Bold } from '../editor/extensions/Bold';
 import { CommentMark } from '../editor/extensions/Comment/CommentMark';
@@ -14,7 +17,9 @@ import { Subscript } from '../editor/extensions/Subscript';
 import { Superscript } from '../editor/extensions/Superscript';
 import { Underline } from '../editor/extensions/Underline';
 
+import { BoundaryKeymap } from './BoundaryKeymap';
 import { StackDocument } from './StackDocument';
+import type { StackKeyboardDelegate } from './types';
 
 const Text = Node.create({ name: 'text', group: 'inline' });
 
@@ -49,4 +54,32 @@ export const buildBibliographySchemaExtensions = (): Extensions => [
   Subscript.extend({ priority: FORMATTING_PRIORITY }),
   Superscript.extend({ priority: FORMATTING_PRIORITY }),
   Underline.extend({ priority: FORMATTING_PRIORITY }),
+];
+
+/**
+ * A live bibliography row's editor: the schema set, bound to the row's
+ * document. Rows are edited in place, never split or merged, and a heading
+ * is a single line.
+ */
+export const buildBibliographyEditorExtensions = ({
+  uuid,
+  kind,
+  fragment,
+  undoManager,
+  delegate,
+}: {
+  uuid: string;
+  kind: StackRowKind;
+  fragment: XmlFragment;
+  undoManager: UndoManager;
+  delegate: StackKeyboardDelegate;
+}): Extensions => [
+  ...buildBibliographySchemaExtensions(),
+  Collaboration.configure({ fragment, yUndoOptions: { undoManager } }),
+  BoundaryKeymap.configure({
+    uuid,
+    delegate,
+    restructure: false,
+    singleLine: kind === 'heading',
+  }),
 ];
