@@ -3,6 +3,7 @@ import {
   DOMParser,
   DOMSerializer,
   Fragment,
+  type Node as PMNode,
   type Schema,
 } from '@tiptap/pm/model';
 import type {
@@ -16,8 +17,12 @@ import { buildBibliographySchemaExtensions } from './bibliography-extensions';
 /** Where a bibliography snapshot came from, for the loader's report. */
 export const BIBLIOGRAPHY_SOURCE_NAME = 'bibliography';
 
-/** A stored bibliography row's HTML, as the codec reads it. */
-export type BibliographyRowHTML = { uuid: string; html: string };
+/** A stored bibliography row, as the codec reads it. A heading's `html` is plain text. */
+export type BibliographyRowHTML = {
+  uuid: string;
+  html: string;
+  isHeading?: boolean;
+};
 
 let defaultSchema: Schema | undefined;
 
@@ -67,16 +72,26 @@ const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
 };
 
 /**
- * A row's stored HTML as the blocks its document holds.
+ * A row's stored value as the blocks its document holds.
  *
- * Whitespace is preserved in full, as the stack's paste and re-read paths do,
- * so newlines, runs of spaces and soft hyphens survive a round trip. Plain
- * text, which is how headings are stored, becomes one paragraph.
+ * An entry's value is HTML. Whitespace is preserved in full, as the stack's
+ * paste and re-read paths do, so newlines, runs of spaces and soft hyphens
+ * survive a round trip. A heading's value is plain text (the save reduces it
+ * to text), so it is read as text, never markup, into one paragraph.
  */
 export const bibliographyHTMLToContent = (
   html: string,
+  kind: StackRowKind = 'entry',
   schema: Schema = bibliographySchema(),
 ): JSONContent[] => {
+  if (kind === 'heading') {
+    return [
+      {
+        type: 'paragraph',
+        content: html ? [{ type: 'text', text: html }] : [],
+      },
+    ].map((block) => schema.nodeFromJSON(block).toJSON() as JSONContent);
+  }
   const container = document.createElement('div');
   container.innerHTML = html;
   dropWhitespaceBetweenBlocks(container);
@@ -89,8 +104,9 @@ export const bibliographyHTMLToContent = (
 /**
  * A row's blocks as the HTML stored for it.
  *
- * An entry is stored as paragraphs. A heading is stored as inline HTML with no
- * wrapper, its paragraphs joined by a space. An empty row is an empty string.
+ * An entry is stored as paragraphs. A heading is stored as plain text, its
+ * marks dropped and its paragraphs joined by a space, unescaped, as the save
+ * stores it. An empty row is an empty string.
  */
 export const bibliographyContentToHTML = (
   content: JSONContent[] | Fragment,
@@ -103,18 +119,26 @@ export const bibliographyContentToHTML = (
       : Fragment.fromArray(content.map((block) => schema.nodeFromJSON(block)));
   if (!fragment.textBetween(0, fragment.size, '', '￼')) return '';
 
-  const serializer = storageSerializer(schema);
-  const htmlOf = (nodes: Fragment) => {
-    const container = document.createElement('div');
-    container.appendChild(serializer.serializeFragment(nodes));
-    return container.innerHTML;
-  };
+  if (kind === 'heading') {
+    const lines: string[] = [];
+    fragment.forEach((block) =>
+      lines.push(block.textBetween(0, block.content.size, '', leafText)),
+    );
+    return lines.join(' ');
+  }
 
-  if (kind === 'entry') return htmlOf(fragment);
-  const lines: string[] = [];
-  fragment.forEach((block) => lines.push(htmlOf(block.content)));
-  return lines.join(' ');
+  const container = document.createElement('div');
+  container.appendChild(storageSerializer(schema).serializeFragment(fragment));
+  return container.innerHTML;
 };
+
+/** A leaf's text in a heading: a mention reads as its items' text. */
+const leafText = (leaf: PMNode): string =>
+  leaf.type.name === 'mention'
+    ? ((leaf.attrs.items ?? []) as { text?: string }[])
+        .map((item) => item.text ?? '')
+        .join(', ')
+    : '';
 
 /**
  * A passage source for bibliography rows, seeding each row's document from
@@ -139,9 +163,13 @@ export const bibliographyRowSource = ({
     }
     if (!uuids.length) return [];
     const rows = await read(uuids);
-    return rows.map(({ uuid, html }) => ({
+    return rows.map(({ uuid, html, isHeading }) => ({
       uuid,
-      content: bibliographyHTMLToContent(html, schema),
+      content: bibliographyHTMLToContent(
+        html,
+        isHeading ? 'heading' : 'entry',
+        schema,
+      ),
     }));
   },
 });

@@ -18,11 +18,10 @@ jest.mock('resend', () => ({ Resend: class {} }));
 
 const schema = bibliographySchema();
 
-const roundTrip = (html: string, isHeading: boolean) =>
-  bibliographyContentToHTML(
-    bibliographyHTMLToContent(html),
-    isHeading ? 'heading' : 'entry',
-  );
+const roundTrip = (html: string, isHeading: boolean) => {
+  const kind = isHeading ? 'heading' : 'entry';
+  return bibliographyContentToHTML(bibliographyHTMLToContent(html, kind), kind);
+};
 
 /** Blocks as the schema normalizes them, defaults filled in. */
 const normalized = (blocks: JSONContent[]) =>
@@ -79,9 +78,16 @@ describe('seed bibliography rows', () => {
   });
 
   it('reads a heading as one plain paragraph', () => {
-    expect(bibliographyHTMLToContent('Tibetan Texts')).toEqual([
+    expect(bibliographyHTMLToContent('Tibetan Texts', 'heading')).toEqual([
       paragraph(text('Tibetan Texts')),
     ]);
+  });
+
+  it('reads a heading’s markup characters as text', () => {
+    expect(bibliographyHTMLToContent('A & B <i>', 'heading')).toEqual([
+      paragraph(text('A & B <i>')),
+    ]);
+    expect(roundTrip('A & B <i>', true)).toBe('A & B <i>');
   });
 
   it('keeps soft hyphens as text', () => {
@@ -129,6 +135,25 @@ describe('serializing a row', () => {
         'heading',
       ),
     ).toBe('Other Sources');
+  });
+
+  it('stores a heading as its text, without marks or escaping', () => {
+    expect(
+      bibliographyContentToHTML(
+        [
+          paragraph(
+            text('A & ', [{ type: 'italic' }]),
+            text('B', [{ type: 'link', attrs: { href: 'https://e.com' } }]),
+            text(' see '),
+            {
+              type: 'mention',
+              attrs: { items: [{ uuid: 'i-1', text: 'The Work' }] },
+            },
+          ),
+        ],
+        'heading',
+      ),
+    ).toBe('A & B see The Work');
   });
 
   it('stores an empty row as an empty string', () => {
@@ -275,6 +300,17 @@ describe('bibliographyRowSource', () => {
           paragraph(text('Title', [{ type: 'italic' }]), text('. 2020.')),
         ]),
       },
+    ]);
+  });
+
+  it('seeds a heading row from its text', async () => {
+    const headings = bibliographyRowSource({
+      workUuid: 'w1',
+      read: async () => [{ uuid: 'h1', html: 'A & <B>', isHeading: true }],
+    });
+
+    expect(await headings.loadPassages('w1', ['h1'])).toEqual([
+      { uuid: 'h1', content: [paragraph(text('A & <B>'))] },
     ]);
   });
 

@@ -457,14 +457,14 @@ three things:
 - **A source and a schema.** `createStackWork` takes a `source` and
   `extensions` in place of the API's passages and the passage schema.
 
-Bibliography rows are stored as HTML, so `bibliography-codec` reads `bibl_html`
-into a row's blocks and writes them back. It parses with whitespace preserved
-in full, so newlines, runs of spaces and soft hyphens survive, and serializes
-without the editor's presentation: a bare `<p>` and `<a href>`, as entries are
-stored. Every seeded row round trips byte for byte. The documented
-normalisations: whitespace between paragraphs is dropped, a link keeps only its
-`href`, and a heading — stored as inline HTML — joins its paragraphs with a
-space.
+Bibliography entries are stored as HTML, so `bibliography-codec` reads
+`bibl_html` into a row's blocks and writes them back. It parses with whitespace
+preserved in full, so newlines, runs of spaces and soft hyphens survive, and
+serializes without the editor's presentation: a bare `<p>` and `<a href>`, as
+entries are stored. A heading is stored as plain text and read as text: its
+marks are dropped and its paragraphs joined with a space. Every seeded row
+round trips byte for byte. The documented normalisations: whitespace between
+paragraphs is dropped and a link keeps only its `href`.
 
 The bibliography schema leaves out `TranslationMetadata`, which mints a uuid
 for every parsed node and mark: stored HTML would change on every read. A
