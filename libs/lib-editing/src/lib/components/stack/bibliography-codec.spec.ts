@@ -84,10 +84,10 @@ describe('seed bibliography rows', () => {
   });
 
   it('reads a heading’s markup characters as text', () => {
-    expect(bibliographyHTMLToContent('A & B <i>', 'heading')).toEqual([
-      paragraph(text('A & B <i>')),
+    expect(bibliographyHTMLToContent('A & B <i> &lt;', 'heading')).toEqual([
+      paragraph(text('A & B <i> &lt;')),
     ]);
-    expect(roundTrip('A & B <i>', true)).toBe('A & B <i>');
+    expect(roundTrip('A & B <i> &lt;', true)).toBe('A & B <i> &lt;');
   });
 
   it('keeps soft hyphens as text', () => {
