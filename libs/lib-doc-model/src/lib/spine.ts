@@ -1,17 +1,20 @@
 import { Array as YArray, Doc, Map as YMap, transact } from 'yjs';
-import {
-  panelAndTabForContentType,
-  type BodyItemType,
-} from '@eightyfourthousand/data-access';
 import { renumberLabelsFrom } from './labels';
 import {
   METAS_KEY,
   ORDER_KEY,
   metaMap,
+  placementFor,
   type MutateOptions,
   type SpineSeed,
 } from './spine-meta';
-import type { LabelChange, PassageMeta, SpineEntry, SpineRange } from './types';
+import type {
+  LabelChange,
+  PassageMeta,
+  SpineEntry,
+  SpineRange,
+  StackRowType,
+} from './types';
 
 export type { MutateOptions, SpineSeed } from './spine-meta';
 
@@ -103,13 +106,15 @@ export class Spine {
     return {
       uuid,
       label: (entry.get('label') as string) ?? '',
-      type: (entry.get('type') as BodyItemType) ?? 'unknown',
+      type: (entry.get('type') as StackRowType) ?? 'unknown',
       panel: (entry.get('panel') as string) ?? 'main',
       tab: (entry.get('tab') as string) ?? 'translation',
       toh: entry.get('toh') as PassageMeta['toh'],
       ...(typeof entry.get('sort') === 'number'
         ? { sort: entry.get('sort') as number }
         : {}),
+      ...(entry.get('parent') ? { parent: entry.get('parent') as string } : {}),
+      ...(entry.get('depth') ? { depth: entry.get('depth') as number } : {}),
     };
   }
 
@@ -165,7 +170,7 @@ export class Spine {
    * includes it. The reader fetches by type (`getTranslationBlocks({ type })`),
    * so the spine answers that question too.
    */
-  ofType(type: BodyItemType): SpineEntry[] {
+  ofType(type: StackRowType): SpineEntry[] {
     return this.entries().filter((entry) => entry.type === type);
   }
 
@@ -372,10 +377,10 @@ export class Spine {
   }
 
   /** Set one passage's type, re-deriving where it is surfaced. */
-  setType(uuid: string, type: BodyItemType) {
+  setType(uuid: string, type: StackRowType) {
     const entry = this.metas.get(uuid);
     if (!entry) return;
-    const { panel, tab } = panelAndTabForContentType(type);
+    const { panel, tab } = placementFor(type);
     transact(
       this.doc,
       () => {

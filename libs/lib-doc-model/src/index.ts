@@ -65,13 +65,17 @@ export type {
   WorkDocumentOptions,
 } from './lib/work-document';
 
+export { BIBLIOGRAPHY_ROW_TYPES, rowKindOf } from './lib/types';
 export type {
+  BibliographyRowType,
   FocusTarget,
   LabelChange,
   PassagePlacement,
   PassageMeta,
   SpineEntry,
   SpineRange,
+  StackRowKind,
+  StackRowType,
   StructuralOpKind,
 } from './lib/types';
 

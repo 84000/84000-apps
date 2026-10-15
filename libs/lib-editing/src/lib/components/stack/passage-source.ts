@@ -332,6 +332,7 @@ export const createStackLoader = ({
   workUuid,
   spine,
   local,
+  source,
   cache,
   buffer,
   extras,
@@ -343,6 +344,8 @@ export const createStackLoader = ({
   extras?: Map<string, PassageExtras>;
   /** `localPassageSource(storage)` from `lib-persistence`, when available. */
   local?: PassageSource;
+  /** The network source for rows that are not passages. Defaults to the API's passages. */
+  source?: PassageSource;
   /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
   cache?: (workUuid: string, snapshots: PassageSnapshot[]) => Promise<void>;
   /** Passages either side of the visible range to hydrate. */
@@ -351,7 +354,7 @@ export const createStackLoader = ({
   new PassageLoader({
     sources: [
       ...(local ? [local] : []),
-      graphqlPassageSource({ client, workUuid, spine, extras }),
+      source ?? graphqlPassageSource({ client, workUuid, spine, extras }),
     ],
     cache,
     buffer,
