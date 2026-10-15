@@ -49,3 +49,20 @@ export function createBuildGraphQLClient(): GraphQLClient {
     headers: { [CONTENT_SOURCE_HEADER]: contentSourceFromEnv() },
   });
 }
+
+/**
+ * Create a GraphQL client that authenticates with a bearer `Authorization` header
+ * rather than cookies, for server routes whose callers present a token, such as
+ * the MCP route. Pass the caller's header unchanged.
+ */
+export function createBearerGraphQLClient(
+  authorization: string,
+): GraphQLClient {
+  return new GraphQLClient(getGraphQLUrl(), {
+    headers: {
+      authorization,
+      'apollo-require-preflight': 'true',
+      [CONTENT_SOURCE_HEADER]: contentSourceFromEnv(),
+    },
+  });
+}

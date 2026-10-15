@@ -10,6 +10,7 @@ import {
   createPolicyEditorResource,
   createReadTools,
   createSessionTools,
+  createSnapshotTools,
   createWriteTools,
   hasRole,
   linearFeedbackConfigFromEnv,
@@ -27,6 +28,7 @@ import { createServerCapture } from '@eightyfourthousand/lib-instr/ssr';
 // editing the app.
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { POLICY_EDITOR_APP_HTML } from '@eightyfourthousand/policy-editor-mcp-app/html';
+import { workSnapshotSource } from './work-snapshots';
 
 /**
  * Explicit rather than the plan default: a tool call may wait on an inline work
@@ -77,6 +79,14 @@ export async function POST(req: Request) {
   // Their `harness.*` checks decide. `open-policy-editor` is listed with
   // them, and with the editor app's resource it links to. The profile tools
   // need no permission: they read and tag only the caller's own profile.
+  //
+  // The work snapshot tools are listed for manager and above, the roles that
+  // hold `editor.read`; api-graphql checks the permission on every call, with
+  // the caller's own token. One source per request, shared by every tool
+  // group that reads snapshots.
+  const snapshots = hasRole(auth.role, 'manager')
+    ? workSnapshotSource(req.headers.get('authorization') ?? '', req.signal)
+    : null;
   const tools = [
     ...createReadTools(auth.client),
     ...createHarnessTools(auth.client),
@@ -88,6 +98,7 @@ export async function POST(req: Request) {
       linear: linearFeedbackConfigFromEnv(),
     }),
     ...createProfileTools(auth.client, auth.userId),
+    ...(snapshots ? createSnapshotTools(snapshots) : []),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];
   // Report each call to PostHog, keyed by the user's uuid. Innermost, so the
