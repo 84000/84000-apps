@@ -35,6 +35,7 @@ export const BackMatterPanel = ({
   isEditor = false,
   withAttestations = false,
   renderTranslation,
+  renderBibliography,
 }: {
   workUuid: string;
   endnotes: TranslationEditorContent;
@@ -52,6 +53,8 @@ export const BackMatterPanel = ({
   renderTranslation: (
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
+  /** Draws the bibliography tab in place of the read-only list. */
+  renderBibliography?: () => ReactElement;
 }) => {
   const { panels, updatePanel } = useNavigation();
   const isMobile = useIsMobile();
@@ -105,9 +108,7 @@ export const BackMatterPanel = ({
             isMobile && 'ps-12',
           )}
         >
-          {hasEndnotes && (
-            <TabsTrigger value="endnotes">Notes</TabsTrigger>
-          )}
+          {hasEndnotes && <TabsTrigger value="endnotes">Notes</TabsTrigger>}
           {hasGlossary && <TabsTrigger value="glossary">Glossary</TabsTrigger>}
           {bibliography.length > 0 && (
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
@@ -160,7 +161,9 @@ export const BackMatterPanel = ({
                 forceMount
                 className="pb-8 data-[state=inactive]:hidden"
               >
-                <BibliographyList content={bibliography} />
+                {renderBibliography?.() ?? (
+                  <BibliographyList content={bibliography} />
+                )}
               </TabsContent>
             )}
             {hasAbbreviations && (
