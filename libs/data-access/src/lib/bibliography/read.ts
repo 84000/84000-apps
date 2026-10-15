@@ -4,13 +4,13 @@ import {
   BibliographyEntryItemDTO,
   bibliographyEntryItemFromDTO,
   DataClient,
-} from './types';
+} from '../types';
 import {
   DEFAULT_CONTENT_SOURCE,
   relationFor,
   rpcFor,
   type ContentSource,
-} from './content-source';
+} from '../content-source';
 
 export const getBibliographyEntries = async ({
   client,
@@ -21,9 +21,12 @@ export const getBibliographyEntries = async ({
   uuid: string;
   source?: ContentSource;
 }) => {
-  const { data, error } = await client.rpc(rpcFor('showBibliographies', source), {
-    v_work_uuid: uuid,
-  });
+  const { data, error } = await client.rpc(
+    rpcFor('showBibliographies', source),
+    {
+      v_work_uuid: uuid,
+    },
+  );
   if (error) {
     console.error(
       `Error fetching glossary instances for work: ${uuid} `,
@@ -97,9 +100,12 @@ export const getBibliographyLabelsByUuids = async ({
     return labelsByUuid;
   }
 
-  const { data, error } = await client.rpc(rpcFor('bibliographyLabels', source), {
-    v_uuids: uuids as string[],
-  });
+  const { data, error } = await client.rpc(
+    rpcFor('bibliographyLabels', source),
+    {
+      v_uuids: uuids as string[],
+    },
+  );
 
   if (error) {
     console.error('Error batch loading bibliography labels:', error);

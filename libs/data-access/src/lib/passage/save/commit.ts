@@ -86,7 +86,7 @@ export const chunkCommit = (commit: SaveCommit): SaveCommit[] => {
  * Whether a failed call is known to have written nothing: Postgres rolled it
  * back (a SQLSTATE), or PostgREST refused it before running it.
  */
-const rolledBack = (code: unknown) =>
+export const rolledBack = (code: unknown) =>
   typeof code === 'string' && /^(?:[0-9A-Z]{5}|PGRST\d+)$/.test(code);
 
 /**

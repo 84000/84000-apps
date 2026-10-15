@@ -1,4 +1,5 @@
 import {
+  BIBLIOGRAPHY_ALLOWLIST,
   COMMENT_ALLOWLIST,
   htmlHasText,
   sanitizeHtml,
@@ -77,5 +78,71 @@ describe('htmlHasText', () => {
     // How a write of `<script>…</script>` is refused as empty rather than
     // stored blank.
     expect(htmlHasText(clean('<script>alert(1)</script>'))).toBe(false);
+  });
+});
+
+describe('BIBLIOGRAPHY_ALLOWLIST', () => {
+  const bibliography = (html: string) =>
+    sanitizeHtml({ html, allowlist: BIBLIOGRAPHY_ALLOWLIST, trim: false });
+
+  // What the editor's inline marks render, one per mark.
+  it.each([
+    ['emphasis', '<p><em>Title</em>, <strong>bold</strong>, <u>under</u></p>'],
+    ['sub and superscript', '<p>H<sub>2</sub>O<sup>1</sup></p>'],
+    [
+      'mark attributes',
+      '<p><em data-type="title" data-text-style="foreign" data-lang="bo" uuid="m1">t</em></p>',
+    ],
+    ['small caps', '<p><sm class="uppercase">bce</sm></p>'],
+    [
+      'foreign text',
+      '<p><span uuid="f1" type="span" textstyle="foreign" lang="bo" data-text-style="foreign">chos</span></p>',
+    ],
+    [
+      'a link',
+      '<p><a href="https://84000.co" target="_blank" rel="noreferrer noopener" type="link" uuid="l1">site</a></p>',
+    ],
+    [
+      'an internal link',
+      '<p><a class="link" type="internalLink" data-toh="toh1" entity="e1" entity-type="passage" uuid="i1" data-same-work="true" data-subtype="x" data-link-toh="toh2" href="/toh2">1.2</a></p>',
+    ],
+    [
+      'a glossary instance',
+      '<p><span class="glossary-instance" type="glossaryInstance" authority="a1" glossary="g1" uuid="gi1">term</span></p>',
+    ],
+    [
+      'a comment mark',
+      '<p><span class="comment-mark" type="comment" comment="c1" uuid="cm1">noted</span></p>',
+    ],
+    [
+      'a mention',
+      '<p><span data-type="mention" data-items="[{&quot;entity&quot;:&quot;e1&quot;}]" class="mention-container" data-toh="toh1">' +
+        '<a class="mention-link" data-toh="toh1" lang="bo" data-style="quote" type="mention" uuid="m1" entity="e1" entity-type="passage" href="#" data-same-work="true" data-subtype="x" data-link-toh="toh1" data-highlight-start="0" data-highlight-end="4">1.2</a>' +
+        '<span class="mention-link" data-style="quote">plain</span></span></p>',
+    ],
+    ['a line break', '<p>One<br />Two</p>'],
+  ])('keeps %s', (_name, html) => {
+    expect(bibliography(html)).toBe(html);
+  });
+
+  it('keeps whitespace and soft hyphens', () => {
+    expect(bibliography(' <p>Bu\u00ADddha</p>\n')).toBe(
+      ' <p>Bu\u00ADddha</p>\n',
+    );
+  });
+
+  it('drops scripts, handlers and script links', () => {
+    expect(
+      bibliography(
+        '<p onclick="x()">One<script>bad()</script><img src="x" onerror="y()" />' +
+          '<a href="javascript:alert(1)">two</a><span style="color:red" onmouseover="z()">three</span></p>',
+      ),
+    ).toBe('<p>One<a>two</a><span>three</span></p>');
+  });
+
+  it('unwraps markup outside the inline set', () => {
+    expect(bibliography('<p><font>old</font> <mark>new</mark></p>')).toBe(
+      '<p>old new</p>',
+    );
   });
 });
