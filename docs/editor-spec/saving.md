@@ -1,0 +1,97 @@
+# Saving (ED-SAV)
+
+These items state what a save leaves in the database and on screen. They do
+not depend on how the save is carried out.
+
+### ED-SAV-01 The Save button (D)
+
+- Do: load the editor and click into `1.4` without typing.
+- Screen: no Save button.
+- Do: type one character in `1.4`.
+- Screen: the Save button appears.
+- Do: click Save.
+- Screen: a "Content saved" toast appears, and the Save button is gone.
+- The same holds for a first edit in each of the other tabs: `n.9`
+  (Endnotes), `s.1` (Front) and the "D" entry (Abbreviations).
+- Known: the button used not to appear for edits in the Translation tab
+  (fixed).
+
+### ED-SAV-02 Annotation round trip (D)
+
+- Fixture: every hand-written passage: front matter, `h.1`, `pl.1`, `p.1`,
+  `1.1`–`1.12`, `2.141`, `c.1`, `c.2`, `ap1.1`, `n.1`–`n.13`, and the
+  abbreviation entries.
+- Do: in each passage, type one character at the very end, then Save.
+- Stored: each passage's content is its seeded text plus that character.
+  Every seeded annotation is still stored with the same type and content,
+  and a block, line, list item or cell that ends at the passage end is extended
+  by one. Zero-length annotations at the end (`image`, `audio`, `end-note-link`,
+  `mention`) either stay before the new character or move after it, as the
+  editor places the caret, but are not lost. No annotation type disappears.
+- Known: the stack editor adds a root `paragraph` row to passages whose
+  stored data has none. Until that is fixed, this item only checks that
+  nothing is lost.
+
+### ED-SAV-03 New, merged and deleted passages persist (D)
+
+- Covered by the save-and-reload checks in ED-STR-01 (new), ED-STR-03 (merge)
+  and ED-STR-04 (delete). This item exists so the Saving section lists them.
+
+### ED-SAV-04 Edits typed during a save are kept (D)
+
+- Fixture: `1.4`.
+- Do: type "ZZBEFORE" at the end of `1.4` and click Save. While the save request
+  is still in flight (held in the test), type " ZZDURING".
+- Screen: once the first save finishes, the Save button is still shown.
+- Do: click Save again.
+- Stored: `1.4` ends with "ZZBEFORE ZZDURING".
+- Known: an edit typed during a save used to be lost (fixed).
+
+### ED-SAV-05 One save covers every tab (D)
+
+- Do: edit `1.4` (Translation), `n.9` (Endnotes), `s.1` (Front) and the "D"
+  entry (Abbreviations), then click Save once.
+- Screen: one "Content saved" toast, and the Save button is gone.
+- Stored: all four edits are stored.
+- Known: Front tab edits used not to be saved (fixed).
+
+### ED-SAV-06 A failed save can be retried (D)
+
+- Do: edit `1.4`, make the save request fail (the test rejects it), and
+  click Save.
+- Screen: an "Error saving content." toast, and the Save button is still shown.
+- Stored: `1.4` is unchanged.
+- Do: let requests through again and click Save.
+- Stored: the edit is stored.
+
+### ED-SAV-07 Passages the user did not edit are not written (D)
+
+- Fixture: `1.12` (it has a mention) and its neighbours.
+- Do: load the editor, click into `1.12` and `1.11` without typing, then edit
+  `1.4` and Save.
+- Stored: only `1.4` changes. `1.11` and `1.12` and their annotations are
+  exactly as seeded, including `updated_at` where the table has one.
+- Known: an unedited passage that contains a mention used to be saved
+  (fixed).
+
+### ED-SAV-08 Overlapping annotations save (D)
+
+- Fixture: thread `t6` on `1.110` has two anchors, on "perfection" and on " of
+  wisdom". `1.110` also has glossary instances.
+- Do: add a comment over a range that overlaps a glossary instance in `1.110`
+  (part of the instance and the text after it), edit a word elsewhere in
+  `1.110`, and Save.
+- Screen: "Content saved".
+- Stored: the edit is stored. The glossary instance is stored as one or more
+  rows that together cover its original text, the new comment anchor covers its
+  range, and `t6`'s anchors are unchanged.
+- Known: overlapping annotations used to make the whole save fail (fixed).
+
+### ED-SAV-09 Deleting an endnote does not bring its links back (D)
+
+- Fixture: `n.6` is linked from the end of `1.20`.
+- Do: delete `n.6` from its label menu and Save. Then edit `1.20` and Save
+  again.
+- Stored: no `end-note-link` on `1.20` or any other passage names `n.6`'s uuid,
+  and `n.6`'s row is gone.
+- Known: open. A later save writes the link back.
