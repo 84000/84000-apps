@@ -59,7 +59,7 @@ export const saveButton = (page: Page): Locator =>
     .filter({ visible: true });
 
 /** A toast with this text that appeared since the last `markToasts`. */
-export const toast = (page: Page, text: string): Locator =>
+export const toast = (page: Page, text: string | RegExp): Locator =>
   page.locator('[data-sonner-toast]:not([data-e2e-seen])', { hasText: text });
 
 /** Marks the toasts on screen, so `toast` only finds ones that come after. */
