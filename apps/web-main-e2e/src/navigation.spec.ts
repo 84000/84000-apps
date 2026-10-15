@@ -99,7 +99,7 @@ test.describe('Navigation', () => {
     }) => {
       test.fixme(
         true,
-        'DEV-847: following a link to a passage that is not loaded yet usually stops at the end of the loaded passages (about 1.118), so 2.1 never loads. It reaches 2.1 about one time in four, so test.fail would be flaky.',
+        'Following a link to a passage that is not loaded yet usually stops at the end of the loaded passages (about 1.118), so 2.1 never loads. It reaches 2.1 about one time in four, so test.fail would be flaky.',
       );
       const source = await passageByLabel(from);
       const target = await passageByLabel('2.1');
@@ -143,7 +143,7 @@ test.describe('Navigation', () => {
   test('ED-NAV-04 Endnote back-references', async ({ page }) => {
     test.fixme(
       true,
-      'DEV-848: n.6 lists 1.20, but clicking the reference usually does not move the main panel. It sometimes does, so test.fail would be flaky.',
+      'Passage n.6 lists 1.20, but clicking the reference usually does not move the main panel. It sometimes does, so test.fail would be flaky.',
     );
     const note = await passageByLabel('n.6');
     const linking = await passageByLabel('1.20');
@@ -214,7 +214,7 @@ test.describe('Navigation', () => {
   test('ED-NAV-05 Replace all in a translation passage', async ({ page }) => {
     test.fail(
       true,
-      'DEV-849: translation passages come back from search as alignment matches, so Replace all stays disabled with "Every match is in the Tibetan source".',
+      'Translation passages come back from search as alignment matches, so Replace all stays disabled with "Every match is in the Tibetan source".',
     );
     const one = await passageByLabel('1.1');
     await openEditor(page, { main: { tab: 'translation', hash: one.uuid } });
@@ -273,7 +273,7 @@ test.describe('Navigation', () => {
   test('ED-NAV-06 A tagged thread outside the first page', async ({ page }) => {
     test.fixme(
       true,
-      'DEV-847: the same stop at the end of the loaded passages as the ED-NAV-02 links, so 2.100 is usually never reached.',
+      'The same stop at the end of the loaded passages as the ED-NAV-02 links, so 2.100 is usually never reached.',
     );
     const far = await passageByLabel('2.100');
     // The panel lists the threads on screen; filtered by a tag it lists
