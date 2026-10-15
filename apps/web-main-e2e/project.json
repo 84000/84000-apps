@@ -1,0 +1,17 @@
+{
+  "name": "web-main-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/web-main-e2e/src",
+  "tags": ["type:e2e"],
+  "implicitDependencies": ["web-main", "api-graphql"],
+  "// targets": "e2e is inferred by @nx/playwright from playwright.config.ts",
+  "targets": {
+    "spec-coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/web-main-e2e/scripts/spec-coverage.mjs"
+      }
+    }
+  }
+}
