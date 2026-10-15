@@ -440,3 +440,33 @@ only when invoked. Verified in a browser both ways. See
 `.harness/decisions/2026-09-02-navigation-context-degrades-it-does-not-throw.md`,
 which corrects the mechanism described in the earlier
 `2026-08-19-sandbox-editors-lack-editor-providers` note.
+
+### Rows that are not passages
+
+The spine, feed and loader are not tied to passages. A second entity brings
+three things:
+
+- **Row types.** `PassageMeta.type` is a `StackRowType`, which adds
+  `bibliographyHeader` and `bibliography` to the body item types. Placement
+  folds `*Header` into its section as before, so both land in the
+  `bibliography` tab, and `rowKindOf` reads heading or entry the same way.
+  `parent` and `depth` carry nesting, and are stored only when set.
+- **A feed.** `RowFeed` is the windowing logic over any `RowPages` reader;
+  `SpineFeed` is that over the API's passages, unchanged. The controller takes
+  any `StackRowFeed`.
+- **A source and a schema.** `createStackWork` takes a `source` and
+  `extensions` in place of the API's passages and the passage schema.
+
+Bibliography rows are stored as HTML, so `bibliography-codec` reads `bibl_html`
+into a row's blocks and writes them back. It parses with whitespace preserved
+in full, so newlines, runs of spaces and soft hyphens survive, and serializes
+without the editor's presentation: a bare `<p>` and `<a href>`, as entries are
+stored. Every seeded row round trips byte for byte. The documented
+normalisations: whitespace between paragraphs is dropped, a link keeps only its
+`href`, and a heading — stored as inline HTML — joins its paragraphs with a
+space.
+
+The bibliography schema leaves out `TranslationMetadata`, which mints a uuid
+for every parsed node and mark: stored HTML would change on every read. A
+comment anchor is a `comment` mark in the row's HTML and keeps its own uuid.
+Formatting marks rank above links, so they wrap a link as stored entries do.
