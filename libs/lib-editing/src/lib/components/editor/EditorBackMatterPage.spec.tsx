@@ -15,7 +15,14 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 jest.mock('@eightyfourthousand/lib-instr/static', () => ({
   isStaticFeatureEnabled: () => false,
 }));
-jest.mock('next/dynamic', () => () => () => null);
+// Every dynamic import here is `StackTab`.
+jest.mock(
+  'next/dynamic',
+  () => () => (props: { tab: string }) =>
+    jest
+      .requireActual('react')
+      .createElement('div', { 'data-testid': `stack-${props.tab}` }),
+);
 jest.mock('.', () => ({ TranslationBuilder: () => null }));
 jest.mock('../shared/NavigationProvider', () => ({
   useNavigation: () => ({
@@ -27,7 +34,12 @@ jest.mock('../shared/glossary', () => ({
   GlossaryTermList: () => null,
   GlossaryPaginationProvider: () => null,
 }));
-jest.mock('../shared/bibliography', () => ({ BibliographyList: () => null }));
+jest.mock('../shared/bibliography', () => ({
+  BibliographyList: () =>
+    jest
+      .requireActual('react')
+      .createElement('div', { 'data-testid': 'bibliography-list' }),
+}));
 jest.mock('./EditorProvider', () => ({
   useEditorState: () => ({ work: { uuid: 'w1' } }),
 }));
@@ -39,7 +51,17 @@ jest.mock('./usePerPassageDocs', () => ({
 
 const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
-) as { getPassageMetaPage: jest.Mock; getTranslationBlocks: jest.Mock };
+) as {
+  getPassageMetaPage: jest.Mock;
+  getTranslationBlocks: jest.Mock;
+  getWorkBibliography: jest.Mock;
+};
+
+/** A work with one bibliography entry. */
+const withBibliography = () =>
+  clientGraphql.getWorkBibliography.mockResolvedValue([
+    { heading: '', label: '', entries: [{ uuid: 'b1', html: '<p>x</p>' }] },
+  ]);
 
 /** A work whose abbreviations and endnotes number as given. */
 const withAbbreviations = (count: number, notes = 0) => {
@@ -76,6 +98,7 @@ window.matchMedia = ((query: string) => ({
 beforeEach(() => {
   clientGraphql.getTranslationBlocks.mockReset();
   clientGraphql.getPassageMetaPage.mockReset();
+  clientGraphql.getWorkBibliography.mockReset().mockResolvedValue([]);
   mockFlag.enabled = false;
   mockFlag.ready = false;
 });
@@ -183,5 +206,28 @@ describe('EditorBackMatterPage', () => {
     await screen.findByRole('tablist');
     expect(screen.getByRole('tab', { name: 'Abbr' })).toBeTruthy();
     expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+  });
+
+  it('edits the bibliography in a stack under the flag', async () => {
+    mockFlag.enabled = true;
+    mockFlag.ready = true;
+    withAbbreviations(0);
+    withBibliography();
+    render(<EditorBackMatterPage />);
+
+    expect(await screen.findByRole('tab', { name: 'Biblio' })).toBeTruthy();
+    expect(screen.getByTestId('stack-bibliography')).toBeTruthy();
+    expect(screen.queryByTestId('bibliography-list')).toBeNull();
+  });
+
+  it('lists the bibliography read-only without the flag', async () => {
+    mockFlag.ready = true;
+    withAbbreviations(0);
+    withBibliography();
+    render(<EditorBackMatterPage />);
+
+    expect(await screen.findByRole('tab', { name: 'Biblio' })).toBeTruthy();
+    expect(screen.getByTestId('bibliography-list')).toBeTruthy();
+    expect(screen.queryByTestId('stack-bibliography')).toBeNull();
   });
 });

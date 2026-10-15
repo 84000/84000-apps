@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { PassageStack } from './PassageStack';
 import { useStackWork } from './StackWorkProvider';
@@ -15,16 +16,19 @@ import { useStackOuterContent } from './useStackOuterContent';
 export const StackTab = ({
   tab,
   className,
+  fallback,
 }: {
   tab: string;
   className?: string;
+  /** Drawn when the work is ready but has no view for this tab. */
+  fallback?: ReactNode;
 }) => {
   const stack = useStackWork();
   const controller = stack?.controllerFor(tab);
   useStackOuterContent(tab === 'front' ? controller : null);
 
   if (!controller) {
-    return <TranslationSkeleton />;
+    return stack && fallback ? fallback : <TranslationSkeleton />;
   }
 
   return <PassageStack controller={controller} className={className} />;

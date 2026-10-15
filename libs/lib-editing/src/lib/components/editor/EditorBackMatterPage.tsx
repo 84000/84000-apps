@@ -10,6 +10,7 @@ import {
 } from '@eightyfourthousand/client-graphql';
 import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
+import { BibliographyList } from '../shared/bibliography';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
 import { usePerPassageDocs } from './usePerPassageDocs';
@@ -158,6 +159,18 @@ export const EditorBackMatterPage = () => {
     [perPassageDocs.enabled, perPassageDocs.ready],
   );
 
+  // Read-only when the stack could not read the rows.
+  const renderBibliography = useCallback(
+    () => (
+      <StackTab
+        tab="bibliography"
+        className="block"
+        fallback={<BibliographyList content={bibliography ?? []} />}
+      />
+    ),
+    [bibliography],
+  );
+
   const tabsKnown = stacked ? !!hasTabs : !!endnotes && !!abbreviations;
   if (!glossary || !bibliography || !tabsKnown) {
     return <TranslationSkeleton />;
@@ -175,6 +188,7 @@ export const EditorBackMatterPage = () => {
       hasEndnotes={stacked ? hasTabs?.endnotes : undefined}
       hasAbbreviations={stacked ? hasTabs?.abbreviations : undefined}
       renderTranslation={renderTranslation}
+      renderBibliography={stacked ? renderBibliography : undefined}
       withAttestations={withAttestations}
       isEditor={true}
     />
