@@ -482,10 +482,13 @@ come from `outlineBibliography`, as the readers number them.
 
 Its controller is built with `rows: 'bibliography'`. Rows are edited in place:
 split, merge, delete, passage paste and the label menu are off, the editor
-mounts the bibliography schema rather than the passage set, a heading is a
-single line of plain text, and the bubble menu offers inline marks only.
+mounts the bibliography schema rather than the passage set, a heading's
+editor is a single line of plain text (its schema has no marks, and a paste
+flattens to text), and the bubble menu offers inline marks only.
 `rowStyle` draws headings as the readers do and indents nested rows by depth.
 
-The one registered save writes both works and reports one outcome. A
+Undo and redo from outside an editor take the history of the work whose row
+was last focused or clicked. The one registered save writes both works and
+reports one outcome. A
 bibliography save writes only edited rows, with their placement as read.
 When the rows cannot be read, the tab falls back to the read-only list.

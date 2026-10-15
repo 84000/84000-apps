@@ -1,4 +1,6 @@
-import { Node, type Extensions } from '@tiptap/core';
+import { Extension, Node, type Extensions } from '@tiptap/core';
+import { Fragment, Slice } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
 import { Collaboration } from '@tiptap/extension-collaboration';
 import type { StackRowKind } from '@eightyfourthousand/lib-doc-model';
 import type { UndoManager, XmlFragment } from 'yjs';
@@ -56,10 +58,42 @@ export const buildBibliographySchemaExtensions = (): Extensions => [
   Underline.extend({ priority: FORMATTING_PRIORITY }),
 ];
 
+/** Pastes into a heading as one line of plain text. */
+const PlainTextPaste = Extension.create({
+  name: 'plainTextPaste',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          transformPasted: (slice, view) => {
+            const text = slice.content
+              .textBetween(0, slice.content.size, ' ', ' ')
+              .replace(/\s+/g, ' ');
+            return text
+              ? new Slice(Fragment.from(view.state.schema.text(text)), 0, 0)
+              : Slice.empty;
+          },
+        },
+      }),
+    ];
+  },
+});
+
 /**
- * A live bibliography row's editor: the schema set, bound to the row's
- * document. Rows are edited in place, never split or merged, and a heading
- * is a single line.
+ * A heading's editor schema: plain text, which is all a heading stores, so
+ * nothing can be typed or pasted that the save would drop.
+ */
+const buildHeadingExtensions = (): Extensions => [
+  StackDocument,
+  Paragraph,
+  Text,
+  PlainTextPaste,
+];
+
+/**
+ * A live bibliography row's editor, bound to the row's document. Rows are
+ * edited in place, never split or merged, and a heading is a single line of
+ * plain text.
  */
 export const buildBibliographyEditorExtensions = ({
   uuid,
@@ -74,7 +108,9 @@ export const buildBibliographyEditorExtensions = ({
   undoManager: UndoManager;
   delegate: StackKeyboardDelegate;
 }): Extensions => [
-  ...buildBibliographySchemaExtensions(),
+  ...(kind === 'heading'
+    ? buildHeadingExtensions()
+    : buildBibliographySchemaExtensions()),
   Collaboration.configure({ fragment, yUndoOptions: { undoManager } }),
   BoundaryKeymap.configure({
     uuid,

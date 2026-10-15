@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -154,9 +155,31 @@ export const StackWorkProvider = ({
 
   const { panels, updatePanel } = useNavigation();
 
+  // The work last worked in, whose history the page's undo and redo take.
+  const activeWork = useRef<WorkDocument | null>(null);
+  useEffect(() => {
+    activeWork.current = null;
+    if (!stack) return;
+    const onEnter = (event: Event) => {
+      const uuid = (event.target as HTMLElement | null)
+        ?.closest?.('[data-stack-passage]')
+        ?.getAttribute('data-stack-passage');
+      if (!uuid) return;
+      activeWork.current =
+        [stack.work, stack.bibliography?.work].find((each) =>
+          each?.spine.meta(uuid),
+        ) ?? activeWork.current;
+    };
+    document.addEventListener('focusin', onEnter);
+    document.addEventListener('pointerdown', onEnter);
+    return () => {
+      document.removeEventListener('focusin', onEnter);
+      document.removeEventListener('pointerdown', onEnter);
+    };
+  }, [stack]);
+
   // Undo and redo with focus outside any editor, such as after a label-menu
-  // action. The editors bind their own; this covers the rest of the page, once
-  // per work, since every view shares the one history.
+  // action. The editors bind their own; this covers the rest of the page.
   useEffect(() => {
     if (!stack) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -173,7 +196,7 @@ export const StackWorkProvider = ({
         return;
       }
       const redo = key === 'y' || event.shiftKey;
-      const { work } = stack;
+      const work = activeWork.current ?? stack.work;
       const focus = work.log.suppress(() => (redo ? work.redo() : work.undo()));
       if (focus === null) return;
       event.preventDefault();

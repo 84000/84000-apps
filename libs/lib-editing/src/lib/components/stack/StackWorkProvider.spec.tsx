@@ -374,5 +374,34 @@ describe('StackWorkProvider', () => {
       expect(await handler.save()).toBe('failed');
       expect(bibliographyWork.saveBibliographyWork).toHaveBeenCalledTimes(2);
     });
+
+    it('undoes from the page in the work last worked in', async () => {
+      const read = bibliography();
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(read);
+      const { stack } = await seeded();
+      const rowUndo = jest.spyOn(read.work, 'undo');
+      const passageUndo = jest.spyOn(stack.work, 'undo');
+      const row = document.createElement('div');
+      row.setAttribute('data-stack-passage', 'e1');
+      document.body.append(row);
+      const pressUndo = () =>
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'z',
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+
+      pressUndo();
+      expect(passageUndo).toHaveBeenCalledTimes(1);
+
+      row.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      pressUndo();
+      expect(rowUndo).toHaveBeenCalledTimes(1);
+      expect(passageUndo).toHaveBeenCalledTimes(1);
+      row.remove();
+    });
   });
 });
