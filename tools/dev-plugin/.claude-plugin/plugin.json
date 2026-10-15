@@ -1,0 +1,11 @@
+{
+  "name": "84000-dev",
+  "version": "0.1.0",
+  "description": "Unpublished developer tools for working on the 84000-apps monorepo. Install locally with tools/dev-plugin/install.sh.",
+  "author": {
+    "name": "84000",
+    "url": "https://84000.co"
+  },
+  "repository": "https://github.com/84000/84000-apps",
+  "license": "ISC"
+}
