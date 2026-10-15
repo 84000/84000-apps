@@ -90,3 +90,55 @@ export const bibliographyEntriesFromDTO = (
 export const bibliographyFromDTO = (dto?: BibliographyDTO): Bibliography => {
   return dto?.map(bibliographyItemFromDTO) || [];
 };
+
+/**
+ * One row of `bibliographies` as the editor reads and writes it: flat, in
+ * `sort` order, with the nesting the readers' two-level shape hides.
+ */
+export type BibliographyRowDTO = {
+  uuid: string;
+  work_uuid: string;
+  bibl_html: string;
+  sort: number;
+  is_heading: boolean;
+  heading_uuid: string | null;
+};
+
+/**
+ * A bibliography heading or entry.
+ *
+ * `html` is the stored `bibl_html`. An entry's is an HTML fragment; a
+ * heading's is plain text, which is how the readers render it and how publish
+ * reads a heading's text. `headingUuid` is the heading the row sits under: a
+ * heading for an entry or a nested heading, `null` at the top level.
+ */
+export type BibliographyRow = {
+  uuid: string;
+  workUuid: string;
+  html: string;
+  sort: number;
+  isHeading: boolean;
+  headingUuid: string | null;
+};
+
+export const bibliographyRowFromDTO = (
+  dto: BibliographyRowDTO,
+): BibliographyRow => ({
+  uuid: dto.uuid,
+  workUuid: dto.work_uuid,
+  html: dto.bibl_html,
+  sort: dto.sort,
+  isHeading: dto.is_heading,
+  headingUuid: dto.heading_uuid ?? null,
+});
+
+export const bibliographyRowToDTO = (
+  row: BibliographyRow,
+): BibliographyRowDTO => ({
+  uuid: row.uuid,
+  work_uuid: row.workUuid,
+  bibl_html: row.html,
+  sort: row.sort,
+  is_heading: row.isHeading,
+  heading_uuid: row.headingUuid,
+});

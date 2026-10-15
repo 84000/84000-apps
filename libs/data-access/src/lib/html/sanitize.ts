@@ -27,6 +27,59 @@ export const COMMENT_ALLOWLIST: HtmlAllowlist = {
   attributes: {},
 };
 
+/** Attributes the editor's inline marks carry. */
+const MARK_ATTRIBUTES = ['data-type', 'data-text-style', 'data-lang', 'uuid'];
+
+/** Attributes the editor's internal links and mentions carry. */
+const ENTITY_LINK_ATTRIBUTES = [
+  'entity',
+  'entity-type',
+  'data-toh',
+  'data-same-work',
+  'data-subtype',
+  'data-link-toh',
+];
+
+/**
+ * What a bibliography entry may hold: the editor's inline set.
+ *
+ * Paragraphs and line breaks, emphasis, underline, sub/superscript, small
+ * caps, foreign text, links, internal links and mentions, glossary instances
+ * and comment marks, each with the attributes the editor writes for it.
+ */
+export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
+  tags: ['p', 'br', 'strong', 'em', 'u', 'sub', 'sup', 'sm', 'span', 'a'],
+  attributes: {
+    strong: MARK_ATTRIBUTES,
+    em: MARK_ATTRIBUTES,
+    u: MARK_ATTRIBUTES,
+    sub: MARK_ATTRIBUTES,
+    sup: MARK_ATTRIBUTES,
+    sm: ['class', ...MARK_ATTRIBUTES],
+    span: [
+      'class',
+      'type',
+      'uuid',
+      'lang',
+      'textstyle',
+      'data-text-style',
+      'comment',
+      'authority',
+      'glossary',
+      ...ENTITY_LINK_ATTRIBUTES,
+    ],
+    a: [
+      'href',
+      'target',
+      'rel',
+      'class',
+      'type',
+      'uuid',
+      ...ENTITY_LINK_ATTRIBUTES,
+    ],
+  },
+};
+
 /**
  * Reduces an HTML fragment to what its field allows.
  *
@@ -38,22 +91,44 @@ export const COMMENT_ALLOWLIST: HtmlAllowlist = {
  * Disallowed elements are unwrapped rather than deleted, so removing markup
  * never silently removes what someone wrote. `script` and `style` are the
  * exception — their content is not prose.
+ *
+ * The result is trimmed unless `trim` is false, for a field whose stored
+ * whitespace must survive an edit.
  */
 export const sanitizeHtml = ({
   html,
   allowlist,
+  trim = true,
 }: {
   html: string;
   allowlist: HtmlAllowlist;
-}): string =>
-  sanitize(html, {
+  trim?: boolean;
+}): string => {
+  const clean = sanitize(html, {
     allowedTags: allowlist.tags,
     allowedAttributes: allowlist.attributes,
     // The default drops these entirely, which is what we want: their content
     // is code, not text a person meant to write.
     nonTextTags: ['script', 'style', 'textarea', 'option', 'noscript'],
     disallowedTagsMode: 'discard',
-  }).trim();
+  });
+  return trim ? clean.trim() : clean;
+};
+
+/**
+ * The text of an HTML fragment, unescaped: for a field that holds plain text
+ * and is rendered as text, not markup.
+ */
+export const htmlToPlainText = (html: string): string =>
+  sanitize(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+    nonTextTags: ['script', 'style', 'textarea', 'option', 'noscript'],
+  })
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&');
 
 /**
  * Whether a fragment says anything, once the markup is taken away.
