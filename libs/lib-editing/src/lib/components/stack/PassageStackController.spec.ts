@@ -521,6 +521,18 @@ describe('PassageStackController bibliography rows', () => {
     expect(names).not.toContain('endNoteLink');
   });
 
+  it('mounts heading editors over plain text only', async () => {
+    const { controller } = await bibliography();
+    const names = controller
+      .buildEditorExtensions('h2')
+      .map((extension) => extension.name);
+
+    expect(names).toEqual(expect.arrayContaining(['paragraph', 'text']));
+    expect(names).not.toContain('bold');
+    expect(names).not.toContain('mention');
+    expect(names).not.toContain('link');
+  });
+
   it('styles a heading, and indents rows by their nesting', async () => {
     const { controller } = await bibliography();
     const style = (uuid: string) => {
