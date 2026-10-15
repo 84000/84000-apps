@@ -44,8 +44,10 @@ const ENTITY_LINK_ATTRIBUTES = [
  * What a bibliography entry may hold: the editor's inline set.
  *
  * Paragraphs and line breaks, emphasis, underline, sub/superscript, small
- * caps, foreign text, links, internal links and mentions, glossary instances
- * and comment marks, each with the attributes the editor writes for it.
+ * caps, foreign text, links, internal links, mentions, glossary instances
+ * and comment marks, each with the attributes the editor writes for it. A
+ * mention carries its whole annotation in `data-items`, which its parse rule
+ * reads back.
  */
 export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
   tags: ['p', 'br', 'strong', 'em', 'u', 'sub', 'sup', 'sm', 'span', 'a'],
@@ -59,6 +61,7 @@ export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
     span: [
       'class',
       'type',
+      'data-type',
       'uuid',
       'lang',
       'textstyle',
@@ -66,6 +69,8 @@ export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
       'comment',
       'authority',
       'glossary',
+      'data-items',
+      'data-style',
       ...ENTITY_LINK_ATTRIBUTES,
     ],
     a: [
@@ -75,6 +80,10 @@ export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
       'class',
       'type',
       'uuid',
+      'lang',
+      'data-style',
+      'data-highlight-start',
+      'data-highlight-end',
       ...ENTITY_LINK_ATTRIBUTES,
     ],
   },
@@ -114,21 +123,6 @@ export const sanitizeHtml = ({
   });
   return trim ? clean.trim() : clean;
 };
-
-/**
- * The text of an HTML fragment, unescaped: for a field that holds plain text
- * and is rendered as text, not markup.
- */
-export const htmlToPlainText = (html: string): string =>
-  sanitize(html, {
-    allowedTags: [],
-    allowedAttributes: {},
-    nonTextTags: ['script', 'style', 'textarea', 'option', 'noscript'],
-  })
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&');
 
 /**
  * Whether a fragment says anything, once the markup is taken away.

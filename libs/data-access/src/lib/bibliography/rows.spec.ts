@@ -183,10 +183,11 @@ describe('storedBibliographyHtml', () => {
     ).toBe('<p>One</p>');
   });
 
-  it('reduces a heading to unescaped text', () => {
-    expect(
-      storedBibliographyHtml(row('Texts &amp; <em>Studies</em>', true)),
-    ).toBe('Texts & Studies');
+  it('stores a heading as given, however often it is saved', () => {
+    const text = 'Texts &lt;revised&gt; & <Studies>';
+    const once = storedBibliographyHtml(row(text, true));
+    expect(once).toBe(text);
+    expect(storedBibliographyHtml(row(once ?? '', true))).toBe(text);
   });
 
   it('is null when nothing is left', () => {

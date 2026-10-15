@@ -2,7 +2,6 @@ import {
   BIBLIOGRAPHY_ALLOWLIST,
   COMMENT_ALLOWLIST,
   htmlHasText,
-  htmlToPlainText,
   sanitizeHtml,
   type HtmlAllowlist,
 } from './sanitize';
@@ -115,6 +114,12 @@ describe('BIBLIOGRAPHY_ALLOWLIST', () => {
       'a comment mark',
       '<p><span class="comment-mark" type="comment" comment="c1" uuid="cm1">noted</span></p>',
     ],
+    [
+      'a mention',
+      '<p><span data-type="mention" data-items="[{&quot;entity&quot;:&quot;e1&quot;}]" class="mention-container" data-toh="toh1">' +
+        '<a class="mention-link" data-toh="toh1" lang="bo" data-style="quote" type="mention" uuid="m1" entity="e1" entity-type="passage" href="#" data-same-work="true" data-subtype="x" data-link-toh="toh1" data-highlight-start="0" data-highlight-end="4">1.2</a>' +
+        '<span class="mention-link" data-style="quote">plain</span></span></p>',
+    ],
     ['a line break', '<p>One<br />Two</p>'],
   ])('keeps %s', (_name, html) => {
     expect(bibliography(html)).toBe(html);
@@ -139,17 +144,5 @@ describe('BIBLIOGRAPHY_ALLOWLIST', () => {
     expect(bibliography('<p><font>old</font> <mark>new</mark></p>')).toBe(
       '<p>old new</p>',
     );
-  });
-});
-
-describe('htmlToPlainText', () => {
-  it('keeps the text, unescaped', () => {
-    expect(htmlToPlainText('Texts &amp; <em>Studies</em> &lt;1&gt;')).toBe(
-      'Texts & Studies <1>',
-    );
-  });
-
-  it('drops what is not text', () => {
-    expect(htmlToPlainText('A<script>bad()</script> B')).toBe('A B');
   });
 });

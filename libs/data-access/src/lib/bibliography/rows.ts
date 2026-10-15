@@ -4,12 +4,7 @@ import {
   type BibliographyRowDTO,
   type DataClient,
 } from '../types';
-import {
-  BIBLIOGRAPHY_ALLOWLIST,
-  htmlHasText,
-  htmlToPlainText,
-  sanitizeHtml,
-} from '../html';
+import { BIBLIOGRAPHY_ALLOWLIST, htmlHasText, sanitizeHtml } from '../html';
 import { rolledBack } from '../passage/save/commit';
 
 /** Rows per request when reading a work's bibliography. */
@@ -74,14 +69,12 @@ const failure = (
 
 /**
  * A row's `html` as it is stored. An entry keeps the markup the bibliography
- * allows and its whitespace; a heading keeps only its text, which the readers
- * render as text. `null` when nothing is left.
+ * allows and its whitespace. A heading is plain text, rendered as text, so it
+ * is stored as given: parsing it as HTML would change it on every save.
+ * `null` when nothing is left.
  */
 export const storedBibliographyHtml = (row: BibliographyRow): string | null => {
-  if (row.isHeading) {
-    const text = htmlToPlainText(row.html);
-    return text.trim() ? text : null;
-  }
+  if (row.isHeading) return row.html.trim() ? row.html : null;
   const html = sanitizeHtml({
     html: row.html,
     allowlist: BIBLIOGRAPHY_ALLOWLIST,
