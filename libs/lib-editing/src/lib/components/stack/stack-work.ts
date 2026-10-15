@@ -73,7 +73,7 @@ export const createStackWork = ({
   client: GraphQLClient;
   /** `localPassageSource(storage)` from `lib-persistence`, when available. */
   local?: PassageSource;
-  /** Where rows that are not passages are read from, e.g. `htmlRowSource`. */
+  /** Where rows that are not passages are read from, e.g. `bibliographyRowSource`. */
   source?: PassageSource;
   /** Their schema, e.g. `buildBibliographySchemaExtensions()`. */
   extensions?: Extensions;
