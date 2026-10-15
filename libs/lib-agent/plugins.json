@@ -42,7 +42,8 @@
       },
       "skills": [
         "libs/lib-agent/skills/docx-import",
-        "libs/lib-agent/skills/resolve-folio-mentions"
+        "libs/lib-agent/skills/resolve-folio-mentions",
+        "libs/lib-agent/skills/folio-reference-audit"
       ],
       "agents": [],
       "renames": {},
