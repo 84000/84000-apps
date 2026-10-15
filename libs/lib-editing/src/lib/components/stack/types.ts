@@ -87,6 +87,32 @@ export type PassageExtras = {
   alignments?: Record<string, { tibetan?: string }>;
 };
 
+/**
+ * Grows the spine as the reader approaches an end of it.
+ *
+ * What the controller asks of a feed, whatever entity its rows come from.
+ */
+export type StackRowFeed = {
+  hasMore: boolean;
+  maybeExtend: (visibleEnd: number) => boolean;
+  /** The page `maybeExtend` started, shared rather than fetched again. */
+  extend?: () => Promise<number>;
+  /** Characters of text in a passage, for estimating an unhydrated row. */
+  contentLength?: (uuid: string) => number | undefined;
+  /** Only a feed that can read backward supplies these. */
+  hasMoreBefore?: boolean;
+  maybeExtendBefore?: (visibleStart: number) => boolean;
+  /** The page `maybeExtendBefore` started, shared rather than fetched again. */
+  extendBefore?: () => Promise<number>;
+  reveal?: (uuid: string) => Promise<number>;
+  revealStart?: () => Promise<void>;
+  /** Content past an end of the run, without moving it; null on failure. */
+  readBeyond?: (
+    direction: 'before' | 'after',
+    cursor: string,
+  ) => Promise<BeyondPage | null>;
+};
+
 export type PassageStackControllerOptions = {
   work: WorkDocument;
   /** Character counts by passage uuid, for estimating unhydrated row heights. */
@@ -97,26 +123,7 @@ export type PassageStackControllerOptions = {
    * Optional: a caller holding a complete spine already — the scale harness,
    * and tests — passes none, and the stack simply never asks for more.
    */
-  spineFeed?: {
-    hasMore: boolean;
-    maybeExtend: (visibleEnd: number) => boolean;
-    /** The page `maybeExtend` started, shared rather than fetched again. */
-    extend?: () => Promise<number>;
-    /** Characters of text in a passage, for estimating an unhydrated row. */
-    contentLength?: (uuid: string) => number | undefined;
-    /** Only a feed that can read backward supplies these. */
-    hasMoreBefore?: boolean;
-    maybeExtendBefore?: (visibleStart: number) => boolean;
-    /** The page `maybeExtendBefore` started, shared rather than fetched again. */
-    extendBefore?: () => Promise<number>;
-    reveal?: (uuid: string) => Promise<number>;
-    revealStart?: () => Promise<void>;
-    /** Content past an end of the run, without moving it; null on failure. */
-    readBeyond?: (
-      direction: 'before' | 'after',
-      cursor: string,
-    ) => Promise<BeyondPage | null>;
-  };
+  spineFeed?: StackRowFeed;
   /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
   readOnly?: boolean;
   /**

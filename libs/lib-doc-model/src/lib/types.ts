@@ -27,6 +27,28 @@ export type PassagePlacement = {
   tab: string;
 };
 
+/** The row types of a bibliography: a section heading, and an entry. */
+export const BIBLIOGRAPHY_ROW_TYPES = [
+  'bibliographyHeader',
+  'bibliography',
+] as const;
+
+export type BibliographyRowType = (typeof BIBLIOGRAPHY_ROW_TYPES)[number];
+
+/**
+ * What a spine row is: a passage's body item type, or another entity's row
+ * type. The `*Header` convention holds for both, so placement and kind are
+ * derived the same way.
+ */
+export type StackRowType = BodyItemType | BibliographyRowType;
+
+/** Whether a row heads a section or sits under one. */
+export type StackRowKind = 'heading' | 'entry';
+
+/** A row's kind, from its type. */
+export const rowKindOf = (type: StackRowType): StackRowKind =>
+  type.endsWith('Header') ? 'heading' : 'entry';
+
 /**
  * Everything about a passage that is *not* its content.
  *
@@ -37,7 +59,7 @@ export type PassagePlacement = {
 export type PassageMeta = {
   uuid: string;
   label: string;
-  type: BodyItemType;
+  type: StackRowType;
   toh?: TohokuCatalogEntry;
   /**
    * The row's stored `sort`. Sparse, and only meaningful across the whole
@@ -45,6 +67,10 @@ export type PassageMeta = {
    * Absent for a passage created locally and not yet saved.
    */
   sort?: number;
+  /** The row this one nests under, such as an entry's heading. */
+  parent?: string;
+  /** Nesting depth below the top level. Absent means zero. */
+  depth?: number;
 } & PassagePlacement;
 
 /** A passage's position and identity, as read back from the spine. */

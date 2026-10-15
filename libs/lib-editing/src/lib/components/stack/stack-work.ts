@@ -1,4 +1,4 @@
-import { getSchema } from '@tiptap/core';
+import { getSchema, type Extensions } from '@tiptap/core';
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import type { GraphQLClient } from 'graphql-request';
 import type { Doc } from 'yjs';
@@ -18,6 +18,8 @@ export type StackWorkOptions = {
   loader?: PassageLoader;
   /** An existing spine document, e.g. one restored from local storage. */
   spineDoc?: Doc;
+  /** The schema rows are parsed with. Defaults to the passage schema. */
+  extensions?: Extensions;
 };
 
 /**
@@ -39,7 +41,7 @@ export type StackWorkOptions = {
 export const createStackWorkDocument = (options: StackWorkOptions) =>
   new WorkDocument({
     workUuid: options.workUuid,
-    schema: getSchema(buildStackSchemaExtensions()),
+    schema: getSchema(options.extensions ?? buildStackSchemaExtensions()),
     loader: options.loader,
     spineDoc: options.spineDoc,
     textOrigins: new Set([ySyncPluginKey]),
@@ -60,6 +62,8 @@ export const createStackWork = ({
   workUuid,
   client,
   local,
+  source,
+  extensions,
   cache,
   buffer,
   spineDoc,
@@ -69,6 +73,10 @@ export const createStackWork = ({
   client: GraphQLClient;
   /** `localPassageSource(storage)` from `lib-persistence`, when available. */
   local?: PassageSource;
+  /** Where rows that are not passages are read from, e.g. `htmlRowSource`. */
+  source?: PassageSource;
+  /** Their schema, e.g. `buildBibliographySchemaExtensions()`. */
+  extensions?: Extensions;
   /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
   cache?: (workUuid: string, snapshots: PassageSnapshot[]) => Promise<void>;
   /** Passages either side of the visible range to hydrate. */
@@ -86,11 +94,17 @@ export const createStackWork = ({
     workUuid,
     spine: () => built.work?.spine,
     local,
+    source,
     cache,
     buffer,
     extras,
   });
 
-  built.work = createStackWorkDocument({ workUuid, loader, spineDoc });
+  built.work = createStackWorkDocument({
+    workUuid,
+    loader,
+    spineDoc,
+    extensions,
+  });
   return built.work;
 };

@@ -9,6 +9,7 @@ import type {
   SpineSeed,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
+import type { StackRowFeed } from './types';
 
 /** How many passages to put in the spine before the reader asks for more. */
 const FIRST_PAGE = 100;
@@ -21,13 +22,45 @@ const NEXT_PAGE = 100;
  */
 const EXTEND_THRESHOLD = 40;
 
-type Meta = {
+/** A row's metadata as a page reports it. */
+export type RowMeta = {
   uuid: string;
   label: string;
   type: string;
   sort?: number;
   toh?: string;
+  parent?: string;
+  depth?: number;
   contentLength?: number;
+};
+
+type Meta = RowMeta;
+
+/** A page of row metadata, read in the entity's order. */
+export type RowMetaPage = {
+  metas: RowMeta[];
+  nextCursor?: string;
+  prevCursor?: string;
+  hasMoreAfter: boolean;
+  hasMoreBefore: boolean;
+};
+
+/**
+ * Where a feed reads its pages from. Cursors are row uuids: forward reads
+ * start after one, backward before it, and `AROUND` centres on it.
+ */
+export type RowPages = {
+  metas(args: {
+    cursor?: string;
+    limit: number;
+    direction?: 'BACKWARD' | 'AROUND';
+  }): Promise<RowMetaPage>;
+  /** Row content past `cursor`, without metadata. Null when the read failed. */
+  content(args: {
+    cursor: string;
+    limit: number;
+    direction: 'before' | 'after';
+  }): Promise<BeyondPage | null>;
 };
 
 /** A page of passage content read past one end of a run. */
@@ -47,7 +80,7 @@ export type SpineSection = {
 };
 
 /**
- * Grows a work's spine a page at a time.
+ * Grows a work's spine a page at a time, from any entity's rows.
  *
  * The spine is *not* the whole work. Seeding it completely means one request
  * per hundred passages, and production's two largest works are 15,904 and
@@ -70,7 +103,7 @@ export type SpineSection = {
  * across sessions, so the pages are fetched once per work rather than once per
  * visit. That does not exist yet, which is why this stays deliberately simple.
  */
-export class SpineFeed {
+export class RowFeed implements StackRowFeed {
   /** Read backward from here. Undefined once the spine holds the first passage. */
   private startCursor?: string;
   /** Read forward from here. */
@@ -90,15 +123,15 @@ export class SpineFeed {
 
   constructor(
     private readonly work: WorkDocument,
-    private readonly client: GraphQLClient,
+    private readonly pages: RowPages,
     /**
-     * The section this feed reads, when a work is loaded a tab at a time.
+     * The tab whose run this feed fills, when a work is loaded a tab at a time.
      *
      * Omitted, it reads the whole work into one run — what the sandbox does.
      * Supplied, its pages join that tab's run and leave the other runs alone,
      * so the panels can load independently of each other.
      */
-    private readonly section?: SpineSection,
+    private readonly tab?: string,
   ) {}
 
   /** Characters of text in a passage, when a page has reported it. */
@@ -140,7 +173,7 @@ export class SpineFeed {
 
   /** How many passages this feed's section holds. */
   private runLength(): number {
-    const tab = this.section?.tab;
+    const tab = this.tab;
     return tab ? this.work.spine.tab(tab).length : this.work.spine.length;
   }
 
@@ -212,13 +245,10 @@ export class SpineFeed {
     const loaded = this.work.spine.indexOf(uuid);
     if (loaded >= 0) return loaded;
 
-    const page = await getPassageMetaPage({
-      client: this.client,
-      uuid: this.work.workUuid,
+    const page = await this.pages.metas({
       cursor: uuid,
       limit: FIRST_PAGE,
       direction: 'AROUND',
-      type: this.section?.type,
     });
     // The server centres a filtered page on the cursor's *position*, so a
     // passage from another section still comes back with a page of this one
@@ -262,7 +292,7 @@ export class SpineFeed {
   }
 
   private runEntries() {
-    const tab = this.section?.tab;
+    const tab = this.tab;
     return tab ? this.work.spine.tab(tab) : this.work.spine.entries();
   }
 
@@ -294,28 +324,11 @@ export class SpineFeed {
    * window — for a caller that needs what lies outside it, such as the link
    * an endnote follows. Null when the read failed.
    */
-  async readBeyond(
+  readBeyond(
     direction: 'before' | 'after',
     cursor: string,
   ): Promise<BeyondPage | null> {
-    const page = await getTranslationBlocks({
-      client: this.client,
-      uuid: this.work.workUuid,
-      type: this.section?.type,
-      cursor,
-      maxPassages: NEXT_PAGE,
-      direction: direction === 'before' ? 'backward' : 'forward',
-    });
-    if (page.failed) return null;
-    const blocks = Array.isArray(page.blocks) ? page.blocks : [];
-    const passages = blocks.flatMap((block) => {
-      const uuid = block.attrs?.uuid;
-      return uuid ? [{ uuid, content: block.content ?? [] }] : [];
-    });
-    const more =
-      direction === 'before' ? page.hasMoreBefore : page.hasMoreAfter;
-    const next = direction === 'before' ? page.prevCursor : page.nextCursor;
-    return { passages, ...(more && next ? { next } : {}) };
+    return this.pages.content({ cursor, limit: NEXT_PAGE, direction });
   }
 
   /**
@@ -331,12 +344,7 @@ export class SpineFeed {
       while (!this.noneBefore) await this.extendBefore();
       return;
     }
-    const page = await getPassageMetaPage({
-      client: this.client,
-      uuid: this.work.workUuid,
-      limit: FIRST_PAGE,
-      type: this.section?.type,
-    });
+    const page = await this.pages.metas({ limit: FIRST_PAGE });
     if (!page.metas.length) return;
 
     this.record(page.metas);
@@ -361,7 +369,7 @@ export class SpineFeed {
   private replaceRun(page: Meta[]) {
     const spine = this.work.spine;
     const metas = withoutDeleted(spine, page);
-    const tab = this.section?.tab;
+    const tab = this.tab;
     if (!tab) {
       spine.seed(metas as SpineSeed[]);
       return;
@@ -380,13 +388,7 @@ export class SpineFeed {
   }
 
   private async fetchAfter(limit: number): Promise<number> {
-    const page = await getPassageMetaPage({
-      client: this.client,
-      uuid: this.work.workUuid,
-      cursor: this.endCursor,
-      limit,
-      type: this.section?.type,
-    });
+    const page = await this.pages.metas({ cursor: this.endCursor, limit });
 
     if (!page.metas.length) {
       // Either the work ended or the read failed. Both mean stop: appending
@@ -397,7 +399,7 @@ export class SpineFeed {
     }
 
     this.record(page.metas);
-    appendToSpine(this.work.spine, page.metas, this.section?.tab);
+    appendToSpine(this.work.spine, page.metas, this.tab);
     this.endCursor = page.nextCursor;
     if (!page.hasMoreAfter || !page.nextCursor) this.noneAfter = true;
 
@@ -405,13 +407,10 @@ export class SpineFeed {
   }
 
   private async fetchBefore(limit: number): Promise<number> {
-    const page = await getPassageMetaPage({
-      client: this.client,
-      uuid: this.work.workUuid,
+    const page = await this.pages.metas({
       cursor: this.startCursor,
       limit,
       direction: 'BACKWARD',
-      type: this.section?.type,
     });
 
     if (!page.metas.length) {
@@ -426,9 +425,62 @@ export class SpineFeed {
     // Synchronously after the prepend: the stack drops its placeholders in
     // the render the prepend causes, and re-anchors against that layout.
     if (!page.hasMoreBefore || !page.prevCursor) this.noneBefore = true;
-    prependToSpine(this.work.spine, page.metas, this.section?.tab);
+    prependToSpine(this.work.spine, page.metas, this.tab);
 
     return this.work.spine.length;
+  }
+}
+
+/** A work's passages as pages, optionally one section of them. */
+export const graphqlPassagePages = (
+  client: GraphQLClient,
+  workUuid: string,
+  type?: string,
+): RowPages => ({
+  metas: ({ cursor, limit, direction }) =>
+    getPassageMetaPage({
+      client,
+      uuid: workUuid,
+      cursor,
+      limit,
+      direction,
+      type,
+    }),
+  async content({ cursor, limit, direction }) {
+    const page = await getTranslationBlocks({
+      client,
+      uuid: workUuid,
+      type,
+      cursor,
+      maxPassages: limit,
+      direction: direction === 'before' ? 'backward' : 'forward',
+    });
+    if (page.failed) return null;
+    const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+    const passages = blocks.flatMap((block) => {
+      const uuid = block.attrs?.uuid;
+      return uuid ? [{ uuid, content: block.content ?? [] }] : [];
+    });
+    const more =
+      direction === 'before' ? page.hasMoreBefore : page.hasMoreAfter;
+    const next = direction === 'before' ? page.prevCursor : page.nextCursor;
+    return { passages, ...(more && next ? { next } : {}) };
+  },
+});
+
+/** A feed over a work's passages through the API. */
+export class SpineFeed extends RowFeed {
+  constructor(
+    work: WorkDocument,
+    client: GraphQLClient,
+    /** The section this feed reads; omitted, the whole work. */
+    section?: SpineSection,
+  ) {
+    super(
+      work,
+      graphqlPassagePages(client, work.workUuid, section?.type),
+      section?.tab,
+    );
   }
 }
 

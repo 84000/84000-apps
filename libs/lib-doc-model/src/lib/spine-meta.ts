@@ -1,6 +1,9 @@
 import { Map as YMap } from 'yjs';
-import { panelAndTabForContentType } from '@eightyfourthousand/data-access';
-import type { PassageMeta } from './types';
+import {
+  panelAndTabForContentType,
+  type PanelContentType,
+} from '@eightyfourthousand/data-access';
+import type { PassageMeta, StackRowType } from './types';
 
 /**
  * Whether a mutation should renumber the labels it disturbs.
@@ -27,6 +30,13 @@ export type MutateOptions = {
  */
 export type SpineSeed = Omit<PassageMeta, 'panel' | 'tab'>;
 
+/**
+ * Where a row type is surfaced. A bibliography type is not a body item, but
+ * folds to the `bibliography` section by the same `*Header` rule.
+ */
+export const placementFor = (type: StackRowType) =>
+  panelAndTabForContentType(type as PanelContentType);
+
 /** Yjs key for the ordered passage uuids. */
 export const ORDER_KEY = 'order';
 /** Yjs key for the uuid → metadata map. */
@@ -34,7 +44,7 @@ export const METAS_KEY = 'metas';
 
 /** A passage's metadata as the spine stores it. */
 export const metaMap = (passage: SpineSeed): YMap<unknown> => {
-  const { panel, tab } = panelAndTabForContentType(passage.type);
+  const { panel, tab } = placementFor(passage.type);
   const entry = new YMap<unknown>();
   entry.set('label', passage.label);
   entry.set('type', passage.type);
@@ -42,5 +52,7 @@ export const metaMap = (passage: SpineSeed): YMap<unknown> => {
   entry.set('tab', tab);
   if (passage.toh) entry.set('toh', passage.toh);
   if (passage.sort !== undefined) entry.set('sort', passage.sort);
+  if (passage.parent) entry.set('parent', passage.parent);
+  if (passage.depth) entry.set('depth', passage.depth);
   return entry;
 };
