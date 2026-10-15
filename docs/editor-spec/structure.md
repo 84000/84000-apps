@@ -26,7 +26,9 @@ sees. `sort` is what orders passages in the database.
 - Stored: `1.2` still has all 7 of its annotation rows, with the same uuids.
   The new passage has its own new block annotation and none of `1.2`'s uuids.
 - Known: a split used to move the original's annotations onto the new
-  passage (fixed). This item guards against that.
+  passage (fixed). This item guards against that. Open in the stack editor:
+  the text typed after the two Enters lands in a new line of `1.2`'s line
+  group, and no passage is stored.
 
 ### ED-STR-03 Merge with Backspace (D)
 
@@ -40,7 +42,8 @@ sees. `sort` is what orders passages in the database.
   by the old `1.21`'s. `1.20` keeps its glossary instance and its end-note link,
   and the old `1.21`'s annotations now sit on `1.20`, shifted by `1.20`'s old
   length. The stored labels match the screen, and chapter 2 is unchanged.
-- Known: the view jumping up after a merge was seen once but not confirmed.
+- Known: open in the stack editor: after the merge, `1.20` is no longer in
+  view.
 
 ### ED-STR-04 Passage label menu (D + J)
 
@@ -52,14 +55,15 @@ sees. `sort` is what orders passages in the database.
 - Do: choose Edit Label, enter `1.12a`, and Save.
 - Stored: the passage's `label` is `1.12a`.
 - Do (fresh fixture): choose View Attributes.
-- Screen: a dialog shows the passage's uuid, type `translation` and sort 1012.
+- Screen: a dialog shows the passage's uuid, label and type `translation`.
 - Do (fresh fixture): choose Delete, confirm, Save, and reload.
 - Screen: `1.12` is gone, the old `1.13` is labelled `1.12`, and **the deleted
   passage does not come back after the reload**.
 - Stored: no passage row with `1.12`'s uuid, and none of its annotations
   remain.
 - Known: deleted passages used to come back after a reload (fixed). This item
-  guards against that.
+  guards against that. Open in the stack editor: Edit Label changes the label
+  on screen, but no Save button appears, so the new label is never stored.
 
 ### ED-STR-05 Labels renumber (D)
 

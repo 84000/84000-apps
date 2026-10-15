@@ -29,8 +29,11 @@ for (const file of walk(specDir).filter((f) => f.endsWith('.md'))) {
 const tested = new Map();
 for (const file of walk(testDir).filter((f) => f.endsWith('.spec.ts'))) {
   const text = readFileSync(file, 'utf8');
-  for (const m of text.matchAll(/test(?:\.\w+)?\(\s*['`"](ED-[A-Z]+-\d+)\b/g)) {
-    tested.set(m[1], path.relative(root, file));
+  // Every item id in a test's title counts, so one test can cover two items.
+  for (const m of text.matchAll(/test(?:\.\w+)?\(\s*(['`"])(ED-.*?)\1/g)) {
+    for (const id of m[2].match(/ED-[A-Z]+-\d+/g) ?? []) {
+      tested.set(id, path.relative(root, file));
+    }
   }
 }
 

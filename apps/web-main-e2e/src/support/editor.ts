@@ -36,6 +36,10 @@ export const openEditor = async (
     ['open', tab, hash].filter(Boolean).join(':');
   const query = new URLSearchParams({ toh, main: panel(main) });
   query.set('right', right ? panel(right) : 'closed:endnotes');
+  // A URL that differs only by its hash would not reload the page.
+  if (page.url().includes('/translations/editor/')) {
+    await page.goto('about:blank');
+  }
   await page.goto(`/translations/editor/${TEST_WORK.uuid}?${query}`);
   await expect(
     page.locator('[data-stack-passage]:visible').first(),
@@ -55,8 +59,8 @@ export const tab = (page: Page, name: string): Locator =>
 /** The editor's Save button. */
 export const saveButton = (page: Page): Locator =>
   page
-    .getByRole('button', { name: 'Save', exact: true })
-    .filter({ visible: true });
+    .locator('button:not([role="dialog"] *)')
+    .filter({ hasText: /^Save$/, visible: true });
 
 /** A toast with this text that appeared since the last `markToasts`. */
 export const toast = (page: Page, text: string | RegExp): Locator =>
@@ -80,6 +84,7 @@ export const caretAtEnd = async (
 ): Promise<Locator> => {
   const target = row(page, uuid);
   await target.scrollIntoViewIfNeeded();
+  await settled(target);
   await target.locator('.passage').first().click();
   const editor = target.locator('.ProseMirror[contenteditable="true"]');
   await expect(editor).toBeFocused();
@@ -172,19 +177,32 @@ export const settled = async (target: Locator): Promise<void> => {
     .toBe(true);
 };
 
+/** Opens a passage's label menu, once its panel has settled. */
+export const openLabelMenu = async (
+  page: Page,
+  uuid: string,
+): Promise<void> => {
+  const label = row(page, uuid).locator(
+    `[data-passage-label][data-uuid="${uuid}"]`,
+  );
+  await settled(label);
+  // The menu closes if the stack re-renders under it, so retry.
+  await expect(async () => {
+    if (!(await page.getByRole('menu').isVisible())) await label.click();
+    await expect(page.getByRole('menuitem').first()).toBeVisible({
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 10_000 });
+};
+
 /** Picks an item from a passage's label menu. */
 export const labelMenuItem = async (
   page: Page,
   uuid: string,
   item: string,
 ): Promise<void> => {
-  const label = row(page, uuid).locator(
-    `[data-passage-label][data-uuid="${uuid}"]`,
-  );
-  await settled(label);
-  // The menu closes if the stack re-renders under it, so retry the pair.
   await expect(async () => {
-    if (!(await page.getByRole('menu').isVisible())) await label.click();
+    await openLabelMenu(page, uuid);
     await page
       .getByRole('menuitem', { name: item, exact: true })
       .click({ timeout: 2_000 });
@@ -222,3 +240,110 @@ export const reveal = async (
   await expect(target).toBeVisible();
   return target;
 };
+
+/**
+ * Focuses a passage and puts the caret before its first character, by
+ * clicking there.
+ */
+export const caretAtStart = async (
+  page: Page,
+  uuid: string,
+): Promise<Locator> => {
+  const editor = await caretAtEnd(page, uuid);
+  const first = await editor.evaluate((el) => {
+    const walker = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      if (!node.data.trim()) continue;
+      const range = el.ownerDocument.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, 1);
+      const box = range.getBoundingClientRect();
+      return { x: box.left + 1, y: box.top + box.height / 2 };
+    }
+    throw new Error('no text');
+  });
+  await expect(async () => {
+    await page.mouse.click(first.x, first.y);
+    await page.keyboard.press('Home');
+    const atStart = await editor.evaluate((el) => {
+      const selection = el.ownerDocument.getSelection();
+      if (!selection?.isCollapsed || !selection.anchorNode) return false;
+      const range = el.ownerDocument.createRange();
+      range.setStart(el, 0);
+      range.setEnd(selection.anchorNode, selection.anchorOffset);
+      return range.toString().trim() === '';
+    });
+    expect(atStart).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  return editor;
+};
+
+/** The titles the open slash menu lists. */
+export const slashMenuItems = (page: Page): Locator =>
+  page.locator('div.bg-popover.w-72 p.font-medium');
+
+/** Types `/query` at the caret and picks the slash menu item titled `item`. */
+export const slashCommand = async (
+  page: Page,
+  query: string,
+  item: string,
+): Promise<void> => {
+  await page.keyboard.type(`/${query}`);
+  await slashMenuItems(page).getByText(item, { exact: true }).click();
+};
+
+/** The labels of the rows drawn in a panel, top to bottom. */
+export const drawnLabels = (
+  page: Page,
+  panel: 'main' | 'right' = 'main',
+): Promise<string[]> =>
+  page
+    .locator(
+      `[data-panel="${panel}"] [data-stack-passage]:visible [data-passage-label]`,
+    )
+    .allInnerTexts();
+
+/** The label shown on a passage's row. */
+export const shownLabel = (page: Page, uuid: string): Locator =>
+  row(page, uuid).locator(`[data-passage-label][data-uuid="${uuid}"]`);
+
+/**
+ * Viewport coordinates of the start or end of `text` in a passage's row, for
+ * clicks that place the caret there.
+ */
+export const pointAt = async (
+  page: Page,
+  uuid: string,
+  text: string,
+  edge: 'start' | 'end',
+): Promise<{ x: number; y: number }> =>
+  row(page, uuid)
+    .locator('.passage')
+    .first()
+    .evaluate(
+      (el, { text, edge }) => {
+        const walker = el.ownerDocument.createTreeWalker(
+          el,
+          NodeFilter.SHOW_TEXT,
+        );
+        while (walker.nextNode()) {
+          const node = walker.currentNode as Text;
+          const at = node.data.indexOf(text);
+          if (at < 0) continue;
+          const offset = edge === 'start' ? at : at + text.length;
+          const range = el.ownerDocument.createRange();
+          range.setStart(node, offset);
+          range.setEnd(node, offset);
+          const box = range.getBoundingClientRect();
+          return { x: box.left, y: box.top + box.height / 2 };
+        }
+        throw new Error(`"${text}" not found`);
+      },
+      { text, edge },
+    );
+
+/** Undo and redo, as the platform spells them. */
+export const undo = (page: Page) => page.keyboard.press('ControlOrMeta+z');
+export const redo = (page: Page) =>
+  page.keyboard.press('ControlOrMeta+Shift+z');
