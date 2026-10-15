@@ -92,7 +92,9 @@ describe('seed bibliography rows', () => {
 
   it('keeps soft hyphens as text', () => {
     const row = BIBLIOGRAPHY_SEED_ROWS.find((r) => r.html.includes('­'));
-    const content = JSON.stringify(bibliographyHTMLToContent(row?.html ?? ''));
+    const content = JSON.stringify(
+      bibliographyHTMLToContent(row?.html ?? '', 'entry'),
+    );
 
     expect(content).toContain('Tathāgata­mahā­karuṇā');
   });
@@ -115,7 +117,7 @@ describe('whitespace', () => {
   });
 
   it('keeps a newline as a newline in the document', () => {
-    expect(bibliographyHTMLToContent('<p>one\ntwo</p>')).toEqual([
+    expect(bibliographyHTMLToContent('<p>one\ntwo</p>', 'entry')).toEqual([
       paragraph(text('one\ntwo')),
     ]);
   });
@@ -254,7 +256,9 @@ describe('marks survive doc → HTML → doc', () => {
 
     const html = bibliographyContentToHTML(blocks, 'entry');
 
-    expect(bibliographyHTMLToContent(html)).toEqual(normalized(blocks));
+    expect(bibliographyHTMLToContent(html, 'entry')).toEqual(
+      normalized(blocks),
+    );
   });
 
   it('stores a link as its href alone', () => {
@@ -271,6 +275,21 @@ describe('marks survive doc → HTML → doc', () => {
     );
   });
 
+  it.each(['javascript:alert(1)', ' data:text/html,x'])(
+    'stores an unsafe href (%s) as an inert anchor',
+    (href) => {
+      const blocks = [
+        paragraph(text('hello', [{ type: 'link', attrs: { href } }])),
+      ];
+      const html = bibliographyContentToHTML(blocks, 'entry');
+
+      expect(html).toBe('<p><a>hello</a></p>');
+      expect(bibliographyHTMLToContent(html, 'entry')).toEqual([
+        paragraph(text('hello')),
+      ]);
+    },
+  );
+
   it('is stable once stored', () => {
     Object.values(MARK_CASES).forEach((block) => {
       const html = bibliographyContentToHTML([block], 'entry');
@@ -284,7 +303,11 @@ describe('bibliographyRowSource', () => {
   const read = jest.fn(async (uuids: string[]) =>
     uuids
       .filter((uuid) => uuid !== 'missing')
-      .map((uuid) => ({ uuid, html: '<p><em>Title</em>. 2020.</p>' })),
+      .map((uuid) => ({
+        uuid,
+        html: '<p><em>Title</em>. 2020.</p>',
+        isHeading: false,
+      })),
   );
   const source = bibliographyRowSource({ workUuid: 'w1', read });
 

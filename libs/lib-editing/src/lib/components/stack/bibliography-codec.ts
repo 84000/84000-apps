@@ -6,6 +6,7 @@ import {
   type Node as PMNode,
   type Schema,
 } from '@tiptap/pm/model';
+import { safeHref } from '@eightyfourthousand/lib-utils';
 import type {
   PassageSnapshot,
   PassageSource,
@@ -21,7 +22,7 @@ export const BIBLIOGRAPHY_SOURCE_NAME = 'bibliography';
 export type BibliographyRowHTML = {
   uuid: string;
   html: string;
-  isHeading?: boolean;
+  isHeading: boolean;
 };
 
 let defaultSchema: Schema | undefined;
@@ -45,11 +46,10 @@ const storageSerializer = (schema: Schema): DOMSerializer => {
     { ...base.nodes, paragraph: () => ['p', 0] },
     {
       ...base.marks,
-      link: (mark) => [
-        'a',
-        mark.attrs.href ? { href: mark.attrs.href as string } : {},
-        0,
-      ],
+      link: (mark) => {
+        const href = safeHref(mark.attrs.href as string | null | undefined);
+        return ['a', href ? { href } : {}, 0];
+      },
     },
   );
   serializers.set(schema, serializer);
@@ -81,7 +81,7 @@ const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
  */
 export const bibliographyHTMLToContent = (
   html: string,
-  kind: StackRowKind = 'entry',
+  kind: StackRowKind,
   schema: Schema = bibliographySchema(),
 ): JSONContent[] => {
   if (kind === 'heading') {

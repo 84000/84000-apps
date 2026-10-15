@@ -13,7 +13,12 @@ import type { PassageLoader } from './loader';
 import type { PassageDoc } from './passage-doc';
 import { Spine, type SpineSeed } from './spine';
 import { withFreshSplitIdentities } from './split-identities';
-import type { FocusTarget, PassageMeta, SpineRange } from './types';
+import {
+  BIBLIOGRAPHY_ROW_TYPES,
+  type FocusTarget,
+  type PassageMeta,
+  type SpineRange,
+} from './types';
 import {
   EMPTY_PARAGRAPH,
   collapseLabelChanges,
@@ -22,13 +27,15 @@ import {
 import { WorkHistory } from './work-history';
 
 /**
- * Passage types stored without labels. Production's abbreviations carry none,
+ * Row types stored without labels. Production's abbreviations carry none,
  * the header included in effect: numbering a new one from its neighbour would
- * write `ab.1` or `1` to a row that never had a label.
+ * write `ab.1` or `1` to a row that never had a label. Bibliography rows have
+ * no label at all.
  */
 export const UNLABELLED_PASSAGE_TYPES: ReadonlySet<string> = new Set([
   'abbreviations',
   'abbreviationsHeader',
+  ...BIBLIOGRAPHY_ROW_TYPES,
 ]);
 
 /**

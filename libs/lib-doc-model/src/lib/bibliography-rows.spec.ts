@@ -1,5 +1,6 @@
 import { Spine } from './spine';
-import { rowKindOf } from './types';
+import { BIBLIOGRAPHY_ROW_TYPES, rowKindOf } from './types';
+import { UNLABELLED_PASSAGE_TYPES } from './work-document';
 
 describe('bibliography rows in a spine', () => {
   const seeded = () => {
@@ -62,5 +63,11 @@ describe('rowKindOf', () => {
     ['translation', 'entry'],
   ] as const)('%s is a %s', (type, kind) => {
     expect(rowKindOf(type)).toBe(kind);
+  });
+});
+
+describe('labels for bibliography rows', () => {
+  it.each(BIBLIOGRAPHY_ROW_TYPES)('%s is unlabelled', (type) => {
+    expect(UNLABELLED_PASSAGE_TYPES.has(type)).toBe(true);
   });
 });
