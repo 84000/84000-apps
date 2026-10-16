@@ -4,17 +4,20 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
 import {
   BODY_MATTER_FILTER,
+  createBrowserClient,
   FRONT_MATTER_FILTER,
 } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
-import { useEditorState } from '../editor/EditorProvider';
+import { useEditorState, type SaveOutcome } from '../editor/EditorProvider';
+import { combineSaveOutcomes } from '../editor/save-bookkeeping';
 import { useNavigation } from '../shared/NavigationContext';
 import {
   DEFAULT_TAB_FOR_PANEL,
@@ -23,6 +26,12 @@ import {
   type TabName,
 } from '../shared/types';
 import { PassageStackController } from './PassageStackController';
+import {
+  hasUnsavedBibliographyChanges,
+  loadBibliographyWork,
+  saveBibliographyWork,
+  type BibliographyWork,
+} from './bibliography-work';
 import {
   applyServerPassages,
   hasUnsavedStackChanges,
@@ -50,6 +59,9 @@ const SECTIONS: SpineSection[] = [
   { tab: 'endnotes', type: 'endnotes' },
 ];
 
+/** The tab the bibliography is drawn in, from its own work. */
+const BIBLIOGRAPHY_TAB = 'bibliography';
+
 /** Whether a panel is showing a tab's passages; Compare draws Translation's. */
 const showsTab = (
   state: PanelState | undefined,
@@ -63,6 +75,11 @@ const showsTab = (
 
 export type StackWork = {
   work: WorkDocument;
+  /**
+   * The bibliography, as a work of its own: its rows are not passages, so it
+   * saves, and undoes, apart from them. Null when it could not be read.
+   */
+  bibliography: BibliographyWork | null;
   /** The view for a tab, or null when this provider does not draw it. */
   controllerFor: (tab: string) => PassageStackController | null;
 };
@@ -95,13 +112,28 @@ export const StackWorkProvider = ({
   // it registers its own save to run alongside.
   useEffect(() => {
     if (!stack) return;
-    const { work } = stack;
+    const { work, bibliography } = stack;
+    const bibliographyDirty = () =>
+      !!bibliography && hasUnsavedBibliographyChanges(bibliography);
+    const isDirty = () => hasUnsavedStackChanges(work) || bibliographyDirty();
     registerSaveHandler({
+      // One save for both works. Each writes on its own, so one failing does
+      // not hold back the other.
       save: async () => {
-        if (!hasUnsavedStackChanges(work)) return 'none';
-        return (await saveStackWork(work)) ? 'saved' : 'failed';
+        const passages: SaveOutcome = !hasUnsavedStackChanges(work)
+          ? 'none'
+          : (await saveStackWork(work))
+            ? 'saved'
+            : 'failed';
+        const rows: SaveOutcome =
+          !bibliography || !bibliographyDirty()
+            ? 'none'
+            : (await saveBibliographyWork(bibliography, createBrowserClient()))
+              ? 'saved'
+              : 'failed';
+        return combineSaveOutcomes([passages, rows]);
       },
-      isDirty: () => hasUnsavedStackChanges(work),
+      isDirty,
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
       removeCommentAnchors: (comment) =>
@@ -110,22 +142,44 @@ export const StackWorkProvider = ({
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.
     const offer = () => {
-      if (hasUnsavedStackChanges(work)) dirtyStore.setDirty(true);
+      if (isDirty()) dirtyStore.setDirty(true);
     };
-    const stopStore = work.store.observe(offer);
-    const stopSpine = work.spine.observe(offer);
+    const stops = [work, bibliography?.work].flatMap((each) =>
+      each ? [each.store.observe(offer), each.spine.observe(offer)] : [],
+    );
     return () => {
-      stopStore();
-      stopSpine();
+      stops.forEach((stop) => stop());
       registerSaveHandler(null);
     };
   }, [stack, registerSaveHandler, dirtyStore]);
 
   const { panels, updatePanel } = useNavigation();
 
+  // The work last worked in, whose history the page's undo and redo take.
+  const activeWork = useRef<WorkDocument | null>(null);
+  useEffect(() => {
+    activeWork.current = null;
+    if (!stack) return;
+    const onEnter = (event: Event) => {
+      const uuid = (event.target as HTMLElement | null)
+        ?.closest?.('[data-stack-passage]')
+        ?.getAttribute('data-stack-passage');
+      if (!uuid) return;
+      activeWork.current =
+        [stack.work, stack.bibliography?.work].find((each) =>
+          each?.spine.meta(uuid),
+        ) ?? activeWork.current;
+    };
+    document.addEventListener('focusin', onEnter);
+    document.addEventListener('pointerdown', onEnter);
+    return () => {
+      document.removeEventListener('focusin', onEnter);
+      document.removeEventListener('pointerdown', onEnter);
+    };
+  }, [stack]);
+
   // Undo and redo with focus outside any editor, such as after a label-menu
-  // action. The editors bind their own; this covers the rest of the page, once
-  // per work, since every view shares the one history.
+  // action. The editors bind their own; this covers the rest of the page.
   useEffect(() => {
     if (!stack) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -142,7 +196,7 @@ export const StackWorkProvider = ({
         return;
       }
       const redo = key === 'y' || event.shiftKey;
-      const { work } = stack;
+      const work = activeWork.current ?? stack.work;
       const focus = work.log.suppress(() => (redo ? work.redo() : work.undo()));
       if (focus === null) return;
       event.preventDefault();
@@ -169,6 +223,12 @@ export const StackWorkProvider = ({
     const extras = new Map<string, PassageExtras>();
     const work = createStackWork({ workUuid, client, extras });
     const controllers = new Map<string, PassageStackController>();
+    // Its own work, so it reads alongside the passages rather than after.
+    const readingBibliography = loadBibliographyWork({
+      workUuid,
+      client: createBrowserClient(),
+      graphql: client,
+    });
 
     void (async () => {
       // Sequentially, not in parallel: each run is placed relative to the ones
@@ -188,9 +248,22 @@ export const StackWorkProvider = ({
         );
       }
 
+      const bibliography = await readingBibliography;
       if (cancelled) return;
+      if (bibliography) {
+        controllers.set(
+          BIBLIOGRAPHY_TAB,
+          new PassageStackController({
+            work: bibliography.work,
+            tab: BIBLIOGRAPHY_TAB,
+            rows: 'bibliography',
+          }),
+        );
+      }
+
       setStack({
         work,
+        bibliography,
         controllerFor: (tab) => controllers.get(tab) ?? null,
       });
     })();
@@ -200,6 +273,9 @@ export const StackWorkProvider = ({
       setStack(null);
       controllers.forEach((controller) => controller.destroy());
       work.destroy();
+      void readingBibliography.then((bibliography) =>
+        bibliography?.work.destroy(),
+      );
     };
   }, [workUuid]);
 

@@ -130,6 +130,7 @@ const build = (
   };
   const stack: StackWork = {
     work,
+    bibliography: null,
     controllerFor: (tab) => (tab === 'endnotes' ? endnotes : viewOf(tab)),
   };
   return { work, stack, endnotes, loader, viewOf };

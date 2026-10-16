@@ -1,4 +1,9 @@
-import { Node, type Extensions } from '@tiptap/core';
+import { Extension, Node, type Extensions } from '@tiptap/core';
+import { Fragment, Slice } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
+import { Collaboration } from '@tiptap/extension-collaboration';
+import type { StackRowKind } from '@eightyfourthousand/lib-doc-model';
+import type { UndoManager, XmlFragment } from 'yjs';
 
 import { Bold } from '../editor/extensions/Bold';
 import { CommentMark } from '../editor/extensions/Comment/CommentMark';
@@ -14,7 +19,9 @@ import { Subscript } from '../editor/extensions/Subscript';
 import { Superscript } from '../editor/extensions/Superscript';
 import { Underline } from '../editor/extensions/Underline';
 
+import { BoundaryKeymap } from './BoundaryKeymap';
 import { StackDocument } from './StackDocument';
+import type { StackKeyboardDelegate } from './types';
 
 const Text = Node.create({ name: 'text', group: 'inline' });
 
@@ -49,4 +56,66 @@ export const buildBibliographySchemaExtensions = (): Extensions => [
   Subscript.extend({ priority: FORMATTING_PRIORITY }),
   Superscript.extend({ priority: FORMATTING_PRIORITY }),
   Underline.extend({ priority: FORMATTING_PRIORITY }),
+];
+
+/** Pastes into a heading as one line of plain text. */
+const PlainTextPaste = Extension.create({
+  name: 'plainTextPaste',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        props: {
+          transformPasted: (slice, view) => {
+            const text = slice.content
+              .textBetween(0, slice.content.size, ' ', ' ')
+              .replace(/\s+/g, ' ');
+            return text
+              ? new Slice(Fragment.from(view.state.schema.text(text)), 0, 0)
+              : Slice.empty;
+          },
+        },
+      }),
+    ];
+  },
+});
+
+/**
+ * A heading's editor schema: plain text, which is all a heading stores, so
+ * nothing can be typed or pasted that the save would drop.
+ */
+const buildHeadingExtensions = (): Extensions => [
+  StackDocument,
+  Paragraph,
+  Text,
+  PlainTextPaste,
+];
+
+/**
+ * A live bibliography row's editor, bound to the row's document. Rows are
+ * edited in place, never split or merged, and a heading is a single line of
+ * plain text.
+ */
+export const buildBibliographyEditorExtensions = ({
+  uuid,
+  kind,
+  fragment,
+  undoManager,
+  delegate,
+}: {
+  uuid: string;
+  kind: StackRowKind;
+  fragment: XmlFragment;
+  undoManager: UndoManager;
+  delegate: StackKeyboardDelegate;
+}): Extensions => [
+  ...(kind === 'heading'
+    ? buildHeadingExtensions()
+    : buildBibliographySchemaExtensions()),
+  Collaboration.configure({ fragment, yUndoOptions: { undoManager } }),
+  BoundaryKeymap.configure({
+    uuid,
+    delegate,
+    restructure: false,
+    singleLine: kind === 'heading',
+  }),
 ];

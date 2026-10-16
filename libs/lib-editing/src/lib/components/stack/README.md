@@ -470,3 +470,25 @@ The bibliography schema leaves out `TranslationMetadata`, which mints a uuid
 for every parsed node and mark: stored HTML would change on every read. A
 comment anchor is a `comment` mark in the row's HTML and keeps its own uuid.
 Formatting marks rank above links, so they wrap a link as stored entries do.
+
+#### The bibliography tab
+
+`StackWorkProvider` reads a work's bibliography into a `WorkDocument` of its
+own (`bibliography-work`), not the passages' work: its rows are not passages,
+so they save, and undo, apart from them. All rows are read at once and seeded
+in the readers' order, each heading followed by its entries, so a deep link to
+any row is already in the spine and no feed is needed. Labels and nesting
+come from `outlineBibliography`, as the readers number them.
+
+Its controller is built with `rows: 'bibliography'`. Rows are edited in place:
+split, merge, delete, passage paste and the label menu are off, the editor
+mounts the bibliography schema rather than the passage set, a heading's
+editor is a single line of plain text (its schema has no marks, and a paste
+flattens to text), and the bubble menu offers inline marks only.
+`rowStyle` draws headings as the readers do and indents nested rows by depth.
+
+Undo and redo from outside an editor take the history of the work whose row
+was last focused or clicked. The one registered save writes both works and
+reports one outcome. A
+bibliography save writes only edited rows, with their placement as read.
+When the rows cannot be read, the tab falls back to the read-only list.
