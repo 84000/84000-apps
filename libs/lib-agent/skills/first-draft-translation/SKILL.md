@@ -1,6 +1,7 @@
 ---
 name: first-draft-translation
 description: Produce a Stage 1 first-draft 84000 translation of a canonical Tibetan work for review by a research editor — aligned Tibetan/English passage pairs with folio references, footnoted uncertainties, a terminology table, and a companion alignment record, saved as toh#_stage1.docx, toh#_stage1.md, and toh#_stage1_alignment.md. Use when a translator asks to draft, translate, or produce a first draft of a text by Toh number, or names Stage 1 of the 84000 AI translation pipeline. Not for editorial review of an existing draft — that is Stage 2, the editorial-review skill — and not for Stage 0 text analysis and retrieval, which must already have been run.
+allowed-tools: Skill(docx)
 ---
 
 # 84000 first-draft translation (Stage 1)
@@ -34,8 +35,8 @@ have been run in another session, on another machine, by someone else. If no
 than reconstructing its retrieval, catalog, and analytics record here. Stage 0
 is governed by the `text-analysis-and-retrieval` skill in this plugin.
 
-A read that *fails* is not a record that is *absent*, and the two must not be
-treated alike — see *Reading the Stage 0 record* in `reference/output.md`.
+A read that _fails_ is not a record that is _absent_, and the two must not be
+treated alike — see _Reading the Stage 0 record_ in `reference/output.md`.
 
 Confirm each of these at the start of the session, retrieving from the studio
 where noted rather than asking the translator to supply it:
@@ -135,7 +136,7 @@ concluding that a cited number does not exist.
   never the straight typewriter forms, per
   `translator-guidelines/IV.A-spelling`. This holds for the English, the
   footnotes, and the Terminology Notes alike.
-  *Extended Wylie needs particular care*, wherever it appears. The *a-chung* (འ)
+  _Extended Wylie needs particular care_, wherever it appears. The _a-chung_ (འ)
   transliterates as a **closing** single quotation mark — `’` (U+2019), its
   convexity to the right, a closing inverted comma. It is **not** a straight
   apostrophe `'` (U+0027), and **not** the opening `‘` (U+2018) that a word
@@ -149,13 +150,13 @@ The first three are policies: fetch them with `read-policies` at the start of
 the session, since they are edited in place and the current text binds. The
 other two ship with this skill — read those when you reach them.
 
-| | |
-|---|---|
-| `shared-policies/uncertainty` | How to flag what is not secure — the single most important discipline here |
-| `shared-policies/terminology` | Locating the binding house rendering before choosing one, and the Terminology Notes table |
-| `shared-policies/commentary-consultation` | Consulting and citing a commentary the translator selected at Stage 0 |
-| `reference/structure.md` | The document structure, passage pairs, folio labels, footnotes, and the companion alignment record |
-| `reference/output.md` | The three deliverables and how they are saved |
+|                                           |                                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `shared-policies/uncertainty`             | How to flag what is not secure — the single most important discipline here                         |
+| `shared-policies/terminology`             | Locating the binding house rendering before choosing one, and the Terminology Notes table          |
+| `shared-policies/commentary-consultation` | Consulting and citing a commentary the translator selected at Stage 0                              |
+| `reference/structure.md`                  | The document structure, passage pairs, folio labels, footnotes, and the companion alignment record |
+| `reference/output.md`                     | The three deliverables and how they are saved                                                      |
 
 ## Working order
 

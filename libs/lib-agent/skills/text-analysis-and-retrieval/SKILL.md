@@ -1,6 +1,7 @@
 ---
 name: text-analysis-and-retrieval
 description: Run Stage 0 of the 84000 AI translation pipeline for a canonical Tibetan work — retrieve the Tibetan source by Toh number, register the work against the Toh catalog, and assemble the contextual record a translator needs before drafting (genre, register, precedent translations, terminological field, parallel witnesses, canonical commentaries), saved as toh#_stage0.md. Use when a translator asks to analyze, scope, research, or prepare a text by Toh number before drafting begins, or names Stage 0 of the pipeline. Also use when a witness collation against a parallel recension is requested, or when asked which commentaries bear on a work. Not for producing a translation — that is Stage 1, the first-draft-translation skill — and not for editorial review of an existing draft, which is Stage 2, the editorial-review skill.
+allowed-tools: Skill(docx)
 ---
 
 # 84000 text analysis and retrieval (Stage 0)
@@ -33,8 +34,8 @@ Confirm each of these at the start of the session:
 - [ ] The `write-session-documents` studio tool, for saving the stage's
       deliverables to storage, and `read-session-documents` for seeing what the
       work already has saved. See `reference/output.md`
-- [ ] The `read-policies` studio tool, for the *Translator Guidelines* and
-      *Text Critical Guidelines* sections this skill cites and for
+- [ ] The `read-policies` studio tool, for the _Translator Guidelines_ and
+      _Text Critical Guidelines_ sections this skill cites and for
       `shared-policies/analytics`, `shared-policies/commentary-register` and
       `shared-policies/collation`. Read them at the start of the session: they
       are edited in place, so the current text binds, not a remembered one. Call
@@ -92,8 +93,8 @@ anything the record needs that only they can supply. At minimum, solicit:
   answer either way. See `shared-policies/collation` for what the Text Critical
   Guidelines recommend and what the report contains.
 - **Which commentaries, if any, they want consulted during Stage 1 drafting.**
-  Unlike the collation, the *sweep* for exegetical works is not optional — it
-  runs for every text — but the *selection* is the translator's and must be
+  Unlike the collation, the _sweep_ for exegetical works is not optional — it
+  runs for every text — but the _selection_ is the translator's and must be
   asked for explicitly. Present the works the sweep verified and ask which
   should be consulted; never choose on their behalf, and never read silence as
   either "all" or "none". See `shared-policies/commentary-register`.
@@ -110,7 +111,7 @@ publishes:
 - **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
   never the straight typewriter forms, per
   `translator-guidelines/IV.A-spelling`.
-  *Extended Wylie needs particular care*, wherever it appears. The *a-chung* (འ)
+  _Extended Wylie needs particular care_, wherever it appears. The _a-chung_ (འ)
   transliterates as a **closing** single quotation mark — `’` (U+2019), its
   convexity to the right, a closing inverted comma. It is **not** a straight
   apostrophe `'` (U+0027), and **not** the opening `‘` (U+2018) that a word
@@ -124,12 +125,12 @@ The first three are policies: fetch them with `read-policies` at the start of
 the session, since they are edited in place and the current text binds. The last
 ships with this skill.
 
-| | |
-|---|---|
-| `shared-policies/analytics` | The analytics pass — genre, register, precedent translations, terminological field, parallel witnesses |
-| `shared-policies/commentary-register` | The exegetical sweep and anchoring test — run for every text |
-| `shared-policies/collation` | The collation report, when a witness comparison is undertaken |
-| `reference/output.md` | The deliverables and how they are saved |
+|                                       |                                                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `shared-policies/analytics`           | The analytics pass — genre, register, precedent translations, terminological field, parallel witnesses |
+| `shared-policies/commentary-register` | The exegetical sweep and anchoring test — run for every text                                           |
+| `shared-policies/collation`           | The collation report, when a witness comparison is undertaken                                          |
+| `reference/output.md`                 | The deliverables and how they are saved                                                                |
 
 ## Working order
 

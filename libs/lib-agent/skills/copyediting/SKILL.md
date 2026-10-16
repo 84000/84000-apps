@@ -1,6 +1,7 @@
 ---
 name: copyediting
 description: Copyedit an edited 84000 translation — body text, notes, front matter, bibliography and glossary — for conformity with the Translator Guidelines and the copyeditor stylesheet, separating mechanical changes from queries, either as a tracked-revision Word file with comments (toh#_copyedited_tracked.docx plus toh#_copyedit_review.docx) or as a suggestions report that leaves the file untouched (toh#_copyedit_review.docx). Use when an editor or copyeditor asks to copyedit, proof against house style, or check a post-editorial translation for conformity, or asks for tracked changes or a suggestions report on one. Not for reviewing the accuracy of a draft against the Tibetan — that is Stage 2, the editorial-review skill — and not for producing a translation, which is Stage 1, the first-draft-translation skill.
+allowed-tools: Skill(docx)
 ---
 
 # 84000 copyediting
@@ -57,7 +58,7 @@ Once the mode is settled, confirm each of these:
       review's header. If it is at a later stage — already copyedited, or
       approved for markup — proceed, and state its status in the header
 - [ ] **The Translator Guidelines** (v. 10.31), through the `read-policies`
-      studio tool — see *The disciplines*. Consult the full document for
+      studio tool — see _The disciplines_. Consult the full document for
       anything beyond the sections it returns
 - [ ] **The copyeditor stylesheet**, through `read-policies` — the four
       `copyeditor-stylesheet/` policies. If the editor supplies a newer
@@ -93,17 +94,17 @@ Fetch the policies with `read-policies` at the start of the session: they are
 edited in place, so the current text binds, not a remembered one. Call it with
 no arguments to see what else is available.
 
-| | |
-|---|---|
-| `shared-policies/copyedit-report` | What counts as a change and what is always a query, the tags, both modes' deliverables and layout, the sweep table, the tone. The single most important discipline here |
-| `copyeditor-stylesheet/terminology`, `style-and-grammar`, `references`, `scientific-names` | The copyeditor stylesheet: fixed spellings and forms of terms, names, places and references; grammar, capitalization and italics, punctuation, formatting, and notes and citations; bibliography order; the verified scientific names of flora and fauna. Where it is more specific than the Guidelines, it is what a change cites |
-| `translator-guidelines/IV.A-spelling` through `IV.H-content-layout-and-folio-markers` | The house rules most changes cite: spelling, numbers, dates and abbreviations (IV.A); proper names (IV.B); capitalization (IV.C); text titles (IV.D); italics (IV.E); punctuation (IV.F); mantras and dhāraṇīs (IV.G); layout, headings, folio and _bam po_ markers (IV.H) |
-| `translator-guidelines/IV.J-order-of-elements`, `V.A-titles`, `V.D-summary`, `V.E-acknowledgments` | The front matter: its order, the title forms, the summary and the acknowledgments |
-| `translator-guidelines/V.G-notes`, `V.I-bibliography` | Note form, sigla, short citations and cross-reference codes; bibliography entry form and order |
-| `translator-guidelines/V.H-glossaries` | Glossary columns and the form of each — what the glossary sweep checks the glossary itself against |
-| `translator-guidelines/appendix-2-tibetan-phonetics` | The phonetics scheme, for the phonetics-vs-Wylie sweep |
-| `shared-policies/terminology` | Locating the binding house rendering, when a term's glossary entry is itself in doubt |
-| `reference/output.md` | The deliverables, how they are built and checked, and how they are saved |
+|                                                                                                    |                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared-policies/copyedit-report`                                                                  | What counts as a change and what is always a query, the tags, both modes' deliverables and layout, the sweep table, the tone. The single most important discipline here                                                                                                                                                            |
+| `copyeditor-stylesheet/terminology`, `style-and-grammar`, `references`, `scientific-names`         | The copyeditor stylesheet: fixed spellings and forms of terms, names, places and references; grammar, capitalization and italics, punctuation, formatting, and notes and citations; bibliography order; the verified scientific names of flora and fauna. Where it is more specific than the Guidelines, it is what a change cites |
+| `translator-guidelines/IV.A-spelling` through `IV.H-content-layout-and-folio-markers`              | The house rules most changes cite: spelling, numbers, dates and abbreviations (IV.A); proper names (IV.B); capitalization (IV.C); text titles (IV.D); italics (IV.E); punctuation (IV.F); mantras and dhāraṇīs (IV.G); layout, headings, folio and _bam po_ markers (IV.H)                                                         |
+| `translator-guidelines/IV.J-order-of-elements`, `V.A-titles`, `V.D-summary`, `V.E-acknowledgments` | The front matter: its order, the title forms, the summary and the acknowledgments                                                                                                                                                                                                                                                  |
+| `translator-guidelines/V.G-notes`, `V.I-bibliography`                                              | Note form, sigla, short citations and cross-reference codes; bibliography entry form and order                                                                                                                                                                                                                                     |
+| `translator-guidelines/V.H-glossaries`                                                             | Glossary columns and the form of each — what the glossary sweep checks the glossary itself against                                                                                                                                                                                                                                 |
+| `translator-guidelines/appendix-2-tibetan-phonetics`                                               | The phonetics scheme, for the phonetics-vs-Wylie sweep                                                                                                                                                                                                                                                                             |
+| `shared-policies/terminology`                                                                      | Locating the binding house rendering, when a term's glossary entry is itself in doubt                                                                                                                                                                                                                                              |
+| `reference/output.md`                                                                              | The deliverables, how they are built and checked, and how they are saved                                                                                                                                                                                                                                                           |
 
 A change cites its rule precisely enough for the copyeditor to check it: the
 Guidelines by section ("Guidelines IV.F"), the stylesheet by sheet and entry

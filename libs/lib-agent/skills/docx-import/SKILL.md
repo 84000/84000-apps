@@ -1,6 +1,7 @@
 ---
 name: docx-import
 description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-entity-import` tool.
+allowed-tools: Skill(docx)
 ---
 
 # Docx import
