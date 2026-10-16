@@ -1,6 +1,7 @@
 ---
 name: editorial-review
 description: Run Stage 2 of the 84000 AI translation pipeline — review a draft translation of a canonical Tibetan work against the Tibetan source and the house standards, and produce a structured review report for a research editor, saved as toh#_stage2.docx, toh#_stage2.md, and toh#_stage2_findings.md. Use when an editor asks to review, check, or assess a draft translation, whether it came from Stage 1 or from a human translator or team, or names Stage 2 of the pipeline. Not for producing a translation — that is Stage 1, the first-draft-translation skill — not for Stage 0 text analysis and retrieval, and not for copyediting an edited text for house style, which is the copyediting skill.
+allowed-tools: Skill(docx)
 ---
 
 # 84000 editorial review (Stage 2)
@@ -105,7 +106,7 @@ Work through the text a few folios at a time. For each passage:
    translated. A note that documents the choice and whose reasoning holds
    closes the point: there is no finding. A note whose reasoning does not hold
    leaves a finding that engages with the note. A note adopting a witness you
-   do not have makes the point a `[Query]`. See *The notes screen* in
+   do not have makes the point a `[Query]`. See _The notes screen_ in
    `shared-policies/review-report`.
 5. Decide whether what remains is a defensible alternative reading, a probable
    error, or beyond your ability to adjudicate, and give it its category tag and
@@ -131,7 +132,7 @@ opening table.
    draft. Do this mechanically, folio by folio, not impressionistically. This is
    the check where an automated review adds the most value. Omissions,
    additions and folio-marker defects become `[Completeness]` entries in
-   *Translation*, anchored at their folio.
+   _Translation_, anchored at their folio.
 2. **Terminology conformity** — for each term the draft's Terminology Notes match
    to an existing house entry, verify that rendering throughout the draft, with
    counts. For each term logged as new, spot-check via the glossary tools that an
@@ -147,7 +148,7 @@ opening table.
 5. **Notes** — every note of the draft verified against the passage it discusses
    and, where it reports what the witness reads, against the witness. A note
    citing a source or witness not provided in the session is flagged for
-   verification, never assumed correct. Findings become entries in *Notes*.
+   verification, never assumed correct. Findings become entries in _Notes_.
 
 State the coverage of each check in the opening table. A check that covered
 part of the text is reported as partial, naming what was covered.
@@ -169,15 +170,15 @@ studio publishes:
   is one; its output needs its `_` replaced by a space and its straight `'`
   by `’`), never by hand, and check each quoted reading against the Unicode
   before it goes into an entry. Where the draft carries its own Wylie
-  transcript, quote the *draft's* Wylie in the **Draft** field and the
-  *studio's* transliterated Wylie in the **Tibetan** field, so that a
+  transcript, quote the _draft's_ Wylie in the **Draft** field and the
+  _studio's_ transliterated Wylie in the **Tibetan** field, so that a
   difference between the two is visible as such.
 - **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
   never the straight typewriter forms, per
   `translator-guidelines/IV.A-spelling`. This holds for the entries, the
   quoted draft readings, and the opening table alike.
-  *Extended Wylie needs particular care*, and the report is now full of it.
-  The *a-chung* (འ) transliterates as a **closing** single quotation mark —
+  _Extended Wylie needs particular care_, and the report is now full of it.
+  The _a-chung_ (འ) transliterates as a **closing** single quotation mark —
   `’` (U+2019), its convexity to the right, a closing inverted comma. It is
   **not** a straight apostrophe `'` (U+0027), and **not** the opening `‘`
   (U+2018) that a word processor produces automatically, which it usually
@@ -194,12 +195,12 @@ The first three are policies: fetch them with `read-policies` at the start of th
 session, since they are edited in place and the current text binds. The last
 ships with this skill.
 
-| | |
-|---|---|
+|                                 |                                                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shared-policies/review-report` | The report's structure — the six parts, the category and confidence tags, what an entry carries, the ordering rule for each section, the notes screen. The single most important discipline here |
-| `shared-policies/terminology` | Locating the binding house rendering, which is what a `[Terminology]` entry is measured against |
-| `shared-policies/uncertainty` | The `[?]` / `[??]` scheme a Stage 1 draft flags itself with, and what its notes are claiming |
-| `reference/output.md` | The deliverables and how they are saved |
+| `shared-policies/terminology`   | Locating the binding house rendering, which is what a `[Terminology]` entry is measured against                                                                                                  |
+| `shared-policies/uncertainty`   | The `[?]` / `[??]` scheme a Stage 1 draft flags itself with, and what its notes are claiming                                                                                                     |
+| `reference/output.md`           | The deliverables and how they are saved                                                                                                                                                          |
 
 ## Working order
 
