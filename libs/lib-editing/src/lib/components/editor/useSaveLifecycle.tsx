@@ -1,8 +1,12 @@
 'use client';
 
-import { RefObject, useCallback } from 'react';
+import { RefObject, useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
-import { CircleAlertIcon, CircleCheckIcon } from 'lucide-react';
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  TriangleAlertIcon,
+} from 'lucide-react';
 import type { GraphQLClient } from 'graphql-request';
 import type { Passage, Work } from '@eightyfourthousand/data-access';
 import {
@@ -20,15 +24,28 @@ import {
   restoreFailedSave,
 } from './save-bookkeeping';
 import { applyRenumberedLabels } from './extensions/EndNoteLink/endnote-utils';
+import { mayHaveBeenApplied, readBackSaved } from './save-outcome';
 import type {
   EditorContextState,
   SaveHandler,
-  SaveOutcome,
+  SaveReport,
 } from './editor-context';
 
-type SaveResult = { outcome: SaveOutcome; dirty: boolean };
+type SaveResult = SaveReport & { dirty: boolean };
 
-/** Saves the paginated editors and any registered save handler as one. */
+/** At most this many warnings are listed in the toast. */
+const SHOWN_WARNINGS = 3;
+
+/** One toast for a save with an unknown outcome, updated as it resolves. */
+const UNKNOWN_SAVE_TOAST = 'save-outcome-unknown';
+
+/**
+ * Saves the paginated editors and any registered save handler as one.
+ *
+ * A save whose answer was lost may have been applied, so it is never sent
+ * again: once its passages can be read back, `reload` replaces the editors
+ * with what the server holds. Until then, saving is paused.
+ */
 export const useSaveLifecycle = ({
   client,
   work,
@@ -42,6 +59,7 @@ export const useSaveLifecycle = ({
   getEditorUuids,
   applyReplacedPassages,
   setNavigating,
+  reload,
 }: {
   client: GraphQLClient;
   work: Work;
@@ -55,7 +73,12 @@ export const useSaveLifecycle = ({
   getEditorUuids: (editor: Editor) => Set<string>;
   applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
   setNavigating: EditorContextState['setNavigating'];
+  /** Replace the editors with what the server holds. */
+  reload: () => void;
 }) => {
+  /** The passages of a save with an unknown outcome, not yet read back. */
+  const unconfirmedRef = useRef<string[] | null>(null);
+
   /** The paginated editors' half of a save. */
   const savePaginated = useCallback(async (): Promise<SaveResult> => {
     const editorEntries = Object.entries(editorCache.current).filter(
@@ -98,6 +121,18 @@ export const useSaveLifecycle = ({
     // post-save bookkeeping instead of being silently cleared.
     const { inFlight: inFlightDirty, next } = beginSave(dirtyUuidsRef.current);
     dirtyUuidsRef.current = next;
+    const unknown = (): SaveResult => {
+      dirtyUuidsRef.current = restoreFailedSave(
+        inFlightDirty,
+        dirtyUuidsRef.current,
+      );
+      return {
+        outcome: 'unknown',
+        dirty: true,
+        affected: [...uuidsToSave, ...deletedUuids],
+      };
+    };
+    let sent = false;
 
     try {
       // Everything up to the await is synchronous, so the serialized payload
@@ -153,12 +188,17 @@ export const useSaveLifecycle = ({
         // visibly lost.
         focusedEntry?.[1].commands.focus(null, { scrollIntoView: false });
       }
+      sent = true;
       const result = await savePassages({
         client,
         passages,
         deletedUuids: deletedUuids.length > 0 ? deletedUuids : undefined,
       });
 
+      if (result?.outcomeUnknown) {
+        console.error('Save may have been applied:', result.error);
+        return unknown();
+      }
       if (!result?.success) {
         // Nothing was durably confirmed; restore the attempted set so the
         // next save retries it alongside any mid-flight edits.
@@ -169,8 +209,6 @@ export const useSaveLifecycle = ({
         console.error('Save failed:', result?.error ?? 'unknown error');
         return { outcome: 'failed', dirty: true };
       }
-
-      result.warnings?.forEach((warning) => console.warn(warning));
 
       // Baselines become the uuid sets captured at save start — not the live
       // editor — so passages added or deleted during the flight are still
@@ -221,10 +259,18 @@ export const useSaveLifecycle = ({
         baseline: savedBaselineUuidsByEditorRef.current,
         current: residualLive,
       });
-      return { outcome: 'saved', dirty: residual.hasChanges };
+      return {
+        outcome: 'saved',
+        dirty: residual.hasChanges,
+        ...(result.warnings?.length ? { warnings: result.warnings } : {}),
+      };
     } catch (error) {
       // A throw anywhere past the swap, the request included, confirmed
       // nothing, and must not take the in-flight set down with it.
+      if (sent && mayHaveBeenApplied(error)) {
+        console.error('Save may have been applied:', error);
+        return unknown();
+      }
       console.error('Save failed:', error);
       dirtyUuidsRef.current = restoreFailedSave(
         inFlightDirty,
@@ -244,6 +290,41 @@ export const useSaveLifecycle = ({
     savedBaselineUuidsByEditorRef,
   ]);
 
+  /**
+   * Read back the passages of a save with an unknown outcome, then show what
+   * the server holds. When they cannot be read, change nothing and pause
+   * saving: the next save tries the read again instead.
+   */
+  const confirmUnknownSave = useCallback(
+    async (affected: string[]) => {
+      if (!(await readBackSaved(client, affected))) {
+        unconfirmedRef.current = affected;
+        dirtyStore.setDirty(true);
+        toast('Your last save may have gone through.', {
+          description:
+            'The server could not be reached to check, so saving is paused. ' +
+            'Save again to check: the editor will then show what is saved, ' +
+            'and any changes made from now on will be lost.',
+          icon: <CircleAlertIcon className="size-4 text-error" />,
+          duration: Infinity,
+          id: UNKNOWN_SAVE_TOAST,
+        });
+        return;
+      }
+      unconfirmedRef.current = null;
+      toast('Your last save may have gone through.', {
+        description:
+          'The editor now shows what is saved. Check your recent changes ' +
+          'there before making any of them again.',
+        icon: <TriangleAlertIcon className="size-4 text-warning" />,
+        duration: Infinity,
+        id: UNKNOWN_SAVE_TOAST,
+      });
+      reload();
+    },
+    [client, dirtyStore, reload],
+  );
+
   // The stack, when it is mounted, and the paginated editors each save what
   // they hold; one button and one toast cover both.
   const save = useCallback(async () => {
@@ -253,19 +334,63 @@ export const useSaveLifecycle = ({
     }
     isSavingRef.current = true;
     try {
+      if (unconfirmedRef.current) {
+        await confirmUnknownSave(unconfirmedRef.current);
+        return;
+      }
+      // Offline, a request fails before it is sent; saying so keeps it from
+      // looking like a save that may have been applied.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        toast('You are offline.', {
+          description: 'Your changes are kept. Save again once you are back.',
+          icon: <CircleAlertIcon className="size-4 text-error" />,
+        });
+        return;
+      }
+
       const stack = saveHandlerRef.current;
-      const stackOutcome: SaveOutcome = stack
+      const stackReport: SaveReport = stack
         ? await stack.save().catch((error: unknown) => {
             console.error('Save failed:', error);
-            return 'failed' as const;
+            return { outcome: 'failed' as const };
           })
-        : 'none';
+        : { outcome: 'none' };
+      // The work's state is uncertain: send nothing more until it is read.
+      if (stackReport.outcome === 'unknown') {
+        await confirmUnknownSave(stackReport.affected ?? []);
+        return;
+      }
       const paginated = await savePaginated();
-      const outcome = combineSaveOutcomes([stackOutcome, paginated.outcome]);
+      const outcome = combineSaveOutcomes([
+        stackReport.outcome,
+        paginated.outcome,
+      ]);
+      const warnings = [
+        ...(stackReport.warnings ?? []),
+        ...(paginated.warnings ?? []),
+      ];
+      warnings.forEach((warning) => console.warn(warning));
+
+      if (outcome === 'unknown') {
+        await confirmUnknownSave([
+          ...(stackReport.affected ?? []),
+          ...(paginated.affected ?? []),
+        ]);
+        return;
+      }
 
       if (outcome === 'failed') {
         toast('Error saving content.', {
           icon: <CircleAlertIcon className="size-4 text-error" />,
+        });
+      } else if (outcome === 'saved' && warnings.length) {
+        const more = warnings.length - SHOWN_WARNINGS;
+        toast('Content saved, with warnings', {
+          description: [
+            ...warnings.slice(0, SHOWN_WARNINGS),
+            ...(more > 0 ? [`and ${more} more`] : []),
+          ].join('\n'),
+          icon: <TriangleAlertIcon className="size-4 text-warning" />,
         });
       } else if (outcome === 'saved') {
         toast('Content saved', {
@@ -279,7 +404,13 @@ export const useSaveLifecycle = ({
     } finally {
       isSavingRef.current = false;
     }
-  }, [savePaginated, dirtyStore, isSavingRef, saveHandlerRef]);
+  }, [
+    savePaginated,
+    confirmUnknownSave,
+    dirtyStore,
+    isSavingRef,
+    saveHandlerRef,
+  ]);
 
   return { save };
 };

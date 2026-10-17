@@ -261,7 +261,7 @@ describe('saveStackWork', () => {
     edit(work, 'p0', 'changed');
     dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
 
-    expect(await saveStackWork(work)).toBe(true);
+    expect((await saveStackWork(work)).outcome).toBe('saved');
     expect(work.store.dirty()).toEqual([]);
   });
 
@@ -364,7 +364,7 @@ describe('saveStackWork', () => {
     await saveStackWork(work);
 
     edit(work, 'q', 'changed');
-    expect(await saveStackWork(work)).toBe(false);
+    expect((await saveStackWork(work)).outcome).toBe('failed');
     expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
     expect(work.store.dirty()).toContain('q');
   });
@@ -537,7 +537,7 @@ describe('saveStackWork', () => {
       return { success: true };
     });
 
-    expect(await saveStackWork(work)).toBe(true);
+    expect((await saveStackWork(work)).outcome).toBe('saved');
     expect(work.store.dirty()).toEqual(['p0']);
   });
 
@@ -660,8 +660,55 @@ describe('saveStackWork', () => {
       error: 'nope',
     });
 
-    expect(await saveStackWork(work)).toBe(false);
+    expect((await saveStackWork(work)).outcome).toBe('failed');
     expect(work.store.dirty()).toEqual(['p0']);
+  });
+
+  it('passes on the warnings of a save that succeeded', async () => {
+    const work = build();
+    edit(work, 'p0', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({
+      success: true,
+      warnings: ['left as stored'],
+    });
+
+    expect(await saveStackWork(work)).toEqual({
+      outcome: 'saved',
+      warnings: ['left as stored'],
+    });
+  });
+
+  // The answer was lost: the server may hold this save, with labels and sorts
+  // the work never heard about. Nothing is settled and nothing read back, so
+  // the caller can replace the work with what the server has.
+  it('settles nothing when the save may have been applied', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    work.seedSpine([
+      { uuid: 'a', label: '1', type: 'translation', sort: 10 },
+      { uuid: 'b', label: '2', type: 'translation', sort: 11 },
+      { uuid: 'c', label: '3', type: 'translation', sort: 12 },
+    ]);
+    ['a', 'b', 'c'].forEach((uuid) => {
+      work.store.create(uuid, [para(uuid)]);
+      work.store.peek(uuid)?.markSynced();
+    });
+    edit(work, 'a', 'changed');
+    const created = work.split('a', 1)?.uuid ?? '';
+    work.remove(['b']);
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({
+      success: false,
+      outcomeUnknown: true,
+      error: 'The save may have been applied: fetch failed',
+    });
+
+    const report = await saveStackWork(work);
+
+    expect(report.outcome).toBe('unknown');
+    expect(report.affected?.sort()).toEqual(['a', 'b', created].sort());
+    expect(work.store.dirty().sort()).toEqual(['a', created].sort());
+    expect(work.spine.removedSinceSave()).toEqual(['b']);
+    expect(work.spine.meta(created)?.sort).toBeUndefined();
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
   });
 });
 

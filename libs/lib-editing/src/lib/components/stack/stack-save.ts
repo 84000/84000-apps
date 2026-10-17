@@ -7,6 +7,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import type { JSONContent } from '@tiptap/core';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
+import type { SaveReport } from '../editor/editor-context';
 
 /**
  * The rows a work's edited passages currently materialize to.
@@ -148,18 +149,24 @@ export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
 /**
  * Write a work's edited passages and delete the ones it removed, and mark
  * them synced once the server agrees.
+ *
+ * When the outcome is unknown nothing is settled: the caller replaces the
+ * work with a fresh read, since resending it could revert labels the server
+ * planned.
  */
-export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
+export const saveStackWork = async (
+  work: WorkDocument,
+): Promise<SaveReport> => {
   const client = createBrowserClient();
   const stale = staleSorts.get(work);
   if (stale && !(await refreshSorts(work, client, stale.from, stale.also))) {
     console.error('Failed to save passages: stored sorts could not be read');
-    return false;
+    return { outcome: 'failed' };
   }
 
   const passages = dirtyPassages(work);
   const deletedUuids = work.spine.removedSinceSave();
-  if (!passages.length && !deletedUuids.length) return true;
+  if (!passages.length && !deletedUuids.length) return { outcome: 'none' };
   // Read with the payload: an edit made while the request is in flight is
   // not in it, and must leave its passage dirty.
   const versions = new Map(
@@ -176,13 +183,27 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   const anchors = anchorsFor(work, created);
   // Before the save, which moves the anchors' sorts.
   const createdFrom = shiftedFrom(work, created, anchors);
-  const result = await savePassagesWithDeletions({
-    client,
-    passages,
-    deletedUuids,
-    anchors,
-  });
+  const unknown = (error: unknown): SaveReport => {
+    console.error('Save may have been applied:', error);
+    return {
+      outcome: 'unknown',
+      affected: [...passages.map((passage) => passage.uuid), ...deletedUuids],
+    };
+  };
+  let result: Awaited<ReturnType<typeof savePassagesWithDeletions>>;
+  try {
+    result = await savePassagesWithDeletions({
+      client,
+      passages,
+      deletedUuids,
+      anchors,
+    });
+  } catch (error) {
+    // It may have thrown after its commit.
+    return unknown(error);
+  }
   const createdUuids = new Set(created.map((passage) => passage.uuid));
+  if (result?.outcomeUnknown) return unknown(result.error);
   if (!result?.success) {
     console.error('Failed to save passages:', result?.error ?? 'unknown error');
     // The save may have shifted sorts before it failed, and inserted the
@@ -190,10 +211,8 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     // server holds, not the ones sent here.
     if (created.length)
       await refreshSorts(work, client, createdFrom, createdUuids);
-    return false;
+    return { outcome: 'failed' };
   }
-
-  result.warnings?.forEach((warning) => console.warn(warning));
 
   // Only after the server has it: a document marked synced on a failed write
   // would drop the edit from the next save.
@@ -221,7 +240,10 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   if (created.length) {
     await refreshSorts(work, client, createdFrom, createdUuids);
   }
-  return true;
+  return {
+    outcome: 'saved',
+    ...(result.warnings?.length ? { warnings: result.warnings } : {}),
+  };
 };
 
 /**

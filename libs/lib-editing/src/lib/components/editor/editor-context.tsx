@@ -9,12 +9,27 @@ import { type ReplacedPassage } from '@eightyfourthousand/client-graphql';
 import { toast } from '@eightyfourthousand/design-system';
 import { type DirtyStore } from './hooks/useDirtyStore';
 
-/** What a save did: nothing to save, saved, or failed. */
-export type SaveOutcome = 'none' | 'saved' | 'failed';
+/**
+ * What a save did: nothing to save, saved, or failed. `unknown` is a failure
+ * that may have been applied anyway, because the answer to the write was lost.
+ */
+export type SaveOutcome = 'none' | 'saved' | 'failed' | 'unknown';
+
+/** What one part of a save reports. */
+export type SaveReport = {
+  outcome: SaveOutcome;
+  /** Problems that did not stop a save that succeeded. */
+  warnings?: string[];
+  /**
+   * When the outcome is unknown: the passages the save wrote or deleted, which
+   * have to be read back before anything is saved again.
+   */
+  affected?: string[];
+};
 
 /** A second editing surface that saves alongside the paginated editors. */
 export type SaveHandler = {
-  save: () => Promise<SaveOutcome>;
+  save: () => Promise<SaveReport>;
   /** Whether it holds changes the last save did not write. */
   isDirty: () => boolean;
   /** Take in passages the server rewrote, such as by a replace. */
