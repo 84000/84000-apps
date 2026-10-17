@@ -42,9 +42,10 @@ const UNKNOWN_SAVE_TOAST = 'save-outcome-unknown';
 /**
  * Saves the paginated editors and any registered save handler as one.
  *
- * A save whose answer was lost may have been applied, so it is never sent
+ * A save whose answer was lost may have been applied. A stack save that only
+ * changed content is sent again by the next save. Any other is never sent
  * again: once its passages can be read back, `reload` replaces the editors
- * with what the server holds. Until then, saving is paused.
+ * with what the server holds, and until then saving is paused.
  */
 export const useSaveLifecycle = ({
   client,
@@ -126,6 +127,8 @@ export const useSaveLifecycle = ({
         inFlightDirty,
         dirtyUuidsRef.current,
       );
+      // Never replayable: the baseline is refreshed on load, so it cannot
+      // tell a stored passage from an inserted one.
       return {
         outcome: 'unknown',
         dirty: true,
@@ -356,7 +359,7 @@ export const useSaveLifecycle = ({
           })
         : { outcome: 'none' };
       // The work's state is uncertain: send nothing more until it is read.
-      if (stackReport.outcome === 'unknown') {
+      if (stackReport.outcome === 'unknown' && !stackReport.replayable) {
         await confirmUnknownSave(stackReport.affected ?? []);
         return;
       }
@@ -371,11 +374,24 @@ export const useSaveLifecycle = ({
       ];
       warnings.forEach((warning) => console.warn(warning));
 
-      if (outcome === 'unknown') {
-        await confirmUnknownSave([
-          ...(stackReport.affected ?? []),
-          ...(paginated.affected ?? []),
-        ]);
+      const unknown = [stackReport, paginated].filter(
+        (report) => report.outcome === 'unknown',
+      );
+      if (unknown.some((report) => !report.replayable)) {
+        await confirmUnknownSave(
+          unknown.flatMap((report) => report.affected ?? []),
+        );
+        return;
+      }
+      if (unknown.length) {
+        // Only content was sent, so the next save sends it again.
+        toast('Your last save could not be confirmed.', {
+          description:
+            'Your changes are kept, and the next save sends them again.',
+          icon: <TriangleAlertIcon className="size-4 text-warning" />,
+          id: UNKNOWN_SAVE_TOAST,
+        });
+        dirtyStore.setDirty(true);
         return;
       }
 

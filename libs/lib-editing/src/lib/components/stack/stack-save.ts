@@ -188,6 +188,8 @@ export const saveStackWork = async (
     return {
       outcome: 'unknown',
       affected: [...passages.map((passage) => passage.uuid), ...deletedUuids],
+      // Nothing settles, so the passages stay dirty and are sent again.
+      replayable: !created.length && !deletedUuids.length,
     };
   };
   let result: Awaited<ReturnType<typeof savePassagesWithDeletions>>;
