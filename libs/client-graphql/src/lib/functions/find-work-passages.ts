@@ -20,7 +20,7 @@ type FindWorkPassagesResponse = {
 
 /**
  * Which of `uuids` a work's passages, read through the API, include. With no
- * `uuids`, its first passage. Null when the request fails.
+ * `uuids`, its first passage. Null when the request fails or finds no work.
  *
  * The server answers a read it could not make with an empty page, so only a
  * passage found shows that the work can be read.
@@ -44,9 +44,9 @@ export async function findWorkPassages({
         filter: uuids.length ? { uuids } : undefined,
       },
     );
-    return new Set(
-      response.work?.passages.nodes.map((node) => node.uuid) ?? [],
-    );
+    // No work is a work that could not be read.
+    if (!response.work) return null;
+    return new Set(response.work.passages.nodes.map((node) => node.uuid));
   } catch (error) {
     console.error('Error finding work passages:', error);
     return null;

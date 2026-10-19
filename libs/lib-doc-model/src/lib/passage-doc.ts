@@ -311,11 +311,14 @@ export class PassageDoc {
     return this.revision;
   }
 
-  /** Mark the document as needing a save, without changing it. */
+  /**
+   * Mark the document as needing a save, without changing it, such as for a
+   * change to its label. It counts as a change: `version` rises.
+   */
   markDirty() {
+    this.revision++;
     if (this.dirty) return;
     this.dirty = true;
-    this.revision++;
     this.notify();
   }
 

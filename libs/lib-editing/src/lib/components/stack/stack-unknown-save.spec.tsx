@@ -394,6 +394,22 @@ describe('a stack save whose answer was lost', () => {
     expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
   });
 
+  it('asks before a reload discards a label changed during it', async () => {
+    await mount();
+    splitFirst();
+    commitThenLoseTheAnswer();
+    const probe = mockGraphqlRequest.getMockImplementation();
+    mockGraphqlRequest.mockImplementationOnce(async (...args: unknown[]) => {
+      stack?.work.setLabel('p2', '9.9');
+      return probe?.(...args);
+    });
+
+    await act(() => editor.save());
+
+    expect(spine()).toContain('9.9@');
+    expect(lastToast()[1].description).toMatch(/discard \d+ unsaved/);
+  });
+
   it('sends a save that only changed content again', async () => {
     await mount();
     const held = stack?.work;

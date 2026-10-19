@@ -518,6 +518,8 @@ export class WorkDocument {
     if (!meta || meta.label === label) return false;
 
     this.spine.setLabel(uuid, label);
+    // The label is saved with the passage.
+    this.store.peek(uuid)?.markDirty();
     this.history.record({
       kind: 'label',
       content: [],

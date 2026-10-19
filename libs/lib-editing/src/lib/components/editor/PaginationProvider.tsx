@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   ReactNode,
   useRef,
@@ -368,6 +369,12 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
+  // Loading more writes only this editor, so edits in the others are tracked.
+  const loadingInto = useCallback(
+    (navigating: boolean) => setNavigating(navigating, false, fragment),
+    [setNavigating, fragment],
+  );
+
   useLoadMoreBlocks({
     uuid,
     filter,
@@ -388,7 +395,7 @@ export const PaginationProvider = ({
     handledEndLoadRequestRef,
     isNavigatingRef,
     refreshEditorBaseline,
-    setNavigating,
+    setNavigating: loadingInto,
   });
 
   return (

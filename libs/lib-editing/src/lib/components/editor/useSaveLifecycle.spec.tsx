@@ -438,7 +438,7 @@ describe('saving the paginated editors', () => {
     registerStack({
       isDirty: () => true,
       unsavedChanges: () => 1,
-      revision: () => revision,
+      revision: () => String(revision),
     });
     clientGraphql.savePassages.mockResolvedValue(lostAnswer);
     serverHolds('p0');
@@ -478,6 +478,80 @@ describe('saving the paginated editors', () => {
     expect(screen.getByRole('button', { name: 'Reload' })).toBeTruthy();
     expect(mounts).toBe(1);
     act(() => sonner.toast.dismiss());
+  });
+
+  it('drops Reload from a warning that no longer offers it', async () => {
+    mockSonner.real = true;
+    const sonner = jest.requireActual('@eightyfourthousand/design-system');
+    designSystem.toast.mockImplementation(sonner.toast);
+    await mount();
+    clientGraphql.savePassages.mockImplementation(async () => {
+      addPassage('p1');
+      return lostAnswer;
+    });
+    serverHolds('p0');
+    await act(() => editorState.save());
+    await screen.findByText(/discard 1 unsaved change\./);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+
+    await screen.findByText(/now shows what is saved/);
+    expect(mounts).toBe(2);
+    expect(screen.queryByRole('button', { name: 'Reload' })).toBeNull();
+    act(() => sonner.toast.dismiss());
+  });
+
+  it('settles nothing when a save answers after the session is gone', async () => {
+    const view = await mount();
+    let answer: (value: unknown) => void = () => undefined;
+    clientGraphql.savePassages.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    serverHolds('p0');
+    const saving = editorState.save();
+
+    view.unmount();
+    await act(async () => {
+      answer(lostAnswer);
+      await saving;
+    });
+
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(toasted()).toEqual([]);
+  });
+
+  it('tracks an edit while another editor navigates', async () => {
+    await mount();
+    const editP0 = observeSavedPassage();
+    clientGraphql.savePassages.mockResolvedValue({
+      success: true,
+      savedCount: 1,
+      passages: [],
+      renumberedPassages: [],
+    });
+
+    act(() =>
+      editorState.setNavigating(true, true, editorState.getFragment('main')),
+    );
+    editP0();
+    act(() => editorState.setNavigating(false));
+    await act(() => editorState.save());
+    // The navigating editor's own writes are not edits.
+    expect(clientGraphql.savePassages).not.toHaveBeenCalled();
+
+    act(() =>
+      editorState.setNavigating(
+        true,
+        true,
+        editorState.getFragment('endnotes'),
+      ),
+    );
+    editP0();
+    await act(() => editorState.save());
+    expect(sentUuids(0)).toEqual(['p0']);
   });
 
   it('settles nothing once the session is gone', async () => {

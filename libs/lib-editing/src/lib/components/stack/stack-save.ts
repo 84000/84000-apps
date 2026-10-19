@@ -151,10 +151,10 @@ export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
   unsavedStackChanges(work) > 0;
 
 /**
- * Follow the local edits to some works, until `stop`. `revision` moves with
+ * Follow the local edits to some works, until `stop`. `revision` changes with
  * every one, however few passages it leaves changed: a document's version
- * rises with each change to it, and the spine is counted on each change.
- * Hydrating or releasing a clean passage does not move it.
+ * rises with each change to it, and each change to the spine is counted.
+ * Hydrating or releasing a clean passage leaves it as it was.
  */
 export const trackEdits = (works: WorkDocument[]) => {
   let structural = 0;
@@ -164,17 +164,16 @@ export const trackEdits = (works: WorkDocument[]) => {
     }),
   );
   return {
+    // A list, not a sum, so two states never share a value.
     revision: () =>
-      works.reduce(
-        (sum, work) =>
+      [
+        structural,
+        ...works.flatMap((work) =>
           work.store
             .dirty()
-            .reduce(
-              (n, uuid) => n + (work.store.peek(uuid)?.version ?? 0),
-              sum,
-            ),
-        structural,
-      ),
+            .map((uuid) => `${uuid}:${work.store.peek(uuid)?.version}`),
+        ),
+      ].join(),
     stop: () => stops.forEach((stop) => stop()),
   };
 };

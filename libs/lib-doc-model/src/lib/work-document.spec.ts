@@ -220,6 +220,22 @@ describe('WorkDocument structural ops', () => {
       expect(work.log.depth).toBe(0);
     });
 
+    // The label is saved with the passage, so a rename is an edit to save.
+    it('marks the renamed passage as changed', () => {
+      const work = build(2);
+      ['p0', 'p1'].forEach((uuid) => work.store.peek(uuid)?.markSynced());
+
+      work.setLabel('p1', '1.5');
+      expect(work.store.dirty()).toEqual(['p1']);
+      const version = work.store.peek('p1')?.version ?? 0;
+      work.setLabel('p1', '1.6');
+      expect(work.store.peek('p1')?.version).toBeGreaterThan(version);
+
+      work.store.peek('p1')?.markSynced();
+      work.undo();
+      expect(work.store.dirty()).toEqual(['p1']);
+    });
+
     it('undoes and redoes the rename', () => {
       const work = build(2);
       work.setLabel('p0', '7');

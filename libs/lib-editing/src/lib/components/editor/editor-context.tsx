@@ -52,7 +52,7 @@ export type SaveHandler = {
   /** How many passages hold changes the last save did not write. */
   unsavedChanges: () => number;
   /** Moves with every local edit, even one that changes no count. */
-  revision?: () => number;
+  revision?: () => string;
   /** Take in passages the server rewrote, such as by a replace. */
   applyReplaced?: (passages: ReplacedPassage[]) => void;
   /** Delete an endnote and its links, if the handler holds the endnotes. */

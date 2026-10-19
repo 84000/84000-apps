@@ -56,6 +56,13 @@ type PendingSave = {
 /** One toast for a save with an unknown outcome, updated as it resolves. */
 const UNKNOWN_SAVE_TOAST = 'save-outcome-unknown';
 
+/**
+ * Show or update that toast. Sonner merges an update into the toast it
+ * replaces, so an action is cleared unless one is given.
+ */
+const outcomeToast = (title: string, options: Parameters<typeof toast>[1]) =>
+  toast(title, { action: undefined, ...options, id: UNKNOWN_SAVE_TOAST });
+
 const changes = (n: number) => `${n} unsaved ${n === 1 ? 'change' : 'changes'}`;
 
 /**
@@ -103,6 +110,8 @@ export const useSaveLifecycle = ({
 }) => {
   /** A save with an unknown outcome, held until it is read back. */
   const pendingRef = useRef<PendingSave | null>(null);
+  /** False once the session is torn down, as a reload does. */
+  const aliveRef = useRef(true);
 
   /** How many passages the paginated editors hold changed from `baseline`. */
   const paginatedChanges = useCallback(
@@ -354,13 +363,15 @@ export const useSaveLifecycle = ({
     paginatedChanges,
   ]);
 
-  // A session torn down by a reload settles nothing more.
-  useEffect(
-    () => () => {
+  // A session torn down by a reload settles nothing more, including a save
+  // whose answer arrives later.
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
       pendingRef.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   /** Hold a save with an unknown outcome, and say why saving is paused. */
   const pause = useCallback(
@@ -375,12 +386,11 @@ export const useSaveLifecycle = ({
     ) => {
       pendingRef.current = pending;
       dirtyStore.setDirty(true);
-      toast(title, {
+      outcomeToast(title, {
         description,
         icon: <CircleAlertIcon className="size-4 text-error" />,
         duration: Infinity,
-        id: UNKNOWN_SAVE_TOAST,
-        ...(action ? { action } : {}),
+        action,
       });
     },
     [dirtyStore],
@@ -434,13 +444,12 @@ export const useSaveLifecycle = ({
         }
 
         pendingRef.current = null;
-        toast(title, {
+        outcomeToast(title, {
           description:
             'Its answer was lost, so the editor now shows what is saved. ' +
             'Check your recent changes there before making any of them again.',
           icon: <TriangleAlertIcon className="size-4 text-warning" />,
           duration: Infinity,
-          id: UNKNOWN_SAVE_TOAST,
         });
         reload();
       };
@@ -488,6 +497,7 @@ export const useSaveLifecycle = ({
    */
   const confirmUnknownSave = useCallback(
     async (pending: PendingSave) => {
+      if (!aliveRef.current) return;
       pendingRef.current = pending;
       const { save } = pending;
       const stored = await readStored([...save.sent, ...save.deleted]);
@@ -507,10 +517,9 @@ export const useSaveLifecycle = ({
         pendingRef.current = null;
         await save.restore();
         dirtyStore.setDirty(true);
-        toast('Your last save did not go through.', {
+        outcomeToast('Your last save did not go through.', {
           description: 'Your changes are kept. Save again to send them.',
           icon: <CircleAlertIcon className="size-4 text-error" />,
-          id: UNKNOWN_SAVE_TOAST,
         });
         return;
       }
@@ -565,11 +574,10 @@ export const useSaveLifecycle = ({
             icon: <CircleAlertIcon className="size-4 text-error" />,
           });
         } else {
-          toast('Your last save could not be confirmed.', {
+          outcomeToast('Your last save could not be confirmed.', {
             description:
               'Your changes are kept, and the next save sends them again.',
             icon: <TriangleAlertIcon className="size-4 text-warning" />,
-            id: UNKNOWN_SAVE_TOAST,
           });
         }
         dirtyStore.setDirty(true);

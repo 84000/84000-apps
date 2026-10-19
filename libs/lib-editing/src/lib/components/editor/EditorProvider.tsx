@@ -79,6 +79,8 @@ const EditorSession = ({
   const editsRef = useRef(0);
   const isSavingRef = useRef(false);
   const isNavigatingRef = useRef(false);
+  // The one editor a navigation writes, or null for all of them.
+  const navigatingFragmentRef = useRef<XmlFragment | null>(null);
   const isNormalizingForSaveRef = useRef(false);
   const clearedFragmentRef = useRef<XmlFragment | null>(null);
   const fragmentBaselinesRef = useRef<Map<XmlFragment, FragmentBaseline>>(
@@ -150,7 +152,16 @@ const EditorSession = ({
       if (!txn.local) {
         return;
       }
-      if (isNavigatingRef.current || isNormalizingForSaveRef.current) {
+      if (isNormalizingForSaveRef.current) {
+        return;
+      }
+      const fragment = findObservedFragment(evts);
+      // A navigation writes its own editor; the others stay editable.
+      if (
+        isNavigatingRef.current &&
+        (!navigatingFragmentRef.current ||
+          fragment === navigatingFragmentRef.current)
+      ) {
         return;
       }
       editsRef.current += 1;
@@ -168,7 +179,6 @@ const EditorSession = ({
       // XmlElements with attributes set pre-integration, so txn.changed
       // never includes them.
       if (evts.length > 0) {
-        const fragment = findObservedFragment(evts);
         if (fragment) {
           const baseline = fragmentBaselinesRef.current.get(fragment);
           if (shouldRescanFragment(evts, fragment, baseline)) {
@@ -270,6 +280,7 @@ const EditorSession = ({
       fragment?: XmlFragment,
     ) => {
       isNavigatingRef.current = navigating;
+      navigatingFragmentRef.current = (navigating && fragment) || null;
       if (navigating && resetLastObservedUuids) {
         // Clear last observed UUIDs so the first observer call after navigation
         // repopulates without diffing against the stale pre-navigation set.
