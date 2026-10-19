@@ -489,6 +489,7 @@ flattens to text), and the bubble menu offers inline marks only.
 
 Undo and redo from outside an editor take the history of the work whose row
 was last focused or clicked. The one registered save writes both works and
-reports one outcome. A
-bibliography save writes only edited rows, with their placement as read.
-When the rows cannot be read, the tab falls back to the read-only list.
+reports one outcome. A bibliography save writes only edited rows, with their
+placement as read. When the passages' outcome is unknown, unsaved rows count
+among the changes a reload would discard. When the rows cannot be read, the
+tab falls back to the read-only list.
