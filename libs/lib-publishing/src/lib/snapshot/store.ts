@@ -181,7 +181,7 @@ const freshnessOf = ({
     current:
       sameKey &&
       age < settings.maxAgeMs &&
-      row.manifest?.formatVersion === SNAPSHOT_FORMAT_VERSION,
+      (row.manifest?.formatVersion ?? 0) >= SNAPSHOT_FORMAT_VERSION,
     draftChangedSince: !sameKey,
     generatedAt,
     ageMinutes: Math.floor(age / 60_000),
