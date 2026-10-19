@@ -404,6 +404,69 @@ describe('saving the paginated editors', () => {
     expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
   });
 
+  describe('with a stack save that only changed content', () => {
+    const replayable = (): UnconfirmedSave => ({
+      sent: ['s1'],
+      inserted: [],
+      deleted: [],
+      newerChanges: () => 0,
+      restore: async () => undefined,
+      replayable: true,
+    });
+    const registerReplayable = () =>
+      registerStack({
+        save: async () => ({ outcome: 'unknown', unconfirmed: replayable() }),
+        isDirty: () => true,
+        unsavedChanges: () => 1,
+      });
+
+    it('leaves it for the next save to send again', async () => {
+      await mount();
+      act(() => editorState.setEditor('main', undefined));
+      registerReplayable();
+
+      await act(() => editorState.save());
+
+      expect(mounts).toBe(1);
+      expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+      expect(toasted()).toEqual(['Your last save could not be confirmed.']);
+      expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+    });
+
+    it('shows that the paginated half failed', async () => {
+      await mount();
+      registerReplayable();
+      clientGraphql.savePassages.mockResolvedValue({
+        success: false,
+        savedCount: 0,
+        passages: [],
+        renumberedPassages: [],
+        error: 'nope',
+      });
+
+      await act(() => editorState.save());
+
+      expect(toasted()).toEqual(['Error saving content.']);
+      expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+    });
+
+    // Its edits may not have been applied, so a reload would discard them.
+    it('asks before a reload for the paginated half discards it', async () => {
+      await mount();
+      registerReplayable();
+      clientGraphql.savePassages.mockResolvedValue(lostAnswer);
+      serverHolds('p0');
+
+      await act(() => editorState.save());
+
+      expect(dataAccess.getPassageSorts).toHaveBeenCalledWith(
+        expect.objectContaining({ uuids: ['p0'] }),
+      );
+      expect(mounts).toBe(1);
+      expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
+    });
+  });
+
   it('keeps the edits of a save the server refused', async () => {
     await mount();
     clientGraphql.savePassages.mockRejectedValue(
