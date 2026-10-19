@@ -358,6 +358,19 @@ describe('getWorkSnapshot', () => {
     expect(t.scheduled).toHaveLength(1);
   });
 
+  it('treats an archive in a newer format as current', async () => {
+    const t = setup();
+    await t.call();
+    if (t.state.row?.manifest)
+      t.state.row.manifest.formatVersion = SNAPSHOT_FORMAT_VERSION + 1;
+    const newer = await t.call();
+    expect(newer).toMatchObject({
+      status: 'ready',
+      freshness: { current: true, refreshing: false },
+    });
+    expect(t.scheduled).toHaveLength(0);
+  });
+
   it('records a failed generation, stores nothing, and backs off before retrying', async () => {
     const t = setup();
     let failing = true;
