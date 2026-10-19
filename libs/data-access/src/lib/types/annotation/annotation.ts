@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { ExtendedTranslationLanguage } from '../language';
 import { parseTohList, serializeTohList } from '../toh';
 import {
@@ -324,7 +325,7 @@ export type ImportAnnotationInput = {
   end: number;
   passageUuid: string;
   // Identity of an annotation that already exists. A first-time import omits
-  // it and gets a derived uuid; a pass that rewrites a populated passage sends
+  // it and gets a new one; a pass that rewrites a populated passage sends
   // the stored uuid back so the row is updated rather than replaced — other
   // rows reference annotations by uuid.
   uuid?: string;
@@ -344,7 +345,7 @@ export const baseAnnotationFromImport = (
   input: ImportAnnotationInput,
   type: AnnotationType,
 ): AnnotationBase => ({
-  uuid: input.uuid || `${input.passageUuid}:${type}:${input.start}:${input.end}`,
+  uuid: input.uuid || uuidv4(),
   start: input.start,
   end: input.end,
   type,

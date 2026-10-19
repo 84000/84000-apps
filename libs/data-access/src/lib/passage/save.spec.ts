@@ -1,9 +1,14 @@
+import { version as uuidVersion } from 'uuid';
 import { savePassagesWithDeletions } from './save';
 import {
   fetchReplaceAnnotations,
   fetchReplaceRows,
 } from './replace-persistence';
 import { replacePassageText } from '../replace';
+import {
+  normalizeImportOperations,
+  upsertPassagesFromPreview,
+} from '../import-preview';
 import {
   annotationsFromDTO,
   type Annotation,
@@ -2544,6 +2549,94 @@ describe('savePassagesWithDeletions large saves', () => {
     expect(state.passages.map((row) => row.sort)).toEqual(
       imported(501).map((p) => p.sort),
     );
+  });
+});
+
+describe('re-running a chunked import', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  // Enough passages for two chunks, each with annotations sent without
+  // uuids: two that differ only by content, and an exact duplicate.
+  const emphasis = {
+    kind: 'span',
+    start: 0,
+    end: 7,
+    data: { textStyle: 'emphasis' },
+  };
+  const operations = Array.from({ length: 501 }, (_, at) => ({
+    kind: 'upsert_passage' as const,
+    passage: { label: '', type: 'translation', content: `Passage ${at}.` },
+    annotations: [
+      { kind: 'paragraph', start: 0, end: 8 + String(at).length },
+      emphasis,
+      emphasis,
+      { kind: 'link', start: 0, end: 7, data: { href: 'https://a.example' } },
+      { kind: 'link', start: 0, end: 7, data: { href: 'https://b.example' } },
+    ],
+  }));
+
+  const runImport = (client: unknown) => {
+    const normalized = normalizeImportOperations('work-1', operations);
+    return upsertPassagesFromPreview({
+      client: client as never,
+      preview: {
+        operations: normalized,
+        counts: {
+          titles: 0,
+          passages: normalized.length,
+          annotations: 0,
+          workUpdates: 0,
+          folioUpdates: 0,
+        },
+      },
+    });
+  };
+
+  const rows = (state: FakeState) => ({
+    passages: [...state.passages].sort((a, b) => a.uuid.localeCompare(b.uuid)),
+    annotations: [...state.annotations].sort((a, b) =>
+      a.uuid.localeCompare(b.uuid),
+    ),
+  });
+
+  it('ends with the same rows as one clean run', async () => {
+    const clean = createState({});
+    await runImport(createFakeClient(clean));
+
+    const state = createState({});
+    let calls = 0;
+    const client = createFakeClient(state) as unknown as {
+      rpc: (name: string, args: unknown) => Promise<unknown>;
+    };
+    const rpc = client.rpc;
+    client.rpc = (name, args) => {
+      if (name === 'apply_passage_save' && ++calls === 2) {
+        return Promise.resolve({
+          error: { message: 'canceling statement', code: '57014' },
+        });
+      }
+      return rpc(name, args);
+    };
+
+    await expect(runImport(client)).rejects.toThrow('Partly saved');
+    expect(state.passages).toHaveLength(500);
+
+    await runImport(client);
+
+    expect(state.passages).toHaveLength(501);
+    expect(state.annotations).toHaveLength(501 * 5);
+    expect(rows(state)).toEqual(rows(clean));
+    expect(
+      [...state.passages, ...state.annotations].every(
+        (row) => uuidVersion(row.uuid) === 5,
+      ),
+    ).toBe(true);
   });
 });
 
