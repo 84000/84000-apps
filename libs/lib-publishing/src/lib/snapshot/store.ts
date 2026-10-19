@@ -7,14 +7,14 @@
  * client.
  *
  * A snapshot is current while the `draft_touched_at` it was built from equals the live
- * one. Inputs no trigger tracks (alignment matview refreshes) are picked up only once
- * an archive outlives `maxAgeMs`.
+ * one and its format is this build's. Inputs no trigger tracks (alignment matview
+ * refreshes) are picked up only once an archive outlives `maxAgeMs`.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
 import { generateWorkSnapshot, type WorkSnapshot } from './generate';
 import { resolveDraftWork } from './read-draft';
-import type { SnapshotManifest } from './render';
+import { SNAPSHOT_FORMAT_VERSION, type SnapshotManifest } from './render';
 
 export const SNAPSHOT_BUCKET = 'work-snapshots';
 
@@ -58,7 +58,7 @@ export interface WorkSnapshotRef {
 }
 
 export interface SnapshotFreshness {
-  /** The stored key equals the live draft key, and the archive is within maxAge. */
+  /** The stored key equals the live draft key, the archive is within maxAge, and its format is current. */
   current: boolean;
   /** The draft has changed since the snapshot was built. */
   draftChangedSince: boolean;
@@ -178,7 +178,10 @@ const freshnessOf = ({
   const age = Math.max(0, now - Date.parse(generatedAt));
   const sameKey = sameDraftKey(row.draft_touched_at, liveKey);
   return {
-    current: sameKey && age < settings.maxAgeMs,
+    current:
+      sameKey &&
+      age < settings.maxAgeMs &&
+      (row.manifest?.formatVersion ?? 0) >= SNAPSHOT_FORMAT_VERSION,
     draftChangedSince: !sameKey,
     generatedAt,
     ageMinutes: Math.floor(age / 60_000),
