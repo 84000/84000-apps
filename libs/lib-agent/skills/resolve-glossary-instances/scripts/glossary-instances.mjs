@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-const SHY = '­';
+const SHY = '\u00ad';
 const LETTER = '[\\p{L}\\p{M}\\p{N}]';
 /** Passage types that are never glossed. */
 const SKIP_TYPE = /Header$|^(acknowledgment|abbreviations)$/;
@@ -214,6 +214,12 @@ const ops = (out, chunk) => {
   const dropTerms = new Set(d.dropTerms ?? []);
   const drop = new Set(d.drop ?? []);
   const pick = d.pick ?? {};
+  // Decisions for candidates this run did not find no longer apply.
+  const ids = new Set(candidates.map((c) => c.id));
+  const unmatched = [
+    ...[...drop, ...Object.keys(pick)].filter((id) => !ids.has(id)),
+    ...[...dropTerms].filter((t) => !terms.has(t)),
+  ];
   const edits = [];
   for (const c of candidates) {
     const anchor = pick[c.id] ?? c.term;
@@ -245,12 +251,18 @@ const ops = (out, chunk) => {
     batch.push(e);
   }
   if (batch.length) flush();
-  console.log(JSON.stringify({ edits: edits.length, files }));
+  console.log(
+    JSON.stringify({
+      edits: edits.length,
+      files,
+      ...(unmatched.length ? { unmatched } : {}),
+    }),
+  );
 };
 
 const [command, a, b] = process.argv.slice(2);
 if (command === 'find' && a && b) find(a, b, flag('many', 150));
-else if (command === 'ops' && a) ops(a, flag('chunk', 50));
+else if (command === 'ops' && a) ops(a, Math.max(1, flag('chunk', 50)));
 else {
   console.error(
     'usage: glossary-instances.mjs find <snapshot-dir> <out-dir> [--many N] | ops <out-dir> [--chunk N]',

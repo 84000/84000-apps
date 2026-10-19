@@ -102,7 +102,7 @@ holds:
   are in endnotes;
 - a table per term: anchor, English, existing, to add;
 - every flagged term and candidate, with its context and your recommendation;
-- what was skipped and why, and the terms found nowhere.
+- what was skipped and why, from `summary.json`'s `skipped`.
 
 Then summarize it in the conversation and ask the editor to confirm or adjust.
 Decisions live in this conversation, not in a store.
@@ -125,7 +125,9 @@ node "<this skill>/scripts/glossary-instances.mjs" ops <out>
 ```
 
 It writes `ops-001.json`, `ops-002.json`, … each about 50 edits, keeping a
-passage's edits together. Keep files small: a dry run returns the full text of
+passage's edits together. If it prints `unmatched`, those decisions name a
+candidate or term this run did not find, usually because the passage was
+edited: find the candidates they meant and decide them again before applying. Keep files small: a dry run returns the full text of
 every passage it touches.
 
 ### 6. Check the snapshot is still current
