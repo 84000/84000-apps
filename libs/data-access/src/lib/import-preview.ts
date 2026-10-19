@@ -1,8 +1,4 @@
-import {
-  v4 as uuidv4,
-  validate as isUuid,
-  version as uuidVersion,
-} from 'uuid';
+import { v4 as uuidv4, validate as isUuid, version as uuidVersion } from 'uuid';
 import { savePassagesWithDeletions } from './passage';
 import {
   derivedUuidAllocator,
@@ -271,6 +267,8 @@ export const findLeftoverImportPassages = async ({
     .filter((row) => !saved.has(row.uuid))
     .map((row) => ({
       ...row,
+      // Only `derivedUuid` mints v5 uuids, and only import passages carry
+      // a derived uuid under a `docx-` xmlId; keep it that way.
       derived: isUuid(row.uuid) && uuidVersion(row.uuid) === 5,
     }));
 };
@@ -362,7 +360,7 @@ const findAnnotationsElsewhere = async ({
       .in('uuid', batch);
     if (error) {
       throw new Error(
-        `No passages were saved: failed to read stored annotations: ${error.message}`,
+        `Nothing was saved: failed to read stored annotations: ${error.message}`,
       );
     }
     for (const row of (data ?? []) as {
@@ -377,28 +375,26 @@ const findAnnotationsElsewhere = async ({
   return elsewhere;
 };
 
+const passageOperations = (preview: ImportPreview) =>
+  preview.operations.filter(
+    (operation): operation is PassageInsertOperation =>
+      operation.kind === 'upsert_passage',
+  );
+
 /**
- * Saves an import's passages. A large import is committed in chunks, so it is
- * not all-or-nothing: a failure partway leaves the chunks before it saved, and
- * the error says how many passages were. Re-running the same import converges:
- * passages and annotations sent without uuids get derived ones, so the rows
- * already saved are matched and updated rather than saved again. A derived
- * annotation uuid stored on another passage, where an edit moved the row, is
- * replaced by a random one, so the row stays where the edit put it.
+ * The annotation uuids this import would derive that are already stored on a
+ * different passage, where an edit has moved the row. Saving one would take
+ * that row from the passage it is on. Throws when the read fails.
  */
-export const upsertPassagesFromPreview = async ({
+export const findDerivedAnnotationsElsewhere = async ({
   client,
   preview,
 }: {
   client: DataClient;
   preview: ImportPreview;
-}) => {
-  const operations = preview.operations.filter(
-    (operation): operation is PassageInsertOperation =>
-      operation.kind === 'upsert_passage',
-  );
+}): Promise<Set<string>> => {
   const derived = new Map<string, string>();
-  operations.forEach((operation) => {
+  passageOperations(preview).forEach((operation) => {
     const sent = new Set(operation.annotations.map((input) => input.uuid));
     previewDtoToPassage(operation).annotations.forEach((annotation) => {
       if (!sent.has(annotation.uuid)) {
@@ -406,14 +402,39 @@ export const upsertPassagesFromPreview = async ({
       }
     });
   });
-  const elsewhere = await findAnnotationsElsewhere({ client, rows: derived });
-  const passages = operations.map((operation) =>
-    previewDtoToPassage(operation, elsewhere),
+  return findAnnotationsElsewhere({ client, rows: derived });
+};
+
+/**
+ * Saves an import's passages. A large import is committed in chunks, so it is
+ * not all-or-nothing: a failure partway leaves the chunks before it saved, and
+ * the error says how many passages were. Re-running the same import converges:
+ * passages and annotations sent without uuids get derived ones, so the rows
+ * already saved are matched and updated rather than saved again, except
+ * while a fallback below is in play. A derived annotation uuid stored on
+ * another passage (`elsewhere`, looked up when not given) is replaced by a
+ * random one, so the save never takes that row from the passage it is on.
+ * The row stays there unless that passage is in the import too, whose own
+ * annotations then replace it.
+ */
+export const upsertPassagesFromPreview = async ({
+  client,
+  preview,
+  elsewhere,
+}: {
+  client: DataClient;
+  preview: ImportPreview;
+  elsewhere?: Set<string>;
+}) => {
+  const heldElsewhere =
+    elsewhere ?? (await findDerivedAnnotationsElsewhere({ client, preview }));
+  const passages = passageOperations(preview).map((operation) =>
+    previewDtoToPassage(operation, heldElsewhere),
   );
   const warnings =
-    elsewhere.size > 0
+    heldElsewhere.size > 0
       ? [
-          `${elsewhere.size} annotation(s) matched rows an edit has moved to another passage, so they were saved under new uuids and the moved rows were left in place.`,
+          `${heldElsewhere.size} annotation(s) matched rows an edit has moved to another passage, so they were saved under new uuids rather than take those rows from the passages they are on.`,
         ]
       : [];
 
@@ -602,6 +623,8 @@ export const applyImportPreview = async ({
     );
   }
 
+  const elsewhere = await findDerivedAnnotationsElsewhere({ client, preview });
+
   const workUpdated = await updateWorkFromPreview({
     client,
     workUuid,
@@ -626,7 +649,11 @@ export const applyImportPreview = async ({
     warnings.push(folioResult.warning);
   }
 
-  const passageResult = await upsertPassagesFromPreview({ client, preview });
+  const passageResult = await upsertPassagesFromPreview({
+    client,
+    preview,
+    elsewhere,
+  });
   warnings.push(...passageResult.warnings);
 
   return {

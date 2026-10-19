@@ -35,6 +35,8 @@ interface FakeState {
   storedPassages?: { uuid: string; sort: number }[];
   /** Stored annotation rows read by uuid. */
   storedAnnotations?: { uuid: string; passage_uuid: string }[];
+  /** Fail the read of stored annotations by uuid. */
+  failAnnotationRead?: boolean;
   titleRows?: {
     uuid: string;
     type: string;
@@ -96,12 +98,14 @@ function makeFakeClient(state: FakeState): DataClient {
           let result: unknown = { data: [], count: 0, error: null };
           if (ctx.table === 'passage_annotations' && ctx.in) {
             const values = ctx.in;
-            result = {
-              data: (state.storedAnnotations ?? []).filter((row) =>
-                values.includes(row.uuid),
-              ),
-              error: null,
-            };
+            result = state.failAnnotationRead
+              ? { data: null, error: { message: 'read failed' } }
+              : {
+                  data: (state.storedAnnotations ?? []).filter((row) =>
+                    values.includes(row.uuid),
+                  ),
+                  error: null,
+                };
           } else if (ctx.table === 'passages' && ctx.in) {
             const values = ctx.in;
             result = {
@@ -324,7 +328,12 @@ describe('normalizeImportOperations explicit passage uuids', () => {
       normalizeImportOperations('w1', [
         {
           kind: 'upsert_passage',
-          passage: { uuid: taken, label: '', type: 'translation', content: 'a' },
+          passage: {
+            uuid: taken,
+            label: '',
+            type: 'translation',
+            content: 'a',
+          },
         },
         {
           kind: 'upsert_passage',
@@ -592,6 +601,22 @@ describe('applyImportPreview leftover import passages', () => {
     expect(state.titleInserts).toEqual([]);
   });
 
+  it('cannot tell a lone matched passage has moved', async () => {
+    // Pinned so a change here is deliberate: the docs say a single
+    // passage's move is not detected.
+    const state: FakeState = {
+      storedPassages: [{ uuid: importPassageUuid('w1', 'docx-0'), sort: 7 }],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.counts.passages).toBe(1);
+  });
+
   it('updates imported passages an insert has shifted but not reordered', async () => {
     const state: FakeState = {
       storedPassages: [
@@ -748,7 +773,11 @@ describe('applyImportPreview annotation uuids held by another passage', () => {
   const ops: ImportOperationInput[] = [
     {
       kind: 'upsert_passage',
-      passage: { label: '', type: 'translation', content: 'Thus have I heard.' },
+      passage: {
+        label: '',
+        type: 'translation',
+        content: 'Thus have I heard.',
+      },
       annotations: [{ kind: 'paragraph', start: 0, end: 18 }],
     },
   ];
@@ -775,6 +804,23 @@ describe('applyImportPreview annotation uuids held by another passage', () => {
     expect(result.warnings).toEqual([
       expect.stringContaining('1 annotation(s)'),
     ]);
+  });
+
+  it('writes nothing when the stored annotations cannot be read', async () => {
+    const state: FakeState = { titleInserts: [], failAnnotationRead: true };
+
+    await expect(
+      applyImportPreview({
+        client: makeFakeClient(state),
+        workUuid: 'w1',
+        operations: [
+          { kind: 'upsert_title', title: { content: 't', type: 'mainTitle' } },
+          ...ops,
+        ],
+      }),
+    ).rejects.toThrow('Nothing was saved: failed to read stored annotations');
+    expect(mockedSavePassages).not.toHaveBeenCalled();
+    expect(state.titleInserts).toEqual([]);
   });
 
   it('keeps the derived uuid of a row already on its own passage', async () => {

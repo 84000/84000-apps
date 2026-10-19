@@ -2703,6 +2703,34 @@ describe('re-running a chunked import', () => {
       state.annotations.filter((row) => row.passage_uuid !== 'other'),
     ).toHaveLength(5);
   });
+
+  it('replaces a moved annotation when the passage it was moved to is re-imported', async () => {
+    const two = operations.slice(0, 2);
+    const clean = createState({});
+    await runImport(createFakeClient(clean), two);
+    const state = createState({});
+    await runImport(createFakeClient(state), two);
+    const [first, second] = [...state.passages].sort((a, b) => a.sort - b.sort);
+    const moved = state.annotations.find(
+      (row) => row.passage_uuid === first.uuid,
+    ) as AnnotationDTO;
+    state.annotations = state.annotations.map((row) =>
+      row.uuid === moved.uuid ? { ...row, passage_uuid: second.uuid } : row,
+    );
+
+    await runImport(createFakeClient(state), two);
+
+    // Each passage ends with the import's annotations; the moved row, not
+    // among the second passage's, is replaced by a copy on the first.
+    const onPassage = (rows: AnnotationDTO[], uuid: string) =>
+      rows.filter((row) => row.passage_uuid === uuid).length;
+    expect(onPassage(state.annotations, first.uuid)).toBe(5);
+    expect(onPassage(state.annotations, second.uuid)).toBe(5);
+    expect(state.annotations.some((row) => row.uuid === moved.uuid)).toBe(
+      false,
+    );
+    expect(state.annotations).toHaveLength(clean.annotations.length);
+  });
 });
 
 describe('savePassagesWithDeletions raw annotation state', () => {

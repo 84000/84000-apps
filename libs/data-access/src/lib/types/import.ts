@@ -186,7 +186,7 @@ export const normalizePassageType = (type: string): BodyItemType => {
  * gets one derived from its passage, type, range and content, so a re-run
  * of the same import matches the rows an earlier run saved. A derived uuid
  * in `elsewhere`, one stored on another passage, is replaced by a random
- * one: saving it would move that row onto this passage.
+ * one: saving it would take that row from the passage it is on.
  */
 export const previewDtoToPassage = (
   operation: PassageInsertOperation,

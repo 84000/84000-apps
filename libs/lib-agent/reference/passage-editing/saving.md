@@ -6,17 +6,17 @@ annotations you did not mention, the content, the sort of a passage you insert.
 
 `apply-entity-import` is the other tool, and it is for filling a work that has
 no passages yet. It takes a passage's whole end state, which on a populated work
-means reconstructing everything you are not changing — see *Why not the import
-tool* below.
+means reconstructing everything you are not changing — see _Why not the import
+tool_ below.
 
 ## The edits
 
-| op | what it does |
-|---|---|
-| `delete-text` | cuts `start`–`end` out of the passage content; `text` must be exactly what that range holds |
-| `add-annotation` | adds an annotation of `kind` at `start` (and `end`, if it spans) |
-| `remove-annotation` | removes the annotation with that uuid |
-| `insert-passage` | inserts a passage before an existing one |
+| op                  | what it does                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `delete-text`       | cuts `start`–`end` out of the passage content; `text` must be exactly what that range holds |
+| `add-annotation`    | adds an annotation of `kind` at `start` (and `end`, if it spans)                            |
+| `remove-annotation` | removes the annotation with that uuid                                                       |
+| `insert-passage`    | inserts a passage before an existing one                                                    |
 
 `delete-text` refuses the whole call when its `text` is not what the stored
 passage holds at `start`–`end`. Copy it from the passage you read.
@@ -121,8 +121,11 @@ shorter run leaves the passages past its end in place, and the result warns
 about them by xmlId. If an edit has moved a passage the earlier run saved out
 of order among this import's passages, the re-run is refused and nothing is
 written. A passage pushed down by an insert, or by the earlier run's own
-placement, still matches. An annotation an edit moved to another passage stays
-there: the re-run saves its own copy under a new uuid and warns.
+placement, still matches. The check compares the import's passages with each
+other, so it misses a move when only one of them is stored, or a move past
+passages this import does not send: to rewrite one passage, send its stored
+uuid. An annotation an edit moved to another passage is never taken from it:
+the re-run saves its own copy under a new uuid and warns.
 
 A uuid the tool derives never repeats one you sent, so passages and annotations
 with and without uuids can be mixed. A work imported before uuids were derived
