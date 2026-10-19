@@ -185,16 +185,24 @@ export const normalizePassageType = (type: string): BodyItemType => {
  * An import passage as a domain passage. An annotation sent without a uuid
  * gets one derived from its passage, type, range and content, so a re-run
  * of the same import matches the rows an earlier run saved. A derived uuid
- * in `elsewhere`, one stored on another passage, is replaced by a random
- * one: saving it would take that row from the passage it is on.
+ * is never one in `sent`, the annotation uuids the whole import sends
+ * (this passage's by default). One in `elsewhere`, stored on another
+ * passage, is replaced by a random one: saving it would take that row from
+ * the passage it is on.
  */
 export const previewDtoToPassage = (
   operation: PassageInsertOperation,
-  elsewhere: ReadonlySet<string> = new Set(),
+  {
+    elsewhere = new Set(),
+    sent,
+  }: { elsewhere?: ReadonlySet<string>; sent?: ReadonlySet<string> } = {},
 ): Passage => {
   const passageUuid = operation.passage.uuid;
   const allocate = derivedUuidAllocator(
-    operation.annotations.flatMap((input) => (input.uuid ? [input.uuid] : [])),
+    sent ??
+      operation.annotations.flatMap((input) =>
+        input.uuid ? [input.uuid] : [],
+      ),
   );
   const withDerivedUuid = (annotation: Annotation): Annotation => {
     const dto = annotationToDTO(annotation);

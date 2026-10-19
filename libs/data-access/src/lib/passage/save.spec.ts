@@ -2599,15 +2599,15 @@ describe('re-running a chunked import', () => {
     });
   };
 
-  /** A client whose `n`-th commit fails as a statement timeout would. */
-  const failingCommit = (state: FakeState, n: number) => {
+  /** A client whose `n`-th commits fail as a statement timeout would. */
+  const failingCommit = (state: FakeState, ...n: number[]) => {
     let calls = 0;
     const client = createFakeClient(state) as unknown as {
       rpc: (name: string, args: unknown) => Promise<unknown>;
     };
     const rpc = client.rpc;
     client.rpc = (name, args) => {
-      if (name === 'apply_passage_save' && ++calls === n) {
+      if (name === 'apply_passage_save' && n.includes(++calls)) {
         return Promise.resolve({
           error: { message: 'canceling statement', code: '57014' },
         });
@@ -2682,6 +2682,45 @@ describe('re-running a chunked import', () => {
     await expect(
       findMovedImportPassages({ client: client as never, passages }),
     ).resolves.toEqual([]);
+  });
+
+  it('is refused after a retry fails between its shift and its commit (known limit)', async () => {
+    // Pinned so a change is deliberate: the docs list this as a known limit.
+    // The failed retry's shift stays, so the tied passage the first run saved
+    // ends above the one after it, which reads as a move. It fails safe.
+    const tied = [
+      ...operations,
+      {
+        ...operations[0],
+        passage: { ...operations[0].passage, content: 'Passage 501.' },
+        annotations: [{ kind: 'paragraph', start: 0, end: 11 }],
+      },
+    ].map((operation, at) =>
+      at === 500
+        ? { ...operation, passage: { ...operation.passage, sort: 499 } }
+        : at === 501
+          ? { ...operation, passage: { ...operation.passage, sort: 500 } }
+          : operation,
+    );
+    const state = createState({});
+    const client = failingCommit(state, 2, 3);
+
+    await expect(runImport(client, tied)).rejects.toThrow('Partly saved');
+    // The retry's first chunk is unchanged, so only its shift and failed
+    // commit happen.
+    await expect(runImport(client, tied)).rejects.toThrow('Nothing was saved');
+    await runImport(client, tied);
+    expect(state.passages).toHaveLength(502);
+
+    const passages = normalizeImportOperations('work-1', tied).flatMap(
+      (operation) =>
+        operation.kind === 'upsert_passage'
+          ? [{ ...operation.passage, xmlId: operation.passage.xmlId ?? '' }]
+          : [],
+    );
+    await expect(
+      findMovedImportPassages({ client: client as never, passages }),
+    ).resolves.not.toEqual([]);
   });
 
   it('leaves an annotation an edit moved to another passage there', async () => {

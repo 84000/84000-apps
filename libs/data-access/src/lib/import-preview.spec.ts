@@ -347,6 +347,74 @@ describe('normalizeImportOperations explicit passage uuids', () => {
   });
 });
 
+describe('normalizeImportOperations occurrence counting', () => {
+  it('counts a sent passage toward its xmlId occurrence, as main did', () => {
+    const [, derived] = passageUuids(
+      normalizeImportOperations('w1', [
+        {
+          kind: 'upsert_passage',
+          passage: {
+            uuid: '3b241101-e2bb-4255-8caf-4136c566a962',
+            label: '',
+            type: 'translation',
+            content: 'a',
+            xmlId: 'docx-0',
+          },
+        },
+        {
+          kind: 'upsert_passage',
+          passage: {
+            label: '',
+            type: 'translation',
+            content: 'b',
+            xmlId: 'docx-0',
+          },
+        },
+      ]),
+    );
+    expect(derived).toBe(importPassageUuid('w1', 'docx-0', 2));
+  });
+});
+
+describe('applyImportPreview annotation uuids sent on another passage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedSavePassages.mockResolvedValue({ success: true } as never);
+  });
+
+  it('does not derive a uuid another passage sends', async () => {
+    const paragraph = { kind: 'paragraph', start: 0, end: 1 };
+    const ops: ImportOperationInput[] = [
+      {
+        kind: 'upsert_passage',
+        passage: { label: '', type: 'translation', content: 'a' },
+        annotations: [paragraph],
+      },
+    ];
+    const [first] = normalizeImportOperations('w1', ops);
+    const taken = previewDtoToPassage(first as PassageInsertOperation)
+      .annotations[0].uuid;
+
+    await applyImportPreview({
+      client: makeFakeClient({}),
+      workUuid: 'w1',
+      operations: [
+        ...ops,
+        {
+          kind: 'upsert_passage',
+          passage: { label: '', type: 'translation', content: 'b' },
+          annotations: [{ ...paragraph, uuid: taken }],
+        },
+      ],
+    });
+
+    const [a, b] = mockedSavePassages.mock.calls[0][0].passages;
+    expect(b.annotations[0].uuid).toBe(taken);
+    expect(a.annotations[0].uuid).not.toBe(taken);
+    expect(isUuid(a.annotations[0].uuid)).toBe(true);
+  });
+});
+
 describe('previewDtoToPassage annotation uuids', () => {
   const operation = (
     annotations: PassageInsertOperation['annotations'],

@@ -381,6 +381,16 @@ const passageOperations = (preview: ImportPreview) =>
       operation.kind === 'upsert_passage',
   );
 
+/** Every annotation uuid the import sends, on any passage. */
+const sentAnnotationUuids = (preview: ImportPreview) =>
+  new Set(
+    passageOperations(preview).flatMap((operation) =>
+      operation.annotations.flatMap((input) =>
+        input.uuid ? [input.uuid] : [],
+      ),
+    ),
+  );
+
 /**
  * The annotation uuids this import would derive that are already stored on a
  * different passage, where an edit has moved the row. Saving one would take
@@ -394,13 +404,15 @@ export const findDerivedAnnotationsElsewhere = async ({
   preview: ImportPreview;
 }): Promise<Set<string>> => {
   const derived = new Map<string, string>();
+  const sent = sentAnnotationUuids(preview);
   passageOperations(preview).forEach((operation) => {
-    const sent = new Set(operation.annotations.map((input) => input.uuid));
-    previewDtoToPassage(operation).annotations.forEach((annotation) => {
-      if (!sent.has(annotation.uuid)) {
-        derived.set(annotation.uuid, operation.passage.uuid);
-      }
-    });
+    previewDtoToPassage(operation, { sent }).annotations.forEach(
+      (annotation) => {
+        if (!sent.has(annotation.uuid)) {
+          derived.set(annotation.uuid, operation.passage.uuid);
+        }
+      },
+    );
   });
   return findAnnotationsElsewhere({ client, rows: derived });
 };
@@ -428,8 +440,9 @@ export const upsertPassagesFromPreview = async ({
 }) => {
   const heldElsewhere =
     elsewhere ?? (await findDerivedAnnotationsElsewhere({ client, preview }));
+  const sent = sentAnnotationUuids(preview);
   const passages = passageOperations(preview).map((operation) =>
-    previewDtoToPassage(operation, heldElsewhere),
+    previewDtoToPassage(operation, { elsewhere: heldElsewhere, sent }),
   );
   const warnings =
     heldElsewhere.size > 0
@@ -500,11 +513,13 @@ export const normalizeImportOperations = (
       return {
         kind: 'upsert_passage',
         passage: {
-          uuid:
-            operation.passage.uuid ??
-            allocate(JSON.stringify([passageWorkUuid, xmlId]), (nth) =>
-              importPassageUuid(passageWorkUuid, xmlId, nth),
-            ),
+          // A sent uuid still counts toward its xmlId's occurrences, so the
+          // derived uuids after it keep the numbers an earlier run gave them.
+          uuid: allocate(
+            JSON.stringify([passageWorkUuid, xmlId]),
+            (nth) => importPassageUuid(passageWorkUuid, xmlId, nth),
+            operation.passage.uuid,
+          ),
           workUuid: passageWorkUuid,
           label: operation.passage.label,
           sort,

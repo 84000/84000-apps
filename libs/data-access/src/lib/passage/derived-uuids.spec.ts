@@ -16,4 +16,10 @@ describe('derivedUuidAllocator', () => {
     expect(allocate('a', uuidFor('a'))).toBe('a#2');
     expect(allocate('a', uuidFor('a'))).toBe('a#4');
   });
+
+  it('counts a sent uuid toward its key and returns it', () => {
+    const allocate = derivedUuidAllocator(['mine']);
+    expect(allocate('a', uuidFor('a'), 'mine')).toBe('mine');
+    expect(allocate('a', uuidFor('a'))).toBe('a#2');
+  });
 });

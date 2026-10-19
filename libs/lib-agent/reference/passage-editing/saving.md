@@ -122,7 +122,10 @@ shorter run leaves the passages past its end in place, and the result warns
 about them by xmlId. If an edit has moved a passage the earlier run saved out
 of order among this import's passages, the re-run is refused and nothing is
 written. A passage pushed down by an insert, or by the earlier run's own
-placement, still matches. The check compares the import's passages with each
+placement, still matches. One case is refused though nothing moved: when
+passages share a sort and a retry fails after making room for one but before
+committing, the room it made stays and later runs read it as a move. Send the
+stored uuids to re-run past it. The check compares the import's passages with each
 other, so it misses a move when only one of them is stored, or a move past
 passages this import does not send: to rewrite one passage, send its stored
 uuid. An annotation an edit moved to another passage is never taken from it:
