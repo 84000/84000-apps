@@ -13,6 +13,7 @@ import {
   passageFromDTO,
 } from '../types';
 import { readAnnotationsByPassageUuids } from './batch';
+import { derivedAnnotationUuid } from './derived-uuids';
 import { savePassagesWithDeletions, type NewPassageAnchor } from './save';
 import { stableStringify } from './save/diff';
 import { inBatches } from './in-batches';
@@ -296,9 +297,8 @@ export const applyEditsToPassages = ({
       if (edit.op !== 'add-annotation') {
         continue;
       }
+      // A placeholder: the row's uuid is derived once its content is known.
       const annotation = annotationFromImport(edit.kind, {
-        // The importer's fallback id is derived, not a uuid, and would also
-        // collide with an annotation removed from the same range.
         uuid: uuidv4(),
         start: mapOffset(edit.start, deletions),
         end: mapOffset(edit.end ?? edit.start, deletions),
@@ -320,7 +320,19 @@ export const applyEditsToPassages = ({
         });
         continue;
       }
-      rows.push({ ...row, passage_uuid: uuid });
+      // Derived from the content as `duplicateOf` compares it, so a resend
+      // matches the row the first send wrote. A stored row can hold that uuid
+      // at another range when an editor has moved it since; the new row then
+      // keeps a random one.
+      const derived = derivedAnnotationUuid(
+        uuid,
+        annotationToDTO(annotationFromDTO(row, content.length)) ?? row,
+      );
+      rows.push({
+        ...row,
+        uuid: rows.some((other) => other.uuid === derived) ? row.uuid : derived,
+        passage_uuid: uuid,
+      });
     }
 
     rawAnnotations[uuid] = rows;
