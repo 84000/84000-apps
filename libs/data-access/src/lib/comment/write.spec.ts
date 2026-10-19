@@ -272,6 +272,21 @@ describe('createComment', () => {
     expect(state.comments).toEqual([]);
   });
 
+  it('checks a bibliography row against the bibliography table', async () => {
+    const { client, state } = fakeClient();
+
+    const result = await createComment({
+      client,
+      entityUuid: PASSAGE,
+      entityType: 'bibliography',
+      content: 'Which edition?',
+      userUuid: AUTHOR,
+    });
+
+    expect(result.comment).toMatchObject({ entityType: 'bibliography' });
+    expect(state.ops).toEqual(['select:bibliographies', 'insert:comments']);
+  });
+
   it('rejects an entity type this build does not know', async () => {
     const { client, state } = fakeClient();
 

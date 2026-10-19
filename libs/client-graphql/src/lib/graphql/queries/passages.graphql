@@ -171,3 +171,25 @@ query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
     }
   }
 }
+
+query GetBibliographyComments($uuid: ID!, $uuids: [ID!]!) {
+  work(uuid: $uuid) {
+    uuid
+    bibliographyComments(uuids: $uuids) {
+      uuid
+      label
+      anchors {
+        uuid
+        comment
+        start
+        end
+      }
+      comments {
+        ...CommentThreadFields
+      }
+      unanchoredComments {
+        ...CommentThreadFields
+      }
+    }
+  }
+}

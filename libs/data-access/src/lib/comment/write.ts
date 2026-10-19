@@ -37,6 +37,7 @@ export type CommentDeleteResult = {
  */
 const ENTITY_TABLES: Record<CommentEntityType, string> = {
   passage: 'passages',
+  bibliography: 'bibliographies',
 };
 
 /**

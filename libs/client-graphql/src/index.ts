@@ -85,6 +85,8 @@ export {
   type AnchoredCommentThread,
   type CommentAnchor,
   type PassageComments,
+  BIBLIOGRAPHY_COMMENTS_TYPE,
+  getBibliographyComments,
   findWorkPassages,
 } from './lib/functions';
 

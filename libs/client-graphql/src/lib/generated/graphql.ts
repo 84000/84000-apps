@@ -65,6 +65,18 @@ export type Annotation = {
   uuid: Scalars['ID']['output'];
 };
 
+/** Where one comment mark sits in a bibliography entry. */
+export type BibliographyCommentAnchor = {
+  __typename?: 'BibliographyCommentAnchor';
+  /** The thread root the mark points at */
+  comment: Scalars['ID']['output'];
+  end: Scalars['Int']['output'];
+  /** Text offsets into the entry, markup excluded */
+  start: Scalars['Int']['output'];
+  /** The mark's own identity */
+  uuid: Scalars['ID']['output'];
+};
+
 /** A bibliography section with heading and entries */
 export type BibliographyEntry = {
   __typename?: 'BibliographyEntry';
@@ -74,6 +86,30 @@ export type BibliographyEntry = {
   heading?: Maybe<Scalars['String']['output']>;
   /** Label of the bibliography entry (e.g., 1, 2, etc.) */
   label?: Maybe<Scalars['String']['output']>;
+};
+
+/**
+ * One bibliography entry's comment threads.
+ *
+ * A bibliography stores its anchors inline, as marks in the entry's HTML, rather
+ * than as annotations; otherwise this reads like `Passage.comments` and
+ * `Passage.unanchoredComments`.
+ */
+export type BibliographyEntryComments = {
+  __typename?: 'BibliographyEntryComments';
+  /** The entry's comment marks, in document order */
+  anchors: Array<BibliographyCommentAnchor>;
+  /** Threads the entry's marks point at. Roots only, replies nested. */
+  comments: Array<Comment>;
+  /** The entry's reference label, such as `1.2` */
+  label?: Maybe<Scalars['String']['output']>;
+  /**
+   * Threads written on this entry that no mark in the work's bibliography points
+   * at any more. Roots only, replies nested.
+   */
+  unanchoredComments: Array<Comment>;
+  /** The bibliography row */
+  uuid: Scalars['ID']['output'];
 };
 
 /** A single bibliography entry item */
@@ -90,11 +126,11 @@ export type BibliographyEntryItem = {
 };
 
 /**
- * A comment thread on a passage, or one reply within it.
+ * A comment thread on a passage or bibliography entry, or one reply within it.
  *
- * Carries no text range. The range a comment refers to lives on the
- * `comment` annotation anchoring it, which is what places a thread on a passage:
- * a thread's `entityUuid` records where it was born, not where it currently sits.
+ * Carries no text range. The range a comment refers to lives on the mark
+ * anchoring it, which is what places a thread: a thread's `entityUuid` records
+ * where it was born, not where it currently sits.
  */
 export type Comment = {
   __typename?: 'Comment';
@@ -166,9 +202,9 @@ export type CreateCommentInput = {
    * rejected, so a body that is nothing but such markup is refused as empty.
    */
   content: Scalars['String']['input'];
-  /** What kind of entity that is. Only `passage` is accepted. */
+  /** What kind of entity that is: `passage` or `bibliography`. */
   entityType: Scalars['String']['input'];
-  /** The entity the thread hangs off — a passage uuid today */
+  /** The entity the thread hangs off: a passage or bibliography row uuid */
   entityUuid: Scalars['ID']['input'];
 };
 
@@ -1316,6 +1352,12 @@ export type Work = {
   __typename?: 'Work';
   /** Bibliography entries for this work, grouped by section */
   bibliography: Array<BibliographyEntry>;
+  /**
+   * Comment threads on these bibliography entries, in the order asked. Entries
+   * of other works are left out. At most 100 entries; empty for a `published`
+   * content source.
+   */
+  bibliographyComments: Array<BibliographyEntryComments>;
   /** Folios for this work, filtered by toh and paginated */
   folios: Array<Folio>;
   /** A window of folios centered on a target folio, for deep-linking */
@@ -1379,6 +1421,12 @@ export type Work = {
   toh: Array<Scalars['String']['output']>;
   /** Unique identifier for the work */
   uuid: Scalars['ID']['output'];
+};
+
+
+/** A published translation work from the 84000 canon */
+export type WorkBibliographyCommentsArgs = {
+  uuids: Array<Scalars['ID']['input']>;
 };
 
 
@@ -1776,6 +1824,20 @@ export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typenam
           { __typename?: 'Comment' }
           & CommentThreadFieldsFragment
         )> }> } } | null };
+
+export type GetBibliographyCommentsQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+  uuids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type GetBibliographyCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, bibliographyComments: Array<{ __typename?: 'BibliographyEntryComments', uuid: string, label?: string | null, anchors: Array<{ __typename?: 'BibliographyCommentAnchor', uuid: string, comment: string, start: number, end: number }>, comments: Array<(
+        { __typename?: 'Comment' }
+        & CommentThreadFieldsFragment
+      )>, unanchoredComments: Array<(
+        { __typename?: 'Comment' }
+        & CommentThreadFieldsFragment
+      )> }> } | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2215,6 +2277,31 @@ export const GetPassageCommentsDocument = gql`
 ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
 ${UserInfoFieldsFragmentDoc}`;
+export const GetBibliographyCommentsDocument = gql`
+    query GetBibliographyComments($uuid: ID!, $uuids: [ID!]!) {
+  work(uuid: $uuid) {
+    uuid
+    bibliographyComments(uuids: $uuids) {
+      uuid
+      label
+      anchors {
+        uuid
+        comment
+        start
+        end
+      }
+      comments {
+        ...CommentThreadFields
+      }
+      unanchoredComments {
+        ...CommentThreadFields
+      }
+    }
+  }
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -2326,6 +2413,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetPassageComments(variables: GetPassageCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageCommentsQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetPassageCommentsQuery>({ document: GetPassageCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassageComments', 'query', variables);
+    },
+    GetBibliographyComments(variables: GetBibliographyCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetBibliographyCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetBibliographyCommentsQuery>({ document: GetBibliographyCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetBibliographyComments', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);

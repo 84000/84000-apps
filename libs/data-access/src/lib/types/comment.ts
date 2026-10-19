@@ -15,11 +15,11 @@ import type { UserInfo } from './user';
  */
 
 /**
- * The kinds of thing a comment can hang off. `passage` is the only one written
- * today; the column is free text rather than an enum, following the
- * `work_notes.note_type` precedent, so this list can grow without a migration.
+ * The kinds of thing a comment can hang off. The column is free text rather
+ * than an enum, following the `work_notes.note_type` precedent, so this list
+ * can grow without a migration.
  */
-export const COMMENT_ENTITY_TYPES = ['passage'] as const;
+export const COMMENT_ENTITY_TYPES = ['passage', 'bibliography'] as const;
 
 export type CommentEntityType = (typeof COMMENT_ENTITY_TYPES)[number];
 

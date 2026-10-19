@@ -1,11 +1,27 @@
 import {
+  getBibliographyCommentAnchors,
+  getCommentsByEntityUuids,
   getCommentThreadByUuid,
   getTaggedComments,
   getTaggedCommentWorks,
   type AnnotationDTO,
   type Comment,
+  type HtmlCommentAnchor,
 } from '@eightyfourthousand/data-access';
 import type { GraphQLContext } from '../../context';
+import type { WorkParent } from '../work/work.types';
+
+/** The most bibliography entries one `bibliographyComments` read covers. */
+const MAX_BIBLIOGRAPHY_ENTRIES = 100;
+
+/** One entry's threads, as `BibliographyEntryComments` resolves them. */
+interface BibliographyEntryComments {
+  uuid: string;
+  label: string | null;
+  anchors: HtmlCommentAnchor[];
+  comments: Comment[];
+  unanchoredComments: Comment[];
+}
 
 /**
  * Parent object passed from the passages resolver. Only `uuid` is read here —
@@ -102,6 +118,78 @@ export const passageUnanchoredCommentsResolver = async (
   // An error from the loader means the anchor read failed, not that the thread
   // is unanchored -- keep it out rather than inventing a loss.
   return threads.filter((_thread, index) => anchored[index] === false);
+};
+
+/**
+ * Field resolver for `Work.bibliographyComments`.
+ *
+ * Position comes from the marks in each entry's HTML and scope from
+ * `comments.entity_uuid`. A thread in an entry's scope is unanchored only when
+ * no entry in the work marks it, so one whose mark moved is not listed twice.
+ */
+export const workBibliographyCommentsResolver = async (
+  parent: WorkParent,
+  args: { uuids: string[] },
+  ctx: GraphQLContext,
+): Promise<BibliographyEntryComments[]> => {
+  if (ctx.source === 'published' || args.uuids.length === 0) {
+    return [];
+  }
+
+  const placed = await getBibliographyCommentAnchors({
+    client: ctx.supabase,
+    workUuid: parent.uuid,
+    rowUuids: args.uuids.slice(0, MAX_BIBLIOGRAPHY_ENTRIES),
+  });
+  if (!placed || placed.rows.length === 0) {
+    return [];
+  }
+
+  const anchoredUuids = [
+    ...new Set(
+      placed.rows.flatMap((row) =>
+        (placed.anchorsByRow.get(row) ?? []).map(({ comment }) => comment),
+      ),
+    ),
+  ];
+
+  const [threads, scope, labels] = await Promise.all([
+    ctx.loaders.commentThreadsByAnchorUuid.loadMany(anchoredUuids),
+    getCommentsByEntityUuids({
+      client: ctx.supabase,
+      entityUuids: placed.rows,
+      entityType: 'bibliography',
+      source: ctx.source,
+    }),
+    ctx.loaders.bibliographyLabelsByUuid.loadMany(placed.rows),
+  ]);
+
+  const threadByUuid = new Map<string, Comment>();
+  threads.forEach((thread) => {
+    if (thread && !(thread instanceof Error)) {
+      threadByUuid.set(thread.uuid, thread);
+    }
+  });
+
+  return placed.rows.map((uuid, index) => {
+    const anchors = placed.anchorsByRow.get(uuid) ?? [];
+    const label = labels[index];
+    const marked = [...new Set(anchors.map(({ comment }) => comment))];
+
+    return {
+      uuid,
+      label: label && !(label instanceof Error) ? label.label : null,
+      anchors,
+      // A mark whose thread is gone drops out, as an annotation would.
+      comments: marked.flatMap((comment) => {
+        const thread = threadByUuid.get(comment);
+        return thread ? [thread] : [];
+      }),
+      unanchoredComments: (scope.get(uuid) ?? []).filter(
+        (thread) => !placed.markedThreads.has(thread.uuid),
+      ),
+    };
+  });
 };
 
 /**

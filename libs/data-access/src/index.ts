@@ -9,6 +9,7 @@ export * from './lib/comment';
 export * from './lib/content-source';
 export * from './lib/folio';
 export * from './lib/glossary';
+export * from './lib/html/comment-marks';
 export * from './lib/harness';
 export * from './lib/imprint';
 export * from './lib/import-preview';
