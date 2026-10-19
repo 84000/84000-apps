@@ -11,6 +11,7 @@ import {
   dirtyPassages,
   hasUnsavedStackChanges,
   saveStackWork,
+  trackEdits,
 } from './stack-save';
 import { createStackWorkDocument } from './stack-work';
 import { stackSeedFromPassage } from './types';
@@ -812,5 +813,30 @@ describe('applyServerPassages', () => {
     const work = build();
     applyServerPassages(work, [replaced('elsewhere', 'x')]);
     expect(work.store.peek('elsewhere')).toBeNull();
+  });
+});
+
+describe('trackEdits', () => {
+  it('moves with each edit, though the same passage stays changed', () => {
+    const work = build();
+    const edits = trackEdits([work]);
+    const seen = [edits.revision()];
+    edit(work, 'p0', 'one');
+    seen.push(edits.revision());
+    edit(work, 'p0', 'two');
+    seen.push(edits.revision());
+    work.remove(['p1']);
+    seen.push(edits.revision());
+    expect(new Set(seen).size).toBe(seen.length);
+    edits.stop();
+  });
+
+  it('stays put while nothing is edited', () => {
+    const work = build();
+    const edits = trackEdits([work]);
+    const before = edits.revision();
+    work.store.peek('p2');
+    expect(edits.revision()).toBe(before);
+    edits.stop();
   });
 });

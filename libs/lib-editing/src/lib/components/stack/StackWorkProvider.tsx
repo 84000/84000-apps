@@ -40,6 +40,7 @@ import {
   applyServerPassages,
   hasUnsavedStackChanges,
   saveStackWork,
+  trackEdits,
   unsavedStackChanges,
 } from './stack-save';
 import { removeStackCommentAnchors } from './stack-comments';
@@ -121,6 +122,7 @@ export const StackWorkProvider = ({
     const unsavedRows = () =>
       bibliography ? unsavedBibliographyChanges(bibliography) : 0;
     const isDirty = () => hasUnsavedStackChanges(work) || unsavedRows() > 0;
+    const edits = trackEdits(bibliography ? [work, bibliography.work] : [work]);
     registerSaveHandler({
       // One save for both works. Each writes on its own, so one failing does
       // not hold back the other.
@@ -148,6 +150,7 @@ export const StackWorkProvider = ({
       },
       isDirty,
       unsavedChanges: () => unsavedStackChanges(work) + unsavedRows(),
+      revision: edits.revision,
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
       removeCommentAnchors: (comment) =>
@@ -163,6 +166,7 @@ export const StackWorkProvider = ({
     );
     return () => {
       stops.forEach((stop) => stop());
+      edits.stop();
       registerSaveHandler(null);
     };
   }, [stack, registerSaveHandler, dirtyStore]);

@@ -1,6 +1,12 @@
 'use client';
 
-import { RefObject, useCallback, useEffect, useRef } from 'react';
+import {
+  type MouseEvent,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { Editor } from '@tiptap/react';
 import {
   CircleAlertIcon,
@@ -67,6 +73,7 @@ export const useSaveLifecycle = ({
   work,
   editorCache,
   dirtyUuidsRef,
+  editsRef,
   isSavingRef,
   isNormalizingForSaveRef,
   savedBaselineUuidsByEditorRef,
@@ -81,6 +88,8 @@ export const useSaveLifecycle = ({
   work: Work;
   editorCache: RefObject<{ [key: string]: Editor }>;
   dirtyUuidsRef: RefObject<Set<string>>;
+  /** Moves with every local edit to the paginated editors. */
+  editsRef: RefObject<number>;
   isSavingRef: RefObject<boolean>;
   isNormalizingForSaveRef: RefObject<boolean>;
   savedBaselineUuidsByEditorRef: RefObject<PassageUuidRecord>;
@@ -359,7 +368,10 @@ export const useSaveLifecycle = ({
       pending: PendingSave,
       title: string,
       description: string,
-      action?: { label: string; onClick: () => void },
+      action?: {
+        label: string;
+        onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+      },
     ) => {
       pendingRef.current = pending;
       dirtyStore.setDirty(true);
@@ -375,7 +387,21 @@ export const useSaveLifecycle = ({
   );
 
   /**
-   * Replace the editors with what the server holds, once the work can be read
+   * Where the editors' edits stand. Two equal snapshots mean no edit came in
+   * between, so the same changes would be discarded.
+   */
+  const editSnapshot = useCallback(
+    (pending: PendingSave) =>
+      [
+        editsRef.current,
+        saveHandlerRef.current?.revision?.() ?? 0,
+        pending.save.newerChanges() + pending.otherChanges(),
+      ].join(),
+    [editsRef, saveHandlerRef],
+  );
+
+  /**
+   * Replace the editors with what the server holds, once the work can be read,
    * and only over unsaved changes the user agreed to discard. Until then the
    * editors, and the save, stay as they are.
    */
@@ -388,10 +414,8 @@ export const useSaveLifecycle = ({
       const discarded = () =>
         pending.save.newerChanges() + pending.otherChanges();
 
-      /** Reload, discarding at most `accepted` changes. */
-      const run = async (accepted: number): Promise<void> => {
-        const before = discarded();
-        if (before > accepted) return askToDiscard(before);
+      /** Reload, if no edit came in since `agreed` was taken. */
+      const run = async (agreed: string): Promise<void> => {
         const readable = await canReload(client, work.uuid, pending.save.sent);
         // Settled by a later save, or the session is gone.
         if (pendingRef.current !== pending) return;
@@ -403,9 +427,11 @@ export const useSaveLifecycle = ({
               'paused and your changes are kept. Save again to retry.',
           );
         }
-        // Edits made while the probe ran.
-        const after = discarded();
-        if (after > accepted) return askToDiscard(after);
+        // The one check, with nothing awaited between it and the reload: an
+        // edit since the user agreed is never discarded unasked.
+        if (editSnapshot(pending) !== agreed && discarded() > 0) {
+          return askToDiscard();
+        }
 
         pendingRef.current = null;
         toast(title, {
@@ -419,33 +445,38 @@ export const useSaveLifecycle = ({
         reload();
       };
 
-      const askToDiscard = (count: number) =>
+      const askToDiscard = () => {
+        const agreed = editSnapshot(pending);
         pause(
           pending,
           verdict === 'applied'
             ? 'Your last save went through, but its answer was lost.'
             : title,
           `Saving is paused. Reloading shows what is saved, and will discard ` +
-            `${changes(count)}. Copy anything you want to keep before you ` +
-            'reload.',
+            `${changes(discarded())}. Copy anything you want to keep before ` +
+            'you reload.',
           {
             label: 'Reload',
-            onClick: () => {
-              // One at a time with saves, and never once the save is settled.
-              if (isSavingRef.current || pendingRef.current !== pending) {
-                return;
-              }
+            onClick: (event) => {
+              // Settled since: the warning has nothing left to do.
+              if (pendingRef.current !== pending) return;
+              // Keep the warning up; what comes of the reload replaces it.
+              event.preventDefault();
+              // One at a time with saves.
+              if (isSavingRef.current) return;
               isSavingRef.current = true;
-              void run(count).finally(() => {
+              void run(agreed).finally(() => {
                 isSavingRef.current = false;
               });
             },
           },
         );
+      };
 
-      return run(0);
+      if (discarded() > 0) return askToDiscard();
+      return run(editSnapshot(pending));
     },
-    [client, work.uuid, pause, reload, isSavingRef],
+    [client, work.uuid, pause, reload, isSavingRef, editSnapshot],
   );
 
   /**
