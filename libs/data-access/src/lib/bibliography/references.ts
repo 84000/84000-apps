@@ -15,7 +15,8 @@ export const countBibliographyReferences = async ({
     const { count, error } = await client
       .from('passage_annotations')
       .select('uuid', { count: 'exact', head: true })
-      .contains('content', [{ uuid }]);
+      // A string, as jsonb takes it: an array would be sent as a Postgres one.
+      .contains('content', JSON.stringify([{ uuid }]));
     if (error) {
       console.error(`Error counting references to ${uuid}:`, error);
       return null;

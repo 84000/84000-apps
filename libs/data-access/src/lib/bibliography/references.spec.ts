@@ -23,7 +23,7 @@ describe('countBibliographyReferences', () => {
       error: null,
     }));
     expect(await countBibliographyReferences({ client, uuid: 'b1' })).toBe(2);
-    expect(calls).toContainEqual(['contains', 'content', [{ uuid: 'b1' }]]);
+    expect(calls).toContainEqual(['contains', 'content', '[{"uuid":"b1"}]']);
   });
 
   it('is null when the count fails or throws', async () => {
