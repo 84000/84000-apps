@@ -1,11 +1,12 @@
 import type { GraphQLClient } from 'graphql-request';
 import {
-  getTranslationBlocks,
+  findWorkPassages,
   RequestNotSentError,
 } from '@eightyfourthousand/client-graphql';
 import {
   createBrowserClient,
   getPassageSorts,
+  getWorkPassageUuids,
 } from '@eightyfourthousand/data-access';
 import type { UnconfirmedSave } from './editor-context';
 
@@ -74,18 +75,35 @@ export const judgeSave = (
   return inserted.length || deleted.length ? 'applied' : 'undecided';
 };
 
+/** The most passages a probe asks for, a page. */
+const PROBE_LIMIT = 100;
+
 /**
- * Whether the editors can read the work again right now, through the API and
- * reader they load it with. Checked before a reload discards what they hold.
+ * Whether the editors can read the work again right now, through the API they
+ * load it with: passages known to be stored come back. Knowing none, one is
+ * read from the database, whose reads report failure; a work with none there
+ * can be read empty. Checked before a reload discards what they hold.
  */
 export const canReload = async (
   graphql: GraphQLClient,
   workUuid: string,
+  stored: string[],
 ): Promise<boolean> => {
-  const page = await getTranslationBlocks({
+  const uuids = stored.length
+    ? stored.slice(0, PROBE_LIMIT)
+    : await getWorkPassageUuids({
+        client: createBrowserClient(),
+        workUuid,
+        limit: 1,
+      }).catch((error: unknown) => {
+        console.error('Could not read the work:', error);
+        return null;
+      });
+  if (!uuids) return false;
+  const found = await findWorkPassages({
     client: graphql,
     uuid: workUuid,
-    maxPassages: 1,
+    uuids,
   });
-  return !page.failed;
+  return !!found && uuids.every((uuid) => found.has(uuid));
 };

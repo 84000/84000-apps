@@ -85,6 +85,7 @@ export {
   type AnchoredCommentThread,
   type CommentAnchor,
   type PassageComments,
+  findWorkPassages,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

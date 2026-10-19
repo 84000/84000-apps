@@ -1,4 +1,5 @@
 export { getPassage } from './get-passage';
+export { findWorkPassages } from './find-work-passages';
 export { lookup, type LookupEntityType, type LookupResult } from './lookup';
 export {
   getTranslationBlocks,

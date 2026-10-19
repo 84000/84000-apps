@@ -91,8 +91,9 @@ export const savePassagesMutation = async (
       deletedUuids: args.deletedUuids,
     });
   } catch (error) {
-    // A commit whose answer was lost comes back as `outcomeUnknown`. A throw
-    // is a bug before the commit, so the passages were not written.
+    // A commit whose answer was lost comes back as `outcomeUnknown`. Reads
+    // report errors rather than throw, so a throw is a bug, and one after the
+    // commit reports a written save as failed.
     console.error('Unexpected error saving passages:', error);
     return {
       success: false,

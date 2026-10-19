@@ -74,6 +74,9 @@ const EditorSession = ({
   const [doc, setDoc] = React.useState<Doc>(initialDoc || new Doc());
   // Use ref for immediate tracking to avoid state updates on every keystroke
   const dirtyUuidsRef = useRef<Set<string>>(new Set());
+  // Every local edit the editors observe, to tell edits apart that leave the
+  // same passages changed.
+  const editsRef = useRef(0);
   const isSavingRef = useRef(false);
   const isNavigatingRef = useRef(false);
   const isNormalizingForSaveRef = useRef(false);
@@ -150,6 +153,7 @@ const EditorSession = ({
       if (isNavigatingRef.current || isNormalizingForSaveRef.current) {
         return;
       }
+      editsRef.current += 1;
 
       // Detect passage additions/deletions by diffing the baseline UUIDs
       // against the current fragment state — but only when the cheap gate
@@ -402,6 +406,7 @@ const EditorSession = ({
     work,
     editorCache,
     dirtyUuidsRef,
+    editsRef,
     isSavingRef,
     isNormalizingForSaveRef,
     savedBaselineUuidsByEditorRef,

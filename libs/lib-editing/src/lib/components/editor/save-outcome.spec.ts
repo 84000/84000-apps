@@ -1,12 +1,19 @@
-import { ClientError } from 'graphql-request';
+import { ClientError, type GraphQLClient } from 'graphql-request';
 import {
   createGraphQLClient,
   RequestNotSentError,
   resetGraphQLClient,
+  savePassages,
   setAccessTokenProvider,
 } from '@eightyfourthousand/client-graphql';
+import type { Passage } from '@eightyfourthousand/data-access';
 
-import { judgeSave, mayHaveBeenApplied, readStored } from './save-outcome';
+import {
+  canReload,
+  judgeSave,
+  mayHaveBeenApplied,
+  readStored,
+} from './save-outcome';
 import type { UnconfirmedSave } from './editor-context';
 
 // The client barrels leak `data-access/ssr`.
@@ -20,10 +27,12 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
   createBrowserClient: jest.fn(() => ({})),
   getPassageSorts: jest.fn(),
+  getWorkPassageUuids: jest.fn(),
 }));
 
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   getPassageSorts: jest.Mock;
+  getWorkPassageUuids: jest.Mock;
 };
 
 const clientError = (
@@ -41,6 +50,18 @@ const clientError = (
   );
 
 describe('mayHaveBeenApplied', () => {
+  it('is false for a save whose body cannot be serialized', async () => {
+    const request = jest.fn();
+    const content: Record<string, unknown> = {};
+    content.self = content;
+    const error = await savePassages({
+      client: { request } as unknown as GraphQLClient,
+      passages: [{ uuid: 'a', workUuid: 'w1', content } as unknown as Passage],
+    }).catch((e: unknown) => e);
+    expect(request).not.toHaveBeenCalled();
+    expect(mayHaveBeenApplied(error)).toBe(false);
+  });
+
   it('is true when no answer arrived', () => {
     expect(mayHaveBeenApplied(new TypeError('Failed to fetch'))).toBe(true);
     expect(mayHaveBeenApplied(new DOMException('aborted', 'AbortError'))).toBe(
@@ -163,5 +184,64 @@ describe('judgeSave', () => {
   // Content alone leaves no trace of whether it was written.
   it('cannot tell for a save that only changed content', () => {
     expect(judgeSave(stored('a'), save(['a'], [], []))).toBe('undecided');
+  });
+});
+
+describe('canReload', () => {
+  const request = jest.fn();
+  const graphql = { request } as unknown as GraphQLClient;
+  const page = (...uuids: string[]) => ({
+    work: { uuid: 'w1', passages: { nodes: uuids.map((uuid) => ({ uuid })) } },
+  });
+
+  beforeEach(() => request.mockReset());
+
+  it('is true when the stored passages come back', async () => {
+    request.mockResolvedValue(page('a', 'b'));
+    expect(await canReload(graphql, 'w1', ['a', 'b'])).toBe(true);
+    expect(request.mock.calls[0][1]).toMatchObject({
+      filter: { uuids: ['a', 'b'] },
+    });
+  });
+
+  // The server answers a read it could not make with an empty page.
+  it('is false when they do not', async () => {
+    request.mockResolvedValue(page());
+    expect(await canReload(graphql, 'w1', ['a'])).toBe(false);
+
+    request.mockResolvedValue(page('a'));
+    expect(await canReload(graphql, 'w1', ['a', 'b'])).toBe(false);
+  });
+
+  it('is false when the API cannot be reached', async () => {
+    request.mockRejectedValue(clientError(502));
+    expect(await canReload(graphql, 'w1', ['a'])).toBe(false);
+  });
+
+  describe('knowing no stored passage', () => {
+    it('needs one the database holds to come back', async () => {
+      dataAccess.getWorkPassageUuids.mockResolvedValue(['x']);
+      request.mockResolvedValue(page('x'));
+      expect(await canReload(graphql, 'w1', [])).toBe(true);
+      expect(request.mock.calls[0][1]).toMatchObject({
+        filter: { uuids: ['x'] },
+      });
+
+      request.mockResolvedValue(page());
+      expect(await canReload(graphql, 'w1', [])).toBe(false);
+    });
+
+    // A save that deleted every passage leaves the work empty.
+    it('reads an empty work as empty', async () => {
+      dataAccess.getWorkPassageUuids.mockResolvedValue([]);
+      request.mockResolvedValue(page());
+      expect(await canReload(graphql, 'w1', [])).toBe(true);
+    });
+
+    it('is false when the database cannot be read', async () => {
+      dataAccess.getWorkPassageUuids.mockResolvedValue(null);
+      request.mockResolvedValue(page('x'));
+      expect(await canReload(graphql, 'w1', [])).toBe(false);
+    });
   });
 });

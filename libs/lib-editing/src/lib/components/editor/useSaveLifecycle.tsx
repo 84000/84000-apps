@@ -1,6 +1,12 @@
 'use client';
 
-import { RefObject, useCallback, useRef } from 'react';
+import {
+  type MouseEvent,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { Editor } from '@tiptap/react';
 import {
   CircleAlertIcon,
@@ -67,6 +73,7 @@ export const useSaveLifecycle = ({
   work,
   editorCache,
   dirtyUuidsRef,
+  editsRef,
   isSavingRef,
   isNormalizingForSaveRef,
   savedBaselineUuidsByEditorRef,
@@ -81,6 +88,8 @@ export const useSaveLifecycle = ({
   work: Work;
   editorCache: RefObject<{ [key: string]: Editor }>;
   dirtyUuidsRef: RefObject<Set<string>>;
+  /** Moves with every local edit to the paginated editors. */
+  editsRef: RefObject<number>;
   isSavingRef: RefObject<boolean>;
   isNormalizingForSaveRef: RefObject<boolean>;
   savedBaselineUuidsByEditorRef: RefObject<PassageUuidRecord>;
@@ -345,9 +354,25 @@ export const useSaveLifecycle = ({
     paginatedChanges,
   ]);
 
+  // A session torn down by a reload settles nothing more.
+  useEffect(
+    () => () => {
+      pendingRef.current = null;
+    },
+    [],
+  );
+
   /** Hold a save with an unknown outcome, and say why saving is paused. */
   const pause = useCallback(
-    (pending: PendingSave, title: string, description: string) => {
+    (
+      pending: PendingSave,
+      title: string,
+      description: string,
+      action?: {
+        label: string;
+        onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+      },
+    ) => {
       pendingRef.current = pending;
       dirtyStore.setDirty(true);
       toast(title, {
@@ -355,42 +380,103 @@ export const useSaveLifecycle = ({
         icon: <CircleAlertIcon className="size-4 text-error" />,
         duration: Infinity,
         id: UNKNOWN_SAVE_TOAST,
+        ...(action ? { action } : {}),
       });
     },
     [dirtyStore],
   );
 
   /**
-   * Replace the editors with what the server holds, once it can be read: until
-   * then the editors, and the save, stay as they are.
+   * Where the editors' edits stand. Two equal snapshots mean no edit came in
+   * between, so the same changes would be discarded.
    */
-  const reloadWhenReadable = useCallback(
-    async (pending: PendingSave, verdict: SaveVerdict) => {
+  const editSnapshot = useCallback(
+    (pending: PendingSave) =>
+      [
+        editsRef.current,
+        saveHandlerRef.current?.revision?.() ?? 0,
+        pending.save.newerChanges() + pending.otherChanges(),
+      ].join(),
+    [editsRef, saveHandlerRef],
+  );
+
+  /**
+   * Replace the editors with what the server holds, once the work can be read,
+   * and only over unsaved changes the user agreed to discard. Until then the
+   * editors, and the save, stay as they are.
+   */
+  const reloadWhenSafe = useCallback(
+    (pending: PendingSave, verdict: SaveVerdict) => {
       const title =
         verdict === 'applied'
           ? 'Your last save went through.'
           : 'Your last save may have gone through.';
-      if (!(await canReload(client, work.uuid))) {
+      const discarded = () =>
+        pending.save.newerChanges() + pending.otherChanges();
+
+      /** Reload, if no edit came in since `agreed` was taken. */
+      const run = async (agreed: string): Promise<void> => {
+        const readable = await canReload(client, work.uuid, pending.save.sent);
+        // Settled by a later save, or the session is gone.
+        if (pendingRef.current !== pending) return;
+        if (!readable) {
+          return pause(
+            pending,
+            title,
+            'The work could not be read to show what is saved, so saving is ' +
+              'paused and your changes are kept. Save again to retry.',
+          );
+        }
+        // The one check, with nothing awaited between it and the reload: an
+        // edit since the user agreed is never discarded unasked.
+        if (editSnapshot(pending) !== agreed && discarded() > 0) {
+          return askToDiscard();
+        }
+
+        pendingRef.current = null;
+        toast(title, {
+          description:
+            'Its answer was lost, so the editor now shows what is saved. ' +
+            'Check your recent changes there before making any of them again.',
+          icon: <TriangleAlertIcon className="size-4 text-warning" />,
+          duration: Infinity,
+          id: UNKNOWN_SAVE_TOAST,
+        });
+        reload();
+      };
+
+      const askToDiscard = () => {
+        const agreed = editSnapshot(pending);
         pause(
           pending,
-          title,
-          'The work could not be read to show what is saved, so saving is ' +
-            'paused and your changes are kept. Save again to retry.',
+          verdict === 'applied'
+            ? 'Your last save went through, but its answer was lost.'
+            : title,
+          `Saving is paused. Reloading shows what is saved, and will discard ` +
+            `${changes(discarded())}. Copy anything you want to keep before ` +
+            'you reload.',
+          {
+            label: 'Reload',
+            onClick: (event) => {
+              // Settled since: the warning has nothing left to do.
+              if (pendingRef.current !== pending) return;
+              // Keep the warning up; what comes of the reload replaces it.
+              event.preventDefault();
+              // One at a time with saves.
+              if (isSavingRef.current) return;
+              isSavingRef.current = true;
+              void run(agreed).finally(() => {
+                isSavingRef.current = false;
+              });
+            },
+          },
         );
-        return;
-      }
-      pendingRef.current = null;
-      toast(title, {
-        description:
-          'Its answer was lost, so the editor now shows what is saved. Check ' +
-          'your recent changes there before making any of them again.',
-        icon: <TriangleAlertIcon className="size-4 text-warning" />,
-        duration: Infinity,
-        id: UNKNOWN_SAVE_TOAST,
-      });
-      reload();
+      };
+
+      if (discarded() > 0) return askToDiscard();
+      return run(editSnapshot(pending));
     },
-    [client, work.uuid, pause, reload],
+    [client, work.uuid, pause, reload, isSavingRef, editSnapshot],
   );
 
   /**
@@ -402,8 +488,10 @@ export const useSaveLifecycle = ({
    */
   const confirmUnknownSave = useCallback(
     async (pending: PendingSave) => {
+      pendingRef.current = pending;
       const { save } = pending;
       const stored = await readStored([...save.sent, ...save.deleted]);
+      if (pendingRef.current !== pending) return;
       if (!stored) {
         pause(
           pending,
@@ -426,40 +514,9 @@ export const useSaveLifecycle = ({
         });
         return;
       }
-
-      const discarded = save.newerChanges() + pending.otherChanges();
-      if (discarded > 0) {
-        pendingRef.current = pending;
-        dirtyStore.setDirty(true);
-        toast(
-          verdict === 'applied'
-            ? 'Your last save went through, but its answer was lost.'
-            : 'Your last save may have gone through.',
-          {
-            description:
-              `Saving is paused. Reloading shows what is saved, and will ` +
-              `discard ${changes(discarded)}. Copy anything you want to ` +
-              'keep before you reload.',
-            icon: <CircleAlertIcon className="size-4 text-error" />,
-            duration: Infinity,
-            id: UNKNOWN_SAVE_TOAST,
-            action: {
-              label: 'Reload',
-              onClick: () => {
-                // A later save may have settled it.
-                if (pendingRef.current !== pending || isSavingRef.current) {
-                  return;
-                }
-                void reloadWhenReadable(pending, verdict);
-              },
-            },
-          },
-        );
-        return;
-      }
-      await reloadWhenReadable(pending, verdict);
+      await reloadWhenSafe(pending, verdict);
     },
-    [dirtyStore, pause, reloadWhenReadable, isSavingRef],
+    [dirtyStore, pause, reloadWhenSafe],
   );
 
   // The stack, when it is mounted, and the paginated editors each save what

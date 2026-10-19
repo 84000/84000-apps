@@ -151,6 +151,35 @@ export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
   unsavedStackChanges(work) > 0;
 
 /**
+ * Follow the local edits to some works, until `stop`. `revision` moves with
+ * every one, however few passages it leaves changed: a document's version
+ * rises with each change to it, and the spine is counted on each change.
+ * Hydrating or releasing a clean passage does not move it.
+ */
+export const trackEdits = (works: WorkDocument[]) => {
+  let structural = 0;
+  const stops = works.map((work) =>
+    work.spine.observe(() => {
+      structural += 1;
+    }),
+  );
+  return {
+    revision: () =>
+      works.reduce(
+        (sum, work) =>
+          work.store
+            .dirty()
+            .reduce(
+              (n, uuid) => n + (work.store.peek(uuid)?.version ?? 0),
+              sum,
+            ),
+        structural,
+      ),
+    stop: () => stops.forEach((stop) => stop()),
+  };
+};
+
+/**
  * How many passages changed since a save was sent with these versions and
  * deletions: edited again, newly edited, or newly removed or put back.
  */
@@ -169,8 +198,14 @@ const changesSince = (
     );
   const removed = new Set(work.spine.removedSinceSave());
   const sentDeleted = new Set(deleted);
+  // Sent, then removed before it was ever stored: the spine records no
+  // removal for it.
+  const dropped = [...versions.keys()].filter(
+    (uuid) => !work.spine.meta(uuid) && !removed.has(uuid),
+  );
   return (
     edited.length +
+    dropped.length +
     [...removed].filter((uuid) => !sentDeleted.has(uuid)).length +
     deleted.filter((uuid) => !removed.has(uuid)).length
   );
