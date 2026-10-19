@@ -15,7 +15,10 @@ import {
 
 const isHeading = (entry: SpineEntry) => rowKindOf(entry.type) === 'heading';
 
-/** Where a heading's rows end: the first row after it that it does not hold. */
+/**
+ * Where a heading's run of rows ends: the first heading after it that it
+ * does not hold. A stored order can place some of what it holds later still.
+ */
 const blockEnd = (entries: SpineEntry[], index: number): number => {
   const held = new Set([entries[index].uuid]);
   let end = index + 1;
@@ -28,11 +31,45 @@ const blockEnd = (entries: SpineEntry[], index: number): number => {
   return end;
 };
 
-/** A row and everything it holds, as a run of the spine. */
-const blockOf = (entries: SpineEntry[], index: number): string[] =>
-  isHeading(entries[index])
-    ? entries.slice(index, blockEnd(entries, index)).map((entry) => entry.uuid)
-    : [entries[index].uuid];
+/** A row and every row under it, wherever they sit, by uuid. */
+const heldBy = (entries: SpineEntry[], uuid: string): Set<string> => {
+  const held = new Set([uuid]);
+  // A child can come before its parent in a stored order: repeat until no
+  // more join.
+  for (let grew = true; grew; ) {
+    grew = false;
+    entries.forEach((entry) => {
+      if (held.has(entry.uuid) || !entry.parent || !held.has(entry.parent)) {
+        return;
+      }
+      held.add(entry.uuid);
+      grew = true;
+    });
+  }
+  return held;
+};
+
+/**
+ * A row and everything it holds, as a run of the spine, or null when what it
+ * holds does not follow it in one run, so it cannot be moved as one.
+ */
+const blockOf = (entries: SpineEntry[], index: number): string[] | null => {
+  const held = heldBy(entries, entries[index].uuid);
+  const run = entries.slice(index, index + held.size);
+  return run.length === held.size && run.every((entry) => held.has(entry.uuid))
+    ? run.map((entry) => entry.uuid)
+    : null;
+};
+
+/** Where the rows a heading holds end, wherever they sit. */
+const heldEnd = (entries: SpineEntry[], index: number): number => {
+  const held = heldBy(entries, entries[index].uuid);
+  let end = index + 1;
+  entries.forEach((entry, i) => {
+    if (held.has(entry.uuid)) end = Math.max(end, i + 1);
+  });
+  return end;
+};
 
 const locate = (work: WorkDocument, uuid: string) => {
   const entries = work.spine.entries();
@@ -51,9 +88,9 @@ export const newBibliographyEntry = (
 };
 
 /**
- * Start a new heading after the row's heading and everything under it: a
- * sibling of that heading, or with `nested` its last child. In a work with
- * no heading yet it goes first, so every entry has one.
+ * Start a new heading after the row's heading: a sibling that follows it and
+ * its rows, or with `nested` its last child. In a work with no heading yet it
+ * goes first, so every entry has one.
  */
 export const newBibliographyHeading = (
   work: WorkDocument,
@@ -71,7 +108,7 @@ export const newBibliographyHeading = (
   const parent = nested ? heading.uuid : heading.parent;
   return work.insert(
     { type: 'bibliographyHeader', ...(parent ? { parent } : {}) },
-    blockEnd(entries, heading.index),
+    (nested ? heldEnd : blockEnd)(entries, heading.index),
   ).uuid;
 };
 
@@ -158,9 +195,10 @@ export const outdentBibliographyHeading = (
   const parent = parentHeading(entries, row);
   if (!parent) return false;
   const block = blockOf(entries, index);
+  if (!block) return false;
   const end = blockEnd(entries, parent.index);
   return work.nest(block, {
-    to: end - block.length,
+    to: end > index ? end - block.length : end,
     parents: [{ uuid, ...(parent.parent ? { parent: parent.parent } : {}) }],
   });
 };
@@ -175,7 +213,7 @@ export const bibliographyMoveTargets = (
 ): SpineEntry[] => {
   const found = locate(work, uuid);
   if (!found) return [];
-  const held = new Set(blockOf(found.entries, found.index));
+  const held = heldBy(found.entries, uuid);
   return found.entries.filter(
     (entry) => isHeading(entry) && !held.has(entry.uuid),
   );
@@ -202,7 +240,7 @@ export const moveBibliographyRow = (
   }
 
   const block = blockOf(entries, index);
-  if (target && block.includes(target)) return false;
+  if (!block || (target && heldBy(entries, uuid).has(target))) return false;
   // Where the run would start, counted before it leaves its place.
   const place = (at: number) => (at > index ? at - block.length : at);
 

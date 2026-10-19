@@ -275,3 +275,50 @@ describe('moving a row', () => {
     expect(moveBibliographyRow(work, 'e1', null)).toBe(false);
   });
 });
+
+describe('a heading whose rows are not in one run', () => {
+  // h3 sits under h1 but sorts after h2, as a stored order may have it.
+  const scattered = async () =>
+    (
+      await loadedBibliography([
+        heading('h1', 1),
+        heading('h2', 2),
+        heading('h3', 3, 'h1'),
+        row('e3', 4, { headingUuid: 'h3' }),
+      ])
+    ).bibliography.work;
+
+  it('offers none of the rows it holds as a place to move to', async () => {
+    const work = await scattered();
+    expect(
+      bibliographyMoveTargets(work, 'h1').map((entry) => entry.uuid),
+    ).toEqual(['h2']);
+    expect(moveBibliographyRow(work, 'h1', 'h3')).toBe(false);
+  });
+
+  it('is not moved apart from what it holds', async () => {
+    const work = await scattered();
+    expect(moveBibliographyRow(work, 'h1', 'h2')).toBe(false);
+    expect(work.spine.uuids()).toEqual(['h1', 'h2', 'h3', 'e3']);
+  });
+
+  it('takes a nested heading after all it holds', async () => {
+    const work = await scattered();
+    const uuid = newBibliographyHeading(work, 'h1', {
+      nested: true,
+    }) as string;
+    expect(outline(work, [uuid])).toEqual([
+      'h1 b.1',
+      'h2 b.2',
+      'h3 b.1.1',
+      'e3 b.1.1.1',
+      'new b.1.2',
+    ]);
+  });
+
+  it('keeps an outdented heading after its parent’s run', async () => {
+    const work = await scattered();
+    expect(outdentBibliographyHeading(work, 'h3')).toBe(true);
+    expect(outline(work)).toEqual(['h1 b.1', 'h3 b.2', 'e3 b.2.1', 'h2 b.3']);
+  });
+});

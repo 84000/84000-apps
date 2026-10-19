@@ -299,6 +299,23 @@ describe('a bibliography work', () => {
     expect(hasUnsavedBibliographyChanges(bibliography)).toBe(false);
   });
 
+  it('deletes a saved row whose insertion is undone after a redo', async () => {
+    const { bibliography, client } = await loaded();
+    const { work } = bibliography;
+    const uuid = newBibliographyEntry(work, 'e1') as string;
+    edit(bibliography, uuid, 'New');
+    await saveBibliographyWork(bibliography, client);
+
+    work.undo();
+    work.undo();
+    work.redo();
+    work.redo();
+    work.undo();
+    work.undo();
+    expect(work.spine.meta(uuid)).toBeNull();
+    expect(planBibliographySave(bibliography).deleteUuids).toEqual([uuid]);
+  });
+
   it('leaves out a new row with nothing in it', async () => {
     const { bibliography, client, calls } = await loaded();
     newBibliographyEntry(bibliography.work, 'e1');
@@ -306,6 +323,16 @@ describe('a bibliography work', () => {
     expect(hasUnsavedBibliographyChanges(bibliography)).toBe(false);
     expect(await saveBibliographyWork(bibliography, client)).toBe(true);
     expect(calls).toHaveLength(0);
+  });
+
+  it('moves no sorts on for a new row with nothing in it', async () => {
+    const { bibliography } = await loaded([
+      heading('h', 1),
+      row('a', 2, { headingUuid: 'h' }),
+      row('b', 3, { headingUuid: 'h' }),
+    ]);
+    newBibliographyEntry(bibliography.work, 'a');
+    expect(hasUnsavedBibliographyChanges(bibliography)).toBe(false);
   });
 
   it('holds back rows under a new heading until it has a name', async () => {

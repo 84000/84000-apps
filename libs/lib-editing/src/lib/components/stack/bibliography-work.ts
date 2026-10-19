@@ -252,47 +252,45 @@ export const planBibliographySave = ({
     };
     return { entry, stored, doc, row, html: storedBibliographyHtml(row) };
   });
+  // New rows with no text are not written, nor while they are new the rows
+  // under them, so they take no place among the sorts.
+  const unwritten = new Set<string>();
+  const held = new Set<string>();
+  const placed = drafts.filter(({ entry, stored, row, html }) => {
+    const parent = row.headingUuid;
+    if (html !== null && !(parent && unwritten.has(parent))) return true;
+    // A new row with nothing in it is a draft, not an unsaved change.
+    if (stored || html !== null) held.add(entry.uuid);
+    if (stored) return true;
+    unwritten.add(entry.uuid);
+    return false;
+  });
   const sorts = placeBibliographyRows(
-    drafts.map(({ row, stored, html }) => ({
+    placed.map(({ row, stored, html }) => ({
       under: row.isHeading ? undefined : (row.headingUuid ?? undefined),
       sort: stored?.sort,
       changed: !stored || html === null || !sameRow(stored, { ...row, html }),
     })),
   );
-  /** New rows the save leaves out, which nothing can be saved under. */
-  const unwritten = new Set<string>();
+
   const plan: BibliographySavePlan = {
     rows: [],
-    deleteUuids: [],
+    // Every stored row is in the spine, so one that is not has left the work.
+    deleteUuids: [...rows.keys()].filter((uuid) => !work.spine.meta(uuid)),
     settled: [],
-    held: [],
+    held: drafts.flatMap(({ entry }) =>
+      held.has(entry.uuid) ? [entry.uuid] : [],
+    ),
   };
-
-  drafts.forEach(({ entry, stored, doc, html, ...draft }, i) => {
+  placed.forEach(({ entry, stored, doc, html, ...draft }, i) => {
     const row = { ...draft.row, sort: sorts[i] };
-    const settle = () => {
-      if (doc?.isDirty) {
-        plan.settled.push({ uuid: entry.uuid, version: doc.version });
-      }
-    };
-
-    if (stored && html !== null && sameRow(stored, { ...row, html })) {
-      settle();
-      return;
+    const same = !!stored && html !== null && sameRow(stored, { ...row, html });
+    if (!same && held.has(entry.uuid)) return;
+    if (doc?.isDirty) {
+      plan.settled.push({ uuid: entry.uuid, version: doc.version });
     }
-    if (html === null || (row.headingUuid && unwritten.has(row.headingUuid))) {
-      if (!stored) unwritten.add(entry.uuid);
-      // A new row with nothing in it is a draft, not an unsaved change.
-      if (stored || html !== null) plan.held.push(entry.uuid);
-      return;
-    }
-    settle();
-    plan.rows.push(row);
+    if (!same) plan.rows.push(row);
   });
-
-  plan.deleteUuids = work.spine
-    .removedSinceSave()
-    .filter((uuid) => rows.has(uuid));
   return plan;
 };
 
@@ -319,9 +317,14 @@ const refreshRows = async (
     workUuid: work.workUuid,
   }).catch(() => null);
   if (!read) return;
+  // Only the rows this editor knows: one it has never seen is not its to
+  // delete.
+  const known = read.filter(
+    (row) => rows.has(row.uuid) || work.spine.meta(row.uuid),
+  );
   rows.clear();
-  read.forEach((row) => rows.set(row.uuid, row));
-  work.spine.adoptSorts(new Map(read.map((row) => [row.uuid, row.sort])));
+  known.forEach((row) => rows.set(row.uuid, row));
+  work.spine.adoptSorts(new Map(known.map((row) => [row.uuid, row.sort])));
 };
 
 /**
