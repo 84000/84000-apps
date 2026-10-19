@@ -85,7 +85,7 @@ const EditorSession = ({
     scoped: new Map<XmlFragment, number>(),
   });
   const isNormalizingForSaveRef = useRef(false);
-  const clearedFragmentRef = useRef<XmlFragment | null>(null);
+  const clearedFragmentsRef = useRef(new Set<XmlFragment>());
   const fragmentBaselinesRef = useRef<Map<XmlFragment, FragmentBaseline>>(
     new Map(),
   );
@@ -304,25 +304,24 @@ const EditorSession = ({
         // can still detect deletions.
         if (fragment) {
           fragmentBaselinesRef.current.delete(fragment);
-          clearedFragmentRef.current = fragment;
+          clearedFragmentsRef.current.add(fragment);
         } else {
           fragmentBaselinesRef.current.clear();
         }
       }
 
-      // When navigation ends, repopulate the baseline for any fragment that
+      // When navigation ends, repopulate the baseline for each fragment that
       // was cleared so deletion detection works immediately — without waiting
       // for an intervening Y.js event to re-establish the baseline.
-      const cleared = clearedFragmentRef.current;
-      if (
-        !navigating &&
-        cleared &&
-        !navigations.scoped.has(cleared) &&
-        navigations.all === 0
-      ) {
-        const f = cleared;
-        clearedFragmentRef.current = null;
-        fragmentBaselinesRef.current.set(f, captureFragmentBaseline(f));
+      if (!navigating && navigations.all === 0) {
+        clearedFragmentsRef.current.forEach((cleared) => {
+          if (navigations.scoped.has(cleared)) return;
+          clearedFragmentsRef.current.delete(cleared);
+          fragmentBaselinesRef.current.set(
+            cleared,
+            captureFragmentBaseline(cleared),
+          );
+        });
       }
     },
     [],

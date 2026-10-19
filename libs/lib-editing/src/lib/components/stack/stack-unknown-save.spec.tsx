@@ -128,7 +128,7 @@ const para = (text: string) => ({
 });
 
 const mount = async () => {
-  render(
+  const view = render(
     <EditorContextProvider work={work}>
       <StackWorkProvider workUuid="w1">
         <Capture />
@@ -136,6 +136,7 @@ const mount = async () => {
     </EditorContextProvider>,
   );
   await waitFor(() => expect(screen.getByTestId('seeded')).toBeTruthy());
+  return view;
 };
 
 /** Split the first passage, which inserts one and renumbers the rest. */
@@ -340,6 +341,36 @@ describe('a stack save whose answer was lost', () => {
     expect(passages.map((p: { uuid: string }) => p.uuid).sort()).toEqual(
       ['p0', created].sort(),
     );
+  });
+
+  it('settles nothing when the session ends while it restores', async () => {
+    const view = await mount();
+    splitFirst();
+    dataAccess.savePassagesWithDeletions.mockResolvedValueOnce(lostAnswer);
+    // The probe reads the sorts, and then the restore does.
+    const read = dataAccess.getPassageSorts.getMockImplementation();
+    if (!read) throw new Error('no sorts');
+    let restored = () => undefined as void;
+    dataAccess.getPassageSorts
+      .mockImplementationOnce(read)
+      .mockImplementationOnce(
+        (args: unknown) =>
+          new Promise((resolve) => {
+            restored = () => resolve(read(args));
+          }),
+      );
+    const saving = editor.save();
+    await waitFor(() =>
+      expect(dataAccess.getPassageSorts).toHaveBeenCalledTimes(2),
+    );
+
+    view.unmount();
+    await act(async () => {
+      restored();
+      await saving;
+    });
+
+    expect(designSystem.toast).not.toHaveBeenCalled();
   });
 
   it.each([

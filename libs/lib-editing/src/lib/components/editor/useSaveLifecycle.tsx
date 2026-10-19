@@ -516,6 +516,7 @@ export const useSaveLifecycle = ({
       if (verdict === 'not-applied') {
         pendingRef.current = null;
         await save.restore();
+        if (!aliveRef.current) return;
         dirtyStore.setDirty(true);
         outcomeToast('Your last save did not go through.', {
           description: 'Your changes are kept. Save again to send them.',

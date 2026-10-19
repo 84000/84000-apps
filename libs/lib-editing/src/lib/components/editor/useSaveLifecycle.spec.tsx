@@ -595,6 +595,44 @@ describe('saving the paginated editors', () => {
     expect(editorState.dirtyStore.getSnapshot()).toBe(false);
   });
 
+  it('tracks an edit in another editor while one loads more', async () => {
+    const view = await mount();
+    act(() => editorState.startObserving('endnotes'));
+    const endnotes = editorState.getFragment('endnotes');
+    const main = editorState.getEditor('main');
+    if (!main) throw new Error('no editor');
+    // Enough to load in chunks, which yield to the browser between them.
+    clientGraphql.getTranslationBlocks.mockResolvedValue({
+      blocks: Array.from({ length: 30 }, (_, i) => passage(`m${i}`, `m${i}`)),
+      hasMoreAfter: false,
+    });
+    let yielded: (() => void) | undefined;
+    const frame = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementationOnce((resume) => {
+        yielded = () => resume(0);
+        return 0;
+      });
+
+    view.rerender(
+      <EditorContextProvider work={work}>
+        <Capture />
+        <LoadMore editor={main} fragment={editorState.getFragment('main')} />
+      </EditorContextProvider>,
+    );
+    await waitFor(() => expect(yielded).toBeDefined());
+    act(() => {
+      const element = new XmlElement('passage');
+      endnotes.insert(0, [element]);
+      element.setAttribute('uuid', 'e1');
+    });
+    frame.mockRestore();
+    await act(async () => yielded?.());
+    await waitFor(() => expect(main.getText()).toContain('m29'));
+
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+  });
+
   it('tracks an edit while another editor navigates', async () => {
     await mount();
     const editP0 = observeSavedPassage();
@@ -633,6 +671,22 @@ describe('saving the paginated editors', () => {
     );
     await act(() => editorState.save());
     expect(sentUuids(0)).toEqual(['p0']);
+  });
+
+  it('sees a deletion in each editor that navigated at once', async () => {
+    await mount();
+    observeSavedPassage();
+    act(() => editorState.startObserving('endnotes'));
+    const main = editorState.getFragment('main');
+    const endnotes = editorState.getFragment('endnotes');
+
+    act(() => editorState.setNavigating(true, true, main));
+    act(() => editorState.setNavigating(true, true, endnotes));
+    act(() => editorState.setNavigating(false, false, main));
+    act(() => editorState.setNavigating(false, false, endnotes));
+    act(() => main.delete(0, 1));
+
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
   });
 
   it('settles nothing once the session is gone', async () => {
