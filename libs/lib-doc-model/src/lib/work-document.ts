@@ -4,7 +4,7 @@ import type { Schema } from '@tiptap/pm/model';
 import { v4 as uuidv4 } from 'uuid';
 import type { Doc } from 'yjs';
 import type { BodyItemType } from '@eightyfourthousand/data-access';
-import { CommandLog, type ContentChange } from './command-log';
+import { CommandLog, type ContentChange, type MoveChange } from './command-log';
 import { PassageDocStore } from './doc-store';
 import { EndNoteLinkUpkeep } from './end-note-link-upkeep';
 import { HydrationWindows } from './hydration-windows';
@@ -16,7 +16,10 @@ import { withFreshSplitIdentities } from './split-identities';
 import {
   BIBLIOGRAPHY_ROW_TYPES,
   type FocusTarget,
+  type LabelChange,
+  type ParentChange,
   type PassageMeta,
+  type RowOutline,
   type SpineRange,
 } from './types';
 import {
@@ -62,6 +65,12 @@ export type WorkDocumentOptions = {
   textOrigins?: Set<unknown>;
   /** Overridable so tests can produce stable uuids. Defaults to uuid v4. */
   newUuid?: () => string;
+  /**
+   * Derives labels and nesting from the order after every change, for rows
+   * numbered by position. Labels are then never renumbered or recorded: they
+   * follow from the order, which undo restores.
+   */
+  outline?: RowOutline;
 };
 
 /** What a newly inserted passage is made of. */
@@ -72,6 +81,8 @@ export type InsertPassageInput = {
   /** Defaults to the label after the preceding passage's. */
   label?: string;
   toh?: PassageMeta['toh'];
+  /** The row it nests under, such as a heading's parent heading. */
+  parent?: string;
   content?: JSONContent[];
 };
 
@@ -97,6 +108,7 @@ export class WorkDocument {
   readonly schema: Schema;
 
   private newUuid: () => string;
+  private outline?: RowOutline;
   private listeners = new Set<() => void>();
   private hydration: HydrationWindows;
   private links: EndNoteLinkUpkeep;
@@ -107,6 +119,7 @@ export class WorkDocument {
     this.workUuid = options.workUuid;
     this.schema = options.schema;
     this.newUuid = options.newUuid ?? uuidv4;
+    this.outline = options.outline;
     this.spine = new Spine(options.workUuid, options.spineDoc);
     this.store = new PassageDocStore({
       workUuid: options.workUuid,
@@ -201,7 +214,11 @@ export class WorkDocument {
       toh: meta.toh,
     };
 
-    const { entry, labelChanges } = this.spine.insert(newMeta, index + 1);
+    const { entry, labelChanges } = this.spine.insert(
+      newMeta,
+      index + 1,
+      this.mutation(),
+    );
     doc.replaceContent(head);
     const tailDoc = this.store.ensure(entry.uuid);
     tailDoc.replaceContent(tail);
@@ -259,7 +276,7 @@ export class WorkDocument {
         head.length || tail.length ? [...head, ...tail] : [EMPTY_PARAGRAPH],
     };
 
-    const labelChanges = this.spine.remove([uuid], { deleted: true });
+    const labelChanges = this.spine.remove([uuid], this.mutation(true));
     previous.replaceContent(merged);
 
     this.history.record({
@@ -299,9 +316,14 @@ export class WorkDocument {
       type: passage.type,
       label: passage.label ?? labelFor(passage.type, previous),
       toh: passage.toh,
+      ...(passage.parent ? { parent: passage.parent } : {}),
     };
 
-    const { entry, labelChanges } = this.spine.insert(meta, at);
+    const { entry, labelChanges } = this.spine.insert(
+      meta,
+      at,
+      this.mutation(),
+    );
     const content = passage.content?.length
       ? passage.content
       : [EMPTY_PARAGRAPH];
@@ -352,7 +374,7 @@ export class WorkDocument {
     }));
     const labelChanges = this.spine.remove(
       targets.map((t) => t.uuid),
-      { deleted: true },
+      this.mutation(true),
     );
     content.push(...this.links.unlink(targets.map((t) => t.uuid)));
 
@@ -443,11 +465,15 @@ export class WorkDocument {
 
     const labelChanges = this.spine.remove(
       targets.map((t) => t.uuid),
-      { deleted: true },
+      this.mutation(true),
     );
     content.push(...this.links.unlink(targets.map((t) => t.uuid)));
     const inserted = seeds.map((seed, i) => {
-      const { entry, labelChanges: changes } = this.spine.insert(seed, at + i);
+      const { entry, labelChanges: changes } = this.spine.insert(
+        seed,
+        at + i,
+        this.mutation(),
+      );
       labelChanges.push(...changes);
       this.store
         .ensure(entry.uuid)
@@ -494,7 +520,7 @@ export class WorkDocument {
 
   /** Move a passage to another position. */
   reorder(uuid: string, toIndex: number): boolean {
-    const result = this.spine.move(uuid, toIndex);
+    const result = this.spine.move(uuid, toIndex, this.mutation());
     if (!result.moved || result.from === result.to) return result.moved;
 
     this.history.record({
@@ -506,6 +532,79 @@ export class WorkDocument {
       labels: result.labelChanges,
       focusAfterUndo: { uuid, where: 'start' },
       focusAfterRedo: { uuid, where: 'start' },
+    });
+
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Move a contiguous run of rows and change what rows nest under, as one
+   * command.
+   *
+   * `to` is where the first row of the run ends up. Each parent is set as
+   * given, an absent one being the top level.
+   */
+  nest(
+    uuids: string[],
+    {
+      to,
+      parents = [],
+    }: { to?: number; parents?: { uuid: string; parent?: string }[] },
+  ): boolean {
+    const indices = uuids.map((uuid) => this.spine.indexOf(uuid));
+    const from = indices[0];
+    if (
+      !uuids.length ||
+      indices.some((index, i) => index < 0 || index !== from + i)
+    ) {
+      return false;
+    }
+
+    const moved: MoveChange[] = [];
+    const labels: LabelChange[] = [];
+    if (to !== undefined) {
+      const target = Math.max(
+        0,
+        Math.min(to, this.spine.length - uuids.length),
+      );
+      // Moving down, the last row goes first, so each lands at its own offset
+      // from the target without displacing the rows still to move.
+      const order = target > from ? [...uuids].reverse() : uuids;
+      order.forEach((uuid) => {
+        const result = this.spine.move(
+          uuid,
+          target + uuids.indexOf(uuid),
+          this.mutation(),
+        );
+        if (result.from === result.to) return;
+        moved.push({ uuid, from: result.from, to: result.to });
+        labels.push(...result.labelChanges);
+      });
+    }
+
+    const parentChanges = parents.flatMap(
+      ({ uuid, parent }): ParentChange[] => {
+        const meta = this.spine.meta(uuid);
+        if (!meta || meta.parent === parent) return [];
+        return [{ uuid, from: meta.parent, to: parent }];
+      },
+    );
+    this.spine.setParents(
+      parentChanges.map(({ uuid, to: parent }) => ({ uuid, parent })),
+    );
+    if (!moved.length && !parentChanges.length) return false;
+
+    this.history.record({
+      kind: 'nest',
+      content: [],
+      inserted: [],
+      removed: [],
+      moved,
+      labels: collapseLabelChanges(labels),
+      parents: parentChanges,
+      focusAfterUndo: { uuid: uuids[0], where: 'start' },
+      focusAfterRedo: { uuid: uuids[0], where: 'start' },
     });
 
     this.notify();
@@ -591,7 +690,15 @@ export class WorkDocument {
     };
   }
 
+  /** How a mutation treats labels: an outlined work derives them instead. */
+  private mutation(deleted?: boolean) {
+    return { renumber: !this.outline, ...(deleted ? { deleted } : {}) };
+  }
+
   private notify() {
+    if (this.outline) {
+      this.spine.applyPlaces(this.outline(this.spine.entries()));
+    }
     this.listeners.forEach((listener) => listener());
   }
 }

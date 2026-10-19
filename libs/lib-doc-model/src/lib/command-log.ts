@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import type {
   FocusTarget,
   LabelChange,
+  ParentChange,
   PassageMeta,
   StructuralOpKind,
 } from './types';
@@ -50,6 +51,8 @@ export type StructuralCommand = {
   moved: MoveChange[];
   /** Labels the operation's renumbering rewrote. */
   labels: LabelChange[];
+  /** Rows the operation nested under another. */
+  parents?: ParentChange[];
   focusAfterUndo?: FocusTarget;
   focusAfterRedo?: FocusTarget;
 };

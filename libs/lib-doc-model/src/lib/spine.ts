@@ -11,6 +11,7 @@ import {
 import type {
   LabelChange,
   PassageMeta,
+  RowPlace,
   SpineEntry,
   SpineRange,
   StackRowType,
@@ -374,6 +375,50 @@ export class Spine {
     const entry = this.metas.get(uuid);
     if (!entry) return;
     transact(this.doc, () => entry.set('label', label), SPINE_ORIGIN);
+  }
+
+  /** Set what rows nest under. An absent parent is the top level. */
+  setParents(changes: { uuid: string; parent?: string }[]) {
+    if (!changes.length) return;
+    transact(
+      this.doc,
+      () =>
+        changes.forEach(({ uuid, parent }) => {
+          const entry = this.metas.get(uuid);
+          if (!entry) return;
+          if (parent) entry.set('parent', parent);
+          else entry.delete('parent');
+        }),
+      SPINE_ORIGIN,
+    );
+  }
+
+  /** Write rows' labels and nesting where they differ, as one change. */
+  applyPlaces(places: Map<string, RowPlace>) {
+    const changed = [...places].filter(([uuid, place]) => {
+      const meta = this.meta(uuid);
+      return (
+        meta &&
+        (meta.label !== place.label ||
+          meta.parent !== place.parent ||
+          (meta.depth ?? 0) !== (place.depth ?? 0))
+      );
+    });
+    if (!changed.length) return;
+    transact(
+      this.doc,
+      () =>
+        changed.forEach(([uuid, { label, parent, depth }]) => {
+          const entry = this.metas.get(uuid);
+          if (!entry) return;
+          entry.set('label', label);
+          if (parent) entry.set('parent', parent);
+          else entry.delete('parent');
+          if (depth) entry.set('depth', depth);
+          else entry.delete('depth');
+        }),
+      SPINE_ORIGIN,
+    );
   }
 
   /** Set one passage's type, re-deriving where it is surfaced. */
