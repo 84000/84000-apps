@@ -54,12 +54,12 @@ is derived from the work and `docx-<sort>`: it matches a passage only if an
 earlier import of this work saved it at that sort, and otherwise inserts a
 second passage beside the one you meant to change. The whole call is refused,
 and nothing is written, if an edit has since moved that passage out of order
-among this import's passages (a single passage's move, or one past passages the import does not send, is not
-detected; see `passage-editing/saving.md`), or if
-the work holds passages an older import
-saved under uuids it cannot match (see `passage-editing/saving.md`). An omitted
-`sort` is taken from a counter in operation order, and the derived uuid keys on
-that sort. A derived uuid never repeats one you sent.
+among this import's passages, or if the work holds passages an older import
+saved under uuids it cannot match. A single passage's move, or one past
+passages the import does not send, is not detected (see
+`passage-editing/saving.md`). An omitted `sort` is taken from a counter in
+operation order, and the derived uuid keys on that sort. A derived uuid never
+repeats one you sent.
 
 `workUuid` and `xmlId` stay optional either way. `workUuid` falls back to the
 one you passed the tool, which is the same work you are editing; `xmlId` is

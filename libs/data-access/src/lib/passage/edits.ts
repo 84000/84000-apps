@@ -521,6 +521,9 @@ export const applyPassageEdits = async ({
   }
   if (elsewhere.size > 0) {
     applied = apply(elsewhere);
+    if (applied.error) {
+      return failed(applied.error, applied.warnings);
+    }
   }
   const { passages, rawAnnotations, warnings, anchors } = applied;
 
