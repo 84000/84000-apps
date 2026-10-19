@@ -7,6 +7,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import type { JSONContent } from '@tiptap/core';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
+import type { SaveReport } from '../editor/editor-context';
 
 /**
  * The rows a work's edited passages currently materialize to.
@@ -138,28 +139,63 @@ const refreshSorts = async (
   return true;
 };
 
-/** Whether a save has anything to write or delete. */
-export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
+/** How many passages a save would write or delete. */
+export const unsavedStackChanges = (work: WorkDocument): number =>
   // A dirty document whose passage has left the spine has nothing to save:
   // counting it would hold the Save button on for good.
-  work.store.dirty().some((uuid) => work.spine.meta(uuid)) ||
-  work.spine.removedSinceSave().length > 0;
+  work.store.dirty().filter((uuid) => work.spine.meta(uuid)).length +
+  work.spine.removedSinceSave().length;
+
+/** Whether a save has anything to write or delete. */
+export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
+  unsavedStackChanges(work) > 0;
+
+/**
+ * How many passages changed since a save was sent with these versions and
+ * deletions: edited again, newly edited, or newly removed or put back.
+ */
+const changesSince = (
+  work: WorkDocument,
+  versions: Map<string, number | undefined>,
+  deleted: string[],
+): number => {
+  const edited = work.store
+    .dirty()
+    .filter(
+      (uuid) =>
+        work.spine.meta(uuid) &&
+        (!versions.has(uuid) ||
+          work.store.peek(uuid)?.version !== versions.get(uuid)),
+    );
+  const removed = new Set(work.spine.removedSinceSave());
+  const sentDeleted = new Set(deleted);
+  return (
+    edited.length +
+    [...removed].filter((uuid) => !sentDeleted.has(uuid)).length +
+    deleted.filter((uuid) => !removed.has(uuid)).length
+  );
+};
 
 /**
  * Write a work's edited passages and delete the ones it removed, and mark
  * them synced once the server agrees.
+ *
+ * When the outcome is unknown nothing is settled, and the report says what
+ * to read back to learn whether the save was applied.
  */
-export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
+export const saveStackWork = async (
+  work: WorkDocument,
+): Promise<SaveReport> => {
   const client = createBrowserClient();
   const stale = staleSorts.get(work);
   if (stale && !(await refreshSorts(work, client, stale.from, stale.also))) {
     console.error('Failed to save passages: stored sorts could not be read');
-    return false;
+    return { outcome: 'failed' };
   }
 
   const passages = dirtyPassages(work);
   const deletedUuids = work.spine.removedSinceSave();
-  if (!passages.length && !deletedUuids.length) return true;
+  if (!passages.length && !deletedUuids.length) return { outcome: 'none' };
   // Read with the payload: an edit made while the request is in flight is
   // not in it, and must leave its passage dirty.
   const versions = new Map(
@@ -181,16 +217,38 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
     passages,
     deletedUuids,
     anchors,
+  }).catch((error: unknown) => {
+    // A commit whose answer was lost comes back as `outcomeUnknown`, so a
+    // throw is a failure before it.
+    console.error('Failed to save passages:', error);
+    return null;
   });
   const createdUuids = new Set(created.map((passage) => passage.uuid));
-  if (!result?.success) {
-    console.error('Failed to save passages:', result?.error ?? 'unknown error');
-    // The save may have shifted sorts before it failed, and inserted the
-    // rows if only its response was lost; a retry must send the sorts the
-    // server holds, not the ones sent here.
+  // The save may have shifted sorts before it failed, and inserted the rows
+  // if only its response was lost; a retry must send the sorts the server
+  // holds, not the ones sent here.
+  const resetSorts = async () => {
     if (created.length)
       await refreshSorts(work, client, createdFrom, createdUuids);
-    return false;
+  };
+  if (result?.outcomeUnknown) {
+    console.error('Save may have been applied:', result.error);
+    return {
+      outcome: 'unknown',
+      unconfirmed: {
+        sent: passages.map((passage) => passage.uuid),
+        inserted: [...createdUuids],
+        deleted: deletedUuids,
+        newerChanges: () => changesSince(work, versions, deletedUuids),
+        // Nothing was settled, so the passages are still dirty.
+        restore: resetSorts,
+      },
+    };
+  }
+  if (!result?.success) {
+    console.error('Failed to save passages:', result?.error ?? 'unknown error');
+    await resetSorts();
+    return { outcome: 'failed' };
   }
 
   result.warnings?.forEach((warning) => console.warn(warning));
@@ -221,7 +279,7 @@ export const saveStackWork = async (work: WorkDocument): Promise<boolean> => {
   if (created.length) {
     await refreshSorts(work, client, createdFrom, createdUuids);
   }
-  return true;
+  return { outcome: 'saved' };
 };
 
 /**

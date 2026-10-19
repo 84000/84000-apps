@@ -19,6 +19,7 @@ const SAVE_PASSAGES_MUTATION = gql`
         label
       }
       warnings
+      outcomeUnknown
     }
   }
 `;
@@ -42,6 +43,7 @@ interface SavePassagesResponse {
     renumberedPassages: RenumberedPassage[];
     error?: string;
     warnings?: string[] | null;
+    outcomeUnknown?: boolean | null;
   };
 }
 
@@ -93,6 +95,14 @@ export const savePassages = async ({
   error?: string;
   /** Problems that did not stop the save. */
   warnings?: string[] | null;
+  /**
+   * The save failed, but may have been applied: the server lost the
+   * database's answer. Re-read the passages before saving them again.
+   *
+   * Only the server's own report. A request that throws, such as one whose
+   * response never arrived, can be just as unknown; the caller judges that.
+   */
+  outcomeUnknown?: boolean | null;
 }> => {
   const passageInputs = passages.map(passageToInput);
 

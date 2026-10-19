@@ -1,6 +1,7 @@
 // Client
 export {
   createGraphQLClient,
+  RequestNotSentError,
   resetGraphQLClient,
   setAccessTokenProvider,
 } from './lib/client';

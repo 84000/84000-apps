@@ -9,6 +9,20 @@ let clientInstance: GraphQLClient | null = null;
 let getAccessToken: (() => Promise<string | null>) | null = null;
 
 /**
+ * A request that failed before it was sent, such as while reading the access
+ * token, so the server never saw it.
+ */
+export class RequestNotSentError extends Error {
+  constructor(cause: unknown) {
+    super(
+      `Request not sent: ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause },
+    );
+    this.name = 'RequestNotSentError';
+  }
+}
+
+/**
  * Set the access token provider function.
  * This should be called once at app initialization.
  */
@@ -42,7 +56,12 @@ export function createGraphQLClient(): GraphQLClient {
       };
 
       if (getAccessToken) {
-        const token = await getAccessToken();
+        let token: string | null;
+        try {
+          token = await getAccessToken();
+        } catch (error) {
+          throw new RequestNotSentError(error);
+        }
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }

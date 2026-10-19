@@ -9,14 +9,43 @@ import { type ReplacedPassage } from '@eightyfourthousand/client-graphql';
 import { toast } from '@eightyfourthousand/design-system';
 import { type DirtyStore } from './hooks/useDirtyStore';
 
-/** What a save did: nothing to save, saved, or failed. */
-export type SaveOutcome = 'none' | 'saved' | 'failed';
+/**
+ * What a save did: nothing to save, saved, or failed. `unknown` is a failure
+ * that may have been applied anyway, because the answer to the write was lost.
+ */
+export type SaveOutcome = 'none' | 'saved' | 'failed' | 'unknown';
+
+/**
+ * A save whose answer was lost. It is all or nothing, and nothing it sent is
+ * settled until the stored passages show whether it was applied.
+ */
+export type UnconfirmedSave = {
+  /** Passages it wrote. */
+  sent: string[];
+  /** Of those, the ones new to the server, as far as the editor knows. */
+  inserted: string[];
+  /** Passages it deleted. */
+  deleted: string[];
+  /** Passages changed since it was sent, which a reload would discard. */
+  newerChanges: () => number;
+  /** It was not applied: leave its changes for the next save to send. */
+  restore: () => Promise<void>;
+};
+
+/** What one part of a save reports. */
+export type SaveReport = {
+  outcome: SaveOutcome;
+  /** Set when the outcome is unknown. */
+  unconfirmed?: UnconfirmedSave;
+};
 
 /** A second editing surface that saves alongside the paginated editors. */
 export type SaveHandler = {
-  save: () => Promise<SaveOutcome>;
+  save: () => Promise<SaveReport>;
   /** Whether it holds changes the last save did not write. */
   isDirty: () => boolean;
+  /** How many passages hold changes the last save did not write. */
+  unsavedChanges: () => number;
   /** Take in passages the server rewrote, such as by a replace. */
   applyReplaced?: (passages: ReplacedPassage[]) => void;
   /** Delete an endnote and its links, if the handler holds the endnotes. */

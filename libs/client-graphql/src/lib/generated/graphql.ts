@@ -1122,6 +1122,14 @@ export type SavePassagesResult = {
   deletedCount?: Maybe<Scalars['Int']['output']>;
   /** Error message if the save failed */
   error?: Maybe<Scalars['String']['output']>;
+  /**
+   * Set when the save failed but may have been applied anyway: the database's
+   * answer was lost after the write was sent. The passages the client sent may
+   * now be stored, with the labels the server planned for them, so resending the
+   * same passages can revert those labels. Re-read the passages before saving
+   * again.
+   */
+  outcomeUnknown?: Maybe<Scalars['Boolean']['output']>;
   /** Saved passages (after server-side normalization), used for client-side refresh. */
   passages: Array<Passage>;
   /**
