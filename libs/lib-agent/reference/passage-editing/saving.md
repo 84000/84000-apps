@@ -118,13 +118,16 @@ them a second time, and ends with the rows one clean run would have written.
 
 If the operations changed between runs, the re-run still matches by position. A
 shorter run leaves the passages past its end in place, and the result warns
-about them by xmlId. If an edit has moved a passage the earlier run saved, the
-re-run is refused and nothing is written.
+about them by xmlId. If an edit has moved a passage the earlier run saved out
+of order among this import's passages, the re-run is refused and nothing is
+written. A passage pushed down by an insert, or by the earlier run's own
+placement, still matches. An annotation an edit moved to another passage stays
+there: the re-run saves its own copy under a new uuid and warns.
 
-Send uuids for every passage or for none: a uuid you send can clash with one
-the tool derives. A work imported before uuids were derived cannot be matched,
-so a re-run over it is refused rather than adding its passages a second time;
-send the stored uuids to rewrite those passages.
+A uuid the tool derives never repeats one you sent, so passages and annotations
+with and without uuids can be mixed. A work imported before uuids were derived
+cannot be matched, so a re-run over it is refused rather than adding its
+passages a second time; send the stored uuids to rewrite those passages.
 
 ## A sort is a reading position, not a passage
 

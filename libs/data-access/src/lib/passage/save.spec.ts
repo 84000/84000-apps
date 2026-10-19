@@ -6,6 +6,7 @@ import {
 } from './replace-persistence';
 import { replacePassageText } from '../replace';
 import {
+  findMovedImportPassages,
   normalizeImportOperations,
   upsertPassagesFromPreview,
 } from '../import-preview';
@@ -2581,8 +2582,8 @@ describe('re-running a chunked import', () => {
     ],
   }));
 
-  const runImport = (client: unknown) => {
-    const normalized = normalizeImportOperations('work-1', operations);
+  const runImport = (client: unknown, ops = operations) => {
+    const normalized = normalizeImportOperations('work-1', ops);
     return upsertPassagesFromPreview({
       client: client as never,
       preview: {
@@ -2596,6 +2597,24 @@ describe('re-running a chunked import', () => {
         },
       },
     });
+  };
+
+  /** A client whose `n`-th commit fails as a statement timeout would. */
+  const failingCommit = (state: FakeState, n: number) => {
+    let calls = 0;
+    const client = createFakeClient(state) as unknown as {
+      rpc: (name: string, args: unknown) => Promise<unknown>;
+    };
+    const rpc = client.rpc;
+    client.rpc = (name, args) => {
+      if (name === 'apply_passage_save' && ++calls === n) {
+        return Promise.resolve({
+          error: { message: 'canceling statement', code: '57014' },
+        });
+      }
+      return rpc(name, args);
+    };
+    return client;
   };
 
   const rows = (state: FakeState) => ({
@@ -2637,6 +2656,52 @@ describe('re-running a chunked import', () => {
         (row) => uuidVersion(row.uuid) === 5,
       ),
     ).toBe(true);
+  });
+
+  it('does not call its own placement of a tied passage a move', async () => {
+    // The last passage shares the sort before it, so the retry places it by
+    // shifting the passage the first run already saved.
+    const tied = operations.map((operation, at) =>
+      at === 500
+        ? { ...operation, passage: { ...operation.passage, sort: 499 } }
+        : operation,
+    );
+    const state = createState({});
+    const client = failingCommit(state, 2);
+
+    await expect(runImport(client, tied)).rejects.toThrow('Partly saved');
+    await runImport(client, tied);
+    expect(state.passages).toHaveLength(501);
+
+    const passages = normalizeImportOperations('work-1', tied).flatMap(
+      (operation) =>
+        operation.kind === 'upsert_passage'
+          ? [{ ...operation.passage, xmlId: operation.passage.xmlId ?? '' }]
+          : [],
+    );
+    await expect(
+      findMovedImportPassages({ client: client as never, passages }),
+    ).resolves.toEqual([]);
+  });
+
+  it('leaves an annotation an edit moved to another passage there', async () => {
+    const one = operations.slice(0, 1);
+    const state = createState({});
+    await runImport(createFakeClient(state), one);
+    const [moved] = state.annotations;
+    state.passages.push({ ...passageRow, uuid: 'other', work_uuid: 'work-1' });
+    state.annotations = state.annotations.map((row) =>
+      row.uuid === moved.uuid ? { ...row, passage_uuid: 'other' } : row,
+    );
+
+    await runImport(createFakeClient(state), one);
+
+    expect(
+      state.annotations.find((row) => row.uuid === moved.uuid),
+    ).toMatchObject({ passage_uuid: 'other' });
+    expect(
+      state.annotations.filter((row) => row.passage_uuid !== 'other'),
+    ).toHaveLength(5);
   });
 });
 

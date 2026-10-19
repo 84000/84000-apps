@@ -59,3 +59,22 @@ export const occurrenceCounter = () => {
     return count;
   };
 };
+
+/**
+ * Hands out derived uuids by key, never one in `taken` or one it has already
+ * handed out: a request whose next occurrence is taken gets the one after.
+ * `taken` holds the uuids a caller sent explicitly, so a derived row never
+ * collides with a row sent under its uuid.
+ */
+export const derivedUuidAllocator = (taken: Iterable<string> = []) => {
+  const used = new Set(taken);
+  const occurrence = occurrenceCounter();
+  return (key: string, uuidFor: (occurrence: number) => string) => {
+    let uuid = uuidFor(occurrence(key));
+    while (used.has(uuid)) {
+      uuid = uuidFor(occurrence(key));
+    }
+    used.add(uuid);
+    return uuid;
+  };
+};

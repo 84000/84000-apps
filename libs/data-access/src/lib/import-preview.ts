@@ -1,6 +1,13 @@
-import { v4 as uuidv4 } from 'uuid';
+import {
+  v4 as uuidv4,
+  validate as isUuid,
+  version as uuidVersion,
+} from 'uuid';
 import { savePassagesWithDeletions } from './passage';
-import { importPassageUuid, occurrenceCounter } from './passage/derived-uuids';
+import {
+  derivedUuidAllocator,
+  importPassageUuid,
+} from './passage/derived-uuids';
 import { inBatches } from './passage/in-batches';
 import {
   DataClient,
@@ -224,9 +231,10 @@ const PAGE_SIZE = 1000;
 
 /**
  * Passages an earlier import saved to the work that are not among `saved`.
- * `derived` says whether the row's uuid is the one this scheme derives for
- * it; a row without one was saved by an import that minted random uuids.
- * Throws when the read fails.
+ * `derived` says whether the row's uuid was derived (a UUIDv5); a row without
+ * one was saved by an import that minted random uuids. The version, not a
+ * recomputed uuid, is what counts: a passage saved as the 2nd of a repeated
+ * xmlId stays derived after the 1st is deleted. Throws when the read fails.
  */
 export const findLeftoverImportPassages = async ({
   client,
@@ -259,25 +267,48 @@ export const findLeftoverImportPassages = async ({
     }
   }
 
-  // A repeated xmlId was saved under its 2nd, 3rd... derived uuid.
-  const repeats = new Map<string, number>();
-  stored.forEach(({ xmlId }) =>
-    repeats.set(xmlId, (repeats.get(xmlId) ?? 0) + 1),
-  );
-  const isDerived = ({ uuid, xmlId }: { uuid: string; xmlId: string }) =>
-    Array.from({ length: repeats.get(xmlId) ?? 1 }, (_, at) =>
-      importPassageUuid(workUuid, xmlId, at + 1),
-    ).includes(uuid);
-
   return stored
     .filter((row) => !saved.has(row.uuid))
-    .map((row) => ({ ...row, derived: isDerived(row) }));
+    .map((row) => ({
+      ...row,
+      derived: isUuid(row.uuid) && uuidVersion(row.uuid) === 5,
+    }));
 };
 
 /**
- * The stored passages a derived uuid would overwrite at another position:
- * one an earlier import saved and an edit has since moved, so the incoming
- * passage is not it. Throws when the read fails.
+ * The indexes of a longest non-decreasing run within `values`, which need not
+ * be contiguous.
+ */
+const longestOrderedRun = (values: number[]): Set<number> => {
+  const tails: number[] = [];
+  const previous = values.map(() => -1);
+  values.forEach((value, at) => {
+    let low = 0;
+    let high = tails.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (values[tails[mid]] <= value) low = mid + 1;
+      else high = mid;
+    }
+    previous[at] = low > 0 ? tails[low - 1] : -1;
+    tails[low] = at;
+  });
+  const run = new Set<number>();
+  for (let at = tails[tails.length - 1] ?? -1; at >= 0; at = previous[at]) {
+    run.add(at);
+  }
+  return run;
+};
+
+/**
+ * The stored passages a derived uuid would overwrite out of order: ones an
+ * earlier import saved that an edit has since moved past others of this
+ * import, so the incoming passage is not the one there. The order is what is
+ * compared, not the sort: a save shifts stored sorts to make room for a new
+ * passage, and an earlier run of this import, or an insert, does that without
+ * moving anything. Passages that share an intended sort may be stored in
+ * either order. One passage alone is never reported. Throws when the read
+ * fails.
  */
 export const findMovedImportPassages = async ({
   client,
@@ -286,9 +317,8 @@ export const findMovedImportPassages = async ({
   client: DataClient;
   passages: { uuid: string; sort: number; xmlId: string }[];
 }): Promise<{ xmlId: string; sort: number; storedSort: number }[]> => {
-  const incoming = new Map(passages.map((passage) => [passage.uuid, passage]));
-  const moved: { xmlId: string; sort: number; storedSort: number }[] = [];
-  for (const batch of inBatches([...incoming.keys()])) {
+  const storedSorts = new Map<string, number>();
+  for (const batch of inBatches(passages.map(({ uuid }) => uuid))) {
     const { data, error } = await client
       .from('passages')
       .select('uuid, sort')
@@ -299,17 +329,52 @@ export const findMovedImportPassages = async ({
       );
     }
     for (const row of (data ?? []) as { uuid: string; sort: number }[]) {
-      const passage = incoming.get(row.uuid);
-      if (passage && passage.sort !== row.sort) {
-        moved.push({
-          xmlId: passage.xmlId,
-          sort: passage.sort,
-          storedSort: row.sort,
-        });
+      storedSorts.set(row.uuid, row.sort);
+    }
+  }
+
+  const matched = passages
+    .flatMap(({ uuid, sort, xmlId }) => {
+      const storedSort = storedSorts.get(uuid);
+      return storedSort === undefined ? [] : [{ xmlId, sort, storedSort }];
+    })
+    .sort((a, b) => a.sort - b.sort || a.storedSort - b.storedSort);
+  const inOrder = longestOrderedRun(matched.map((row) => row.storedSort));
+  return matched.filter((_, at) => !inOrder.has(at));
+};
+
+/**
+ * Annotation uuids, of those given with their passage, that are stored on a
+ * different passage. Throws when the read fails.
+ */
+const findAnnotationsElsewhere = async ({
+  client,
+  rows,
+}: {
+  client: DataClient;
+  rows: Map<string, string>;
+}): Promise<Set<string>> => {
+  const elsewhere = new Set<string>();
+  for (const batch of inBatches([...rows.keys()])) {
+    const { data, error } = await client
+      .from('passage_annotations')
+      .select('uuid, passage_uuid')
+      .in('uuid', batch);
+    if (error) {
+      throw new Error(
+        `No passages were saved: failed to read stored annotations: ${error.message}`,
+      );
+    }
+    for (const row of (data ?? []) as {
+      uuid: string;
+      passage_uuid: string;
+    }[]) {
+      if (row.passage_uuid !== rows.get(row.uuid)) {
+        elsewhere.add(row.uuid);
       }
     }
   }
-  return moved;
+  return elsewhere;
 };
 
 /**
@@ -317,7 +382,9 @@ export const findMovedImportPassages = async ({
  * not all-or-nothing: a failure partway leaves the chunks before it saved, and
  * the error says how many passages were. Re-running the same import converges:
  * passages and annotations sent without uuids get derived ones, so the rows
- * already saved are matched and updated rather than saved again.
+ * already saved are matched and updated rather than saved again. A derived
+ * annotation uuid stored on another passage, where an edit moved the row, is
+ * replaced by a random one, so the row stays where the edit put it.
  */
 export const upsertPassagesFromPreview = async ({
   client,
@@ -326,12 +393,29 @@ export const upsertPassagesFromPreview = async ({
   client: DataClient;
   preview: ImportPreview;
 }) => {
-  const passages = preview.operations
-    .filter(
-      (operation): operation is PassageInsertOperation =>
-        operation.kind === 'upsert_passage',
-    )
-    .map(previewDtoToPassage);
+  const operations = preview.operations.filter(
+    (operation): operation is PassageInsertOperation =>
+      operation.kind === 'upsert_passage',
+  );
+  const derived = new Map<string, string>();
+  operations.forEach((operation) => {
+    const sent = new Set(operation.annotations.map((input) => input.uuid));
+    previewDtoToPassage(operation).annotations.forEach((annotation) => {
+      if (!sent.has(annotation.uuid)) {
+        derived.set(annotation.uuid, operation.passage.uuid);
+      }
+    });
+  });
+  const elsewhere = await findAnnotationsElsewhere({ client, rows: derived });
+  const passages = operations.map((operation) =>
+    previewDtoToPassage(operation, elsewhere),
+  );
+  const warnings =
+    elsewhere.size > 0
+      ? [
+          `${elsewhere.size} annotation(s) matched rows an edit has moved to another passage, so they were saved under new uuids and the moved rows were left in place.`,
+        ]
+      : [];
 
   const result = await savePassagesWithDeletions({
     client,
@@ -349,6 +433,7 @@ export const upsertPassagesFromPreview = async ({
       (count, passage) => count + passage.annotations.length,
       0,
     ),
+    warnings,
   };
 };
 
@@ -363,7 +448,13 @@ export const normalizeImportOperations = (
   operations: ImportOperationInput[],
 ): ImportOperation[] => {
   let nextSort = 0;
-  const occurrence = occurrenceCounter();
+  const allocate = derivedUuidAllocator(
+    operations.flatMap((operation) =>
+      operation.kind === 'upsert_passage' && operation.passage.uuid
+        ? [operation.passage.uuid]
+        : [],
+    ),
+  );
 
   return operations.map((operation) => {
     if (operation.kind === 'upsert_title') {
@@ -384,14 +475,15 @@ export const normalizeImportOperations = (
       nextSort = sort + 1;
       const passageWorkUuid = operation.passage.workUuid ?? workUuid;
       const xmlId = operation.passage.xmlId ?? `docx-${sort}`;
-      const nth = occurrence(JSON.stringify([passageWorkUuid, xmlId]));
 
       return {
         kind: 'upsert_passage',
         passage: {
           uuid:
             operation.passage.uuid ??
-            importPassageUuid(passageWorkUuid, xmlId, nth),
+            allocate(JSON.stringify([passageWorkUuid, xmlId]), (nth) =>
+              importPassageUuid(passageWorkUuid, xmlId, nth),
+            ),
           workUuid: passageWorkUuid,
           label: operation.passage.label,
           sort,
@@ -479,7 +571,7 @@ export const applyImportPreview = async ({
       )
       .join(', ');
     throw new Error(
-      `Nothing was saved: ${moved.length} passage(s) would overwrite a stored passage an earlier import saved and an edit has since moved: ${sample}. Send the uuid of each passage you mean to rewrite.`,
+      `Nothing was saved: ${moved.length} passage(s) would overwrite a stored passage an earlier import saved and an edit has since moved out of this import's order: ${sample}. Send the uuid of each passage you mean to rewrite.`,
     );
   }
 
@@ -535,6 +627,7 @@ export const applyImportPreview = async ({
   }
 
   const passageResult = await upsertPassagesFromPreview({ client, preview });
+  warnings.push(...passageResult.warnings);
 
   return {
     counts: {

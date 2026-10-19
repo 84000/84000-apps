@@ -33,6 +33,8 @@ interface FakeState {
   failImportedRead?: boolean;
   /** Stored passages read by uuid. */
   storedPassages?: { uuid: string; sort: number }[];
+  /** Stored annotation rows read by uuid. */
+  storedAnnotations?: { uuid: string; passage_uuid: string }[];
   titleRows?: {
     uuid: string;
     type: string;
@@ -92,7 +94,15 @@ function makeFakeClient(state: FakeState): DataClient {
         },
         then(resolve: (value: unknown) => unknown) {
           let result: unknown = { data: [], count: 0, error: null };
-          if (ctx.table === 'passages' && ctx.in) {
+          if (ctx.table === 'passage_annotations' && ctx.in) {
+            const values = ctx.in;
+            result = {
+              data: (state.storedAnnotations ?? []).filter((row) =>
+                values.includes(row.uuid),
+              ),
+              error: null,
+            };
+          } else if (ctx.table === 'passages' && ctx.in) {
             const values = ctx.in;
             result = {
               data: (state.storedPassages ?? []).filter((row) =>
@@ -307,6 +317,27 @@ describe('normalizeImportOperations passage uuids', () => {
   });
 });
 
+describe('normalizeImportOperations explicit passage uuids', () => {
+  it('does not derive a uuid another passage was sent with', () => {
+    const taken = importPassageUuid('w1', 'docx-0');
+    const uuids = passageUuids(
+      normalizeImportOperations('w1', [
+        {
+          kind: 'upsert_passage',
+          passage: { uuid: taken, label: '', type: 'translation', content: 'a' },
+        },
+        {
+          kind: 'upsert_passage',
+          passage: { label: '', type: 'translation', content: 'b', sort: 0 },
+        },
+      ]),
+    );
+    expect(uuids[0]).toBe(taken);
+    expect(uuids[1]).not.toBe(taken);
+    expect(isUuid(uuids[1])).toBe(true);
+  });
+});
+
 describe('previewDtoToPassage annotation uuids', () => {
   const operation = (
     annotations: PassageInsertOperation['annotations'],
@@ -349,6 +380,17 @@ describe('previewDtoToPassage annotation uuids', () => {
   it('keeps identical annotations apart', () => {
     const [one, two] = previewDtoToPassage(operation([span, span])).annotations;
     expect(one.uuid).not.toBe(two.uuid);
+  });
+
+  it('does not derive a uuid another annotation was sent with', () => {
+    const [derived] = previewDtoToPassage(operation([span])).annotations;
+    const [explicit, fresh] = previewDtoToPassage(
+      operation([{ ...span, uuid: derived.uuid }, span]),
+    ).annotations;
+
+    expect(explicit.uuid).toBe(derived.uuid);
+    expect(fresh.uuid).not.toBe(derived.uuid);
+    expect(isUuid(fresh.uuid)).toBe(true);
   });
 
   it('keeps an explicit uuid', () => {
@@ -521,10 +563,19 @@ describe('applyImportPreview leftover import passages', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('refuses to overwrite an imported passage an edit has moved', async () => {
+  const threeOps: ImportOperationInput[] = ['a', 'b', 'c'].map((content) => ({
+    kind: 'upsert_passage',
+    passage: { label: '', type: 'translation', content },
+  }));
+
+  it('refuses to overwrite imported passages an edit has reordered', async () => {
     const state: FakeState = {
       titleInserts: [],
-      storedPassages: [{ uuid: importPassageUuid('w1', 'docx-0'), sort: 1 }],
+      storedPassages: [
+        { uuid: importPassageUuid('w1', 'docx-0'), sort: 0 },
+        { uuid: importPassageUuid('w1', 'docx-1'), sort: 2 },
+        { uuid: importPassageUuid('w1', 'docx-2'), sort: 1 },
+      ],
     };
 
     await expect(
@@ -533,12 +584,60 @@ describe('applyImportPreview leftover import passages', () => {
         workUuid: 'w1',
         operations: [
           { kind: 'upsert_title', title: { content: 't', type: 'mainTitle' } },
-          ...passageOps,
+          ...threeOps,
         ],
       }),
-    ).rejects.toThrow('docx-0 (sort 0, stored at 1)');
+    ).rejects.toThrow('1 passage(s) would overwrite');
     expect(mockedSavePassages).not.toHaveBeenCalled();
     expect(state.titleInserts).toEqual([]);
+  });
+
+  it('updates imported passages an insert has shifted but not reordered', async () => {
+    const state: FakeState = {
+      storedPassages: [
+        { uuid: importPassageUuid('w1', 'docx-0'), sort: 0 },
+        { uuid: importPassageUuid('w1', 'docx-1'), sort: 2 },
+        { uuid: importPassageUuid('w1', 'docx-2'), sort: 3 },
+      ],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: threeOps,
+    });
+
+    expect(result.counts.passages).toBe(3);
+  });
+
+  it('accepts passages sharing a sort that an earlier run saved in either order', async () => {
+    // The second run of a failed import places the tied passage below the
+    // one already saved; the third run must not call that a move.
+    const ops: ImportOperationInput[] = [
+      {
+        kind: 'upsert_passage',
+        passage: { label: '', type: 'translation', content: 'a' },
+      },
+      {
+        kind: 'upsert_passage',
+        passage: { label: '', type: 'translation', content: 'b', sort: 0 },
+      },
+    ];
+    const [first, second] = passageUuids(normalizeImportOperations('w1', ops));
+    const state: FakeState = {
+      storedPassages: [
+        { uuid: first, sort: 1 },
+        { uuid: second, sort: 0 },
+      ],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: ops,
+    });
+
+    expect(result.counts.passages).toBe(2);
   });
 
   it('updates an imported passage still at its position', async () => {
@@ -610,6 +709,24 @@ describe('applyImportPreview leftover import passages', () => {
     ]);
   });
 
+  it('matches a leftover whose earlier occurrence of the xmlId was deleted', async () => {
+    const state: FakeState = {
+      importedPassages: [
+        { uuid: importPassageUuid('w1', 'docx-5', 2), xmlId: 'docx-5' },
+      ],
+    };
+
+    const result = await applyImportPreview({
+      client: makeFakeClient(state),
+      workUuid: 'w1',
+      operations: passageOps,
+    });
+
+    expect(result.warnings).toEqual([
+      expect.stringContaining('1 passage(s) saved by an earlier import'),
+    ]);
+  });
+
   it('refuses when the earlier import passages cannot be read', async () => {
     await expect(
       applyImportPreview({
@@ -619,6 +736,65 @@ describe('applyImportPreview leftover import passages', () => {
       }),
     ).rejects.toThrow('Nothing was saved');
     expect(mockedSavePassages).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyImportPreview annotation uuids held by another passage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedSavePassages.mockResolvedValue({ success: true } as never);
+  });
+
+  const ops: ImportOperationInput[] = [
+    {
+      kind: 'upsert_passage',
+      passage: { label: '', type: 'translation', content: 'Thus have I heard.' },
+      annotations: [{ kind: 'paragraph', start: 0, end: 18 }],
+    },
+  ];
+  const derivedUuid = () => {
+    const [operation] = normalizeImportOperations('w1', ops);
+    return previewDtoToPassage(operation as PassageInsertOperation)
+      .annotations[0].uuid;
+  };
+  const saved = () =>
+    mockedSavePassages.mock.calls[0][0].passages[0].annotations[0].uuid;
+
+  it('saves a new uuid rather than take the row from the other passage', async () => {
+    const taken = derivedUuid();
+    const result = await applyImportPreview({
+      client: makeFakeClient({
+        storedAnnotations: [{ uuid: taken, passage_uuid: 'other-passage' }],
+      }),
+      workUuid: 'w1',
+      operations: ops,
+    });
+
+    expect(saved()).not.toBe(taken);
+    expect(isUuid(saved())).toBe(true);
+    expect(result.warnings).toEqual([
+      expect.stringContaining('1 annotation(s)'),
+    ]);
+  });
+
+  it('keeps the derived uuid of a row already on its own passage', async () => {
+    const taken = derivedUuid();
+    const [operation] = normalizeImportOperations('w1', ops);
+    const result = await applyImportPreview({
+      client: makeFakeClient({
+        storedAnnotations: [
+          {
+            uuid: taken,
+            passage_uuid: (operation as PassageInsertOperation).passage.uuid,
+          },
+        ],
+      }),
+      workUuid: 'w1',
+      operations: ops,
+    });
+
+    expect(saved()).toBe(taken);
+    expect(result.warnings).toEqual([]);
   });
 });
 
