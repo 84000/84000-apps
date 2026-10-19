@@ -3,24 +3,21 @@
 // accepted ones into apply-passage-edits ops. No dependencies.
 //
 //   node glossary-instances.mjs find <snapshot-dir> <out-dir> [--many 150]
-//   node glossary-instances.mjs ops <out-dir> [--chunk 200]
+//   node glossary-instances.mjs ops <out-dir> [--chunk 50]
 //
 // `find` writes <out-dir>/candidates.jsonl and <out-dir>/summary.json.
 // `ops` reads those and the optional <out-dir>/decisions.json, and writes
 // <out-dir>/ops-001.json, … each a JSON array of add-annotation edits.
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const SHY = '­';
 const LETTER = '[\\p{L}\\p{M}\\p{N}]';
 /** Passage types that are never glossed. */
 const SKIP_TYPE = /Header$|^(acknowledgment|abbreviations)$/;
 /** Annotations whose text is not glossed: cited titles and mantras. */
-const SHELTER_TYPES = new Set(['inline-title']);
-const SHELTER_STYLES = new Set(['mantra']);
-const styled = (a, style) =>
-  a.type === 'span' && (a.content ?? []).some((c) => c['text-style'] === style);
+const SHELTER_TYPES = new Set(['inline-title', 'mantra']);
 
 const lines = (path) =>
   existsSync(path)
@@ -36,21 +33,25 @@ const flag = (name, fallback) => {
   return at > 0 ? Number(process.argv[at + 1]) : fallback;
 };
 const overlaps = (a, b) => a.start < b.end && b.start < a.end;
+const byPassage = (rows) => {
+  const map = new Map();
+  for (const r of rows) {
+    const range = { start: Number(r.start), end: Number(r.end) };
+    map.set(r.passage, [...(map.get(r.passage) ?? []), range]);
+  }
+  return map;
+};
 
-/** One regex source per English form: soft hyphens anywhere, s/es plurals inside. */
-const formSource = (form) =>
-  [...form]
-    .map((ch) =>
-      /\s/.test(ch)
-        ? `[\\s${SHY}]+`
-        : ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + `${SHY}*`,
-    )
-    .join('');
-const formRegex = (form) =>
-  new RegExp(
-    `(?<!${LETTER}|${SHY})${formSource(form)}(?:e?s)?(?!${LETTER})`,
+/** A whole-word, case-insensitive match, with soft hyphens inside and an s/es plural. */
+const formRegex = (form) => {
+  const chars = [...form].map((ch) =>
+    /\s/.test(ch) ? `[\\s${SHY}]+` : ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  );
+  return new RegExp(
+    `(?<!${LETTER}${SHY}*)${chars.join(`${SHY}*`)}(?:${SHY}*e?s)?(?!${SHY}*${LETTER})`,
     'giu',
   );
+};
 
 /** Plain lowercase single words, such as "lord" or "action", are often used in another sense. */
 const isCommonWord = (form) => /^[a-z]+$/.test(form);
@@ -62,26 +63,17 @@ const find = (snap, out, many) => {
   const info = new Map(
     tsv(join(snap, 'anchors.tsv')).map((r) => [r.anchor, r]),
   );
-  const byPassage = (rows) => {
-    const map = new Map();
-    for (const r of rows) {
-      const range = { start: Number(r.start), end: Number(r.end) };
-      map.set(r.passage, [...(map.get(r.passage) ?? []), range]);
-    }
-    return map;
-  };
-  const existing = byPassage(
-    tsv(join(snap, 'annotations/glossary-instances.tsv')),
-  );
+  const instances = tsv(join(snap, 'annotations/glossary-instances.tsv'));
+  const existing = byPassage(instances);
   const other = jsonl(join(snap, 'annotations/annotations.jsonl'));
-  const sheltered = byPassage(
+  const sheltered = byPassage(other.filter((a) => SHELTER_TYPES.has(a.type)));
+  const foreign = byPassage(
     other.filter(
       (a) =>
-        SHELTER_TYPES.has(a.type) ||
-        [...SHELTER_STYLES].some((style) => styled(a, style)),
+        a.type === 'span' &&
+        (a.content ?? []).some((c) => c['text-style'] === 'foreign'),
     ),
   );
-  const foreign = byPassage(other.filter((a) => styled(a, 'foreign')));
 
   const forms = [];
   for (const t of terms) {
@@ -100,22 +92,33 @@ const find = (snap, out, many) => {
       { term: t.anchor, english: t.english, existing: 0, found: 0, flags: [] },
     ]),
   );
-  for (const rows of [...tsv(join(snap, 'annotations/glossary-instances.tsv'))])
-    if (stats.has(rows.term)) stats.get(rows.term).existing += 1;
-  const skipped = { passageType: 0, annotated: 0, sheltered: 0, shorter: 0 };
+  for (const row of instances) {
+    if (stats.has(row.term)) stats.get(row.term).existing += 1;
+  }
   const termFlags = new Map(terms.map((t) => [t.anchor, new Set()]));
+  const skipped = {
+    passageType: 0,
+    title: 0,
+    annotated: 0,
+    sheltered: 0,
+    shorter: 0,
+  };
   const candidates = [];
 
   for (const p of passages) {
     const meta = info.get(p.anchor) ?? {};
-    const title = meta.type === 'translation' && !meta.label;
     const hits = [];
     for (const f of forms) {
       for (const m of p.content.matchAll(f.re)) {
         hits.push({ ...f, start: m.index, end: m.index + m[0].length });
       }
     }
-    if (SKIP_TYPE.test(meta.type ?? '') || title) {
+    // An unlabeled translation passage is the title line (or a lone marker).
+    if (meta.type === 'translation' && !meta.label) {
+      skipped.title += hits.length;
+      continue;
+    }
+    if (SKIP_TYPE.test(meta.type ?? '')) {
       skipped.passageType += hits.length;
       continue;
     }
@@ -134,26 +137,25 @@ const find = (snap, out, many) => {
       }
       const clash = kept.find((k) => overlaps(k, h));
       if (!clash) {
-        kept.push({ ...h, others: [] });
-      } else if (clash.end - clash.start > h.end - h.start) {
+        kept.push({ ...h, also: new Set(), overlap: false });
+      } else if (clash.start === h.start && clash.end === h.end) {
+        if (clash.term.uuid !== h.term.uuid) clash.also.add(h.term.anchor);
+      } else {
         skipped.shorter += 1;
-      } else if (
-        clash.term.uuid !== h.term.uuid &&
-        !clash.others.some((o) => o.term.uuid === h.term.uuid)
-      ) {
-        clash.others.push(h);
+        // An overlap of equal length has no clear winner.
+        if (clash.end - clash.start === h.end - h.start) clash.overlap = true;
       }
     }
     for (const k of kept.sort((a, b) => a.start - b.start)) {
       const flags = [];
-      if (k.others.length) flags.push('ambiguous');
+      if (k.also.size || k.overlap) flags.push('ambiguous');
       if ((foreign.get(p.anchor) ?? []).some((r) => overlaps(r, k)))
         flags.push('foreign');
+      if (meta.type === 'endnotes') flags.push('endnote');
       if (isCommonWord(k.form)) termFlags.get(k.term.anchor).add('common-word');
       candidates.push({
-        id: candidates.length + 1,
+        id: `${p.anchor}:${k.start}`,
         passage: p.uuid,
-        anchor: p.anchor,
         label: meta.label ?? null,
         start: k.start,
         end: k.end,
@@ -161,9 +163,7 @@ const find = (snap, out, many) => {
         term: k.term.anchor,
         form: k.form,
         flags,
-        ...(k.others.length
-          ? { alsoMatches: k.others.map((o) => o.term.anchor) }
-          : {}),
+        ...(k.also.size ? { alsoMatches: [...k.also] } : {}),
         context: p.content
           .slice(Math.max(0, k.start - 60), k.end + 60)
           .replaceAll(SHY, ''),
@@ -176,21 +176,20 @@ const find = (snap, out, many) => {
     if (s.found > many) termFlags.get(s.term).add('many-hits');
     s.flags = [...termFlags.get(s.term)];
   }
-  const termById = new Map(terms.map((t) => [t.anchor, t]));
+  const count = (f) => candidates.filter((c) => c.flags.includes(f)).length;
   const summary = {
-    snapshot: snap,
+    snapshot: resolve(snap),
     terms: terms.length,
     passages: passages.length,
     candidates: candidates.length,
-    flagged: candidates.filter((c) => c.flags.length).length,
+    ambiguous: count('ambiguous'),
+    foreign: count('foreign'),
+    endnotes: count('endnote'),
     flaggedTerms: [...stats.values()].filter((s) => s.flags.length).length,
     skipped,
     byTerm: [...stats.values()]
       .filter((s) => s.found)
       .sort((a, b) => b.found - a.found),
-    unfound: [...stats.values()]
-      .filter((s) => !s.found && !s.existing)
-      .map((s) => `${s.term} ${termById.get(s.term)?.english ?? ''}`.trim()),
   };
   mkdirSync(out, { recursive: true });
   writeFileSync(
@@ -198,24 +197,17 @@ const find = (snap, out, many) => {
     candidates.map((c) => JSON.stringify(c)).join('\n') + '\n',
   );
   writeFileSync(join(out, 'summary.json'), JSON.stringify(summary, null, 1));
-  writeFileSync(join(out, 'terms.json'), JSON.stringify(terms));
-  const { byTerm, unfound, ...head } = summary;
-  console.log(
-    JSON.stringify({
-      ...head,
-      termsFound: byTerm.length,
-      unfound: unfound.length,
-    }),
-  );
+  const { byTerm, ...head } = summary;
+  console.log(JSON.stringify({ ...head, termsFound: byTerm.length }));
 };
 
 const ops = (out, chunk) => {
   const candidates = jsonl(join(out, 'candidates.jsonl'));
+  const { snapshot } = JSON.parse(
+    readFileSync(join(out, 'summary.json'), 'utf8'),
+  );
   const terms = new Map(
-    JSON.parse(readFileSync(join(out, 'terms.json'), 'utf8')).map((t) => [
-      t.anchor,
-      t,
-    ]),
+    jsonl(join(snapshot, 'raw/glossary.jsonl')).map((t) => [t.anchor, t]),
   );
   const path = join(out, 'decisions.json');
   const d = existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : {};
@@ -238,28 +230,27 @@ const ops = (out, chunk) => {
       data: { glossary: t.uuid, authority: t.authority },
     });
   }
-  // Keep a passage's edits in one chunk: each call is all-or-nothing.
+  // Keep a passage's edits in one file: each call is all-or-nothing.
   const files = [];
   let batch = [];
   const flush = () => {
-    if (!batch.length) return;
     const name = `ops-${String(files.length + 1).padStart(3, '0')}.json`;
     writeFileSync(join(out, name), JSON.stringify(batch));
     files.push({ file: name, edits: batch.length });
     batch = [];
   };
   for (const e of edits) {
-    const last = batch[batch.length - 1];
-    if (batch.length >= chunk && last?.passageUuid !== e.passageUuid) flush();
+    if (batch.length >= chunk && batch.at(-1).passageUuid !== e.passageUuid)
+      flush();
     batch.push(e);
   }
-  flush();
+  if (batch.length) flush();
   console.log(JSON.stringify({ edits: edits.length, files }));
 };
 
 const [command, a, b] = process.argv.slice(2);
 if (command === 'find' && a && b) find(a, b, flag('many', 150));
-else if (command === 'ops' && a) ops(a, flag('chunk', 200));
+else if (command === 'ops' && a) ops(a, flag('chunk', 50));
 else {
   console.error(
     'usage: glossary-instances.mjs find <snapshot-dir> <out-dir> [--many N] | ops <out-dir> [--chunk N]',

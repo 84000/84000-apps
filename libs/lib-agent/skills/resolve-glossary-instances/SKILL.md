@@ -25,10 +25,7 @@ the analysis this skill automates. The preview rules are in
 The `add-annotation` edit for one use:
 
 ```json
-{ "op": "add-annotation", "passageUuid": "<passage uuid>",
-  "kind": "glossary-instance", "start": 107, "end": 120,
-  "text": "Samantabhadra",
-  "data": { "glossary": "<term uuid>", "authority": "<authority uuid>" } }
+{ "op": "add-annotation", "passageUuid": "<passage uuid>", "kind": "glossary-instance", "start": 107, "end": 120, "text": "Samantabhadra", "data": { "glossary": "<term uuid>", "authority": "<authority uuid>" } }
 ```
 
 `start` and `end` index the passage content **as stored**, `text` is exactly
@@ -36,11 +33,13 @@ what they cover, and both `data` fields are required. The script builds these;
 do not write them by hand.
 
 House conventions, which the script follows: plurals are inside the span
-(`[[apsarases]]`), a possessive `’s` is outside it, a hyphenated compound gets
+(`[[arhats]]`), a possessive `’s` is outside it, a hyphenated compound gets
 one instance per term, a leading "the" is not included, and an `alt` form links
-to its term. Text inside a cited title (`inline-title`) or a mantra is not
+to its term. Text inside a cited title (`inline-title`) or a `mantra` is not
 glossed, and neither are acknowledgment, header and abbreviation passages or the
-work's title line.
+work's title line (an unlabeled translation passage). Endnotes **are** glossed,
+as in published works; their candidates carry the `endnote` flag so the report
+can show them apart.
 
 ## Workflow
 
@@ -48,10 +47,12 @@ work's title line.
 
 Resolve the work with `resolve-toh`, then call `download-work-snapshot` and
 fetch and unpack it with the command it returns, into a new, empty directory.
-Note the freshness line. If the snapshot is not `current`, wait a minute and
-download again: an out-of-date snapshot is refreshed in the background. If
-there is no `raw/passages.jsonl`, the snapshot is in an older format; download
-again.
+Note the freshness line. A snapshot that is not `current` is refreshed in the
+background, at most every two minutes: wait two minutes and download again,
+until the line reads `current`. After three tries, go on with the snapshot you
+have and tell the editor which one it is. The script needs
+`raw/passages.jsonl`; a snapshot without it is in an older format and is
+refreshed the same way.
 
 ### 2. Find the candidates
 
@@ -63,11 +64,11 @@ node "<this skill>/scripts/glossary-instances.mjs" find <snapshot>/<toh> <out>
 `raw/passages.jsonl`, `raw/glossary.jsonl`, `anchors.tsv` and the files under
 `annotations/`, and writes to `<out>`:
 
-- `candidates.jsonl`: one proposed instance per line, with `id`, the passage
-  `anchor` and `label`, `start`, `end`, `text`, the `term` anchor, the `form`
-  that matched, `flags`, and `context` around it;
-- `summary.json`: totals, what was skipped and why, and per term (`byTerm`) the
-  existing and found counts and its `flags`, plus terms found nowhere.
+- `candidates.jsonl`: one proposed instance per line, with `id`
+  (`<passage anchor>:<start>`), `label`, `start`, `end`, `text`, the `term`
+  anchor, the `form` that matched, `flags`, and `context` around it;
+- `summary.json`: totals, the flag counts, what was skipped and why, and per
+  term (`byTerm`) the existing and found counts and its `flags`.
 
 Matching is case-insensitive on whole words, over each term's `en` and `alt`
 forms, allowing soft hyphens inside a word and an `s` or `es` plural. Where
@@ -78,12 +79,13 @@ instance are skipped.
 
 Most candidates are certain. Spend your judgment on these:
 
-| flag | on | means | do |
-|---|---|---|---|
-| `ambiguous` | candidate | another term matches the same text (`alsoMatches`) | read the passage and choose the term, or ask |
-| `foreign` | candidate | inside transliterated text | usually keep; it is a term in its original language |
-| `common-word` | term | a plain English word, such as "nature" or "same" | read a sample of its `context`s; ask whether every use is the term |
-| `many-hits` | term | more uses than `--many` (default 150) | spot-check a sample for another sense |
+| flag          | on        | means                                              | do                                                                 |
+| ------------- | --------- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| `ambiguous`   | candidate | another term matches the same text (`alsoMatches`) | read the passage and choose the term, or ask                       |
+| `foreign`     | candidate | inside transliterated text                         | usually keep; it is a term in its original language                |
+| `endnote`     | candidate | in an endnote                                      | keep; endnotes are glossed                                         |
+| `common-word` | term      | a plain English word, such as "nature" or "same"   | read a sample of its `context`s; ask whether every use is the term |
+| `many-hits`   | term      | more uses than `--many` (default 150)              | spot-check a sample for another sense                              |
 
 Drop a candidate only when it is clearly not the term — part of a name, an
 everyday sense in a phrase like "the lord of death". When unsure, it is an ask,
@@ -96,7 +98,8 @@ with `write-session-documents`, stage `glossary-instances`, role `primary`. It
 holds:
 
 - the snapshot's freshness line;
-- totals: instances to add, terms affected, passages affected;
+- totals: instances to add, terms affected, passages affected, and how many
+  are in endnotes;
 - a table per term: anchor, English, existing, to add;
 - every flagged term and candidate, with its context and your recommendation;
 - what was skipped and why, and the terms found nowhere.
@@ -109,24 +112,28 @@ Decisions live in this conversation, not in a store.
 Write `<out>/decisions.json`:
 
 ```json
-{ "dropTerms": ["g-3074e30d"], "drop": [17, 230], "pick": { "41": "g-9e85815c" } }
+{ "dropTerms": ["g-3074e30d"], "drop": ["p-77f13182:65"], "pick": { "p-944e1b2a:146": "g-9e85815c" } }
 ```
 
 `dropTerms` excludes a term entirely, `drop` excludes candidates by `id`, and
-`pick` chooses the term for an ambiguous candidate (`"none"` drops it). Then:
+`pick` chooses the term for an ambiguous candidate (`"none"` drops it). An `id`
+is the passage anchor and start offset, so decisions carry over to a re-run
+unless the passage itself was edited. Then:
 
 ```sh
 node "<this skill>/scripts/glossary-instances.mjs" ops <out>
 ```
 
-It writes `ops-001.json`, `ops-002.json`, … each about 200 edits, keeping a
-passage's edits together.
+It writes `ops-001.json`, `ops-002.json`, … each about 50 edits, keeping a
+passage's edits together. Keep files small: a dry run returns the full text of
+every passage it touches.
 
 ### 6. Check the snapshot is still current
 
 Call `download-work-snapshot` again. If the draft has been edited since your
-snapshot, download the new one, run `find` again into a new directory, carry the
-decisions over, and tell the editor if the counts changed.
+snapshot, wait for the line to read `current` as in step 1, download, run
+`find` again into a new directory, copy `decisions.json` into it, and tell the
+editor if the counts changed.
 
 ### 7. Apply
 
@@ -135,7 +142,8 @@ array as `edits`, and `dryRun: true`; check the result; then call it again
 without `dryRun`. Do one file at a time.
 
 - An edit whose `text` no longer matches is refused, and the whole call with it:
-  the passage changed after the snapshot. Go back to step 6.
+  the passage changed after the snapshot. Go back to step 6, at most twice;
+  after that, stop and tell the editor which files are still unapplied.
 - A warning that an identical instance already exists means it was already
   added. That is safe.
 - If a result says `applied: "unknown"`, re-read the passages before sending

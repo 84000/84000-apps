@@ -26,7 +26,7 @@
     {
       "name": "84000-digital-editor-tools",
       "displayName": "84000 Digital Editor Tools",
-      "description": "Tooling for digital content the 84000 translation studio. Import copy-edited translation .docx files into a work as structured passages, titles, and metadata, and convert the folio break markers in an imported work into folio mention annotations.",
+      "description": "Tooling for digital content the 84000 translation studio. Import copy-edited translation .docx files into a work as structured passages, titles, and metadata, convert the folio break markers in an imported work into folio mention annotations, and link a work's glossary terms in its text as glossary instances.",
       "keywords": [
         "84000",
         "translation",
@@ -34,6 +34,7 @@
         "import",
         "editing",
         "folio",
+        "glossary",
         "annotations"
       ],
       "audience": {
@@ -55,6 +56,7 @@
           "libs/lib-agent/reference/passage-editing"
         ],
         "resolve-glossary-instances": [
+          "libs/lib-agent/reference/import-model",
           "libs/lib-agent/reference/whole-work-analysis",
           "libs/lib-agent/reference/passage-editing",
           "libs/lib-agent/reference/session-documents"
