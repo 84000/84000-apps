@@ -169,8 +169,14 @@ const changesSince = (
     );
   const removed = new Set(work.spine.removedSinceSave());
   const sentDeleted = new Set(deleted);
+  // Sent, then removed before it was ever stored: the spine records no
+  // removal for it.
+  const dropped = [...versions.keys()].filter(
+    (uuid) => !work.spine.meta(uuid) && !removed.has(uuid),
+  );
   return (
     edited.length +
+    dropped.length +
     [...removed].filter((uuid) => !sentDeleted.has(uuid)).length +
     deleted.filter((uuid) => !removed.has(uuid)).length
   );

@@ -45,6 +45,8 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   hasPermission: jest.fn(async () => true),
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  findWorkPassages: jest.requireActual('@eightyfourthousand/client-graphql')
+    .findWorkPassages,
   getTranslationBlocksAround: jest.fn(),
   savePassages: jest.fn(),
   getBibliographyEntry: jest.fn(),
@@ -72,7 +74,6 @@ const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   getPassageMetaPage: jest.Mock;
-  getTranslationBlocks: jest.Mock;
 };
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   BODY_MATTER_FILTER: string;
@@ -216,12 +217,20 @@ describe('a stack save whose answer was lost', () => {
             .map((row) => [row.uuid, row.sort]),
         ),
     );
-    clientGraphql.getTranslationBlocks.mockReset();
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: [],
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    });
+    // The reload probe, through the API.
+    mockGraphqlRequest.mockReset();
+    mockGraphqlRequest.mockImplementation(
+      async (_query: unknown, vars: { filter?: { uuids: string[] } }) => ({
+        work: {
+          uuid: 'w1',
+          passages: {
+            nodes: server
+              .filter((row) => vars.filter?.uuids.includes(row.uuid) ?? true)
+              .map(({ uuid }) => ({ uuid })),
+          },
+        },
+      }),
+    );
     clientGraphql.getPassageMetaPage.mockReset();
     clientGraphql.getPassageMetaPage.mockImplementation(
       async ({ type }: { type?: string }) => ({
@@ -290,11 +299,9 @@ describe('a stack save whose answer was lost', () => {
     await mount();
     splitFirst();
     commitThenLoseTheAnswer();
-    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
-      blocks: [],
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-      failed: true,
+    // The page the server answers with when its read fails.
+    mockGraphqlRequest.mockResolvedValueOnce({
+      work: { uuid: 'w1', passages: { nodes: [] } },
     });
 
     await act(() => editor.save());
@@ -360,6 +367,26 @@ describe('a stack save whose answer was lost', () => {
       expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
     },
   );
+
+  // A passage never stored leaves no removal behind, but a reload that
+  // confirms its insert would bring it back.
+  it('asks before a reload brings back a new passage removed during it', async () => {
+    await mount();
+    const created = splitFirst();
+    commitThenLoseTheAnswer();
+    const lose = dataAccess.savePassagesWithDeletions.getMockImplementation();
+    dataAccess.savePassagesWithDeletions.mockImplementation(
+      async (args: unknown) => {
+        stack?.work.remove([created]);
+        return lose?.(args);
+      },
+    );
+
+    await act(() => editor.save());
+
+    expect(spine()).not.toContain('@new');
+    expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
+  });
 
   it('sends a save that only changed content again', async () => {
     await mount();

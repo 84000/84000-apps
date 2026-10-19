@@ -703,6 +703,10 @@ describe('saveStackWork', () => {
     edit(work, 'a', 'again');
     work.remove(['c']);
     expect(report.unconfirmed?.newerChanges()).toBe(2);
+
+    // As would removing the passage it inserted, which was never stored.
+    work.remove([created]);
+    expect(report.unconfirmed?.newerChanges()).toBe(3);
   });
 
   describe('a save whose answer was lost', () => {
