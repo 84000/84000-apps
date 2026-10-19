@@ -37,7 +37,7 @@ requires `editor.edit`.
   See `passages.md` for types and labels, `annotations.md` for annotations.
 
 Both title and passage operations are **upserts**: they update a matching row
-and insert when there is none. There is no `insert_title` or `insert_passage`.
+and insert when there is none. There is no separate insert operation.
 
 ## What you do not supply — when filling an empty work
 

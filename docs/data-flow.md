@@ -140,3 +140,58 @@ Supabase ← passageToDTO() ← passagesFromNodes() ← TipTap editor state
 - **Passages → Editor**: `libs/lib-editing/src/lib/block.ts` converts `Passage[]` to `TranslationEditorContent` (TipTap node structure). Annotations are applied as TipTap marks and node attributes via transformers in `libs/lib-editing/src/lib/transformers/`.
 - **Editor → Passages**: `libs/lib-editing/src/lib/passage.ts` extracts passages from editor state. Exporters in `libs/lib-editing/src/lib/exporters/` reverse the annotation transformation.
 - **Saving**: `EditorProvider` manages dirty tracking and calls `savePassages` via GraphQL mutation.
+
+## Passage and Annotation Writes
+
+Every app write to `passages` and `passage_annotations` goes through
+`savePassagesWithDeletions` (`libs/data-access/src/lib/passage/save/`).
+- It commits through the `apply_passage_save` RPC.
+- Before that, `shift_passage_sorts` makes room for any new passages.
+- An ordinary save is one transaction. An import save (`chunked`, from
+  `import-preview.ts`) commits chunk by chunk.
+
+This covers the editors, the GraphQL `savePassages` and `replace` mutations,
+the MCP passage edits and imports. Outside the save directory,
+`one-write-path.spec.ts` fails if app code writes those tables directly
+through supabase-js (`.from(...)` with insert, update, upsert or delete). It
+cannot catch a new RPC that writes them, so do not add one.
+
+Some writers live outside the apps and bypass that path. They are known and
+accepted, and each has an owner. Do not add new ones. Write through the save
+path instead.
+
+| Writer | Who runs it | How |
+|---|---|---|
+| Legacy TEI/XML ingest (the functions are listed below) | A digital editor, from the Supabase SQL editor, as `postgres` | Deletes and reloads a whole work from `migration/translations/<UT>.json`. Only `postgres` and `service_role` can execute these functions; `anon` and `authenticated` cannot. The ingest goes away once the editors stop using TEI as an intermediate step. |
+| Alignment loads into `folio_annotations_passage_alignments` | Whoever has dashboard access, from the SQL editor, as `postgres` | Through the `stg_folio_annotations_passage_alignments` staging table, then a direct `INSERT … SELECT`. |
+| Dashboard table-editor edits on `passages` and `passage_annotations` | Whoever has dashboard access, as `postgres` | Single-row updates and deletes, with no range or label checks. |
+| Ad-hoc SQL scripts | Whoever has dashboard access, from the SQL editor, as `postgres` | For example, a glossary-instance generator (it previews, then inserts), and an indent → paragraph annotation fix-up. |
+
+The ingest runs `fetch_and_insert_json_from_storage`, then
+`clear_translations_by_xmlid`, then `process_passages` (which calls
+`insert_passage`), then `process_translations_by_xmlid` (which calls
+`process_annotations`, `insert_passage_annotation` and `upsert_titles`).
+
+The `indexing` edge function (`infra/supabase/functions/indexing`) also
+writes `works`, `titles` and `passages` with the service role, from the legacy
+ingest. It first deletes any existing `works` row with the same `xmlId`,
+which cascades to that work's titles and passages, and then tries to write the
+work again. Against the current schema that write fails (`works` has no
+`migrationJson` column), so the work stays deleted. It is still deployed
+because an external app may rely on it.
+
+Four more baseline writers have no known caller, but production cannot show
+that they are unused yet:
+- `insert_passage_annotations`;
+- `process_annotation_batch`;
+- `process_epic_passages`;
+- `delete_passages_batch_by_work_uuid`.
+
+To find out, production has run with `track_functions = 'all'` since
+2026-10-19. It is set per role, with `ALTER ROLE <r> SET track_functions =
+'all'`, on `postgres`, `authenticator`, `anon`, `authenticated` and
+`service_role`, and only new connections pick it up. Data API calls are
+counted through `authenticator`, the role PostgREST logs in as. After
+2026-11-19, check `pg_stat_user_functions` for these four, and drop any with
+no calls. To turn the setting off again, run
+`ALTER ROLE <r> RESET track_functions` on each role.
