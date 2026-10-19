@@ -1,19 +1,25 @@
 # Navigation (ED-NAV)
 
-### ED-NAV-01 Hover cards (J)
+### ED-NAV-01 Hover cards (D + J)
 
 - Fixture: the glossary instance in `2.5`, the end-note link at the end of
   `1.20` (to `n.6`), the passage mention at the end of `1.12` (to `2.1`), and the
   internal link in `p.1` (to `2.1`).
-- Do: hover each one, first in a passage that has the caret and then in one
-  that does not.
-- Screen: a card appears each time:
-  - glossary: the term _great compassion_ with its definition
-  - endnote: the text of `n.6`, "This passage echoes the perfection of
-    wisdom literature."
-  - mention and internal link: the opening of `2.1`
+- Do: hover each one, first in a passage that does not have the caret and then
+  in one that does.
+- Screen: a card appears each time. It is an edit toolbar for the link (its
+  target's label, with edit and remove buttons), not a preview of the target:
+  - glossary: `g.N` and the term, here "g.N great compassion"
+  - endnote: the note's label, `n.6`
+  - mention: "passage 2.1"
+  - internal link: "passage" and the target's uuid. Internal links are
+    deprecated and kept only for older works, so the uuid is expected here.
+- A uuid on any other card means the local data is incomplete (the target's
+  label is missing), not an editor bug: check the seed before reporting it.
 - The check must read the card's own text in the visible DOM. Before calling a
   card missing, show that the same probe finds a card that is known to appear.
+- J: the card sits next to the hovered text, does not cover it, and goes away
+  when the pointer leaves.
 - Note: hover cards are behind the `translation-hover-cards` flag. Locally,
   turn it on with `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES` under `next dev`.
 
