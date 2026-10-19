@@ -1,3 +1,4 @@
+import { version as uuidVersion } from 'uuid';
 import { applyEditsToPassages, type PassageEdit } from './edits';
 import type { AnnotationDTO, Passage } from '../types';
 
@@ -299,5 +300,104 @@ describe('applyEditsToPassages with overlapping cuts', () => {
     expect(cuts([5, 2]).error).toMatch(/ordered and within/);
     expect(cuts([8, 11]).error).toMatch(/ordered and within/);
     expect(cuts([-1, 2]).error).toMatch(/ordered and within/);
+  });
+});
+
+describe('applyEditsToPassages add-annotation uuids', () => {
+  const mention = (entity: string): PassageEdit => ({
+    op: 'add-annotation',
+    passageUuid: 'p1',
+    kind: 'mention',
+    start: 4,
+    data: { entity, linkType: 'folio', isSameWork: true },
+  });
+  const added = (result: ReturnType<typeof run>) =>
+    result.rawAnnotations.p1.filter(
+      (row) => !annotationDtos.some((stored) => stored.uuid === row.uuid),
+    );
+
+  it('derives the same v5 uuid each time the same add is sent', () => {
+    const [first] = added(run([mention('folio-1')]));
+    const [second] = added(run([mention('folio-1')]));
+
+    expect(uuidVersion(first.uuid)).toBe(5);
+    expect(second.uuid).toBe(first.uuid);
+  });
+
+  it('derives different uuids for different data at one position', () => {
+    const [one, two] = added(run([mention('folio-1'), mention('folio-2')]));
+    expect(one.uuid).not.toBe(two.uuid);
+  });
+
+  it('skips a resend once the first send is stored', () => {
+    const [row] = added(run([mention('folio-1')]));
+    const result = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [passage()],
+      annotations: new Map([['p1', [...annotationDtos, row]]]),
+      edits: [mention('folio-1')],
+    });
+
+    expect(result.rawAnnotations.p1).toHaveLength(annotationDtos.length + 1);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining('Skipped add-annotation'),
+      }),
+    ]);
+  });
+
+  it('re-adds an annotation removed in the same call under its uuid', () => {
+    const [row] = added(run([mention('folio-1')]));
+    const result = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [passage()],
+      annotations: new Map([['p1', [...annotationDtos, row]]]),
+      edits: [
+        {
+          op: 'remove-annotation',
+          passageUuid: 'p1',
+          annotationUuid: row.uuid,
+        },
+        mention('folio-1'),
+      ],
+    });
+
+    const uuids = result.rawAnnotations.p1.map((r) => r.uuid);
+    expect(uuids.filter((u) => u === row.uuid)).toHaveLength(1);
+    expect(uuids).toHaveLength(annotationDtos.length + 1);
+  });
+
+  it('keeps a random uuid when a deprecated row holds the derived one', () => {
+    const [row] = added(run([mention('folio-1')]));
+    const deprecated = {
+      ...row,
+      type: 'deprecated-temp-mention' as AnnotationDTO['type'],
+    };
+    const result = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [passage()],
+      annotations: new Map([['p1', [...annotationDtos, deprecated]]]),
+      edits: [mention('folio-1')],
+    });
+
+    const [, fresh] = added(result);
+    expect(uuidVersion(fresh.uuid)).toBe(4);
+  });
+
+  it('keeps a random uuid when a moved stored row holds the derived one', () => {
+    const [row] = added(run([mention('folio-1')]));
+    const moved = { ...row, start: 0, end: 0 };
+    const result = applyEditsToPassages({
+      workUuid: WORK,
+      passages: [passage()],
+      annotations: new Map([['p1', [...annotationDtos, moved]]]),
+      edits: [mention('folio-1')],
+    });
+
+    const uuids = result.rawAnnotations.p1.map((r) => r.uuid);
+    expect(new Set(uuids).size).toBe(uuids.length);
+    const [kept, fresh] = added(result);
+    expect(kept.uuid).toBe(row.uuid);
+    expect(uuidVersion(fresh.uuid)).toBe(4);
   });
 });

@@ -47,7 +47,11 @@ What the tool does with the annotations you did not name:
   warning: there is no right place to move it to.
 
 An `add-annotation` identical to one already there — same kind, same position,
-same data — is skipped with a warning, so sending the same add twice is safe.
+same data — is skipped with a warning, so sending the same add twice is safe. The
+annotation's uuid is derived from its passage, kind, position and data, so the
+same add sent twice, even by two calls at once, is written as one row — unless
+an identical annotation from an earlier add has since been moved, when the new
+one gets a uuid of its own.
 
 Read `offsets.md` for why this is the part worth getting right.
 
