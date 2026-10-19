@@ -117,6 +117,31 @@ export const getPassageUuidByXmlId = async ({
 
 /** URLs carry the uuid list, so it is read in slices, a few at a time. */
 const SORT_READ_CHUNK = 150;
+/**
+ * Up to `limit` of a work's stored passage uuids, or null when the read fails.
+ * An empty list is a work with no passages.
+ */
+export const getWorkPassageUuids = async ({
+  client,
+  workUuid,
+  limit,
+}: {
+  client: DataClient;
+  workUuid: string;
+  limit: number;
+}): Promise<string[] | null> => {
+  const { data, error } = await client
+    .from('passages')
+    .select('uuid')
+    .eq('work_uuid', workUuid)
+    .limit(limit);
+  if (error) {
+    console.error('Error reading work passages:', error);
+    return null;
+  }
+  return (data ?? []).map((row) => row.uuid as string);
+};
+
 const SORT_READ_CONCURRENCY = 4;
 
 /**

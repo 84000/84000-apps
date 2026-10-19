@@ -62,6 +62,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   createBrowserClient: jest.fn(() => ({})),
   savePassagesWithDeletions: jest.fn(),
   getPassageSorts: jest.fn(),
+  getWorkPassageUuids: jest.fn(),
 }));
 
 jest.mock('@eightyfourthousand/design-system', () => ({
@@ -79,6 +80,7 @@ const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   BODY_MATTER_FILTER: string;
   savePassagesWithDeletions: jest.Mock;
   getPassageSorts: jest.Mock;
+  getWorkPassageUuids: jest.Mock;
 };
 const designSystem = jest.requireMock('@eightyfourthousand/design-system') as {
   toast: jest.Mock;
@@ -208,6 +210,10 @@ describe('a stack save whose answer was lost', () => {
     designSystem.toast.mockReset();
     dataAccess.savePassagesWithDeletions.mockReset();
     dataAccess.getPassageSorts.mockReset();
+    dataAccess.getWorkPassageUuids.mockImplementation(
+      async ({ limit }: { limit: number }) =>
+        server.map((row) => row.uuid).slice(0, limit),
+    );
     // Reads what the server holds now.
     dataAccess.getPassageSorts.mockImplementation(
       async ({ uuids }: { uuids: string[] }) =>
@@ -362,7 +368,7 @@ describe('a stack save whose answer was lost', () => {
       );
       expect(description).toContain('discard 1 unsaved change.');
 
-      await act(async () => action.onClick());
+      await act(async () => action.onClick({ preventDefault: jest.fn() }));
       await waitFor(() => expect(spine()).toBe('1.1@0 1.2@1 1.3@2 1.40@3'));
       expect(dataAccess.savePassagesWithDeletions).toHaveBeenCalledTimes(1);
     },

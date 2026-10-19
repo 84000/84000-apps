@@ -1,6 +1,7 @@
 import type { GraphQLClient } from 'graphql-request';
 import { gql } from 'graphql-request';
 import type { Passage } from '@eightyfourthousand/data-access';
+import { RequestNotSentError } from '../client';
 import type { ReplacedPassage } from './replace';
 
 const SAVE_PASSAGES_MUTATION = gql`
@@ -104,11 +105,20 @@ export const savePassages = async ({
    */
   outcomeUnknown?: boolean | null;
 }> => {
-  const passageInputs = passages.map(passageToInput);
+  const variables = {
+    passages: passages.map(passageToInput),
+    deletedUuids,
+  };
+  // A body that cannot be serialized is never sent.
+  try {
+    JSON.stringify(variables);
+  } catch (cause) {
+    throw new RequestNotSentError(cause);
+  }
 
   const response = await client.request<SavePassagesResponse>(
     SAVE_PASSAGES_MUTATION,
-    { passages: passageInputs, deletedUuids },
+    variables,
   );
 
   return response.savePassages;

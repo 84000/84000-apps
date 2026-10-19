@@ -6,6 +6,7 @@ import {
 import {
   createBrowserClient,
   getPassageSorts,
+  getWorkPassageUuids,
 } from '@eightyfourthousand/data-access';
 import type { UnconfirmedSave } from './editor-context';
 
@@ -79,20 +80,30 @@ const PROBE_LIMIT = 100;
 
 /**
  * Whether the editors can read the work again right now, through the API they
- * load it with: the passages known to be stored come back (or, knowing none,
- * any passage does). Checked before a reload discards what they hold.
+ * load it with: passages known to be stored come back. Knowing none, one is
+ * read from the database, whose reads report failure; a work with none there
+ * can be read empty. Checked before a reload discards what they hold.
  */
 export const canReload = async (
   graphql: GraphQLClient,
   workUuid: string,
   stored: string[],
 ): Promise<boolean> => {
-  const uuids = stored.slice(0, PROBE_LIMIT);
+  const uuids = stored.length
+    ? stored.slice(0, PROBE_LIMIT)
+    : await getWorkPassageUuids({
+        client: createBrowserClient(),
+        workUuid,
+        limit: 1,
+      }).catch((error: unknown) => {
+        console.error('Could not read the work:', error);
+        return null;
+      });
+  if (!uuids) return false;
   const found = await findWorkPassages({
     client: graphql,
     uuid: workUuid,
     uuids,
   });
-  if (!found) return false;
-  return uuids.length ? uuids.every((uuid) => found.has(uuid)) : found.size > 0;
+  return !!found && uuids.every((uuid) => found.has(uuid));
 };
