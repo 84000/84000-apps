@@ -256,9 +256,13 @@ export const applyEditsToPassages = ({
     );
     if (misplaced) {
       const end = misplaced.end ?? misplaced.start;
-      const found = passage.content.slice(misplaced.start, end);
+      const length = passage.content.length;
+      const found =
+        end > length
+          ? `the range runs past the passage, ${length} characters`
+          : `found ${JSON.stringify(passage.content.slice(misplaced.start, end))}`;
       return fail(
-        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but found ${JSON.stringify(found)}${end > passage.content.length ? ` (the passage is ${passage.content.length} characters)` : ''}. If the passage has changed since it was read, re-read it.`,
+        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but ${found}. If the passage has changed since it was read, re-read it.`,
       );
     }
 

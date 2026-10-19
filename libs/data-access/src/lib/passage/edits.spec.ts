@@ -238,7 +238,9 @@ describe('applyEditsToPassages', () => {
         data: { glossary: 'g1', authority: 'au1' },
       },
     ]);
-    expect(result.error).toMatch(/expected "this" at 28–99 but found "this" \(the passage is 32/);
+    expect(result.error).toMatch(
+      'expected "this" at 28–99 but the range runs past the passage, 32 characters',
+    );
   });
 
   it('adds an annotation whose text matches the range', () => {
