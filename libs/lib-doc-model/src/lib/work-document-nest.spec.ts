@@ -42,9 +42,7 @@ describe('WorkDocument.nest', () => {
 
   it('records nothing when nothing changes', () => {
     const work = build(3);
-    expect(work.nest(['p1'], { to: 1, parents: [{ uuid: 'p1' }] })).toBe(
-      false,
-    );
+    expect(work.nest(['p1'], { to: 1, parents: [{ uuid: 'p1' }] })).toBe(false);
     expect(work.log.depth).toBe(0);
   });
 

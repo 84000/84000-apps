@@ -3,6 +3,7 @@ import {
   getBibliographyRows,
   outlineBibliography,
   saveBibliographyRows,
+  storedBibliographyHtml,
   type BibliographyRow,
   type DataClient,
 } from '@eightyfourthousand/data-access';
@@ -17,10 +18,11 @@ import {
   bibliographyRowSource,
 } from './bibliography-codec';
 import { buildBibliographySchemaExtensions } from './bibliography-extensions';
+import {
+  BIBLIOGRAPHY_LABEL_PREFIX,
+  outlineBibliographyRows,
+} from './bibliography-outline';
 import { createStackWork } from './stack-work';
-
-/** The prefix the readers give a bibliography row's label. */
-const LABEL_PREFIX = 'b.';
 
 /**
  * Rows in the order the readers show them: each heading by `sort`, followed by
@@ -59,7 +61,7 @@ export const bibliographySeeds = (
     const place = places.get(row.uuid);
     return {
       uuid: row.uuid,
-      label: place?.label ? `${LABEL_PREFIX}${place.label}` : '',
+      label: place?.label ? `${BIBLIOGRAPHY_LABEL_PREFIX}${place.label}` : '',
       type: row.isHeading ? 'bibliographyHeader' : 'bibliography',
       sort: row.sort,
       ...(row.headingUuid ? { parent: row.headingUuid } : {}),
@@ -110,63 +112,269 @@ export const loadBibliographyWork = async ({
         }),
     }),
     extensions: buildBibliographySchemaExtensions(),
+    outline: outlineBibliographyRows,
   });
-  work.spine.seed(bibliographySeeds(read));
+  work.seedSpine(bibliographySeeds(read));
   return { work, rows };
 };
 
-/** How many bibliography rows hold changes the last save did not write. */
-export const unsavedBibliographyChanges = ({ work }: BibliographyWork) =>
-  work.store.dirty().filter((uuid) => work.spine.meta(uuid)).length;
+/** A row to place: its run, its stored sort, and whether it is written anyway. */
+type Placing = { under?: string; sort?: number; changed?: boolean };
 
-/** Whether a bibliography save has anything to write. */
+/**
+ * The positions of the rows to keep their stored sorts: each leaves room for
+ * the rows between it and the one before, and the first for those before it
+ * after `floor`. Rows written anyway count for less, so that as few rows as
+ * possible are written for their sorts alone.
+ */
+const keepable = (rows: Placing[], floor: number) => {
+  // Room between two rows is their sorts' gap less their positions' gap,
+  // so the kept rows are a heaviest non-decreasing run of `sort - position`.
+  const key = (i: number) => (rows[i].sort as number) - i;
+  const candidates = rows.flatMap((row, i) =>
+    row.sort !== undefined && key(i) > floor ? [i] : [],
+  );
+  const heavy = candidates.length + 1;
+  const keys = [...new Set(candidates.map(key))].sort((a, b) => a - b);
+  const rank = new Map(keys.map((value, at) => [value, at + 1]));
+
+  // A Fenwick tree of the heaviest run ending at each key or below, as
+  // [weight, last position].
+  type Run = [number, number];
+  const tree: Run[] = keys.map((): Run => [0, -1]).concat([[0, -1]]);
+  const heaviest = (at: number) => {
+    let best: Run = [0, -1];
+    for (; at > 0; at -= at & -at) if (tree[at][0] > best[0]) best = tree[at];
+    return best;
+  };
+  const raise = (at: number, run: Run) => {
+    for (; at < tree.length; at += at & -at) {
+      if (run[0] > tree[at][0]) tree[at] = run;
+    }
+  };
+
+  const before = new Map<number, number>();
+  let top: Run = [0, -1];
+  candidates.forEach((i) => {
+    const at = rank.get(key(i)) as number;
+    const [weight, last] = heaviest(at);
+    before.set(i, last);
+    const run: Run = [weight + (rows[i].changed ? 1 : heavy), i];
+    raise(at, run);
+    if (run[0] > top[0]) top = run;
+  });
+  const kept = new Set<number>();
+  for (let i = top[1]; i >= 0; i = before.get(i) ?? -1) kept.add(i);
+  return kept;
+};
+
+/**
+ * Sorts for a run of rows. The rows `keepable` picks keep their stored
+ * sorts; the rest take the next sort after the row before.
+ */
+const placeRun = (rows: Placing[]): number[] => {
+  const defined = rows.flatMap((row) => row.sort ?? []);
+  const floor = Math.min(0, ...defined.map((sort) => sort - 1));
+  const kept = keepable(rows, floor);
+  let previous = floor;
+  return rows.map((row, i) => {
+    previous = kept.has(i) ? (row.sort as number) : previous + 1;
+    return previous;
+  });
+};
+
+/**
+ * Sorts for rows in reading order, given those they have stored. The readers
+ * order headings and headingless entries by sort among themselves, and each
+ * heading's entries among those under it, so each of those runs is placed on
+ * its own, keeping as many stored sorts as it can.
+ */
+export const placeBibliographyRows = (rows: Placing[]): number[] => {
+  const runs = new Map<string, number[]>();
+  rows.forEach((row, i) => {
+    const key = row.under ?? '';
+    runs.set(key, [...(runs.get(key) ?? []), i]);
+  });
+  const sorts = rows.map(() => 0);
+  runs.forEach((run) =>
+    placeRun(run.map((i) => rows[i])).forEach((sort, at) => {
+      sorts[run[at]] = sort;
+    }),
+  );
+  return sorts;
+};
+
+/** What a bibliography save writes, deletes and settles. */
+export type BibliographySavePlan = {
+  /** New rows and rows whose content or placement changed, as stored. */
+  rows: BibliographyRow[];
+  /** Stored rows that left the work. */
+  deleteUuids: string[];
+  /** Edited documents, at the version the plan read. */
+  settled: { uuid: string; version: number }[];
+  /**
+   * Changed rows this save cannot write yet: emptied, or under a new heading
+   * it does not write.
+   */
+  held: string[];
+};
+
+const sameRow = (a: BibliographyRow, b: BibliographyRow) =>
+  a.html === b.html &&
+  a.sort === b.sort &&
+  a.isHeading === b.isHeading &&
+  a.headingUuid === b.headingUuid;
+
+/**
+ * Plan a bibliography save: every row placed in reading order under the
+ * heading the outline gives it. A row with no text is not written, nor,
+ * while it is new, the rows under it.
+ */
+export const planBibliographySave = ({
+  work,
+  rows,
+}: BibliographyWork): BibliographySavePlan => {
+  const entries = work.spine.entries();
+  const drafts = entries.map((entry) => {
+    const stored = rows.get(entry.uuid);
+    const doc = work.store.peek(entry.uuid);
+    const kind = rowKindOf(entry.type);
+    const edited = !!doc && (doc.isDirty || !stored);
+    const row: BibliographyRow = {
+      uuid: entry.uuid,
+      workUuid: work.workUuid,
+      html: edited
+        ? bibliographyContentToHTML(doc.toNode().content, kind)
+        : (stored?.html ?? ''),
+      sort: stored?.sort ?? 0,
+      isHeading: kind === 'heading',
+      headingUuid: entry.parent ?? null,
+    };
+    return { entry, stored, doc, row, html: storedBibliographyHtml(row) };
+  });
+  const sorts = placeBibliographyRows(
+    drafts.map(({ row, stored, html }) => ({
+      under: row.isHeading ? undefined : (row.headingUuid ?? undefined),
+      sort: stored?.sort,
+      changed: !stored || html === null || !sameRow(stored, { ...row, html }),
+    })),
+  );
+  /** New rows the save leaves out, which nothing can be saved under. */
+  const unwritten = new Set<string>();
+  const plan: BibliographySavePlan = {
+    rows: [],
+    deleteUuids: [],
+    settled: [],
+    held: [],
+  };
+
+  drafts.forEach(({ entry, stored, doc, html, ...draft }, i) => {
+    const row = { ...draft.row, sort: sorts[i] };
+    const settle = () => {
+      if (doc?.isDirty) {
+        plan.settled.push({ uuid: entry.uuid, version: doc.version });
+      }
+    };
+
+    if (stored && html !== null && sameRow(stored, { ...row, html })) {
+      settle();
+      return;
+    }
+    if (html === null || (row.headingUuid && unwritten.has(row.headingUuid))) {
+      if (!stored) unwritten.add(entry.uuid);
+      // A new row with nothing in it is a draft, not an unsaved change.
+      if (stored || html !== null) plan.held.push(entry.uuid);
+      return;
+    }
+    settle();
+    plan.rows.push(row);
+  });
+
+  plan.deleteUuids = work.spine
+    .removedSinceSave()
+    .filter((uuid) => rows.has(uuid));
+  return plan;
+};
+
+/** How many bibliography rows hold changes the last save did not write. */
+export const unsavedBibliographyChanges = (bibliography: BibliographyWork) => {
+  const plan = planBibliographySave(bibliography);
+  return plan.rows.length + plan.deleteUuids.length + plan.held.length;
+};
+
+/** Whether a bibliography holds changes the last save did not write. */
 export const hasUnsavedBibliographyChanges = (bibliography: BibliographyWork) =>
   unsavedBibliographyChanges(bibliography) > 0;
 
 /**
- * Write a bibliography's edited rows, and mark them synced once the server
- * agrees. Placement is written as read: rows are edited, not moved.
+ * Read the stored rows back, after a save whose outcome is unknown, so the
+ * next one plans from what the server holds.
+ */
+const refreshRows = async (
+  { work, rows }: BibliographyWork,
+  client: DataClient,
+) => {
+  const read = await getBibliographyRows({
+    client,
+    workUuid: work.workUuid,
+  }).catch(() => null);
+  if (!read) return;
+  rows.clear();
+  read.forEach((row) => rows.set(row.uuid, row));
+  work.spine.adoptSorts(new Map(read.map((row) => [row.uuid, row.sort])));
+};
+
+/**
+ * Write a bibliography's new, edited and moved rows and delete the ones it
+ * removed, and settle them once the server agrees. False when the save
+ * failed or left rows it could not write.
  */
 export const saveBibliographyWork = async (
   bibliography: BibliographyWork,
   client: DataClient,
 ): Promise<boolean> => {
   const { work, rows } = bibliography;
-  const edited = work.store.dirty().flatMap((uuid) => {
-    const meta = work.spine.meta(uuid);
-    const doc = work.store.peek(uuid);
-    const row = rows.get(uuid);
-    if (!meta || !doc || !row) return [];
-    return [
-      {
-        row: {
-          ...row,
-          html: bibliographyContentToHTML(
-            doc.toNode().content,
-            rowKindOf(meta.type),
-          ),
-        },
-        // Read with the payload: an edit made while the request is in
-        // flight is not in it, and must leave its row dirty.
-        version: doc.version,
-      },
-    ];
-  });
-  if (!edited.length) return true;
+  const plan = planBibliographySave(bibliography);
+  const settle = () =>
+    plan.settled.forEach(({ uuid, version }) =>
+      work.store.peek(uuid)?.markSynced(version),
+    );
+  const complete = () => {
+    if (!plan.held.length) return true;
+    console.error(
+      'Bibliography rows left unsaved, empty or under an empty heading:',
+      plan.held,
+    );
+    return false;
+  };
+  if (!plan.rows.length && !plan.deleteUuids.length) {
+    settle();
+    return complete();
+  }
 
   const result = await saveBibliographyRows({
     client,
     workUuid: work.workUuid,
-    rows: edited.map(({ row }) => row),
+    rows: plan.rows,
+    deleteUuids: plan.deleteUuids,
   });
   if (!result.success) {
     console.error('Failed to save bibliography:', result.error);
+    if (result.outcomeUnknown) await refreshRows(bibliography, client);
     return false;
   }
 
+  const created = plan.rows
+    .filter((row) => !rows.has(row.uuid))
+    .map((row) => row.uuid);
   result.rows.forEach((row) => rows.set(row.uuid, row));
-  edited.forEach(({ row, version }) =>
-    work.store.peek(row.uuid)?.markSynced(version),
+  plan.deleteUuids.forEach((uuid) => rows.delete(uuid));
+  // Only after the server has them: a document marked synced on a failed
+  // write would drop the edit from the next save.
+  settle();
+  work.spine.settleSave({ deleted: plan.deleteUuids, created });
+  work.spine.adoptSorts(
+    new Map(result.rows.map((row) => [row.uuid, row.sort])),
   );
-  return true;
+  return complete();
 };

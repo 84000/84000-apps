@@ -480,6 +480,16 @@ in the readers' order, each heading followed by its entries, so a deep link to
 any row is already in the spine and no feed is needed. Labels and nesting
 come from `outlineBibliography`, as the readers number them.
 
+The work document takes an `outline`, which derives every row's label, parent
+and depth from the order after each change, so they are never recorded in the
+history. `outlineBibliographyRows` numbers the order as `outlineBibliography`
+numbers the stored rows: an entry belongs to the heading before it, and a
+heading keeps the parent it is given. The edits in `bibliography-structure`
+keep that true: a new heading follows its heading's block (or goes first in a
+work with none), a heading is deleted only once nothing is under it, and
+indent, outdent and move carry a heading's block with it, through
+`WorkDocument.nest`, as one undo step.
+
 Its controller is built with `rows: 'bibliography'`. Rows are edited in place:
 split, merge, delete, passage paste and the label menu are off, the editor
 mounts the bibliography schema rather than the passage set, a heading's
@@ -489,7 +499,12 @@ flattens to text), and the bubble menu offers inline marks only.
 
 Undo and redo from outside an editor take the history of the work whose row
 was last focused or clicked. The one registered save writes both works and
-reports one outcome. A bibliography save writes only edited rows, with their
-placement as read. When the passages' outcome is unknown, unsaved rows count
-among the changes a reload would discard. When the rows cannot be read, the
-tab falls back to the read-only list.
+reports one outcome. A bibliography save writes new, edited and moved rows and
+deletes removed ones in one call. Sorts are placed per run the readers sort,
+the headings and each heading's entries, keeping as many stored sorts as fit
+and writing the fewest rows for their sort alone. A row with no text is held
+back, and so are the rows under a new heading until it has a name; the save
+then reports a failure, and those rows count as unsaved. When a save's
+outcome is unknown the rows are read back. When the passages' outcome is
+unknown, unsaved rows count among the changes a reload would discard. When
+the rows cannot be read, the tab falls back to the read-only list.
