@@ -79,7 +79,7 @@ export type BibliographyWork = {
  * Read a work's bibliography into its own stack work, seeded in full.
  *
  * Null when the rows cannot be read, so a failure is not drawn as an empty
- * bibliography.
+ * bibliography, and never throws: the passages load alongside it.
  */
 export const loadBibliographyWork = async ({
   workUuid,
@@ -90,7 +90,12 @@ export const loadBibliographyWork = async ({
   client: DataClient;
   graphql: GraphQLClient;
 }): Promise<BibliographyWork | null> => {
-  const read = await getBibliographyRows({ client, workUuid });
+  const read = await getBibliographyRows({ client, workUuid }).catch(
+    (error: unknown) => {
+      console.error('Failed to read bibliography:', error);
+      return null;
+    },
+  );
   if (!read) return null;
   const rows = new Map(read.map((row) => [row.uuid, row]));
   const work = createStackWork({

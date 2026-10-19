@@ -222,6 +222,17 @@ describe('a bibliography work', () => {
     ).toBeNull();
   });
 
+  it('is null, not thrown, when reading its rows throws', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(
+      await loadBibliographyWork({
+        workUuid: WORK,
+        client: {} as DataClient,
+        graphql: {} as never,
+      }),
+    ).toBeNull();
+  });
+
   it('seeds its spine in reading order and its rows from their HTML', async () => {
     const { bibliography } = await loaded();
     const { work } = bibliography;
