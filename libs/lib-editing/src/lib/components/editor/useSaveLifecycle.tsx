@@ -55,7 +55,8 @@ const changes = (n: number) => `${n} unsaved ${n === 1 ? 'change' : 'changes'}`;
 /**
  * Saves the paginated editors and any registered save handler as one.
  *
- * A save whose answer was lost may have been applied, so it is never sent
+ * A save whose answer was lost may have been applied. A stack save that only
+ * changed content is sent again by the next save. Any other is never sent
  * again until the stored passages are read back. Not applied, its changes are
  * kept for the next save. Otherwise `reload` replaces the editors with what
  * the server holds, unless that would discard newer changes, in which case
@@ -167,6 +168,8 @@ export const useSaveLifecycle = ({
     );
     // The in-flight set is held apart until the stored passages show whether
     // the save was applied, so the dirty set holds only what changed since.
+    // Never replayable: the baseline cannot tell a stored passage from an
+    // inserted one.
     const unknown = (): SaveResult => ({
       outcome: 'unknown',
       dirty: true,
@@ -480,8 +483,9 @@ export const useSaveLifecycle = ({
             return { outcome: 'failed' as const };
           })
         : { outcome: 'none' };
+      const replay = stackReport.unconfirmed?.replayable;
       // The work's state is uncertain: send nothing more until it is read.
-      if (stackReport.unconfirmed) {
+      if (stackReport.unconfirmed && !replay) {
         await confirmUnknownSave({
           save: stackReport.unconfirmed,
           otherChanges: () =>
@@ -495,6 +499,23 @@ export const useSaveLifecycle = ({
           save: paginated.unconfirmed,
           otherChanges: () => stack?.unsavedChanges() ?? 0,
         });
+        return;
+      }
+      if (replay) {
+        // Only content was sent, so the next save sends it again.
+        if (paginated.outcome === 'failed') {
+          toast('Error saving content.', {
+            icon: <CircleAlertIcon className="size-4 text-error" />,
+          });
+        } else {
+          toast('Your last save could not be confirmed.', {
+            description:
+              'Your changes are kept, and the next save sends them again.',
+            icon: <TriangleAlertIcon className="size-4 text-warning" />,
+            id: UNKNOWN_SAVE_TOAST,
+          });
+        }
+        dirtyStore.setDirty(true);
         return;
       }
       const outcome = combineSaveOutcomes([

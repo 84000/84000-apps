@@ -705,6 +705,66 @@ describe('saveStackWork', () => {
     expect(report.unconfirmed?.newerChanges()).toBe(2);
   });
 
+  describe('a save whose answer was lost', () => {
+    /** A work whose passages are all stored. */
+    const stored = () => {
+      const work = new WorkDocument({ workUuid: 'w1', schema });
+      work.seedSpine(
+        ['p0', 'p1', 'p2'].map((uuid, i) => ({
+          uuid,
+          label: String(i + 1),
+          type: 'translation',
+          sort: i,
+        })),
+      );
+      ['p0', 'p1', 'p2'].forEach((uuid) => {
+        work.store.create(uuid, [para(uuid)]);
+        work.store.peek(uuid)?.markSynced();
+      });
+      return work;
+    };
+
+    beforeEach(() =>
+      dataAccess.savePassagesWithDeletions.mockResolvedValue({
+        success: false,
+        outcomeUnknown: true,
+        error: 'The save may have been applied: fetch failed',
+      }),
+    );
+
+    // Sending it again writes the same thing.
+    it('can be sent again when it only changed content', async () => {
+      const work = stored();
+      edit(work, 'p0', 'changed');
+
+      const report = await saveStackWork(work);
+
+      expect(report.unconfirmed?.replayable).toBe(true);
+    });
+
+    it('cannot be sent again when it inserted a passage', async () => {
+      const work = stored();
+      const created = work.split('p0', 1)?.uuid ?? '';
+      work.store.peek('p0')?.markSynced();
+
+      const report = await saveStackWork(work);
+
+      expect(report.unconfirmed?.sent).toEqual([created]);
+      expect(report.unconfirmed?.replayable).toBe(false);
+    });
+
+    it('cannot be sent again when it deleted a passage', async () => {
+      const work = stored();
+      work.remove(['p1']);
+
+      const report = await saveStackWork(work);
+
+      expect(report.unconfirmed?.sent).toEqual([]);
+      expect(report.unconfirmed?.deleted).toEqual(['p1']);
+      expect(report.unconfirmed?.replayable).toBe(false);
+    });
+  });
+
   // A commit whose answer was lost comes back as a value; a throw is a bug
   // before the request, which wrote nothing.
   it('fails a save that threw', async () => {

@@ -361,6 +361,33 @@ describe('a stack save whose answer was lost', () => {
     },
   );
 
+  it('sends a save that only changed content again', async () => {
+    await mount();
+    const held = stack?.work;
+    if (!held) throw new Error('not seeded');
+    server.forEach(({ uuid }) => {
+      held.store.create(uuid, [para(`text of ${uuid}`)]);
+      held.store.peek(uuid)?.markSynced();
+    });
+    edit('p1', 'changed');
+    dataAccess.savePassagesWithDeletions.mockResolvedValueOnce(lostAnswer);
+
+    await act(() => editor.save());
+
+    expect(lastToast()[0]).toBe('Your last save could not be confirmed.');
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(stack?.work).toBe(held);
+    expect(held.store.dirty()).toEqual(['p1']);
+
+    dataAccess.savePassagesWithDeletions.mockResolvedValue({ success: true });
+    await act(() => editor.save());
+
+    const sent = dataAccess.savePassagesWithDeletions.mock.calls.map(
+      ([{ passages }]) => passages.map((p: { uuid: string }) => p.uuid),
+    );
+    expect(sent).toEqual([['p1'], ['p1']]);
+  });
+
   // A commit whose answer was lost comes back as a value, so a throw is a
   // failure before the request.
   it('keeps the edits of a save that threw', async () => {

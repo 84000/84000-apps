@@ -242,6 +242,7 @@ export const saveStackWork = async (
         newerChanges: () => changesSince(work, versions, deletedUuids),
         // Nothing was settled, so the passages are still dirty.
         restore: resetSorts,
+        replayable: !created.length && !deletedUuids.length,
       },
     };
   }

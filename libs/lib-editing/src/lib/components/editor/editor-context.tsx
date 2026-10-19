@@ -30,6 +30,11 @@ export type UnconfirmedSave = {
   newerChanges: () => number;
   /** It was not applied: leave its changes for the next save to send. */
   restore: () => Promise<void>;
+  /**
+   * It neither created nor deleted a passage, so sending it again writes the
+   * same thing, and its changes are left for the next save.
+   */
+  replayable?: boolean;
 };
 
 /** What one part of a save reports. */
