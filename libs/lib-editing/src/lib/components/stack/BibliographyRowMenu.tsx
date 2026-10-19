@@ -70,13 +70,24 @@ export const BibliographyRowMenu = ({
   const uuid = meta?.uuid ?? '';
   const isHeading = !!meta && rowKindOf(meta.type) === 'heading';
 
-  // The captured rect goes stale on scroll, so close rather than drift.
+  // The captured rect goes stale on scroll, so close rather than drift. A
+  // scroll inside the menu, such as a long list of headings, is its own.
   useEffect(() => {
     if (!target) return;
-    window.addEventListener('scroll', onClose, true);
+    const onScroll = (event: Event) => {
+      const scrolled = event.target;
+      if (
+        scrolled instanceof Element &&
+        scrolled.closest('[data-radix-menu-content]')
+      ) {
+        return;
+      }
+      onClose();
+    };
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onClose);
     return () => {
-      window.removeEventListener('scroll', onClose, true);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onClose);
     };
   }, [target, onClose]);
