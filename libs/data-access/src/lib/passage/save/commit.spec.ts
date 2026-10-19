@@ -158,6 +158,18 @@ describe('commitSave', () => {
     });
   });
 
+  // A thrown call was sent with no answer, unlike an error the client returns.
+  it('says the save may have been applied when the call threw', async () => {
+    const client = {
+      rpc: jest.fn(() => Promise.reject(new Error('socket hang up'))),
+    } as never;
+    expect(await commitSave(client, commitOf(1))).toEqual({
+      error: 'The save may have been applied: socket hang up',
+      savedPassages: 0,
+      outcomeUnknown: true,
+    });
+  });
+
   it('reports the chunks written before a failure', async () => {
     const result = await commitSave(
       clientFailing(2, { message: 'timeout', code: '57014' }),

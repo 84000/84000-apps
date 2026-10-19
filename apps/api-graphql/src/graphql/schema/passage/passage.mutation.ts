@@ -69,29 +69,30 @@ export const savePassagesMutation = async (
     };
   }
 
-  // Convert inputs to Passage type
-  // The annotations are passed as JSON and cast to the proper type
-  const passages: Passage[] = args.passages.map((input) => ({
-    uuid: input.uuid,
-    workUuid: input.workUuid,
-    content: input.content,
-    label: input.label,
-    sort: input.sort,
-    type: input.type as Passage['type'],
-    xmlId: input.xmlId ?? undefined,
-    annotations: input.annotations as Annotation[],
-    annotationsIncomplete: input.annotationsIncomplete ?? undefined,
-  }));
-
   try {
+    // Convert inputs to Passage type
+    // The annotations are passed as JSON and cast to the proper type
+    const passages: Passage[] = args.passages.map((input) => ({
+      uuid: input.uuid,
+      workUuid: input.workUuid,
+      content: input.content,
+      label: input.label,
+      sort: input.sort,
+      type: input.type as Passage['type'],
+      xmlId: input.xmlId ?? undefined,
+      annotations: input.annotations as Annotation[],
+      annotationsIncomplete: input.annotationsIncomplete ?? undefined,
+    }));
+
+    // Awaited here, so a rejection is caught below.
     return await savePassagesWithDeletions({
       client: ctx.supabase,
       passages,
       deletedUuids: args.deletedUuids,
     });
   } catch (error) {
-    // The save threw rather than reporting, so it may have thrown after its
-    // commit: nothing here says whether the passages were written.
+    // A commit whose answer was lost comes back as `outcomeUnknown`. A throw
+    // is a bug before the commit, so the passages were not written.
     console.error('Unexpected error saving passages:', error);
     return {
       success: false,
@@ -99,7 +100,6 @@ export const savePassagesMutation = async (
       passages: [],
       renumberedPassages: [],
       error: error instanceof Error ? error.message : 'Unknown error',
-      outcomeUnknown: true,
     };
   }
 };
