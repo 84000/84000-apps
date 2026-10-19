@@ -45,7 +45,8 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   RequestNotSentError: jest.requireActual('@eightyfourthousand/client-graphql')
     .RequestNotSentError,
   createGraphQLClient: jest.fn(() => ({ request: mockGraphqlRequest })),
-  getTranslationBlocks: jest.fn(),
+  findWorkPassages: jest.requireActual('@eightyfourthousand/client-graphql')
+    .findWorkPassages,
   hasPermission: jest.fn(async () => true),
   savePassages: jest.fn(),
   getBibliographyEntry: jest.fn(),
@@ -72,7 +73,6 @@ const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   RequestNotSentError: new (cause: unknown) => Error;
-  getTranslationBlocks: jest.Mock;
   savePassages: jest.Mock;
 };
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
@@ -181,12 +181,25 @@ const lostAnswer = {
   outcomeUnknown: true,
 };
 
+/** The passages the server holds, read back directly or through the API. */
+let held: string[] = [];
+
 /** What the server holds after a save whose answer was lost. */
-const serverHolds = (...uuids: string[]) =>
-  dataAccess.getPassageSorts.mockImplementation(
-    async ({ uuids: asked }: { uuids: string[] }) =>
-      new Map(asked.filter((u) => uuids.includes(u)).map((u) => [u, 1])),
-  );
+const serverHolds = (...uuids: string[]) => {
+  held = uuids;
+};
+
+/** The API's page of passages, as the reload probe asks for them. */
+const apiPage = (_query: unknown, vars: { filter?: { uuids: string[] } }) => {
+  const asked = vars.filter?.uuids;
+  const nodes = (asked ? held.filter((u) => asked.includes(u)) : held)
+    .slice(0, asked?.length || 1)
+    .map((uuid) => ({ uuid }));
+  return Promise.resolve({ work: { uuid: 'w1', passages: { nodes } } });
+};
+
+/** The page the server answers with when its read fails. */
+const failedRead = { work: { uuid: 'w1', passages: { nodes: [] } } };
 
 /** A second editing surface, as the passage stack registers. */
 const registerStack = (handler: Partial<SaveHandler>) =>
@@ -233,12 +246,11 @@ describe('saving the paginated editors', () => {
     clientGraphql.savePassages.mockReset();
     dataAccess.getPassageSorts.mockReset();
     mockGraphqlRequest.mockReset();
-    clientGraphql.getTranslationBlocks.mockReset();
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: [],
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    });
+    mockGraphqlRequest.mockImplementation(apiPage);
+    dataAccess.getPassageSorts.mockImplementation(
+      async ({ uuids }: { uuids: string[] }) =>
+        new Map(uuids.filter((u) => held.includes(u)).map((u) => [u, 1])),
+    );
     serverHolds();
   });
 
@@ -313,12 +325,7 @@ describe('saving the paginated editors', () => {
     await mount();
     clientGraphql.savePassages.mockResolvedValue(lostAnswer);
     serverHolds('p0');
-    clientGraphql.getTranslationBlocks.mockResolvedValueOnce({
-      blocks: [],
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-      failed: true,
-    });
+    mockGraphqlRequest.mockResolvedValueOnce(failedRead);
 
     await act(() => editorState.save());
 
@@ -330,6 +337,50 @@ describe('saving the paginated editors', () => {
 
     await waitFor(() => expect(mounts).toBe(2));
     expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks before a reload discards an edit made while checking', async () => {
+    await mount();
+    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
+    serverHolds('p0');
+    mockGraphqlRequest.mockImplementationOnce(async (...args) => {
+      addPassage('p1');
+      return apiPage(...(args as Parameters<typeof apiPage>));
+    });
+
+    await act(() => editorState.save());
+
+    expect(mounts).toBe(1);
+    expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
+  });
+
+  it('reloads once, however often Reload or Save is pressed', async () => {
+    await mount();
+    clientGraphql.savePassages.mockImplementation(async () => {
+      addPassage('p1');
+      return lostAnswer;
+    });
+    serverHolds('p0');
+    await act(() => editorState.save());
+    const { action } = lastToast()[1];
+    const probes: (() => void)[] = [];
+    mockGraphqlRequest.mockImplementation(
+      (...args) =>
+        new Promise((resolve) =>
+          probes.push(() =>
+            resolve(apiPage(...(args as Parameters<typeof apiPage>))),
+          ),
+        ),
+    );
+
+    act(() => action.onClick());
+    act(() => action.onClick());
+    await act(() => editorState.save());
+    await act(async () => probes.forEach((resolveProbe) => resolveProbe()));
+
+    await waitFor(() => expect(mounts).toBe(2));
+    expect(probes).toHaveLength(1);
+    expect(dataAccess.getPassageSorts).toHaveBeenCalledTimes(1);
   });
 
   it('asks before a reload discards a passage added during the save', async () => {

@@ -1,4 +1,4 @@
-import { ClientError } from 'graphql-request';
+import { ClientError, type GraphQLClient } from 'graphql-request';
 import {
   createGraphQLClient,
   RequestNotSentError,
@@ -6,7 +6,12 @@ import {
   setAccessTokenProvider,
 } from '@eightyfourthousand/client-graphql';
 
-import { judgeSave, mayHaveBeenApplied, readStored } from './save-outcome';
+import {
+  canReload,
+  judgeSave,
+  mayHaveBeenApplied,
+  readStored,
+} from './save-outcome';
 import type { UnconfirmedSave } from './editor-context';
 
 // The client barrels leak `data-access/ssr`.
@@ -163,5 +168,45 @@ describe('judgeSave', () => {
   // Content alone leaves no trace of whether it was written.
   it('cannot tell for a save that only changed content', () => {
     expect(judgeSave(stored('a'), save(['a'], [], []))).toBe('undecided');
+  });
+});
+
+describe('canReload', () => {
+  const request = jest.fn();
+  const graphql = { request } as unknown as GraphQLClient;
+  const page = (...uuids: string[]) => ({
+    work: { uuid: 'w1', passages: { nodes: uuids.map((uuid) => ({ uuid })) } },
+  });
+
+  beforeEach(() => request.mockReset());
+
+  it('is true when the stored passages come back', async () => {
+    request.mockResolvedValue(page('a', 'b'));
+    expect(await canReload(graphql, 'w1', ['a', 'b'])).toBe(true);
+    expect(request.mock.calls[0][1]).toMatchObject({
+      filter: { uuids: ['a', 'b'] },
+    });
+  });
+
+  // The server answers a read it could not make with an empty page.
+  it('is false when they do not', async () => {
+    request.mockResolvedValue(page());
+    expect(await canReload(graphql, 'w1', ['a'])).toBe(false);
+
+    request.mockResolvedValue(page('a'));
+    expect(await canReload(graphql, 'w1', ['a', 'b'])).toBe(false);
+  });
+
+  it('is false when the API cannot be reached', async () => {
+    request.mockRejectedValue(clientError(502));
+    expect(await canReload(graphql, 'w1', ['a'])).toBe(false);
+  });
+
+  it('needs some passage when none is known to be stored', async () => {
+    request.mockResolvedValue(page('x'));
+    expect(await canReload(graphql, 'w1', [])).toBe(true);
+
+    request.mockResolvedValue(page());
+    expect(await canReload(graphql, 'w1', [])).toBe(false);
   });
 });

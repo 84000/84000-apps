@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject, useCallback, useRef } from 'react';
+import { RefObject, useCallback, useEffect, useRef } from 'react';
 import { Editor } from '@tiptap/react';
 import {
   CircleAlertIcon,
@@ -345,9 +345,22 @@ export const useSaveLifecycle = ({
     paginatedChanges,
   ]);
 
+  // A session torn down by a reload settles nothing more.
+  useEffect(
+    () => () => {
+      pendingRef.current = null;
+    },
+    [],
+  );
+
   /** Hold a save with an unknown outcome, and say why saving is paused. */
   const pause = useCallback(
-    (pending: PendingSave, title: string, description: string) => {
+    (
+      pending: PendingSave,
+      title: string,
+      description: string,
+      action?: { label: string; onClick: () => void },
+    ) => {
       pendingRef.current = pending;
       dirtyStore.setDirty(true);
       toast(title, {
@@ -355,42 +368,84 @@ export const useSaveLifecycle = ({
         icon: <CircleAlertIcon className="size-4 text-error" />,
         duration: Infinity,
         id: UNKNOWN_SAVE_TOAST,
+        ...(action ? { action } : {}),
       });
     },
     [dirtyStore],
   );
 
   /**
-   * Replace the editors with what the server holds, once it can be read: until
-   * then the editors, and the save, stay as they are.
+   * Replace the editors with what the server holds, once the work can be read
+   * and only over unsaved changes the user agreed to discard. Until then the
+   * editors, and the save, stay as they are.
    */
-  const reloadWhenReadable = useCallback(
-    async (pending: PendingSave, verdict: SaveVerdict) => {
+  const reloadWhenSafe = useCallback(
+    (pending: PendingSave, verdict: SaveVerdict) => {
       const title =
         verdict === 'applied'
           ? 'Your last save went through.'
           : 'Your last save may have gone through.';
-      if (!(await canReload(client, work.uuid))) {
+      const discarded = () =>
+        pending.save.newerChanges() + pending.otherChanges();
+
+      /** Reload, discarding at most `accepted` changes. */
+      const run = async (accepted: number): Promise<void> => {
+        const before = discarded();
+        if (before > accepted) return askToDiscard(before);
+        const readable = await canReload(client, work.uuid, pending.save.sent);
+        // Settled by a later save, or the session is gone.
+        if (pendingRef.current !== pending) return;
+        if (!readable) {
+          return pause(
+            pending,
+            title,
+            'The work could not be read to show what is saved, so saving is ' +
+              'paused and your changes are kept. Save again to retry.',
+          );
+        }
+        // Edits made while the probe ran.
+        const after = discarded();
+        if (after > accepted) return askToDiscard(after);
+
+        pendingRef.current = null;
+        toast(title, {
+          description:
+            'Its answer was lost, so the editor now shows what is saved. ' +
+            'Check your recent changes there before making any of them again.',
+          icon: <TriangleAlertIcon className="size-4 text-warning" />,
+          duration: Infinity,
+          id: UNKNOWN_SAVE_TOAST,
+        });
+        reload();
+      };
+
+      const askToDiscard = (count: number) =>
         pause(
           pending,
-          title,
-          'The work could not be read to show what is saved, so saving is ' +
-            'paused and your changes are kept. Save again to retry.',
+          verdict === 'applied'
+            ? 'Your last save went through, but its answer was lost.'
+            : title,
+          `Saving is paused. Reloading shows what is saved, and will discard ` +
+            `${changes(count)}. Copy anything you want to keep before you ` +
+            'reload.',
+          {
+            label: 'Reload',
+            onClick: () => {
+              // One at a time with saves, and never once the save is settled.
+              if (isSavingRef.current || pendingRef.current !== pending) {
+                return;
+              }
+              isSavingRef.current = true;
+              void run(count).finally(() => {
+                isSavingRef.current = false;
+              });
+            },
+          },
         );
-        return;
-      }
-      pendingRef.current = null;
-      toast(title, {
-        description:
-          'Its answer was lost, so the editor now shows what is saved. Check ' +
-          'your recent changes there before making any of them again.',
-        icon: <TriangleAlertIcon className="size-4 text-warning" />,
-        duration: Infinity,
-        id: UNKNOWN_SAVE_TOAST,
-      });
-      reload();
+
+      return run(0);
     },
-    [client, work.uuid, pause, reload],
+    [client, work.uuid, pause, reload, isSavingRef],
   );
 
   /**
@@ -402,8 +457,10 @@ export const useSaveLifecycle = ({
    */
   const confirmUnknownSave = useCallback(
     async (pending: PendingSave) => {
+      pendingRef.current = pending;
       const { save } = pending;
       const stored = await readStored([...save.sent, ...save.deleted]);
+      if (pendingRef.current !== pending) return;
       if (!stored) {
         pause(
           pending,
@@ -426,40 +483,9 @@ export const useSaveLifecycle = ({
         });
         return;
       }
-
-      const discarded = save.newerChanges() + pending.otherChanges();
-      if (discarded > 0) {
-        pendingRef.current = pending;
-        dirtyStore.setDirty(true);
-        toast(
-          verdict === 'applied'
-            ? 'Your last save went through, but its answer was lost.'
-            : 'Your last save may have gone through.',
-          {
-            description:
-              `Saving is paused. Reloading shows what is saved, and will ` +
-              `discard ${changes(discarded)}. Copy anything you want to ` +
-              'keep before you reload.',
-            icon: <CircleAlertIcon className="size-4 text-error" />,
-            duration: Infinity,
-            id: UNKNOWN_SAVE_TOAST,
-            action: {
-              label: 'Reload',
-              onClick: () => {
-                // A later save may have settled it.
-                if (pendingRef.current !== pending || isSavingRef.current) {
-                  return;
-                }
-                void reloadWhenReadable(pending, verdict);
-              },
-            },
-          },
-        );
-        return;
-      }
-      await reloadWhenReadable(pending, verdict);
+      await reloadWhenSafe(pending, verdict);
     },
-    [dirtyStore, pause, reloadWhenReadable, isSavingRef],
+    [dirtyStore, pause, reloadWhenSafe],
   );
 
   // The stack, when it is mounted, and the paginated editors each save what

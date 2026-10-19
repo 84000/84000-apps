@@ -1,6 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import {
-  getTranslationBlocks,
+  findWorkPassages,
   RequestNotSentError,
 } from '@eightyfourthousand/client-graphql';
 import {
@@ -74,18 +74,25 @@ export const judgeSave = (
   return inserted.length || deleted.length ? 'applied' : 'undecided';
 };
 
+/** The most passages a probe asks for, a page. */
+const PROBE_LIMIT = 100;
+
 /**
- * Whether the editors can read the work again right now, through the API and
- * reader they load it with. Checked before a reload discards what they hold.
+ * Whether the editors can read the work again right now, through the API they
+ * load it with: the passages known to be stored come back (or, knowing none,
+ * any passage does). Checked before a reload discards what they hold.
  */
 export const canReload = async (
   graphql: GraphQLClient,
   workUuid: string,
+  stored: string[],
 ): Promise<boolean> => {
-  const page = await getTranslationBlocks({
+  const uuids = stored.slice(0, PROBE_LIMIT);
+  const found = await findWorkPassages({
     client: graphql,
     uuid: workUuid,
-    maxPassages: 1,
+    uuids,
   });
-  return !page.failed;
+  if (!found) return false;
+  return uuids.length ? uuids.every((uuid) => found.has(uuid)) : found.size > 0;
 };
