@@ -171,6 +171,10 @@ const duplicateOf = (
       normalizedContent(other, length) === normalizedContent(row, length),
   );
 
+/** Whether `text` is exactly what `start`–`end` covers, the range lying inside the content. */
+const textAt = (content: string, start: number, end: number, text: string) =>
+  start <= end && end <= content.length && content.slice(start, end) === text;
+
 const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
   edit.op !== 'insert-passage' && edit.passageUuid === uuid;
 
@@ -248,13 +252,13 @@ export const applyEditsToPassages = ({
       (edit): edit is AddAnnotationEdit =>
         edit.op === 'add-annotation' &&
         edit.text !== undefined &&
-        passage.content.slice(edit.start, edit.end ?? edit.start) !== edit.text,
+        !textAt(passage.content, edit.start, edit.end ?? edit.start, edit.text),
     );
     if (misplaced) {
       const end = misplaced.end ?? misplaced.start;
       const found = passage.content.slice(misplaced.start, end);
       return fail(
-        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but found ${JSON.stringify(found)}. If the passage has changed since it was read, re-read it.`,
+        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but found ${JSON.stringify(found)}${end > passage.content.length ? ` (the passage is ${passage.content.length} characters)` : ''}. If the passage has changed since it was read, re-read it.`,
       );
     }
 

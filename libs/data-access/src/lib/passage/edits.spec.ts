@@ -226,6 +226,21 @@ describe('applyEditsToPassages', () => {
     expect(result.passages).toEqual([]);
   });
 
+  it('refuses an annotation with text whose range runs past the passage', () => {
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 28,
+        end: 99,
+        text: 'this',
+        data: { glossary: 'g1', authority: 'au1' },
+      },
+    ]);
+    expect(result.error).toMatch(/expected "this" at 28–99 but found "this" \(the passage is 32/);
+  });
+
   it('adds an annotation whose text matches the range', () => {
     const result = run([
       cut(14, 23),
