@@ -36,7 +36,7 @@ export interface ReadyWorkSnapshot {
   /** The archive's top-level directory. */
   root: string;
   generatedAt: string;
-  /** Built from the current draft and not older than a day. */
+  /** Built from the current draft, not older than a day, in the current format. */
   current: boolean;
   /** The draft was edited after this snapshot was built. */
   draftChangedSince: boolean;

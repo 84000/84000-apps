@@ -46,7 +46,9 @@ const inputSchema = {
   path: z
     .string()
     .optional()
-    .describe('File or directory to search, relative to the snapshot root'),
+    .describe(
+      'File or directory to search, relative to the snapshot root. raw/ is searched only when named here.',
+    ),
   glob: z
     .string()
     .max(MAX_GREP_GLOB_LENGTH)
@@ -132,6 +134,9 @@ export const compileGlob = (glob: string): RE2JS => {
   );
 };
 
+/** Unnormalized copies of the text, for scripts: searched only when `path` names them. */
+const RAW = /^raw(\/|$)/;
+
 /** The files under `path` whose paths match `glob`, in path order. */
 const selectFiles = (
   files: WorkSnapshotFiles,
@@ -142,6 +147,7 @@ const selectFiles = (
     .filter(
       (key) =>
         (!path || key === path || key.startsWith(`${path}/`)) &&
+        (RAW.test(path) || !RAW.test(key)) &&
         (!glob || glob.test(key)),
     )
     .sort();
