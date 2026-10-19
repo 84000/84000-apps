@@ -46,6 +46,8 @@ interface SavePassagesResult {
   renumberedPassages: RenumberedPassageRow[];
   error?: string;
   warnings?: string[];
+  /** The save failed, but may have been applied: its answer was lost. */
+  outcomeUnknown?: boolean;
 }
 
 /**
@@ -82,12 +84,15 @@ export const savePassagesMutation = async (
       annotationsIncomplete: input.annotationsIncomplete ?? undefined,
     }));
 
-    return savePassagesWithDeletions({
+    // Awaited here, so a rejection is caught below.
+    return await savePassagesWithDeletions({
       client: ctx.supabase,
       passages,
       deletedUuids: args.deletedUuids,
     });
   } catch (error) {
+    // A commit whose answer was lost comes back as `outcomeUnknown`. A throw
+    // is a bug before the commit, so the passages were not written.
     console.error('Unexpected error saving passages:', error);
     return {
       success: false,

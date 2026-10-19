@@ -94,6 +94,9 @@ export const rolledBack = (code: unknown) =>
  * in one transaction. With `chunked`, a large save that only writes rows is
  * written in chunks (see `chunkCommit`), so is not all-or-nothing: on a
  * failure, the chunks before it stay written.
+ *
+ * A call that errors or throws without Postgres's answer may have been
+ * applied, and is reported with `outcomeUnknown`.
  */
 export const commitSave = async (
   client: DataClient,
@@ -102,13 +105,21 @@ export const commitSave = async (
 ): Promise<{ savedPassages: number } | CommitFailure> => {
   let savedPassages = 0;
   for (const chunk of chunked ? chunkCommit(commit) : [commit]) {
-    const { error } = await client.rpc('apply_passage_save', {
-      p_passages: chunk.passages,
-      p_labels: chunk.labels,
-      p_annotations: chunk.annotations,
-      p_delete_annotations: chunk.deleteAnnotations,
-      p_delete_passages: chunk.deletePassages,
-    });
+    let error: { message: string; code?: string } | null;
+    try {
+      ({ error } = await client.rpc('apply_passage_save', {
+        p_passages: chunk.passages,
+        p_labels: chunk.labels,
+        p_annotations: chunk.annotations,
+        p_delete_annotations: chunk.deleteAnnotations,
+        p_delete_passages: chunk.deletePassages,
+      }));
+    } catch (thrown) {
+      // Sent, but with no answer to say whether it committed.
+      error = {
+        message: thrown instanceof Error ? thrown.message : String(thrown),
+      };
+    }
     if (error) {
       console.error('Error committing passage save:', error);
       const unknown = !rolledBack(error.code);
