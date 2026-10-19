@@ -138,12 +138,16 @@ const refreshSorts = async (
   return true;
 };
 
-/** Whether a save has anything to write or delete. */
-export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
+/** How many passages a save would write or delete. */
+export const unsavedStackChanges = (work: WorkDocument): number =>
   // A dirty document whose passage has left the spine has nothing to save:
   // counting it would hold the Save button on for good.
-  work.store.dirty().some((uuid) => work.spine.meta(uuid)) ||
-  work.spine.removedSinceSave().length > 0;
+  work.store.dirty().filter((uuid) => work.spine.meta(uuid)).length +
+  work.spine.removedSinceSave().length;
+
+/** Whether a save has anything to write or delete. */
+export const hasUnsavedStackChanges = (work: WorkDocument): boolean =>
+  unsavedStackChanges(work) > 0;
 
 /**
  * Write a work's edited passages and delete the ones it removed, and mark

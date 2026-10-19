@@ -27,6 +27,7 @@ import {
   applyServerPassages,
   hasUnsavedStackChanges,
   saveStackWork,
+  unsavedStackChanges,
 } from './stack-save';
 import { removeStackCommentAnchors } from './stack-comments';
 import { deleteStackEndnote } from './stack-endnotes';
@@ -98,10 +99,11 @@ export const StackWorkProvider = ({
     const { work } = stack;
     registerSaveHandler({
       save: async () => {
-        if (!hasUnsavedStackChanges(work)) return 'none';
-        return (await saveStackWork(work)) ? 'saved' : 'failed';
+        if (!hasUnsavedStackChanges(work)) return { outcome: 'none' };
+        return { outcome: (await saveStackWork(work)) ? 'saved' : 'failed' };
       },
       isDirty: () => hasUnsavedStackChanges(work),
+      unsavedChanges: () => unsavedStackChanges(work),
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
       removeCommentAnchors: (comment) =>
