@@ -7,6 +7,7 @@ import {
   type PassageLoader,
   type PassageSnapshot,
   type PassageSource,
+  type RowOutline,
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageExtras } from './types';
 
@@ -20,6 +21,8 @@ export type StackWorkOptions = {
   spineDoc?: Doc;
   /** The schema rows are parsed with. Defaults to the passage schema. */
   extensions?: Extensions;
+  /** For rows labelled by position, such as `outlineBibliographyRows`. */
+  outline?: RowOutline;
 };
 
 /**
@@ -45,6 +48,7 @@ export const createStackWorkDocument = (options: StackWorkOptions) =>
     loader: options.loader,
     spineDoc: options.spineDoc,
     textOrigins: new Set([ySyncPluginKey]),
+    outline: options.outline,
   });
 
 /**
@@ -64,6 +68,7 @@ export const createStackWork = ({
   local,
   source,
   extensions,
+  outline,
   cache,
   buffer,
   spineDoc,
@@ -77,6 +82,8 @@ export const createStackWork = ({
   source?: PassageSource;
   /** Their schema, e.g. `buildBibliographySchemaExtensions()`. */
   extensions?: Extensions;
+  /** Their outline, e.g. `outlineBibliographyRows`. */
+  outline?: RowOutline;
   /** `cachePassageSnapshots(storage)` from `lib-persistence`. */
   cache?: (workUuid: string, snapshots: PassageSnapshot[]) => Promise<void>;
   /** Passages either side of the visible range to hydrate. */
@@ -105,6 +112,7 @@ export const createStackWork = ({
     loader,
     spineDoc,
     extensions,
+    outline,
   });
   return built.work;
 };

@@ -104,6 +104,7 @@ export type StructuralOpKind =
   | 'insert'
   | 'delete'
   | 'reorder'
+  | 'nest'
   | 'label';
 
 /**
@@ -124,3 +125,24 @@ export type LabelChange = {
   from: string;
   to: string;
 };
+
+/** A row's parent changed by an operation. Absent means the top level. */
+export type ParentChange = {
+  uuid: string;
+  from?: string;
+  to?: string;
+};
+
+/** Where a row sits in an outline: its label and what it nests under. */
+export type RowPlace = {
+  label: string;
+  parent?: string;
+  /** Absent means zero. */
+  depth?: number;
+};
+
+/**
+ * Derives every row's place from the spine, for rows numbered by position
+ * rather than by a stored label.
+ */
+export type RowOutline = (entries: SpineEntry[]) => Map<string, RowPlace>;

@@ -105,6 +105,7 @@ export class WorkHistory {
     command.moved.forEach((move) =>
       this.spine.move(move.uuid, move.to, { renumber: false }),
     );
+    this.applyParents(command, 'to');
     command.content.forEach((change) => {
       if (change.after === null) return;
       this.store.ensure(change.uuid).replaceContent(change.after);
@@ -131,6 +132,7 @@ export class WorkHistory {
       .forEach((move) =>
         this.spine.move(move.uuid, move.from, { renumber: false }),
       );
+    this.applyParents(command, 'from');
     command.content.forEach((change) => {
       if (change.before === null) return;
       this.store.ensure(change.uuid).replaceContent(change.before);
@@ -154,6 +156,15 @@ export class WorkHistory {
   /** A renamed passage is saved with its label. One released is not loaded to mark. */
   private markRelabeledDirty(command: StructuralCommand) {
     command.labels.forEach(({ uuid }) => this.store.peek(uuid)?.markDirty());
+  }
+
+  private applyParents(command: StructuralCommand, side: 'from' | 'to') {
+    this.spine.setParents(
+      (command.parents ?? []).map((change) => ({
+        uuid: change.uuid,
+        parent: change[side],
+      })),
+    );
   }
 
   private applyLabels(changes: LabelChange[], side: 'from' | 'to') {
