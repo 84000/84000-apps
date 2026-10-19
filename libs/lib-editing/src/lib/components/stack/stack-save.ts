@@ -164,7 +164,7 @@ export const trackEdits = (works: WorkDocument[]) => {
     }),
   );
   return {
-    // A list, not a sum, so two states never share a value.
+    // A list, not a sum, so distinct edits do not cancel out.
     revision: () =>
       [
         structural,

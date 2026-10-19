@@ -50,6 +50,18 @@ interface PaginationContextState {
 
 export const PaginationContext = createContext<PaginationContextState>({});
 
+/**
+ * Start or end loading more into one editor. Its writes are not edits, while
+ * edits in the other editors are still tracked.
+ */
+export const useLoadingInto = (fragment?: XmlFragment) => {
+  const { setNavigating } = useEditorState();
+  return useCallback(
+    (navigating: boolean) => setNavigating(navigating, false, fragment),
+    [setNavigating, fragment],
+  );
+};
+
 export const PaginationProvider = ({
   uuid,
   filter,
@@ -310,7 +322,7 @@ export const PaginationProvider = ({
         console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
-        setNavigating(false);
+        setNavigating(false, false, fragment);
       }
     })();
   }, [
@@ -369,11 +381,7 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
-  // Loading more writes only this editor, so edits in the others are tracked.
-  const loadingInto = useCallback(
-    (navigating: boolean) => setNavigating(navigating, false, fragment),
-    [setNavigating, fragment],
-  );
+  const loadingInto = useLoadingInto(fragment);
 
   useLoadMoreBlocks({
     uuid,

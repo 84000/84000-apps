@@ -549,6 +549,8 @@ export const useSaveLifecycle = ({
             return { outcome: 'failed' as const };
           })
         : { outcome: 'none' };
+      // A session gone meanwhile reports nothing over the next one's toasts.
+      if (!aliveRef.current) return;
       const replay = stackReport.unconfirmed?.replayable;
       // The work's state is uncertain: send nothing more until it is read.
       if (stackReport.unconfirmed && !replay) {
@@ -560,6 +562,7 @@ export const useSaveLifecycle = ({
         return;
       }
       const paginated = await savePaginated();
+      if (!aliveRef.current) return;
       if (paginated.unconfirmed) {
         await confirmUnknownSave({
           save: paginated.unconfirmed,

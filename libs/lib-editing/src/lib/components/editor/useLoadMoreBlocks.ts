@@ -114,8 +114,11 @@ export const useLoadMoreBlocks = ({
 
       if (pos >= 0 && blocks.length && editor) {
         setNavigating(true);
-        await insertContentChunked(editor, pos, blocks);
-        setNavigating(false);
+        try {
+          await insertContentChunked(editor, pos, blocks);
+        } finally {
+          setNavigating(false);
+        }
         if (tab) {
           refreshEditorBaseline(tab);
         }
@@ -181,8 +184,11 @@ export const useLoadMoreBlocks = ({
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
         setNavigating(true);
-        editor.commands.insertContentAt(pos, blocks);
-        setNavigating(false);
+        try {
+          editor.commands.insertContentAt(pos, blocks);
+        } finally {
+          setNavigating(false);
+        }
         if (tab) {
           refreshEditorBaseline(tab);
         }
@@ -197,8 +203,11 @@ export const useLoadMoreBlocks = ({
       } else if (blocks.length && editor) {
         // Fallback: insert without scroll preservation when view not ready
         setNavigating(true);
-        editor.commands.insertContentAt(pos, blocks);
-        setNavigating(false);
+        try {
+          editor.commands.insertContentAt(pos, blocks);
+        } finally {
+          setNavigating(false);
+        }
         if (tab) {
           refreshEditorBaseline(tab);
         }

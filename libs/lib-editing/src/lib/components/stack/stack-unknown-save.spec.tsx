@@ -407,7 +407,7 @@ describe('a stack save whose answer was lost', () => {
     await act(() => editor.save());
 
     expect(spine()).toContain('9.9@');
-    expect(lastToast()[1].description).toMatch(/discard \d+ unsaved/);
+    expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
   });
 
   it('sends a save that only changed content again', async () => {

@@ -101,6 +101,11 @@ export interface EditorContextState {
   registerSaveHandler: (handler: SaveHandler | null) => void;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
+  /**
+   * Start or end a navigation, which writes the editors itself, so its writes
+   * are not edits. Given a `fragment`, only that editor's writes; pass the
+   * same `fragment` to start and end it.
+   */
   setNavigating: (
     navigating: boolean,
     resetLastObservedUuids?: boolean,

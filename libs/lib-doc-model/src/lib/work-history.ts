@@ -151,7 +151,7 @@ export class WorkHistory {
       .forEach((uuid) => this.store.peek(uuid)?.markDirty());
   }
 
-  /** A renamed passage is saved with its label. */
+  /** A renamed passage is saved with its label. One released is not loaded to mark. */
   private markRelabeledDirty(command: StructuralCommand) {
     command.labels.forEach(({ uuid }) => this.store.peek(uuid)?.markDirty());
   }
