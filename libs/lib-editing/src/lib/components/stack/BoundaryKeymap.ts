@@ -119,7 +119,9 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
       },
       Enter: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
-        if (singleLine) return true;
+        // One line: Enter starts the row after it, if rows can be started.
+        if (singleLine)
+          return restructure ? delegate.splitAtSelection(uuid) : true;
         if (!restructure || !atDocEnd(editor)) return false;
 
         // A single Enter belongs to the paragraph, not to the passage: at the

@@ -490,12 +490,18 @@ work with none), a heading is deleted only once nothing is under it, and
 indent, outdent and move carry a heading's block with it, through
 `WorkDocument.nest`, as one undo step.
 
-Its controller is built with `rows: 'bibliography'`. Rows are edited in place:
-split, merge, delete, passage paste and the label menu are off, the editor
-mounts the bibliography schema rather than the passage set, a heading's
-editor is a single line of plain text (its schema has no marks, and a paste
-flattens to text), and the bubble menu offers inline marks only.
-`rowStyle` draws headings as the readers do and indents nested rows by depth.
+Its controller is built with `rows: 'bibliography'`, and the editor mounts the
+bibliography schema rather than the passage set. A heading's editor is a
+single line of plain text (its schema has no marks, and a paste flattens to
+text), and Enter in it starts the heading's first entry. An entry splits on
+Enter-Enter and merges into the entry before it, never into a heading, and its
+slash menu starts an entry, a heading or a subheading. `BibliographyRowMenu`,
+on the row's label, starts rows, indents and outdents a heading, moves a row
+under another heading, and deletes it; the delete dialog counts the mentions
+of the row it would leave unresolved. Passage paste, run deletes and the
+passage label menu stay off, and the bubble menu offers inline marks only.
+A read-only controller changes no structure. `rowStyle` draws headings as the
+readers do and indents nested rows by depth.
 
 Undo and redo from outside an editor take the history of the work whose row
 was last focused or clicked. The one registered save writes both works and

@@ -148,6 +148,13 @@ describe('deleting a row', () => {
     expect(work.spine.uuids()).toEqual(['h1', 'e1', 'h2', 'e2', 'h3']);
   });
 
+  it('keeps the last row', async () => {
+    const work = (await loadedBibliography([heading('h1', 1), row('a', 2)]))
+      .bibliography.work;
+    expect(deleteBibliographyRow(work, 'a')).toBe(true);
+    expect(canDeleteBibliographyRow(work, 'h1')).toBe(false);
+  });
+
   it('keeps a heading that only holds headings', async () => {
     const work = (
       await loadedBibliography([heading('h1', 1), heading('h2', 2, 'h1')])

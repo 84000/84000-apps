@@ -16,6 +16,7 @@ import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdva
 import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
+import { BibliographyRowMenu } from './BibliographyRowMenu';
 import {
   StackPassageMenu,
   type StackPassageMenuTarget,
@@ -316,6 +317,13 @@ export const PassageStack = ({
       )}
       {controller.restructures() && (
         <StackPassageMenu
+          controller={controller}
+          target={menuTarget}
+          onClose={closeMenu}
+        />
+      )}
+      {controller.editsOutline() && (
+        <BibliographyRowMenu
           controller={controller}
           target={menuTarget}
           onClose={closeMenu}

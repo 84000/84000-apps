@@ -11,6 +11,7 @@ import {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import { buildBibliographyEditorExtensions } from './bibliography-extensions';
+import * as bibliography from './bibliography-structure';
 import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
 import { buildStackEditorExtensions } from './stack-extensions';
 import { StackHydration } from './stack-hydration';
@@ -343,6 +344,7 @@ export class PassageStackController {
       return buildBibliographyEditorExtensions({
         ...binding,
         kind: meta ? rowKindOf(meta.type) : 'entry',
+        ...(this.editsOutline() ? { outline: this } : {}),
       });
     }
     return buildStackEditorExtensions(binding);
@@ -407,7 +409,11 @@ export class PassageStackController {
   // ------------------------------------------------------ structural ops
 
   splitAtSelection = (uuid: string) => {
-    if (!this.restructures()) return false;
+    if (this.editsOutline() && this.isHeadingRow(uuid)) {
+      // A heading is one line: what follows it is its first entry.
+      return this.focusMade(bibliography.newBibliographyEntry(this.work, uuid));
+    }
+    if (!this.restructuresRows()) return false;
     const editor = this.live.getEditor(uuid);
     if (!editor) return false;
     const result = this.work.split(uuid, editor.state.selection.$from.pos);
@@ -417,7 +423,13 @@ export class PassageStackController {
   };
 
   mergeWithPrevious = (uuid: string) => {
-    if (!this.restructures()) return false;
+    if (!this.restructuresRows()) return false;
+    if (
+      this.rows === 'bibliography' &&
+      !bibliography.canMergeBibliographyRow(this.work, uuid)
+    ) {
+      return false;
+    }
     const result = this.work.merge(uuid);
     if (!result) return false;
     this.focusPassage(result.uuid, result.boundary);
@@ -434,7 +446,8 @@ export class PassageStackController {
    * longer holds leaves the shared surfaces bound to nothing.
    */
   removePassage = (uuid: string) => {
-    if (!this.restructures()) return false;
+    if (!this.restructuresRows()) return false;
+    if (!this.canRemove(uuid)) return false;
     const index = this.getOrder().indexOf(uuid);
     if (index < 0) return false;
     if (!this.work.remove([uuid])) return false;
@@ -446,6 +459,80 @@ export class PassageStackController {
     else this.live.reset();
     return true;
   };
+
+  /** A row's text, when its document is held. */
+  getRowText = (uuid: string) => this.work.store.peek(uuid)?.text ?? '';
+
+  /** Whether a row can be deleted: in a bibliography, a heading once empty. */
+  canRemove = (uuid: string) =>
+    this.rows !== 'bibliography' ||
+    bibliography.canDeleteBibliographyRow(this.work, uuid);
+
+  // ------------------------------------------------- bibliography outline
+
+  /** Start a bibliography entry after a row, and focus it. */
+  newBibliographyEntry = (uuid: string) =>
+    this.editsOutline() &&
+    this.focusMade(bibliography.newBibliographyEntry(this.work, uuid));
+
+  /** Start a heading after a row's heading, or nested in it, and focus it. */
+  newBibliographyHeading = (uuid: string, nested = false) =>
+    this.editsOutline() &&
+    this.focusMade(
+      bibliography.newBibliographyHeading(this.work, uuid, { nested }),
+    );
+
+  canIndentBibliographyHeading = (uuid: string) =>
+    this.editsOutline() &&
+    bibliography.canIndentBibliographyHeading(this.work, uuid);
+
+  /** Nest a heading under the heading before it. */
+  indentBibliographyHeading = (uuid: string) =>
+    this.editsOutline() &&
+    bibliography.indentBibliographyHeading(this.work, uuid);
+
+  canOutdentBibliographyHeading = (uuid: string) =>
+    this.editsOutline() &&
+    bibliography.canOutdentBibliographyHeading(this.work, uuid);
+
+  /** Take a heading out of its parent. */
+  outdentBibliographyHeading = (uuid: string) =>
+    this.editsOutline() &&
+    bibliography.outdentBibliographyHeading(this.work, uuid);
+
+  /** The headings a row can move under. */
+  bibliographyMoveTargets = (uuid: string): PassageMeta[] =>
+    this.editsOutline()
+      ? bibliography.bibliographyMoveTargets(this.work, uuid)
+      : [];
+
+  /** Move a row under a heading, or a heading to the top level. */
+  moveBibliographyRow = (uuid: string, target: string | null) => {
+    if (!this.editsOutline()) return false;
+    if (!bibliography.moveBibliographyRow(this.work, uuid, target))
+      return false;
+    this.focusPassage(uuid, 'start');
+    return true;
+  };
+
+  private isHeadingRow(uuid: string) {
+    const meta = this.work.spine.meta(uuid);
+    return !!meta && rowKindOf(meta.type) === 'heading';
+  }
+
+  /** Whether a bibliography's rows can be added, nested and moved here. */
+  editsOutline = () => this.rows === 'bibliography' && !this.readOnly;
+
+  /** Whether rows split, merge and delete here. */
+  private restructuresRows = () => this.restructures() || this.editsOutline();
+
+  /** Focus the row an edit made, if it made one. */
+  private focusMade(uuid: string | null) {
+    if (!uuid) return false;
+    this.orderCache = null;
+    this.focusPassage(uuid, 'start');
+    return true;
+  }
 
   /** A passage's document as editor JSON, for the attributes dialog. */
   getPassageJSON = (uuid: string): JSONContent | null => {

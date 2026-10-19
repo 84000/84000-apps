@@ -115,7 +115,8 @@ export const newBibliographyHeading = (
 /** Whether a row can be deleted: an entry always, a heading once empty. */
 export const canDeleteBibliographyRow = (work: WorkDocument, uuid: string) => {
   const meta = work.spine.meta(uuid);
-  if (!meta) return false;
+  // The last row stays: every new row starts from one.
+  if (!meta || work.spine.length < 2) return false;
   if (rowKindOf(meta.type) === 'entry') return true;
   return !work.spine.entries().some((entry) => entry.parent === uuid);
 };
