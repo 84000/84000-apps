@@ -372,6 +372,50 @@ describe('BoundaryKeymap Enter and Backspace', () => {
     expect(shortcuts(delegate)['Backspace']({ editor })).toBe(false);
     expect(calls).toEqual([]);
   });
+
+  describe('on rows that are edited in place', () => {
+    const fixed = (delegate: StackKeyboardDelegate, singleLine = false) =>
+      (
+        BoundaryKeymap.config.addKeyboardShortcuts as (this: {
+          options: {
+            uuid: string;
+            delegate: StackKeyboardDelegate;
+            restructure: boolean;
+            singleLine: boolean;
+          };
+        }) => Record<string, (props: { editor: unknown }) => boolean>
+      ).call({
+        options: { uuid: 'p0', delegate, restructure: false, singleLine },
+      });
+
+    it('leaves a second Enter to the editor rather than splitting', () => {
+      const { calls, delegate } = spyDelegate();
+      const joined: string[] = [];
+      const editor = editorFor(['text', ''], 'end', joined);
+
+      expect(fixed(delegate)['Enter']({ editor })).toBe(false);
+      expect(fixed(delegate)['Mod-Enter']({ editor })).toBe(false);
+      expect(calls).toEqual([]);
+      expect(joined).toEqual([]);
+    });
+
+    it('swallows Backspace at the start rather than merging', () => {
+      const { calls, delegate } = spyDelegate();
+      const editor = editorFor(['text'], 'start');
+
+      expect(fixed(delegate)['Backspace']({ editor })).toBe(true);
+      expect(calls).toEqual([]);
+    });
+
+    it('adds no line to a single-line row', () => {
+      const { calls, delegate } = spyDelegate();
+      const editor = editorFor(['text'], 'end');
+
+      expect(fixed(delegate, true)['Enter']({ editor })).toBe(true);
+      expect(fixed(delegate, true)['Mod-Enter']({ editor })).toBe(true);
+      expect(calls).toEqual([]);
+    });
+  });
 });
 
 describe('stack toh round trip', () => {

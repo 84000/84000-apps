@@ -1,14 +1,17 @@
 import { Editor, Extensions } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import { getBookmarks } from '@eightyfourthousand/data-access';
-import type {
-  FocusTarget,
-  PassageMeta,
-  SpineRange,
-  WorkDocument,
+import {
+  rowKindOf,
+  type FocusTarget,
+  type PassageMeta,
+  type SpineRange,
+  type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
+import { buildBibliographyEditorExtensions } from './bibliography-extensions';
+import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
 import { buildStackEditorExtensions } from './stack-extensions';
 import { StackHydration } from './stack-hydration';
 import { StackLiveEditors } from './stack-live-editors';
@@ -19,6 +22,7 @@ import type {
   PassageStackControllerOptions,
   StackFocusWhere,
   StackPassageSeed,
+  StackRows,
 } from './types';
 
 export type { PassageStackControllerOptions } from './types';
@@ -61,6 +65,7 @@ export class PassageStackController {
   private readOnly: boolean;
   private readonly windowKey: string;
   private readonly tab?: string;
+  private readonly rows: StackRows;
   private bookmarks = new Set<string>();
 
   private listeners = new Set<() => void>();
@@ -72,6 +77,7 @@ export class PassageStackController {
     this.work = options.work;
     this.readOnly = options.readOnly ?? false;
     this.tab = options.tab;
+    this.rows = options.rows ?? 'passages';
     this.extras = options.extras;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     this.readBookmarks();
@@ -223,6 +229,16 @@ export class PassageStackController {
   /** The tab this view draws, which is also what names its panel. */
   getTab = () => this.tab;
 
+  /** What the rows are. */
+  getRows = () => this.rows;
+
+  /** Whether rows can be split, merged, deleted and replaced here. */
+  restructures = () => this.rows === 'passages';
+
+  /** A row's own presentation. A passage has none: its blocks carry it. */
+  rowStyle = (meta: PassageMeta): StackRowStyle =>
+    this.rows === 'bibliography' ? bibliographyRowStyle(meta) : {};
+
   /** Whether a row shows the bookmark indicator. */
   showsBookmark = (uuid: string) => this.readOnly && this.bookmarks.has(uuid);
 
@@ -316,12 +332,20 @@ export class PassageStackController {
       throw new Error(`cannot mount an editor on unhydrated passage ${uuid}`);
     }
     this.content.wire(doc);
-    return buildStackEditorExtensions({
+    const binding = {
       uuid,
       fragment: doc.content,
       undoManager: doc.undoManager,
       delegate: this,
-    });
+    };
+    if (this.rows === 'bibliography') {
+      const meta = this.work.spine.meta(uuid);
+      return buildBibliographyEditorExtensions({
+        ...binding,
+        kind: meta ? rowKindOf(meta.type) : 'entry',
+      });
+    }
+    return buildStackEditorExtensions(binding);
   }
 
   registerEditor(uuid: string, editor: Editor) {
@@ -383,6 +407,7 @@ export class PassageStackController {
   // ------------------------------------------------------ structural ops
 
   splitAtSelection = (uuid: string) => {
+    if (!this.restructures()) return false;
     const editor = this.live.getEditor(uuid);
     if (!editor) return false;
     const result = this.work.split(uuid, editor.state.selection.$from.pos);
@@ -392,6 +417,7 @@ export class PassageStackController {
   };
 
   mergeWithPrevious = (uuid: string) => {
+    if (!this.restructures()) return false;
     const result = this.work.merge(uuid);
     if (!result) return false;
     this.focusPassage(result.uuid, result.boundary);
@@ -408,6 +434,7 @@ export class PassageStackController {
    * longer holds leaves the shared surfaces bound to nothing.
    */
   removePassage = (uuid: string) => {
+    if (!this.restructures()) return false;
     const index = this.getOrder().indexOf(uuid);
     if (index < 0) return false;
     if (!this.work.remove([uuid])) return false;
@@ -466,11 +493,12 @@ export class PassageStackController {
     this.selection.serializePassageSelection();
 
   /** Delete the selected passages, as one command. */
-  deletePassageSelection = () => this.selection.deletePassageSelection();
+  deletePassageSelection = () =>
+    this.restructures() && this.selection.deletePassageSelection();
 
   /** Replace the selected passages with what the clipboard carries. */
   pastePassageSelection = (clipboard: { html: string; text: string }) =>
-    this.selection.pastePassageSelection(clipboard);
+    this.restructures() && this.selection.pastePassageSelection(clipboard);
 
   // ------------------------------------------------------------ undo/redo
 

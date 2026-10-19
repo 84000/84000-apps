@@ -9,6 +9,7 @@ import {
   seeds,
   source,
 } from './stack-controller.fixture';
+import { buildBibliographySchemaExtensions } from './bibliography-extensions';
 import { createStackWorkDocument } from './stack-work';
 
 // Building the stack schema instantiates every editor extension, and Mention's
@@ -435,5 +436,125 @@ describe('PassageStackController getPassageJSON', () => {
     });
     expect(json?.content?.[0].type).toBe('paragraph');
     expect(controller.getPassageJSON('missing')).toBeNull();
+  });
+});
+
+describe('PassageStackController bibliography rows', () => {
+  const bibliography = async () => {
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      extensions: buildBibliographySchemaExtensions(),
+      loader: new PassageLoader({
+        sources: [
+          {
+            name: 'rows',
+            loadPassages: async (_work, uuids) =>
+              uuids.map((uuid) => ({
+                uuid,
+                content: [
+                  {
+                    type: 'paragraph',
+                    content: [{ type: 'text', text: uuid }],
+                  },
+                ],
+              })),
+          },
+        ],
+      }),
+    });
+    work.seedSpine([
+      { uuid: 'h1', label: 'b.1', type: 'bibliographyHeader', sort: 1 },
+      {
+        uuid: 'h2',
+        label: 'b.1.1',
+        type: 'bibliographyHeader',
+        sort: 2,
+        parent: 'h1',
+        depth: 1,
+      },
+      {
+        uuid: 'e1',
+        label: 'b.1.1.1',
+        type: 'bibliography',
+        sort: 3,
+        parent: 'h2',
+        depth: 2,
+      },
+      {
+        uuid: 'e2',
+        label: 'b.1.1.2',
+        type: 'bibliography',
+        sort: 4,
+        parent: 'h2',
+        depth: 2,
+      },
+    ]);
+    await work.hydrateWindow({ start: 0, end: 4 });
+    const controller = new PassageStackController({
+      work,
+      tab: 'bibliography',
+      rows: 'bibliography',
+    });
+    return { work, controller };
+  };
+
+  it('neither merges, deletes nor replaces rows', async () => {
+    const { controller } = await bibliography();
+
+    expect(controller.restructures()).toBe(false);
+    expect(controller.mergeWithPrevious('e2')).toBe(false);
+    expect(controller.removePassage('e1')).toBe(false);
+    controller.setPassageSelection('e1', 'e2');
+    expect(controller.deletePassageSelection()).toBe(false);
+    expect(controller.getOrder()).toEqual(['h1', 'h2', 'e1', 'e2']);
+  });
+
+  it('mounts editors over the bibliography schema', async () => {
+    const { controller } = await bibliography();
+    const names = controller
+      .buildEditorExtensions('e1')
+      .map((extension) => extension.name);
+
+    expect(names).toContain('boundaryKeymap');
+    expect(names).toContain('collaboration');
+    expect(names).not.toContain('slashCommand');
+    expect(names).not.toContain('endNoteLink');
+  });
+
+  it('mounts heading editors over plain text only', async () => {
+    const { controller } = await bibliography();
+    const names = controller
+      .buildEditorExtensions('h2')
+      .map((extension) => extension.name);
+
+    expect(names).toEqual(expect.arrayContaining(['paragraph', 'text']));
+    expect(names).not.toContain('bold');
+    expect(names).not.toContain('mention');
+    expect(names).not.toContain('link');
+  });
+
+  it('styles a heading, and indents rows by their nesting', async () => {
+    const { controller } = await bibliography();
+    const style = (uuid: string) => {
+      const meta = controller.getMeta(uuid);
+      if (!meta) throw new Error(uuid);
+      return controller.rowStyle(meta);
+    };
+
+    expect(style('h1').className).toContain('font-bold');
+    expect(style('h1').style).toBeUndefined();
+    expect(style('h2').style).toEqual({ marginInlineStart: '1.5rem' });
+    // An entry sits with its heading, not a step further in.
+    expect(style('e1')).toEqual({
+      className: undefined,
+      style: { marginInlineStart: '1.5rem' },
+    });
+  });
+
+  it('leaves passages unstyled', async () => {
+    const { controller } = await hydrated(1);
+    const meta = controller.getMeta('p0');
+    expect(meta && controller.rowStyle(meta)).toEqual({});
+    expect(controller.restructures()).toBe(true);
   });
 });

@@ -6,6 +6,10 @@ import {
   FRONT_MATTER_FILTER,
 } from '@eightyfourthousand/data-access';
 
+import type { SaveHandler } from '../editor/EditorProvider';
+import { createStackWorkDocument } from './stack-work';
+import { buildBibliographySchemaExtensions } from './bibliography-extensions';
+import type { BibliographyWork } from './bibliography-work';
 import {
   StackWorkProvider,
   useStackWork,
@@ -25,6 +29,46 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
   getTranslationBlocksAround: jest.fn(),
+}));
+
+jest.mock('@eightyfourthousand/data-access', () => ({
+  ...jest.requireActual('@eightyfourthousand/data-access'),
+  createBrowserClient: jest.fn(() => ({})),
+}));
+
+jest.mock('./bibliography-work', () => ({
+  loadBibliographyWork: jest.fn(),
+  unsavedBibliographyChanges: jest.fn(() => 0),
+  saveBibliographyWork: jest.fn(),
+}));
+
+jest.mock('./stack-save', () => {
+  const actual = jest.requireActual('./stack-save');
+  return {
+    ...actual,
+    hasUnsavedStackChanges: jest.fn(actual.hasUnsavedStackChanges),
+    saveStackWork: jest.fn(actual.saveStackWork),
+  };
+});
+
+const stackSave = jest.requireMock('./stack-save') as {
+  hasUnsavedStackChanges: jest.Mock;
+  saveStackWork: jest.Mock;
+};
+
+const bibliographyWork = jest.requireMock('./bibliography-work') as {
+  loadBibliographyWork: jest.Mock;
+  unsavedBibliographyChanges: jest.Mock;
+  saveBibliographyWork: jest.Mock;
+};
+
+const mockEditorState = {
+  registerSaveHandler: jest.fn(),
+  dirtyStore: { setDirty: jest.fn() },
+};
+
+jest.mock('../editor/EditorProvider', () => ({
+  useEditorState: () => mockEditorState,
 }));
 
 const clientGraphql = jest.requireMock(
@@ -71,8 +115,42 @@ const Probe = () => {
   );
 };
 
+/** A bibliography of one heading and the entry under it. */
+const bibliography = (): BibliographyWork => {
+  const work = createStackWorkDocument({
+    workUuid: 'w1',
+    extensions: buildBibliographySchemaExtensions(),
+  });
+  work.spine.seed([
+    { uuid: 'h1', label: 'b.1', type: 'bibliographyHeader', sort: 1 },
+    {
+      uuid: 'e1',
+      label: 'b.1.1',
+      type: 'bibliography',
+      sort: 2,
+      parent: 'h1',
+      depth: 1,
+    },
+  ]);
+  return { work, rows: new Map() };
+};
+
+/** Every section seeded with one passage. */
+const seedSections = () =>
+  clientGraphql.getPassageMetaPage
+    .mockResolvedValueOnce(page('f', 'introduction', 1))
+    .mockResolvedValueOnce(page('p', 'translation', 1))
+    .mockResolvedValueOnce(page('a', 'abbreviations', 0))
+    .mockResolvedValueOnce(page('n', 'endnotes', 1));
+
 describe('StackWorkProvider', () => {
-  beforeEach(() => clientGraphql.getPassageMetaPage.mockReset());
+  beforeEach(() => {
+    clientGraphql.getPassageMetaPage.mockReset();
+    bibliographyWork.loadBibliographyWork.mockReset().mockResolvedValue(null);
+    bibliographyWork.unsavedBibliographyChanges.mockReset().mockReturnValue(0);
+    bibliographyWork.saveBibliographyWork.mockReset();
+    mockEditorState.registerSaveHandler.mockReset();
+  });
 
   it('holds back until the sections are seeded', () => {
     clientGraphql.getPassageMetaPage.mockReturnValue(
@@ -247,6 +325,122 @@ describe('StackWorkProvider', () => {
       const { undo } = await seeded();
       pressUndo(true);
       expect(undo).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the bibliography', () => {
+    /** The stack once seeded, and the save it registered. */
+    const seeded = async () => {
+      seedSections();
+      const found: { stack?: StackWork } = {};
+      const Grab = () => {
+        const stack = useStackWork();
+        useEffect(() => {
+          if (stack) found.stack = stack;
+        }, [stack]);
+        return null;
+      };
+      render(
+        <StackWorkProvider workUuid="w1">
+          <Grab />
+        </StackWorkProvider>,
+      );
+      await waitFor(() => expect(found.stack).toBeDefined());
+      const calls = mockEditorState.registerSaveHandler.mock.calls;
+      const handler = calls[calls.length - 1][0] as SaveHandler;
+      return { stack: found.stack as StackWork, handler };
+    };
+
+    it('draws its rows in a view of their own work', async () => {
+      const read = bibliography();
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(read);
+
+      const { stack } = await seeded();
+
+      const view = stack.controllerFor('bibliography');
+      expect(view?.getOrder()).toEqual(['h1', 'e1']);
+      expect(view?.work).toBe(read.work);
+      expect(view?.getRows()).toBe('bibliography');
+      expect(stack.work.spine.uuids()).not.toContain('e1');
+    });
+
+    it('has no view when its rows could not be read', async () => {
+      const { stack } = await seeded();
+
+      expect(stack.bibliography).toBeNull();
+      expect(stack.controllerFor('bibliography')).toBeNull();
+    });
+
+    it('saves with the passages, from the one save', async () => {
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(bibliography());
+      const { handler } = await seeded();
+      expect(handler.isDirty()).toBe(false);
+      expect(await handler.save()).toEqual({ outcome: 'none' });
+
+      bibliographyWork.unsavedBibliographyChanges.mockReturnValue(2);
+      bibliographyWork.saveBibliographyWork.mockResolvedValue(true);
+      expect(handler.isDirty()).toBe(true);
+      expect(handler.unsavedChanges()).toBe(2);
+      expect(await handler.save()).toEqual({ outcome: 'saved' });
+
+      bibliographyWork.saveBibliographyWork.mockResolvedValue(false);
+      expect(await handler.save()).toEqual({ outcome: 'failed' });
+      expect(bibliographyWork.saveBibliographyWork).toHaveBeenCalledTimes(2);
+    });
+
+    // An unknown save can end in a reload, which would discard them.
+    it('counts unsaved rows against a passage save of unknown outcome', async () => {
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(bibliography());
+      const { handler } = await seeded();
+      const unconfirmed = {
+        sent: ['p1'],
+        inserted: [],
+        deleted: [],
+        newerChanges: () => 1,
+        restore: async () => undefined,
+      };
+      stackSave.hasUnsavedStackChanges.mockReturnValueOnce(true);
+      stackSave.saveStackWork.mockResolvedValueOnce({
+        outcome: 'unknown',
+        unconfirmed,
+      });
+      bibliographyWork.unsavedBibliographyChanges.mockReturnValue(1);
+      bibliographyWork.saveBibliographyWork.mockResolvedValue(false);
+
+      const report = await handler.save();
+
+      expect(report.outcome).toBe('unknown');
+      expect(report.unconfirmed?.sent).toEqual(['p1']);
+      expect(report.unconfirmed?.newerChanges()).toBe(2);
+    });
+
+    it('undoes from the page in the work last worked in', async () => {
+      const read = bibliography();
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(read);
+      const { stack } = await seeded();
+      const rowUndo = jest.spyOn(read.work, 'undo');
+      const passageUndo = jest.spyOn(stack.work, 'undo');
+      const row = document.createElement('div');
+      row.setAttribute('data-stack-passage', 'e1');
+      document.body.append(row);
+      const pressUndo = () =>
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            key: 'z',
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+
+      pressUndo();
+      expect(passageUndo).toHaveBeenCalledTimes(1);
+
+      row.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      pressUndo();
+      expect(rowUndo).toHaveBeenCalledTimes(1);
+      expect(passageUndo).toHaveBeenCalledTimes(1);
+      row.remove();
     });
   });
 });

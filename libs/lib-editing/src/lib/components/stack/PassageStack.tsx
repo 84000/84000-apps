@@ -9,10 +9,11 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { rowKindOf } from '@eightyfourthousand/lib-doc-model';
 import { cn } from '@eightyfourthousand/lib-utils';
 
 import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
-import { TranslationBubbleMenu } from '../editor/menus';
+import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
 import { PassageStackController } from './PassageStackController';
 import { StackPassageEditor } from './StackPassageEditor';
 import {
@@ -138,6 +139,8 @@ export const PassageStack = ({
     focusedEditor && parentRef.current?.contains(focusedEditor.view.dom)
       ? focusedEditor
       : null;
+  const focusedMeta = controller.getMeta(controller.getFocusedUuid() ?? '');
+  const focusedKind = focusedMeta ? rowKindOf(focusedMeta.type) : null;
 
   // Room above the first row for the placeholders, inside the list's own
   // coordinates: a prepend that ends the earlier passages removes it in the
@@ -299,15 +302,25 @@ export const PassageStack = ({
         Keyed so they rebind rather than hold a stale editor — and prefixed, or
         the two keyed siblings would share a key.
       */}
-      <TranslationBubbleMenu
-        key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
-        editor={menuEditor}
-      />
-      <StackPassageMenu
-        controller={controller}
-        target={menuTarget}
-        onClose={closeMenu}
-      />
+      {controller.getRows() === 'bibliography' ? (
+        // A heading is plain text: there is nothing to format.
+        <BibliographyBubbleMenu
+          key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
+          editor={focusedKind === 'entry' ? menuEditor : null}
+        />
+      ) : (
+        <TranslationBubbleMenu
+          key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
+          editor={menuEditor}
+        />
+      )}
+      {controller.restructures() && (
+        <StackPassageMenu
+          controller={controller}
+          target={menuTarget}
+          onClose={closeMenu}
+        />
+      )}
       {menuEditor && (
         <MentionAdvancedOverlay
           key={`mention-${controller.getFocusedUuid() ?? 'none'}`}
