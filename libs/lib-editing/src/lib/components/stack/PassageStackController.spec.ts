@@ -10,6 +10,7 @@ import {
   source,
 } from './stack-controller.fixture';
 import { buildBibliographySchemaExtensions } from './bibliography-extensions';
+import { loadedBibliography } from './bibliography-work.fixture';
 import { createStackWorkDocument } from './stack-work';
 
 // Building the stack schema instantiates every editor extension, and Mention's
@@ -498,17 +499,6 @@ describe('PassageStackController bibliography rows', () => {
     return { work, controller };
   };
 
-  it('neither merges, deletes nor replaces rows', async () => {
-    const { controller } = await bibliography();
-
-    expect(controller.restructures()).toBe(false);
-    expect(controller.mergeWithPrevious('e2')).toBe(false);
-    expect(controller.removePassage('e1')).toBe(false);
-    controller.setPassageSelection('e1', 'e2');
-    expect(controller.deletePassageSelection()).toBe(false);
-    expect(controller.getOrder()).toEqual(['h1', 'h2', 'e1', 'e2']);
-  });
-
   it('mounts editors over the bibliography schema', async () => {
     const { controller } = await bibliography();
     const names = controller
@@ -517,7 +507,6 @@ describe('PassageStackController bibliography rows', () => {
 
     expect(names).toContain('boundaryKeymap');
     expect(names).toContain('collaboration');
-    expect(names).not.toContain('slashCommand');
     expect(names).not.toContain('endNoteLink');
   });
 
@@ -556,5 +545,145 @@ describe('PassageStackController bibliography rows', () => {
     const meta = controller.getMeta('p0');
     expect(meta && controller.rowStyle(meta)).toEqual({});
     expect(controller.restructures()).toBe(true);
+  });
+});
+
+// The outline the readers number, edited row by row.
+describe('PassageStackController bibliography outline', () => {
+  /** Reads h1 e1 h2 e2 h3 e3, with h3 under h2. */
+  const outlined = async ({ readOnly = false } = {}) => {
+    const { work } = (await loadedBibliography()).bibliography;
+    const controller = new PassageStackController({
+      work,
+      tab: 'bibliography',
+      rows: 'bibliography',
+      readOnly,
+    });
+    const labels = () =>
+      controller
+        .getOrder()
+        .map((uuid) => `${uuid} ${controller.getMeta(uuid)?.label}`);
+    return { work, controller, labels };
+  };
+
+  it('merges an entry only into the entry before it', async () => {
+    const { controller } = await outlined();
+
+    expect(controller.restructures()).toBe(false);
+    expect(controller.editsOutline()).toBe(true);
+    expect(controller.mergeWithPrevious('e1')).toBe(false);
+    expect(controller.mergeWithPrevious('h2')).toBe(false);
+
+    expect(controller.newBibliographyEntry('e1')).toBe(true);
+    const made = controller.getFocusedUuid() as string;
+    expect(controller.mergeWithPrevious(made)).toBe(true);
+    expect(controller.getOrder()).toEqual(['h1', 'e1', 'h2', 'e2', 'h3', 'e3']);
+  });
+
+  it('deletes an entry, and a heading once nothing is under it', async () => {
+    const { controller, labels } = await outlined();
+
+    expect(controller.canRemove('h3')).toBe(false);
+    expect(controller.removePassage('h3')).toBe(false);
+    expect(controller.removePassage('e3')).toBe(true);
+    expect(controller.removePassage('h3')).toBe(true);
+    expect(controller.getFocusedUuid()).toBe('e2');
+    expect(labels()).toEqual(['h1 b.1', 'e1 b.1.1', 'h2 b.2', 'e2 b.2.1']);
+  });
+
+  it('never deletes a run of rows at once', async () => {
+    const { controller } = await outlined();
+    controller.setPassageSelection('e2', 'e3');
+    expect(controller.deletePassageSelection()).toBe(false);
+  });
+
+  it('starts a heading’s first entry on Enter, and focuses it', async () => {
+    const { controller, labels } = await outlined();
+
+    expect(controller.splitAtSelection('h2')).toBe(true);
+    const made = controller.getFocusedUuid() as string;
+    expect(labels().slice(2, 5)).toEqual([
+      'h2 b.2',
+      `${made} b.2.1`,
+      'e2 b.2.2',
+    ]);
+  });
+
+  it('starts headings beside a row or nested in its heading', async () => {
+    const { controller, labels } = await outlined();
+
+    expect(controller.newBibliographyHeading('e1')).toBe(true);
+    const sibling = controller.getFocusedUuid() as string;
+    expect(controller.newBibliographyHeading('h3', true)).toBe(true);
+    const nested = controller.getFocusedUuid() as string;
+
+    expect(labels()).toEqual([
+      'h1 b.1',
+      'e1 b.1.1',
+      `${sibling} b.2`,
+      'h2 b.3',
+      'e2 b.3.1',
+      'h3 b.3.1',
+      'e3 b.3.1.1',
+      `${nested} b.3.1.1`,
+    ]);
+  });
+
+  it('indents, outdents and moves headings, one undo step each', async () => {
+    const { work, controller, labels } = await outlined();
+
+    expect(controller.canIndentBibliographyHeading('h2')).toBe(true);
+    expect(controller.indentBibliographyHeading('h2')).toBe(true);
+    expect(controller.getMeta('h3')?.label).toBe('b.1.1.1');
+
+    expect(controller.canOutdentBibliographyHeading('h3')).toBe(true);
+    expect(controller.outdentBibliographyHeading('h3')).toBe(true);
+    expect(controller.getMeta('h3')?.label).toBe('b.1.2');
+
+    work.undo();
+    work.undo();
+    expect(labels()).toEqual([
+      'h1 b.1',
+      'e1 b.1.1',
+      'h2 b.2',
+      'e2 b.2.1',
+      'h3 b.2.1',
+      'e3 b.2.1.1',
+    ]);
+  });
+
+  it('moves a row under a heading and focuses it', async () => {
+    const { controller } = await outlined();
+
+    expect(
+      controller.bibliographyMoveTargets('h2').map((meta) => meta.uuid),
+    ).toEqual(['h1']);
+    expect(controller.moveBibliographyRow('e3', 'h1')).toBe(true);
+    expect(controller.getMeta('e3')?.label).toBe('b.1.2');
+    expect(controller.getFocusedUuid()).toBe('e3');
+  });
+
+  it('offers entries the slash menu that starts rows', async () => {
+    const { controller } = await outlined();
+    const names = (uuid: string) =>
+      controller.buildEditorExtensions(uuid).map((extension) => extension.name);
+
+    expect(names('e1')).toContain('slashCommand');
+    expect(names('h1')).not.toContain('slashCommand');
+  });
+
+  it('changes no structure when read-only', async () => {
+    const { controller } = await outlined({ readOnly: true });
+
+    expect(controller.editsOutline()).toBe(false);
+    expect(controller.newBibliographyEntry('e1')).toBe(false);
+    expect(controller.newBibliographyHeading('e1')).toBe(false);
+    expect(controller.indentBibliographyHeading('h2')).toBe(false);
+    expect(controller.removePassage('e1')).toBe(false);
+    expect(controller.bibliographyMoveTargets('e1')).toEqual([]);
+    expect(controller.splitAtSelection('h2')).toBe(false);
+    expect(
+      controller.buildEditorExtensions('e1').map((extension) => extension.name),
+    ).not.toContain('slashCommand');
   });
 });

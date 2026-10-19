@@ -62,6 +62,12 @@ export type StackKeyboardDelegate = {
   redo: () => boolean;
 };
 
+/** What a bibliography row's editor starts rows through. */
+export type BibliographyOutlineDelegate = {
+  newBibliographyEntry: (uuid: string) => boolean;
+  newBibliographyHeading: (uuid: string, nested?: boolean) => boolean;
+};
+
 /** Split a row into the spine's half and the view's half. */
 export const stackSeedFromPassage = (passage: Passage): StackPassageSeed => {
   const block = blockFromPassage(passage);
