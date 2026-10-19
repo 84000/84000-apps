@@ -31,13 +31,18 @@ export type DeleteTextEdit = {
   text: string;
 };
 
-/** Add an annotation. `end` defaults to `start`, giving a zero-length marker. */
+/**
+ * Add an annotation. `end` defaults to `start`, giving a zero-length marker.
+ * When `text` is given, it is exactly what the range covers in the stored
+ * content: an edit whose text is not there is refused.
+ */
 export type AddAnnotationEdit = {
   op: 'add-annotation';
   passageUuid: string;
   kind: string;
   start: number;
   end?: number;
+  text?: string;
   data?: Record<string, unknown>;
 };
 
@@ -166,6 +171,10 @@ const duplicateOf = (
       normalizedContent(other, length) === normalizedContent(row, length),
   );
 
+/** Whether `text` is exactly what `start`–`end` covers, the range lying inside the content. */
+const textAt = (content: string, start: number, end: number, text: string) =>
+  start <= end && end <= content.length && content.slice(start, end) === text;
+
 const isPassageEditFor = (edit: PassageEdit, uuid: string) =>
   edit.op !== 'insert-passage' && edit.passageUuid === uuid;
 
@@ -237,6 +246,23 @@ export const applyEditsToPassages = ({
       const found = passage.content.slice(misread.start, misread.end);
       return fail(
         `Passage ${uuid}: expected ${JSON.stringify(misread.text)} at ${misread.start}–${misread.end} but found ${JSON.stringify(found)}. If this edit was already applied, re-read the passage.`,
+      );
+    }
+    const misplaced = forPassage.find(
+      (edit): edit is AddAnnotationEdit =>
+        edit.op === 'add-annotation' &&
+        edit.text !== undefined &&
+        !textAt(passage.content, edit.start, edit.end ?? edit.start, edit.text),
+    );
+    if (misplaced) {
+      const end = misplaced.end ?? misplaced.start;
+      const length = passage.content.length;
+      const found =
+        end > length
+          ? `the range runs past the passage, ${length} characters`
+          : `found ${JSON.stringify(passage.content.slice(misplaced.start, end))}`;
+      return fail(
+        `Passage ${uuid}: expected ${JSON.stringify(misplaced.text)} at ${misplaced.start}–${end} but ${found}. If the passage has changed since it was read, re-read it.`,
       );
     }
 
