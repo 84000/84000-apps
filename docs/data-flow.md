@@ -174,8 +174,11 @@ The ingest runs `fetch_and_insert_json_from_storage`, then
 
 The `indexing` edge function (`infra/supabase/functions/indexing`) also
 writes `works`, `titles` and `passages` with the service role, from the legacy
-ingest. It first deletes any existing `works` row with the same `xmlId`, which
-cascades to that work's titles and passages, and then writes it again. It is still deployed because an external app may rely on it.
+ingest. It first deletes any existing `works` row with the same `xmlId`,
+which cascades to that work's titles and passages, and then tries to write the
+work again. Against the current schema that write fails (`works` has no
+`migrationJson` column), so the work stays deleted. It is still deployed
+because an external app may rely on it.
 
 Four more baseline writers have no known caller, but production cannot show
 that they are unused yet:
@@ -188,6 +191,7 @@ To find out, production has run with `track_functions = 'all'` since
 2026-10-19. It is set per role, with `ALTER ROLE <r> SET track_functions =
 'all'`, on `postgres`, `authenticator`, `anon`, `authenticated` and
 `service_role`, and only new connections pick it up. Data API calls are
-counted through `authenticator`, the role PostgREST logs in as. After 2026-11-19, check
-`pg_stat_user_functions` for these four, and drop any with no calls. To turn
-the setting off again, run `ALTER ROLE <r> RESET track_functions` on each role.
+counted through `authenticator`, the role PostgREST logs in as. After
+2026-11-19, check `pg_stat_user_functions` for these four, and drop any with
+no calls. To turn the setting off again, run
+`ALTER ROLE <r> RESET track_functions` on each role.
