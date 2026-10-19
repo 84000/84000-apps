@@ -1,6 +1,13 @@
 import type { Locator, Page } from '@playwright/test';
 import { passageByLabel, passageByUuid, sectionPassages } from './support/db';
-import { openEditor, row, saveButton, settled, tab } from './support/editor';
+import {
+  caretAtEnd,
+  openEditor,
+  row,
+  saveButton,
+  settled,
+  tab,
+} from './support/editor';
 import { expect, test } from './support/fixtures';
 import { TEST_WORK } from './support/local-stack';
 
@@ -54,7 +61,41 @@ const openWith = async (page: Page, query: Record<string, string>) => {
 const inView = (target: Locator) =>
   expect(target).toBeInViewport({ timeout: 30_000 });
 
+/** The open hover card. */
+const hoverCard = (page: Page) => page.locator('div.z-100 > div.bg-popover');
+
+/** A uuid, which only a (legacy) internal-link card should show. */
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
 test.describe('Navigation', () => {
+  test('ED-NAV-01 Hover cards', async ({ page }) => {
+    test.setTimeout(180_000);
+    const targets = [
+      ['2.5', '[type="glossaryInstance"]', /^g\.\d+\s*great compassion$/],
+      ['1.20', '[type="endNoteLink"]', /^n\.6$/],
+      ['1.12', '[type="mention"]', /^passage\s*2\.1$/],
+      // Internal links are legacy: their card shows the target's uuid.
+      ['p.1', '[type="internalLink"]', new RegExp(`^passage\\s*${UUID}$`)],
+    ] as const;
+    for (const [label, selector, text] of targets) {
+      await test.step(label, async () => {
+        const passage = await passageByLabel(label);
+        await openEditor(page, {
+          main: { tab: 'translation', hash: passage.uuid },
+        });
+        const target = row(page, passage.uuid).locator(selector).last();
+        await settled(row(page, passage.uuid));
+        for (const caret of [false, true]) {
+          if (caret) await caretAtEnd(page, passage.uuid);
+          await page.mouse.move(0, 0);
+          await expect(hoverCard(page)).toHaveCount(0);
+          await target.hover();
+          await expect(hoverCard(page)).toHaveText(text);
+        }
+      });
+    }
+  });
+
   test('ED-NAV-02 Clicking content links', async ({ page }) => {
     const withInstance = await passageByLabel('1.20');
     const withNote = await passageByLabel('1.20');

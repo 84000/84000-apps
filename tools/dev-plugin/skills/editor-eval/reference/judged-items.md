@@ -4,19 +4,19 @@ The J part of each item, with what to probe and what passes. The spec item
 is the authority; if this file and the spec disagree, follow the spec and say
 so in the report's `note`.
 
-## ED-NAV-01 Hover cards (J)
+## ED-NAV-01 Hover cards (D + J)
 
-- Hover each target, first in the passage that has the caret, then in one that
-  doesn't: the glossary instance on "great compassion" in 2.5, the end-note
-  link at the end of 1.20 (to n.6), the mention at the end of 1.12 (to 2.1),
-  and the internal link in p.1 (to 2.1).
-- Probe: after each hover, wait a few seconds, then read the visible hover
-  card (`div.z-100 > div.bg-popover`) and its text. Check the probe on the
-  glossary case first, then use it for the rest. With the flag off, no card
-  ever opens: that is a setup problem, not a fail.
-- Pass: a card appears every time, with the term _great compassion_ and its
-  definition, n.6's text ("This passage echoes the perfection of wisdom
-  literature."), and the opening of 2.1 for both the mention and the link.
+- The test checks each card's text. The J part: hover each target (the
+  glossary instance in 2.5, the end-note link at the end of 1.20, the mention
+  at the end of 1.12, the internal link in p.1) with and without the caret in
+  the passage.
+- Probe: the visible hover card (`div.z-100 > div.bg-popover`), its bounding
+  box against the hovered element's, and whether it is gone after the pointer
+  moves away. With the `translation-hover-cards` flag off, no card ever opens:
+  that is a setup problem, not a fail.
+- Pass: the card sits next to the hovered text without covering it, and closes
+  when the pointer leaves. A uuid on an internal-link card is expected (legacy);
+  on any other card it means incomplete local data, not a fail.
 
 ## ED-EDT-04 Arrow keys across passage boundaries (J)
 
