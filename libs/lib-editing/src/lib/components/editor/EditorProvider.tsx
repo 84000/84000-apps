@@ -79,8 +79,13 @@ const EditorSession = ({
   const editsRef = useRef(0);
   const isSavingRef = useRef(false);
   const isNavigatingRef = useRef(false);
+  // Navigations under way: those writing every editor, and those writing one.
+  const navigationsRef = useRef({
+    all: 0,
+    scoped: new Map<XmlFragment, number>(),
+  });
   const isNormalizingForSaveRef = useRef(false);
-  const clearedFragmentRef = useRef<XmlFragment | null>(null);
+  const clearedFragmentsRef = useRef(new Set<XmlFragment>());
   const fragmentBaselinesRef = useRef<Map<XmlFragment, FragmentBaseline>>(
     new Map(),
   );
@@ -150,7 +155,16 @@ const EditorSession = ({
       if (!txn.local) {
         return;
       }
-      if (isNavigatingRef.current || isNormalizingForSaveRef.current) {
+      if (isNormalizingForSaveRef.current) {
+        return;
+      }
+      const fragment = findObservedFragment(evts);
+      // A navigation writes its own editor; the others stay editable.
+      const navigations = navigationsRef.current;
+      if (
+        navigations.all > 0 ||
+        (fragment && navigations.scoped.has(fragment))
+      ) {
         return;
       }
       editsRef.current += 1;
@@ -168,7 +182,6 @@ const EditorSession = ({
       // XmlElements with attributes set pre-integration, so txn.changed
       // never includes them.
       if (evts.length > 0) {
-        const fragment = findObservedFragment(evts);
         if (fragment) {
           const baseline = fragmentBaselinesRef.current.get(fragment);
           if (shouldRescanFragment(evts, fragment, baseline)) {
@@ -269,7 +282,18 @@ const EditorSession = ({
       resetLastObservedUuids = false,
       fragment?: XmlFragment,
     ) => {
-      isNavigatingRef.current = navigating;
+      // Counted, so one navigation ending leaves any other still under way.
+      const navigations = navigationsRef.current;
+      if (fragment) {
+        const count =
+          (navigations.scoped.get(fragment) ?? 0) + (navigating ? 1 : -1);
+        if (count > 0) navigations.scoped.set(fragment, count);
+        else navigations.scoped.delete(fragment);
+      } else {
+        navigations.all = Math.max(0, navigations.all + (navigating ? 1 : -1));
+      }
+      isNavigatingRef.current =
+        navigations.all > 0 || navigations.scoped.size > 0;
       if (navigating && resetLastObservedUuids) {
         // Clear last observed UUIDs so the first observer call after navigation
         // repopulates without diffing against the stale pre-navigation set.
@@ -280,19 +304,24 @@ const EditorSession = ({
         // can still detect deletions.
         if (fragment) {
           fragmentBaselinesRef.current.delete(fragment);
-          clearedFragmentRef.current = fragment;
+          clearedFragmentsRef.current.add(fragment);
         } else {
           fragmentBaselinesRef.current.clear();
         }
       }
 
-      // When navigation ends, repopulate the baseline for any fragment that
+      // When navigation ends, repopulate the baseline for each fragment that
       // was cleared so deletion detection works immediately — without waiting
       // for an intervening Y.js event to re-establish the baseline.
-      if (!navigating && clearedFragmentRef.current) {
-        const f = clearedFragmentRef.current;
-        clearedFragmentRef.current = null;
-        fragmentBaselinesRef.current.set(f, captureFragmentBaseline(f));
+      if (!navigating && navigations.all === 0) {
+        clearedFragmentsRef.current.forEach((cleared) => {
+          if (navigations.scoped.has(cleared)) return;
+          clearedFragmentsRef.current.delete(cleared);
+          fragmentBaselinesRef.current.set(
+            cleared,
+            captureFragmentBaseline(cleared),
+          );
+        });
       }
     },
     [],

@@ -110,6 +110,7 @@ export class WorkHistory {
       this.store.ensure(change.uuid).replaceContent(change.after);
     });
     this.applyLabels(command.labels, 'to');
+    if (command.kind === 'label') this.markRelabeledDirty(command);
     this.links.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
@@ -135,6 +136,7 @@ export class WorkHistory {
       this.store.ensure(change.uuid).replaceContent(change.before);
     });
     this.applyLabels(command.labels, 'from');
+    if (command.kind === 'label') this.markRelabeledDirty(command);
     this.links.numberLinks(command.content.map(({ uuid }) => uuid));
     this.markRestoredDirty();
   }
@@ -147,6 +149,11 @@ export class WorkHistory {
     this.spine
       .restoredSinceSave()
       .forEach((uuid) => this.store.peek(uuid)?.markDirty());
+  }
+
+  /** A renamed passage is saved with its label. One released is not loaded to mark. */
+  private markRelabeledDirty(command: StructuralCommand) {
+    command.labels.forEach(({ uuid }) => this.store.peek(uuid)?.markDirty());
   }
 
   private applyLabels(changes: LabelChange[], side: 'from' | 'to') {

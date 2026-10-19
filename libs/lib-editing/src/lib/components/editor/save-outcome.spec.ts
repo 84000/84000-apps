@@ -238,6 +238,12 @@ describe('canReload', () => {
       expect(await canReload(graphql, 'w1', [])).toBe(true);
     });
 
+    it('is false when the API finds no work', async () => {
+      dataAccess.getWorkPassageUuids.mockResolvedValue([]);
+      request.mockResolvedValue({ work: null });
+      expect(await canReload(graphql, 'w1', [])).toBe(false);
+    });
+
     it('is false when the database cannot be read', async () => {
       dataAccess.getWorkPassageUuids.mockResolvedValue(null);
       request.mockResolvedValue(page('x'));

@@ -542,6 +542,19 @@ describe('saveStackWork', () => {
     expect(work.store.dirty()).toEqual(['p0']);
   });
 
+  // The label goes with the passage, so a rename sent after it is still owed.
+  it('leaves a passage dirty when it was renamed during the save', async () => {
+    const work = build();
+    edit(work, 'p1', 'sent');
+    dataAccess.savePassagesWithDeletions.mockImplementation(async () => {
+      work.setLabel('p1', '2.5');
+      return { success: true };
+    });
+
+    expect((await saveStackWork(work)).outcome).toBe('saved');
+    expect(work.store.dirty()).toEqual(['p1']);
+  });
+
   describe('removed passages', () => {
     const saved = () => {
       const work = new WorkDocument({ workUuid: 'w1', schema });

@@ -52,7 +52,7 @@ export type SaveHandler = {
   /** How many passages hold changes the last save did not write. */
   unsavedChanges: () => number;
   /** Moves with every local edit, even one that changes no count. */
-  revision?: () => number;
+  revision?: () => string;
   /** Take in passages the server rewrote, such as by a replace. */
   applyReplaced?: (passages: ReplacedPassage[]) => void;
   /** Delete an endnote and its links, if the handler holds the endnotes. */
@@ -101,6 +101,11 @@ export interface EditorContextState {
   registerSaveHandler: (handler: SaveHandler | null) => void;
   startObserving: (builder: string) => void;
   stopObserving: (builder: string) => void;
+  /**
+   * Start or end a navigation, which writes the editors itself, so its writes
+   * are not edits. Given a `fragment`, only that editor's writes; pass the
+   * same `fragment` to start and end it.
+   */
   setNavigating: (
     navigating: boolean,
     resetLastObservedUuids?: boolean,

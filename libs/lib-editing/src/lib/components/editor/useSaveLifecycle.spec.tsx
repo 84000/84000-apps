@@ -5,10 +5,10 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@tiptap/react';
-import { ClientError } from 'graphql-request';
-import { XmlElement } from 'yjs';
+import { ClientError, type GraphQLClient } from 'graphql-request';
+import { XmlElement, type XmlFragment } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
 
 import { EditorContextProvider, useEditorState } from './EditorProvider';
@@ -21,6 +21,8 @@ import { translationSSRExtensions } from './extensions/translationSSRExtensions'
 import TranslationDocument from './extensions/TranslationDocument';
 import TranslationMetadata from './extensions/TranslationMetadata';
 import { PassageNode } from './extensions/Passage/PassageNode';
+import { useLoadingInto } from './PaginationProvider';
+import { useLoadMoreBlocks } from './useLoadMoreBlocks';
 
 // See PassageStackController.spec.ts — the client barrels leak
 // `data-access/ssr`.
@@ -55,6 +57,7 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
     .findWorkPassages,
   hasPermission: jest.fn(async () => true),
   savePassages: jest.fn(),
+  getTranslationBlocks: jest.fn(),
   getBibliographyEntry: jest.fn(),
   getGlossaryInstance: jest.fn(),
   lookup: jest.fn(async () => null),
@@ -88,6 +91,7 @@ const clientGraphql = jest.requireMock(
 ) as {
   RequestNotSentError: new (cause: unknown) => Error;
   savePassages: jest.Mock;
+  getTranslationBlocks: jest.Mock;
 };
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   getPassageSorts: jest.Mock;
@@ -190,6 +194,44 @@ const observeSavedPassage = () => {
   act(() => editorState.startObserving('main'));
   let revision = 0;
   return () => element.setAttribute('revision', String(++revision));
+};
+
+/** Load more into one editor, as its pagination does on reaching the end. */
+const LoadMore = ({
+  editor,
+  fragment,
+}: {
+  editor: Editor;
+  fragment: XmlFragment;
+}) => {
+  const [endCursor, setEndCursor] = useState<string | undefined>('p0');
+  const [endIsLoading, setEndIsLoading] = useState(false);
+  const [startCursor, setStartCursor] = useState<string | undefined>();
+  const [startIsLoading, setStartIsLoading] = useState(false);
+  const handledStart = useRef(0);
+  const handledEnd = useRef(0);
+  const navigating = useRef(false);
+  useLoadMoreBlocks({
+    uuid: 'w1',
+    editor,
+    dataClient: {} as GraphQLClient,
+    startCursor,
+    setStartCursor,
+    endCursor,
+    setEndCursor,
+    startIsLoading,
+    setStartIsLoading,
+    endIsLoading,
+    setEndIsLoading,
+    startLoadRequest: 0,
+    endLoadRequest: 1,
+    handledStartLoadRequestRef: handledStart,
+    handledEndLoadRequestRef: handledEnd,
+    isNavigatingRef: navigating,
+    refreshEditorBaseline: () => undefined,
+    setNavigating: useLoadingInto(fragment),
+  });
+  return null;
 };
 
 const lostAnswer = {
@@ -438,7 +480,7 @@ describe('saving the paginated editors', () => {
     registerStack({
       isDirty: () => true,
       unsavedChanges: () => 1,
-      revision: () => revision,
+      revision: () => String(revision),
     });
     clientGraphql.savePassages.mockResolvedValue(lostAnswer);
     serverHolds('p0');
@@ -478,6 +520,173 @@ describe('saving the paginated editors', () => {
     expect(screen.getByRole('button', { name: 'Reload' })).toBeTruthy();
     expect(mounts).toBe(1);
     act(() => sonner.toast.dismiss());
+  });
+
+  it('drops Reload from a warning that no longer offers it', async () => {
+    mockSonner.real = true;
+    const sonner = jest.requireActual('@eightyfourthousand/design-system');
+    designSystem.toast.mockImplementation(sonner.toast);
+    await mount();
+    clientGraphql.savePassages.mockImplementation(async () => {
+      addPassage('p1');
+      return lostAnswer;
+    });
+    serverHolds('p0');
+    await act(() => editorState.save());
+    await screen.findByText(/discard 1 unsaved change\./);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+
+    await screen.findByText(/now shows what is saved/);
+    expect(mounts).toBe(2);
+    expect(screen.queryByRole('button', { name: 'Reload' })).toBeNull();
+    act(() => sonner.toast.dismiss());
+  });
+
+  it('settles nothing when a save answers after the session is gone', async () => {
+    const view = await mount();
+    let answer: (value: unknown) => void = () => undefined;
+    clientGraphql.savePassages.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    serverHolds('p0');
+    const saving = editorState.save();
+
+    view.unmount();
+    await act(async () => {
+      answer(lostAnswer);
+      await saving;
+    });
+
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(toasted()).toEqual([]);
+  });
+
+  it('keeps a navigation quiet while another editor loads more', async () => {
+    const view = await mount();
+    act(() => editorState.startObserving('endnotes'));
+    const endnotes = editorState.getFragment('endnotes');
+    const main = editorState.getEditor('main');
+    if (!main) throw new Error('no editor');
+    clientGraphql.getTranslationBlocks.mockResolvedValue({
+      blocks: [passage('p9', 'more')],
+      hasMoreAfter: false,
+    });
+    act(() => editorState.setNavigating(true, true, endnotes));
+
+    view.rerender(
+      <EditorContextProvider work={work}>
+        <Capture />
+        <LoadMore editor={main} fragment={editorState.getFragment('main')} />
+      </EditorContextProvider>,
+    );
+    await waitFor(() => expect(main.getText()).toContain('more'));
+    // The navigation writes its editor once loading more is done.
+    act(() => {
+      const element = new XmlElement('passage');
+      endnotes.insert(0, [element]);
+      element.setAttribute('uuid', 'e1');
+    });
+    act(() => editorState.setNavigating(false, false, endnotes));
+
+    expect(editorState.dirtyStore.getSnapshot()).toBe(false);
+  });
+
+  it('tracks an edit in another editor while one loads more', async () => {
+    const view = await mount();
+    act(() => editorState.startObserving('endnotes'));
+    const endnotes = editorState.getFragment('endnotes');
+    const main = editorState.getEditor('main');
+    if (!main) throw new Error('no editor');
+    // Enough to load in chunks, which yield to the browser between them.
+    clientGraphql.getTranslationBlocks.mockResolvedValue({
+      blocks: Array.from({ length: 30 }, (_, i) => passage(`m${i}`, `m${i}`)),
+      hasMoreAfter: false,
+    });
+    let yielded: (() => void) | undefined;
+    const frame = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementationOnce((resume) => {
+        yielded = () => resume(0);
+        return 0;
+      });
+
+    view.rerender(
+      <EditorContextProvider work={work}>
+        <Capture />
+        <LoadMore editor={main} fragment={editorState.getFragment('main')} />
+      </EditorContextProvider>,
+    );
+    await waitFor(() => expect(yielded).toBeDefined());
+    act(() => {
+      const element = new XmlElement('passage');
+      endnotes.insert(0, [element]);
+      element.setAttribute('uuid', 'e1');
+    });
+    frame.mockRestore();
+    await act(async () => yielded?.());
+    await waitFor(() => expect(main.getText()).toContain('m29'));
+
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+  });
+
+  it('tracks an edit while another editor navigates', async () => {
+    await mount();
+    const editP0 = observeSavedPassage();
+    clientGraphql.savePassages.mockResolvedValue({
+      success: true,
+      savedCount: 1,
+      passages: [],
+      renumberedPassages: [],
+    });
+
+    act(() =>
+      editorState.setNavigating(true, true, editorState.getFragment('main')),
+    );
+    editP0();
+    act(() =>
+      editorState.setNavigating(false, false, editorState.getFragment('main')),
+    );
+    await act(() => editorState.save());
+    // The navigating editor's own writes are not edits.
+    expect(clientGraphql.savePassages).not.toHaveBeenCalled();
+
+    act(() =>
+      editorState.setNavigating(
+        true,
+        true,
+        editorState.getFragment('endnotes'),
+      ),
+    );
+    editP0();
+    act(() =>
+      editorState.setNavigating(
+        false,
+        false,
+        editorState.getFragment('endnotes'),
+      ),
+    );
+    await act(() => editorState.save());
+    expect(sentUuids(0)).toEqual(['p0']);
+  });
+
+  it('sees a deletion in each editor that navigated at once', async () => {
+    await mount();
+    observeSavedPassage();
+    act(() => editorState.startObserving('endnotes'));
+    const main = editorState.getFragment('main');
+    const endnotes = editorState.getFragment('endnotes');
+
+    act(() => editorState.setNavigating(true, true, main));
+    act(() => editorState.setNavigating(true, true, endnotes));
+    act(() => editorState.setNavigating(false, false, main));
+    act(() => editorState.setNavigating(false, false, endnotes));
+    act(() => main.delete(0, 1));
+
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
   });
 
   it('settles nothing once the session is gone', async () => {
