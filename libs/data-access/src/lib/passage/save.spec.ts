@@ -6,6 +6,7 @@ import {
 } from './replace-persistence';
 import { replacePassageText } from '../replace';
 import {
+  findMovedImportPassages,
   normalizeImportOperations,
   upsertPassagesFromPreview,
 } from '../import-preview';
@@ -2581,8 +2582,8 @@ describe('re-running a chunked import', () => {
     ],
   }));
 
-  const runImport = (client: unknown) => {
-    const normalized = normalizeImportOperations('work-1', operations);
+  const runImport = (client: unknown, ops = operations) => {
+    const normalized = normalizeImportOperations('work-1', ops);
     return upsertPassagesFromPreview({
       client: client as never,
       preview: {
@@ -2596,6 +2597,24 @@ describe('re-running a chunked import', () => {
         },
       },
     });
+  };
+
+  /** A client whose `n`-th commits fail as a statement timeout would. */
+  const failingCommit = (state: FakeState, ...n: number[]) => {
+    let calls = 0;
+    const client = createFakeClient(state) as unknown as {
+      rpc: (name: string, args: unknown) => Promise<unknown>;
+    };
+    const rpc = client.rpc;
+    client.rpc = (name, args) => {
+      if (name === 'apply_passage_save' && n.includes(++calls)) {
+        return Promise.resolve({
+          error: { message: 'canceling statement', code: '57014' },
+        });
+      }
+      return rpc(name, args);
+    };
+    return client;
   };
 
   const rows = (state: FakeState) => ({
@@ -2637,6 +2656,119 @@ describe('re-running a chunked import', () => {
         (row) => uuidVersion(row.uuid) === 5,
       ),
     ).toBe(true);
+  });
+
+  it('does not call its own placement of a tied passage a move', async () => {
+    // The last passage shares the sort before it, so the retry places it by
+    // shifting the passage the first run already saved.
+    const tied = operations.map((operation, at) =>
+      at === 500
+        ? { ...operation, passage: { ...operation.passage, sort: 499 } }
+        : operation,
+    );
+    const state = createState({});
+    const client = failingCommit(state, 2);
+
+    await expect(runImport(client, tied)).rejects.toThrow('Partly saved');
+    await runImport(client, tied);
+    expect(state.passages).toHaveLength(501);
+
+    const passages = normalizeImportOperations('work-1', tied).flatMap(
+      (operation) =>
+        operation.kind === 'upsert_passage'
+          ? [{ ...operation.passage, xmlId: operation.passage.xmlId ?? '' }]
+          : [],
+    );
+    await expect(
+      findMovedImportPassages({ client: client as never, passages }),
+    ).resolves.toEqual([]);
+  });
+
+  it('is refused after a retry fails between its shift and its commit (known limit)', async () => {
+    // Pinned so a change is deliberate: the docs list this as a known limit.
+    // The failed retry's shift stays, so the tied passage the first run saved
+    // ends above the one after it, which reads as a move. It fails safe.
+    const tied = [
+      ...operations,
+      {
+        ...operations[0],
+        passage: { ...operations[0].passage, content: 'Passage 501.' },
+        annotations: [{ kind: 'paragraph', start: 0, end: 11 }],
+      },
+    ].map((operation, at) =>
+      at === 500
+        ? { ...operation, passage: { ...operation.passage, sort: 499 } }
+        : at === 501
+          ? { ...operation, passage: { ...operation.passage, sort: 500 } }
+          : operation,
+    );
+    const state = createState({});
+    const client = failingCommit(state, 2, 3);
+
+    await expect(runImport(client, tied)).rejects.toThrow('Partly saved');
+    // The retry's first chunk is unchanged, so only its shift and failed
+    // commit happen.
+    await expect(runImport(client, tied)).rejects.toThrow('Nothing was saved');
+    await runImport(client, tied);
+    expect(state.passages).toHaveLength(502);
+
+    const passages = normalizeImportOperations('work-1', tied).flatMap(
+      (operation) =>
+        operation.kind === 'upsert_passage'
+          ? [{ ...operation.passage, xmlId: operation.passage.xmlId ?? '' }]
+          : [],
+    );
+    await expect(
+      findMovedImportPassages({ client: client as never, passages }),
+    ).resolves.not.toEqual([]);
+  });
+
+  it('leaves an annotation an edit moved to another passage there', async () => {
+    const one = operations.slice(0, 1);
+    const state = createState({});
+    await runImport(createFakeClient(state), one);
+    const [moved] = state.annotations;
+    state.passages.push({ ...passageRow, uuid: 'other', work_uuid: 'work-1' });
+    state.annotations = state.annotations.map((row) =>
+      row.uuid === moved.uuid ? { ...row, passage_uuid: 'other' } : row,
+    );
+
+    await runImport(createFakeClient(state), one);
+
+    expect(
+      state.annotations.find((row) => row.uuid === moved.uuid),
+    ).toMatchObject({ passage_uuid: 'other' });
+    expect(
+      state.annotations.filter((row) => row.passage_uuid !== 'other'),
+    ).toHaveLength(5);
+  });
+
+  it('replaces a moved annotation when the passage it was moved to is re-imported', async () => {
+    const two = operations.slice(0, 2);
+    const clean = createState({});
+    await runImport(createFakeClient(clean), two);
+    const state = createState({});
+    await runImport(createFakeClient(state), two);
+    const [first, second] = [...state.passages].sort((a, b) => a.sort - b.sort);
+    const moved = state.annotations.find(
+      (row) => row.passage_uuid === first.uuid,
+    ) as AnnotationDTO;
+    state.annotations = state.annotations.map((row) =>
+      row.uuid === moved.uuid ? { ...row, passage_uuid: second.uuid } : row,
+    );
+
+    await runImport(createFakeClient(state), two);
+
+    // Each passage ends with the import's annotations; the moved row, not
+    // among the second passage's, is replaced by a copy on the first.
+    const onPassage = (rows: AnnotationDTO[], uuid: string) =>
+      rows.filter((row) => row.passage_uuid === uuid).length;
+    expect(onPassage(state.annotations, first.uuid)).toBe(5);
+    expect(onPassage(state.annotations, second.uuid)).toBe(5);
+    expect(state.annotations.some((row) => row.uuid === moved.uuid)).toBe(
+      false,
+    );
+    expect(state.annotations).toHaveLength(clean.annotations.length);
   });
 });
 

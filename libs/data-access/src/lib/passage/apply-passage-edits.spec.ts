@@ -49,6 +49,13 @@ class FakeQuery {
 
   in(column: string, values: unknown[]) {
     this.filters.push((row) => values.includes(row[column]));
+    if (
+      this.table === 'passage_annotations' &&
+      column === 'uuid' &&
+      this.tables.failUuidReads !== undefined
+    ) {
+      this.fail = true;
+    }
     return this;
   }
 
@@ -384,6 +391,44 @@ describe('applyPassageEdits', () => {
     expect(log.deletes).toEqual([]);
   });
 
+  it('writes nothing when the added uuids cannot be looked up', async () => {
+    const tables: Tables = { ...tablesFor(published()), failUuidReads: [] };
+    const { client } = fakeClient(tables);
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 13,
+          data: { endNote: 'n2' },
+        },
+        // Already there: skipped with a warning the failure must keep.
+        {
+          op: 'add-annotation',
+          passageUuid: 'p1',
+          kind: 'end-note-link',
+          start: 32,
+          data: { endNote: 'n1' },
+        },
+      ],
+    });
+
+    expect(result.warnings.map((w) => w.message)).toEqual([
+      expect.stringContaining('Skipped add-annotation'),
+    ]);
+    expect(result).toMatchObject({ success: false, applied: false });
+    expect(storedUuids(tables)).toEqual([
+      'a-comment',
+      'a-glossary',
+      'a-marker',
+      'a-note',
+    ]);
+  });
+
   it('saves an added annotation under a fresh uuid', async () => {
     const tables = tablesFor(published());
     const { client } = fakeClient(tables);
@@ -412,6 +457,42 @@ describe('applyPassageEdits', () => {
     expect(storedUuids(tables)).toEqual(
       expect.arrayContaining(['a-comment', 'a-glossary', 'a-marker', 'a-note']),
     );
+  });
+
+  it('does not take back an added annotation an edit moved to another passage', async () => {
+    const tables = tablesFor(published());
+    tables.passages.push({ ...passageRow, uuid: 'p2', sort: 549 });
+    const { client } = fakeClient(tables);
+    const add = {
+      op: 'add-annotation' as const,
+      passageUuid: 'p1',
+      kind: 'end-note-link',
+      start: 13,
+      data: { endNote: 'n2' },
+    };
+    const addedOn = (passageUuid: string) =>
+      tables.passage_annotations.filter(
+        (row) =>
+          row.passage_uuid === passageUuid &&
+          row.type === 'end-note-link' &&
+          row.start === 13,
+      );
+
+    await applyPassageEdits({ client, workUuid: WORK, edits: [add] });
+    const [first] = addedOn('p1');
+    // Split off onto p2, keeping its uuid.
+    first.passage_uuid = 'p2';
+
+    const result = await applyPassageEdits({
+      client,
+      workUuid: WORK,
+      edits: [add],
+    });
+
+    expect(result.success).toBe(true);
+    expect(addedOn('p2').map((row) => row.uuid)).toEqual([first.uuid]);
+    expect(addedOn('p1')).toHaveLength(1);
+    expect(addedOn('p1')[0].uuid).not.toBe(first.uuid);
   });
 
   it('replaces an annotation removed and re-added at the same range', async () => {

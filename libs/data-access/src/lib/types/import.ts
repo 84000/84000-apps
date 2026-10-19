@@ -1,6 +1,7 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
   derivedAnnotationUuid,
-  occurrenceCounter,
+  derivedUuidAllocator,
 } from '../passage/derived-uuids';
 import { stableStringify } from '../passage/save/diff';
 import {
@@ -183,19 +184,32 @@ export const normalizePassageType = (type: string): BodyItemType => {
 /**
  * An import passage as a domain passage. An annotation sent without a uuid
  * gets one derived from its passage, type, range and content, so a re-run
- * of the same import matches the rows an earlier run saved.
+ * of the same import matches the rows an earlier run saved. A derived uuid
+ * is never one in `sent`, the annotation uuids the whole import sends
+ * (this passage's by default). One in `elsewhere`, stored on another
+ * passage, is replaced by a random one: saving it would take that row from
+ * the passage it is on.
  */
 export const previewDtoToPassage = (
   operation: PassageInsertOperation,
+  {
+    elsewhere = new Set(),
+    sent,
+  }: { elsewhere?: ReadonlySet<string>; sent?: ReadonlySet<string> } = {},
 ): Passage => {
   const passageUuid = operation.passage.uuid;
-  const occurrence = occurrenceCounter();
+  const allocate = derivedUuidAllocator(
+    sent ??
+      operation.annotations.flatMap((input) =>
+        input.uuid ? [input.uuid] : [],
+      ),
+  );
   const withDerivedUuid = (annotation: Annotation): Annotation => {
     const dto = annotationToDTO(annotation);
     if (!dto) {
       return annotation;
     }
-    const nth = occurrence(
+    const uuid = allocate(
       stableStringify([
         dto.type,
         dto.start,
@@ -203,11 +217,9 @@ export const previewDtoToPassage = (
         dto.content ?? [],
         dto.toh ?? null,
       ]),
+      (nth) => derivedAnnotationUuid(passageUuid, dto, nth),
     );
-    return {
-      ...annotation,
-      uuid: derivedAnnotationUuid(passageUuid, dto, nth),
-    };
+    return { ...annotation, uuid: elsewhere.has(uuid) ? uuidv4() : uuid };
   };
 
   return {

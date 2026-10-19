@@ -6,17 +6,17 @@ annotations you did not mention, the content, the sort of a passage you insert.
 
 `apply-entity-import` is the other tool, and it is for filling a work that has
 no passages yet. It takes a passage's whole end state, which on a populated work
-means reconstructing everything you are not changing — see *Why not the import
-tool* below.
+means reconstructing everything you are not changing — see _Why not the import
+tool_ below.
 
 ## The edits
 
-| op | what it does |
-|---|---|
-| `delete-text` | cuts `start`–`end` out of the passage content; `text` must be exactly what that range holds |
-| `add-annotation` | adds an annotation of `kind` at `start` (and `end`, if it spans) |
-| `remove-annotation` | removes the annotation with that uuid |
-| `insert-passage` | inserts a passage before an existing one |
+| op                  | what it does                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `delete-text`       | cuts `start`–`end` out of the passage content; `text` must be exactly what that range holds |
+| `add-annotation`    | adds an annotation of `kind` at `start` (and `end`, if it spans)                            |
+| `remove-annotation` | removes the annotation with that uuid                                                       |
+| `insert-passage`    | inserts a passage before an existing one                                                    |
 
 `delete-text` refuses the whole call when its `text` is not what the stored
 passage holds at `start`–`end`. Copy it from the passage you read.
@@ -50,8 +50,9 @@ An `add-annotation` identical to one already there — same kind, same position,
 same data — is skipped with a warning, so sending the same add twice is safe. The
 annotation's uuid is derived from its passage, kind, position and data, so the
 same add sent twice, even by two calls at once, is written as one row — unless
-an identical annotation from an earlier add has since been moved, when the new
-one gets a uuid of its own.
+an identical annotation from an earlier add has since been moved, on this
+passage or to another, when the new one gets a uuid of its own and the moved
+one stays where it is.
 
 Read `offsets.md` for why this is the part worth getting right.
 
@@ -118,13 +119,22 @@ them a second time, and ends with the rows one clean run would have written.
 
 If the operations changed between runs, the re-run still matches by position. A
 shorter run leaves the passages past its end in place, and the result warns
-about them by xmlId. If an edit has moved a passage the earlier run saved, the
-re-run is refused and nothing is written.
+about them by xmlId. If an edit has moved a passage the earlier run saved out
+of order among this import's passages, the re-run is refused and nothing is
+written. A passage pushed down by an insert, or by the earlier run's own
+placement, still matches. One case is refused though nothing moved: when
+passages share a sort and a retry fails after making room for one but before
+committing, the room it made stays and later runs read it as a move. Send the
+stored uuids to re-run past it. The check compares the import's passages with
+each other, so it misses a move when only one of them is stored, or a move past
+passages this import does not send: to rewrite one passage, send its stored
+uuid. An annotation an edit moved to another passage is never taken from it:
+the re-run saves its own copy under a new uuid and warns.
 
-Send uuids for every passage or for none: a uuid you send can clash with one
-the tool derives. A work imported before uuids were derived cannot be matched,
-so a re-run over it is refused rather than adding its passages a second time;
-send the stored uuids to rewrite those passages.
+A uuid the tool derives never repeats one you sent, so passages and annotations
+with and without uuids can be mixed. A work imported before uuids were derived
+cannot be matched, so a re-run over it is refused rather than adding its
+passages a second time; send the stored uuids to rewrite those passages.
 
 ## A sort is a reading position, not a passage
 

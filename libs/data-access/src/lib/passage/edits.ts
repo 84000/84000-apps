@@ -196,12 +196,18 @@ export const applyEditsToPassages = ({
   passages,
   annotations,
   edits,
+  elsewhere = new Set(),
 }: {
   workUuid: string;
   passages: Passage[];
   /** Every stored annotation row of each passage, by passage uuid. */
   annotations: Map<string, AnnotationDTO[]>;
   edits: PassageEdit[];
+  /**
+   * Annotation uuids stored on a passage other than the one an add derives
+   * them for. An add never takes one: the save would move that row.
+   */
+  elsewhere?: ReadonlySet<string>;
 }): {
   passages: Passage[];
   rawAnnotations: Record<string, AnnotationDTO[]>;
@@ -348,15 +354,17 @@ export const applyEditsToPassages = ({
       }
       // Derived from the content as `duplicateOf` compares it, so a resend
       // matches the row the first send wrote. A stored row can hold that uuid
-      // at another range when an editor has moved it since; the new row then
-      // keeps a random one.
+      // at another range, or on another passage, when an editor has moved it
+      // since; the new row then keeps a random one.
       const derived = derivedAnnotationUuid(
         uuid,
         annotationToDTO(annotationFromDTO(row, content.length)) ?? row,
       );
+      const taken =
+        elsewhere.has(derived) || rows.some((other) => other.uuid === derived);
       rows.push({
         ...row,
-        uuid: rows.some((other) => other.uuid === derived) ? row.uuid : derived,
+        uuid: taken ? row.uuid : derived,
         passage_uuid: uuid,
       });
     }
@@ -464,22 +472,60 @@ export const applyPassageEdits = async ({
     return failed(`Failed to read annotations: ${annotationsRead.error}`);
   }
 
-  const {
-    passages,
-    rawAnnotations,
-    warnings,
-    anchors,
-    error: editError,
-  } = applyEditsToPassages({
-    workUuid,
-    passages: rows.map((row) => passageFromDTO(row, [])),
-    annotations: annotationsRead.data,
-    edits,
-  });
-
-  if (editError) {
-    return failed(editError, warnings);
+  const apply = (elsewhere?: ReadonlySet<string>) =>
+    applyEditsToPassages({
+      workUuid,
+      passages: rows.map((row) => passageFromDTO(row, [])),
+      annotations: annotationsRead.data,
+      edits,
+      elsewhere,
+    });
+  let applied = apply();
+  if (applied.error) {
+    return failed(applied.error, applied.warnings);
   }
+
+  // A derived uuid can already be stored on another passage, when an edit
+  // moved the row an earlier add wrote. Saving it would move that row back,
+  // so the adds are worked out again without those uuids.
+  const added = new Map(
+    Object.entries(applied.rawAnnotations).flatMap(([passageUuid, list]) => {
+      const stored = new Set(
+        (annotationsRead.data.get(passageUuid) ?? []).map((row) => row.uuid),
+      );
+      return list
+        .filter((row) => !stored.has(row.uuid))
+        .map((row) => [row.uuid, passageUuid] as const);
+    }),
+  );
+  const elsewhere = new Set<string>();
+  for (const batch of inBatches([...added.keys()])) {
+    const { data, error } = await client
+      .from('passage_annotations')
+      .select('uuid, passage_uuid')
+      .in('uuid', batch);
+    if (error) {
+      return failed(
+        `Failed to read annotations: ${error.message}`,
+        applied.warnings,
+      );
+    }
+    for (const row of (data ?? []) as {
+      uuid: string;
+      passage_uuid: string;
+    }[]) {
+      if (row.passage_uuid !== added.get(row.uuid)) {
+        elsewhere.add(row.uuid);
+      }
+    }
+  }
+  if (elsewhere.size > 0) {
+    applied = apply(elsewhere);
+    if (applied.error) {
+      return failed(applied.error, applied.warnings);
+    }
+  }
+  const { passages, rawAnnotations, warnings, anchors } = applied;
 
   if (dryRun) {
     return { success: true, dryRun, applied: false, passages, warnings };
