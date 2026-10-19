@@ -93,6 +93,11 @@ Call `apply-entity-import` with `{ "workUuid": "…", "operations": [ … ] }`. 
 writes everything to the empty work through the shared passage save path and
 returns counts plus any warnings (e.g. a missing folio-annotation row).
 
+A large import is saved in chunks. If the call fails partway, or its result is
+lost, call it again with the same operations: passages and annotations sent
+without uuids get derived ones, so the re-run updates what the first run saved
+rather than duplicating it.
+
 ### 6. Verify
 
 Confirm with `get-toc` and `get-translation-passages` that the structure and

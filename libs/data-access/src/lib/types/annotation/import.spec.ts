@@ -1,3 +1,4 @@
+import { validate as isUuid } from 'uuid';
 import { annotationFromImport } from './import';
 import type {
   EndNoteLinkAnnotation,
@@ -13,15 +14,15 @@ import type {
 const base = { start: 0, end: 4, passageUuid: 'p1', passageText: 'Homage!' };
 
 describe('annotationFromImport', () => {
-  it('maps a simple kind to its domain type with a derived uuid', () => {
+  it('maps a simple kind to its domain type with a valid uuid', () => {
     const annotation = annotationFromImport('blockquote', base);
     expect(annotation).toMatchObject({
       type: 'blockquote',
       start: 0,
       end: 4,
       passageUuid: 'p1',
-      uuid: 'p1:blockquote:0:4',
     });
+    expect(isUuid(annotation?.uuid)).toBe(true);
   });
 
   it('maps the kebab "line-group" kind to the lineGroup type', () => {

@@ -44,18 +44,25 @@ and insert when there is none. There is no separate insert operation.
 - **UUIDs, `sort`, and per-row `workUuid`.** The tool fills these in. `sort` is
   assigned in the order operations arrive.
 - **`xmlId`.** A deprecated artifact of the original migration. Leave it unset:
-  the tool fills in `docx-<sort>`, nothing reads it, and publishing strips it.
-  New works should not have one.
+  the tool fills in `docx-<sort>`, and publishing strips it. The tool also keys
+  a passage's derived uuid on it, which is what lets a failed import be re-run
+  (see `passage-editing/saving.md`).
 
 **Editing a passage that already exists inverts part of this.** `uuid` and
-`sort` must be supplied with the values the row already has, or the operation
-overwrites them: an omitted `uuid` inserts a second passage beside the one you
-meant to change, and an omitted `sort` is reassigned from a counter, reordering
-the work.
+`sort` must be supplied with the values the row already has. An omitted `uuid`
+is derived from the work and `docx-<sort>`: it matches a passage only if an
+earlier import of this work saved it at that sort, and otherwise inserts a
+second passage beside the one you meant to change. The whole call is refused,
+and nothing is written, if that passage has since moved or if the work holds
+passages an older import saved under uuids it cannot match (see
+`passage-editing/saving.md`). An omitted `sort` is
+taken from a counter in operation order, and the derived uuid keys on that
+sort. Send uuids for every passage or for none: one you send can clash with one
+the tool derives.
 
 `workUuid` and `xmlId` stay optional either way. `workUuid` falls back to the
 one you passed the tool, which is the same work you are editing; `xmlId` is
-filled with `docx-<sort>`, which nothing reads.
+filled with `docx-<sort>`.
 
 The same inversion applies to the annotations. An annotation operation may carry
 a `uuid`; send the stored one for every annotation that already exists, or the
