@@ -100,7 +100,7 @@ export const StackWorkProvider = ({
     registerSaveHandler({
       save: async () => {
         if (!hasUnsavedStackChanges(work)) return { outcome: 'none' };
-        return { outcome: (await saveStackWork(work)) ? 'saved' : 'failed' };
+        return saveStackWork(work);
       },
       isDirty: () => hasUnsavedStackChanges(work),
       unsavedChanges: () => unsavedStackChanges(work),
