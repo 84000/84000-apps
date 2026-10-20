@@ -22,3 +22,4 @@ export * from './lib/publish';
 export * from './lib/rebuild';
 export * from './lib/verify';
 export * from './lib/snapshot';
+export * from './lib/etexts';
