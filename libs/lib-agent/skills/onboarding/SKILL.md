@@ -1,6 +1,6 @@
 ---
 name: onboarding
-description: Welcome a user to the 84000 plugins and recommend the ones that suit their 84000 role. Run it at the start of a session, before your first reply, when the user has not completed 84000 onboarding (this skill checks that with get-my-profile and stops quietly if they have), when a studio tool result says the user has not completed onboarding, or when the user asks to set up, onboard or find the right 84000 plugins.
+description: Welcome a user to the 84000 plugins and recommend the ones that suit their 84000 role. Use it when the 84000 studio says the user has not completed 84000 onboarding, in its server instructions or a tool result, or when the user asks to set up, onboard or find the right 84000 plugins. Offer it once a session; if the user declines or defers, do not raise it again.
 ---
 
 # 84000 onboarding
@@ -15,11 +15,12 @@ Call the studio MCP tool `get-my-profile`. The first call may ask the user to
 sign in to the 84000 studio; let them.
 
 - If `tags` contains `harness.onboarding.completed` and the user did not ask
-  for onboarding, stop here without mentioning it and carry on with their
-  request.
-- If the studio tools are unavailable or the call fails, say in one sentence
-  that the 84000 studio connector is not connected, and carry on with their
-  request. Do not retry in a loop.
+  for onboarding, stop here and say nothing about onboarding: no "already
+  complete", no status line. Carry on with their request.
+- If the studio tools are unavailable or the call fails, and the user asked for
+  onboarding, say in one sentence that the 84000 studio connector is not
+  connected. Otherwise say nothing about it. Either way, carry on with their
+  request, and do not retry in a loop.
 
 ## 2. Welcome and recommend
 
@@ -57,9 +58,9 @@ Ask whether they are done, unless step 2 already finished it. Then:
 
 - **Finished**, or they say they **don't want onboarding**: call
   `add-profile-tag` with `harness.onboarding.completed`, so it does not come
-  up again on any device.
-- **"Not now"** or anything that defers it: set no tag. Onboarding will be
-  offered again next session.
+  up again on any device or surface.
+- **"Not now"** or anything that defers it: set no tag, and do not raise it
+  again this session. The studio offers it again in a later session.
 
 Then answer the user's original request, if they had one, in the same
 reply where you can.
