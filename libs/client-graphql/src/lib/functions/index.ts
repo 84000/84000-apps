@@ -100,6 +100,10 @@ export {
   type PassageComments,
 } from './get-passage-comments';
 export {
+  BIBLIOGRAPHY_COMMENTS_TYPE,
+  getBibliographyComments,
+} from './get-bibliography-comments';
+export {
   ensureWorkSnapshot,
   type EnsureWorkSnapshotResult,
   type SnapshotDownload,

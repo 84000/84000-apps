@@ -53,6 +53,7 @@ import {
   commentResolvedByResolver,
   taggedCommentsQueryResolver,
   taggedCommentWorksQueryResolver,
+  workBibliographyCommentsResolver,
 } from './schema/comment/comment.resolver';
 import { commentMutations } from './schema/comment/comment.mutation';
 
@@ -93,6 +94,7 @@ export const resolvers = {
     glossaryTerms: workGlossaryTermsResolver,
     searchGlossaryTerms: searchWorkGlossaryTermsResolver,
     bibliography: workBibliographyResolver,
+    bibliographyComments: workBibliographyCommentsResolver,
     folios: workFoliosResolver,
     foliosAround: workFoliosAroundResolver,
   },

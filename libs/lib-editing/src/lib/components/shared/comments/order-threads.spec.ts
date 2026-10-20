@@ -86,6 +86,38 @@ describe('orderThreads', () => {
     ]);
   });
 
+  it('lists bibliography entries after the passages, in the order given', () => {
+    const { anchored } = orderThreads(
+      [
+        passage({
+          uuid: 'p1',
+          sort: 900,
+          anchored: [{ thread: thread('body'), anchors: [anchor('p1', 0)] }],
+        }),
+      ],
+      [
+        passage({
+          uuid: 'b2',
+          sort: 5,
+          type: 'bibliography',
+          anchored: [{ thread: thread('entry-2'), anchors: [anchor('b2', 0)] }],
+        }),
+        passage({
+          uuid: 'b1',
+          sort: 1,
+          type: 'bibliography',
+          anchored: [{ thread: thread('entry-1'), anchors: [anchor('b1', 0)] }],
+        }),
+      ],
+    );
+
+    expect(anchored.map(({ thread }) => thread.uuid)).toEqual([
+      'body',
+      'entry-2',
+      'entry-1',
+    ]);
+  });
+
   it('lists a thread once however many anchors carry it, collecting them all', () => {
     // A selection crossing a passage boundary is one row per passage, so the
     // same thread comes back under both.

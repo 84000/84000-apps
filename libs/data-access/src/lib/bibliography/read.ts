@@ -11,7 +11,12 @@ import {
   rpcFor,
   type ContentSource,
 } from '../content-source';
+import { stripCommentMarks } from '../html/comment-marks';
 
+/**
+ * A work's bibliography as readers see it, grouped by heading. Comment marks
+ * are taken out: comments are draft-only, and these rows leave the editor.
+ */
 export const getBibliographyEntries = async ({
   client,
   uuid,
@@ -36,9 +41,16 @@ export const getBibliographyEntries = async ({
   }
 
   const dto = data as BibliographyEntriesDTO;
-  return bibliographyEntriesFromDTO(dto);
+  return bibliographyEntriesFromDTO(dto).map((section) => ({
+    ...section,
+    entries: section.entries.map((entry) => ({
+      ...entry,
+      html: entry.html && stripCommentMarks(entry.html),
+    })),
+  }));
 };
 
+/** One bibliography entry as readers see it, comment marks taken out. */
 export const getBibliographyEntry = async ({
   client,
   uuid,
@@ -64,9 +76,9 @@ export const getBibliographyEntry = async ({
     return null;
   }
 
-  const dto = data as BibliographyEntryItemDTO;
+  const entry = bibliographyEntryItemFromDTO(data as BibliographyEntryItemDTO);
 
-  return bibliographyEntryItemFromDTO(dto);
+  return { ...entry, html: entry.html && stripCommentMarks(entry.html) };
 };
 
 /**

@@ -53,14 +53,19 @@ export const mergeContiguous = (anchors: CommentAnchor[]): CommentAnchor[] => {
  *
  * Position is the first anchor: earliest passage, then earliest offset. Not
  * `createdAt` — the panel reads as a margin, so it follows the text.
+ * Bibliography entries come after every passage, in the order given.
  */
 export const orderThreads = (
   passages: PassageComments[],
+  bibliography: PassageComments[] = [],
 ): { anchored: PanelThread[]; unanchored: PanelThread[] } => {
   const anchored = new Map<string, PanelThread>();
   const unanchored = new Map<string, PanelThread>();
 
-  const inWorkOrder = [...passages].sort((a, b) => a.sort - b.sort);
+  const inWorkOrder = [
+    ...[...passages].sort((a, b) => a.sort - b.sort),
+    ...bibliography,
+  ];
 
   for (const passage of inWorkOrder) {
     const byPosition = [...passage.anchored].sort(

@@ -1,9 +1,9 @@
 """
-A comment thread on a passage, or one reply within it.
+A comment thread on a passage or bibliography entry, or one reply within it.
 
-Carries no text range. The range a comment refers to lives on the
-`comment` annotation anchoring it, which is what places a thread on a passage:
-a thread's `entityUuid` records where it was born, not where it currently sits.
+Carries no text range. The range a comment refers to lives on the mark
+anchoring it, which is what places a thread: a thread's `entityUuid` records
+where it was born, not where it currently sits.
 """
 type Comment {
   """
@@ -187,18 +187,82 @@ extend type Passage {
 }
 
 """
+Where one comment mark sits in a bibliography entry.
+"""
+type BibliographyCommentAnchor {
+  """
+  The mark's own identity
+  """
+  uuid: ID!
+
+  """
+  The thread root the mark points at
+  """
+  comment: ID!
+
+  """
+  Text offsets into the entry, markup excluded
+  """
+  start: Int!
+  end: Int!
+}
+
+"""
+One bibliography entry's comment threads.
+
+A bibliography stores its anchors inline, as marks in the entry's HTML, rather
+than as annotations; otherwise this reads like `Passage.comments` and
+`Passage.unanchoredComments`.
+"""
+type BibliographyEntryComments {
+  """
+  The bibliography row
+  """
+  uuid: ID!
+
+  """
+  The entry's reference label, such as `1.2`
+  """
+  label: String
+
+  """
+  The entry's comment marks, in document order
+  """
+  anchors: [BibliographyCommentAnchor!]!
+
+  """
+  Threads the entry's marks point at. Roots only, replies nested.
+  """
+  comments: [Comment!]!
+
+  """
+  Threads written on this entry that no mark in the work's bibliography points
+  at any more. Roots only, replies nested.
+  """
+  unanchoredComments: [Comment!]!
+}
+
+extend type Work {
+  """
+  The bibliography entries that carry comment threads, in bibliography order.
+  Empty for a `published` content source.
+  """
+  bibliographyComments: [BibliographyEntryComments!]!
+}
+
+"""
 What a client sends to start a thread. A reply carries no scope of its own —
 `replyToComment` inherits its parent's, so a reply cannot be filed under an
 entity its thread does not belong to.
 """
 input CreateCommentInput {
   """
-  The entity the thread hangs off — a passage uuid today
+  The entity the thread hangs off: a passage or bibliography row uuid
   """
   entityUuid: ID!
 
   """
-  What kind of entity that is. Only `passage` is accepted.
+  What kind of entity that is: `passage` or `bibliography`.
   """
   entityType: String!
 
