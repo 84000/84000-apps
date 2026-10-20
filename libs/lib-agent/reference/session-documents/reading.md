@@ -6,7 +6,7 @@ run weeks ago, in another session, on another machine, or for someone else, so a
 local file is not evidence of anything and its absence is not evidence either.
 
 This file is the mechanism. Which document a stage depends on, and what to do
-when it is not there, is in that stage's own spec.
+when it is not there, is in that stage's skill and policies.
 
 ## The call
 
@@ -33,8 +33,8 @@ stage's files, when, and with what model.
 The two come back as different errors, and the difference decides what to do:
 
 - **No document matched** — nothing has been saved under that name. The stage
-  you depend on has not run, or did not save. Follow your own spec: usually stop
-  and say which stage is missing.
+  you depend on has not run, or did not save. Follow your own skill and
+  policies: usually stop and say which stage is missing.
 - **Could not read** — the document may well exist and storage failed to hand it
   over. Stop and report that. It is a transient condition, not a missing record.
 
