@@ -2,6 +2,24 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import type { McpHandlerOptions } from './types';
 
+/** The request's JSON body, or undefined when it is not JSON. */
+async function readBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether a JSON-RPC body, one message or a batch, opens a session. */
+function isInitialize(body: unknown): boolean {
+  const messages = Array.isArray(body) ? body : [body];
+  return messages.some(
+    (message) =>
+      (message as { method?: unknown } | null)?.method === 'initialize',
+  );
+}
+
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
@@ -13,7 +31,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
     resources = [],
   } = options;
 
-  function buildServer(): McpServer {
+  function buildServer(instructions: string | undefined): McpServer {
     const server = new McpServer(
       { name, version, description },
       { instructions },
@@ -91,10 +109,24 @@ export function createMcpHandler(options: McpHandlerOptions) {
         enableJsonResponse: true,
       });
 
-      const server = buildServer();
+      // Only the initialize result carries instructions, so a function is
+      // called for that request alone. Reading the body to tell is a parse the
+      // transport then reuses; a body that is not JSON is left for the
+      // transport to reject.
+      let parsedBody: unknown;
+      let resolved =
+        typeof instructions === 'string' ? instructions : undefined;
+      if (typeof instructions === 'function') {
+        parsedBody = await readBody(req);
+        resolved = isInitialize(parsedBody) ? await instructions() : undefined;
+      }
+      const server = buildServer(resolved);
       await server.connect(transport);
 
-      return await transport.handleRequest(req);
+      return await transport.handleRequest(
+        req,
+        parsedBody === undefined ? undefined : { parsedBody },
+      );
     } catch (error) {
       console.error('MCP request failed:', error);
       return new Response(

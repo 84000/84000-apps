@@ -249,3 +249,51 @@ describe('createMcpHandler prompt + tool surface', () => {
     ]);
   });
 });
+
+describe('createMcpHandler instructions', () => {
+  const instructionsOf = (response: Record<string, unknown>) =>
+    (response.result as { instructions?: string }).instructions;
+
+  it('returns static instructions on initialize', async () => {
+    const handler = createMcpHandler({
+      tools: [askTool],
+      instructions: 'static',
+    });
+    expect(instructionsOf(await rpc(handler, init))).toBe('static');
+  });
+
+  it('calls an instructions function for initialize alone', async () => {
+    const instructions = jest.fn(async () => 'per caller');
+    const handler = createMcpHandler({ tools: [askTool], instructions });
+    expect(instructionsOf(await rpc(handler, init))).toBe('per caller');
+    await rpc(handler, { jsonrpc: '2.0', id: 1, method: 'tools/list' });
+    expect(instructions).toHaveBeenCalledTimes(1);
+  });
+
+  it('finds initialize in a one-message batch', async () => {
+    const handler = createMcpHandler({
+      tools: [askTool],
+      instructions: async () => 'per caller',
+    });
+    // The transport answers a one-message batch with a single response.
+    expect(instructionsOf(await rpc(handler, [init]))).toBe('per caller');
+  });
+
+  it('leaves a body that is not JSON for the transport to reject', async () => {
+    const instructions = jest.fn(async () => 'per caller');
+    const handler = createMcpHandler({ tools: [askTool], instructions });
+    const res = await handler.POST(
+      new Request('http://localhost/mcp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+        },
+        body: '{not json',
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe(-32700);
+    expect(instructions).not.toHaveBeenCalled();
+  });
+});

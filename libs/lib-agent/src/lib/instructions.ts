@@ -49,11 +49,19 @@ export const publicInstructions = joinInstructions([
 ]);
 
 /**
- * Instructions for the authenticated studio MCP, which adds the policy,
- * session and feedback tools. Sections run most important first.
+ * The studio's offer of onboarding, for a caller whose profile lacks the
+ * completed tag. Once a session, so a declined offer is not repeated.
  */
-export const studioInstructions = joinInstructions([
-  'Authenticated access to the 84000 studio, the internal platform for translating the Tibetan Buddhist canon (Kangyur and Tengyur).',
+export const onboardingInstructions = `## Onboarding
+
+This user hasn't completed 84000 onboarding. Offer the \`onboarding\` skill once this session; don't repeat it if they decline or defer.`;
+
+const studioIntro =
+  'Authenticated access to the 84000 studio, the internal platform for translating the Tibetan Buddhist canon (Kangyur and Tengyur).';
+
+// The onboarding variant is the longer one to keep under
+// MCP_INSTRUCTIONS_MAX_LENGTH: a section added here must fit in both.
+const studioSections = [
   `## Policies are live
 
 84000's translation policies (house style, text-critical practice, etc.) change without a release. At the start of each session, read the ones your task depends on with \`read-policies\`, not from memory or a plugin's copy. \`write-policy\` edits one; \`open-policy-editor\` opens an editor for the user.`,
@@ -67,7 +75,26 @@ A session's working files (Stage 0 records, Stage 1 drafts, collation and alignm
   `## Draft versus published
 
 Glossary term and search reads take \`source\`. The default, published, binds a translator; \`"draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,
-  `## Feedback
+];
 
-\`submit-feedback\`, \`submit-bug-report\` and \`submit-feature-request\` reach the 84000 team. Get the user's go-ahead on the exact draft first.`,
-]);
+const feedbackSection = `## Feedback
+
+\`submit-feedback\`, \`submit-bug-report\` and \`submit-feature-request\` reach the 84000 team. Get the user's go-ahead on the exact draft first.`;
+
+/**
+ * Instructions for the authenticated studio MCP, which adds the policy,
+ * session and feedback tools. Sections run most important first, so a caller
+ * who still needs onboarding reads the offer right after the intro. The offer
+ * takes the feedback section's place, which keeps the text under the length
+ * clients keep; the feedback tools' own descriptions carry its rule.
+ */
+export const studioInstructionsFor = (needsOnboarding: boolean): string =>
+  joinInstructions([
+    studioIntro,
+    needsOnboarding ? onboardingInstructions : '',
+    ...studioSections,
+    needsOnboarding ? '' : feedbackSection,
+  ]);
+
+/** The studio's instructions for a caller who needs no onboarding. */
+export const studioInstructions = studioInstructionsFor(false);

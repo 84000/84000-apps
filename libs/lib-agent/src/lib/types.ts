@@ -55,7 +55,12 @@ export interface McpHandlerOptions {
   name?: string;
   version?: string;
   description?: string;
-  instructions?: string;
+  /**
+   * The server's instructions, or a function producing them. Only the
+   * `initialize` result carries instructions, so a function is called for that
+   * request alone.
+   */
+  instructions?: string | (() => Promise<string>);
   tools: McpToolDefinition[];
   prompts?: McpPromptDefinition[];
   resources?: McpResourceDefinition[];
