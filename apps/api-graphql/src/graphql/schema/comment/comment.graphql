@@ -244,11 +244,10 @@ type BibliographyEntryComments {
 
 extend type Work {
   """
-  Comment threads on these bibliography entries, in the order asked. Entries
-  of other works are left out. At most 100 entries; empty for a `published`
-  content source.
+  The bibliography entries that carry comment threads, in bibliography order.
+  Empty for a `published` content source.
   """
-  bibliographyComments(uuids: [ID!]!): [BibliographyEntryComments!]!
+  bibliographyComments: [BibliographyEntryComments!]!
 }
 
 """

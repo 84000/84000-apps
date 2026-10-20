@@ -11,9 +11,6 @@ import {
 import type { GraphQLContext } from '../../context';
 import type { WorkParent } from '../work/work.types';
 
-/** The most bibliography entries one `bibliographyComments` read covers. */
-const MAX_BIBLIOGRAPHY_ENTRIES = 100;
-
 /** One entry's threads, as `BibliographyEntryComments` resolves them. */
 interface BibliographyEntryComments {
   uuid: string;
@@ -129,39 +126,38 @@ export const passageUnanchoredCommentsResolver = async (
  */
 export const workBibliographyCommentsResolver = async (
   parent: WorkParent,
-  args: { uuids: string[] },
+  _args: unknown,
   ctx: GraphQLContext,
 ): Promise<BibliographyEntryComments[]> => {
-  if (ctx.source === 'published' || args.uuids.length === 0) {
+  if (ctx.source === 'published') {
     return [];
   }
 
   const placed = await getBibliographyCommentAnchors({
     client: ctx.supabase,
     workUuid: parent.uuid,
-    rowUuids: args.uuids.slice(0, MAX_BIBLIOGRAPHY_ENTRIES),
   });
   if (!placed || placed.rows.length === 0) {
     return [];
   }
 
-  const anchoredUuids = [
-    ...new Set(
-      placed.rows.flatMap((row) =>
-        (placed.anchorsByRow.get(row) ?? []).map(({ comment }) => comment),
-      ),
-    ),
-  ];
+  const scope = await getCommentsByEntityUuids({
+    client: ctx.supabase,
+    entityUuids: placed.rows,
+    entityType: 'bibliography',
+    source: ctx.source,
+  });
 
-  const [threads, scope, labels] = await Promise.all([
-    ctx.loaders.commentThreadsByAnchorUuid.loadMany(anchoredUuids),
-    getCommentsByEntityUuids({
-      client: ctx.supabase,
-      entityUuids: placed.rows,
-      entityType: 'bibliography',
-      source: ctx.source,
-    }),
-    ctx.loaders.bibliographyLabelsByUuid.loadMany(placed.rows),
+  const entries = placed.rows.filter(
+    (uuid) => placed.anchorsByRow.has(uuid) || !!scope.get(uuid)?.length,
+  );
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const [threads, labels] = await Promise.all([
+    ctx.loaders.commentThreadsByAnchorUuid.loadMany([...placed.markedThreads]),
+    ctx.loaders.bibliographyLabelsByUuid.loadMany(entries),
   ]);
 
   const threadByUuid = new Map<string, Comment>();
@@ -171,24 +167,31 @@ export const workBibliographyCommentsResolver = async (
     }
   });
 
-  return placed.rows.map((uuid, index) => {
+  return entries.flatMap((uuid, index) => {
     const anchors = placed.anchorsByRow.get(uuid) ?? [];
     const label = labels[index];
     const marked = [...new Set(anchors.map(({ comment }) => comment))];
+    // A mark whose thread is gone drops out, as an annotation would.
+    const comments = marked.flatMap((comment) => {
+      const thread = threadByUuid.get(comment);
+      return thread ? [thread] : [];
+    });
+    const unanchoredComments = (scope.get(uuid) ?? []).filter(
+      (thread) => !placed.markedThreads.has(thread.uuid),
+    );
+    if (comments.length === 0 && unanchoredComments.length === 0) {
+      return [];
+    }
 
-    return {
-      uuid,
-      label: label && !(label instanceof Error) ? label.label : null,
-      anchors,
-      // A mark whose thread is gone drops out, as an annotation would.
-      comments: marked.flatMap((comment) => {
-        const thread = threadByUuid.get(comment);
-        return thread ? [thread] : [];
-      }),
-      unanchoredComments: (scope.get(uuid) ?? []).filter(
-        (thread) => !placed.markedThreads.has(thread.uuid),
-      ),
-    };
+    return [
+      {
+        uuid,
+        label: label && !(label instanceof Error) ? label.label : null,
+        anchors,
+        comments,
+        unanchoredComments,
+      },
+    ];
   });
 };
 

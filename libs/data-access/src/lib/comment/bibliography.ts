@@ -7,12 +7,9 @@ import {
 /** Rows per request. PostgREST truncates a read at 1000 without an error. */
 const PAGE_ROWS = 1000;
 
-/** Uuids per `in` filter, inside PostgREST's URL limit. */
-const UUID_BATCH_SIZE = 200;
-
 /** Where a work's bibliography places its comment threads. */
 export interface BibliographyCommentAnchors {
-  /** The requested rows that belong to the work, in request order. */
+  /** Every row of the work's bibliography, in `sort` order. */
   rows: string[];
   /** Each marked row's anchors, in document order. */
   anchorsByRow: Map<string, HtmlCommentAnchor[]>;
@@ -20,67 +17,75 @@ export interface BibliographyCommentAnchors {
   markedThreads: Set<string>;
 }
 
+/** Reads every page of a query built by `page`, or null on the first error. */
+const readAll = async <T>(
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
+  what: string,
+): Promise<T[] | null> => {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE_ROWS) {
+    const { data, error } = await page(from, from + PAGE_ROWS - 1);
+    if (error) {
+      console.error(`Error reading ${what}:`, error);
+      return null;
+    }
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+    if (rows.length < PAGE_ROWS) return all;
+  }
+};
+
 /**
- * The comment marks in a work's draft bibliography, and which of `rowUuids`
- * are its rows.
+ * The rows of a work's draft bibliography and the comment marks they carry.
  *
  * A bibliography stores its anchors inline in `bibl_html` rather than as
- * annotation rows, so this reads the rows that carry one. Work-wide, so a
- * thread whose mark moved to another row is still anchored. Null when the read
+ * annotation rows, so this reads the rows that carry one. Null when the read
  * fails.
  */
 export const getBibliographyCommentAnchors = async ({
   client,
   workUuid,
-  rowUuids,
 }: {
   client: DataClient;
   workUuid: string;
-  rowUuids: readonly string[];
 }): Promise<BibliographyCommentAnchors | null> => {
+  const [rows, marked] = await Promise.all([
+    readAll<{ uuid: string }>(
+      (from, to) =>
+        client
+          .from('bibliographies')
+          .select('uuid')
+          .eq('work_uuid', workUuid)
+          .order('sort')
+          .order('uuid')
+          .range(from, to),
+      'bibliography rows',
+    ),
+    readAll<{ uuid: string; bibl_html: string | null }>(
+      (from, to) =>
+        client
+          .from('bibliographies')
+          .select('uuid, bibl_html')
+          .eq('work_uuid', workUuid)
+          .like('bibl_html', '%type="comment"%')
+          .order('uuid')
+          .range(from, to),
+      'bibliography comment marks',
+    ),
+  ]);
+  if (!rows || !marked) return null;
+
   const anchorsByRow = new Map<string, HtmlCommentAnchor[]>();
   const markedThreads = new Set<string>();
-  const inWork = new Set<string>();
-
-  for (let from = 0; ; from += PAGE_ROWS) {
-    const { data, error } = await client
-      .from('bibliographies')
-      .select('uuid, bibl_html')
-      .eq('work_uuid', workUuid)
-      .like('bibl_html', '%type="comment"%')
-      .order('uuid')
-      .range(from, from + PAGE_ROWS - 1);
-    if (error) {
-      console.error('Error reading bibliography comment marks:', error);
-      return null;
-    }
-
-    const page = (data ?? []) as { uuid: string; bibl_html: string | null }[];
-    for (const row of page) {
-      const anchors = commentAnchorsInHtml(row.bibl_html ?? '');
-      if (anchors.length === 0) continue;
-      anchorsByRow.set(row.uuid, anchors);
-      anchors.forEach(({ comment }) => markedThreads.add(comment));
-    }
-    if (page.length < PAGE_ROWS) break;
+  for (const row of marked) {
+    const anchors = commentAnchorsInHtml(row.bibl_html ?? '');
+    if (anchors.length === 0) continue;
+    anchorsByRow.set(row.uuid, anchors);
+    anchors.forEach(({ comment }) => markedThreads.add(comment));
   }
 
-  for (let i = 0; i < rowUuids.length; i += UUID_BATCH_SIZE) {
-    const { data, error } = await client
-      .from('bibliographies')
-      .select('uuid')
-      .eq('work_uuid', workUuid)
-      .in('uuid', rowUuids.slice(i, i + UUID_BATCH_SIZE) as string[]);
-    if (error) {
-      console.error('Error reading bibliography rows:', error);
-      return null;
-    }
-    (data ?? []).forEach(({ uuid }: { uuid: string }) => inWork.add(uuid));
-  }
-
-  return {
-    rows: [...new Set(rowUuids)].filter((uuid) => inWork.has(uuid)),
-    anchorsByRow,
-    markedThreads,
-  };
+  return { rows: rows.map(({ uuid }) => uuid), anchorsByRow, markedThreads };
 };

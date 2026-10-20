@@ -172,10 +172,10 @@ query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
   }
 }
 
-query GetBibliographyComments($uuid: ID!, $uuids: [ID!]!) {
+query GetBibliographyComments($uuid: ID!) {
   work(uuid: $uuid) {
     uuid
-    bibliographyComments(uuids: $uuids) {
+    bibliographyComments {
       uuid
       label
       anchors {

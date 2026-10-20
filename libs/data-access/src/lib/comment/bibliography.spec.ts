@@ -15,8 +15,6 @@ const fakeClient = (rows: Row[], error?: { message: string }) => {
       range: () => builder,
       eq: (column: keyof Row, value: string) =>
         query([...filters, (row) => row[column] === value]),
-      in: (column: keyof Row, values: string[]) =>
-        query([...filters, (row) => values.includes(row[column])]),
       like: (column: keyof Row, pattern: string) => {
         const needle = pattern.replace(/^%|%$/g, '');
         return query([...filters, (row) => row[column].includes(needle)]);
@@ -57,21 +55,19 @@ describe('getBibliographyCommentAnchors', () => {
     },
   ];
 
-  it("places the work's marks and keeps only its rows", async () => {
+  it("lists the work's rows and places their marks", async () => {
     const result = await getBibliographyCommentAnchors({
       client: fakeClient(rows),
       workUuid: 'w1',
-      rowUuids: ['r2', 'r1', 'x1'],
     });
 
-    expect(result?.rows).toEqual(['r2', 'r1']);
+    expect(result?.rows).toEqual(['r1', 'r2', 'r3']);
     expect(result?.anchorsByRow).toEqual(
       new Map([
         ['r1', [{ uuid: 'a1', comment: 't1', start: 0, end: 1 }]],
         ['r3', [{ uuid: 'a2', comment: 't2', start: 2, end: 3 }]],
       ]),
     );
-    // Work-wide: a row off screen still anchors its thread.
     expect(result?.markedThreads).toEqual(new Set(['t1', 't2']));
   });
 
@@ -81,7 +77,6 @@ describe('getBibliographyCommentAnchors', () => {
     const result = await getBibliographyCommentAnchors({
       client: fakeClient(rows, { message: 'boom' }),
       workUuid: 'w1',
-      rowUuids: ['r1'],
     });
 
     expect(result).toBeNull();

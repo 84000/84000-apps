@@ -9,7 +9,6 @@ const mockGetBibliographyComments = jest.fn<
   Promise<PassageComments[]>,
   unknown[]
 >();
-const mockEntryUuids: string[] = [];
 const mockResolveComment = jest.fn();
 const mockReplyToComment = jest.fn();
 const mockDeleteComment = jest.fn();
@@ -63,9 +62,7 @@ jest.mock('../NavigationProvider', () => ({
 }));
 
 jest.mock('./useVisiblePassageUuids', () => ({
-  BIBLIOGRAPHY_ROWS: 'bibliography-rows',
-  useVisiblePassageUuids: (_enabled: boolean, rows?: string) =>
-    rows === 'bibliography-rows' ? mockEntryUuids : ['p1'],
+  useVisiblePassageUuids: () => ['p1'],
 }));
 
 const thread = (
@@ -121,7 +118,6 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
   mockGetPassageComments.mockResolvedValue([]);
   mockGetBibliographyComments.mockResolvedValue([]);
-  mockEntryUuids.splice(0);
   mockDeleteComment.mockResolvedValue({ success: true, deletedUuids: [] });
   mockRequestEditorFor.mockResolvedValue(null);
   mockSetCommentTags.mockResolvedValue({ success: true });
@@ -340,7 +336,6 @@ describe('CommentsPanel', () => {
   });
 
   it('lists a bibliography entry thread and navigates to the entry', async () => {
-    mockEntryUuids.push('b1');
     mockGetBibliographyComments.mockResolvedValue([
       {
         passageUuid: 'b1',
@@ -361,7 +356,7 @@ describe('CommentsPanel', () => {
     await userEvent.click(await screen.findByText('body of t1'));
 
     expect(mockGetBibliographyComments).toHaveBeenCalledWith(
-      expect.objectContaining({ workUuid: 'w1', entryUuids: ['b1'] }),
+      expect.objectContaining({ workUuid: 'w1' }),
     );
     expect(screen.getByText('Bibliography 1.2')).toBeTruthy();
     expect(mockUpdatePanel).toHaveBeenCalledWith({
@@ -370,11 +365,13 @@ describe('CommentsPanel', () => {
     });
   });
 
-  it('reads no bibliography entries when none are on screen', async () => {
+  it('reads no bibliography threads under a tag filter', async () => {
+    window.history.replaceState(null, '', '/?commentTag=pending');
+
     render(<CommentsPanel workUuid="w1" />);
 
     expect(
-      await screen.findByText('No comments on the text in view.'),
+      await screen.findByText('No comments tagged “pending” in this work.'),
     ).toBeTruthy();
     expect(mockGetBibliographyComments).not.toHaveBeenCalled();
   });

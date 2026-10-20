@@ -1353,9 +1353,8 @@ export type Work = {
   /** Bibliography entries for this work, grouped by section */
   bibliography: Array<BibliographyEntry>;
   /**
-   * Comment threads on these bibliography entries, in the order asked. Entries
-   * of other works are left out. At most 100 entries; empty for a `published`
-   * content source.
+   * The bibliography entries that carry comment threads, in bibliography order.
+   * Empty for a `published` content source.
    */
   bibliographyComments: Array<BibliographyEntryComments>;
   /** Folios for this work, filtered by toh and paginated */
@@ -1421,12 +1420,6 @@ export type Work = {
   toh: Array<Scalars['String']['output']>;
   /** Unique identifier for the work */
   uuid: Scalars['ID']['output'];
-};
-
-
-/** A published translation work from the 84000 canon */
-export type WorkBibliographyCommentsArgs = {
-  uuids: Array<Scalars['ID']['input']>;
 };
 
 
@@ -1827,7 +1820,6 @@ export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typenam
 
 export type GetBibliographyCommentsQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
-  uuids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
 }>;
 
 
@@ -2278,10 +2270,10 @@ ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
 ${UserInfoFieldsFragmentDoc}`;
 export const GetBibliographyCommentsDocument = gql`
-    query GetBibliographyComments($uuid: ID!, $uuids: [ID!]!) {
+    query GetBibliographyComments($uuid: ID!) {
   work(uuid: $uuid) {
     uuid
-    bibliographyComments(uuids: $uuids) {
+    bibliographyComments {
       uuid
       label
       anchors {

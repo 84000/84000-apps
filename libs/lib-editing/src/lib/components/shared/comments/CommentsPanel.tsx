@@ -33,10 +33,7 @@ import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
 import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
-import {
-  BIBLIOGRAPHY_ROWS,
-  useVisiblePassageUuids,
-} from './useVisiblePassageUuids';
+import { useVisiblePassageUuids } from './useVisiblePassageUuids';
 import { COMMENT_TAG_PARAM } from './tags';
 import { TagPicker } from './TagPicker';
 
@@ -97,7 +94,6 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   } = useNavigation();
   const { removeCommentAnchors } = useEditorState();
   const passageUuids = useVisiblePassageUuids();
-  const entryUuids = useVisiblePassageUuids(true, BIBLIOGRAPHY_ROWS);
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [bibliography, setBibliography] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,30 +177,27 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     };
   }, [client, workUuid, readUuids, readCount, commentsRevision]);
 
-  // The tag filter reads passage threads only.
-  const readEntryUuids = filterTag ? undefined : entryUuids;
+  // Every bibliography thread, whatever is in view: the bibliography is short,
+  // and on a phone it never shares the screen with this panel. The tag filter
+  // reads passage threads only.
+  const readBibliography = !filterTag;
 
   useEffect(() => {
-    if (!readEntryUuids?.length) return;
+    if (!readBibliography) return;
 
     let current = true;
 
     (async () => {
-      const read = await getBibliographyComments({
-        client,
-        workUuid,
-        entryUuids: readEntryUuids,
-      });
+      const read = await getBibliographyComments({ client, workUuid });
       if (current) setBibliography(read);
     })();
 
     return () => {
       current = false;
     };
-  }, [client, workUuid, readEntryUuids, readCount, commentsRevision]);
+  }, [client, workUuid, readBibliography, readCount, commentsRevision]);
 
-  // A read for entries no longer on screen would otherwise linger.
-  const entries = readEntryUuids?.length ? bibliography : NO_ENTRIES;
+  const entries = readBibliography ? bibliography : NO_ENTRIES;
 
   const { anchored, unanchored } = useMemo(() => {
     const all = orderThreads(passages, entries);
@@ -456,7 +449,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
           <p className="text-xs text-muted-foreground py-4">
             {filterTag
               ? `No comments tagged “${filterTag}” in this work.`
-              : 'No comments on the text in view.'}
+              : 'No comments on the passages in view.'}
           </p>
         )}
 
