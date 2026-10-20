@@ -13,13 +13,17 @@ const GET_TAGGED_COMMENTS = gql`
 
 /**
  * Where a tagged comment sits in its work. Its body is not read: a caller
- * filtering to tagged threads reads those threads through the passage reads.
+ * filtering to tagged threads reads those threads through the passage and
+ * bibliography reads.
  */
 export type TaggedCommentEntry = {
   workUuid: string;
   /** The root of the comment's thread. Absent when its parent chain is broken. */
   threadUuid?: string;
-  /** The passages anchoring the thread, or the one it was written on. */
+  /**
+   * The passages anchoring the thread, or the one it was written on. Empty for
+   * a thread on a bibliography entry.
+   */
   passageUuids: string[];
 };
 

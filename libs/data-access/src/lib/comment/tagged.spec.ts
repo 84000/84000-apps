@@ -108,6 +108,30 @@ describe('getTaggedComments', () => {
     expect(tagged.passageUuids).toEqual(['p1']);
   });
 
+  it('places a thread on a bibliography entry in no passage', async () => {
+    const root = row({
+      entity_uuid: 'b1',
+      entity_type: 'bibliography',
+      tags: ['pending'],
+    });
+
+    const [tagged] = await getTaggedComments({
+      client: fakeClient({
+        tagged: [{ ...root, work_uuid: 'w1' }],
+        scope: [root],
+      }),
+      tag: 'pending',
+      workUuid: 'w1',
+      source: 'draft',
+    });
+
+    expect(tagged).toMatchObject({
+      workUuid: 'w1',
+      threadUuid: 'root-1',
+      passageUuids: [],
+    });
+  });
+
   it('passes the work through', async () => {
     const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
 
