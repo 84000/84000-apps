@@ -11,7 +11,7 @@ For one term, or a set of epithets and formulae, find every rendering used.
 1. Find the term's entry in `glossary.md` (`work-grep` for the term, with
    `path: glossary.md`; results stop at 100 unless `head_limit` is raised) for
    its `en` and `alt` forms. The snapshot glossary is the work's own; the binding
-   house rendering is what the skill's terminology policy says.
+   house rendering is what `shared-policies/terminology` says.
 2. Tally the renderings: `work-grep` with `output_mode: tally`, `path: text`,
    case-insensitive, and a capture group over the variants, such as
    `(bodhisattvas?|bodhi-beings?)`. Counts show which is the norm.
@@ -72,6 +72,6 @@ that span the work are not.
 Write each chapter's findings to a local file with a distinct flat name, such as
 `toh345_stage2_ch03_findings.md`, with the merged report beside them. Use the
 stage of the task (`stage2` for editorial review, `copyedit` for copyediting)
-and do not reuse a filename the skill already assigns. Then save with
+and do not reuse a filename the stage's policies already assign. Then save with
 `write-session-documents`; see `reference/session-documents/saving.md`. Say
 which snapshot (freshness line) the review read.
