@@ -103,6 +103,11 @@ type EtextsSnapshot {
 enum EtextsSnapshotStatus {
   READY
   NOT_FOUND
+
+  """
+  Storage could not be read or signed; worth retrying.
+  """
+  ERROR
 }
 
 enum EtextsDataset {

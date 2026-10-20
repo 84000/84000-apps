@@ -55,6 +55,7 @@ export const publishEtextsBuild = async ({
 /** Lifetime of a signed download URL. Long enough for a slow fetch of the largest archive. */
 export const ETEXTS_URL_TTL_SECONDS = 15 * 60;
 
+/** The object's JSON; null when it does not exist. Throws on any other failure. */
 const readJson = async <T>(
   client: DataClient,
   path: string,
@@ -62,28 +63,42 @@ const readJson = async <T>(
   const { data, error } = await client.storage
     .from(ETEXTS_BUCKET)
     .download(path);
-  if (error || !data) return null;
-  return JSON.parse(await data.text()) as T;
+  if (error) {
+    if (/not found/i.test(error.message)) return null;
+    throw new Error(`Reading ${path} failed: ${error.message}`);
+  }
+  return data ? (JSON.parse(await data.text()) as T) : null;
 };
 
-/** The published build's manifest, or null when none is published or it cannot be read. */
+/** The published build, or why there is none to serve. */
+export type PublishedEtextsBuild =
+  | { status: 'published'; manifest: EtextsBuildManifest }
+  | { status: 'none' }
+  | { status: 'unavailable' };
+
+/** Reads the build `latest.json` names. Never throws. */
 export const readPublishedEtextsBuild = async (
   client: DataClient,
-): Promise<EtextsBuildManifest | null> => {
+): Promise<PublishedEtextsBuild> => {
   try {
     const latest = await readJson<EtextsLatest>(client, ETEXTS_LATEST_PATH);
-    if (!latest?.buildId) return null;
-    return await readJson<EtextsBuildManifest>(
+    if (!latest?.buildId) return { status: 'none' };
+    const manifest = await readJson<EtextsBuildManifest>(
       client,
       manifestObjectPath(latest.buildId),
     );
+    if (!manifest) {
+      console.error(`eText build ${latest.buildId} has no manifest`);
+      return { status: 'unavailable' };
+    }
+    return { status: 'published', manifest };
   } catch (error) {
     console.error('Error reading the published eText build:', error);
-    return null;
+    return { status: 'unavailable' };
   }
 };
 
-/** A short-lived download URL for one of a build's archives. */
+/** A short-lived download URL for one of a build's archives, or null if signing fails. */
 export const signEtextsArchive = async ({
   client,
   archive,
@@ -92,7 +107,7 @@ export const signEtextsArchive = async ({
   client: DataClient;
   archive: EtextsArchive;
   now?: () => number;
-}): Promise<{ url: string; expiresAt: string; filename: string }> => {
+}): Promise<{ url: string; expiresAt: string; filename: string } | null> => {
   const issued = now();
   const { data, error } = await client.storage
     .from(ETEXTS_BUCKET)
@@ -100,9 +115,10 @@ export const signEtextsArchive = async ({
       download: archive.filename,
     });
   if (error || !data?.signedUrl) {
-    throw new Error(
+    console.error(
       `Signing ${archive.path} failed: ${error?.message ?? 'no URL returned'}`,
     );
+    return null;
   }
   return {
     url: data.signedUrl,

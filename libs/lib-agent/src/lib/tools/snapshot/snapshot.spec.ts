@@ -476,6 +476,19 @@ describe('toEtextsArchiveStatus', () => {
     ).toEqual({ status: 'error', error: 'Permission denied' });
     expect(
       toEtextsArchiveStatus({
+        snapshot: {
+          status: 'ERROR',
+          collections: [],
+          error: 'The eText build could not be read. Try again shortly.',
+        },
+        error: null,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: 'The eText build could not be read. Try again shortly.',
+    });
+    expect(
+      toEtextsArchiveStatus({
         snapshot: { status: 'READY', buildId: 'b', collections: [] },
         error: null,
       }).status,

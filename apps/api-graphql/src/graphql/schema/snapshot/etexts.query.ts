@@ -20,14 +20,22 @@ export const etextsQueries = {
     await requireSnapshotRead(ctx);
 
     const client = createServiceRoleClient();
-    const manifest = await readPublishedEtextsBuild(client);
-    if (!manifest) {
+    const published = await readPublishedEtextsBuild(client);
+    if (published.status === 'unavailable') {
+      return {
+        status: 'ERROR',
+        collections: [],
+        error: 'The eText build could not be read. Try again shortly.',
+      };
+    }
+    if (published.status === 'none') {
       return {
         status: 'NOT_FOUND',
         collections: [],
         error: 'No eText build is published yet.',
       };
     }
+    const { manifest } = published;
     const collections = Object.keys(manifest.text);
     const key = args.collection?.trim();
     const archive =
@@ -51,6 +59,16 @@ export const etextsQueries = {
       };
     }
 
+    const download = await signEtextsArchive({ client, archive });
+    if (!download) {
+      return {
+        status: 'ERROR',
+        buildId: manifest.buildId,
+        builtAt: manifest.builtAt,
+        collections,
+        error: 'The eText archive could not be signed. Try again shortly.',
+      };
+    }
     return {
       status: 'READY',
       buildId: manifest.buildId,
@@ -60,7 +78,7 @@ export const etextsQueries = {
       unpackedBytes: archive.unpackedBytes,
       files: archive.files,
       sha256: archive.sha256,
-      download: await signEtextsArchive({ client, archive }),
+      download,
     };
   },
 };

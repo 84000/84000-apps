@@ -286,6 +286,8 @@ export type EtextsSnapshot = {
 };
 
 export type EtextsSnapshotStatus =
+  /** Storage could not be read or signed; worth retrying. */
+  | 'ERROR'
   | 'NOT_FOUND'
   | 'READY';
 
