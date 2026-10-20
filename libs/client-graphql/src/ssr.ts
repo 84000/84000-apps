@@ -40,6 +40,10 @@ export {
   type EnsureWorkSnapshotResult,
   type SnapshotDownload,
   type WorkSnapshot,
+  getEtextsSnapshot,
+  type EtextsDataset,
+  type EtextsSnapshot,
+  type GetEtextsSnapshotResult,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

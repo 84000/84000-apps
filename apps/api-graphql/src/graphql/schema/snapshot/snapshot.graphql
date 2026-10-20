@@ -74,3 +74,46 @@ extend type Mutation {
   """
   ensureWorkSnapshot(work: String!): WorkSnapshot!
 }
+
+"""
+The canon's eText witnesses, from the published build: a catalog archive, and one
+text archive per collection.
+"""
+type EtextsSnapshot {
+  status: EtextsSnapshotStatus!
+  buildId: String
+  builtAt: String
+
+  """
+  Every collection key with a text archive in the published build.
+  """
+  collections: [String!]!
+
+  """
+  Compressed size in bytes.
+  """
+  archiveBytes: Float
+  unpackedBytes: Float
+  files: Int
+  sha256: String
+  error: String
+  download: SnapshotDownload
+}
+
+enum EtextsSnapshotStatus {
+  READY
+  NOT_FOUND
+}
+
+enum EtextsDataset {
+  CATALOG
+  TEXT
+}
+
+extend type Query {
+  """
+  A signed download for one archive of the published eText build. `collection` is
+  required for TEXT. Requires editor.read.
+  """
+  etextsSnapshot(dataset: EtextsDataset!, collection: String): EtextsSnapshot!
+}

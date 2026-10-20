@@ -20,6 +20,7 @@ import { lookupQueries } from './schema/lookup/lookup.query';
 import { passageQueries } from './schema/passage/passage.query';
 import { publishMutations } from './schema/publish/publish.mutation';
 import { publishQueries } from './schema/publish/publish.query';
+import { etextsQueries } from './schema/snapshot/etexts.query';
 import {
   snapshotMutations,
   workSnapshotResolvers,
@@ -61,6 +62,7 @@ export const resolvers = {
   JSON: JSONResolver,
 
   Query: {
+    ...etextsQueries,
     ...healthQueries,
     ...lookupQueries,
     ...passageQueries,

@@ -1,5 +1,6 @@
 import type { McpToolDefinition } from '../../types';
-import { createDownloadWorkSnapshotTool } from './download-work-snapshot';
+import { createDownloadSnapshotTool } from './download-snapshot';
+import type { EtextsSnapshotSource } from './etexts-source';
 import type { WorkSnapshotSource } from './source';
 import { createWorkGrepTool } from './work-grep';
 import { createWorkLsTool } from './work-ls';
@@ -10,24 +11,34 @@ export const SNAPSHOT_TOOL_NAMES = [
   'work-ls',
   'work-read',
   'work-grep',
-  'download-work-snapshot',
+  'download-snapshot',
 ] as const;
 
 /**
  * Tools over a work's draft snapshot: the whole work as a file tree, listed,
- * read and searched in memory, or downloaded. `source` authorizes each call.
+ * read and searched in memory, or downloaded. The download tool also serves the
+ * eText collections when `etexts` is given. Each source authorizes each call.
  */
 export function createSnapshotTools(
   source: WorkSnapshotSource,
+  etexts?: EtextsSnapshotSource,
 ): McpToolDefinition[] {
   return [
     createWorkLsTool(source),
     createWorkReadTool(source),
     createWorkGrepTool(source),
-    createDownloadWorkSnapshotTool(source),
+    createDownloadSnapshotTool(source, etexts),
   ];
 }
 
+export {
+  toEtextsArchiveStatus,
+  type EtextsArchiveStatus,
+  type EtextsDataset,
+  type EtextsSnapshotResponse,
+  type EtextsSnapshotSource,
+  type ReadyEtextsArchive,
+} from './etexts-source';
 export {
   createWorkSnapshotCache,
   DEFAULT_SNAPSHOT_CACHE_BYTES,

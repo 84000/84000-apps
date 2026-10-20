@@ -8,6 +8,8 @@ import type { EtextsSink } from './build';
 import {
   ETEXTS_BUCKET,
   ETEXTS_LATEST_PATH,
+  manifestObjectPath,
+  type EtextsArchive,
   type EtextsBuildManifest,
   type EtextsLatest,
 } from './layout';
@@ -48,4 +50,63 @@ export const publishEtextsBuild = async ({
   if (error) {
     throw new Error(`Updating ${ETEXTS_LATEST_PATH} failed: ${error.message}`);
   }
+};
+
+/** Lifetime of a signed download URL. Long enough for a slow fetch of the largest archive. */
+export const ETEXTS_URL_TTL_SECONDS = 15 * 60;
+
+const readJson = async <T>(
+  client: DataClient,
+  path: string,
+): Promise<T | null> => {
+  const { data, error } = await client.storage
+    .from(ETEXTS_BUCKET)
+    .download(path);
+  if (error || !data) return null;
+  return JSON.parse(await data.text()) as T;
+};
+
+/** The published build's manifest, or null when none is published or it cannot be read. */
+export const readPublishedEtextsBuild = async (
+  client: DataClient,
+): Promise<EtextsBuildManifest | null> => {
+  try {
+    const latest = await readJson<EtextsLatest>(client, ETEXTS_LATEST_PATH);
+    if (!latest?.buildId) return null;
+    return await readJson<EtextsBuildManifest>(
+      client,
+      manifestObjectPath(latest.buildId),
+    );
+  } catch (error) {
+    console.error('Error reading the published eText build:', error);
+    return null;
+  }
+};
+
+/** A short-lived download URL for one of a build's archives. */
+export const signEtextsArchive = async ({
+  client,
+  archive,
+  now = Date.now,
+}: {
+  client: DataClient;
+  archive: EtextsArchive;
+  now?: () => number;
+}): Promise<{ url: string; expiresAt: string; filename: string }> => {
+  const issued = now();
+  const { data, error } = await client.storage
+    .from(ETEXTS_BUCKET)
+    .createSignedUrl(archive.path, ETEXTS_URL_TTL_SECONDS, {
+      download: archive.filename,
+    });
+  if (error || !data?.signedUrl) {
+    throw new Error(
+      `Signing ${archive.path} failed: ${error?.message ?? 'no URL returned'}`,
+    );
+  }
+  return {
+    url: data.signedUrl,
+    expiresAt: new Date(issued + ETEXTS_URL_TTL_SECONDS * 1000).toISOString(),
+    filename: archive.filename,
+  };
 };
