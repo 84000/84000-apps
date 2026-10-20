@@ -55,6 +55,9 @@ export const publishEtextsBuild = async ({
 /** Lifetime of a signed download URL. Long enough for a slow fetch of the largest archive. */
 export const ETEXTS_URL_TTL_SECONDS = 15 * 60;
 
+/** Storage's error for a missing object; a missing bucket must not read as "no build". */
+const OBJECT_NOT_FOUND = /^object not found$/i;
+
 /** The object's JSON; null when it does not exist. Throws on any other failure. */
 const readJson = async <T>(
   client: DataClient,
@@ -64,7 +67,7 @@ const readJson = async <T>(
     .from(ETEXTS_BUCKET)
     .download(path);
   if (error) {
-    if (/not found/i.test(error.message)) return null;
+    if (OBJECT_NOT_FOUND.test(error.message.trim())) return null;
     throw new Error(`Reading ${path} failed: ${error.message}`);
   }
   return data ? (JSON.parse(await data.text()) as T) : null;
