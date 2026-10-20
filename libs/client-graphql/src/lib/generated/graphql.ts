@@ -261,6 +261,36 @@ export type EntitySearchResult = {
   workUuid?: Maybe<Scalars['ID']['output']>;
 };
 
+export type EtextsDataset =
+  | 'CATALOG'
+  | 'TEXT';
+
+/**
+ * The canon's eText witnesses, from the published build: a catalog archive, and one
+ * text archive per collection.
+ */
+export type EtextsSnapshot = {
+  __typename?: 'EtextsSnapshot';
+  /** Compressed size in bytes. */
+  archiveBytes?: Maybe<Scalars['Float']['output']>;
+  buildId?: Maybe<Scalars['String']['output']>;
+  builtAt?: Maybe<Scalars['String']['output']>;
+  /** Every collection key with a text archive in the published build. */
+  collections: Array<Scalars['String']['output']>;
+  download?: Maybe<SnapshotDownload>;
+  error?: Maybe<Scalars['String']['output']>;
+  files?: Maybe<Scalars['Int']['output']>;
+  sha256?: Maybe<Scalars['String']['output']>;
+  status: EtextsSnapshotStatus;
+  unpackedBytes?: Maybe<Scalars['Float']['output']>;
+};
+
+export type EtextsSnapshotStatus =
+  /** Storage could not be read or signed; worth retrying. */
+  | 'ERROR'
+  | 'NOT_FOUND'
+  | 'READY';
+
 /**
  * Where a validation finding's subject sits, so a view can link to it.
  *
@@ -903,6 +933,11 @@ export type Query = {
    */
   comment?: Maybe<Comment>;
   /**
+   * A signed download for one archive of the published eText build. `collection` is
+   * required for TEXT. Requires editor.read.
+   */
+  etextsSnapshot: EtextsSnapshot;
+  /**
    * Resolve finding subject uuids to the passages they sit in, scoped to one work.
    * Requires editor.admin.
    */
@@ -1010,6 +1045,13 @@ export type QueryBibliographyEntryArgs = {
 export type QueryCommentArgs = {
   depth?: InputMaybe<Scalars['Int']['input']>;
   uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryEtextsSnapshotArgs = {
+  collection?: InputMaybe<Scalars['String']['input']>;
+  dataset: EtextsDataset;
 };
 
 

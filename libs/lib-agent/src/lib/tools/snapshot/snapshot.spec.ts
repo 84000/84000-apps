@@ -1,5 +1,10 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types';
 import { SNAPSHOT_TOOL_NAMES, createSnapshotTools } from './index';
+import {
+  toEtextsArchiveStatus,
+  type EtextsArchiveStatus,
+  type EtextsSnapshotSource,
+} from './etexts-source';
 import type {
   ReadyWorkSnapshot,
   WorkSnapshotFiles,
@@ -88,8 +93,9 @@ const call = async (
   source: WorkSnapshotSource,
   name: (typeof SNAPSHOT_TOOL_NAMES)[number],
   args: Record<string, unknown>,
+  etexts?: EtextsSnapshotSource,
 ): Promise<{ text: string; isError: boolean }> => {
-  const tool = createSnapshotTools(source).find((t) => t.name === name);
+  const tool = createSnapshotTools(source, etexts).find((t) => t.name === name);
   if (!tool) throw new Error(`no tool ${name}`);
   const result = (await tool.handler(
     args as never,
@@ -123,7 +129,7 @@ describe('createSnapshotTools', () => {
       });
       expect(source.ensure).toHaveBeenCalledWith(
         'toh8',
-        name === 'download-work-snapshot' ? { download: true } : undefined,
+        name === 'download-snapshot' ? { download: true } : undefined,
       );
       expect(source.files).not.toHaveBeenCalled();
       expect(result).toEqual({
@@ -301,7 +307,7 @@ describe('work-read', () => {
   });
 });
 
-describe('download-work-snapshot', () => {
+describe('download-snapshot', () => {
   it('returns the signed URL with the archive facts', async () => {
     const download = {
       url: 'https://storage.test/signed?token=t',
@@ -310,7 +316,7 @@ describe('download-work-snapshot', () => {
     };
     const { text, isError } = await call(
       stubSource(fixtureSnapshot(undefined, { download })),
-      'download-work-snapshot',
+      'download-snapshot',
       { work: 'toh8' },
     );
     expect(isError).toBe(false);
@@ -320,9 +326,172 @@ describe('download-work-snapshot', () => {
   });
 
   it('fails cleanly when no URL came back', async () => {
-    const { isError } = await call(stubSource(), 'download-work-snapshot', {
+    const { isError } = await call(stubSource(), 'download-snapshot', {
       work: 'toh8',
     });
     expect(isError).toBe(true);
+  });
+
+  it('needs a work for the work dataset', async () => {
+    const { text, isError } = await call(stubSource(), 'download-snapshot', {
+      dataset: 'work',
+    });
+    expect(isError).toBe(true);
+    expect(text).toContain('Pass `work`');
+  });
+});
+
+describe('download-snapshot of the eText collections', () => {
+  const ready: EtextsArchiveStatus = {
+    status: 'ready',
+    buildId: '20261020T123456Z',
+    builtAt: '2026-10-20T12:34:56.000Z',
+    archiveBytes: 2048,
+    unpackedBytes: 9000,
+    files: 8,
+    sha256: 'abc',
+    collections: ['kangyur/D', 'kangyur/S'],
+    download: {
+      url: 'https://storage.test/signed?token=e',
+      expiresAt: '2026-10-20T12:50:00.000Z',
+      filename: 'etexts-catalog-20261020T123456Z.tar.gz',
+    },
+  };
+  const etextsSource = (status: EtextsArchiveStatus = ready) => ({
+    download: jest.fn(async () => status),
+  });
+
+  it('signs the catalog and points at its README', async () => {
+    const etexts = etextsSource();
+    const { text, isError } = await call(
+      stubSource(),
+      'download-snapshot',
+      { dataset: 'etexts-catalog' },
+      etexts,
+    );
+    expect(etexts.download).toHaveBeenCalledWith({
+      dataset: 'catalog',
+      collection: undefined,
+    });
+    expect(isError).toBe(false);
+    expect(text).toContain('[eText build 20261020T123456Z');
+    expect(text).toContain('url: https://storage.test/signed?token=e');
+    expect(text).toContain('etexts/README.md');
+  });
+
+  it('asks for a collection before calling the source', async () => {
+    const etexts = etextsSource();
+    const { isError } = await call(
+      stubSource(),
+      'download-snapshot',
+      { dataset: 'etexts-text' },
+      etexts,
+    );
+    expect(isError).toBe(true);
+    expect(etexts.download).not.toHaveBeenCalled();
+  });
+
+  it('lists the collections when one is unknown', async () => {
+    const { text, isError } = await call(
+      stubSource(),
+      'download-snapshot',
+      { dataset: 'etexts-text', collection: 'kangyur/X' },
+      etextsSource({
+        status: 'not-found',
+        error: 'No collection kangyur/X in this build.',
+        collections: ['kangyur/D', 'kangyur/S'],
+      }),
+    );
+    expect(isError).toBe(true);
+    expect(text).toBe(
+      'No collection kangyur/X in this build. Collections: kangyur/D, kangyur/S.',
+    );
+  });
+
+  it('says so when the host serves no eTexts', async () => {
+    const { isError, text } = await call(stubSource(), 'download-snapshot', {
+      dataset: 'etexts-catalog',
+    });
+    expect(isError).toBe(true);
+    expect(text).toContain('not available');
+  });
+});
+
+describe('toEtextsArchiveStatus', () => {
+  const download = {
+    url: 'https://example.test/signed',
+    expiresAt: '2026-10-20T12:15:00.000Z',
+    filename: 'etexts-catalog-20261020T120000Z.tar.gz',
+  };
+
+  it('maps a ready archive', () => {
+    expect(
+      toEtextsArchiveStatus({
+        snapshot: {
+          status: 'READY',
+          buildId: '20261020T120000Z',
+          builtAt: '2026-10-20T12:00:00.000Z',
+          collections: ['kangyur/D'],
+          archiveBytes: 10,
+          unpackedBytes: 40,
+          files: 3,
+          sha256: 'abc',
+          download,
+        },
+        error: null,
+      }),
+    ).toEqual({
+      status: 'ready',
+      buildId: '20261020T120000Z',
+      builtAt: '2026-10-20T12:00:00.000Z',
+      collections: ['kangyur/D'],
+      archiveBytes: 10,
+      unpackedBytes: 40,
+      files: 3,
+      sha256: 'abc',
+      download,
+    });
+  });
+
+  it('keeps the collections of a missing archive', () => {
+    expect(
+      toEtextsArchiveStatus({
+        snapshot: {
+          status: 'NOT_FOUND',
+          collections: ['kangyur/D'],
+          error: 'No eText collection "kangyur/X" in the published build.',
+        },
+        error: null,
+      }),
+    ).toEqual({
+      status: 'not-found',
+      error: 'No eText collection "kangyur/X" in the published build.',
+      collections: ['kangyur/D'],
+    });
+  });
+
+  it('reports a failed request or an unsigned archive as an error', () => {
+    expect(
+      toEtextsArchiveStatus({ snapshot: null, error: 'Permission denied' }),
+    ).toEqual({ status: 'error', error: 'Permission denied' });
+    expect(
+      toEtextsArchiveStatus({
+        snapshot: {
+          status: 'ERROR',
+          collections: [],
+          error: 'The eText build could not be read. Try again shortly.',
+        },
+        error: null,
+      }),
+    ).toEqual({
+      status: 'error',
+      error: 'The eText build could not be read. Try again shortly.',
+    });
+    expect(
+      toEtextsArchiveStatus({
+        snapshot: { status: 'READY', buildId: 'b', collections: [] },
+        error: null,
+      }).status,
+    ).toBe('error');
   });
 });

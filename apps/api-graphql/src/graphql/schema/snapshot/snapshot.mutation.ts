@@ -52,22 +52,26 @@ const toGraphQL = (result: GetWorkSnapshotResult) => {
   }
 };
 
+/** Throws unless the caller holds editor.read. */
+export const requireSnapshotRead = async (ctx: GraphQLContext) => {
+  requireAuth(ctx);
+  // ctx.supabase carries the caller's token, so PostgREST verifies it here.
+  const permitted = await hasPermission({
+    client: ctx.supabase,
+    permission: READ_PERMISSION,
+  });
+  if (!permitted) {
+    throw new Error(`Permission denied: ${READ_PERMISSION} required`);
+  }
+};
+
 export const snapshotMutations = {
   ensureWorkSnapshot: async (
     _parent: unknown,
     args: { work: string },
     ctx: GraphQLContext,
   ) => {
-    requireAuth(ctx);
-    // ctx.supabase carries the caller's token, so PostgREST verifies it here.
-    const permitted = await hasPermission({
-      client: ctx.supabase,
-      permission: READ_PERMISSION,
-    });
-    if (!permitted) {
-      throw new Error(`Permission denied: ${READ_PERMISSION} required`);
-    }
-
+    await requireSnapshotRead(ctx);
     const result = await getWorkSnapshot({
       client: createServiceRoleClient(),
       work: args.work,

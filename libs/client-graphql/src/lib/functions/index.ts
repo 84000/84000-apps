@@ -109,3 +109,9 @@ export {
   type SnapshotDownload,
   type WorkSnapshot,
 } from './ensure-work-snapshot';
+export {
+  getEtextsSnapshot,
+  type EtextsDataset,
+  type EtextsSnapshot,
+  type GetEtextsSnapshotResult,
+} from './get-etexts-snapshot';

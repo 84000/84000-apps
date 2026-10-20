@@ -45,8 +45,9 @@ can show them apart.
 
 ### 1. Download the snapshot
 
-Resolve the work with `resolve-toh`, then call `download-work-snapshot` and
-fetch and unpack it with the command it returns, into a new, empty directory.
+Resolve the work with `resolve-toh`, then call `download-snapshot` with its
+`work`, and fetch and unpack it with the command it returns, into a new, empty
+directory.
 Note the freshness line. A snapshot that is not `current` is refreshed in the
 background, at most every two minutes: wait two minutes and download again,
 until the line reads `current`. After three tries, go on with the snapshot you
@@ -132,8 +133,8 @@ every passage it touches.
 
 ### 6. Check the snapshot is still current
 
-Call `download-work-snapshot` again. If the draft has been edited since your
-snapshot, wait for the line to read `current` as in step 1, download, run
+Call `download-snapshot` for the work again. If the draft has been edited since
+your snapshot, wait for the line to read `current` as in step 1, download, run
 `find` again into a new directory, copy `decisions.json` into it, and tell the
 editor if the counts changed.
 

@@ -2,8 +2,8 @@
 
 A work's **draft** rendered as a tree of text files, so the whole work can be
 searched and read like a repository. It is what `work-ls`, `work-read`,
-`work-grep` and `download-work-snapshot` operate on. The snapshot is read-only
-and is not the published text: it follows the draft.
+`work-grep` and `download-snapshot` (for a `work`) operate on. The snapshot is
+read-only and is not the published text: it follows the draft.
 
 Every tool result opens with a freshness line: when the snapshot was generated,
 and whether it is `current`, behind the draft (edited since) or out of date
@@ -69,12 +69,12 @@ script, read the stored text from `raw/passages.jsonl`.
 
 All four take `work` as a Toh key (`toh8`) or a uuid.
 
-| Tool                     | Does                                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `work-ls`                | One directory level, with bytes and lines per file                                                               |
-| `work-read`              | Numbered lines of one file. At most 2,000 lines a call and about 25,000 tokens, with the offset to continue from |
-| `work-grep`              | RE2 regular expression, line by line, output `path:line:text`. See below                                         |
-| `download-work-snapshot` | A short-lived signed URL to the tree as a `.tar.gz`                                                              |
+| Tool                | Does                                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `work-ls`           | One directory level, with bytes and lines per file                                                               |
+| `work-read`         | Numbered lines of one file. At most 2,000 lines a call and about 25,000 tokens, with the offset to continue from |
+| `work-grep`         | RE2 regular expression, line by line, output `path:line:text`. See below                                         |
+| `download-snapshot` | A short-lived signed URL to the tree as a `.tar.gz`                                                              |
 
 `work-grep` takes `path` and `glob` to narrow the search, `context` (0 to 10
 lines) and `output_mode`: `content` (default), `files`, `count` (matching lines
@@ -111,8 +111,8 @@ outbound network. Each call is capped, but nothing is stored locally.
 
 Download when a shell is available and the work needs many passes over the
 same text, or scripting across files (joining `glossary.md` to the TSV, for
-example). `download-work-snapshot` returns a `url`, a `filename` and a fetch
-command, `curl -sSfo '<filename>' '<url>' && tar xzf '<filename>'`.
+example). `download-snapshot` with the `work` returns a `url`, a `filename` and
+a fetch command, `curl -sSfo '<filename>' '<url>' && tar xzf '<filename>'`.
 
 - The URL is a credential: do not log it, share it, or put it in a saved
   document.
