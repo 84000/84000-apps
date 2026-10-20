@@ -11,6 +11,7 @@ export {
   publicInstructions,
   readToolInstructions,
   studioInstructions,
+  studioInstructionsFor,
 } from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';

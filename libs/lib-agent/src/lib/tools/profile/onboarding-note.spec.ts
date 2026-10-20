@@ -46,6 +46,10 @@ describe('withOnboardingNote', () => {
     ]);
   });
 
+  it('asks for one offer a session, not one per result', () => {
+    expect(ONBOARDING_NOTE).toContain("If you haven't offered it this session");
+  });
+
   it('adds nothing once onboarding is complete', async () => {
     const [wrapped] = withOnboardingNote(
       [tool('get-passage')],

@@ -2,6 +2,20 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import type { McpHandlerOptions } from './types';
 
+/** Whether a JSON-RPC body, one message or a batch, opens a session. */
+async function isInitialize(req: Request): Promise<boolean> {
+  try {
+    const body: unknown = await req.clone().json();
+    const messages = Array.isArray(body) ? body : [body];
+    return messages.some(
+      (message) =>
+        (message as { method?: unknown } | null)?.method === 'initialize',
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
@@ -13,7 +27,7 @@ export function createMcpHandler(options: McpHandlerOptions) {
     resources = [],
   } = options;
 
-  function buildServer(): McpServer {
+  function buildServer(instructions: string | undefined): McpServer {
     const server = new McpServer(
       { name, version, description },
       { instructions },
@@ -91,7 +105,13 @@ export function createMcpHandler(options: McpHandlerOptions) {
         enableJsonResponse: true,
       });
 
-      const server = buildServer();
+      const server = buildServer(
+        typeof instructions === 'function'
+          ? (await isInitialize(req))
+            ? await instructions()
+            : undefined
+          : instructions,
+      );
       await server.connect(transport);
 
       return await transport.handleRequest(req);

@@ -16,6 +16,7 @@ import {
   linearFeedbackConfigFromEnv,
   onboardingCheck,
   studioInstructions,
+  studioInstructionsFor,
   validateBearerToken,
   withCorsHeaders,
   withInstrumentation,
@@ -122,19 +123,22 @@ export async function POST(req: Request) {
       app: process.env.NEXT_PUBLIC_APPLICATION_NAME ?? null,
     },
   });
-  // Until an internal user (manager and above) is onboarded, tool results
-  // carry a short note offering onboarding. Scholars and readers are not
-  // internal users and are never prompted. The tag is read lazily, once per
-  // request.
-  const servedTools = hasRole(auth.role, 'manager')
-    ? withOnboardingNote(
-        instrumentedTools,
-        onboardingCheck(auth.client, auth.userId),
-      )
+  // Until an internal user (manager and above) is onboarded, the server's
+  // instructions and its tool results carry a short offer of onboarding. Both
+  // come from the profile tag, so they hold on every device and surface.
+  // Scholars and readers are not internal users and are never prompted. The
+  // tag is read lazily, at most once per request.
+  const needsOnboarding = hasRole(auth.role, 'manager')
+    ? onboardingCheck(auth.client, auth.userId)
+    : null;
+  const servedTools = needsOnboarding
+    ? withOnboardingNote(instrumentedTools, needsOnboarding)
     : instrumentedTools;
   const handler = createMcpHandler({
     description,
-    instructions: studioInstructions,
+    instructions: needsOnboarding
+      ? async () => studioInstructionsFor(await needsOnboarding())
+      : studioInstructions,
     tools: servedTools,
     resources: [createPolicyEditorResource(POLICY_EDITOR_APP_HTML)],
   });

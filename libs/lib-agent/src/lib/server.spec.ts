@@ -249,3 +249,24 @@ describe('createMcpHandler prompt + tool surface', () => {
     ]);
   });
 });
+
+describe('createMcpHandler instructions', () => {
+  const instructionsOf = (response: Record<string, unknown>) =>
+    (response.result as { instructions?: string }).instructions;
+
+  it('returns static instructions on initialize', async () => {
+    const handler = createMcpHandler({
+      tools: [askTool],
+      instructions: 'static',
+    });
+    expect(instructionsOf(await rpc(handler, init))).toBe('static');
+  });
+
+  it('calls an instructions function for initialize alone', async () => {
+    const instructions = jest.fn(async () => 'per caller');
+    const handler = createMcpHandler({ tools: [askTool], instructions });
+    expect(instructionsOf(await rpc(handler, init))).toBe('per caller');
+    await rpc(handler, { jsonrpc: '2.0', id: 1, method: 'tools/list' });
+    expect(instructions).toHaveBeenCalledTimes(1);
+  });
+});

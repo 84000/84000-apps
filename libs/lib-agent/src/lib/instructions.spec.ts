@@ -2,8 +2,10 @@ import {
   MCP_INSTRUCTIONS_MAX_LENGTH,
   joinInstructions,
   publicInstructions,
+  onboardingInstructions,
   readToolInstructions,
   studioInstructions,
+  studioInstructionsFor,
 } from './instructions';
 import { createFeedbackTools } from './tools/feedback';
 import type { LinearFeedbackConfig } from './tools/feedback';
@@ -76,6 +78,7 @@ describe('readToolInstructions', () => {
 describe('server instructions', () => {
   it.each([
     ['studio', studioInstructions],
+    ['studio, before onboarding', studioInstructionsFor(true)],
     ['public', publicInstructions],
   ])('%s instructions fit before clients truncate them', (_, text) => {
     expect(text.length).toBeLessThanOrEqual(MCP_INSTRUCTIONS_MAX_LENGTH);
@@ -106,6 +109,31 @@ describe('server instructions', () => {
     expect(studioInstructions.indexOf('`read-policies`')).toBeLessThan(
       studioInstructions.indexOf('## Content'),
     );
+  });
+});
+
+describe('studioInstructionsFor', () => {
+  it('offers onboarding only to a caller who needs it', () => {
+    expect(studioInstructionsFor(true)).toContain(onboardingInstructions);
+    expect(studioInstructionsFor(false)).not.toMatch(/onboarding/i);
+    expect(studioInstructionsFor(false)).toBe(studioInstructions);
+  });
+
+  it('puts the offer after the intro and before the policies', () => {
+    const text = studioInstructionsFor(true);
+    expect(text.indexOf('## Onboarding')).toBeGreaterThan(0);
+    expect(text.indexOf('## Onboarding')).toBeLessThan(
+      text.indexOf('## Policies are live'),
+    );
+  });
+
+  it('makes room for the offer by leaving feedback to the tools', () => {
+    expect(studioInstructionsFor(false)).toContain('## Feedback');
+    expect(studioInstructionsFor(true)).not.toContain('## Feedback');
+  });
+
+  it('asks for one offer a session', () => {
+    expect(onboardingInstructions).toContain('once this session');
   });
 });
 
