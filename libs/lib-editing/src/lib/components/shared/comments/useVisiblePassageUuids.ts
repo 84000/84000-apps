@@ -8,8 +8,16 @@ const SETTLE_MS = 250;
 /** What a page of passages costs to read comments for at once. */
 const MAX_PASSAGES = 100;
 
+/** Passage rows in the body panel. */
+export const BODY_ROWS = '[data-panel="main"] [data-passage-label][data-uuid]';
+
+/** Entry rows in the back matter's bibliography tab. */
+export const BIBLIOGRAPHY_ROWS =
+  '[data-panel="right"] [data-tab="bibliography"] [data-passage-label][data-uuid]';
+
 /**
- * The passages currently drawn in the body panel, in document order.
+ * The passages currently drawn in the body panel, in document order, or the
+ * rows `rows` matches.
  *
  * Read from the DOM rather than from an editor: the passage stack mounts an
  * editor only where focus is and draws everything else as static HTML, and the
@@ -20,7 +28,10 @@ const MAX_PASSAGES = 100;
  * Debounced, because scrolling a virtualized list changes the set continuously
  * and each change costs a read.
  */
-export const useVisiblePassageUuids = (enabled = true): string[] => {
+export const useVisiblePassageUuids = (
+  enabled = true,
+  rows = BODY_ROWS,
+): string[] => {
   const [uuids, setUuids] = useState<string[]>([]);
 
   useEffect(() => {
@@ -29,15 +40,13 @@ export const useVisiblePassageUuids = (enabled = true): string[] => {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const read = () => {
-      // Every main panel, keeping only rows that are drawn: the layout keeps a
+      // Every matching panel, keeping only rows that are drawn: the layout keeps a
       // hidden copy of the panel, and each panel keeps its inactive tabs
       // mounted but hidden, so the first panel found is often not the one
       // being read.
-      const labels = [
-        ...document.querySelectorAll(
-          '[data-panel="main"] [data-passage-label][data-uuid]',
-        ),
-      ].filter((el) => el.getClientRects().length > 0);
+      const labels = [...document.querySelectorAll(rows)].filter(
+        (el) => el.getClientRects().length > 0,
+      );
       const found = [
         ...new Set(
           labels
@@ -76,7 +85,7 @@ export const useVisiblePassageUuids = (enabled = true): string[] => {
       observer.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [enabled]);
+  }, [enabled, rows]);
 
   return uuids;
 };

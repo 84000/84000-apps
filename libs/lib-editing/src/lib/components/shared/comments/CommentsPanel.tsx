@@ -1,8 +1,10 @@
 'use client';
 
 import {
+  BIBLIOGRAPHY_COMMENTS_TYPE,
   createGraphQLClient,
   deleteComment,
+  getBibliographyComments,
   getCommentThread,
   getPassageComments,
   getTaggedComments,
@@ -31,12 +33,17 @@ import { CommentThreadCard, type CommentActions } from './CommentThreadCard';
 import { orderThreads, type PanelThread } from './order-threads';
 import { anchorSelector, attributeValue } from './selectors';
 import { useCommentAnchorStyles } from './useCommentAnchorStyles';
-import { useVisiblePassageUuids } from './useVisiblePassageUuids';
+import {
+  BIBLIOGRAPHY_ROWS,
+  useVisiblePassageUuids,
+} from './useVisiblePassageUuids';
 import { COMMENT_TAG_PARAM } from './tags';
 import { TagPicker } from './TagPicker';
 
 /** How many passages one comments read covers. */
 const PASSAGES_PER_READ = 100;
+
+const NO_ENTRIES: PassageComments[] = [];
 
 /** Where the work's threads carrying a tag are, and which threads they are. */
 type TaggedThreads = { threadUuids: Set<string>; passageUuids: string[] };
@@ -63,16 +70,22 @@ const tagsIn = (passages: PassageComments[]): string[] => {
   return [...tags].sort();
 };
 
+/** How a thread's heading names where it sits. */
+const placeLabel = (label?: string, type?: string) =>
+  type === BIBLIOGRAPHY_COMMENTS_TYPE
+    ? `Bibliography${label ? ` ${label}` : ''}`
+    : label;
+
 /**
- * Comment threads for the passages on screen, beside the text they annotate,
- * or, filtered by a tag, every thread in the work carrying it.
+ * Comment threads for the passages and bibliography entries on screen, beside
+ * the text they annotate, or, filtered by a tag, every passage thread in the
+ * work carrying it.
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
  *
- * Passages are what a thread hangs off today; the store was shaped for glossary
- * entries and bibliographies too, so this reads a set of entities rather than
- * the body specifically.
+ * The store was shaped for glossary entries too, so this reads a set of
+ * entities rather than the body specifically.
  */
 export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const {
@@ -84,7 +97,9 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   } = useNavigation();
   const { removeCommentAnchors } = useEditorState();
   const passageUuids = useVisiblePassageUuids();
+  const entryUuids = useVisiblePassageUuids(true, BIBLIOGRAPHY_ROWS);
   const [passages, setPassages] = useState<PassageComments[]>([]);
+  const [bibliography, setBibliography] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [filterTag, setFilterTag] = useState(initialFilterTag);
@@ -166,8 +181,33 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     };
   }, [client, workUuid, readUuids, readCount, commentsRevision]);
 
+  // The tag filter reads passage threads only.
+  const readEntryUuids = filterTag ? undefined : entryUuids;
+
+  useEffect(() => {
+    if (!readEntryUuids?.length) return;
+
+    let current = true;
+
+    (async () => {
+      const read = await getBibliographyComments({
+        client,
+        workUuid,
+        entryUuids: readEntryUuids,
+      });
+      if (current) setBibliography(read);
+    })();
+
+    return () => {
+      current = false;
+    };
+  }, [client, workUuid, readEntryUuids, readCount, commentsRevision]);
+
+  // A read for entries no longer on screen would otherwise linger.
+  const entries = readEntryUuids?.length ? bibliography : NO_ENTRIES;
+
   const { anchored, unanchored } = useMemo(() => {
-    const all = orderThreads(passages);
+    const all = orderThreads(passages, entries);
     const isTagged = ({ thread }: PanelThread) =>
       !!taggedThreads?.threadUuids.has(thread.uuid);
     const ordered = filterTag
@@ -201,7 +241,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages, taggedThreads, filterTag]);
+  }, [passages, entries, taggedThreads, filterTag]);
 
   const resolvedCount = useMemo(
     () =>
@@ -320,6 +360,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         const branch = await getCommentThread({ client, uuid, depth: 10 });
         if (!branch) return;
         setPassages((prev) => prev.map((p) => graftBranch(p, branch)));
+        setBibliography((prev) => prev.map((p) => graftBranch(p, branch)));
       },
     }),
     [client, reload, unsetAnchors],
@@ -353,7 +394,10 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const anchoredVisible = visible(anchored);
   const unanchoredVisible = visible(unanchored);
   const filterSuggestions = [
-    ...new Set([...COMMENT_TAG_SUGGESTIONS, ...tagsIn(passages)]),
+    ...new Set([
+      ...COMMENT_TAG_SUGGESTIONS,
+      ...tagsIn([...passages, ...entries]),
+    ]),
   ];
 
   const changeFilter = (tag?: string) => {
@@ -412,29 +456,31 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
           <p className="text-xs text-muted-foreground py-4">
             {filterTag
               ? `No comments tagged “${filterTag}” in this work.`
-              : 'No comments on the passages in view.'}
+              : 'No comments on the text in view.'}
           </p>
         )}
 
       <div className="flex flex-col gap-2">
-        {anchoredVisible.map(({ thread, anchors, passageLabel }) => (
-          <div key={thread.uuid}>
-            {passageLabel && (
-              <p className="text-[11px] text-muted-foreground mb-0.5">
-                {passageLabel}
-              </p>
-            )}
-            <CommentThreadCard
-              thread={thread}
-              currentUserId={currentUserId}
-              selected={focusedComment === thread.uuid}
-              anchorCount={anchors.length}
-              actions={actions}
-              onHover={setHovered}
-              onSelect={select}
-            />
-          </div>
-        ))}
+        {anchoredVisible.map(
+          ({ thread, anchors, passageLabel, passageType }) => (
+            <div key={thread.uuid}>
+              {placeLabel(passageLabel, passageType) && (
+                <p className="text-[11px] text-muted-foreground mb-0.5">
+                  {placeLabel(passageLabel, passageType)}
+                </p>
+              )}
+              <CommentThreadCard
+                thread={thread}
+                currentUserId={currentUserId}
+                selected={focusedComment === thread.uuid}
+                anchorCount={anchors.length}
+                actions={actions}
+                onHover={setHovered}
+                onSelect={select}
+              />
+            </div>
+          ),
+        )}
       </div>
 
       {unanchoredVisible.length > 0 && (

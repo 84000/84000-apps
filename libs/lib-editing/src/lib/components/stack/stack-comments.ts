@@ -1,8 +1,8 @@
 import { mapMarks, type WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 /**
- * Take a comment thread's anchors off every passage the stack holds, rows
- * outside the DOM included, so their next save deletes the anchor rows.
+ * Take a comment thread's anchors off every row a work holds, rows outside the
+ * DOM included, so their next save removes them.
  */
 export const removeStackCommentAnchors = (
   work: WorkDocument,

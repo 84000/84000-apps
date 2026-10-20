@@ -15,6 +15,7 @@ import {
   createGraphQLClient,
   createComment,
 } from '@eightyfourthousand/client-graphql';
+import type { CommentEntityType } from '@eightyfourthousand/data-access';
 import {
   MessageSquarePlusIcon,
   Trash2Icon,
@@ -41,8 +42,16 @@ const EDITOR_UPDATE_DELAY_MS = 50;
  *
  * Commenting over an existing comment mark starts a new thread. Replies come
  * from the panel, where the thread they belong to is visible.
+ *
+ * `entityType` is what the focused row is: a passage, or a bibliography entry.
  */
-export const CommentSelector = ({ editor }: { editor: Editor }) => {
+export const CommentSelector = ({
+  editor,
+  entityType = 'passage',
+}: {
+  editor: Editor;
+  entityType?: CommentEntityType;
+}) => {
   const [open, setOpen] = useState(false);
   const { editable, setFocusedComment, updatePanel, refreshComments } =
     useNavigation();
@@ -74,7 +83,7 @@ export const CommentSelector = ({ editor }: { editor: Editor }) => {
   const submit = async (content: string) => {
     const entityUuid = passageUuidForSelection(editor);
     if (!entityUuid) {
-      fail('Could not tell which passage this is. Try again.');
+      fail(`Could not tell which ${entityType} this is. Try again.`);
       return;
     }
 
@@ -91,7 +100,7 @@ export const CommentSelector = ({ editor }: { editor: Editor }) => {
       result = await createComment({
         client: createGraphQLClient(),
         entityUuid,
-        entityType: 'passage',
+        entityType,
         content,
       });
     } catch (error) {
@@ -123,7 +132,7 @@ export const CommentSelector = ({ editor }: { editor: Editor }) => {
         .run();
 
       // The panel reads from the server, so it needs telling; the anchor itself
-      // only reaches the server with the next passage save.
+      // only reaches the server with the next save.
       refreshComments();
       setFocusedComment(comment);
       updatePanel({

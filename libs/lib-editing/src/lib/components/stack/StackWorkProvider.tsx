@@ -154,7 +154,9 @@ export const StackWorkProvider = ({
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
       removeCommentAnchors: (comment) =>
-        removeStackCommentAnchors(work, comment),
+        [work, bibliography?.work].forEach(
+          (each) => each && removeStackCommentAnchors(each, comment),
+        ),
     });
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.

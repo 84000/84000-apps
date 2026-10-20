@@ -5,6 +5,11 @@ import type { CommentThread } from '@eightyfourthousand/data-access';
 import { CommentsPanel } from './CommentsPanel';
 
 const mockGetPassageComments = jest.fn<Promise<PassageComments[]>, unknown[]>();
+const mockGetBibliographyComments = jest.fn<
+  Promise<PassageComments[]>,
+  unknown[]
+>();
+const mockEntryUuids: string[] = [];
 const mockResolveComment = jest.fn();
 const mockReplyToComment = jest.fn();
 const mockDeleteComment = jest.fn();
@@ -21,7 +26,10 @@ jest.mock('resend', () => ({ Resend: class {} }));
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
+  BIBLIOGRAPHY_COMMENTS_TYPE: 'bibliography',
   getPassageComments: (...args: unknown[]) => mockGetPassageComments(...args),
+  getBibliographyComments: (...args: unknown[]) =>
+    mockGetBibliographyComments(...args),
   getCommentThread: jest.fn(),
   replyToComment: (...args: unknown[]) => mockReplyToComment(...args),
   resolveComment: (...args: unknown[]) => mockResolveComment(...args),
@@ -55,7 +63,9 @@ jest.mock('../NavigationProvider', () => ({
 }));
 
 jest.mock('./useVisiblePassageUuids', () => ({
-  useVisiblePassageUuids: () => ['p1'],
+  BIBLIOGRAPHY_ROWS: 'bibliography-rows',
+  useVisiblePassageUuids: (_enabled: boolean, rows?: string) =>
+    rows === 'bibliography-rows' ? mockEntryUuids : ['p1'],
 }));
 
 const thread = (
@@ -110,6 +120,8 @@ beforeEach(() => {
   mockNavigation.focusedComment = undefined;
   Element.prototype.scrollIntoView = jest.fn();
   mockGetPassageComments.mockResolvedValue([]);
+  mockGetBibliographyComments.mockResolvedValue([]);
+  mockEntryUuids.splice(0);
   mockDeleteComment.mockResolvedValue({ success: true, deletedUuids: [] });
   mockRequestEditorFor.mockResolvedValue(null);
   mockSetCommentTags.mockResolvedValue({ success: true });
@@ -325,6 +337,46 @@ describe('CommentsPanel', () => {
     expect(mockReplyToComment).toHaveBeenCalledWith(
       expect.objectContaining({ parentUuid: 'root', content: '<p>Noted.</p>' }),
     );
+  });
+
+  it('lists a bibliography entry thread and navigates to the entry', async () => {
+    mockEntryUuids.push('b1');
+    mockGetBibliographyComments.mockResolvedValue([
+      {
+        passageUuid: 'b1',
+        label: '1.2',
+        type: 'bibliography',
+        sort: 0,
+        anchored: [
+          {
+            thread: thread('t1'),
+            anchors: [{ uuid: 'a1', passageUuid: 'b1', start: 0, end: 4 }],
+          },
+        ],
+        unanchored: [],
+      },
+    ]);
+
+    render(<CommentsPanel workUuid="w1" />);
+    await userEvent.click(await screen.findByText('body of t1'));
+
+    expect(mockGetBibliographyComments).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: 'w1', entryUuids: ['b1'] }),
+    );
+    expect(screen.getByText('Bibliography 1.2')).toBeTruthy();
+    expect(mockUpdatePanel).toHaveBeenCalledWith({
+      name: 'right',
+      state: { open: true, tab: 'bibliography', hash: 'b1' },
+    });
+  });
+
+  it('reads no bibliography entries when none are on screen', async () => {
+    render(<CommentsPanel workUuid="w1" />);
+
+    expect(
+      await screen.findByText('No comments on the text in view.'),
+    ).toBeTruthy();
+    expect(mockGetBibliographyComments).not.toHaveBeenCalled();
   });
 
   it('navigates to the passage a thread annotates, whatever tab is open', async () => {

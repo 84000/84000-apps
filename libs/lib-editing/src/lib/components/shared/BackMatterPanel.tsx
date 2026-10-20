@@ -160,6 +160,7 @@ export const BackMatterPanel = ({
                 value="bibliography"
                 forceMount
                 className="pb-8 data-[state=inactive]:hidden"
+                data-tab="bibliography"
               >
                 {renderBibliography?.() ?? (
                   <BibliographyList content={bibliography} />

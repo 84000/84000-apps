@@ -8,6 +8,7 @@ import {
   ScrollBar,
 } from '@eightyfourthousand/design-system';
 import { useRef } from 'react';
+import { CommentSelector } from './selectors/CommentSelector';
 import { ForeignSelector } from './selectors/ForeignSelector';
 import { GlossarySelector } from './selectors/GlossarySelector';
 import { LinkSelector } from './selectors/LinkSelector';
@@ -15,7 +16,7 @@ import { MentionSelector } from './selectors/MentionSelector';
 import { InlineMarkButtons } from './selectors/TranslationTextButtons';
 import { useDismissBubbleMenu } from './useDismissBubbleMenu';
 
-/** The formatting a bibliography entry takes: inline marks only. */
+/** The formatting a bibliography entry takes: inline marks, and comments. */
 export const BibliographyBubbleMenu = ({
   editor,
 }: {
@@ -49,6 +50,7 @@ export const BibliographyBubbleMenu = ({
           <GlossarySelector editor={editor} />
           <MentionSelector editor={editor} />
           <LinkSelector editor={editor} />
+          <CommentSelector editor={editor} entityType="bibliography" />
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
