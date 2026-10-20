@@ -42,8 +42,8 @@ proceeding on assumptions:
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill
 - [ ] The `kangyur-tengyur-recensions` skill, if the translator asks for the
-      Stok Palace version to be consulted. It is not shipped in this plugin;
-      the policies say what to do without it
+      Stok Palace version to be consulted. It needs `download-snapshot` and a
+      shell; the policies say what to do without it
 - [ ] The `docx` skill, for the primary `.docx` deliverable. This is Claude's
       general document skill, not one this plugin ships
 

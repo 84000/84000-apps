@@ -89,7 +89,8 @@
         "libs/lib-agent/skills/copyediting",
         "libs/lib-agent/skills/tibetan-source-text",
         "libs/lib-agent/skills/tibetan-english-passage-alignment",
-        "libs/lib-agent/skills/glossary-by-canon-section"
+        "libs/lib-agent/skills/glossary-by-canon-section",
+        "libs/lib-agent/skills/kangyur-tengyur-recensions"
       ],
       "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
