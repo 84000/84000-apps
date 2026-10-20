@@ -8,7 +8,7 @@ machine.
 
 This file is the mechanism, and it is the same for every stage. Which files a
 stage saves, and which of them is the primary deliverable, is in that stage's
-own output spec.
+skill and policies.
 
 ## The call
 

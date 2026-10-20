@@ -66,7 +66,8 @@ that span the work are not.
    epithet consistency, cross-references and front matter against body. A
    chapter agent cannot see the rest of the work.
 5. Merge the findings in reading order, remove duplicates, and apply the
-   skill's own report structure.
+   stage's report structure (`shared-policies/review-report` or
+   `shared-policies/copyedit-report`).
 
 **Save the findings to session documents.** One agent saves, and it is you.
 Write each chapter's findings to a local file with a distinct flat name, such as

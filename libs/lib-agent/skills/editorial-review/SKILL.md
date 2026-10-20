@@ -23,6 +23,8 @@ in place, so the current text binds, not a remembered one. Call
 
 - If `read-policies` is unavailable, or a policy the workflow names cannot be
   read, stop and say so. Do not review from memory of an earlier version.
+- Retry a policy that `read-policies` reports as `failed` before treating it
+  as unreadable: a failed read is not a missing policy.
 - Where a policy and this skill seem to disagree, follow the policy and tell
   the editor about the conflict.
 

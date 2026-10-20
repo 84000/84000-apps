@@ -7,7 +7,7 @@ allowed-tools: Skill(docx)
 # 84000 text analysis and retrieval (Stage 0)
 
 You are producing the Stage 0 report for a text before any drafting begins,
-from its Toh number alone. Stage 0 asks the translator nothing.
+from its Toh number alone.
 
 ## The standard is in the policies
 
@@ -22,6 +22,8 @@ edited in place, so the current text binds, not a remembered one. Call
 
 - If `read-policies` is unavailable, or a policy the workflow names cannot be
   read, stop and say so. Do not run Stage 0 from memory of an earlier version.
+- Retry a policy that `read-policies` reports as `failed` before treating it
+  as unreadable: a failed read is not a missing policy.
 - Where a policy and this skill seem to disagree, follow the policy and report
   the conflict.
 
@@ -56,13 +58,10 @@ Confirm each of these at the start of the session:
 
 - Resolve the Toh number first with `resolve-toh`. A cited number is often not
   an entry of its own: it may be superseded, one of several a single entry
-  covers, or a subdivided or lettered entry. Pass the resolved number onward,
-  and record every placement `resolve-toh` reports.
-- **If the number resolves to more than one work, or to none, stop and
-  report it.** Do not choose.
+  covers, or a subdivided or lettered entry. Pass the resolved number onward;
+  `resolve-toh` also reports the work's placements.
 - Fetch the Degé text — Kangyur or Tengyur, Uchen Unicode — for the resolved
-  number with the `tibetan-source-text` skill, every folio side from the first
-  to the last.
+  number with the `tibetan-source-text` skill.
 - Take the canonical section from `get-translation` and the titles from
   `get-work-titles`.
 

@@ -20,7 +20,8 @@ the research editor can revise it without a plugin release. Read it with
 place, so the current text binds, not a remembered one.
 
 - If `read-policies` is unavailable or the policy cannot be read, report
-  recorded alignments as usual, but do not derive one. Say why.
+  recorded alignments as usual, but do not derive one. Say why. Retry a policy
+  that `read-policies` reports as `failed` before treating it as unreadable.
 - Where the policy and this skill seem to disagree, follow the policy and tell
   the person about the conflict.
 
@@ -82,8 +83,9 @@ Keep `uuid`/`folio`/`side` attached to each folio's content as you work — the
 output needs them. To confirm what Tibetan an English term corresponds to for
 this work, use `search-glossary-terms` or `get-glossary-instances`.
 
-Note the character offset into that folio's `content` where the span starts
-and ends on its first and last folio. This is not part of the reported output,
+Once the boundary is fixed per the policy, note the character offset into the
+first and last folio's `content` where the span starts and ends. This is not
+part of the reported output,
 but keep it — it is what makes the alignment reproducible, and it matches the
 anchor format the rest of this pipeline uses.
 
@@ -135,6 +137,9 @@ Confidence: moderate — boundary falls mid-formula; the exact split point is a 
 - Do not guess a folio, or fabricate a `folio_uuid`, when the passage cannot
   actually be located. Say so instead.
 - Do not derive a boundary without checking `get-passage-alignments` first.
+- Do not correct a recorded alignment, with or without the policy. Return its
+  Tibetan exactly as retrieved and the English exactly as given; if it looks
+  wrong, report the recorded span and say why you doubt it.
 - Do not write the result into the database. This skill finds and reports an
   alignment; it does not persist one. If the person explicitly asks you to save
   it, confirm the target table and required columns with them first.
