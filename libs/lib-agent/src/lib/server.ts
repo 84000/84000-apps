@@ -114,12 +114,13 @@ export function createMcpHandler(options: McpHandlerOptions) {
       // transport then reuses; a body that is not JSON is left for the
       // transport to reject.
       let parsedBody: unknown;
-      let resolved = instructions;
+      let resolved =
+        typeof instructions === 'string' ? instructions : undefined;
       if (typeof instructions === 'function') {
         parsedBody = await readBody(req);
         resolved = isInitialize(parsedBody) ? await instructions() : undefined;
       }
-      const server = buildServer(resolved as string | undefined);
+      const server = buildServer(resolved);
       await server.connect(transport);
 
       return await transport.handleRequest(
