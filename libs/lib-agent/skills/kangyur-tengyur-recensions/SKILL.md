@@ -71,8 +71,9 @@ than one).
    collections are Unicode Tibetan and others Wylie (see the README); search
    each in its own script, and convert Wylie to Unicode per
    `shared-policies/transliteration`, not by hand. Without that policy or a
-   converter, search the Wylie collections only and say the Unicode ones
-   were not searched. OCR text is noisy: search for short, distinctive
+   converter, search the Unicode collections with strings copied from the
+   work's Degé source (the `tibetan-source-text` skill), or say they were not
+   searched. OCR text is noisy: search for short, distinctive
    strings and try variant spellings before reporting nothing found.
 4. Quote only what the user needs. Do not reproduce long stretches unless
    asked.
