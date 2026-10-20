@@ -50,11 +50,12 @@ const SECTION_NAME_LANGUAGE = 'en';
 /**
  * Creator roles the imprint credits, and the language each falls back to when
  * the creator carries no name of its own. Authors are credited in English,
- * translators in Tibetan — an asymmetry inherited from the imprint as published.
+ * translators in Tibetan (stored as Wylie, `Bo-Ltn`) — an asymmetry inherited
+ * from the imprint as published.
  */
 const CREDIT_FALLBACK_LANGUAGE = {
   tibetanAuthor: 'en',
-  tibetanTranslator: 'bo',
+  tibetanTranslator: 'Bo-Ltn',
 } as const;
 
 type CreditRole = keyof typeof CREDIT_FALLBACK_LANGUAGE;
@@ -121,30 +122,53 @@ type SourceDescriptionRow = {
 };
 
 /**
- * A credited creator with both name sources: the one it points at directly, and
- * its authority's names so the language fallback can be applied. Both embeds
- * hang off `creators`, so the specific name needs an explicit foreign key hint
- * to disambiguate it from the authority's names.
+ * A credited creator with the name it points at directly, which wins outright
+ * and may be in any language, and its authority for the fallback.
  *
- * The authority's names are narrowed to the fallback languages by the query —
- * an authority can carry dozens of transliterations, and the fallback only ever
- * reads `en` or `bo`. That is 308 rows rather than 2,788 for a 200-work batch,
- * 72KB rather than 232KB. The creator's own name stays unnarrowed: it wins
- * outright and may be in any language.
+ * The authority's names are not embedded; they are read separately, and only
+ * for credits without a name of their own.
  */
 const CREDIT_COLUMNS = `
   work_uuid,
   type,
   status,
-  names!creators_name_uuid_fkey(content),
-  authorities(names(language, content))`;
+  authority_uuid,
+  names!creators_name_uuid_fkey(content)`;
 
 type CreditRow = {
   work_uuid: string;
   type: string;
   status: string | null;
+  authority_uuid: string | null;
   names: { content: string | null } | null;
-  authorities: { names: { language: string | null; content: string | null }[] } | null;
+};
+
+/** An authority's name, read only for the credits that have none of their own. */
+const FALLBACK_NAME_COLUMNS = 'authority_uuid, language, content';
+
+type FallbackNameRow = {
+  authority_uuid: string;
+  language: string | null;
+  content: string | null;
+};
+
+const fallbackKey = (authorityUuid: string, language: string) =>
+  `${authorityUuid}:${language}`;
+
+/** The first name by content for each authority and language. */
+const fallbackNamesOf = (rows: readonly FallbackNameRow[]) => {
+  const names = new Map<string, string>();
+  for (const { authority_uuid, language, content } of rows) {
+    if (!language || !content) {
+      continue;
+    }
+    const key = fallbackKey(authority_uuid, language);
+    const current = names.get(key);
+    if (current === undefined || content < current) {
+      names.set(key, content);
+    }
+  }
+  return names;
 };
 
 /**
@@ -162,14 +186,14 @@ type SectionRow = {
 };
 
 /**
- * How many work uuids to name in a single `in.(...)` filter.
+ * How many uuids to name in a single `in.(...)` filter.
  *
  * PostgREST rejects a request whose URL exceeds roughly 16KB, and a uuid costs
  * 37 characters in the list — so a few hundred works is the ceiling, well below
  * the thousands a full-library imprint read carries. Matches the batch size the
  * passage reads already use.
  */
-const WORK_UUID_BATCH_SIZE = 200;
+const UUID_BATCH_SIZE = 200;
 
 /**
  * How many rows to ask for at once.
@@ -214,19 +238,18 @@ const readPages = async <T>(query: () => PagedQuery<T>): Promise<Read<T>> => {
 };
 
 /**
- * Run a read once per batch of work uuids and concatenate the rows.
+ * Run a read once per batch of uuids and concatenate the rows.
  *
- * Ordering applies within a batch, which is all the assembly needs: every row
- * for a given work lands in the same batch, because the batches are cut by work.
+ * Ordering applies within a batch only.
  */
-const readByWork = async <T>(
-  workUuids: readonly string[],
+const readByUuid = async <T>(
+  uuids: readonly string[],
   read: (batch: string[]) => PagedQuery<T>,
 ): Promise<Read<T>> => {
   const rows: T[] = [];
 
-  for (let i = 0; i < workUuids.length; i += WORK_UUID_BATCH_SIZE) {
-    const batch = workUuids.slice(i, i + WORK_UUID_BATCH_SIZE);
+  for (let i = 0; i < uuids.length; i += UUID_BATCH_SIZE) {
+    const batch = uuids.slice(i, i + UUID_BATCH_SIZE);
     const { rows: page, error } = await readPages(() => read(batch));
 
     if (error) {
@@ -294,6 +317,7 @@ const titlesByLanguage = (
 const creditedNames = (
   rows: readonly CreditRow[],
   role: CreditRole,
+  fallbackNames: ReadonlyMap<string, string>,
 ): string[] => {
   const fallbackLanguage = CREDIT_FALLBACK_LANGUAGE[role];
   const names = new Set<string>();
@@ -303,15 +327,11 @@ const creditedNames = (
       continue;
     }
 
-    const fallback = (row.authorities?.names ?? [])
-      .filter(
-        (name): name is { language: string | null; content: string } =>
-          name.language === fallbackLanguage && !!name.content,
-      )
-      .map(({ content }) => content)
-      .sort()[0];
-
-    const name = row.names?.content ?? fallback;
+    const name =
+      row.names?.content ||
+      (row.authority_uuid
+        ? fallbackNames.get(fallbackKey(row.authority_uuid, fallbackLanguage))
+        : undefined);
     if (name) {
       names.add(name);
     }
@@ -337,6 +357,7 @@ const assembleImprint = ({
   titles,
   sourceDescriptions,
   credits,
+  fallbackNames,
   sections,
 }: {
   key: ImprintKey;
@@ -345,6 +366,7 @@ const assembleImprint = ({
   titles: readonly TitleRow[];
   sourceDescriptions: readonly SourceDescriptionRow[];
   credits: readonly CreditRow[];
+  fallbackNames: ReadonlyMap<string, string>;
   sections: readonly SectionRow[];
 }): Imprint => {
   const { uuid, toh } = key;
@@ -359,9 +381,7 @@ const assembleImprint = ({
   const section = sections.find((row) => row.toh === toh)?.catalogs
     ?.catalog_names[0]?.content;
 
-  const publisher = work.publisher
-    ? settings.get(work.publisher)
-    : undefined;
+  const publisher = work.publisher ? settings.get(work.publisher) : undefined;
   const license = work.license ? settings.get(work.license) : undefined;
 
   const version = work.work_versions?.version ?? work.publicationVersion;
@@ -378,14 +398,18 @@ const assembleImprint = ({
     version: (version as SemVer) ?? undefined,
     restriction: work.restriction ?? undefined,
     publishYear: publishYearOf(work.publicationDate),
-    tibetanAuthors: creditedNames(credits, 'tibetanAuthor'),
+    tibetanAuthors: creditedNames(credits, 'tibetanAuthor', fallbackNames),
     isAuthorContested: credits.some(
       (row) => row.type === 'tibetanAuthor' && row.status === CONTESTED,
     ),
     sourceDescription: sourceDescription ?? undefined,
     publisherStatement: publisher?.description ?? undefined,
     // The domain keeps translators as the joined string the imprint prints.
-    tibetanTranslators: creditedNames(credits, 'tibetanTranslator').join(', '),
+    tibetanTranslators: creditedNames(
+      credits,
+      'tibetanTranslator',
+      fallbackNames,
+    ).join(', '),
     license: {
       name: license?.name ?? undefined,
       description: license?.description ?? undefined,
@@ -403,8 +427,9 @@ const assembleImprint = ({
  * function fanned a ten-way join out per pair and collapsed it with `max()`
  * aggregates, so its cost was linear in the batch — about 3.4ms per imprint
  * against production, or ~16s to read the whole library. These reads are
- * set-based instead: six of them, each covering the whole batch, so the cost
- * barely moves with batch size.
+ * set-based instead, each covering the whole batch, so the cost barely moves
+ * with batch size. Fallback names follow in one more read, only when a credit
+ * has no name of its own.
  *
  * A pair with no work row, or whose toh the work does not carry, is absent from
  * the returned map.
@@ -426,14 +451,14 @@ export const getTranslationImprints = async ({
   const workUuids = [...new Set(keys.map(({ uuid }) => uuid))];
 
   const reads = await Promise.all([
-    readByWork<WorkRow>(workUuids, (batch) =>
+    readByUuid<WorkRow>(workUuids, (batch) =>
       client
         .from('works')
         .select<string, WorkRow>(WORK_COLUMNS)
         .in('uuid', batch)
         .order('uuid', { ascending: true }),
     ),
-    readByWork<TitleRow>(workUuids, (batch) =>
+    readByUuid<TitleRow>(workUuids, (batch) =>
       client
         .from('titles')
         .select<string, TitleRow>(TITLE_COLUMNS)
@@ -446,7 +471,7 @@ export const getTranslationImprints = async ({
         .order('content', { ascending: false, nullsFirst: false })
         .order('uuid', { ascending: true }),
     ),
-    readByWork<SourceDescriptionRow>(workUuids, (batch) =>
+    readByUuid<SourceDescriptionRow>(workUuids, (batch) =>
       client
         .from('folio_annotations')
         .select<string, SourceDescriptionRow>(SOURCE_DESCRIPTION_COLUMNS)
@@ -455,21 +480,15 @@ export const getTranslationImprints = async ({
         .order('source_description', { ascending: false, nullsFirst: false })
         .order('uuid', { ascending: true }),
     ),
-    readByWork<CreditRow>(workUuids, (batch) =>
+    readByUuid<CreditRow>(workUuids, (batch) =>
       client
         .from('creators')
         .select<string, CreditRow>(CREDIT_COLUMNS)
         .in('work_uuid', batch)
         .in('type', Object.keys(CREDIT_FALLBACK_LANGUAGE))
-        // Derived from the same constant as the fallback itself, so the two
-        // cannot drift apart.
-        .in(
-          'authorities.names.language',
-          Object.values(CREDIT_FALLBACK_LANGUAGE),
-        )
         .order('uuid', { ascending: true }),
     ),
-    readByWork<SectionRow>(workUuids, (batch) =>
+    readByUuid<SectionRow>(workUuids, (batch) =>
       client
         .from('catalog_works')
         .select<string, SectionRow>(SECTION_COLUMNS)
@@ -497,6 +516,29 @@ export const getTranslationImprints = async ({
   const [works, titles, sourceDescriptions, credits, sections, settingRows] =
     reads;
 
+  const unnamed = [
+    ...new Set(
+      credits.rows.flatMap((row) =>
+        row.names?.content || !row.authority_uuid ? [] : [row.authority_uuid],
+      ),
+    ),
+  ];
+  const fallbackRows = await readByUuid<FallbackNameRow>(unnamed, (batch) =>
+    client
+      .from('names')
+      .select<string, FallbackNameRow>(FALLBACK_NAME_COLUMNS)
+      .in('authority_uuid', batch)
+      // Derived from the same constant as the fallback itself, so the two
+      // cannot drift apart.
+      .in('language', Object.values(CREDIT_FALLBACK_LANGUAGE))
+      .order('uuid', { ascending: true }),
+  );
+  if (fallbackRows.error) {
+    console.error('Error batch fetching imprints:', fallbackRows.error);
+    return imprintsByKey;
+  }
+
+  const fallbackNames = fallbackNamesOf(fallbackRows.rows);
   const settings = new Map(settingRows.rows.map((row) => [row.uuid, row]));
   const worksByUuid = new Map(works.rows.map((work) => [work.uuid, work]));
   const titlesByWork = groupByWork(titles.rows);
@@ -519,6 +561,7 @@ export const getTranslationImprints = async ({
         titles: titlesByWork.get(key.uuid) ?? [],
         sourceDescriptions: sourceDescriptionsByWork.get(key.uuid) ?? [],
         credits: creditsByWork.get(key.uuid) ?? [],
+        fallbackNames,
         sections: sectionsByWork.get(key.uuid) ?? [],
       }),
     );
