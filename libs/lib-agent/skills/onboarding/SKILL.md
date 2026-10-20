@@ -1,6 +1,6 @@
 ---
 name: onboarding
-description: Welcome a user to the 84000 plugins and recommend the ones that suit their 84000 role. Use it when the 84000 studio says the user has not completed 84000 onboarding, in its server instructions or a tool result, or when the user asks to set up, onboard or find the right 84000 plugins. Offer it once a session; if the user declines or defers, do not raise it again.
+description: Welcome a user to the 84000 plugins and recommend the ones that suit their 84000 role. Use it when the 84000 studio says the user has not completed 84000 onboarding, in its server instructions or a tool result, or when the user asks to set up, onboard or find the right 84000 plugins. When the studio says so, offer it at most once a session; if the user declines or defers, do not raise it again. Never mention onboarding otherwise.
 ---
 
 # 84000 onboarding

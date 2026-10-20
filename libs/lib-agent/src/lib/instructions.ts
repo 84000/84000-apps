@@ -59,6 +59,8 @@ This user hasn't completed 84000 onboarding. Offer the \`onboarding\` skill once
 const studioIntro =
   'Authenticated access to the 84000 studio, the internal platform for translating the Tibetan Buddhist canon (Kangyur and Tengyur).';
 
+// The onboarding variant is the longer one to keep under
+// MCP_INSTRUCTIONS_MAX_LENGTH: a section added here must fit in both.
 const studioSections = [
   `## Policies are live
 

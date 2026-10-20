@@ -16,8 +16,9 @@ export const ONBOARDING_NOTE =
 
 /**
  * Whether the caller still needs onboarding, read at most once per request and
- * only when a tool is actually called. An unreadable profile counts as no:
- * a missing note is cheaper than nagging an onboarded user.
+ * only when a tool is called or the session is initialized. An unreadable
+ * profile counts as no: a missing offer is cheaper than nagging an onboarded
+ * user.
  */
 export function onboardingCheck(
   client: DataClient,
