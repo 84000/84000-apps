@@ -366,11 +366,56 @@ describe('getTranslationImprints', () => {
     await getTranslationImprints({ client, keys: [KEY] });
 
     const [credits] = forTable(queries, 'creators');
-    // An authority can carry dozens of transliterations, so they are never
-    // embedded in the credits read.
     expect(credits.columns).toContain('names!creators_name_uuid_fkey(content)');
     expect(credits.columns).not.toContain('authorities(');
     expect(forTable(queries, 'names')).toHaveLength(0);
+  });
+
+  it('omits an unnamed credit with no name in its fallback language', async () => {
+    const { client, queries } = createMockClient({
+      ...fullReads(),
+      creators: {
+        data: [
+          credit('tibetanTranslator', null, 'translator-a'),
+          credit('tibetanTranslator', null, null),
+        ],
+        error: null,
+      },
+      names: { data: [], error: null },
+    });
+
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
+
+    expect(imprint?.tibetanTranslators).toBe('');
+    // A credit with no authority has nothing to fall back to.
+    expect(forTable(queries, 'names')[0].filters[0].value).toEqual([
+      'translator-a',
+    ]);
+  });
+
+  it('batches and deduplicates the authorities it reads fallback names for', async () => {
+    const authorities = Array.from(
+      { length: 201 },
+      (_, index) => `authority-${index}`,
+    );
+    const { client, queries } = createMockClient({
+      ...fullReads(),
+      creators: {
+        data: [...authorities, authorities[0]].map((uuid) =>
+          credit('tibetanTranslator', null, uuid),
+        ),
+        error: null,
+      },
+    });
+
+    await getTranslationImprints({ client, keys: [KEY] });
+
+    const names = forTable(queries, 'names');
+    expect(names).toHaveLength(2);
+    expect(names[0].filters[0].value).toEqual(authorities.slice(0, 200));
+    expect(names[1].filters[0].value).toEqual(authorities.slice(200));
   });
 
   it('returns an empty map when the fallback names read fails', async () => {

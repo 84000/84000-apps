@@ -125,8 +125,8 @@ type SourceDescriptionRow = {
  * A credited creator with the name it points at directly, which wins outright
  * and may be in any language, and its authority for the fallback.
  *
- * The authority's names are not embedded: a translator's authority carries
- * dozens of Wylie variants, and almost every credit has a name of its own.
+ * The authority's names are not embedded; they are read separately, and only
+ * for credits without a name of their own.
  */
 const CREDIT_COLUMNS = `
   work_uuid,
@@ -240,8 +240,7 @@ const readPages = async <T>(query: () => PagedQuery<T>): Promise<Read<T>> => {
 /**
  * Run a read once per batch of uuids and concatenate the rows.
  *
- * Ordering applies within a batch, which is all the assembly needs: every row
- * for a given work lands in the same batch, because the batches are cut by work.
+ * Ordering applies within a batch only.
  */
 const readByUuid = async <T>(
   uuids: readonly string[],
@@ -329,7 +328,7 @@ const creditedNames = (
     }
 
     const name =
-      row.names?.content ??
+      row.names?.content ||
       (row.authority_uuid
         ? fallbackNames.get(fallbackKey(row.authority_uuid, fallbackLanguage))
         : undefined);
@@ -428,9 +427,9 @@ const assembleImprint = ({
  * function fanned a ten-way join out per pair and collapsed it with `max()`
  * aggregates, so its cost was linear in the batch — about 3.4ms per imprint
  * against production, or ~16s to read the whole library. These reads are
- * set-based instead: six of them, each covering the whole batch, so the cost
- * barely moves with batch size. A seventh reads fallback names, and runs only
- * when a credit has no name of its own.
+ * set-based instead, each covering the whole batch, so the cost barely moves
+ * with batch size. Fallback names follow in one more read, only when a credit
+ * has no name of its own.
  *
  * A pair with no work row, or whose toh the work does not carry, is absent from
  * the returned map.
@@ -519,9 +518,9 @@ export const getTranslationImprints = async ({
 
   const unnamed = [
     ...new Set(
-      credits.rows
-        .filter((row) => !row.names?.content && row.authority_uuid)
-        .map((row) => row.authority_uuid as string),
+      credits.rows.flatMap((row) =>
+        row.names?.content || !row.authority_uuid ? [] : [row.authority_uuid],
+      ),
     ),
   ];
   const fallbackRows = await readByUuid<FallbackNameRow>(unnamed, (batch) =>
