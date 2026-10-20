@@ -26,12 +26,21 @@ const cell = (value: unknown): string =>
 /** Column names from a space-separated list. */
 const cols = (names: string): string[] => names.split(' ');
 
+/** Toh numbers in catalog order: toh9 before toh10. */
+const byToh = (a: string, b: string): number =>
+  a.localeCompare(b, 'en', { numeric: true });
+
 const tsv = (header: readonly string[], rows: readonly unknown[][]): string =>
   [header, ...rows].map((row) => row.map(cell).join('\t')).join('\n') + '\n';
 
+/** Marks a folio side the source gives no folio number or side for. */
+export const UNNUMBERED_FOLIO = 'F.?';
+
 /** A folio side's line: its 84000 label, then its text with line breaks joined. */
 export const renderFolioLine = (folio: EtextsFolioRow): string =>
-  `[${folioLabel(folio.folio_number, folio.folio_side)}] ${(folio.content ?? '')
+  `[${folioLabel(folio.folio_number, folio.folio_side) || UNNUMBERED_FOLIO}] ${(
+    folio.content ?? ''
+  )
     .replace(/\s*[\r\n]+\s*/g, ' ')
     .trim()}`;
 
@@ -161,7 +170,7 @@ export const renderCatalog = ({
           w.rkts_id,
           w.conceptual_work,
           w.conceptual_work
-            ? (tohByWork.get(w.conceptual_work) ?? []).sort().join(' ')
+            ? (tohByWork.get(w.conceptual_work) ?? []).sort(byToh).join(' ')
             : '',
           w.title_bo,
           w.title_sa,
@@ -192,7 +201,7 @@ export const renderCatalog = ({
         .sort((a, b) => a.uuid.localeCompare(b.uuid))
         .map((cw) => [
           cw.uuid,
-          (tohByWork.get(cw.uuid) ?? []).sort().join(' '),
+          (tohByWork.get(cw.uuid) ?? []).sort(byToh).join(' '),
           cw.bdrc_id,
           cw.rkts_id,
           cw.topic_id,
@@ -351,8 +360,10 @@ const renderReadme = ({
     '- Every witness of a work shares its `conceptual_work`. Toh number -> `toh.tsv` ->',
     '  `conceptual_work` -> every `works.tsv` row with it.',
     '- `text/<canon>/<siglum>/<vol>.txt` holds one folio side per line in reading order,',
-    "  `[F.12.a] …`, with the side's own line breaks joined by a single space. Volume",
-    '  numbers are zero-padded to three digits. A volume with no eText has no file.',
+    "  `[F.12.a] …`, with the side's own line breaks joined by a single space. A side",
+    '  the source gives no folio number for is `[F.?]`: locate it by the nearest',
+    '  numbered line before it. Volume numbers are zero-padded to three digits. A',
+    '  volume with no eText has no file.',
     '- A witness runs from `start_folio` in `start_vol` to `end_folio` in `end_vol`. Its',
     '  first and last sides usually also hold the end of the previous text and the start',
     '  of the next: a text opens at *rgya gar skad du* (རྒྱ་གར་སྐད་དུ) and closes at its',

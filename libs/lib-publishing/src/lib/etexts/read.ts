@@ -91,8 +91,8 @@ export interface EtextsReferenceBoundaryRow {
 export interface EtextsFolioRow {
   uuid: string;
   seq: number | null;
-  folio_number: number;
-  folio_side: string;
+  folio_number: number | null;
+  folio_side: string | null;
   content: string | null;
 }
 

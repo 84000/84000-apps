@@ -134,8 +134,8 @@ const rows: EtextsCatalogRows = {
 
 const folio = (
   seq: number,
-  folio_number: number,
-  folio_side: string,
+  folio_number: number | null,
+  folio_side: string | null,
   content: string,
 ): EtextsFolioRow => ({
   uuid: `f-${seq}`,
@@ -190,6 +190,10 @@ describe('renderFolioLine', () => {
     expect(renderFolioLine(folio(1, 12, 'xa', 'one\r\n two \nthree\n'))).toBe(
       '[F.12.xa] one two three',
     );
+  });
+
+  it('marks a side with no folio number', () => {
+    expect(renderFolioLine(folio(2, null, null, 'text'))).toBe('[F.?] text');
   });
 });
 
