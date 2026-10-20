@@ -365,15 +365,35 @@ describe('CommentsPanel', () => {
     });
   });
 
-  it('reads no bibliography threads under a tag filter', async () => {
+  it('lists the tagged bibliography threads under a tag filter', async () => {
     window.history.replaceState(null, '', '/?commentTag=pending');
+    mockGetTaggedComments.mockResolvedValue([
+      { workUuid: 'w1', threadUuid: 't1', passageUuids: [] },
+    ]);
+    mockGetBibliographyComments.mockResolvedValue([
+      {
+        passageUuid: 'b1',
+        label: '1.2',
+        type: 'bibliography',
+        sort: 0,
+        anchored: [
+          {
+            thread: thread('t1', { tags: ['pending'] }),
+            anchors: [{ uuid: 'a1', passageUuid: 'b1', start: 0, end: 4 }],
+          },
+          {
+            thread: thread('t2'),
+            anchors: [{ uuid: 'a2', passageUuid: 'b1', start: 6, end: 9 }],
+          },
+        ],
+        unanchored: [],
+      },
+    ]);
 
     render(<CommentsPanel workUuid="w1" />);
 
-    expect(
-      await screen.findByText('No comments tagged “pending” in this work.'),
-    ).toBeTruthy();
-    expect(mockGetBibliographyComments).not.toHaveBeenCalled();
+    expect(await screen.findByText('body of t1')).toBeTruthy();
+    expect(screen.queryByText('body of t2')).toBeNull();
   });
 
   it('navigates to the passage a thread annotates, whatever tab is open', async () => {

@@ -19,7 +19,8 @@ export type TaggedComment = {
   threadUuid?: string;
   /**
    * Where the thread sits: the passages anchoring it, or the passage it was
-   * written on when nothing anchors it.
+   * written on when nothing anchors it. Empty for a thread on a bibliography
+   * entry.
    */
   passageUuids: string[];
 };
@@ -97,12 +98,17 @@ export const getTaggedComments = async ({
   return rows.map(({ work_uuid, ...row }) => {
     const threadUuid = rootByComment.get(row.uuid);
     const anchored = threadUuid ? anchors?.get(threadUuid) : undefined;
+    const onPassage = row.entity_type === 'passage';
 
     return {
       comment: commentFromDTO(row),
       workUuid: work_uuid,
       threadUuid,
-      passageUuids: anchored?.length ? anchored : [row.entity_uuid],
+      passageUuids: !onPassage
+        ? []
+        : anchored?.length
+          ? anchored
+          : [row.entity_uuid],
     };
   });
 };

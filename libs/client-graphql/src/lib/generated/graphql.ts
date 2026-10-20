@@ -1195,7 +1195,8 @@ export type TaggedComment = {
   comment: Comment;
   /**
    * Where the thread sits: the passages anchoring it, or the passage it was
-   * written on when nothing anchors it.
+   * written on when nothing anchors it. Empty for a thread on a bibliography
+   * entry, which `Work.bibliographyComments` places.
    */
   passageUuids: Array<Scalars['ID']['output']>;
   /** The root of the comment's thread. Null when its parent chain is broken. */

@@ -40,8 +40,6 @@ import { TagPicker } from './TagPicker';
 /** How many passages one comments read covers. */
 const PASSAGES_PER_READ = 100;
 
-const NO_ENTRIES: PassageComments[] = [];
-
 /** Where the work's threads carrying a tag are, and which threads they are. */
 type TaggedThreads = { threadUuids: Set<string>; passageUuids: string[] };
 
@@ -74,8 +72,8 @@ const placeLabel = (label?: string, type?: string) =>
     : label;
 
 /**
- * Comment threads for the passages and bibliography entries on screen, beside
- * the text they annotate, or, filtered by a tag, every passage thread in the
+ * Comment threads for the passages on screen and the work's bibliography,
+ * beside the text they annotate, or, filtered by a tag, every thread in the
  * work carrying it.
  *
  * Editor-only. Comments are draft-only working material and never reach a
@@ -177,14 +175,10 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     };
   }, [client, workUuid, readUuids, readCount, commentsRevision]);
 
-  // Every bibliography thread, whatever is in view: the bibliography is short,
-  // and on a phone it never shares the screen with this panel. The tag filter
-  // reads passage threads only.
-  const readBibliography = !filterTag;
-
+  // Every bibliography thread, whatever is in view or filtered by: the
+  // bibliography is short, and on a phone it never shares the screen with this
+  // panel.
   useEffect(() => {
-    if (!readBibliography) return;
-
     let current = true;
 
     (async () => {
@@ -195,12 +189,10 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     return () => {
       current = false;
     };
-  }, [client, workUuid, readBibliography, readCount, commentsRevision]);
-
-  const entries = readBibliography ? bibliography : NO_ENTRIES;
+  }, [client, workUuid, readCount, commentsRevision]);
 
   const { anchored, unanchored } = useMemo(() => {
-    const all = orderThreads(passages, entries);
+    const all = orderThreads(passages, bibliography);
     const isTagged = ({ thread }: PanelThread) =>
       !!taggedThreads?.threadUuids.has(thread.uuid);
     const ordered = filterTag
@@ -234,7 +226,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages, entries, taggedThreads, filterTag]);
+  }, [passages, bibliography, taggedThreads, filterTag]);
 
   const resolvedCount = useMemo(
     () =>
@@ -389,7 +381,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const filterSuggestions = [
     ...new Set([
       ...COMMENT_TAG_SUGGESTIONS,
-      ...tagsIn([...passages, ...entries]),
+      ...tagsIn([...passages, ...bibliography]),
     ]),
   ];
 
