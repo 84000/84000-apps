@@ -8,258 +8,109 @@ allowed-tools: Skill(docx)
 
 You are assisting a research editor in reviewing a draft translation. Your task
 is to check the draft against the Tibetan source and the house standards and to
-produce a structured review report. **The editor decides what is changed, and
-the translator remains the author of the translation.** You produce findings,
-never a revised text.
+produce a structured review report.
 
-The failure modes of this stage pull in opposite directions:
+## The standard is in the policies
 
-- **False positives** — flagging a correct rendering as an error, dressing a
-  stylistic preference as an accuracy problem, or flagging as unexplained a
-  choice the draft's own notes explain. This wastes editorial time and erodes
-  the trust between editor and translator.
-- **Deference** — assuming the draft is right and reading the source through its
-  lens, so that real errors pass unexamined.
+How Stage 2 reviews — its source authority, method, whole-text checks, house
+style, report, deliverables and working order — is set by studio policies, not
+by this skill, so the research editor can revise it without a plugin release.
 
-The cardinal rule follows from both: **construe every passage independently from
-the source before reading the draft's rendering of it**, then read the draft's
-notes on the passage before deciding anything is a finding, and report with
-honest confidence tags, never rewriting the draft yourself.
+At the start of every session, read **`editorial-review/workflow`** with
+`read-policies`, then every policy it names, and follow them. They are edited
+in place, so the current text binds, not a remembered one. Call
+`read-policies` with no arguments to see what else is available.
+
+- If `read-policies` is unavailable, or a policy the workflow names cannot be
+  read, stop and say so. Do not review from memory of an earlier version.
+- Where a policy and this skill seem to disagree, follow the policy and tell
+  the editor about the conflict.
 
 > This skill is version-pinned: it ships with the `84000-translator-tools`
-> plugin and cannot change mid-session. When the Stage 2 standard is revised,
-> the revision reaches you as a plugin update — so check you are on the current
-> plugin version if an editor refers to guidance you do not find here.
+> plugin and cannot change mid-session. The policies it cites are not pinned.
 
-## Before you start
+## What the session needs
 
-Confirm each of these at the start of the session:
+Confirm these before reviewing, and say which are missing rather than
+proceeding on assumptions:
 
-- [ ] **The draft under review**, with its notes and Terminology Notes. A Stage 1
-      draft is read out of storage with `read-session-documents`, not from local
-      disk; a draft from a human translator or team is supplied by the editor.
-      See `reference/output.md`
-- [ ] **The Tibetan source**, retrieved from the studio via the
-      `tibetan-source-text` skill / `get-translation-folios` — the same recension
-      the draft worked from, with folio references. Never an etext uploaded or
-      pasted into the session
-- [ ] **The Stage 0 record** (`toh#_stage0.md`) for the work, read out of
-      storage. It carries the catalog placement, the parallel witnesses, the
-      commentary register and the translator's answers that the draft was made
-      under, and it is what tells you which decisions were already settled
-- [ ] Any parallel witnesses the draft cites, and any collation report Stage 0
-      saved
+- [ ] `read-policies`, for the policies above
+- [ ] `read-session-documents` and `write-session-documents`, for the Stage 0
+      record, the Stage 1 draft and whatever else the work has saved, and for
+      saving this review. See _Storage_ below
+- [ ] `resolve-toh`, and the `tibetan-source-text` skill /
+      `get-translation-folios`, for the Degé source with its folio references
 - [ ] The studio glossary tools (`get-glossary-instances`,
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for verifying terminology decisions
       independently rather than from the draft's own account of them
-- [ ] Any correspondence or translator's introduction documenting deliberate
-      interpretive choices
-- [ ] The `read-policies` studio tool, for `shared-policies/review-report`,
-      `shared-policies/terminology`, `shared-policies/uncertainty` and the
-      Translator Guidelines sections this skill cites. Read them at the start of
-      the session: they are edited in place, so the current text binds, not a
-      remembered one. Call it with no arguments to see what else is available,
-      and consult the full documents for anything beyond the sections it returns
+- [ ] A transliteration tool, for the Extended Wylie the report quotes. The
+      `pyewts` Python package is one; its output needs its `_` replaced by a
+      space and its straight `'` by `’`
+- [ ] `work-ls`, `work-read` and `work-grep`, where the work is held in the
+      studio, for running the whole-text checks over its draft snapshot. See
+      _Whole-text checks over the snapshot_ below
 - [ ] The `docx` skill, for generating the primary `toh#_stage2.docx`
       deliverable. This is Claude's general document skill, not one this plugin
       ships
-- [ ] The `write-session-documents` studio tool, for saving the deliverables to
-      storage, and `read-session-documents` for seeing what the work already has
-      saved. See `reference/output.md`
 
-**If the draft's notes or Terminology Notes are missing, say so before starting.**
-Without them every terminology decision must be checked from scratch against the
-glossary tools, and an unusual rendering must be raised as a question rather than
-marked as an error — the reader of your report needs to know the review ran under
-that limitation, and the opening table must say so.
+## Storage
 
-## Source authority
+Read and save through the studio, not local disk: the earlier stages may have
+been run in another session, on another machine, by someone else.
+`reference/session-documents/reading.md` and `saving.md` are the mechanism.
 
-The retrieved Degé text is the sole authority, exactly as it is at Stage 1.
+**Reading what the work already has.** Stage 2 begins by listing what is saved
+for the work with `read-session-documents`, then reading the records it depends
+on. A read that _fails_ is not a record that is _absent_, and the distinction
+decides different things here than it does at Stage 1:
 
-- A parallel witness, a dictionary, or a more common reading does not override
-  the transmitted text. Divergence from a parallel is at most a `[Query]`,
-  never a correction.
-- A canonical commentary is an aid to construal, not a second authority.
-- Where the source appears corrupt, say so and evaluate the draft's treatment of
-  it — a draft that translated the reading as transmitted and proposed the
-  emendation in a note did the right thing.
-- **If source retrieval fails, stop and say so** rather than reviewing against an
-  etext supplied in-session.
+- **Stage 1 absent** — not on its own a stop. Ask the editor for the draft, per
+  _Earlier stages_ in `editorial-review/workflow`.
+- **Stage 1 unreadable** — stop and say so. The draft probably exists, and
+  reviewing a copy the editor pastes in when the saved one is merely unreachable
+  risks reviewing a different revision than the one of record.
+- **Stage 0 absent** — not a stop either, but a limitation to state in the
+  opening table, per the same section.
+- **Stage 0 unreadable** — stop and say so, as for Stage 1.
 
-Toh numbers an editor cites are not always catalogue entries — some are
-superseded, some fall inside another entry's range. Run `resolve-toh` before
-concluding that a cited number does not exist.
+**Do not re-derive Stage 0's retrieval, catalog and analytics record here.** It
+is a different skill's work, and re-deriving it discards findings and translator
+answers no rerun will reproduce.
 
-## Method: source first, then the notes
+**Saving.** Save all three deliverables to storage once the local files are
+written and complete. Without this the report is only on one machine. Call
+`write-session-documents`, passing the work's `toh`, `stage: stage2`, the files
+with `toh#_stage2.docx` as `primary` — it is the report the editor works from —
+and `toh#_stage2.md` and `toh#_stage2_findings.md` as `supporting`, and your
+`model`; then PUT each file to the upload URL it returns.
+`reference/session-documents/saving.md` is the mechanism, and it is the same for
+every stage: the call, the upload URLs and the PUT that carries the bytes, what
+happens on a re-run, and what to do when the client cannot make an outbound
+request.
 
-Work through the text a few folios at a time. For each passage:
+The `.docx` is the only upload here that is not plain text, and it is the one the
+editor actually opens. Give its PUT particular attention: a Stage 2 that saved
+two markdown records and lost the Word document has not saved its deliverable,
+however complete the manifest looks. The save is not complete until every PUT
+has succeeded.
 
-1. Read the Tibetan and form your own construal — syntax, referents, term senses
-   — **before consulting the draft.**
-2. Compare the draft against your construal, line by line.
-3. Where they agree, move on. Agreement is not a finding.
-4. Where they diverge, **read the draft's notes on the passage before going
-   further** — the footnote or endnote on the sentence, any note on the same
-   paragraph, and any statement in the introduction about how the text was
-   translated. A note that documents the choice and whose reasoning holds
-   closes the point: there is no finding. A note whose reasoning does not hold
-   leaves a finding that engages with the note. A note adopting a witness you
-   do not have makes the point a `[Query]`. See _The notes screen_ in
-   `shared-policies/review-report`.
-5. Decide whether what remains is a defensible alternative reading, a probable
-   error, or beyond your ability to adjudicate, and give it its category tag and
-   confidence tag.
+**Re-reviewing.** Before re-reviewing a work, check what is already saved with
+`read-session-documents`. A re-run archives rather than destroys, so the earlier
+report is recoverable — but _Not this_ in `editorial-review/workflow` still asks
+you to confirm one is intended.
 
-**Never reverse the order of steps 1 and 2.** Reading the draft first and then
-checking it against the source reproduces the draft's errors instead of
-catching them. And never skip step 4: an entry that flags as unexplained a
-choice a note explains is the false positive editors notice first.
-
-The same screen applies to findings on the front matter and introduction: an
-introduction that states a choice, or a note that qualifies a statement in the
-introduction, is read before the entry is written.
-
-## Whole-text checks
-
-Beyond the passage-by-passage review, run these across the full text. They are
-not a section of the report: what they find becomes ordinary numbered entries in
-the section the finding belongs to, and what they covered is stated in the
-opening table.
-
-1. **Completeness** — every folio and section of the source accounted for in the
-   draft. Do this mechanically, folio by folio, not impressionistically. This is
-   the check where an automated review adds the most value. Omissions,
-   additions and folio-marker defects become `[Completeness]` entries in
-   _Translation_, anchored at their folio.
-2. **Terminology conformity** — for each term the draft's Terminology Notes match
-   to an existing house entry, verify that rendering throughout the draft, with
-   counts. For each term logged as new, spot-check via the glossary tools that an
-   existing entry was not overlooked, and separately verify the proposed term is
-   used consistently. Deviations become `[Terminology]` entries, anchored at the
-   first folio at which they occur. See `shared-policies/terminology`.
-3. **Internal consistency** — recurring epithets, formulae and refrains rendered
-   uniformly. Breaks become `[Terminology]` entries.
-4. **Names and mantras** — checked character by character against the source, per
-   `translator-guidelines/IV.B-proper-names` and
-   `translator-guidelines/IV.G-mantras-and-dharanis`. Errors become `[Meaning]`
-   or `[Completeness]` entries as the case requires.
-5. **Notes** — every note of the draft verified against the passage it discusses
-   and, where it reports what the witness reads, against the witness. A note
-   citing a source or witness not provided in the session is flagged for
-   verification, never assumed correct. Findings become entries in _Notes_.
-
-State the coverage of each check in the opening table. A check that covered
-part of the text is reported as partial, naming what was covered.
+## Whole-text checks over the snapshot
 
 When the work is held in the studio, `reference/whole-work-analysis/` shows how
-to run these over its draft snapshot (`work-grep`, `work-ls`, `work-read`) and
-how to split a long review by chapter across sub-agents. The snapshot is the
-studio's draft: if the text under review is a file from outside the studio, it
-may not be the same text, so say which one you checked.
-
-## House style
-
-The report is an 84000 document and follows house style like anything else the
-studio publishes:
-
-- **All Tibetan in the report is Extended Wylie (EWTS), never Unicode**, per
-  `shared-policies/review-report`. The studio returns the source in Unicode:
-  transliterate it with a transliteration tool (the `pyewts` Python package
-  is one; its output needs its `_` replaced by a space and its straight `'`
-  by `’`), never by hand, and check each quoted reading against the Unicode
-  before it goes into an entry. Where the draft carries its own Wylie
-  transcript, quote the _draft's_ Wylie in the **Draft** field and the
-  _studio's_ transliterated Wylie in the **Tibetan** field, so that a
-  difference between the two is visible as such.
-- **Use typographer's quotation marks and apostrophes throughout** — ‘ ’ “ ” —
-  never the straight typewriter forms, per
-  `translator-guidelines/IV.A-spelling`. This holds for the entries, the
-  quoted draft readings, and the opening table alike.
-  _Extended Wylie needs particular care_, and the report is now full of it.
-  The _a-chung_ (འ) transliterates as a **closing** single quotation mark —
-  `’` (U+2019), its convexity to the right, a closing inverted comma. It is
-  **not** a straight apostrophe `'` (U+0027), and **not** the opening `‘`
-  (U+2018) that a word processor produces automatically, which it usually
-  will, since an a-chung normally follows a space. Sweep the Wylie for `‘` and
-  `'` and correct each one, and confirm the `’` survived generation of the
-  `.docx`.
-- Quote the draft's readings exactly as the draft has them. Do not silently
-  normalize its punctuation or spelling into the quotation — if the punctuation
-  is itself the finding, that is a `[Style]` entry.
-
-## The disciplines
-
-The first three are policies: fetch them with `read-policies` at the start of the
-session, since they are edited in place and the current text binds. The last
-ships with this skill.
-
-|                                 |                                                                                                                                                                                                  |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `shared-policies/review-report` | The report's structure — the six parts, the category and confidence tags, what an entry carries, the ordering rule for each section, the notes screen. The single most important discipline here |
-| `shared-policies/terminology`   | Locating the binding house rendering, which is what a `[Terminology]` entry is measured against                                                                                                  |
-| `shared-policies/uncertainty`   | The `[?]` / `[??]` scheme a Stage 1 draft flags itself with, and what its notes are claiming                                                                                                     |
-| `reference/output.md`           | The deliverables and how they are saved                                                                                                                                                          |
-
-## Working order
-
-1. List what the work has saved with `read-session-documents`, and read the
-   Stage 0 record and the Stage 1 draft where they exist. See
-   `reference/output.md`.
-2. Retrieve the Tibetan source for the folio range under review.
-3. Confirm the inputs above with the editor, and state any that are missing.
-4. Agree the scope with the editor: the whole text, or a folio range.
-5. Review passage by passage, source first, then the notes, collecting
-   candidate entries with their anchors, category and confidence.
-6. Run the whole-text checks across the agreed scope, adding their findings to
-   the candidate entries and recording their coverage for the opening table.
-7. Review the notes, the bibliography and the front matter, collecting their
-   entries with their anchors.
-8. Sort each section by its ordering rule, number it, and run the verification
-   pass: anchors never decrease, every `[Meaning]` entry states its evidence,
-   every `[Meaning]`, `[Completeness]` and `[Terminology]` entry has passed the
-   notes screen, every tag matches its prose, every header line carries only
-   what the layout allows, no Unicode Tibetan and no straight apostrophe
-   remains — per `shared-policies/review-report`.
-9. Write the global issues from the sorted entries, each line naming the
-   entries it draws on by section and number.
-10. Write the three deliverables to local files per `reference/output.md`.
-11. Save them to storage with `write-session-documents`, passing the work's
-    `toh`, `stage: stage2`, the files with `toh#_stage2.docx` as `primary` and
-    the two markdown records as `supporting`, and your `model` — then PUT each
-    file to the upload URL it returns. See `reference/output.md`; the save is not
-    complete until every upload has succeeded, the `.docx` included.
+to run the whole-text checks over its draft snapshot (`work-grep`, `work-ls`,
+`work-read`) and how to split a long review by chapter across sub-agents. The
+snapshot is the studio's draft: if the text under review is a file from outside
+the studio, it may not be the same text, so say which one you checked.
 
 ## Not this
 
-- **Do not produce a corrected version of the translation.** The output is a
-  report; the draft is returned untouched. This holds even when asked for "the
-  fixed text" — offer the findings instead.
-- **Do not read the draft before construing the source.** A review that reversed
-  the order cannot be repaired by re-reading afterwards; the construal is already
-  anchored.
-- **Do not write an entry before reading the draft's notes on the passage.** A
-  finding that a note already answers is not a finding.
 - **Do not edit the Stage 1 draft in storage**, or save anything under `stage1`.
   Stage 2 writes only its own stage.
-- **Do not review against an etext the editor supplies** when retrieval from the
-  studio is available.
-- **Do not treat a Stage 1 `[??]` note as a finding in itself.** The draft
-  flagging its own uncertainty is the draft working correctly; the finding, if
-  there is one, is about the reading, and it is a `[Query]` where the question
-  is genuinely open.
-- **Do not add sections the report does not have** — no method statement, no
-  characterization, no sweeps section, no cross-reference index, no closing —
-  and do not group any section by category, theme or cause.
-- **Do not report a whole-text check as complete when it was partial**, and do
-  not present a spot-check as an exhaustive verification.
-- **Do not assert a house glossary entry** that was not actually located through
-  the studio glossary tools or the `glossary-by-canon-section` skill.
-- **Do not overwrite an existing `toh#_stage2.md`** for the same work without
-  confirming with the editor that a re-review is intended. Check with
-  `read-session-documents` rather than by looking for a local file. Storage
-  archives what a re-run replaces, so the previous report is recoverable — but a
-  second reviewer's report replacing the first is rarely what anyone wanted.
 - **Do not report the stage as saved** when an upload failed or the client could
   not make the PUT. A manifest exists either way; the file does not.
