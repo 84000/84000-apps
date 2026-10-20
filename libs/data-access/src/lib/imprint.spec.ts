@@ -29,7 +29,7 @@ type MockQueryBuilder = {
 /**
  * Records every query the imprint read builds and serves results per table.
  *
- * The six reads all resolve through `.range()` — the assembly pages each one —
+ * Every read resolves through `.range()` — the assembly pages each one —
  * so results are keyed by table rather than served from a single queue. A table
  * mapped to an array serves one entry per call, which is how paging and work
  * batching are exercised.
@@ -124,15 +124,21 @@ const title = (
 const credit = (
   type: string,
   specific: string | null,
-  authorityNames: { language: string; content: string }[] = [],
+  authorityUuid: string | null = null,
   status: string | null = null,
 ) => ({
   work_uuid: WORK,
   type,
   status,
+  authority_uuid: authorityUuid,
   names: specific ? { content: specific } : null,
-  authorities: { names: authorityNames },
 });
+
+const authorityName = (
+  authority_uuid: string,
+  language: string,
+  content: string,
+) => ({ authority_uuid, language, content });
 
 const sectionRow = (content: string, toh = TOH) => ({
   work_uuid: WORK,
@@ -158,7 +164,7 @@ const fullReads = () => ({
   },
   creators: {
     data: [
-      credit('tibetanAuthor', 'Nāgārjuna', [], 'contested'),
+      credit('tibetanAuthor', 'Nāgārjuna', null, 'contested'),
       credit('tibetanTranslator', 'Yeshé Dé'),
     ],
     error: null,
@@ -166,7 +172,12 @@ const fullReads = () => ({
   catalog_works: { data: [sectionRow('General Sūtra Section')], error: null },
   settings: {
     data: [
-      { uuid: 'publisher-1', name: '84000', description: 'A statement.', link: null },
+      {
+        uuid: 'publisher-1',
+        name: '84000',
+        description: 'A statement.',
+        link: null,
+      },
       {
         uuid: 'license-1',
         name: 'CC BY-NC-ND',
@@ -233,9 +244,9 @@ describe('getTranslationImprints', () => {
   it('maps every imprint field the reader shows', async () => {
     const { client } = createMockClient(fullReads());
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
     expect(imprint).toEqual({
       uuid: WORK,
@@ -265,9 +276,9 @@ describe('getTranslationImprints', () => {
       works: { data: [workRow({ work_versions: null })], error: null },
     });
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
     expect(imprint?.version).toBe('1.1.33');
   });
@@ -284,9 +295,9 @@ describe('getTranslationImprints', () => {
       },
     });
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
     expect(imprint?.mainTitles).toEqual({ en: 'This Toh' });
   });
@@ -306,49 +317,75 @@ describe('getTranslationImprints', () => {
   });
 
   it('credits a creator by its own name, falling back to its authority', async () => {
-    const { client } = createMockClient({
+    const { client, queries } = createMockClient({
       ...fullReads(),
       creators: {
         data: [
-          credit('tibetanAuthor', null, [
-            { language: 'en', content: 'Zeta' },
-            { language: 'en', content: 'Alpha' },
-            { language: 'bo', content: 'ignored' },
-          ]),
-          credit('tibetanAuthor', 'Named Author'),
-          credit('tibetanTranslator', null, [
-            { language: 'bo', content: 'ye shes sde' },
-            { language: 'en', content: 'ignored' },
-          ]),
+          credit('tibetanAuthor', null, 'author-a'),
+          credit('tibetanAuthor', 'Named Author', 'author-b'),
+          credit('tibetanTranslator', null, 'translator-a'),
+        ],
+        error: null,
+      },
+      names: {
+        data: [
+          authorityName('author-a', 'en', 'Zeta'),
+          authorityName('author-a', 'en', 'Alpha'),
+          authorityName('author-a', 'Bo-Ltn', 'ignored'),
+          authorityName('translator-a', 'Bo-Ltn', 'ye shes sde'),
+          authorityName('translator-a', 'en', 'ignored'),
         ],
         error: null,
       },
     });
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
-    // Authors fall back to English, translators to Tibetan, and the fallback is
+    // Authors fall back to English, translators to Wylie, and the fallback is
     // the first name in that language by content.
     expect(imprint?.tibetanAuthors).toEqual(['Alpha', 'Named Author']);
     expect(imprint?.tibetanTranslators).toBe('ye shes sde');
+
+    // Only the authorities of unnamed credits, in the fallback languages.
+    const [names] = forTable(queries, 'names');
+    expect(names.filters).toEqual([
+      {
+        op: 'in',
+        column: 'authority_uuid',
+        value: ['author-a', 'translator-a'],
+      },
+      { op: 'in', column: 'language', value: ['en', 'Bo-Ltn'] },
+    ]);
   });
 
-  it('narrows the authority names to the languages the fallback can use', async () => {
+  it('reads no authority names when every credit has its own', async () => {
     const { client, queries } = createMockClient(fullReads());
 
     await getTranslationImprints({ client, keys: [KEY] });
 
     const [credits] = forTable(queries, 'creators');
-    // An authority can carry dozens of transliterations; only 'en' and 'bo' are
-    // ever read. The creator's own name is deliberately not narrowed.
-    expect(credits.filters).toEqual(
-      expect.arrayContaining([
-        { op: 'in', column: 'authorities.names.language', value: ['en', 'bo'] },
-      ]),
-    );
+    // An authority can carry dozens of transliterations, so they are never
+    // embedded in the credits read.
     expect(credits.columns).toContain('names!creators_name_uuid_fkey(content)');
+    expect(credits.columns).not.toContain('authorities(');
+    expect(forTable(queries, 'names')).toHaveLength(0);
+  });
+
+  it('returns an empty map when the fallback names read fails', async () => {
+    const { client } = createMockClient({
+      ...fullReads(),
+      creators: {
+        data: [credit('tibetanTranslator', null, 'translator-a')],
+        error: null,
+      },
+      names: { data: null, error: { message: 'permission denied' } },
+    });
+
+    const imprints = await getTranslationImprints({ client, keys: [KEY] });
+
+    expect(imprints.size).toBe(0);
   });
 
   it('deduplicates credited names', async () => {
@@ -363,9 +400,9 @@ describe('getTranslationImprints', () => {
       },
     });
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
     expect(imprint?.tibetanAuthors).toEqual(['Same Name']);
     expect(imprint?.isAuthorContested).toBe(false);
@@ -408,9 +445,9 @@ describe('getTranslationImprints', () => {
       ],
     });
 
-    const imprint = (
-      await getTranslationImprints({ client, keys: [KEY] })
-    ).get(imprintKey(KEY));
+    const imprint = (await getTranslationImprints({ client, keys: [KEY] })).get(
+      imprintKey(KEY),
+    );
 
     // Each page rebuilds the query, so the ranges land one per recorded read.
     expect(forTable(queries, 'titles').flatMap(({ ranges }) => ranges)).toEqual(
@@ -437,8 +474,8 @@ describe('getTranslationImprints', () => {
 
     const works = forTable(queries, 'works');
     expect(works).toHaveLength(2);
-    expect((works[0].filters[0].value as string[])).toHaveLength(200);
-    expect((works[1].filters[0].value as string[])).toHaveLength(1);
+    expect(works[0].filters[0].value as string[]).toHaveLength(200);
+    expect(works[1].filters[0].value as string[]).toHaveLength(1);
   });
 
   it('deduplicates work uuids across keys', async () => {
