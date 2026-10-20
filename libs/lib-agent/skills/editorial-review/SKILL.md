@@ -50,8 +50,9 @@ proceeding on assumptions:
       `pyewts` Python package is one; its output needs its `_` replaced by a
       space and its straight `'` by `’`
 - [ ] `work-ls`, `work-read` and `work-grep`, where the work is held in the
-      studio, for running the whole-text checks over its draft snapshot. See
-      _Whole-text checks over the snapshot_ below
+      studio, for running the whole-text checks over its draft snapshot, and
+      optionally `download-snapshot` with a shell. See _Whole-text checks over
+      the snapshot_ below
 - [ ] The `docx` skill, for generating the primary `toh#_stage2.docx`
       deliverable. This is Claude's general document skill, not one this plugin
       ships
@@ -109,6 +110,11 @@ to run the whole-text checks over its draft snapshot (`work-grep`, `work-ls`,
 `work-read`) and how to split a long review by chapter across sub-agents. The
 snapshot is the studio's draft: if the text under review is a file from outside
 the studio, it may not be the same text, so say which one you checked.
+
+When a shell is available and the work needs many passes or scripting across
+files, `download-snapshot` with the `work` gives a local copy instead;
+`reference/whole-work-analysis/snapshot.md` says when to choose it and how to
+handle the URL, which is a credential. Without a shell, use the `work-*` tools.
 
 ## Not this
 

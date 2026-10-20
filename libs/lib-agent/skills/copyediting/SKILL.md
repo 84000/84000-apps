@@ -49,7 +49,8 @@ proceeding on assumptions:
 - [ ] `get-glossary-instances` and `get-glossary-term`, where the work already
       has a studio glossary
 - [ ] `work-grep`, `work-ls` and `work-read`, when the work is held in the
-      studio. See _The work snapshot_ below
+      studio, and optionally `download-snapshot` with a shell. See _The work
+      snapshot_ below
 - [ ] The `docx` skill, for reading the supplied file and generating the Word
       deliverables, including tracked changes and comments. This is Claude's
       general document skill, not one this plugin ships
@@ -151,3 +152,8 @@ to run the glossary and terminology sweeps over its draft snapshot
 across sub-agents. The snapshot is the studio's draft: if the file under review
 has since been edited outside the studio, it may differ, so say which one you
 checked.
+
+When a shell is available and the work needs many passes or scripting across
+files, `download-snapshot` with the `work` gives a local copy instead;
+`reference/whole-work-analysis/snapshot.md` says when to choose it and how to
+handle the URL, which is a credential. Without a shell, use the `work-*` tools.
