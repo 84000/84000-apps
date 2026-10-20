@@ -68,14 +68,14 @@ Confirm each of these at the start of the session:
 - [ ] The `tibetan-source-text` skill and the 84000 Studio catalog tools
       (`resolve-toh`, `get-translation`, `get-work-titles`, `get-imprint`,
       `get-translation-folios`, `search-entities`, `search-canon-sections`).
-- [ ] The `kangyur-tengyur-recensions` skill, which reads the eText
-      collections (Degé, Stok Palace, Peking, Narthang and Phugdrak Kangyurs;
-      Degé, Narthang and Peking Tengyurs) and their work catalog. Stage 0
-      depends on it for recensions and for title search over the Kangyur and
-      Tengyur, and for the search of the Degé Tengyur folio text for works
-      citing the base text. If it is not available in the session, the
-      subsections that need it are reported as not run — see
-      `shared-policies/canonical-resources`.
+- [ ] The `kangyur-tengyur-recensions` skill, with `download-snapshot` and a
+      shell. It reads the eText collections of the Kangyur, Tengyur and
+      Nyingma Gyubum and their work catalog; the catalog's README lists the
+      collections in the current build. Stage 0 depends on it for recensions
+      and for title search over the Kangyur and Tengyur, and for the search of
+      the Degé Tengyur folio text for works citing the base text. If it is not
+      available in the session, the subsections that need it are reported as
+      not run — see `shared-policies/canonical-resources`.
 - [ ] A web search tool, for precedent translations outside of 84000 content. If
       none is available, that route is reported as not run.
 - [ ] The `read-policies` tool. Read, at the start of the session:
