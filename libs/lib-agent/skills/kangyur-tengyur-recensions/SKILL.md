@@ -66,12 +66,14 @@ than one).
    volumes. Its first and last sides usually also hold the neighbouring texts;
    the README says where a text opens and closes.
 3. To search, grep the collection's text files. Each line is one folio side
-   and begins with its folio reference, so a hit gives its location. Some
+   and begins with its folio reference, so a hit gives its location (a side
+   marked as unnumbered is located by the numbered line before it). Some
    collections are Unicode Tibetan and others Wylie (see the README); search
    each in its own script, and convert Wylie to Unicode per
-   `shared-policies/transliteration`, not by hand. OCR text is noisy: search
-   for short, distinctive strings and try variant spellings before reporting
-   nothing found.
+   `shared-policies/transliteration`, not by hand. Without that policy or a
+   converter, search the Wylie collections only and say the Unicode ones
+   were not searched. OCR text is noisy: search for short, distinctive
+   strings and try variant spellings before reporting nothing found.
 4. Quote only what the user needs. Do not reproduce long stretches unless
    asked.
 
@@ -87,10 +89,11 @@ Kangyur first, Degé first within each:
 | Narthang Tengyur | N4061  | 114  | F.1.b–38.b | anchored  |
 | Peking Tengyur   | Q5272  | 114  | F.1.b–45.a | anchored  |
 
-Write folios in 84000 style (`F.186.a–191.b`). After the tables, list
-low-confidence rows and why, and any witnesses with no eText. End with the
-build id, so the result can be traced. Treat Sanskrit titles from the catalog
-as mechanical conversions, not edited IAST.
+Write folios in 84000 style (`F.186.a–191.b`). When a witness crosses volumes,
+give both (`41–42` under Vol., and the folio range across them). After the
+tables, list low-confidence rows and why, and any witnesses with no eText. End
+with the build id, so the result can be traced. Treat Sanskrit titles from the
+catalog as mechanical conversions, not edited IAST.
 
 ## Housekeeping
 
