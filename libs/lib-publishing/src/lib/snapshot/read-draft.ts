@@ -100,9 +100,14 @@ export const resolveDraftWork = async ({
   };
 };
 
-const readAlignments = async (
+/**
+ * Alignments of `passageUuids`, for the Toh `toh` when given (a work catalogued at
+ * several places is aligned once per Toh). Alignments are not versioned: drafts and
+ * published passages share them.
+ */
+export const readAlignments = async (
   client: DataClient,
-  passageUuids: string[],
+  passageUuids: readonly string[],
   toh: string | undefined,
 ): Promise<DraftAlignment[]> => {
   const out: DraftAlignment[] = [];
@@ -136,6 +141,70 @@ const readAlignments = async (
   return out;
 };
 
+/** A work's draft passages, in reading order (sort, then uuid; unsorted last). */
+export const readDraftPassages = (
+  client: DataClient,
+  workUuid: string,
+): Promise<PublishedPassage[]> =>
+  readKeyset<PublishedPassage & Record<string, unknown>>({
+    build: () =>
+      client
+        .from(relationFor('passages', 'draft'))
+        .select('uuid, work_uuid, content, label, sort, parent, type, toh')
+        .eq('work_uuid', workUuid),
+    sortColumn: 'sort',
+    idColumn: 'uuid',
+    nullableSort: true,
+    what: 'passages',
+  });
+
+/**
+ * The draft annotations of `passageUuids`, unfiltered unless `types` narrows them:
+ * `deprecated-*` and `comment` included, as an editor sees them.
+ */
+export const readDraftAnnotations = async (
+  client: DataClient,
+  workUuid: string,
+  passageUuids: readonly string[],
+  types?: readonly string[],
+): Promise<PublishedAnnotation[]> => {
+  const rows = await readByIn<PublishedAnnotation & Record<string, unknown>>({
+    client,
+    table: relationFor('passageAnnotations', 'draft'),
+    columns: 'uuid, passage_uuid, type, start, end, content, toh',
+    column: 'passage_uuid',
+    values: passageUuids,
+    idColumn: 'uuid',
+    what: 'annotations',
+    ...(types ? { filter: (query) => query.in('type', [...types]) } : {}),
+  });
+  return rows.map((a) => ({ ...a, work_uuid: workUuid }));
+};
+
+/** A work's draft bibliography, in order. */
+export const readDraftBibliographies = async (
+  client: DataClient,
+  workUuid: string,
+): Promise<PublishedBibliography[]> => {
+  const rows = await readKeyset<
+    PublishedBibliography & Record<string, unknown>
+  >({
+    build: () =>
+      client
+        .from(relationFor('bibliographies', 'draft'))
+        .select(
+          'uuid, work_uuid, bibl_html, sort, heading, is_heading, heading_uuid',
+        )
+        .eq('work_uuid', workUuid),
+    sortColumn: 'sort',
+    idColumn: 'uuid',
+    nullableSort: true,
+    what: 'bibliographies',
+  });
+  // The draft table has no Toh column; the published copy stamps one at snapshot.
+  return rows.map((b) => ({ ...b, toh: null }));
+};
+
 /**
  * Every draft row a snapshot renders, unfiltered: `deprecated-*` and `comment`
  * annotations included, so the snapshot shows what an editor sees.
@@ -147,46 +216,14 @@ export const readDraftRows = async ({
   client: DataClient;
   work: DraftWork;
 }): Promise<DraftRows> => {
-  const passages = await readKeyset<PublishedPassage & Record<string, unknown>>(
-    {
-      build: () =>
-        client
-          .from(relationFor('passages', 'draft'))
-          .select('uuid, work_uuid, content, label, sort, parent, type, toh')
-          .eq('work_uuid', work.uuid),
-      sortColumn: 'sort',
-      idColumn: 'uuid',
-      nullableSort: true,
-      what: 'passages',
-    },
-  );
+  const passages = await readDraftPassages(client, work.uuid);
   const passageUuids = passages.map((p) => p.uuid);
 
   const [annotations, glossary, bibliographies, alignments] = await Promise.all(
     [
-      readByIn<PublishedAnnotation & Record<string, unknown>>({
-        client,
-        table: relationFor('passageAnnotations', 'draft'),
-        columns: 'uuid, passage_uuid, type, start, end, content, toh',
-        column: 'passage_uuid',
-        values: passageUuids,
-        idColumn: 'uuid',
-        what: 'annotations',
-      }),
+      readDraftAnnotations(client, work.uuid, passageUuids),
       readDraftGlossary({ client, workUuid: work.uuid }),
-      readKeyset<PublishedBibliography & Record<string, unknown>>({
-        build: () =>
-          client
-            .from(relationFor('bibliographies', 'draft'))
-            .select(
-              'uuid, work_uuid, bibl_html, sort, heading, is_heading, heading_uuid',
-            )
-            .eq('work_uuid', work.uuid),
-        sortColumn: 'sort',
-        idColumn: 'uuid',
-        nullableSort: true,
-        what: 'bibliographies',
-      }),
+      readDraftBibliographies(client, work.uuid),
       readAlignments(client, passageUuids, work.tohs[0]),
     ],
   );
@@ -194,11 +231,10 @@ export const readDraftRows = async ({
   return {
     work,
     passages,
-    annotations: annotations.map((a) => ({ ...a, work_uuid: work.uuid })),
+    annotations,
     glossary: glossary.terms,
     glossaryTermOf: glossary.termOf,
-    // The draft table has no Toh column; the published copy stamps one at snapshot.
-    bibliographies: bibliographies.map((b) => ({ ...b, toh: null })),
+    bibliographies,
     alignments,
   };
 };

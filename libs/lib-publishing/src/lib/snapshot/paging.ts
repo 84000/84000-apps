@@ -15,8 +15,10 @@ export const IN_BATCH_SIZE = 150;
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
 type Query = any;
 
+/** Throws for a failed read; `what` is a draft relation unless it names its source. */
 export const fail = (what: string, error: unknown): never => {
-  throw new Error(`Failed reading draft ${what}: ${JSON.stringify(error)}`);
+  const named = /^published /.test(what) ? what : `draft ${what}`;
+  throw new Error(`Failed reading ${named}: ${JSON.stringify(error)}`);
 };
 
 export const chunk = <T>(items: readonly T[], size: number): T[][] => {
@@ -103,6 +105,7 @@ export const readByIn = async <T extends Record<string, unknown>>({
   sortColumn,
   what,
   batchSize = IN_BATCH_SIZE,
+  filter = (query) => query,
 }: {
   client: DataClient;
   table: string;
@@ -113,12 +116,15 @@ export const readByIn = async <T extends Record<string, unknown>>({
   sortColumn?: string;
   what: string;
   batchSize?: number;
+  /** Narrows each batch's query further. */
+  filter?: (query: Query) => Query;
 }): Promise<T[]> => {
   const out: T[] = [];
   for (const batch of chunk(values, batchSize)) {
     out.push(
       ...(await readKeyset<T>({
-        build: () => client.from(table).select(columns).in(column, batch),
+        build: () =>
+          filter(client.from(table).select(columns).in(column, batch)),
         sortColumn,
         idColumn,
         what,
