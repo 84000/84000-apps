@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import type { McpToolDefinition } from '../../types';
 import { errorResult, textResult } from '../read/util';
+import type {
+  ReadySnapshotBundle,
+  SnapshotBundleSource,
+} from './bundle-source';
 import type { EtextsSnapshotSource } from './etexts-source';
 import { openSnapshot } from './open';
 import type { WorkSnapshotSource } from './source';
@@ -9,9 +13,9 @@ import { formatCount, freshnessLine } from './text';
 const inputSchema = {
   dataset: z
     .enum(['work', 'etexts-catalog', 'etexts-text'])
-    .default('work')
+    .optional()
     .describe(
-      "`work`: one work's draft. `etexts-catalog`: every Kangyur, Tengyur and Nyingma Gyubum witness, with titles, Toh numbers and folio ranges. `etexts-text`: one eText collection's full text",
+      "Not with `layers`. Default `work`. `work`: one work's draft. `etexts-catalog`: every Kangyur, Tengyur and Nyingma Gyubum witness, with titles, Toh numbers and folio ranges. `etexts-text`: one eText collection's full text",
     ),
   work: z
     .string()
@@ -22,6 +26,19 @@ const inputSchema = {
     .optional()
     .describe(
       'For `etexts-text`: a collection key from the catalog, e.g. "kangyur/S"',
+    ),
+  layers: z
+    .array(z.looseObject({ layer: z.string() }))
+    .optional()
+    .describe(
+      'Instead of `dataset`: layers to bundle into one download, each `{ layer, ...that layer\'s options }` as `list-snapshot-layers` lists them, e.g. [{ "layer": "work.draft", "work": "toh8" }]',
+    ),
+  format: z
+    .object({ tibetan: z.enum(['unicode', 'ewts', 'both']) })
+    .partial()
+    .optional()
+    .describe(
+      'With `layers`: bundle-wide formats. `tibetan`: unicode (default), ewts or both, as far as `list-snapshot-layers` says is available',
     ),
 };
 
@@ -86,26 +103,119 @@ const downloadEtexts = async (
   );
 };
 
+/** Single-quote `value` for a POSIX shell. */
+const shellQuote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+
+/** An option value: strings as written, anything else as JSON. */
+const optionValue = (value: unknown) =>
+  typeof value === 'string' ? value : JSON.stringify(value);
+
+const plural = (count: number, noun: string) =>
+  `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
+
+/** The earliest of the parts' expiry times, which bounds when all must be fetched. */
+const earliestExpiry = (expiries: string[]) =>
+  expiries.reduce((first, next) =>
+    Date.parse(next) < Date.parse(first) ? next : first,
+  );
+
+const bundleText = (bundle: ReadySnapshotBundle) => {
+  const { root, parts } = bundle;
+  const origin = bundle.cached
+    ? 'reused from cache'
+    : `built ${bundle.createdAt}`;
+  const lines = [
+    `[bundle ${root} · ${plural(bundle.layers.length, 'layer')} · ${origin}]`,
+  ];
+  for (const layer of bundle.layers) {
+    const options = Object.entries(layer.options)
+      .map(([key, value]) => `${key}: ${optionValue(value)}`)
+      .join(', ');
+    lines.push(
+      `- ${layer.layer}${options ? ` (${options})` : ''} → ${root}/${layer.dir}/ · data ${layer.dataVersion}`,
+    );
+    if (layer.note) lines.push(`  note: ${layer.note}`);
+  }
+  const totalBytes = parts.reduce((sum, part) => sum + part.bytes, 0);
+  lines.push(
+    `download: ${plural(parts.length, 'part')}, ${formatCount(totalBytes)} bytes (tar.gz), expires ${earliestExpiry(parts.map((part) => part.expiresAt))}`,
+  );
+  parts.forEach((part, index) => {
+    lines.push(
+      `part ${index + 1}: ${part.filename} · ${formatCount(part.bytes)} bytes${part.sha256 ? ` · sha256 ${part.sha256}` : ''}`,
+      `  url: ${part.url}`,
+    );
+  });
+  const steps = parts.map((part) => {
+    const file = shellQuote(part.filename);
+    const into = part.into === '.' ? '' : ` -C ${shellQuote(part.into)}`;
+    return `curl -sSfo ${file} ${shellQuote(part.url)} && tar xzf ${file}${into}`;
+  });
+  lines.push(
+    `Fetch and unpack: ${steps.join(' && ')}`,
+    `Read ${root}/README.md first: it covers every layer.`,
+  );
+  return lines.join('\n');
+};
+
+const downloadLayers = async (
+  bundles: SnapshotBundleSource | undefined,
+  layers: Record<string, unknown>[],
+  format: { tibetan?: string } | undefined,
+) => {
+  if (!bundles) return errorResult('Layer bundles are not available here.');
+  if (layers.length === 0) {
+    return errorResult(
+      'Pass at least one layer; `list-snapshot-layers` shows what is available.',
+    );
+  }
+  const status = await bundles.bundle({ layers, format });
+  switch (status.status) {
+    case 'ready':
+      return textResult(bundleText(status));
+    case 'pending':
+      // Not an error: the layers are being prepared and the call should be repeated.
+      return textResult(
+        `${status.error} Call again in about ${status.retryAfterSeconds} s.`,
+      );
+    default:
+      return errorResult(status.error);
+  }
+};
+
 /**
  * `download-snapshot`: a signed URL to a snapshot archive, for working on the files
- * locally. `etexts` is absent when the host does not serve the eText collections.
+ * locally. `etexts` is absent when the host does not serve the eText collections,
+ * and `bundles` when it does not serve layer bundles.
  */
 export function createDownloadSnapshotTool(
   source: WorkSnapshotSource,
   etexts?: EtextsSnapshotSource,
+  bundles?: SnapshotBundleSource,
 ): McpToolDefinition {
   return {
     name: 'download-snapshot',
     description:
-      "A short-lived signed URL to a snapshot as a tar.gz, for working on the files locally (grep, scripts): a work's draft, or the Kangyur, Tengyur and Nyingma Gyubum eText collections. The URL is a credential: do not share or log it. Requires editor.read.",
+      "Short-lived signed URLs to a snapshot as tar.gz, for working on the files locally (grep, scripts): a work's draft, or the Kangyur, Tengyur and Nyingma Gyubum eText collections. Pass `layers` instead of `dataset` to bundle several layers (a work's draft, the eText catalog, more as they are added) into one directory with one README; `list-snapshot-layers` lists them. The URLs are credentials: do not share or log them. Requires editor.read, and each layer's own permission.",
     inputSchema,
     annotations: {
       title: 'Download Snapshot',
       readOnlyHint: true,
       openWorldHint: false,
     },
-    handler: async ({ dataset = 'work', work, collection }) => {
-      if (dataset === 'work') {
+    handler: async ({ dataset, work, collection, layers, format }) => {
+      if (layers) {
+        if (dataset) {
+          return errorResult(
+            'Pass either `layers` or `dataset`, not both. The datasets are presets of layers; see `list-snapshot-layers`.',
+          );
+        }
+        return downloadLayers(bundles, layers, format);
+      }
+      if (format) {
+        return errorResult('`format` applies to `layers`; pass `layers` too.');
+      }
+      if (dataset === undefined || dataset === 'work') {
         if (!work) return errorResult('Pass `work` for the `work` dataset.');
         return downloadWork(source, work);
       }
