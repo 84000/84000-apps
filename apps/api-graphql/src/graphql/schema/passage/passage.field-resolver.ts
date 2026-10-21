@@ -54,12 +54,16 @@ async function resolveMentionTexts(
       uuid?: string;
       type?: string;
       text?: string;
+      subtype?: string;
     }>;
     const entityUuid = content?.find((c) => c.uuid)?.uuid;
     const linkType = content?.find((c) => c.type)?.type;
     const hasCustomText = content?.some((c) => c.text);
+    // A bampo or volume marker is labelled by its own text, never its folio's.
+    const isFolioMarker =
+      linkType === 'folio' && content?.some((c) => c.subtype);
 
-    if (!entityUuid || !linkType || hasCustomText) continue;
+    if (!entityUuid || !linkType || hasCustomText || isFolioMarker) continue;
     mentions.push({ annotationUuid: a.uuid, entityUuid, linkType });
   }
 

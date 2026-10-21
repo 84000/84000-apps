@@ -67,6 +67,57 @@ describe('mention transformer', () => {
     expect(mentions[0].marks).toEqual([]);
   });
 
+  it.each([0, 4])(
+    'orders volume, folio, then bampo markers at offset %i',
+    (at) => {
+      const marker = (uuid: string, text: string, subtype?: string) => ({
+        start: at,
+        end: at,
+        type: 'mention' as const,
+        uuid,
+        content: [
+          { type: 'folio' },
+          { uuid: 'folio-1' },
+          { text },
+          { same_work: true },
+          ...(subtype ? [{ subtype }] : []),
+        ],
+        passage_uuid: 'passage-uuid-1234',
+      });
+      const dto: PassageDTO = {
+        sort: 1,
+        type: 'root',
+        uuid: 'passage-uuid-1234',
+        label: '',
+        xmlId: 'test-passage',
+        parent: 'test-parent',
+        content: 'Some text',
+        work_uuid: 'work-uuid-5678',
+        annotations: [
+          marker('bampo', '[B1]', 'bampo'),
+          marker('volume-1', '[V26]', 'volume'),
+          marker('folio', '[F.1.a]'),
+          marker('volume-2', '[V27]', 'volume'),
+        ],
+      };
+
+      const passage = passageFromDTO(
+        dto,
+        annotationsFromDTO(dto.annotations || [], dto.content.length),
+      );
+      const block = blockFromPassage(passage);
+      if (!block?.content) {
+        throw new Error('Block conversion failed');
+      }
+
+      const mentions = countMentions(block);
+      expect(mentions.length).toBe(1);
+      expect(
+        mentions[0].attrs?.items?.map((item: { text: string }) => item.text),
+      ).toEqual(['[V26]', '[V27]', '[F.1.a]', '[B1]']);
+    },
+  );
+
   it('carries the lang attribute from annotation content onto the mention item', () => {
     const dto: PassageDTO = {
       sort: 1,

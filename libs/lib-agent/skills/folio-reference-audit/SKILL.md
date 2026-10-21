@@ -44,6 +44,10 @@ is an annotation with:
 | `linkToh` | the Tohoku number being audited |
 | `isSameWork` | `true` |
 
+A folio mention with a `subtype` (`bampo` or `volume`) is a bampo or volume
+marker such as `[B1]` or `[V26]`. It points at the folio it sits on but is not
+that folio's break, so the audit ignores it.
+
 A `[F.27.b]` still in the text, a `deprecated-reference`, or a folio `link` is
 **not** found. Those mean an earlier step was skipped; the audit reports the
 folio as missing, and the editor should run `resolve-folio-mentions` rather
@@ -252,7 +256,8 @@ Read-only and deterministic. Write it once per run; keep it short.
 
 **Found mentions.** Walk the passages in order and, within a passage, the
 annotations by `start`. Take every annotation with `type` `mention` and
-`linkType` `folio`; skip those whose `linkToh` is a sibling number.
+`linkType` `folio` and no `subtype`; skip those whose `linkToh` is a sibling
+number.
 
 **Checks**, in this order for each mention:
 

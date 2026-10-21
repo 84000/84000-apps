@@ -59,7 +59,11 @@ describe('annotationFromImport', () => {
       ...base,
       data: { level: 2, class: 'section-title' },
     }) as HeadingAnnotation;
-    expect(heading).toMatchObject({ type: 'heading', level: 2, class: 'section-title' });
+    expect(heading).toMatchObject({
+      type: 'heading',
+      level: 2,
+      class: 'section-title',
+    });
 
     const fallback = annotationFromImport('heading', base) as HeadingAnnotation;
     expect(fallback.level).toBe(1);
@@ -100,6 +104,40 @@ describe('annotationFromImport', () => {
       isSameWork: true,
       linkToh: 'toh58',
     });
+  });
+
+  it('builds a bampo marker as a folio mention with a subtype', () => {
+    const mention = annotationFromImport('mention', {
+      ...base,
+      data: {
+        entity: 'folio-uuid',
+        linkType: 'folio',
+        subtype: 'bampo',
+        text: '[B1]',
+        isSameWork: true,
+      },
+    }) as MentionAnnotation;
+    expect(mention).toMatchObject({
+      linkType: 'folio',
+      subtype: 'bampo',
+      text: '[B1]',
+    });
+  });
+
+  it('drops a folio mention with an unknown subtype or no text', () => {
+    const data = { entity: 'folio-uuid', linkType: 'folio' };
+    expect(
+      annotationFromImport('mention', {
+        ...base,
+        data: { ...data, subtype: 'chapter', text: '[C1]' },
+      }),
+    ).toBeNull();
+    expect(
+      annotationFromImport('mention', {
+        ...base,
+        data: { ...data, subtype: 'volume' },
+      }),
+    ).toBeNull();
   });
 
   it('carries a mention highlight range, which targets the linked passage', () => {

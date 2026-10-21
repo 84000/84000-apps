@@ -58,7 +58,7 @@ const editSchema = z.discriminatedUnion('op', [
       .record(z.string(), z.unknown())
       .optional()
       .describe(
-        'Kind-specific attributes, e.g. { "entity": "<uuid>", "linkType": "folio", "isSameWork": true } for a folio mention.',
+        'Kind-specific attributes, e.g. { "entity": "<uuid>", "linkType": "folio", "isSameWork": true } for a folio mention. A bampo or volume marker is a folio mention on the folio it sits on, with "subtype": "bampo" or "volume" and its label as "text" (e.g. "[B1]", "[V26]").',
       ),
   }),
   z.object({

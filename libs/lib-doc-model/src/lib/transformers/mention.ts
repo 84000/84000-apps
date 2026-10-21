@@ -18,6 +18,25 @@ type MentionItem = Omit<
   'type' | 'passageUuid' | 'start' | 'end' | 'toh' | 'validated'
 > & { toh?: string };
 
+/** Display rank among items at one position: volume, then the rest, then bampo. */
+const rank = (item: MentionItem): number => {
+  if (item.linkType !== 'folio') return 1;
+  if (item.subtype === 'volume') return 0;
+  return item.subtype === 'bampo' ? 2 : 1;
+};
+
+/**
+ * Adds `item` to a batched mention's items. A volume marker leads the folio and
+ * bampo markers it shares a position with, since they fall inside it, and a
+ * bampo marker follows the folio it starts on. Equal ranks keep insertion order.
+ */
+const withItem = (items: MentionItem[], item: MentionItem): MentionItem[] => {
+  const at = items.findIndex((other) => rank(other) > rank(item));
+  return at === -1
+    ? [...items, item]
+    : [...items.slice(0, at), item, ...items.slice(at)];
+};
+
 /**
  * Adds a mention item to `container`, batching into the mention already at the
  * same position when there is one. Two folio references can share a single
@@ -38,8 +57,7 @@ const insertOrBatch = (
   );
 
   if (existing) {
-    const items = existing.attrs?.items || [];
-    items.push(item);
+    const items = withItem(existing.attrs?.items || [], item);
     existing.attrs = { ...existing.attrs, items };
     return;
   }
@@ -117,8 +135,7 @@ export const mention: Transformer = (ctx) => {
           );
 
           if (mention) {
-            const items = mention.attrs?.items || [];
-            items.push(item);
+            const items = withItem(mention.attrs?.items || [], item);
             mention.attrs = { ...mention.attrs, items };
             // Item was batched into the existing mention; signal that no new
             // mention block should be inserted for this annotation.

@@ -51,3 +51,37 @@ describe('mention highlight range', () => {
     );
   });
 });
+
+describe('folio mention subtype', () => {
+  const dto: AnnotationDTO = {
+    uuid: 'mention-2',
+    start: 0,
+    end: 0,
+    type: 'mention',
+    passage_uuid: 'passage-1',
+    content: [
+      { type: 'folio' },
+      { uuid: 'folio-1' },
+      { text: '[V26]' },
+      { same_work: true },
+      { subtype: 'volume' },
+    ],
+  };
+
+  it('reads a volume marker as a folio mention with a subtype', () => {
+    const mention = annotationFromDTO(dto, 100) as MentionAnnotation;
+    expect(mention).toMatchObject({
+      linkType: 'folio',
+      subtype: 'volume',
+      text: '[V26]',
+      entity: 'folio-1',
+    });
+  });
+
+  it('writes the subtype back into content', () => {
+    const out = annotationToDTO(annotationFromDTO(dto, 100));
+    expect(out?.content).toEqual(
+      expect.arrayContaining([{ type: 'folio' }, { subtype: 'volume' }]),
+    );
+  });
+});
