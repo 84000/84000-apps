@@ -34,8 +34,8 @@ describe('transliterate tool', () => {
   });
 
   it('reports warnings when there are any', async () => {
-    const result = await call({ text: 'ཀ༹' });
-    expect(result.ewts).toBe('ka\\u0F39');
+    const result = await call({ text: 'ཀ༓' });
+    expect(result.ewts).toBe('ka\\u0F13');
     expect(result.warnings).toHaveLength(1);
   });
 

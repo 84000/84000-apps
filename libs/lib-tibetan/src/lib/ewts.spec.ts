@@ -64,7 +64,12 @@ describe('toEwts', () => {
       ['དབྱངས', 'dbyangs'],
       ['གངས', 'gangs'],
       ['གནད', 'gnad'],
-      ['བགས', 'bgas'],
+      ['བགས', 'bags'],
+      ['མངས', 'mangs'],
+      ['དངས', 'dangs'],
+      ['དམས', 'dmas'],
+      ['ལེའུར', 'le’ur'],
+      ['ཁྱེའུས', 'khye’us'],
       ['གཡག', 'g.yag'],
       ['གཡོ', 'g.yo'],
       ['སངས་རྒྱས', 'sangs rgyas'],
@@ -93,7 +98,11 @@ describe('toEwts', () => {
       ['ཏཱིཀྵྞ', 'tIk+Sh+Na'],
       ['དུཿཁ', 'duHkha'],
       ['ཧྲྀ', 'hr-i'],
-      ['ཏ྄', 't?'],
+      ['ཏ྄', 'ta?'],
+      ['\u0f68\u0f76', 'a+r-i'],
+      ['\u0f68\u0fb2\u0f80', 'a+r-i'],
+      ['\u0f40\u0f76', 'kr-i'],
+      ['\u0f55\u0f39', 'fa'],
       ['ནཱཾ', 'nAM'],
       ['ཨ་ཨཱ་ཨི་ཨཱི་ཨུ་ཨཱུ་ཨེ་ཨཻ་ཨོ་ཨཽ་ཨཾ་ཨཿ', 'a A i I u U e ai o au aM aH'],
     ])('%s -> %s', (unicode, ewts) => {
@@ -140,8 +149,8 @@ describe('toEwts', () => {
 
   describe('warnings', () => {
     it('escapes a Tibetan character with no EWTS form and says so', () => {
-      const result = toEwtsWithWarnings('ཀ༹');
-      expect(result.ewts).toBe('ka\\u0F39');
+      const result = toEwtsWithWarnings('ཀ༓');
+      expect(result.ewts).toBe('ka\\u0F13');
       expect(result.warnings).toHaveLength(1);
     });
 

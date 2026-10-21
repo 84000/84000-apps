@@ -1,26 +1,16 @@
 /**
  * Tibetan Unicode to Extended Wylie (EWTS), in the 84000 house profile.
  *
- * The house profile is the studio policy `shared-policies/transliteration`.
- * Where converters differ from one another, it fixes the form:
+ * Syllables are analysed as the reference EWTS converter (Lib Wylie, and its
+ * Python port pyewts) analyses them, so the letters and stacks match what
+ * translators already compare against. The house profile
+ * (`shared-policies/transliteration`) then fixes what converters disagree on:
+ * the a-chung is `’` (U+2019), the space after a shad is a space rather than
+ * `_`, and the final shad is kept or dropped as the caller says, since only the
+ * caller knows whether the string is a passage or a title, term or name.
  *
- * - the a-chung (འ) is `’` (U+2019), never `'` or `‘`;
- * - Sanskrit in Tibetan script is written with explicit stacking (`b+ha`,
- *   `tan+t+ra`, `ts+tsha`) and the EWTS Sanskrit marks (`sha~M`, `hU~M`), with
- *   capitals only for Sanskrit letters and long vowels (`bAn`, `pA Ni`);
- * - a stack that is also a valid native Tibetan stack is written as native
- *   Tibetan (`badzra`, not `bad+zra`), and native syllables are written
- *   normally (`bsgrub`);
- * - the space after a shad is an ordinary space, not `_`;
- * - the final shad is kept (as `/`) inside a quoted passage and dropped after a
- *   title, term or name quoted on its own. The converter cannot tell the two
- *   apart, so the caller says which with `finalShad`.
- *
- * Italics (rule 2 of the policy) are typesetting, not transliteration, and are
- * left to whatever sets the string.
- *
- * Pure and dependency-free, so a server, a worker and a browser can all run it
- * and get the same string for the same input.
+ * Pure and dependency-free, so every runtime gives the same string for the
+ * same input.
  */
 
 /** Whether to keep a final shad (a quoted passage) or drop it (a title, term or name). */
@@ -40,21 +30,17 @@ export interface EwtsResult {
   ewts: string;
   /**
    * Things a reader should check against the Unicode: Tibetan characters with
-   * no EWTS letter, written as `\uXXXX` escapes, and malformed sequences.
+   * no EWTS form, written as `\uXXXX` escapes, ambiguous syllables and
+   * malformed sequences.
    */
   warnings: string[];
 }
 
-/** The a-chung as the house profile writes it. */
 const A_CHUNG = '’';
 
-/**
- * Letters are held internally in plain EWTS, with `'` for the a-chung, so the
- * stack and syllable tables read as the EWTS specification does. Rendering a
- * syllable swaps in the house a-chung; text that never was Tibetan is never
- * touched.
- */
-const BASE: Record<number, string> = {
+// Letters are held in plain EWTS, with `'` for the a-chung, so the tables
+// read as the specification does; a finished syllable takes the house a-chung.
+const TOP: Record<number, string> = {
   0x0f40: 'k',
   0x0f41: 'kh',
   0x0f42: 'g',
@@ -97,51 +83,64 @@ const BASE: Record<number, string> = {
   0x0f68: 'a',
   0x0f69: 'k+Sh',
   0x0f6a: 'R',
-  0x0f6b: 'kk',
-  0x0f6c: 'rr',
 };
 
-/** Subjoined letters: each is its base letter's code point plus 0x50. */
+/** Subjoined letters: the top letter's code point plus 0x50, and the fixed forms. */
 const SUBJOINED: Record<number, string> = {
   ...Object.fromEntries(
-    Object.entries(BASE)
+    Object.entries(TOP)
       .filter(([cp]) => Number(cp) <= 0x0f69)
       .map(([cp, letter]) => [Number(cp) + 0x50, letter]),
   ),
-  // Not the base letter +0x50: fixed forms and wa-zur.
-  0x0fad: 'w',
   0x0fba: 'W',
   0x0fbb: 'Y',
   0x0fbc: 'R',
 };
 
-/** Vowel signs, with precomposed long vowels split into `A` and the short vowel. */
-const VOWELS: Record<number, string[]> = {
-  0x0f71: ['A'],
-  0x0f72: ['i'],
-  0x0f73: ['A', 'i'],
-  0x0f74: ['u'],
-  0x0f75: ['A', 'u'],
-  0x0f76: ['r-i'],
-  0x0f77: ['r-I'],
-  0x0f78: ['l-i'],
-  0x0f79: ['l-I'],
-  0x0f7a: ['e'],
-  0x0f7b: ['ai'],
-  0x0f7c: ['o'],
-  0x0f7d: ['au'],
-  0x0f80: ['-i'],
-  0x0f81: ['A', '-i'],
+const VOWELS: Record<number, string> = {
+  0x0f71: 'A',
+  0x0f72: 'i',
+  0x0f74: 'u',
+  0x0f7a: 'e',
+  0x0f7b: 'ai',
+  0x0f7c: 'o',
+  0x0f7d: 'au',
+  0x0f80: '-i',
 };
 
-/** Signs that follow the vowel: anusvara, visarga, candrabindu, halanta. */
+const LONG_VOWELS: Record<string, string> = { i: 'I', u: 'U', '-i': '-I' };
+
+/**
+ * Precomposed vowel signs, spelled out so that canonically equivalent Unicode
+ * gives the same EWTS. The vocalic r and l become a subjoined letter and
+ * `-i`, as in the reference converter.
+ */
+const DECOMPOSE: Record<string, string> = {
+  'ཱི': 'ཱི',
+  'ཱུ': 'ཱུ',
+  'ྲྀ': 'ྲྀ',
+  'ཷ': 'ྲཱྀ',
+  'ླྀ': 'ླྀ',
+  'ཹ': 'ླཱྀ',
+  'ཱྀ': 'ཱྀ',
+};
+const PRECOMPOSED = /[ཱཱིུ-ཹཱྀ]/gu;
+
+/** Signs written after the vowel. */
 const FINALS: Record<number, string> = {
   0x0f7e: 'M',
-  0x0f7f: 'H',
   0x0f82: '~M`',
   0x0f83: '~M',
+  0x0f37: 'X',
+  0x0f35: '~X',
+  0x0f7f: 'H',
   0x0f84: '?',
+  0x0f85: '&',
 };
+const VISARGA = 0x0f7f;
+const TSA_PHRU = 0x0f39;
+/** Letters the tsa-phru turns into another letter. */
+const CARET_LETTERS: Record<string, string> = { ph: 'f', b: 'v' };
 
 /** Tibetan characters outside a syllable that EWTS writes as ASCII. */
 const SYMBOLS: Record<number, string> = {
@@ -173,372 +172,409 @@ const SYMBOLS: Record<number, string> = {
   0x0f3b: '>',
   0x0f3c: '(',
   0x0f3d: ')',
-  0x0f85: '&',
 };
 
-/**
- * What `finalShad: 'drop'` trims from the end: tshegs, shads, the gter tsheg
- * and whitespace.
- */
+/** What `finalShad: 'drop'` trims: tshegs, shads, the gter tsheg and whitespace. */
 const TRAILING_SEPARATORS = /[་-༒༔\s]+$/u;
 
-/** The thirty letters of the Tibetan alphabet, as EWTS writes them. */
-const NATIVE_LETTERS = new Set([
-  'k',
-  'kh',
-  'g',
-  'ng',
-  'c',
-  'ch',
-  'j',
-  'ny',
-  't',
-  'th',
-  'd',
-  'n',
-  'p',
-  'ph',
-  'b',
-  'm',
-  'ts',
-  'tsh',
-  'dz',
-  'w',
-  'zh',
-  'z',
-  "'",
-  'y',
-  'r',
-  'l',
-  'sh',
-  's',
-  'h',
-  'a',
-]);
-
-/** Every letter EWTS writes as a single token, for spotting a prefix that would run into its root. */
-const LETTER_TOKENS = new Set(Object.values(BASE));
-
-/**
- * The stacks of native Tibetan orthography: superscribed r, l and s,
- * subscribed y, r, l and w, and their combinations. A stack listed here is
- * written without `+`; any other stack is Sanskrit and is written with it.
- */
+/** Stacks of native orthography, written without `+`. */
 const NATIVE_STACKS = new Set([
-  // ra-mgo
-  'r+k',
+  'b+l',
+  'b+r',
+  'b+y',
+  'c+w',
+  'd+r',
+  'd+r+w',
+  'd+w',
+  'dz+r',
+  'g+l',
+  'g+r',
+  'g+r+w',
+  'g+w',
+  'g+y',
+  'h+r',
+  'h+w',
+  'k+l',
+  'k+r',
+  'k+w',
+  'k+y',
+  'kh+r',
+  'kh+w',
+  'kh+y',
+  'l+b',
+  'l+c',
+  'l+d',
+  'l+g',
+  'l+h',
+  'l+j',
+  'l+k',
+  'l+ng',
+  'l+p',
+  'l+t',
+  'l+w',
+  'm+r',
+  'm+y',
+  'n+r',
+  'ny+w',
+  'p+r',
+  'p+y',
+  'ph+r',
+  'ph+y',
+  'ph+y+w',
+  'r+b',
+  'r+d',
+  'r+dz',
   'r+g',
-  'r+ng',
+  'r+g+w',
+  'r+g+y',
   'r+j',
+  'r+k',
+  'r+k+y',
+  'r+l',
+  'r+m',
+  'r+m+y',
+  'r+n',
+  'r+ng',
   'r+ny',
   'r+t',
-  'r+d',
-  'r+n',
-  'r+b',
-  'r+m',
   'r+ts',
-  'r+dz',
-  'r+k+y',
-  'r+g+y',
-  'r+m+y',
-  'r+g+w',
   'r+ts+w',
-  // la-mgo
-  'l+k',
-  'l+g',
-  'l+ng',
-  'l+c',
-  'l+j',
-  'l+t',
-  'l+d',
-  'l+p',
-  'l+b',
-  'l+h',
-  // sa-mgo
-  's+k',
+  'r+w',
+  's+b',
+  's+b+r',
+  's+b+y',
+  's+d',
   's+g',
+  's+g+r',
+  's+g+y',
+  's+k',
+  's+k+r',
+  's+k+y',
+  's+l',
+  's+m',
+  's+m+r',
+  's+m+y',
+  's+n',
+  's+n+r',
   's+ng',
   's+ny',
-  's+t',
-  's+d',
-  's+n',
   's+p',
-  's+b',
-  's+m',
-  's+ts',
-  's+k+y',
-  's+g+y',
-  's+p+y',
-  's+b+y',
-  's+m+y',
-  's+k+r',
-  's+g+r',
-  's+n+r',
   's+p+r',
-  's+b+r',
-  's+m+r',
-  // ya-btags
-  'k+y',
-  'kh+y',
-  'g+y',
-  'p+y',
-  'ph+y',
-  'b+y',
-  'm+y',
-  // ra-btags
-  'k+r',
-  'kh+r',
-  'g+r',
-  't+r',
-  'th+r',
-  'd+r',
-  'p+r',
-  'ph+r',
-  'b+r',
-  'm+r',
-  'sh+r',
+  's+p+y',
   's+r',
-  'h+r',
-  'dz+r',
-  'n+r',
-  // la-btags
-  'k+l',
-  'g+l',
-  'b+l',
-  'z+l',
-  'r+l',
-  's+l',
-  // wa-zur
-  'k+w',
-  'kh+w',
-  'g+w',
-  'c+w',
-  'ny+w',
+  's+t',
+  's+ts',
+  's+w',
+  'sh+r',
+  'sh+w',
+  't+r',
   't+w',
-  'd+w',
+  'th+r',
   'ts+w',
   'tsh+w',
-  'zh+w',
+  'z+l',
   'z+w',
-  'r+w',
-  'l+w',
-  'sh+w',
-  's+w',
-  'h+w',
-  'g+r+w',
-  'd+r+w',
-  'ph+y+w',
+  'zh+w',
 ]);
 
-/** Which root letters (the top letter of the root stack) each prefix may precede. */
-const PREFIX_ROOTS: Record<string, Set<string>> = {
+/** The roots (a stack, wa-zur aside) each prefix may stand before. */
+const PREFIXES: Record<string, Set<string>> = {
   g: new Set(['c', 'ny', 't', 'd', 'n', 'ts', 'zh', 'z', 'y', 'sh', 's']),
-  d: new Set(['k', 'g', 'ng', 'p', 'b', 'm']),
-  b: new Set(['k', 'g', 'c', 't', 'd', 'ts', 'zh', 'z', 'sh', 's', 'r', 'l']),
-  m: new Set(['kh', 'g', 'ng', 'ch', 'j', 'ny', 'th', 'd', 'n', 'tsh', 'dz']),
-  "'": new Set(['kh', 'g', 'ch', 'j', 'th', 'd', 'ph', 'b', 'tsh', 'dz']),
+  d: new Set([
+    'k',
+    'g',
+    'ng',
+    'p',
+    'b',
+    'm',
+    'k+y',
+    'g+y',
+    'p+y',
+    'b+y',
+    'm+y',
+    'k+r',
+    'g+r',
+    'p+r',
+    'b+r',
+  ]),
+  b: new Set([
+    'k',
+    'g',
+    'c',
+    't',
+    'd',
+    'ts',
+    'zh',
+    'z',
+    'sh',
+    's',
+    'r',
+    'l',
+    'k+y',
+    'g+y',
+    'k+r',
+    'g+r',
+    'r+l',
+    's+l',
+    'r+k',
+    'r+g',
+    'r+ng',
+    'r+j',
+    'r+ny',
+    'r+t',
+    'r+d',
+    'r+n',
+    'r+ts',
+    'r+dz',
+    's+k',
+    's+g',
+    's+ng',
+    's+ny',
+    's+t',
+    's+d',
+    's+n',
+    's+ts',
+    'r+k+y',
+    'r+g+y',
+    's+k+y',
+    's+g+y',
+    's+k+r',
+    's+g+r',
+    'l+d',
+    'l+t',
+    'k+l',
+    's+r',
+    'z+l',
+    's+w',
+  ]),
+  m: new Set([
+    'kh',
+    'g',
+    'ng',
+    'ch',
+    'j',
+    'ny',
+    'th',
+    'd',
+    'n',
+    'tsh',
+    'dz',
+    'kh+y',
+    'g+y',
+    'kh+r',
+    'g+r',
+  ]),
+  "'": new Set([
+    'kh',
+    'g',
+    'ch',
+    'j',
+    'th',
+    'd',
+    'ph',
+    'b',
+    'tsh',
+    'dz',
+    'kh+y',
+    'g+y',
+    'ph+y',
+    'b+y',
+    'kh+r',
+    'g+r',
+    'd+r',
+    'ph+r',
+    'b+r',
+  ]),
 };
 
-const SUFFIXES = new Set(['g', 'ng', 'd', 'n', 'b', 'm', "'", 'r', 'l', 's']);
+/** Suffix letters, with the Sanskrit retroflexes common in suffix position. */
+const SUFFIXES = new Set([
+  'g',
+  'ng',
+  'd',
+  'n',
+  'b',
+  'm',
+  "'",
+  'r',
+  'l',
+  's',
+  'N',
+  'T',
+]);
 
-/** Second suffixes, by the first suffix they may follow. */
+/** Second suffixes, by the first suffixes they may follow. */
 const SECOND_SUFFIXES: Record<string, Set<string>> = {
-  g: new Set(['s']),
-  ng: new Set(['s']),
-  b: new Set(['s']),
-  m: new Set(['s']),
-  n: new Set(['d']),
-  r: new Set(['d']),
-  l: new Set(['d']),
-  // The particles 'am and 'ang.
-  "'": new Set(['m', 'ng']),
+  s: new Set(['g', 'ng', 'b', 'm']),
+  d: new Set(['n', 'r', 'l']),
 };
 
-/** Vowels the a-chung carries as a closing particle: pa'i, ba'o, -'u, -'e. */
-const PARTICLE_VOWELS = new Set(['i', 'o', 'u', 'e']);
+/**
+ * Three bare letters that read both as prefix-root-suffix and as
+ * root-suffix-suffix: the index of the root, by spelling.
+ */
+const AMBIGUOUS_ROOT: Record<string, number> = {
+  dgs: 1,
+  dms: 1,
+  dngs: 0,
+  "'gs": 1,
+  "'bs": 1,
+  mngs: 0,
+  mgs: 0,
+  bgs: 0,
+  dbs: 1,
+};
 
 interface Stack {
-  /** EWTS letters, top to bottom. */
+  /** Letters top to bottom; empty for an a-chen carrying a vowel. */
   cons: string[];
-  /** EWTS vowel tokens, in input order. */
   vowels: string[];
-  /** EWTS final signs, in input order. */
   finals: string[];
-}
-
-/** A native syllable: prefix, root, up to two suffixes, or a closing a-chung particle. */
-interface Layout {
-  prefix?: Stack;
-  root: Stack;
-  suffixes: Stack[];
-  particle?: Stack;
+  caret: boolean;
+  /** The letter, when the stack is one bare letter other than the a-chen. */
+  single?: string;
+  prefix: boolean;
+  suffix: boolean;
+  suffix2: boolean;
+  dot: boolean;
 }
 
 const hex = (cp: number) => cp.toString(16).toUpperCase().padStart(4, '0');
 
-const isTibetan = (cp: number) => cp >= 0x0f00 && cp <= 0x0fff;
+const codePoint = (ch: string) => ch.codePointAt(0) as number;
 
-/** The vowel tokens of a stack as one EWTS vowel, folding `A` into a long vowel. */
-function vowelString(vowels: string[]): string {
-  if (vowels.length === 0) return '';
-  const rest = [...vowels];
-  const long = rest.indexOf('A');
-  if (long >= 0) {
-    const short = rest.findIndex((v) => v === 'i' || v === 'u' || v === '-i');
-    if (short >= 0) {
-      rest[short] = rest[short] === '-i' ? '-I' : rest[short].toUpperCase();
-      rest.splice(long, 1);
+/** Read one stack starting at a top letter. Returns the stack and the next index. */
+function readStack(
+  chars: string[],
+  start: number,
+  warnings: string[],
+): [Stack, number] {
+  const stack: Stack = {
+    cons: [TOP[codePoint(chars[start])]],
+    vowels: [],
+    finals: [],
+    caret: false,
+    prefix: false,
+    suffix: false,
+    suffix2: false,
+    dot: false,
+  };
+  let i = start + 1;
+  for (; i < chars.length; i++) {
+    const cp = codePoint(chars[i]);
+    if (SUBJOINED[cp] !== undefined) {
+      if (stack.vowels.length || stack.finals.length) {
+        warnings.push(
+          `U+${hex(cp)} follows a vowel or final sign; it was read as part of the stack before it.`,
+        );
+      }
+      stack.cons.push(SUBJOINED[cp]);
+    } else if (VOWELS[cp] !== undefined) {
+      stack.vowels.push(VOWELS[cp]);
+    } else if (cp === TSA_PHRU) {
+      stack.caret = true;
+    } else if (FINALS[cp] !== undefined) {
+      stack.finals.push(FINALS[cp]);
+    } else {
+      break;
     }
   }
-  return rest.join('+');
+
+  if (stack.cons.length === 1 && stack.cons[0] === 'a' && stack.vowels.length) {
+    stack.cons = [];
+  }
+  const long = stack.vowels.indexOf('A');
+  const short = stack.vowels.findIndex((v) => LONG_VOWELS[v]);
+  if (long >= 0 && short >= 0) {
+    stack.vowels[short] = LONG_VOWELS[stack.vowels[short]];
+    stack.vowels.splice(long, 1);
+  }
+  if (stack.caret && stack.cons.length === 1 && CARET_LETTERS[stack.cons[0]]) {
+    stack.cons = [CARET_LETTERS[stack.cons[0]]];
+    stack.caret = false;
+  }
+  if (
+    stack.cons.length === 1 &&
+    stack.cons[0] !== 'a' &&
+    !stack.caret &&
+    !stack.vowels.length &&
+    !stack.finals.length
+  ) {
+    stack.single = stack.cons[0];
+  }
+  return [stack, i];
 }
 
-/** A stack's letters, with `+` unless it is a native stack. */
-function consonantString(cons: string[]): string {
-  if (cons.length === 1) return cons[0];
-  const joined = cons.join('+');
-  return NATIVE_STACKS.has(joined) ? cons.join('') : joined;
-}
-
-/**
- * A stack with its vowel. A stack without a vowel sign takes the inherent
- * `a`, except before a halanta, which cancels it. The a-chen alone is just
- * its vowel.
- */
 function stackString(stack: Stack): string {
-  const vowel = vowelString(stack.vowels);
-  const finals = stack.finals.join('');
-  if (stack.cons.length === 1 && stack.cons[0] === 'a') {
-    return (vowel || 'a') + finals;
+  const joined = stack.cons.join('+');
+  let out = NATIVE_STACKS.has(joined) ? stack.cons.join('') : joined;
+  if (stack.caret) out += '^';
+  if (stack.vowels.length) {
+    out += stack.vowels.join('+');
+  } else if (
+    !stack.prefix &&
+    !stack.suffix &&
+    !stack.suffix2 &&
+    !joined.endsWith('a')
+  ) {
+    out += 'a';
   }
-  const inherent = vowel || (stack.finals.includes('?') ? '' : 'a');
-  return consonantString(stack.cons) + inherent + finals;
+  out += stack.finals.join('');
+  if (stack.dot) out += '.';
+  return out;
 }
 
-const isBare = (stack: Stack) =>
-  stack.vowels.length === 0 && stack.finals.length === 0;
+/**
+ * One syllable (tsheg-bar): mark its prefix and suffixes so they go without
+ * the inherent `a`, then write every stack.
+ */
+function syllableString(stacks: Stack[], warnings: string[]): string {
+  const n = stacks.length;
+  const [first, second] = stacks;
+  const last = stacks[n - 1];
+  const beforeLast = stacks[n - 2];
 
-/** A single native letter with no vowel: what a prefix or suffix must be. */
-const isBareLetter = (stack: Stack) =>
-  isBare(stack) && stack.cons.length === 1 && NATIVE_LETTERS.has(stack.cons[0]);
-
-const isNativeRoot = (stack: Stack) =>
-  stack.cons.length === 1
-    ? NATIVE_LETTERS.has(stack.cons[0])
-    : NATIVE_STACKS.has(stack.cons.join('+'));
-
-const isParticle = (stack: Stack) =>
-  stack.cons.length === 1 &&
-  stack.cons[0] === "'" &&
-  stack.finals.length === 0 &&
-  stack.vowels.length === 1 &&
-  PARTICLE_VOWELS.has(stack.vowels[0]);
-
-function prefixAllows(prefix: string, root: Stack): boolean {
-  const top = root.cons[0];
-  if (!PREFIX_ROOTS[prefix]?.has(top)) return false;
-  // b- precedes ra-mgo and la-mgo stacks (brgya, blta), never a bare r or l.
-  if (prefix === 'b' && (top === 'r' || top === 'l'))
-    return root.cons.length > 1;
-  return true;
-}
-
-function fits(
-  core: Stack[],
-  rootIndex: number,
-  particle?: Stack,
-): Layout | null {
-  if (rootIndex > 1 || rootIndex >= core.length) return null;
-  const root = core[rootIndex];
-  if (!isNativeRoot(root)) return null;
-  const suffixes = core.slice(rootIndex + 1);
-  if (root.finals.length > 0 && (suffixes.length > 0 || particle)) return null;
-  if (particle && suffixes.length > 0) return null;
-  if (suffixes.length > 2 || !suffixes.every(isBareLetter)) return null;
-  const [first, second] = suffixes.map((s) => s.cons[0]);
-  if (first !== undefined && !SUFFIXES.has(first)) return null;
-  if (second !== undefined && !SECOND_SUFFIXES[first]?.has(second)) return null;
-  let prefix: Stack | undefined;
-  if (rootIndex === 1) {
-    prefix = core[0];
-    if (!isBareLetter(prefix) || !prefixAllows(prefix.cons[0], root)) {
-      return null;
+  if (n > 1 && first.single) {
+    first.prefix =
+      PREFIXES[first.single]?.has(second.cons.join('+').replace(/\+w/g, '')) ??
+      false;
+  }
+  if (n > 1 && last.single && SUFFIXES.has(last.single)) {
+    last.suffix = true;
+  }
+  if (
+    n > 2 &&
+    last.single &&
+    beforeLast.single &&
+    SUFFIXES.has(beforeLast.single) &&
+    SECOND_SUFFIXES[last.single]?.has(beforeLast.single)
+  ) {
+    last.suffix2 = true;
+    beforeLast.suffix = true;
+  }
+  if (n === 2 && first.prefix && last.suffix) {
+    first.prefix = false;
+  }
+  if (n === 3 && first.prefix && second.suffix && last.suffix2) {
+    const spelling = stacks.map((s) => s.single).join('');
+    let root = AMBIGUOUS_ROOT[spelling];
+    if (root === undefined) {
+      warnings.push(
+        `"${spelling.replace(/'/g, A_CHUNG)}" reads two ways; it was taken as prefix, root and suffix.`,
+      );
+      root = 1;
     }
+    stacks[root].prefix = stacks[root].suffix = false;
+    stacks[root + 1].suffix2 = false;
   }
-  return { prefix, root, suffixes, particle };
-}
-
-/**
- * Read a syllable as native Tibetan, or return null when it is not one (and
- * so is Sanskrit, or malformed). With no vowel sign to mark the root, two
- * letters read as root and suffix (dag; dga' needs its a-chung), and three
- * letters that read both ways as prefix, root and suffix (dgas, gnad).
- */
-function nativeLayout(stacks: Stack[]): Layout | null {
-  let core = stacks;
-  let particle: Stack | undefined;
-  if (stacks.length >= 2 && isParticle(stacks[stacks.length - 1])) {
-    particle = stacks[stacks.length - 1];
-    core = stacks.slice(0, -1);
-  }
-  if (core.length > 4) return null;
-
-  const marked = core.flatMap((s, i) => (isBare(s) ? [] : [i]));
-  if (marked.length > 1) return null;
-
-  let candidates: number[];
-  if (marked.length === 1) {
-    candidates = marked;
-  } else if (particle) {
-    // The particle takes the suffix's place: root, or prefix and root.
-    candidates = core.length === 1 ? [0] : core.length === 2 ? [1] : [];
-  } else {
-    candidates = [[0], [0, 1], [1, 0], [1]][core.length - 1] ?? [];
+  if (
+    first.prefix &&
+    NATIVE_STACKS.has(`${first.single}+${second.cons.join('+')}`)
+  ) {
+    first.dot = true;
   }
 
-  for (const candidate of candidates) {
-    const layout = fits(core, candidate, particle);
-    if (layout) return layout;
-  }
-  return null;
-}
-
-/** Suffixes as written; the a-chung keeps its vowel before a second suffix: 'am, 'ang. */
-function suffixString(suffixes: Stack[]): string {
-  const [first, second] = suffixes.map((s) => s.cons[0]);
-  if (first === "'" && second) return "'a" + second;
-  return suffixes.map((s) => s.cons[0]).join('');
-}
-
-/**
- * A prefix needs a dot when, run into its root, EWTS would read the two as one
- * stack or one letter: g.yag, not gyag.
- */
-function needsDot(prefix: string, root: Stack): boolean {
-  return (
-    NATIVE_STACKS.has([prefix, ...root.cons].join('+')) ||
-    LETTER_TOKENS.has(prefix + root.cons[0])
-  );
-}
-
-/** One syllable (tsheg-bar) in EWTS, with the house a-chung. */
-function syllableString(stacks: Stack[]): string {
-  const layout = nativeLayout(stacks);
-  let ewts: string;
-  if (layout) {
-    const { prefix, root, suffixes, particle } = layout;
-    ewts =
-      (prefix
-        ? prefix.cons[0] + (needsDot(prefix.cons[0], root) ? '.' : '')
-        : '') +
-      stackString(root) +
-      suffixString(suffixes) +
-      (particle ? "'" + vowelString(particle.vowels) : '');
-  } else {
-    // Sanskrit: every stack carries its own vowel, so stacks never run together.
-    ewts = stacks.map(stackString).join('');
-  }
-  return ewts.replace(/'/g, A_CHUNG);
+  return stacks.map(stackString).join('').replace(/'/g, A_CHUNG);
 }
 
 /**
@@ -549,63 +585,40 @@ export function toEwtsWithWarnings(
   text: string,
   options: EwtsOptions = {},
 ): EwtsResult {
-  const input =
+  const trimmed =
     options.finalShad === 'drop' ? text.replace(TRAILING_SEPARATORS, '') : text;
+  const chars = Array.from(trimmed.replace(PRECOMPOSED, (ch) => DECOMPOSE[ch]));
   const warnings: string[] = [];
   const out: string[] = [];
-  const chars = Array.from(input);
 
   let i = 0;
   while (i < chars.length) {
-    const cp = chars[i].codePointAt(0) as number;
+    const cp = codePoint(chars[i]);
 
-    if (BASE[cp] !== undefined) {
+    if (TOP[cp] !== undefined) {
       const stacks: Stack[] = [];
-      while (i < chars.length) {
-        const next = chars[i].codePointAt(0) as number;
-        if (BASE[next] !== undefined) {
-          stacks.push({ cons: [BASE[next]], vowels: [], finals: [] });
-        } else {
-          const stack = stacks[stacks.length - 1];
-          if (SUBJOINED[next] !== undefined) {
-            if (stack.vowels.length > 0 || stack.finals.length > 0) {
-              warnings.push(
-                `U+${hex(next)} follows a vowel sign; it was read as part of the stack before it.`,
-              );
-            }
-            stack.cons.push(SUBJOINED[next]);
-          } else if (VOWELS[next] !== undefined) {
-            stack.vowels.push(...VOWELS[next]);
-          } else if (FINALS[next] !== undefined) {
-            stack.finals.push(FINALS[next]);
-          } else {
-            break;
-          }
-        }
-        i++;
+      while (i < chars.length && TOP[codePoint(chars[i])] !== undefined) {
+        const [stack, next] = readStack(chars, i, warnings);
+        stacks.push(stack);
+        i = next;
+        // A visarga closes the syllable.
+        if (stack.finals.includes(FINALS[VISARGA])) break;
       }
-      const ewts = syllableString(stacks);
-      if (
-        stacks.some((s, n) => n > 0 && s.cons[0] === 'a' && s.vowels.length)
-      ) {
-        warnings.push(
-          `"${ewts}" has an a-chen with a vowel inside the syllable, which EWTS cannot write unambiguously.`,
-        );
-      }
-      out.push(ewts);
+      out.push(syllableString(stacks, warnings));
       continue;
     }
 
     if (SYMBOLS[cp] !== undefined) {
       out.push(SYMBOLS[cp]);
-    } else if (isTibetan(cp)) {
+    } else if (cp >= 0x0f00 && cp <= 0x0fff) {
       out.push(`\\u${hex(cp)}`);
       warnings.push(
         SUBJOINED[cp] !== undefined ||
           VOWELS[cp] !== undefined ||
-          FINALS[cp] !== undefined
+          FINALS[cp] !== undefined ||
+          cp === TSA_PHRU
           ? `U+${hex(cp)} has no letter to attach to; it was written as \\u${hex(cp)}.`
-          : `U+${hex(cp)} has no EWTS form in the house profile; it was written as \\u${hex(cp)}.`,
+          : `U+${hex(cp)} has no EWTS form; it was written as \\u${hex(cp)}.`,
       );
     } else if (cp === 0x00a0) {
       out.push(' ');
