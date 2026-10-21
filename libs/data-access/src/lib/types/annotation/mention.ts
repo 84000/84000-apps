@@ -115,7 +115,11 @@ export const importer: AnnotationImporter = (
   const { text, isSameWork, subtype, linkToh, lang, style } = input.data ?? {};
   if (linkType === 'folio' && subtype !== undefined) {
     // A subtyped folio marker shows only its own text (`[B1]`, `[V26]`).
-    if (!isFolioMentionSubtype(subtype) || typeof text !== 'string' || !text) {
+    if (
+      !isFolioMentionSubtype(subtype) ||
+      typeof text !== 'string' ||
+      !text.trim()
+    ) {
       return null;
     }
   }

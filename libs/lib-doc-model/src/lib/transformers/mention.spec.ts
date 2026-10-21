@@ -68,7 +68,7 @@ describe('mention transformer', () => {
   });
 
   it.each([0, 4])(
-    'puts a volume marker before the folio and bampo markers at offset %i',
+    'orders volume, folio, then bampo markers at offset %i',
     (at) => {
       const marker = (uuid: string, text: string, subtype?: string) => ({
         start: at,
@@ -94,9 +94,10 @@ describe('mention transformer', () => {
         content: 'Some text',
         work_uuid: 'work-uuid-5678',
         annotations: [
-          marker('folio', '[F.1.a]'),
           marker('bampo', '[B1]', 'bampo'),
-          marker('volume', '[V26]', 'volume'),
+          marker('volume-1', '[V26]', 'volume'),
+          marker('folio', '[F.1.a]'),
+          marker('volume-2', '[V27]', 'volume'),
         ],
       };
 
@@ -113,7 +114,7 @@ describe('mention transformer', () => {
       expect(mentions.length).toBe(1);
       expect(
         mentions[0].attrs?.items?.map((item: { text: string }) => item.text),
-      ).toEqual(['[V26]', '[F.1.a]', '[B1]']);
+      ).toEqual(['[V26]', '[V27]', '[F.1.a]', '[B1]']);
     },
   );
 

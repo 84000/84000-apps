@@ -18,18 +18,20 @@ type MentionItem = Omit<
   'type' | 'passageUuid' | 'start' | 'end' | 'toh' | 'validated'
 > & { toh?: string };
 
-const isVolumeMarker = (item: MentionItem): boolean =>
-  item.linkType === 'folio' && item.subtype === 'volume';
+/** Display rank among items at one position: volume, then the rest, then bampo. */
+const rank = (item: MentionItem): number => {
+  if (item.linkType !== 'folio') return 1;
+  if (item.subtype === 'volume') return 0;
+  return item.subtype === 'bampo' ? 2 : 1;
+};
 
 /**
- * Adds `item` to a batched mention's items. A volume marker goes ahead of the
- * folio and bampo markers it shares a position with, since they fall inside it.
+ * Adds `item` to a batched mention's items. A volume marker leads the folio and
+ * bampo markers it shares a position with, since they fall inside it, and a
+ * bampo marker follows the folio it starts on. Equal ranks keep insertion order.
  */
 const withItem = (items: MentionItem[], item: MentionItem): MentionItem[] => {
-  if (!isVolumeMarker(item)) {
-    return [...items, item];
-  }
-  const at = items.findIndex((other) => !isVolumeMarker(other));
+  const at = items.findIndex((other) => rank(other) > rank(item));
   return at === -1
     ? [...items, item]
     : [...items.slice(0, at), item, ...items.slice(at)];

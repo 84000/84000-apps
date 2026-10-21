@@ -67,6 +67,10 @@ required. It also takes `isSameWork`, `subtype`, `text`, `lang`,
 `style: "quote"`, and `highlightStart` / `highlightEnd` — a range in the
 *target*, not in this passage.
 
+A bampo or volume marker (`[B1]`, `[V26]`) is a `folio` mention on the folio it
+sits on, with `subtype` `bampo` or `volume` and its label in `text`. Both are
+required; any other folio `subtype` is refused.
+
 `mention.linkToh` is the **target's** Tohoku number. It is a different field
 from the annotation's own `toh`, which scopes visibility; do not conflate them.
 
