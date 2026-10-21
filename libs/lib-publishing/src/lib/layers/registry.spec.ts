@@ -235,7 +235,9 @@ describe('work.draft', () => {
       },
     };
     const layer = snapshotLayerRegistry.get('work.draft');
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const spy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     const resolution = await layer?.resolve(
       {
         client: failing as never,
