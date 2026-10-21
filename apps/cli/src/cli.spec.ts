@@ -506,6 +506,29 @@ describe('eft', () => {
       expect(found[0]['match']).toBe('rin po che bai DUR+Ya las');
     });
 
+    it('reads Unicode punctuation in a regular expression as one space', () => {
+      for (const pattern of ['བཀའ་སྩལ་པ། རིགས་ཀྱི', 'བཀའ་སྩལ་པ། །རིགས་ཀྱི་བུ།'])
+        expect(
+          rows(
+            cli('search', 'grep', collection('kangyur/S'), pattern, '--regex')
+              .stdout,
+          ),
+        ).toHaveLength(1);
+    });
+
+    it('refuses --fold with --regex', () => {
+      const { code, stderr } = cli(
+        'search',
+        'grep',
+        collection('kangyur/S'),
+        'bcom ldan',
+        '--regex',
+        '--fold',
+      );
+      expect(code).toBe(1);
+      expect(stderr).toContain('--fold cannot be combined with --regex');
+    });
+
     it('writes JSON lines on request', () => {
       const { stdout } = cli(
         'search',
@@ -560,6 +583,19 @@ describe('eft', () => {
       );
       expect(found).toHaveLength(1);
       expect(Number(found[0]['matched'])).toBeGreaterThanOrEqual(6);
+    });
+
+    it('says when a phrase is too frequent to search', () => {
+      const { stdout, stderr } = cli(
+        'search',
+        'phrase',
+        collection('kangyur/S'),
+        'rigs kyi bu khyod kyis legs par',
+        '--max-freq',
+        '0',
+      );
+      expect(rows(stdout)).toHaveLength(0);
+      expect(stderr).toContain('phrase 1: every seed is too frequent');
     });
   });
 

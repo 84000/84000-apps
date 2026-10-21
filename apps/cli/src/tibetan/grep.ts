@@ -13,7 +13,7 @@ import {
 export interface GrepOptions {
   /** Treat the pattern as a regular expression over the normal form. */
   regex: boolean;
-  /** Match on syllable skeletons, as `phrase` and `quotes` do, not on spelling. */
+  /** Match on syllable skeletons, ignoring spelling the two scripts write differently. Not with `regex`. */
   fold: boolean;
   /** Syllables of context on each side of a match. */
   context: number;
@@ -43,7 +43,8 @@ export interface GrepMatch {
 const form = (s: Syllable, fold: boolean) =>
   fold ? s.key : s.ewts.replace(/\+/g, '');
 
-const TIBETAN_PUNCTUATION = /[\u0F0B-\u0F14]+/gu;
+/** Tibetan punctuation with any spaces around it. */
+const TIBETAN_PUNCTUATION = /\s*[\u0F0B-\u0F14][\u0F0B-\u0F14\s]*/gu;
 
 /**
  * A pattern in the normal form: Unicode syllables become their forms and
@@ -55,14 +56,26 @@ export function normalizePattern(pattern: string, opts: GrepOptions): string {
     return tibetanSyllables(pattern)
       .map((s) => form(s, opts.fold))
       .join(' ');
+  if (opts.fold)
+    throw new Error(
+      '--fold cannot be combined with --regex: write the regex in Wylie, or search without --regex.',
+    );
   const syllables = tibetanSyllables(pattern, 'unicode');
   let out = '';
   let at = 0;
   for (const s of syllables) {
-    out += pattern.slice(at, s.start) + form(s, opts.fold);
+    out +=
+      pattern.slice(at, s.start) +
+      form(s, false).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     at = s.end;
   }
-  return (out + pattern.slice(at)).replace(TIBETAN_PUNCTUATION, ' ');
+  // Punctuation separates syllables, so it becomes one space, or nothing at
+  // either end of the pattern.
+  return (out + pattern.slice(at)).replace(
+    TIBETAN_PUNCTUATION,
+    (m, offset: number, whole: string) =>
+      offset === 0 || offset + m.length === whole.length ? '' : ' ',
+  );
 }
 
 /** Index of the syllable whose form holds offset `pos` of the joined text. */

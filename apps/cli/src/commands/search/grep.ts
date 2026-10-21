@@ -12,9 +12,10 @@ import { CORPUS_NOTE } from './corpus-note';
 
 const USAGE = `eft search grep <corpus> <pattern> [--regex] [--fold] [--context 8] [--max N] [--json]
 
-Exact search for a Unicode or EWTS pattern; --regex for a regular
-expression over EWTS syllables separated by single spaces; --fold to
-match on syllable skeletons, as phrase does.
+Exact search for a Unicode or EWTS pattern. --regex for a regular
+expression over the text as EWTS syllables separated by single spaces,
+without '+'. --fold to match exactly on syllable skeletons, ignoring
+spelling the two scripts write differently (not with --regex).
 
 ${CORPUS_NOTE}`;
 

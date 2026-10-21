@@ -94,22 +94,28 @@ Every `search` command takes a corpus: a collection directory of a download
 directory each hit names the witness at its folio, from the catalog. A pattern
 or phrase can be Unicode or Wylie, whatever the corpus is in.
 
-- `search grep <corpus> <pattern>`: every exact occurrence, as whole
-  syllables.
-  `--regex` takes a regular expression over the text as Wylie syllables
-  separated by single spaces; `--fold` matches as `phrase` does, ignoring
-  spelling the two scripts write differently. `--context 8` sets the syllables
-  of context shown, `--max` caps the hits.
+- `search grep <corpus> <pattern>`: every exact occurrence, as whole syllables.
+  `--regex` takes a regular expression over the text written as Wylie
+  syllables separated by single spaces, with `+` removed (write `badzra`, not
+  `badz+ra`). `--fold` still matches exactly, but on the skeleton `phrase` uses,
+  ignoring spelling the two scripts write differently; it cannot be combined
+  with `--regex`. `--context 8` sets the syllables of context shown, `--max`
+  caps the hits.
 - `search phrase <corpus> <phrase>…`: fuzzy search for one or more phrases (or
   `--phrases-file`, one per line). A hit shares at least `--min-share 0.6` of
   a phrase's syllables, so it survives OCR errors and spelling variants. Each
   hit gives the phrase's number, the syllables matched and the phrase's length.
+  A passage matching several phrases (one phrase inside another, say) is
+  listed once, under one of them. A phrase too common to search (more than
+  `--max-freq 1000` times) is reported as such, not as absent: search it with
+  `search grep`.
 - `search quotes <corpus> <root-file> --out <dir>`: every passage of a root
   text found in the corpus (below).
 - `extract <collection-dir> <toh>`: one witness's folio range, trimmed at the
   neighbouring texts.
 
-Output is a table with a header row; `--json` gives JSON lines. Add `--help`
+`grep` and `phrase` print a table with a header row, or JSON lines with
+`--json`; `quotes` writes files and `extract` writes the text. Add `--help`
 to a command for every option. Save output you keep, and any file you write for a search,
 under `84000/scratch/<toh>/<command>/` (`84000/scratch/toh464/grep/`), or
 `84000/scratch/<command>/` when the search is not about one work; never in the
@@ -125,7 +131,7 @@ whole root at once, never by grepping hundreds of phrases one at a time.
 1. Fetch the catalog and the text of both the root text's collection and the
    collection to search, as above, into one `84000/cache/etexts/<build id>/`.
    That is two text archives: tell the user their sizes first. Below, `E` is
-   that folder's `etexts/`, and `S` is `84000/scratch/<toh>/quotation-search/`
+   that folder's `etexts/`, and `S` is `84000/scratch/<toh>/quotes/`
    for the root text's Toh number.
 2. Write the root text to a file. From its Degé eText witness:
 

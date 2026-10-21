@@ -15,7 +15,9 @@ const USAGE = `eft search phrase <corpus> <phrase>... [--phrases-file F] [--n 4]
                   [--max-freq 1000] [--gap 4] [--json]
 
 Fuzzy search for one or more phrases: a hit shares at least --min-share
-of a phrase's syllables, allowing spelling and OCR variants.
+of a phrase's syllables, allowing spelling and OCR variants. A passage
+matching several phrases is reported once, under one of them. Seeds
+found more than --max-freq times are not searched (reported on stderr).
 
 ${CORPUS_NOTE}`;
 
@@ -72,6 +74,14 @@ function run(args: string[], flags: Flags, io: Io): number {
     ),
   );
   io.stderr(`${rows.length} matches\n`);
+  if (result.seedsTooFrequent)
+    io.stderr(
+      `${result.seedsTooFrequent} seeds found more than --max-freq times were not searched\n`,
+    );
+  for (const g of result.groupsTooFrequent)
+    io.stderr(
+      `phrase ${g + 1}: every seed is too frequent to search; use search grep, or raise --max-freq\n`,
+    );
   return 0;
 }
 
