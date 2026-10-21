@@ -42,7 +42,8 @@ export interface LayerContext {
 
 /**
  * A stored archive reused as is: the bundle signs it for download rather than copying
- * it. It must unpack under one top-level directory, its `root`.
+ * it. It must unpack under one top-level directory, the layer's `dir`, and its path
+ * must never be rewritten with different bytes: a new version gets a new path.
  */
 export interface PrebuiltArchive {
   bucket: string;
@@ -105,9 +106,7 @@ export type LayerResolution =
  * (never `layer` itself); a layer serving both drafts and published data includes
  * `source` (see `sourceOption`).
  */
-export interface SnapshotLayer<
-  Options extends z.ZodObject = z.ZodObject,
-> {
+export interface SnapshotLayer<Options extends z.ZodObject = z.ZodObject> {
   /** Dotted, by family: `work.*` for per-work layers, `etexts.*` for the eTexts. */
   name: string;
   /** What the files hold and what they are for, for agents choosing layers. */

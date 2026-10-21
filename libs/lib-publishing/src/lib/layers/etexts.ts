@@ -4,14 +4,21 @@
  */
 
 import { z } from 'zod';
-import { ETEXTS_BUCKET, ETEXTS_ROOT, type EtextsArchive } from '../etexts/layout';
+import {
+  ETEXTS_BUCKET,
+  ETEXTS_ROOT,
+  type EtextsArchive,
+} from '../etexts/layout';
 import { readPublishedEtextsBuild } from '../etexts/storage';
 import type { LayerContext, LayerResolution, SnapshotLayer } from './types';
 
 const publishedBuild = ({ client, memo }: LayerContext) =>
   memo('etexts:published', () => readPublishedEtextsBuild(client));
 
-const prebuilt = (buildId: string, archive: EtextsArchive): LayerResolution => ({
+const prebuilt = (
+  buildId: string,
+  archive: EtextsArchive,
+): LayerResolution => ({
   status: 'ready',
   kind: 'prebuilt',
   dir: ETEXTS_ROOT,

@@ -91,9 +91,7 @@ describe('parseLayerRequests', () => {
     ]);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(
-      parsed.requests.map((r) => [r.layer.name, r.options]),
-    ).toEqual([
+    expect(parsed.requests.map((r) => [r.layer.name, r.options])).toEqual([
       ['work.passages', { work: 'toh8', source: 'draft' }],
       ['etexts.catalog', {}],
     ]);
