@@ -58,11 +58,23 @@ place to reclaim space. Propose removing:
 
 The newest, recent entries are kept unless the user asks for them to go too.
 
-**Scratch.** Call `read-session-documents` with the work's Toh (the first Toh
-of a two-Toh prefix) to list what is saved for it. Propose removing a task
-folder whose work has the results of that stage saved. Where nothing is saved
-for that stage, or the call fails, list the folder as **results not saved** and
-recommend keeping it unless the user says the task is finished or abandoned.
+**Scratch.** A scratch folder may belong to a task still under way: a
+skill can save a report and then go on to record decisions and apply edits
+from the same folder. So a saved document is not enough to call it finished.
+A task folder is named for the stage whose documents it produces
+(`stage2-chapters` for `stage2`, `glossary-instances` for that stage). Propose
+removing it only when all of these hold:
+
+- `read-session-documents` with the work's Toh (the first Toh of a two-Toh
+  prefix) lists documents saved for that stage, and the stage's
+  `manifest.json` says they were saved after the newest file in the folder
+  was last changed (`find <folder> -type f -newer …`, or compare `stat`
+  times);
+- nothing in the folder has changed for at least 7 days.
+
+Anything else, including a failed read or a task with no stage, is listed as
+**may be unfinished** and stays unless the user names it and says the task is
+finished or abandoned.
 
 **Deliverables.** Never proposed. They are the user's working copies, and the
 user may have revised one since it was saved. Remove one only when the user
@@ -74,8 +86,8 @@ asks for it by name, and only when every test below passes:
 2. The local file is the same as the saved copy. Read the saved copy: markdown
    and JSON come back as text, so compare them exactly; a `.docx` comes back as
    a signed URL, so fetch it into `scratch/tidy/` and compare the two with
-   `shasum -a 256` (or `sha256sum`), then delete the fetched copy. The URL is a credential: do
-   not log it or write it to a file.
+   `shasum -a 256` (or `sha256sum`), then delete the fetched copy. The URL is
+   a credential: do not log it or write it to a file.
 3. The user confirms that deliverable, named, after seeing that it is saved and
    unchanged.
 
@@ -100,9 +112,9 @@ root, its size, and the reason:
 | ------ | ---- | ---- | --- |
 
 Then the totals: space each group would free, and what stays. Ask the user to
-confirm all of it, some of it, or none. Removing scratch whose results are not
-saved, a recent cache entry, or a deliverable needs the user to name it, not
-just accept the list.
+confirm all of it, some of it, or none. Removing scratch that may be
+unfinished, a recent cache entry, or a deliverable needs the user to name it,
+not just accept the list.
 
 ## 5. Remove what was confirmed
 

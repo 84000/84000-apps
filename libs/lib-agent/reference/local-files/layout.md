@@ -84,8 +84,9 @@ version. An older version folder is superseded once a newer one is in place.
 
 Everything a task produces on the way to its results: chapter findings before
 they are merged, the files a script reads or writes, a run's working data.
-One folder per task, named for it (`scratch/toh345/stage2-chapters/`,
-`scratch/toh8/glossary-instances/`). A task that runs more than once in a
+One folder per task, named for it, and starting with the stage name when the
+task's results are saved under a stage (`scratch/toh345/stage2-chapters/`,
+`scratch/toh8/glossary-instances/`), so `tidy-local-files` can check them. A task that runs more than once in a
 session numbers its runs (`run1/`, `run2/`).
 
 Some scratch files are also saved to storage, as chapter findings are; save
