@@ -1,3 +1,16 @@
+import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types';
 import {
   toSnapshotBundleStatus,
@@ -8,6 +21,7 @@ import {
   type SnapshotLayerCatalogStatus,
   type SnapshotLayersResponse,
 } from './bundle-source';
+import { fetchBlock } from './download-snapshot';
 import { createSnapshotTools } from './index';
 import type { WorkSnapshotSource } from './source';
 
@@ -87,7 +101,7 @@ const readyBundle = (
       expiresAt: '2026-10-21T08:30:00.000Z',
       filename: 'snapshot-abcdef012345.tar.gz',
       bytes: 900,
-      sha256: null,
+      sha256: 'def456',
       into: '.',
       layers: ['work.folios'],
     },
@@ -128,13 +142,37 @@ describe('download-snapshot with layers', () => {
       '  note: Folio labels are inferred for 3 passages.',
       '- work.draft (work: toh8) → snapshot-abcdef012345/toh8/ · data work-1/100',
       'download: 2 parts, 5,900 bytes (tar.gz), expires 2026-10-21T08:15:00.000Z',
-      'part 1: snapshot-abcdef012345.tar.gz · 900 bytes',
-      '  url: https://storage.test/own?token=1',
-      'part 2: toh8-draft.tar.gz · 5,000 bytes · sha256 abc123',
-      '  url: https://storage.test/draft?token=2',
-      "Fetch and unpack: curl -sSfo 'snapshot-abcdef012345.tar.gz' 'https://storage.test/own?token=1' && tar xzf 'snapshot-abcdef012345.tar.gz' && curl -sSfo 'toh8-draft.tar.gz' 'https://storage.test/draft?token=2' && tar xzf 'toh8-draft.tar.gz' -C 'snapshot-abcdef012345'",
+      'part 1: snapshot-abcdef012345.tar.gz · 900 bytes · README.md, manifest.json, work.folios',
+      'part 2: toh8-draft.tar.gz · 5,000 bytes · work.draft',
+      'Run this block as is: it fetches every part, checks each sha256, and unpacks them all under snapshot-abcdef012345/.',
+      '```sh',
+      "curl -sSfo 'snapshot-abcdef012345.tar.gz' 'https://storage.test/own?token=1' && \\",
+      "curl -sSfo 'toh8-draft.tar.gz' 'https://storage.test/draft?token=2' && \\",
+      "printf '%s  %s\\n' \\",
+      "  'def456' 'snapshot-abcdef012345.tar.gz' \\",
+      "  'abc123' 'toh8-draft.tar.gz' \\",
+      '  | { if command -v sha256sum >/dev/null; then sha256sum -c -; else shasum -a 256 -c -; fi; } && \\',
+      "tar xzf 'snapshot-abcdef012345.tar.gz' && \\",
+      "tar xzf 'toh8-draft.tar.gz' -C 'snapshot-abcdef012345'",
+      '```',
       'Read snapshot-abcdef012345/README.md first: it covers every layer.',
     ]);
+    expect(text.match(/https:\/\/storage\.test\/own/g)).toHaveLength(1);
+  });
+
+  it('refuses a ready bundle missing a checksum', async () => {
+    const ready = readyBundle() as Extract<
+      SnapshotBundleStatus,
+      { status: 'ready' }
+    >;
+    ready.parts[1].sha256 = null;
+    const { text, isError } = await run(
+      'download-snapshot',
+      { layers },
+      stubBundles(ready),
+    );
+    expect(isError).toBe(true);
+    expect(text).not.toContain('storage.test');
   });
 
   it('says a cached bundle was reused, and omits empty options', async () => {
@@ -151,7 +189,7 @@ describe('download-snapshot with layers', () => {
               expiresAt: '2026-10-21T08:15:00.000Z',
               filename: 'etexts-catalog.tar.gz',
               bytes: 2000,
-              sha256: null,
+              sha256: 'abc',
               into: '.',
               layers: ['etexts.catalog'],
             },
@@ -286,6 +324,95 @@ describe('download-snapshot with layers', () => {
     expect(isError).toBe(true);
     expect(text).toContain('Pass `work`');
     expect(bundles.bundle).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchBlock', () => {
+  const ROOT = 'snapshot-abcdef012345';
+  let dir: string;
+
+  /** A tar.gz of `files` (paths relative to the archive's own top level). */
+  const archive = (name: string, files: Record<string, string>) => {
+    const staging = join(dir, `staging-${name}`);
+    for (const [path, content] of Object.entries(files)) {
+      mkdirSync(join(staging, path, '..'), { recursive: true });
+      writeFileSync(join(staging, path), content);
+    }
+    const file = join(dir, 'store', name);
+    mkdirSync(join(dir, 'store'), { recursive: true });
+    execFileSync('tar', ['czf', file, '-C', staging, '.'], {
+      env: { ...process.env, COPYFILE_DISABLE: '1' },
+    });
+    return {
+      url: `file://${file}`,
+      filename: name,
+      sha256: createHash('sha256').update(readFileSync(file)).digest('hex'),
+    };
+  };
+
+  /** The bundle's parts as the server signs them: its own archive, then a prebuilt one. */
+  const parts = () => [
+    {
+      ...archive(`${ROOT}.tar.gz`, {
+        [`${ROOT}/README.md`]: '# Snapshot bundle\n',
+        [`${ROOT}/manifest.json`]: '{}\n',
+        [`${ROOT}/etexts/ranges/ranges.json`]: '[]\n',
+      }),
+      into: '.',
+    },
+    {
+      ...archive('toh8-draft.tar.gz', { 'toh8/draft.md': '# Toh 8\n' }),
+      into: ROOT,
+    },
+  ];
+
+  const runBlock = (block: string) => {
+    const out = join(dir, 'out');
+    mkdirSync(out, { recursive: true });
+    const result = spawnSync('/bin/sh', ['-c', block], {
+      cwd: out,
+      encoding: 'utf8',
+    });
+    return { out, status: result.status, stderr: result.stderr };
+  };
+
+  /** Every file under `root`, relative to it. */
+  const listFiles = (root: string, prefix = ''): string[] =>
+    readdirSync(join(root, prefix), { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory()
+        ? listFiles(root, join(prefix, entry.name))
+        : [join(prefix, entry.name)],
+    );
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fetch-block-'));
+  });
+  afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('fetches, checks and unpacks every part under one root', () => {
+    const { out, status, stderr } = runBlock(fetchBlock(parts()));
+    expect(stderr).toBe('');
+    expect(status).toBe(0);
+    expect(
+      readdirSync(out, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name),
+    ).toEqual([ROOT]);
+    expect(listFiles(join(out, ROOT)).sort()).toEqual([
+      'README.md',
+      'etexts/ranges/ranges.json',
+      'manifest.json',
+      'toh8/draft.md',
+    ]);
+  });
+
+  it('unpacks nothing when a checksum does not match', () => {
+    const [own, draft] = parts();
+    const { out, status } = runBlock(
+      fetchBlock([own, { ...draft, sha256: '0'.repeat(64) }]),
+    );
+    expect(status).not.toBe(0);
+    expect(existsSync(join(out, ROOT))).toBe(false);
   });
 });
 

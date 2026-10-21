@@ -3,6 +3,7 @@ import type { McpToolDefinition } from '../../types';
 import { errorResult, textResult } from '../read/util';
 import type {
   ReadySnapshotBundle,
+  SnapshotBundlePartInfo,
   SnapshotBundleSource,
 } from './bundle-source';
 import type { EtextsSnapshotSource } from './etexts-source';
@@ -139,23 +140,48 @@ const bundleText = (bundle: ReadySnapshotBundle) => {
   const totalBytes = parts.reduce((sum, part) => sum + part.bytes, 0);
   lines.push(
     `download: ${plural(parts.length, 'part')}, ${formatCount(totalBytes)} bytes (tar.gz), expires ${earliestExpiry(parts.map((part) => part.expiresAt))}`,
-  );
-  parts.forEach((part, index) => {
-    lines.push(
-      `part ${index + 1}: ${part.filename} · ${formatCount(part.bytes)} bytes${part.sha256 ? ` · sha256 ${part.sha256}` : ''}`,
-      `  url: ${part.url}`,
-    );
-  });
-  const steps = parts.map((part) => {
-    const file = shellQuote(part.filename);
-    const into = part.into === '.' ? '' : ` -C ${shellQuote(part.into)}`;
-    return `curl -sSfo ${file} ${shellQuote(part.url)} && tar xzf ${file}${into}`;
-  });
-  lines.push(
-    `Fetch and unpack: ${steps.join(' && ')}`,
+    ...parts.map(
+      (part, index) =>
+        `part ${index + 1}: ${part.filename} · ${formatCount(part.bytes)} bytes · ${[...(part.into === '.' ? ['README.md', 'manifest.json'] : []), ...part.layers].join(', ')}`,
+    ),
+    `Run this block as is: it fetches every part, checks each sha256, and unpacks them all under ${root}/.`,
+    '```sh',
+    fetchBlock(parts),
+    '```',
     `Read ${root}/README.md first: it covers every layer.`,
   );
   return lines.join('\n');
+};
+
+/**
+ * One POSIX shell command, split over lines, that downloads every part, checks every
+ * part's sha256 before unpacking any, then unpacks each where it belongs.
+ */
+export const fetchBlock = (
+  parts: readonly Pick<
+    SnapshotBundlePartInfo,
+    'url' | 'filename' | 'sha256' | 'into'
+  >[],
+): string => {
+  const steps = [
+    ...parts.map(
+      (part) =>
+        `curl -sSfo ${shellQuote(part.filename)} ${shellQuote(part.url)}`,
+    ),
+    [
+      "printf '%s  %s\\n'",
+      ...parts.map(
+        (part) =>
+          `  ${shellQuote(part.sha256 ?? '')} ${shellQuote(part.filename)}`,
+      ),
+      '  | { if command -v sha256sum >/dev/null; then sha256sum -c -; else shasum -a 256 -c -; fi; }',
+    ].join(' \\\n'),
+    ...parts.map(
+      (part) =>
+        `tar xzf ${shellQuote(part.filename)}${part.into === '.' ? '' : ` -C ${shellQuote(part.into)}`}`,
+    ),
+  ];
+  return steps.join(' && \\\n');
 };
 
 const downloadLayers = async (
@@ -172,6 +198,11 @@ const downloadLayers = async (
   const status = await bundles.bundle({ layers, format });
   switch (status.status) {
     case 'ready':
+      if (status.parts.some((part) => !part.sha256)) {
+        return errorResult(
+          'The bundle came without a checksum for every part. Try again shortly.',
+        );
+      }
       return textResult(bundleText(status));
     case 'pending':
       // Not an error: the layers are being prepared and the call should be repeated.
