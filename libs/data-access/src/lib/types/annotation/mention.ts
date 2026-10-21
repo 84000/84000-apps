@@ -7,6 +7,7 @@ import {
   baseAnnotationFromDTO,
   baseAnnotationFromImport,
   baseAnnotationToDto,
+  isFolioMentionSubtype,
 } from './annotation';
 
 export const transformer: AnnotationTransformer = (dto): MentionAnnotation => {
@@ -111,6 +112,14 @@ export const importer: AnnotationImporter = (
     return null;
   }
 
+  const { text, isSameWork, subtype, linkToh, lang, style } = input.data ?? {};
+  if (linkType === 'folio' && subtype !== undefined) {
+    // A subtyped folio marker shows only its own text (`[B1]`, `[V26]`).
+    if (!isFolioMentionSubtype(subtype) || typeof text !== 'string' || !text) {
+      return null;
+    }
+  }
+
   const mention = baseAnnotationFromImport(
     input,
     'mention',
@@ -118,7 +127,6 @@ export const importer: AnnotationImporter = (
   mention.entity = entity;
   mention.linkType = linkType;
 
-  const { text, isSameWork, subtype, linkToh, lang, style } = input.data ?? {};
   if (typeof text === 'string') {
     mention.text = text;
   }

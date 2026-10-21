@@ -175,6 +175,15 @@ export type MantraAnnotation = AnnotationBase & {
 
 export type MentionStyle = 'quote';
 
+/** Markers that are folio mentions but label something other than the folio. */
+export const FOLIO_MENTION_SUBTYPES = ['bampo', 'volume'] as const;
+export type FolioMentionSubtype = (typeof FOLIO_MENTION_SUBTYPES)[number];
+
+export const isFolioMentionSubtype = (
+  value: unknown,
+): value is FolioMentionSubtype =>
+  FOLIO_MENTION_SUBTYPES.includes(value as FolioMentionSubtype);
+
 export type MentionAnnotation = AnnotationBase & {
   type: 'mention';
   entity: string;
@@ -182,6 +191,8 @@ export type MentionAnnotation = AnnotationBase & {
   text?: string;
   displayText?: string;
   isSameWork?: boolean;
+  // Refines the target: the passage type for a passage mention, or a
+  // `FolioMentionSubtype` for a folio mention.
   subtype?: string;
   linkToh?: string;
   lang?: ExtendedTranslationLanguage;
