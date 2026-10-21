@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, statSync, existsSync, appendFileSync } from 'node:fs';
 import { join, dirname, resolve, basename, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG_PATH = join(REPO_ROOT, 'libs', 'lib-agent', 'plugins.json');
@@ -209,6 +210,34 @@ function renderPluginCatalog(plugins) {
   return `${lines.join('\n')}\n`;
 }
 
+/**
+ * Bundle a TypeScript entry point into one ESM file for node, with its
+ * workspace imports inlined. Paths in the output are relative to the repo, so
+ * the same source gives the same bytes on any machine.
+ */
+function bundleScript(entry) {
+  let esbuild;
+  try {
+    esbuild = createRequire(import.meta.url)('esbuild');
+  } catch {
+    throw new Error(`Bundling ${entry} needs esbuild: run npm ci first.`);
+  }
+  const result = esbuild.buildSync({
+    absWorkingDir: REPO_ROOT,
+    entryPoints: [entry],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node18',
+    tsconfig: 'tsconfig.base.json',
+    legalComments: 'none',
+    charset: 'utf8',
+    write: false,
+    logLevel: 'warning',
+  });
+  return Buffer.from(result.outputFiles[0].contents);
+}
+
 /** Build one plugin's file tree, with `version` left as the placeholder. */
 function buildPluginTree(plugin, defaults, allPlugins) {
   const tree = new Map();
@@ -218,6 +247,20 @@ function buildPluginTree(plugin, defaults, allPlugins) {
     if (!existsSync(abs)) throw new Error(`${plugin.name}: skill source not found: ${source}`);
     for (const [rel, contents] of readTree(abs)) {
       tree.set(`skills/${basename(source)}/${rel}`, contents);
+    }
+  }
+
+  // CLIs written in TypeScript elsewhere in the repo ship inside a skill as one
+  // bundled, dependency-free .mjs, generated here so no hand copy can drift.
+  for (const [skill, scripts] of Object.entries(plugin.bundles ?? {})) {
+    if (!(plugin.skills ?? []).some((s) => basename(s) === skill)) {
+      throw new Error(`${plugin.name}: bundles names a skill the plugin does not ship: ${skill}`);
+    }
+    for (const [rel, entry] of Object.entries(scripts)) {
+      if (!existsSync(join(REPO_ROOT, entry))) {
+        throw new Error(`${plugin.name}: bundle entry not found: ${entry}`);
+      }
+      tree.set(`skills/${skill}/${rel}`, bundleScript(entry));
     }
   }
 

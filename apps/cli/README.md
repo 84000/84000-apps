@@ -2,7 +2,8 @@
 
 84000's command line, `eft`. Its commands:
 
-- `eft search quotes`: search Tibetan eTexts, in Unicode or EWTS.
+- `eft search grep`, `phrase` and `quotes`: search Tibetan eTexts, in Unicode
+  or EWTS.
 - `eft extract`: one witness's text from an eText collection.
 
 Run `eft --help` for the commands, and `eft <command> --help` for one
@@ -20,3 +21,7 @@ npx nx bundle cli    # dist/apps/cli/eft.mjs, for node
 npx nx compile cli   # standalone binaries, dist/apps/cli/bin/eft-<platform> (needs bun)
 node apps/cli/build.mjs compile --targets darwin-arm64
 ```
+
+Until the binaries are released, the plugin build bundles it into the
+`kangyur-tengyur-recensions` skill as `scripts/eft.mjs` (see `bundles` in
+`libs/lib-agent/plugins.json`).
