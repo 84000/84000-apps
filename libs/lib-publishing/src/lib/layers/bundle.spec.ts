@@ -1,0 +1,381 @@
+import { createHash } from 'node:crypto';
+import { z } from 'zod';
+import type { DataClient } from '@eightyfourthousand/data-access';
+import { tarGzTree, untarGzTree } from '../snapshot/archive';
+import { BUNDLE_MAX_AGE_MS, type BundleStore } from './bundle-store';
+import {
+  bundleKey,
+  directoryConflict,
+  getSnapshotBundle,
+  type SnapshotBundleResult,
+} from './bundle';
+import { createLayerRegistry, workOption } from './registry';
+import type { LayerResolution, SnapshotLayer } from './types';
+
+const NOW = Date.parse('2026-10-21T12:00:00Z');
+const hash = (body: Buffer) => createHash('sha256').update(body).digest('hex');
+
+/** An in-memory bucket: stored objects by `bucket/path`. */
+const fakeStore = (objects = new Map<string, Buffer>()) => {
+  const writes: string[] = [];
+  const stamps = new Map<string, number>();
+  const store: BundleStore = {
+    find: async (path) =>
+      objects.has(`work-snapshots/${path}`)
+        ? {
+            storedAt: stamps.get(path) ?? NOW,
+            bytes: objects.get(`work-snapshots/${path}`)?.length ?? 0,
+          }
+        : null,
+    put: async (path, body) => {
+      writes.push(path);
+      objects.set(`work-snapshots/${path}`, body);
+      stamps.set(path, NOW);
+    },
+    prune: async () => undefined,
+    sha256: async (bucket, path) => {
+      const body = objects.get(`${bucket}/${path}`);
+      if (!body) throw new Error(`no ${bucket}/${path}`);
+      return hash(body);
+    },
+  };
+  return { store, objects, writes, stamps };
+};
+
+const sign = async ({
+  bucket,
+  path,
+  filename,
+}: {
+  bucket: string;
+  path: string;
+  filename: string;
+}) => ({
+  url: `https://storage.test/${bucket}/${path}`,
+  expiresAt: new Date(NOW + 900_000).toISOString(),
+  filename,
+});
+
+/** A per-work prebuilt layer whose archive unpacks to `<work>/draft.md`. */
+const draftArchive = tarGzTree({
+  tree: new Map([['draft.md', '# Toh 8\n']]),
+  root: 'toh8',
+  mtime: 0,
+});
+
+const prebuiltLayer = (
+  version: () => string,
+  resolve?: () => Promise<LayerResolution>,
+): SnapshotLayer => ({
+  name: 'work.draft',
+  description: 'draft',
+  permission: 'editor.read',
+  scope: 'work',
+  options: z.strictObject({ work: workOption() }),
+  sources: ['draft'],
+  typicalSize: '1 KB',
+  prebuilt: true,
+  resolve:
+    resolve ??
+    (async (_ctx, options) => ({
+      status: 'ready',
+      kind: 'prebuilt',
+      dir: String(options.work),
+      dataVersion: version(),
+      estimatedBytes: draftArchive.length,
+      archive: {
+        bucket: 'work-snapshots',
+        path: 'w/1.tar.gz',
+        filename: 'toh8-draft.tar.gz',
+        bytes: draftArchive.length,
+        sha256: null,
+      },
+    })),
+  readme: () => 'The work draft.',
+});
+
+const generatedLayer = (
+  generate = jest.fn(async () => new Map([['ranges.json', '[]\n']])),
+  estimatedBytes = 100,
+): SnapshotLayer => ({
+  name: 'etexts.ranges',
+  description: 'ranges',
+  permission: 'editor.edit',
+  scope: 'canon',
+  options: z.strictObject({}),
+  sources: ['published'],
+  typicalSize: '1 KB',
+  prebuilt: false,
+  resolve: async () => ({
+    status: 'ready',
+    kind: 'generated',
+    dir: 'etexts/ranges',
+    dataVersion: 'build-1',
+    estimatedBytes,
+    generate,
+  }),
+  readme: () => 'Folio ranges for every eText.',
+});
+
+const setup = ({
+  layers = [prebuiltLayer(() => 'snap-1'), generatedLayer()],
+  objects = new Map([['work-snapshots/w/1.tar.gz', draftArchive]]),
+  granted = async () => true,
+  maxBytes,
+}: {
+  layers?: SnapshotLayer[];
+  objects?: Map<string, Buffer>;
+  granted?: (permission: string) => Promise<boolean>;
+  maxBytes?: number;
+} = {}) => {
+  const fake = fakeStore(objects);
+  const scheduled: (() => Promise<void>)[] = [];
+  const registry = createLayerRegistry({ layers });
+  const run = (raw: unknown, format?: unknown) =>
+    getSnapshotBundle({
+      client: {} as DataClient,
+      request: { layers: raw, format },
+      isGranted: granted,
+      schedule: (task) => scheduled.push(task),
+      registry,
+      store: fake.store,
+      sign,
+      now: () => NOW,
+      maxBytes,
+    });
+  return { ...fake, scheduled, run };
+};
+
+const ready = (result: SnapshotBundleResult) => {
+  if (result.status !== 'ready') throw new Error(JSON.stringify(result));
+  return result.bundle;
+};
+
+const MIXED = [
+  { layer: 'work.draft', work: 'Toh 8' },
+  { layer: 'etexts.ranges' },
+];
+
+describe('bundleKey', () => {
+  const a = { layer: 'a.x', options: { work: 'toh8' }, dataVersion: '1' };
+  const b = { layer: 'b.y', options: {}, dataVersion: '2' };
+  const unicode = { tibetan: 'unicode' as const };
+
+  it('ignores order', () => {
+    expect(bundleKey(unicode, [a, b])).toBe(bundleKey(unicode, [b, a]));
+  });
+
+  it('changes with options, data version and format', () => {
+    const key = bundleKey(unicode, [a, b]);
+    expect(
+      bundleKey(unicode, [{ ...a, options: { work: 'toh9' } }, b]),
+    ).not.toBe(key);
+    expect(bundleKey(unicode, [{ ...a, dataVersion: '3' }, b])).not.toBe(key);
+    expect(bundleKey({ tibetan: 'ewts' }, [a, b])).not.toBe(key);
+  });
+});
+
+describe('directoryConflict', () => {
+  it('lets prebuilt archives share a directory', () => {
+    expect(
+      directoryConflict([
+        { layer: 'etexts.catalog', dir: 'etexts', kind: 'prebuilt' },
+        { layer: 'etexts.text', dir: 'etexts', kind: 'prebuilt' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('refuses a generated layer inside another layer', () => {
+    expect(
+      directoryConflict([
+        { layer: 'work.draft', dir: 'toh8', kind: 'prebuilt' },
+        { layer: 'work.folios', dir: 'toh8/folios', kind: 'generated' },
+      ]),
+    ).toMatch(/work\.draft.*work\.folios/);
+  });
+
+  it('refuses unsafe and reserved directories', () => {
+    for (const dir of ['../x', '/abs', 'a//b', 'README.md', 'manifest.json']) {
+      expect(
+        directoryConflict([{ layer: 'a.b', dir, kind: 'generated' }]),
+      ).toMatch(/unsafe/);
+    }
+  });
+});
+
+describe('getSnapshotBundle', () => {
+  it('bundles a per-work and a canon layer under one root', async () => {
+    const { run, objects, writes, scheduled } = setup();
+    const bundle = ready(await run(MIXED));
+
+    expect(bundle.root).toBe(`snapshot-${bundle.bundleId.slice(0, 12)}`);
+    expect(bundle.cached).toBe(false);
+    expect(writes).toEqual([`bundles/${bundle.bundleId}.tar.gz`]);
+    expect(scheduled).toHaveLength(1);
+
+    const [own, draft] = bundle.parts;
+    expect(bundle.parts).toHaveLength(2);
+    expect(own).toMatchObject({
+      filename: `${bundle.root}.tar.gz`,
+      into: '.',
+      layers: ['etexts.ranges'],
+    });
+    expect(draft).toMatchObject({
+      filename: 'toh8-draft.tar.gz',
+      into: bundle.root,
+      layers: ['work.draft'],
+      sha256: hash(draftArchive),
+      bytes: draftArchive.length,
+    });
+
+    // Unpack every part as the fetch command does: the own archive in ".", each
+    // prebuilt archive into the root.
+    const ownBody = objects.get(
+      `work-snapshots/bundles/${bundle.bundleId}.tar.gz`,
+    ) as Buffer;
+    expect(own.sha256).toBe(hash(ownBody));
+    expect(own.bytes).toBe(ownBody.length);
+    const unpacked = untarGzTree(ownBody);
+    const prebuilt = untarGzTree(draftArchive);
+    expect(unpacked.root).toBe(bundle.root);
+    const files = new Map(unpacked.tree);
+    for (const [path, content] of prebuilt.tree) {
+      files.set(`${prebuilt.root}/${path}`, content);
+    }
+    expect([...files.keys()].sort()).toEqual([
+      'README.md',
+      'etexts/ranges/ranges.json',
+      'manifest.json',
+      'toh8/draft.md',
+    ]);
+
+    const readme = files.get('README.md') as string;
+    expect(readme).toMatch(/## work\.draft \(work: toh8\)\n\nThe work draft\./);
+    expect(readme).toMatch(
+      /## etexts\.ranges\n\nFolio ranges for every eText\./,
+    );
+    expect(readme).toMatch(/arrives in 2 parts/);
+
+    const manifest = JSON.parse(files.get('manifest.json') as string);
+    expect(manifest).toMatchObject({
+      bundleId: bundle.bundleId,
+      root: bundle.root,
+      format: { tibetan: 'unicode' },
+      layers: [
+        {
+          layer: 'work.draft',
+          dir: 'toh8',
+          dataVersion: 'snap-1',
+          prebuilt: true,
+        },
+        { layer: 'etexts.ranges', dir: 'etexts/ranges', prebuilt: false },
+      ],
+      parts: [
+        { filename: `${bundle.root}.tar.gz`, into: '.', sha256: null },
+        {
+          filename: 'toh8-draft.tar.gz',
+          into: bundle.root,
+          sha256: hash(draftArchive),
+        },
+      ],
+    });
+    expect(manifest.files.map((f: { path: string }) => f.path)).toEqual([
+      'README.md',
+      'etexts/ranges/ranges.json',
+    ]);
+  });
+
+  it('reuses a stored bundle while every data version is unchanged', async () => {
+    const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
+    let version = 'snap-1';
+    const { run, writes } = setup({
+      layers: [prebuiltLayer(() => version), generatedLayer(generate)],
+    });
+    const first = ready(await run(MIXED));
+    const again = ready(await run([...MIXED].reverse()));
+    expect(again.bundleId).toBe(first.bundleId);
+    expect(again.cached).toBe(true);
+    expect(again.parts[0].sha256).toBe(first.parts[0].sha256);
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(writes).toHaveLength(1);
+
+    version = 'snap-2';
+    const changed = ready(await run(MIXED));
+    expect(changed.bundleId).not.toBe(first.bundleId);
+    expect(changed.cached).toBe(false);
+    expect(writes).toHaveLength(2);
+  });
+
+  it('rebuilds a stored bundle older than the reuse window', async () => {
+    const { run, writes, stamps } = setup();
+    const first = ready(await run(MIXED));
+    stamps.set(`bundles/${first.bundleId}.tar.gz`, NOW - BUNDLE_MAX_AGE_MS - 1);
+    const again = ready(await run(MIXED));
+    expect(again.cached).toBe(false);
+    expect(writes).toHaveLength(2);
+  });
+
+  it('builds nothing when any layer is refused', async () => {
+    const resolve = jest.fn();
+    const { run, writes } = setup({
+      layers: [prebuiltLayer(() => 'snap-1', resolve), generatedLayer()],
+      granted: async (permission) => permission === 'editor.read',
+    });
+    const result = await run(MIXED);
+    expect(result).toMatchObject({
+      status: 'refused',
+      refusedLayers: ['etexts.ranges'],
+    });
+    expect(result.status === 'refused' && result.error).toMatch(
+      /editor\.edit\. Nothing was built\./,
+    );
+    expect(resolve).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('refuses a bundle over the size cap, naming the largest layers', async () => {
+    const { run, writes } = setup({
+      layers: [prebuiltLayer(() => 'snap-1'), generatedLayer(undefined, 5000)],
+      maxBytes: 1000,
+    });
+    const result = await run(MIXED);
+    expect(result.status).toBe('too-large');
+    expect(result.status === 'too-large' && result.error).toMatch(
+      /Largest: etexts\.ranges 4\.9 KB/,
+    );
+    expect(writes).toEqual([]);
+  });
+
+  it('passes through pending, not-found and error resolutions', async () => {
+    const cases: [LayerResolution, string][] = [
+      { status: 'pending', retryAfterSeconds: 30, message: 'Building.' },
+      { status: 'not-found', error: 'No such work.' },
+      { status: 'error', error: 'Storage down.' },
+    ].map((r) => [r as LayerResolution, r.status]);
+    for (const [resolution, status] of cases) {
+      const { run, writes } = setup({
+        layers: [
+          prebuiltLayer(
+            () => 'x',
+            async () => resolution,
+          ),
+        ],
+      });
+      const result = await run([{ layer: 'work.draft', work: 'toh8' }]);
+      expect(result.status).toBe(status);
+      expect(writes).toEqual([]);
+    }
+  });
+
+  it('refuses invalid layers and formats', async () => {
+    const { run } = setup();
+    expect((await run([{ layer: 'work.nope' }])).status).toBe('invalid');
+    expect((await run(MIXED, { tibetan: 'ewts' })).status).toBe('invalid');
+  });
+
+  it('reports a storage failure as an error', async () => {
+    const { run } = setup({ objects: new Map() });
+    const result = await run(MIXED);
+    expect(result.status).toBe('error');
+  });
+});

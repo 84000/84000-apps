@@ -1,0 +1,231 @@
+"""
+A bundle of snapshot layers: one root directory holding a README, a manifest.json
+and each layer's files. Prebuilt layers (a work's draft, the eText archives) are
+signed from storage as their own parts and unpack into the same root.
+"""
+type SnapshotBundle {
+  status: SnapshotBundleStatus!
+
+  """
+  The cache key: a hash of the layers, their options, their data versions and the
+  format. Null unless READY.
+  """
+  bundleId: String
+
+  """
+  The directory every part unpacks into.
+  """
+  root: String
+
+  """
+  The bundle's own archive was already stored for this key.
+  """
+  cached: Boolean
+  createdAt: String
+
+  """
+  Expected download size of every part, compressed.
+  """
+  estimatedBytes: Float
+
+  """
+  The largest estimated download a bundle may have.
+  """
+  maxBytes: Float!
+  layers: [SnapshotBundleLayer!]!
+
+  """
+  Download in order: the first creates the root, the rest unpack into it.
+  """
+  parts: [SnapshotBundlePart!]!
+
+  """
+  When REFUSED: the requested layers the caller lacks permission for.
+  """
+  refusedLayers: [String!]!
+  error: String
+
+  """
+  When PENDING: seconds to wait before asking again.
+  """
+  retryAfterSeconds: Int
+}
+
+enum SnapshotBundleStatus {
+  READY
+
+  """
+  A layer's data is being prepared; ask again after retryAfterSeconds.
+  """
+  PENDING
+
+  """
+  The caller lacks a permission some layers require. Nothing was built.
+  """
+  REFUSED
+
+  """
+  The layers or format are not valid; error says why.
+  """
+  INVALID
+
+  """
+  The estimated download exceeds maxBytes; request fewer or narrower layers.
+  """
+  TOO_LARGE
+  NOT_FOUND
+
+  """
+  Storage or the database failed; worth retrying.
+  """
+  ERROR
+}
+
+type SnapshotBundleLayer {
+  layer: String!
+
+  """
+  The layer's options after validation, defaults included.
+  """
+  options: JSON!
+
+  """
+  The directory under the root this layer writes.
+  """
+  dir: String!
+
+  """
+  Identifies the data the layer read: a snapshot id, a build id, a draft timestamp.
+  """
+  dataVersion: String!
+  prebuilt: Boolean!
+  estimatedBytes: Float!
+  note: String
+}
+
+type SnapshotBundlePart {
+  url: String!
+  expiresAt: String!
+  filename: String!
+
+  """
+  Compressed size.
+  """
+  bytes: Float!
+  sha256: String
+
+  """
+  Where to run `tar xzf`: "." for the bundle's own archive, which creates the root;
+  the root for a prebuilt part.
+  """
+  into: String!
+
+  """
+  The layers this part holds; empty for the bundle's own archive with none generated.
+  """
+  layers: [String!]!
+}
+
+input SnapshotBundleInput {
+  """
+  Each item is { layer: "<name>", ...that layer's options }, as snapshotLayers lists.
+  """
+  layers: [JSON!]!
+  format: SnapshotFormatInput
+}
+
+input SnapshotFormatInput {
+  """
+  unicode | ewts | both. Only the values snapshotLayers lists as supported are accepted.
+  """
+  tibetan: String
+}
+
+"""
+A layer that can go in a bundle.
+"""
+type SnapshotLayerInfo {
+  """
+  Dotted: work.* layers take a work, etexts.* layers are canon-wide.
+  """
+  name: String!
+  description: String!
+
+  """
+  The editor.* permission the layer requires.
+  """
+  permission: String!
+
+  """
+  The caller holds that permission.
+  """
+  granted: Boolean!
+
+  """
+  work or canon.
+  """
+  scope: String!
+
+  """
+  draft, published, or both; with both, `source` is an option.
+  """
+  sources: [String!]!
+  typicalSize: String!
+  prebuilt: Boolean!
+
+  """
+  JSON Schema of the layer's options.
+  """
+  options: JSON!
+}
+
+"""
+A named list of layers: the dataset forms of download-snapshot.
+"""
+type SnapshotPreset {
+  name: String!
+  description: String!
+
+  """
+  Layer requests; a "{param}" value is filled from the call's field of that name.
+  """
+  layers: [JSON!]!
+}
+
+"""
+A bundle-wide format option.
+"""
+type SnapshotFormatOption {
+  name: String!
+  description: String!
+  values: [String!]!
+
+  """
+  The values accepted today.
+  """
+  supported: [String!]!
+  default: String!
+}
+
+type SnapshotLayerCatalog {
+  layers: [SnapshotLayerInfo!]!
+  presets: [SnapshotPreset!]!
+  formats: [SnapshotFormatOption!]!
+  maxBundleBytes: Float!
+}
+
+extend type Query {
+  """
+  Every layer a bundle can hold, with its options and whether the caller may have it.
+  Requires sign-in.
+  """
+  snapshotLayers: SnapshotLayerCatalog!
+}
+
+extend type Mutation {
+  """
+  A bundle of layers, served from cache when every layer's data is unchanged. Each
+  layer's permission is checked first; if any is missing, nothing is built.
+  """
+  snapshotBundle(input: SnapshotBundleInput!): SnapshotBundle!
+}
