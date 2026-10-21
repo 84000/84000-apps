@@ -71,7 +71,9 @@ that span the work are not.
 
 **Save the findings to session documents.** One agent saves, and it is you.
 Write each chapter's findings to a local file with a distinct flat name, such as
-`toh345_stage2_ch03_findings.md`, with the merged report beside them. Use the
+`toh345_stage2_ch03_findings.md`, in `84000/scratch/<toh>/<stage>-chapters/`,
+and the merged report with the stage's deliverables
+(`reference/local-files/layout.md`). Use the
 stage of the task (`stage2` for editorial review, `copyedit` for copyediting)
 and do not reuse a filename the stage's policies already assign. Then save with
 `write-session-documents`; see `reference/session-documents/saving.md`. Say

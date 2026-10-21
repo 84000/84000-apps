@@ -74,6 +74,10 @@ the calls, the upload URLs and the PUT that carries the bytes, what happens on
 a re-run, and what to do when the client cannot make an outbound request. Read
 `saving.md` before the first save of a session.
 
+**Local files.** Write `toh#_stage0.md` and its Word mirror to
+`84000/deliverables/<toh>/`, and downloads and working files where
+`reference/local-files/layout.md` puts them.
+
 **An existing record.** Before running, check with `read-session-documents`
 whether a `toh#_stage0.md` is already saved for this work, and apply the
 workflow's rule for a re-run.

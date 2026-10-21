@@ -18,11 +18,12 @@ range.
 1. Resolve the work with `resolve-toh`. A cited number may be superseded,
    covered by another entry or lettered; use the number it resolves to.
 2. Call `download-snapshot` with `dataset: etexts-catalog`. Its first line names
-   the build. If `etexts-<build id>/etexts/README.md` already exists in the
-   working directory, use that copy and skip the download.
-3. Otherwise make `etexts-<build id>/`, run the fetch command the tool returns
-   inside it, then delete the `.tar.gz`. The URL is a credential: do not log or
-   save it.
+   the build. If `84000/cache/etexts/<build id>/etexts/README.md` already
+   exists, use that copy and skip the download.
+   `reference/local-files/layout.md` says where 84000 files go.
+3. Otherwise make `84000/cache/etexts/<build id>/`, run the fetch command the
+   tool returns inside it, then delete the `.tar.gz`. The URL is a credential:
+   do not log or save it.
 4. **Read `etexts/README.md` before anything else.** It is generated with the
    data and is the authority on the files, their columns, the collections in
    this build, how to read boundary status, and each collection's known
@@ -59,9 +60,10 @@ large download (the tool reports its size; tell the user before fetching more
 than one).
 
 1. Call `download-snapshot` with `dataset: etexts-text` and the collection
-   (the README lists them). Fetch it into the same `etexts-<build id>/`
-   directory as the catalog, so both unpack under one `etexts/`. Reuse an
-   existing copy for the same build id.
+   (the README lists them). Fetch it into the same
+   `84000/cache/etexts/<build id>/` folder as the catalog, so both unpack under
+   one `etexts/`. Reuse an existing copy for the same build id. Write anything
+   you derive from the text under `84000/scratch/`, never into the cache.
 2. A witness runs from its start folio to its end folio, which may cross
    volumes. Its first and last sides usually also hold the neighbouring texts;
    the README says where a text opens and closes.
@@ -98,6 +100,7 @@ catalog as mechanical conversions, not edited IAST.
 
 ## Housekeeping
 
-The unpacked text of a large collection runs to hundreds of megabytes. When
-you are done, tell the user which `etexts-<build id>/` directories you left and
-their sizes. Delete one only when the user agrees.
+The unpacked text of a large collection runs to hundreds of megabytes. Keep it
+for reuse, and follow _After a download_ in `reference/local-files/layout.md`:
+when the cache is large, point the user to the `tidy-local-files` skill rather
+than deleting anything yourself.

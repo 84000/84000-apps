@@ -295,7 +295,9 @@ either fails, stop and say so.
 
 ## Getting the data into code
 
-Your code needs the step 2 and 3 results as files. A result the client saved
+Your code needs the step 2 and 3 results as files. Write the script and its
+data files to `84000/scratch/<toh>/folio-audit/`, per
+`reference/local-files/layout.md`, not into the working folder. A result the client saved
 to a file because it was too large to show can be read as it is: it is a JSON
 array of `{type, text}` items, the tool's JSON in the first `text` that parses,
 possibly followed by a notice from the studio that is not JSON.
