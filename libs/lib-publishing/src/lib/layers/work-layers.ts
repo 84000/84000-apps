@@ -22,6 +22,7 @@ import {
 } from '../snapshot/parts';
 import { readAlignments } from '../snapshot/read-draft';
 import {
+  isPublishedVersionLive,
   readSourceAnnotations,
   readSourceBibliographies,
   readSourceGlossary,
@@ -74,6 +75,8 @@ export interface WorkLayerSource {
     context: LayerContext,
     workUuid: string,
   ): Promise<{ manifest: SnapshotManifest; archiveBytes: number } | null>;
+  /** Whether a published work's version is still live; asked after its reads. */
+  stillLive(context: LayerContext, work: SourceWork): Promise<boolean>;
 }
 
 const readStoredSnapshot = async (client: DataClient, workUuid: string) => {
@@ -120,6 +123,7 @@ export const databaseWorkSource: WorkLayerSource = {
     ctx.memo(`stored-snapshot:${workUuid}`, () =>
       readStoredSnapshot(ctx.client, workUuid).catch(() => null),
     ),
+  stillLive: (ctx, work) => isPublishedVersionLive(ctx.client, work),
 };
 
 /** `rows`, with each read made once per request across every work layer. */
@@ -155,6 +159,11 @@ interface WorkPart {
    * version also turns over daily, as the stored snapshot refreshes.
    */
   readsAlignments?: boolean;
+  /**
+   * The part resolves glossary instances through glossary edges, which are not
+   * versioned; a published version's output also turns over daily.
+   */
+  readsGlossaryEdges?: boolean;
   generate(rows: WorkRows): Promise<LayerFiles>;
   readme(dir: string, source: LayerSource): string;
 }
@@ -223,6 +232,7 @@ const PARTS: WorkPart[] = [
       "A work's annotations by passage, in reading order: glossary instances with the text they cover (TSV), every other non-layout annotation, and layout annotations (JSONL).",
     typicalSize: '10 KB to 60 MB',
     claims: PART_PATHS.annotations,
+    readsGlossaryEdges: true,
     generate: async (rows) => {
       const [passages, annotations, glossary] = await Promise.all([
         rows.passages(),
@@ -349,9 +359,10 @@ const workLayer = (
       target.source === 'draft'
         ? `draft:${target.draftTouchedAt ?? 'never'}`
         : `published:${target.versionUuid}`;
-    // Alignments, and a draft with no recorded edit, have no key that tracks them.
+    // Alignments, published glossary edges and a never-edited draft have no key.
     const untracked =
       part.readsAlignments ||
+      (part.readsGlossaryEdges && target.source === 'published') ||
       (target.source === 'draft' && !target.draftTouchedAt);
     const day = untracked ? `:day:${Math.floor(ctx.now() / DAY_MS)}` : '';
     const stored = await data.storedSnapshot(ctx, target.uuid);
@@ -362,8 +373,21 @@ const workLayer = (
       claims: part.claims,
       dataVersion: `v${SNAPSHOT_FORMAT_VERSION}:${target.uuid}:${version}${day}`,
       estimatedBytes: estimate(stored, part.claims),
-      generate: () =>
-        part.generate(sharedRows(ctx, target, data.rows(ctx, target))),
+      consistency: `source ${target.source}`,
+      generate: async () => {
+        const files = await part.generate(
+          sharedRows(ctx, target, data.rows(ctx, target)),
+        );
+        if (
+          target.source === 'published' &&
+          !(await data.stillLive(ctx, target))
+        ) {
+          throw new Error(
+            `${work} was republished while ${part.name} was read; request it again.`,
+          );
+        }
+        return files;
+      },
     };
   },
   readme: ({ source }, { dir }) => part.readme(dir, source),

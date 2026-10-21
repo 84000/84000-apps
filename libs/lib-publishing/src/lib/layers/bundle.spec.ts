@@ -249,6 +249,30 @@ describe('directoryConflict', () => {
     expect(directoryConflict([{ ...passages, claims: ['../x'] }])).toMatch(
       /unsafe/,
     );
+    expect(directoryConflict([{ ...passages, claims: [] }])).toMatch(/unsafe/);
+  });
+
+  it('refuses layers sharing a directory that disagree on their consistency key', () => {
+    const at = (layer: string, claim: string, consistency?: string) => ({
+      layer,
+      dir: 'toh8',
+      kind: 'generated',
+      claims: [claim],
+      consistency,
+    });
+    expect(
+      directoryConflict([
+        at('work.passages', 'text', 'source draft'),
+        at('work.glossary', 'glossary.md', 'source published'),
+      ]),
+    ).toMatch(/work\.passages.*work\.glossary.*different data/);
+    expect(
+      directoryConflict([
+        at('work.passages', 'text', 'source draft'),
+        at('work.glossary', 'glossary.md', 'source draft'),
+        at('other.layer', 'other.md'),
+      ]),
+    ).toBeNull();
   });
 
   it('refuses unsafe and reserved directories', () => {

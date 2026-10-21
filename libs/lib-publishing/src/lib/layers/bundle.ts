@@ -137,13 +137,17 @@ export const directoryConflict = (
     dir: string;
     kind: string;
     claims?: readonly string[];
+    consistency?: string;
   }[],
 ): string | null => {
   for (const layer of layers) {
     if (!safePath(layer.dir) || RESERVED.has(layer.dir)) {
       return `Layer ${layer.layer} has an unsafe directory "${layer.dir}".`;
     }
-    if (layer.claims && !layer.claims.every(safePath)) {
+    if (
+      layer.claims &&
+      (!layer.claims.length || !layer.claims.every(safePath))
+    ) {
       return `Layer ${layer.layer} claims an unsafe path under "${layer.dir}".`;
     }
   }
@@ -156,6 +160,14 @@ export const directoryConflict = (
       );
       if (!bothPrebuilt && clash) {
         return `Layers ${a.layer} (${a.dir}/) and ${b.layer} (${b.dir}/) would write the same files; request them in separate bundles.`;
+      }
+      if (
+        a.dir === b.dir &&
+        a.consistency !== undefined &&
+        b.consistency !== undefined &&
+        a.consistency !== b.consistency
+      ) {
+        return `Layers ${a.layer} (${a.consistency}) and ${b.layer} (${b.consistency}) share ${a.dir}/ but read different data, so their cross-references would not match; request them with the same options or in separate bundles.`;
       }
     }
   }
@@ -442,6 +454,7 @@ export const getSnapshotBundle = async ({
         dir: output.dir,
         kind: output.kind,
         claims: output.claims,
+        consistency: output.consistency,
       })),
     );
     if (conflict) return { status: 'invalid', error: conflict };

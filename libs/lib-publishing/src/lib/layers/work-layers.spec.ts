@@ -194,9 +194,12 @@ const fixture = (label = 'draft'): DraftRows => {
 const fakeSource = ({
   draft = fixture('draft'),
   published = fixture('published') as DraftRows | null,
+  republished = false,
 }: {
   draft?: DraftRows;
   published?: DraftRows | null;
+  /** A publish replaces the version while its rows are read. */
+  republished?: boolean;
 } = {}) => {
   const reads: string[] = [];
   const rowsOf = (source: LayerSource) =>
@@ -240,6 +243,7 @@ const fakeSource = ({
       };
     },
     storedSnapshot: async () => null,
+    stillLive: async () => !republished,
   };
   return { source, reads, draft };
 };
@@ -530,6 +534,43 @@ describe('source', () => {
     expect(result).toMatchObject({
       status: 'not-found',
       error: expect.stringMatching(/no published version.*source "draft"/),
+    });
+  });
+
+  it('turns published annotations over daily, as glossary edges are not versioned', async () => {
+    const { run } = setup();
+    const bundle = ready(
+      await run([
+        { layer: 'work.annotations', work: 'toh145' },
+        { layer: 'work.glossary', work: 'toh145' },
+      ]),
+    );
+    expect(bundle.layers[0].dataVersion).toMatch(
+      new RegExp(`published:${VERSION}:day:\\d+$`),
+    );
+    expect(bundle.layers[1].dataVersion).toMatch(
+      new RegExp(`published:${VERSION}$`),
+    );
+  });
+
+  it('fails rather than serve rows read while a publish replaced the version', async () => {
+    const { run } = setup({ data: fakeSource({ republished: true }) });
+    const result = await run([{ layer: 'work.glossary', work: 'toh145' }]);
+    expect(result).toMatchObject({
+      status: 'error',
+      error: expect.stringMatching(/republished while work\.glossary was read/),
+    });
+  });
+
+  it('refuses one work from both sources in a bundle, whose anchors would not match', async () => {
+    const { run } = setup();
+    const result = await run([
+      { layer: 'work.passages', work: 'toh145', source: 'draft' },
+      { layer: 'work.glossary', work: 'toh145', source: 'published' },
+    ]);
+    expect(result).toMatchObject({
+      status: 'invalid',
+      error: expect.stringMatching(/source draft.*source published/),
     });
   });
 

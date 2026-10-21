@@ -74,6 +74,11 @@ interface ResolvedBase {
    * all of `dir`.
    */
   claims?: readonly string[];
+  /**
+   * Layers sharing a `dir` that set this must agree on it, such as the work layers on
+   * their source: files that cross-reference each other must come from the same data.
+   */
+  consistency?: string;
   /** Identifies the data read; it changes whenever the layer's output would. */
   dataVersion: string;
   /** Expected download size in bytes, compressed. Checked against the bundle cap. */

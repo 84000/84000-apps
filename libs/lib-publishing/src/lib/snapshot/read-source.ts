@@ -3,8 +3,8 @@
  * at a time, in the shapes the snapshot parts render.
  *
  * Published reads go to the version-scoped `published_*` rows of the version that is
- * live when the work resolves. Those rows never change, so a read cannot mix two
- * versions even if a publish lands mid-read.
+ * live when the work resolves. A later publish deletes those rows after it flips the
+ * pointer, so a caller confirms with `isPublishedVersionLive` once its reads are done.
  */
 
 import {
@@ -73,6 +73,25 @@ export const resolveSourceWork = async ({
   const versionUuid: string | null = data?.published_version_uuid ?? null;
   if (!versionUuid) return { status: 'unpublished', work: draft };
   return { status: 'ok', work: { ...draft, source, versionUuid } };
+};
+
+/**
+ * Whether `work`'s version is still the live one. Rows read before a publish replaced
+ * it may be incomplete, since the previous version's rows are deleted after the flip.
+ */
+export const isPublishedVersionLive = async (
+  client: DataClient,
+  work: SourceWork,
+): Promise<boolean> => {
+  const { data, error } = await client
+    .from('works')
+    .select('published_version_uuid')
+    .eq('uuid', work.uuid)
+    .maybeSingle();
+  if (error) fail('published version', error);
+  return (
+    !!work.versionUuid && data?.published_version_uuid === work.versionUuid
+  );
 };
 
 const published = (work: SourceWork): string => {
@@ -171,7 +190,7 @@ export const readSourceGlossary = async (
     values: terms.map((t) => t.glossary_uuid),
     sortColumn: 'parent_uuid',
     idColumn: 'child_uuid',
-    what: 'glossary edges',
+    what: 'published glossary edges',
   });
   return { terms, termOf: glossaryTermOf(terms, edges) };
 };
