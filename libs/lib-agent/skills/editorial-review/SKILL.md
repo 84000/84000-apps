@@ -46,9 +46,8 @@ proceeding on assumptions:
       `search-glossary-terms`, `get-glossary-term`, `list-glossary-terms`) and
       the `glossary-by-canon-section` skill, for verifying terminology decisions
       independently rather than from the draft's own account of them
-- [ ] A transliteration tool, for the Extended Wylie the report quotes. The
-      `pyewts` Python package is one; its output needs its `_` replaced by a
-      space and its straight `'` by `’`
+- [ ] `transliterate`, for the Extended Wylie the report quotes. It returns
+      the house profile directly; still check its output against the Unicode
 - [ ] `work-ls`, `work-read` and `work-grep`, where the work is held in the
       studio, for running the whole-text checks over its draft snapshot, and
       optionally `download-snapshot` with a shell. See _Whole-text checks over

@@ -81,6 +81,9 @@
       "@eightyfourthousand/lib-publishing/ssr": [
         "./libs/lib-publishing/src/ssr.ts"
       ],
+      "@eightyfourthousand/lib-tibetan": [
+        "./libs/lib-tibetan/src/index.ts"
+      ],
       "@eightyfourthousand/lib-search": [
         "./libs/lib-search/src/index.ts"
       ],

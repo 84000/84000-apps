@@ -17,6 +17,10 @@ export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export {
+  createTransliterateTool,
+  TRANSLITERATE_TOOL_NAME,
+} from './lib/tools/transliterate';
+export {
   createHarnessTools,
   createOpenPolicyEditorTool,
   createPolicyEditorResource,
