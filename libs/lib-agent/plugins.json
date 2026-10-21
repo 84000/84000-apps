@@ -59,8 +59,10 @@
           "libs/lib-agent/reference/import-model",
           "libs/lib-agent/reference/whole-work-analysis",
           "libs/lib-agent/reference/passage-editing",
-          "libs/lib-agent/reference/session-documents"
-        ]
+          "libs/lib-agent/reference/session-documents",
+          "libs/lib-agent/reference/local-files"
+        ],
+        "folio-reference-audit": ["libs/lib-agent/reference/local-files"]
       }
     },
     {
@@ -96,19 +98,24 @@
       "renames": {},
       "sharedReference": {
         "text-analysis-and-retrieval": [
-          "libs/lib-agent/reference/session-documents"
+          "libs/lib-agent/reference/session-documents",
+          "libs/lib-agent/reference/local-files"
         ],
         "first-draft-translation": [
-          "libs/lib-agent/reference/session-documents"
+          "libs/lib-agent/reference/session-documents",
+          "libs/lib-agent/reference/local-files"
         ],
         "editorial-review": [
           "libs/lib-agent/reference/session-documents",
-          "libs/lib-agent/reference/whole-work-analysis"
+          "libs/lib-agent/reference/whole-work-analysis",
+          "libs/lib-agent/reference/local-files"
         ],
         "copyediting": [
           "libs/lib-agent/reference/session-documents",
-          "libs/lib-agent/reference/whole-work-analysis"
-        ]
+          "libs/lib-agent/reference/whole-work-analysis",
+          "libs/lib-agent/reference/local-files"
+        ],
+        "kangyur-tengyur-recensions": ["libs/lib-agent/reference/local-files"]
       }
     },
     {
@@ -135,24 +142,28 @@
     {
       "name": "84000-core",
       "displayName": "84000 Core",
-      "description": "Core tooling for everyone using the 84000 plugins. Onboarding that recommends the 84000 plugins for the user's role, and feature requests, bug reports and feedback sent to the 84000 team from the conversation, drafted for review before anything is filed.",
+      "description": "Core tooling for everyone using the 84000 plugins. Onboarding that recommends the 84000 plugins for the user's role, feature requests, bug reports and feedback sent to the 84000 team from the conversation, drafted for review before anything is filed, and a tidy-up of the files the 84000 skills leave on the user's computer, removing only what the user confirms.",
       "keywords": [
         "84000",
         "onboarding",
         "feedback",
         "bug-report",
-        "feature-request"
+        "feature-request",
+        "files"
       ],
       "audience": {
         "everyone": true
       },
       "skills": [
         "libs/lib-agent/skills/send-feedback",
-        "libs/lib-agent/skills/onboarding"
+        "libs/lib-agent/skills/onboarding",
+        "libs/lib-agent/skills/tidy-local-files"
       ],
       "agents": [],
       "renames": {},
-      "sharedReference": {},
+      "sharedReference": {
+        "tidy-local-files": ["libs/lib-agent/reference/local-files"]
+      },
       "pluginCatalog": ["onboarding"]
     }
   ]

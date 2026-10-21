@@ -90,6 +90,11 @@ What this stage supplies:
 | Suggestions report | `toh#_copyedit_review.docx` — the review                                             | `primary`    |
 |                    | `toh#_copyedit_review.md` — the review's markdown text                               | `supporting` |
 
+Write these files to `84000/deliverables/<toh>/`, where `<toh>` is the
+filenames' prefix, and downloads, chapter findings and other working files
+where `reference/local-files/layout.md` puts them. Read the supplied file where
+it is.
+
 Then PUT each file to the upload URL it returns. The `.docx` files are the
 uploads that matter: the tracked file in mode 1, the review in mode 2, is what
 the copyeditor opens. A copyedit that saved its markdown and lost a Word

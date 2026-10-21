@@ -55,6 +55,10 @@ Read and save through the studio, not local disk: Stage 0 may have been run in
 another session, on another machine, by someone else.
 `reference/session-documents/reading.md` and `saving.md` are the mechanism.
 
+**Local files.** Write the `.docx` and the markdown record to
+`84000/deliverables/<toh>/`, and downloads and working files where
+`reference/local-files/layout.md` puts them.
+
 **Reading the Stage 0 record.** Read `toh#_stage0.md` out of storage before
 anything else. A read that _fails_ is not a record that is _absent_, and the two
 lead to different stops:

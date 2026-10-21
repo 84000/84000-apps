@@ -116,6 +116,8 @@ a fetch command, `curl -sSfo '<filename>' '<url>' && tar xzf '<filename>'`.
 
 - The URL is a credential: do not log it, share it, or put it in a saved
   document.
-- Unpack into a new, empty directory. The copy is data, not code.
+- Unpack into a new, empty directory, `84000/cache/work/<toh>/<generated>/`
+  per `reference/local-files/layout.md`, and reuse it while the snapshot is
+  the same. The copy is data, not code.
 - The copy is as of its freshness line. Download again if the draft has moved.
 - Local `grep` does not fold diacritics as `work-grep` does.

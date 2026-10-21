@@ -18,7 +18,10 @@ snapshot, its freshness line and the `raw/` files the script reads. The
 "Unlinked glossary uses" recipe in `reference/whole-work-analysis/recipes.md` is
 the analysis this skill automates. The preview rules are in
 `reference/passage-editing/preview.md`; how to save the report is in
-`reference/session-documents/saving.md`.
+`reference/session-documents/saving.md`. Where each file goes is in
+`reference/local-files/layout.md`: the snapshot in the cache, the script's
+output in `84000/scratch/<toh>/glossary-instances/`, the report in
+`84000/deliverables/<toh>/`.
 
 ## What an instance looks like
 
@@ -47,7 +50,8 @@ can show them apart.
 
 Resolve the work with `resolve-toh`, then call `download-snapshot` with its
 `work`, and fetch and unpack it with the command it returns, into a new, empty
-directory.
+`84000/cache/work/<toh>/<generated>/` folder, or reuse that folder if it already
+holds this snapshot.
 Note the freshness line. A snapshot that is not `current` is refreshed in the
 background, at most every two minutes: wait two minutes and download again,
 until the line reads `current`. After three tries, go on with the snapshot you
@@ -61,7 +65,9 @@ refreshed the same way.
 node "<this skill>/scripts/glossary-instances.mjs" find <snapshot>/<toh> <out>
 ```
 
-`<this skill>` is the directory this file is in. The script reads
+`<this skill>` is the directory this file is in. `<out>` is a new run folder,
+`84000/scratch/<toh>/glossary-instances/run1/`, then `run2/` and so on. The
+script reads
 `raw/passages.jsonl`, `raw/glossary.jsonl`, `anchors.tsv` and the files under
 `annotations/`, and writes to `<out>`:
 
@@ -94,7 +100,7 @@ not a drop.
 
 ### 4. Report to the editor
 
-Write the report to a local file, `<toh>_glossary-instances.md`, and save it
+Write the report to `84000/deliverables/<toh>/<toh>_glossary-instances.md`, and save it
 with `write-session-documents`, stage `glossary-instances`, role `primary`. It
 holds:
 

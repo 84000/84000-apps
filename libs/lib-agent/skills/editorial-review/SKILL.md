@@ -97,6 +97,10 @@ two markdown records and lost the Word document has not saved its deliverable,
 however complete the manifest looks. The save is not complete until every PUT
 has succeeded.
 
+**Local files.** Write the three deliverables to `84000/deliverables/<toh>/`,
+and downloads, chapter findings and other working files where
+`reference/local-files/layout.md` puts them.
+
 **Re-reviewing.** Before re-reviewing a work, check what is already saved with
 `read-session-documents`. A re-run archives rather than destroys, so the earlier
 report is recoverable — but _Not this_ in `editorial-review/workflow` still asks
