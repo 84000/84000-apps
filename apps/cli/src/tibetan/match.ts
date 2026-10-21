@@ -345,10 +345,11 @@ export function findMatches(
   const seeded = new Set<number>();
   const searched = new Set<number>();
   for (const seed of seeds.values()) {
-    const group = probe.group[seed.probeAt[0]];
-    seeded.add(group);
     if (seed.count > maxFreq) frequent++;
-    else searched.add(group);
+    for (const p of seed.probeAt) {
+      seeded.add(probe.group[p]);
+      if (seed.count <= maxFreq) searched.add(probe.group[p]);
+    }
   }
   return {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
