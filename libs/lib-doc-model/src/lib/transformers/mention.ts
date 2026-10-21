@@ -18,6 +18,23 @@ type MentionItem = Omit<
   'type' | 'passageUuid' | 'start' | 'end' | 'toh' | 'validated'
 > & { toh?: string };
 
+const isVolumeMarker = (item: MentionItem): boolean =>
+  item.linkType === 'folio' && item.subtype === 'volume';
+
+/**
+ * Adds `item` to a batched mention's items. A volume marker goes ahead of the
+ * folio and bampo markers it shares a position with, since they fall inside it.
+ */
+const withItem = (items: MentionItem[], item: MentionItem): MentionItem[] => {
+  if (!isVolumeMarker(item)) {
+    return [...items, item];
+  }
+  const at = items.findIndex((other) => !isVolumeMarker(other));
+  return at === -1
+    ? [...items, item]
+    : [...items.slice(0, at), item, ...items.slice(at)];
+};
+
 /**
  * Adds a mention item to `container`, batching into the mention already at the
  * same position when there is one. Two folio references can share a single
@@ -38,8 +55,7 @@ const insertOrBatch = (
   );
 
   if (existing) {
-    const items = existing.attrs?.items || [];
-    items.push(item);
+    const items = withItem(existing.attrs?.items || [], item);
     existing.attrs = { ...existing.attrs, items };
     return;
   }
@@ -117,8 +133,7 @@ export const mention: Transformer = (ctx) => {
           );
 
           if (mention) {
-            const items = mention.attrs?.items || [];
-            items.push(item);
+            const items = withItem(mention.attrs?.items || [], item);
             mention.attrs = { ...mention.attrs, items };
             // Item was batched into the existing mention; signal that no new
             // mention block should be inserted for this annotation.
