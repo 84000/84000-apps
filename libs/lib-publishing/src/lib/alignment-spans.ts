@@ -62,8 +62,9 @@ export const readAlignmentSpans = async (
 /**
  * Which sides, given by uuid in reading order, hold aligned Tibetan. A side counts when
  * any alignment starts on it, ends on it, or runs across it; an alignment that ends at
- * character 0 of a later side does not reach that side. `unplaced` counts alignments
- * whose start or end side is not among `sideUuids`.
+ * character 0 of a later side does not reach that side. A start side is counted even
+ * when the span starts at its very end. `unplaced` counts alignments whose start or
+ * end side is not among `sideUuids`.
  */
 export const markAlignedSides = (
   sideUuids: readonly string[],

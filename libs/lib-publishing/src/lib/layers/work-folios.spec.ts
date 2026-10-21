@@ -4,6 +4,7 @@ import type { DraftWork } from '../snapshot/read-draft';
 import type { LayerContext, LayerResolution, ResolvedGenerated } from './types';
 import {
   BYTES_PER_SIDE,
+  studioFoliosReader,
   createWorkFoliosLayer,
   renderFolioFiles,
   type FolioSideText,
@@ -51,7 +52,8 @@ const fakeReader = ({
     },
     readSides: async (_client, _uuid, toh) => {
       calls.push(`sides ${toh}`);
-      return sides;
+      // The view is keyed by work and Toh: another work's Toh reads nothing.
+      return work?.tohs.includes(toh) ? sides : [];
     },
     readSideTexts: async (_client, _uuid, toh) => {
       calls.push(`texts ${toh}`);
@@ -226,13 +228,15 @@ describe('work.folios', () => {
       await layer.resolve(context(), { work: 'toh502', toh: 'toh503' }),
     ).toMatchObject({
       status: 'not-found',
-      error: expect.stringContaining('toh503 is not a Toh of toh502'),
+      error:
+        'No Degé folios are recorded for toh503 of toh502 (catalogued as toh502).',
     });
 
     const empty = createWorkFoliosLayer(fakeReader({ sides: [] }).reader);
     expect(await empty.resolve(context(), { work: 'toh502' })).toMatchObject({
       status: 'not-found',
-      error: 'No Degé folios are recorded for toh502.',
+      error:
+        'No Degé folios are recorded for toh502 of toh502 (catalogued as toh502).',
     });
   });
 
@@ -250,6 +254,112 @@ describe('work.folios', () => {
       }),
     ).toMatchObject({ status: 'error' });
     spy.mockRestore();
+  });
+});
+
+describe('work.folios edge cases', () => {
+  it('refuses a Tibetan format it cannot write before reading anything', async () => {
+    const { reader, calls } = fakeReader();
+    const ctx = { ...context(), format: { tibetan: 'ewts' as const } };
+    expect(
+      await createWorkFoliosLayer(reader).resolve(ctx, { work: 'toh502' }),
+    ).toEqual({
+      status: 'error',
+      error:
+        'work.folios cannot write format.tibetan "ewts" yet; use "unicode".',
+    });
+    expect(calls).toEqual([]);
+  });
+
+  it('notes alignments that point outside the folios', async () => {
+    const { reader } = fakeReader({ spans: [span('s1', 'gone')] });
+    const resolved = ready(
+      await createWorkFoliosLayer(reader).resolve(context(), {
+        work: 'toh502',
+      }),
+    );
+    expect(resolved.note).toBe(
+      '1 recorded alignment points at sides outside the folios of toh502; not marked.',
+    );
+  });
+
+  it('refuses to build when the folios change after resolving', async () => {
+    const { reader } = fakeReader();
+    const layer = createWorkFoliosLayer(reader);
+    const resolved = ready(await layer.resolve(context(), { work: 'toh502' }));
+    reader.readSideTexts = async () => SIDES.slice(1);
+    await expect(resolved.generate()).rejects.toThrow(/changed/);
+  });
+
+  it('lists a neighbour once, whatever order the rows come in', async () => {
+    const version = async (sharers: [string, string][]) => {
+      const { reader } = fakeReader({ sharers });
+      const layer = createWorkFoliosLayer(reader);
+      const resolved = ready(
+        await layer.resolve(context(), { work: 'toh502' }),
+      );
+      const files = await resolved.generate();
+      return {
+        version: resolved.dataVersion,
+        first: files.get('toh502-sides.tsv')?.split('\n')[1],
+      };
+    };
+    const a = await version([
+      ['s1', 'toh501'],
+      ['s4', 'toh503'],
+      ['s1', 'toh501'],
+    ]);
+    const b = await version([
+      ['s4', 'toh503'],
+      ['s1', 'toh501'],
+    ]);
+    expect(a.first).toBe('87\tF.181.a\tunaligned\ttoh501');
+    expect(a.version).toBe(b.version);
+  });
+});
+
+describe('studioFoliosReader.readSides', () => {
+  it('pages past the 1000-row cap until a short page', async () => {
+    const ranges: [number, number][] = [];
+    const row = (i: number) => ({
+      folio_uuid: `u${i}`,
+      volume_number: 1,
+      folio_number: i,
+      side: 'a',
+    });
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      order: () => builder,
+      range: async (from: number, to: number) => {
+        ranges.push([from, to]);
+        const count = from === 0 ? 1000 : 1;
+        return {
+          data: Array.from({ length: count }, (_, i) => row(from + i)),
+          error: null,
+        };
+      },
+    };
+    const client = { from: () => builder } as unknown as DataClient;
+    const sides = await studioFoliosReader.readSides(client, WORK, 'toh8');
+    expect(sides).toHaveLength(1001);
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
+  it('throws on a failed page rather than returning a short list', async () => {
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      order: () => builder,
+      range: async () => ({ data: null, error: { message: 'boom' } }),
+    };
+    const client = { from: () => builder } as unknown as DataClient;
+    await expect(
+      studioFoliosReader.readSides(client, WORK, 'toh8'),
+    ).rejects.toThrow(/boom/);
   });
 });
 
@@ -278,6 +388,6 @@ describe('renderFolioFiles', () => {
         sharers: new Map(),
         format: { tibetan: 'ewts' },
       }),
-    ).toThrow(/cannot write format.tibetan "ewts"/);
+    ).toThrow(/cannot write format.tibetan "ewts" yet/);
   });
 });

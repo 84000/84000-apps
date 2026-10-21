@@ -12,7 +12,7 @@ import {
   readAlignmentSpans,
   type AlignmentSpan,
 } from '../alignment-spans';
-import { folioLabel } from '../folio';
+import { folioLabel, joinSideLines } from '../folio';
 import { resolveDraftWork, type DraftWork } from '../snapshot/read-draft';
 import type { BundleFormat } from './format';
 import { normalizeWorkKey, workOption } from './registry';
@@ -121,7 +121,9 @@ export const studioFoliosReader: WorkFoliosReader = {
       .from('tibetan_works_folios')
       .select('folio_uuid, toh')
       .in('folio_uuid', folioUuids)
-      .neq('toh', toh);
+      .neq('toh', toh)
+      .order('folio_uuid', { ascending: true })
+      .order('toh', { ascending: true });
     if (error) fail('neighbouring works', error);
     return ((data ?? []) as { folio_uuid: string; toh: string }[]).map(
       (row) => [row.folio_uuid, row.toh],
@@ -155,26 +157,27 @@ export const volumeFileName = (toh: string, volume: number): string =>
 
 export const sidesFileName = (toh: string): string => `${toh}-sides.tsv`;
 
-/** A side's text on one line: its own line breaks joined by a single space. */
-const oneLine = (content: string | null): string =>
-  (content ?? '').replace(/\s*[\r\n]+\s*/g, ' ').trim();
+interface TextWriter {
+  /** Told apart in the file name: `toh8-vol014<suffix>.txt`. */
+  suffix: string;
+  text: (content: string | null) => string;
+}
 
 /**
- * How each side's text is written, per Tibetan format. A format adds its own writer
- * here; each writes its own volume files, told apart by `suffix`.
+ * How each side's text is written, per Tibetan format; null for a format the layer
+ * cannot write yet. A format adds its writers here.
  */
-const textWriters = (
-  format: BundleFormat,
-): { suffix: string; text: (content: string | null) => string }[] => {
+const textWriters = (format: BundleFormat): TextWriter[] | null => {
   switch (format.tibetan) {
     case 'unicode':
-      return [{ suffix: '', text: oneLine }];
+      return [{ suffix: '', text: joinSideLines }];
     default:
-      throw new Error(
-        `work.folios cannot write format.tibetan "${format.tibetan}" yet`,
-      );
+      return null;
   }
 };
+
+const unsupportedFormat = (format: BundleFormat) =>
+  `work.folios cannot write format.tibetan "${format.tibetan}" yet; use "unicode".`;
 
 const withSuffix = (fileName: string, suffix: string) =>
   suffix ? fileName.replace(/\.txt$/, `${suffix}.txt`) : fileName;
@@ -204,7 +207,9 @@ export const renderFolioFiles = ({
     list.push(side);
     byVolume.set(side.volume_number, list);
   }
-  for (const { suffix, text } of textWriters(format)) {
+  const writers = textWriters(format);
+  if (!writers) throw new Error(unsupportedFormat(format));
+  for (const { suffix, text } of writers) {
     for (const [volume, list] of byVolume) {
       files.set(
         withSuffix(volumeFileName(toh, volume), suffix),
@@ -259,6 +264,9 @@ export const createWorkFoliosLayer = (
   prebuilt: false,
   resolve: async (context, { work, toh: requested }) => {
     const { client } = context;
+    if (!textWriters(context.format)) {
+      return { status: 'error', error: unsupportedFormat(context.format) };
+    }
     try {
       const found = await context.memo(`resolveDraftWork:${work}`, () =>
         reader.resolveWork(client, work),
@@ -269,27 +277,26 @@ export const createWorkFoliosLayer = (
           error: `No work matches "${work}". Pass a Toh key such as "toh502" or a work uuid.`,
         };
       }
-      const named = found.tohs.includes(work) ? work : found.tohs[0];
-      const toh = requested ?? named;
-      if (!toh || !found.tohs.includes(toh)) {
+      // A Toh given as `work` names its placement; a uuid takes the first.
+      const toh = requested ?? (work.startsWith('toh') ? work : found.tohs[0]);
+      if (!toh) {
         return {
           status: 'not-found',
-          error: requested
-            ? `${requested} is not a Toh of ${work}; it is catalogued as ${found.tohs.join(', ') || 'no Toh'}.`
-            : `${work} has no Toh number, so it has no Degé folios.`,
+          error: `${work} has no Toh number, so it has no Degé folios.`,
         };
       }
 
+      // The view is keyed by the work and Toh, so a Toh of another work reads nothing.
       const sides = await reader.readSides(client, found.uuid, toh);
       if (!sides.length) {
         return {
           status: 'not-found',
-          error: `No Degé folios are recorded for ${toh}.`,
+          error: `No Degé folios are recorded for ${toh} of ${work}${found.tohs.length ? ` (catalogued as ${found.tohs.join(', ')})` : ''}.`,
         };
       }
       const spans = await reader.readSpans(client, toh);
       const uuids = sides.map((s) => s.folio_uuid);
-      const { aligned } = markAlignedSides(uuids, spans);
+      const { aligned, unplaced } = markAlignedSides(uuids, spans);
       const first = sides[0];
       const last = sides[sides.length - 1];
       const edges = [...new Set([first.folio_uuid, last.folio_uuid])];
@@ -299,7 +306,10 @@ export const createWorkFoliosLayer = (
         edges,
         toh,
       )) {
-        sharers.set(uuid, [...(sharers.get(uuid) ?? []), other].sort(byToh));
+        sharers.set(
+          uuid,
+          [...new Set([...(sharers.get(uuid) ?? []), other])].sort(byToh),
+        );
       }
       const alignedUuids = new Set(uuids.filter((_, i) => aligned[i]));
 
@@ -331,16 +341,31 @@ export const createWorkFoliosLayer = (
         status: 'ready',
         kind: 'generated',
         dir: `${found.tohs[0] ?? found.uuid}/folios`,
+        // Side text is not hashed: the view changes only when it is repopulated, and
+        // a cached bundle lives at most seven days.
         dataVersion: `folios-v${GENERATOR_VERSION}-${hash({
           toh,
           sides: sides.map((s) => [s.folio_uuid, s.volume_number, label(s)]),
           aligned,
-          sharers: [...sharers],
+          sharers: [...sharers].sort(([a], [b]) => (a < b ? -1 : 1)),
         }).slice(0, 16)}`,
         estimatedBytes: sides.length * BYTES_PER_SIDE,
         folios: summary,
+        ...(unplaced
+          ? {
+              note: `${unplaced} recorded alignment${unplaced === 1 ? ' points' : 's point'} at sides outside the folios of ${toh}; not marked.`,
+            }
+          : {}),
         generate: async (): Promise<LayerFiles> => {
           const texts = await reader.readSideTexts(client, found.uuid, toh);
+          if (
+            texts.length !== uuids.length ||
+            texts.some((s, i) => s.folio_uuid !== uuids[i])
+          ) {
+            throw new Error(
+              `The folios of ${toh} changed while the bundle was built`,
+            );
+          }
           return renderFolioFiles({
             toh,
             sides: texts,
@@ -380,7 +405,11 @@ export const foliosReadme = (
     '  translation covers any of the side, else `unaligned`), and `also_in` (other',
     '  Tohs whose text also starts or ends on the side, space-separated; checked',
     '  for the first and last sides only).',
-    '- Folio labels match those in the alignments.',
+    "- The first and last lines hold only this work's part of a side it shares with",
+    '  another work (see `also_in`).',
+    '- Folio labels match those in the alignments. Alignment character positions',
+    '  count from the start of the full side, before its line breaks are joined, so',
+    '  they do not index these lines.',
   ];
   if (!summary) return lines.join('\n');
   lines.push(
