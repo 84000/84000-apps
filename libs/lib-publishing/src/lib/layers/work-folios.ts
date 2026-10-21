@@ -264,6 +264,8 @@ export const createWorkFoliosLayer = (
   prebuilt: false,
   resolve: async (context, { work, toh: requested }) => {
     const { client } = context;
+    // Unreachable while the bundle refuses unsupported formats first; a format added
+    // there before it has a writer here fails cleanly.
     if (!textWriters(context.format)) {
       return { status: 'error', error: unsupportedFormat(context.format) };
     }
