@@ -77,6 +77,7 @@ describe('createLayerRegistry', () => {
       'work.annotations',
       'work.bibliography',
       'work.draft',
+      'work.folios',
       'work.glossary',
       'work.passages',
       'work.passages.raw',
