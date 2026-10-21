@@ -2,7 +2,11 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { DataClient } from '@eightyfourthousand/data-access';
 import { tarGzTree, untarGzTree } from '../snapshot/archive';
-import { BUNDLE_MAX_AGE_MS, type BundleStore } from './bundle-store';
+import {
+  BUNDLE_MAX_AGE_MS,
+  createBundleStore,
+  type BundleStore,
+} from './bundle-store';
 import {
   bundleKey,
   directoryConflict,
@@ -15,9 +19,13 @@ import type { LayerResolution, SnapshotLayer } from './types';
 const NOW = Date.parse('2026-10-21T12:00:00Z');
 const hash = (body: Buffer) => createHash('sha256').update(body).digest('hex');
 
-/** An in-memory bucket: stored objects by `bucket/path`. */
-const fakeStore = (objects = new Map<string, Buffer>()) => {
+/** An in-memory bucket: stored objects by `bucket/path`, written once each. */
+const fakeStore = (
+  objects = new Map<string, Buffer>(),
+  clock = { now: NOW },
+) => {
   const writes: string[] = [];
+  const attempts: string[] = [];
   const stamps = new Map<string, number>();
   const store: BundleStore = {
     find: async (path) =>
@@ -28,9 +36,12 @@ const fakeStore = (objects = new Map<string, Buffer>()) => {
           }
         : null,
     put: async (path, body) => {
+      attempts.push(path);
+      if (objects.has(`work-snapshots/${path}`)) return false;
       writes.push(path);
       objects.set(`work-snapshots/${path}`, body);
-      stamps.set(path, NOW);
+      stamps.set(path, clock.now);
+      return true;
     },
     prune: async () => undefined,
     sha256: async (bucket, path) => {
@@ -39,7 +50,7 @@ const fakeStore = (objects = new Map<string, Buffer>()) => {
       return hash(body);
     },
   };
-  return { store, objects, writes, stamps };
+  return { store, objects, writes, attempts, stamps };
 };
 
 const sign = async ({
@@ -128,7 +139,8 @@ const setup = ({
   granted?: (permission: string) => Promise<boolean>;
   maxBytes?: number;
 } = {}) => {
-  const fake = fakeStore(objects);
+  const clock = { now: NOW };
+  const fake = fakeStore(objects, clock);
   const scheduled: (() => Promise<void>)[] = [];
   const registry = createLayerRegistry({ layers });
   const run = (raw: unknown, format?: unknown) =>
@@ -140,11 +152,14 @@ const setup = ({
       registry,
       store: fake.store,
       sign,
-      now: () => NOW,
+      now: () => clock.now,
       maxBytes,
     });
-  return { ...fake, scheduled, run };
+  return { ...fake, clock, scheduled, run };
 };
+
+const objectPath = (bundleId: string, at = NOW) =>
+  `bundles/${bundleId}-${Math.floor(at / BUNDLE_MAX_AGE_MS)}.tar.gz`;
 
 const ready = (result: SnapshotBundleResult) => {
   if (result.status !== 'ready') throw new Error(JSON.stringify(result));
@@ -210,7 +225,7 @@ describe('getSnapshotBundle', () => {
 
     expect(bundle.root).toBe(`snapshot-${bundle.bundleId.slice(0, 12)}`);
     expect(bundle.cached).toBe(false);
-    expect(writes).toEqual([`bundles/${bundle.bundleId}.tar.gz`]);
+    expect(writes).toEqual([objectPath(bundle.bundleId)]);
     expect(scheduled).toHaveLength(1);
 
     const [own, draft] = bundle.parts;
@@ -231,7 +246,7 @@ describe('getSnapshotBundle', () => {
     // Unpack every part as the fetch command does: the own archive in ".", each
     // prebuilt archive into the root.
     const ownBody = objects.get(
-      `work-snapshots/bundles/${bundle.bundleId}.tar.gz`,
+      `work-snapshots/${objectPath(bundle.bundleId)}`,
     ) as Buffer;
     expect(own.sha256).toBe(hash(ownBody));
     expect(own.bytes).toBe(ownBody.length);
@@ -306,13 +321,32 @@ describe('getSnapshotBundle', () => {
     expect(writes).toHaveLength(2);
   });
 
-  it('rebuilds a stored bundle older than the reuse window', async () => {
-    const { run, writes, stamps } = setup();
+  it('builds again under a new path once the window ends', async () => {
+    const { run, writes, clock } = setup();
     const first = ready(await run(MIXED));
-    stamps.set(`bundles/${first.bundleId}.tar.gz`, NOW - BUNDLE_MAX_AGE_MS - 1);
+    clock.now += BUNDLE_MAX_AGE_MS;
     const again = ready(await run(MIXED));
+    expect(again.bundleId).toBe(first.bundleId);
     expect(again.cached).toBe(false);
-    expect(writes).toHaveLength(2);
+    expect(writes).toEqual([
+      objectPath(first.bundleId),
+      objectPath(first.bundleId, clock.now),
+    ]);
+  });
+
+  it('serves the stored copy to a request that lost a concurrent build', async () => {
+    const { run, objects, writes, attempts, clock } = setup();
+    const racing = [run(MIXED), run(MIXED)];
+    clock.now += 1000;
+    const bundles = (await Promise.all(racing)).map(ready);
+    expect(attempts).toHaveLength(2);
+    expect(writes).toHaveLength(1);
+    const stored = objects.get(`work-snapshots/${writes[0]}`) as Buffer;
+    for (const bundle of bundles) {
+      expect(bundle.parts[0].sha256).toBe(hash(stored));
+      expect(bundle.parts[0].bytes).toBe(stored.length);
+    }
+    expect(bundles.map((b) => b.cached).sort()).toEqual([false, true]);
   });
 
   it('builds nothing when any layer is refused', async () => {
@@ -377,5 +411,54 @@ describe('getSnapshotBundle', () => {
     const { run } = setup({ objects: new Map() });
     const result = await run(MIXED);
     expect(result.status).toBe('error');
+  });
+});
+
+describe('createBundleStore', () => {
+  const age = (ms: number) => new Date(NOW - ms).toISOString();
+
+  /** A client whose `bundles/` listing holds `items`, recording each `remove`. */
+  const client = (items: { name: string; updated_at: string }[]) => {
+    const removed: string[][] = [];
+    const bucket = {
+      list: async (
+        _prefix: string,
+        { limit, offset = 0 }: { limit: number; offset?: number },
+      ) => ({ data: items.slice(offset, offset + limit), error: null }),
+      remove: async (paths: string[]) => {
+        removed.push(paths);
+        return { data: [], error: null };
+      },
+      upload: async () => ({
+        data: null,
+        error: { message: 'The resource already exists', statusCode: '409' },
+      }),
+    };
+    return {
+      removed,
+      client: { storage: { from: () => bucket } } as unknown as DataClient,
+    };
+  };
+
+  it('prunes in batches, keeping bundles whose URLs may still be live', async () => {
+    const old = Array.from({ length: 1500 }, (_, i) => ({
+      name: `old-${i}.tar.gz`,
+      updated_at: age(BUNDLE_MAX_AGE_MS * 2),
+    }));
+    const recent = {
+      name: 'recent.tar.gz',
+      updated_at: age(BUNDLE_MAX_AGE_MS + 10 * 60 * 1000),
+    };
+    const { client: c, removed } = client([...old, recent]);
+    await createBundleStore(c).prune(NOW);
+    expect(removed.map((batch) => batch.length)).toEqual([1000, 500]);
+    expect(removed.flat()).not.toContain('bundles/recent.tar.gz');
+  });
+
+  it('reports an existing object as not stored', async () => {
+    const { client: c } = client([]);
+    expect(
+      await createBundleStore(c).put('bundles/x.tar.gz', Buffer.from('')),
+    ).toBe(false);
   });
 });

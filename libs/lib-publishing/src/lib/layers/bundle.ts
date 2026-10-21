@@ -13,7 +13,6 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import { tarGzTree } from '../snapshot/archive';
 import {
   BUNDLE_BUCKET,
-  BUNDLE_MAX_AGE_MS,
   BUNDLE_OBJECT_LIMIT_BYTES,
   bundleObjectPath,
   createBundleStore,
@@ -464,18 +463,28 @@ export const getSnapshotBundle = async ({
 
     const bundleId = bundleKey(format.format, layers);
     const root = `snapshot-${bundleId.slice(0, 12)}`;
-    const path = bundleObjectPath(bundleId);
     const at = now();
-    const stored = await store.find(path);
-    const cached = !!stored && at - stored.storedAt < BUNDLE_MAX_AGE_MS;
-    let createdAt = new Date(stored?.storedAt ?? at).toISOString();
-    let ownBytes = stored?.bytes ?? 0;
-    let ownSha256 =
-      cached && stored
-        ? await store.sha256(BUNDLE_BUCKET, path, String(stored.storedAt))
-        : '';
-    if (!cached) {
-      createdAt = new Date(at).toISOString();
+    const path = bundleObjectPath(bundleId, at);
+    // Objects are written once, so whatever is stored is what every caller gets.
+    const reuse = async () => {
+      const stored = await store.find(path);
+      if (!stored) throw new Error(`${path} vanished after it was stored`);
+      return {
+        createdAt: new Date(stored.storedAt).toISOString(),
+        bytes: stored.bytes,
+        sha256: await store.sha256(
+          BUNDLE_BUCKET,
+          path,
+          String(stored.storedAt),
+        ),
+      };
+    };
+    let cached = !!(await store.find(path));
+    let own: { createdAt: string; bytes: number; sha256: string };
+    if (cached) {
+      own = await reuse();
+    } else {
+      const createdAt = new Date(at).toISOString();
       const tree = await buildTree({
         bundleId,
         root,
@@ -493,13 +502,21 @@ export const getSnapshotBundle = async ({
           error: `The generated files come to ${formatBytes(body.length)} compressed, over the ${formatBytes(BUNDLE_OBJECT_LIMIT_BYTES)} storage limit. Request fewer works or a narrower range.`,
         };
       }
-      ownBytes = body.length;
-      ownSha256 = createHash('sha256').update(body).digest('hex');
-      await store.put(path, body);
-      schedule(() => store.prune(now()));
+      if (await store.put(path, body)) {
+        own = {
+          createdAt,
+          bytes: body.length,
+          sha256: createHash('sha256').update(body).digest('hex'),
+        };
+        schedule(() => store.prune(now()));
+      } else {
+        // Another request stored this bundle first; serve its copy.
+        cached = true;
+        own = await reuse();
+      }
     }
 
-    const own = await sign({
+    const ownDownload = await sign({
       bucket: BUNDLE_BUCKET,
       path,
       filename: `${root}.tar.gz`,
@@ -518,7 +535,7 @@ export const getSnapshotBundle = async ({
           : null;
       }),
     );
-    if (!own || signed.some((part) => !part)) {
+    if (!ownDownload || signed.some((part) => !part)) {
       return {
         status: 'error',
         error:
@@ -531,14 +548,14 @@ export const getSnapshotBundle = async ({
         bundleId,
         root,
         cached,
-        createdAt,
+        createdAt: own.createdAt,
         estimatedBytes,
         layers,
         parts: [
           {
-            ...own,
-            bytes: ownBytes,
-            sha256: ownSha256,
+            ...ownDownload,
+            bytes: own.bytes,
+            sha256: own.sha256,
             into: '.',
             layers: resolved
               .filter(({ output }) => output.kind === 'generated')

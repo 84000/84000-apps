@@ -10,26 +10,39 @@ import { SNAPSHOT_BUCKET } from '../snapshot/store';
 export const BUNDLE_BUCKET = SNAPSHOT_BUCKET;
 export const BUNDLE_PREFIX = 'bundles';
 
-/** A stored bundle is reused while younger than this, and pruned once older. */
+/**
+ * Bundles are stored per window of this length: one is reused until its window ends,
+ * then built again under the next window's path.
+ */
 export const BUNDLE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Lifetime of a signed download URL. */
 export const BUNDLE_URL_TTL_SECONDS = 15 * 60;
 
+/** Stored bundles are pruned once older than this: a window, any URL signed in it, and a margin. */
+export const BUNDLE_PRUNE_AFTER_MS =
+  BUNDLE_MAX_AGE_MS + BUNDLE_URL_TTL_SECONDS * 1000 + 60 * 60 * 1000;
+
 /** The bucket's own object size limit. */
 export const BUNDLE_OBJECT_LIMIT_BYTES = 100 * 1024 * 1024;
 
-/** Where a bundle's own archive is stored. */
-export const bundleObjectPath = (bundleId: string): string =>
-  `${BUNDLE_PREFIX}/${bundleId}.tar.gz`;
+/**
+ * Where a bundle's own archive is stored in the window holding `now`. Objects are
+ * written once and never replaced, so a signed URL and its hash always agree.
+ */
+export const bundleObjectPath = (bundleId: string, now: number): string =>
+  `${BUNDLE_PREFIX}/${bundleId}-${Math.floor(now / BUNDLE_MAX_AGE_MS)}.tar.gz`;
 
 /** Bundle archive storage, injectable for specs. */
 export interface BundleStore {
   /** When the object was last written, or null when absent. Throws when storage fails. */
   find(path: string): Promise<{ storedAt: number; bytes: number } | null>;
-  /** Stores (or replaces) the object. Throws when storage fails. */
-  put(path: string, body: Buffer): Promise<void>;
-  /** Deletes bundles older than `BUNDLE_MAX_AGE_MS`. Never throws. */
+  /**
+   * Stores the object unless one is already there: false when another request stored
+   * it first. Throws when storage fails.
+   */
+  put(path: string, body: Buffer): Promise<boolean>;
+  /** Deletes bundles older than `BUNDLE_PRUNE_AFTER_MS`. Never throws. */
   prune(now: number): Promise<void>;
   /**
    * The sha256 of a stored object, downloading it once per `version` (any string that
@@ -38,9 +51,15 @@ export interface BundleStore {
   sha256(bucket: string, path: string, version: string): Promise<string>;
 }
 
+/** Both the listing page and the most objects one `remove` call may delete. */
 const PAGE = 1000;
 
-/** An upsert keeps `created_at`, so the last write is `updated_at`. */
+/** Storage's answer to creating an object that exists. */
+const isDuplicate = (error: { message?: string; statusCode?: string }) =>
+  error.statusCode === '409' ||
+  /already exists|duplicate/i.test(error.message ?? '');
+
+/** When the object was last written. */
 const storedAt = (item: {
   updated_at?: string | null;
   created_at?: string | null;
@@ -77,9 +96,13 @@ export const createBundleStore = (client: DataClient): BundleStore => {
       const { error } = await bucket().upload(
         path,
         new Blob([new Uint8Array(body)], { type: 'application/gzip' }),
-        { contentType: 'application/gzip', upsert: true },
+        { contentType: 'application/gzip', upsert: false },
       );
-      if (error) throw new Error(`Uploading ${path}: ${error.message}`);
+      if (!error) return true;
+      if (isDuplicate(error as { message?: string; statusCode?: string })) {
+        return false;
+      }
+      throw new Error(`Uploading ${path}: ${error.message}`);
     },
     prune: async (now) => {
       try {
@@ -93,14 +116,16 @@ export const createBundleStore = (client: DataClient): BundleStore => {
           if (error) throw new Error(error.message);
           for (const item of data ?? []) {
             const stored = storedAt(item);
-            if (stored && now - stored > BUNDLE_MAX_AGE_MS) {
+            if (stored && now - stored > BUNDLE_PRUNE_AFTER_MS) {
               doomed.push(`${BUNDLE_PREFIX}/${item.name}`);
             }
           }
           if ((data ?? []).length < PAGE) break;
         }
-        if (doomed.length) {
-          const { error } = await bucket().remove(doomed);
+        for (let start = 0; start < doomed.length; start += PAGE) {
+          const { error } = await bucket().remove(
+            doomed.slice(start, start + PAGE),
+          );
           if (error) throw new Error(error.message);
         }
       } catch (error) {
