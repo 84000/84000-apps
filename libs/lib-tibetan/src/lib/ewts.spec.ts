@@ -160,6 +160,13 @@ describe('toEwts', () => {
       expect(result.warnings).toHaveLength(1);
     });
 
+    it('flags an a-chen carrying a vowel inside a syllable', () => {
+      const result = toEwtsWithWarnings('ཀཨི');
+      expect(result.ewts).toBe('kai');
+      expect(result.warnings).toHaveLength(1);
+      expect(toEwtsWithWarnings('ཀཻ').warnings).toEqual([]);
+    });
+
     it('has none for ordinary text', () => {
       expect(toEwtsWithWarnings('བསྒྱུར་བའོ། །').warnings).toEqual([]);
     });

@@ -604,7 +604,13 @@ export function toEwtsWithWarnings(
         // A visarga closes the syllable.
         if (stack.finals.includes(FINALS[VISARGA])) break;
       }
-      out.push(syllableString(stacks, warnings));
+      const ewts = syllableString(stacks, warnings);
+      if (stacks.some((s, n) => n > 0 && s.cons.length === 0)) {
+        warnings.push(
+          `"${ewts}" has an a-chen carrying a vowel inside the syllable, which EWTS cannot write unambiguously.`,
+        );
+      }
+      out.push(ewts);
       continue;
     }
 
