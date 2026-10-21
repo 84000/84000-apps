@@ -11,10 +11,7 @@
     "importHelpers": true,
     "target": "es2022",
     "module": "esnext",
-    "lib": [
-      "es2022",
-      "dom"
-    ],
+    "lib": ["es2022", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "paths": {
@@ -24,12 +21,8 @@
       "@eightyfourthousand/client-graphql/ssr": [
         "./libs/client-graphql/src/ssr.ts"
       ],
-      "@eightyfourthousand/data-access": [
-        "./libs/data-access/src/index.ts"
-      ],
-      "@eightyfourthousand/data-access/ssr": [
-        "./libs/data-access/src/ssr.ts"
-      ],
+      "@eightyfourthousand/data-access": ["./libs/data-access/src/index.ts"],
+      "@eightyfourthousand/data-access/ssr": ["./libs/data-access/src/ssr.ts"],
       "@eightyfourthousand/design-system": [
         "./libs/design-system/src/index.ts"
       ],
@@ -45,12 +38,8 @@
       "@eightyfourthousand/lib-doc-model": [
         "./libs/lib-doc-model/src/index.ts"
       ],
-      "@eightyfourthousand/lib-editing": [
-        "./libs/lib-editing/src/index.ts"
-      ],
-      "@eightyfourthousand/lib-editing/ssr": [
-        "./libs/lib-editing/src/ssr.ts"
-      ],
+      "@eightyfourthousand/lib-editing": ["./libs/lib-editing/src/index.ts"],
+      "@eightyfourthousand/lib-editing/ssr": ["./libs/lib-editing/src/ssr.ts"],
       "@eightyfourthousand/lib-editing/stack": [
         "./libs/lib-editing/src/stack.ts"
       ],
@@ -60,12 +49,8 @@
       "@eightyfourthousand/lib-editing/fixtures/*": [
         "./libs/lib-editing/src/fixtures/*"
       ],
-      "@eightyfourthousand/lib-instr": [
-        "./libs/lib-instr/src/index.ts"
-      ],
-      "@eightyfourthousand/lib-instr/ssr": [
-        "./libs/lib-instr/src/ssr.ts"
-      ],
+      "@eightyfourthousand/lib-instr": ["./libs/lib-instr/src/index.ts"],
+      "@eightyfourthousand/lib-instr/ssr": ["./libs/lib-instr/src/ssr.ts"],
       "@eightyfourthousand/lib-instr/static": [
         "./libs/lib-instr/src/static.ts"
       ],
@@ -81,37 +66,19 @@
       "@eightyfourthousand/lib-publishing/ssr": [
         "./libs/lib-publishing/src/ssr.ts"
       ],
-      "@eightyfourthousand/lib-search": [
-        "./libs/lib-search/src/index.ts"
-      ],
-      "@eightyfourthousand/lib-utils": [
-        "./libs/lib-utils/src/index.ts"
-      ],
-      "@lib-explore": [
-        "./libs/lib-explore/src/index.ts"
-      ],
-      "@lib-explore/ssr": [
-        "./libs/lib-explore/src/ssr.ts"
-      ],
-      "@lib-search": [
-        "./libs/lib-search/src/index.ts"
-      ],
-      "@lib-user": [
-        "./libs/lib-user/src/index.ts"
-      ],
-      "@lib-user/ssr": [
-        "./libs/lib-user/src/ssr.ts"
-      ],
-      "@eightyfourthousand/lib-agent": [
-        "./libs/lib-agent/src/index.ts"
-      ],
+      "@eightyfourthousand/lib-tibetan": ["./libs/lib-tibetan/src/index.ts"],
+      "@eightyfourthousand/lib-search": ["./libs/lib-search/src/index.ts"],
+      "@eightyfourthousand/lib-utils": ["./libs/lib-utils/src/index.ts"],
+      "@lib-explore": ["./libs/lib-explore/src/index.ts"],
+      "@lib-explore/ssr": ["./libs/lib-explore/src/ssr.ts"],
+      "@lib-search": ["./libs/lib-search/src/index.ts"],
+      "@lib-user": ["./libs/lib-user/src/index.ts"],
+      "@lib-user/ssr": ["./libs/lib-user/src/ssr.ts"],
+      "@eightyfourthousand/lib-agent": ["./libs/lib-agent/src/index.ts"],
       "@eightyfourthousand/policy-editor-mcp-app/html": [
         "./apps/policy-editor-mcp-app/generated/app-html.ts"
       ]
     }
   },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+  "exclude": ["node_modules", "tmp"]
 }

@@ -1,0 +1,27 @@
+{
+  "name": "lib-tibetan",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/lib-tibetan/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/lib-tibetan",
+        "main": "libs/lib-tibetan/src/index.ts",
+        "tsConfig": "libs/lib-tibetan/tsconfig.lib.json",
+        "rootDir": "libs/lib-tibetan/src",
+        "generateExportsField": false
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "libs/lib-tibetan/jest.config.ts"
+      }
+    }
+  }
+}
