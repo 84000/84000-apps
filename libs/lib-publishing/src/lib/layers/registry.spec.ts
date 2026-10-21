@@ -223,3 +223,30 @@ describe('helpers', () => {
     expect(parseBundleFormat({ script: 'x' }).ok).toBe(false);
   });
 });
+
+describe('work.draft', () => {
+  it('reports a snapshot store failure as an error resolution', async () => {
+    const failing = {
+      from: () => {
+        throw new Error('db down');
+      },
+      rpc: () => {
+        throw new Error('db down');
+      },
+    };
+    const layer = snapshotLayerRegistry.get('work.draft');
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const resolution = await layer?.resolve(
+      {
+        client: failing as never,
+        format: { tibetan: 'unicode' },
+        now: () => 0,
+        schedule: () => undefined,
+        memo: (_key, load) => load(),
+      },
+      { work: 'toh8' },
+    );
+    spy.mockRestore();
+    expect(resolution).toMatchObject({ status: 'error' });
+  });
+});

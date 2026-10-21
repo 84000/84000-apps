@@ -21,7 +21,16 @@ export const workDraftLayer: SnapshotLayer<typeof options> = {
   typicalSize: '40 KB to 17 MB',
   prebuilt: true,
   resolve: async ({ client, now, schedule }, { work }) => {
-    const result = await getWorkSnapshot({ client, work, schedule, now });
+    let result: Awaited<ReturnType<typeof getWorkSnapshot>>;
+    try {
+      result = await getWorkSnapshot({ client, work, schedule, now });
+    } catch (error) {
+      console.error(`Resolving the draft snapshot of ${work} failed:`, error);
+      return {
+        status: 'error',
+        error: `The draft snapshot of ${work} could not be read. Try again shortly.`,
+      };
+    }
     switch (result.status) {
       case 'ready': {
         const { snapshot, freshness } = result;
