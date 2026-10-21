@@ -1,0 +1,227 @@
+import { z } from 'zod';
+import { snapshotLayerRegistry } from './default-registry';
+import { parseBundleFormat } from './format';
+import {
+  canonicalJson,
+  createLayerRegistry,
+  describeLayers,
+  MAX_LAYERS_PER_BUNDLE,
+  normalizeWorkKey,
+  parseLayerRequests,
+  refusedLayers,
+  sourceOption,
+  workOption,
+} from './registry';
+import type { LayerPermission, SnapshotLayer } from './types';
+
+const layer = (
+  name: string,
+  permission: LayerPermission = 'editor.read',
+  options: z.ZodObject = z.strictObject({}),
+): SnapshotLayer => ({
+  name,
+  description: name,
+  permission,
+  scope: 'canon',
+  options,
+  sources: ['published'],
+  typicalSize: '1 KB',
+  prebuilt: false,
+  resolve: async () => ({ status: 'not-found', error: 'unused' }),
+  readme: () => '',
+});
+
+const registry = createLayerRegistry({
+  layers: [
+    layer('work.notes', 'editor.edit', z.strictObject({ work: workOption() })),
+    layer(
+      'work.passages',
+      'editor.read',
+      z.strictObject({ work: workOption(), source: sourceOption('draft') }),
+    ),
+    layer('etexts.catalog'),
+  ],
+});
+
+describe('createLayerRegistry', () => {
+  it('lists layers by name and finds them', () => {
+    expect(registry.layers.map((l) => l.name)).toEqual([
+      'etexts.catalog',
+      'work.notes',
+      'work.passages',
+    ]);
+    expect(registry.get('work.notes')?.permission).toBe('editor.edit');
+    expect(registry.get('work.nope')).toBeUndefined();
+  });
+
+  it('refuses undotted, duplicate and preset-unknown names', () => {
+    expect(() => createLayerRegistry({ layers: [layer('notes')] })).toThrow(
+      /dotted/,
+    );
+    expect(() =>
+      createLayerRegistry({ layers: [layer('a.b'), layer('a.b')] }),
+    ).toThrow(/twice/);
+    expect(() =>
+      createLayerRegistry({
+        layers: [layer('a.b')],
+        presets: [{ name: 'p', description: '', layers: [{ layer: 'a.c' }] }],
+      }),
+    ).toThrow(/unknown layer "a.c"/);
+  });
+
+  it('registers the studio layers and their presets', () => {
+    expect(snapshotLayerRegistry.layers.map((l) => l.name)).toEqual([
+      'etexts.catalog',
+      'etexts.text',
+      'work.draft',
+    ]);
+    expect(snapshotLayerRegistry.presets.map((p) => p.name)).toEqual([
+      'work',
+      'etexts-catalog',
+      'etexts-text',
+    ]);
+  });
+});
+
+describe('parseLayerRequests', () => {
+  it('parses options, fills defaults and normalizes works', () => {
+    const parsed = parseLayerRequests(registry, [
+      { layer: 'work.passages', work: 'Toh 8' },
+      { layer: 'etexts.catalog' },
+    ]);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(
+      parsed.requests.map((r) => [r.layer.name, r.options]),
+    ).toEqual([
+      ['work.passages', { work: 'toh8', source: 'draft' }],
+      ['etexts.catalog', {}],
+    ]);
+  });
+
+  it('collapses duplicate requests', () => {
+    const parsed = parseLayerRequests(registry, [
+      { layer: 'work.passages', work: 'toh8' },
+      { layer: 'work.passages', work: '8', source: 'draft' },
+    ]);
+    expect(parsed.ok && parsed.requests).toHaveLength(1);
+  });
+
+  it('reports every problem at once', () => {
+    const parsed = parseLayerRequests(registry, [
+      { layer: 'work.nope' },
+      { layer: 'work.notes' },
+      { layer: 'etexts.catalog', source: 'draft' },
+      'etexts.catalog',
+    ]);
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error).toMatch(/^Unknown layer: work\.nope\. Known: /);
+    expect(parsed.error).toMatch(/layers\[1\] \(work\.notes\).*work/);
+    expect(parsed.error).toMatch(/layers\[2\] \(etexts\.catalog\).*source/);
+    expect(parsed.error).toMatch(/layers\[3\]: expected/);
+  });
+
+  it('refuses an empty or oversized list', () => {
+    expect(parseLayerRequests(registry, []).ok).toBe(false);
+    expect(parseLayerRequests(registry, undefined).ok).toBe(false);
+    const many = Array.from({ length: MAX_LAYERS_PER_BUNDLE + 1 }, () => ({
+      layer: 'etexts.catalog',
+    }));
+    expect(parseLayerRequests(registry, many).ok).toBe(false);
+  });
+});
+
+describe('refusedLayers', () => {
+  const requests = (names: string[]) => {
+    const parsed = parseLayerRequests(
+      registry,
+      names.map((layer) => ({ layer, work: 'toh8' })),
+    );
+    if (!parsed.ok) throw new Error(parsed.error);
+    return parsed.requests;
+  };
+
+  it('names every layer whose permission is missing, checking each once', async () => {
+    const asked: string[] = [];
+    const refused = await refusedLayers(
+      requests(['work.notes', 'work.passages']),
+      async (permission) => {
+        asked.push(permission);
+        return permission === 'editor.read';
+      },
+    );
+    expect(refused).toEqual(['work.notes']);
+    expect(asked.sort()).toEqual(['editor.edit', 'editor.read']);
+  });
+
+  it('treats a failed check as refused', async () => {
+    const refused = await refusedLayers(
+      requests(['work.passages']),
+      async () => {
+        throw new Error('rpc down');
+      },
+    );
+    expect(refused).toEqual(['work.passages']);
+  });
+
+  it('refuses nothing when every permission is held', async () => {
+    expect(
+      await refusedLayers(
+        requests(['work.notes', 'work.passages']),
+        async () => true,
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('describeLayers', () => {
+  it('lists every layer with its options as JSON Schema', () => {
+    const [, , passages] = describeLayers(registry);
+    expect(passages).toMatchObject({
+      name: 'work.passages',
+      permission: 'editor.read',
+      options: {
+        type: 'object',
+        properties: {
+          work: { type: 'string' },
+          source: { enum: ['draft', 'published'], default: 'draft' },
+        },
+        required: ['work'],
+      },
+    });
+  });
+
+  it('describes the studio layers', () => {
+    expect(() => describeLayers(snapshotLayerRegistry)).not.toThrow();
+  });
+});
+
+describe('helpers', () => {
+  it('normalizes Toh keys and leaves uuids', () => {
+    expect(normalizeWorkKey('8')).toBe('toh8');
+    expect(normalizeWorkKey('Toh 1-14')).toBe('toh1-14');
+    expect(normalizeWorkKey('toh724A')).toBe('toh724a');
+    const uuid = '2cd55d9c-a17c-4d9f-9fce-e32e05b0192d';
+    expect(normalizeWorkKey(uuid)).toBe(uuid);
+  });
+
+  it('serializes objects with sorted keys at every depth', () => {
+    expect(canonicalJson({ b: 1, a: { d: 2, c: [3, { f: 4, e: 5 }] } })).toBe(
+      '{"a":{"c":[3,{"e":5,"f":4}],"d":2},"b":1}',
+    );
+  });
+
+  it('accepts only supported Tibetan formats', () => {
+    expect(parseBundleFormat(undefined)).toEqual({
+      ok: true,
+      format: { tibetan: 'unicode' },
+    });
+    expect(parseBundleFormat({ tibetan: 'ewts' })).toEqual({
+      ok: false,
+      error: 'format.tibetan "ewts" is not available yet; use "unicode".',
+    });
+    expect(parseBundleFormat({ tibetan: 'wylie' }).ok).toBe(false);
+    expect(parseBundleFormat({ script: 'x' }).ok).toBe(false);
+  });
+});
