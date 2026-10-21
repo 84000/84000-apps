@@ -59,7 +59,11 @@ describe('annotationFromImport', () => {
       ...base,
       data: { level: 2, class: 'section-title' },
     }) as HeadingAnnotation;
-    expect(heading).toMatchObject({ type: 'heading', level: 2, class: 'section-title' });
+    expect(heading).toMatchObject({
+      type: 'heading',
+      level: 2,
+      class: 'section-title',
+    });
 
     const fallback = annotationFromImport('heading', base) as HeadingAnnotation;
     expect(fallback.level).toBe(1);
