@@ -21,6 +21,7 @@ import { createGetWorkTitlesTool } from './get-work-titles';
 import { createSearchCanonSectionsTool } from './search-canon-sections';
 import { createSearchCanonSectionGlossaryTool } from './search-canon-section-glossary';
 import { createResolveTohTool } from './resolve-toh';
+import { createTransliterateTool } from '../transliterate';
 
 export function createReadTools(client: DataClient): McpToolDefinition[] {
   return [
@@ -44,6 +45,7 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
     createSearchCanonSectionsTool(client),
     createSearchCanonSectionGlossaryTool(client),
     createResolveTohTool(client),
+    createTransliterateTool(),
   ];
 }
 
