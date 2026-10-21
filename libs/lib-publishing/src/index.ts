@@ -14,3 +14,4 @@ export * from './lib/types';
 export * from './lib/artifact-keys';
 export * from './lib/version-label';
 export * from './lib/findings';
+export * from './lib/folio';
