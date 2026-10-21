@@ -9,6 +9,7 @@ import {
   normalizeWorkKey,
   parseLayerRequests,
   refusedLayers,
+  requiredPermission,
   sourceOption,
   workOption,
 } from './registry';
@@ -73,7 +74,12 @@ describe('createLayerRegistry', () => {
     expect(snapshotLayerRegistry.layers.map((l) => l.name)).toEqual([
       'etexts.catalog',
       'etexts.text',
+      'work.annotations',
+      'work.bibliography',
       'work.draft',
+      'work.glossary',
+      'work.passages',
+      'work.passages.raw',
     ]);
     expect(snapshotLayerRegistry.presets.map((p) => p.name)).toEqual([
       'work',
@@ -161,6 +167,43 @@ describe('refusedLayers', () => {
       },
     );
     expect(refused).toEqual(['work.passages']);
+  });
+
+  it('checks the permission a request needs, and none when it needs none', async () => {
+    const gated = createLayerRegistry({
+      layers: [
+        {
+          ...layer(
+            'work.text',
+            'editor.read',
+            z.strictObject({
+              work: workOption(),
+              source: sourceOption('published'),
+            }),
+          ),
+          permissionFor: ({ source }) =>
+            source === 'draft' ? 'editor.read' : null,
+        },
+      ],
+    });
+    const parse = (source: string) => {
+      const parsed = parseLayerRequests(gated, [
+        { layer: 'work.text', work: 'toh8', source },
+      ]);
+      if (!parsed.ok) throw new Error(parsed.error);
+      return parsed.requests;
+    };
+    const asked: string[] = [];
+    const deny = async (permission: string) => {
+      asked.push(permission);
+      return false;
+    };
+    expect(requiredPermission(parse('draft')[0])).toBe('editor.read');
+    expect(requiredPermission(parse('published')[0])).toBeNull();
+    expect(await refusedLayers(parse('published'), deny)).toEqual([]);
+    expect(asked).toEqual([]);
+    expect(await refusedLayers(parse('draft'), deny)).toEqual(['work.text']);
+    expect(asked).toEqual(['editor.read']);
   });
 
   it('refuses nothing when every permission is held', async () => {

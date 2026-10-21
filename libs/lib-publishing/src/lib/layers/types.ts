@@ -68,6 +68,12 @@ interface ResolvedBase {
    * a subdirectory named for itself, such as `toh8/folios`.
    */
   dir: string;
+  /**
+   * The paths under `dir` this layer writes, files or directories. Layers that declare
+   * them may share a `dir` while their claims do not overlap; without them a layer owns
+   * all of `dir`.
+   */
+  claims?: readonly string[];
   /** Identifies the data read; it changes whenever the layer's output would. */
   dataVersion: string;
   /** Expected download size in bytes, compressed. Checked against the bundle cap. */
@@ -111,7 +117,13 @@ export interface SnapshotLayer<Options extends z.ZodObject = z.ZodObject> {
   name: string;
   /** What the files hold and what they are for, for agents choosing layers. */
   description: string;
+  /** The permission the layer needs; with `permissionFor`, the most it can need. */
   permission: LayerPermission;
+  /**
+   * The permission one request needs, when it depends on the options (a published
+   * source may need none). Null means no `editor.*` permission is required.
+   */
+  permissionFor?(options: z.output<Options>): LayerPermission | null;
   scope: LayerScope;
   options: Options;
   /** The sources the layer serves; a single entry means `source` is not an option. */
