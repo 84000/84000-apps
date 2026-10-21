@@ -151,8 +151,8 @@ interface WorkPart {
   typicalSize: string;
   claims: readonly string[];
   /**
-   * The part reads alignments, which no draft or publish timestamp tracks; its data
-   * version also turns over daily, as the stored snapshot does.
+   * The part reads alignments, which no draft or publish key tracks, so its data
+   * version also turns over daily, as the stored snapshot refreshes.
    */
   readsAlignments?: boolean;
   generate(rows: WorkRows): Promise<LayerFiles>;
@@ -282,13 +282,22 @@ const PARTS: WorkPart[] = [
   },
 ];
 
-/** The stored snapshot's compressed bytes for the files under `claims`. */
+/**
+ * The stored snapshot's compressed bytes for the files under `claims`, or a fixed
+ * guess when no stored snapshot in the current format exists.
+ */
 const estimate = (
   stored: { manifest: SnapshotManifest; archiveBytes: number } | null,
   claims: readonly string[],
 ): number => {
   const total = stored?.manifest.totals?.bytes ?? 0;
-  if (!stored || !total) return FALLBACK_ESTIMATE_BYTES;
+  if (
+    !stored ||
+    !total ||
+    (stored.manifest.formatVersion ?? 0) < SNAPSHOT_FORMAT_VERSION
+  ) {
+    return FALLBACK_ESTIMATE_BYTES;
+  }
   const bytes = stored.manifest.files
     .filter(({ path }) =>
       claims.some((c) => path === c || path.startsWith(`${c}/`)),
@@ -340,9 +349,11 @@ const workLayer = (
       target.source === 'draft'
         ? `draft:${target.draftTouchedAt ?? 'never'}`
         : `published:${target.versionUuid}`;
-    const day = part.readsAlignments
-      ? `:day:${Math.floor(ctx.now() / DAY_MS)}`
-      : '';
+    // Alignments, and a draft with no recorded edit, have no key that tracks them.
+    const untracked =
+      part.readsAlignments ||
+      (target.source === 'draft' && !target.draftTouchedAt);
+    const day = untracked ? `:day:${Math.floor(ctx.now() / DAY_MS)}` : '';
     const stored = await data.storedSnapshot(ctx, target.uuid);
     return {
       status: 'ready',

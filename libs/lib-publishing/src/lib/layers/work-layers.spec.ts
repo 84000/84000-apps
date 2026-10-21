@@ -460,6 +460,35 @@ describe('each work layer alone', () => {
   });
 });
 
+describe('estimates', () => {
+  it('scale the stored snapshot’s bytes for the files each layer writes', async () => {
+    const data = fakeSource();
+    data.source.storedSnapshot = async () => ({
+      archiveBytes: 1000,
+      manifest: {
+        formatVersion: 2,
+        totals: { files: 3, bytes: 4000, lines: 0 },
+        files: [
+          { path: 'glossary.md', bytes: 1000, lines: 1, sha256: '' },
+          { path: 'raw/glossary.jsonl', bytes: 1000, lines: 1, sha256: '' },
+          { path: 'text/00-summary.md', bytes: 2000, lines: 1, sha256: '' },
+        ],
+      } as never,
+    });
+    const { run } = setup({ data });
+    const bundle = ready(
+      await run([
+        { layer: 'work.glossary', work: 'toh145' },
+        { layer: 'work.bibliography', work: 'toh145' },
+      ]),
+    );
+    expect(bundle.layers.map((l) => [l.layer, l.estimatedBytes])).toEqual([
+      ['work.glossary', 500],
+      ['work.bibliography', 1],
+    ]);
+  });
+});
+
 describe('source', () => {
   it('reads the live published version, and defaults to it', async () => {
     const { unpack, data } = setup();
@@ -483,6 +512,16 @@ describe('source', () => {
     expect(bundle.layers[0].dataVersion).toContain(
       'draft:2026-10-08T18:50:28.517Z',
     );
+  });
+
+  it('turns a never-edited draft over daily, as nothing else would', async () => {
+    const draft = fixture('draft');
+    draft.work.draftTouchedAt = null;
+    const { run } = setup({ data: fakeSource({ draft }) });
+    const bundle = ready(
+      await run([{ layer: 'work.glossary', work: 'toh145', source: 'draft' }]),
+    );
+    expect(bundle.layers[0].dataVersion).toMatch(/draft:never:day:\d+$/);
   });
 
   it('says so when the work has no published version', async () => {

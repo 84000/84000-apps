@@ -94,6 +94,7 @@ export const readSourcePassages = (
       client
         .from('published_passages')
         .select('uuid, work_uuid, content, label, sort, parent, type, toh')
+        .eq('work_uuid', work.uuid)
         .eq('version_uuid', version),
     sortColumn: 'sort',
     idColumn: 'uuid',
@@ -153,6 +154,7 @@ export const readSourceGlossary = async (
             'wylie, tibetan, sanskrit_plain, sanskrit_attested, chinese, pali, alternatives, ' +
             'definition, english_sort, headword_sort, term_number, search_text',
         )
+        .eq('work_uuid', work.uuid)
         .eq('version_uuid', version),
     sortColumn: 'term_number',
     idColumn: 'glossary_uuid',
@@ -189,6 +191,7 @@ export const readSourceBibliographies = (
         .select(
           'uuid, work_uuid, bibl_html, sort, heading, is_heading, heading_uuid, toh',
         )
+        .eq('work_uuid', work.uuid)
         .eq('version_uuid', version),
     sortColumn: 'sort',
     idColumn: 'uuid',

@@ -13,7 +13,7 @@ const options = z.strictObject({ work: workOption() });
 export const workDraftLayer: SnapshotLayer<typeof options> = {
   name: 'work.draft',
   description:
-    "A work's whole draft as a file tree: passages by section, notes, glossary, bibliography, annotations and alignments, with its own README. The same files `work-ls`, `work-read` and `work-grep` read. Rebuilt when the draft changes.",
+    "A work's whole draft as a file tree: passages by section, notes, glossary, bibliography, annotations and alignments, with its own README. The same files `work-ls`, `work-read` and `work-grep` read, and the same as the `work` preset of the work.* layers, served prebuilt; it cannot share a bundle with them. Rebuilt when the draft changes.",
   permission: 'editor.read',
   scope: 'work',
   options,
