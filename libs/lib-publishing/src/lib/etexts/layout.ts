@@ -18,12 +18,6 @@ export const ETEXTS_FORMAT_VERSION = 1;
 export const collectionKey = (canon: string, siglum: string): string =>
   `${canon}/${siglum}`;
 
-/** A folio side in 84000 style: `F.12.a`. */
-export const folioLabel = (
-  folio: number | null | undefined,
-  side: string | null | undefined,
-): string => (folio == null || !side ? '' : `F.${folio}.${side}`);
-
 /** A volume's text file, under the archive root. */
 export const volumeTextPath = (key: string, vol: number): string =>
   `text/${key}/${String(vol).padStart(3, '0')}.txt`;

@@ -3,9 +3,9 @@
  * describes them, and one text file per volume.
  */
 
+import { folioLabel } from '../folio';
 import {
   collectionKey,
-  folioLabel,
   volumeTextPath,
   type EtextsBuildManifest,
 } from './layout';
