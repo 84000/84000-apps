@@ -279,16 +279,22 @@ class Text {
     return i;
   }
 
-  /** Source text from syllable a to syllable b, with the shad after b. */
+  /**
+   * Source text from syllable a to syllable b, with the shad after b. EWTS
+   * sides are joined with a space, so syllables at a folio break stay apart.
+   */
   slice(a: number, b: number): string {
     const first = this.syllables[a];
     const last = this.syllables[b];
-    let out = '';
+    const parts: string[] = [];
     for (let s = first.side; s <= last.side; s++)
-      out += this.sides[s].text.slice(
-        s === first.side ? first.start : 0,
-        s === last.side ? last.end : undefined,
+      parts.push(
+        this.sides[s].text.slice(
+          s === first.side ? first.start : 0,
+          s === last.side ? last.end : undefined,
+        ),
       );
+    const out = parts.join(this.unicode ? '' : ' ');
     const shad = (this.unicode ? LEADING_SHAD_UNICODE : LEADING_SHAD_EWTS).exec(
       this.gapAfter(b),
     );

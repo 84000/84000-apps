@@ -146,6 +146,17 @@ describe('structure', () => {
     expect(entry.text).toBe('gleng gzhi’i le’u ste dang po’o/');
   });
 
+  it('keeps EWTS syllables apart across a folio break', () => {
+    const [entry] = rows(
+      "[F.1.a] rgyud kyi rgyal po las/ gleng gzhi'i le'u ste\n[F.1.b] dang po'o// //",
+      ['division'],
+    );
+    expect(entry).toMatchObject({ number: 1, from: 'F.1.a', to: 'F.1.b' });
+    expect(entry.text).toBe(
+      'rgyud kyi rgyal po las/ gleng gzhi’i le’u ste dang po’o//',
+    );
+  });
+
   it('follows a series when its label changes form', () => {
     const entries = rows(
       [
