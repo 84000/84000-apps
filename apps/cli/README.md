@@ -42,12 +42,12 @@ a-chung). Add a label or spelling there, not in code:
 - `divisions.ordinalEndings` close an ordinal (`pa'o`, `po'o`);
   `ordinalStems` are the same before a terminator or a bare shad (`pa`).
 - `divisions.terminators`: `rdzogs so`. Without a label before it, it is an
-  `end` row.
+  `end` row, found only where a statement ends and not after `ma` or `mi`.
 - `numerals`: the words of a cardinal number and their values. `units` are
   1–9; a unit before a word in `tens`, `hundreds` or `thousands` multiplies
   it (`bzhi bcu` 40), after it adds (`bcu bzhi` 14); `joiners` (`rtsa`,
   `dang`) carry no value; `first` is `dang` of `dang po`.
-- `speech`: speech formulas.
+- `speech`: speech formulas, found only before a shad.
 
 An edited copy can be passed with `--patterns`; `--print-patterns` writes out
 the built-in one. The file is JSON so that both runtimes read it with no

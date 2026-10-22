@@ -94,18 +94,25 @@ lines):
   divisions under a label the patterns lack); `end` (_rdzogs so_ with no
   label, as in the final title); `speech` (_gsol pa_, _bka’ stsal pa_ and the
   like).
-- `label` and `number`: the division label and the ordinal's value (empty
-  for _rdzogs so_ alone); for speech, the formula.
-- `level`: nesting, 0 outermost, inferred from how often each label closes.
+- `label` and `number`: the division label and the ordinal's value; for
+  speech, the formula. A `division` row with no number closed with _rdzogs so_
+  and no ordinal: it is not a map entry unless `shared-policies/analytics`
+  says otherwise, but check whether the text numbers that division elsewhere.
+- `level`: nesting, 0 outermost, inferred from how often each label (with
+  the forms that continue its count) closes.
   Check it against the text where labels nest.
 - `from`, `at`, `to`: where the division begins (the side after the previous
   closing at its level or above; for the first, the start of the text, so
   move it to the division's first words), where the statement holding the
   formula begins, and where it ends. In a work of several volumes a folio in
-  another volume is prefixed with its file.
+  another volume is prefixed with its file. A single file that runs over
+  several volumes repeats folio numbers, so `from` and `at` name the folio
+  but not its volume: give the work as a directory of volume files instead.
 - `note`: a skipped, repeated or restarted ordinal, or one that starts above
-  1. These are irregularities the map records, not errors to reconcile; a
-     change of label form shows here too.
+  1, and a label that takes up another's count in a new form (_brtag pa’i
+  rgyal po_ 4, then _brtag pa_ 5). These are irregularities the map records,
+  not errors to reconcile. Numbering under a division counts afresh when the
+  division above it closes, so a restart there gets no note.
 - `text`: the statement in EWTS (house profile, closing shad kept), from the
   previous double shad to the formula's end; for a division, its title in
   full. `tibetan` is the same in Unicode, to check the EWTS against.

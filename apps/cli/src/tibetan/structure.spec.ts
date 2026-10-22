@@ -85,16 +85,8 @@ describe('structure', () => {
       ['division', 1, 'le’u', 15, 'F.2.a', 'F.2.a', 'F.2.b', 'skips 2–14'],
       ['division', 1, 'le’u', 15, 'F.3.a', 'F.3.a', 'F.3.a', 'repeats 15'],
       ['division', 0, 'brtag pa', 1, 'F.1.a', 'F.3.b', 'F.3.b', ''],
-      [
-        'division',
-        1,
-        'le’u',
-        1,
-        'F.4.a',
-        'F.4.a',
-        'F.4.a',
-        'numbering restarts at 1 (after 15)',
-      ],
+      // Its parent closed, so le’u counts afresh: no restart note.
+      ['division', 1, 'le’u', 1, 'F.4.a', 'F.4.a', 'F.4.a', ''],
       ['division', 1, 'le’u', 2, 'F.4.b', 'F.4.b', 'F.4.b', ''],
       ['division', 1, 'le’u', 3, 'F.5.a', 'F.5.a', 'F.5.a', ''],
       ['ordinal', null, 'gter', 2, 'F.5.b', 'F.5.b', 'F.5.b', ''],
@@ -139,6 +131,54 @@ describe('structure', () => {
     );
   });
 
+  const rows = (text: string, kinds?: string[]) =>
+    structure(
+      openCorpus(file('case.txt', text)),
+      patterns,
+      kinds && new Set(kinds as never[]),
+    );
+
+  it('ends a statement at one shad after a final ga', () => {
+    const [entry] = rows(
+      '[F.1.a] བཅོམ་ལྡན་འདས་ཀྱིས་ཉོན་ཅིག །གླེང་གཞིའི་ལེའུ་སྟེ་དང་པོའོ། །',
+      ['division'],
+    );
+    expect(entry.text).toBe('gleng gzhi’i le’u ste dang po’o/');
+  });
+
+  it('follows a series when its label changes form', () => {
+    const entries = rows(
+      [
+        "[F.1.a] brtag pa'i rgyal po ste dang po'o// //",
+        "[F.1.b] brtag pa'i rgyal po ste gnyis pa'o// //",
+        "[F.2.a] brtag pa ste gsum pa'o// //",
+      ].join('\n'),
+    );
+    expect(
+      entries.map((e) => [e.label, e.number, e.level, e.from, e.note]),
+    ).toEqual([
+      ['brtag pa’i rgyal po', 1, 0, 'F.1.a', ''],
+      ['brtag pa’i rgyal po', 2, 0, 'F.1.b', ''],
+      [
+        'brtag pa',
+        3,
+        0,
+        'F.2.a',
+        'label form changes from brtag pa’i rgyal po',
+      ],
+    ]);
+  });
+
+  it('skips speech and rdzogs so inside prose', () => {
+    const entries = rows(
+      "[F.1.a] de nas gsol pa dang bka' stsal pa/ las ma rdzogs so// chos rdzogs so/ de nas rdzogs so// //",
+    );
+    expect(entries.map((e) => [e.kind, e.label, e.text])).toEqual([
+      ['speech', 'bka’ stsal pa', 'de nas gsol pa dang bka’ stsal pa/'],
+      ['end', '', 'chos rdzogs so/ de nas rdzogs so//'],
+    ]);
+  });
+
   describe('cli', () => {
     it('gives identical output on every run', () => {
       const path = file('text.txt', TEXT_BO);
@@ -149,7 +189,7 @@ describe('structure', () => {
       );
       expect(cli('structure', path).stdout).toBe(first.stdout);
       expect(first.stderr).toBe(
-        '8 division closings, 1 unlabelled ordinals, 1 ends, 2 speech formulas, 3 numbering notes in 0.0 s\n',
+        '8 division closings, 1 unlabelled ordinals, 1 ends, 2 speech formulas, 2 numbering notes in 0.0 s\n',
       );
     });
 
@@ -215,6 +255,30 @@ describe('structure', () => {
       expect(rows.map((r) => [r.vol, r.number, r.from])).toEqual([
         ['toh1-vol001.txt', 1, 'F.1.b'],
         ['toh1-vol002.txt', 2, 'F.2.a'],
+      ]);
+    });
+
+    it('names the volume of a division that began in another', () => {
+      const work = join(dir, 'work2');
+      rmSync(work, { recursive: true, force: true });
+      mkdirSync(work);
+      writeFileSync(
+        join(work, 'toh1-vol001.txt'),
+        "[F.1.a] le'u ste dang po'o// //\n[F.1.b] le'u ste gnyis pa'o// //\n",
+      );
+      writeFileSync(
+        join(work, 'toh1-vol002.txt'),
+        '[F.1.a] brtag pa dang po rdzogs so// //\n',
+      );
+      const { stdout } = cli('structure', work, '--json');
+      const rows = stdout
+        .trim()
+        .split('\n')
+        .map((l) => JSON.parse(l));
+      expect(rows.map((r) => [r.label, r.level, r.from])).toEqual([
+        ['le’u', 1, 'F.1.a'],
+        ['le’u', 1, 'F.1.b'],
+        ['brtag pa', 0, 'toh1-vol001.txt:F.1.a'],
       ]);
     });
   });

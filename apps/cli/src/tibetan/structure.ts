@@ -214,6 +214,9 @@ export function numeralValue(words: string[], c: Compiled): number | null {
 const UNICODE_SHAD = /[\u0F0D-\u0F12]/u;
 const LEADING_SHAD_UNICODE = /^[\s\u0F0B\u0F0C]*[\u0F0D-\u0F12]+/u;
 const LEADING_SHAD_EWTS = /^\s*\/+/;
+const GA_KA_FINAL = /(?<!n)g$|k$/;
+/** Negations that make a following rdzogs so prose (`ma rdzogs so`). */
+const NEGATIONS = new Set(['ma', 'mi']);
 
 /** One volume prepared for matching. */
 class Text {
@@ -252,15 +255,20 @@ class Text {
   }
 
   /**
-   * Whether the gap after syllable k ends a statement: two shads (`། །`), or a
-   * head mark. A single shad only breaks a clause, as in `… rgyal po las། le’u …`.
+   * Whether the gap after syllable k ends a statement: two shads (`། །`), a
+   * head mark, or one shad after a final ga or ka, which takes no second shad
+   * (`ཅིག །`). Otherwise a single shad only breaks a clause, as in
+   * `… rgyal po las། le’u …`.
    */
   statementBreakAfter(k: number): boolean {
     const gap = this.gapAfter(k);
-    if (!this.unicode) return (gap.match(/\//g) ?? []).length >= 2;
+    const shads = this.unicode
+      ? (gap.match(/[\u0F0D-\u0F12]/gu) ?? []).length
+      : (gap.match(/\//g) ?? []).length;
     return (
-      /[\u0F01-\u0F0A]/u.test(gap) ||
-      (gap.match(/[\u0F0D-\u0F12]/gu) ?? []).length >= 2
+      shads >= 2 ||
+      (shads === 1 && GA_KA_FINAL.test(this.forms[k])) ||
+      (this.unicode && /[\u0F01-\u0F0A]/u.test(gap))
     );
   }
 
@@ -413,8 +421,11 @@ function ordinalFormula(t: Text, j: number, c: Compiled): Found | null {
 /** A label, then a terminator with no ordinal; or a terminator alone (`end`). */
 function terminatorFormula(t: Text, i: number, c: Compiled): Found | null {
   const len = terminatorAt(t, i, c);
-  if (!len || !t.shadAfter(i + len - 1)) return null;
+  if (!len || !t.shadAfter(i + len - 1) || NEGATIONS.has(t.forms[i - 1]))
+    return null;
   const label = labelBefore(t, i - 1, c);
+  // Bare rdzogs so is a closing only where a statement ends.
+  if (!label?.known && !t.statementBreakAfter(i + len - 1)) return null;
   return label?.known
     ? {
         kind: 'division',
@@ -430,7 +441,7 @@ type Placed = Found & { vol: number | string; v: number; t: Text };
 
 function speechFormula(t: Text, i: number, c: Compiled): Found | null {
   for (const { label, forms } of c.speech)
-    if (t.matchAt(i, forms))
+    if (t.matchAt(i, forms) && t.shadAfter(i + forms.length - 1))
       return {
         kind: 'speech',
         label,
@@ -494,15 +505,45 @@ export function structure(
     }
   }
 
-  // A label that closes more often nests inside one that closes less often.
+  // A label that takes up another's count (brtag pa’i rgyal po 1–4, then
+  // brtag pa 5) continues that series under a new form.
+  const series = new Map<string, string>();
+  const formChange = new Map<number, string>();
+  {
+    // Each series' latest number and label, most recently closed last.
+    const last = new Map<string, { number: number; label: string }>();
+    found.forEach((f, i) => {
+      if (f.kind !== 'division') return;
+      if (!series.has(f.label)) {
+        const n = f.number;
+        const joins =
+          n !== null && n > 1
+            ? [...last].reverse().find(([, l]) => l.number === n - 1)
+            : undefined;
+        series.set(f.label, joins ? joins[0] : f.label);
+      }
+      const s = series.get(f.label) as string;
+      const before = last.get(s);
+      if (before && before.label !== f.label) formChange.set(i, before.label);
+      if (f.number !== null) {
+        last.delete(s);
+        last.set(s, { number: f.number, label: f.label });
+      }
+    });
+  }
+
+  // A series that closes more often nests inside one that closes less often.
   const counts = new Map<string, number>();
   for (const f of found)
-    if (f.kind === 'division')
-      counts.set(f.label, (counts.get(f.label) ?? 0) + 1);
+    if (f.kind === 'division') {
+      const s = series.get(f.label) as string;
+      counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
   const tiers = [...new Set(counts.values())].sort((a, b) => a - b);
-  const level = (label: string) => tiers.indexOf(counts.get(label) as number);
+  const level = (s: string) => tiers.indexOf(counts.get(s) as number);
 
   const out: StructureEntry[] = [];
+  // The latest number in each series, cleared when a division above it closes.
   const previous = new Map<string, number>();
   // The side after the latest closing at each level, and its position in `found`.
   const closed: ({ at: number; place: Place } | undefined)[] = [];
@@ -524,7 +565,8 @@ export function structure(
       tibetan: source.replace(/\s+/g, ' ').trim(),
     };
     if (f.kind === 'division') {
-      const lv = level(f.label);
+      const s = series.get(f.label) as string;
+      const lv = level(s);
       entry.level = lv;
       let begin: Place | null = starts[0] ?? null;
       let latest = -1;
@@ -538,8 +580,16 @@ export function structure(
       if (begin)
         entry.from =
           begin.vol === f.vol ? begin.ref : `${begin.vol}:${begin.ref}`;
-      entry.note = numberingNote(previous.get(f.label), f.number);
-      if (f.number !== null) previous.set(f.label, f.number);
+      const changed = formChange.get(i);
+      entry.note = [
+        changed ? `label form changes from ${changed}` : '',
+        numberingNote(previous.get(s), f.number),
+      ]
+        .filter(Boolean)
+        .join('; ');
+      if (f.number !== null) previous.set(s, f.number);
+      for (const other of previous.keys())
+        if (level(other) > lv) previous.delete(other);
       // The side after the formula, or the next volume's first side.
       const place =
         f.end + 1 < t.syllables.length

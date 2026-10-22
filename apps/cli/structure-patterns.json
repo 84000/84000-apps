@@ -1,5 +1,5 @@
 {
-  "about": "Patterns for `eft structure`. Every entry is EWTS (Unicode Tibetan works too); the a-chung may be written ' or ’, and + stacking is ignored. Add a spelling or a label here and rebuild; or copy this file (`eft structure --print-patterns`), edit it, and pass it with --patterns. See apps/cli/README.md for what each list does.",
+  "about": "Patterns for `eft structure`. Every entry is EWTS (Unicode Tibetan works too); the a-chung may be written ' or ’, and + stacking is ignored. Add a spelling or a label here and rebuild; or copy this file (`eft structure --print-patterns`), edit it, and pass it with --patterns. See apps/cli/README.md for what each list does. `dang` is in both numerals.first (dang po, first) and numerals.joiners (brgya dang bcu, a hundred and ten).",
   "divisions": {
     "labels": [
       "le'u",
