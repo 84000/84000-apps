@@ -8,6 +8,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from './cli';
+import { readSides, readWitnesses, witnessesAt } from './lib/corpus';
 
 // One passage, in Degé Unicode and in rKTs-style EWTS.
 const PASSAGE_BO =
@@ -34,7 +35,13 @@ const WORKS = [
   'tengyur/D\tD9\tc9\ttoh9\tcommentary\t\t\t\t1\tF.1.a\t1\tF.3.b\treference',
   'tengyur/D\tD8\tc8\ttoh8\tsecond commentary\t\t\t\t1\tF.4.a\t1\tF.5.a\treference',
   'kangyur/S\tS1\tc1\ttoh1\troot text\t\t\t\t1\tF.5.a\t1\tF.7.a\tanchored',
+  // Volume 2 numbers its folios afresh for the second text.
+  'kangyur/X\tX10\tc10\ttoh10\tlong text\t\t\t\t1\tF.1.b\t2\tF.5.b\treference',
+  'kangyur/X\tX11\tc11\ttoh11\tnext text\t\t\t\t2\tF.1.b\t2\tF.2.b\treference',
 ].join('\n');
+
+const LONG_BO = 'ཁྲི་བརྒྱད་སྟོང་པ་ཡི་དགེ། ';
+const NEXT_BO = 'ཁྲི་པ་ཞེས་བྱ་བ་ཡི་དགེ། ';
 
 describe('tibetan-search', () => {
   let dir: string;
@@ -101,6 +108,31 @@ describe('tibetan-search', () => {
       `[F.5.a] ${MANTRA_WY} ${PASSAGE_WY}\n[F.6.a] zhes so/\n[F.7.a] ${BERYL_WY}\n`,
     );
     write(
+      join(collection('kangyur/X'), '001.txt'),
+      `[F.1.a] ${FILLER_BO}\n[F.1.b] རྒྱ་གར་སྐད་དུ། ${LONG_BO}\n[F.2.a] ${LONG_BO}\n`,
+    );
+    write(
+      join(collection('kangyur/X'), '002.txt'),
+      [
+        ...[
+          '1.a',
+          '1.b',
+          '2.a',
+          '2.b',
+          '3.a',
+          '3.b',
+          '4.a',
+          '4.b',
+          '5.a',
+          '5.b',
+        ].map((f) => `[F.${f}] ${LONG_BO}`),
+        '[F.1.a] ',
+        `[F.1.b] རྒྱ་གར་སྐད་དུ། ${NEXT_BO}`,
+        `[F.2.a] ${NEXT_BO}`,
+        `[F.2.b] ${NEXT_BO}`,
+      ].join('\n') + '\n',
+    );
+    write(
       at('refrain-root.txt'),
       `[F.1.a] ${REFRAIN_BO}${FILLER_BO.repeat(3)}\n[F.1.b] ${REFRAIN_BO}${PASSAGE_BO}\n[F.2.a] ${BERYL_BO}\n`,
     );
@@ -135,6 +167,59 @@ describe('tibetan-search', () => {
       const { code, stderr } = cli('extract', dir, 'toh1');
       expect(code).toBe(1);
       expect(stderr).toContain('not a collection directory');
+    });
+  });
+
+  describe('a volume that numbers its folios afresh', () => {
+    const refs = (text: string) =>
+      text
+        .trim()
+        .split('\n')
+        .map((l) => l.slice(1, l.indexOf(']')));
+
+    it('extracts each witness from its own run', () => {
+      const ten = cli('extract', collection('kangyur/X'), 'toh10');
+      expect(refs(ten.stdout)).toEqual([
+        'F.1.b',
+        'F.2.a',
+        ...[
+          '1.a',
+          '1.b',
+          '2.a',
+          '2.b',
+          '3.a',
+          '3.b',
+          '4.a',
+          '4.b',
+          '5.a',
+          '5.b',
+        ].map((f) => `F.${f}`),
+      ]);
+      expect(ten.stdout).not.toContain(NEXT_BO.trim());
+
+      const eleven = cli('extract', collection('kangyur/X'), 'toh11');
+      expect(refs(eleven.stdout)).toEqual(['F.1.b', 'F.2.a', 'F.2.b']);
+      expect(eleven.stdout).not.toContain(LONG_BO.trim());
+    });
+
+    it('places a side of either run in its one witness', () => {
+      const witnesses = readWitnesses(at('etexts'), 'kangyur/X');
+      const named = readSides(join(collection('kangyur/X'), '002.txt')).map(
+        (side) => [
+          side.ref,
+          witnessesAt(witnesses, 2, side.ord)
+            .map((w) => w.siglum)
+            .join(' '),
+        ],
+      );
+      expect(named.slice(0, 1)).toEqual([['F.1.a', 'X10']]);
+      expect(named.slice(9)).toEqual([
+        ['F.5.b', 'X10'],
+        ['F.1.a', ''],
+        ['F.1.b', 'X11'],
+        ['F.2.a', 'X11'],
+        ['F.2.b', 'X11'],
+      ]);
     });
   });
 

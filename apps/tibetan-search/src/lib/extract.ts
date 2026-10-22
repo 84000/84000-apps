@@ -1,10 +1,10 @@
 import {
-  atOrBefore,
   collectionOf,
+  inWitness,
   openCorpus,
   readSides,
   readTsv,
-  folioOrdinal,
+  readWitnesses,
 } from './corpus';
 import { join } from 'node:path';
 
@@ -37,22 +37,23 @@ export function extract(dir: string, toh: string): Extracted {
   if (!rows.length)
     throw new Error(`No ${toh} witness in ${place.collection}.`);
   const w = rows[0];
-  const from = [Number(w['start_vol']), folioOrdinal(w['start_folio'])];
-  const to = [Number(w['end_vol']), folioOrdinal(w['end_folio'])];
-  if (from[1] === null || to[1] === null)
+  // Positions come from the collection's witnesses, which place each range
+  // in its folio run.
+  const placed = readWitnesses(place.etexts, place.collection).find(
+    (x) => x.siglum === w['siglum_number'],
+  );
+  if (!placed)
     throw new Error(
       `${w['siglum_number']} has no folio range (${w['boundary_status']}).`,
     );
-  const start = from as [number, number];
-  const end = to as [number, number];
+  const [start, end] = [placed.from, placed.to];
 
   const lines: { ref: string; text: string }[] = [];
   for (const { vol, path } of openCorpus(dir).volumes) {
     if (vol === null || vol < start[0] || vol > end[0]) continue;
     for (const side of readSides(path)) {
       if (side.ord === null) continue;
-      const at: [number, number] = [vol, side.ord];
-      if (atOrBefore(start, at) && atOrBefore(at, end))
+      if (inWitness(placed, vol, side.ord))
         lines.push({ ref: side.ref, text: side.text });
     }
   }
