@@ -1,0 +1,22 @@
+{
+  "name": "cli",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/cli/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "typecheck": {
+      "command": "tsc --noEmit -p tsconfig.app.json",
+      "options": { "cwd": "apps/cli" },
+      "cache": true
+    },
+    "bundle": {
+      "command": "node apps/cli/build.mjs bundle",
+      "outputs": ["{workspaceRoot}/dist/apps/cli/eft.mjs"]
+    },
+    "compile": {
+      "command": "node apps/cli/build.mjs compile",
+      "outputs": ["{workspaceRoot}/dist/apps/cli/bin"]
+    }
+  }
+}

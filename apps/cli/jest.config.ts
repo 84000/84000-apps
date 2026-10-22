@@ -1,5 +1,5 @@
 export default {
-  displayName: 'tibetan-search',
+  displayName: 'cli',
   preset: '../../jest.preset.js',
   transform: {
     // Pure TypeScript with no JSX and no browser APIs, so tests are compiled
@@ -16,5 +16,5 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js'],
   testEnvironment: 'node',
-  coverageDirectory: '../../coverage/apps/tibetan-search',
+  coverageDirectory: '../../coverage/apps/cli',
 };

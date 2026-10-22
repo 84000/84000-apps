@@ -8,7 +8,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from './cli';
-import { readSides, readWitnesses, witnessesAt } from './lib/corpus';
+import { readSides, readWitnesses, witnessesAt } from './tibetan/corpus';
 
 // One passage, in Degé Unicode and in rKTs-style EWTS.
 const PASSAGE_BO =
@@ -50,7 +50,7 @@ const WORKS = [
 const LONG_BO = 'ཁྲི་བརྒྱད་སྟོང་པ་ཡི་དགེ། ';
 const NEXT_BO = 'ཁྲི་པ་ཞེས་བྱ་བ་ཡི་དགེ། ';
 
-describe('tibetan-search', () => {
+describe('eft', () => {
   let dir: string;
   const at = (...parts: string[]) => join(dir, ...parts);
   const collection = (c: string) => at('etexts', 'text', ...c.split('/'));
@@ -75,7 +75,7 @@ describe('tibetan-search', () => {
       .map((l) => JSON.parse(l));
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'tibetan-search-'));
+    dir = mkdtempSync(join(tmpdir(), 'eft-'));
     write(at('etexts', 'catalog', 'works.tsv'), `${WORKS}\n`);
     write(at('etexts', 'manifest.json'), '{"buildId":"test"}');
     write(
@@ -280,8 +280,14 @@ describe('tibetan-search', () => {
     it('finds a quotation across a folio break, with folios and witness', () => {
       const out = at('tengyur');
       expect(
-        cli('quotes', collection('tengyur/D'), at('root.txt'), '--out', out)
-          .code,
+        cli(
+          'search',
+          'quotes',
+          collection('tengyur/D'),
+          at('root.txt'),
+          '--out',
+          out,
+        ).code,
       ).toBe(0);
       const found = jsonl(join(out, 'hits.jsonl'));
       expect(found[0]).toMatchObject({
@@ -303,7 +309,14 @@ describe('tibetan-search', () => {
 
     it('matches a Unicode root against an EWTS collection, without the mantra', () => {
       const out = at('stok');
-      cli('quotes', collection('kangyur/S'), at('root.txt'), '--out', out);
+      cli(
+        'search',
+        'quotes',
+        collection('kangyur/S'),
+        at('root.txt'),
+        '--out',
+        out,
+      );
       const found = jsonl(join(out, 'hits.jsonl'));
       expect(found).toHaveLength(1);
       expect(found[0].from).toBe('F.5.a');
@@ -314,6 +327,7 @@ describe('tibetan-search', () => {
     it('keeps a quotation of a repeated phrase whole, on the right root folio', () => {
       const out = at('refrain');
       cli(
+        'search',
         'quotes',
         collection('tengyur/D'),
         at('refrain-root.txt'),
@@ -335,7 +349,14 @@ describe('tibetan-search', () => {
       write(at('beryl-root.txt'), `[F.2.a] ${BERYL_BO}\n`);
       write(at('beryl.txt'), `[F.7.a] ${BERYL_WY}\n`);
       const out = at('beryl');
-      cli('quotes', at('beryl.txt'), at('beryl-root.txt'), '--out', out);
+      cli(
+        'search',
+        'quotes',
+        at('beryl.txt'),
+        at('beryl-root.txt'),
+        '--out',
+        out,
+      );
       const found = jsonl(join(out, 'hits.jsonl'));
       expect(found).toHaveLength(1);
       // Every syllable, the fixed-form ya included.
@@ -343,8 +364,22 @@ describe('tibetan-search', () => {
     });
 
     it('gives byte-identical output for the same inputs', () => {
-      cli('quotes', collection('tengyur/D'), at('root.txt'), '--out', at('a'));
-      cli('quotes', collection('tengyur/D'), at('root.txt'), '--out', at('b'));
+      cli(
+        'search',
+        'quotes',
+        collection('tengyur/D'),
+        at('root.txt'),
+        '--out',
+        at('a'),
+      );
+      cli(
+        'search',
+        'quotes',
+        collection('tengyur/D'),
+        at('root.txt'),
+        '--out',
+        at('b'),
+      );
       for (const f of ['hits.tsv', 'hits.jsonl', 'summary.json'])
         expect(readFileSync(at('a', f), 'utf8')).toBe(
           readFileSync(at('b', f), 'utf8'),
@@ -353,6 +388,7 @@ describe('tibetan-search', () => {
 
     it('requires an output directory', () => {
       const { code, stderr } = cli(
+        'search',
         'quotes',
         collection('tengyur/D'),
         at('root.txt'),
@@ -365,6 +401,16 @@ describe('tibetan-search', () => {
   it('prints usage and fails on an unknown command', () => {
     expect(cli().code).toBe(2);
     expect(cli('frobnicate').code).toBe(2);
-    expect(cli('--help').stdout).toContain('tibetan-search quotes');
+    expect(cli('search', 'frobnicate').code).toBe(2);
+    const help = cli('--help');
+    expect(help.code).toBe(0);
+    expect(help.stdout).toMatch(/^ {2}search /m);
+    expect(help.stdout).toMatch(/^ {2}extract /m);
+    expect(cli('search').code).toBe(2);
+    expect(cli('search', '--help').stdout).toMatch(/^ {2}quotes /m);
+    const quotes = cli('search', 'quotes', '--help');
+    expect(quotes.code).toBe(0);
+    expect(quotes.stdout).toContain('eft search quotes <corpus>');
+    expect(cli('extract', '-h').stdout).toContain('eft extract');
   });
 });

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Builds the tibetan-search CLI.
+ * Builds the eft CLI.
  *
- *   node apps/tibetan-search/build.mjs bundle    one dependency-free .mjs for node
- *   node apps/tibetan-search/build.mjs compile [--targets linux-x64,...]
- *        standalone binaries with bun build --compile, one per target
+ *   node apps/cli/build.mjs bundle    eft.mjs, one dependency-free file for node
+ *   node apps/cli/build.mjs compile [--targets linux-x64,...]
+ *        standalone binaries with bun build --compile, bin/eft-<target>
  *
- * Outputs go to dist/apps/tibetan-search and are not committed.
+ * Outputs go to dist/apps/cli and are not committed.
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, statSync } from 'node:fs';
@@ -14,8 +14,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const ENTRY = join(ROOT, 'apps/tibetan-search/src/main.ts');
-const OUT = join(ROOT, 'dist/apps/tibetan-search');
+const ENTRY = join(ROOT, 'apps/cli/src/main.ts');
+const OUT = join(ROOT, 'dist/apps/cli');
 const TARGETS = [
   'darwin-arm64',
   'darwin-x64',
@@ -28,7 +28,7 @@ const mb = (path) => `${(statSync(path).size / 1e6).toFixed(2)} MB`;
 
 async function bundle() {
   const { build } = await import('esbuild');
-  const outfile = join(OUT, 'tibetan-search.mjs');
+  const outfile = join(OUT, 'eft.mjs');
   await build({
     entryPoints: [ENTRY],
     outfile,
@@ -47,11 +47,11 @@ async function bundle() {
 function compile(targets) {
   for (const target of targets) {
     if (!TARGETS.includes(target)) throw new Error(`Unknown target ${target}`);
-    const dir = join(OUT, 'bin', target);
+    const dir = join(OUT, 'bin');
     mkdirSync(dir, { recursive: true });
     const outfile = join(
       dir,
-      target.startsWith('windows') ? 'tibetan-search.exe' : 'tibetan-search',
+      `eft-${target}${target.startsWith('windows') ? '.exe' : ''}`,
     );
     const result = spawnSync(
       'bun',
