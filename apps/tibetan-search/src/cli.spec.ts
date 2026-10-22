@@ -28,7 +28,7 @@ const BERYL_WY =
   "rin po che bai DUR+Ya las byas pa'i khang pa brtsegs pa mdzes pa zhig yod do/";
 
 const WORKS = [
-  'collection\tsiglum_number\tconceptual_work\ttoh\ttitle_bo\ttitle_sa\ttitle_en\tsection_title\tstart_vol\tstart_folio\tend_vol\tend_folio\tboundary_status',
+  'collection\tsiglum_number\tconceptual_work\ttoh\ttitle_bo\ttitle_sa\ttitle_en\tsection_title\tstart_vol\tstart_folio\tend_vol\tend_folio\tboundary_status\tpage_start',
   'kangyur/D\tD1\tc1\ttoh1\troot text\t\t\t\t1\tF.1.b\t1\tF.2.a\treference',
   'kangyur/D\tD2\tc2\ttoh2\tnext text\t\t\t\t1\tF.2.a\t1\tF.2.b\treference',
   'kangyur/D\tD3\tc3\ttoh3\tshort start\t\t\t\t2\tF.1.b\t2\tF.2.a\treference',
@@ -41,6 +41,10 @@ const WORKS = [
   // Volume 3 restarts its numbering inside its last text, X13.
   'kangyur/X\tX12\tc12\ttoh12\tshort text\t\t\t\t3\tF.1.b\t3\tF.5.b\treference',
   'kangyur/X\tX13\tc13\ttoh13\tlast text\t\t\t\t3\tF.5.b\t3\tF.12.a\treference',
+  // Sorted by folio, as catalogs are: Y3 is read after Y2, on a later page.
+  'kangyur/Y\tY1\tc21\ttoh21\tfirst\t\t\t\t1\tF.1.b\t1\tF.5.b\treference\t2',
+  'kangyur/Y\tY3\tc23\ttoh23\tthird\t\t\t\t1\tF.1.b\t1\tF.4.b\treference\t23',
+  'kangyur/Y\tY2\tc22\ttoh22\tsecond\t\t\t\t1\tF.5.b\t1\tF.10.b\treference\t10',
 ].join('\n');
 
 const LONG_BO = 'ཁྲི་བརྒྱད་སྟོང་པ་ཡི་དགེ། ';
@@ -139,6 +143,15 @@ describe('tibetan-search', () => {
       join(collection('kangyur/X'), '003.txt'),
       [...Array(12).keys(), ...Array(4).keys()]
         .map((i) => `[F.${i + 1}.a] ${FILLER_BO}`)
+        .join('\n') + '\n',
+    );
+    write(
+      join(collection('kangyur/Y'), '001.txt'),
+      [...Array(10).keys(), ...Array(4).keys()]
+        .flatMap((i) => [
+          `[F.${i + 1}.a] ${FILLER_BO}`,
+          `[F.${i + 1}.b] ${FILLER_BO}`,
+        ])
         .join('\n') + '\n',
     );
     write(
@@ -243,6 +256,19 @@ describe('tibetan-search', () => {
       );
       expect(named.slice(12)).toEqual(['X13', 'X13', 'X13', 'X13']);
       expect(named[1]).toBe('X12');
+    });
+
+    it("places witnesses in page order, not the catalog's folio order", () => {
+      const witnesses = readWitnesses(at('etexts'), 'kangyur/Y');
+      const sides = readSides(join(collection('kangyur/Y'), '001.txt'));
+      const named = sides.map((side) =>
+        witnessesAt(witnesses, 1, side.ord)
+          .map((w) => w.siglum)
+          .join(' '),
+      );
+      // F.6.a in the first run, F.2.a in the second.
+      expect(named[10]).toBe('Y2');
+      expect(named[22]).toBe('Y3');
     });
   });
 

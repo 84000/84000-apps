@@ -206,10 +206,21 @@ export function readWitnesses(etexts: string, collection: string): Witness[] {
     runs.set(vol, at);
     return at.run;
   };
-  // Place the witnesses in volume order, keeping the catalog's order within a
-  // volume (the sort is stable).
+  // Place the witnesses in reading order: by volume, then by page where every
+  // witness starting in the volume has one (the catalog sorts by folio, which
+  // puts a later run's low folios first), else in the catalog's order.
+  const paged = new Map<number, boolean>();
+  for (const r of rows)
+    paged.set(
+      r.startVol,
+      (paged.get(r.startVol) ?? true) && /^\d+$/.test(r.w['page_start'] ?? ''),
+    );
+  const page = (r: (typeof rows)[number]) =>
+    paged.get(r.startVol) ? Number(r.w['page_start']) : 0;
   const placed = new Map<(typeof rows)[number], [number, number]>();
-  for (const r of [...rows].sort((a, b) => a.startVol - b.startVol))
+  for (const r of [...rows].sort(
+    (a, b) => a.startVol - b.startVol || page(a) - page(b),
+  ))
     placed.set(r, [
       place(r.startVol, r.start, true),
       place(r.endVol, r.end, false),
