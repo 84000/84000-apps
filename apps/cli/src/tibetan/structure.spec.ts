@@ -167,6 +167,48 @@ describe('structure', () => {
     expect(ends('ཆོས་རྫོགས་སོ།')).toEqual([]);
   });
 
+  it('does not join a label to an ordinal or terminator in the next statement', () => {
+    const kinds = (text: string) =>
+      rows(`[F.1.a] ${text}`, ['division', 'ordinal', 'end']).map((e) => [
+        e.kind,
+        e.text,
+      ]);
+    expect(kinds("rgyud kyi rgyal po las le'u// gnyis pa'o// //")).toEqual([]);
+    expect(kinds('རྒྱུད་ཀྱི་རྒྱལ་པོ་ལས་ལེའུ། །གཉིས་པའོ། །')).toEqual([]);
+    expect(kinds("rgyud kyi rgyal po las le'u// rdzogs so// //")).toEqual([
+      ['end', 'rdzogs so//'],
+    ]);
+    expect(kinds("rgyud kyi rgyal po las/ le'u ste/ gnyis pa'o// //")).toEqual([
+      ['division', 'rgyud kyi rgyal po las/ le’u ste/ gnyis pa’o//'],
+    ]);
+  });
+
+  it('keeps a label across a break beside its connective', () => {
+    const closing = (text: string) =>
+      rows(`[F.1.a] ${text}`, ['division']).map((e) => [e.number, e.text]);
+    expect(
+      closing("gtor ma'i cho ga bstan pa'i le'u// ste bcwa lnga pa'o// //"),
+    ).toEqual([
+      [15, 'gtor ma’i cho ga bstan pa’i le’u// ste bcwa lnga pa’o//'],
+    ]);
+    expect(closing('གཏོར་མའི་ཆོ་ག་བསྟན་པའི་ལེའུ། །སྟེ་བཅོ་ལྔ་པའོ། །')).toEqual([
+      [15, 'gtor ma’i cho ga bstan pa’i le’u/ /ste bco lnga pa’o/'],
+    ]);
+    expect(
+      closing("sems rnam par dag pa'i le'u ste// bcu gsum pa'o//"),
+    ).toEqual([[13, 'sems rnam par dag pa’i le’u ste// bcu gsum pa’o//']]);
+    expect(
+      closing("mchod rten gyi le'u zhes bya ste// nyi shu rtsa bdun pa'o//"),
+    ).toEqual([
+      [27, 'mchod rten gyi le’u zhes bya ste// nyi shu rtsa bdun pa’o//'],
+    ]);
+    expect(
+      closing("rnam par byang ba med pa'i le'u ste// // brgyad bcu pa'o//"),
+    ).toEqual([
+      [80, 'rnam par byang ba med pa’i le’u ste// // brgyad bcu pa’o//'],
+    ]);
+  });
+
   it('follows a series when its label changes form', () => {
     const entries = rows(
       [

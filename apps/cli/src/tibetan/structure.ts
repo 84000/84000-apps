@@ -352,13 +352,16 @@ function phraseEndingAt(
  * label, then optionally its own ordinal, a tail (zhes bya ba) and a
  * connective (ste). Without a
  * known label, a connective still marks the formula's shape, and the syllable
- * before it is returned as an unknown label.
+ * before it is returned as an unknown label. A statement break between a
+ * label and what follows it means the label closed a statement of its own,
+ * unless a connective joins them (`le’u// ste`, `le’u ste//`).
  */
 function labelBefore(
   t: Text,
   k: number,
   c: Compiled,
 ): { label: string; start: number; known: boolean } | null {
+  const end = k;
   const connective = k >= 0 && c.connectives.has(t.forms[k]);
   if (connective) k--;
   const tail = phraseEndingAt(t, k, c.tails);
@@ -372,7 +375,12 @@ function labelBefore(
     );
   };
   const label = (tail ? at(tail.start - 1) : null) ?? at(k);
-  if (label) return { ...label, known: true };
+  if (label) {
+    if (!connective)
+      for (let j = label.start; j <= end; j++)
+        if (t.statementBreakAfter(j)) return null;
+    return { ...label, known: true };
+  }
   if (!connective || k < 0) return null;
   return { label: t.forms[k].replace(/'/g, '’'), start: k, known: false };
 }
