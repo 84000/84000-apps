@@ -59,6 +59,8 @@ export interface MatchResult {
   matches: Match[];
   seeds: number;
   seedsTooFrequent: number;
+  /** Groups that had seeds, every one of them too frequent to search. */
+  groupsTooFrequent: number[];
 }
 
 function intern(vocab: Map<string, number>, key: string): number {
@@ -340,11 +342,22 @@ export function findMatches(
   found.sort((a, b) => b.score - a.score || a.v - b.v || a.at - b.at);
 
   let frequent = 0;
-  for (const seed of seeds.values()) if (seed.count > maxFreq) frequent++;
+  const seeded = new Set<number>();
+  const searched = new Set<number>();
+  for (const seed of seeds.values()) {
+    if (seed.count > maxFreq) frequent++;
+    for (const p of seed.probeAt) {
+      seeded.add(probe.group[p]);
+      if (seed.count <= maxFreq) searched.add(probe.group[p]);
+    }
+  }
   return {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     matches: found.map(({ v, at, ...m }) => m),
     seeds: seeds.size,
     seedsTooFrequent: frequent,
+    groupsTooFrequent: [...seeded]
+      .filter((g) => !searched.has(g))
+      .sort((a, b) => a - b),
   };
 }

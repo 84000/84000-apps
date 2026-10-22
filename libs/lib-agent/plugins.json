@@ -96,6 +96,11 @@
       ],
       "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
+      "bundles": {
+        "kangyur-tengyur-recensions": {
+          "scripts/eft.mjs": "apps/cli/src/main.ts"
+        }
+      },
       "sharedReference": {
         "text-analysis-and-retrieval": [
           "libs/lib-agent/reference/session-documents",

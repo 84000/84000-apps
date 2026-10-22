@@ -38,6 +38,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: 'npm'
 
       # A deploy key is scoped to exactly one repo, and unlike the default
       # GITHUB_TOKEN a deploy-key push *does* trigger downstream workflows —
@@ -54,7 +55,10 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           git clone git@github.com:84000/claude-plugins.git "$RUNNER_TEMP/claude-plugins"
 
-      # The generator needs no dependencies — it uses only Node builtins.
+      # The generator bundles CLIs into skills with esbuild.
+      - name: Install dependencies
+        run: npm ci
+
       - name: Generate plugins
         id: generate
         run: node tools/build-plugins.mjs --target "$RUNNER_TEMP/claude-plugins" --github-output

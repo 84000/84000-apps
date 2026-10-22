@@ -1,6 +1,6 @@
 ---
 name: kangyur-tengyur-recensions
-description: Find every recension of a canonical work across the Kangyur, Tengyur and Nyingma Gyubum eText collections from a Toh number — collection, volume, folio range and how far the boundary can be trusted — and read or search the eTexts themselves. Use when a translator or editor asks which recensions or witnesses of a work exist, where a text sits in the Stok, Peking, Narthang, Phugdrak or Drakmar Kangyur or a Tengyur, for the Stok or Peking text of a passage, to search Kangyur or Tengyur titles, or to search a collection's text for a phrase or for works citing a text. Not for collating witnesses, and not for the Degé source with 84000's folio references, which is the tibetan-source-text skill.
+description: Find every recension of a canonical work across the Kangyur, Tengyur and Nyingma Gyubum eText collections from a Toh number — collection, volume, folio range and how far the boundary can be trusted — and read or search the eTexts themselves. Use when a translator or editor asks which recensions or witnesses of a work exist, where a text sits in the Stok, Peking, Narthang, Phugdrak or Drakmar Kangyur or a Tengyur, for the Stok or Peking text of a passage, to search Kangyur or Tengyur titles, or to search a collection's text for a phrase or for works citing a text, or to find the passages of a work quoted in another collection (which Tengyur works quote Toh 464). Not for collating witnesses, and not for the Degé source with 84000's folio references, which is the tibetan-source-text skill.
 ---
 
 # Kangyur and Tengyur recensions
@@ -67,20 +67,133 @@ than one).
 2. A witness runs from its start folio to its end folio, which may cross
    volumes. Its first and last sides usually also hold the neighbouring texts;
    the README says where a text opens and closes.
-3. To search, grep the collection's text files. Each line is one folio side
-   and begins with its folio reference, so a hit gives its location (a side
-   marked as unnumbered is located by the numbered line before it). Some
-   collections are Unicode Tibetan and others Wylie (see the README); search
-   each in its own script, and convert Wylie to Unicode per
-   `shared-policies/transliteration`, not by hand. Without that policy or a
-   converter, search the Unicode collections with strings copied from the
-   work's Degé source (the `tibetan-source-text` skill), or say they were not
-   searched. OCR text is noisy: search for short, distinctive
-   strings and try variant spellings before reporting nothing found.
+3. To search, use `eft search` (below), not grep: it reads Unicode and
+   Wylie collections alike, and a match is not stopped by a tsheg, a shad, or
+   a line or folio break. Each line of a text file is one folio side and begins
+   with its folio reference, so every hit gives its location (a side marked as
+   unnumbered is located by the numbered line before it). OCR text is noisy:
+   use `search phrase` rather than `search grep` for it, and try variant
+   spellings before reporting nothing found.
 4. Quote only what the user needs. Do not reproduce long stretches unless
    asked.
 
-## Output
+## The search tool
+
+`scripts/eft.mjs` in this skill is 84000's command line, `eft`. Run it with
+node: `node "<this skill>/scripts/eft.mjs" <command> …`, where
+`<this skill>` is the directory this file is in. It has no dependencies, and
+the same inputs always give the same output. (It will also come as a
+standalone program; a downloaded copy belongs in
+`84000/cache/bin/eft/<version>/`, as
+`reference/local-files/layout.md` says, but until this skill names a version
+to fetch, use the script.)
+
+Every `search` command takes a corpus: a collection directory of a download
+(`84000/cache/etexts/<build id>/etexts/text/tengyur/D`), any directory of
+`.txt` files, or one `.txt` file of `[F.12.a] …` lines. In a collection
+directory each hit names the witness at its folio, from the catalog. A pattern
+or phrase can be Unicode or Wylie, whatever the corpus is in.
+
+- `search grep <corpus> <pattern>`: every exact occurrence, as whole syllables.
+  `--regex` takes a regular expression over the text written as Wylie
+  syllables separated by single spaces, with `+` removed (write `badzra`, not
+  `badz+ra`). `--fold` still matches exactly, but on the skeleton `phrase` uses,
+  ignoring spelling the two scripts write differently; it cannot be combined
+  with `--regex`. `--context 8` sets the syllables of context shown, `--max`
+  caps the hits.
+- `search phrase <corpus> <phrase>…`: fuzzy search for one or more phrases (or
+  `--phrases-file`, one per line). A hit shares at least `--min-share 0.6` of
+  a phrase's syllables, so it survives OCR errors and spelling variants. Each
+  hit gives the phrase's number, the syllables matched and the phrase's length.
+  A passage matching several phrases (one phrase inside another, say) is
+  listed once, under one of them. A phrase too common to search (more than
+  `--max-freq 1000` times) is reported as such, not as absent: search it with
+  `search grep`.
+- `search quotes <corpus> <root-file> --out <dir>`: every passage of a root
+  text found in the corpus (below).
+- `extract <collection-dir> <toh>`: one witness's folio range, trimmed at the
+  neighbouring texts.
+
+`grep` and `phrase` print a table with a header row, or JSON lines with
+`--json`; `quotes` writes files and `extract` writes the text. Add `--help`
+to a command for every option. Save output you keep, and any file you write for a search,
+under `84000/scratch/<toh>/<command>/` (`84000/scratch/toh464/grep/`), or
+`84000/scratch/<command>/` when the search is not about one work; never in the
+cache.
+
+## Find quoted passages
+
+To find where a work's passages are quoted in a collection — the Degé Tengyur
+for works citing a text, or another Kangyur to check a recension — use
+`search quotes`. A search of the whole Degé Tengyur takes about a minute. Search the
+whole root at once, never by grepping hundreds of phrases one at a time.
+
+1. Fetch the catalog and the text of both the root text's collection and the
+   collection to search, as above, into one `84000/cache/etexts/<build id>/`.
+   That is two text archives: tell the user their sizes first. Below, `E` is
+   that folder's `etexts/`, and `S` is `84000/scratch/<toh>/quotes/`
+   for the root text's Toh number.
+2. Write the root text to a file. From its Degé eText witness:
+
+   ```sh
+   node "<this skill>/scripts/eft.mjs" extract "$E/text/kangyur/D" toh464 --out "$S/toh464.txt"
+   ```
+
+   Any plain-text file of the root text works instead, Unicode or Wylie,
+   ideally with each line opening `[F.12.a]` so hits carry root folios.
+
+3. Search:
+
+   ```sh
+   node "<this skill>/scripts/eft.mjs" search quotes "$E/text/tengyur/D" "$S/toh464.txt" --out "$S/tengyur-D"
+   ```
+
+   It writes `hits.tsv` (to read), `hits.jsonl` (the same, plus the character
+   offsets of each hit in its first and last side) and `summary.json` (the
+   build, the parameters and the counts), best hits first.
+
+Each hit is a passage of at least 10 syllables shared with the root text:
+`vol`, `from`–`to` (its folios in the searched collection), `rootFrom`–`rootTo`
+(where it is in the root), `matched` (syllables in common), `witness` and
+`title` (the work at that folio, from the catalog; a side two works share
+lists both), the passage itself, and `score`. The score adds up the passage's
+six-syllable phrases, each weighted by how rarely it occurs in the whole
+collection, so a long passage of rare phrases ranks above a common formula.
+
+How the matching treats the text:
+
+- Unicode and Wylie are compared syllable by syllable on a shared skeleton, so
+  a Degé root can be searched against the Stok or Peking Kangyur, and a
+  quotation is found whatever its punctuation and across a folio break.
+- Mantras and Sanskrit are left out: a phrase with more than one syllable
+  marked as Sanskrit (a long vowel, a retroflex, a fixed-form letter,
+  anusvara, visarga or reversed _i_) never seeds a match, and a passage mostly
+  of such syllables is dropped. A phrase found more than 30 times in the
+  collection is a stock formula and does not count.
+- OCR noise lowers recall. In a test on Toh 464, the hits covered 92% of the
+  Tibetan of the Stok witness and 81% of the noisier Peking one.
+
+**A hit is a shared passage, not yet a quotation.** Before reporting one, read
+it in context: open its side in `$E/text/<collection>/<vol>.txt` and the root
+at `rootFrom`. Then decide, and say which applies:
+
+- it quotes the text — a citation formula (_… las_, _… zhes gsungs pa_) or
+  the text's title nearby;
+- it shares a passage the text also draws on — a ritual verse found in
+  several manuals is shared, not quoted from this text;
+- it is the text's own witness (when searching its own canon), or a
+  coincidence of stock phrasing.
+
+Report the hits you checked with their folios and the evidence for each, and
+say how many hits you did not check. Searching another Kangyur for the same
+text is a recall check: its hits should run end to end through that witness's
+folio range.
+
+The defaults (`--n 6 --min 10 --max-freq 30 --gap 12`) suit a whole root text.
+Lower `--n` to 5 or raise `--gap` for noisy OCR, which finds more and adds
+more stray hits; say what you changed.
+
+## Reporting witnesses
 
 Lead with the work: its Tibetan title (Wylie, no capitals), the conceptual
 work's BDRC and rKTs ids, and every catalogue number. Then one table per canon,

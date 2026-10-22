@@ -74,6 +74,13 @@ describe('eft', () => {
     });
     return { code, stdout, stderr };
   };
+  const rows = (tsv: string) => {
+    const [head, ...lines] = tsv.trim().split('\n');
+    const cols = head.split('\t');
+    return lines.map((l) =>
+      Object.fromEntries(l.split('\t').map((v, i) => [cols[i], v])),
+    );
+  };
   const jsonl = (path: string) =>
     readFileSync(path, 'utf8')
       .split('\n')
@@ -447,6 +454,148 @@ describe('eft', () => {
         skipSanskrit: false,
       }).matches;
       expect(found.map((m) => [m.group, m.matched])).toEqual([[1, 4]]);
+    });
+  });
+
+  describe('grep', () => {
+    it('finds a Unicode phrase across a folio break and a shad', () => {
+      const { stdout } = cli(
+        'search',
+        'grep',
+        collection('tengyur/D'),
+        'བཀའ་སྩལ་པ་རིགས་ཀྱི་བུ་ཁྱོད་ཀྱིས',
+      );
+      const found = rows(stdout);
+      expect(
+        found.map((r) => [r['from'], r['to'], r['witness']]),
+      ).toContainEqual(['F.2.b', 'F.3.a', 'D9 (toh9)']);
+    });
+
+    it('finds a Unicode phrase in an EWTS collection, and an EWTS one in Unicode', () => {
+      expect(
+        rows(
+          cli('search', 'grep', collection('kangyur/S'), 'ཁང་པ་བརྩེགས་པ')
+            .stdout,
+        ),
+      ).toHaveLength(1);
+      expect(
+        rows(
+          cli('search', 'grep', collection('kangyur/D'), "bka' stsal pa/")
+            .stdout,
+        ),
+      ).toHaveLength(2);
+    });
+
+    it('matches whole syllables only', () => {
+      expect(
+        rows(cli('search', 'grep', collection('kangyur/S'), 'ang pa').stdout),
+      ).toHaveLength(0);
+    });
+
+    it('takes a regular expression over EWTS syllables', () => {
+      const found = rows(
+        cli(
+          'search',
+          'grep',
+          collection('kangyur/S'),
+          'rin po che \\S+ \\S+ las',
+          '--regex',
+        ).stdout,
+      );
+      expect(found).toHaveLength(1);
+      expect(found[0]['match']).toBe('rin po che bai DUR+Ya las');
+    });
+
+    it('reads Unicode punctuation in a regular expression as one space', () => {
+      for (const pattern of ['བཀའ་སྩལ་པ། རིགས་ཀྱི', 'བཀའ་སྩལ་པ། །རིགས་ཀྱི་བུ།'])
+        expect(
+          rows(
+            cli('search', 'grep', collection('kangyur/S'), pattern, '--regex')
+              .stdout,
+          ),
+        ).toHaveLength(1);
+    });
+
+    it('refuses --fold with --regex', () => {
+      const { code, stderr } = cli(
+        'search',
+        'grep',
+        collection('kangyur/S'),
+        'bcom ldan',
+        '--regex',
+        '--fold',
+      );
+      expect(code).toBe(1);
+      expect(stderr).toContain('--fold cannot be combined with --regex');
+    });
+
+    it('writes JSON lines on request', () => {
+      const { stdout } = cli(
+        'search',
+        'grep',
+        collection('kangyur/S'),
+        'zhes so',
+        '--json',
+      );
+      expect(JSON.parse(stdout.trim())).toMatchObject({
+        vol: 1,
+        from: 'F.6.a',
+      });
+    });
+
+    it('searches a plain text file', () => {
+      const found = rows(
+        cli('search', 'grep', at('refrain-root.txt'), 'ཕྱག་འཚལ་ལོ').stdout,
+      );
+      expect(found.map((r) => r['from'])).toEqual(['F.1.a', 'F.1.b']);
+      expect(found[0]['vol']).toBe('refrain-root.txt');
+    });
+  });
+
+  describe('phrase', () => {
+    it('finds phrases with variant spellings, naming the phrase', () => {
+      const { code, stdout } = cli(
+        'search',
+        'phrase',
+        collection('kangyur/S'),
+        // OCR-style variants: a dropped a-chung and a misread suffix.
+        'རིགས་ཀྱི་བུ་ཁྱོད་ཀྱིས་ལེགས་པར་ཉོན་ལ་ཡིད་ལ་ཟུངས་ཤིག',
+        "rin po che bai DUR+Ya las byas pa'i khang pa brtsegs pa mdzes pa zhig yod do",
+      );
+      expect(code).toBe(0);
+      const found = rows(stdout);
+      expect(found.map((r) => [r['phrase'], r['from']])).toEqual(
+        expect.arrayContaining([
+          ['1', 'F.5.a'],
+          ['2', 'F.7.a'],
+        ]),
+      );
+    });
+
+    it('tolerates a misspelt syllable', () => {
+      const found = rows(
+        cli(
+          'search',
+          'phrase',
+          collection('kangyur/S'),
+          'rigs kyi bu khyod kyis legs bar nyon la yid la',
+        ).stdout,
+      );
+      expect(found).toHaveLength(1);
+      expect(Number(found[0]['matched'])).toBeGreaterThanOrEqual(6);
+    });
+
+    it('says when a phrase is too frequent to search', () => {
+      const { stdout, stderr } = cli(
+        'search',
+        'phrase',
+        collection('kangyur/S'),
+        'rigs kyi bu khyod kyis legs par',
+        '--max-freq',
+        '0',
+      );
+      expect(rows(stdout)).toHaveLength(0);
+      expect(stderr).toContain('phrase 1: every seed is too frequent');
     });
   });
 
