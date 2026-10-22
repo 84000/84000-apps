@@ -424,6 +424,12 @@ describe('eft', () => {
       ).toEqual([]);
     });
 
+    it('counts a phrase syllable the corpus repeats once', () => {
+      const found = search('chos thams cad rang thams cad rang bzhin/');
+      expect(found).toHaveLength(1);
+      expect(found[0].matched).toBe(5);
+    });
+
     it('still finds the phrase itself', () => {
       const found = search(`dang/ ${PHRASE}/ zhes so/`);
       expect(found).toHaveLength(1);

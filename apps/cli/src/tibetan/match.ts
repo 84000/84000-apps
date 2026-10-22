@@ -159,11 +159,11 @@ interface Run {
 }
 
 /**
- * Where a run sits in the probe. A phrase the probe repeats has several
- * positions; walk back from the run's last seed, keeping at each seed the
- * offset nearest the one after it.
+ * Where a run sits in the probe, and how many probe syllables its seeds
+ * cover. A phrase the probe repeats has several positions; walk back from the
+ * run's last seed, keeping at each seed the offset nearest the one after it.
  */
-function probeSpan(run: Run, n: number): [number, number] {
+function probeSpan(run: Run, n: number): [number, number, number] {
   let offset = Math.min(...run.seeds[run.seeds.length - 1].offsets);
   const chosen: number[] = [];
   for (let i = run.seeds.length - 1; i >= 0; i--) {
@@ -173,7 +173,9 @@ function probeSpan(run: Run, n: number): [number, number] {
     );
     chosen[i] = h.at + offset;
   }
-  return [chosen[0], Math.max(...chosen) + n - 1];
+  const covered = new Set<number>();
+  for (const p of chosen) for (let j = p; j < p + n; j++) covered.add(j);
+  return [chosen[0], Math.max(...chosen) + n - 1, covered.size];
 }
 
 /**
@@ -281,14 +283,16 @@ export function findMatches(
       cached = { v: r.v, data: readVolume(corpus.volumes[r.v].path) };
     const { sides, syllables } = cached.data as ReturnType<typeof readVolume>;
     const volume = corpus.volumes[r.v];
-    const matched = r.covered.size;
-    const [probeFrom, probeTo] = probeSpan(r, n);
+    // Syllables in common: a corpus syllable counts once, and so does a probe
+    // syllable the corpus repeats.
+    const [probeFrom, probeTo, probeCovered] = probeSpan(r, n);
+    const matched = Math.min(r.covered.size, probeCovered);
     const group = probe.group[probeFrom];
     if (matched < opts.min(group)) continue;
     if (opts.skipSanskrit) {
       let skt = 0;
       for (const j of r.covered) if (syllables[j].sanskrit) skt++;
-      if (skt * 2 > matched) continue;
+      if (skt * 2 > r.covered.size) continue;
     }
     const first = syllables[r.cStart];
     const last = syllables[r.cEnd];
