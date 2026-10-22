@@ -160,6 +160,13 @@ export const parseLayerRequests = (
   return { ok: true, requests: [...requests.values()] };
 };
 
+/** The permission one request needs, or null when it needs none. */
+export const requiredPermission = ({
+  layer,
+  options,
+}: LayerRequest): LayerPermission | null =>
+  layer.permissionFor ? layer.permissionFor(options) : layer.permission;
+
 /**
  * The names of requested layers the caller may not have, checking each distinct
  * permission once. A failed check counts as refused.
@@ -168,7 +175,13 @@ export const refusedLayers = async (
   requests: readonly LayerRequest[],
   isGranted: (permission: LayerPermission) => Promise<boolean>,
 ): Promise<string[]> => {
-  const permissions = [...new Set(requests.map((r) => r.layer.permission))];
+  const permissions = [
+    ...new Set(
+      requests
+        .map(requiredPermission)
+        .filter((p): p is LayerPermission => p !== null),
+    ),
+  ];
   const granted = new Map(
     await Promise.all(
       permissions.map(
@@ -179,7 +192,10 @@ export const refusedLayers = async (
   return [
     ...new Set(
       requests
-        .filter((r) => !granted.get(r.layer.permission))
+        .filter((r) => {
+          const permission = requiredPermission(r);
+          return permission !== null && !granted.get(permission);
+        })
         .map((r) => r.layer.name),
     ),
   ];

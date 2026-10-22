@@ -26,6 +26,7 @@ import {
   canonicalJson,
   parseLayerRequests,
   refusedLayers,
+  requiredPermission,
   type LayerRegistry,
   type LayerRequest,
 } from './registry';
@@ -122,25 +123,51 @@ const RESERVED = new Set(['README.md', 'manifest.json']);
 
 const SAFE_DIR = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
 
+const safePath = (path: string) =>
+  SAFE_DIR.test(path) && !path.split('/').includes('..');
+
+/** The paths a layer writes under the root: its claims, else its whole dir. */
+const footprint = (layer: { dir: string; claims?: readonly string[] }) =>
+  layer.claims ? layer.claims.map((c) => `${layer.dir}/${c}`) : [layer.dir];
+
 /** Why the layers' directories cannot share a root, or null when they can. */
 export const directoryConflict = (
-  layers: readonly { layer: string; dir: string; kind: string }[],
+  layers: readonly {
+    layer: string;
+    dir: string;
+    kind: string;
+    claims?: readonly string[];
+    consistency?: string;
+  }[],
 ): string | null => {
   for (const layer of layers) {
-    if (
-      !SAFE_DIR.test(layer.dir) ||
-      layer.dir.split('/').includes('..') ||
-      RESERVED.has(layer.dir)
-    ) {
+    if (!safePath(layer.dir) || RESERVED.has(layer.dir)) {
       return `Layer ${layer.layer} has an unsafe directory "${layer.dir}".`;
+    }
+    if (
+      layer.claims &&
+      (!layer.claims.length || !layer.claims.every(safePath))
+    ) {
+      return `Layer ${layer.layer} claims an unsafe path under "${layer.dir}".`;
     }
   }
   for (let i = 0; i < layers.length; i++) {
     for (let j = i + 1; j < layers.length; j++) {
       const [a, b] = [layers[i], layers[j]];
       const bothPrebuilt = a.kind === 'prebuilt' && b.kind === 'prebuilt';
-      if (!bothPrebuilt && overlaps(a.dir, b.dir)) {
+      const clash = footprint(a).some((x) =>
+        footprint(b).some((y) => overlaps(x, y)),
+      );
+      if (!bothPrebuilt && clash) {
         return `Layers ${a.layer} (${a.dir}/) and ${b.layer} (${b.dir}/) would write the same files; request them in separate bundles.`;
+      }
+      if (
+        a.dir === b.dir &&
+        a.consistency !== undefined &&
+        b.consistency !== undefined &&
+        a.consistency !== b.consistency
+      ) {
+        return `Layers ${a.layer} (${a.consistency}) and ${b.layer} (${b.consistency}) share ${a.dir}/ but read different data, so their cross-references would not match; request them with the same options or in separate bundles.`;
       }
     }
   }
@@ -259,9 +286,17 @@ const buildTree = async ({
     if (output.kind !== 'generated') continue;
     const files = await output.generate();
     for (const [path, content] of files) {
-      if (!SAFE_DIR.test(path) || path.split('/').includes('..')) {
+      if (!safePath(path)) {
         throw new Error(
           `Layer ${request.layer.name} wrote an unsafe path "${path}"`,
+        );
+      }
+      if (
+        output.claims &&
+        !output.claims.some((c) => path === c || path.startsWith(`${c}/`))
+      ) {
+        throw new Error(
+          `Layer ${request.layer.name} wrote "${path}" outside its claims`,
         );
       }
       tree.set(`${output.dir}/${path}`, content);
@@ -364,7 +399,8 @@ export const getSnapshotBundle = async ({
       ...new Set(
         requests
           .filter((r) => refused.includes(r.layer.name))
-          .map((r) => r.layer.permission),
+          .map(requiredPermission)
+          .filter((p) => p !== null),
       ),
     ];
     return {
@@ -417,6 +453,8 @@ export const getSnapshotBundle = async ({
         layer: r.layer.name,
         dir: output.dir,
         kind: output.kind,
+        claims: output.claims,
+        consistency: output.consistency,
       })),
     );
     if (conflict) return { status: 'invalid', error: conflict };

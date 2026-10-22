@@ -209,6 +209,72 @@ describe('directoryConflict', () => {
     ).toMatch(/work\.draft.*work\.folios/);
   });
 
+  it('lets generated layers share a directory when their claims are disjoint', () => {
+    const passages = {
+      layer: 'work.passages',
+      dir: 'toh8',
+      kind: 'generated',
+      claims: ['text', 'anchors.tsv'],
+    };
+    expect(
+      directoryConflict([
+        passages,
+        {
+          layer: 'work.passages.raw',
+          dir: 'toh8',
+          kind: 'generated',
+          claims: ['raw/passages.jsonl'],
+        },
+        {
+          layer: 'work.glossary',
+          dir: 'toh8',
+          kind: 'generated',
+          claims: ['glossary.md', 'raw/glossary.jsonl'],
+        },
+        { layer: 'work.folios', dir: 'toh8/folios', kind: 'generated' },
+      ]),
+    ).toBeNull();
+    expect(
+      directoryConflict([
+        passages,
+        { layer: 'work.text', dir: 'toh8/text', kind: 'generated' },
+      ]),
+    ).toMatch(/work\.passages.*work\.text/);
+    expect(
+      directoryConflict([
+        { layer: 'work.draft', dir: 'toh8', kind: 'prebuilt' },
+        passages,
+      ]),
+    ).toMatch(/work\.draft.*work\.passages/);
+    expect(directoryConflict([{ ...passages, claims: ['../x'] }])).toMatch(
+      /unsafe/,
+    );
+    expect(directoryConflict([{ ...passages, claims: [] }])).toMatch(/unsafe/);
+  });
+
+  it('refuses layers sharing a directory that disagree on their consistency key', () => {
+    const at = (layer: string, claim: string, consistency?: string) => ({
+      layer,
+      dir: 'toh8',
+      kind: 'generated',
+      claims: [claim],
+      consistency,
+    });
+    expect(
+      directoryConflict([
+        at('work.passages', 'text', 'source draft'),
+        at('work.glossary', 'glossary.md', 'source published'),
+      ]),
+    ).toMatch(/work\.passages.*work\.glossary.*different data/);
+    expect(
+      directoryConflict([
+        at('work.passages', 'text', 'source draft'),
+        at('work.glossary', 'glossary.md', 'source draft'),
+        at('other.layer', 'other.md'),
+      ]),
+    ).toBeNull();
+  });
+
   it('refuses unsafe and reserved directories', () => {
     for (const dir of ['../x', '/abs', 'a//b', 'README.md', 'manifest.json']) {
       expect(

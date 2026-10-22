@@ -6,9 +6,11 @@ import { etextsCatalogLayer, etextsTextLayer } from './etexts';
 import { createLayerRegistry } from './registry';
 import type { SnapshotLayer, SnapshotPreset } from './types';
 import { workDraftLayer } from './work-draft';
+import { createWorkLayers, WORK_LAYER_NAMES } from './work-layers';
 
 export const SNAPSHOT_LAYERS: readonly SnapshotLayer[] = [
   workDraftLayer,
+  ...createWorkLayers(),
   etextsCatalogLayer,
   etextsTextLayer,
 ] as SnapshotLayer[];
@@ -17,8 +19,13 @@ export const SNAPSHOT_LAYERS: readonly SnapshotLayer[] = [
 export const SNAPSHOT_PRESETS: readonly SnapshotPreset[] = [
   {
     name: 'work',
-    description: "One work's draft.",
-    layers: [{ layer: 'work.draft', work: '{work}' }],
+    description:
+      "One work's draft: its passages, raw passages, annotations, glossary and bibliography, the files `work-ls`, `work-read` and `work-grep` read.",
+    layers: WORK_LAYER_NAMES.map((layer) => ({
+      layer,
+      work: '{work}',
+      source: 'draft',
+    })),
   },
   {
     name: 'etexts-catalog',
