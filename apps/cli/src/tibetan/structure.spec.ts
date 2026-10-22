@@ -157,6 +157,16 @@ describe('structure', () => {
     );
   });
 
+  it('reads a nyis shad as two shads', () => {
+    const ends = (text: string) =>
+      rows(`[F.1.a] ${text}`, ['end']).map((e) => e.text);
+    expect(ends('ཆོས་རྫོགས་སོ༎')).toEqual(ends('ཆོས་རྫོགས་སོ།།'));
+    expect(ends('ཆོས་རྫོགས་སོ༎')).toHaveLength(1);
+    expect(ends('chos rdzogs so//')).toHaveLength(1);
+    expect(ends('ལས་མ་རྫོགས་སོ༎')).toEqual([]);
+    expect(ends('ཆོས་རྫོགས་སོ།')).toEqual([]);
+  });
+
   it('follows a series when its label changes form', () => {
     const entries = rows(
       [

@@ -255,15 +255,16 @@ class Text {
   }
 
   /**
-   * Whether the gap after syllable k ends a statement: two shads (`། །`), a
-   * head mark, or one shad after a final ga or ka, which takes no second shad
-   * (`ཅིག །`). Otherwise a single shad only breaks a clause, as in
-   * `… rgyal po las། le’u …`.
+   * Whether the gap after syllable k ends a statement: two shads (`། །`, or
+   * the nyis shad `༎`), a head mark, or one shad after a final ga or ka, which
+   * takes no second shad (`ཅིག །`). Otherwise a single shad only breaks a
+   * clause, as in `… rgyal po las། le’u …`.
    */
   statementBreakAfter(k: number): boolean {
     const gap = this.gapAfter(k);
     const shads = this.unicode
-      ? (gap.match(/[\u0F0D-\u0F12]/gu) ?? []).length
+      ? (gap.match(/[\u0F0D-\u0F12]/gu) ?? []).length +
+        (gap.match(/\u0F0E/gu) ?? []).length
       : (gap.match(/\//g) ?? []).length;
     return (
       shads >= 2 ||
