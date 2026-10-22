@@ -14,7 +14,7 @@ export default {
       },
     ],
   },
-  moduleFileExtensions: ['ts', 'js'],
+  moduleFileExtensions: ['ts', 'js', 'json'],
   testEnvironment: 'node',
   coverageDirectory: '../../coverage/apps/cli',
 };

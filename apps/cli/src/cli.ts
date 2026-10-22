@@ -7,10 +7,11 @@ import {
 } from './command';
 import { extract } from './commands/extract';
 import { search } from './commands/search';
+import { structure } from './commands/structure';
 
 export type { Io } from './command';
 
-const commands: Command[] = [search, extract];
+const commands: Command[] = [search, extract, structure];
 
 /** `eft`, 84000's command line: a group of commands. */
 export const eft: Command = {

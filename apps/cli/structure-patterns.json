@@ -1,0 +1,46 @@
+{
+  "about": "Patterns for `eft structure`. Every entry is EWTS (Unicode Tibetan works too); the a-chung may be written ' or ’, and + stacking is ignored. Add a spelling or a label here and rebuild; or copy this file (`eft structure --print-patterns`), edit it, and pass it with --patterns. See apps/cli/README.md for what each list does.",
+  "divisions": {
+    "labels": [
+      "le'u",
+      "brtag pa",
+      "rab tu byed pa",
+      "dum bu",
+      "skabs",
+      "tshoms",
+      "sde tshan",
+      "brtag pa'i rgyal po",
+      "brtag pa'i rgyal po chen po",
+      "rim par phye ba",
+      "rim par phye pa",
+      "rtog pa"
+    ],
+    "labelTails": ["zhes bya ba", "zhes bya"],
+    "connectives": ["ste", "te", "de"],
+    "ordinalEndings": ["pa'o", "ba'o", "po'o"],
+    "ordinalStems": ["pa", "ba", "po"],
+    "terminators": ["rdzogs so"]
+  },
+  "numerals": {
+    "first": ["dang"],
+    "units": {
+      "gcig": 1,
+      "gnyis": 2,
+      "nyis": 2,
+      "nyi": 2,
+      "gsum": 3,
+      "sum": 3,
+      "bzhi": 4,
+      "lnga": 5,
+      "drug": 6,
+      "bdun": 7,
+      "brgyad": 8,
+      "dgu": 9
+    },
+    "tens": ["bcu", "cu", "bco", "bcwa", "shu"],
+    "hundreds": ["brgya"],
+    "thousands": ["stong"],
+    "joiners": ["rtsa", "so", "zhe", "nga", "re", "don", "gya", "go", "dang"]
+  },
+  "speech": ["gsol pa", "gsol to", "bka' stsal pa", "bka' stsal to"]
+}
