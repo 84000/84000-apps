@@ -40,7 +40,12 @@ export function extract(dir: string, toh: string): Extracted {
   // Positions come from the collection's witnesses, which place each range
   // in its folio run.
   const placed = readWitnesses(place.etexts, place.collection).find(
-    (x) => x.siglum === w['siglum_number'],
+    (x) =>
+      x.siglum === w['siglum_number'] &&
+      x.startVol === w['start_vol'] &&
+      x.startFolio === w['start_folio'] &&
+      x.endVol === w['end_vol'] &&
+      x.endFolio === w['end_folio'],
   );
   if (!placed)
     throw new Error(

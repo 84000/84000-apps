@@ -214,9 +214,12 @@ export function readWitnesses(etexts: string, collection: string): Witness[] {
       place(r.startVol, r.start, true),
       place(r.endVol, r.end, false),
     ]);
-  // An end in the last run a witness opens in its volume also covers any later
-  // run there: the folios restart without a new text.
-  const lastRun = (vol: number) => runs.get(vol)?.run ?? 0;
+  // The witness reaching furthest into the last run opened in a volume also
+  // covers any later run there, where the folios restart without a new text.
+  const runsOpen = (vol: number, run: number, end: number) => {
+    const at = runs.get(vol);
+    return !at || (run === at.run && end >= at.reached);
+  };
 
   return rows.map((r) => {
     const { w, startVol, endVol, start, end } = r;
@@ -234,7 +237,7 @@ export function readWitnesses(etexts: string, collection: string): Witness[] {
       endFolio: w['end_folio'],
       from,
       to,
-      openEnd: endRun === lastRun(endVol),
+      openEnd: runsOpen(endVol, endRun, end),
     };
   });
 }

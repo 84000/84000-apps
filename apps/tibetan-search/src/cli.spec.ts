@@ -38,6 +38,9 @@ const WORKS = [
   // Volume 2 numbers its folios afresh for the second text.
   'kangyur/X\tX10\tc10\ttoh10\tlong text\t\t\t\t1\tF.1.b\t2\tF.5.b\treference',
   'kangyur/X\tX11\tc11\ttoh11\tnext text\t\t\t\t2\tF.1.b\t2\tF.2.b\treference',
+  // Volume 3 restarts its numbering inside its last text, X13.
+  'kangyur/X\tX12\tc12\ttoh12\tshort text\t\t\t\t3\tF.1.b\t3\tF.5.b\treference',
+  'kangyur/X\tX13\tc13\ttoh13\tlast text\t\t\t\t3\tF.5.b\t3\tF.12.a\treference',
 ].join('\n');
 
 const LONG_BO = 'ཁྲི་བརྒྱད་སྟོང་པ་ཡི་དགེ། ';
@@ -133,6 +136,12 @@ describe('tibetan-search', () => {
       ].join('\n') + '\n',
     );
     write(
+      join(collection('kangyur/X'), '003.txt'),
+      [...Array(12).keys(), ...Array(4).keys()]
+        .map((i) => `[F.${i + 1}.a] ${FILLER_BO}`)
+        .join('\n') + '\n',
+    );
+    write(
       at('refrain-root.txt'),
       `[F.1.a] ${REFRAIN_BO}${FILLER_BO.repeat(3)}\n[F.1.b] ${REFRAIN_BO}${PASSAGE_BO}\n[F.2.a] ${BERYL_BO}\n`,
     );
@@ -220,6 +229,20 @@ describe('tibetan-search', () => {
         ['F.2.a', 'X11'],
         ['F.2.b', 'X11'],
       ]);
+    });
+  });
+
+  describe('a volume restarting its numbering inside a text', () => {
+    it('places the later run in that text only', () => {
+      const witnesses = readWitnesses(at('etexts'), 'kangyur/X');
+      const sides = readSides(join(collection('kangyur/X'), '003.txt'));
+      const named = sides.map((side) =>
+        witnessesAt(witnesses, 3, side.ord)
+          .map((w) => w.siglum)
+          .join(' '),
+      );
+      expect(named.slice(12)).toEqual(['X13', 'X13', 'X13', 'X13']);
+      expect(named[1]).toBe('X12');
     });
   });
 
