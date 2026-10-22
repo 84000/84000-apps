@@ -18,9 +18,13 @@ export const ETEXTS_FORMAT_VERSION = 1;
 export const collectionKey = (canon: string, siglum: string): string =>
   `${canon}/${siglum}`;
 
+/** A volume's text file name: its number, zero-padded to three digits. */
+export const volumeFileName = (vol: number): string =>
+  `${String(vol).padStart(3, '0')}.txt`;
+
 /** A volume's text file, under the archive root. */
 export const volumeTextPath = (key: string, vol: number): string =>
-  `text/${key}/${String(vol).padStart(3, '0')}.txt`;
+  `text/${key}/${volumeFileName(vol)}`;
 
 export const buildPrefix = (buildId: string): string => `builds/${buildId}`;
 
