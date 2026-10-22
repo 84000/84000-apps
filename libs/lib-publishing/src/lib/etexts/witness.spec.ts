@@ -110,6 +110,9 @@ const WORKS: WitnessWorkRow[] = [
   // A real siglum number that a suffix would also produce, and an unsafe one.
   work('S14-2', 'cw14', 'v3-0001', 'v3-0002', 'anchored'),
   work('Q760,01', 'cw14', 'v3-0003', 'v3-0004', 'anchored'),
+  // A dotted siglum number keeps its name; an all-dot one falls back to its uuid.
+  work('S11.01', 'cw14', 'v3-0005', 'v3-0006', 'anchored'),
+  work('..', 'cw14', 'v3-0007', 'v3-0008', 'anchored', 'w-dots'),
 ];
 
 const TOH = new Map([
@@ -360,7 +363,9 @@ describe('one witness of an eText collection', () => {
   it('keeps witnesses that share a siglum number apart', async () => {
     const { files, plan } = await ready({ toh: 'toh14' });
     expect(plan.spans.map((s) => [s.name, s.witness?.uuid])).toEqual([
+      ['w-dots', 'w-dots'],
       ['Q760_01', 'w-Q760,01'],
+      ['S11.01', 'w-S11.01'],
       ['S14', 'w-S14-early'],
       ['S14-3', 'w-S14-late'],
       ['S14-2', 'w-S14-2'],
@@ -372,7 +377,7 @@ describe('one witness of an eText collection', () => {
       linesOf(files.get('witnesses.tsv'))
         .slice(1)
         .map((row) => row.split('\t')[0]),
-    ).toEqual(['Q760_01', 'S14', 'S14-3', 'S14-2']);
+    ).toEqual(['w-dots', 'Q760_01', 'S11.01', 'S14', 'S14-3', 'S14-2']);
   });
 
   it('skips a witness bounded by a side with no reading position', async () => {
