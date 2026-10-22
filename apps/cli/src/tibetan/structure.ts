@@ -215,8 +215,8 @@ const UNICODE_SHAD = /[\u0F0D-\u0F12]/u;
 const LEADING_SHAD_UNICODE = /^[\s\u0F0B\u0F0C]*[\u0F0D-\u0F12]+/u;
 const LEADING_SHAD_EWTS = /^\s*\/+/;
 const GA_KA_FINAL = /(?<!n)g$|k$/;
-/** Negations that make a following rdzogs so prose (`ma rdzogs so`). */
-const NEGATIONS = new Set(['ma', 'mi']);
+/** Words that make a following rdzogs so prose (`ma rdzogs so`, `yongs su rdzogs so`). */
+const PROSE_BEFORE = new Set(['ma', 'mi', 'su', 'par']);
 
 /** One volume prepared for matching. */
 class Text {
@@ -421,7 +421,7 @@ function ordinalFormula(t: Text, j: number, c: Compiled): Found | null {
 /** A label, then a terminator with no ordinal; or a terminator alone (`end`). */
 function terminatorFormula(t: Text, i: number, c: Compiled): Found | null {
   const len = terminatorAt(t, i, c);
-  if (!len || !t.shadAfter(i + len - 1) || NEGATIONS.has(t.forms[i - 1]))
+  if (!len || !t.shadAfter(i + len - 1) || PROSE_BEFORE.has(t.forms[i - 1]))
     return null;
   const label = labelBefore(t, i - 1, c);
   // Bare rdzogs so is a closing only where a statement ends.
@@ -469,6 +469,21 @@ function numberingNote(
 }
 
 /**
+ * The numbering note for a series whose parent has closed since its last
+ * number: counting afresh or counting on are both regular.
+ */
+function continuedNote(
+  prev: number | undefined,
+  before: number | undefined,
+  n: number | null,
+): string {
+  if (prev !== undefined || before === undefined || n === null)
+    return numberingNote(prev, n);
+  if (n === 1 || n === before + 1) return '';
+  return n > before ? numberingNote(before, n) : numberingNote(undefined, n);
+}
+
+/**
  * Closing formulas and speech formulas in a text, in text order, with their
  * folios. The same text and patterns always give the same entries.
  */
@@ -509,35 +524,47 @@ export function structure(
   // brtag pa 5) continues that series under a new form.
   const series = new Map<string, string>();
   const formChange = new Map<number, string>();
+  // Series that have counted afresh from 1, so nest inside another.
+  const restarted = new Set<string>();
   {
-    // Each series' latest number and label, most recently closed last.
+    // Each series' latest number and label, most recently closed last. A
+    // series' first closing without an ordinal counts as its first.
     const last = new Map<string, { number: number; label: string }>();
+    const head = (label: string) => label.split(' ')[0];
     found.forEach((f, i) => {
       if (f.kind !== 'division') return;
       if (!series.has(f.label)) {
         const n = f.number;
-        const joins =
+        const candidates =
           n !== null && n > 1
-            ? [...last].reverse().find(([, l]) => l.number === n - 1)
-            : undefined;
+            ? [...last]
+                .reverse()
+                .filter(([s, l]) => l.number === n - 1 && !restarted.has(s))
+            : [];
+        const joins =
+          candidates.find(([, l]) => head(l.label) === head(f.label)) ??
+          candidates[0];
         series.set(f.label, joins ? joins[0] : f.label);
       }
       const s = series.get(f.label) as string;
       const before = last.get(s);
       if (before && before.label !== f.label) formChange.set(i, before.label);
-      if (f.number !== null) {
+      const number = f.number ?? (before ? null : 1);
+      if (number !== null) {
+        if (before && number === 1) restarted.add(s);
         last.delete(s);
-        last.set(s, { number: f.number, label: f.label });
+        last.set(s, { number, label: f.label });
       }
     });
   }
 
-  // A series that closes more often nests inside one that closes less often.
+  // A series that closes more often nests inside one that closes less often;
+  // of two that close equally often, one that restarts its count is inner.
   const counts = new Map<string, number>();
   for (const f of found)
     if (f.kind === 'division') {
       const s = series.get(f.label) as string;
-      counts.set(s, (counts.get(s) ?? 0) + 1);
+      counts.set(s, (counts.get(s) ?? (restarted.has(s) ? 0.5 : 0)) + 1);
     }
   const tiers = [...new Set(counts.values())].sort((a, b) => a - b);
   const level = (s: string) => tiers.indexOf(counts.get(s) as number);
@@ -545,6 +572,9 @@ export function structure(
   const out: StructureEntry[] = [];
   // The latest number in each series, cleared when a division above it closes.
   const previous = new Map<string, number>();
+  // A series' number before its parent closed: some texts count on across it.
+  const cleared = new Map<string, number>();
+  const counted = new Set<string>();
   // The side after the latest closing at each level, and its position in `found`.
   const closed: ({ at: number; place: Place } | undefined)[] = [];
   found.forEach((f, i) => {
@@ -583,13 +613,22 @@ export function structure(
       const changed = formChange.get(i);
       entry.note = [
         changed ? `label form changes from ${changed}` : '',
-        numberingNote(previous.get(s), f.number),
+        continuedNote(previous.get(s), cleared.get(s), f.number),
       ]
         .filter(Boolean)
         .join('; ');
-      if (f.number !== null) previous.set(s, f.number);
-      for (const other of previous.keys())
-        if (level(other) > lv) previous.delete(other);
+      // A series' first closing without an ordinal counts as its first.
+      const number = f.number ?? (counted.has(s) ? null : 1);
+      counted.add(s);
+      if (number !== null) {
+        previous.set(s, number);
+        cleared.delete(s);
+      }
+      for (const [other, n] of previous)
+        if (level(other) > lv) {
+          cleared.set(other, n);
+          previous.delete(other);
+        }
       // The side after the formula, or the next volume's first side.
       const place =
         f.end + 1 < t.syllables.length

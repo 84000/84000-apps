@@ -95,9 +95,10 @@ lines):
   label, as in the final title); `speech` (_gsol pa_, _bka’ stsal pa_ and the
   like).
 - `label` and `number`: the division label and the ordinal's value; for
-  speech, the formula. A `division` row with no number closed with _rdzogs so_
-  and no ordinal: it is not a map entry unless `shared-policies/analytics`
-  says otherwise, but check whether the text numbers that division elsewhere.
+  speech, the formula. A `division` row with no number is a known label
+  closed with _rdzogs so_ and no ordinal: it is still a division closing, so
+  map it, place it by its order among that label's closings, and note the
+  missing ordinal without reconciling it.
 - `level`: nesting, 0 outermost, inferred from how often each label (with
   the forms that continue its count) closes.
   Check it against the text where labels nest.

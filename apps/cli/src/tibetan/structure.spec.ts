@@ -169,13 +169,52 @@ describe('structure', () => {
     ]);
   });
 
+  it('nests a label that counts afresh, and lets a child count on across its parent', () => {
+    const level = (lines: string[]) =>
+      rows(lines.join('\n'), ['division']).map((e) => [
+        e.level,
+        e.label,
+        e.number,
+        e.note,
+      ]);
+    // A parent whose first closing has no ordinal, over a child that restarts.
+    expect(
+      level([
+        "[F.1.a] ka ba'i le'u ste dang po'o// //",
+        "[F.1.b] ga ba'i brtag pa'i rgyal po rdzogs so// //",
+        "[F.2.a] kha ba'i le'u ste dang po'o// //",
+        "[F.2.b] ga ba'i brtag pa gnyis pa'o// //",
+        "[F.3.a] kha ba'i le'u ste dang po'o// //",
+        "[F.3.b] ga ba'i brtag pa gsum pa'o// //",
+      ]),
+    ).toEqual([
+      [1, 'le’u', 1, ''],
+      [0, 'brtag pa’i rgyal po', null, ''],
+      [1, 'le’u', 1, ''],
+      [0, 'brtag pa', 2, 'label form changes from brtag pa’i rgyal po'],
+      [1, 'le’u', 1, ''],
+      [0, 'brtag pa', 3, ''],
+    ]);
+    // le’u numbered on through the brtag pa that closes between them.
+    expect(
+      level([
+        "[F.1.a] ka ba'i le'u ste dang po'o// //",
+        "[F.1.b] kha ba'i le'u ste gnyis pa'o// //",
+        "[F.2.a] ga ba'i brtag pa ste dang po'o// //",
+        "[F.2.b] nga ba'i le'u ste gsum pa'o// //",
+        "[F.3.a] ca ba'i le'u ste bzhi pa'o// //",
+        "[F.3.b] cha ba'i brtag pa ste gnyis pa'o// //",
+      ]).map((r) => r[3]),
+    ).toEqual(['', '', '', '', '', '']);
+  });
+
   it('skips speech and rdzogs so inside prose', () => {
     const entries = rows(
-      "[F.1.a] de nas gsol pa dang bka' stsal pa/ las ma rdzogs so// chos rdzogs so/ de nas rdzogs so// //",
+      "[F.1.a] de nas gsol pa dang bka' stsal pa/ las ma rdzogs so// chos rdzogs so/ yongs su rdzogs so// de nas rdzogs so// //",
     );
     expect(entries.map((e) => [e.kind, e.label, e.text])).toEqual([
       ['speech', 'bka’ stsal pa', 'de nas gsol pa dang bka’ stsal pa/'],
-      ['end', '', 'chos rdzogs so/ de nas rdzogs so//'],
+      ['end', '', 'de nas rdzogs so//'],
     ]);
   });
 
