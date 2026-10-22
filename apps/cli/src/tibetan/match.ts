@@ -159,18 +159,25 @@ interface Run {
 }
 
 /**
- * Where a run sits in the probe, and how many probe syllables its seeds
- * cover. A phrase the probe repeats has several positions; walk back from the
- * run's last seed, keeping at each seed the offset nearest the one after it.
+ * Where a run sits in the probe if its last seed is at `end`, and how many
+ * probe syllables its seeds cover. A phrase the probe repeats has several
+ * positions; walk back from the last seed, keeping at each seed the offset
+ * nearest the one after it in the same phrase.
  */
-function probeSpan(run: Run, n: number): [number, number, number] {
-  let offset = Math.min(...run.seeds[run.seeds.length - 1].offsets);
+function probeSpan(
+  probe: Probe,
+  run: Run,
+  n: number,
+  end: number,
+): [number, number, number] {
+  const group = probe.group[run.seeds[run.seeds.length - 1].h.at + end];
+  let offset = end;
   const chosen: number[] = [];
   for (let i = run.seeds.length - 1; i >= 0; i--) {
     const { h, offsets } = run.seeds[i];
-    offset = offsets.reduce((a, b) =>
-      Math.abs(b - offset) < Math.abs(a - offset) ? b : a,
-    );
+    offset = offsets
+      .filter((d) => probe.group[h.at + d] === group)
+      .reduce((a, b) => (Math.abs(b - offset) < Math.abs(a - offset) ? b : a));
     chosen[i] = h.at + offset;
   }
   const covered = new Set<number>();
@@ -283,12 +290,22 @@ export function findMatches(
       cached = { v: r.v, data: readVolume(corpus.volumes[r.v].path) };
     const { sides, syllables } = cached.data as ReturnType<typeof readVolume>;
     const volume = corpus.volumes[r.v];
-    // Syllables in common: a corpus syllable counts once, and so does a probe
-    // syllable the corpus repeats.
-    const [probeFrom, probeTo, probeCovered] = probeSpan(r, n);
-    const matched = Math.min(r.covered.size, probeCovered);
+    // Place the run at the first probe position where it has enough syllables
+    // in common: a corpus syllable counts once, and so does a probe syllable
+    // the corpus repeats.
+    let placed: { span: [number, number]; matched: number } | undefined;
+    const ends = [...r.seeds[r.seeds.length - 1].offsets].sort((a, b) => a - b);
+    for (const end of ends) {
+      const [from, to, covered] = probeSpan(probe, r, n, end);
+      const matched = Math.min(r.covered.size, covered);
+      if (matched < opts.min(probe.group[from])) continue;
+      placed = { span: [from, to], matched };
+      break;
+    }
+    if (!placed) continue;
+    const [probeFrom, probeTo] = placed.span;
+    const { matched } = placed;
     const group = probe.group[probeFrom];
-    if (matched < opts.min(group)) continue;
     if (opts.skipSanskrit) {
       let skt = 0;
       for (const j of r.covered) if (syllables[j].sanskrit) skt++;

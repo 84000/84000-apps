@@ -435,6 +435,19 @@ describe('eft', () => {
       expect(found).toHaveLength(1);
       expect(found[0].matched).toBe(8);
     });
+
+    it('places a run in a later phrase that it matches in full', () => {
+      write(at('chain.txt'), '[F.1.a] bdag rang bzhin gyis stong ste/\n');
+      const probe = probeFromPhrases([PHRASE, 'rang bzhin gyis stong']);
+      const found = findMatches(probe, openCorpus(at('chain.txt')), {
+        n: 4,
+        min: (g) => Math.max(4, Math.ceil(0.6 * probe.groupSize[g])),
+        maxFreq: 1000,
+        gap: 4,
+        skipSanskrit: false,
+      }).matches;
+      expect(found.map((m) => [m.group, m.matched])).toEqual([[1, 4]]);
+    });
   });
 
   it('prints usage and fails on an unknown command', () => {
