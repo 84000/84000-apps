@@ -341,5 +341,85 @@ describe('structure', () => {
         ['brtag pa', 0, 'toh1-vol001.txt:F.1.a'],
       ]);
     });
+
+    it('finds a formula that runs on into the next volume', () => {
+      const work = join(dir, 'work3');
+      rmSync(work, { recursive: true, force: true });
+      mkdirSync(work);
+      writeFileSync(
+        join(work, 'toh1-vol001.txt'),
+        "[F.1.a] le'u ste dang po'o// //\n[F.1.b] klu sgrub pa'i le'u ste\n",
+      );
+      writeFileSync(
+        join(work, 'toh1-vol002.txt'),
+        "[F.1.a] gnyis pa'o// //\n[F.1.b] le'u ste gsum pa'o// //\n",
+      );
+      const { stdout } = cli('structure', work, '--json');
+      const rows = stdout
+        .trim()
+        .split('\n')
+        .map((l) => JSON.parse(l));
+      expect(
+        rows.map((r) => [r.number, r.vol, r.from, r.at, r.to, r.text]),
+      ).toEqual([
+        [
+          1,
+          'toh1-vol001.txt',
+          'F.1.a',
+          'F.1.a',
+          'F.1.a',
+          'le’u ste dang po’o//',
+        ],
+        [
+          2,
+          'toh1-vol002.txt',
+          'toh1-vol001.txt:F.1.b',
+          'toh1-vol001.txt:F.1.b',
+          'F.1.a',
+          'klu sgrub pa’i le’u ste gnyis pa’o//',
+        ],
+        [
+          3,
+          'toh1-vol002.txt',
+          'F.1.b',
+          'F.1.b',
+          'F.1.b',
+          'le’u ste gsum pa’o//',
+        ],
+      ]);
+
+      // A formula that starts in its own volume keeps its statement there.
+      writeFileSync(join(work, 'toh1-vol001.txt'), '[F.1.a] bam po dang po/\n');
+      writeFileSync(
+        join(work, 'toh1-vol002.txt'),
+        "[F.1.a] le'u ste dang po'o// //\n",
+      );
+      const [only] = cli('structure', work, '--json')
+        .stdout.trim()
+        .split('\n')
+        .map((l) => JSON.parse(l));
+      expect([only.at, only.text]).toEqual(['F.1.a', 'le’u ste dang po’o//']);
+    });
+
+    it('reads a volume after one in another script, or one that ends in prose', () => {
+      const work = join(dir, 'work4');
+      const rowsOf = (vol1: string, vol2: string) => {
+        rmSync(work, { recursive: true, force: true });
+        mkdirSync(work);
+        writeFileSync(join(work, 'toh1-vol001.txt'), `[F.1.a] ${vol1}\n`);
+        writeFileSync(join(work, 'toh1-vol002.txt'), `[F.1.a] ${vol2}\n`);
+        return cli('structure', work, '--json')
+          .stdout.trim()
+          .split('\n')
+          .filter(Boolean)
+          .map((l) => JSON.parse(l).kind);
+      };
+      expect(rowsOf('bam po dang po/', 'ལེའུ་སྟེ་དང་པོའོ། །')).toEqual([
+        'division',
+      ]);
+      expect(
+        rowsOf(`ma rdzogs so// ${Array(198).fill('chos').join(' ')}`, 'chos/'),
+      ).toEqual([]);
+    });
   });
 });

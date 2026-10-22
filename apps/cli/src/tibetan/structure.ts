@@ -218,7 +218,15 @@ const GA_KA_FINAL = /(?<!n)g$|k$/;
 /** Words that make a following rdzogs so prose (`ma rdzogs so`, `yongs su rdzogs so`). */
 const PROSE_BEFORE = new Set(['ma', 'mi', 'su', 'par']);
 
-/** One volume prepared for matching. */
+/** Syllables of a volume's end carried into the next: a formula and its statement. */
+const CARRY = 200;
+/** Syllables before those, kept so a formula there is read as before. */
+const LOOKBEHIND = 40;
+
+const scriptOf = (sides: Side[]) =>
+  detectScript(sides.map((s) => s.text).join('\n'));
+
+/** One volume, with the end of the one before it, prepared for matching. */
 class Text {
   readonly forms: string[];
   private readonly unicode: boolean;
@@ -226,6 +234,8 @@ class Text {
   constructor(
     readonly sides: Side[],
     readonly syllables: PlacedSyllable[],
+    /** The volume of each side. */
+    readonly vols: (number | string)[],
   ) {
     this.forms = syllables.map((s) => form(s.ewts));
     this.unicode =
@@ -444,7 +454,7 @@ function terminatorFormula(t: Text, i: number, c: Compiled): Found | null {
     : { kind: 'end', label: '', number: null, start: i, end: i + len - 1 };
 }
 
-type Placed = Found & { vol: number | string; v: number; t: Text };
+type Placed = Found & { v: number; t: Text };
 
 function speechFormula(t: Text, i: number, c: Compiled): Found | null {
   for (const { label, forms } of c.speech)
@@ -503,14 +513,36 @@ export function structure(
   const found: Placed[] = [];
   // The first side of each volume.
   const starts: Place[] = [];
+  // The previous volume from after its last formula, for one that runs on,
+  // and where in it to resume.
+  const none = { sides: [], syllables: [], vols: [], scan: 0 };
+  let carry: {
+    sides: Side[];
+    syllables: PlacedSyllable[];
+    vols: (number | string)[];
+    scan: number;
+  } = none;
   for (const volume of corpus.volumes) {
-    const { sides, syllables } = readVolume(volume.path);
-    const t = new Text(sides, syllables);
+    const own = readVolume(volume.path);
     const vol = volume.vol ?? volume.label;
     const v = starts.length;
-    starts.push({ vol, ref: sides[0]?.ref ?? '' });
-    let floor = 0;
-    for (let j = 0; j < syllables.length; j++) {
+    starts.push({ vol, ref: own.sides[0]?.ref ?? '' });
+    // A formula does not run on into a volume in another script.
+    if (carry.sides.length && scriptOf(carry.sides) !== scriptOf(own.sides))
+      carry = none;
+    const base = carry.sides.length;
+    for (const syl of own.syllables) syl.side += base;
+    const t = new Text(
+      carry.sides.concat(own.sides),
+      carry.syllables.concat(own.syllables),
+      carry.vols.concat(own.sides.map(() => vol)),
+    );
+    const { syllables } = t;
+    // The volume's own first syllable: a statement crosses into the volume
+    // before only with a formula that does.
+    const first = carry.syllables.length;
+    let floor = carry.scan;
+    for (let j = carry.scan; j < syllables.length; j++) {
       const hit =
         ordinalFormula(t, j, c) ??
         terminatorFormula(t, j, c) ??
@@ -518,13 +550,29 @@ export function structure(
       if (!hit) continue;
       hit.start = t.statementStart(
         hit.start,
-        floor,
+        hit.start >= first ? Math.max(floor, first) : floor,
         hit.kind === 'speech' ? 40 : 80,
       );
-      found.push({ ...hit, vol, v, t });
+      found.push({ ...hit, v, t });
       floor = hit.end + 1;
       j = hit.end;
     }
+    // Enough of the volume's end for a formula and its statement.
+    const from = Math.max(floor, syllables.length - CARRY);
+    if (from >= syllables.length) {
+      carry = none;
+      continue;
+    }
+    const keep = Math.max(0, from - LOOKBEHIND);
+    const side = syllables[keep].side;
+    carry = {
+      sides: t.sides.slice(side),
+      syllables: syllables
+        .slice(keep)
+        .map((syl) => ({ ...syl, side: syl.side - side })),
+      vols: t.vols.slice(side),
+      scan: from - keep,
+    };
   }
 
   // A label that takes up another's count (brtag pa’i rgyal po 1–4, then
@@ -586,16 +634,21 @@ export function structure(
   const closed: ({ at: number; place: Place } | undefined)[] = [];
   found.forEach((f, i) => {
     const { t } = f;
+    const volOf = (k: number) => t.vols[t.syllables[k].side];
+    const vol = volOf(f.end);
     const ref = (k: number) => t.sides[t.syllables[k].side].ref;
+    // A side in another volume is named with it.
+    const at = (k: number) =>
+      volOf(k) === vol ? ref(k) : `${volOf(k)}:${ref(k)}`;
     const source = t.slice(f.start, f.end);
     const entry: StructureEntry = {
       kind: f.kind,
       level: null,
       label: f.label,
       number: f.number,
-      vol: f.vol,
-      from: ref(f.start),
-      at: ref(f.start),
+      vol,
+      from: at(f.start),
+      at: at(f.start),
       to: ref(f.end),
       note: '',
       text: t.ewts(source),
@@ -616,7 +669,7 @@ export function structure(
       }
       if (begin)
         entry.from =
-          begin.vol === f.vol ? begin.ref : `${begin.vol}:${begin.ref}`;
+          begin.vol === vol ? begin.ref : `${begin.vol}:${begin.ref}`;
       const changed = formChange.get(i);
       entry.note = [
         changed ? `label form changes from ${changed}` : '',
@@ -639,8 +692,8 @@ export function structure(
       // The side after the formula, or the next volume's first side.
       const place =
         f.end + 1 < t.syllables.length
-          ? { vol: f.vol, ref: ref(f.end + 1) }
-          : (starts[f.v + 1] ?? { vol: f.vol, ref: ref(f.end) });
+          ? { vol: volOf(f.end + 1), ref: ref(f.end + 1) }
+          : (starts[f.v + 1] ?? { vol, ref: ref(f.end) });
       closed[lv] = { at: i, place };
     }
     if (kinds.has(f.kind)) out.push(entry);
