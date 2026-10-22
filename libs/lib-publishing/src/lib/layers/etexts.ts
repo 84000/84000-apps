@@ -147,7 +147,7 @@ const textOptions = z
       ctx.addIssue({
         code: 'custom',
         message:
-          'Pass one of toh, witness, or a range (startVolume, startFolio, endFolio), not several.',
+          'Pass one of toh, witness, or a range (startVolume, startFolio, endFolio, optional endVolume), not several.',
       });
     }
     if (
@@ -218,6 +218,20 @@ const resolveWitness = async (
       error: `No eText collection "${collection}" in the published build. Collections: ${Object.keys(manifest.text).join(', ')}.`,
     };
   }
+  const dirName = selectorDir(selector);
+  const dir = [ETEXTS_WITNESS_ROOT, ...collection.split('/'), dirName]
+    .filter(Boolean)
+    .join('/');
+  if (
+    !dir
+      .split('/')
+      .every((part) => SAFE_SEGMENT.test(part) && !/^\.+$/.test(part))
+  ) {
+    return {
+      status: 'not-found',
+      error: `"${collection}" or "${dirName}" is not a usable name.`,
+    };
+  }
   const reader = readerFor(context.client);
   let plan;
   try {
@@ -231,16 +245,6 @@ const resolveWitness = async (
   }
   if (plan.status !== 'ready') return plan;
 
-  const dirName = selectorDir(selector);
-  const dir = [ETEXTS_WITNESS_ROOT, ...collection.split('/'), dirName]
-    .filter(Boolean)
-    .join('/');
-  if (!dir.split('/').every((segment) => SAFE_SEGMENT.test(segment))) {
-    return {
-      status: 'not-found',
-      error: `"${collection}" or "${dirName}" is not a usable name.`,
-    };
-  }
   const sidesPerVolume = archive.volumes
     ? Math.ceil(archive.folios / archive.volumes)
     : 0;

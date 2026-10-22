@@ -12,7 +12,7 @@
 import type { DataClient } from '@eightyfourthousand/data-access';
 import { createHash } from 'node:crypto';
 import { folioLabel, parseFolioLabel } from '../folio';
-import { readKeyset } from '../snapshot/paging';
+import { chunk, IN_BATCH_SIZE, readKeyset } from '../snapshot/paging';
 import { volumeFileName } from './layout';
 import type { EtextsFolioRow } from './read';
 import { renderVolumeText } from './render';
@@ -66,7 +66,9 @@ export interface WitnessReader {
   ): Promise<WitnessBound[]>;
   /**
    * A volume's sides in reading order (seq, then uuid; unsequenced sides last, as the
-   * collection archive orders them), limited to `from`..`to` when given.
+   * collection archive orders them), limited to seq `from`..`to` when given. A volume's
+   * seq values are unique, so a seq bound is one side; an open end keeps the
+   * unsequenced sides.
    */
   sides(
     volume: string,
@@ -110,31 +112,41 @@ export const createWitnessReader = (client: DataClient): WitnessReader => {
         what: 'etexts.collection_volume',
       }),
     worksByToh: async (collection, toh) => {
-      const { data, error } = await db
-        .from('conceptual_work_toh')
-        .select('conceptual_work_uuid')
-        .eq('toh', toh)
-        .order('uuid')
-        .limit(1000);
-      if (error) fail('etexts.conceptual_work_toh', error);
+      const mappings = await readKeyset<{
+        uuid: string;
+        conceptual_work_uuid: string | null;
+      }>({
+        build: () =>
+          db
+            .from('conceptual_work_toh')
+            .select('uuid,conceptual_work_uuid')
+            .eq('toh', toh),
+        idColumn: 'uuid',
+        what: 'etexts.conceptual_work_toh',
+      });
       const works = [
         ...new Set(
-          ((data ?? []) as { conceptual_work_uuid: string | null }[])
+          mappings
             .map((row) => row.conceptual_work_uuid)
             .filter((uuid): uuid is string => Boolean(uuid)),
         ),
       ];
-      if (!works.length) return [];
-      return readKeyset<WitnessWorkRow & Record<string, unknown>>({
-        build: () =>
-          db
-            .from('works')
-            .select(WITNESS_COLUMNS)
-            .eq('collection_uuid', collection)
-            .in('conceptual_work', works),
-        idColumn: 'uuid',
-        what: 'etexts.works',
-      });
+      const out: WitnessWorkRow[] = [];
+      for (const batch of chunk(works, IN_BATCH_SIZE)) {
+        out.push(
+          ...(await readKeyset<WitnessWorkRow & Record<string, unknown>>({
+            build: () =>
+              db
+                .from('works')
+                .select(WITNESS_COLUMNS)
+                .eq('collection_uuid', collection)
+                .in('conceptual_work', batch),
+            idColumn: 'uuid',
+            what: 'etexts.works',
+          })),
+        );
+      }
+      return out;
     },
     worksBySiglum: (collection, siglum) =>
       readKeyset<WitnessWorkRow & Record<string, unknown>>({
@@ -237,7 +249,7 @@ export type WitnessPlan =
   | { status: 'not-found'; error: string };
 
 const witnessName = (w: WitnessWorkRow) =>
-  w.rkts_id && /^[A-Za-z0-9._-]+$/.test(w.rkts_id) ? w.rkts_id : w.uuid;
+  w.rkts_id && /^[A-Za-z0-9_-]+$/.test(w.rkts_id) ? w.rkts_id : w.uuid;
 
 const describeWitness = (w: WitnessWorkRow) =>
   `${w.rkts_id ?? w.uuid}${w.bdrc_id ? ` (BDRC ${w.bdrc_id})` : ''}`;
@@ -312,9 +324,10 @@ export const planWitness = async ({
       reader.sidesLabelled(startVol.uuid, start.folio, start.side),
       reader.sidesLabelled(endVol.uuid, end.folio, end.side),
     ]);
-    // A label can repeat in a volume (an OCR misread); take the widest span.
-    const first = starts[0];
-    const last = ends[ends.length - 1];
+    // A label can repeat in a volume (an OCR misread); take the widest span. A side
+    // with no reading position cannot bound one.
+    const first = starts.find((s) => s.seq != null);
+    const last = ends.filter((s) => s.seq != null).pop();
     if (!first || !last) {
       const [vol, label] = first
         ? [selector.endVolume, selector.endFolio]
@@ -352,21 +365,28 @@ export const planWitness = async ({
         error: `${collectionKey} has no witness of ${asked}. Look the work up in etexts/catalog/works.tsv (the etexts.catalog layer).`,
       };
     }
-    for (const w of [...works].sort((a, b) =>
-      (a.rkts_id ?? '').localeCompare(b.rkts_id ?? '', 'en', {
-        numeric: true,
-      }),
+    // Some collections repeat a siglum number; later witnesses get "-2", "-3".
+    const seen = new Map<string, number>();
+    for (const w of [...works].sort(
+      (a, b) =>
+        (a.rkts_id ?? '').localeCompare(b.rkts_id ?? '', 'en', {
+          numeric: true,
+        }) ||
+        (a.fs && b.fs ? before(a.fs, b.fs, volNum) : 0) ||
+        a.uuid.localeCompare(b.uuid),
     )) {
       const { fs, fe } = w;
       const reason = !fs
         ? 'no start folio'
         : !fe
           ? 'no end folio'
-          : !volNumOf.has(fs.vol) || !volNumOf.has(fe.vol)
-            ? 'a bounding side outside the collection'
-            : before(fe, fs, volNum) < 0
-              ? 'an end before its start'
-              : null;
+          : fs.seq == null || fe.seq == null
+            ? 'a bounding side with no reading position'
+            : !volNumOf.has(fs.vol) || !volNumOf.has(fe.vol)
+              ? 'a bounding side outside the collection'
+              : before(fe, fs, volNum) < 0
+                ? 'an end before its start'
+                : null;
       if (reason || !fs || !fe) {
         skipped.push({
           witness: w,
@@ -374,8 +394,11 @@ export const planWitness = async ({
         });
         continue;
       }
+      const base = witnessName(w);
+      const count = (seen.get(base) ?? 0) + 1;
+      seen.set(base, count);
       spans.push({
-        name: witnessName(w),
+        name: count === 1 ? base : `${base}-${count}`,
         witness: w,
         start: fs,
         end: fe,
@@ -398,9 +421,10 @@ export const planWitness = async ({
 
   const fingerprint = createHash('sha256')
     .update(
-      JSON.stringify(
-        spans.map((s) => [s.name, s.start.uuid, s.end.uuid, s.volumes]),
-      ),
+      JSON.stringify([
+        spans.map((s) => [s.name, s.start, s.end, s.volumes, s.witness]),
+        skipped,
+      ]),
     )
     .digest('hex')
     .slice(0, 16);

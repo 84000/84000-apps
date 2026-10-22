@@ -80,8 +80,9 @@ const work = (
   fs: string | null,
   fe: string | null,
   boundary_status = 'anchored',
+  uuid = `w-${rkts_id}`,
 ): WitnessWorkRow => ({
-  uuid: `w-${rkts_id}`,
+  uuid,
   rkts_id,
   bdrc_id: `WA${rkts_id}`,
   title_bo: `title ${rkts_id}`,
@@ -103,11 +104,15 @@ const WORKS: WitnessWorkRow[] = [
   work('S12', 'cw10', 'v3-0007', 'v3-0010'),
   // A witness of cw10 with no boundary.
   work('S13', 'cw10', null, null, 'start-off-text'),
+  // One siglum number twice (as kangyur/Dm has), overlapping in volume 2.
+  work('S14', 'cw14', 'v2-0003', 'v2-0008', 'anchored', 'w-S14-late'),
+  work('S14', 'cw14', 'v2-0001', 'v2-0004', 'anchored', 'w-S14-early'),
 ];
 
 const TOH = new Map([
   ['toh10', ['cw10']],
   ['toh11', ['cw11']],
+  ['toh14', ['cw14']],
 ]);
 
 /** Reads the fixture as the tables would answer. */
@@ -349,6 +354,37 @@ describe('one witness of an eText collection', () => {
     );
   });
 
+  it('keeps witnesses that share a siglum number apart', async () => {
+    const { files, plan } = await ready({ witness: 'S14' });
+    expect(plan.spans.map((s) => [s.name, s.witness?.uuid])).toEqual([
+      ['S14', 'w-S14-early'],
+      ['S14-2', 'w-S14-late'],
+    ]);
+    expect(linesOf(files.get('S14/002.txt'))).toHaveLength(4);
+    expect(linesOf(files.get('S14-2/002.txt'))).toHaveLength(6);
+    expect(
+      linesOf(files.get('witnesses.tsv'))
+        .slice(1)
+        .map((row) => row.split('\t')[0]),
+    ).toEqual(['S14', 'S14-2']);
+  });
+
+  it('skips a witness bounded by a side with no reading position', async () => {
+    const unsequenced = { ...(WORKS[0].fs as WitnessBound), seq: null };
+    const reader: WitnessReader = {
+      ...fixtureReader(),
+      worksBySiglum: async () => [{ ...WORKS[0], fs: unsequenced }],
+    };
+    const plan = await planWitness({
+      reader,
+      collectionKey: 'kangyur/S',
+      selector: { witness: 'S10' },
+    });
+    expect(plan.status === 'not-found' && plan.error).toMatch(
+      /no reading position/,
+    );
+  });
+
   it('reads an explicit range across volumes, widest where a label repeats', async () => {
     const { volumeFiles } = await publish();
     const across = await ready({
@@ -476,22 +512,29 @@ describe('etexts.text', () => {
     ]);
   });
 
-  it('changes its data version when a bounding side does', async () => {
+  it('changes its data version when a bounding side or the witness record does', async () => {
     const { client } = await publish();
-    const version = async (reader: WitnessReader) => {
+    const version = async (row: WitnessWorkRow) => {
+      const reader: WitnessReader = {
+        ...fixtureReader(),
+        worksBySiglum: async () => [row],
+      };
       const resolved = await createEtextsTextLayer(() => reader).resolve(
         contextFor(client),
         layer.options.parse({ collection: 'kangyur/S', witness: 'S10' }),
       );
       return resolved.status === 'ready' ? resolved.dataVersion : null;
     };
-    const reloaded: WitnessReader = {
-      ...fixtureReader(),
-      worksBySiglum: async () => [
-        { ...WORKS[0], fs: { ...(WORKS[0].fs as WitnessBound), uuid: 'new' } },
-      ],
-    };
-    expect(await version(fixtureReader())).not.toBe(await version(reloaded));
+    const base = WORKS[0];
+    const fs = base.fs as WitnessBound;
+    const versions = await Promise.all([
+      version(base),
+      version({ ...base, fs: { ...fs, uuid: 'reloaded' } }),
+      version({ ...base, fs: { ...fs, seq: 3 } }),
+      version({ ...base, boundary_status: 'reference' }),
+    ]);
+    expect(new Set(versions).size).toBe(4);
+    expect(await version(base)).toBe(versions[0]);
   });
 
   it('names its directories for the selection', async () => {
