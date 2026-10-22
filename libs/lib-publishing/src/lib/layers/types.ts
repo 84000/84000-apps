@@ -13,7 +13,7 @@
 
 import type { DataClient } from '@eightyfourthousand/data-access';
 import type { z } from 'zod';
-import type { BundleFormat } from './format';
+import type { BundleFormat, TibetanFormat } from './format';
 
 /** The permission a layer requires, from the `editor.*` family. */
 export type LayerPermission = 'editor.read' | 'editor.edit' | 'editor.admin';
@@ -31,7 +31,7 @@ export interface LayerContext {
    * the layer runs; never infer authorization from this client.
    */
   client: DataClient;
-  /** Bundle-wide format options, already validated as supported. */
+  /** Bundle-wide format options, already checked against this layer's `tibetanFormats`. */
   format: BundleFormat;
   now: () => number;
   /** Runs work after the response, such as a background refresh. */
@@ -137,6 +137,13 @@ export interface SnapshotLayer<Options extends z.ZodObject = z.ZodObject> {
   typicalSize: string;
   /** Prebuilt layers are signed from storage, never rebuilt per bundle. */
   prebuilt: boolean;
+  /**
+   * The `format.tibetan` values the layer writes; `['unicode']` when omitted. A
+   * generated layer refuses a bundle asking for any other. A prebuilt layer names the
+   * format its archive holds and keeps it whatever is asked. A layer without Tibetan
+   * lists every value.
+   */
+  tibetanFormats?: readonly TibetanFormat[];
   resolve(
     context: LayerContext,
     options: z.output<Options>,

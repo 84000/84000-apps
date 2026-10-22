@@ -6,7 +6,7 @@
 import { after } from 'next/server';
 import { hasPermission } from '@eightyfourthousand/data-access';
 import {
-  BUNDLE_FORMAT_OPTIONS,
+  bundleFormatOptions,
   MAX_BUNDLE_BYTES,
   createServiceRoleClient,
   describeLayers,
@@ -98,7 +98,7 @@ export const snapshotBundleQueries = {
         granted: granted.get(layer.permission) ?? false,
       })),
       presets: snapshotLayerRegistry.presets,
-      formats: BUNDLE_FORMAT_OPTIONS,
+      formats: bundleFormatOptions(snapshotLayerRegistry.layers),
       maxBundleBytes: MAX_BUNDLE_BYTES,
     };
   },

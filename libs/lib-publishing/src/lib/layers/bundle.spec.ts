@@ -470,7 +470,57 @@ describe('getSnapshotBundle', () => {
   it('refuses invalid layers and formats', async () => {
     const { run } = setup();
     expect((await run([{ layer: 'work.nope' }])).status).toBe('invalid');
-    expect((await run(MIXED, { tibetan: 'ewts' })).status).toBe('invalid');
+    expect((await run(MIXED, { tibetan: 'wylie' })).status).toBe('invalid');
+  });
+
+  it('refuses a format a generated layer does not write, naming the layer', async () => {
+    const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
+    const { run, writes } = setup({
+      layers: [prebuiltLayer(() => 'snap-1'), generatedLayer(generate)],
+    });
+    expect(await run(MIXED, { tibetan: 'ewts' })).toEqual({
+      status: 'invalid',
+      error:
+        'format.tibetan "ewts" is not available for etexts.ranges (writes `unicode`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.',
+    });
+    expect(generate).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('keeps a prebuilt layer in its own format and says so', async () => {
+    const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
+    const { run, objects } = setup({
+      layers: [
+        prebuiltLayer(() => 'snap-1'),
+        { ...generatedLayer(generate), tibetanFormats: ['unicode', 'ewts'] },
+      ],
+    });
+    const unicode = ready(await run(MIXED));
+    const bundle = ready(await run(MIXED, { tibetan: 'ewts' }));
+    expect(bundle.bundleId).not.toBe(unicode.bundleId);
+    const own = untarGzTree(
+      objects.get(`work-snapshots/${objectPath(bundle.bundleId)}`) as Buffer,
+    );
+    const files = new Map(own.tree);
+    const readme = files.get('README.md') as string;
+    expect(readme).toContain(
+      'Tibetan: `ewts` in generated layers. `work.draft` is a prebuilt archive and keeps its own format, Unicode.',
+    );
+    expect(readme).toMatch(
+      /## work\.draft \(work: toh8\)\n\nThe work draft\.\n\nTibetan here is in Unicode: a prebuilt archive keeps its own format/,
+    );
+    expect(readme).not.toMatch(/## etexts\.ranges[\s\S]*Tibetan here/);
+    const manifest = JSON.parse(files.get('manifest.json') as string);
+    expect(manifest.format).toEqual({ tibetan: 'ewts' });
+    expect(
+      manifest.layers.map((l: { layer: string; tibetan: string }) => [
+        l.layer,
+        l.tibetan,
+      ]),
+    ).toEqual([
+      ['work.draft', 'unicode'],
+      ['etexts.ranges', 'ewts'],
+    ]);
   });
 
   it('reports a storage failure as an error', async () => {
