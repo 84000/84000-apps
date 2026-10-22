@@ -1,10 +1,10 @@
 /**
  * Bundle-wide format options: one value per bundle, honoured layer by layer.
  *
- * Each layer says which `format.tibetan` values it writes (`tibetanFormats`). A
- * generated layer asked for a value it does not write refuses the bundle; a prebuilt
- * archive keeps the format it was built in, whatever is asked, and the README and
- * manifest say so.
+ * Each layer says which `format.tibetan` values it writes (`tibetanFormats`). A layer
+ * that would generate files in a value it does not write refuses the bundle; a
+ * prebuilt archive keeps the format it was built in, whatever is asked, and the
+ * README and manifest say so.
  */
 
 import { z } from 'zod';
@@ -28,15 +28,18 @@ export const layerTibetanFormats = (
   layer: Pick<SnapshotLayer, 'tibetanFormats'>,
 ): readonly TibetanFormat[] => layer.tibetanFormats ?? DEFAULT_TIBETAN_FORMATS;
 
+/** The format of every stored (prebuilt) archive. */
+export const PREBUILT_TIBETAN_FORMAT: TibetanFormat = 'unicode';
+
 /**
- * The Tibetan format a layer's files are actually in, given the bundle's: the
- * requested one for a generated layer, the archive's own for a prebuilt one.
+ * The Tibetan format a layer's files are in: the bundle's for generated files, the
+ * archive's own for a prebuilt one.
  */
 export const writtenTibetanFormat = (
-  layer: Pick<SnapshotLayer, 'tibetanFormats' | 'prebuilt'>,
+  kind: 'generated' | 'prebuilt',
   format: BundleFormat,
 ): TibetanFormat =>
-  layer.prebuilt ? layerTibetanFormats(layer)[0] : format.tibetan;
+  kind === 'prebuilt' ? PREBUILT_TIBETAN_FORMAT : format.tibetan;
 
 /** One bundle-wide option, as discovery lists it. */
 export interface BundleFormatOption {
@@ -61,21 +64,22 @@ export const bundleFormatOptions = (
     'name' | 'prebuilt' | 'tibetanFormats'
   >[],
 ): BundleFormatOption[] => {
-  const generated = layers.filter((l) => !l.prebuilt);
-  const supported = TIBETAN_FORMATS.filter(
-    (value) =>
-      value === 'unicode' ||
-      generated.some((l) => layerTibetanFormats(l).includes(value)),
-  );
   const writers = (value: TibetanFormat) =>
-    generated
+    layers
       .filter((l) => layerTibetanFormats(l).includes(value))
       .map((l) => l.name);
+  const supported = TIBETAN_FORMATS.filter(
+    (value) => value === 'unicode' || writers(value).length > 0,
+  );
   const perValue = supported
     .filter((value) => value !== 'unicode')
     .map((value) => `\`${value}\` is written by ${quoted(writers(value))}`);
-  const unicodeOnly = generated
-    .filter((l) => !layerTibetanFormats(l).some((v) => v !== 'unicode'))
+  const unicodeOnly = layers
+    .filter(
+      (l) =>
+        !l.prebuilt &&
+        !layerTibetanFormats(l).some((v) => v !== PREBUILT_TIBETAN_FORMAT),
+    )
     .map((l) => l.name);
   const prebuilt = layers.filter((l) => l.prebuilt).map((l) => l.name);
   const sentences = [
@@ -85,7 +89,7 @@ export const bundleFormatOptions = (
       ? `Generated layers that write only \`unicode\` (${quoted(unicodeOnly)}) refuse any other value: request them in a separate bundle.`
       : '',
     prebuilt.length
-      ? `Prebuilt archives (${quoted(prebuilt)}) keep their own format (Unicode) whatever is asked; the README and manifest.json say which format each layer is in.`
+      ? `Prebuilt archives (${quoted(prebuilt)}) keep their own format (Unicode) whatever is asked; only generated files follow \`format.tibetan\`. The README and manifest.json say which format each layer is in.`
       : '',
   ];
   return [
@@ -117,23 +121,17 @@ export const parseBundleFormat = (
 };
 
 /**
- * Why `format` cannot be honoured by the generated layers among `layers`, or null.
- * Prebuilt layers never refuse: they keep their own format.
+ * Why `format` cannot be honoured by `layers`, the layers that will generate files,
+ * or null. Leave out prebuilt archives: they keep their own format.
  */
 export const unsupportedFormatError = (
-  layers: readonly Pick<
-    SnapshotLayer,
-    'name' | 'prebuilt' | 'tibetanFormats'
-  >[],
+  layers: readonly Pick<SnapshotLayer, 'name' | 'tibetanFormats'>[],
   format: BundleFormat,
 ): string | null => {
   const refusing = [
     ...new Map(
       layers
-        .filter(
-          (l) =>
-            !l.prebuilt && !layerTibetanFormats(l).includes(format.tibetan),
-        )
+        .filter((l) => !layerTibetanFormats(l).includes(format.tibetan))
         .map((l) => [l.name, l]),
     ).values(),
   ];

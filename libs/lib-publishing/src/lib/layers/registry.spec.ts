@@ -280,10 +280,8 @@ describe('Tibetan formats per layer', () => {
   const passages = layer('work.passages');
   const draft = { ...layer('work.draft'), prebuilt: true };
 
-  it('refuses only generated layers that do not write the value', () => {
-    expect(
-      unsupportedFormatError([folios, draft], { tibetan: 'ewts' }),
-    ).toBeNull();
+  it('refuses only layers that do not write the value', () => {
+    expect(unsupportedFormatError([folios], { tibetan: 'ewts' })).toBeNull();
     expect(
       unsupportedFormatError([passages], { tibetan: 'unicode' }),
     ).toBeNull();

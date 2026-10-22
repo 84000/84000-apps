@@ -487,6 +487,25 @@ describe('getSnapshotBundle', () => {
     expect(writes).toEqual([]);
   });
 
+  it('refuses a format once a prebuilt layer chooses to generate files', async () => {
+    const slicing: SnapshotLayer = {
+      ...generatedLayer(),
+      prebuilt: true,
+    };
+    const { run, writes } = setup({ layers: [slicing] });
+    expect(
+      await run([{ layer: 'etexts.ranges' }], { tibetan: 'both' }),
+    ).toEqual({
+      status: 'invalid',
+      error:
+        'format.tibetan "both" is not available for etexts.ranges (writes `unicode`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.',
+    });
+    expect(writes).toEqual([]);
+    expect(
+      (await run([{ layer: 'etexts.ranges' }], { tibetan: 'unicode' })).status,
+    ).toBe('ready');
+  });
+
   it('keeps a prebuilt layer in its own format and says so', async () => {
     const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
     const { run, objects } = setup({

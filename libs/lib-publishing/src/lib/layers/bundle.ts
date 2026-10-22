@@ -43,7 +43,7 @@ import type {
 } from './types';
 
 /** Bumped when the bundle's own files change shape; part of the cache key. */
-export const BUNDLE_FORMAT_VERSION = 1;
+export const BUNDLE_FORMAT_VERSION = 2;
 
 /** The largest estimated download, every part compressed, a bundle may have. */
 export const MAX_BUNDLE_BYTES = 256 * 1024 * 1024;
@@ -214,8 +214,8 @@ const tibetanLine = (format: BundleFormat, resolved: Resolved[]) => {
     ...new Set(
       resolved
         .filter(
-          ({ request }) =>
-            writtenTibetanFormat(request.layer, format) !== format.tibetan,
+          ({ output }) =>
+            writtenTibetanFormat(output.kind, format) !== format.tibetan,
         )
         .map(({ request }) => `\`${request.layer.name}\``),
     ),
@@ -270,7 +270,7 @@ const renderReadme = ({
       request.layer.readme(request.options, output).trim(),
     );
     if (output.note) lines.push('', `Note: ${output.note}`);
-    const written = writtenTibetanFormat(request.layer, format);
+    const written = writtenTibetanFormat(output.kind, format);
     if (written !== format.tibetan) {
       lines.push(
         '',
@@ -362,7 +362,7 @@ const buildTree = async ({
       dir: output.dir,
       dataVersion: output.dataVersion,
       prebuilt: output.kind === 'prebuilt',
-      tibetan: writtenTibetanFormat(request.layer, format),
+      tibetan: writtenTibetanFormat(output.kind, format),
       part:
         output.kind === 'prebuilt' ? output.archive.filename : `${root}.tar.gz`,
     })),
@@ -430,8 +430,9 @@ export const getSnapshotBundle = async ({
   const parsed = parseLayerRequests(registry, request.layers);
   if (!parsed.ok) return { status: 'invalid', error: parsed.error };
   const { requests } = parsed;
+  // Layers that always generate are checked before anything is read.
   const unsupported = unsupportedFormatError(
-    requests.map((r) => r.layer),
+    requests.map((r) => r.layer).filter((l) => !l.prebuilt),
     format.format,
   );
   if (unsupported) return { status: 'invalid', error: unsupported };
@@ -490,6 +491,14 @@ export const getSnapshotBundle = async ({
         error: pending.map((p) => p.message).join(' '),
       };
     }
+    // A layer that may resolve either way is checked once it chose to generate.
+    const unwritable = unsupportedFormatError(
+      resolved
+        .filter(({ output }) => output.kind === 'generated')
+        .map(({ request: r }) => r.layer),
+      format.format,
+    );
+    if (unwritable) return { status: 'invalid', error: unwritable };
 
     const conflict = directoryConflict(
       resolved.map(({ request: r, output }) => ({
