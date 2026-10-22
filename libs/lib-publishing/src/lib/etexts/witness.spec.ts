@@ -107,6 +107,9 @@ const WORKS: WitnessWorkRow[] = [
   // One siglum number twice (as kangyur/Dm has), overlapping in volume 2.
   work('S14', 'cw14', 'v2-0003', 'v2-0008', 'anchored', 'w-S14-late'),
   work('S14', 'cw14', 'v2-0001', 'v2-0004', 'anchored', 'w-S14-early'),
+  // A real siglum number that a suffix would also produce, and an unsafe one.
+  work('S14-2', 'cw14', 'v3-0001', 'v3-0002', 'anchored'),
+  work('Q760,01', 'cw14', 'v3-0003', 'v3-0004', 'anchored'),
 ];
 
 const TOH = new Map([
@@ -355,18 +358,21 @@ describe('one witness of an eText collection', () => {
   });
 
   it('keeps witnesses that share a siglum number apart', async () => {
-    const { files, plan } = await ready({ witness: 'S14' });
+    const { files, plan } = await ready({ toh: 'toh14' });
     expect(plan.spans.map((s) => [s.name, s.witness?.uuid])).toEqual([
+      ['Q760_01', 'w-Q760,01'],
       ['S14', 'w-S14-early'],
-      ['S14-2', 'w-S14-late'],
+      ['S14-3', 'w-S14-late'],
+      ['S14-2', 'w-S14-2'],
     ]);
     expect(linesOf(files.get('S14/002.txt'))).toHaveLength(4);
-    expect(linesOf(files.get('S14-2/002.txt'))).toHaveLength(6);
+    expect(linesOf(files.get('S14-3/002.txt'))).toHaveLength(6);
+    expect(linesOf(files.get('S14-2/003.txt'))).toHaveLength(2);
     expect(
       linesOf(files.get('witnesses.tsv'))
         .slice(1)
         .map((row) => row.split('\t')[0]),
-    ).toEqual(['S14', 'S14-2']);
+    ).toEqual(['Q760_01', 'S14', 'S14-3', 'S14-2']);
   });
 
   it('skips a witness bounded by a side with no reading position', async () => {

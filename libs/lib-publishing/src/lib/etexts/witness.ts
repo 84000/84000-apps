@@ -248,8 +248,11 @@ export type WitnessPlan =
     }
   | { status: 'not-found'; error: string };
 
-const witnessName = (w: WitnessWorkRow) =>
-  w.rkts_id && /^[A-Za-z0-9_-]+$/.test(w.rkts_id) ? w.rkts_id : w.uuid;
+/** A witness's directory name: its siglum number, with unsafe characters as `_`. */
+const witnessName = (w: WitnessWorkRow) => {
+  const name = (w.rkts_id ?? '').trim().replace(/[^A-Za-z0-9._-]/g, '_');
+  return name && !/^\.+$/.test(name) ? name : w.uuid;
+};
 
 const describeWitness = (w: WitnessWorkRow) =>
   `${w.rkts_id ?? w.uuid}${w.bdrc_id ? ` (BDRC ${w.bdrc_id})` : ''}`;
@@ -366,12 +369,15 @@ export const planWitness = async ({
       };
     }
     // Some collections repeat a siglum number; later witnesses get "-2", "-3".
-    const seen = new Map<string, number>();
+    // Every siglum number keeps its own name; only the repeats are suffixed.
+    const taken = new Set(works.map(witnessName));
+    const named = new Set<string>();
     for (const w of [...works].sort(
       (a, b) =>
         (a.rkts_id ?? '').localeCompare(b.rkts_id ?? '', 'en', {
           numeric: true,
         }) ||
+        (a.fs ? 0 : 1) - (b.fs ? 0 : 1) ||
         (a.fs && b.fs ? before(a.fs, b.fs, volNum) : 0) ||
         a.uuid.localeCompare(b.uuid),
     )) {
@@ -395,10 +401,14 @@ export const planWitness = async ({
         continue;
       }
       const base = witnessName(w);
-      const count = (seen.get(base) ?? 0) + 1;
-      seen.set(base, count);
+      let name = base;
+      if (named.has(base)) {
+        for (let n = 2; taken.has(name); n++) name = `${base}-${n}`;
+      }
+      taken.add(name);
+      named.add(name);
       spans.push({
-        name: count === 1 ? base : `${base}-${count}`,
+        name,
         witness: w,
         start: fs,
         end: fe,
