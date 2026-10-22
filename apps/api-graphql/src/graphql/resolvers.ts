@@ -20,6 +20,10 @@ import { lookupQueries } from './schema/lookup/lookup.query';
 import { passageQueries } from './schema/passage/passage.query';
 import { publishMutations } from './schema/publish/publish.mutation';
 import { publishQueries } from './schema/publish/publish.query';
+import {
+  snapshotBundleMutations,
+  snapshotBundleQueries,
+} from './schema/snapshot/bundle.resolver';
 import { etextsQueries } from './schema/snapshot/etexts.query';
 import {
   snapshotMutations,
@@ -67,6 +71,7 @@ export const resolvers = {
     ...lookupQueries,
     ...passageQueries,
     ...publishQueries,
+    ...snapshotBundleQueries,
     ...userQueries,
     ...workQueries,
     glossaryInstance: glossaryInstanceResolver,
@@ -81,6 +86,7 @@ export const resolvers = {
   Mutation: {
     ...commentMutations,
     ...publishMutations,
+    ...snapshotBundleMutations,
     ...snapshotMutations,
     replace: replaceMutation,
     savePassages: savePassagesMutation,
