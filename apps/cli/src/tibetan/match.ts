@@ -294,8 +294,11 @@ export function findMatches(
     // in common: a corpus syllable counts once, and so does a probe syllable
     // the corpus repeats.
     let placed: { span: [number, number]; matched: number } | undefined;
+    const lastAt = r.seeds[r.seeds.length - 1].h.at;
     const ends = [...r.seeds[r.seeds.length - 1].offsets].sort((a, b) => a - b);
     for (const end of ends) {
+      // The corpus syllables bound what any position can reach.
+      if (r.covered.size < opts.min(probe.group[lastAt + end])) continue;
       const [from, to, covered] = probeSpan(probe, r, n, end);
       const matched = Math.min(r.covered.size, covered);
       if (matched < opts.min(probe.group[from])) continue;
