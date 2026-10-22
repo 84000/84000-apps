@@ -65,6 +65,66 @@ Confirm each of these at the start of the session:
 - Take the canonical section from `get-translation` and the titles from
   `get-work-titles`.
 
+## The structural sweep
+
+Find the closing formulas and speech formulas for the Structural Map with
+`scripts/eft.mjs structure` in this skill, never with code written
+in the session: the same text then always gives the same map, and a long text
+takes seconds. `shared-policies/analytics` decides what goes on the map; the
+script only finds the formulas. Run it with node:
+
+```sh
+node "<this skill>/scripts/eft.mjs" structure <text> > "$S/structure.tsv"
+```
+
+`<this skill>` is the directory this file is in, and `S` is
+`84000/scratch/<toh>/structure/`. `<text>` is the work's Degé text as
+`[F.12.a] …` lines, one folio side each: the directory of a download of the
+work's Degé folios (`<toh>-vol<NNN>.txt` files), or a file written by the
+`kangyur-tengyur-recensions` skill's `extract` command from the Degé eText
+collection (`kangyur/D` or `tengyur/D`). If neither can be had, build the map
+by reading, and say in the section's scope line that the sweep was not run.
+
+The output is a table, one row per formula in text order (`--json` for JSON
+lines):
+
+- `kind`: `division` (a label from the patterns, then an ordinal or _rdzogs
+  so_, then the closing shad); `ordinal` (the same shape after a word that is
+  not a known label: check it, since most are enumerations, but some are
+  divisions under a label the patterns lack); `end` (_rdzogs so_ with no
+  label, as in the final title); `speech` (_gsol pa_, _bka’ stsal pa_ and the
+  like).
+- `label` and `number`: the division label and the ordinal's value; for
+  speech, the formula. A `division` row with no number is a known label
+  closed with _rdzogs so_ and no ordinal: it is still a division closing, so
+  map it, place it by its order among that label's closings, and note the
+  missing ordinal without reconciling it.
+- `level`: nesting, 0 outermost, inferred from how often each label (with
+  the forms that continue its count) closes.
+  Check it against the text where labels nest.
+- `from`, `at`, `to`: where the division begins (the side after the previous
+  closing at its level or above; for the first, the start of the text, so
+  move it to the division's first words), where the statement holding the
+  formula begins, and where it ends. In a work of several volumes a folio in
+  another volume is prefixed with its file. A single file that runs over
+  several volumes repeats folio numbers, so `from` and `at` name the folio
+  but not its volume: give the work as a directory of volume files instead.
+- `note`: a skipped, repeated or restarted ordinal, or one that starts above
+  1, and a label that takes up another's count in a new form (_brtag pa’i
+  rgyal po_ 4, then _brtag pa_ 5). These are irregularities the map records,
+  not errors to reconcile. Numbering under a division counts afresh when the
+  division above it closes, so a restart there gets no note.
+- `text`: the statement in EWTS (house profile, closing shad kept), from the
+  previous double shad to the formula's end; for a division, its title in
+  full. `tibetan` is the same in Unicode, to check the EWTS against.
+
+Speech rows are for the Interlocutors and, in a text without divisions, the
+inferred entries; they are not map entries. The patterns (labels, ordinal
+spellings, speech formulas) are built in: `structure --print-patterns`
+prints them. When a text closes its divisions with a label or spelling they
+lack, copy them to `$S/patterns.json`, add it, rerun with
+`--patterns "$S/patterns.json"`, and name the addition in the scope line.
+
 ## Storage
 
 Read and save through the studio, not local disk: Stage 1 and Stage 2 read the

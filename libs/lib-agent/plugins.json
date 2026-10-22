@@ -99,6 +99,9 @@
       "bundles": {
         "kangyur-tengyur-recensions": {
           "scripts/eft.mjs": "apps/cli/src/main.ts"
+        },
+        "text-analysis-and-retrieval": {
+          "scripts/eft.mjs": "apps/cli/src/main.ts"
         }
       },
       "sharedReference": {

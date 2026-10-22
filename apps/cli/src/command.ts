@@ -21,7 +21,13 @@ export type Command = {
 );
 
 /** Flags that take no value, for every command. */
-const BOOLEAN_FLAGS = new Set(['regex', 'fold', 'json', 'help']);
+const BOOLEAN_FLAGS = new Set([
+  'regex',
+  'fold',
+  'json',
+  'help',
+  'print-patterns',
+]);
 
 /** Split arguments into positionals and `--name value` flags. */
 export function parseArgs(argv: string[]): {
