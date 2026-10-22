@@ -148,6 +148,8 @@ interface Run {
   v: number;
   cStart: number;
   cEnd: number;
+  /** Corpus position of the run's last seed. */
+  last: number;
   /** Candidate offsets, probe position minus corpus position. */
   offsets: number[];
   /** The phrase each offset places the run in. */
@@ -226,9 +228,10 @@ export function findMatches(
   hits.sort((a, b) => a.v - b.v || a.at - b.at);
 
   // A hit joins a recent run when it is within `gap` syllables of it in the
-  // corpus and keeps one of its offsets within `gap`: a repeated phrase stays
-  // ambiguous until a later seed settles it, and a stray seed inside a
-  // quotation starts a run of its own without breaking the quotation's.
+  // corpus and keeps one of its offsets within `gap`, moving forward in the
+  // probe: a repeated phrase stays ambiguous until a later seed settles it, a
+  // stray seed inside a quotation starts a run of its own without breaking
+  // the quotation's, and a fragment the corpus repeats is not counted twice.
   const runs: Run[] = [];
   const RECENT = 3;
   for (const h of hits) {
@@ -237,11 +240,13 @@ export function findMatches(
     for (let k = runs.length - 1; k >= Math.max(0, runs.length - RECENT); k--) {
       const run = runs[k];
       if (run.v !== h.v || h.at > run.cEnd + gap) continue;
-      // Offsets that stay near one of the run's, in the same phrase.
+      // Offsets that stay near one of the run's, in the same phrase, past
+      // where the run's last seed is in the probe.
       const kept = offsets.filter((d) =>
         run.offsets.some(
           (e) =>
             Math.abs(d - e) <= gap &&
+            h.at + d > run.last + e &&
             probe.group[h.at + d] === run.group.get(e),
         ),
       );
@@ -249,6 +254,7 @@ export function findMatches(
       run.offsets = kept;
       run.group = new Map(kept.map((d) => [d, probe.group[h.at + d]]));
       run.cEnd = Math.max(run.cEnd, h.at + n - 1);
+      run.last = h.at;
       run.seeds.push({ h, offsets: kept });
       for (let j = h.at; j < h.at + n; j++) run.covered.add(j);
       joined = true;
@@ -259,6 +265,7 @@ export function findMatches(
       v: h.v,
       cStart: h.at,
       cEnd: h.at + n - 1,
+      last: h.at,
       offsets,
       group: new Map(offsets.map((d) => [d, probe.group[h.at + d]])),
       seeds: [{ h, offsets }],

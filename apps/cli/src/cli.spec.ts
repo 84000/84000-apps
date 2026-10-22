@@ -8,7 +8,13 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from './cli';
-import { readSides, readWitnesses, witnessesAt } from './tibetan/corpus';
+import {
+  openCorpus,
+  readSides,
+  readWitnesses,
+  witnessesAt,
+} from './tibetan/corpus';
+import { findMatches, probeFromPhrases } from './tibetan/match';
 
 // One passage, in Degé Unicode and in rKTs-style EWTS.
 const PASSAGE_BO =
@@ -395,6 +401,33 @@ describe('eft', () => {
       );
       expect(code).toBe(1);
       expect(stderr).toContain('--out');
+    });
+  });
+
+  describe('chaining seeds', () => {
+    const PHRASE = 'chos thams cad rang bzhin gyis stong pa';
+    const search = (text: string) => {
+      write(at('chain.txt'), `[F.1.a] ${text}\n`);
+      const probe = probeFromPhrases([PHRASE]);
+      return findMatches(probe, openCorpus(at('chain.txt')), {
+        n: 4,
+        min: () => 5,
+        maxFreq: 1000,
+        gap: 4,
+        skipSanskrit: false,
+      }).matches;
+    };
+
+    it('does not count a fragment the corpus repeats more than once', () => {
+      expect(
+        search('chos thams cad rang chos thams cad rang chos thams cad rang/'),
+      ).toEqual([]);
+    });
+
+    it('still finds the phrase itself', () => {
+      const found = search(`dang/ ${PHRASE}/ zhes so/`);
+      expect(found).toHaveLength(1);
+      expect(found[0].matched).toBe(8);
     });
   });
 
