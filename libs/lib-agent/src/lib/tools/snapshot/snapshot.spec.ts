@@ -1,5 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types';
 import { SNAPSHOT_TOOL_NAMES, createSnapshotTools } from './index';
+import type { SnapshotBundleSource } from './bundle-source';
 import {
   toEtextsArchiveStatus,
   type EtextsArchiveStatus,
@@ -89,6 +90,11 @@ const stubSource = (
   return source;
 };
 
+/** The tools every host gets; `list-snapshot-layers` needs a bundle source. */
+const WORK_TOOL_NAMES = SNAPSHOT_TOOL_NAMES.filter(
+  (name) => name !== 'list-snapshot-layers',
+);
+
 const call = async (
   source: WorkSnapshotSource,
   name: (typeof SNAPSHOT_TOOL_NAMES)[number],
@@ -111,11 +117,21 @@ const call = async (
 describe('createSnapshotTools', () => {
   it('registers the four tools, all read-only', () => {
     const tools = createSnapshotTools(stubSource());
+    expect(tools.map((t) => t.name)).toEqual(WORK_TOOL_NAMES);
+    expect(tools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
+  });
+
+  it('adds the layer listing only when the host has a bundle source', () => {
+    const bundles = {
+      bundle: jest.fn(),
+      layers: jest.fn(),
+    } satisfies SnapshotBundleSource;
+    const tools = createSnapshotTools(stubSource(), undefined, bundles);
     expect(tools.map((t) => t.name)).toEqual([...SNAPSHOT_TOOL_NAMES]);
     expect(tools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
   });
 
-  it.each(SNAPSHOT_TOOL_NAMES)(
+  it.each(WORK_TOOL_NAMES)(
     '%s asks the source, which authorizes, before anything else',
     async (name) => {
       const source = stubSource({

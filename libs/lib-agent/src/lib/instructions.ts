@@ -71,7 +71,7 @@ A session's working files (Stage 0 records, Stage 1 drafts, collation and alignm
   readToolInstructions({ translations: 'published and in progress' }),
   `## Whole-work analysis
 
-\`work-grep\` finds every occurrence in a work's draft; \`work-ls\` and \`work-read\` browse it. \`download-snapshot\` gives a tar.gz of a work's draft or the canon's eTexts.`,
+\`work-grep\` finds every occurrence in a work's draft; \`work-ls\` and \`work-read\` browse it. \`download-snapshot\` bundles a draft, eTexts or more (\`list-snapshot-layers\`).`,
   `## Draft versus published
 
 Glossary term and search reads take \`source\`. The default, published, binds a translator; \`"draft"\` adds terminology still under review (not yet binding) and reaches works in preparation.`,

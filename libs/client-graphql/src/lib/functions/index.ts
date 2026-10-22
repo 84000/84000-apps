@@ -115,3 +115,19 @@ export {
   type EtextsSnapshot,
   type GetEtextsSnapshotResult,
 } from './get-etexts-snapshot';
+export {
+  requestSnapshotBundle,
+  type RequestSnapshotBundleResult,
+  type SnapshotBundle,
+  type SnapshotBundleLayer,
+  type SnapshotBundlePart,
+  type SnapshotFormatInput,
+} from './request-snapshot-bundle';
+export {
+  getSnapshotLayers,
+  type GetSnapshotLayersResult,
+  type SnapshotFormatOption,
+  type SnapshotLayerCatalog,
+  type SnapshotLayerInfo,
+  type SnapshotPreset,
+} from './get-snapshot-layers';

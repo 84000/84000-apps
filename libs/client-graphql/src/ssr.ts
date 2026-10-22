@@ -44,6 +44,18 @@ export {
   type EtextsDataset,
   type EtextsSnapshot,
   type GetEtextsSnapshotResult,
+  requestSnapshotBundle,
+  type RequestSnapshotBundleResult,
+  type SnapshotBundle,
+  type SnapshotBundleLayer,
+  type SnapshotBundlePart,
+  type SnapshotFormatInput,
+  getSnapshotLayers,
+  type GetSnapshotLayersResult,
+  type SnapshotFormatOption,
+  type SnapshotLayerCatalog,
+  type SnapshotLayerInfo,
+  type SnapshotPreset,
 } from './lib/functions';
 
 // Re-export types from @eightyfourthousand/data-access for convenience

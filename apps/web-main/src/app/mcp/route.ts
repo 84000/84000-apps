@@ -30,6 +30,7 @@ import { createServerCapture } from '@eightyfourthousand/lib-instr/ssr';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { POLICY_EDITOR_APP_HTML } from '@eightyfourthousand/policy-editor-mcp-app/html';
 import { etextsSnapshotSource } from './etexts-snapshots';
+import { snapshotBundleSource } from './snapshot-bundles';
 import { workSnapshotSource } from './work-snapshots';
 
 /**
@@ -85,7 +86,8 @@ export async function POST(req: Request) {
   // The snapshot tools, over work drafts and the eTexts, are listed for
   // manager and above, the roles that hold `editor.read`; api-graphql checks
   // the permission on every call, with the caller's own token. One source per
-  // request, shared by every tool group that reads snapshots.
+  // request, shared by every tool group that reads snapshots; the layer bundles
+  // ride the same gate and are checked per layer.
   const authorization = req.headers.get('authorization') ?? '';
   const snapshots = hasRole(auth.role, 'manager')
     ? workSnapshotSource(authorization, req.signal)
@@ -105,6 +107,7 @@ export async function POST(req: Request) {
       ? createSnapshotTools(
           snapshots,
           etextsSnapshotSource(authorization, req.signal),
+          snapshotBundleSource(authorization, req.signal),
         )
       : []),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),

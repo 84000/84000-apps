@@ -557,6 +557,11 @@ export type Mutation = {
    */
   setCommentTags: CommentResult;
   /**
+   * A bundle of layers, served from cache when every layer's data is unchanged. Each
+   * layer's permission is checked first; if any is missing, nothing is built.
+   */
+  snapshotBundle: SnapshotBundle;
+  /**
    * Edit a comment's body. The author only.
    * Requires editor.edit permission.
    */
@@ -634,6 +639,12 @@ export type MutationSavePassagesArgs = {
 export type MutationSetCommentTagsArgs = {
   tags: Array<Scalars['String']['input']>;
   uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationSnapshotBundleArgs = {
+  input: SnapshotBundleInput;
 };
 
 
@@ -1011,6 +1022,11 @@ export type Query = {
    */
   search: Array<EntitySearchResult>;
   /**
+   * Every layer a bundle can hold, with its options and whether the caller may have it.
+   * Requires sign-in.
+   */
+  snapshotLayers: SnapshotLayerCatalog;
+  /**
    * How many comments carry `tag` in each work, newest activity first, across
    * the library. Reads no threads, anchors or bodies. Empty for a `published`
    * content source.
@@ -1224,11 +1240,147 @@ export type SavePassagesResult = {
   warnings?: Maybe<Array<Scalars['String']['output']>>;
 };
 
+/**
+ * A bundle of snapshot layers: one root directory holding a README, a manifest.json
+ * and each layer's files. Prebuilt layers (a work's draft, the eText archives) are
+ * signed from storage as their own parts and unpack into the same root.
+ */
+export type SnapshotBundle = {
+  __typename?: 'SnapshotBundle';
+  /**
+   * The cache key: a hash of the layers, their options, their data versions and the
+   * format. Null unless READY.
+   */
+  bundleId?: Maybe<Scalars['String']['output']>;
+  /** The bundle's own archive was already stored for this key. */
+  cached?: Maybe<Scalars['Boolean']['output']>;
+  createdAt?: Maybe<Scalars['String']['output']>;
+  error?: Maybe<Scalars['String']['output']>;
+  /** Expected download size of every part, compressed. */
+  estimatedBytes?: Maybe<Scalars['Float']['output']>;
+  layers: Array<SnapshotBundleLayer>;
+  /** The largest estimated download a bundle may have. */
+  maxBytes: Scalars['Float']['output'];
+  /** Download in order: the first creates the root, the rest unpack into it. */
+  parts: Array<SnapshotBundlePart>;
+  /** When REFUSED: the requested layers the caller lacks permission for. */
+  refusedLayers: Array<Scalars['String']['output']>;
+  /** When PENDING: seconds to wait before asking again. */
+  retryAfterSeconds?: Maybe<Scalars['Int']['output']>;
+  /** The directory every part unpacks into. */
+  root?: Maybe<Scalars['String']['output']>;
+  status: SnapshotBundleStatus;
+};
+
+export type SnapshotBundleInput = {
+  format?: InputMaybe<SnapshotFormatInput>;
+  /** Each item is { layer: "<name>", ...that layer's options }, as snapshotLayers lists. */
+  layers: Array<Scalars['JSON']['input']>;
+};
+
+export type SnapshotBundleLayer = {
+  __typename?: 'SnapshotBundleLayer';
+  /** Identifies the data the layer read: a snapshot id, a build id, a draft timestamp. */
+  dataVersion: Scalars['String']['output'];
+  /** The directory under the root this layer writes. */
+  dir: Scalars['String']['output'];
+  estimatedBytes: Scalars['Float']['output'];
+  layer: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  /** The layer's options after validation, defaults included. */
+  options: Scalars['JSON']['output'];
+  prebuilt: Scalars['Boolean']['output'];
+};
+
+export type SnapshotBundlePart = {
+  __typename?: 'SnapshotBundlePart';
+  /** Compressed size. */
+  bytes: Scalars['Float']['output'];
+  expiresAt: Scalars['String']['output'];
+  filename: Scalars['String']['output'];
+  /**
+   * Where to run `tar xzf`: "." for the bundle's own archive, which creates the root;
+   * the root for a prebuilt part.
+   */
+  into: Scalars['String']['output'];
+  /** The layers this part holds; empty for the bundle's own archive with none generated. */
+  layers: Array<Scalars['String']['output']>;
+  sha256?: Maybe<Scalars['String']['output']>;
+  url: Scalars['String']['output'];
+};
+
+export type SnapshotBundleStatus =
+  /** Storage or the database failed; worth retrying. */
+  | 'ERROR'
+  /** The layers or format are not valid; error says why. */
+  | 'INVALID'
+  | 'NOT_FOUND'
+  /** A layer's data is being prepared; ask again after retryAfterSeconds. */
+  | 'PENDING'
+  | 'READY'
+  /** The caller lacks a permission some layers require. Nothing was built. */
+  | 'REFUSED'
+  /** The estimated download exceeds maxBytes; request fewer or narrower layers. */
+  | 'TOO_LARGE';
+
 export type SnapshotDownload = {
   __typename?: 'SnapshotDownload';
   expiresAt: Scalars['String']['output'];
   filename: Scalars['String']['output'];
   url: Scalars['String']['output'];
+};
+
+export type SnapshotFormatInput = {
+  /** unicode | ewts | both. Only the values snapshotLayers lists as supported are accepted. */
+  tibetan?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** A bundle-wide format option. */
+export type SnapshotFormatOption = {
+  __typename?: 'SnapshotFormatOption';
+  default: Scalars['String']['output'];
+  description: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  /** The values accepted today. */
+  supported: Array<Scalars['String']['output']>;
+  values: Array<Scalars['String']['output']>;
+};
+
+export type SnapshotLayerCatalog = {
+  __typename?: 'SnapshotLayerCatalog';
+  formats: Array<SnapshotFormatOption>;
+  layers: Array<SnapshotLayerInfo>;
+  maxBundleBytes: Scalars['Float']['output'];
+  presets: Array<SnapshotPreset>;
+};
+
+/** A layer that can go in a bundle. */
+export type SnapshotLayerInfo = {
+  __typename?: 'SnapshotLayerInfo';
+  description: Scalars['String']['output'];
+  /** The caller holds that permission. */
+  granted: Scalars['Boolean']['output'];
+  /** Dotted: work.* layers take a work, etexts.* layers are canon-wide. */
+  name: Scalars['String']['output'];
+  /** JSON Schema of the layer's options. */
+  options: Scalars['JSON']['output'];
+  /** The editor.* permission the layer requires. */
+  permission: Scalars['String']['output'];
+  prebuilt: Scalars['Boolean']['output'];
+  /** work or canon. */
+  scope: Scalars['String']['output'];
+  /** draft, published, or both; with both, `source` is an option. */
+  sources: Array<Scalars['String']['output']>;
+  typicalSize: Scalars['String']['output'];
+};
+
+/** A named list of layers: the dataset forms of download-snapshot. */
+export type SnapshotPreset = {
+  __typename?: 'SnapshotPreset';
+  description: Scalars['String']['output'];
+  /** Layer requests; a "{param}" value is filled from the call's field of that name. */
+  layers: Array<Scalars['JSON']['output']>;
+  name: Scalars['String']['output'];
 };
 
 /** A tagged comment, placed in its work and thread. */
