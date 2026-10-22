@@ -454,7 +454,17 @@ function terminatorFormula(t: Text, i: number, c: Compiled): Found | null {
     : { kind: 'end', label: '', number: null, start: i, end: i + len - 1 };
 }
 
-type Placed = Found & { v: number; t: Text };
+/** A formula with what its row needs from its volume, so the volume can be let go. */
+type Placed = Found & {
+  v: number;
+  vol: number | string;
+  at: string;
+  to: string;
+  source: string;
+  text: string;
+  /** The side after the formula, unless it ends its volume. */
+  next: Place | null;
+};
 
 function speechFormula(t: Text, i: number, c: Compiled): Found | null {
   for (const { label, forms } of c.speech)
@@ -467,6 +477,31 @@ function speechFormula(t: Text, i: number, c: Compiled): Found | null {
         end: i + forms.length - 1,
       };
   return null;
+}
+
+/** A formula with its row's folios and text, read while its volume is loaded. */
+function place(t: Text, f: Found, v: number): Placed {
+  const volOf = (k: number) => t.vols[t.syllables[k].side];
+  const ref = (k: number) => t.sides[t.syllables[k].side].ref;
+  const vol = volOf(f.end);
+  const source = t.slice(f.start, f.end);
+  return {
+    ...f,
+    v,
+    vol,
+    // A side in another volume is named with it.
+    at:
+      volOf(f.start) === vol
+        ? ref(f.start)
+        : `${volOf(f.start)}:${ref(f.start)}`,
+    to: ref(f.end),
+    source,
+    text: t.ewts(source),
+    next:
+      f.end + 1 < t.syllables.length
+        ? { vol: volOf(f.end + 1), ref: ref(f.end + 1) }
+        : null,
+  };
 }
 
 /** Notes on a label's numbering, given the previous number under that label. */
@@ -553,7 +588,7 @@ export function structure(
         hit.start >= first ? Math.max(floor, first) : floor,
         hit.kind === 'speech' ? 40 : 80,
       );
-      found.push({ ...hit, v, t });
+      found.push(place(t, hit, v));
       floor = hit.end + 1;
       j = hit.end;
     }
@@ -633,25 +668,18 @@ export function structure(
   // The side after the latest closing at each level, and its position in `found`.
   const closed: ({ at: number; place: Place } | undefined)[] = [];
   found.forEach((f, i) => {
-    const { t } = f;
-    const volOf = (k: number) => t.vols[t.syllables[k].side];
-    const vol = volOf(f.end);
-    const ref = (k: number) => t.sides[t.syllables[k].side].ref;
-    // A side in another volume is named with it.
-    const at = (k: number) =>
-      volOf(k) === vol ? ref(k) : `${volOf(k)}:${ref(k)}`;
-    const source = t.slice(f.start, f.end);
+    const { vol, source } = f;
     const entry: StructureEntry = {
       kind: f.kind,
       level: null,
       label: f.label,
       number: f.number,
       vol,
-      from: at(f.start),
-      at: at(f.start),
-      to: ref(f.end),
+      from: f.at,
+      at: f.at,
+      to: f.to,
       note: '',
-      text: t.ewts(source),
+      text: f.text,
       tibetan: source.replace(/\s+/g, ' ').trim(),
     };
     if (f.kind === 'division') {
@@ -690,11 +718,10 @@ export function structure(
           previous.delete(other);
         }
       // The side after the formula, or the next volume's first side.
-      const place =
-        f.end + 1 < t.syllables.length
-          ? { vol: volOf(f.end + 1), ref: ref(f.end + 1) }
-          : (starts[f.v + 1] ?? { vol, ref: ref(f.end) });
-      closed[lv] = { at: i, place };
+      closed[lv] = {
+        at: i,
+        place: f.next ?? starts[f.v + 1] ?? { vol, ref: f.to },
+      };
     }
     if (kinds.has(f.kind)) out.push(entry);
   });
