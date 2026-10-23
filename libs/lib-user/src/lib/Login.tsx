@@ -1,10 +1,16 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SocialLogin } from './SocialLogin';
-import { Button, H4, MainLogo, Separator } from '@eightyfourthousand/design-system';
+import {
+  Button,
+  H4,
+  MainLogo,
+  Separator,
+} from '@eightyfourthousand/design-system';
 import { EmailLogin } from './EmailLogin';
-import { LoginVariation } from './types';
+import { AUTH_FAILED_ERROR, LoginVariation } from './types';
 
 // Email sign-in is for the local Supabase stack, where infra's seed creates one
 // account per app role and there is no OAuth client to configure. Deriving it
@@ -34,6 +40,18 @@ const FOOTER_TEXT = {
 const LINK_TEXT = {
   create: 'Sign in',
   login: 'Create one',
+};
+
+const LoginError = () => {
+  const searchParams = useSearchParams();
+  if (searchParams.get('error') !== AUTH_FAILED_ERROR) {
+    return null;
+  }
+  return (
+    <p className="mt-4 text-center text-sm text-destructive">
+      Sign-in didn’t complete. Please try again.
+    </p>
+  );
 };
 
 export const Login = () => {
@@ -69,6 +87,9 @@ export const Login = () => {
               {line}
             </p>
           ))}
+          <Suspense>
+            <LoginError />
+          </Suspense>
           <SocialLogin className="w-full" />
           {EMAIL_AUTH_ENABLED && (
             <>

@@ -24,3 +24,6 @@ export type LibraryCache = {
   bibliographies: unknown[];
   searches: unknown[];
 };
+
+/** `error` query value `/login` reads to say a sign-in did not complete. */
+export const AUTH_FAILED_ERROR = 'auth_failed';
