@@ -329,13 +329,19 @@ const EditorSession = ({
 
   const isNavigating = useCallback(() => isNavigatingRef.current, []);
 
-  const canEdit = useCallback(async () => {
-    return await hasPermission({ client, permission: 'EDITOR_EDIT' });
-  }, [client]);
+  // A failed check reads as "no": the editor opens read-only rather than
+  // waiting on an answer that never comes.
+  const canEdit = useCallback(
+    () =>
+      hasPermission({ client, permission: 'EDITOR_EDIT' }).catch(() => false),
+    [client],
+  );
 
-  const canAdminister = useCallback(async () => {
-    return await hasPermission({ client, permission: 'EDITOR_ADMIN' });
-  }, [client]);
+  const canAdminister = useCallback(
+    () =>
+      hasPermission({ client, permission: 'EDITOR_ADMIN' }).catch(() => false),
+    [client],
+  );
 
   const saveHandlerRef = useRef<SaveHandler | null>(null);
 

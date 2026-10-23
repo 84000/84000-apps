@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ScholarUser, useSession } from '@lib-user';
+import {
+  AccessCheckFailed,
+  AccessCheckLoading,
+  ScholarUser,
+  useSession,
+} from '@lib-user';
 import {
   createGraphQLClient,
   hasPermission,
@@ -10,6 +15,9 @@ import {
 import { AppHeader } from '../../components/ui/AppHeader';
 
 const UNAUTHORIZED = '/unauthorized';
+
+/** Where the access check stands. `failed` means no answer, not a "no". */
+type Access = 'checking' | 'permitted' | 'denied' | 'failed';
 
 export default function Layout({
   children,
@@ -21,35 +29,57 @@ export default function Layout({
   const pathname = usePathname();
 
   const [user, setUser] = useState<ScholarUser | null>();
-  const [permitted, setPermitted] = useState<boolean>();
+  const [access, setAccess] = useState<Access>('checking');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+
     (async () => {
-      const user = await getUser();
-      setUser(user);
+      try {
+        const user = await getUser();
+        if (!active) {
+          return;
+        }
+        setUser(user);
 
-      if (!user) {
-        router.replace('/login');
-        return;
-      }
+        if (!user) {
+          router.replace('/login');
+          return;
+        }
 
-      // Asked of the database rather than matched against a list of role names
-      // here. Which roles hold `editor.read` is the database's to say, and the
-      // list this replaced left out `manager`, which holds it.
-      setPermitted(
-        await hasPermission({
+        // Asked of the database rather than matched against a list of role
+        // names here. Which roles hold `editor.read` is the database's to say.
+        const permitted = await hasPermission({
           client: createGraphQLClient(),
           permission: 'EDITOR_READ',
-        }),
-      );
+        });
+        if (active) {
+          setAccess(permitted ? 'permitted' : 'denied');
+        }
+      } catch (error) {
+        console.error('Studio access check failed:', error);
+        if (active) {
+          setAccess('failed');
+        }
+      }
     })();
-  }, [router, getUser]);
+
+    return () => {
+      active = false;
+    };
+  }, [router, getUser, attempt]);
 
   useEffect(() => {
-    if (permitted === false && pathname !== UNAUTHORIZED) {
+    if (access === 'denied' && pathname !== UNAUTHORIZED) {
       router.replace(UNAUTHORIZED);
     }
-  }, [permitted, pathname, router]);
+  }, [access, pathname, router]);
+
+  const handleRetry = useCallback(() => {
+    setAccess('checking');
+    setAttempt((n) => n + 1);
+  }, []);
 
   const handleLogout = () => {
     (async () => {
@@ -59,17 +89,22 @@ export default function Layout({
     })();
   };
 
+  if (access === 'failed') {
+    return (
+      <AccessCheckFailed onRetry={handleRetry} onLogout={handleLogout} />
+    );
+  }
+
   // Nothing below renders until the answer is in, and nothing but the refusal
   // renders without it. Drawing the page while the redirect is only queued
   // mounts the route underneath, and a route whose own server layout redirects
   // then leaves two navigations in flight — which is what crashed the studio
   // for a signed-in user who lacked access.
-  if (!user || permitted === undefined) {
-    // TODO: loading skeleton
-    return null;
+  if (!user || access === 'checking') {
+    return <AccessCheckLoading />;
   }
 
-  if (!permitted && pathname !== UNAUTHORIZED) {
+  if (access === 'denied' && pathname !== UNAUTHORIZED) {
     return null;
   }
 

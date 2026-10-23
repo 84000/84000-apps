@@ -1,3 +1,4 @@
+export * from './lib/AccessCheck';
 export * from './lib/EmailLogin';
 export * from './lib/GraphQLAuthProvider';
 export * from './lib/LibraryBibliographiesPage';

@@ -1,5 +1,5 @@
 import type { GraphQLContext } from '../../context';
-import { hasPermission } from '@eightyfourthousand/data-access';
+import { checkPermission } from '@eightyfourthousand/data-access';
 
 /**
  * Map GraphQL Permission enum to Supabase permission strings
@@ -41,9 +41,14 @@ export const userQueries = {
       return false;
     }
 
-    return hasPermission({
+    const permitted = await checkPermission({
       client: ctx.supabase,
       permission: supabasePermission,
     });
+    // An error, not `false`: a client must not read an outage as a refusal.
+    if (permitted === null) {
+      throw new Error('Permission check failed');
+    }
+    return permitted;
   },
 };
