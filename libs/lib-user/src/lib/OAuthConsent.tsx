@@ -17,7 +17,7 @@ import {
 type ConsentState =
   | { status: 'loading' }
   | { status: 'signed-out' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; title?: string }
   | { status: 'redirecting' }
   | {
       status: 'consent';
@@ -55,8 +55,9 @@ export const OAuthConsent = () => {
         console.error('Failed to fetch authorization details:', error);
         setState({
           status: 'error',
+          title: 'Request No Longer Active',
           message:
-            'This authorization request is invalid or has expired. Retry from the connecting app.',
+            'This authorization request has already been completed or has expired. You can close this tab. If the app is still not connected, retry from there.',
         });
         return;
       }
@@ -126,7 +127,9 @@ export const OAuthConsent = () => {
       )}
       {state.status === 'error' && (
         <>
-          <H4 className="font-sans font-bold">Authorization Failed</H4>
+          <H4 className="font-sans font-bold">
+            {state.title ?? 'Authorization Failed'}
+          </H4>
           <p className="text-sm text-muted-foreground">{state.message}</p>
         </>
       )}
