@@ -328,9 +328,27 @@ describe('Tibetan formats per layer', () => {
     ).toEqual([
       ['etexts.catalog', ['unicode']],
       ['etexts.text', ['unicode']],
+      ['work.annotations', ['unicode']],
+      ['work.bibliography', ['unicode']],
       ['work.draft', ['unicode']],
       ['work.folios', ['unicode', 'ewts', 'both']],
+      ['work.glossary', ['unicode']],
+      ['work.passages', ['unicode']],
+      ['work.passages.raw', ['unicode']],
     ]);
+  });
+
+  it('says only work.folios writes ewts and both in the studio', () => {
+    const [tibetan] = bundleFormatOptions(snapshotLayerRegistry.layers);
+    expect(tibetan.description).toContain(
+      '`ewts` is written by `work.folios`; `both` is written by `work.folios`.',
+    );
+    expect(tibetan.description).toContain(
+      'Generated layers that write only `unicode` (`work.annotations`, `work.bibliography`, `work.glossary`, `work.passages`, `work.passages.raw`) refuse any other value',
+    );
+    expect(tibetan.description).toContain(
+      'Prebuilt archives (`etexts.catalog`, `etexts.text`, `work.draft`) keep their own format',
+    );
   });
 });
 

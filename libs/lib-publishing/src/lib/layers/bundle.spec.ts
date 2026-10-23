@@ -13,6 +13,7 @@ import {
   getSnapshotBundle,
   type SnapshotBundleResult,
 } from './bundle';
+import { SNAPSHOT_PRESETS, snapshotLayerRegistry } from './default-registry';
 import { createLayerRegistry, workOption } from './registry';
 import type { LayerResolution, SnapshotLayer } from './types';
 
@@ -504,6 +505,70 @@ describe('getSnapshotBundle', () => {
     expect(
       (await run([{ layer: 'etexts.ranges' }], { tibetan: 'unicode' })).status,
     ).toBe('ready');
+  });
+
+  describe('with the studio registry', () => {
+    const studio = (layers: unknown, format: unknown) =>
+      getSnapshotBundle({
+        // Refused before any layer reads anything.
+        client: {} as DataClient,
+        request: { layers, format },
+        isGranted: async () => true,
+        schedule: () => undefined,
+        registry: snapshotLayerRegistry,
+        now: () => NOW,
+      });
+    const refusal = (names: string[], tibetan: string) =>
+      `format.tibetan "${tibetan}" is not available for ${names
+        .map((n) => `${n} (writes \`unicode\`)`)
+        .join(
+          ', ',
+        )}. Request ${names.length === 1 ? 'it' : 'them'} in a separate bundle with a format ${names.length === 1 ? 'it writes' : 'they write'}, or use "unicode" for the whole bundle.`;
+
+    it.each([
+      'work.annotations',
+      'work.bibliography',
+      'work.glossary',
+      'work.passages',
+      'work.passages.raw',
+    ])('refuses ewts and both for %s', async (layer) => {
+      for (const tibetan of ['ewts', 'both']) {
+        expect(
+          await studio([{ layer, work: 'toh8', source: 'draft' }], { tibetan }),
+        ).toEqual({ status: 'invalid', error: refusal([layer], tibetan) });
+      }
+    });
+
+    it('refuses ewts for the work preset, naming its five layers', async () => {
+      const preset = SNAPSHOT_PRESETS.find((p) => p.name === 'work');
+      const layers = (preset?.layers ?? []).map((l) => ({
+        ...l,
+        work: 'toh8',
+      }));
+      expect(layers).toHaveLength(5);
+      expect(await studio(layers, { tibetan: 'ewts' })).toEqual({
+        status: 'invalid',
+        error: refusal(
+          layers.map((l) => l.layer),
+          'ewts',
+        ),
+      });
+    });
+
+    it('refuses ewts when work.folios shares the bundle with a Unicode-only layer', async () => {
+      expect(
+        await studio(
+          [
+            { layer: 'work.folios', work: 'toh8' },
+            { layer: 'work.passages', work: 'toh8', source: 'draft' },
+          ],
+          { tibetan: 'both' },
+        ),
+      ).toEqual({
+        status: 'invalid',
+        error: refusal(['work.passages'], 'both'),
+      });
+    });
   });
 
   it('keeps a prebuilt layer in its own format and says so', async () => {
