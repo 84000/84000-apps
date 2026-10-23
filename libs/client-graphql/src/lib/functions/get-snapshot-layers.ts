@@ -21,6 +21,7 @@ const SNAPSHOT_LAYERS = gql`
         sources
         typicalSize
         prebuilt
+        tibetanFormats
         options
       }
       presets {

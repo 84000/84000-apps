@@ -609,7 +609,10 @@ describe('etexts.text', () => {
 
 const hash = (body: Buffer) => createHash('sha256').update(body).digest('hex');
 
-const bundleWith = async (layers: Record<string, unknown>[]) => {
+const runBundle = async (
+  layers: Record<string, unknown>[],
+  format?: unknown,
+) => {
   const published = await publish();
   const own = new Map<string, Buffer>();
   const store: BundleStore = {
@@ -628,7 +631,7 @@ const bundleWith = async (layers: Record<string, unknown>[]) => {
   });
   const result = await getSnapshotBundle({
     client: published.client,
-    request: { layers },
+    request: { layers, format },
     isGranted: async () => true,
     schedule: () => undefined,
     registry,
@@ -640,8 +643,13 @@ const bundleWith = async (layers: Record<string, unknown>[]) => {
     }),
     now: () => Date.parse('2026-10-21T12:00:00Z'),
   });
+  return { ...published, result, own };
+};
+
+const bundleWith = async (layers: Record<string, unknown>[]) => {
+  const { result, ...rest } = await runBundle(layers);
   if (result.status !== 'ready') throw new Error(JSON.stringify(result));
-  return { ...published, bundle: result.bundle, own };
+  return { ...rest, bundle: result.bundle };
 };
 
 describe('etexts.text in a bundle', () => {
@@ -699,6 +707,39 @@ describe('etexts.text in a bundle', () => {
     });
     expect(bundle.layers).toEqual([
       expect.objectContaining({ dir: 'etexts', prebuilt: true }),
+    ]);
+  });
+
+  it.each([
+    [{ toh: 'toh10' }],
+    [{ witness: 'S11' }],
+    [{ startVolume: 1, startFolio: 'F.1.a', endFolio: 'F.2.a' }],
+  ])(
+    'refuses ewts and both for a generated slice %j, which writes Unicode',
+    async (selection) => {
+      for (const tibetan of ['ewts', 'both']) {
+        const { result, own } = await runBundle(
+          [{ layer: 'etexts.text', collection: 'kangyur/S', ...selection }],
+          { tibetan },
+        );
+        expect(result).toEqual({
+          status: 'invalid',
+          error: `format.tibetan "${tibetan}" is not available for etexts.text (writes \`unicode\`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.`,
+        });
+        expect(own.size).toBe(0);
+      }
+    },
+  );
+
+  it('still serves the whole collection, as its Unicode archive, whatever format is asked', async () => {
+    const { result } = await runBundle(
+      [{ layer: 'etexts.text', collection: 'kangyur/S' }],
+      { tibetan: 'ewts' },
+    );
+    expect(result.status).toBe('ready');
+    if (result.status !== 'ready') return;
+    expect(result.bundle.layers).toEqual([
+      expect.objectContaining({ prebuilt: true, dir: 'etexts' }),
     ]);
   });
 });

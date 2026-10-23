@@ -136,7 +136,8 @@ input SnapshotBundleInput {
 
 input SnapshotFormatInput {
   """
-  unicode | ewts | both. Only the values snapshotLayers lists as supported are accepted.
+  unicode | ewts | both. A generated layer refuses a value outside its
+  tibetanFormats; prebuilt layers keep their own format.
   """
   tibetan: String
 }
@@ -174,6 +175,12 @@ type SnapshotLayerInfo {
   prebuilt: Boolean!
 
   """
+  The format.tibetan values the layer writes. A prebuilt layer lists the one its
+  archive holds and keeps it whatever is asked.
+  """
+  tibetanFormats: [String!]!
+
+  """
   JSON Schema of the layer's options.
   """
   options: JSON!
@@ -201,7 +208,7 @@ type SnapshotFormatOption {
   values: [String!]!
 
   """
-  The values accepted today.
+  The values at least one layer writes; see each layer's tibetanFormats.
   """
   supported: [String!]!
   default: String!

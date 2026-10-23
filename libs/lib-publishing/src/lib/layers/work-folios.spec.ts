@@ -1,9 +1,11 @@
 import type { DataClient } from '@eightyfourthousand/data-access';
+import { toEwts, toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import type { AlignmentSpan } from '../alignment-spans';
 import type { DraftWork } from '../snapshot/read-draft';
 import type { LayerContext, LayerResolution, ResolvedGenerated } from './types';
 import {
   BYTES_PER_SIDE,
+  EWTS_BYTES_PER_SIDE,
   studioFoliosReader,
   createWorkFoliosLayer,
   renderFolioFiles,
@@ -260,13 +262,13 @@ describe('work.folios', () => {
 describe('work.folios edge cases', () => {
   it('refuses a Tibetan format it cannot write before reading anything', async () => {
     const { reader, calls } = fakeReader();
-    const ctx = { ...context(), format: { tibetan: 'ewts' as const } };
+    const ctx = { ...context(), format: { tibetan: 'wylie' as never } };
     expect(
       await createWorkFoliosLayer(reader).resolve(ctx, { work: 'toh502' }),
     ).toEqual({
       status: 'error',
       error:
-        'work.folios cannot write format.tibetan "ewts" yet; use "unicode".',
+        'work.folios cannot write format.tibetan "wylie"; use one of "unicode", "ewts", "both".',
     });
     expect(calls).toEqual([]);
   });
@@ -386,8 +388,154 @@ describe('renderFolioFiles', () => {
         sides: [],
         aligned: new Set(),
         sharers: new Map(),
-        format: { tibetan: 'ewts' },
+        format: { tibetan: 'wylie' as never },
       }),
-    ).toThrow(/cannot write format.tibetan "ewts" yet/);
+    ).toThrow(/cannot write format.tibetan "wylie"/);
+  });
+});
+
+/** Sides with real Tibetan: line breaks, a Sanskrit stack, and a sign the converter flags. */
+const TIBETAN_SIDES: FolioSideText[] = [
+  {
+    ...side('t1', 1, 'b', 33),
+    content: 'བསྒྱུར་བའོ། །སླད་ཀྱིས\n ཨོཾ་བཛྲ་ཏཱིཀྵྞ་དུཿཁ་ཙྪེ་ད།',
+  },
+  { ...side('t2', 2, 'a', 33), content: 'པདྨ་ཏནྟྲ། ཀ༓' },
+  { ...side('t3', 2, 'b', 33), content: null },
+  { ...side('t4', 1, 'a', 34), content: 'ལྕང་ལོ་ཅན།\r\nབྱང་ཆུབ་སེམས་དཔའ།' },
+];
+
+const render = (tibetan: 'unicode' | 'ewts' | 'both') =>
+  renderFolioFiles({
+    toh: 'toh8',
+    sides: TIBETAN_SIDES,
+    aligned: new Set(),
+    sharers: new Map(),
+    format: { tibetan },
+  });
+
+describe('renderFolioFiles in EWTS', () => {
+  it('writes EWTS under ewts/ for ewts, and both scripts for both', () => {
+    expect([...render('ewts').keys()]).toEqual([
+      'ewts/toh8-vol033.txt',
+      'ewts/toh8-vol034.txt',
+      'ewts/warnings.tsv',
+      'toh8-sides.tsv',
+    ]);
+    expect([...render('both').keys()]).toEqual([
+      'toh8-vol033.txt',
+      'toh8-vol034.txt',
+      'ewts/toh8-vol033.txt',
+      'ewts/toh8-vol034.txt',
+      'ewts/warnings.tsv',
+      'toh8-sides.tsv',
+    ]);
+  });
+
+  it('leaves the Unicode files and the sides table unchanged by both', () => {
+    const unicode = render('unicode');
+    const both = render('both');
+    for (const [path, content] of unicode) {
+      expect(both.get(path)).toBe(content);
+    }
+  });
+
+  it('keeps each label and line, with the Tibetan in house-profile EWTS', () => {
+    const ewts = render('ewts').get('ewts/toh8-vol033.txt') as string;
+    const unicode = render('unicode').get('toh8-vol033.txt') as string;
+    expect(ewts.split('\n')).toHaveLength(unicode.split('\n').length);
+    expect(ewts.split('\n')[0]).toMatch(
+      /^\[F\.1\.b\] bsgyur ba’o\/ \/slad kyis /,
+    );
+    expect(ewts.split('\n')[2]).toBe('[F.2.b] ');
+    expect(ewts.split('\n').map((l) => l.slice(0, l.indexOf(']') + 1))).toEqual(
+      unicode.split('\n').map((l) => l.slice(0, l.indexOf(']') + 1)),
+    );
+  });
+
+  it('is byte for byte what the transliterate tool returns for the same text', () => {
+    // The tool calls toEwtsWithWarnings(text, { finalShad }) with finalShad defaulting
+    // to keep; a side's line and a whole volume file must both match it.
+    const both = render('both');
+    for (const volume of ['toh8-vol033.txt', 'toh8-vol034.txt']) {
+      const unicode = both.get(volume) as string;
+      const ewts = both.get(`ewts/${volume}`) as string;
+      expect(Buffer.from(ewts)).toEqual(
+        Buffer.from(toEwtsWithWarnings(unicode, { finalShad: 'keep' }).ewts),
+      );
+      expect(ewts).toBe(toEwts(unicode));
+      const lines = unicode.trimEnd().split('\n');
+      ewts
+        .trimEnd()
+        .split('\n')
+        .forEach((line, i) => {
+          const [label, text] = [
+            lines[i].slice(0, lines[i].indexOf('] ') + 2),
+            lines[i].slice(lines[i].indexOf('] ') + 2),
+          ];
+          expect(line).toBe(
+            label + toEwtsWithWarnings(text, { finalShad: 'keep' }).ewts,
+          );
+        });
+    }
+  });
+
+  it('lists converter warnings by side rather than dropping them', () => {
+    const warnings = render('ewts').get('ewts/warnings.tsv') as string;
+    const rows = warnings.trimEnd().split('\n');
+    expect(rows[0]).toBe('volume\tfolio\twarning');
+    expect(rows.slice(1).map((r) => r.split('\t').slice(0, 2))).toEqual(
+      toEwtsWithWarnings('པདྨ་ཏནྟྲ། ཀ༓').warnings.map(() => ['33', 'F.2.a']),
+    );
+    expect(rows.length).toBeGreaterThan(1);
+    expect(render('unicode').has('ewts/warnings.tsv')).toBe(false);
+  });
+});
+
+describe('work.folios in EWTS', () => {
+  it('writes ewts and both, and its README says where and how many warnings', async () => {
+    const { reader } = fakeReader({
+      work: { uuid: WORK, tohs: ['toh8'], title: null, draftTouchedAt: null },
+      sides: TIBETAN_SIDES,
+    });
+    const layer = createWorkFoliosLayer(reader);
+    expect(layer.tibetanFormats).toEqual(['unicode', 'ewts', 'both']);
+    const ctx = { ...context(), format: { tibetan: 'both' as const } };
+    const resolved = ready(await layer.resolve(ctx, { work: 'toh8' }));
+    const unicode = ready(await layer.resolve(context(), { work: 'toh8' }));
+    // The files differ by format, so the bundle key carries it, not the data version.
+    expect(resolved.dataVersion).toBe(unicode.dataVersion);
+    expect(resolved.estimatedBytes).toBe(
+      TIBETAN_SIDES.length * (BYTES_PER_SIDE + EWTS_BYTES_PER_SIDE),
+    );
+    const files = await resolved.generate();
+    expect(files.has('ewts/toh8-vol033.txt')).toBe(true);
+    const readme = layer.readme({ work: 'toh8' }, resolved);
+    expect(readme).toContain('- `<toh>-vol<NNN>.txt`: one folio side per line');
+    expect(readme).toContain(
+      '- `ewts/<toh>-vol<NNN>.txt`: the same files with the Tibetan in EWTS,',
+    );
+    expect(readme).toMatch(/- `ewts\/warnings\.tsv`: \d+ converter warnings?,/);
+    expect(layer.readme({ work: 'toh8' }, unicode)).not.toContain('ewts/');
+  });
+
+  it('says when the converter raised no warnings', async () => {
+    const { reader } = fakeReader({
+      work: { uuid: WORK, tohs: ['toh8'], title: null, draftTouchedAt: null },
+      sides: [TIBETAN_SIDES[3]],
+    });
+    const layer = createWorkFoliosLayer(reader);
+    const ctx = { ...context(), format: { tibetan: 'ewts' as const } };
+    const resolved = ready(await layer.resolve(ctx, { work: 'toh8' }));
+    const files = await resolved.generate();
+    expect([...files.keys()]).toEqual([
+      'ewts/toh8-vol034.txt',
+      'toh8-sides.tsv',
+    ]);
+    const readme = layer.readme({ work: 'toh8' }, resolved);
+    expect(readme).toContain(
+      '- No `ewts/warnings.tsv`: the converter raised no warnings.',
+    );
+    expect(readme).not.toContain('- `<toh>-vol<NNN>.txt`');
   });
 });

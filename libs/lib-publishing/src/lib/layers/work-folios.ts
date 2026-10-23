@@ -7,6 +7,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { DataClient } from '@eightyfourthousand/data-access';
+import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import {
   markAlignedSides,
   readAlignmentSpans,
@@ -14,7 +15,7 @@ import {
 } from '../alignment-spans';
 import { folioLabel, joinSideLines } from '../folio';
 import { resolveDraftWork, type DraftWork } from '../snapshot/read-draft';
-import type { BundleFormat } from './format';
+import type { BundleFormat, TibetanFormat } from './format';
 import { normalizeWorkKey, workOption } from './registry';
 import type {
   LayerFiles,
@@ -31,6 +32,9 @@ const PAGE_SIZE = 1000;
 
 /** Compressed bytes per side: about 620 measured on Toh 502, 180 on Toh 8. */
 export const BYTES_PER_SIDE = 650;
+
+/** The same in EWTS: about 480 on Toh 502, 0.81 of the Unicode. */
+export const EWTS_BYTES_PER_SIDE = 530;
 
 /** One folio side of a work's placement, in reading order. */
 export interface FolioSide {
@@ -144,8 +148,16 @@ export interface FoliosSummary {
   sharedEdges: { label: string; tohs: string[]; edge: 'first' | 'last' }[];
 }
 
+/** The Tibetan the files hold, and how many converter warnings the EWTS raised. */
+export interface FoliosText {
+  tibetan: TibetanFormat;
+  /** Lines of the warnings file; null until the files are generated. */
+  ewtsWarnings: number | null;
+}
+
 interface ResolvedFolios extends ResolvedGenerated {
   folios: FoliosSummary;
+  text: FoliosText;
 }
 
 const byToh = (a: string, b: string) =>
@@ -157,30 +169,33 @@ export const volumeFileName = (toh: string, volume: number): string =>
 
 export const sidesFileName = (toh: string): string => `${toh}-sides.tsv`;
 
-interface TextWriter {
-  /** Told apart in the file name: `toh8-vol014<suffix>.txt`. */
-  suffix: string;
-  text: (content: string | null) => string;
-}
+/** The `format.tibetan` values the layer writes. */
+const TIBETAN_FORMATS: readonly TibetanFormat[] = ['unicode', 'ewts', 'both'];
 
-/**
- * How each side's text is written, per Tibetan format; null for a format the layer
- * cannot write yet. A format adds its writers here.
- */
-const textWriters = (format: BundleFormat): TextWriter[] | null => {
+/** The directory, under the layer's own, of EWTS copies of the volume files. */
+export const EWTS_DIR = 'ewts';
+
+/** Converter warnings, under `EWTS_DIR`. */
+export const EWTS_WARNINGS_FILE = `${EWTS_DIR}/warnings.tsv`;
+
+type Script = 'unicode' | 'ewts';
+
+/** The scripts written for a format, or null for one the layer cannot write. */
+const scriptsFor = (format: BundleFormat): Script[] | null => {
   switch (format.tibetan) {
     case 'unicode':
-      return [{ suffix: '', text: joinSideLines }];
+      return ['unicode'];
+    case 'ewts':
+      return ['ewts'];
+    case 'both':
+      return ['unicode', 'ewts'];
     default:
       return null;
   }
 };
 
 const unsupportedFormat = (format: BundleFormat) =>
-  `work.folios cannot write format.tibetan "${format.tibetan}" yet; use "unicode".`;
-
-const withSuffix = (fileName: string, suffix: string) =>
-  suffix ? fileName.replace(/\.txt$/, `${suffix}.txt`) : fileName;
+  `work.folios cannot write format.tibetan "${format.tibetan}"; use one of ${TIBETAN_FORMATS.map((v) => `"${v}"`).join(', ')}.`;
 
 /** `[F.181.a] …`: the line shape of the eText volume files. */
 export const renderSideLine = (side: FolioSide, text: string): string =>
@@ -207,15 +222,35 @@ export const renderFolioFiles = ({
     list.push(side);
     byVolume.set(side.volume_number, list);
   }
-  const writers = textWriters(format);
-  if (!writers) throw new Error(unsupportedFormat(format));
-  for (const { suffix, text } of writers) {
+  const scripts = scriptsFor(format);
+  if (!scripts) throw new Error(unsupportedFormat(format));
+  const warnings: string[] = [];
+  for (const script of scripts) {
     for (const [volume, list] of byVolume) {
+      const lines = list.map((s) => {
+        const text = joinSideLines(s.content);
+        if (script === 'unicode') return renderSideLine(s, text);
+        // The same call, with the same default final shad, as the transliterate tool.
+        const ewts = toEwtsWithWarnings(text);
+        for (const warning of ewts.warnings) {
+          warnings.push(
+            [volume, folioLabel(s.folio_number, s.side), warning].join('\t'),
+          );
+        }
+        return renderSideLine(s, ewts.ewts);
+      });
+      const name = volumeFileName(toh, volume);
       files.set(
-        withSuffix(volumeFileName(toh, volume), suffix),
-        list.map((s) => renderSideLine(s, text(s.content))).join('\n') + '\n',
+        script === 'unicode' ? name : `${EWTS_DIR}/${name}`,
+        lines.join('\n') + '\n',
       );
     }
+  }
+  if (warnings.length) {
+    files.set(
+      EWTS_WARNINGS_FILE,
+      ['volume\tfolio\twarning', ...warnings].join('\n') + '\n',
+    );
   }
   const rows = sides.map((s) =>
     [
@@ -255,18 +290,18 @@ export const createWorkFoliosLayer = (
 ): SnapshotLayer<typeof options> => ({
   name: 'work.folios',
   description:
-    "A work's complete Degé text from the studio's folios: one folio side per line, `[F.181.a] …`, one file per volume, with a table marking each side aligned or unaligned to the translation and naming any neighbouring work that shares the first or last side. Any catalogued work, with or without a draft in the studio. Folio labels match `get-translation-folios` and the alignments.",
+    "A work's complete Degé text from the studio's folios: one folio side per line, `[F.181.a] …`, one file per volume, with a table marking each side aligned or unaligned to the translation and naming any neighbouring work that shares the first or last side. Any catalogued work, with or without a draft in the studio. Folio labels match `get-translation-folios` and the alignments. Writes `format.tibetan` `ewts` (EWTS in place of the script) and `both` (EWTS copies under `ewts/`, line for line).",
   permission: 'editor.read',
   scope: 'work',
   options,
   sources: ['published'],
   typicalSize: '5 KB to 2 MB',
   prebuilt: false,
+  tibetanFormats: TIBETAN_FORMATS,
   resolve: async (context, { work, toh: requested }) => {
     const { client } = context;
-    // Unreachable while the bundle refuses unsupported formats first; a format added
-    // there before it has a writer here fails cleanly.
-    if (!textWriters(context.format)) {
+    // Unreachable while the bundle checks `tibetanFormats` first.
+    if (!scriptsFor(context.format)) {
       return { status: 'error', error: unsupportedFormat(context.format) };
     }
     try {
@@ -339,6 +374,10 @@ export const createWorkFoliosLayer = (
         ),
       };
 
+      const text: FoliosText = {
+        tibetan: context.format.tibetan,
+        ewtsWarnings: null,
+      };
       const resolved: { status: 'ready' } & ResolvedFolios = {
         status: 'ready',
         kind: 'generated',
@@ -351,8 +390,16 @@ export const createWorkFoliosLayer = (
           aligned,
           sharers: [...sharers].sort(([a], [b]) => (a < b ? -1 : 1)),
         }).slice(0, 16)}`,
-        estimatedBytes: sides.length * BYTES_PER_SIDE,
+        estimatedBytes:
+          sides.length *
+          (scriptsFor(context.format) ?? ['unicode']).reduce(
+            (sum, script) =>
+              sum +
+              (script === 'unicode' ? BYTES_PER_SIDE : EWTS_BYTES_PER_SIDE),
+            0,
+          ),
         folios: summary,
+        text,
         ...(unplaced
           ? {
               note: `${unplaced} recorded alignment${unplaced === 1 ? ' points' : 's point'} at sides outside the folios of ${toh}; not marked.`,
@@ -368,13 +415,19 @@ export const createWorkFoliosLayer = (
               `The folios of ${toh} changed while the bundle was built`,
             );
           }
-          return renderFolioFiles({
+          const files = renderFolioFiles({
             toh,
             sides: texts,
             aligned: alignedUuids,
             sharers,
             format: context.format,
           });
+          // The README is written after the files, so it can count the warnings.
+          const warnings = files.get(EWTS_WARNINGS_FILE);
+          text.ewtsWarnings = warnings
+            ? warnings.trim().split('\n').length - 1
+            : 0;
+          return files;
         },
       };
       return resolved;
@@ -387,21 +440,64 @@ export const createWorkFoliosLayer = (
     }
   },
   readme: (_options: Options, resolved: ResolvedLayerOutput) =>
-    foliosReadme(resolved.dir, (resolved as ResolvedFolios).folios),
+    foliosReadme(
+      resolved.dir,
+      (resolved as ResolvedFolios).folios,
+      (resolved as ResolvedFolios).text,
+    ),
 });
+
+const UNICODE_VOLUMES = [
+  '- `<toh>-vol<NNN>.txt`: one folio side per line in reading order, `[F.181.a] …`,',
+  "  with the side's own line breaks joined by a single space. The volume is",
+  '  zero-padded to three digits. The text is the same as `get-translation-folios`',
+  '  returns for the side, and the lines have the shape of the eText volume files.',
+];
+
+const ewtsVolumes = (both: boolean) =>
+  both
+    ? [
+        `- \`${EWTS_DIR}/<toh>-vol<NNN>.txt\`: the same files with the Tibetan in EWTS,`,
+        '  line for line under the same labels. The EWTS is what the `transliterate`',
+        '  tool returns for the same text (house profile, final shad kept). Check it',
+        '  against the Unicode before quoting it.',
+      ]
+    : [
+        `- \`${EWTS_DIR}/<toh>-vol<NNN>.txt\`: one folio side per line in reading order,`,
+        "  `[F.181.a] …`, with the side's own line breaks joined by a single space and",
+        '  the Tibetan in EWTS. The volume is zero-padded to three digits. The EWTS is',
+        '  what the `transliterate` tool returns for the same text (house profile, final',
+        '  shad kept). Check it against the Unicode (`get-translation-folios`, or format',
+        '  `both`) before quoting it.',
+      ];
+
+const warningsLine = (count: number | null) =>
+  count
+    ? [
+        `- \`${EWTS_WARNINGS_FILE}\`: ${count} converter warning${count === 1 ? '' : 's'}, tab-separated`,
+        '  with a header row: `volume`, `folio`, `warning`. Check those sides by hand.',
+      ]
+    : count === 0
+      ? [`- No \`${EWTS_WARNINGS_FILE}\`: the converter raised no warnings.`]
+      : [];
 
 /** The README section: what the files hold, then this work's range. */
 export const foliosReadme = (
   dir: string,
   summary: FoliosSummary | undefined,
+  text: FoliosText = { tibetan: 'unicode', ewtsWarnings: null },
 ): string => {
+  const scripts = scriptsFor({ tibetan: text.tibetan }) ?? ['unicode'];
   const lines = [
     `The Degé text of the work, from the studio's folios, under \`${dir}/\`.`,
     '',
-    '- `<toh>-vol<NNN>.txt`: one folio side per line in reading order, `[F.181.a] …`,',
-    "  with the side's own line breaks joined by a single space. The volume is",
-    '  zero-padded to three digits. The text is the same as `get-translation-folios`',
-    '  returns for the side, and the lines have the shape of the eText volume files.',
+    ...(scripts.includes('unicode') ? UNICODE_VOLUMES : []),
+    ...(scripts.includes('ewts')
+      ? [
+          ...ewtsVolumes(scripts.includes('unicode')),
+          ...warningsLine(text.ewtsWarnings),
+        ]
+      : []),
     '- `<toh>-sides.tsv`: every side, tab-separated with a header row: `volume`,',
     '  `folio` (`F.181.a`), `alignment` (`aligned` when a recorded alignment of the',
     '  translation covers any of the side, else `unaligned`), and `also_in` (other',

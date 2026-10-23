@@ -1331,7 +1331,10 @@ export type SnapshotDownload = {
 };
 
 export type SnapshotFormatInput = {
-  /** unicode | ewts | both. Only the values snapshotLayers lists as supported are accepted. */
+  /**
+   * unicode | ewts | both. A generated layer refuses a value outside its
+   * tibetanFormats; prebuilt layers keep their own format.
+   */
   tibetan?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1341,7 +1344,7 @@ export type SnapshotFormatOption = {
   default: Scalars['String']['output'];
   description: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  /** The values accepted today. */
+  /** The values at least one layer writes; see each layer's tibetanFormats. */
   supported: Array<Scalars['String']['output']>;
   values: Array<Scalars['String']['output']>;
 };
@@ -1371,6 +1374,11 @@ export type SnapshotLayerInfo = {
   scope: Scalars['String']['output'];
   /** draft, published, or both; with both, `source` is an option. */
   sources: Array<Scalars['String']['output']>;
+  /**
+   * The format.tibetan values the layer writes. A prebuilt layer lists the one its
+   * archive holds and keeps it whatever is asked.
+   */
+  tibetanFormats: Array<Scalars['String']['output']>;
   typicalSize: Scalars['String']['output'];
 };
 

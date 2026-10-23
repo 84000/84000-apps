@@ -21,7 +21,12 @@ import {
   type SignedDownload,
 } from './bundle-store';
 import { snapshotLayerRegistry } from './default-registry';
-import { parseBundleFormat, type BundleFormat } from './format';
+import {
+  parseBundleFormat,
+  unsupportedFormatError,
+  writtenTibetanFormat,
+  type BundleFormat,
+} from './format';
 import {
   canonicalJson,
   parseLayerRequests,
@@ -38,7 +43,7 @@ import type {
 } from './types';
 
 /** Bumped when the bundle's own files change shape; part of the cache key. */
-export const BUNDLE_FORMAT_VERSION = 1;
+export const BUNDLE_FORMAT_VERSION = 2;
 
 /** The largest estimated download, every part compressed, a bundle may have. */
 export const MAX_BUNDLE_BYTES = 256 * 1024 * 1024;
@@ -202,16 +207,40 @@ const summarize = ({ request, output }: Resolved): BundleLayerSummary => ({
   ...(output.note ? { note: output.note } : {}),
 });
 
+/** Where the bundle's Tibetan format differs by layer, one line saying so. */
+const tibetanLine = (format: BundleFormat, resolved: Resolved[]) => {
+  if (format.tibetan === 'unicode') return [];
+  const kept = [
+    ...new Set(
+      resolved
+        .filter(
+          ({ output }) =>
+            writtenTibetanFormat(output.kind, format) !== format.tibetan,
+        )
+        .map(({ request }) => `\`${request.layer.name}\``),
+    ),
+  ];
+  const keeps = kept.length
+    ? ` ${kept.join(', ')} ${kept.length === 1 ? 'is a prebuilt archive and keeps its' : 'are prebuilt archives and keep their'} own format, Unicode.`
+    : '';
+  return [
+    '',
+    `Tibetan: \`${format.tibetan}\` in generated layers.${keeps} \`manifest.json\` gives each layer's format as \`tibetan\`.`,
+  ];
+};
+
 const renderReadme = ({
   bundleId,
   root,
   createdAt,
+  format,
   resolved,
   parts,
 }: {
   bundleId: string;
   root: string;
   createdAt: string;
+  format: BundleFormat;
   resolved: Resolved[];
   parts: PrebuiltPart[];
 }): string => {
@@ -226,6 +255,7 @@ const renderReadme = ({
       ({ request, output }) =>
         `| \`${request.layer.name}\` | ${describeOptions(request.options) || '—'} | \`${output.dir}/\` | \`${output.dataVersion}\` |`,
     ),
+    ...tibetanLine(format, resolved),
     '',
     parts.length
       ? `The bundle arrives in ${parts.length + 1} parts, each checked against its sha256 and unpacked into this directory: \`${root}.tar.gz\` (this README, \`manifest.json\` and any generated layers), then ${parts.map((p) => `\`${p.archive.filename}\``).join(', ')}, prebuilt archives reused as they are. \`manifest.json\` lists the parts, the layers, and every generated file with its sha256.`
@@ -240,6 +270,13 @@ const renderReadme = ({
       request.layer.readme(request.options, output).trim(),
     );
     if (output.note) lines.push('', `Note: ${output.note}`);
+    const written = writtenTibetanFormat(output.kind, format);
+    if (written !== format.tibetan) {
+      lines.push(
+        '',
+        `Tibetan here is in ${written === 'unicode' ? 'Unicode' : written}: a prebuilt archive keeps its own format, so \`format.tibetan: ${format.tibetan}\` does not apply to it.`,
+      );
+    }
   }
   return lines.join('\n') + '\n';
 };
@@ -304,7 +341,7 @@ const buildTree = async ({
   }
   tree.set(
     'README.md',
-    renderReadme({ bundleId, root, createdAt, resolved, parts }),
+    renderReadme({ bundleId, root, createdAt, format, resolved, parts }),
   );
   const files = [...tree.entries()]
     .map(([path, content]) => ({
@@ -325,6 +362,7 @@ const buildTree = async ({
       dir: output.dir,
       dataVersion: output.dataVersion,
       prebuilt: output.kind === 'prebuilt',
+      tibetan: writtenTibetanFormat(output.kind, format),
       part:
         output.kind === 'prebuilt' ? output.archive.filename : `${root}.tar.gz`,
     })),
@@ -392,6 +430,12 @@ export const getSnapshotBundle = async ({
   const parsed = parseLayerRequests(registry, request.layers);
   if (!parsed.ok) return { status: 'invalid', error: parsed.error };
   const { requests } = parsed;
+  // Layers that always generate are checked before anything is read.
+  const unsupported = unsupportedFormatError(
+    requests.map((r) => r.layer).filter((l) => !l.prebuilt),
+    format.format,
+  );
+  if (unsupported) return { status: 'invalid', error: unsupported };
 
   const refused = await refusedLayers(requests, isGranted);
   if (refused.length) {
@@ -447,6 +491,14 @@ export const getSnapshotBundle = async ({
         error: pending.map((p) => p.message).join(' '),
       };
     }
+    // A layer that may resolve either way is checked once it chose to generate.
+    const unwritable = unsupportedFormatError(
+      resolved
+        .filter(({ output }) => output.kind === 'generated')
+        .map(({ request: r }) => r.layer),
+      format.format,
+    );
+    if (unwritable) return { status: 'invalid', error: unwritable };
 
     const conflict = directoryConflict(
       resolved.map(({ request: r, output }) => ({

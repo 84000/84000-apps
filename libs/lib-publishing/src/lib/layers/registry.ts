@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { layerTibetanFormats, type TibetanFormat } from './format';
 import type {
   LayerPermission,
   LayerScope,
@@ -210,6 +211,8 @@ export interface LayerInfo {
   sources: readonly LayerSource[];
   typicalSize: string;
   prebuilt: boolean;
+  /** The `format.tibetan` values the layer writes; for a prebuilt layer, the one it holds. */
+  tibetanFormats: readonly TibetanFormat[];
   /** JSON Schema of the layer's options, as callers write them. */
   options: Record<string, unknown>;
 }
@@ -224,6 +227,7 @@ export const describeLayers = (registry: LayerRegistry): LayerInfo[] =>
     sources: layer.sources,
     typicalSize: layer.typicalSize,
     prebuilt: layer.prebuilt,
+    tibetanFormats: layerTibetanFormats(layer),
     options: z.toJSONSchema(layer.options, { io: 'input' }) as Record<
       string,
       unknown

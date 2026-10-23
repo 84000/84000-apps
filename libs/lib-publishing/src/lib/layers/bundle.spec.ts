@@ -13,6 +13,7 @@ import {
   getSnapshotBundle,
   type SnapshotBundleResult,
 } from './bundle';
+import { SNAPSHOT_PRESETS, snapshotLayerRegistry } from './default-registry';
 import { createLayerRegistry, workOption } from './registry';
 import type { LayerResolution, SnapshotLayer } from './types';
 
@@ -470,7 +471,140 @@ describe('getSnapshotBundle', () => {
   it('refuses invalid layers and formats', async () => {
     const { run } = setup();
     expect((await run([{ layer: 'work.nope' }])).status).toBe('invalid');
-    expect((await run(MIXED, { tibetan: 'ewts' })).status).toBe('invalid');
+    expect((await run(MIXED, { tibetan: 'wylie' })).status).toBe('invalid');
+  });
+
+  it('refuses a format a generated layer does not write, naming the layer', async () => {
+    const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
+    const { run, writes } = setup({
+      layers: [prebuiltLayer(() => 'snap-1'), generatedLayer(generate)],
+    });
+    expect(await run(MIXED, { tibetan: 'ewts' })).toEqual({
+      status: 'invalid',
+      error:
+        'format.tibetan "ewts" is not available for etexts.ranges (writes `unicode`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.',
+    });
+    expect(generate).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
+  });
+
+  it('refuses a format once a prebuilt layer chooses to generate files', async () => {
+    const slicing: SnapshotLayer = {
+      ...generatedLayer(),
+      prebuilt: true,
+    };
+    const { run, writes } = setup({ layers: [slicing] });
+    expect(
+      await run([{ layer: 'etexts.ranges' }], { tibetan: 'both' }),
+    ).toEqual({
+      status: 'invalid',
+      error:
+        'format.tibetan "both" is not available for etexts.ranges (writes `unicode`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.',
+    });
+    expect(writes).toEqual([]);
+    expect(
+      (await run([{ layer: 'etexts.ranges' }], { tibetan: 'unicode' })).status,
+    ).toBe('ready');
+  });
+
+  describe('with the studio registry', () => {
+    const studio = (layers: unknown, format: unknown) =>
+      getSnapshotBundle({
+        // Refused before any layer reads anything.
+        client: {} as DataClient,
+        request: { layers, format },
+        isGranted: async () => true,
+        schedule: () => undefined,
+        registry: snapshotLayerRegistry,
+        now: () => NOW,
+      });
+    const refusal = (names: string[], tibetan: string) =>
+      `format.tibetan "${tibetan}" is not available for ${names
+        .map((n) => `${n} (writes \`unicode\`)`)
+        .join(
+          ', ',
+        )}. Request ${names.length === 1 ? 'it' : 'them'} in a separate bundle with a format ${names.length === 1 ? 'it writes' : 'they write'}, or use "unicode" for the whole bundle.`;
+
+    it.each([
+      'work.annotations',
+      'work.bibliography',
+      'work.glossary',
+      'work.passages',
+      'work.passages.raw',
+    ])('refuses ewts and both for %s', async (layer) => {
+      for (const tibetan of ['ewts', 'both']) {
+        expect(
+          await studio([{ layer, work: 'toh8', source: 'draft' }], { tibetan }),
+        ).toEqual({ status: 'invalid', error: refusal([layer], tibetan) });
+      }
+    });
+
+    it('refuses ewts for the work preset, naming its five layers', async () => {
+      const preset = SNAPSHOT_PRESETS.find((p) => p.name === 'work');
+      const layers = (preset?.layers ?? []).map((l) => ({
+        ...l,
+        work: 'toh8',
+      }));
+      expect(layers).toHaveLength(5);
+      expect(await studio(layers, { tibetan: 'ewts' })).toEqual({
+        status: 'invalid',
+        error: refusal(
+          layers.map((l) => l.layer),
+          'ewts',
+        ),
+      });
+    });
+
+    it('refuses ewts when work.folios shares the bundle with a Unicode-only layer', async () => {
+      expect(
+        await studio(
+          [
+            { layer: 'work.folios', work: 'toh8' },
+            { layer: 'work.passages', work: 'toh8', source: 'draft' },
+          ],
+          { tibetan: 'both' },
+        ),
+      ).toEqual({
+        status: 'invalid',
+        error: refusal(['work.passages'], 'both'),
+      });
+    });
+  });
+
+  it('keeps a prebuilt layer in its own format and says so', async () => {
+    const generate = jest.fn(async () => new Map([['ranges.json', '[]\n']]));
+    const { run, objects } = setup({
+      layers: [
+        prebuiltLayer(() => 'snap-1'),
+        { ...generatedLayer(generate), tibetanFormats: ['unicode', 'ewts'] },
+      ],
+    });
+    const unicode = ready(await run(MIXED));
+    const bundle = ready(await run(MIXED, { tibetan: 'ewts' }));
+    expect(bundle.bundleId).not.toBe(unicode.bundleId);
+    const own = untarGzTree(
+      objects.get(`work-snapshots/${objectPath(bundle.bundleId)}`) as Buffer,
+    );
+    const files = new Map(own.tree);
+    const readme = files.get('README.md') as string;
+    expect(readme).toContain(
+      'Tibetan: `ewts` in generated layers. `work.draft` is a prebuilt archive and keeps its own format, Unicode.',
+    );
+    expect(readme).toMatch(
+      /## work\.draft \(work: toh8\)\n\nThe work draft\.\n\nTibetan here is in Unicode: a prebuilt archive keeps its own format/,
+    );
+    expect(readme).not.toMatch(/## etexts\.ranges[\s\S]*Tibetan here/);
+    const manifest = JSON.parse(files.get('manifest.json') as string);
+    expect(manifest.format).toEqual({ tibetan: 'ewts' });
+    expect(
+      manifest.layers.map((l: { layer: string; tibetan: string }) => [
+        l.layer,
+        l.tibetan,
+      ]),
+    ).toEqual([
+      ['work.draft', 'unicode'],
+      ['etexts.ranges', 'ewts'],
+    ]);
   });
 
   it('reports a storage failure as an error', async () => {

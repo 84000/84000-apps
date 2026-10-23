@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { snapshotLayerRegistry } from './default-registry';
-import { parseBundleFormat } from './format';
+import {
+  bundleFormatOptions,
+  parseBundleFormat,
+  unsupportedFormatError,
+} from './format';
 import {
   canonicalJson,
   createLayerRegistry,
@@ -254,17 +258,97 @@ describe('helpers', () => {
     );
   });
 
-  it('accepts only supported Tibetan formats', () => {
+  it('accepts the known Tibetan formats', () => {
     expect(parseBundleFormat(undefined)).toEqual({
       ok: true,
       format: { tibetan: 'unicode' },
     });
-    expect(parseBundleFormat({ tibetan: 'ewts' })).toEqual({
-      ok: false,
-      error: 'format.tibetan "ewts" is not available yet; use "unicode".',
+    expect(parseBundleFormat({ tibetan: 'both' })).toEqual({
+      ok: true,
+      format: { tibetan: 'both' },
     });
     expect(parseBundleFormat({ tibetan: 'wylie' }).ok).toBe(false);
     expect(parseBundleFormat({ script: 'x' }).ok).toBe(false);
+  });
+});
+
+describe('Tibetan formats per layer', () => {
+  const folios = {
+    ...layer('work.folios'),
+    tibetanFormats: ['unicode', 'ewts', 'both'] as const,
+  };
+  const passages = layer('work.passages');
+  const draft = { ...layer('work.draft'), prebuilt: true };
+
+  it('refuses only layers that do not write the value', () => {
+    expect(unsupportedFormatError([folios], { tibetan: 'ewts' })).toBeNull();
+    expect(
+      unsupportedFormatError([passages], { tibetan: 'unicode' }),
+    ).toBeNull();
+    expect(
+      unsupportedFormatError([folios, passages, passages], { tibetan: 'both' }),
+    ).toBe(
+      'format.tibetan "both" is not available for work.passages (writes `unicode`). Request it in a separate bundle with a format it writes, or use "unicode" for the whole bundle.',
+    );
+  });
+
+  it('lists in discovery which layers write which values', () => {
+    const [tibetan] = bundleFormatOptions([folios, passages, draft]);
+    expect(tibetan.supported).toEqual(['unicode', 'ewts', 'both']);
+    expect(tibetan.description).toContain(
+      '`ewts` is written by `work.folios`; `both` is written by `work.folios`.',
+    );
+    expect(tibetan.description).toContain(
+      'Generated layers that write only `unicode` (`work.passages`) refuse any other value',
+    );
+    expect(tibetan.description).toContain(
+      'Prebuilt archives (`work.draft`) keep their own format',
+    );
+    expect(bundleFormatOptions([passages])[0].supported).toEqual(['unicode']);
+  });
+
+  it('gives each layer its formats in describeLayers', () => {
+    const described = describeLayers(
+      createLayerRegistry({ layers: [folios, passages] }),
+    );
+    expect(described.map((l) => [l.name, l.tibetanFormats])).toEqual([
+      ['work.folios', ['unicode', 'ewts', 'both']],
+      ['work.passages', ['unicode']],
+    ]);
+  });
+
+  it('offers ewts and both for the studio layers through work.folios', () => {
+    const [tibetan] = bundleFormatOptions(snapshotLayerRegistry.layers);
+    expect(tibetan.supported).toEqual(['unicode', 'ewts', 'both']);
+    expect(
+      describeLayers(snapshotLayerRegistry).map((l) => [
+        l.name,
+        l.tibetanFormats,
+      ]),
+    ).toEqual([
+      ['etexts.catalog', ['unicode']],
+      ['etexts.text', ['unicode']],
+      ['work.annotations', ['unicode']],
+      ['work.bibliography', ['unicode']],
+      ['work.draft', ['unicode']],
+      ['work.folios', ['unicode', 'ewts', 'both']],
+      ['work.glossary', ['unicode']],
+      ['work.passages', ['unicode']],
+      ['work.passages.raw', ['unicode']],
+    ]);
+  });
+
+  it('says only work.folios writes ewts and both in the studio', () => {
+    const [tibetan] = bundleFormatOptions(snapshotLayerRegistry.layers);
+    expect(tibetan.description).toContain(
+      '`ewts` is written by `work.folios`; `both` is written by `work.folios`.',
+    );
+    expect(tibetan.description).toContain(
+      'Generated layers that write only `unicode` (`work.annotations`, `work.bibliography`, `work.glossary`, `work.passages`, `work.passages.raw`) refuse any other value',
+    );
+    expect(tibetan.description).toContain(
+      'Prebuilt archives (`etexts.catalog`, `etexts.text`, `work.draft`) keep their own format',
+    );
   });
 });
 
