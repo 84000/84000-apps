@@ -68,22 +68,32 @@ export const getUser = async ({ client }: { client: DataClient }) => {
   };
 };
 
-export const hasPermission = async ({
+/**
+ * Asks the database whether the caller holds a permission. Returns `null` when
+ * the check itself fails, so a caller can tell "no" from "couldn't tell".
+ */
+export const checkPermission = async ({
   client,
   permission,
 }: {
   client: DataClient;
   permission: UserPermission;
-}) => {
+}): Promise<boolean | null> => {
   const { data, error } = await client.rpc('authorize', {
     requested_permission: permission,
   });
   if (error) {
     console.error(`Failed to check permission: ${error.message}`);
-    return false;
+    return null;
   }
   return data as boolean;
 };
+
+/** Like `checkPermission`, but a failed check counts as denied. */
+export const hasPermission = async (args: {
+  client: DataClient;
+  permission: UserPermission;
+}) => (await checkPermission(args)) ?? false;
 
 export const loginWithGoogle = async ({
   client,
