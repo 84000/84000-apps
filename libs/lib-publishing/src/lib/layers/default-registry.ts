@@ -6,10 +6,12 @@ import { etextsCatalogLayer, etextsTextLayer } from './etexts';
 import { createLayerRegistry } from './registry';
 import type { SnapshotLayer, SnapshotPreset } from './types';
 import { workDraftLayer } from './work-draft';
+import { workFoliosLayer } from './work-folios';
 import { createWorkLayers, WORK_LAYER_NAMES } from './work-layers';
 
 export const SNAPSHOT_LAYERS: readonly SnapshotLayer[] = [
   workDraftLayer,
+  workFoliosLayer,
   ...createWorkLayers(),
   etextsCatalogLayer,
   etextsTextLayer,

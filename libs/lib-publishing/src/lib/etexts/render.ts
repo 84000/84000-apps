@@ -3,7 +3,7 @@
  * describes them, and one text file per volume.
  */
 
-import { folioLabel } from '../folio';
+import { folioLabel, joinSideLines } from '../folio';
 import {
   collectionKey,
   volumeTextPath,
@@ -38,11 +38,7 @@ export const UNNUMBERED_FOLIO = 'F.?';
 
 /** A folio side's line: its 84000 label, then its text with line breaks joined. */
 export const renderFolioLine = (folio: EtextsFolioRow): string =>
-  `[${folioLabel(folio.folio_number, folio.folio_side) || UNNUMBERED_FOLIO}] ${(
-    folio.content ?? ''
-  )
-    .replace(/\s*[\r\n]+\s*/g, ' ')
-    .trim()}`;
+  `[${folioLabel(folio.folio_number, folio.folio_side) || UNNUMBERED_FOLIO}] ${joinSideLines(folio.content)}`;
 
 /** A volume's text: one folio side per line, in reading order. */
 export const renderVolumeText = (folios: readonly EtextsFolioRow[]): string =>

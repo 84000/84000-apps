@@ -9,6 +9,10 @@ export const folioLabel = (
   side: string | null | undefined,
 ): string => (folio == null || !side ? '' : `F.${folio}.${side}`);
 
+/** A side's text on one line: its own line breaks joined by a single space. */
+export const joinSideLines = (content: string | null | undefined): string =>
+  (content ?? '').replace(/\s*[\r\n]+\s*/g, ' ').trim();
+
 const LABEL = /^F\.(\d+)\.([a-z]+)$/;
 
 /** The folio and side of a label `folioLabel` writes; null for anything else. */
