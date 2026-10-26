@@ -14,13 +14,7 @@
     },
     "homepage": "https://github.com/84000/84000-apps",
     "repository": "https://github.com/84000/84000-apps",
-    "license": "ISC",
-    "mcpServers": {
-      "84000-studio": {
-        "type": "http",
-        "url": "https://studio.84000.co/mcp"
-      }
-    }
+    "license": "ISC"
   },
   "plugins": [
     {
