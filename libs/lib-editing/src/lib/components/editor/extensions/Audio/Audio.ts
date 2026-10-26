@@ -41,7 +41,8 @@ export const Audio = Node.create<AudioOptions>({
       },
       title: {
         default: null,
-        parseHTML: (element) => element.getAttribute('data-title'),
+        parseHTML: (element) =>
+          element.getAttribute('data-title') ?? element.getAttribute('title'),
         renderHTML: ({ title }) =>
           typeof title === 'string' ? { 'data-title': title } : {},
       },

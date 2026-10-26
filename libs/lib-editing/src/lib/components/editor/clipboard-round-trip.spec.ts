@@ -396,6 +396,34 @@ describe.each([
  * copied out of one editor and pasted into another, through the view's own
  * clipboard functions and the whole paste pipeline.
  */
+describe('pasted HTML with native attributes', () => {
+  it.each([
+    [
+      'a line language',
+      '<ul><li type="line" lang="Sa-Ltn">oṃ</li></ul>',
+      'line',
+      'lang',
+      'Sa-Ltn',
+    ],
+    [
+      'an audio title',
+      '<audio src="https://e.com/a.mp3" title="A recitation"></audio>',
+      'audio',
+      'title',
+      'A recitation',
+    ],
+  ])('keeps %s', (_name, html, type, attr, value) => {
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    const doc = DOMParser.fromSchema(stackSchema).parse(element);
+    const found: unknown[] = [];
+    doc.descendants((node) => {
+      if (node.type.name === type) found.push(node.attrs[attr]);
+    });
+    expect(found).toEqual([value]);
+  });
+});
+
 describe('the editor clipboard itself', () => {
   const notesIn = (editor: Editor) => {
     const notes: unknown[] = [];
