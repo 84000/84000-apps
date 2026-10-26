@@ -367,11 +367,7 @@ export class WorkDocument {
       .sort((a, b) => a.index - b.index);
     if (!targets.length) return false;
 
-    const content: ContentChange[] = targets.map((target) => ({
-      uuid: target.uuid,
-      before: this.store.ensure(target.uuid).toJSON(),
-      after: null,
-    }));
+    const content = this.removedContent(targets.map((t) => t.uuid));
     const labelChanges = this.spine.remove(
       targets.map((t) => t.uuid),
       this.mutation(true),
@@ -445,22 +441,19 @@ export class WorkDocument {
       return seed;
     });
 
+    const added: ContentChange[] = seeds.map((seed, i) => ({
+      uuid: seed.uuid,
+      before: null,
+      after: {
+        type: 'doc',
+        content: replacements[i].content?.length
+          ? replacements[i].content
+          : [EMPTY_PARAGRAPH],
+      },
+    }));
     const content: ContentChange[] = [
-      ...targets.map((target) => ({
-        uuid: target.uuid,
-        before: this.store.ensure(target.uuid).toJSON(),
-        after: null,
-      })),
-      ...seeds.map((seed, i) => ({
-        uuid: seed.uuid,
-        before: null,
-        after: {
-          type: 'doc',
-          content: replacements[i].content?.length
-            ? replacements[i].content
-            : [EMPTY_PARAGRAPH],
-        } as JSONContent,
-      })),
+      ...this.removedContent(targets.map((t) => t.uuid)),
+      ...added,
     ];
 
     const labelChanges = this.spine.remove(
@@ -477,7 +470,7 @@ export class WorkDocument {
       labelChanges.push(...changes);
       this.store
         .ensure(entry.uuid)
-        .replaceContent(content[targets.length + i].after as JSONContent);
+        .replaceContent(added[i].after as JSONContent);
       return { meta: entry, index: at + i };
     });
 
@@ -675,6 +668,18 @@ export class WorkDocument {
   }
 
   // ------------------------------------------------------------- private
+
+  /**
+   * What undo needs to put deleted passages back: the content of each one
+   * held. One not held is left to load from its source when it returns, as
+   * it would have before the delete; reading it here would make it empty.
+   */
+  private removedContent(uuids: string[]): ContentChange[] {
+    return uuids.flatMap((uuid) => {
+      const doc = this.store.peek(uuid);
+      return doc ? [{ uuid, before: doc.toJSON(), after: null }] : [];
+    });
+  }
 
   /** The document size of a run of blocks, as a caret position. */
   private contentSize(content: JSONContent[]): number {
