@@ -72,3 +72,13 @@
 - Screen: the caret moves to the start, or the first line, of `1.12`. ArrowLeft
   and ArrowUp from the start of `1.12` move it back into `1.11`. Shift+Arrow
   extends a selection across the boundary.
+
+### ED-EDT-05 Clicking into a passage taller than the window (D)
+
+- Fixture: `1.52`, lengthened so its row is taller than the window.
+- Do: scroll so `1.52` starts above the top of the panel and ends below its
+  bottom, then click on a word in the middle of the window.
+- Screen: the panel does not scroll, the text under the pointer stays where it
+  was, and the caret is where the click landed.
+- Keyboard and programmatic focus (arrow keys across a boundary, deep links,
+  merges) still scroll the focused passage into view.
