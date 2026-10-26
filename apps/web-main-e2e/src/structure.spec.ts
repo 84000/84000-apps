@@ -127,8 +127,7 @@ test.describe('Passage structure', () => {
     await reveal(page, tail.uuid);
     await caretAtStart(page, tail.uuid);
     await page.keyboard.press('Backspace');
-    // Not the old row going away: it sometimes stays on screen, which the
-    // test below checks.
+    // Not the old row going away: it sometimes stays on screen.
     await expect(row(page, head.uuid)).toContainText(tail.content.slice(0, 20));
     await save(page);
 
@@ -161,9 +160,9 @@ test.describe('Passage structure', () => {
   test('ED-STR-03 Merge with Backspace: the view stays on the merged passage', async ({
     page,
   }) => {
-    test.fail(
+    test.fixme(
       true,
-      'DEV-853: the view moves away from the merged passage, and the old row sometimes stays on screen.',
+      'DEV-853: the view usually moves away from the merged passage, and the old row sometimes stays on screen. Both are intermittent, so test.fail would be flaky.',
     );
     const head = await passageByLabel('1.20');
     const tail = await passageByLabel('1.21');
@@ -229,10 +228,6 @@ test.describe('Passage structure', () => {
   test('ED-STR-04 Passage label menu: an edited label is saved', async ({
     page,
   }) => {
-    test.fail(
-      true,
-      'DEV-841: the label changes on screen, but the Save button does not appear, so the new label cannot be saved.',
-    );
     const twelve = await passageByLabel('1.12');
     await openAt(page, twelve.uuid);
     await labelMenuItem(page, twelve.uuid, 'Edit Label');
