@@ -10,11 +10,22 @@ import {
 } from './annotation';
 
 export const transformer: AnnotationTransformer = (dto): LineAnnotation => {
-  return baseAnnotationFromDTO(dto) as LineAnnotation;
+  const line = baseAnnotationFromDTO(dto) as LineAnnotation;
+  dto.content.forEach((content) => {
+    if (content.lang) {
+      line.lang = content.lang as LineAnnotation['lang'];
+    }
+  });
+  return line;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  return baseAnnotationToDto(annotation);
+  const { lang } = annotation as LineAnnotation;
+  const dto = baseAnnotationToDto(annotation);
+  if (lang) {
+    dto.content.push({ lang });
+  }
+  return dto;
 };
 
 export const importer: AnnotationImporter = (input): LineAnnotation => {

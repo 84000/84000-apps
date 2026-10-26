@@ -32,6 +32,15 @@ export const Audio = Node.create<AudioOptions>({
       src: {
         default: null,
       },
+      // Stored with the audio and written back on save; not shown.
+      mediaType: {
+        default: null,
+        rendered: false,
+      },
+      title: {
+        default: null,
+        rendered: false,
+      },
     };
   },
 

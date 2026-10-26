@@ -71,6 +71,9 @@ export const InternalLinkHoverContent = ({
         }
 
         const { from, to, mark } = range;
+        if (mark.attrs.type === newType && mark.attrs.entity === newEntity) {
+          return;
+        }
         const newHref = `/entity/${newType}/${newEntity}`;
         const { tr } = editor.state;
         tr.removeMark(from, to, mark.type);
@@ -82,6 +85,12 @@ export const InternalLinkHoverContent = ({
             type: newType,
             entity: newEntity,
             href: newHref,
+            // These described the previous target.
+            label: undefined,
+            linkStatus: undefined,
+            isSameWork: undefined,
+            subtype: undefined,
+            linkToh: undefined,
           }),
         );
         editor.view.dispatch(tr);

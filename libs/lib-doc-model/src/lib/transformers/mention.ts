@@ -73,6 +73,7 @@ export const mention: Transformer = (ctx) => {
   const {
     entity,
     linkType,
+    linkStatus,
     text,
     displayText,
     uuid,
@@ -92,6 +93,7 @@ export const mention: Transformer = (ctx) => {
     uuid,
     entity,
     linkType,
+    linkStatus,
     text,
     displayText,
     isSameWork,

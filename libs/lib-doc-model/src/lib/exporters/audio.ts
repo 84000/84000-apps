@@ -9,6 +9,7 @@ export const audio: Exporter<AudioAnnotation> = ({
   const uuid = node.attrs.uuid;
   const src = node.attrs.src;
   const mediaType = node.attrs.mediaType || 'audio/mpeg';
+  const title = node.attrs.title;
 
   if (!src) {
     console.warn(`Audio node ${uuid} is missing src attribute`);
@@ -23,5 +24,6 @@ export const audio: Exporter<AudioAnnotation> = ({
     end: start,
     src,
     mediaType,
+    ...(title ? { title } : {}),
   };
 };

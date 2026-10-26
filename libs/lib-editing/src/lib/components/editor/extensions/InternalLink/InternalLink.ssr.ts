@@ -1,6 +1,7 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { cn, safeHref } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
+import { internalLinkPath } from '@eightyfourthousand/lib-doc-model';
 
 export interface InternalLinkSSROptions {
   HTMLAttributes: Record<string, unknown>;
@@ -63,6 +64,16 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
         rendered: false,
         parseHTML: (element) => element.getAttribute('data-link-toh'),
       },
+      // Stored with the link and written back on save; not shown.
+      label: {
+        default: undefined,
+        rendered: false,
+      },
+      // The stored `link-type`, e.g. `pending` or `not-found`.
+      linkStatus: {
+        default: undefined,
+        rendered: false,
+      },
     };
   },
 
@@ -71,7 +82,11 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
   },
 
   renderHTML({ mark, HTMLAttributes }) {
-    const href = safeHref(mark.attrs.href as string | null | undefined);
+    const href = safeHref(
+      internalLinkPath(
+        mark.attrs as { href?: string; type?: string; entity?: string },
+      ),
+    );
     const {
       entity,
       type: entityType,

@@ -12,11 +12,14 @@ export const internalLink: Transformer = (ctx) => {
   const {
     uuid,
     entity,
-    href = '#',
+    href,
     start,
     end,
     linkType: type,
     toh,
+    label,
+    linkStatus,
+    isPending,
     isSameWork,
     subtype,
     linkToh,
@@ -29,14 +32,6 @@ export const internalLink: Transformer = (ctx) => {
       annotation,
     );
     return;
-  }
-
-  // NOTE: we use redirects to forward older urls. Hashes aren't passed to the
-  // api, so make an effort to convert them to query params.
-  let path = href.replace('#', '?xmlId=');
-
-  if (type && entity) {
-    path = `/entity/${type}/${entity}`;
   }
 
   const matched = recurse({
@@ -52,10 +47,14 @@ export const internalLink: Transformer = (ctx) => {
               type: 'internalLink',
               attrs: {
                 uuid,
-                href: path,
+                // The stored href, kept as is so a save writes it back;
+                // `internalLinkPath` derives the URL to navigate to.
+                href,
                 entity,
                 type,
                 toh: serializeTohList(toh),
+                label,
+                linkStatus: linkStatus ?? (isPending ? 'pending' : undefined),
                 isSameWork,
                 subtype,
                 linkToh,

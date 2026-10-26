@@ -3,6 +3,7 @@ import { createMarkViewDom, registerEditorElement } from '../../util';
 import { locationForPassageType } from '../../../shared/types';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
+import { internalLinkPath } from '@eightyfourthousand/lib-doc-model';
 import { InternalLinkSSR } from './InternalLink.ssr';
 
 declare module '@tiptap/core' {
@@ -40,7 +41,7 @@ export const InternalLink = InternalLinkSSR.extend({
         e.preventDefault();
         if (!isSameWork) {
           // Cross-work links open in a new tab
-          let href = props.mark.attrs.href || '#';
+          let href = internalLinkPath(props.mark.attrs);
           if (isEditable && href) {
             href = `${href}?edit=true`;
           }
