@@ -252,11 +252,9 @@ test.describe('Navigation', () => {
     expect(stored?.content).not.toContain('great saṅgha');
   });
 
+  // DEV-849: translation passages come back from search as alignment matches;
+  // their English is replaceable like any other passage.
   test('ED-NAV-05 Replace all in a translation passage', async ({ page }) => {
-    test.fail(
-      true,
-      'DEV-849: translation passages come back from search as alignment matches, so Replace all stays disabled with "Every match is in the Tibetan source".',
-    );
     const one = await passageByLabel('1.1');
     await openEditor(page, { main: { tab: 'translation', hash: one.uuid } });
     await search(page, 'lotus pond');

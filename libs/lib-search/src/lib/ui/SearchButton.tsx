@@ -18,6 +18,7 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { search } from '../data';
 import type {
+  AlignmentMatch,
   PassageMatch,
   ResultsEntity,
   SearchResult,
@@ -36,6 +37,12 @@ export interface SearchActionContext {
   activeOccurrenceIndex: number;
   activePassageLabel?: string;
   activePassageUuid?: string;
+  /**
+   * Translation passages, with their Tibetan alignment. A match here can be in
+   * the English (`content`) or only in the Tibetan (`source`); occurrences are
+   * found in the English, so those are replaceable.
+   */
+  alignments: AlignmentMatch[];
   moveActiveOccurrence: (direction: 'next' | 'previous') => void;
   passageOccurrences: PassageOccurrence[];
   passages: PassageMatch[];
@@ -118,18 +125,20 @@ export const SearchButton = ({
   const activeOccurrence = passageOccurrences[activeOccurrenceIndex];
   const activeOccurrenceStart = activeOccurrence?.start ?? null;
   const activePassageUuid = activeOccurrence?.passageUuid;
-  const activePassageLabel = results?.passages.find(
-    (passage) => passage.uuid === activePassageUuid,
-  )?.label;
+  const activePassageLabel = [
+    ...(results?.alignments || []),
+    ...(results?.passages || []),
+  ].find((passage) => passage.uuid === activePassageUuid)?.label;
+  // Same order as `passageOccurrences`, so "the next passage" after a single
+  // replace is the next one in the occurrence list, alignments included.
   const passageOrder = useMemo(
     () =>
       new Map(
-        (results?.passages || []).map((passage, index) => [
-          passage.uuid,
-          index,
-        ]),
+        [...(results?.alignments || []), ...(results?.passages || [])].map(
+          (passage, index) => [passage.uuid, index],
+        ),
       ),
-    [results?.passages],
+    [results?.alignments, results?.passages],
   );
 
   const scrollActiveOccurrenceIntoView = useCallback(() => {
@@ -356,6 +365,7 @@ export const SearchButton = ({
       activeOccurrenceIndex,
       activePassageLabel,
       activePassageUuid,
+      alignments: results?.alignments || [],
       moveActiveOccurrence,
       passageOccurrences,
       passages: results?.passages || [],
@@ -375,6 +385,7 @@ export const SearchButton = ({
       moveActiveOccurrence,
       passageOccurrences,
       refreshSearch,
+      results?.alignments,
       results?.passages,
       scrollActiveOccurrenceIntoView,
       searchQuery,
