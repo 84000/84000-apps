@@ -18,6 +18,26 @@ import { useEffect, useMemo, useState } from 'react';
 
 const REPLACE_CHUNK_SIZE = 200;
 
+/** Strip diacritics and case, roughly as the search's `unaccent` + `ilike` do. */
+const fold = (text: string) =>
+  text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+/**
+ * Whether the search could have matched `text` loosely, the way the server
+ * search does (accent- and case-insensitive), as opposed to the exact,
+ * case-sensitive occurrences replace acts on.
+ */
+const looselyMatches = (text: string, query: string, useRegex: boolean) => {
+  if (!useRegex) {
+    return fold(text).includes(fold(query));
+  }
+  try {
+    return new RegExp(fold(query), 'i').test(fold(text));
+  } catch {
+    return false;
+  }
+};
+
 export interface SearchReplacePanelProps {
   canReplace: boolean;
   onPassagesReplaced?: (passages: ReplacedPassage[]) => Promise<void> | void;
@@ -36,18 +56,41 @@ export const SearchReplacePanel = ({
   const [replaceQuery, setReplaceQuery] = useState('');
   const [replacing, setReplacing] = useState(false);
 
-  // Alignment matches are in the Tibetan source, which replace doesn't touch.
-  const onlyAlignments =
-    searchContext.passageOccurrences.length > 0 &&
-    searchContext.passages.length === 0;
+  // Occurrences are found in passage content: the English of translation
+  // passages (alignment matches) and of every other passage. All of them are
+  // replaceable (DEV-849).
+  const targetUuids = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          searchContext.passageOccurrences.map(
+            (occurrence) => occurrence.passageUuid,
+          ),
+        ),
+      ),
+    [searchContext.passageOccurrences],
+  );
+  // An alignment match can also be in the Tibetan source alone, which replace
+  // doesn't touch. Say so only when that is true of every match.
+  const onlyTibetan =
+    searchContext.passageOccurrences.length === 0 &&
+    searchContext.passages.length === 0 &&
+    searchContext.alignments.length > 0 &&
+    searchContext.alignments.every(
+      (alignment) =>
+        !looselyMatches(
+          alignment.content ?? '',
+          searchContext.searchQuery,
+          searchContext.useRegex,
+        ),
+    );
   const canRunReplace =
     canReplace &&
     !replaceDisabledReason &&
     !!searchContext.searchQuery &&
-    searchContext.passages.length > 0 &&
+    targetUuids.length > 0 &&
     !replacing;
-  const canReplaceActive =
-    canRunReplace && searchContext.activeOccurrence?.type !== 'alignment';
+  const canReplaceActive = canRunReplace && !!searchContext.activeOccurrence;
   const canStepBackward =
     replaceOpen && searchContext.activeOccurrenceIndex > 0;
   const canStepForward =
@@ -97,13 +140,6 @@ export const SearchReplacePanel = ({
 
     try {
       if (replaceAll) {
-        const targetUuids = searchContext.passages.map(
-          (passage) => passage.uuid,
-        );
-        if (targetUuids.length === 0) {
-          return;
-        }
-
         const allReplacedPassages: ReplacedPassage[] = [];
         for (let i = 0; i < targetUuids.length; i += REPLACE_CHUNK_SIZE) {
           const chunk = targetUuids.slice(i, i + REPLACE_CHUNK_SIZE);
@@ -218,7 +254,7 @@ export const SearchReplacePanel = ({
                 : 'No exact passage occurrences available for replacement.'}
             </span>
             {replaceDisabledReason && <span>{replaceDisabledReason}</span>}
-            {!replaceDisabledReason && onlyAlignments && (
+            {!replaceDisabledReason && onlyTibetan && (
               <span>
                 Every match is in the Tibetan source, which can't be replaced.
               </span>
