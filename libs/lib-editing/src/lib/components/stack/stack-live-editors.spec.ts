@@ -165,7 +165,7 @@ describe('PassageStackController focused editor', () => {
      */
     const viewport = (controller: PassageStackController) => {
       const view = { scrollTop: 0, scrolls: [] as number[] };
-      controller.setScrollHandler((index) => {
+      controller.addScrollHandler((index) => {
         view.scrolls.push(index);
         // A row taller than the viewport is moved to an edge.
         view.scrollTop += 400;
@@ -248,5 +248,36 @@ describe('PassageStackController focused editor', () => {
 
     controller.unregisterEditor('p1');
     expect(controller.getFocusedEditor()).toBeNull();
+  });
+});
+
+// DEV-847: the layout mounts a stack twice over one controller (the desktop
+// and mobile trees), and each copy installs a scroll handler. With one slot,
+// the copy that installed last took every scroll, and one leaving cleared it
+// for the other.
+describe('PassageStackController scroll handlers', () => {
+  it('scrolls through every copy that installed a handler', async () => {
+    const { controller } = await hydrated(3);
+    const desktop = jest.fn();
+    const mobile = jest.fn();
+    controller.addScrollHandler(desktop);
+    controller.addScrollHandler(mobile);
+
+    controller.focusPassage('p1');
+
+    expect(desktop).toHaveBeenCalledWith(1, undefined);
+    expect(mobile).toHaveBeenCalledWith(1, undefined);
+  });
+
+  it('keeps the other copy installed when one is removed', async () => {
+    const { controller } = await hydrated(3);
+    const desktop = jest.fn();
+    controller.addScrollHandler(desktop);
+    const removeMobile = controller.addScrollHandler(jest.fn());
+
+    removeMobile();
+    controller.focusPassage('p2');
+
+    expect(desktop).toHaveBeenCalledWith(2, undefined);
   });
 });

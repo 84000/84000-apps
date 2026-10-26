@@ -135,13 +135,12 @@ test.describe('Navigation', () => {
     ['internal link', 'p.1', 'a[type="internalLink"]'],
     ['mention', '1.12', 'a[type="mention"]'],
   ] as const) {
+    // DEV-847: the target is outside the loaded window, so the window is
+    // swapped for one around it. The scroll used to go to whichever copy of
+    // the stack (desktop or the hidden mobile one) installed its handler last.
     test(`ED-NAV-02 Clicking an ${kind} to a passage not loaded yet`, async ({
       page,
     }) => {
-      test.fixme(
-        true,
-        'DEV-847: following a link to a passage that is not loaded yet usually stops at the end of the loaded passages (about 1.118), so 2.1 never loads. It reaches 2.1 about one time in four, so test.fail would be flaky.',
-      );
       const source = await passageByLabel(from);
       const target = await passageByLabel('2.1');
       await openEditor(page, {
@@ -309,11 +308,8 @@ test.describe('Navigation', () => {
     });
   });
 
+  // DEV-847: as the ED-NAV-02 links to a passage not loaded yet.
   test('ED-NAV-06 A tagged thread outside the first page', async ({ page }) => {
-    test.fixme(
-      true,
-      'DEV-847: the same stop at the end of the loaded passages as the ED-NAV-02 links, so 2.100 is usually never reached.',
-    );
     const far = await passageByLabel('2.100');
     // The panel lists the threads on screen; filtered by a tag it lists
     // every thread in the work with that tag, which is how t3 is reached.

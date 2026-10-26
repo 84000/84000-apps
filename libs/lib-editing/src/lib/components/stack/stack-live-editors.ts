@@ -2,7 +2,11 @@ import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
-import type { StackFocusTarget, StackFocusWhere } from './types';
+import type {
+  StackFocusTarget,
+  StackFocusWhere,
+  StackScrollHandler,
+} from './types';
 
 /** Frames to wait for a focused passage's editor to mount. */
 const EDITOR_MOUNT_FRAMES = 60;
@@ -31,9 +35,13 @@ export class StackLiveEditors {
   private editors = new Map<string, Editor>();
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
-  private scrollToIndex:
-    | ((index: number, options?: { settle?: boolean }) => void)
-    | null = null;
+  /**
+   * One per drawn copy of the view. The layout mounts a stack twice — the
+   * desktop tree and the mobile one a breakpoint hides — over one controller,
+   * so a single slot went to whichever copy installed last. When that was the
+   * hidden one, every reveal scrolled a list nobody could see (DEV-847).
+   */
+  private scrollHandlers = new Set<StackScrollHandler>();
 
   private liveUuids = new Set<string>();
   private focusedUuid: string | null = null;
@@ -61,9 +69,12 @@ export class StackLiveEditors {
     this.focusedUuid = null;
   }
 
-  /** Scroll the view to a row, through whatever handler it installed. */
+  /**
+   * Scroll the view to a row, through every handler its copies installed.
+   * Each handler answers only for a copy that is laid out.
+   */
   scrollTo(index: number, options?: { settle?: boolean }) {
-    this.scrollToIndex?.(index, options);
+    this.scrollHandlers.forEach((handler) => handler(index, options));
   }
 
   registerEditor(uuid: string, editor: Editor) {
@@ -94,10 +105,12 @@ export class StackLiveEditors {
 
   getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
 
-  setScrollHandler(
-    handler: ((index: number, options?: { settle?: boolean }) => void) | null,
-  ) {
-    this.scrollToIndex = handler;
+  /** Install a copy's scroll handler. Returns a function that removes it. */
+  addScrollHandler(handler: StackScrollHandler) {
+    this.scrollHandlers.add(handler);
+    return () => {
+      this.scrollHandlers.delete(handler);
+    };
   }
 
   /** Whether this row should render as an editor rather than static HTML. */
@@ -195,13 +208,13 @@ export class StackLiveEditors {
     const editor = this.editors.get(uuid);
     if (editor) {
       this.focusEditor(editor, where);
-      if (reveal) this.scrollToIndex?.(index);
+      if (reveal) this.scrollTo(index);
       return true;
     }
 
     this.pendingFocus = { uuid, where };
     this.keyBuffer = '';
-    if (reveal) this.scrollToIndex?.(index);
+    if (reveal) this.scrollTo(index);
     // Either the row is static and re-rendering swaps it to an editor, or the
     // passage is not hydrated yet and mounting waits on its document.
     void this.hydrateOne(uuid);
