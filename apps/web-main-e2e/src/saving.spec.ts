@@ -298,7 +298,7 @@ test.describe('Saving', () => {
   }) => {
     test.fixme(
       true,
-      'Pending DEV-836 (PR #668): until it merges, an aborted save is a failed one, as in ED-SAV-06.',
+      'Still fails after DEV-836: aborting the save of an edit to 1.4 shows no "may have gone through" toast. Not yet diagnosed.',
     );
     const p = await passageByLabel('1.4');
     let requests = 0;

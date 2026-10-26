@@ -111,5 +111,6 @@ not depend on how the save is carried out.
   the passages from the server instead of sending the save again.
 - Stored: one save request at most; `1.4` is either unchanged or has the
   edit, and the editor shows what is stored.
-- Known: pending DEV-836 (PR #668). Until it merges, an aborted save is treated
-  as a failed one, as in `ED-SAV-06`, and the test is skipped.
+- Known: still fails after DEV-836 merged: when the save of an edit to `1.4` is
+  aborted, no "may have gone through" toast appears. Not yet diagnosed, so the
+  test is skipped.

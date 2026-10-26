@@ -22,9 +22,9 @@
   reproduce in isolation (typing in two passages, undo both, Save, redo both,
   Save), so it is not filed. The test waits for the first save's response
   before redoing.
-- Known: intermittent, possible data loss: about 1 run in 5, after
-  Delete, undo and Save, `1.12` is still shown but its annotations are stored
-  empty.
+- Known: open in the stack editor (DEV-852): intermittent, possible data loss:
+  about 1 run in 5, after Delete, undo and Save, `1.12` is still shown but its
+  annotations are stored empty. That step is skipped.
 
 ### ED-EDT-02 Copy and paste (D + J)
 
