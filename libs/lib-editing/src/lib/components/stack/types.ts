@@ -162,3 +162,12 @@ export type PassageStackControllerOptions = {
 
 /** The entity a stack's rows are. */
 export type StackRows = 'passages' | 'bibliography';
+
+/**
+ * Scrolls one drawn copy of a stack view to a row. `settle` holds the row in
+ * place while the rows around it load and take their real heights.
+ */
+export type StackScrollHandler = (
+  index: number,
+  options?: { settle?: boolean },
+) => void;

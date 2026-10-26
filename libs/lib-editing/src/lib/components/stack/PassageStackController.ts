@@ -22,6 +22,7 @@ import type {
   PassageExtras,
   PassageStackControllerOptions,
   StackFocusWhere,
+  StackScrollHandler,
   StackPassageSeed,
   StackRows,
 } from './types';
@@ -360,10 +361,12 @@ export class PassageStackController {
 
   getEditor = (uuid: string) => this.live.getEditor(uuid);
 
-  setScrollHandler(
-    handler: ((index: number, options?: { settle?: boolean }) => void) | null,
-  ) {
-    this.live.setScrollHandler(handler);
+  /**
+   * Install a drawn copy's scroll handler; each copy of the view installs its
+   * own. Returns a function that removes it.
+   */
+  addScrollHandler(handler: StackScrollHandler) {
+    return this.live.addScrollHandler(handler);
   }
 
   // --------------------------------------------------------------- focus
