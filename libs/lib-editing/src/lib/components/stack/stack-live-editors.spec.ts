@@ -157,6 +157,89 @@ describe('PassageStackController focused editor', () => {
     expect(controller.getFocusedUuid()).toBe('p3');
   });
 
+  describe('scrolling on focus', () => {
+    /**
+     * A scroll handler that moves a fake viewport, and an editor whose
+     * `posAtCoords` reads the text under a screen point in that viewport — a
+     * stand-in for layout, which jsdom does not do.
+     */
+    const viewport = (controller: PassageStackController) => {
+      const view = { scrollTop: 0, scrolls: [] as number[] };
+      controller.setScrollHandler((index) => {
+        view.scrolls.push(index);
+        // A row taller than the viewport is moved to an edge.
+        view.scrollTop += 400;
+      });
+      const editorAt = (uuid: string) => {
+        const editor = mountEditor(controller, uuid);
+        editor.view.posAtCoords = ({ top }) => {
+          const pos = Math.floor((top + view.scrollTop) / 100) + 1;
+          return { pos, inside: -1 };
+        };
+        return editor;
+      };
+      return { view, editorAt };
+    };
+
+    it('does not scroll when a click focuses a static row', async () => {
+      const { controller } = await hydrated(3);
+      const { view } = viewport(controller);
+
+      controller.focusPassage('p1', { x: 10, y: 250 });
+
+      expect(view.scrolls).toEqual([]);
+    });
+
+    it('does not scroll when a click focuses a mounted editor', async () => {
+      const { controller } = await hydrated(3);
+      const { view, editorAt } = viewport(controller);
+      const editor = editorAt('p1');
+      controller.registerEditor('p1', editor);
+
+      controller.focusPassage('p1', { x: 10, y: 250 });
+
+      expect(view.scrolls).toEqual([]);
+      editor.destroy();
+    });
+
+    // Regression: the scroll ran before the editor mounted, so the click's
+    // screen point was resolved over text the scroll had moved there.
+    it('lands the caret where a static row was clicked', async () => {
+      const { controller } = await hydrated(3);
+      const { editorAt } = viewport(controller);
+
+      controller.focusPassage('p1', { x: 10, y: 250 });
+      const editor = editorAt('p1');
+      controller.registerEditor('p1', editor);
+
+      // y 250 with no scroll is position 3.
+      expect(editor.state.selection.from).toBe(3);
+      editor.destroy();
+    });
+
+    it.each([
+      ['start', 'start'],
+      ['end', 'end'],
+      ['a document position', 2],
+    ] as const)('still scrolls to a row focused at %s', async (_, where) => {
+      const { controller } = await hydrated(3);
+      const { view } = viewport(controller);
+
+      controller.focusPassage('p2', where);
+
+      expect(view.scrolls).toEqual([2]);
+    });
+
+    it('still scrolls when keyboard navigation moves focus', async () => {
+      const { controller } = await hydrated(3);
+      const { view } = viewport(controller);
+
+      controller.focusRelative('p1', 1, 'start');
+
+      expect(view.scrolls).toEqual([2]);
+    });
+  });
+
   it('lets go of the editor when the focused passage unmounts', async () => {
     const { controller } = await hydrated(3);
     controller.focusPassage('p1');

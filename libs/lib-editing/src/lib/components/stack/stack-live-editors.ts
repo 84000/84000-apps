@@ -187,16 +187,21 @@ export class StackLiveEditors {
     this.focusedUuid = uuid;
     this.recenterLive(uuid);
 
+    // A clicked row is already on screen. Scrolling it would move a passage
+    // taller than the viewport, and the click's screen point, resolved to a
+    // caret once the editor mounts, would then be over different text.
+    const reveal = typeof where !== 'object';
+
     const editor = this.editors.get(uuid);
     if (editor) {
       this.focusEditor(editor, where);
-      this.scrollToIndex?.(index);
+      if (reveal) this.scrollToIndex?.(index);
       return true;
     }
 
     this.pendingFocus = { uuid, where };
     this.keyBuffer = '';
-    this.scrollToIndex?.(index);
+    if (reveal) this.scrollToIndex?.(index);
     // Either the row is static and re-rendering swaps it to an editor, or the
     // passage is not hydrated yet and mounting waits on its document.
     void this.hydrateOne(uuid);
