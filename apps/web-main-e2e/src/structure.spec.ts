@@ -351,48 +351,54 @@ test.describe('Editing', () => {
   });
 
   // The race the test above can lose, made certain: the passage is deleted
-  // before its content has loaded.
-  test('ED-EDT-01 Undo and redo across passages: undo a delete before the passage loads', async ({
-    page,
-  }) => {
-    const target = await passageByLabel('1.59');
-    const annotations = await annotationsOf(target.uuid);
-    // Open at the top: the target is too far down to load with the first rows.
-    await openEditor(page);
+  // before its content has loaded. Saved between delete and undo, the server
+  // no longer has it to load from.
+  for (const savedBetween of [false, true]) {
+    test(`ED-EDT-01 Undo and redo across passages: undo a delete before the passage loads${savedBetween ? ', saved between' : ''}`, async ({
+      page,
+    }) => {
+      const target = await passageByLabel('1.59');
+      const annotations = await annotationsOf(target.uuid);
+      // Open at the top: the target is too far down to load with the first rows.
+      await openEditor(page);
 
-    // From here, hold every read of passage content until the undo.
-    let release = () => undefined as void;
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    await page.route('**/api/graphql', async (route) => {
-      if (/WithJson/.test(route.request().postData() ?? '')) await held;
-      await route.fallback();
-    });
-    await page.locator('[data-stack-passage]:visible').first().hover();
-    for (
-      let step = 0;
-      step < 150 && !(await row(page, target.uuid).count());
-      step++
-    ) {
-      await page.mouse.wheel(0, 600);
-      await page.waitForTimeout(100);
-    }
-    const opening = target.content.split(' ').slice(0, 4).join(' ');
-    await expect(row(page, target.uuid)).toBeVisible();
-    await expect(row(page, target.uuid)).not.toContainText(opening);
-    await labelMenuItem(page, target.uuid, 'Delete');
-    await page.getByRole('button', { name: 'Delete', exact: true }).click();
-    await expect(row(page, target.uuid)).toHaveCount(0);
-    await undo(page);
-    await expect(row(page, target.uuid)).toBeVisible();
-    release();
+      // From here, hold every read of passage content until released.
+      let release = () => undefined as void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route('**/api/graphql', async (route) => {
+        if (/WithJson/.test(route.request().postData() ?? '')) await held;
+        await route.fallback();
+      });
+      await page.locator('[data-stack-passage]:visible').first().hover();
+      for (
+        let step = 0;
+        step < 150 && !(await row(page, target.uuid).count());
+        step++
+      ) {
+        await page.mouse.wheel(0, 600);
+        await page.waitForTimeout(100);
+      }
+      const opening = target.content.split(' ').slice(0, 4).join(' ');
+      await expect(row(page, target.uuid)).toBeVisible();
+      await expect(row(page, target.uuid)).not.toContainText(opening);
+      await labelMenuItem(page, target.uuid, 'Delete');
+      await page.getByRole('button', { name: 'Delete', exact: true }).click();
+      release();
+      await expect(row(page, target.uuid)).toHaveCount(0);
+      if (savedBetween) {
+        await save(page);
+        expect(await passageByUuid(target.uuid)).toBeNull();
+      }
+      await undo(page);
+      await expect(row(page, target.uuid)).toContainText(opening);
 
-    await expect.soft(row(page, target.uuid)).toContainText(opening);
-    await saveIfShown(page);
-    expect((await passageByUuid(target.uuid))?.content).toBe(target.content);
-    expect(await annotationsOf(target.uuid)).toEqual(annotations);
-  });
+      await saveIfShown(page);
+      expect((await passageByUuid(target.uuid))?.content).toBe(target.content);
+      expect(await annotationsOf(target.uuid)).toEqual(annotations);
+    });
+  }
 
   test('ED-EDT-03 Select and delete across passages', async ({ page }) => {
     const eleven = await passageByLabel('1.11');
