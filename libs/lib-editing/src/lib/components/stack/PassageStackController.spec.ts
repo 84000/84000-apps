@@ -310,6 +310,17 @@ describe('PassageStackController structural ops', () => {
     expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
   });
 
+  it('splits at a position the keymap names, rather than at the caret', async () => {
+    const { work, controller } = await hydrated(3);
+    // After "passage": 1 for the paragraph's opening, 7 for the word.
+    expect(controller.splitAtSelection('p1', 8)).toBe(true);
+
+    const order = controller.getOrder();
+    expect(order).toHaveLength(4);
+    expect(work.store.ensure('p1').text).toBe('passage');
+    expect(work.store.ensure(order[2]).text).toBe(' 1 text');
+  });
+
   it('renames a passage without touching the run below it', async () => {
     const { controller } = await hydrated(3);
     expect(controller.setLabel('p1', '1.5')).toBe(true);

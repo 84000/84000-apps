@@ -56,7 +56,11 @@ export type StackKeyboardDelegate = {
     direction: -1 | 1,
     where: 'start' | 'end',
   ) => boolean;
-  splitAtSelection: (uuid: string) => boolean;
+  /**
+   * Split a passage at the caret, or at `at` — a position in the passage's
+   * own document — when the caller has worked out a better place to cut.
+   */
+  splitAtSelection: (uuid: string, at?: number) => boolean;
   mergeWithPrevious: (uuid: string) => boolean;
   undo: () => boolean;
   redo: () => boolean;

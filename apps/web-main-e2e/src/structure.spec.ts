@@ -87,11 +87,9 @@ test.describe('Passage structure', () => {
     await expect(shownLabel(page, added?.uuid ?? '')).toHaveText('1.13');
   });
 
+  // DEV-842: at the end of a line group, the second Enter used to add another
+  // line to 1.2 rather than start a passage.
   test('ED-STR-02 New passage with Enter twice', async ({ page }) => {
-    test.fail(
-      true,
-      'DEV-842: at the end of a line group the text typed after two Enters lands in a new line of 1.2, and no passage is stored.',
-    );
     const verse = await passageByLabel('1.2');
     const seeded = await annotationsOf(verse.uuid);
     expect(seeded).toHaveLength(7);

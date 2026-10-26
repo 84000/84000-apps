@@ -49,15 +49,15 @@ rather than by keeping two lists in step.
 Only one passage is editable at a time — neighbours premount non-editable so
 boundary arrow keys land in a real editor. That is what decides this:
 
-| Concern                                | Verdict                                                                                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema, marks, node views              | **Per editor.** Each passage parses and renders its own content.                                                                      |
-| `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `StackRowContent.wire`.        |
-| `BoundaryKeymap`, `SlashCommand`       | **Per editor.** Both act on the focused passage and need its uuid.                                                                    |
+| Concern                                | Verdict                                                                                                                                                                                                                                                                    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema, marks, node views              | **Per editor.** Each passage parses and renders its own content.                                                                                                                                                                                                           |
+| `Collaboration` binding, `UndoManager` | **Per editor**, but the manager belongs to the `PassageDoc` and outlives every mount — see the note in `StackRowContent.wire`.                                                                                                                                             |
+| `BoundaryKeymap`, `SlashCommand`       | **Per editor.** Both act on the focused passage and need its uuid.                                                                                                                                                                                                         |
 | `TranslationBubbleMenu`                | **Shared**, mounted once by `PassageStack` and bound to `getFocusedEditor()`. It follows a selection and only one editor carries one, so N mounted menus would be N popovers watching nothing. Keyed on the focused uuid so it rebinds rather than holding a stale editor. |
-| `StackPassageMenu`                     | **Shared**, and not editor-driven at all — see below.                                                                                |
-| `MentionAdvancedOverlay`               | **Shared**, bound to whichever editor has focus, keyed the same way. The prefix on that key is load bearing: two siblings keyed on the same uuid are two children with the same key. |
-| `DragHandle`                           | Not in the production translation set either. Out of scope.                                                                          |
+| `StackPassageMenu`                     | **Shared**, and not editor-driven at all — see below.                                                                                                                                                                                                                      |
+| `MentionAdvancedOverlay`               | **Shared**, bound to whichever editor has focus, keyed the same way. The prefix on that key is load bearing: two siblings keyed on the same uuid are two children with the same key.                                                                                       |
+| `DragHandle`                           | Not in the production translation set either. Out of scope.                                                                                                                                                                                                                |
 
 ### Row chrome
 
@@ -105,23 +105,23 @@ to a row that is not drawn.
 
 Not carried over, and why:
 
-| | |
-| --- | --- |
-| `ReaderOptions` in the menu | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet. |
-| The references list | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past. |
-| The compare source column | Compare mode is DEV-743's, and its surface is undecided. |
-| `data-toh` on the row | Correct, but the wrong mechanism: the annotation rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
-| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet. |
+|                              |                                                                                                                                                                                                                                                                                                    |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ReaderOptions` in the menu  | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet.                                                                                                                   |
+| The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                                          |
+| The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                                           |
+| `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
+| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet.                                                                                  |
 
 ### Keys at a passage boundary
 
-| Key                                  | Behaviour                                                                                                                                                                                                                                                                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Enter at the end                     | Starts a **paragraph**, as it does anywhere else. A passage boundary is not a reason for Enter to mean something different.                                                                                                                                                                            |
-| Enter again, in that empty paragraph | Starts a new passage, dropping the empty paragraph so the head does not end in a blank line. An Enter in an already-empty passage is still the _first_ press, so the gesture is always two.                                                                                                            |
-| Slash menu → Passage                 | The same split, directly.                                                                                                                                                                                                                                                                              |
-| Backspace at the start               | Merges into the previous passage and puts the caret at the join.                                                                                                                                                                                                                                       |
-| Backspace at an inner block start    | Joins into the block before it. Where a join is impossible — a heading, a table, a line group — it does nothing rather than letting ProseMirror fall through to `selectNodeBackward`, which selected the whole preceding block, showed the bubble menu over it, and made the next Backspace delete it. |
+| Key                               | Behaviour                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enter at the end                  | Starts a **paragraph**, as it does anywhere else. A passage boundary is not a reason for Enter to mean something different.                                                                                                                                                                                                                                                                                                               |
+| Enter again, in that empty block  | Starts a new passage, moving the empty block into it so the head does not end in a blank line. At the end of a line group the first Enter adds an empty line, and the second moves that line out of the group as a paragraph, so the new passage starts with a paragraph. An Enter in an already-empty passage is still the _first_ press, so the gesture is always two. Lists keep their own Enter, which lifts an empty item out first. |
+| Slash menu → Passage              | The same split, directly.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Backspace at the start            | Merges into the previous passage and puts the caret at the join.                                                                                                                                                                                                                                                                                                                                                                          |
+| Backspace at an inner block start | Joins into the block before it. Where a join is impossible — a heading, a table, a line group — it does nothing rather than letting ProseMirror fall through to `selectNodeBackward`, which selected the whole preceding block, showed the bubble menu over it, and made the next Backspace delete it.                                                                                                                                    |
 
 A caret position handed over by the doc model is a document offset, not
 necessarily somewhere a caret can sit: a merge's boundary is the size of the
@@ -182,7 +182,7 @@ stack.
 
 It is re-measured, not taken once. What sits above can change height long
 after mount — a title or an imprint arriving — and a stale margin offsets
-every row *and* every scroll by that much, silently: rows still render and a
+every row _and_ every scroll by that much, silently: rows still render and a
 deep link still scrolls, just to the wrong place. Adding 260px above a settled
 stack moved a revealed row by exactly 260px, which on web-main reads as landing
 a couple of passages short. Watching the scroller alone does not see it, since
@@ -200,7 +200,7 @@ the entire work, and without it loads one page.
 A card needs no editor. Its content comes from the navigation fetchers by uuid
 and from the anchor's own attributes, and detection is a delegated listener
 over the whole subtree — all three are already document level. The only thing
-that genuinely needs an editor is *editing*, and that is resolved when an
+that genuinely needs an editor is _editing_, and that is resolved when an
 action runs: `requestEditorFor` focuses the passage, which mounts it.
 
 What used to decide whether a card appeared was whether the anchor resolved to
@@ -232,7 +232,7 @@ Three things it has to get right:
 
 - **It is what the virtualizer measures.** So it is drawn at the row's
   estimated height, not a token height: a short placeholder does not get
-  corrected, it *becomes* the row's height until the passage hydrates.
+  corrected, it _becomes_ the row's height until the passage hydrates.
 - **It is one block per passage, not ruled lines.** A passage is a block of
   text, and a placeholder that draws individual lines is inventing a shape it
   does not know — line breaks depend on the column width. The space between
@@ -310,7 +310,7 @@ first passage had to ask for twice the run and throw the leading half away —
 on every hydration, including plain scrolling.
 
 It is only needed where no predecessor is held. Within a section's run the
-spine entry before a passage *is* the passage before it in the work, so that
+spine entry before a passage _is_ the passage before it in the work, so that
 entry is an exclusive cursor and the run reads forward at exactly its length.
 `AROUND` stays as the fallback for a run that opens a section, or a spine that
 opens mid-work after a deep link — which is the case the original note was
@@ -368,13 +368,14 @@ Three things that each cost a debugging pass:
 
   So the anchor is held until the page stops moving, re-armed by anything that
   changes the view, and released only once the offset, the controller's version
-  *and* `isHydrating` all agree there is nothing left to come. The last of
+  _and_ `isHydrating` all agree there is nothing left to come. The last of
   those is load bearing: between issuing the scroll and the content landing the
   page is perfectly still, and letting go in that gap is exactly when the drift
   happens.
 
   It yields immediately to a reader who scrolls. Holding a position against
   someone trying to leave it is worse than the drift.
+
 - **Upward paging waits for the top.** Downward loads ahead of a fast scroll;
   upward cannot, because a prepend moves every row below it. It is also
   disarmed while a reveal is in flight and again while a prepend lands, or the
@@ -398,7 +399,7 @@ The view filters them out of `getOrder`, rather than hiding them with CSS as
 the annotation rule does — a virtualized row is absolutely positioned at a
 measured offset, so `display: none` leaves a hole rather than closing the gap.
 Rows are indexed within the tab and hydration within the work, and `spineRange`
-maps between them through the first and last *visible* uuid, so a filtered row
+maps between them through the first and last _visible_ uuid, so a filtered row
 costs at most a passage of over-fetch at the window's edges.
 
 Most passages carry no scope and belong to every reading. Until a toh is named
