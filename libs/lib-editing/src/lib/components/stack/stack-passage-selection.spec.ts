@@ -37,7 +37,7 @@ describe('PassageStackController passage selection', () => {
     charCount: text.length,
   });
 
-  const withMarks = async () => {
+  const withMarks = async ({ stored = false } = {}) => {
     const all = [
       annotated('p0', '1', 'alpha'),
       annotated('p1', '2', 'bravo'),
@@ -48,7 +48,9 @@ describe('PassageStackController passage selection', () => {
       workUuid: 'work-1',
       loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
     });
-    work.seedSpine(all.map((entry) => entry.meta));
+    work.seedSpine(
+      all.map((entry, sort) => (stored ? { ...entry.meta, sort } : entry.meta)),
+    );
     const controller = new PassageStackController({ work });
     controller.setVisibleRange({ start: 0, end: all.length });
     await flush();
@@ -85,11 +87,32 @@ describe('PassageStackController passage selection', () => {
     const { work, controller } = await withMarks();
     controller.setPassageSelection('p1', 'p2');
 
-    expect(controller.deletePassageSelection()).toBe(true);
+    expect(await controller.deletePassageSelection()).toBe(true);
 
     expect(work.spine.uuids()).toEqual(['p0', 'p3']);
     expect(work.log.depth).toBe(1);
     expect(controller.hasPassageSelection()).toBe(false);
+  });
+
+  it('loads the selected passages before deleting them, so a saved delete can be undone', async () => {
+    const { work, controller } = await withMarks({ stored: true });
+    // Only the first row loaded: the rest scrolled out and were let go.
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+    expect(work.store.has('p2')).toBe(false);
+    controller.setPassageSelection('p1', 'p2');
+
+    expect(await controller.deletePassageSelection()).toBe(true);
+    expect(work.spine.removedSinceSave().sort()).toEqual(['p1', 'p2']);
+    work.spine.settleSave({
+      deleted: work.spine.removedSinceSave(),
+      created: [],
+    });
+    work.undo();
+
+    expect(work.spine.uuids()).toEqual(['p0', 'p1', 'p2', 'p3']);
+    expect(work.store.peek('p2')?.toNode().textContent).toBe('charlie');
+    expect(work.store.dirty().sort()).toEqual(['p1', 'p2']);
   });
 
   it('undoes a delete of the selection in one step', async () => {
@@ -109,7 +132,7 @@ describe('PassageStackController passage selection', () => {
 
     controller.setPassageSelection('p1', 'p2');
     expect(
-      controller.pastePassageSelection({
+      await controller.pastePassageSelection({
         html: copied?.html ?? '',
         text: copied?.text ?? '',
       }),
@@ -158,7 +181,7 @@ describe('PassageStackController passage selection', () => {
     controller.setPassageSelection('p1', 'p2');
 
     expect(
-      controller.pastePassageSelection({ html: '', text: 'one\n\ntwo' }),
+      await controller.pastePassageSelection({ html: '', text: 'one\n\ntwo' }),
     ).toBe(true);
 
     expect(work.spine.uuids().length).toBe(3);

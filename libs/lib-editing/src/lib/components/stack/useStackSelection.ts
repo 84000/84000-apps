@@ -141,18 +141,20 @@ export const useStackSelection = (controller: PassageStackController) => {
       event.preventDefault();
       event.stopPropagation();
       const count = controller.selectedUuids().length;
-      if (!controller.deletePassageSelection() || count < 2) return;
-      // Several passages go at a keystroke, so say so and offer the way back.
-      const deleted = controller.work.log.peekUndo();
-      toast(`Deleted ${count} passages`, {
-        action: {
-          label: 'Undo',
-          // Only while the delete is still the last thing done: otherwise the
-          // button would undo something else.
-          onClick: () => {
-            if (controller.work.log.peekUndo() === deleted) controller.undo();
+      void controller.deletePassageSelection().then((done) => {
+        if (!done || count < 2) return;
+        // Several passages go at a keystroke, so say so and offer the way back.
+        const deleted = controller.work.log.peekUndo();
+        toast(`Deleted ${count} passages`, {
+          action: {
+            label: 'Undo',
+            // Only while the delete is still the last thing done: otherwise
+            // the button would undo something else.
+            onClick: () => {
+              if (controller.work.log.peekUndo() === deleted) controller.undo();
+            },
           },
-        },
+        });
       });
     };
 
@@ -198,7 +200,7 @@ export const useStackSelection = (controller: PassageStackController) => {
       const text = event.clipboardData?.getData('text/plain') ?? '';
       event.preventDefault();
       event.stopPropagation();
-      controller.pastePassageSelection({ html, text });
+      void controller.pastePassageSelection({ html, text });
     };
 
     // Document-level: with static rows the selection can exist while focus

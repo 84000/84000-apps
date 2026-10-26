@@ -11,6 +11,7 @@ import {
 } from './stack-controller.fixture';
 import { buildBibliographySchemaExtensions } from './bibliography-extensions';
 import { loadedBibliography } from './bibliography-work.fixture';
+import { hasUnsavedStackChanges } from './stack-save';
 import { createStackWorkDocument } from './stack-work';
 
 // Building the stack schema instantiates every editor extension, and Mention's
@@ -331,7 +332,7 @@ describe('PassageStackController structural ops', () => {
 
   it('deletes a passage and leaves focus on the one that takes its place', async () => {
     const { controller } = await hydrated(3);
-    expect(controller.removePassage('p1')).toBe(true);
+    expect(await controller.removePassage('p1')).toBe(true);
 
     expect(controller.getOrder()).toEqual(['p0', 'p2']);
     // A focused uuid the spine no longer holds is bound to nothing drawn.
@@ -340,8 +341,37 @@ describe('PassageStackController structural ops', () => {
 
   it('falls back to the previous passage when deleting the last one', async () => {
     const { controller } = await hydrated(3);
-    expect(controller.removePassage('p2')).toBe(true);
+    expect(await controller.removePassage('p2')).toBe(true);
     expect(controller.getFocusedUuid()).toBe('p1');
+  });
+
+  // Undo puts a deleted passage back from what the delete recorded. Once the
+  // delete is saved the server no longer has the passage to load it from.
+  it('loads a passage before deleting it, so a saved delete can be undone', async () => {
+    const all = seeds(3);
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    // Stored rows, which the server deletes when the delete is saved.
+    work.seedSpine(all.map((entry, sort) => ({ ...entry.meta, sort })));
+    const controller = new PassageStackController({ work });
+    controller.setVisibleRange({ start: 0, end: 1 });
+    await flush();
+    expect(work.store.has('p2')).toBe(false);
+
+    expect(await controller.removePassage('p2')).toBe(true);
+    expect(work.spine.removedSinceSave()).toEqual(['p2']);
+    work.spine.settleSave({
+      deleted: work.spine.removedSinceSave(),
+      created: [],
+    });
+    work.undo();
+
+    expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
+    expect(work.store.peek('p2')?.text).toBe('passage 2 text');
+    expect(hasUnsavedStackChanges(work)).toBe(true);
+    expect(work.store.dirty()).toEqual(['p2']);
   });
 });
 
@@ -595,9 +625,9 @@ describe('PassageStackController bibliography outline', () => {
     const { controller, labels } = await outlined();
 
     expect(controller.canRemove('h3')).toBe(false);
-    expect(controller.removePassage('h3')).toBe(false);
-    expect(controller.removePassage('e3')).toBe(true);
-    expect(controller.removePassage('h3')).toBe(true);
+    expect(await controller.removePassage('h3')).toBe(false);
+    expect(await controller.removePassage('e3')).toBe(true);
+    expect(await controller.removePassage('h3')).toBe(true);
     expect(controller.getFocusedUuid()).toBe('e2');
     expect(labels()).toEqual(['h1 b.1', 'e1 b.1.1', 'h2 b.2', 'e2 b.2.1']);
   });
@@ -605,7 +635,7 @@ describe('PassageStackController bibliography outline', () => {
   it('never deletes a run of rows at once', async () => {
     const { controller } = await outlined();
     controller.setPassageSelection('e2', 'e3');
-    expect(controller.deletePassageSelection()).toBe(false);
+    expect(await controller.deletePassageSelection()).toBe(false);
   });
 
   it('starts a heading’s first entry on Enter, and focuses it', async () => {
@@ -690,7 +720,7 @@ describe('PassageStackController bibliography outline', () => {
     expect(controller.newBibliographyEntry('e1')).toBe(false);
     expect(controller.newBibliographyHeading('e1')).toBe(false);
     expect(controller.indentBibliographyHeading('h2')).toBe(false);
-    expect(controller.removePassage('e1')).toBe(false);
+    expect(await controller.removePassage('e1')).toBe(false);
     expect(controller.bibliographyMoveTargets('e1')).toEqual([]);
     expect(controller.splitAtSelection('h2')).toBe(false);
     expect(

@@ -4,6 +4,7 @@ import type {
   PassageMeta,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
+import { deepEqual } from '@eightyfourthousand/lib-utils';
 
 import {
   passagesFromHTML,
@@ -26,6 +27,7 @@ export class StackPassageSelectionModel {
     where: StackFocusWhere,
   ) => boolean;
   private readonly blurEditors: () => void;
+  private readonly hydrate: (uuids: string[]) => Promise<void>;
   private readonly bump: () => void;
 
   private passageSelection: StackPassageSelection | null = null;
@@ -36,6 +38,7 @@ export class StackPassageSelectionModel {
     getMeta: (uuid: string) => PassageMeta | null;
     focusPassage: (uuid: string, where: StackFocusWhere) => boolean;
     blurEditors: () => void;
+    hydrate: (uuids: string[]) => Promise<void>;
     bump: () => void;
   }) {
     this.work = host.work;
@@ -43,6 +46,7 @@ export class StackPassageSelectionModel {
     this.getMeta = host.getMeta;
     this.focusPassage = host.focusPassage;
     this.blurEditors = host.blurEditors;
+    this.hydrate = host.hydrate;
     this.bump = host.bump;
   }
 
@@ -130,9 +134,19 @@ export class StackPassageSelectionModel {
     );
   };
 
-  private replacePassageSelection(passages: JSONContent[][] = []) {
+  private async replacePassageSelection(
+    passages: JSONContent[][] = [],
+  ): Promise<boolean> {
     const uuids = this.selectedUuids();
     if (!uuids.length) return false;
+    // Undo puts back what the delete recorded, which is only what is held.
+    // Synchronous when all of it is, as it nearly always is.
+    if (!uuids.every((uuid) => this.work.store.has(uuid))) {
+      await this.hydrate(uuids);
+      // The selection, or the store, may have moved on while they loaded.
+      if (!deepEqual(this.selectedUuids(), uuids)) return false;
+      if (!uuids.every((uuid) => this.work.store.has(uuid))) return false;
+    }
 
     const at = this.getOrder().indexOf(uuids[0]);
     const meta = this.getMeta(uuids[0]);

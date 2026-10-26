@@ -70,7 +70,7 @@ export const StackPassageMenu = ({
   );
 
   const handleDelete = useCallback(() => {
-    if (subject) controller.removePassage(subject.uuid);
+    if (subject) void controller.removePassage(subject.uuid);
     setIsDialogOpen(false);
   }, [controller, subject]);
 

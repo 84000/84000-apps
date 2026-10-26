@@ -126,7 +126,7 @@ export const BibliographyRowMenu = ({
   }, [uuid, contentType]);
 
   const handleDelete = useCallback(() => {
-    if (deleting) controller.removePassage(deleting.uuid);
+    if (deleting) void controller.removePassage(deleting.uuid);
     setDeleting(null);
   }, [controller, deleting]);
 
