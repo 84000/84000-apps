@@ -103,15 +103,20 @@ not depend on how the save is carried out.
 - Known: a later save used to write the link back. Passes in the stack
   editor.
 
-### ED-SAV-10 A save whose outcome is unknown is read back (D)
+### ED-SAV-10 A save whose outcome is unknown (D)
 
+- Fixture: `1.4`; `1.12`, followed by `1.13`.
 - Do: edit `1.4`, make the save request fail without an answer (the test
-  aborts the connection), and click Save.
-- Screen: a toast says the save may have gone through, and the editor reloads
-  the passages from the server instead of sending the save again.
-- Stored: one save request at most; `1.4` is either unchanged or has the
-  edit, and the editor shows what is stored.
-- Known: this item is out of date. Since DEV-836, a save that only changed
-  content is kept and sent again when its outcome is unknown ("could not be
-  confirmed"); only a save that creates or deletes passages is read back. The
-  test is skipped until the item is rewritten.
+  aborts it before it reaches the server), and click Save.
+- Screen: a toast says the save could not be confirmed. The edit stays on
+  screen, and so does the Save button.
+- Stored: `1.4` is unchanged, and the editor sends nothing more on its own.
+- Do: click Save again, with the request let through.
+- Stored: `1.4` has the edit.
+- Do (fresh fixture): delete `1.12` from its label menu and click Save. The
+  request reaches the server, but its answer is lost (the test drops the
+  response).
+- Screen: a toast says the save went through, and the editor reloads from the
+  server: `1.12` is gone, the old `1.13` is labelled `1.12`, and there is no
+  Save button.
+- Stored: `1.12` is gone, after exactly one save request.

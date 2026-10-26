@@ -22,6 +22,7 @@ import {
   save,
   saveButton,
   selectText,
+  shownLabel,
   tab,
   toast,
   typeAtEnd,
@@ -293,28 +294,57 @@ test.describe('Saving', () => {
     expect((await passageByUuid(p.uuid))?.content).toBe(`${p.content}Q`);
   });
 
-  test('ED-SAV-10 A save whose outcome is unknown is read back', async ({
+  test('ED-SAV-10 A save whose outcome is unknown: a content edit is kept and resent', async ({
     page,
   }) => {
-    test.fixme(
-      true,
-      'Out of date: since DEV-836, an aborted save of a content-only edit is kept and sent again ("could not be confirmed"), not read back. Rewrite against the current design.',
-    );
     const p = await passageByLabel('1.4');
+    let aborting = true;
     let requests = 0;
     await page.route(SAVE_ROUTE, (route) => {
       requests++;
-      return route.abort('failed');
+      return aborting ? route.abort('failed') : route.continue();
     });
 
     await openEditor(page, { main: { tab: 'translation', hash: p.uuid } });
     await typeAtEnd(page, p.uuid, 'Q');
     await markToasts(page);
     await saveButton(page).click();
-    await expect(toast(page, /may have gone through/)).toBeVisible();
-    await expect(row(page, p.uuid)).toHaveText(p.content);
+    await expect(toast(page, /could not be confirmed/)).toBeVisible();
+    await expect(row(page, p.uuid)).toContainText(`${p.content}Q`);
+    await expect(saveButton(page)).toBeVisible();
     expect(requests).toBe(1);
     expect((await passageByUuid(p.uuid))?.content).toBe(p.content);
+
+    aborting = false;
+    await save(page);
+    expect((await passageByUuid(p.uuid))?.content).toBe(`${p.content}Q`);
+  });
+
+  test('ED-SAV-10 A save whose outcome is unknown: a delete is read back and reloaded', async ({
+    page,
+  }) => {
+    const twelve = await passageByLabel('1.12');
+    const thirteen = await passageByLabel('1.13');
+    let requests = 0;
+    // The request reaches the server; only its answer is lost.
+    await page.route(SAVE_ROUTE, async (route) => {
+      requests++;
+      await route.fetch();
+      return route.abort('failed');
+    });
+
+    await openEditor(page, { main: { tab: 'translation', hash: twelve.uuid } });
+    await labelMenuItem(page, twelve.uuid, 'Delete');
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(row(page, twelve.uuid)).toHaveCount(0);
+    await markToasts(page);
+    await saveButton(page).click();
+    await expect(toast(page, /went through/)).toBeVisible();
+    await expect(shownLabel(page, thirteen.uuid)).toHaveText('1.12');
+    await expect(row(page, twelve.uuid)).toHaveCount(0);
+    await expect(saveButton(page)).toBeHidden();
+    expect(requests).toBe(1);
+    expect(await passageByUuid(twelve.uuid)).toBeNull();
   });
 
   test('ED-SAV-07 Passages the user did not edit are not written', async ({
