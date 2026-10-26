@@ -1,5 +1,10 @@
 import { getSchema } from '@tiptap/core';
-import { EditorState, PluginKey, Selection } from '@tiptap/pm/state';
+import {
+  EditorState,
+  PluginKey,
+  Selection,
+  type Transaction,
+} from '@tiptap/pm/state';
 import { Doc } from 'yjs';
 import {
   ANNOTATION_TOH_TYPES,
@@ -10,7 +15,7 @@ import {
 import { slashCommandPluginKey } from '../editor/extensions/SlashCommand/SlashCommand';
 import { mentionSuggestionPluginKey } from '../editor/extensions/Mention/MentionSuggestion';
 import { renderTranslationHTML } from '../reader/translation-html';
-import { BoundaryKeymap } from './BoundaryKeymap';
+import { BoundaryKeymap, secondEnterSplit } from './BoundaryKeymap';
 import {
   buildStackEditorExtensions,
   buildStackSchemaExtensions,
@@ -238,15 +243,26 @@ describe('BoundaryKeymap Enter and Backspace', () => {
       }) => Record<string, (props: { editor: unknown }) => boolean>
     ).call({ options: { uuid: 'p0', delegate } });
 
+  const splitPositions = new WeakMap<StackKeyboardDelegate, number[]>();
+  /** Where the last split was asked for, when the keymap named a position. */
+  const splitAt = (delegate: StackKeyboardDelegate) =>
+    splitPositions.get(delegate)?.at(-1);
+
   const spyDelegate = () => {
     const calls: string[] = [];
+    const positions: number[] = [];
     const delegate: StackKeyboardDelegate = {
       focusRelative: () => true,
-      splitAtSelection: () => (calls.push('split'), true),
+      splitAtSelection: (_uuid, at) => {
+        calls.push('split');
+        if (at !== undefined) positions.push(at);
+        return true;
+      },
       mergeWithPrevious: () => (calls.push('merge'), true),
       undo: () => true,
       redo: () => true,
     };
+    splitPositions.set(delegate, positions);
     return { calls, delegate };
   };
 
@@ -300,15 +316,47 @@ describe('BoundaryKeymap Enter and Backspace', () => {
     expect(calls).toEqual([]);
   });
 
-  it('splits on a second Enter, dropping the empty paragraph the first made', () => {
+  it('splits on a second Enter, before the empty paragraph the first made', () => {
     const { calls, delegate } = spyDelegate();
-    const dropped: string[] = [];
-    const editor = editorFor(['text', ''], 'end', dropped);
+    const editor = editorFor(['text', ''], 'end');
 
     expect(shortcuts(delegate)['Enter']({ editor })).toBe(true);
     expect(calls).toEqual(['split']);
-    // Without this the head would end in a blank line.
-    expect(dropped).toContain('deleteCurrentNode');
+    // Between the two blocks, so the empty paragraph goes to the new passage
+    // and the head does not end in a blank line.
+    expect(splitAt(delegate)).toBe(editor.state.doc.child(0).nodeSize);
+  });
+
+  // DEV-842: in a line group the first Enter adds a line to the group, so the
+  // second found no empty top-level block and added another line instead.
+  it('splits on a second Enter at the end of a line group', () => {
+    const { calls, delegate } = spyDelegate();
+    const schema = getSchema(buildStackSchemaExtensions());
+    const line = (text: string) =>
+      schema.node('line', null, text ? [schema.text(text)] : []);
+    const doc = schema.node('doc', null, [
+      schema.node('lineGroup', null, [line('one'), line('two'), line('')]),
+    ]);
+    let state = EditorState.create({ doc });
+    state = state.apply(state.tr.setSelection(Selection.atEnd(state.doc)));
+    const editor = {
+      state,
+      view: {
+        endOfTextblock: () => true,
+        dispatch: (tr: Transaction) => {
+          editor.state = editor.state.apply(tr);
+        },
+      },
+    };
+
+    expect(shortcuts(delegate)['Enter']({ editor })).toBe(true);
+    expect(calls).toEqual(['split']);
+    // The empty line left the group, as a paragraph, and the split is before it.
+    expect(
+      editor.state.doc.toJSON().content.map((n: { type: string }) => n.type),
+    ).toEqual(['lineGroup', 'paragraph']);
+    expect(editor.state.doc.child(0).childCount).toBe(2);
+    expect(splitAt(delegate)).toBe(editor.state.doc.child(0).nodeSize);
   });
 
   it('does not treat an Enter in an empty passage as the second press', () => {
@@ -415,6 +463,78 @@ describe('BoundaryKeymap Enter and Backspace', () => {
       expect(fixed(delegate, true)['Mod-Enter']({ editor })).toBe(true);
       expect(calls).toEqual([]);
     });
+  });
+});
+
+describe('secondEnterSplit', () => {
+  const schema = getSchema(buildStackSchemaExtensions());
+  const text = (value: string) => (value ? [schema.text(value)] : []);
+  const p = (value: string) => schema.node('paragraph', null, text(value));
+  const line = (value: string) => schema.node('line', null, text(value));
+  const group = (...lines: string[]) =>
+    schema.node('lineGroup', null, lines.map(line));
+
+  /** A state over these blocks, caret at the very end. */
+  const stateAtEnd = (...blocks: ReturnType<typeof p>[]) => {
+    const state = EditorState.create({ doc: schema.node('doc', null, blocks) });
+    return state.apply(state.tr.setSelection(Selection.atEnd(state.doc)));
+  };
+
+  const types = (state: EditorState) =>
+    (state.doc.toJSON().content as { type: string }[]).map((n) => n.type);
+
+  it('cuts before an empty trailing paragraph, with no edit', () => {
+    const state = stateAtEnd(p('text'), p(''));
+    expect(secondEnterSplit(state)).toEqual({ at: 6, tr: null });
+  });
+
+  it('is not the gesture with text in the caret block', () => {
+    expect(secondEnterSplit(stateAtEnd(p('text'), p('more')))).toBeNull();
+    expect(secondEnterSplit(stateAtEnd(group('one', 'two')))).toBeNull();
+  });
+
+  it('is not the gesture in an empty passage', () => {
+    expect(secondEnterSplit(stateAtEnd(p('')))).toBeNull();
+    expect(secondEnterSplit(stateAtEnd(group('')))).toBeNull();
+  });
+
+  it('is not the gesture away from the end of the passage', () => {
+    let state = stateAtEnd(p(''), p('after'));
+    state = state.apply(state.tr.setSelection(Selection.atStart(state.doc)));
+    expect(secondEnterSplit(state)).toBeNull();
+  });
+
+  it('moves an empty last line out of its group as a paragraph', () => {
+    const state = stateAtEnd(group('one', 'two', ''));
+    const split = secondEnterSplit(state);
+    expect(split?.tr).not.toBeNull();
+    const after = state.apply(split?.tr as Transaction);
+
+    expect(types(after)).toEqual(['lineGroup', 'paragraph']);
+    expect(after.doc.child(0).textContent).toBe('onetwo');
+    expect(after.doc.child(0).childCount).toBe(2);
+    expect(split?.at).toBe(after.doc.child(0).nodeSize);
+    // The caret follows the empty block, in the paragraph.
+    expect(after.selection.$from.parent.type.name).toBe('paragraph');
+  });
+
+  it('takes a group whose only line is the empty one with it', () => {
+    const state = stateAtEnd(p('text'), group(''));
+    const split = secondEnterSplit(state);
+    const after = state.apply(split?.tr as Transaction);
+
+    expect(types(after)).toEqual(['paragraph', 'paragraph']);
+    expect(split?.at).toBe(6);
+  });
+
+  // Lists lift an empty item out on Enter themselves; the Enter after that is
+  // the paragraph case.
+  it('leaves an empty list item to the list', () => {
+    const list = schema.node('bulletList', null, [
+      schema.node('listItem', null, [p('item')]),
+      schema.node('listItem', null, [p('')]),
+    ]);
+    expect(secondEnterSplit(stateAtEnd(list))).toBeNull();
   });
 });
 

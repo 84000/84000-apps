@@ -408,15 +408,15 @@ export class PassageStackController {
 
   // ------------------------------------------------------ structural ops
 
-  splitAtSelection = (uuid: string) => {
+  splitAtSelection = (uuid: string, at?: number) => {
     if (this.editsOutline() && this.isHeadingRow(uuid)) {
       // A heading is one line: what follows it is its first entry.
       return this.focusMade(bibliography.newBibliographyEntry(this.work, uuid));
     }
     if (!this.restructuresRows()) return false;
-    const editor = this.live.getEditor(uuid);
-    if (!editor) return false;
-    const result = this.work.split(uuid, editor.state.selection.$from.pos);
+    const pos = at ?? this.live.getEditor(uuid)?.state.selection.$from.pos;
+    if (pos === undefined) return false;
+    const result = this.work.split(uuid, pos);
     if (!result) return false;
     this.focusPassage(result.uuid, 'start');
     return true;

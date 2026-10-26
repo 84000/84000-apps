@@ -1,4 +1,5 @@
 import { Schema } from '@tiptap/pm/model';
+import { EditorState, Selection } from '@tiptap/pm/state';
 import {
   annotationsFromDTO,
   passageFromDTO,
@@ -13,6 +14,7 @@ import {
   saveStackWork,
   trackEdits,
 } from './stack-save';
+import { secondEnterSplit } from './BoundaryKeymap';
 import { createStackWorkDocument } from './stack-work';
 import { stackSeedFromPassage } from './types';
 
@@ -211,6 +213,69 @@ describe('dirtyPassages', () => {
         (a) => (a as { abbreviation?: string }).abbreviation,
       ),
     ).toEqual(['ab-1', 'ab-1']);
+  });
+
+  // DEV-842 (ED-STR-02): two Enters at the end of a verse leave the line
+  // group and start a new passage, which the save then sends.
+  it('saves a passage started by a second Enter at the end of a line group', () => {
+    const work = createStackWorkDocument({ workUuid: 'w1' });
+    work.seedSpine([{ uuid: 'p1', label: '1.2', type: 'translation' }]);
+    const line = (uuid: string, text: string) => ({
+      type: 'line',
+      attrs: { uuid },
+      content: [{ type: 'text', text }],
+    });
+    work.store.create('p1', [
+      {
+        type: 'lineGroup',
+        attrs: { uuid: 'group-1' },
+        content: [line('line-1', 'First line,'), line('line-2', 'second.')],
+      },
+    ]);
+    const verse = work.store.ensure('p1');
+
+    // The first Enter, as the editor makes it: an empty line in the group.
+    const schema = verse.toNode().type.schema;
+    let state = EditorState.create({ doc: verse.toNode() });
+    state = state.apply(
+      state.tr.insert(
+        state.doc.child(0).nodeSize - 1,
+        schema.nodes.line.create(),
+      ),
+    );
+    state = state.apply(state.tr.setSelection(Selection.atEnd(state.doc)));
+
+    // The second, through the keymap's edit and the controller's split.
+    const split = secondEnterSplit(state);
+    if (!split) throw new Error('expected the second Enter to split');
+    if (split.tr) state = state.apply(split.tr);
+    verse.replaceContent(state.doc.toJSON());
+    const added = work.split('p1', split.at);
+    if (!added) throw new Error('expected a new passage');
+    const tail = work.store.ensure(added.uuid);
+    // Typing into the block the split put there. The uuid is what the
+    // editor's EnsureUniqueUuids gives a new block.
+    const typed = EditorState.create({ doc: tail.toNode() });
+    expect(typed.doc.child(0).type.name).toBe('paragraph');
+    tail.replaceContent(
+      typed
+        .apply(
+          typed.tr
+            .setNodeAttribute(0, 'uuid', 'para-new')
+            .insertText('After the verse.', 1),
+        )
+        .doc.toJSON(),
+    );
+
+    const saved = dirtyPassages(work);
+    expect(saved.map((passage) => passage.uuid)).toEqual(['p1', added.uuid]);
+    const [head, made] = saved;
+    expect(head.content).toBe('First line,second.');
+    // No trailing empty line left behind in the verse.
+    expect(head.annotations.filter((a) => a.type === 'line')).toHaveLength(2);
+    expect(made.content).toBe('After the verse.');
+    expect(made.label).toBe('1.3');
+    expect(made.annotations.map((a) => a.type)).toEqual(['paragraph']);
   });
 
   it('takes identity from the spine and sort from position', () => {
