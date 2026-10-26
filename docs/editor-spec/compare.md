@@ -19,4 +19,4 @@
 - Do: search the work's source for a Tibetan phrase from `1.10`'s aligned span.
 - Screen: the result names `1.10`. Choosing it opens the Compare tab scrolled
   to `1.10`, with its Tibetan span visible.
-- Known: open in the stack editor: Compare opens at the top, not at `1.10`.
+- Known: open in the stack editor (DEV-851): Compare opens at the top, not at `1.10`.

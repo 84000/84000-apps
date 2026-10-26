@@ -19,6 +19,7 @@
   - Mention: ED-ANN-03
   - Abbreviation: ED-ANN-07
 - Known: open in the stack editor: choosing Text leaves the typed `/text` in the
-  passage. A list made from the menu also stores a `paragraph` row inside its item.
+  passage (DEV-855). A list made from the menu also stores a `paragraph` row
+  inside its item (DEV-856).
 - J: the menu opens next to the caret, Up/Down/Enter choose an entry, Escape
   closes it, and choosing one removes the typed `/…`.

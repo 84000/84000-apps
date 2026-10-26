@@ -33,7 +33,7 @@
   of `1.12`.
 - Screen: the main panel scrolls to `2.1`, loading its page if needed, and
   `2.1` is in the viewport.
-- Known: open in the stack editor: when `2.1` is not
+- Known: open in the stack editor (DEV-847): when `2.1` is not
   loaded yet, the main panel usually scrolls to the end of the loaded passages
   (about `1.118`) and stops there. It reaches `2.1` about one time in four, so
   the test is skipped rather than expected to fail.
@@ -56,7 +56,7 @@
 - Do: open `n.6` in the Endnotes tab.
 - Screen: it lists `1.20` as the passage that refers to it, and clicking that
   reference scrolls the main panel to `1.20`.
-- Known: open in the stack editor: `n.6` lists `1.20`, but
+- Known: open in the stack editor (DEV-848): `n.6` lists `1.20`, but
   clicking the reference usually does not move the main panel. It sometimes
   does, so the test is skipped rather than expected to fail.
 
@@ -76,7 +76,7 @@
   no reload.
 - Stored, without a Save: `1.1`'s content has "lily pond", and its italic span
   still covers it.
-- Known: open in the stack editor: a match in a
+- Known: open in the stack editor (DEV-849): a match in a
   translation passage comes back from search as an alignment match, so Replace
   all stays disabled with "Every match is in the Tibetan source", although the
   match is in the English.
@@ -98,7 +98,7 @@
 - Do: open the editor at `1.50` and click the unanchored thread `t5`.
 - Screen: it is listed under Unanchored, and clicking it scrolls to `1.50`
   without a highlight.
-- Known: open in the stack editor: clicking `t3` has the
+- Known: open in the stack editor (DEV-847): clicking `t3` has the
   same stop at the end of the loaded passages as `ED-NAV-02`, so `2.100` is
   usually not reached; that step is skipped.
 
