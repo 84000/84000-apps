@@ -137,6 +137,26 @@ const CASES: Record<string, Blocks> = {
       ]),
     ]),
   ],
+  // A stored link: its href is not the path it renders to.
+  storedInternalLink: [
+    paragraph([
+      text([
+        {
+          type: 'internalLink',
+          attrs: {
+            uuid: 'm-1',
+            entity: 'entity-1',
+            type: 'passage',
+            href: 'UT22084-001-006-chapter-9',
+            label: '',
+            linkStatus: 'not-found',
+            isSameWork: true,
+            subtype: 'translationHeader',
+          },
+        },
+      ]),
+    ]),
+  ],
   glossaryInstance: [
     paragraph([
       text([
@@ -254,7 +274,15 @@ const CASES: Record<string, Blocks> = {
     { type: 'image', attrs: { src: 'https://e.com/a.png', uuid: 'image-1' } },
   ],
   audio: [
-    { type: 'audio', attrs: { src: 'https://e.com/a.mp3', uuid: 'audio-1' } },
+    {
+      type: 'audio',
+      attrs: {
+        src: 'https://e.com/a.ogg',
+        mediaType: 'audio/ogg',
+        title: 'A recitation',
+        uuid: 'audio-1',
+      },
+    },
   ],
   heading: [
     {
@@ -270,7 +298,7 @@ const CASES: Record<string, Blocks> = {
       content: [
         {
           type: 'line',
-          attrs: { uuid: 'line-1' },
+          attrs: { uuid: 'line-1', lang: 'Sa-Ltn' },
           content: [{ type: 'text', text: 'a line' }],
         },
         {

@@ -17,7 +17,8 @@ export const LineNodeSSR = Node.create({
       // Stored with the line and written back on save; not shown.
       lang: {
         default: null,
-        rendered: false,
+        parseHTML: (element) => element.getAttribute('data-lang'),
+        renderHTML: ({ lang }) => (lang ? { 'data-lang': lang } : {}),
       },
     };
   },

@@ -24,6 +24,6 @@ export const audio: Exporter<AudioAnnotation> = ({
     end: start,
     src,
     mediaType,
-    ...(title ? { title } : {}),
+    ...(typeof title === 'string' ? { title } : {}),
   };
 };

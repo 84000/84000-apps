@@ -17,8 +17,8 @@ export const transformer: AnnotationTransformer = (dto): AudioAnnotation => {
     if (content['media-type']) {
       audio.mediaType = content['media-type'] as string;
     }
-    if (content.title) {
-      audio.title = content.title as string;
+    if (typeof content.title === 'string') {
+      audio.title = content.title;
     }
   });
 
@@ -32,7 +32,7 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     src,
     'media-type': mediaType,
   } as AnnotationDTOContent);
-  if (title) {
+  if (title !== undefined) {
     dto.content.push({ title });
   }
   return dto;

@@ -21,7 +21,7 @@ export const audio: Transformer = (ctx) => {
             ...tohAttrs(annotation),
             src,
             mediaType,
-            ...(title ? { title } : {}),
+            ...(title !== undefined ? { title } : {}),
             uuid,
             start,
             end,

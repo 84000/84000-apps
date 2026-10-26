@@ -375,6 +375,12 @@ const blocks = passage('p-blocks', (b) => {
     { title: 'A recitation of the The Dhāraṇī of Tārā' },
   ]);
   b.row('para-after-media', 'paragraph', b.text('After the media.'));
+  const untitled = b.text('');
+  b.row('audio-untitled', 'audio', untitled, [
+    { src: 'https://e.com/a.mp3', 'media-type': 'audio/mpeg' },
+    { title: '' },
+  ]);
+  b.row('para-last', 'paragraph', b.text('The end.'));
 });
 
 const verse = passage('p-verse', (b) => {
