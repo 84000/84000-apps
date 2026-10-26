@@ -298,7 +298,7 @@ test.describe('Saving', () => {
   }) => {
     test.fixme(
       true,
-      'Still fails after DEV-836: aborting the save of an edit to 1.4 shows no "may have gone through" toast. Not yet diagnosed.',
+      'Out of date: since DEV-836, an aborted save of a content-only edit is kept and sent again ("could not be confirmed"), not read back. Rewrite against the current design.',
     );
     const p = await passageByLabel('1.4');
     let requests = 0;
