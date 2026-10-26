@@ -27,8 +27,13 @@ export const TextSuggestion: CommandSuggestionItem = {
   description: 'Just start typing',
   keywords: ['text', 'paragraph', 'p'],
   icon: LetterTextIcon,
-  command: ({ editor }) => {
-    editor.chain().focus().toggleNode('paragraph', 'paragraph').run();
+  command: ({ editor, range }) => {
+    editor
+      .chain()
+      .focus()
+      .deleteRange(range)
+      .toggleNode('paragraph', 'paragraph')
+      .run();
   },
 };
 

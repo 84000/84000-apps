@@ -1,6 +1,16 @@
 import { Editor } from '@tiptap/core';
 import { CircleIcon } from 'lucide-react';
-import { getSuggestion } from './Suggestions';
+import StarterKit from '@tiptap/starter-kit';
+import {
+  BulletListSuggestion,
+  getSuggestion,
+  Heading1Suggestion,
+  Heading2Suggestion,
+  Heading3Suggestion,
+  NumberListSuggestion,
+  QuoteSuggestion,
+  TextSuggestion,
+} from './Suggestions';
 import { CommandSuggestionItem } from './SuggestionList';
 
 const item = (
@@ -82,5 +92,41 @@ describe('getSuggestion items', () => {
 
   it('keeps items that declare no availability predicate', () => {
     expect(listItems([heading], 'heading')).toEqual(['Heading']);
+  });
+});
+
+describe('slash menu entries', () => {
+  // The suggestion plugin hands each command the range of the typed "/query";
+  // every entry has to remove it before changing the block (DEV-855).
+  const typed = '/text';
+  const range = { from: 1, to: 1 + typed.length };
+
+  const run = (item: CommandSuggestionItem) => {
+    const editor = new Editor({
+      extensions: [StarterKit],
+      content: `<p>${typed}</p>`,
+    });
+    item.command({ editor, range });
+    return editor;
+  };
+
+  it.each([
+    ['Text', TextSuggestion],
+    ['Heading 1', Heading1Suggestion],
+    ['Heading 2', Heading2Suggestion],
+    ['Heading 3', Heading3Suggestion],
+    ['Bullet List', BulletListSuggestion],
+    ['Numbered List', NumberListSuggestion],
+    ['Quote', QuoteSuggestion],
+  ])('%s removes the typed range', (_title, item) => {
+    const editor = run(item);
+    expect(editor.state.doc.textContent).toBe('');
+    editor.destroy();
+  });
+
+  it('Text leaves a paragraph in place of the typed range', () => {
+    const editor = run(TextSuggestion);
+    expect(editor.getJSON().content).toEqual([{ type: 'paragraph' }]);
+    editor.destroy();
   });
 });

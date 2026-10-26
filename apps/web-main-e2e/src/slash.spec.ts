@@ -105,10 +105,7 @@ test.describe('Slash menu', () => {
   });
 
   test('ED-SLH-01 Text entry', async ({ page }) => {
-    test.fail(
-      true,
-      'DEV-855: choosing Text from the slash menu leaves the typed "/text" in the passage.',
-    );
+    // DEV-855: Text used to leave the typed "/text" in the passage.
     const twelve = await passageByLabel('1.12');
     await insertAndCheck(page, twelve, ['text', 'Text', ['paragraph']]);
   });
