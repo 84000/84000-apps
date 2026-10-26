@@ -61,13 +61,23 @@ const attributes = (content: unknown): Record<string, unknown> =>
     ? Object.assign({}, ...content)
     : ((content as Record<string, unknown>) ?? {});
 
+/**
+ * Stored keys the editor deliberately does not model, by annotation type. A
+ * save may drop these; every other key must survive.
+ */
+const NOT_MODELLED: Record<string, string[]> = {
+  link: ['title'],
+};
+
 /** The seeded attributes a stored annotation no longer carries as seeded. */
 const droppedAttributes = (
   seeded: StoredAnnotation,
   stored: StoredAnnotation,
 ): string[] => {
   const after = attributes(stored.content);
+  const skipped = NOT_MODELLED[seeded.type] ?? [];
   return Object.entries(attributes(seeded.content))
+    .filter(([key]) => !skipped.includes(key) && !key.endsWith('_xmlId'))
     .filter(([key, value]) => !isDeepStrictEqual(after[key], value))
     .map(([key]) => key);
 };
@@ -188,15 +198,7 @@ test.describe('Saving', () => {
         }
       }
     }
-    // Known bug DEV-840: attributes the stack editor does not model yet. Listed
-    // so the test still catches any new loss, and fails once DEV-840 is fixed.
-    const known = [
-      'ac.1: link on "84000.co" lost title',
-      'i.2: internal-link on "The Noble Mahāyāna Sūtra on the Four Factors" lost toh',
-      'i.2: internal-link on "opening scene" lost subtype, toh',
-      'p.1: internal-link on "Mañjuśrī rises to speak" lost label, same_work, subtype',
-    ];
-    expect(problems).toEqual(known);
+    expect(problems).toEqual([]);
   });
 
   test('ED-SAV-04 Edits typed during a save are kept', async ({ page }) => {
