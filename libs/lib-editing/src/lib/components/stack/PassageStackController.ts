@@ -116,6 +116,7 @@ export class PassageStackController {
       getMeta: this.getMeta,
       focusPassage: (uuid, where) => this.focusPassage(uuid, where),
       blurEditors: () => this.live.blurEditors(),
+      hydrate: (uuids) => this.hydration.hydrateSome(uuids),
       bump: () => this.bump(),
     });
 
@@ -447,12 +448,21 @@ export class PassageStackController {
    *
    * Focus moves to the one taking its place: a focused uuid the spine no
    * longer holds leaves the shared surfaces bound to nothing.
+   *
+   * A passage not yet loaded is loaded first, so undo has its content to put
+   * back; otherwise the delete is synchronous.
    */
-  removePassage = (uuid: string) => {
-    if (!this.restructuresRows()) return false;
-    if (!this.canRemove(uuid)) return false;
+  removePassage = async (uuid: string): Promise<boolean> => {
+    const removable = () =>
+      this.restructuresRows() &&
+      this.canRemove(uuid) &&
+      this.getOrder().includes(uuid);
+    if (!removable()) return false;
+    if (!this.work.store.has(uuid)) {
+      await this.hydration.hydrateOne(uuid);
+      if (!this.work.store.has(uuid) || !removable()) return false;
+    }
     const index = this.getOrder().indexOf(uuid);
-    if (index < 0) return false;
     if (!this.work.remove([uuid])) return false;
 
     this.orderCache = null;
@@ -583,11 +593,14 @@ export class PassageStackController {
     this.selection.serializePassageSelection();
 
   /** Delete the selected passages, as one command. */
-  deletePassageSelection = () =>
+  deletePassageSelection = async (): Promise<boolean> =>
     this.restructures() && this.selection.deletePassageSelection();
 
   /** Replace the selected passages with what the clipboard carries. */
-  pastePassageSelection = (clipboard: { html: string; text: string }) =>
+  pastePassageSelection = async (clipboard: {
+    html: string;
+    text: string;
+  }): Promise<boolean> =>
     this.restructures() && this.selection.pastePassageSelection(clipboard);
 
   // ------------------------------------------------------------ undo/redo

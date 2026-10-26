@@ -73,32 +73,33 @@ describe('useStackSelection', () => {
 
 describe('the undo offered after deleting passages', () => {
   /** Delete two selected passages; returns the toast's Undo and the stack. */
-  const deleteTwo = () => {
+  const deleteTwo = async () => {
     const log = { last: { kind: 'delete' } as unknown };
     const stack = {
       clearPassageSelection: jest.fn(),
       hasPassageSelection: jest.fn(() => true),
       selectedUuids: jest.fn(() => ['a', 'b']),
-      deletePassageSelection: jest.fn(() => true),
+      deletePassageSelection: jest.fn(async () => true),
       undo: jest.fn(),
       work: { log: { peekUndo: () => log.last } },
     } as unknown as PassageStackController & { undo: jest.Mock };
     renderHook(() => useStackSelection(stack));
     (toast as unknown as jest.Mock).mockClear();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }));
+    await Promise.resolve();
     const undo = (toast as unknown as jest.Mock).mock.calls[0][1].action
       .onClick;
     return { stack, log, undo: undo as () => void };
   };
 
-  it('undoes the delete', () => {
-    const { stack, undo } = deleteTwo();
+  it('undoes the delete', async () => {
+    const { stack, undo } = await deleteTwo();
     undo();
     expect(stack.undo).toHaveBeenCalled();
   });
 
-  it('does nothing once something else was done since', () => {
-    const { stack, log, undo } = deleteTwo();
+  it('does nothing once something else was done since', async () => {
+    const { stack, log, undo } = await deleteTwo();
     log.last = { kind: 'text' };
     undo();
     expect(stack.undo).not.toHaveBeenCalled();

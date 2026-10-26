@@ -244,4 +244,15 @@ export class StackHydration {
       this.bump();
     }
   }
+
+  /** Hydrate the passages in `uuids` not held, in one load. */
+  async hydrateSome(uuids: string[]) {
+    const missing = new Set(uuids.filter((uuid) => !this.work.store.has(uuid)));
+    if (!missing.size) return;
+    const docs = await this.work.store.hydrateMany([...missing]);
+    docs.forEach((doc) => {
+      if (missing.has(doc.uuid)) this.wire(doc);
+    });
+    this.bump();
+  }
 }
