@@ -52,11 +52,11 @@ const readerSpan = (lang?: string) => {
   return host.querySelector('span[data-text-style="foreign"]') as HTMLElement;
 };
 
-/** Pastes a span's HTML back into the schema, returning the first mark. */
-const pasted = (lang: string) =>
+/** Pastes a span's HTML back into the schema, returning every mark it gets. */
+const pasted = (lang?: string) =>
   DOMParser.fromSchema(schema).parse(
     editorSpan(lang).parentElement as HTMLElement,
-  ).firstChild?.firstChild?.marks[0];
+  ).firstChild?.firstChild?.marks ?? [];
 
 describe('renderableForeignLang', () => {
   it('passes a language tag through', () => {
@@ -80,7 +80,6 @@ describe('ForeignMark rendering', () => {
     it('renders the lang of a foreign span that names a language', () => {
       const el = span('Sa-Ltn');
       expect(el.getAttribute('lang')).toBe('Sa-Ltn');
-      expect(el.style.fontStyle).toBe('');
     });
 
     it('renders no lang attribute for a foreign span with no language', () => {
@@ -93,19 +92,23 @@ describe('ForeignMark rendering', () => {
       expect(span('foreign').hasAttribute('lang')).toBe(false);
     });
 
-    it('keeps a language-less foreign span italic, as `[lang]` once made it', () => {
-      expect(span().style.fontStyle).toBe('italic');
-      expect(span('foreign').style.fontStyle).toBe('italic');
+    it('leaves the styling to the design system, with no inline style', () => {
+      expect(span().hasAttribute('style')).toBe(false);
+      expect(span('foreign').hasAttribute('style')).toBe(false);
     });
   });
 
-  it('keeps the model value when a span rendered with no lang is pasted', () => {
-    const mark = pasted('foreign');
-    expect(mark?.type.name).toBe('foreign');
-    expect(mark?.attrs.lang).toBe('foreign');
+  it('pastes a span rendered with no lang as the same foreign mark alone', () => {
+    for (const lang of [undefined, 'foreign']) {
+      const marks = pasted(lang);
+      expect(marks.map((m) => m.type.name)).toEqual(['foreign']);
+      expect(marks[0].attrs.lang).toBe('foreign');
+    }
   });
 
   it('keeps a real language when a span is copied and pasted', () => {
-    expect(pasted('Bo-Ltn')?.attrs.lang).toBe('Bo-Ltn');
+    const marks = pasted('Bo-Ltn');
+    expect(marks.map((m) => m.type.name)).toEqual(['foreign']);
+    expect(marks[0].attrs.lang).toBe('Bo-Ltn');
   });
 });

@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * The `lang` a foreign mark carries when no language was chosen. It is a
  * stored value, not a language tag, so it is kept in the model (stored data
- * round-trips unchanged) but never rendered as a `lang` attribute.
+ * round-trips unchanged) but never rendered as a `lang` attribute. The design
+ * system italicises a span with no `lang` by its `data-text-style` instead.
  */
 export const UNSPECIFIED_FOREIGN_LANG = 'foreign';
 
@@ -69,15 +70,10 @@ export const ForeignMark = Mark.create<ForeignOptions>({
     return [{ tag: 'span[data-text-style="foreign"]' }];
   },
 
-  renderHTML({ mark, HTMLAttributes }) {
-    // The design system italicises text by its `lang` attribute. Without a
-    // language there is no attribute to key on, so italicise it directly.
-    const style = renderableForeignLang(mark.attrs.lang)
-      ? {}
-      : { style: 'font-style:italic' };
+  renderHTML({ HTMLAttributes }) {
     return [
       'span',
-      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, style, {
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         'data-text-style': 'foreign',
       }),
       0,
