@@ -7,6 +7,7 @@ import {
   PARAMETER_ANNOTATION_ATTRS,
   isPlainParagraph,
   isStructuralParagraph,
+  takesWrapperUuid,
   parameterAnnotationValue,
 } from '@eightyfourthousand/lib-doc-model';
 
@@ -86,7 +87,10 @@ export const ensureUuids = (
     if (
       wraps &&
       follow &&
-      (!existing || existing === parent.attrs.uuid || seen.has(existing))
+      (!existing ||
+        existing === parent.attrs.uuid ||
+        seen.has(existing) ||
+        takesWrapperUuid(parent, node))
     ) {
       wrapped.add(parent);
       newAttrs = { ...node.attrs, uuid: follow };

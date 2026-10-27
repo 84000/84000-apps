@@ -88,10 +88,6 @@ test.describe('Slash menu', () => {
 
   test('ED-SLH-01 List entries', async ({ page }) => {
     test.setTimeout(240_000);
-    test.fail(
-      true,
-      'DEV-856: a list made from the slash menu also stores a paragraph row inside its item.',
-    );
     const twelve = await passageByLabel('1.12');
     for (const entry of [
       ['bullet', 'Bullet List', ['list', 'list-item']],
