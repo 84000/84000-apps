@@ -28,3 +28,15 @@ export const isStructuralParagraph = (
   ownerUuid: string | null | undefined,
 ): boolean =>
   !!ownerUuid && node.attrs.uuid === ownerUuid && isPlainParagraph(node);
+
+/**
+ * Whether a node's paragraph is only ever its wrapper, so a paragraph that
+ * ends up inside a newly identified one of these takes its uuid.
+ *
+ * A list item holds one paragraph for its text and nothing describes it. When
+ * the editor wraps an existing paragraph in a new list item, the paragraph
+ * arrives with a uuid of its own, which would be saved as a paragraph row
+ * inside the item. A blockquote is different: its paragraphs are stored.
+ */
+export const wrapsStructuralParagraph = (node: Node): boolean =>
+  node.type.name === 'listItem';

@@ -1,4 +1,4 @@
-import { getSchema } from '@tiptap/core';
+import { Editor, getSchema } from '@tiptap/core';
 import type { Extensions, JSONContent } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
@@ -19,6 +19,10 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 
 import { buildStackSchemaExtensions } from '../stack/stack-extensions';
+import {
+  BulletListSuggestion,
+  NumberListSuggestion,
+} from './extensions/SlashCommand/Suggestions';
 import { stackSeedFromPassage } from '../stack/types';
 import { EnsureUniqueUuids } from './extensions/EnsureUniqueUuids';
 import { useTranslationExtensions } from './hooks/useTranslationExtensions';
@@ -401,4 +405,68 @@ describe('quote annotations', () => {
     // The save's delete diff only reads types outside this list.
     expect(ANNOTATIONS_TO_IGNORE).toContain('quote');
   });
+});
+
+describe('lists made from the slash menu', () => {
+  // The caret sits in a new paragraph, as after Enter at the end of a passage,
+  // holding the typed "/list". The list wraps that paragraph, which already
+  // has a uuid, so the list item must take it rather than leave a paragraph
+  // row inside the item.
+  const typed = '/list';
+  const makeList = (command: typeof BulletListSuggestion.command) => {
+    const editor = new Editor({
+      extensions: buildStackSchemaExtensions(),
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { uuid: 'p-1' },
+            content: [{ type: 'text', text: 'Hello world' }],
+          },
+          {
+            type: 'paragraph',
+            attrs: { uuid: 'p-2', indent: { uuid: 'indent-1' } },
+            content: [{ type: 'text', text: typed }],
+          },
+        ],
+      },
+    });
+    const from = editor.state.doc.child(0).nodeSize + 1;
+    editor.commands.setTextSelection(from + typed.length);
+    command({ editor, range: { from, to: from + typed.length } });
+    editor.commands.insertContent('Slash entry.');
+    const node = editor.state.doc;
+    const saved = exportStack(plain, node);
+    editor.destroy();
+    return { node, saved };
+  };
+
+  it.each([
+    ['Bullet List', BulletListSuggestion, 'bulletList'],
+    ['Numbered List', NumberListSuggestion, 'orderedList'],
+  ])(
+    '%s stores a list and an item with no paragraph',
+    (_, suggestion, type) => {
+      const { node, saved } = makeList(suggestion.command);
+      const list = node.child(1);
+      expect(list.type.name).toBe(type);
+      const item = list.child(0);
+      expect(item.type.name).toBe('listItem');
+      expect(item.child(0).attrs.uuid).toBe(item.attrs.uuid);
+
+      // The paragraph's indent goes with it into the item.
+      const stored = (saved.annotations ?? []).filter((row) => row.start >= 11);
+      expect(stored.map((row) => row.type).sort()).toEqual([
+        'indent',
+        'list',
+        'listItem',
+      ]);
+      // The only paragraph row is the passage's first paragraph, which is not
+      // in the list.
+      expect(
+        (saved.annotations ?? []).filter((row) => row.type === 'paragraph'),
+      ).toEqual([expect.objectContaining({ uuid: 'p-1' })]);
+    },
+  );
 });

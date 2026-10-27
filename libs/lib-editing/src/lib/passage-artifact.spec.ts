@@ -1,4 +1,5 @@
 import { Editor } from '@tiptap/core';
+import type { Node } from '@tiptap/pm/model';
 import { translationSSRExtensions } from './components/editor/extensions/translationSSRExtensions';
 import TranslationMetadata from './components/editor/extensions/TranslationMetadata';
 import TranslationDocument from './components/editor/extensions/TranslationDocument';
@@ -163,6 +164,31 @@ describe('the passage node ProseMirror fills an emptied document with', () => {
     expect(passages[0].label).toBe('');
     expect(passages[0].type).toBe('translation');
     expect(passages[0].content).toBe('');
+    editor.destroy();
+  });
+});
+
+describe('ensureUuids on a list made by wrapping a paragraph', () => {
+  it('gives the list item and its paragraph one uuid', () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      // Without the plugin, so `ensureUuids` is what stamps the new nodes.
+      extensions: extensions.filter(
+        (extension) => extension !== EnsureUniqueUuids,
+      ),
+      content: document_(1),
+    });
+    editor.commands.setTextSelection(3);
+    editor.commands.toggleBulletList();
+    ensureUuids(editor);
+
+    const items: Node[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'listItem') items.push(node);
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].attrs.uuid).toBeTruthy();
+    expect(items[0].child(0).attrs.uuid).toBe(items[0].attrs.uuid);
     editor.destroy();
   });
 });

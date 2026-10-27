@@ -7,6 +7,7 @@ import {
   isPlainParagraph,
   isStructuralParagraph,
   parameterAnnotationValue,
+  wrapsStructuralParagraph,
 } from '@eightyfourthousand/lib-doc-model';
 
 /**
@@ -154,7 +155,9 @@ export const EnsureUniqueUuids = Extension.create({
           // stale drops).
           const seen = new Set<string>();
           // A wrapper's first plain paragraph shares its uuid by design, and
-          // follows the wrapper when the wrapper gets a new one.
+          // follows the wrapper when the wrapper gets a new one. A list item
+          // made by wrapping a paragraph takes the paragraph's too, though it
+          // arrives with a uuid of its own.
           const wrapped = new Set<Node>();
           const renamed = new Map<Node, string>();
           newState.doc.descendants((node, pos, parent) => {
@@ -165,21 +168,20 @@ export const EnsureUniqueUuids = Extension.create({
             const existing: string | null = node.attrs.uuid;
             if (parent && !wrapped.has(parent) && isPlainParagraph(node)) {
               const follow = renamed.get(parent);
-              if (
-                follow &&
-                (!existing ||
-                  existing === parent.attrs.uuid ||
-                  seen.has(existing))
-              ) {
+              const copied =
+                !existing ||
+                existing === parent.attrs.uuid ||
+                seen.has(existing);
+              if (follow && (copied || wrapsStructuralParagraph(parent))) {
                 wrapped.add(parent);
-                // A copy, like any duplicate: it must not take the original's
-                // parameter annotations with it.
+                // A copy must not take the original's parameter annotations
+                // with it. A paragraph wrapped into a list item is the
+                // original, and keeps them.
                 updates.push({
                   pos,
-                  attrs: resetDependentAttrs(node, {
-                    ...node.attrs,
-                    uuid: follow,
-                  }),
+                  attrs: copied
+                    ? resetDependentAttrs(node, { ...node.attrs, uuid: follow })
+                    : { ...node.attrs, uuid: follow },
                 });
                 return true;
               }

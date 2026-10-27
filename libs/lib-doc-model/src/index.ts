@@ -54,7 +54,11 @@ export { internalLinkPath } from './lib/internal-link-path';
 
 export { passageFromNode } from './lib/passage';
 
-export { isPlainParagraph, isStructuralParagraph } from './lib/structural';
+export {
+  isPlainParagraph,
+  isStructuralParagraph,
+  wrapsStructuralParagraph,
+} from './lib/structural';
 
 export { mapMarks } from './lib/marks';
 
