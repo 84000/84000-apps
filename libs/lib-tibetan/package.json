@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/lib-tibetan",
-  "version": "2026.10.14",
+  "version": "2026.10.15",
   "description": "Tibetan text helpers for 84000 applications: Unicode to Extended Wylie (EWTS) in the 84000 house profile.",
   "private": false,
   "repository": {
