@@ -158,10 +158,6 @@ test.describe('Inline marks', () => {
   });
 
   test('ED-MRK-02 A foreign span with no language', async ({ page }) => {
-    test.fail(
-      true,
-      'DEV-854: a foreign span stored with no language renders lang="foreign".',
-    );
     const uuid = await openAt(page, 'pl.1', 'translation');
     const span = styled(page, uuid, 'foreign').filter({ hasText: 'vajrapada' });
     await expect(span).toBeVisible();

@@ -138,6 +138,11 @@
     @apply italic;
   }
 
+  /* A foreign span with no language has no lang attribute to match above. */
+  [data-text-style='foreign']:not([lang]) {
+    @apply italic;
+  }
+
   [lang='bo'] {
     @apply font-tibetan text-lg;
   }
