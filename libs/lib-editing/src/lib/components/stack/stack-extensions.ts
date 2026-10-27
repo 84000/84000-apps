@@ -25,6 +25,7 @@ import { GlossaryInstanceNode } from '../editor/extensions/GlossaryInstance/Glos
 import Heading from '../editor/extensions/Heading/Heading';
 import Image from '../editor/extensions/Image';
 import { Indent } from '../editor/extensions/Indent';
+import { InlineTitleMark } from '../editor/extensions/InlineTitle/InlineTitle';
 import { InternalLink } from '../editor/extensions/InternalLink';
 import { Italic } from '../editor/extensions/Italic';
 import { LeadingSpace } from '../editor/extensions/LeadingSpace';
@@ -83,6 +84,7 @@ export const buildStackSchemaExtensions = (): Extensions => [
   Heading,
   Image,
   Indent,
+  InlineTitleMark,
   InternalLink,
   Italic,
   LeadingSpace,

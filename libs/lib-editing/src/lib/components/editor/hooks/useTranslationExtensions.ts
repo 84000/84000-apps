@@ -38,6 +38,7 @@ import { LineNode } from '../extensions/Line/LineNode';
 import { Subscript } from '../extensions/Subscript';
 import { Superscript } from '../extensions/Superscript';
 import { SmallCaps } from '../extensions/SmallCaps';
+import { InlineTitleMark } from '../extensions/InlineTitle/InlineTitle';
 import { Italic } from '../extensions/Italic';
 import { Indent } from '../extensions/Indent';
 import { InternalLink } from '../extensions/InternalLink';
@@ -112,6 +113,7 @@ export const useTranslationExtensions = ({
     Heading,
     Image,
     Indent,
+    InlineTitleMark,
     InternalLink,
     Italic,
     LeadingSpace,

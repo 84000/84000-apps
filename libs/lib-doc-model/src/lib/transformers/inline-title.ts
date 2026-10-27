@@ -13,10 +13,9 @@ export const inlineTitle: Transformer = (ctx) => {
     return;
   }
 
-  const markType = ITALIC_LANGUAGES.includes(lang) ? 'italic' : undefined;
-  if (!markType) {
-    return;
-  }
+  // Titles in languages not set in italics (e.g. zh, ja) get their own
+  // upright mark, so they are kept rather than dropped.
+  const markType = ITALIC_LANGUAGES.includes(lang) ? 'italic' : 'inlineTitle';
 
   const matched = recurse({
     ...ctx,

@@ -61,6 +61,7 @@ export const ANNOTATION_TOH_TYPES = [
   'foreign',
   'glossaryInstance',
   'hasAbbreviation',
+  'inlineTitle',
   'internalLink',
   'italic',
   'link',

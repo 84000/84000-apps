@@ -56,4 +56,31 @@ describe('inlineTitle transformer', () => {
     expect(italicMark?.attrs?.type).toBe('inlineTitle');
     expect(textNode?.text).toBe('Dhammapada');
   });
+
+  it('keeps a title in a language not set in italics on its own mark', () => {
+    const [title] = dto.annotations ?? [];
+    const zhDto: PassageDTO = {
+      ...dto,
+      annotations: [{ ...title, content: [{ lang: 'zh' }] }],
+    };
+    const zhBlock = blockFromPassage(
+      passageFromDTO(
+        zhDto,
+        annotationsFromDTO(zhDto.annotations || [], zhDto.content.length),
+      ),
+    );
+    if (!zhBlock) {
+      throw new Error('Block conversion failed');
+    }
+    const textNode = findTextNodeWithMarks(zhBlock);
+    const types = textNode?.marks?.map(({ type }) => type);
+    const mark = textNode?.marks?.find(({ type }) => type === 'inlineTitle');
+    expect(types).toEqual(['inlineTitle']);
+    expect(mark?.attrs).toMatchObject({
+      uuid: 'inline-title-uuid-1',
+      lang: 'zh',
+      type: 'inlineTitle',
+    });
+    expect(textNode?.text).toBe('Dhammapada');
+  });
 });
