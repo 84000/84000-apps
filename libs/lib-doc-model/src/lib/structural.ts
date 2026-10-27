@@ -1,4 +1,5 @@
 import type { Node } from '@tiptap/pm/model';
+import { tohFromAttrs } from './annotation-attrs';
 
 /**
  * Whether a node is a paragraph carrying nothing a row of its own would save:
@@ -30,13 +31,15 @@ export const isStructuralParagraph = (
   !!ownerUuid && node.attrs.uuid === ownerUuid && isPlainParagraph(node);
 
 /**
- * Whether a node's paragraph is only ever its wrapper, so a paragraph that
- * ends up inside a newly identified one of these takes its uuid.
+ * Whether a paragraph wrapped into a new `wrapper` takes the wrapper's uuid.
  *
  * A list item holds one paragraph for its text and nothing describes it. When
  * the editor wraps an existing paragraph in a new list item, the paragraph
  * arrives with a uuid of its own, which would be saved as a paragraph row
- * inside the item. A blockquote is different: its paragraphs are stored.
+ * inside the item. A blockquote is different: its paragraphs are stored. A
+ * paragraph scoped to some Tohoku texts keeps its row too, since the scope
+ * is saved on it and the item carries none.
  */
-export const wrapsStructuralParagraph = (node: Node): boolean =>
-  node.type.name === 'listItem';
+export const takesWrapperUuid = (wrapper: Node, paragraph: Node): boolean =>
+  wrapper.type.name === 'listItem' &&
+  tohFromAttrs(paragraph.attrs).length === 0;

@@ -57,7 +57,7 @@ export { passageFromNode } from './lib/passage';
 export {
   isPlainParagraph,
   isStructuralParagraph,
-  wrapsStructuralParagraph,
+  takesWrapperUuid,
 } from './lib/structural';
 
 export { mapMarks } from './lib/marks';

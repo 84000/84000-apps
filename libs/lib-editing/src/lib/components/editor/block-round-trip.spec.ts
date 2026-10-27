@@ -413,7 +413,10 @@ describe('lists made from the slash menu', () => {
   // has a uuid, so the list item must take it rather than leave a paragraph
   // row inside the item.
   const typed = '/list';
-  const makeList = (command: typeof BulletListSuggestion.command) => {
+  const makeList = (
+    command: typeof BulletListSuggestion.command,
+    attrs: Record<string, unknown> = { indent: { uuid: 'indent-1' } },
+  ) => {
     const editor = new Editor({
       extensions: buildStackSchemaExtensions(),
       content: {
@@ -426,7 +429,7 @@ describe('lists made from the slash menu', () => {
           },
           {
             type: 'paragraph',
-            attrs: { uuid: 'p-2', indent: { uuid: 'indent-1' } },
+            attrs: { uuid: 'p-2', ...attrs },
             content: [{ type: 'text', text: typed }],
           },
         ],
@@ -469,4 +472,17 @@ describe('lists made from the slash menu', () => {
       ).toEqual([expect.objectContaining({ uuid: 'p-1' })]);
     },
   );
+
+  // The scope is saved on the paragraph's row, and the new item carries none.
+  it('keeps a paragraph scoped to some texts as its own row', () => {
+    const { saved } = makeList(BulletListSuggestion.command, {
+      toh: 'toh1',
+    });
+    expect(
+      (saved.annotations ?? []).filter((row) => row.type === 'paragraph'),
+    ).toEqual([
+      expect.objectContaining({ uuid: 'p-1' }),
+      expect.objectContaining({ uuid: 'p-2', toh: [expect.anything()] }),
+    ]);
+  });
 });

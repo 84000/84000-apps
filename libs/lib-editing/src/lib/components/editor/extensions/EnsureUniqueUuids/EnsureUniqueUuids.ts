@@ -7,7 +7,7 @@ import {
   isPlainParagraph,
   isStructuralParagraph,
   parameterAnnotationValue,
-  wrapsStructuralParagraph,
+  takesWrapperUuid,
 } from '@eightyfourthousand/lib-doc-model';
 
 /**
@@ -172,7 +172,7 @@ export const EnsureUniqueUuids = Extension.create({
                 !existing ||
                 existing === parent.attrs.uuid ||
                 seen.has(existing);
-              if (follow && (copied || wrapsStructuralParagraph(parent))) {
+              if (follow && (copied || takesWrapperUuid(parent, node))) {
                 wrapped.add(parent);
                 // A copy must not take the original's parameter annotations
                 // with it. A paragraph wrapped into a list item is the
