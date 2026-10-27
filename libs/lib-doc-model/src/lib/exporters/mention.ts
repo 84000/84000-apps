@@ -27,6 +27,7 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       uuid: string;
       entity: string;
       linkType: string;
+      linkStatus?: string;
       text?: string;
       isSameWork?: boolean;
       subtype?: string;
@@ -45,6 +46,7 @@ export const mention: Exporter<MentionAnnotation[]> = ({
       passageUuid,
       entity: item.entity,
       linkType: item.linkType,
+      ...(item.linkStatus && { linkStatus: item.linkStatus }),
       // Persist custom override text, but NEVER persist displayText
       ...(item.text && { text: item.text }),
       ...(item.isSameWork !== undefined && { isSameWork: item.isSameWork }),

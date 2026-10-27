@@ -19,6 +19,7 @@ export type AudioAnnotation = AnnotationBase & {
   type: 'audio';
   src: string;
   mediaType: string;
+  title?: string;
 };
 
 export type BlockquoteAnnotation = AnnotationBase & {
@@ -134,6 +135,8 @@ export type InternalLinkAnnotation = AnnotationBase & {
   label?: string;
   entity?: string;
   isPending?: boolean;
+  // The stored `link-type`, e.g. `pending` or `not-found`; sets `isPending`.
+  linkStatus?: string;
   isSameWork?: boolean;
   subtype?: string;
   linkToh?: string;
@@ -149,6 +152,7 @@ export type LineGroupAnnotation = AnnotationBase & {
 
 export type LineAnnotation = AnnotationBase & {
   type: 'line';
+  lang?: ExtendedTranslationLanguage;
 };
 
 export type LinkAnnotation = AnnotationBase & {
@@ -188,6 +192,8 @@ export type MentionAnnotation = AnnotationBase & {
   type: 'mention';
   entity: string;
   linkType: string;
+  // The stored `link-type`, e.g. `not-found` for an unresolved target.
+  linkStatus?: string;
   text?: string;
   displayText?: string;
   isSameWork?: boolean;

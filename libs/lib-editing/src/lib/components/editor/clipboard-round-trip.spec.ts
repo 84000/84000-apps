@@ -137,6 +137,26 @@ const CASES: Record<string, Blocks> = {
       ]),
     ]),
   ],
+  // A stored link: its href is not the path it renders to.
+  storedInternalLink: [
+    paragraph([
+      text([
+        {
+          type: 'internalLink',
+          attrs: {
+            uuid: 'm-1',
+            entity: 'entity-1',
+            type: 'passage',
+            href: 'UT22084-001-006-chapter-9',
+            label: '',
+            linkStatus: 'not-found',
+            isSameWork: true,
+            subtype: 'translationHeader',
+          },
+        },
+      ]),
+    ]),
+  ],
   glossaryInstance: [
     paragraph([
       text([
@@ -254,7 +274,15 @@ const CASES: Record<string, Blocks> = {
     { type: 'image', attrs: { src: 'https://e.com/a.png', uuid: 'image-1' } },
   ],
   audio: [
-    { type: 'audio', attrs: { src: 'https://e.com/a.mp3', uuid: 'audio-1' } },
+    {
+      type: 'audio',
+      attrs: {
+        src: 'https://e.com/a.ogg',
+        mediaType: 'audio/ogg',
+        title: 'A recitation',
+        uuid: 'audio-1',
+      },
+    },
   ],
   heading: [
     {
@@ -270,7 +298,7 @@ const CASES: Record<string, Blocks> = {
       content: [
         {
           type: 'line',
-          attrs: { uuid: 'line-1' },
+          attrs: { uuid: 'line-1', lang: 'Sa-Ltn' },
           content: [{ type: 'text', text: 'a line' }],
         },
         {
@@ -368,6 +396,34 @@ describe.each([
  * copied out of one editor and pasted into another, through the view's own
  * clipboard functions and the whole paste pipeline.
  */
+describe('pasted HTML with native attributes', () => {
+  it.each([
+    [
+      'a line language',
+      '<ul><li type="line" lang="Sa-Ltn">oṃ</li></ul>',
+      'line',
+      'lang',
+      'Sa-Ltn',
+    ],
+    [
+      'an audio title',
+      '<audio src="https://e.com/a.mp3" title="A recitation"></audio>',
+      'audio',
+      'title',
+      'A recitation',
+    ],
+  ])('keeps %s', (_name, html, type, attr, value) => {
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    const doc = DOMParser.fromSchema(stackSchema).parse(element);
+    const found: unknown[] = [];
+    doc.descendants((node) => {
+      if (node.type.name === type) found.push(node.attrs[attr]);
+    });
+    expect(found).toEqual([value]);
+  });
+});
+
 describe('the editor clipboard itself', () => {
   const notesIn = (editor: Editor) => {
     const notes: unknown[] = [];

@@ -12,9 +12,14 @@ export const internalLink: Exporter<InternalLinkAnnotation> = ({
   const entity = mark?.attrs.entity;
   const uuid = mark?.attrs.uuid;
   const href = mark?.attrs.href;
-  const isPending = mark?.attrs.isPending;
+  const linkStatus = mark?.attrs.linkStatus;
+  const label = mark?.attrs.label;
+  const isSameWork = mark?.attrs.isSameWork;
+  const subtype = mark?.attrs.subtype;
+  const linkToh = mark?.attrs.linkToh;
 
-  if (!textContent || !entity || !linkType || !uuid) {
+  // Older links carry only an href (no target entity), and still persist.
+  if (!textContent || !uuid) {
     console.warn(
       `Internal link ${uuid} on pasage ${passageUuid} is incomplete`,
     );
@@ -28,7 +33,11 @@ export const internalLink: Exporter<InternalLinkAnnotation> = ({
     linkType,
     entity,
     href,
-    isPending,
+    ...(linkStatus ? { linkStatus, isPending: true } : {}),
+    ...(typeof label === 'string' ? { label } : {}),
+    ...(typeof isSameWork === 'boolean' ? { isSameWork } : {}),
+    ...(subtype ? { subtype } : {}),
+    ...(linkToh ? { linkToh } : {}),
     start,
     end: start + textContent.length,
   };

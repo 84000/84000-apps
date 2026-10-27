@@ -6,7 +6,8 @@ import { tohAttrs } from '../annotation-attrs';
 
 export const audio: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { src, mediaType, uuid, start, end } = annotation as AudioAnnotation;
+  const { src, mediaType, title, uuid, start, end } =
+    annotation as AudioAnnotation;
   recurse({
     ...ctx,
     until: ['paragraph'],
@@ -20,6 +21,7 @@ export const audio: Transformer = (ctx) => {
             ...tohAttrs(annotation),
             src,
             mediaType,
+            ...(title !== undefined ? { title } : {}),
             uuid,
             start,
             end,

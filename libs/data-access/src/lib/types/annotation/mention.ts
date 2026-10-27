@@ -19,6 +19,9 @@ export const transformer: AnnotationTransformer = (dto): MentionAnnotation => {
     if (content.type) {
       mention.linkType = content.type as string;
     }
+    if (content['link-type']) {
+      mention.linkStatus = content['link-type'] as string;
+    }
     if (content.text) {
       mention.text = content.text as string;
     }
@@ -52,6 +55,7 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   const {
     entity,
     linkType,
+    linkStatus,
     text,
     isSameWork,
     subtype,
@@ -68,6 +72,9 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   }
   if (linkType) {
     dto.content.push({ type: linkType });
+  }
+  if (linkStatus) {
+    dto.content.push({ 'link-type': linkStatus });
   }
   // Persist custom override text, but NEVER persist displayText
   if (text) {

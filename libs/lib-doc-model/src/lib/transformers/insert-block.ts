@@ -14,6 +14,12 @@ import type { TranslationEditorContentItem } from '@eightyfourthousand/data-acce
  * is never the block that holds the atom — the line inside it is — and its
  * `line+` content means an empty group could not be built anyway.
  */
+// A carrier line keeps its language like any other line.
+const langAttr = (annotation: object) => {
+  const { lang } = annotation as { lang?: string };
+  return lang ? { lang } : {};
+};
+
 const CARRIER_TYPES: AnnotationType[] = ['line', 'paragraph'];
 
 /**
@@ -68,6 +74,7 @@ export const insertBlockAt: Transformer = ({ parent, block, annotation }) => {
       start,
       end,
       uuid,
+      ...langAttr(annotation),
     };
     return;
   }
@@ -80,6 +87,7 @@ export const insertBlockAt: Transformer = ({ parent, block, annotation }) => {
       start,
       end,
       uuid,
+      ...langAttr(annotation),
     },
     content: [],
   };

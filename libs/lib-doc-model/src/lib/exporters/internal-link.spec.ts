@@ -13,7 +13,6 @@ describe('internalLink exporter', () => {
         type: 'passage',
         entity: 'entity-uuid-5678',
         href: '/passage/entity-uuid-5678',
-        isPending: false,
       },
     } as unknown as Mark;
 
@@ -33,7 +32,6 @@ describe('internalLink exporter', () => {
       linkType: 'passage',
       entity: 'entity-uuid-5678',
       href: '/passage/entity-uuid-5678',
-      isPending: false,
       start: 0,
       end: 13,
     });
@@ -64,15 +62,14 @@ describe('internalLink exporter', () => {
     expect(result).toBeUndefined();
   });
 
-  it('should return undefined when entity is missing', () => {
-    const node = {
-      textContent: 'internal link',
-    } as unknown as Node;
-
+  it('exports a link that has only an href', () => {
+    const node = { textContent: 'internal link' } as unknown as Node;
     const mark = {
       attrs: {
-        uuid: 'internal-link-uuid-noentity',
-        type: 'passage',
+        uuid: 'internal-link-uuid-href',
+        href: '/translation/toh1-17',
+        linkStatus: 'not-found',
+        label: '',
       },
     } as unknown as Mark;
 
@@ -81,10 +78,22 @@ describe('internalLink exporter', () => {
       mark,
       parent: node,
       root: node,
-      start: 0,
+      start: 2,
       passageUuid: 'passage-uuid-1234',
     });
 
-    expect(result).toBeUndefined();
+    expect(result).toEqual({
+      uuid: 'internal-link-uuid-href',
+      passageUuid: 'passage-uuid-1234',
+      type: 'internalLink',
+      linkType: undefined,
+      entity: undefined,
+      href: '/translation/toh1-17',
+      linkStatus: 'not-found',
+      isPending: true,
+      label: '',
+      start: 2,
+      end: 15,
+    });
   });
 });

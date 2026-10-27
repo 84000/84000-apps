@@ -18,14 +18,16 @@ export const transformer: AnnotationTransformer = (
 
     if (content['link-type']) {
       internalLink.isPending = true;
+      internalLink.linkStatus = content['link-type'] as string;
     }
 
     if (content.type) {
       internalLink.linkType = content['type'] as string;
     }
 
-    if (content.label) {
-      internalLink.label = content.label as string;
+    // Stored labels include the empty string; keep it as stored.
+    if (typeof content.label === 'string') {
+      internalLink.label = content.label;
     }
 
     if (content.uuid) {
@@ -49,8 +51,17 @@ export const transformer: AnnotationTransformer = (
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { entity, linkType, href, label, isPending } =
-    annotation as InternalLinkAnnotation;
+  const {
+    entity,
+    linkType,
+    href,
+    label,
+    isPending,
+    linkStatus,
+    isSameWork,
+    subtype,
+    linkToh,
+  } = annotation as InternalLinkAnnotation;
   const dto = baseAnnotationToDto(annotation);
   dto.content = [
     {
@@ -58,13 +69,13 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
     },
   ];
 
-  if (isPending) {
+  if (linkStatus || isPending) {
     dto.content.push({
-      'link-type': 'pending',
+      'link-type': linkStatus || 'pending',
     });
   }
 
-  if (label) {
+  if (label !== undefined) {
     dto.content.push({
       label,
     });
@@ -79,6 +90,25 @@ export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
   if (linkType) {
     dto.content.push({
       type: linkType,
+    });
+  }
+
+  if (isSameWork !== undefined) {
+    dto.content.push({
+      same_work: isSameWork,
+    });
+  }
+
+  if (subtype) {
+    dto.content.push({
+      subtype,
+    });
+  }
+
+  // The target's Tohoku number, distinct from the row's own `toh` scope.
+  if (linkToh) {
+    dto.content.push({
+      toh: linkToh,
     });
   }
 

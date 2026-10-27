@@ -1,6 +1,7 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { cn, safeHref } from '@eightyfourthousand/lib-utils';
 import { LINK_STYLE } from '@eightyfourthousand/design-system';
+import { internalLinkPath } from '@eightyfourthousand/lib-doc-model';
 
 export interface InternalLinkSSROptions {
   HTMLAttributes: Record<string, unknown>;
@@ -40,7 +41,10 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
       href: {
         default: undefined,
         rendered: false,
-        parseHTML: (element) => element.getAttribute('href'),
+        // The stored href rides in `data-href`: the rendered `href` is the
+        // derived link path.
+        parseHTML: (element) =>
+          element.getAttribute('data-href') ?? element.getAttribute('href'),
       },
       uuid: {
         default: undefined,
@@ -63,6 +67,19 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
         rendered: false,
         parseHTML: (element) => element.getAttribute('data-link-toh'),
       },
+      // Stored with the link and written back on save; not shown.
+      label: {
+        default: undefined,
+        rendered: false,
+        parseHTML: (element) => element.getAttribute('data-label') ?? undefined,
+      },
+      // The stored `link-type`, e.g. `pending` or `not-found`.
+      linkStatus: {
+        default: undefined,
+        rendered: false,
+        parseHTML: (element) =>
+          element.getAttribute('data-link-status') ?? undefined,
+      },
     };
   },
 
@@ -71,7 +88,11 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
   },
 
   renderHTML({ mark, HTMLAttributes }) {
-    const href = safeHref(mark.attrs.href as string | null | undefined);
+    const href = safeHref(
+      internalLinkPath(
+        mark.attrs as { href?: string; type?: string; entity?: string },
+      ),
+    );
     const {
       entity,
       type: entityType,
@@ -80,7 +101,10 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
       subtype,
       linkToh,
       toh,
+      label,
+      linkStatus,
     } = mark.attrs as Record<string, string | boolean | undefined>;
+    const storedHref = mark.attrs.href as string | null | undefined;
 
     const attrs: Record<string, string> = {
       class: cn(LINK_STYLE),
@@ -93,6 +117,9 @@ export const InternalLinkSSR = Mark.create<InternalLinkSSROptions>({
     if (isSameWork) attrs['data-same-work'] = 'true';
     if (subtype) attrs['data-subtype'] = String(subtype);
     if (linkToh) attrs['data-link-toh'] = String(linkToh);
+    if (storedHref) attrs['data-href'] = storedHref;
+    if (typeof label === 'string') attrs['data-label'] = label;
+    if (linkStatus) attrs['data-link-status'] = String(linkStatus);
 
     if (!href) {
       return [

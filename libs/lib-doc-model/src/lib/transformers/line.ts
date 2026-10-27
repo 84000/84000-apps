@@ -1,3 +1,4 @@
+import { LineAnnotation } from '@eightyfourthousand/data-access';
 import { insertBlockAt } from './insert-block';
 import { recurse } from './recurse';
 import { splitBlock } from './split-block';
@@ -6,7 +7,7 @@ import { tohAttrs } from '../annotation-attrs';
 
 export const line: Transformer = (ctx) => {
   const { annotation } = ctx;
-  const { start, end, uuid } = annotation || {};
+  const { start, end, uuid, lang } = (annotation || {}) as LineAnnotation;
 
   return recurse({
     ...ctx,
@@ -29,6 +30,7 @@ export const line: Transformer = (ctx) => {
             start,
             end,
             uuid,
+            ...(lang ? { lang } : {}),
           };
         },
       });

@@ -29,10 +29,9 @@ not depend on how the save is carried out.
   `mention`) either stay before the new character or move after it, as the
   editor places the caret, but are not lost. No annotation type disappears.
 - Known: the stack editor adds a root `paragraph` row to passages whose
-  stored data has none, so this item only checks that nothing is lost. Open
-  (DEV-840): a save drops attributes the editor does not model, the link `title` on
-  `ac.1` and the internal-link `toh`, `subtype`, `label` and `same_work` on
-  `i.2` and `p.1`.
+  stored data has none, so this item only checks that nothing is lost. Only
+  the content keys the editor models are checked: a save may drop a stored key
+  it does not model, such as the link `title` on `ac.1` or an `*_xmlId`.
 
 ### ED-SAV-03 New, merged and deleted passages persist (D)
 

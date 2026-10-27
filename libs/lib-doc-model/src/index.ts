@@ -50,6 +50,8 @@ export {
 } from './lib/passage-doc';
 export type { PassageDocOptions } from './lib/passage-doc';
 
+export { internalLinkPath } from './lib/internal-link-path';
+
 export { passageFromNode } from './lib/passage';
 
 export { isPlainParagraph, isStructuralParagraph } from './lib/structural';

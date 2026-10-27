@@ -32,6 +32,20 @@ export const Audio = Node.create<AudioOptions>({
       src: {
         default: null,
       },
+      // Stored with the audio and written back on save.
+      mediaType: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('data-media-type'),
+        renderHTML: ({ mediaType }) =>
+          mediaType ? { 'data-media-type': mediaType } : {},
+      },
+      title: {
+        default: null,
+        parseHTML: (element) =>
+          element.getAttribute('data-title') ?? element.getAttribute('title'),
+        renderHTML: ({ title }) =>
+          typeof title === 'string' ? { 'data-title': title } : {},
+      },
     };
   },
 

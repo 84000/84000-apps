@@ -9,6 +9,7 @@ export const line: Exporter<LineAnnotation> = ({
 }): LineAnnotation | undefined => {
   const textContent = node.textContent || '';
   const uuid = node.attrs.uuid;
+  const lang = node.attrs.lang;
 
   // A line holding only inline atoms — a folio reference on its own line —
   // spans no characters but still marks a break, so it persists as a
@@ -24,5 +25,6 @@ export const line: Exporter<LineAnnotation> = ({
     passageUuid,
     start,
     end: start + textContent.length,
+    ...(lang ? { lang } : {}),
   };
 };
