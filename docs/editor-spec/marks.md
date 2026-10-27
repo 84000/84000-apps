@@ -28,15 +28,14 @@ plus `mantra` for mantras.
   in `1.11` on "oṃ padme svāhā".
 - Screen: each foreign span carries its stored language as its `lang`
   attribute (`Sa-Ltn`, `Bo-Ltn`, `bo`, `zh`, `Pi-Ltn`, or none) and its
-  foreign styling. The mantra shows its mantra styling.
+  foreign styling. A span with no language has no `lang` attribute.
+  The mantra shows its mantra styling.
 - Do: in `1.12`, mark "great compassion" as foreign Sanskrit (Sa-Ltn) and
   Save.
 - Stored: `1.12` has one new `span` row over "great compassion" with
   the foreign style and language Sa-Ltn. The existing en span is unchanged.
 - Do: mark "great compassion" in `1.1` as a mantra and Save.
 - Stored: `1.1` has one `mantra` row over it.
-- Known: open in the stack editor (DEV-854): the span with no
-  language renders `lang="foreign"`.
 
 ### ED-MRK-03 Upright pipes and typography (D)
 
