@@ -13,6 +13,7 @@ import Heading from './Heading/Heading';
 import Image from './Image';
 import { Indent } from './Indent';
 import { InternalLinkSSR } from './InternalLink/InternalLink.ssr';
+import { InlineTitleMark } from './InlineTitle/InlineTitle';
 import { Italic } from './Italic';
 import { LeadingSpace } from './LeadingSpace';
 import { LineGroupNodeSSR } from './LineGroup/LineGroupNode.ssr';
@@ -49,6 +50,7 @@ export const translationSSRExtensions: Extensions = [
   Heading,
   Image,
   Indent,
+  InlineTitleMark,
   InternalLinkSSR,
   Italic,
   LeadingSpace,
