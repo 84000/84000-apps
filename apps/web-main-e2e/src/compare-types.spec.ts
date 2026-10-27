@@ -138,11 +138,6 @@ test.describe('Compare tab', () => {
     page,
   }) => {
     const { ten, phrase } = await chooseAlignmentResult(page);
-    // Only the scroll is the known bug; the search itself is checked above.
-    test.fail(
-      true,
-      'DEV-851: choosing a Translation Passages result opens Compare at the top, without scrolling to the passage.',
-    );
     await expect(row(page, ten.uuid)).toBeInViewport({ timeout: 10_000 });
     await expect(source(page, ten.uuid)).toBeVisible();
     await expect(source(page, ten.uuid)).toContainText(phrase);
