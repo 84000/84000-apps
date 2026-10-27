@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { render, screen, act } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import userEvent from '@testing-library/user-event';
 import { NavigationProvider, useNavigation } from './NavigationProvider';
 
@@ -20,6 +22,8 @@ const mockSearch = {
   cached: { search: '', params: new URLSearchParams() },
   /** Held back in place of the URL, as a transition the router has not committed yet. */
   lagging: undefined as URLSearchParams | undefined,
+  /** Throws on read, as Next does while prerendering a static page. */
+  prerendering: false,
   subscribe: (listener: () => void) => {
     mockSearch.listeners.add(listener);
     return () => mockSearch.listeners.delete(listener);
@@ -37,8 +41,12 @@ const mockSearch = {
 jest.mock('next/navigation', () => {
   const { useSyncExternalStore } = jest.requireActual('react');
   return {
-    useSearchParams: () =>
-      useSyncExternalStore(mockSearch.subscribe, mockSearch.snapshot),
+    useSearchParams: () => {
+      if (mockSearch.prerendering) {
+        throw new Error('BAILOUT_TO_CLIENT_SIDE_RENDERING');
+      }
+      return useSyncExternalStore(mockSearch.subscribe, mockSearch.snapshot);
+    },
   };
 });
 
@@ -359,6 +367,81 @@ describe('NavigationProvider URL sync', () => {
     expect(screen.getByTestId('right').textContent).toBe('open:glossary:g1');
     expect(new URLSearchParams(window.location.search).get('left')).toBe(
       'closed:toc',
+    );
+  });
+});
+
+describe('NavigationProvider static rendering', () => {
+  afterEach(() => {
+    mockSearch.prerendering = false;
+  });
+
+  // A prerendered page cannot read the query. Only the query's own boundary
+  // may fall back to the client, or the reader ships as an empty shell.
+  it('server-renders its children when the query cannot be read', () => {
+    mockSearch.prerendering = true;
+
+    const html = renderToString(
+      <NavigationProvider uuid="w1">
+        <p>Thus did I hear at one time.</p>
+      </NavigationProvider>,
+    );
+
+    expect(html).toContain('Thus did I hear at one time.');
+  });
+
+  it('applies the panels in the URL at load rather than writing defaults over them', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/?left=closed:toc&right=open:glossary:g9',
+    );
+
+    render(
+      <NavigationProvider uuid="w1">
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByTestId('left').textContent).toBe('closed:toc');
+    const query = new URLSearchParams(window.location.search);
+    expect(query.get('left')).toBe('closed:toc');
+    expect(query.get('right')).toBe('open:glossary:g9');
+  });
+
+  // The left panel and the passage stack fall back to the work's first toh on
+  // mount. That default must not win over the toh the link asked for.
+  it('keeps the toh in the URL over a default a child sets on mount', () => {
+    const DefaultToh = () => {
+      const { toh, setToh } = useNavigation();
+      useEffect(() => {
+        setToh(toh || 'toh1');
+      }, [toh, setToh]);
+      return <span data-testid="toh">{toh}</span>;
+    };
+    window.history.replaceState(null, '', '/?toh=toh2');
+
+    render(
+      <NavigationProvider uuid="w1" initialToh="toh1">
+        <DefaultToh />
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByTestId('toh').textContent).toBe('toh2');
+    expect(new URLSearchParams(window.location.search).get('toh')).toBe('toh2');
+  });
+
+  it('closes a right panel the URL opens when there is no translation', () => {
+    window.history.replaceState(null, '', '/?right=open:glossary');
+
+    render(
+      <NavigationProvider uuid="w1" initialHasTranslationContent={false}>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(new URLSearchParams(window.location.search).get('right')).toBe(
+      'closed:glossary',
     );
   });
 });
