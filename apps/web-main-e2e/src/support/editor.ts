@@ -115,6 +115,9 @@ export const caretAtEnd = async (
     const selection = el.ownerDocument.getSelection();
     selection?.selectAllChildren(el);
     selection?.collapseToEnd();
+    // The editor reads the caret on the browser's `selectionchange`, which can
+    // arrive after the next key. Send it now so that key sees this caret.
+    el.ownerDocument.dispatchEvent(new Event('selectionchange'));
   });
   return editor;
 };
@@ -272,6 +275,13 @@ export const reveal = async (
 };
 
 /**
+ * The key that moves the caret to the start of its line. On macOS, Home
+ * scrolls the page to the top instead, and that scroll can still be running
+ * when the test's next key lands.
+ */
+const lineStart = process.platform === 'darwin' ? 'Meta+ArrowLeft' : 'Home';
+
+/**
  * Focuses a passage and puts the caret before its first character, by
  * clicking there.
  */
@@ -295,10 +305,13 @@ export const caretAtStart = async (
   });
   await expect(async () => {
     await page.mouse.click(first.x, first.y);
-    await page.keyboard.press('Home');
+    await page.keyboard.press(lineStart);
     const atStart = await editor.evaluate((el) => {
+      // As in `caretAtEnd`: Backspace must not act on the caret before this.
+      el.ownerDocument.dispatchEvent(new Event('selectionchange'));
       const selection = el.ownerDocument.getSelection();
       if (!selection?.isCollapsed || !selection.anchorNode) return false;
+      if (!el.contains(selection.anchorNode)) return false;
       const range = el.ownerDocument.createRange();
       range.setStart(el, 0);
       range.setEnd(selection.anchorNode, selection.anchorOffset);
