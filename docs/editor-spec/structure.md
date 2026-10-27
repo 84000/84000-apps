@@ -42,9 +42,10 @@ sees. `sort` is what orders passages in the database.
   by the old `1.21`'s. `1.20` keeps its glossary instance and its end-note link,
   and the old `1.21`'s annotations now sit on `1.20`, shifted by `1.20`'s old
   length. The stored labels match the screen, and chapter 2 is unchanged.
-- Known: open in the stack editor (DEV-853), intermittent: after the merge, `1.20`
-  is usually no longer in view, and the merged passage's row sometimes stays on
-  screen. The view check is skipped.
+- Known: the old row used to stay on screen and the view to leave `1.20`, both
+  intermittently. Both came from how the test placed the caret, not from the
+  editor: on macOS, Home scrolled the page to the top, and a Backspace sent
+  before the editor read the new caret did not merge (fixed).
 
 ### ED-STR-04 Passage label menu (D + J)
 

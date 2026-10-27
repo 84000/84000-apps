@@ -116,6 +116,7 @@ test.describe('Passage structure', () => {
   test('ED-STR-03 Merge with Backspace', async ({ page }) => {
     const head = await passageByLabel('1.20');
     const tail = await passageByLabel('1.21');
+    const next = await passageByLabel('1.22');
     const headAnnotations = await annotationsOf(head.uuid);
     const tailAnnotations = await annotationsOf(tail.uuid);
     const before = await sectionPassages('1');
@@ -125,8 +126,9 @@ test.describe('Passage structure', () => {
     await reveal(page, tail.uuid);
     await caretAtStart(page, tail.uuid);
     await page.keyboard.press('Backspace');
-    // Not the old row going away: it sometimes stays on screen.
+    await expect(row(page, tail.uuid)).toHaveCount(0);
     await expect(row(page, head.uuid)).toContainText(tail.content.slice(0, 20));
+    await expect(shownLabel(page, next.uuid)).toHaveText('1.21');
     await save(page);
 
     expect(await passageByUuid(tail.uuid)).toBeNull();
@@ -158,10 +160,6 @@ test.describe('Passage structure', () => {
   test('ED-STR-03 Merge with Backspace: the view stays on the merged passage', async ({
     page,
   }) => {
-    test.fixme(
-      true,
-      'DEV-853: the view usually moves away from the merged passage, and the old row sometimes stays on screen. Both are intermittent, so test.fail would be flaky.',
-    );
     const head = await passageByLabel('1.20');
     const tail = await passageByLabel('1.21');
     await openAt(page, head.uuid);
