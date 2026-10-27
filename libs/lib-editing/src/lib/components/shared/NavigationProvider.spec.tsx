@@ -12,9 +12,43 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getTranslationMetadataByUuid: jest.fn(),
 }));
 
-jest.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
-}));
+// Behaves like the App Router: a history write that changes the query yields
+// new search params, and one that leaves it as it was yields the same object,
+// so the provider sees its own URL writes come back the way it does in Next.
+const mockSearch = {
+  listeners: new Set<() => void>(),
+  cached: { search: '', params: new URLSearchParams() },
+  /** Held back in place of the URL, as a transition the router has not committed yet. */
+  lagging: undefined as URLSearchParams | undefined,
+  subscribe: (listener: () => void) => {
+    mockSearch.listeners.add(listener);
+    return () => mockSearch.listeners.delete(listener);
+  },
+  snapshot: () => {
+    if (mockSearch.lagging) return mockSearch.lagging;
+    const { search } = window.location;
+    if (search !== mockSearch.cached.search) {
+      mockSearch.cached = { search, params: new URLSearchParams(search) };
+    }
+    return mockSearch.cached.params;
+  },
+};
+
+jest.mock('next/navigation', () => {
+  const { useSyncExternalStore } = jest.requireActual('react');
+  return {
+    useSearchParams: () =>
+      useSyncExternalStore(mockSearch.subscribe, mockSearch.snapshot),
+  };
+});
+
+for (const method of ['pushState', 'replaceState'] as const) {
+  const original = window.history[method].bind(window.history);
+  window.history[method] = (...args: Parameters<History['pushState']>) => {
+    original(...args);
+    mockSearch.listeners.forEach((listener) => listener());
+  };
+}
 
 jest.mock('@eightyfourthousand/lib-instr', () => ({
   useFeatureFlagEnabled: () => false,
@@ -234,5 +268,97 @@ describe('NavigationProvider xmlId deep links', () => {
 
     const target = await screen.findByText(`open:${tab}:p-1`);
     expect(target.getAttribute('data-testid')).toBe(panel);
+  });
+});
+
+describe('NavigationProvider URL sync', () => {
+  /** Reports where the right panel points. */
+  const RightProbe = () => {
+    const { panels, updatePanel } = useNavigation();
+    const { open, tab, hash } = panels.right;
+    return (
+      <>
+        <span data-testid="right">
+          {`${open ? 'open' : 'closed'}:${tab ?? '-'}:${hash ?? '-'}`}
+        </span>
+        <button
+          onClick={() =>
+            updatePanel({ name: 'left', state: { open: false, tab: 'toc' } })
+          }
+        >
+          Close the contents
+        </button>
+      </>
+    );
+  };
+
+  /** What a same-work link does: push the panel it opens onto the query. */
+  const followLink = (hash: string) =>
+    act(() => {
+      const query = new URLSearchParams(window.location.search);
+      query.set('right', `open:glossary:${hash}`);
+      window.history.pushState({}, '', `?${query.toString()}`);
+    });
+
+  const renderProbe = () =>
+    render(
+      <NavigationProvider uuid="w1">
+        <RightProbe />
+      </NavigationProvider>,
+    );
+
+  // The provider writes the panels into the query on load. That write coming
+  // back must not swallow the reader's first link.
+  it('opens the panel for the first link followed after load', () => {
+    renderProbe();
+
+    followLink('g1');
+
+    expect(screen.getByTestId('right').textContent).toBe('open:glossary:g1');
+  });
+
+  it('opens the panel for a link followed after a panel change', async () => {
+    renderProbe();
+
+    await userEvent.click(screen.getByText('Close the contents'));
+    followLink('g1');
+
+    expect(screen.getByTestId('right').textContent).toBe('open:glossary:g1');
+  });
+
+  // The router hands over its query in a transition, which can commit after
+  // the URL has moved on. That query is stale and must not undo the move.
+  it('ignores a query the URL has already moved past', async () => {
+    renderProbe();
+    followLink('g1');
+    const stale = new URLSearchParams(window.location.search);
+
+    await userEvent.click(screen.getByText('Close the contents'));
+    act(() => {
+      const query = new URLSearchParams(window.location.search);
+      query.set('right', 'closed:glossary');
+      window.history.pushState({}, '', `?${query.toString()}`);
+    });
+    expect(screen.getByTestId('right').textContent).toBe('closed:glossary:-');
+
+    act(() => {
+      mockSearch.lagging = stale;
+      mockSearch.listeners.forEach((listener) => listener());
+    });
+    mockSearch.lagging = undefined;
+
+    expect(screen.getByTestId('right').textContent).toBe('closed:glossary:-');
+  });
+
+  it('keeps a panel change rather than reading back the query it replaced', async () => {
+    renderProbe();
+    followLink('g1');
+
+    await userEvent.click(screen.getByText('Close the contents'));
+
+    expect(screen.getByTestId('right').textContent).toBe('open:glossary:g1');
+    expect(new URLSearchParams(window.location.search).get('left')).toBe(
+      'closed:toc',
+    );
   });
 });

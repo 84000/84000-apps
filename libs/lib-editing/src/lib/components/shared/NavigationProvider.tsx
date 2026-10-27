@@ -37,7 +37,12 @@ import {
   DEFAULT_PANELS,
   type EditorRequestHandler,
 } from './NavigationContext';
-import { parseHighlight, parsePanelParams } from './navigation-params';
+import {
+  panelParam,
+  parseHighlight,
+  parsePanelParams,
+  samePanels,
+} from './navigation-params';
 import { useNavigationFetchers } from './hooks/useNavigationFetchers';
 
 export { NavigationContext, useNavigation } from './NavigationContext';
@@ -63,7 +68,6 @@ export const NavigationProvider = ({
   const [panels, setPanels] = useState<PanelsState>(
     parsePanelParams(query).panels || DEFAULT_PANELS,
   );
-  const isPanelTransitioning = useRef(false);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(
     parsePanelParams(query).toh || initialToh,
   );
@@ -112,7 +116,6 @@ export const NavigationProvider = ({
   const updatePanel = useCallback(
     ({ name, state }: { name: PanelName; state: PanelState }) => {
       const { open } = state;
-      isPanelTransitioning.current = true;
       setPanels((prev) => {
         const newPanels = {
           ...prev,
@@ -182,7 +185,6 @@ export const NavigationProvider = ({
       return;
     }
 
-    isPanelTransitioning.current = true;
     const params = new URLSearchParams(window.location.search);
 
     if (toh) {
@@ -191,12 +193,7 @@ export const NavigationProvider = ({
 
     if (panels) {
       Object.entries(panels).forEach(([panelName, panelState]) => {
-        const { open, tab, hash } = panelState;
-        const openness = open ? 'open' : 'closed';
-        params.set(
-          panelName,
-          `${openness}${tab ? `:${tab}` : ''}${hash ? `:${hash}` : ''}`,
-        );
+        params.set(panelName, panelParam(panelState));
       });
     }
 
@@ -273,21 +270,14 @@ export const NavigationProvider = ({
   }, [uuid, toh, graphqlClient]);
 
   useEffect(() => {
-    if (isPanelTransitioning.current) {
-      isPanelTransitioning.current = false;
-      return;
-    }
+    // The router's query arrives in a transition and can trail the URL, so it
+    // only signals a change; the live URL says what it is. Equal state is kept,
+    // which makes our own writes reading back here a no-op.
+    const live = new URLSearchParams(window.location.search);
+    const { panels: newPanels, toh: newToh } = parsePanelParams(live);
 
-    const { panels: newPanels, toh: newToh } = parsePanelParams(query);
-
-    // Router state is the external system here, and `isPanelTransitioning`
-    // above guards against the feedback loop where our own panel writes push a
-    // new query which then reads back. Both the guard and the ordering depend
-    // on this staying an effect.
-    if (newPanels) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from router state behind a transition guard
-      setPanels(newPanels);
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from router state; equal state is kept
+    setPanels((prev) => (samePanels(prev, newPanels) ? prev : newPanels));
 
     if (newToh) {
       setToh(newToh);
@@ -296,8 +286,13 @@ export const NavigationProvider = ({
     // Re-read the highlight range so an in-session navigation (e.g. a
     // same-work mention link that pushes `start`/`end`) triggers a highlight,
     // and navigating away (no range) clears it.
-    setHighlight(parseHighlight(query));
-  }, [query, parsePanelParams]);
+    const newHighlight = parseHighlight(live);
+    setHighlight((prev) =>
+      prev?.start === newHighlight?.start && prev?.end === newHighlight?.end
+        ? prev
+        : newHighlight,
+    );
+  }, [query]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
   // Static, not a PostHog flag: an ad blocker stops the flags arriving and the
