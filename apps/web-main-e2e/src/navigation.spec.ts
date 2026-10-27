@@ -181,10 +181,6 @@ test.describe('Navigation', () => {
   });
 
   test('ED-NAV-04 Endnote back-references', async ({ page }) => {
-    test.fixme(
-      true,
-      'DEV-848: passage n.6 lists 1.20, but clicking the reference usually does not move the main panel. It sometimes does, so test.fail would be flaky.',
-    );
     const note = await passageByLabel('n.6');
     const linking = await passageByLabel('1.20');
     await openEditor(page, { right: { tab: 'endnotes', hash: note.uuid } });
