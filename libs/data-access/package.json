@@ -1,6 +1,6 @@
 {
   "name": "@eightyfourthousand/data-access",
-  "version": "2026.10.13",
+  "version": "2026.10.14",
   "description": "Shared data access clients, DTO mappers, and domain types for 84000 applications.",
   "private": false,
   "repository": {
@@ -17,13 +17,14 @@
     "access": "public"
   },
   "dependencies": {
-    "@eightyfourthousand/lib-utils": "^2026.10.13",
+    "@eightyfourthousand/lib-utils": "^2026.10.14",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
     "@tiptap/core": "^3.23.6",
     "jwt-decode": "^4.0.0",
     "resend": "^6.12.4",
-    "sanitize-html": "^2.17.7"
+    "sanitize-html": "^2.17.7",
+    "uuid": "^14.0.0"
   },
   "peerDependencies": {
     "next": "^16.0.0",
