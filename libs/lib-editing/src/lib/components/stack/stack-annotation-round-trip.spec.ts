@@ -128,9 +128,16 @@ const FOREIGN_LANGS = [
   'ja',
   'zh',
 ];
-// Stored inline titles also use `ja` and `zh`, which the editor does not load
-// today; that gap is tracked separately.
-const TITLE_LANGS = ['Bo-Ltn', 'Mt-Ltn', 'Pi-Ltn', 'Sa-Ltn', 'Zh-Ltn', 'en'];
+const TITLE_LANGS = [
+  'Bo-Ltn',
+  'Mt-Ltn',
+  'Pi-Ltn',
+  'Sa-Ltn',
+  'Zh-Ltn',
+  'en',
+  'ja',
+  'zh',
+];
 const MANTRA_LANGS = ['Bo-Ltn', 'Pi-Ltn', 'Sa-Ltn', 'en', 'zh'];
 
 /** Inline marks, one per word, inside one paragraph. */
