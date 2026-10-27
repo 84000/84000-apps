@@ -5,13 +5,14 @@ import {
   PANEL_NAMES,
   PanelName,
   PanelsState,
+  PanelState,
   TabName,
 } from './types';
 import { DEFAULT_PANELS } from './NavigationContext';
 
 /** Reads the panel states and toh from the query parameters. */
 export const parsePanelParams = (
-  params: ReadonlyURLSearchParams,
+  params: ReadonlyURLSearchParams | URLSearchParams,
 ): {
   toh?: TohokuCatalogEntry;
   panels: PanelsState;
@@ -39,12 +40,20 @@ export const parsePanelParams = (
   return { toh, panels };
 };
 
+/** Writes a panel state as its query parameter value, e.g. `open:toc`. */
+export const panelParam = ({ open, tab, hash }: PanelState): string =>
+  `${open ? 'open' : 'closed'}${tab ? `:${tab}` : ''}${hash ? `:${hash}` : ''}`;
+
+/** Whether two panel states write the same query parameters. */
+export const samePanels = (a: PanelsState, b: PanelsState): boolean =>
+  PANEL_NAMES.every((name) => panelParam(a[name]) === panelParam(b[name]));
+
 /**
  * Parses the `start`/`end` query parameters into a highlight range. Both must
  * be present and numeric with `end > start`; otherwise no highlight is applied.
  */
 export const parseHighlight = (
-  params: ReadonlyURLSearchParams,
+  params: ReadonlyURLSearchParams | URLSearchParams,
 ): HighlightRange | undefined => {
   const start = Number(params.get('start'));
   const end = Number(params.get('end'));
