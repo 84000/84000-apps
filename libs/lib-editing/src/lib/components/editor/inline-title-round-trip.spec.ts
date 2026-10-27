@@ -34,6 +34,7 @@ jest.mock('resend', () => ({ Resend: class {} }));
 const stackSchema = getSchema(buildStackSchemaExtensions());
 const tabSchema = getSchema(
   // Hook-shaped by name only — it calls no hooks and just assembles the list.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useTranslationExtensions().extensions as Extensions,
 );
 
