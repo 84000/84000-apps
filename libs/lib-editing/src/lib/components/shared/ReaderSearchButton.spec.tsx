@@ -67,3 +67,27 @@ describe('ReaderSearchButton passage results', () => {
     });
   });
 });
+
+describe('ReaderSearchButton alignment results', () => {
+  // A Translation Passages result names its passage, and Compare scrolls to
+  // it through the panel hash.
+  it('opens Compare at the matched passage', async () => {
+    const onResultSelected = await renderOnResultSelected();
+
+    onResultSelected({
+      type: 'alignment',
+      uuid: 'p-10',
+      content: '',
+      section: 'translation',
+      label: '1.10',
+      source: '',
+      volume: '1',
+      folio: '1',
+    } as SearchResult);
+
+    expect(mockUpdatePanel).toHaveBeenCalledWith({
+      name: 'main',
+      state: { open: true, tab: 'compare', hash: 'p-10' },
+    });
+  });
+});
