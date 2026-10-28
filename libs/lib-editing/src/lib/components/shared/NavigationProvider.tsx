@@ -12,6 +12,7 @@ import type {
 } from '@eightyfourthousand/data-access';
 import {
   ReactNode,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -48,6 +49,20 @@ import { useNavigationFetchers } from './hooks/useNavigationFetchers';
 export { NavigationContext, useNavigation } from './NavigationContext';
 export type { NavigationState } from './NavigationContext';
 
+/**
+ * Calls `onChange` on mount and whenever the URL query changes. Reading the
+ * query opts a prerendered page out of server rendering up to the nearest
+ * Suspense boundary, so this gets one of its own rather than taking the
+ * reader with it.
+ */
+const QueryListener = ({ onChange }: { onChange: () => void }) => {
+  const query = useSearchParams();
+  useEffect(() => {
+    onChange();
+  }, [query, onChange]);
+  return null;
+};
+
 export const NavigationProvider = ({
   uuid,
   initialToh,
@@ -63,19 +78,15 @@ export const NavigationProvider = ({
   children: ReactNode;
 }) => {
   const graphqlClient = createGraphQLClient();
-  const query = useSearchParams();
   const isMobile = useIsMobile();
-  const [panels, setPanels] = useState<PanelsState>(
-    parsePanelParams(query).panels || DEFAULT_PANELS,
-  );
-  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(
-    parsePanelParams(query).toh || initialToh,
-  );
+  // The URL is read after mount so the server and the first client render
+  // agree, and nothing is written back to it until then.
+  const [urlRead, setUrlRead] = useState(false);
+  const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
+  const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(initialToh);
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
-  const [highlight, setHighlight] = useState<HighlightRange | undefined>(() =>
-    parseHighlight(query),
-  );
+  const [highlight, setHighlight] = useState<HighlightRange | undefined>();
   const [focusedComment, setFocusedComment] = useState<string | undefined>();
   const [commentsRevision, setCommentsRevision] = useState(0);
   const [hasTranslationContent, setHasTranslationContent] = useState(
@@ -181,7 +192,7 @@ export const NavigationProvider = ({
   }, [editable, updatePanel]);
 
   useEffect(() => {
-    if (!toh && !panels) {
+    if (!urlRead || (!toh && !panels)) {
       return;
     }
 
@@ -199,12 +210,13 @@ export const NavigationProvider = ({
 
     const newUrl = `?${params.toString()}${window.location.hash}`;
     window.history.replaceState(null, '', newUrl);
-  }, [toh, panels]);
+  }, [urlRead, toh, panels]);
 
-  // On initial load, check for an XML ID in the URL hash and resolve it to an entity UUID.
+  // On initial load, check for an XML ID in the URL hash and resolve it to an
+  // entity UUID. Waits for the URL's panels, which would otherwise replace it.
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, '');
-    if (!hash || !isXmlId(hash)) {
+    if (!urlRead || !hash || !isXmlId(hash)) {
       return;
     }
 
@@ -252,31 +264,34 @@ export const NavigationProvider = ({
         state: { open: true, tab, hash: uuid },
       });
     })();
-  }, [graphqlClient, updatePanel]);
+  }, [urlRead, graphqlClient, updatePanel]);
 
   useEffect(() => {
     if (!uuid || !toh) {
       return;
     }
 
+    let cancelled = false;
     (async () => {
       const imprint = await getTranslationImprint({
         client: graphqlClient,
         uuid,
         toh,
       });
-      setImprint(imprint);
+      if (!cancelled) setImprint(imprint);
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [uuid, toh, graphqlClient]);
 
-  useEffect(() => {
-    // The router's query arrives in a transition and can trail the URL, so it
-    // only signals a change; the live URL says what it is. Equal state is kept,
-    // which makes our own writes reading back here a no-op.
+  // The router's query arrives in a transition and can trail the URL, so it
+  // only signals a change; the live URL says what it is. Equal state is kept,
+  // which makes our own writes reading back here a no-op.
+  const syncFromUrl = useCallback(() => {
     const live = new URLSearchParams(window.location.search);
     const { panels: newPanels, toh: newToh } = parsePanelParams(live);
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs from router state; equal state is kept
     setPanels((prev) => (samePanels(prev, newPanels) ? prev : newPanels));
 
     if (newToh) {
@@ -292,7 +307,9 @@ export const NavigationProvider = ({
         ? prev
         : newHighlight,
     );
-  }, [query]);
+
+    setUrlRead(true);
+  }, []);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
   // Static, not a PostHog flag: an ad blocker stops the flags arriving and the
@@ -301,13 +318,18 @@ export const NavigationProvider = ({
     'show-restriction-warning',
   );
 
-  // Close the right panel when there is no translation to show. `prev` starts
-  // true so a first render that already lacks translation content still closes
-  // it, matching the effect this replaced.
-  const [prevHasTranslationContent, setPrevHasTranslationContent] =
-    useState(true);
-  if (hasTranslationContent !== prevHasTranslationContent) {
-    setPrevHasTranslationContent(hasTranslationContent);
+  // Close the right panel when there is no translation to show, checked again
+  // once the URL's panels apply. `prev` starts true so a first render that
+  // already lacks translation content still closes it.
+  const [prevContentCheck, setPrevContentCheck] = useState({
+    hasTranslationContent: true,
+    urlRead,
+  });
+  if (
+    hasTranslationContent !== prevContentCheck.hasTranslationContent ||
+    urlRead !== prevContentCheck.urlRead
+  ) {
+    setPrevContentCheck({ hasTranslationContent, urlRead });
     if (!hasTranslationContent) {
       setPanels((prev) => {
         if (!prev.right.open) {
@@ -395,6 +417,10 @@ export const NavigationProvider = ({
   return (
     <NavigationContext.Provider value={contextValue}>
       <HoverCardProvider enabled={hasHoverCards}>{children}</HoverCardProvider>
+      {/* After the children, so the URL wins over a default they set on mount. */}
+      <Suspense fallback={null}>
+        <QueryListener onChange={syncFromUrl} />
+      </Suspense>
       {showRestrictionWarning && <RestrictionWarning imprint={imprint} />}
     </NavigationContext.Provider>
   );
