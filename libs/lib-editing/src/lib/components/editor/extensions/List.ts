@@ -6,6 +6,7 @@ const ITEM_STYLE_TO_CLASS: { [key: string]: string } = {
   circles: 'list-[circle]',
   numbers: 'list-decimal',
   letters: 'list-[lower-latin]',
+  roman_numerals: 'list-[lower-roman]',
 };
 
 const LIST_SPACING_TO_CLASS: { [key: string]: string } = {
