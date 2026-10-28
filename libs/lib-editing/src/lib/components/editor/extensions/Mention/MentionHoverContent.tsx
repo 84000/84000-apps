@@ -1,16 +1,21 @@
 import { Button, Input } from '@eightyfourthousand/design-system';
-import { ExtendedTranslationLanguage } from '@eightyfourthousand/data-access';
+import {
+  ExtendedTranslationLanguage,
+  FolioMentionSubtype,
+  isFolioMentionSubtype,
+} from '@eightyfourthousand/data-access';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { Editor } from '@tiptap/core';
 import {
+  AtSignIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   HighlighterIcon,
   LanguagesIcon,
+  PencilIcon,
   QuoteIcon,
   Trash2Icon,
-  TypeIcon,
   XIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -36,6 +41,16 @@ const LANG_OPTIONS: { name: string; lang: ExtendedTranslationLanguage }[] = [
   { name: 'Mongolian', lang: 'Mt-Ltn' },
   { name: 'Pali', lang: 'Pi-Ltn' },
   { name: 'Pinyin', lang: 'Zh-Ltn' },
+];
+
+/** Marker kinds a folio mention can label. Plain folio has no subtype. */
+const FOLIO_SUBTYPE_OPTIONS: {
+  name: string;
+  subtype: FolioMentionSubtype | '';
+}[] = [
+  { name: 'Folio', subtype: '' },
+  { name: 'Bampo', subtype: 'bampo' },
+  { name: 'Volume', subtype: 'volume' },
 ];
 
 /**
@@ -140,6 +155,7 @@ export const MentionHoverContent = ({
       entity,
       linkType: entityType,
       displayText: anchor?.textContent?.trim() || undefined,
+      subtype: anchor?.getAttribute('data-subtype') || undefined,
     } as MentionItem;
   });
   const currentText = item?.text ?? '';
@@ -149,6 +165,11 @@ export const MentionHoverContent = ({
   const isWork = entityType === 'work';
   // Quote styling (superscript label) is only offered for passage mentions.
   const isPassage = entityType === 'passage';
+  // Folio mentions can instead mark a bampo or volume.
+  const isFolio = entityType === 'folio';
+  const [folioSubtype, setFolioSubtype] = useState<FolioMentionSubtype | ''>(
+    isFolioMentionSubtype(item?.subtype) ? item.subtype : '',
+  );
 
   const setMode = useCallback(
     (next: Mode) => {
@@ -208,6 +229,19 @@ export const MentionHoverContent = ({
       mutateItem((item) => ({ ...item, text: value || undefined }));
     },
     [mutateItem],
+  );
+
+  // A bampo or volume marker is labelled only by its text, so clearing the
+  // text also returns it to a plain folio marker.
+  const renameFolioMarker = useCallback(
+    (value?: string) => {
+      mutateItem((item) => ({
+        ...item,
+        text: value || undefined,
+        subtype: (value && folioSubtype) || undefined,
+      }));
+    },
+    [mutateItem, folioSubtype],
   );
 
   // Set or clear the mention's language tag. Passing no value clears `lang`.
@@ -271,6 +305,34 @@ export const MentionHoverContent = ({
       highlightEnd: hasValidRange ? end : undefined,
     }));
   }, [mutateItem, hasValidRange, start, end]);
+
+  if (mode === 'rename' && isFolio) {
+    return (
+      <div className="flex flex-col gap-2 p-2 w-fit max-w-80">
+        <select
+          aria-label="Marker type"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none"
+          value={folioSubtype}
+          onChange={(e) =>
+            setFolioSubtype(e.target.value as FolioMentionSubtype | '')
+          }
+        >
+          {FOLIO_SUBTYPE_OPTIONS.map((option) => (
+            <option key={option.name} value={option.subtype}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <HoverInputField
+          type="mention"
+          attr="text"
+          valueRef={currentText}
+          placeholder="Custom label (leave empty to reset)…"
+          onSubmit={(value) => renameFolioMarker(value)}
+        />
+      </div>
+    );
+  }
 
   if (mode === 'rename') {
     return (
@@ -420,6 +482,7 @@ export const MentionHoverContent = ({
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
+      <AtSignIcon className="text-primary my-auto size-6 [&_svg]:size-4" />
       <span className="text-primary text-sm my-auto">{entityType}</span>
       <ChevronRightIcon className="my-auto size-4" />
       <span className="truncate text-muted-foreground text-sm my-auto">
@@ -478,7 +541,7 @@ export const MentionHoverContent = ({
         title="Edit display text"
         onClick={() => setMode('rename')}
       >
-        <TypeIcon className="text-primary my-auto" />
+        <PencilIcon className="text-primary my-auto" />
       </Button>
       <Button
         variant="ghost"
