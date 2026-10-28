@@ -309,20 +309,6 @@ export const MentionHoverContent = ({
   if (mode === 'rename' && isFolio) {
     return (
       <div className="flex flex-col gap-2 p-2 w-fit max-w-80">
-        <select
-          aria-label="Marker type"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none"
-          value={folioSubtype}
-          onChange={(e) =>
-            setFolioSubtype(e.target.value as FolioMentionSubtype | '')
-          }
-        >
-          {FOLIO_SUBTYPE_OPTIONS.map((option) => (
-            <option key={option.name} value={option.subtype}>
-              {option.name}
-            </option>
-          ))}
-        </select>
         <HoverInputField
           type="mention"
           attr="text"
@@ -330,6 +316,23 @@ export const MentionHoverContent = ({
           placeholder="Custom label (leave empty to reset)…"
           onSubmit={(value) => renameFolioMarker(value)}
         />
+        <div className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+          <select
+            id="folio-subtype-select"
+            className="size-full bg-transparent focus-visible:outline-none"
+            aria-label="Marker type"
+            value={folioSubtype}
+            onChange={(e) =>
+              setFolioSubtype(e.target.value as FolioMentionSubtype | '')
+            }
+          >
+            {FOLIO_SUBTYPE_OPTIONS.map((option) => (
+              <option key={option.name} value={option.subtype}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     );
   }
