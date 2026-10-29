@@ -13,6 +13,8 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 
 import { slashCommandPluginKey } from '../editor/extensions/SlashCommand/SlashCommand';
+import { Mention } from '../editor/extensions/Mention/Mention';
+import { MentionSSR } from '../editor/extensions/Mention/Mention.ssr';
 import { mentionSuggestionPluginKey } from '../editor/extensions/Mention/MentionSuggestion';
 import { renderTranslationHTML } from '../reader/translation-html';
 import { BoundaryKeymap, secondEnterSplit } from './BoundaryKeymap';
@@ -93,6 +95,15 @@ describe('stack schema extensions', () => {
     expect(list).not.toContain('slashCommand');
     expect(list).not.toContain('abbreviationCommand');
   });
+
+  // The reader builds its schema from here, so the mention node must be the
+  // schema-only one: the authoring one brings the suggestion menu with it.
+  it('uses the schema-only mention node', () => {
+    const schema = buildStackSchemaExtensions();
+
+    expect(schema).toContain(MentionSSR);
+    expect(schema).not.toContain(Mention);
+  });
 });
 
 describe('stack editor extensions', () => {
@@ -103,6 +114,16 @@ describe('stack editor extensions', () => {
     expect(list).toContain('abbreviationCommand');
     expect(list).toContain('collaboration');
     expect(list).toContain('boundaryKeymap');
+  });
+
+  it('swaps in the authoring mention node, keeping one mention node', () => {
+    const extensions = editorExtensions();
+
+    expect(extensions).toContain(Mention);
+    expect(extensions).not.toContain(MentionSSR);
+    expect(names(extensions).filter((name) => name === 'mention')).toHaveLength(
+      1,
+    );
   });
 
   it('routes the slash menu Passage item to the spine, not to splitPassage', () => {

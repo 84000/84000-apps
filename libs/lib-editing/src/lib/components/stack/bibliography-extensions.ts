@@ -7,7 +7,7 @@ import { GlossaryInstanceNode } from '../editor/extensions/GlossaryInstance/Glos
 import { InternalLink } from '../editor/extensions/InternalLink';
 import { Italic } from '../editor/extensions/Italic';
 import { Link } from '../editor/extensions/Link';
-import { Mention } from '../editor/extensions/Mention/Mention';
+import { MentionSSR } from '../editor/extensions/Mention/Mention.ssr';
 import Paragraph from '../editor/extensions/Paragraph/Paragraph';
 import { SmallCaps } from '../editor/extensions/SmallCaps';
 import { Subscript } from '../editor/extensions/Subscript';
@@ -45,7 +45,8 @@ export const buildBibliographySchemaExtensions = (): Extensions => [
   InternalLink,
   Italic.extend({ priority: FORMATTING_PRIORITY }),
   Link,
-  Mention,
+  // The node alone: the editor adds its suggestion and node view.
+  MentionSSR,
   SmallCaps.extend({ priority: FORMATTING_PRIORITY }),
   Subscript.extend({ priority: FORMATTING_PRIORITY }),
   Superscript.extend({ priority: FORMATTING_PRIORITY }),

@@ -29,7 +29,7 @@ import { LineNode } from '../editor/extensions/Line/LineNode';
 import { Link } from '../editor/extensions/Link';
 import { List, ListItem } from '../editor/extensions/List';
 import { MantraMark } from '../editor/extensions/Mantra/Mantra';
-import { Mention } from '../editor/extensions/Mention/Mention';
+import { MentionSSR } from '../editor/extensions/Mention/Mention.ssr';
 import Paragraph from '../editor/extensions/Paragraph/Paragraph';
 import { ParagraphIndent } from '../editor/extensions/ParagraphIndent';
 import { PipeNotItalic } from '../editor/extensions/PipeNotItalic';
@@ -74,7 +74,8 @@ export const buildStackSchemaExtensions = (): Extensions => [
   List,
   ListItem,
   MantraMark,
-  Mention,
+  // The node alone: the editor adds its suggestion and node view.
+  MentionSSR,
   Paragraph,
   ParagraphIndent,
   PipeNotItalic,
