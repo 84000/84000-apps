@@ -177,6 +177,26 @@ extensions, the live-row component, the menus and the y-sync origin), and
 comes back into its static imports. What remains is shared with the existing
 readers: `@tiptap/react` through the schema extensions and the hover cards.
 
+Packages import it as `@eightyfourthousand/lib-editing/stack-reader`.
+
+#### Drawn on the server
+
+`loadStackReaderSeed` (from `/ssr`) reads, on the server, each section's first
+page of metadata and the content of the first passages of the main panel's
+sections. Handed to `StackReaderProvider` as `seed`, it builds the views in the
+provider's first render, so the server draws their first window (see "Rows in
+flow") and the browser's first render matches it. The load effect then adopts
+those views rather than rebuilding them: the sections' feeds page on from the
+seeded cursors, and only the bibliography is read in the browser.
+
+What only the browser knows is read after mount, so it cannot differ between
+the two renders: a view built with `serverRendered` reads bookmarks in an
+effect rather than in its constructor.
+
+Not covered: on a work spanning several Tohoku texts, the server does not know
+which one the URL names, so it draws every toh's scoped rows and the browser
+filters them once it reads the URL.
+
 ### Static passages outside the stack
 
 `StaticPassage` draws one passage read-only, outside any stack, with the same

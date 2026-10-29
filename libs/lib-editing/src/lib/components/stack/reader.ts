@@ -7,4 +7,5 @@ export { PassageStack } from './PassageStack';
 export { StackController } from './StackController';
 export { StackReaderProvider } from './StackReaderProvider';
 export { StackTab } from './StackTab';
+export type { StackReaderSeed } from './stack-seed';
 export { useStackWork, type StackWork } from './stack-work-context';

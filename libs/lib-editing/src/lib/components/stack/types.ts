@@ -147,6 +147,12 @@ export type PassageStackControllerOptions = {
    */
   readOnly?: boolean;
   /**
+   * Drawn by a server first. What only the browser knows, such as bookmarks,
+   * is then read after mount, so the browser's first render matches the
+   * server's.
+   */
+  serverRendered?: boolean;
+  /**
    * Names this view's hydration window on the work.
    *
    * Views over one work scroll independently, and the work hydrates the union

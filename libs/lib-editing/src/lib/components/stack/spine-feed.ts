@@ -9,10 +9,9 @@ import type {
   SpineSeed,
   WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
+import { FIRST_PAGE } from './stack-seed';
 import type { StackRowFeed } from './types';
 
-/** How many passages to put in the spine before the reader asks for more. */
-const FIRST_PAGE = 100;
 /** How many to add each time the window nears an end of what is loaded. */
 const NEXT_PAGE = 100;
 /**
@@ -161,6 +160,18 @@ export class RowFeed implements StackRowFeed {
       return this.work.spine.length;
     }
     return this.extend(FIRST_PAGE);
+  }
+
+  /**
+   * `seed`, from a first page already read — on the server, say — so the run
+   * is filled without a request and later pages continue from its cursor.
+   */
+  seedFrom(page: RowMetaPage): number {
+    if (this.runLength() > 0) {
+      this.noneAfter = true;
+      return this.work.spine.length;
+    }
+    return this.appendPage(page);
   }
 
   private record(metas: Meta[]) {
@@ -388,8 +399,12 @@ export class RowFeed implements StackRowFeed {
   }
 
   private async fetchAfter(limit: number): Promise<number> {
-    const page = await this.pages.metas({ cursor: this.endCursor, limit });
+    return this.appendPage(
+      await this.pages.metas({ cursor: this.endCursor, limit }),
+    );
+  }
 
+  private appendPage(page: RowMetaPage): number {
     if (!page.metas.length) {
       // Either the work ended or the read failed. Both mean stop: appending
       // after a hole would put the spine out of order, and order is the one

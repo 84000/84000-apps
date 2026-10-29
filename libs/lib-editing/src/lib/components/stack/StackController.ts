@@ -93,7 +93,7 @@ export class StackController {
     this.rows = options.rows ?? 'passages';
     this.extras = options.extras;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
-    this.readBookmarks();
+    if (!options.serverRendered) this.readBookmarks();
     this.content = new StackRowContent({
       work: this.work,
       spineFeed: options.spineFeed,
