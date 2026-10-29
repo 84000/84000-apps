@@ -94,3 +94,35 @@ describe('RowFeed over rows that are not passages', () => {
     work.destroy();
   });
 });
+
+describe('RowFeed.seedFrom', () => {
+  it('fills an empty run from a page already read, then pages on from it', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    const pages = pagesOver(3);
+    const feed = new RowFeed(work, pages, 'bibliography');
+
+    feed.seedFrom(await pagesOver(3).metas({}));
+    expect(pages.metas).not.toHaveBeenCalled();
+    expect(feed.hasMore).toBe(true);
+
+    await feed.extend();
+    expect(pages.metas).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'e2' }),
+    );
+    expect(work.spine.tab('bibliography').map((entry) => entry.uuid)).toEqual(
+      ROWS.map((row) => row.uuid),
+    );
+    expect(feed.hasMore).toBe(false);
+  });
+
+  it('leaves a run another feed filled alone, as seed does', async () => {
+    const work = new WorkDocument({ workUuid: 'w1', schema });
+    await new RowFeed(work, pagesOver(2), 'bibliography').seed();
+    const feed = new RowFeed(work, pagesOver(2), 'bibliography');
+
+    feed.seedFrom(await pagesOver(5).metas({}));
+
+    expect(work.spine.tab('bibliography')).toHaveLength(2);
+    expect(feed.hasMore).toBe(false);
+  });
+});
