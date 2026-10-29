@@ -104,12 +104,12 @@ to a row that is not drawn.
 
 Not carried over, and why:
 
-|                              |                                                                                                                                                                                                                                                                                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                                          |
-| The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                                           |
-| `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
-| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet.                                                                                  |
+|                              |                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                           |
+| The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                            |
+| `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and the virtualizer keeps a row's last measured size, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
+| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet.                                                                   |
 
 ### Read-only mode
 
@@ -287,6 +287,26 @@ None of the harness routes caught it, because each one wrapped the stack in an
 explicit height. `?unbounded=1` on `/stack/[toh]` reproduces web-main's nesting
 instead, and is the regression test: with the stack owning a scroller it loads
 the entire work, and without it loads one page.
+
+### Rows in flow, and the first window on the server
+
+The window of drawn rows is laid out in normal flow, inside a list padded down
+to where the window starts, rather than each row absolutely placed at its own
+measured offset. So the space between two drawn rows is the rows themselves,
+never an estimate.
+
+That is what lets a server draw the stack. With no scroller and no layout, the
+virtualizer works from an assumed viewport (`initialRect`, 1200px plus the
+overscan) and from estimated heights; the window starts at the top, so its
+offset is the same before and after anything is measured, and the browser's
+first render matches the server's. Measuring then corrects only the list's
+total height below the window, which is a `min-height`: a row taller than its
+estimate pushes what follows down rather than overlapping it.
+
+Each row is its own formatting context (`flow-root`), as an absolutely placed
+one was, so a passage's outer margins do not collapse into its neighbour's.
+Rows are no longer one stacking context each; nothing in a row sets a z-index
+that would notice.
 
 ### Hover cards are a document-level surface
 
@@ -490,8 +510,8 @@ them: toh145 and toh847 each carry their own endnote n.10. Drawing both is
 wrong under either reading, and it is what the stack did.
 
 The view filters them out of `getOrder`, rather than hiding them with CSS as
-the annotation rule does — a virtualized row is absolutely positioned at a
-measured offset, so `display: none` leaves a hole rather than closing the gap.
+the annotation rule does — the virtualizer keeps a row's last measured size,
+so `display: none` leaves a hole rather than closing the gap.
 Rows are indexed within the tab and hydration within the work, and `spineRange`
 maps between them through the first and last _visible_ uuid, so a filtered row
 costs at most a passage of over-fetch at the window's edges.

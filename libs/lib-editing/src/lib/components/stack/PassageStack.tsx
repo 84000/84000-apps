@@ -38,6 +38,18 @@ const OVERSCAN = 20;
 
 const MEASURED_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
 
+/**
+ * The viewport the stack assumes before it has found its scroller: on the
+ * server, and in the browser's first render, which must match it.
+ *
+ * It decides how many rows the server draws — this tall, plus the overscan —
+ * so it errs tall: a row drawn and not seen costs a little HTML, a row seen and
+ * not drawn is a blank a reader without JavaScript never gets past. Once the
+ * scroller is known the virtualizer measures the real one.
+ */
+const INITIAL_VIEWPORT_PX = 1200;
+const INITIAL_RECT = { width: 0, height: INITIAL_VIEWPORT_PX };
+
 export const PassageStack = ({
   controller,
   className,
@@ -160,6 +172,9 @@ export const PassageStack = ({
     overscan,
     getItemKey: (index) => order[index],
     scrollMargin,
+    // Without it the window is empty until a layout effect finds the
+    // scroller, so the server would draw no rows at all.
+    initialRect: INITIAL_RECT,
     // A tab that isn't showing is `display: none`, and every row in it
     // measures 0. Taking that would collapse the list and drag the shared
     // scroll container with it, so a row that isn't rendered keeps its size.
@@ -196,6 +211,11 @@ export const PassageStack = ({
   // its own buffer, so passing the rendered range (overscan included) is what
   // keeps a row's document in memory by the time it is scrolled onto.
   const items = virtualizer.getVirtualItems();
+  // Where the window starts in the list. Rows are laid out in flow below it,
+  // so their spacing never depends on a height estimate: what the server drew
+  // is where the browser keeps them. `start` counts the scroll margin, which
+  // is 0 until it is measured, so this is the same before and after.
+  const windowStart = items.length ? items[0].start - scrollMargin : 0;
   const firstIndex = items[0]?.index ?? 0;
   const lastIndex = items[items.length - 1]?.index ?? 0;
   const drawn = useStackVisibleRange(controller, parentRef, {
@@ -321,54 +341,73 @@ export const PassageStack = ({
       )}
       <div
         // No width of its own: the host already constrains the column, the
-        // way it does for the paginated editor.
+        // way it does for the paginated editor. A minimum, not a height: the
+        // estimate can fall short of rows drawn but not yet measured, and
+        // those must push what follows down rather than overlap it.
         className="relative w-full"
-        style={{ height: virtualizer.getTotalSize() }}
+        style={{ minHeight: virtualizer.getTotalSize() }}
       >
         {hasEarlier && <StackStart />}
-        {items.map((item) => {
-          const uuid = order[item.index];
-          const meta = controller.getMeta(uuid);
-          if (!meta) return null;
-          const asEditor = controller.isLive(uuid);
-          const tibetan =
-            compareToh === undefined
-              ? undefined
-              : controller.getTibetan(uuid, compareToh);
-          const tibetanLead = tibetan
-            ? controller.getCompareLead(uuid)
-            : undefined;
-          return (
-            <div
-              key={item.key}
-              data-index={item.index}
-              ref={virtualizer.measureElement}
-              className="absolute left-0 top-0 w-full"
-              style={{
-                transform: `translateY(${item.start - scrollMargin}px)`,
-              }}
-            >
-              {asEditor && editing ? (
-                <editing.PassageEditor
-                  controller={controller}
-                  meta={meta}
-                  focused={controller.getFocusedUuid() === uuid}
-                  selected={controller.isSelected(uuid)}
-                  tibetan={tibetan}
-                  tibetanLead={tibetanLead}
+        <div
+          className="w-full"
+          style={{ paddingTop: windowStart }}
+          data-stack-window=""
+        >
+          {items.map((item) => {
+            const uuid = order[item.index];
+            const meta = controller.getMeta(uuid);
+            // Still measured, at nothing: in flow, a missing row would
+            // otherwise put every row after it out of step with the
+            // virtualizer's offsets.
+            if (!meta) {
+              return (
+                <div
+                  key={item.key}
+                  data-index={item.index}
+                  ref={virtualizer.measureElement}
                 />
-              ) : (
-                <StaticPassageRow
-                  controller={controller}
-                  meta={meta}
-                  selected={controller.isSelected(uuid)}
-                  tibetan={tibetan}
-                  tibetanLead={tibetanLead}
-                />
-              )}
-            </div>
-          );
-        })}
+              );
+            }
+            const asEditor = controller.isLive(uuid);
+            const tibetan =
+              compareToh === undefined
+                ? undefined
+                : controller.getTibetan(uuid, compareToh);
+            const tibetanLead = tibetan
+              ? controller.getCompareLead(uuid)
+              : undefined;
+            return (
+              <div
+                key={item.key}
+                data-index={item.index}
+                ref={virtualizer.measureElement}
+                // Its own formatting context, as an absolutely placed row had:
+                // a passage's first and last margins stay inside it rather than
+                // collapsing into its neighbour's.
+                className="flow-root w-full"
+              >
+                {asEditor && editing ? (
+                  <editing.PassageEditor
+                    controller={controller}
+                    meta={meta}
+                    focused={controller.getFocusedUuid() === uuid}
+                    selected={controller.isSelected(uuid)}
+                    tibetan={tibetan}
+                    tibetanLead={tibetanLead}
+                  />
+                ) : (
+                  <StaticPassageRow
+                    controller={controller}
+                    meta={meta}
+                    selected={controller.isSelected(uuid)}
+                    tibetan={tibetan}
+                    tibetanLead={tibetanLead}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
       {order.length > 0 && <StackEnd hasMore={controller.hasMorePassages()} />}
     </div>
