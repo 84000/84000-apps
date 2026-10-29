@@ -8,6 +8,7 @@ import {
   AbbreviationSuggestion,
 } from '../editor/extensions/Abbreviation/Abbreviation';
 import { MentionCommandSuggestion } from '../editor/extensions/Mention/MentionCommandSuggestion';
+import { withMentionAuthoring } from './mention-authoring';
 import { SlashCommand } from '../editor/extensions/SlashCommand/SlashCommand';
 import {
   BulletListSuggestion,
@@ -59,7 +60,7 @@ export const buildStackEditorExtensions = ({
   undoManager: UndoManager;
   delegate: StackKeyboardDelegate;
 }): Extensions => [
-  ...buildStackSchemaExtensions(),
+  ...withMentionAuthoring(buildStackSchemaExtensions()),
   // Commands and plugins are kept out of the schema set so they do not affect
   // how a passage document is parsed or statically rendered.
   AbbreviationCommand,
