@@ -85,8 +85,8 @@ export const EditorLayout = ({
  * history.
  *
  * Read-only follows the editor context, which also sets
- * `NavigationProvider`'s `editable` from it: the stack and the hover cards
- * must agree on whether this is the studio or a reader.
+ * `NavigationProvider`'s `editable` from it: the stack and the hover cards'
+ * edit actions must agree on whether the work can be edited.
  */
 const EditorStack = ({
   workUuid,

@@ -523,11 +523,15 @@ const EditorSession = ({
         isNavigating,
       }}
     >
-      {/* Editing surfaces are offered only while the stack is editable too. */}
+      {/*
+        Cards are drawn either way; their edit actions only while the stack is
+        editable too.
+      */}
       <NavigationProvider
         uuid={work.uuid}
         initialToh={work.toh[0]}
         editable={!readOnly}
+        hoverCards
       >
         {children}
       </NavigationProvider>
