@@ -1,12 +1,12 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
 import { PassageSkeleton } from './PassageSkeleton';
-import { rowContentClass } from './row-classes';
 import { StackRow } from './StackRow';
+import { StaticPassageHTML } from './StaticPassage';
 
 /**
  * The cheap tier of the stack: pre-rendered HTML for passages that don't
@@ -40,10 +40,6 @@ export const StaticPassageRow = memo(
     tibetanLead?: string;
   }) => {
     const html = controller.getStaticHTML(meta.uuid);
-    // Held by the string: React compares this object by identity, and a new
-    // one on every render would replace the row's DOM, collapsing a deep-link
-    // highlight and detaching any hover card anchored in it.
-    const inner = useMemo(() => ({ __html: html ?? '' }), [html]);
     const look = controller.rowStyle(meta);
 
     return (
@@ -64,13 +60,7 @@ export const StaticPassageRow = memo(
             sized={controller.hasSizeFor(meta.uuid)}
           />
         ) : (
-          <div
-            className={rowContentClass(
-              !controller.isReadOnly(),
-              'tiptap pm-text-metrics',
-            )}
-            dangerouslySetInnerHTML={inner}
-          />
+          <StaticPassageHTML html={html} editable={!controller.isReadOnly()} />
         )}
       </StackRow>
     );
