@@ -18,17 +18,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const query = new URLSearchParams(request.nextUrl.searchParams);
-  const xmlId = query.get('xmlId') || undefined;
-  query.delete('xmlId');
-
   const { path } = await lookupEntityWithClient({
     client: createAnonServerClient(),
     type: 'translation',
     entity: match[1],
     prefix: '/translation',
-    xmlId,
-    searchParams: query,
+    searchParams: new URLSearchParams(request.nextUrl.searchParams),
     source: contentSourceFromEnv(),
   });
 
