@@ -32,8 +32,8 @@ pointed at the local stack. It fails if something already listens on those
 ports, unless `E2E_REUSE_SERVERS=1` is set; only reuse servers you started
 with the local stack's env, since the suite cannot check them. Set
 `E2E_WEB_PORT` and `E2E_GRAPHQL_PORT` to move them. Dev mode is required: it is
-the only mode that honours the feature flag overrides that turn on the passage
-stack editor the suite targets, and its hover cards.
+the only mode that honours the feature flag override that turns on the
+editor's hover cards.
 
 The suite signs in as `editor@local.test` (`E2E_USER_EMAIL` to change it)
 through a magic link minted with the local service role, so it needs no

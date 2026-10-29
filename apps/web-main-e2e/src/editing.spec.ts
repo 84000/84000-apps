@@ -1,6 +1,15 @@
 import type { Locator } from '@playwright/test';
 import { db, passageByLabel } from './support/db';
-import { openEditor, pointAt, reveal, settled } from './support/editor';
+import {
+  caretAtEnd,
+  markToasts,
+  openEditor,
+  pointAt,
+  reveal,
+  row,
+  settled,
+  toast,
+} from './support/editor';
 import { expect, test } from './support/fixtures';
 
 /** Sentences appended to a passage to make its row taller than the window. */
@@ -105,5 +114,48 @@ test.describe('Editing', () => {
     const after = await pointAt(page, passage.uuid, word, 'start');
     expect(Math.abs(after.y - before.y)).toBeLessThan(2);
     expect(await textAfterCaret(editor)).toMatch(new RegExp(`^${word}`));
+  });
+
+  test('ED-EDT-06 Reading the work read-only', async ({ page }) => {
+    const edited = await passageByLabel('1.11');
+    const next = await passageByLabel('1.12');
+    const settings = page.getByRole('button', { name: 'Editor settings' });
+    const readOnly = page.getByRole('menuitemcheckbox', { name: 'Read-only' });
+    const live = page.locator('[contenteditable="true"]');
+
+    await openEditor(page, { main: { tab: 'translation', hash: edited.uuid } });
+    await caretAtEnd(page, edited.uuid);
+    await page.keyboard.type(' Readonly');
+
+    // Turning it on saves the pending edit first.
+    await markToasts(page);
+    await settings.click();
+    await readOnly.click();
+    await expect(readOnly).toHaveAttribute('aria-checked', 'true');
+    await expect(toast(page, 'Content saved')).toBeVisible();
+    await page.keyboard.press('Escape');
+    expect((await passageByLabel('1.11')).content).toMatch(/ Readonly$/);
+
+    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await expect(live).toHaveCount(0);
+    const target = await reveal(page, next.uuid);
+    await settled(target);
+    await target.locator('.passage').first().click();
+    await expect(live).toHaveCount(0);
+
+    // Remembered across a reload.
+    await openEditor(page, { main: { tab: 'translation', hash: next.uuid } });
+    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await settings.click();
+    await expect(readOnly).toHaveAttribute('aria-checked', 'true');
+
+    await readOnly.click();
+    await expect(readOnly).toHaveAttribute('aria-checked', 'false');
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('Read-only', { exact: true })).toBeHidden();
+    await caretAtEnd(page, next.uuid);
+    await expect(
+      row(page, next.uuid).locator('.ProseMirror[contenteditable="true"]'),
+    ).toBeFocused();
   });
 });

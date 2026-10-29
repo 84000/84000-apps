@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useCallback, useContext, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Editor } from '@tiptap/react';
 import { Doc, Transaction, XmlElement, XmlFragment, YEvent } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
@@ -23,6 +29,10 @@ import {
 } from './observer-utils';
 import { EditorContext, type SaveHandler } from './editor-context';
 import { useSaveLifecycle } from './useSaveLifecycle';
+import {
+  readReadOnlyPreference,
+  writeReadOnlyPreference,
+} from './read-only-preference';
 
 export { EditorContext } from './editor-context';
 export type {
@@ -453,6 +463,38 @@ const EditorSession = ({
     reload,
   });
 
+  const [editPermitted, setEditPermitted] = useState<boolean>();
+  useEffect(() => {
+    let active = true;
+    canEdit().then((permitted) => {
+      if (active) setEditPermitted(permitted);
+    });
+    return () => {
+      active = false;
+    };
+  }, [canEdit]);
+
+  const [readOnlyChosen, setReadOnlyChosenState] = useState(
+    readReadOnlyPreference,
+  );
+  const setReadOnlyChosen = useCallback(
+    async (next: boolean) => {
+      // Remembered first, so a save that reloads the session opens it as
+      // chosen.
+      writeReadOnlyPreference(next);
+      // The live editors unmount when the stack turns read-only. Their edits
+      // live in the work and survive that, but save them while the user is
+      // still looking at an editor.
+      if (next && dirtyStore.getSnapshot()) {
+        await save();
+      }
+      setReadOnlyChosenState(next);
+    },
+    [dirtyStore, save],
+  );
+
+  const readOnly = editPermitted !== true || readOnlyChosen;
+
   return (
     <EditorContext.Provider
       value={{
@@ -461,6 +503,10 @@ const EditorSession = ({
         dirtyStore,
         canEdit,
         canAdminister,
+        readOnly,
+        editPermitted,
+        readOnlyChosen,
+        setReadOnlyChosen,
         applyReplacedPassages,
         deleteEndnote,
         removeCommentAnchors,
@@ -477,8 +523,12 @@ const EditorSession = ({
         isNavigating,
       }}
     >
-      {/* The studio: editing surfaces are offered here and not in the reader. */}
-      <NavigationProvider uuid={work.uuid} initialToh={work.toh[0]} editable>
+      {/* Editing surfaces are offered only while the stack is editable too. */}
+      <NavigationProvider
+        uuid={work.uuid}
+        initialToh={work.toh[0]}
+        editable={!readOnly}
+      >
         {children}
       </NavigationProvider>
     </EditorContext.Provider>

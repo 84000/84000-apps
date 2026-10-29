@@ -82,3 +82,17 @@
   was, and the caret is where the click landed.
 - Keyboard and programmatic focus (arrow keys across a boundary, deep links,
   merges) still scroll the focused passage into view.
+
+### ED-EDT-06 Reading the work read-only (D)
+
+- Fixture: `1.11`.
+- Do: type a word at the end of `1.11` without saving, then open the editor
+  settings in the main panel's actions and turn on Read-only. Click into
+  `1.12`. Reload the page. Turn Read-only off and click into `1.12`.
+- Screen: turning it on saves the typed word first. While it is on, the editor
+  shows "Read-only", no passage takes a caret and nothing on the page is
+  editable. It is still on after the reload. Once it is off, clicking a passage
+  puts the caret in it again.
+- Stored: `1.11` ends with the typed word.
+- A user who may read the work but not edit it always gets the read-only
+  editor, and is not offered the setting.

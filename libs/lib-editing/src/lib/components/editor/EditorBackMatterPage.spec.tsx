@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
 import { EditorBackMatterPage } from './EditorBackMatterPage';
@@ -6,7 +6,6 @@ import { EditorBackMatterPage } from './EditorBackMatterPage';
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: jest.fn(() => ({})),
   getPassageMetaPage: jest.fn(),
-  getTranslationBlocks: jest.fn(),
   getWorkGlossaryTerms: jest.fn(async () => ({
     terms: [],
     hasMoreAfter: false,
@@ -25,7 +24,6 @@ jest.mock('next/dynamic', () => () => (props: { tab: string }) => {
     .requireActual('react')
     .createElement('div', { 'data-testid': `stack-${props.tab}` });
 });
-jest.mock('.', () => ({ TranslationBuilder: () => null }));
 jest.mock('../shared/NavigationProvider', () => ({
   useNavigation: () => ({
     panels: { right: { open: true } },
@@ -46,16 +44,10 @@ jest.mock('./EditorProvider', () => ({
   useEditorState: () => ({ work: { uuid: 'w1' } }),
 }));
 
-const mockFlag = { enabled: false, ready: false };
-jest.mock('./usePerPassageDocs', () => ({
-  usePerPassageDocs: () => mockFlag,
-}));
-
 const clientGraphql = jest.requireMock(
   '@eightyfourthousand/client-graphql',
 ) as {
   getPassageMetaPage: jest.Mock;
-  getTranslationBlocks: jest.Mock;
   getWorkBibliography: jest.Mock;
 };
 
@@ -72,12 +64,6 @@ const withAbbreviations = (count: number, notes = 0) => {
       { length: type === 'abbreviations' ? count : notes },
       (_, i) => `${type}${i}`,
     );
-  clientGraphql.getTranslationBlocks.mockImplementation(
-    async ({ type }: { type: string }) => ({
-      blocks: of(type).map((uuid) => ({ type: 'passage', attrs: { uuid } })),
-      hasMoreAfter: false,
-    }),
-  );
   clientGraphql.getPassageMetaPage.mockImplementation(
     async ({ type, limit }: { type: string; limit: number }) => ({
       metas: of(type)
@@ -98,34 +84,17 @@ window.matchMedia = ((query: string) => ({
 })) as unknown as typeof window.matchMedia;
 
 beforeEach(() => {
-  clientGraphql.getTranslationBlocks.mockReset();
   clientGraphql.getPassageMetaPage.mockReset();
   clientGraphql.getWorkBibliography.mockReset().mockResolvedValue([]);
-  mockFlag.enabled = false;
-  mockFlag.ready = false;
 });
 
 describe('EditorBackMatterPage', () => {
-  // The paginated editor must not wait on the flag to start reading.
-  it('reads the abbreviations at mount, before the flag settles', async () => {
-    withAbbreviations(1);
-    render(<EditorBackMatterPage />);
-
-    await waitFor(() =>
-      expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'abbreviations' }),
-      ),
-    );
-  });
-
   it.each([
     ['shows', 2, true],
     ['hides', 0, false],
   ])(
-    '%s the Abbr tab under the flag for a work with %i abbreviations',
+    '%s the Abbr tab for a work with %i abbreviations',
     async (_, count, shown) => {
-      mockFlag.enabled = true;
-      mockFlag.ready = true;
       withAbbreviations(count);
       render(<EditorBackMatterPage />);
 
@@ -137,13 +106,10 @@ describe('EditorBackMatterPage', () => {
   );
 
   it('asks only whether each stacked tab has passages', async () => {
-    mockFlag.enabled = true;
-    mockFlag.ready = true;
     withAbbreviations(3);
     render(<EditorBackMatterPage />);
 
     await screen.findByRole('tablist');
-    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
     expect(clientGraphql.getPassageMetaPage).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'abbreviations', limit: 1 }),
     );
@@ -152,9 +118,7 @@ describe('EditorBackMatterPage', () => {
     );
   });
 
-  it('shows Notes under the flag for a work with endnotes', async () => {
-    mockFlag.enabled = true;
-    mockFlag.ready = true;
+  it('shows Notes for a work with endnotes', async () => {
     withAbbreviations(0, 4);
     render(<EditorBackMatterPage />);
 
@@ -162,57 +126,7 @@ describe('EditorBackMatterPage', () => {
     expect(screen.queryByRole('tab', { name: 'Abbr' })).toBeNull();
   });
 
-  it('shows the tabs the probe finds once the flag settles on', async () => {
-    withAbbreviations(2);
-    // The page's content says there are no abbreviations; the probe, which
-    // reads what the stack reads, says there are.
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: [],
-      hasMoreAfter: false,
-    });
-    const { rerender } = render(<EditorBackMatterPage />);
-    await waitFor(() =>
-      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalled(),
-    );
-
-    mockFlag.enabled = true;
-    mockFlag.ready = true;
-    rerender(<EditorBackMatterPage />);
-
-    expect(await screen.findByRole('tab', { name: 'Abbr' })).toBeTruthy();
-  });
-
-  it('ignores the probe once the flag settles off', async () => {
-    withAbbreviations(2);
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: [],
-      hasMoreAfter: false,
-    });
-    const { rerender } = render(<EditorBackMatterPage />);
-    await waitFor(() =>
-      expect(clientGraphql.getPassageMetaPage).toHaveBeenCalled(),
-    );
-
-    mockFlag.ready = true;
-    rerender(<EditorBackMatterPage />);
-
-    await screen.findByRole('tablist');
-    expect(screen.queryByRole('tab', { name: 'Abbr' })).toBeNull();
-  });
-
-  it('shows the Abbr tab from its content without the flag', async () => {
-    mockFlag.ready = true;
-    withAbbreviations(2);
-    render(<EditorBackMatterPage />);
-
-    await screen.findByRole('tablist');
-    expect(screen.getByRole('tab', { name: 'Abbr' })).toBeTruthy();
-    expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
-  });
-
-  it('edits the bibliography in a stack under the flag', async () => {
-    mockFlag.enabled = true;
-    mockFlag.ready = true;
+  it('edits the bibliography in a stack', async () => {
     withAbbreviations(0);
     withBibliography();
     render(<EditorBackMatterPage />);
@@ -223,8 +137,6 @@ describe('EditorBackMatterPage', () => {
   });
 
   it('titles the stacked bibliography as the Glossary tab titles its own', async () => {
-    mockFlag.enabled = true;
-    mockFlag.ready = true;
     withAbbreviations(0);
     withBibliography();
     render(<EditorBackMatterPage />);
@@ -240,16 +152,5 @@ describe('EditorBackMatterPage', () => {
     expect(heading.closest('#bibliography')?.textContent).toBe(
       'b.Bibliography',
     );
-  });
-
-  it('lists the bibliography read-only without the flag', async () => {
-    mockFlag.ready = true;
-    withAbbreviations(0);
-    withBibliography();
-    render(<EditorBackMatterPage />);
-
-    expect(await screen.findByRole('tab', { name: 'Biblio' })).toBeTruthy();
-    expect(screen.getByTestId('bibliography-list')).toBeTruthy();
-    expect(screen.queryByTestId('stack-bibliography')).toBeNull();
   });
 });
