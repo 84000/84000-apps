@@ -16,7 +16,7 @@ rollout resolves differently per browser profile.
 list where `flag` forces it on and `flag=false` forces it off:
 
 ```sh
-NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES="per-passage-docs,show-reader-header=false"
+NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES="translation-hover-cards,show-reader-header=false"
 ```
 
 An override also bypasses the `apps` payload check, which is the other thing
