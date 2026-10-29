@@ -89,13 +89,16 @@ export type RenderAlignmentEnglish = (
 /** Margin around the viewport within which a result counts as in view. */
 const IN_VIEW_MARGIN = '200px 0px';
 
-/** True once the element has come within the margin of the viewport. */
-const useSeen = (enabled: boolean) => {
+/**
+ * True once the element has come within the margin of the viewport while
+ * showing `id`. A card reused for another result starts unseen again.
+ */
+const useSeen = (id: string, enabled: boolean) => {
   const ref = React.useRef<HTMLDivElement>(null);
+  const [seenId, setSeenId] = React.useState<string>();
   // Without an observer, everything counts as in view.
-  const [seen, setSeen] = React.useState(
-    () => typeof IntersectionObserver === 'undefined',
-  );
+  const seen =
+    seenId === id || typeof IntersectionObserver === 'undefined';
 
   React.useEffect(() => {
     const element = ref.current;
@@ -103,7 +106,7 @@ const useSeen = (enabled: boolean) => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          setSeen(true);
+          setSeenId(id);
           observer.disconnect();
         }
       },
@@ -111,7 +114,7 @@ const useSeen = (enabled: boolean) => {
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [enabled, seen]);
+  }, [enabled, id, seen]);
 
   return { ref, seen };
 };
@@ -130,7 +133,7 @@ export const AlignmentResult = ({
   useRegex?: boolean;
 }) => {
   // The renderer may load the passage, so it is only called once in view.
-  const { ref, seen } = useSeen(!!renderEnglish);
+  const { ref, seen } = useSeen(match.uuid, !!renderEnglish);
   const fallback = renderPassageHighlight({
     activeOccurrenceStart,
     query,

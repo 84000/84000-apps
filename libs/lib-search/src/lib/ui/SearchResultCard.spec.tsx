@@ -63,4 +63,26 @@ describe('AlignmentResult', () => {
       }),
     );
   });
+
+  it('starts unseen again when the card shows another result', () => {
+    const renderEnglish = jest.fn(() => <div>rendered</div>);
+    const { rerender } = render(
+      <AlignmentResult
+        match={match}
+        query="sun"
+        renderEnglish={renderEnglish}
+      />,
+    );
+    act(() => observed?.([{ isIntersecting: true }]));
+    expect(screen.getByText('rendered')).toBeTruthy();
+
+    rerender(
+      <AlignmentResult
+        match={{ ...match, uuid: 'p-2' }}
+        query="sun"
+        renderEnglish={renderEnglish}
+      />,
+    );
+    expect(screen.queryByText('rendered')).toBeNull();
+  });
 });
