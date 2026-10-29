@@ -21,11 +21,7 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      // Short links the public reader also accepts: /toh123 and /entity/...
-      {
-        source: '/:slug(toh[0-9]+[a-z0-9-]*)',
-        destination: '/translation/:slug',
-      },
+      // As in the public reader. Toh short links are handled in proxy.ts.
       {
         source: '/entity/:type/:slug',
         destination: '/translation/entity/:type/:slug',

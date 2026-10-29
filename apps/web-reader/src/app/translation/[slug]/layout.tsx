@@ -1,15 +1,11 @@
 import { ReaderLayout } from '@eightyfourthousand/lib-editing';
 import { isPublishedStatus } from '@eightyfourthousand/data-access';
 import {
-  createAnonServerClient,
-  lookupEntityWithClient,
-} from '@eightyfourthousand/data-access/ssr';
-import {
   createBuildGraphQLClient,
   getTranslationMetadataByUuid,
 } from '@eightyfourthousand/client-graphql/ssr';
 import { isUuid } from '@eightyfourthousand/lib-utils';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ReactNode, Suspense } from 'react';
 
 const Layout = async ({
@@ -25,19 +21,8 @@ const Layout = async ({
 }) => {
   const { slug } = await params;
 
-  // Toh slugs (`/translation/toh1`) resolve to the work's uuid.
+  // Toh slugs are redirected to the uuid by the proxy; anything else is unknown.
   if (!isUuid(slug)) {
-    const { path } = await lookupEntityWithClient({
-      client: createAnonServerClient(),
-      type: 'translation',
-      entity: slug,
-      prefix: '/translation',
-    });
-
-    if (path) {
-      redirect(path);
-    }
-
     notFound();
   }
 

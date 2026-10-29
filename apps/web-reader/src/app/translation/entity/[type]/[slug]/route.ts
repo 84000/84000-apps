@@ -1,3 +1,4 @@
+import { contentSourceFromEnv } from '@eightyfourthousand/data-access';
 import {
   createAnonServerClient,
   lookupEntityWithClient,
@@ -20,6 +21,7 @@ export async function GET(
     entity,
     searchParams,
     prefix: '/translation',
+    source: contentSourceFromEnv(),
   });
 
   if (!path) {
