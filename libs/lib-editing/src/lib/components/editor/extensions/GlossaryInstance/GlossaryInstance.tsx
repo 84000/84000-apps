@@ -20,6 +20,7 @@ export const GlossaryInstance = ({
   anchor,
   close,
   setHoverCardEditing,
+  editable,
 }: {
   uuid: string;
   glossary: string;
@@ -28,6 +29,8 @@ export const GlossaryInstance = ({
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
+  /** Offer the actions that edit the document. */
+  editable: boolean;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
   const withEditor = useHoverCardEditor(editor, requestEditor);
@@ -144,28 +147,39 @@ export const GlossaryInstance = ({
         {english ?? markText}
       </span>
       <span className="flex-grow" />
-      <Popover open={isEditing} onOpenChange={(next) => setIsEditing(next)}>
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-6 [&_svg]:size-4">
-            <PencilIcon className="text-primary my-auto" />
+      {editable && (
+        <>
+          <Popover open={isEditing} onOpenChange={(next) => setIsEditing(next)}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 [&_svg]:size-4"
+              >
+                <PencilIcon className="text-primary my-auto" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-72 shadow-xl rounded-md border p-2"
+              align="end"
+              noPortal
+            >
+              <GlossarySearch
+                initialQuery={markText}
+                onSelect={updateGlossary}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            onClick={deleteLink}
+          >
+            <Trash2Icon className="text-destructive my-auto" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-72 shadow-xl rounded-md border p-2"
-          align="end"
-          noPortal
-        >
-          <GlossarySearch initialQuery={markText} onSelect={updateGlossary} />
-        </PopoverContent>
-      </Popover>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        onClick={deleteLink}
-      >
-        <Trash2Icon className="text-destructive my-auto" />
-      </Button>
+        </>
+      )}
     </div>
   );
 };

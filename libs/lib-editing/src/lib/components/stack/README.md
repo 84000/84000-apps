@@ -116,8 +116,8 @@ Not carried over, and why:
 A read-only stack is the reader's: no row ever mounts an editor and nothing
 changes the work. Every row stays static HTML, so there is no
 `contenteditable`, bubble menu, slash command, mention overlay or undo handler
-anywhere on the page. Links still work: a glossary term or mention opens its
-panel, as in the paginated reader.
+anywhere on the page. Hover cards still open, without their edit actions, and
+a glossary term or mention still opens its panel.
 
 A host sets it on `StackWorkProvider`:
 
@@ -149,12 +149,15 @@ redraw as static HTML. Edits already made live in the work, not the editors, so
 they are kept and the save handler stays registered to write them. Turning it
 off again takes effect on the next click.
 
-The host owns the rest of the reader's surface: `NavigationProvider`'s
-`editable` decides whether hover cards are drawn at all, so it should follow
-the same flag. With it false there are none, as in the paginated reader; the
-cards need no editor, so they would work over static rows if a reader ever
-wanted them, but their actions are edits. The sandbox's `/stack/[toh]/tabs` takes `?readonly=1` and has a
-button that switches it live.
+The host owns the rest of the reader's surface, on `NavigationProvider`:
+
+- `editable` decides whether hover cards offer their edit actions, so it should
+  be `!readOnly`.
+- `hoverCards` decides whether cards are drawn at all. It defaults to
+  `editable`, which keeps the paginated reader without them, so a read-only
+  stack passes `hoverCards` to keep its cards. A reader gets no card for an
+  internal link, whose card shows only its raw target. The sandbox's `/stack/[toh]/tabs` takes `?readonly=1` and has a
+  button that switches it live.
 
 ### Static passages outside the stack
 
@@ -282,8 +285,9 @@ covers the whole panel, the two coincide. In the stack they do not: most rows
 are static HTML, so cards simply stopped existing for them, and premounted
 neighbours are non-editable, so they had none either.
 
-The switch is now `NavigationContext.editable` — the studio rather than the
-reader — set by the host that mounts the provider. Detection in the mark and
+The switches are now application-level, set by the host on
+`NavigationProvider`: `hoverCards` for whether cards are drawn, and `editable`
+— the studio rather than the reader — for whether they offer edits. Detection in the mark and
 node views is unconditional for the same reason: an anchor that hides itself
 from detection cannot be reconsidered later, and whether to offer a card is
 not its decision to make.

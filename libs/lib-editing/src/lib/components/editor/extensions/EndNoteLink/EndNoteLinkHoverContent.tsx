@@ -26,6 +26,7 @@ export const EndNoteLinkHoverContent = ({
   requestEditor,
   close,
   setHoverCardEditing,
+  editable,
 }: {
   uuid: string;
   endNote: string;
@@ -34,6 +35,8 @@ export const EndNoteLinkHoverContent = ({
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
+  /** Offer the actions that edit the document. */
+  editable: boolean;
 }) => {
   const [label, setLabel] = useState<string | undefined>();
   const withEditor = useHoverCardEditor(editor, requestEditor);
@@ -146,24 +149,28 @@ export const EndNoteLinkHoverContent = ({
         </span>
       )}
       <span className="flex-grow" />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        title="Remove link"
-        onClick={removeLink}
-      >
-        <UnlinkIcon className="text-destructive my-auto" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        title="Delete endnote"
-        onClick={deleteEndnoteAndLink}
-      >
-        <Trash2Icon className="text-destructive my-auto" />
-      </Button>
+      {editable && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Remove link"
+            onClick={removeLink}
+          >
+            <UnlinkIcon className="text-destructive my-auto" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Delete endnote"
+            onClick={deleteEndnoteAndLink}
+          >
+            <Trash2Icon className="text-destructive my-auto" />
+          </Button>
+        </>
+      )}
     </div>
   );
 };
