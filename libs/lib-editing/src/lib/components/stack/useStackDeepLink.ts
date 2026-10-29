@@ -13,7 +13,7 @@ import {
   panelForTab,
   type PanelName,
 } from '../shared/types';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 /** How long to wait for the target row to render before giving up. */
 const RENDER_TIMEOUT_MS = 2000;
@@ -105,7 +105,7 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
  * somewhere unusual can still say so.
  */
 export const useStackDeepLink = (
-  controller: PassageStackController,
+  controller: StackController,
   panel: PanelName = panelForTab(controller.getTab()),
   /**
    * Whether this stack is laid out. The hash is consumed once, so a hidden

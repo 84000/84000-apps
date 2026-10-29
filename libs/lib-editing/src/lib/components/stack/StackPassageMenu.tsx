@@ -19,7 +19,7 @@ import {
 import { EditLabel } from '../editor/extensions/Passage/EditLabel';
 import { EditorOptions } from '../editor/extensions/Passage/EditorOptions';
 import { ShowAnnotations } from '../editor/extensions/Passage/ShowAnnotations';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 /** The clicked label, and where it was. */
 export type StackPassageMenuTarget = {
@@ -38,7 +38,7 @@ export const StackPassageMenu = ({
   target,
   onClose,
 }: {
-  controller: PassageStackController;
+  controller: StackController;
   target: StackPassageMenuTarget | null;
   onClose: () => void;
 }) => {

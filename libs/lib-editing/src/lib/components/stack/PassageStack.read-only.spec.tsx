@@ -8,7 +8,7 @@ import {
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStack } from './PassageStack';
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import { createStackWorkDocument } from './stack-work';
 import { flush, seeds, source } from './stack-controller.fixture';
 

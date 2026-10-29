@@ -4,7 +4,7 @@ import {
   type PassageSource,
 } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import { StaticPassageRow } from './StaticPassageRow';
 import { createStackWorkDocument } from './stack-work';
 
