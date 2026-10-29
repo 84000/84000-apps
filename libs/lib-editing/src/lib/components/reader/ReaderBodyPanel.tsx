@@ -1,30 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback } from 'react';
 import {
   BODY_MATTER_FILTER,
-  createBrowserClient,
   FRONT_MATTER_FILTER,
-  getSession,
   Titles as TitlesData,
-  UserRole,
 } from '@eightyfourthousand/data-access';
 import { BodyPanel } from '../shared/BodyPanel';
-import { Titles, TitlesVariant } from '../shared/titles';
-import {
-  TitlesRenderer,
-  TranslationRenderer,
-  TranslationState,
-} from '../shared/types';
+import { TranslationRenderer } from '../shared/types';
 import { TranslationEditorContent } from '../editor';
 import { TranslationReader } from './TranslationReader';
-
-const TITLE_VARIANTS_FOR_TABS: { [key: string]: TitlesVariant } = {
-  translation: 'english',
-  source: 'tibetan',
-  front: 'front',
-  compare: 'comparison',
-};
+import { useReaderBody } from './useReaderBody';
 
 export const ReaderBodyPanel = ({
   titles,
@@ -50,37 +36,10 @@ export const ReaderBodyPanel = ({
    */
   isPublished?: boolean;
 }) => {
-  // `undefined` while the role resolves. Gate as a reader until then so
-  // unpublished content never flashes before the role is known.
-  const [role, setRole] = useState<UserRole | undefined>(undefined);
-
-  useEffect(() => {
-    (async () => {
-      const session = await getSession({ client: createBrowserClient() });
-      // Unauthenticated visitors are treated as readers.
-      setRole(session?.claims.role ?? 'reader');
-    })();
-  }, []);
-
-  const translationState = useMemo<TranslationState>(() => {
-    const isReader = role === undefined || role === 'reader';
-    if (isReader && isPublished === false) {
-      return 'unpublished';
-    }
-    const bodyEmpty = Array.isArray(body) ? body.length === 0 : !body;
-    return bodyEmpty ? 'empty' : 'content';
-  }, [role, isPublished, body]);
-
-  const renderTitles = useCallback(
-    ({ titles, imprint, name }: TitlesRenderer) => (
-      <Titles
-        titles={titles}
-        imprint={imprint}
-        variant={(TITLE_VARIANTS_FOR_TABS[name] || 'english') as TitlesVariant}
-      />
-    ),
-    [],
-  );
+  const { translationState, renderTitles } = useReaderBody({
+    body,
+    isPublished,
+  });
 
   const renderTranslation = useCallback(
     ({ content, name, className, hasMoreAfter }: TranslationRenderer) => (
