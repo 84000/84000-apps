@@ -4,10 +4,10 @@
 
 ### web-main — 84000 Studio
 
-The internal application for translation management. Authenticated via Supabase Auth (Google, Apple, email). Features a dashboard, user library (saved passages, glossaries, bibliographies), and embedded reader/editor views.
+The internal application for translation management. Authenticated via Supabase Auth (Google, Apple, email). Features a dashboard, user library (saved passages, glossaries, bibliographies), and the editor. The reader lives in `web-reader`.
 
 - **Route groups**: `(auth)` for login/callback, `(DashboardLayout)` for the authenticated experience
-- **Parallel routes**: `/translations/editor/[slug]` and `/translations/reader/[slug]` use `@left`, `@main`, `@right` slots for side-by-side panels
+- **Parallel routes**: `/translations/editor/[slug]` uses `@left`, `@main`, `@right` slots for side-by-side panels
 - **Providers**: `InterfaceContextProvider` > `SessionProvider` > `GraphQLAuthProvider` (see `layout.tsx`)
 - **API routes**: `/api/feedback` and `/api/mcp`
 
