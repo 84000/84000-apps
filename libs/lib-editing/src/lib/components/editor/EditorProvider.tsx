@@ -532,6 +532,7 @@ const EditorSession = ({
         initialToh={work.toh[0]}
         editable={!readOnly}
         hoverCards
+        commentsPanel
       >
         {children}
       </NavigationProvider>
