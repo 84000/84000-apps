@@ -5,7 +5,6 @@ export * from './EditorBodyPage';
 export * from './EditorLeftPanelPage';
 export * from './EditorLayout';
 export * from './EditorProvider';
-export * from './TranslationBuilder';
 export * from './TranslationEditor';
 export * from './hooks';
 export * from './menus';
