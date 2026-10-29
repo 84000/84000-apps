@@ -74,6 +74,21 @@ export const HoverCardProvider = ({
   const [isHoveringCard, setIsHoveringCard] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // A card open when the work stops being edited may be part way through an
+  // edit, which its read-only form cannot show or finish. Close it.
+  const [wasEditable, setWasEditable] = useState(editable);
+  if (editable !== wasEditable) {
+    setWasEditable(editable);
+    if (!editable) {
+      setAnchor(null);
+      setUuid(undefined);
+      setCardType(undefined);
+      setIsHoveringAnchor(false);
+      setIsHoveringCard(false);
+      setIsEditing(false);
+    }
+  }
+
   // Get the editor for the current anchor
   const editor = useMemo(() => {
     if (!anchor) return undefined;

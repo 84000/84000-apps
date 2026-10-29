@@ -176,4 +176,25 @@ describe('HoverCardProvider', () => {
 
     expect(screen.queryByText('Mention hover card')).toBeNull();
   });
+
+  it('closes an open card when the work stops being edited', () => {
+    jest.useFakeTimers();
+    const ui = (editable: boolean) =>
+      inStudio(
+        <HoverCardProvider openDelay={0} closeDelay={0}>
+          <a href="/anchor" type="mention" {...MENTION_UUID_ATTR}>
+            Anchor
+          </a>
+        </HoverCardProvider>,
+        { editable },
+      );
+    const { rerender } = render(ui(true));
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Anchor' }));
+    act(() => jest.runOnlyPendingTimers());
+    expect(screen.getByText('Mention hover card')).toBeTruthy();
+
+    rerender(ui(false));
+
+    expect(screen.queryByText('Mention hover card')).toBeNull();
+  });
 });
