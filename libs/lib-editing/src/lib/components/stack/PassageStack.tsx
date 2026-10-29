@@ -271,8 +271,10 @@ export const PassageStack = ({
   });
 
   // Bookmarks live in local storage; another tab changing them arrives here.
+  // A server-drawn view has not read them yet.
   useEffect(() => {
     const onStorage = () => controller.refreshBookmarks();
+    onStorage();
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, [controller]);

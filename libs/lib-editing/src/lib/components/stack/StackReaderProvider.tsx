@@ -3,7 +3,9 @@
 import { useState, type ReactNode } from 'react';
 
 import { StackController } from './StackController';
+import type { StackReaderSeed } from './stack-seed';
 import {
+  seedStackWork,
   StackWorkContextProvider,
   useStackWorkLoad,
   type LoadedStackWork,
@@ -21,21 +23,32 @@ const createReaderView: StackViewFactory = (options) =>
  *
  * It reads no bibliography: the stack's read is the editor's, of the draft
  * rows, so its Biblio tab draws the host's fallback.
+ *
+ * Given a `seed` (`loadStackReaderSeed`, on the server), the stacks exist from
+ * the first render, so a server draws their first rows and the browser keeps
+ * them. Without one they load in the browser.
  */
 export const StackReaderProvider = ({
   workUuid,
+  seed,
   children,
 }: {
   workUuid: string;
+  seed?: StackReaderSeed;
   children: ReactNode;
 }) => {
-  const [stack, setStack] = useState<LoadedStackWork | null>(null);
+  const [stack, setStack] = useState<LoadedStackWork | null>(() =>
+    seed?.workUuid === workUuid
+      ? seedStackWork({ seed, readOnly: true, createView: createReaderView })
+      : null,
+  );
   useStackWorkLoad({
     workUuid,
     readOnly: true,
     stack,
     setStack,
     createView: createReaderView,
+    seed,
     withBibliography: false,
   });
   return (
