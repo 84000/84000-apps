@@ -199,8 +199,8 @@ export class StackController {
    *
    * This is a question about which rows exist, not about CSS. The annotation
    * rule hides scoped markup with `display: none`, which a virtualized row
-   * cannot use: rows are absolutely positioned at measured offsets, so hiding
-   * one leaves a hole the size of the passage.
+   * cannot rely on: the virtualizer still counts a hidden row, at its
+   * estimated height until it is measured, and can land a jump on it.
    */
   private showsForToh = (uuid: string) => {
     if (!this.activeToh) return true;

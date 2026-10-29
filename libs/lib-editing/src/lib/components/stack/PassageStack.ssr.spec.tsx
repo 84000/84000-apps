@@ -125,7 +125,7 @@ describe.each(['reader', 'editor'] as const)(
       expect(reported).toEqual([]);
       const after = rows(host);
       // The same nodes, in the same place: React adopted the server's rows.
-      expect(after.slice(0, before.length)).toEqual(before);
+      before.forEach((row, i) => expect(after[i]).toBe(row));
       expect(
         (host.querySelector('[data-stack-window]') as HTMLElement).style
           .paddingTop,
