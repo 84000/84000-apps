@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { useNavigation } from '../shared/NavigationContext';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 const unsubscribed = () => undefined;
 
@@ -15,7 +15,7 @@ const unsubscribed = () => undefined;
  * Pass the front tab's controller, or null for any other tab.
  */
 export const useStackOuterContent = (
-  controller: PassageStackController | null | undefined,
+  controller: StackController | null | undefined,
 ) => {
   const { setShowOuterContent } = useNavigation();
   const subscribe = useCallback(

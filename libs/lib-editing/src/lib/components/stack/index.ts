@@ -6,9 +6,11 @@ export { useStackDeepLink } from './useStackDeepLink';
 
 export * from './bibliography-codec';
 export * from './bibliography-extensions';
+export * from './bibliography-editor-extensions';
 export * from './passage-source';
 export * from './spine-feed';
 export * from './PassageStack';
+export * from './PassageStackController';
 export * from './StackController';
 export * from './StackPassageMenu';
 export * from './StackReaderMenu';

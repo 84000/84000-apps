@@ -12,7 +12,7 @@ import {
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import { build, flush, hydrated, source } from './stack-controller.fixture';
 import { buildStackSchemaExtensions } from './stack-extensions';
 import { createStackWorkDocument } from './stack-work';

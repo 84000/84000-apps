@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 /**
  * Whether a stack's root is laid out, rather than inside a `display: none`
@@ -36,7 +36,7 @@ const useStackDrawn = (ref: RefObject<HTMLElement | null>) => {
  * @returns Whether the stack is drawn.
  */
 export const useStackVisibleRange = (
-  controller: PassageStackController,
+  controller: StackController,
   rootRef: RefObject<HTMLElement | null>,
   { count, start, end }: { count: number; start: number; end: number },
 ) => {

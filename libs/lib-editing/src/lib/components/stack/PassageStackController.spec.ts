@@ -1,6 +1,6 @@
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import {
   build,
   flush,

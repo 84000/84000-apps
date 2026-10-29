@@ -16,10 +16,8 @@ import { slashCommandPluginKey } from '../editor/extensions/SlashCommand/SlashCo
 import { mentionSuggestionPluginKey } from '../editor/extensions/Mention/MentionSuggestion';
 import { renderTranslationHTML } from '../reader/translation-html';
 import { BoundaryKeymap, secondEnterSplit } from './BoundaryKeymap';
-import {
-  buildStackEditorExtensions,
-  buildStackSchemaExtensions,
-} from './stack-extensions';
+import { buildStackEditorExtensions } from './stack-editor-extensions';
+import { buildStackSchemaExtensions } from './stack-extensions';
 import { createStackWorkDocument } from './stack-work';
 import type { StackKeyboardDelegate } from './types';
 

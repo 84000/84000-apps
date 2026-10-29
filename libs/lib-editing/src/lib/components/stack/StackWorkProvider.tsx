@@ -30,7 +30,7 @@ import {
   type PanelState,
   type TabName,
 } from '../shared/types';
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import {
   loadBibliographyWork,
   saveBibliographyWork,

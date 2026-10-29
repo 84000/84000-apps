@@ -4,7 +4,7 @@ import { useEffect, type RefObject } from 'react';
 
 import { useNavigation } from '../shared/NavigationContext';
 import { locationForPassageType } from '../shared/types';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import {
   resolveStackLink,
@@ -28,7 +28,7 @@ export const useStackRowPointer = ({
   setMenuTarget,
 }: {
   parentRef: RefObject<HTMLDivElement | null>;
-  controller: PassageStackController;
+  controller: StackController;
   updatePanel: ReturnType<typeof useNavigation>['updatePanel'];
   followLink: (link: StackLinkTarget) => void;
   setMenuTarget: (target: StackPassageMenuTarget | null) => void;

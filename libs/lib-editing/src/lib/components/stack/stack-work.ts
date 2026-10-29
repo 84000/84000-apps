@@ -1,5 +1,4 @@
 import { getSchema, type Extensions } from '@tiptap/core';
-import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import type { GraphQLClient } from 'graphql-request';
 import type { Doc } from 'yjs';
 import {
@@ -25,6 +24,9 @@ export type StackWorkOptions = {
   outline?: RowOutline;
 };
 
+/** Each work's text origins, which views add to. */
+const textOrigins = new WeakMap<WorkDocument, Set<unknown>>();
+
 /**
  * A `WorkDocument` configured for the editor stack.
  *
@@ -36,20 +38,37 @@ export type StackWorkOptions = {
  *   editors can render back.
  * - **Text origins.** `PassageDoc` defaults to treating a direct write as the
  *   user's text edit. Edits made through a TipTap editor do not arrive that
- *   way — they carry the y-sync plugin's origin — so without this the passage
+ *   way — they carry the y-sync plugin's origin — so without it the passage
  *   `UndoManager` tracks nothing a typist did and Mod-Z silently skips their
- *   typing. It is a quiet failure, which is why it is pinned here rather than
- *   left to each caller.
+ *   typing. It is a quiet failure, so it is not left to each caller: the work
+ *   starts with no text origins, and a view built with the editing layer adds
+ *   the editor's (`trackTextOrigin`). A reader's work never imports the y-sync
+ *   plugin to name it.
  */
-export const createStackWorkDocument = (options: StackWorkOptions) =>
-  new WorkDocument({
+export const createStackWorkDocument = (options: StackWorkOptions) => {
+  // One set for every passage: each undo manager tracks it by reference.
+  const origins = new Set<unknown>();
+  const work = new WorkDocument({
     workUuid: options.workUuid,
     schema: getSchema(options.extensions ?? buildStackSchemaExtensions()),
     loader: options.loader,
     spineDoc: options.spineDoc,
-    textOrigins: new Set([ySyncPluginKey]),
+    textOrigins: origins,
     outline: options.outline,
   });
+  textOrigins.set(work, origins);
+  return work;
+};
+
+/**
+ * Count transactions under `origin` as the user's typing in every passage of
+ * a work built here, including passages hydrated later.
+ *
+ * A work built some other way chose its own origins, and is left alone.
+ */
+export const trackTextOrigin = (work: WorkDocument, origin: unknown) => {
+  textOrigins.get(work)?.add(origin);
+};
 
 /**
  * A stack `WorkDocument` reading through the API, and the local store when one

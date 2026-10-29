@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 
 import { useStackDeepLink } from './useStackDeepLink';
-import type { PassageStackController } from './StackController';
+import type { PassageStackController } from './PassageStackController';
 
 // jsdom has no CSS.escape; the ids here need no escaping.
 if (typeof CSS === 'undefined') {

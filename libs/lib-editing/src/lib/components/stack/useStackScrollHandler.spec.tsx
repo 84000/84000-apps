@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import type { Virtualizer } from '@tanstack/react-virtual';
 
 import { useStackScrollHandler } from './useStackScrollHandler';
-import type { PassageStackController } from './StackController';
+import type { PassageStackController } from './PassageStackController';
 
 type Handler = (index: number, options?: { settle?: boolean }) => void;
 

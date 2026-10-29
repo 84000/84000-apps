@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 
 import { useStackRowPointer } from './useStackRowPointer';
-import type { PassageStackController } from './StackController';
+import type { PassageStackController } from './PassageStackController';
 
 /** A stack container holding one back-reference of the given passage type. */
 const containerWithReference = (refType: string) => {
