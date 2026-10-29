@@ -124,7 +124,7 @@ test.describe('Editing', () => {
       .getByRole('button', { name: 'Editor settings' })
       .filter({ visible: true });
     const badge = page
-      .getByText('Read-only', { exact: true })
+      .locator('[data-slot="badge"]', { hasText: 'Read-only' })
       .filter({ visible: true });
     const readOnly = page.getByRole('menuitemcheckbox', { name: 'Read-only' });
     const live = page.locator('[contenteditable="true"]');
