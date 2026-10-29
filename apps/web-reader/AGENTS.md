@@ -24,6 +24,11 @@ to turn one on. Content reads default to `draft`, because the local seed has no
 published snapshots; set `NEXT_PUBLIC_CONTENT_SOURCE=published` in `.env.local`
 to read what the public reader serves.
 
+The main panel is paginated by default. Set `READER_RENDERER=stack` in
+`.env.local` to draw its front matter and translation as passage stacks, their
+first rows rendered on the server (`src/main-panel.ts`). The left and right
+panels stay paginated either way.
+
 ## Layout
 
 No session or GraphQL auth providers: server reads use anonymous clients.
