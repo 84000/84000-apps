@@ -132,6 +132,7 @@ export const StackTabsPage = ({
       uuid={work.uuid}
       initialToh={toh as TohokuCatalogEntry}
       editable={!readOnly}
+      hoverCards
     >
       <StackWorkProvider workUuid={work.uuid} readOnly={readOnly}>
         <Body

@@ -68,10 +68,16 @@ export const NavigationProvider = ({
   initialToh,
   initialHasTranslationContent = true,
   editable = false,
+  hoverCards = editable,
   children,
 }: {
   /** The studio rather than the reader. Defaults to the reader. */
   editable?: boolean;
+  /**
+   * Whether hover cards are drawn. Their edit actions follow `editable`, so a
+   * reader can show cards that only read. Defaults to `editable`.
+   */
+  hoverCards?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -416,7 +422,9 @@ export const NavigationProvider = ({
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      <HoverCardProvider enabled={hasHoverCards}>{children}</HoverCardProvider>
+      <HoverCardProvider enabled={hasHoverCards && hoverCards}>
+        {children}
+      </HoverCardProvider>
       {/* After the children, so the URL wins over a default they set on mount. */}
       <Suspense fallback={null}>
         <QueryListener onChange={syncFromUrl} />

@@ -64,6 +64,7 @@ const renderCard = (item: Partial<MentionItem>) => {
       anchor={document.createElement('a')}
       close={jest.fn()}
       setHoverCardEditing={jest.fn()}
+      editable
     />,
   );
   fireEvent.click(screen.getByTitle('Edit display text'));
@@ -115,5 +116,25 @@ describe('MentionHoverContent', () => {
     renderCard({ linkType: 'passage', subtype: 'translation' });
 
     expect(screen.queryByLabelText('Marker type')).toBeNull();
+  });
+
+  it('offers no edit actions to a reader', () => {
+    editor = createEditor({ linkType: 'passage' });
+    render(
+      <MentionHoverContent
+        uuid="m-1"
+        entityType="passage"
+        entity="e-1"
+        editor={editor}
+        requestEditor={async () => null}
+        anchor={document.createElement('a')}
+        close={jest.fn()}
+        setHoverCardEditing={jest.fn()}
+        editable={false}
+      />,
+    );
+
+    expect(screen.getByText('passage')).toBeTruthy();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

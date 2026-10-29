@@ -122,6 +122,7 @@ export const MentionHoverContent = ({
   anchor,
   close,
   setHoverCardEditing,
+  editable,
 }: {
   uuid: string;
   entityType: string;
@@ -131,6 +132,8 @@ export const MentionHoverContent = ({
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
+  /** Offer the actions that edit the document. */
+  editable: boolean;
 }) => {
   const [mode, setModeLocal] = useState<Mode>('view');
   const { fetchPassage } = useNavigation();
@@ -492,69 +495,75 @@ export const MentionHoverContent = ({
         {displayLabel}
       </span>
       <span className="flex-grow" />
-      {isWork && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 [&_svg]:size-4"
-          title="Set language"
-          onClick={() => setMode('lang')}
-        >
-          <LanguagesIcon className="text-primary my-auto" />
-        </Button>
+      {editable && (
+        <>
+          {isWork && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 [&_svg]:size-4"
+              title="Set language"
+              onClick={() => setMode('lang')}
+            >
+              <LanguagesIcon className="text-primary my-auto" />
+            </Button>
+          )}
+          {isPassage && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 [&_svg]:size-4"
+              title="Toggle quote style"
+              onClick={toggleQuoteStyle}
+            >
+              <QuoteIcon
+                className={cn(
+                  'my-auto',
+                  item?.style === 'quote'
+                    ? 'text-primary'
+                    : 'text-foreground/50',
+                )}
+              />
+            </Button>
+          )}
+          {isPassage && item?.style === 'quote' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6 [&_svg]:size-4"
+              title="Set highlight range"
+              onClick={() => setMode('range')}
+            >
+              <HighlighterIcon
+                className={cn(
+                  'my-auto',
+                  item?.highlightStart != null
+                    ? 'text-primary'
+                    : 'text-foreground/50',
+                )}
+              />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Edit display text"
+            onClick={() => setMode('rename')}
+          >
+            <PencilIcon className="text-primary my-auto" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 [&_svg]:size-4"
+            title="Remove mention"
+            onClick={deleteMention}
+          >
+            <Trash2Icon className="text-destructive my-auto" />
+          </Button>
+        </>
       )}
-      {isPassage && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 [&_svg]:size-4"
-          title="Toggle quote style"
-          onClick={toggleQuoteStyle}
-        >
-          <QuoteIcon
-            className={cn(
-              'my-auto',
-              item?.style === 'quote' ? 'text-primary' : 'text-foreground/50',
-            )}
-          />
-        </Button>
-      )}
-      {isPassage && item?.style === 'quote' && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6 [&_svg]:size-4"
-          title="Set highlight range"
-          onClick={() => setMode('range')}
-        >
-          <HighlighterIcon
-            className={cn(
-              'my-auto',
-              item?.highlightStart != null
-                ? 'text-primary'
-                : 'text-foreground/50',
-            )}
-          />
-        </Button>
-      )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        title="Edit display text"
-        onClick={() => setMode('rename')}
-      >
-        <PencilIcon className="text-primary my-auto" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-6 [&_svg]:size-4"
-        title="Remove mention"
-        onClick={deleteMention}
-      >
-        <Trash2Icon className="text-destructive my-auto" />
-      </Button>
     </div>
   );
 };

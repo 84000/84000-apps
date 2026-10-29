@@ -74,6 +74,21 @@ export const HoverCardProvider = ({
   const [isHoveringCard, setIsHoveringCard] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  // A card open when the work stops being edited may be part way through an
+  // edit, which its read-only form cannot show or finish. Close it.
+  const [wasEditable, setWasEditable] = useState(editable);
+  if (editable !== wasEditable) {
+    setWasEditable(editable);
+    if (!editable) {
+      setAnchor(null);
+      setUuid(undefined);
+      setCardType(undefined);
+      setIsHoveringAnchor(false);
+      setIsHoveringCard(false);
+      setIsEditing(false);
+    }
+  }
+
   // Get the editor for the current anchor
   const editor = useMemo(() => {
     if (!anchor) return undefined;
@@ -303,7 +318,9 @@ export const HoverCardProvider = ({
     // A card renders without an editor; its actions resolve one on demand,
     // falling back to the host when nothing is mounted over the anchor.
     const requestEditor = async () =>
-      getEditorForAnchor(anchorEl) ?? (await requestEditorFor?.(anchorEl)) ?? null;
+      getEditorForAnchor(anchorEl) ??
+      (await requestEditorFor?.(anchorEl)) ??
+      null;
 
     if (type === 'glossaryInstance') {
       const glossary = anchorEl.getAttribute('glossary') || '';
@@ -316,6 +333,7 @@ export const HoverCardProvider = ({
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
+          editable={editable}
         />
       );
     }
@@ -330,6 +348,7 @@ export const HoverCardProvider = ({
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
+          editable={editable}
         />
       );
     }
@@ -344,6 +363,7 @@ export const HoverCardProvider = ({
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
+          editable={editable}
         />
       );
     }
@@ -360,6 +380,7 @@ export const HoverCardProvider = ({
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
+          editable={editable}
         />
       );
     }
@@ -376,16 +397,23 @@ export const HoverCardProvider = ({
           anchor={anchorEl}
           close={closeImmediately}
           setHoverCardEditing={setIsEditing}
+          editable={editable}
         />
       );
     }
     return null;
   };
 
-  // Whether the work is being edited is an application-level fact, so it is
-  // read from the navigation context rather than inferred from whichever
-  // editor happens to be mounted under the pointer.
-  const shouldShowCard = enabled && editable && anchor && uuid && cardType;
+  // Whether cards are drawn is the host's call (`enabled`); whether they edit
+  // is whether the work is being edited, an application-level fact read from
+  // the navigation context rather than from the editor under the pointer.
+  // An internal link's card only shows its raw target, which is for editors.
+  const shouldShowCard =
+    enabled &&
+    anchor &&
+    uuid &&
+    cardType &&
+    (editable || cardType !== 'internalLink');
 
   return (
     <>

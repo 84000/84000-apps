@@ -32,10 +32,12 @@ jest.mock('../editor/extensions/Link/LinkHoverContent', () => ({
   LinkHoverContent: () => null,
 }));
 jest.mock('../editor/extensions/InternalLink/InternalLinkHoverContent', () => ({
-  InternalLinkHoverContent: () => null,
+  InternalLinkHoverContent: () => <div>Internal link hover card</div>,
 }));
 jest.mock('../editor/extensions/Mention/MentionHoverContent', () => ({
-  MentionHoverContent: () => <div>Mention hover card</div>,
+  MentionHoverContent: ({ editable }: { editable: boolean }) => (
+    <div data-editable={String(editable)}>Mention hover card</div>
+  ),
 }));
 
 const MENTION_UUID_ATTR = { uuid: 'mention-id' } as Record<string, string>;
@@ -119,23 +121,79 @@ describe('HoverCardProvider', () => {
     expect(screen.getByText('Mention hover card')).not.toBeNull();
   });
 
-  it('offers no card in the reader', () => {
+  /** Hover an anchor of `type` and let the open delay pass. */
+  const hover = (
+    type: string,
+    options: { editable?: boolean; enabled?: boolean } = {},
+  ) => {
     jest.useFakeTimers();
     render(
       inStudio(
-        <HoverCardProvider openDelay={0} closeDelay={0}>
-          <a href="/mention" type="mention" {...MENTION_UUID_ATTR}>
-            Mention
+        <HoverCardProvider
+          openDelay={0}
+          closeDelay={0}
+          enabled={options.enabled ?? true}
+        >
+          <a href="/anchor" type={type} {...MENTION_UUID_ATTR}>
+            Anchor
           </a>
         </HoverCardProvider>,
-        { editable: false },
+        { editable: options.editable },
       ),
     );
-    const anchor = screen.getByRole('link', { name: 'Mention' });
-    registerEditorElement(anchor, { isEditable: true } as Editor);
-
-    fireEvent.mouseEnter(anchor);
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Anchor' }));
     act(() => jest.runOnlyPendingTimers());
+  };
+
+  it('shows a reader a card without its edit actions', () => {
+    hover('mention', { editable: false });
+
+    const card = screen.getByText('Mention hover card');
+    expect(card.dataset['editable']).toBe('false');
+  });
+
+  it('offers the studio its edit actions', () => {
+    hover('mention');
+
+    const card = screen.getByText('Mention hover card');
+    expect(card.dataset['editable']).toBe('true');
+  });
+
+  it('shows a reader no card for an internal link', () => {
+    hover('internalLink', { editable: false });
+
+    expect(screen.queryByText('Internal link hover card')).toBeNull();
+  });
+
+  it('shows the studio a card for an internal link', () => {
+    hover('internalLink');
+
+    expect(screen.getByText('Internal link hover card')).toBeTruthy();
+  });
+
+  it('draws nothing when the host turns cards off', () => {
+    hover('mention', { enabled: false });
+
+    expect(screen.queryByText('Mention hover card')).toBeNull();
+  });
+
+  it('closes an open card when the work stops being edited', () => {
+    jest.useFakeTimers();
+    const ui = (editable: boolean) =>
+      inStudio(
+        <HoverCardProvider openDelay={0} closeDelay={0}>
+          <a href="/anchor" type="mention" {...MENTION_UUID_ATTR}>
+            Anchor
+          </a>
+        </HoverCardProvider>,
+        { editable },
+      );
+    const { rerender } = render(ui(true));
+    fireEvent.mouseEnter(screen.getByRole('link', { name: 'Anchor' }));
+    act(() => jest.runOnlyPendingTimers());
+    expect(screen.getByText('Mention hover card')).toBeTruthy();
+
+    rerender(ui(false));
 
     expect(screen.queryByText('Mention hover card')).toBeNull();
   });

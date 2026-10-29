@@ -14,6 +14,7 @@ export const LinkHoverContent = ({
   anchor,
   close,
   setHoverCardEditing,
+  editable,
 }: {
   uuid: string;
   href: string;
@@ -22,6 +23,8 @@ export const LinkHoverContent = ({
   anchor: HTMLElement;
   close: () => void;
   setHoverCardEditing: (isEditing: boolean) => void;
+  /** Offer the actions that edit the document. */
+  editable: boolean;
 }) => {
   const [isEditing, setIsEditingLocal] = useState(false);
   const withEditor = useHoverCardEditor(editor, requestEditor);
@@ -105,22 +108,26 @@ export const LinkHoverContent = ({
             {href}
           </span>
           <span className="flex-grow" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-            onClick={() => setIsEditing(true)}
-          >
-            <PencilIcon className="text-primary my-auto" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6 [&_svg]:size-4"
-            onClick={deleteLink}
-          >
-            <Trash2Icon className="text-destructive my-auto" />
-          </Button>
+          {editable && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 [&_svg]:size-4"
+                onClick={() => setIsEditing(true)}
+              >
+                <PencilIcon className="text-primary my-auto" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 [&_svg]:size-4"
+                onClick={deleteLink}
+              >
+                <Trash2Icon className="text-destructive my-auto" />
+              </Button>
+            </>
+          )}
         </>
       )}
     </div>
