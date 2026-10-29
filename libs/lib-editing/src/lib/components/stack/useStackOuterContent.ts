@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import { useNavigation } from '../shared/NavigationContext';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 
 const unsubscribed = () => undefined;
 

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { PassageStackController } from './PassageStackController';
+import { PassageStackController } from './StackController';
 import { stackPerf } from './perf';
 
 const ms = (value: number) => `${value.toFixed(1)}ms`;

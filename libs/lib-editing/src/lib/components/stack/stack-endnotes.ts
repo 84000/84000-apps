@@ -8,7 +8,7 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 
 import { endNoteLinkTransaction } from '../editor/extensions/EndNoteLink/EndNoteLinkMark';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import type { StackWork } from './StackWorkProvider';
 
 /** The parts of a stack work the endnote edits use. */

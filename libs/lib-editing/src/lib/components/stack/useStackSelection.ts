@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { toast } from '@eightyfourthousand/design-system';
 
-import { PassageStackController } from './PassageStackController';
+import { PassageStackController } from './StackController';
 
 /** How far the pointer must travel before a press counts as a drag. */
 const DRAG_SLOP_PX = 4;

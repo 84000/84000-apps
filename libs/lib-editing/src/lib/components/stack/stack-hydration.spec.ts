@@ -1,6 +1,6 @@
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './PassageStackController';
+import { PassageStackController } from './StackController';
 import { build, flush, seeds } from './stack-controller.fixture';
 import { createStackWorkDocument } from './stack-work';
 

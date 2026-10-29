@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './PassageStackController';
+import { PassageStackController } from './StackController';
 import { PassageSkeleton } from './PassageSkeleton';
 import { StackRow } from './StackRow';
 import { StaticPassageHTML } from './StaticPassage';

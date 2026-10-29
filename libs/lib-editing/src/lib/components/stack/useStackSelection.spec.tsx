@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { toast } from '@eightyfourthousand/design-system';
 
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import { useStackSelection } from './useStackSelection';
 
 jest.mock('@eightyfourthousand/design-system', () => ({ toast: jest.fn() }));

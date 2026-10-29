@@ -1,6 +1,6 @@
 import { Editor } from '@tiptap/core';
 
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import { hydrated } from './stack-controller.fixture';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
