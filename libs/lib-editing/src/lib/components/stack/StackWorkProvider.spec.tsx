@@ -15,6 +15,8 @@ import {
   useStackWork,
   type StackWork,
 } from './StackWorkProvider';
+import { PassageStackController } from './PassageStackController';
+import { StackReaderProvider } from './StackReaderProvider';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
 // `data-access/ssr` through two client barrels that leak it.
@@ -513,5 +515,45 @@ describe('StackWorkProvider', () => {
 
       expect(undo).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('StackReaderProvider', () => {
+  beforeEach(() => {
+    clientGraphql.getPassageMetaPage.mockReset();
+    bibliographyWork.loadBibliographyWork.mockReset().mockResolvedValue(null);
+    mockEditorState.registerSaveHandler.mockReset();
+  });
+
+  it("gives every tab a reader's view, with nothing to save", async () => {
+    seedSections();
+    const ReaderProbe = () => {
+      const view = useStackWork()?.controllerFor('translation');
+      if (!view) return null;
+      return (
+        <span data-testid="reader">
+          {[
+            view.isReadOnly() && 'read-only',
+            !view.getEditing() && 'no editing',
+            !(view instanceof PassageStackController) && 'reader view',
+          ]
+            .filter(Boolean)
+            .join(', ')}
+        </span>
+      );
+    };
+
+    render(
+      <StackReaderProvider workUuid="w1">
+        <ReaderProbe />
+      </StackReaderProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('reader').textContent).toBe(
+        'read-only, no editing, reader view',
+      ),
+    );
+    expect(mockEditorState.registerSaveHandler).not.toHaveBeenCalled();
   });
 });

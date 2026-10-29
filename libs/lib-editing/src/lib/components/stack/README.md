@@ -159,6 +159,24 @@ The host owns the rest of the reader's surface, on `NavigationProvider`:
   internal link, whose card shows only its raw target. The sandbox's `/stack/[toh]/tabs` takes `?readonly=1` and has a
   button that switches it live.
 
+### A reader without the editor
+
+`StackWorkProvider` and `PassageStackController` carry the editor, read-only or
+not. A host that only reads uses `StackReaderProvider` and the `reader.ts`
+entry instead, which load none of it: no live-editor rows, menus, slash or
+mention UI, collaboration or y-sync plugin, and no `EditorProvider` from the
+stack.
+
+The split is by injection. `StackController` is the view without an editor; it
+is always read-only and throws if asked to build one. `PassageStackController`
+is the same class handed the editing layer (`stack-editing.tsx`: the editor
+extensions, the live-row component, the menus and the y-sync origin), and
+`PassageStack` draws the editor's pieces from the view it is given.
+
+`stack-reader-graph.spec.ts` bundles `reader.ts` and fails if anything editor-only
+comes back into its static imports. What remains is shared with the existing
+readers: `@tiptap/react` through the schema extensions and the hover cards.
+
 ### Static passages outside the stack
 
 `StaticPassage` draws one passage read-only, outside any stack, with the same
