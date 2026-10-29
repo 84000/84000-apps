@@ -6,21 +6,15 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { useEffect } from 'react';
-import { Editor } from '@tiptap/react';
-import { ClientError } from 'graphql-request';
-import { XmlElement } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
 
 import { EditorContextProvider, useEditorState } from './EditorProvider';
 import type {
   EditorContextState,
   SaveHandler,
+  SaveReport,
   UnconfirmedSave,
 } from './editor-context';
-import { translationSSRExtensions } from './extensions/translationSSRExtensions';
-import TranslationDocument from './extensions/TranslationDocument';
-import TranslationMetadata from './extensions/TranslationMetadata';
-import { PassageNode } from './extensions/Passage/PassageNode';
 
 // See PassageStackController.spec.ts — the client barrels leak
 // `data-access/ssr`.
@@ -48,13 +42,10 @@ jest.mock('../shared/RestrictionWarning', () => ({
 const mockGraphqlRequest = jest.fn();
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
-  RequestNotSentError: jest.requireActual('@eightyfourthousand/client-graphql')
-    .RequestNotSentError,
   createGraphQLClient: jest.fn(() => ({ request: mockGraphqlRequest })),
   findWorkPassages: jest.requireActual('@eightyfourthousand/client-graphql')
     .findWorkPassages,
   hasPermission: jest.fn(async () => true),
-  savePassages: jest.fn(),
   getBibliographyEntry: jest.fn(),
   getGlossaryInstance: jest.fn(),
   lookup: jest.fn(async () => null),
@@ -83,12 +74,6 @@ jest.mock('@eightyfourthousand/design-system', () => {
   };
 });
 
-const clientGraphql = jest.requireMock(
-  '@eightyfourthousand/client-graphql',
-) as {
-  RequestNotSentError: new (cause: unknown) => Error;
-  savePassages: jest.Mock;
-};
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   getPassageSorts: jest.Mock;
   getWorkPassageUuids: jest.Mock;
@@ -123,36 +108,47 @@ const Capture = () => {
   return null;
 };
 
-const extensions = [
-  ...translationSSRExtensions.filter(
-    (extension) =>
-      !['doc', 'passage'].includes((extension as { name?: string }).name ?? ''),
-  ),
-  TranslationDocument,
-  PassageNode,
-  // Declares the uuid attributes.
-  TranslationMetadata,
-];
+/** What the registered stack holds, as its save handler reports it. */
+const stack = {
+  /** Passages changed since the last save. */
+  unsaved: 0,
+  /** Moves with every edit, even one that changes no count. */
+  revision: 0,
+  save: jest.fn<Promise<SaveReport>, []>(),
+};
 
-const passage = (uuid: string, text: string) => ({
-  type: 'passage',
-  attrs: { uuid, label: '1.1', sort: 1, type: 'translation' },
-  content: [
-    {
-      type: 'paragraph',
-      attrs: { uuid: `para-${uuid}` },
-      content: [{ type: 'text', text }],
-    },
-  ],
+/** An edit to the stack, as typing does. */
+const edit = (changes = 1) => {
+  stack.unsaved += changes;
+  stack.revision += 1;
+};
+
+/** A save of `p0` whose answer was lost. */
+const lostSave = (unconfirmed?: Partial<UnconfirmedSave>): SaveReport => ({
+  outcome: 'unknown',
+  unconfirmed: {
+    sent: ['p0'],
+    inserted: [],
+    deleted: [],
+    newerChanges: () => stack.unsaved,
+    restore: jest.fn(async () => undefined),
+    ...unconfirmed,
+  },
 });
 
-/** A paginated editor holding one passage the last save has not seen. */
-const editorWithAnEdit = () =>
-  new Editor({
-    element: document.createElement('div'),
-    extensions,
-    content: { type: 'translation', content: [passage('p0', 'edited')] },
-  });
+/** A save of a new passage `p0` whose answer was lost. */
+const lostInsert = () => lostSave({ inserted: ['p0'] });
+
+const registerStack = (handler?: Partial<SaveHandler>) =>
+  act(() =>
+    editorState.registerSaveHandler({
+      save: stack.save,
+      isDirty: () => stack.unsaved > 0,
+      unsavedChanges: () => stack.unsaved,
+      revision: () => String(stack.revision),
+      ...handler,
+    }),
+  );
 
 const mount = async () => {
   const view = render(
@@ -161,45 +157,13 @@ const mount = async () => {
     </EditorContextProvider>,
   );
   await waitFor(() => expect(mounts).toBe(1));
-  act(() => editorState.setEditor('main', editorWithAnEdit()));
+  registerStack();
   return view;
 };
 
 /** Press a toast's action, as its button does. */
 const press = (action: { onClick: (event: unknown) => void }) =>
   action.onClick({ preventDefault: jest.fn() });
-
-/** Add a passage to the paginated editor, as typing a new one does. */
-const addPassage = (uuid: string) => {
-  const editor = editorState.getEditor('main');
-  editor?.commands.insertContentAt(
-    editor.state.doc.content.size,
-    passage(uuid, 'new'),
-  );
-};
-
-/**
- * Track `main` as saved, holding p0, with the fragment the editors bind to,
- * and return how to edit p0 there as typing does.
- */
-const observeSavedPassage = () => {
-  const fragment = editorState.getFragment('main');
-  const element = new XmlElement('passage');
-  fragment.insert(0, [element]);
-  element.setAttribute('uuid', 'p0');
-  act(() => editorState.startObserving('main'));
-  let revision = 0;
-  return () => element.setAttribute('revision', String(++revision));
-};
-
-const lostAnswer = {
-  success: false,
-  savedCount: 0,
-  passages: [],
-  renumberedPassages: [],
-  error: 'The save may have been applied: fetch failed',
-  outcomeUnknown: true,
-};
 
 /** The passages the server holds, read back directly or through the API. */
 let held: string[] = [];
@@ -221,37 +185,11 @@ const apiPage = (_query: unknown, vars: { filter?: { uuids: string[] } }) => {
 /** The page the server answers with when its read fails. */
 const failedRead = { work: { uuid: 'w1', passages: { nodes: [] } } };
 
-/** A second editing surface, as the passage stack registers. */
-const registerStack = (handler: Partial<SaveHandler>) =>
-  act(() =>
-    editorState.registerSaveHandler({
-      save: async () => ({ outcome: 'none' }),
-      isDirty: () => false,
-      unsavedChanges: () => 0,
-      ...handler,
-    }),
-  );
-
 const toasted = () => designSystem.toast.mock.calls.map(([title]) => title);
 const lastToast = () =>
   designSystem.toast.mock.calls[designSystem.toast.mock.calls.length - 1];
-const sentUuids = (call: number) =>
-  clientGraphql.savePassages.mock.calls[call][0].passages.map(
-    (p: { uuid: string }) => p.uuid,
-  );
 
-const clientError = (status: number, errors?: { message: string }[]) =>
-  new ClientError(
-    {
-      status,
-      errors,
-      headers: new Headers(),
-      body: '',
-    } as unknown as ConstructorParameters<typeof ClientError>[0],
-    { query: 'mutation SavePassages' },
-  );
-
-describe('saving the paginated editors', () => {
+describe('saving', () => {
   beforeAll(() => {
     window.matchMedia = jest.fn().mockReturnValue({
       matches: false,
@@ -263,8 +201,10 @@ describe('saving the paginated editors', () => {
   beforeEach(() => {
     mounts = 0;
     mockSonner.real = false;
+    stack.unsaved = 0;
+    stack.revision = 0;
+    stack.save.mockReset();
     designSystem.toast.mockReset();
-    clientGraphql.savePassages.mockReset();
     dataAccess.getPassageSorts.mockReset();
     dataAccess.getWorkPassageUuids.mockImplementation(
       async ({ limit }: { limit: number }) => held.slice(0, limit),
@@ -278,9 +218,46 @@ describe('saving the paginated editors', () => {
     serverHolds();
   });
 
+  it('says what a save wrote', async () => {
+    await mount();
+    edit();
+    stack.save.mockImplementation(async () => {
+      stack.unsaved = 0;
+      return { outcome: 'saved' };
+    });
+
+    await act(() => editorState.save());
+
+    expect(toasted()).toEqual(['Content saved']);
+    expect(editorState.dirtyStore.getSnapshot()).toBe(false);
+  });
+
+  it('keeps the edits of a save that failed', async () => {
+    await mount();
+    edit();
+    stack.save.mockResolvedValue({ outcome: 'failed' });
+
+    await act(() => editorState.save());
+
+    expect(mounts).toBe(1);
+    expect(toasted()).toEqual(['Error saving content.']);
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
+  });
+
+  it('reports a save that threw as failed', async () => {
+    await mount();
+    stack.save.mockRejectedValue(new Error('boom'));
+
+    await act(() => editorState.save());
+
+    expect(toasted()).toEqual(['Error saving content.']);
+    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+  });
+
   it('reads the editors again once the save shows it went through', async () => {
     await mount();
-    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
+    stack.save.mockResolvedValue(lostInsert());
     serverHolds('p0');
 
     await act(() => editorState.save());
@@ -294,40 +271,26 @@ describe('saving the paginated editors', () => {
     expect(editorState.dirtyStore.getSnapshot()).toBe(false);
   });
 
-  it('reads the editors again when no answer arrived', async () => {
-    await mount();
-    clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
-    serverHolds('p0');
-
-    await act(() => editorState.save());
-
-    await waitFor(() => expect(mounts).toBe(2));
-    expect(toasted()).toEqual(['Your last save went through.']);
-  });
-
   it('keeps the edits of a save that did not go through', async () => {
     await mount();
-    clientGraphql.savePassages.mockResolvedValueOnce(lostAnswer);
+    const lost = lostInsert();
+    stack.save.mockResolvedValueOnce(lost);
 
     await act(() => editorState.save());
 
     expect(mounts).toBe(1);
+    expect(lost.unconfirmed?.restore).toHaveBeenCalled();
     expect(toasted()).toEqual(['Your last save did not go through.']);
     expect(editorState.dirtyStore.getSnapshot()).toBe(true);
 
-    clientGraphql.savePassages.mockResolvedValueOnce({
-      success: true,
-      savedCount: 1,
-      passages: [],
-      renumberedPassages: [],
-    });
+    stack.save.mockResolvedValueOnce({ outcome: 'saved' });
     await act(() => editorState.save());
-    expect(sentUuids(1)).toEqual(['p0']);
+    expect(stack.save).toHaveBeenCalledTimes(2);
   });
 
   it('pauses saving until the server can be read', async () => {
     await mount();
-    clientGraphql.savePassages.mockRejectedValue(new TypeError('fetch failed'));
+    stack.save.mockResolvedValue(lostInsert());
     dataAccess.getPassageSorts.mockResolvedValueOnce(null);
 
     await act(() => editorState.save());
@@ -340,35 +303,34 @@ describe('saving the paginated editors', () => {
 
     await waitFor(() => expect(mounts).toBe(2));
     // The save is never sent again, only read back.
-    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+    expect(stack.save).toHaveBeenCalledTimes(1);
   });
 
   // The read-back worked, but the reload would not: replacing the editors
   // now would leave them empty.
   it('keeps the editors while the work cannot be read', async () => {
     await mount();
-    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
+    stack.save.mockResolvedValue(lostInsert());
     serverHolds('p0');
     mockGraphqlRequest.mockResolvedValueOnce(failedRead);
 
     await act(() => editorState.save());
 
     expect(mounts).toBe(1);
-    expect(editorState.getEditor('main')?.getText().trim()).toBe('edited');
     expect(editorState.dirtyStore.getSnapshot()).toBe(true);
 
     await act(() => editorState.save());
 
     await waitFor(() => expect(mounts).toBe(2));
-    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+    expect(stack.save).toHaveBeenCalledTimes(1);
   });
 
   it('asks before a reload discards an edit made while checking', async () => {
     await mount();
-    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
+    stack.save.mockResolvedValue(lostInsert());
     serverHolds('p0');
     mockGraphqlRequest.mockImplementationOnce(async (...args) => {
-      addPassage('p1');
+      edit();
       return apiPage(...(args as Parameters<typeof apiPage>));
     });
 
@@ -380,9 +342,9 @@ describe('saving the paginated editors', () => {
 
   it('reloads once, however often Reload or Save is pressed', async () => {
     await mount();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      addPassage('p1');
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
     await act(() => editorState.save());
@@ -410,18 +372,16 @@ describe('saving the paginated editors', () => {
   // The same passages stay changed, but not the same changes.
   it('asks again when an edit while reloading changes no count', async () => {
     await mount();
-    const editP0 = observeSavedPassage();
-    editP0();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      editP0();
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
     await act(() => editorState.save());
     const asked = toasted().length;
     expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
     mockGraphqlRequest.mockImplementationOnce(async (...args) => {
-      editP0();
+      edit(0);
       return apiPage(...(args as Parameters<typeof apiPage>));
     });
 
@@ -430,29 +390,6 @@ describe('saving the paginated editors', () => {
     expect(mounts).toBe(1);
     expect(toasted()).toHaveLength(asked + 1);
     expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
-  });
-
-  it('asks again when a stack edit while reloading changes no count', async () => {
-    await mount();
-    let revision = 0;
-    registerStack({
-      isDirty: () => true,
-      unsavedChanges: () => 1,
-      revision: () => String(revision),
-    });
-    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
-    serverHolds('p0');
-    await act(() => editorState.save());
-    const asked = toasted().length;
-    mockGraphqlRequest.mockImplementationOnce(async (...args) => {
-      revision += 1;
-      return apiPage(...(args as Parameters<typeof apiPage>));
-    });
-
-    await act(async () => press(lastToast()[1].action));
-
-    expect(mounts).toBe(1);
-    expect(toasted()).toHaveLength(asked + 1);
   });
 
   it('keeps the warning up when Reload has to ask again', async () => {
@@ -460,14 +397,14 @@ describe('saving the paginated editors', () => {
     const sonner = jest.requireActual('@eightyfourthousand/design-system');
     designSystem.toast.mockImplementation(sonner.toast);
     await mount();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      addPassage('p1');
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
     await act(() => editorState.save());
     await screen.findByText(/discard 1 unsaved change\./);
-    addPassage('p2');
+    edit();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
 
@@ -485,9 +422,9 @@ describe('saving the paginated editors', () => {
     const sonner = jest.requireActual('@eightyfourthousand/design-system');
     designSystem.toast.mockImplementation(sonner.toast);
     await mount();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      addPassage('p1');
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
     await act(() => editorState.save());
@@ -503,8 +440,8 @@ describe('saving the paginated editors', () => {
 
   it('settles nothing when a save answers after the session is gone', async () => {
     const view = await mount();
-    let answer: (value: unknown) => void = () => undefined;
-    clientGraphql.savePassages.mockImplementation(
+    let answer: (value: SaveReport) => void = () => undefined;
+    stack.save.mockImplementation(
       () =>
         new Promise((resolve) => {
           answer = resolve;
@@ -515,7 +452,7 @@ describe('saving the paginated editors', () => {
 
     view.unmount();
     await act(async () => {
-      answer(lostAnswer);
+      answer(lostInsert());
       await saving;
     });
 
@@ -523,67 +460,11 @@ describe('saving the paginated editors', () => {
     expect(toasted()).toEqual([]);
   });
 
-  it('tracks an edit while another editor navigates', async () => {
-    await mount();
-    const editP0 = observeSavedPassage();
-    clientGraphql.savePassages.mockResolvedValue({
-      success: true,
-      savedCount: 1,
-      passages: [],
-      renumberedPassages: [],
-    });
-
-    act(() =>
-      editorState.setNavigating(true, true, editorState.getFragment('main')),
-    );
-    editP0();
-    act(() =>
-      editorState.setNavigating(false, false, editorState.getFragment('main')),
-    );
-    await act(() => editorState.save());
-    // The navigating editor's own writes are not edits.
-    expect(clientGraphql.savePassages).not.toHaveBeenCalled();
-
-    act(() =>
-      editorState.setNavigating(
-        true,
-        true,
-        editorState.getFragment('endnotes'),
-      ),
-    );
-    editP0();
-    act(() =>
-      editorState.setNavigating(
-        false,
-        false,
-        editorState.getFragment('endnotes'),
-      ),
-    );
-    await act(() => editorState.save());
-    expect(sentUuids(0)).toEqual(['p0']);
-  });
-
-  it('sees a deletion in each editor that navigated at once', async () => {
-    await mount();
-    observeSavedPassage();
-    act(() => editorState.startObserving('endnotes'));
-    const main = editorState.getFragment('main');
-    const endnotes = editorState.getFragment('endnotes');
-
-    act(() => editorState.setNavigating(true, true, main));
-    act(() => editorState.setNavigating(true, true, endnotes));
-    act(() => editorState.setNavigating(false, false, main));
-    act(() => editorState.setNavigating(false, false, endnotes));
-    act(() => main.delete(0, 1));
-
-    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
-  });
-
   it('settles nothing once the session is gone', async () => {
     const view = await mount();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      addPassage('p1');
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
     await act(() => editorState.save());
@@ -609,14 +490,8 @@ describe('saving the paginated editors', () => {
   // empty whether or not the read worked.
   it('reloads a work its save emptied', async () => {
     await mount();
-    const unconfirmed: UnconfirmedSave = {
-      sent: [],
-      inserted: [],
-      deleted: ['s1'],
-      newerChanges: () => 0,
-      restore: jest.fn(async () => undefined),
-    };
-    registerStack({ save: async () => ({ outcome: 'unknown', unconfirmed }) });
+    edit();
+    stack.save.mockResolvedValue(lostSave({ sent: [], deleted: ['s1'] }));
     await act(() => editorState.save());
     expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
 
@@ -627,9 +502,9 @@ describe('saving the paginated editors', () => {
 
   it('asks before a reload discards a passage added during the save', async () => {
     await mount();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      addPassage('p1');
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit();
+      return lostInsert();
     });
     serverHolds('p0');
 
@@ -643,148 +518,36 @@ describe('saving the paginated editors', () => {
 
     await act(async () => press(action));
     await waitFor(() => expect(mounts).toBe(2));
-    expect(clientGraphql.savePassages).toHaveBeenCalledTimes(1);
+    expect(stack.save).toHaveBeenCalledTimes(1);
   });
 
-  it('asks before a reload discards an edit to a passage it sent', async () => {
+  it('asks before a reload discards edits to a passage it sent', async () => {
     await mount();
-    const editP0 = observeSavedPassage();
-    editP0();
-    clientGraphql.savePassages.mockImplementation(async () => {
-      editP0();
-      return lostAnswer;
+    stack.save.mockImplementation(async () => {
+      edit(2);
+      return lostSave();
     });
     serverHolds('p0');
 
     await act(() => editorState.save());
 
-    expect(sentUuids(0)).toEqual(['p0']);
     expect(mounts).toBe(1);
     const [title, { description }] = lastToast();
     expect(title).toBe('Your last save may have gone through.');
-    expect(description).toContain('discard 1 unsaved change.');
+    expect(description).toContain('discard 2 unsaved changes.');
   });
 
-  it('asks before a reload discards the stack edits', async () => {
+  // Only content was sent, so sending it again writes the same thing.
+  it('leaves a save that only changed content for the next save', async () => {
     await mount();
-    registerStack({ isDirty: () => true, unsavedChanges: () => 2 });
-    clientGraphql.savePassages.mockResolvedValue(lostAnswer);
-    serverHolds('p0');
+    edit();
+    stack.save.mockResolvedValue(lostSave({ replayable: true }));
 
     await act(() => editorState.save());
 
     expect(mounts).toBe(1);
-    expect(lastToast()[1].description).toContain('discard 2 unsaved changes.');
-  });
-
-  it('asks before a reload discards the paginated edits', async () => {
-    await mount();
-    const unconfirmed: UnconfirmedSave = {
-      sent: ['s1'],
-      inserted: ['s1'],
-      deleted: [],
-      newerChanges: () => 0,
-      restore: jest.fn(async () => undefined),
-    };
-    registerStack({ save: async () => ({ outcome: 'unknown', unconfirmed }) });
-    serverHolds('s1');
-
-    await act(() => editorState.save());
-
-    // The paginated half waits, so the edit there is not sent.
-    expect(clientGraphql.savePassages).not.toHaveBeenCalled();
-    expect(mounts).toBe(1);
-    expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
-  });
-
-  describe('with a stack save that only changed content', () => {
-    const replayable = (): UnconfirmedSave => ({
-      sent: ['s1'],
-      inserted: [],
-      deleted: [],
-      newerChanges: () => 0,
-      restore: async () => undefined,
-      replayable: true,
-    });
-    const registerReplayable = () =>
-      registerStack({
-        save: async () => ({ outcome: 'unknown', unconfirmed: replayable() }),
-        isDirty: () => true,
-        unsavedChanges: () => 1,
-      });
-
-    it('leaves it for the next save to send again', async () => {
-      await mount();
-      act(() => editorState.setEditor('main', undefined));
-      registerReplayable();
-
-      await act(() => editorState.save());
-
-      expect(mounts).toBe(1);
-      expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
-      expect(toasted()).toEqual(['Your last save could not be confirmed.']);
-      expect(editorState.dirtyStore.getSnapshot()).toBe(true);
-    });
-
-    it('shows that the paginated half failed', async () => {
-      await mount();
-      registerReplayable();
-      clientGraphql.savePassages.mockResolvedValue({
-        success: false,
-        savedCount: 0,
-        passages: [],
-        renumberedPassages: [],
-        error: 'nope',
-      });
-
-      await act(() => editorState.save());
-
-      expect(toasted()).toEqual(['Error saving content.']);
-      expect(editorState.dirtyStore.getSnapshot()).toBe(true);
-    });
-
-    // Its edits may not have been applied, so a reload would discard them.
-    it('asks before a reload for the paginated half discards it', async () => {
-      await mount();
-      registerReplayable();
-      clientGraphql.savePassages.mockResolvedValue(lostAnswer);
-      serverHolds('p0');
-
-      await act(() => editorState.save());
-
-      expect(dataAccess.getPassageSorts).toHaveBeenCalledWith(
-        expect.objectContaining({ uuids: ['p0'] }),
-      );
-      expect(mounts).toBe(1);
-      expect(lastToast()[1].description).toContain('discard 1 unsaved change.');
-    });
-  });
-
-  it('keeps the edits of a save the server refused', async () => {
-    await mount();
-    clientGraphql.savePassages.mockRejectedValue(
-      clientError(400, [{ message: 'invalid input' }]),
-    );
-
-    await act(() => editorState.save());
-
-    expect(mounts).toBe(1);
-    expect(toasted()).toEqual(['Error saving content.']);
     expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
-    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
-  });
-
-  it('keeps the edits of a save that was never sent', async () => {
-    await mount();
-    clientGraphql.savePassages.mockRejectedValue(
-      new clientGraphql.RequestNotSentError(new Error('session expired')),
-    );
-
-    await act(() => editorState.save());
-
-    expect(mounts).toBe(1);
-    expect(toasted()).toEqual(['Error saving content.']);
-    expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
+    expect(toasted()).toEqual(['Your last save could not be confirmed.']);
     expect(editorState.dirtyStore.getSnapshot()).toBe(true);
   });
 });
