@@ -17,6 +17,13 @@ A minimal Next.js app exposing the 84000 library as a Model Context Protocol (MC
 
 - **Single route**: `/v1` (`GET`/`POST`/`DELETE`), built with `createMcpHandler` + `createReadTools` from `@eightyfourthousand/lib-agent`, backed by an anonymous Supabase client. Exposes read-only tools over translations, glossary, bibliographies, imprints, and tables of contents.
 
+### web-reader — Local Reader
+
+A local stand-in for the public reader (`public-reading-room`), built against the working tree so reader changes can be tested before the libs are released. Anonymous and read-only; unpublished works 404. Not deployed.
+
+- **Routes**: `/translation` (index) and `/translation/[slug]` with `@left`, `@main`, `@right` slots, mirroring the public reader's URLs
+- **Port**: 3002 (`npx nx dev web-reader`)
+
 ### web-editor — Translation Editor
 
 Standalone TipTap-based rich text editor for working on translations. Builds on `lib-editing`.
@@ -51,7 +58,7 @@ CLI scripts for one-time data migrations (endnote processing, glossary instance 
 ## Dependency Flow
 
 ```
-Apps (web-main, web-editor, api-mcp)
+Apps (web-main, web-reader, web-editor, api-mcp)
   ├── lib-user (auth UI, session)
   ├── lib-editing (editor, reader components)
   ├── lib-search (search UI and server actions)

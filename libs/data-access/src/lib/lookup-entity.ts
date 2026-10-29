@@ -9,6 +9,7 @@ import { panelAndTabForContentType } from './panel-url';
 import { getGlossaryInstance } from './glossary';
 import { getFolioLocation } from './folio';
 import { DataClient } from './types';
+import type { ContentSource } from './content-source';
 
 const ALLOWED_TYPES = [
   'bibliography',
@@ -32,12 +33,15 @@ export const lookupEntity = async ({
   prefix = '',
   xmlId,
   searchParams,
+  source,
 }: {
   type: string;
   entity: string;
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
+  /** Copy that versioned entities (bibliography, glossary) are looked up in. */
+  source?: ContentSource;
 }): Promise<LookupEntityReturnType> => {
   if (!ALLOWED_TYPES.includes(type)) {
     return {};
@@ -50,6 +54,7 @@ export const lookupEntity = async ({
     prefix,
     xmlId,
     searchParams,
+    source,
   });
 };
 
@@ -60,6 +65,7 @@ export const lookupEntityWithClient = async ({
   prefix = '',
   xmlId,
   searchParams,
+  source,
 }: {
   client: DataClient;
   type: string;
@@ -67,6 +73,8 @@ export const lookupEntityWithClient = async ({
   prefix?: string;
   xmlId?: string;
   searchParams?: URLSearchParams;
+  /** Copy that versioned entities (bibliography, glossary) are looked up in. */
+  source?: ContentSource;
 }): Promise<LookupEntityReturnType> => {
   let path: string | undefined;
   let workUuid: string | undefined;
@@ -77,7 +85,11 @@ export const lookupEntityWithClient = async ({
   switch (type) {
     case 'bibliography':
       {
-        const item = await getBibliographyEntry({ client, uuid: entity });
+        const item = await getBibliographyEntry({
+          client,
+          uuid: entity,
+          source,
+        });
         if (!item?.workUuid || !item.uuid) {
           return {};
         }
@@ -109,7 +121,11 @@ export const lookupEntityWithClient = async ({
       break;
     case 'glossary':
       {
-        const item = await getGlossaryInstance({ client, uuid: entity });
+        const item = await getGlossaryInstance({
+          client,
+          uuid: entity,
+          source,
+        });
         if (!item?.workUuid || !item.uuid) {
           return {};
         }

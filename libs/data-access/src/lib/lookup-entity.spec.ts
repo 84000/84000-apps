@@ -1,6 +1,7 @@
 import { lookupEntity } from './lookup-entity';
 import { getGlossaryInstance } from './glossary';
 import { getFolioLocation } from './folio';
+import { getBibliographyEntry } from './bibliography';
 
 jest.mock('./client-ssr', () => ({
   createServerClient: jest.fn().mockResolvedValue({}),
@@ -30,6 +31,7 @@ jest.mock('./glossary', () => ({
 
 const mockedGetGlossaryInstance = jest.mocked(getGlossaryInstance);
 const mockedGetFolioLocation = jest.mocked(getFolioLocation);
+const mockedGetBibliographyEntry = jest.mocked(getBibliographyEntry);
 
 describe('lookupEntity', () => {
   beforeEach(() => {
@@ -80,6 +82,26 @@ describe('lookupEntity', () => {
     expect(mockedGetFolioLocation).toHaveBeenCalledWith({
       client: {},
       uuid: 'folio-uuid',
+    });
+  });
+
+  it('looks versioned entities up in the requested content source', async () => {
+    mockedGetBibliographyEntry.mockResolvedValue({
+      uuid: 'bibl-uuid',
+      workUuid: 'work-uuid',
+    } as Awaited<ReturnType<typeof getBibliographyEntry>>);
+
+    const result = await lookupEntity({
+      type: 'bibliography',
+      entity: 'bibl-uuid',
+      source: 'draft',
+    });
+
+    expect(result.path).toBe('/work-uuid?right=open%3Abibliography%3Abibl-uuid');
+    expect(mockedGetBibliographyEntry).toHaveBeenCalledWith({
+      client: {},
+      uuid: 'bibl-uuid',
+      source: 'draft',
     });
   });
 });
