@@ -102,9 +102,12 @@ const Probe = () => {
   );
 };
 
-const renderProvider = (editable = true) =>
+const renderProvider = (
+  editable = true,
+  props: { commentsPanel?: boolean } = {},
+) =>
   render(
-    <NavigationProvider uuid="w1" editable={editable}>
+    <NavigationProvider uuid="w1" editable={editable} {...props}>
       <Probe />
       <span {...anchorAttrs('t1')}>commented text</span>
     </NavigationProvider>,
@@ -138,6 +141,16 @@ describe('NavigationProvider comment anchors', () => {
 
     expect(screen.getByTestId('focused').textContent).toBe('t1');
     expect(screen.getByTestId('left').textContent).not.toContain('comments');
+  });
+
+  it('opens the panel for a read-only studio', async () => {
+    // A read-only editor still reads and answers comments.
+    renderProvider(false, { commentsPanel: true });
+
+    await userEvent.click(screen.getByText('commented text'));
+
+    expect(screen.getByTestId('focused').textContent).toBe('t1');
+    expect(screen.getByTestId('left').textContent).toBe('open:comments');
   });
 
   it('drops the focused thread when the panel is closed', async () => {
