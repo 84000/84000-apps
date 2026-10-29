@@ -104,6 +104,7 @@ export async function getTranslationBlocks({
   client,
   uuid,
   type,
+  uuids,
   cursor,
   maxPassages = 100,
   direction,
@@ -111,6 +112,8 @@ export async function getTranslationBlocks({
   client: GraphQLClient;
   uuid: string;
   type?: BodyItemType | string;
+  /** Only these passages, in the work's order. At most a page. */
+  uuids?: string[];
   cursor?: string;
   maxPassages?: number;
   direction?: PaginationDirection;
@@ -123,7 +126,13 @@ export async function getTranslationBlocks({
         cursor,
         limit: maxPassages,
         direction: mapDirection(direction),
-        filter: type ? { type } : undefined,
+        filter:
+          type || uuids?.length
+            ? {
+                ...(type ? { type } : {}),
+                ...(uuids?.length ? { uuids } : {}),
+              }
+            : undefined,
       },
     );
 

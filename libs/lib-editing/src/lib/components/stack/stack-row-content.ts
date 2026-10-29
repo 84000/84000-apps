@@ -8,7 +8,7 @@ import {
   COMPARE_LEAD_DEFAULT,
   compareLeadingSpaceClass,
 } from '../editor/extensions/Passage/passage-chrome';
-import { renderTranslationHTML } from '../reader/translation-html';
+import { renderStaticPassageHTML } from './static-passage-html';
 import type { PassageStackControllerOptions } from './types';
 
 /**
@@ -119,8 +119,7 @@ export class StackRowContent {
     const doc = this.work.store.peek(uuid);
     if (!doc) return null;
 
-    const html =
-      renderTranslationHTML({ content: doc.toJSON() }) ?? `<p>${doc.text}</p>`;
+    const html = renderStaticPassageHTML(doc.toJSON());
     this.staticHTML.set(uuid, html);
     return html;
   };

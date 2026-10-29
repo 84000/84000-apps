@@ -11,6 +11,9 @@ import { endNoteLinkTransaction } from '../editor/extensions/EndNoteLink/EndNote
 import type { PassageStackController } from './PassageStackController';
 import type { StackWork } from './StackWorkProvider';
 
+/** The parts of a stack work the endnote edits use. */
+type StackViews = Pick<StackWork, 'work' | 'controllerFor'>;
+
 const ENDNOTES_TAB = 'endnotes';
 
 type Notes = { endNote?: string }[];
@@ -45,7 +48,7 @@ const variants = (a: Entry | undefined, b: Entry | undefined) =>
   !!a && !!b && a.label === b.label && hasToh(a) && hasToh(b);
 
 /** The index of the first variant in an endnote's slot. */
-const slotStart = ({ work }: StackWork, uuid: string) => {
+const slotStart = ({ work }: StackViews, uuid: string) => {
   const entries = work.spine.entries();
   let index = work.spine.indexOf(uuid);
   while (variants(entries[index - 1], entries[index])) index--;
@@ -53,7 +56,7 @@ const slotStart = ({ work }: StackWork, uuid: string) => {
 };
 
 /** The index of the last variant in an endnote's slot. */
-const slotEnd = ({ work }: StackWork, uuid: string) => {
+const slotEnd = ({ work }: StackViews, uuid: string) => {
   const entries = work.spine.entries();
   let index = work.spine.indexOf(uuid);
   while (variants(entries[index], entries[index + 1])) index++;
@@ -78,7 +81,7 @@ type Found = string | undefined | null;
 
 /** The last link in passages the server served, preferring held copies. */
 const lastLinkIn = (
-  { work }: StackWork,
+  { work }: StackViews,
   passages: { uuid: string; content: JSONContent[] }[],
 ): Found => {
   const deleted = new Set(work.spine.removedSinceSave());
@@ -101,7 +104,7 @@ const lastLinkIn = (
 
 /** The last link in a run's loaded entries, hydrating any it doesn't hold. */
 const lastLinkInLoaded = async (
-  { work }: StackWork,
+  { work }: StackViews,
   entries: Entry[],
 ): Promise<Found> => {
   for (let end = entries.length; end > 0; end -= HYDRATE_CHUNK) {
@@ -128,7 +131,7 @@ const lastLinkInLoaded = async (
 
 /** The last link in the passages before a run's first saved one. */
 const lastLinkInHead = async (
-  stack: StackWork,
+  stack: StackViews,
   view: PassageStackController,
   from: string,
 ): Promise<Found> => {
@@ -145,7 +148,7 @@ const lastLinkInHead = async (
 
 /** The last link in the passages after a run's last saved one. */
 const lastLinkInTail = async (
-  stack: StackWork,
+  stack: StackViews,
   view: PassageStackController,
   from: string,
 ): Promise<Found> => {
@@ -176,7 +179,7 @@ const isSaved = (entry: Entry) => entry.sort !== undefined;
  * number another note already has.
  */
 const placementFor = async (
-  stack: StackWork,
+  stack: StackViews,
   state: EditorState,
   passageUuid: string,
 ): Promise<Placement> => {
@@ -255,7 +258,7 @@ export const createStackEndnote = async ({
   stack,
   editor,
 }: {
-  stack: StackWork;
+  stack: StackViews;
   editor: Editor;
 }): Promise<{ uuid: string; label: string } | { error: string }> => {
   const { work } = stack;
@@ -321,7 +324,7 @@ export const deleteStackEndnote = async ({
   stack,
   endNote,
 }: {
-  stack: StackWork;
+  stack: StackViews;
   endNote: string;
 }): Promise<boolean> => {
   const endnotes = stack.controllerFor(ENDNOTES_TAB);

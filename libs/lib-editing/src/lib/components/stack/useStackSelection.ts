@@ -42,9 +42,16 @@ const passageUuidAt = (x: number, y: number): string | null =>
  * Which also means the drag is tracked by pointer position rather than by
  * `selectionchange`: the browser never reports a selection leaving the row it
  * started in, so there is nothing to listen for.
+ *
+ * Off when `enabled` is false: a read-only stack has no editors, so the
+ * browser's own selection crosses rows freely.
  */
-export const useStackSelection = (controller: PassageStackController) => {
+export const useStackSelection = (
+  controller: PassageStackController,
+  enabled = true,
+) => {
   useEffect(() => {
+    if (!enabled) return;
     let anchorUuid: string | null = null;
     let origin: { x: number; y: number } | null = null;
 
@@ -222,5 +229,5 @@ export const useStackSelection = (controller: PassageStackController) => {
       document.removeEventListener('copy', onCopy, true);
       document.removeEventListener('paste', onPaste, true);
     };
-  }, [controller]);
+  }, [controller, enabled]);
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { H3 } from '@eightyfourthousand/design-system';
+import { Button, H3 } from '@eightyfourthousand/design-system';
 import type { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
 import {
   createGraphQLClient,
@@ -24,7 +24,13 @@ import {
  * shared work, the per-tab views and the cross-tab undo can be exercised
  * against real data.
  */
-const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
+const Body = ({
+  tohList,
+  onToggleReadOnly,
+}: {
+  tohList: TohokuCatalogEntry[];
+  onToggleReadOnly: () => void;
+}) => {
   useStackTohVisibility({ tohList });
   const stack = useStackWork();
 
@@ -34,44 +40,63 @@ const Body = ({ tohList }: { tohList: TohokuCatalogEntry[] }) => {
   }, [stack]);
 
   return (
-    <div className="flex h-[calc(100dvh-5rem)] w-full gap-4">
-      <div
-        className="h-full flex-1 overflow-y-auto border-r px-12"
-        data-testid="tab-front"
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mx-12 mt-2"
+        onClick={onToggleReadOnly}
+        data-testid="toggle-read-only"
       >
-        <div className="mx-auto mt-8 w-full max-w-readable">
-          <StackTab tab="front" />
+        {stack?.readOnly ? 'Read-only: on' : 'Read-only: off'}
+      </Button>
+      <div className="flex h-[calc(100dvh-5rem)] w-full gap-4">
+        <div
+          className="h-full flex-1 overflow-y-auto border-r px-12"
+          data-testid="tab-front"
+        >
+          <div className="mx-auto mt-8 w-full max-w-readable">
+            <StackTab tab="front" />
+          </div>
+        </div>
+        <div
+          className="h-full flex-1 overflow-y-auto border-r px-12"
+          data-testid="tab-translation"
+        >
+          <div className="mx-auto mt-8 w-full max-w-readable">
+            <StackTab tab="translation" />
+          </div>
+        </div>
+        <div
+          className="h-full w-1/4 overflow-y-auto border-r px-12"
+          data-testid="tab-abbreviations"
+        >
+          <div className="mx-auto mt-8 w-full max-w-readable">
+            <StackTab tab="abbreviations" />
+          </div>
+        </div>
+        <div
+          className="h-full w-1/4 overflow-y-auto px-12"
+          data-testid="tab-endnotes"
+        >
+          <div className="mx-auto mt-8 w-full max-w-readable">
+            <StackTab tab="endnotes" />
+          </div>
         </div>
       </div>
-      <div
-        className="h-full flex-1 overflow-y-auto border-r px-12"
-        data-testid="tab-translation"
-      >
-        <div className="mx-auto mt-8 w-full max-w-readable">
-          <StackTab tab="translation" />
-        </div>
-      </div>
-      <div
-        className="h-full w-1/4 overflow-y-auto border-r px-12"
-        data-testid="tab-abbreviations"
-      >
-        <div className="mx-auto mt-8 w-full max-w-readable">
-          <StackTab tab="abbreviations" />
-        </div>
-      </div>
-      <div
-        className="h-full w-1/4 overflow-y-auto px-12"
-        data-testid="tab-endnotes"
-      >
-        <div className="mx-auto mt-8 w-full max-w-readable">
-          <StackTab tab="endnotes" />
-        </div>
-      </div>
-    </div>
+    </>
   );
 };
 
-export const StackTabsPage = ({ toh }: { toh: string }) => {
+export const StackTabsPage = ({
+  toh,
+  readOnly: initialReadOnly = false,
+}: {
+  toh: string;
+  /** `?readonly=1`: start as the reader. The button switches it live. */
+  readOnly?: boolean;
+}) => {
+  const [readOnly, setReadOnly] = useState(initialReadOnly);
   const [work, setWork] = useState<{
     uuid: string;
     toh: TohokuCatalogEntry[];
@@ -106,11 +131,12 @@ export const StackTabsPage = ({ toh }: { toh: string }) => {
     <NavigationProvider
       uuid={work.uuid}
       initialToh={toh as TohokuCatalogEntry}
-      editable
+      editable={!readOnly}
     >
-      <StackWorkProvider workUuid={work.uuid}>
+      <StackWorkProvider workUuid={work.uuid} readOnly={readOnly}>
         <Body
           tohList={work.toh.length ? work.toh : [toh as TohokuCatalogEntry]}
+          onToggleReadOnly={() => setReadOnly((value) => !value)}
         />
       </StackWorkProvider>
     </NavigationProvider>

@@ -728,3 +728,86 @@ describe('PassageStackController bibliography outline', () => {
     ).not.toContain('slashCommand');
   });
 });
+
+describe('PassageStackController read-only', () => {
+  const readOnlyOver = async (count = 3) => {
+    const built = await hydrated(count);
+    built.controller.setReadOnly(true);
+    return built;
+  };
+
+  it('mounts no editor and focuses nothing', async () => {
+    const { controller } = await readOnlyOver();
+
+    expect(controller.focusPassage('p1')).toBe(false);
+    expect(controller.isLive('p1')).toBe(false);
+    expect(controller.getFocusedUuid()).toBeNull();
+    await expect(controller.requestEditorFor('p1')).resolves.toBeNull();
+  });
+
+  it('changes nothing in the work', async () => {
+    const { work, controller } = await readOnlyOver();
+
+    expect(controller.restructures()).toBe(false);
+    expect(controller.splitAtSelection('p1', 2)).toBe(false);
+    expect(controller.mergeWithPrevious('p1')).toBe(false);
+    await expect(controller.removePassage('p1')).resolves.toBe(false);
+    expect(controller.setLabel('p1', '9')).toBe(false);
+    expect(controller.getOrder()).toEqual(['p0', 'p1', 'p2']);
+    expect(controller.getMeta('p1')?.label).toBe('2');
+    expect(hasUnsavedStackChanges(work)).toBe(false);
+  });
+
+  it('takes no passage selection, so nothing can be cut or pasted', async () => {
+    const { controller } = await readOnlyOver();
+
+    controller.setPassageSelection('p0', 'p2');
+    expect(controller.hasPassageSelection()).toBe(false);
+    await expect(controller.deletePassageSelection()).resolves.toBe(false);
+  });
+
+  it('does not undo edits made before it turned read-only', async () => {
+    const { work, controller } = await hydrated(3);
+    expect(controller.setLabel('p1', '9')).not.toBe(false);
+    controller.setReadOnly(true);
+
+    expect(controller.undo()).toBe(false);
+    expect(work.spine.meta('p1')?.label).toBe('9');
+  });
+
+  it('lets go of the live set and the selection when it turns read-only', async () => {
+    const { controller } = await hydrated(3);
+    controller.focusPassage('p1');
+    controller.setPassageSelection('p0', 'p2');
+    expect(controller.isLive('p1')).toBe(true);
+    const listener = jest.fn();
+    controller.subscribe(listener);
+
+    controller.setReadOnly(true);
+
+    expect(listener).toHaveBeenCalled();
+    expect(['p0', 'p1', 'p2'].some(controller.isLive)).toBe(false);
+    expect(controller.getFocusedUuid()).toBeNull();
+    expect(controller.hasPassageSelection()).toBe(false);
+  });
+
+  it('edits again once read-only is turned off', async () => {
+    const { controller } = await readOnlyOver();
+
+    controller.setReadOnly(false);
+
+    expect(controller.restructures()).toBe(true);
+    expect(controller.focusPassage('p1')).toBe(true);
+    expect(controller.isLive('p1')).toBe(true);
+  });
+
+  it('does not notify for a mode it is already in', async () => {
+    const { controller } = await readOnlyOver();
+    const listener = jest.fn();
+    controller.subscribe(listener);
+
+    controller.setReadOnly(true);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+});

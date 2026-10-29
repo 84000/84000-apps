@@ -88,8 +88,7 @@ as production's `!editable`, because a bookmark is a reader's marker and the
 studio has no way to make one. Bookmarks are local storage, so `PassageStack`
 listens for `storage` and has the controller re-read.
 
-`readOnly` is the seam the reader migration widens. Today it governs chrome and
-nothing else; the sandbox reaches it with `?readonly=1`.
+`readOnly` makes the stack a reader's. See [Read-only mode](#read-only-mode).
 
 `StackPassageMenu` is the passage label menu. Production drives it from a
 ProseMirror click plugin matching `[data-passage-label]`; the trigger is an
@@ -107,11 +106,84 @@ Not carried over, and why:
 
 |                              |                                                                                                                                                                                                                                                                                                    |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ReaderOptions` in the menu  | The reader half: the bookmark toggle and Suggest Revision. Needs `useBookmark` and a per-passage excerpt. The indicator reads the bookmark store; nothing here writes to it yet.                                                                                                                   |
 | The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                                          |
 | The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                                           |
 | `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and a virtualized row is absolutely positioned at a measured offset, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
 | Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet.                                                                                  |
+
+### Read-only mode
+
+A read-only stack is the reader's: no row ever mounts an editor and nothing
+changes the work. Every row stays static HTML, so there is no
+`contenteditable`, bubble menu, slash command, mention overlay or undo handler
+anywhere on the page. Links still work: a glossary term or mention opens its
+panel, as in the paginated reader.
+
+A host sets it on `StackWorkProvider`:
+
+```tsx
+<StackWorkProvider workUuid={work.uuid} readOnly={readOnly}>
+```
+
+and every view the provider builds follows it. `useStackWork()` reports it as
+`readOnly`. A view built directly takes `readOnly` in its options.
+
+What changes with it:
+
+- **Rows.** `isLive` is false for every row, `focusPassage` refuses and
+  `requestEditorFor` resolves null, so a click or a hover card's edit action
+  mounts nothing.
+- **The work.** Split, merge, delete, relabel, the passage selection's cut and
+  paste, undo and redo all refuse, and so does every bibliography outline edit.
+- **Selection.** The stack's passage selection is off. With no editors the
+  browser's own selection crosses rows, as it does in the paginated reader.
+- **The label menu.** `StackReaderMenu` replaces `StackPassageMenu`: bookmark,
+  copy link and suggest revision, as `ReaderOptions` offers in the paginated
+  reader. Bibliography rows have no label menu when read-only.
+
+**It can change while the stack is drawn.** The provider calls
+`PassageStackController.setReadOnly` on every view when the prop changes, so the
+work, its spine and the scroll position are kept. Turning read-only blurs and
+releases every live editor and clears any passage selection, and the rows
+redraw as static HTML. Edits already made live in the work, not the editors, so
+they are kept and the save handler stays registered to write them. Turning it
+off again takes effect on the next click.
+
+The host owns the rest of the reader's surface: `NavigationProvider`'s
+`editable` decides whether hover cards are drawn at all, so it should follow
+the same flag. With it false there are none, as in the paginated reader; the
+cards need no editor, so they would work over static rows if a reader ever
+wanted them, but their actions are edits. The sandbox's `/stack/[toh]/tabs` takes `?readonly=1` and has a
+button that switches it live.
+
+### Static passages outside the stack
+
+`StaticPassage` draws one passage read-only, outside any stack, with the same
+renderer and classes a static row uses, so a passage reads and wraps as it does
+in the stack. It mounts no editor and draws no row chrome: no label, no `id`,
+no `data-stack-passage`, so it cannot be mistaken for a stack row by deep
+links or the stack's delegated handlers.
+
+```tsx
+// Reads the passage itself.
+<StaticPassage uuid={uuid} workUuid={workUuid} />
+// Or from content the caller already holds.
+<StaticPassage uuid={uuid} workUuid={workUuid} json={passage.json} />
+<StaticPassage uuid={uuid} workUuid={workUuid} html={html} />
+```
+
+Underneath it are two functions for a caller that wants the HTML itself, for
+instance to mark search matches in it:
+
+- `renderStaticPassageHTML(json)` renders a passage's content to the HTML a
+  static row draws. It takes the passage node the API serves as `json`, or the
+  passage's blocks. Pure, and free of editor code.
+- `loadStaticPassages({ client, workUuid, uuids })` reads the passages of one
+  work in pages of 100 and returns their HTML by uuid. A list showing many
+  passages should read the ones in view through this, in one call, and pass
+  each `html` in, rather than letting each `StaticPassage` read its own.
+
+`StaticPassageHTML` is the element both draw: the HTML with the row's classes.
 
 ### Keys at a passage boundary
 
