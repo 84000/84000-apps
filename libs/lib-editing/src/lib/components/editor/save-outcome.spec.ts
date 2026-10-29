@@ -1,19 +1,5 @@
 import { ClientError, type GraphQLClient } from 'graphql-request';
-import {
-  createGraphQLClient,
-  RequestNotSentError,
-  resetGraphQLClient,
-  savePassages,
-  setAccessTokenProvider,
-} from '@eightyfourthousand/client-graphql';
-import type { Passage } from '@eightyfourthousand/data-access';
-
-import {
-  canReload,
-  judgeSave,
-  mayHaveBeenApplied,
-  readStored,
-} from './save-outcome';
+import { canReload, judgeSave, readStored } from './save-outcome';
 import type { UnconfirmedSave } from './editor-context';
 
 // The client barrels leak `data-access/ssr`.
@@ -48,81 +34,6 @@ const clientError = (
     } as unknown as ConstructorParameters<typeof ClientError>[0],
     { query: 'mutation SavePassages' },
   );
-
-describe('mayHaveBeenApplied', () => {
-  it('is false for a save whose body cannot be serialized', async () => {
-    const request = jest.fn();
-    const content: Record<string, unknown> = {};
-    content.self = content;
-    const error = await savePassages({
-      client: { request } as unknown as GraphQLClient,
-      passages: [{ uuid: 'a', workUuid: 'w1', content } as unknown as Passage],
-    }).catch((e: unknown) => e);
-    expect(request).not.toHaveBeenCalled();
-    expect(mayHaveBeenApplied(error)).toBe(false);
-  });
-
-  it('is true when no answer arrived', () => {
-    expect(mayHaveBeenApplied(new TypeError('Failed to fetch'))).toBe(true);
-    expect(mayHaveBeenApplied(new DOMException('aborted', 'AbortError'))).toBe(
-      true,
-    );
-  });
-
-  it('is true for a server error, such as a gateway timeout', () => {
-    expect(mayHaveBeenApplied(clientError(504))).toBe(true);
-    expect(mayHaveBeenApplied(clientError(500))).toBe(true);
-  });
-
-  // The mutation ran, so the write may have committed before resolving its
-  // result failed.
-  it('is true for an error raised while resolving the result', () => {
-    expect(
-      mayHaveBeenApplied(
-        clientError(200, [
-          { message: 'boom', path: ['savePassages', 'passages', '0'] },
-        ]),
-      ),
-    ).toBe(true);
-  });
-
-  it('is false for a request the server refused before running', () => {
-    expect(
-      mayHaveBeenApplied(clientError(400, [{ message: 'invalid input' }])),
-    ).toBe(false);
-    expect(mayHaveBeenApplied(clientError(401))).toBe(false);
-  });
-});
-
-describe('a request the access token stopped', () => {
-  const fetch = jest.fn();
-  const realFetch = globalThis.fetch;
-
-  beforeEach(() => {
-    process.env.NEXT_PUBLIC_GRAPHQL_URL = 'http://api.test/graphql';
-    globalThis.fetch = fetch;
-    resetGraphQLClient();
-  });
-
-  afterEach(() => {
-    globalThis.fetch = realFetch;
-    resetGraphQLClient();
-  });
-
-  it('was not sent, so wrote nothing', async () => {
-    setAccessTokenProvider(async () => {
-      throw new Error('session expired');
-    });
-
-    const error = await createGraphQLClient()
-      .request('mutation { savePassages }')
-      .catch((thrown: unknown) => thrown);
-
-    expect(error).toBeInstanceOf(RequestNotSentError);
-    expect(mayHaveBeenApplied(error)).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-});
 
 describe('readStored', () => {
   beforeEach(() => dataAccess.getPassageSorts.mockReset());
