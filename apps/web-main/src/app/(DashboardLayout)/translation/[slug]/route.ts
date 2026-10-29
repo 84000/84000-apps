@@ -13,7 +13,7 @@ export async function GET(
   const { path } = await lookupEntity({
     type: 'translation',
     entity,
-    prefix: '/translations/reader',
+    prefix: '/translations/editor',
     xmlId,
     searchParams: query,
   });
