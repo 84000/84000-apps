@@ -12,7 +12,6 @@ export {
   applyRenumberedLabels,
   buildEndnoteLabelMap,
   syncEndnoteLinkLabels,
-  syncEndnoteLinkLabelsAcrossEditors,
   syncPassageLabels,
 } from './endnote-label-sync';
 

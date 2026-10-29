@@ -2,7 +2,6 @@
 
 import {
   createContext,
-  useCallback,
   useContext,
   ReactNode,
   useRef,
@@ -35,7 +34,6 @@ import {
   LotusPond,
   SHEET_ANIMATION_DURATION,
 } from '@eightyfourthousand/design-system';
-import { useEditorState } from './EditorProvider';
 import { usePaginationLoadTriggers } from '../shared/hooks/usePaginationLoadTriggers';
 import { useLoadMoreBlocks } from './useLoadMoreBlocks';
 
@@ -49,18 +47,6 @@ interface PaginationContextState {
 }
 
 export const PaginationContext = createContext<PaginationContextState>({});
-
-/**
- * Start or end loading more into one editor. Its writes are not edits, while
- * edits in the other editors are still tracked.
- */
-export const useLoadingInto = (fragment?: XmlFragment) => {
-  const { setNavigating } = useEditorState();
-  return useCallback(
-    (navigating: boolean) => setNavigating(navigating, false, fragment),
-    [setNavigating, fragment],
-  );
-};
 
 export const PaginationProvider = ({
   uuid,
@@ -90,8 +76,6 @@ export const PaginationProvider = ({
   const initialEndCursor = Array.isArray(content)
     ? content.at(-1)?.attrs?.uuid
     : content?.attrs?.uuid;
-
-  const { refreshEditorBaseline, setNavigating } = useEditorState();
 
   const [startCursor, setStartCursor] = useState<string | undefined>();
   // When the caller knows the initial window already contains everything
@@ -209,7 +193,6 @@ export const PaginationProvider = ({
 
     (async () => {
       isNavigatingRef.current = true;
-      setNavigating(true, true, fragment);
       try {
         // On mobile, add a delay to allow panel Sheet animation to complete
         // before attempting to scroll to the element
@@ -255,9 +238,6 @@ export const PaginationProvider = ({
           editor?.chain().clearContent().setContent(blocks).run();
           setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
           setEndCursor(hasMoreAfter && nextCursor ? nextCursor : undefined);
-          if (tab) {
-            refreshEditorBaseline(tab);
-          }
 
           // Let the webfonts land before measuring. The Tibetan face swaps in
           // late and reflows the whole body; measuring before it does gives a
@@ -322,7 +302,6 @@ export const PaginationProvider = ({
         console.error('Navigation failed:', error);
       } finally {
         isNavigatingRef.current = false;
-        setNavigating(false, false, fragment);
       }
     })();
   }, [
@@ -338,10 +317,6 @@ export const PaginationProvider = ({
     dataClient,
     updatePanel,
     isMobile,
-    refreshEditorBaseline,
-    setNavigating,
-    tab,
-    fragment,
     highlight,
   ]);
 
@@ -381,12 +356,9 @@ export const PaginationProvider = ({
     };
   }, [editor]);
 
-  const loadingInto = useLoadingInto(fragment);
-
   useLoadMoreBlocks({
     uuid,
     filter,
-    tab,
     editor,
     dataClient,
     startCursor,
@@ -402,8 +374,6 @@ export const PaginationProvider = ({
     handledStartLoadRequestRef,
     handledEndLoadRequestRef,
     isNavigatingRef,
-    refreshEditorBaseline,
-    setNavigating: loadingInto,
   });
 
   return (

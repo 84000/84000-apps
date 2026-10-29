@@ -11,13 +11,9 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigation } from '../../../shared/NavigationContext';
-import { findEndnoteMarkByUuid, findPassageNode } from '../../util';
+import { findEndnoteMarkByUuid } from '../../util';
 import { useEditorState } from '../../EditorProvider';
 import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
-import {
-  deleteEndnotePassageNode,
-  removeAllEndnoteLinksForPassage,
-} from './endnote-utils';
 
 export const EndNoteLinkHoverContent = ({
   uuid,
@@ -43,7 +39,7 @@ export const EndNoteLinkHoverContent = ({
   const [fetchState, setFetchState] = useState<'loading' | 'loaded' | 'error'>(
     'loading',
   );
-  const { getEditor, deleteEndnote } = useEditorState();
+  const { deleteEndnote } = useEditorState();
   const { fetchEndNote } = useNavigation();
 
   // With no endnote to resolve there is nothing to load, so this is derived
@@ -55,22 +51,9 @@ export const EndNoteLinkHoverContent = ({
       return;
     }
 
-    // Try the local endnotes editor first — works for unpersisted passages too
-    const endnotesEditor = getEditor('endnotes');
-    if (endnotesEditor) {
-      const found = findPassageNode(endnotesEditor, endNote);
-      if (found?.node.attrs.label) {
-        // A synchronous read of live TipTap document state, which cannot be
-        // derived during render without reading the editor impurely. The other
-        // branch resolves over the network, so both paths land in state here.
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronous read of external editor state
-        setLabel(found.node.attrs.label);
-        setFetchState('loaded');
-        return;
-      }
-    }
-
-    // Fall back to network fetch
+    // Shows the spinner again when the endnote changes; the label resolves
+    // over the network below.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset before an async fetch
     setFetchState('loading');
     fetchEndNote(endNote).then((passage) => {
       if (passage?.label) {
@@ -80,7 +63,7 @@ export const EndNoteLinkHoverContent = ({
         setFetchState('error');
       }
     });
-  }, [endNote, fetchEndNote, getEditor]);
+  }, [endNote, fetchEndNote]);
 
   const removeLink = useCallback(() => {
     setHoverCardEditing(false);
@@ -111,25 +94,8 @@ export const EndNoteLinkHoverContent = ({
     close();
 
     // The stack removes the endnote and every link to it as one change.
-    if (await deleteEndnote(endNote)) return;
-
-    withEditor((editor) => {
-      const endnotesEditor = getEditor('endnotes');
-      if (endnotesEditor) {
-        deleteEndnotePassageNode(endnotesEditor, endNote);
-      }
-
-      // Outside the stack: remove the referencing links directly.
-      const frontEditor = getEditor('front');
-      const translationEditor = getEditor('translation');
-      if (frontEditor) {
-        removeAllEndnoteLinksForPassage(frontEditor, endNote);
-      }
-      if (translationEditor) {
-        removeAllEndnoteLinksForPassage(translationEditor, endNote);
-      }
-    });
-  }, [endNote, getEditor, deleteEndnote, close, setHoverCardEditing]);
+    await deleteEndnote(endNote);
+  }, [endNote, deleteEndnote, close, setHoverCardEditing]);
 
   return (
     <div className="flex justify-between gap-2 p-2 w-fit max-w-80">

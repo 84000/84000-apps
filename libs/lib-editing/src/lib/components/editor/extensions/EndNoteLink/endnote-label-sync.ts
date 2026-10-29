@@ -122,23 +122,3 @@ export function applyRenumberedLabels(
     syncEndnoteLinkLabels(editor, labelMap);
   }
 }
-
-/** Editor keys that can contain endNoteLink marks. */
-const ENDNOTE_LINK_EDITOR_KEYS = ['front', 'translation'] as const;
-
-/**
- * After deleting/renumbering endnote passages, sync the updated labels into
- * endNoteLink marks across all editors that may contain them (front + translation).
- */
-export function syncEndnoteLinkLabelsAcrossEditors(
-  endnotesEditor: Editor,
-  getEditor: (key: string) => Editor | undefined,
-): void {
-  const labelMap = buildEndnoteLabelMap(endnotesEditor);
-  for (const key of ENDNOTE_LINK_EDITOR_KEYS) {
-    const ed = getEditor(key);
-    if (ed) {
-      syncEndnoteLinkLabels(ed, labelMap);
-    }
-  }
-}
