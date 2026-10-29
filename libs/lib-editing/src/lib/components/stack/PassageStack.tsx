@@ -14,7 +14,7 @@ import { cn } from '@eightyfourthousand/lib-utils';
 
 import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
 import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
-import { PassageStackController } from './PassageStackController';
+import { PassageStackController } from './StackController';
 import { StackPassageEditor } from './StackPassageEditor';
 import { BibliographyRowMenu } from './BibliographyRowMenu';
 import {

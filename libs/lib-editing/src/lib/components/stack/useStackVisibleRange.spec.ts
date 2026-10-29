@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 
 import { useStackVisibleRange } from './useStackVisibleRange';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 
 /** The observers created, so a test can report a box change. */
 const observers: (() => void)[] = [];

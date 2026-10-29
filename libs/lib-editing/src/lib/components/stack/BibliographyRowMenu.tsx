@@ -36,7 +36,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 
 /** A row as a menu names it: its label, and its text where it is held. */

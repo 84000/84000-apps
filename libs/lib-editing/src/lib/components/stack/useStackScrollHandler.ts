@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import { isRendered } from '@eightyfourthousand/lib-utils';
 
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 
 /**
  * Frames of no movement before a settled scroll stops holding its target.

@@ -15,7 +15,7 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import { ReaderOptions } from '../editor/extensions/Passage/ReaderOptions';
 import { useNavigation } from '../shared/NavigationContext';
 import { SuggestRevisionForm } from '../shared/SuggestRevisionForm';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 
 /** Characters of a passage kept with its bookmark. */

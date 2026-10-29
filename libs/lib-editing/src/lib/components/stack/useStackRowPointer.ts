@@ -4,7 +4,7 @@ import { useEffect, type RefObject } from 'react';
 
 import { useNavigation } from '../shared/NavigationContext';
 import { locationForPassageType } from '../shared/types';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import {
   resolveStackLink,

@@ -13,7 +13,7 @@ import {
   panelForTab,
   type PanelName,
 } from '../shared/types';
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 
 /** How long to wait for the target row to render before giving up. */
 const RENDER_TIMEOUT_MS = 2000;

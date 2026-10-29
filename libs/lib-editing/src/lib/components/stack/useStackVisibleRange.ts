@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 
-import type { PassageStackController } from './PassageStackController';
+import type { PassageStackController } from './StackController';
 
 /**
  * Whether a stack's root is laid out, rather than inside a `display: none`
