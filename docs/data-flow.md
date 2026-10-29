@@ -29,6 +29,14 @@ MCP client → api-mcp /v1 (Next.js) → lib-agent + data-access → Supabase
 3. Read-only queries reach Supabase directly and return translations, glossary terms, bibliographies, imprints, and tables of contents
 4. Access is public and anonymous — works are looked up by UUID or Tohoku catalog number
 
+## Local Reader (web-reader)
+
+```
+Browser → web-reader (Next.js) → client-graphql → api-graphql → Supabase
+```
+
+Server components read through `client-graphql` with no cookies forwarded, and resolve Toh and entity links with an anonymous Supabase client, so the app sees what an anonymous public reader sees. It is a local test bed for the public reader, which lives in the `public-reading-room` repo and consumes the published libs.
+
 ## Path 2: Internal Studio (web-main)
 
 ```
