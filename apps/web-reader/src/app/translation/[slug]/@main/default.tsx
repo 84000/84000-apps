@@ -1,4 +1,4 @@
-import { ReaderBodyPage } from '@eightyfourthousand/lib-editing/ssr';
+import { MainPanelPage } from '../../../../main-panel';
 
 /**
  * Fallback for the `@main` slot when Next cannot match it to the current URL.
@@ -10,6 +10,6 @@ import { ReaderBodyPage } from '@eightyfourthousand/lib-editing/ssr';
  * that failure is silent enough to read as a blank page. Rendering what the
  * page renders keeps the slot behaving the same however the route is entered.
  */
-const Default = ReaderBodyPage;
+const Default = MainPanelPage;
 
 export default Default;
