@@ -119,7 +119,13 @@ test.describe('Editing', () => {
   test('ED-EDT-06 Reading the work read-only', async ({ page }) => {
     const edited = await passageByLabel('1.11');
     const next = await passageByLabel('1.12');
-    const settings = page.getByRole('button', { name: 'Editor settings' });
+    // The actions bar is drawn twice, for narrow and wide layouts.
+    const settings = page
+      .getByRole('button', { name: 'Editor settings' })
+      .filter({ visible: true });
+    const badge = page
+      .getByText('Read-only', { exact: true })
+      .filter({ visible: true });
     const readOnly = page.getByRole('menuitemcheckbox', { name: 'Read-only' });
     const live = page.locator('[contenteditable="true"]');
 
@@ -136,7 +142,7 @@ test.describe('Editing', () => {
     await page.keyboard.press('Escape');
     expect((await passageByLabel('1.11')).content).toMatch(/ Readonly$/);
 
-    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await expect(badge).toBeVisible();
     await expect(live).toHaveCount(0);
     const target = await reveal(page, next.uuid);
     await settled(target);
@@ -145,14 +151,14 @@ test.describe('Editing', () => {
 
     // Remembered across a reload.
     await openEditor(page, { main: { tab: 'translation', hash: next.uuid } });
-    await expect(page.getByText('Read-only', { exact: true })).toBeVisible();
+    await expect(badge).toBeVisible();
     await settings.click();
     await expect(readOnly).toHaveAttribute('aria-checked', 'true');
 
     await readOnly.click();
     await expect(readOnly).toHaveAttribute('aria-checked', 'false');
     await page.keyboard.press('Escape');
-    await expect(page.getByText('Read-only', { exact: true })).toBeHidden();
+    await expect(badge).toHaveCount(0);
     await caretAtEnd(page, next.uuid);
     await expect(
       row(page, next.uuid).locator('.ProseMirror[contenteditable="true"]'),
