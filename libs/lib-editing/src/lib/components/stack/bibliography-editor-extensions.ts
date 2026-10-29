@@ -12,6 +12,7 @@ import type { CommandSuggestionItem } from '../editor/extensions/SlashCommand/Su
 import { getSuggestion } from '../editor/extensions/SlashCommand/Suggestions';
 
 import { BoundaryKeymap } from './BoundaryKeymap';
+import { withMentionAuthoring } from './mention-authoring';
 import { StackDocument } from './StackDocument';
 import {
   BibliographyText,
@@ -120,7 +121,7 @@ export const buildBibliographyEditorExtensions = ({
 }): Extensions => [
   ...(kind === 'heading'
     ? buildHeadingExtensions()
-    : buildBibliographySchemaExtensions()),
+    : withMentionAuthoring(buildBibliographySchemaExtensions())),
   ...(outline && kind === 'entry'
     ? [
         SlashCommand.configure({
