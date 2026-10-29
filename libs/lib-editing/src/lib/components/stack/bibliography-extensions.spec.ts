@@ -3,7 +3,7 @@ import { Fragment, Slice } from '@tiptap/pm/model';
 import { Doc, UndoManager } from 'yjs';
 import type { StackRowKind } from '@eightyfourthousand/lib-doc-model';
 
-import { buildBibliographyEditorExtensions } from './bibliography-extensions';
+import { buildBibliographyEditorExtensions } from './bibliography-editor-extensions';
 import type {
   BibliographyOutlineDelegate,
   StackKeyboardDelegate,

@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import { PassageSkeleton } from './PassageSkeleton';
 import { StackRow } from './StackRow';
 import { StaticPassageHTML } from './StaticPassage';
@@ -31,7 +31,7 @@ export const StaticPassageRow = memo(
     tibetan,
     tibetanLead,
   }: {
-    controller: PassageStackController;
+    controller: StackController;
     meta: PassageMeta;
     selected?: boolean;
     /** The Tibetan source, in Compare; undefined outside it. */

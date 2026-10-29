@@ -10,24 +10,27 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
-import { buildBibliographyEditorExtensions } from './bibliography-extensions';
 import * as bibliography from './bibliography-structure';
 import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
-import { buildStackEditorExtensions } from './stack-extensions';
 import { StackHydration } from './stack-hydration';
 import { StackLiveEditors } from './stack-live-editors';
 import { StackPassageSelectionModel } from './stack-passage-selection';
 import { StackRowContent } from './stack-row-content';
+import { trackTextOrigin } from './stack-work';
 import type {
   PassageExtras,
-  PassageStackControllerOptions,
+  StackControllerOptions,
+  StackEditing,
   StackFocusWhere,
   StackScrollHandler,
   StackPassageSeed,
   StackRows,
 } from './types';
 
-export type { PassageStackControllerOptions } from './types';
+export type {
+  PassageStackControllerOptions,
+  StackControllerOptions,
+} from './types';
 
 /**
  * The view half of the editor-per-passage stack.
@@ -45,8 +48,13 @@ export type { PassageStackControllerOptions } from './types';
  * focus-driven and small — the focused passage and its immediate neighbours —
  * so scrolling never mounts or destroys an editor, and a passage being edited
  * keeps its editor even after it scrolls out of sight.
+ *
+ * On its own it is a reader's view: it can mount no editor, because the
+ * editing layer is handed to it (`options.editing`) rather than imported, and
+ * that is what keeps a reader's module graph free of the editor.
+ * `PassageStackController` is this with the editing layer.
  */
-export class PassageStackController {
+export class StackController {
   readonly work: WorkDocument;
 
   private readonly content: StackRowContent;
@@ -65,6 +73,7 @@ export class PassageStackController {
 
   private orderCache: string[] | null = null;
   private readOnly: boolean;
+  private readonly editing: StackEditing | null;
   private readonly windowKey: string;
   private readonly tab?: string;
   private readonly rows: StackRows;
@@ -75,9 +84,11 @@ export class PassageStackController {
   private disposers: (() => void)[] = [];
   private extras?: ReadonlyMap<string, PassageExtras>;
 
-  constructor(options: PassageStackControllerOptions) {
+  constructor(options: StackControllerOptions) {
     this.work = options.work;
-    this.readOnly = options.readOnly ?? false;
+    this.editing = options.editing ?? null;
+    this.readOnly = !this.editing || (options.readOnly ?? false);
+    if (this.editing) trackTextOrigin(this.work, this.editing.textOrigin);
     this.tab = options.tab;
     this.rows = options.rows ?? 'passages';
     this.extras = options.extras;
@@ -232,13 +243,18 @@ export class PassageStackController {
    */
   isReadOnly = () => this.readOnly;
 
+  /** The editing layer this view was given, or null for a reader's view. */
+  getEditing = () => this.editing;
+
   /**
    * Switch between reader and studio while the view is drawn.
    *
    * Turning read-only lets go of every editor, so each row redraws as static
    * HTML. Edits already made stay in the work and can still be saved.
    */
-  setReadOnly = (readOnly: boolean) => {
+  setReadOnly = (requested: boolean) => {
+    // Without the editing layer there is nothing to edit with.
+    const readOnly = requested || !this.editing;
     if (this.readOnly === readOnly) return;
     this.readOnly = readOnly;
     if (readOnly) {
@@ -349,6 +365,11 @@ export class PassageStackController {
   // ------------------------------------------------------------- editors
 
   buildEditorExtensions(uuid: string): Extensions {
+    if (!this.editing) {
+      throw new Error(
+        `cannot mount an editor on ${uuid}: the view is read-only`,
+      );
+    }
     const doc = this.work.store.peek(uuid);
     if (!doc) {
       throw new Error(`cannot mount an editor on unhydrated passage ${uuid}`);
@@ -362,13 +383,13 @@ export class PassageStackController {
     };
     if (this.rows === 'bibliography') {
       const meta = this.work.spine.meta(uuid);
-      return buildBibliographyEditorExtensions({
+      return this.editing.bibliographyExtensions({
         ...binding,
         kind: meta ? rowKindOf(meta.type) : 'entry',
         ...(this.editsOutline() ? { outline: this } : {}),
       });
     }
-    return buildStackEditorExtensions(binding);
+    return this.editing.passageExtensions(binding);
   }
 
   registerEditor(uuid: string, editor: Editor) {

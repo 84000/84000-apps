@@ -8,7 +8,7 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 
 import { endNoteLinkTransaction } from '../editor/extensions/EndNoteLink/EndNoteLinkMark';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import type { StackWork } from './StackWorkProvider';
 
 /** The parts of a stack work the endnote edits use. */
@@ -132,7 +132,7 @@ const lastLinkInLoaded = async (
 /** The last link in the passages before a run's first saved one. */
 const lastLinkInHead = async (
   stack: StackViews,
-  view: PassageStackController,
+  view: StackController,
   from: string,
 ): Promise<Found> => {
   let cursor: string | undefined = from;
@@ -149,7 +149,7 @@ const lastLinkInHead = async (
 /** The last link in the passages after a run's last saved one. */
 const lastLinkInTail = async (
   stack: StackViews,
-  view: PassageStackController,
+  view: StackController,
   from: string,
 ): Promise<Found> => {
   let last: string | undefined;

@@ -3,7 +3,7 @@ import {
   PassageLoader,
 } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import { PassageStackController } from './PassageStackController';
 import { flush, source } from './stack-controller.fixture';
 import { createStackWorkDocument } from './stack-work';
 

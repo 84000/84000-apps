@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import { stackPerf } from './perf';
 
 const ms = (value: number) => `${value.toFixed(1)}ms`;
@@ -12,11 +12,7 @@ const ms = (value: number) => `${value.toFixed(1)}ms`;
  * editor mount cost, mounted-editor count, and undo history lost to
  * unmounting.
  */
-export const PerfHUD = ({
-  controller,
-}: {
-  controller: PassageStackController;
-}) => {
+export const PerfHUD = ({ controller }: { controller: StackController }) => {
   useSyncExternalStore(
     stackPerf.subscribe,
     stackPerf.getVersion,
