@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { AlignmentMatch } from '@eightyfourthousand/lib-search';
 
 import { SearchAlignmentEnglish } from './SearchAlignmentEnglish';
@@ -38,7 +38,7 @@ describe('SearchAlignmentEnglish', () => {
       );
     });
 
-    expect(batcher.get).toHaveBeenCalledWith('p-1', 'the sun rose');
+    expect(batcher.get).toHaveBeenCalledWith('p-1');
     expect(screen.queryByText('plain')).toBeNull();
     expect(screen.getByText('sun').tagName).toBe('MARK');
     expect(screen.getByText(/\[F\.12\.b\]/)).toBeTruthy();
@@ -57,5 +57,42 @@ describe('SearchAlignmentEnglish', () => {
     });
 
     expect(screen.getByText('plain')).toBeTruthy();
+  });
+
+  it('keeps a link in the passage from navigating, but lets the click through', async () => {
+    const onClick = jest.fn();
+    await act(async () => {
+      render(
+        <div onClick={onClick}>
+          <SearchAlignmentEnglish
+            batcher={batcherWith(
+              '<p><a href="/entity/folio/x">[F.1.a]</a> the sun</p>',
+            )}
+            fallback={null}
+            match={match}
+            query="sun"
+          />
+        </div>,
+      );
+    });
+
+    const link = screen.getByText('[F.1.a]');
+    const notPrevented = fireEvent.click(link);
+    expect(notPrevented).toBe(false);
+    expect(onClick).toHaveBeenCalled();
+  });
+
+  it('reads the passage again for a new result set, keeping the old HTML up meanwhile', async () => {
+    const batcher = batcherWith('<p>the sun rose</p>');
+    const props = { batcher, fallback: <span>plain</span>, query: 'sun' };
+    const { rerender } = render(
+      <SearchAlignmentEnglish {...props} match={match} />,
+    );
+    await act(async () => undefined);
+
+    rerender(<SearchAlignmentEnglish {...props} match={{ ...match }} />);
+    expect(screen.queryByText('plain')).toBeNull();
+    await act(async () => undefined);
+    expect(batcher.get).toHaveBeenCalledTimes(2);
   });
 });

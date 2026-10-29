@@ -20,23 +20,24 @@ export const SearchAlignmentEnglish = ({
   query,
   useRegex,
 }: AlignmentEnglishProps & { batcher: StaticPassageBatcher }) => {
-  const key = `${match.uuid}\u0000${match.content}`;
+  // Read again for every new result set, so saved edits show. The previous
+  // HTML of the same passage stays up meanwhile, re-marked for the new query.
   const [loaded, setLoaded] = useState<{
-    key: string;
+    uuid: string;
     html: string | null;
   } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void batcher.get(match.uuid, match.content).then((html) => {
-      if (!cancelled) setLoaded({ key, html });
+    void batcher.get(match.uuid).then((html) => {
+      if (!cancelled) setLoaded({ uuid: match.uuid, html });
     });
     return () => {
       cancelled = true;
     };
-  }, [batcher, key, match.content, match.uuid]);
+  }, [batcher, match]);
 
-  const html = loaded?.key === key ? loaded.html : null;
+  const html = loaded?.uuid === match.uuid ? loaded.html : null;
   const marked = useMemo(
     () =>
       html === null
@@ -52,5 +53,14 @@ export const SearchAlignmentEnglish = ({
   );
 
   if (marked === null) return fallback;
-  return <StaticPassageHTML html={marked} />;
+  return (
+    // Links in the passage would leave search; a click only selects the result.
+    <div
+      onClick={(event) => {
+        if ((event.target as Element).closest('a')) event.preventDefault();
+      }}
+    >
+      <StaticPassageHTML html={marked} />
+    </div>
+  );
 };

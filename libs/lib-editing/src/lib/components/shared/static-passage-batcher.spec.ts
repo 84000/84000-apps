@@ -32,25 +32,20 @@ describe('createStaticPassageBatcher', () => {
     expect(load).toHaveBeenCalledWith(['a', 'b']);
   });
 
-  it('serves a passage again from cache, unless its version changed', async () => {
+  it('reads a passage again on a later request', async () => {
     const load = loader({ a: '<p>a</p>' });
     const batcher = createStaticPassageBatcher({ workUuid: 'w', load });
 
-    await batcher.get('a', 'v1');
-    await batcher.get('a', 'v1');
-    expect(load).toHaveBeenCalledTimes(1);
-
-    await batcher.get('a', 'v2');
+    await batcher.get('a');
+    await batcher.get('a');
     expect(load).toHaveBeenCalledTimes(2);
   });
 
-  it('resolves null for a passage it cannot read, and tries it again later', async () => {
+  it('resolves null for a passage it cannot read', async () => {
     const load = loader({});
     const batcher = createStaticPassageBatcher({ workUuid: 'w', load });
 
     await expect(batcher.get('gone')).resolves.toBeNull();
-    await expect(batcher.get('gone')).resolves.toBeNull();
-    expect(load).toHaveBeenCalledTimes(2);
   });
 
   it('resolves null when the read fails', async () => {
