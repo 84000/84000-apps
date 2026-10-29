@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStack } from './PassageStack';
@@ -122,6 +128,29 @@ describe('PassageStack read-only', () => {
     expect(screen.getByText('Suggest Revision')).toBeTruthy();
     expect(screen.queryByText('Edit Label')).toBeNull();
     expect(screen.queryByText('Delete')).toBeNull();
+  });
+
+  it('reopens on its options after closing on the revision form', async () => {
+    await setup(true);
+    const label = document.querySelector('[data-stack-passage="p1"] .labeled');
+    const open = () =>
+      act(async () => {
+        label?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      });
+
+    await open();
+    await act(async () => {
+      fireEvent.click(await screen.findByText('Suggest Revision'));
+    });
+    expect(screen.queryByText('Copy Link')).toBeNull();
+
+    // Scrolling closes it without going through the menu's own close.
+    await act(async () => {
+      window.dispatchEvent(new Event('scroll'));
+    });
+    await open();
+
+    expect(await screen.findByText('Copy Link')).toBeTruthy();
   });
 
   it('turns live rows static when switched to read-only, and back', async () => {

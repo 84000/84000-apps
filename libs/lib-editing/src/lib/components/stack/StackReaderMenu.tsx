@@ -34,11 +34,14 @@ export const StackReaderMenu = ({
   target: StackPassageMenuTarget | null;
   onClose: () => void;
 }) => {
-  const [showRevisionForm, setShowRevisionForm] = useState(false);
+  // The passage whose revision form is showing, so another label opens on
+  // the menu rather than on a form for a different passage.
+  const [revisionFor, setRevisionFor] = useState<string | null>(null);
   const { toh, panels, imprint } = useNavigation();
 
   const meta = target ? controller.getMeta(target.uuid) : null;
   const uuid = meta?.uuid ?? '';
+  const showRevisionForm = !!uuid && revisionFor === uuid;
   const text = controller.getRowText(uuid);
   const excerpt =
     text.slice(0, EXCERPT_LENGTH) + (text.length > EXCERPT_LENGTH ? '...' : '');
@@ -63,24 +66,29 @@ export const StackReaderMenu = ({
     controller.refreshBookmarks();
   }, [toggle, controller]);
 
+  // Every way of closing goes through here, so a reopened menu starts on its
+  // options rather than on a form left open.
+  const close = useCallback(() => {
+    setRevisionFor(null);
+    onClose();
+  }, [onClose]);
+
   // The captured rect goes stale on scroll, so close rather than drift.
   useEffect(() => {
     if (!target) return;
-    window.addEventListener('scroll', onClose, true);
-    window.addEventListener('resize', onClose);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
     return () => {
-      window.removeEventListener('scroll', onClose, true);
-      window.removeEventListener('resize', onClose);
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
     };
-  }, [target, onClose]);
+  }, [target, close]);
 
   const onOpenChange = useCallback(
     (next: boolean) => {
-      if (next) return;
-      setShowRevisionForm(false);
-      onClose();
+      if (!next) close();
     },
-    [onClose],
+    [close],
   );
 
   const rect = target?.rect;
@@ -112,7 +120,7 @@ export const StackReaderMenu = ({
               toh={toh ?? ''}
               type="passage"
               label={meta.label}
-              onClose={() => onOpenChange(false)}
+              onClose={close}
             />
           ) : (
             <ReaderOptions
@@ -120,7 +128,7 @@ export const StackReaderMenu = ({
               contentType={contentType}
               isBookmarked={isBookmarked}
               toggleBookmark={toggleBookmark}
-              onSuggestRevision={() => setShowRevisionForm(true)}
+              onSuggestRevision={() => setRevisionFor(meta.uuid)}
             />
           ))}
       </DropdownMenuContent>
