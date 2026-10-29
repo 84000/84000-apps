@@ -25,6 +25,7 @@ import type {
   SearchResults,
 } from '../types';
 import { RESULTS_ENTITIES } from '../types';
+import type { RenderAlignmentEnglish } from './SearchResultCard';
 import { SearchResultsList } from './SearchResultsList';
 import { SearchResultTabs } from './SearchResultTab';
 
@@ -60,6 +61,11 @@ export interface SearchActionContext {
 export interface SearchButtonProps {
   onResultSelected: (result: SearchResult) => void;
   renderActions?: (context: SearchActionContext) => ReactNode;
+  /**
+   * Draws a Translation Passages result's English side, for instance as the
+   * reader shows it. Without it the passage's plain text is shown.
+   */
+  renderAlignmentEnglish?: RenderAlignmentEnglish;
   toh?: string;
   workUuid?: string;
 }
@@ -85,6 +91,7 @@ const getOccurrenceResultsTab = (
 
 export const SearchButton = ({
   renderActions,
+  renderAlignmentEnglish,
   workUuid,
   toh,
   onResultSelected,
@@ -501,6 +508,7 @@ export const SearchButton = ({
                             }
                             activePassageUuid={activePassageUuid}
                             query={searchQuery}
+                            renderAlignmentEnglish={renderAlignmentEnglish}
                             results={results[tab]}
                             useRegex={useRegex}
                             onCardClick={onCardClick}

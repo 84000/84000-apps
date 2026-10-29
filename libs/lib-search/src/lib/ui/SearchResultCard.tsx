@@ -9,12 +9,8 @@ import {
   PassageMatch,
   SearchResult,
 } from '../types';
+import { findHighlightRanges, markClassName } from './highlight';
 import { Separator } from '@eightyfourthousand/design-system';
-
-const markClassName = (isActive: boolean) =>
-  isActive
-    ? 'bg-accent/20 text-foreground font-semibold ring-2 ring-accent ring-offset-1 ring-offset-background rounded-sm'
-    : 'bg-highlight text-foreground font-semibold';
 
 const renderPassageHighlight = ({
   activeOccurrenceStart,
@@ -27,66 +23,29 @@ const renderPassageHighlight = ({
   text: string;
   useRegex?: boolean;
 }) => {
-  if (!query.trim()) {
+  const ranges = findHighlightRanges(text, query, useRegex);
+  if (ranges.length === 0) {
     return text;
   }
 
-  if (useRegex) {
-    let regex: RegExp;
-    try {
-      regex = new RegExp(query, 'gi');
-    } catch {
-      return text;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  ranges.forEach(({ start, end }) => {
+    if (start > lastIndex) {
+      nodes.push(text.slice(lastIndex, start));
     }
-
-    const nodes: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match[0].length === 0) {
-        regex.lastIndex++;
-        continue;
-      }
-      if (match.index > lastIndex) {
-        nodes.push(text.slice(lastIndex, match.index));
-      }
-      nodes.push(
-        <mark key={match.index} className={markClassName(match.index === activeOccurrenceStart)}>
-          {match[0]}
-        </mark>,
-      );
-      lastIndex = regex.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-      nodes.push(text.slice(lastIndex));
-    }
-
-    return nodes;
+    nodes.push(
+      <mark key={start} className={markClassName(start === activeOccurrenceStart)}>
+        {text.slice(start, end)}
+      </mark>,
+    );
+    lastIndex = end;
+  });
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
   }
 
-  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
-  let offset = 0;
-
-  return parts.map((part, index) => {
-    const isMatch = part.toLowerCase() === query.toLowerCase();
-
-    if (!isMatch) {
-      offset += part.length;
-      return part;
-    }
-
-    const start = offset;
-    offset += part.length;
-
-    return (
-      <mark key={index} className={markClassName(start === activeOccurrenceStart)}>
-        {part}
-      </mark>
-    );
-  });
+  return nodes;
 };
 
 export const PassageResult = ({
@@ -112,26 +71,85 @@ export const PassageResult = ({
   );
 };
 
+/** What an injected renderer is given to draw an alignment's English side. */
+export interface AlignmentEnglishProps {
+  activeOccurrenceStart?: number;
+  match: AlignmentMatch;
+  query: string;
+  useRegex?: boolean;
+  /** The plain-text rendering, to show while loading or on failure. */
+  fallback: React.ReactNode;
+}
+
+/** Draws an alignment's English side in place of its plain text. */
+export type RenderAlignmentEnglish = (
+  props: AlignmentEnglishProps,
+) => React.ReactNode;
+
+/** Margin around the viewport within which a result counts as in view. */
+const IN_VIEW_MARGIN = '200px 0px';
+
+/** True once the element has come within the margin of the viewport. */
+const useSeen = (enabled: boolean) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  // Without an observer, everything counts as in view.
+  const [seen, setSeen] = React.useState(
+    () => typeof IntersectionObserver === 'undefined',
+  );
+
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!enabled || seen || !element) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setSeen(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: IN_VIEW_MARGIN },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [enabled, seen]);
+
+  return { ref, seen };
+};
+
 export const AlignmentResult = ({
   activeOccurrenceStart,
   match,
   query,
+  renderEnglish,
   useRegex,
 }: {
   activeOccurrenceStart?: number;
   match: AlignmentMatch;
   query: string;
+  renderEnglish?: RenderAlignmentEnglish;
   useRegex?: boolean;
 }) => {
+  // The renderer may load the passage, so it is only called once in view.
+  const { ref, seen } = useSeen(!!renderEnglish);
+  const fallback = renderPassageHighlight({
+    activeOccurrenceStart,
+    query,
+    text: match.content,
+    useRegex,
+  });
+
   return (
     <div className="grid md:grid-cols-2 gap-4">
-      <div>
-        {renderPassageHighlight({
-          activeOccurrenceStart,
-          query,
-          text: match.content,
-          useRegex,
-        })}
+      <div ref={ref}>
+        {renderEnglish && seen
+          ? renderEnglish({
+              activeOccurrenceStart,
+              match,
+              query,
+              useRegex,
+              fallback,
+            })
+          : fallback}
       </div>
       <div className="text-lg">{highlightText(match.source, query)}</div>
     </div>
@@ -176,6 +194,7 @@ export const SearchResultCard = ({
   activeOccurrenceStart,
   match,
   query,
+  renderAlignmentEnglish,
   useRegex,
   onClick,
 }: {
@@ -183,6 +202,7 @@ export const SearchResultCard = ({
   activeOccurrenceStart?: number;
   match: SearchResult;
   query: string;
+  renderAlignmentEnglish?: RenderAlignmentEnglish;
   useRegex?: boolean;
   onClick: () => void;
 }) => {
@@ -208,6 +228,7 @@ export const SearchResultCard = ({
             activeOccurrenceStart={isActive ? activeOccurrenceStart : undefined}
             match={match as AlignmentMatch}
             query={query}
+            renderEnglish={renderAlignmentEnglish}
             useRegex={useRegex}
           />
         );

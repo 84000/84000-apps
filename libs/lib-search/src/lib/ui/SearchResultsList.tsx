@@ -1,10 +1,12 @@
 import { SearchResult } from '../types';
+import type { RenderAlignmentEnglish } from './SearchResultCard';
 import { SearchResultCard } from './SearchResultCard';
 
 export const SearchResultsList = ({
   activeOccurrenceStart,
   activePassageUuid,
   query,
+  renderAlignmentEnglish,
   results,
   useRegex,
   onCardClick,
@@ -12,6 +14,7 @@ export const SearchResultsList = ({
   activeOccurrenceStart?: number;
   activePassageUuid?: string;
   query: string;
+  renderAlignmentEnglish?: RenderAlignmentEnglish;
   results: SearchResult[];
   useRegex?: boolean;
   onCardClick: (result: SearchResult) => void;
@@ -28,6 +31,7 @@ export const SearchResultsList = ({
             isActive={isActive}
             match={result}
             query={query}
+            renderAlignmentEnglish={renderAlignmentEnglish}
             useRegex={useRegex}
             onClick={() => onCardClick(result)}
           />
