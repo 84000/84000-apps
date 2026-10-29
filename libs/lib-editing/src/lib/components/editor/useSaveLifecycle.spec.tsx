@@ -5,10 +5,10 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Editor } from '@tiptap/react';
-import { ClientError, type GraphQLClient } from 'graphql-request';
-import { XmlElement, type XmlFragment } from 'yjs';
+import { ClientError } from 'graphql-request';
+import { XmlElement } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
 
 import { EditorContextProvider, useEditorState } from './EditorProvider';
@@ -21,8 +21,6 @@ import { translationSSRExtensions } from './extensions/translationSSRExtensions'
 import TranslationDocument from './extensions/TranslationDocument';
 import TranslationMetadata from './extensions/TranslationMetadata';
 import { PassageNode } from './extensions/Passage/PassageNode';
-import { useLoadingInto } from './PaginationProvider';
-import { useLoadMoreBlocks } from './useLoadMoreBlocks';
 
 // See PassageStackController.spec.ts — the client barrels leak
 // `data-access/ssr`.
@@ -57,7 +55,6 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
     .findWorkPassages,
   hasPermission: jest.fn(async () => true),
   savePassages: jest.fn(),
-  getTranslationBlocks: jest.fn(),
   getBibliographyEntry: jest.fn(),
   getGlossaryInstance: jest.fn(),
   lookup: jest.fn(async () => null),
@@ -91,7 +88,6 @@ const clientGraphql = jest.requireMock(
 ) as {
   RequestNotSentError: new (cause: unknown) => Error;
   savePassages: jest.Mock;
-  getTranslationBlocks: jest.Mock;
 };
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   getPassageSorts: jest.Mock;
@@ -194,44 +190,6 @@ const observeSavedPassage = () => {
   act(() => editorState.startObserving('main'));
   let revision = 0;
   return () => element.setAttribute('revision', String(++revision));
-};
-
-/** Load more into one editor, as its pagination does on reaching the end. */
-const LoadMore = ({
-  editor,
-  fragment,
-}: {
-  editor: Editor;
-  fragment: XmlFragment;
-}) => {
-  const [endCursor, setEndCursor] = useState<string | undefined>('p0');
-  const [endIsLoading, setEndIsLoading] = useState(false);
-  const [startCursor, setStartCursor] = useState<string | undefined>();
-  const [startIsLoading, setStartIsLoading] = useState(false);
-  const handledStart = useRef(0);
-  const handledEnd = useRef(0);
-  const navigating = useRef(false);
-  useLoadMoreBlocks({
-    uuid: 'w1',
-    editor,
-    dataClient: {} as GraphQLClient,
-    startCursor,
-    setStartCursor,
-    endCursor,
-    setEndCursor,
-    startIsLoading,
-    setStartIsLoading,
-    endIsLoading,
-    setEndIsLoading,
-    startLoadRequest: 0,
-    endLoadRequest: 1,
-    handledStartLoadRequestRef: handledStart,
-    handledEndLoadRequestRef: handledEnd,
-    isNavigatingRef: navigating,
-    refreshEditorBaseline: () => undefined,
-    setNavigating: useLoadingInto(fragment),
-  });
-  return null;
 };
 
 const lostAnswer = {
@@ -563,74 +521,6 @@ describe('saving the paginated editors', () => {
 
     expect(dataAccess.getPassageSorts).not.toHaveBeenCalled();
     expect(toasted()).toEqual([]);
-  });
-
-  it('keeps a navigation quiet while another editor loads more', async () => {
-    const view = await mount();
-    act(() => editorState.startObserving('endnotes'));
-    const endnotes = editorState.getFragment('endnotes');
-    const main = editorState.getEditor('main');
-    if (!main) throw new Error('no editor');
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: [passage('p9', 'more')],
-      hasMoreAfter: false,
-    });
-    act(() => editorState.setNavigating(true, true, endnotes));
-
-    view.rerender(
-      <EditorContextProvider work={work}>
-        <Capture />
-        <LoadMore editor={main} fragment={editorState.getFragment('main')} />
-      </EditorContextProvider>,
-    );
-    await waitFor(() => expect(main.getText()).toContain('more'));
-    // The navigation writes its editor once loading more is done.
-    act(() => {
-      const element = new XmlElement('passage');
-      endnotes.insert(0, [element]);
-      element.setAttribute('uuid', 'e1');
-    });
-    act(() => editorState.setNavigating(false, false, endnotes));
-
-    expect(editorState.dirtyStore.getSnapshot()).toBe(false);
-  });
-
-  it('tracks an edit in another editor while one loads more', async () => {
-    const view = await mount();
-    act(() => editorState.startObserving('endnotes'));
-    const endnotes = editorState.getFragment('endnotes');
-    const main = editorState.getEditor('main');
-    if (!main) throw new Error('no editor');
-    // Enough to load in chunks, which yield to the browser between them.
-    clientGraphql.getTranslationBlocks.mockResolvedValue({
-      blocks: Array.from({ length: 30 }, (_, i) => passage(`m${i}`, `m${i}`)),
-      hasMoreAfter: false,
-    });
-    let yielded: (() => void) | undefined;
-    const frame = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementationOnce((resume) => {
-        yielded = () => resume(0);
-        return 0;
-      });
-
-    view.rerender(
-      <EditorContextProvider work={work}>
-        <Capture />
-        <LoadMore editor={main} fragment={editorState.getFragment('main')} />
-      </EditorContextProvider>,
-    );
-    await waitFor(() => expect(yielded).toBeDefined());
-    act(() => {
-      const element = new XmlElement('passage');
-      endnotes.insert(0, [element]);
-      element.setAttribute('uuid', 'e1');
-    });
-    frame.mockRestore();
-    await act(async () => yielded?.());
-    await waitFor(() => expect(main.getText()).toContain('m29'));
-
-    expect(editorState.dirtyStore.getSnapshot()).toBe(true);
   });
 
   it('tracks an edit while another editor navigates', async () => {

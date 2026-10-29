@@ -7,9 +7,7 @@ import { getTranslationBlocks } from '@eightyfourthousand/client-graphql';
 import type { PanelFilter } from '@eightyfourthousand/data-access';
 import { TranslationEditorContent } from './TranslationEditor';
 import { useBlockEditor } from './hooks';
-import type { TabName } from '../shared';
 import { findScrollParent } from '../shared/hooks/useScrollPositionRestore';
-import type { EditorContextState } from './editor-context';
 
 const CHUNK_SIZE = 25;
 
@@ -44,7 +42,6 @@ const insertContentChunked = async (
 export const useLoadMoreBlocks = ({
   uuid,
   filter,
-  tab,
   editor,
   dataClient,
   startCursor,
@@ -60,12 +57,9 @@ export const useLoadMoreBlocks = ({
   handledStartLoadRequestRef,
   handledEndLoadRequestRef,
   isNavigatingRef,
-  refreshEditorBaseline,
-  setNavigating,
 }: {
   uuid: string;
   filter?: PanelFilter;
-  tab?: TabName;
   editor: ReturnType<typeof useBlockEditor>['editor'];
   dataClient: GraphQLClient;
   startCursor?: string;
@@ -81,8 +75,6 @@ export const useLoadMoreBlocks = ({
   handledStartLoadRequestRef: RefObject<number>;
   handledEndLoadRequestRef: RefObject<number>;
   isNavigatingRef: RefObject<boolean>;
-  refreshEditorBaseline: EditorContextState['refreshEditorBaseline'];
-  setNavigating: EditorContextState['setNavigating'];
 }) => {
   useEffect(() => {
     if (
@@ -113,15 +105,7 @@ export const useLoadMoreBlocks = ({
       const pos = editor?.state.doc?.content.size;
 
       if (pos >= 0 && blocks.length && editor) {
-        setNavigating(true);
-        try {
-          await insertContentChunked(editor, pos, blocks);
-        } finally {
-          setNavigating(false);
-        }
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
+        await insertContentChunked(editor, pos, blocks);
       }
 
       setEndCursor(hasMore && nextCursor ? nextCursor : undefined);
@@ -135,9 +119,6 @@ export const useLoadMoreBlocks = ({
     endCursor,
     dataClient,
     endLoadRequest,
-    refreshEditorBaseline,
-    setNavigating,
-    tab,
     handledEndLoadRequestRef,
     isNavigatingRef,
     setEndCursor,
@@ -183,15 +164,7 @@ export const useLoadMoreBlocks = ({
 
         // For start insertion, insert all at once to maintain scroll position accuracy.
         // Chunking here would cause scroll jank since we adjust scroll after insertion.
-        setNavigating(true);
-        try {
-          editor.commands.insertContentAt(pos, blocks);
-        } finally {
-          setNavigating(false);
-        }
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
+        editor.commands.insertContentAt(pos, blocks);
 
         requestAnimationFrame(() => {
           const newScrollHeight = scrollContainer?.scrollHeight || 0;
@@ -202,15 +175,7 @@ export const useLoadMoreBlocks = ({
         });
       } else if (blocks.length && editor) {
         // Fallback: insert without scroll preservation when view not ready
-        setNavigating(true);
-        try {
-          editor.commands.insertContentAt(pos, blocks);
-        } finally {
-          setNavigating(false);
-        }
-        if (tab) {
-          refreshEditorBaseline(tab);
-        }
+        editor.commands.insertContentAt(pos, blocks);
       }
 
       setStartCursor(hasMoreBefore && prevCursor ? prevCursor : undefined);
@@ -224,9 +189,6 @@ export const useLoadMoreBlocks = ({
     startCursor,
     dataClient,
     startLoadRequest,
-    refreshEditorBaseline,
-    setNavigating,
-    tab,
     handledStartLoadRequestRef,
     isNavigatingRef,
     setStartCursor,
