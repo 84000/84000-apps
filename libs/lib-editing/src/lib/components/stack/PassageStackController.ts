@@ -226,8 +226,27 @@ export class PassageStackController {
 
   undoDepth = () => this.work.log.depth;
 
-  /** Reader rather than studio, which decides how a link is followed. */
+  /**
+   * Reader rather than studio. A read-only view mounts no editor and changes
+   * nothing in the work: rows stay static HTML.
+   */
   isReadOnly = () => this.readOnly;
+
+  /**
+   * Switch between reader and studio while the view is drawn.
+   *
+   * Turning read-only lets go of every editor, so each row redraws as static
+   * HTML. Edits already made stay in the work and can still be saved.
+   */
+  setReadOnly = (readOnly: boolean) => {
+    if (this.readOnly === readOnly) return;
+    this.readOnly = readOnly;
+    if (readOnly) {
+      this.live.release();
+      this.selection.clearPassageSelection();
+    }
+    this.bump();
+  };
 
   /** The tab this view draws, which is also what names its panel. */
   getTab = () => this.tab;
@@ -236,7 +255,7 @@ export class PassageStackController {
   getRows = () => this.rows;
 
   /** Whether rows can be split, merged, deleted and replaced here. */
-  restructures = () => this.rows === 'passages';
+  restructures = () => this.rows === 'passages' && !this.readOnly;
 
   /** A row's own presentation. A passage has none: its blocks carry it. */
   rowStyle = (meta: PassageMeta): StackRowStyle =>
@@ -373,7 +392,7 @@ export class PassageStackController {
   // --------------------------------------------------------------- focus
 
   /** Whether this row should render as an editor rather than static HTML. */
-  isLive = (uuid: string) => this.live.isLive(uuid);
+  isLive = (uuid: string) => !this.readOnly && this.live.isLive(uuid);
 
   getFocusedUuid = () => this.live.getFocusedUuid();
 
@@ -383,7 +402,7 @@ export class PassageStackController {
    * event was taken; the caller then prevents its default.
    */
   bufferTyping(event: KeyboardEvent | InputEvent) {
-    return this.live.bufferTyping(event);
+    return !this.readOnly && this.live.bufferTyping(event);
   }
 
   /** Recenter the live window when an editor gains focus by any means. */
@@ -392,13 +411,19 @@ export class PassageStackController {
   }
 
   /** The editor that currently has focus, if it is mounted. */
-  getFocusedEditor = (): Editor | null => this.live.getFocusedEditor();
+  getFocusedEditor = (): Editor | null =>
+    this.readOnly ? null : this.live.getFocusedEditor();
 
-  /** An editor for this passage, focusing it if that is what it takes. */
+  /**
+   * An editor for this passage, focusing it if that is what it takes. Null
+   * when read-only.
+   */
   requestEditorFor = (uuid: string): Promise<Editor | null> =>
-    this.live.requestEditorFor(uuid);
+    this.readOnly ? Promise.resolve(null) : this.live.requestEditorFor(uuid);
 
+  /** Focus a passage, mounting its editor. Refused when read-only. */
   focusPassage(uuid: string, where: StackFocusWhere = 'start') {
+    if (this.readOnly) return false;
     return this.live.focusPassage(uuid, where);
   }
 
@@ -441,7 +466,8 @@ export class PassageStackController {
   };
 
   /** Rename one passage. */
-  setLabel = (uuid: string, label: string) => this.work.setLabel(uuid, label);
+  setLabel = (uuid: string, label: string) =>
+    !this.readOnly && this.work.setLabel(uuid, label);
 
   /**
    * Delete a whole passage.
@@ -572,8 +598,12 @@ export class PassageStackController {
 
   // ---------------------------------------------------- passage selection
 
-  /** Select whole passages from `anchorUuid` through `focusUuid`. */
+  /**
+   * Select whole passages from `anchorUuid` through `focusUuid`. A reader
+   * selects text natively instead, so this does nothing when read-only.
+   */
   setPassageSelection(anchorUuid: string, focusUuid: string) {
+    if (this.readOnly) return;
     this.selection.setPassageSelection(anchorUuid, focusUuid);
   }
 
@@ -606,6 +636,7 @@ export class PassageStackController {
   // ------------------------------------------------------------ undo/redo
 
   undo = () => {
+    if (this.readOnly) return false;
     // `WorkDocument.undo` moves entries between its own stacks; the passage
     // `UndoManager` it drives fires `stack-item-added` on the way, which would
     // otherwise be recorded as a brand new text edit and clear the redo
@@ -617,6 +648,7 @@ export class PassageStackController {
   };
 
   redo = () => {
+    if (this.readOnly) return false;
     const target = this.work.log.suppress(() => this.work.redo());
     if (target === null) return false;
     this.applyFocusTarget(target);

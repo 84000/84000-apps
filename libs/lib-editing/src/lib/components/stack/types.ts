@@ -134,7 +134,11 @@ export type PassageStackControllerOptions = {
    * and tests — passes none, and the stack simply never asks for more.
    */
   spineFeed?: StackRowFeed;
-  /** Reader rather than studio: shows bookmarks, as `TranslationReader` does. */
+  /**
+   * Reader rather than studio. No row ever mounts an editor, nothing edits the
+   * work, and bookmarks show, as `TranslationReader` does. Can be changed
+   * later with `setReadOnly`.
+   */
   readOnly?: boolean;
   /**
    * Names this view's hydration window on the work.

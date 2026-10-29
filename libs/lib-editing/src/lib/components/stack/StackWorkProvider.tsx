@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -88,6 +89,13 @@ export type StackWork = {
   bibliography: BibliographyWork | null;
   /** The view for a tab, or null when this provider does not draw it. */
   controllerFor: (tab: string) => PassageStackController | null;
+  /** Whether every view is read-only, as the provider was told. */
+  readOnly: boolean;
+};
+
+/** What the loader builds, before the provider adds its own state. */
+type LoadedStackWork = Omit<StackWork, 'readOnly'> & {
+  controllers: PassageStackController[];
 };
 
 const StackWorkContext = createContext<StackWork | null>(null);
@@ -101,15 +109,29 @@ const StackWorkContext = createContext<StackWork | null>(null);
  * Null until the sections have been seeded: a view over an empty spine draws
  * nothing and reports a visible range of zero, which the loader would take as
  * a window and answer.
+ *
+ * `readOnly` makes every view a reader's: no row mounts an editor and nothing
+ * edits the work. It can change while the stack is drawn.
  */
 export const StackWorkProvider = ({
   workUuid,
+  readOnly = false,
   children,
 }: {
   workUuid: string;
+  /** Draw every view read-only. Defaults to false. */
+  readOnly?: boolean;
   children: ReactNode;
 }) => {
-  const [stack, setStack] = useState<StackWork | null>(null);
+  const [stack, setStack] = useState<LoadedStackWork | null>(null);
+  // Read when the views are built, so they start in the current mode.
+  const readOnlyRef = useRef(readOnly);
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+    stack?.controllers.forEach((controller) =>
+      controller.setReadOnly(readOnly),
+    );
+  }, [stack, readOnly]);
   const { registerSaveHandler, dirtyStore } = useEditorState();
 
   // The editor's save button materializes rows from one TipTap editor per tab,
@@ -201,7 +223,7 @@ export const StackWorkProvider = ({
   // Undo and redo with focus outside any editor, such as after a label-menu
   // action. The editors bind their own; this covers the rest of the page.
   useEffect(() => {
-    if (!stack) return;
+    if (!stack || readOnly) return;
     const onKeyDown = (event: KeyboardEvent) => {
       // An editor handled it. Its undo can move focus and tear the editor
       // down, so the target no longer reads as one.
@@ -235,7 +257,7 @@ export const StackWorkProvider = ({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [stack, panels, updatePanel]);
+  }, [stack, readOnly, panels, updatePanel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -264,6 +286,7 @@ export const StackWorkProvider = ({
             tab: section.tab,
             spineFeed: feed,
             extras,
+            readOnly: readOnlyRef.current,
           }),
         );
       }
@@ -277,6 +300,7 @@ export const StackWorkProvider = ({
             work: bibliography.work,
             tab: BIBLIOGRAPHY_TAB,
             rows: 'bibliography',
+            readOnly: readOnlyRef.current,
           }),
         );
       }
@@ -285,6 +309,7 @@ export const StackWorkProvider = ({
         work,
         bibliography,
         controllerFor: (tab) => controllers.get(tab) ?? null,
+        controllers: [...controllers.values()],
       });
     })();
 
@@ -299,8 +324,19 @@ export const StackWorkProvider = ({
     };
   }, [workUuid]);
 
+  const value = useMemo<StackWork | null>(
+    () =>
+      stack && {
+        work: stack.work,
+        bibliography: stack.bibliography,
+        controllerFor: stack.controllerFor,
+        readOnly,
+      },
+    [stack, readOnly],
+  );
+
   return (
-    <StackWorkContext.Provider value={stack}>
+    <StackWorkContext.Provider value={value}>
       {children}
     </StackWorkContext.Provider>
   );

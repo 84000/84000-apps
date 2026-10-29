@@ -22,6 +22,7 @@ import {
   type StackPassageMenuTarget,
 } from './StackPassageMenu';
 import { StackEnd, StackStart, stackStartPx } from './StackEnd';
+import { StackReaderMenu } from './StackReaderMenu';
 import { StaticPassageRow } from './StaticPassageRow';
 import { stackPerf } from './perf';
 import { useStackDeepLink } from './useStackDeepLink';
@@ -66,12 +67,22 @@ export const PassageStack = ({
     controller.getVersion,
   );
   const order = controller.getOrder();
+  const readOnly = controller.isReadOnly();
   const parentRef = useRef<HTMLDivElement>(null);
   const { scroller, scrollMargin } = useStackScroller(parentRef);
-  const [menuTarget, setMenuTarget] = useState<StackPassageMenuTarget | null>(
-    null,
+  // The label menu differs by mode, so a menu opened in one is not shown in
+  // the other if the mode changes while it is open.
+  const [menu, setMenu] = useState<{
+    target: StackPassageMenuTarget;
+    readOnly: boolean;
+  } | null>(null);
+  const openMenu = useCallback(
+    (target: StackPassageMenuTarget | null) =>
+      setMenu(target && { target, readOnly: controller.isReadOnly() }),
+    [controller],
   );
-  const closeMenu = useCallback(() => setMenuTarget(null), []);
+  const closeMenu = useCallback(() => setMenu(null), []);
+  const menuTarget = menu?.readOnly === readOnly ? menu.target : null;
 
   const { updatePanel, setToh, toh, registerEditorRequest, panels } =
     useNavigation();
@@ -234,7 +245,8 @@ export const PassageStack = ({
     if (shift > 0) scroller.scrollTop -= shift;
   }, [hasEarlier, firstUuid, scroller, scrollMargin, startPx]);
 
-  useStackSelection(controller);
+  // A reader selects text natively, across rows, as the paginated reader does.
+  useStackSelection(controller, !readOnly);
   useStackDeepLink(controller, panel, drawn);
 
   useStackRowPointer({
@@ -242,7 +254,7 @@ export const PassageStack = ({
     controller,
     updatePanel,
     followLink,
-    setMenuTarget,
+    setMenuTarget: openMenu,
   });
 
   // Bookmarks live in local storage; another tab changing them arrives here.
@@ -254,6 +266,7 @@ export const PassageStack = ({
 
   // Text typed between click and editor mount is buffered and replayed.
   useEffect(() => {
+    if (readOnly) return;
     const onTyping = (event: KeyboardEvent | InputEvent) => {
       if (controller.bufferTyping(event)) event.preventDefault();
     };
@@ -263,7 +276,7 @@ export const PassageStack = ({
       document.removeEventListener('keydown', onTyping, true);
       document.removeEventListener('beforeinput', onTyping, true);
     };
-  }, [controller]);
+  }, [controller, readOnly]);
 
   // Keystroke-to-paint latency: stamp on keydown, sample after the next
   // frame has painted (double rAF).
@@ -295,7 +308,8 @@ export const PassageStack = ({
       className={cn('w-full [overflow-anchor:none]', className)}
       // As the paginated editor does: a browser translating the page would
       // rewrite text an editor then reads back as an edit.
-      translate={controller.isReadOnly() ? 'yes' : 'no'}
+      translate={readOnly ? 'yes' : 'no'}
+      data-stack-read-only={readOnly ? '' : undefined}
     >
       {/*
         One of each for the whole stack, bound to the focused passage: only one
@@ -303,7 +317,7 @@ export const PassageStack = ({
         Keyed so they rebind rather than hold a stale editor — and prefixed, or
         the two keyed siblings would share a key.
       */}
-      {controller.getRows() === 'bibliography' ? (
+      {readOnly ? null : controller.getRows() === 'bibliography' ? (
         // A heading is plain text: there is nothing to format.
         <BibliographyBubbleMenu
           key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
@@ -317,6 +331,13 @@ export const PassageStack = ({
       )}
       {controller.restructures() && (
         <StackPassageMenu
+          controller={controller}
+          target={menuTarget}
+          onClose={closeMenu}
+        />
+      )}
+      {readOnly && controller.getRows() === 'passages' && (
+        <StackReaderMenu
           controller={controller}
           target={menuTarget}
           onClose={closeMenu}

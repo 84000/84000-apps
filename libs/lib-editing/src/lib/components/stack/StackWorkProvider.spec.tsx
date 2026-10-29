@@ -443,4 +443,75 @@ describe('StackWorkProvider', () => {
       row.remove();
     });
   });
+
+  describe('read-only', () => {
+    const seeded = async (readOnly: boolean) => {
+      seedSections();
+      bibliographyWork.loadBibliographyWork.mockResolvedValue(bibliography());
+      const found: { stack?: StackWork } = {};
+      const Grab = () => {
+        const stack = useStackWork();
+        useEffect(() => {
+          if (stack) found.stack = stack;
+        }, [stack]);
+        return null;
+      };
+      const view = render(
+        <StackWorkProvider workUuid="w1" readOnly={readOnly}>
+          <Grab />
+        </StackWorkProvider>,
+      );
+      await waitFor(() => expect(found.stack).toBeDefined());
+      const views = () =>
+        ['front', 'translation', 'endnotes', 'bibliography'].map((tab) =>
+          found.stack?.controllerFor(tab)?.isReadOnly(),
+        );
+      const rerender = (next: boolean) =>
+        view.rerender(
+          <StackWorkProvider workUuid="w1" readOnly={next}>
+            <Grab />
+          </StackWorkProvider>,
+        );
+      return { found, views, rerender };
+    };
+
+    it('builds every view read-only', async () => {
+      const { found, views } = await seeded(true);
+
+      expect(views()).toEqual([true, true, true, true]);
+      expect(found.stack?.readOnly).toBe(true);
+    });
+
+    it('switches every view while drawn, keeping the same work', async () => {
+      const { found, views, rerender } = await seeded(false);
+      const work = found.stack?.work;
+      expect(views()).toEqual([false, false, false, false]);
+
+      rerender(true);
+      await waitFor(() => expect(views()).toEqual([true, true, true, true]));
+      expect(found.stack?.readOnly).toBe(true);
+      expect(found.stack?.work).toBe(work);
+
+      rerender(false);
+      await waitFor(() =>
+        expect(views()).toEqual([false, false, false, false]),
+      );
+    });
+
+    it('does not undo from the page', async () => {
+      const { found } = await seeded(true);
+      const undo = jest.spyOn(found.stack?.work as StackWork['work'], 'undo');
+
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'z',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+
+      expect(undo).not.toHaveBeenCalled();
+    });
+  });
 });

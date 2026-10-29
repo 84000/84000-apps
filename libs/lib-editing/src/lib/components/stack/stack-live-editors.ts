@@ -70,6 +70,20 @@ export class StackLiveEditors {
   }
 
   /**
+   * Give up every editor: blur them, drop focus and any focus still waiting
+   * for its editor, and empty the live set so every row draws static again.
+   *
+   * For a view turning read-only. The documents are untouched — edits live in
+   * the work, not in the editors — so nothing typed is lost.
+   */
+  release() {
+    this.blurEditors();
+    this.pendingFocus = null;
+    this.keyBuffer = '';
+    this.reset();
+  }
+
+  /**
    * Scroll the view to a row, through every handler its copies installed.
    * Each handler answers only for a copy that is laid out.
    */

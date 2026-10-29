@@ -132,6 +132,7 @@ const build = (
     work,
     bibliography: null,
     controllerFor: (tab) => (tab === 'endnotes' ? endnotes : viewOf(tab)),
+    readOnly: false,
   };
   return { work, stack, endnotes, loader, viewOf };
 };
