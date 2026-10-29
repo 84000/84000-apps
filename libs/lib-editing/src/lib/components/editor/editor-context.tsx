@@ -1,9 +1,7 @@
 'use client';
 
 import { createContext } from 'react';
-import { Editor } from '@tiptap/react';
 import { TriangleAlertIcon } from 'lucide-react';
-import { Doc, XmlFragment } from 'yjs';
 import type { Work } from '@eightyfourthousand/data-access';
 import { type ReplacedPassage } from '@eightyfourthousand/client-graphql';
 import { toast } from '@eightyfourthousand/design-system';
@@ -44,7 +42,7 @@ export type SaveReport = {
   unconfirmed?: UnconfirmedSave;
 };
 
-/** A second editing surface that saves alongside the paginated editors. */
+/** The editing surface a save writes: the passage stack registers one. */
 export type SaveHandler = {
   save: () => Promise<SaveReport>;
   /** Whether it holds changes the last save did not write. */
@@ -63,7 +61,6 @@ export type SaveHandler = {
 
 /** What the editor context offers its consumers. */
 export interface EditorContextState {
-  doc?: Doc;
   work: Work;
   dirtyStore: DirtyStore;
   canEdit(): Promise<boolean>;
@@ -88,24 +85,16 @@ export interface EditorContextState {
    */
   setReadOnlyChosen: (readOnly: boolean) => Promise<void>;
   applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
-  /**
-   * Delete an endnote through the passage stack. False when the stack doesn't
-   * hold the endnotes, so the caller edits the paginated editors instead.
-   */
+  /** Delete an endnote through the passage stack. False when it can't. */
   deleteEndnote: (uuid: string) => Promise<boolean>;
   /**
    * Take a comment thread's anchors off the passages the stack holds,
    * including those not drawn.
    */
   removeCommentAnchors: (comment: string) => void;
-  getFragment: (builder: string) => XmlFragment;
-  setDoc: (doc: Doc) => void;
-  getEditor: (key: string) => Editor | undefined;
-  setEditor: (key: string, editor?: Editor) => void;
-  refreshEditorBaseline: (key: string) => void;
   save: () => Promise<void>;
   /**
-   * Save something else alongside the paginated editors, or stop with null.
+   * Register what a save writes, or stop with null.
    *
    * The passage stack materializes rows from its own documents rather than
    * from a TipTap editor, and this provider cannot call into it — the stack
@@ -113,19 +102,6 @@ export interface EditorContextState {
    * of the server bundle. So the stack registers instead.
    */
   registerSaveHandler: (handler: SaveHandler | null) => void;
-  startObserving: (builder: string) => void;
-  stopObserving: (builder: string) => void;
-  /**
-   * Start or end a navigation, which writes the editors itself, so its writes
-   * are not edits. Given a `fragment`, only that editor's writes; pass the
-   * same `fragment` to start and end it.
-   */
-  setNavigating: (
-    navigating: boolean,
-    resetLastObservedUuids?: boolean,
-    fragment?: XmlFragment,
-  ) => void;
-  isNavigating: () => boolean;
 }
 
 export const EditorContext = createContext<EditorContextState>({
@@ -165,32 +141,9 @@ export const EditorContext = createContext<EditorContextState>({
   },
   deleteEndnote: async () => false,
   removeCommentAnchors: () => undefined,
-  getFragment: () => {
-    throw Error('Not implemented');
-  },
-  setDoc: () => {
-    throw Error('Not implemented');
-  },
-  getEditor: () => undefined,
-  setEditor: () => {
-    throw Error('Not implemented');
-  },
-  refreshEditorBaseline: () => {
-    // No-op when outside provider
-  },
   save: async () => {
     toast('Unable to save.', {
       icon: <TriangleAlertIcon className="size-4 text-warning" />,
     });
   },
-  startObserving: () => {
-    throw Error('Not implemented');
-  },
-  stopObserving: () => {
-    throw Error('Not implemented');
-  },
-  setNavigating: () => {
-    // No-op when outside provider
-  },
-  isNavigating: () => false,
 });
