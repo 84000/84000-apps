@@ -50,6 +50,21 @@ describe('bibliographyReadingOrder', () => {
     ).toEqual(['a', 'b']);
   });
 
+  it('reads the top-level entries first, wherever they sort', () => {
+    const rows = [
+      heading('h1', 1),
+      row('e1', 2, { headingUuid: 'h1' }),
+      row('a', 3),
+      row('b', 0),
+    ];
+    expect(bibliographyReadingOrder(rows).map((r) => r.uuid)).toEqual([
+      'b',
+      'a',
+      'h1',
+      'e1',
+    ]);
+  });
+
   it('keeps an entry whose heading is missing in its own place', () => {
     const rows = [
       row('e0', 1, { headingUuid: 'gone' }),
@@ -108,6 +123,22 @@ describe('bibliographySeeds', () => {
     expect(
       bibliographySeeds([row('a', 1), row('b', 2)]).map((s) => s.label),
     ).toEqual(['b.1', 'b.2']);
+  });
+
+  it('numbers top-level headings after the top-level entries', () => {
+    expect(
+      bibliographySeeds([
+        row('a', 1),
+        row('b', 2),
+        heading('h1', 3),
+        row('e1', 4, { headingUuid: 'h1' }),
+      ]).map(({ uuid, label, parent }) => [uuid, label, parent]),
+    ).toEqual([
+      ['a', 'b.1', undefined],
+      ['b', 'b.2', undefined],
+      ['h1', 'b.3', undefined],
+      ['e1', 'b.3.1', 'h1'],
+    ]);
   });
 });
 
@@ -286,6 +317,36 @@ describe('a bibliography work', () => {
       e1: expect.objectContaining({ sort: 6, heading_uuid: 'h3' }),
     });
     expect(bibliography.rows.get('e1')?.headingUuid).toBe('h3');
+  });
+
+  it('writes an entry moved to the top level before the first heading', async () => {
+    const { bibliography, client, calls } = await loaded();
+    moveBibliographyRow(bibliography.work, 'e2', null);
+
+    expect(await saveBibliographyWork(bibliography, client)).toBe(true);
+    const rows = sent(calls);
+    expect(rows['e2']).toEqual(expect.objectContaining({ heading_uuid: null }));
+    const firstHeading = Math.min(
+      ...[...bibliography.rows.values()]
+        .filter((r) => r.isHeading)
+        .map((r) => r.sort),
+    );
+    expect(bibliography.rows.get('e2')?.sort).toBeLessThan(firstHeading);
+    expect(bibliography.rows.get('e2')?.headingUuid).toBeNull();
+  });
+
+  it('moves a top-level entry stored after a heading before it', async () => {
+    const { bibliography, client } = await loaded([
+      heading('h1', 1),
+      row('e1', 2, { headingUuid: 'h1' }),
+      row('a', 3),
+    ]);
+    expect(bibliography.work.spine.uuids()).toEqual(['a', 'h1', 'e1']);
+
+    expect(await saveBibliographyWork(bibliography, client)).toBe(true);
+    const sorts = (uuid: string) => bibliography.rows.get(uuid)?.sort ?? NaN;
+    expect(sorts('a')).toBeLessThan(sorts('h1'));
+    expect(bibliography.rows.get('a')?.headingUuid).toBeNull();
   });
 
   it('deletes a removed row', async () => {

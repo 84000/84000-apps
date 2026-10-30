@@ -19,7 +19,8 @@ type Place = { label: string | null; depth: number };
  * - A heading nests under its own parent and is numbered among the headings
  *   under the same one.
  * - An entry nests under the heading before it and is numbered among the
- *   entries under that heading, or among the headingless ones.
+ *   entries under that heading. Entries before the first heading sit at the
+ *   top level, and top-level headings are numbered after them.
  *
  * A heading the top level cannot reach, and the entries under it, get no
  * label, as no reader shows them.
@@ -29,8 +30,11 @@ export const outlineBibliographyRows: RowOutline = (entries) => {
     entries.filter(isHeading).map((entry) => [entry.uuid, entry]),
   );
 
+  const firstHeading = entries.findIndex(isHeading);
+  const topLevelEntries = firstHeading < 0 ? entries.length : firstHeading;
+
   const position = new Map<string, number>();
-  const counts = new Map<string, number>();
+  const counts = new Map<string, number>([['under:', topLevelEntries]]);
   const count = (key: string) => {
     const next = (counts.get(key) ?? 0) + 1;
     counts.set(key, next);
