@@ -8,8 +8,7 @@ Internal application for translation management, editing, and research.
 - `(DashboardLayout)/` — authenticated routes with shared dashboard layout
   - `profile/` — user library (publications, passages, glossaries, bibliographies, searches)
   - `translations/editor/[slug]/` — editor view with parallel routes (`@left`, `@main`, `@right`)
-  - `translations/reader/[slug]/` — reader view with parallel routes (`@left`, `@main`, `@right`)
-  - `translation/[slug]/` — translation detail page
+  - `translation/[slug]/` — redirects a Toh link to the editor
   - `entity/[type]/[slug]/` — glossary, authority, and other entity pages
   - `research/explore/` — AI-powered exploration interface
 - `api/` — feedback and MCP endpoints
@@ -20,4 +19,4 @@ Root `layout.tsx` wraps the app in: `InterfaceContextProvider` > `SessionProvide
 
 ## Parallel Routes
 
-The editor and reader use `@left`, `@main`, `@right` slots for a three-panel layout. Each slot renders independently and receives the `[slug]` parameter.
+The editor uses `@left`, `@main`, `@right` slots for a three-panel layout. Each slot renders independently and receives the `[slug]` parameter.

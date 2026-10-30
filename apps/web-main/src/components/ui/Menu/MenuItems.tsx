@@ -1,5 +1,4 @@
 import {
-  BookOpenIcon,
   Edit3Icon,
   LibraryIcon,
   SearchIcon,
@@ -11,7 +10,7 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
   {
     title: 'Translations',
     color: 'brick',
-    href: '/translations/reader',
+    href: '/translations/editor',
     hero: {
       header: 'Translation Tools',
       body: 'Read and edit translations in the 84000 collection',
@@ -22,13 +21,6 @@ export const MENU_ITEMS: NavigationMenuItemProps[] = [
       {
         header: 'Translations',
         items: [
-          {
-            header: 'Reader',
-            body: 'Browse and read published translations',
-            href: '/translations/reader',
-            icon: BookOpenIcon,
-            showOnHomepage: true,
-          },
           {
             header: 'Editor',
             body: 'Edit translations in the pipeline',
