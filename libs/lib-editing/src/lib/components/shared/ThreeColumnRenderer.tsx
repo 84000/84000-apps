@@ -7,6 +7,7 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import { TranslationHeader } from './TranslationHeader';
 import { ReaderSearchButton } from './ReaderSearchButton';
 import { FocusToggleButton } from './FocusToggleButton';
+import { EditorSettingsMenu } from '../editor/EditorSettingsMenu';
 import { GatedFeature } from '@eightyfourthousand/lib-instr';
 
 export const ThreeColumnRenderer = ({
@@ -27,6 +28,8 @@ export const ThreeColumnRenderer = ({
       <>
         <ReaderSearchButton />
         {withFocusToggle && <FocusToggleButton />}
+        {/* Draws nothing outside the editor. */}
+        <EditorSettingsMenu />
       </>
     ),
     [withFocusToggle],

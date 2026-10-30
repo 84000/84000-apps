@@ -73,6 +73,20 @@ export interface EditorContextState {
    * titles. A stricter bar than `canEdit`.
    */
   canAdminister(): Promise<boolean>;
+  /**
+   * Whether the editor shows the work read-only: the user may not edit it, or
+   * chose to read it. True until the permission check answers.
+   */
+  readOnly: boolean;
+  /** Whether the user may edit the work; undefined until the check answers. */
+  editPermitted?: boolean;
+  /** Whether the user chose to read rather than edit, remembered per browser. */
+  readOnlyChosen: boolean;
+  /**
+   * Choose to read or edit. Turning read-only on saves pending changes first,
+   * since the live editors unmount.
+   */
+  setReadOnlyChosen: (readOnly: boolean) => Promise<void>;
   applyReplacedPassages: (passages: ReplacedPassage[]) => Promise<void>;
   /**
    * Delete an endnote through the passage stack. False when the stack doesn't
@@ -138,6 +152,11 @@ export const EditorContext = createContext<EditorContextState>({
   },
   canEdit: async () => false,
   canAdminister: async () => false,
+  readOnly: true,
+  readOnlyChosen: false,
+  setReadOnlyChosen: async () => {
+    // No-op when outside provider (reader mode)
+  },
   registerSaveHandler: () => {
     // No-op when outside provider (reader mode)
   },

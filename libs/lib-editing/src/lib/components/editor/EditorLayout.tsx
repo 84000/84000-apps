@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { ReactNode, use, useEffect, useState } from 'react';
-import { EditorContextProvider } from './EditorProvider';
+import { EditorContextProvider, useEditorState } from './EditorProvider';
 import {
   createGraphQLClient,
   getTranslationMetadataByUuid,
@@ -16,7 +16,6 @@ import {
   RightPanel,
 } from '@eightyfourthousand/design-system';
 import { EditorHeader } from './EditorHeader';
-import { usePerPassageDocs } from './usePerPassageDocs';
 
 /**
  * Loaded on demand, and never on the server.
@@ -45,10 +44,6 @@ export const EditorLayout = ({
 }) => {
   const { slug } = use(params);
   const [work, setWork] = useState<Work>();
-  // Only `enabled` here: holding the whole page until the flag settles would
-  // make every reader wait on PostHog for a flag that is off for most of them.
-  // The wait belongs around the editor itself, in the pages below.
-  const { enabled: perPassageDocs } = usePerPassageDocs();
 
   useEffect(() => {
     (async () => {
@@ -80,13 +75,30 @@ export const EditorLayout = ({
 
   return (
     <EditorContextProvider work={work}>
-      {perPassageDocs ? (
-        // One work behind every column, so the tabs share a spine and an undo
-        // history.
-        <StackWorkProvider workUuid={work.uuid}>{columns}</StackWorkProvider>
-      ) : (
-        columns
-      )}
+      <EditorStack workUuid={work.uuid}>{columns}</EditorStack>
     </EditorContextProvider>
+  );
+};
+
+/**
+ * One work behind every column, so the tabs share a spine and an undo
+ * history.
+ *
+ * Read-only follows the editor context, which also sets
+ * `NavigationProvider`'s `editable` from it: the stack and the hover cards'
+ * edit actions must agree on whether the work can be edited.
+ */
+const EditorStack = ({
+  workUuid,
+  children,
+}: {
+  workUuid: string;
+  children: ReactNode;
+}) => {
+  const { readOnly } = useEditorState();
+  return (
+    <StackWorkProvider workUuid={workUuid} readOnly={readOnly}>
+      {children}
+    </StackWorkProvider>
   );
 };

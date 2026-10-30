@@ -3,7 +3,6 @@
 import {
   createGraphQLClient,
   getPassageMetaPage,
-  getTranslationBlocks,
   getWorkGlossaryTerms,
   getWorkBibliography,
   type GlossaryTermsPage,
@@ -13,13 +12,11 @@ import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { BibliographyList } from '../shared/bibliography';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
-import { usePerPassageDocs } from './usePerPassageDocs';
 import dynamic from 'next/dynamic';
 
 import { useCallback, useEffect, useState } from 'react';
-import { TranslationEditorContent } from '../editor';
+import type { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
-import { TranslationBuilder } from '../editor';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 
 /** See `EditorLayout` — the stack must not reach the server bundle. */
@@ -27,9 +24,6 @@ const StackTab = dynamic(
   () => import('../stack/StackTab').then((m) => m.StackTab),
   { ssr: false },
 );
-
-/** The right panel's tabs drawn as stacks under the flag. */
-const STACKED_TABS = new Set<string>(['endnotes', 'abbreviations']);
 
 /** What a stacked tab is handed: the stack reads its own passages. */
 const NO_CONTENT: TranslationEditorContent = [];
@@ -48,15 +42,6 @@ const hasPassages = async (uuid: string, type: string) => {
 export const EditorBackMatterPage = () => {
   const withAttestations = isStaticFeatureEnabled('glossary-attestations');
   const { work } = useEditorState();
-  const perPassageDocs = usePerPassageDocs();
-  // The stack reads these tabs itself, so the panel need not wait on them.
-  const stacked = perPassageDocs.ready && perPassageDocs.enabled;
-  const unstacked = perPassageDocs.ready && !perPassageDocs.enabled;
-  const [endnotes, setEndnotes] = useState<TranslationEditorContent>();
-  const [abbreviations, setAbbreviations] =
-    useState<TranslationEditorContent>();
-  const [endnotesHasMore, setEndnotesHasMore] = useState<boolean>();
-  const [abbreviationsHasMore, setAbbreviationsHasMore] = useState<boolean>();
   const [hasTabs, setHasTabs] = useState<{
     endnotes: boolean;
     abbreviations: boolean;
@@ -89,40 +74,9 @@ export const EditorBackMatterPage = () => {
     };
   }, [work, withAttestations]);
 
-  // Read unless the stack is known to read them instead — at mount while the
-  // flag is unresolved, so the paginated editor need not wait on it.
+  // The stack reads the endnotes and abbreviations itself; the panel only
+  // needs to know which tabs to show.
   useEffect(() => {
-    if (stacked) return;
-    let cancelled = false;
-    (async () => {
-      const graphqlClient = createGraphQLClient();
-      const [endnotePage, abbreviationPage] = await Promise.all([
-        getTranslationBlocks({
-          client: graphqlClient,
-          uuid: work.uuid,
-          type: 'endnotes',
-        }),
-        getTranslationBlocks({
-          client: graphqlClient,
-          uuid: work.uuid,
-          type: 'abbreviations',
-        }),
-      ]);
-      if (cancelled) return;
-      setEndnotes(endnotePage.blocks);
-      setEndnotesHasMore(endnotePage.hasMoreAfter);
-      setAbbreviations(abbreviationPage.blocks);
-      setAbbreviationsHasMore(abbreviationPage.hasMoreAfter);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [work.uuid, stacked]);
-
-  // Under the stack the panel only needs to know which tabs to show. Asked
-  // while the flag is unresolved too, so the stack need not wait on it.
-  useEffect(() => {
-    if (unstacked) return;
     let cancelled = false;
     (async () => {
       const [endnotes, abbreviations] = await Promise.all([
@@ -135,28 +89,13 @@ export const EditorBackMatterPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [work.uuid, unstacked]);
+  }, [work.uuid]);
 
   const renderTranslation = useCallback(
-    ({ content, name, className, hasMoreAfter }: TranslationRenderer) =>
-      !perPassageDocs.ready ? (
-        // Not "the flag is off" — the value has not arrived. Building the
-        // paginated editor on that answer costs a TipTap instance and a Yjs
-        // binding, thrown away when it does.
-        <TranslationSkeleton />
-      ) : perPassageDocs.enabled && STACKED_TABS.has(name) ? (
-        <StackTab tab={name} className={className} />
-      ) : (
-        <TranslationBuilder
-          content={content}
-          name={name}
-          className={className}
-          filter={name}
-          panel="right"
-          hasMoreAfter={hasMoreAfter}
-        />
-      ),
-    [perPassageDocs.enabled, perPassageDocs.ready],
+    ({ name, className }: TranslationRenderer) => (
+      <StackTab tab={name} className={className} />
+    ),
+    [],
   );
 
   // Read-only when the stack could not read the rows.
@@ -171,24 +110,21 @@ export const EditorBackMatterPage = () => {
     [bibliography],
   );
 
-  const tabsKnown = stacked ? !!hasTabs : !!endnotes && !!abbreviations;
-  if (!glossary || !bibliography || !tabsKnown) {
+  if (!glossary || !bibliography || !hasTabs) {
     return <TranslationSkeleton />;
   }
 
   return (
     <BackMatterPanel
       workUuid={work.uuid}
-      endnotes={stacked ? NO_CONTENT : (endnotes ?? NO_CONTENT)}
+      endnotes={NO_CONTENT}
       glossary={glossary}
       bibliography={bibliography}
-      abbreviations={stacked ? NO_CONTENT : (abbreviations ?? NO_CONTENT)}
-      endnotesHasMore={endnotesHasMore}
-      abbreviationsHasMore={abbreviationsHasMore}
-      hasEndnotes={stacked ? hasTabs?.endnotes : undefined}
-      hasAbbreviations={stacked ? hasTabs?.abbreviations : undefined}
+      abbreviations={NO_CONTENT}
+      hasEndnotes={hasTabs.endnotes}
+      hasAbbreviations={hasTabs.abbreviations}
       renderTranslation={renderTranslation}
-      renderBibliography={stacked ? renderBibliography : undefined}
+      renderBibliography={renderBibliography}
       withAttestations={withAttestations}
       isEditor={true}
     />

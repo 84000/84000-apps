@@ -69,6 +69,7 @@ export const NavigationProvider = ({
   initialHasTranslationContent = true,
   editable = false,
   hoverCards = editable,
+  commentsPanel = editable,
   children,
 }: {
   /** The studio rather than the reader. Defaults to the reader. */
@@ -78,6 +79,11 @@ export const NavigationProvider = ({
    * reader can show cards that only read. Defaults to `editable`.
    */
   hoverCards?: boolean;
+  /**
+   * Whether clicking a comment anchor opens the comments panel, which is the
+   * studio's. A read-only studio still has it. Defaults to `editable`.
+   */
+  commentsPanel?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -185,7 +191,7 @@ export const NavigationProvider = ({
       setFocusedComment(comment);
 
       // The comments tab is the studio's. A reader has no panel to open.
-      if (editable) {
+      if (commentsPanel) {
         updatePanel({
           name: 'left',
           state: { open: true, tab: 'comments', hash: comment },
@@ -195,7 +201,7 @@ export const NavigationProvider = ({
 
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, [editable, updatePanel]);
+  }, [commentsPanel, updatePanel]);
 
   useEffect(() => {
     if (!urlRead || (!toh && !panels)) {

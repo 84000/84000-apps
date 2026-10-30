@@ -24,7 +24,7 @@ export const TitlesBuilder = ({
   // step in between, so editing them takes `editor.admin` — a higher bar than
   // the `editor.edit` that governs passage content. RLS on `public.titles`
   // enforces the same rule; this only decides whether the pencil is offered.
-  const { canAdminister } = useEditorState();
+  const { canAdminister, readOnlyChosen } = useEditorState();
 
   useEffect(() => {
     const checkEditable = async () => {
@@ -44,7 +44,8 @@ export const TitlesBuilder = ({
     <Titles
       titles={titles}
       imprint={imprint}
-      canEdit={isEditable}
+      // Reading by choice hides it too.
+      canEdit={isEditable && !readOnlyChosen}
       workUuid={workUuid}
       onTitlesSaved={onTitlesSaved}
     />

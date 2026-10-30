@@ -69,8 +69,8 @@ marked pass.
    ```
 
    They get the same env as the e2e suite gives them: the local stack, dev
-   mode, and `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES=per-passage-docs,translation-hover-cards`
-   (without the second flag no hover card ever opens). Wait until
+   mode, and `NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES=translation-hover-cards`
+   (without it no hover card ever opens). Wait until
    `curl -s -o /dev/null -w '%{http_code}' http://localhost:3804/` answers.
    If something else already listens on those ports and you can't tell how
    it was started, ask instead.

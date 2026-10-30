@@ -21,7 +21,7 @@ export SUPABASE_URL="$API_URL"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 export SUPABASE_SERVICE_KEY="$SERVICE_ROLE_KEY"
 export NEXT_PUBLIC_GRAPHQL_URL="http://localhost:$graphql_port/api/graphql"
-export NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES="per-passage-docs,translation-hover-cards"
+export NEXT_PUBLIC_FEATURE_FLAG_OVERRIDES="translation-hover-cards"
 
 cd "$repo"
 case "${1:-}" in
