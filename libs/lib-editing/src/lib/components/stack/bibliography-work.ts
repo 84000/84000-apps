@@ -190,10 +190,10 @@ const placeRun = (rows: Placing[]): number[] => {
 };
 
 /**
- * Sorts for rows in reading order, given those they have stored. The readers
- * order headings and headingless entries by sort among themselves, and each
- * heading's entries among those under it, so each of those runs is placed on
- * its own, keeping as many stored sorts as it can.
+ * Sorts for rows in reading order, given those they have stored. The headings
+ * and the top-level entries share one run, so the top-level entries, read
+ * first, sort before every heading; each heading's entries are a run of their
+ * own. Each run keeps as many stored sorts as it can.
  */
 export const placeBibliographyRows = (rows: Placing[]): number[] => {
   const runs = new Map<string, number[]>();

@@ -176,6 +176,7 @@ export const BibliographyRowMenu = ({
                 <Heading1Icon className="text-primary" /> New Heading
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={!isHeading && !meta.parent}
                 onSelect={() => controller.newBibliographyHeading(uuid, true)}
               >
                 <Heading2Icon className="text-primary" /> New Subheading

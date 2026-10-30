@@ -124,6 +124,23 @@ describe('outlineBibliographyRows', () => {
     ]);
   });
 
+  it('reads an entry whose heading is not a heading of the work in its place', () => {
+    const rows: BibliographyRow[] = [
+      { uuid: 'x', sort: 0, isHeading: false, headingUuid: 'e9' },
+      { uuid: 'h1', sort: 1, isHeading: true, headingUuid: null },
+      { uuid: 'e9', sort: 2, isHeading: false, headingUuid: 'h1' },
+    ].map((row) => ({ ...row, workUuid: 'w1', html: row.uuid }));
+    const seeds = bibliographySeeds(rows);
+    const entries = seeds.map(
+      (seed, index) => ({ ...seed, label: '', index }) as SpineEntry,
+    );
+    expect(outlined(entries)).toEqual([
+      { uuid: 'x', label: 'b.1' },
+      { uuid: 'h1', label: 'b.2' },
+      { uuid: 'e9', label: 'b.2.1', parent: 'h1', depth: 1 },
+    ]);
+  });
+
   it('puts each entry under the heading before it', () => {
     expect(
       outlined(

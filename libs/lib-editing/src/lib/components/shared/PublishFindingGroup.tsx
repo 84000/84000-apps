@@ -35,6 +35,8 @@ const RULE_TITLES: Record<string, string> = {
     'Bibliography headings that do not resolve',
   'bibliography-entry-misplaced':
     'Top-level bibliography entries after a heading',
+  'bibliography-entry-unlinked':
+    'Top-level bibliography entries that name a heading',
   'glossary-index-unavailable': 'Glossary index unavailable',
   'work-not-found': 'Work not found',
   'xmlid-stripped': 'Deprecated xmlIds',

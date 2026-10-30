@@ -4,6 +4,8 @@ import {
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
+import { topLevelEnd } from './bibliography-outline';
+
 /**
  * The structural edits a bibliography allows, over its work document.
  *
@@ -14,12 +16,6 @@ import {
  */
 
 const isHeading = (entry: SpineEntry) => rowKindOf(entry.type) === 'heading';
-
-/** Where the top-level entries end: at the first heading. */
-const topLevelEnd = (entries: SpineEntry[]): number => {
-  const first = entries.findIndex(isHeading);
-  return first < 0 ? entries.length : first;
-};
 
 /**
  * Where a heading's run of rows ends: the first heading after it that it
