@@ -73,7 +73,14 @@ export const tocFromDTO = (dto: TocDTO): Toc => {
     translation: bodyMatter,
   };
 
+  // A passage with several heading annotations comes back once per heading;
+  // keep its first row so each passage appears once.
+  const seen = new Set<string>();
   dto.forEach((entry) => {
+    if (seen.has(entry.uuid)) {
+      return;
+    }
+    seen.add(entry.uuid);
     const tocEntry: TocEntry = {
       ...entry,
       children: [],
