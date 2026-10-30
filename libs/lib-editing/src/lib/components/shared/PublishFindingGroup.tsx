@@ -57,6 +57,8 @@ const RULE_NOTES: Record<string, string> = {
   'inline-marker-unresolved':
     'Only markers that are always local are checked: end notes, abbreviations, and mentions or internal links explicitly flagged as same-work. Cross-work links are valid and not reported here.',
   'xmlid-stripped': 'XML ID values are not retained when a work is published.',
+  'bibliography-entry-unlinked':
+    'These entries have no heading but still name one from the import, so they may have lost their section. They are shown at the top level. Move them under a heading, or save them where they are.',
   'bibliography-entry-misplaced':
     'Entries with no heading are listed at the top level, before the first heading. These are stored after a heading, so readers would show them out of place. Open the bibliography and save it to move them, or move them under a heading.',
 };
