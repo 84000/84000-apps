@@ -7,7 +7,9 @@ import {
 } from '@eightyfourthousand/client-graphql/ssr';
 import React, { Suspense } from 'react';
 
-export const revalidate = 60;
+// Rendered per request rather than prerendered: a build needs no GraphQL API,
+// and without one the read fails when the page is visited, not in the build.
+export const dynamic = 'force-dynamic';
 
 const page = async () => {
   const client = createBuildGraphQLClient();
