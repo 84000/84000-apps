@@ -2,6 +2,8 @@ import { lookupEntity } from './lookup-entity';
 import { getGlossaryInstance } from './glossary';
 import { getFolioLocation } from './folio';
 import { getBibliographyEntry } from './bibliography';
+import { getPassageByUuidOrXmlId } from './passage';
+import { getTranslationMetadataByToh } from './publications';
 
 jest.mock('./client-ssr', () => ({
   createServerClient: jest.fn().mockResolvedValue({}),
@@ -17,7 +19,7 @@ jest.mock('./folio', () => ({
 
 jest.mock('./passage', () => ({
   getPassage: jest.fn(),
-  getPassageUuidByXmlId: jest.fn(),
+  getPassageByUuidOrXmlId: jest.fn(),
 }));
 
 jest.mock('./publications', () => ({
@@ -32,6 +34,10 @@ jest.mock('./glossary', () => ({
 const mockedGetGlossaryInstance = jest.mocked(getGlossaryInstance);
 const mockedGetFolioLocation = jest.mocked(getFolioLocation);
 const mockedGetBibliographyEntry = jest.mocked(getBibliographyEntry);
+const mockedGetPassageByUuidOrXmlId = jest.mocked(getPassageByUuidOrXmlId);
+const mockedGetTranslationMetadataByToh = jest.mocked(
+  getTranslationMetadataByToh,
+);
 
 describe('lookupEntity', () => {
   beforeEach(() => {
@@ -97,11 +103,58 @@ describe('lookupEntity', () => {
       source: 'draft',
     });
 
-    expect(result.path).toBe('/work-uuid?right=open%3Abibliography%3Abibl-uuid');
+    expect(result.path).toBe(
+      '/work-uuid?right=open%3Abibliography%3Abibl-uuid',
+    );
     expect(mockedGetBibliographyEntry).toHaveBeenCalledWith({
       client: {},
       uuid: 'bibl-uuid',
       source: 'draft',
     });
+  });
+
+  it('routes a translation xmlId to its passage in the work', async () => {
+    mockedGetPassageByUuidOrXmlId.mockResolvedValue({
+      uuid: 'passage-uuid',
+      workUuid: 'work-uuid',
+      content: '',
+      label: '1.1',
+      sort: 1,
+      type: 'translation',
+      toh: 'toh1',
+      xmlId: 'UT22084-001-001-1',
+    });
+
+    const result = await lookupEntity({
+      type: 'translation',
+      entity: 'toh1.html',
+      xmlId: 'UT22084-001-001-1',
+    });
+
+    expect(result).toMatchObject({
+      path: '/work-uuid?toh=toh1&main=open%3Atranslation%3Apassage-uuid',
+      uuid: 'passage-uuid',
+      workUuid: 'work-uuid',
+    });
+    expect(mockedGetPassageByUuidOrXmlId).toHaveBeenCalledWith({
+      client: {},
+      xmlId: 'UT22084-001-001-1',
+    });
+    expect(mockedGetTranslationMetadataByToh).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the work when a translation xmlId is unknown', async () => {
+    mockedGetPassageByUuidOrXmlId.mockResolvedValue(null);
+    mockedGetTranslationMetadataByToh.mockResolvedValue({
+      uuid: 'work-uuid',
+    } as Awaited<ReturnType<typeof getTranslationMetadataByToh>>);
+
+    const result = await lookupEntity({
+      type: 'translation',
+      entity: 'toh1',
+      xmlId: 'missing',
+    });
+
+    expect(result.path).toBe('/work-uuid?toh=toh1');
   });
 });

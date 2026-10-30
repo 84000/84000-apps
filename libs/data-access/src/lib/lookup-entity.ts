@@ -1,6 +1,6 @@
 import { createServerClient } from './client-ssr';
 import { getBibliographyEntry } from './bibliography';
-import { getPassage, getPassageUuidByXmlId } from './passage';
+import { getPassage, getPassageByUuidOrXmlId } from './passage';
 import {
   getTranslationMetadataByToh,
   getTranslationMetadataByUuid,
@@ -163,14 +163,16 @@ export const lookupEntityWithClient = async ({
         query.set('toh', toh);
 
         if (xmlId) {
-          const item = await getPassageUuidByXmlId({ client, xmlId });
-          const queryTab = query.get('tab') || undefined;
-          const { panel, tab } = panelAndTabForContentType(item.type, queryTab);
-
+          const item = await getPassageByUuidOrXmlId({ client, xmlId });
           uuid = item?.uuid;
           workUuid = item?.workUuid;
 
-          if (uuid && workUuid) {
+          if (item && uuid && workUuid) {
+            const queryTab = query.get('tab') || undefined;
+            const { panel, tab } = panelAndTabForContentType(
+              item.type,
+              queryTab,
+            );
             query.delete('tab');
             query.set(panel, `open:${tab}:${uuid}`);
 

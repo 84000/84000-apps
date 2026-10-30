@@ -555,7 +555,9 @@ own (`bibliography-work`), not the passages' work: its rows are not passages,
 so they save, and undo, apart from them. All rows are read at once and seeded
 in the readers' order, each heading followed by its entries, so a deep link to
 any row is already in the spine and no feed is needed. Labels and nesting
-come from `outlineBibliography`, as the readers number them.
+come from `outlineBibliography`, as the readers number them. The tab's own
+title, `b.` Bibliography, is not a row: the host draws it above the stack, as
+the Glossary tab draws its own, so it is never saved, moved or deleted.
 
 The work document takes an `outline`, which derives every row's label, parent
 and depth from the order after each change, so they are never recorded in the

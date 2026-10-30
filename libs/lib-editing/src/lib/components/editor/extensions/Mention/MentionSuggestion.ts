@@ -49,15 +49,24 @@ export const mentionSuggestion: Omit<
       .run();
   },
   render: () => {
-    let component: ReactRenderer<
-      MentionListHandle,
-      SuggestionProps<MentionSearchResult>
-    >;
+    // Both stay unset until `onStart`, which the plugin calls only after an
+    // async `items` lookup. Its view can be torn down in between (the stack
+    // re-keys its BubbleMenu when focus moves), calling `onExit` first, so
+    // every hook tolerates them being missing.
+    let component:
+      | ReactRenderer<MentionListHandle, SuggestionProps<MentionSearchResult>>
+      | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let popup: Instance<any>[];
+    let popup: Instance<any>[] | undefined;
 
     return {
       onStart: (props) => {
+        // A start that lands after its editor is gone would leave a popup
+        // nothing exits; one that lands twice replaces the first.
+        if (props.editor.isDestroyed) return;
+        component?.destroy();
+        popup?.[0]?.destroy();
+
         component = new ReactRenderer(MentionList, {
           props,
           editor: props.editor,
@@ -80,28 +89,30 @@ export const mentionSuggestion: Omit<
       },
 
       onUpdate(props) {
-        component.updateProps(props);
+        component?.updateProps(props);
 
         if (!props.clientRect) {
           return;
         }
 
-        popup[0].setProps({
+        popup?.[0]?.setProps({
           getReferenceClientRect: props.clientRect,
         });
       },
 
       onKeyDown(props) {
         if (props.event.key === 'Escape') {
-          popup[0].hide();
+          popup?.[0]?.hide();
           return true;
         }
-        return component.ref?.onKeyDown(props) ?? false;
+        return component?.ref?.onKeyDown(props) ?? false;
       },
 
       onExit() {
-        component.destroy();
-        popup[0].destroy();
+        component?.destroy();
+        popup?.[0]?.destroy();
+        component = undefined;
+        popup = undefined;
       },
     };
   },

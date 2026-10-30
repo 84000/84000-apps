@@ -1,11 +1,11 @@
 'use client';
 
-import { SectionTitle } from '@eightyfourthousand/design-system';
 import { LabeledElement } from '../LabeledElement';
 import { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { useScrollInTab } from '../hooks/useScrollInTab';
 import { BibliographyBody } from './BibliographyBody';
+import { BibliographyTitle } from './BibliographyTitle';
 
 export const BibliographyList = ({
   content,
@@ -21,14 +21,7 @@ export const BibliographyList = ({
 
   return (
     <div ref={ref} className={cn('flex flex-col w-full', className)}>
-      <LabeledElement
-        className="mt-2"
-        id={'bibliography'}
-        label="b."
-        excerpt="Bibliography"
-      >
-        <SectionTitle>Bibliography</SectionTitle>
-      </LabeledElement>
+      <BibliographyTitle className="mt-2" />
       <div className="mt-3 flex flex-col gap-6">
         {content.length === 0 && (
           <div className="py-16 mx-auto text-muted-foreground">
