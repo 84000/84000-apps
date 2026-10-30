@@ -91,6 +91,11 @@
       "import": "./stack.js",
       "default": "./stack.js"
     },
+    "./stack-reader": {
+      "types": "./stack-reader.d.ts",
+      "import": "./stack-reader.js",
+      "default": "./stack-reader.js"
+    },
     "./policy-editor": {
       "types": "./policy-editor.d.ts",
       "import": "./policy-editor.js",

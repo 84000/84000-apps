@@ -1,10 +1,10 @@
-import type { JSONContent } from '@tiptap/core';
 import type { GraphQLClient } from 'graphql-request';
 import {
   getPassageMetaPage,
   getTranslationBlocks,
   getTranslationBlocksAround,
 } from '@eightyfourthousand/client-graphql';
+import { passageFromBlock } from './stack-seed';
 import type { PassageExtras } from './types';
 import {
   PassageLoader,
@@ -81,19 +81,10 @@ export const graphqlPassageSource = ({
     attrs?: Record<string, unknown>;
     content?: unknown[];
   }): PassageSnapshot | null => {
-    const uuid = block?.attrs?.uuid as string | undefined;
-    if (!uuid) return null;
-    const references = block.attrs?.references as
-      | PassageExtras['references']
-      | undefined;
-    const alignments = block.attrs?.alignments as
-      | PassageExtras['alignments']
-      | undefined;
-    extras?.set(uuid, {
-      ...(references?.length ? { references } : {}),
-      ...(alignments && Object.keys(alignments).length ? { alignments } : {}),
-    });
-    return { uuid, content: (block.content ?? []) as JSONContent[] };
+    const passage = passageFromBlock(block);
+    if (!passage) return null;
+    extras?.set(passage.uuid, passage.extras ?? {});
+    return { uuid: passage.uuid, content: passage.content };
   };
 
   const wrongWork = (requested: string) => {

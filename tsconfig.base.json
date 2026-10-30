@@ -54,6 +54,9 @@
       "@eightyfourthousand/lib-editing/stack": [
         "./libs/lib-editing/src/stack.ts"
       ],
+      "@eightyfourthousand/lib-editing/stack-reader": [
+        "./libs/lib-editing/src/stack-reader.ts"
+      ],
       "@eightyfourthousand/lib-editing/policy-editor": [
         "./libs/lib-editing/src/policy-editor.ts"
       ],

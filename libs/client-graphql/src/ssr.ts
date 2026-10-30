@@ -9,6 +9,8 @@ export {
 export {
   getPassage,
   getTranslationBlocks,
+  getPassageMetaPage,
+  type PassageMetaPage,
   getTranslationBlocksAround,
   getTranslationTitles,
   getTranslationMetadataByUuid,
