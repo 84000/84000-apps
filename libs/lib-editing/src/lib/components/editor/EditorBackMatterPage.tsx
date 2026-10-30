@@ -11,6 +11,7 @@ import {
 import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { BibliographyList } from '../shared/bibliography';
+import { BibliographyTitle } from '../shared/bibliography/BibliographyTitle';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
 import { usePerPassageDocs } from './usePerPassageDocs';
@@ -159,12 +160,14 @@ export const EditorBackMatterPage = () => {
     [perPassageDocs.enabled, perPassageDocs.ready],
   );
 
-  // Read-only when the stack could not read the rows.
+  // Read-only when the stack could not read the rows. The stack's title is
+  // drawn, not stored, as the Glossary tab draws its own.
   const renderBibliography = useCallback(
     () => (
       <StackTab
         tab="bibliography"
-        className="block"
+        className="block mt-3"
+        title={<BibliographyTitle className="mt-2" />}
         fallback={<BibliographyList content={bibliography ?? []} />}
       />
     ),
