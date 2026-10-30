@@ -449,17 +449,9 @@ const EditorSession = ({
   const { save } = useSaveLifecycle({
     client,
     work,
-    editorCache,
-    dirtyUuidsRef,
-    editsRef,
     isSavingRef,
-    isNormalizingForSaveRef,
-    savedBaselineUuidsByEditorRef,
     saveHandlerRef,
     dirtyStore,
-    getEditorUuids,
-    applyReplacedPassages,
-    setNavigating,
     reload,
   });
 
