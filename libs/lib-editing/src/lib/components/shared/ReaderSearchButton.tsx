@@ -2,13 +2,22 @@
 
 import {
   PassageMatch,
+  RenderAlignmentEnglish,
   SearchButton,
   SearchResult,
 } from '@eightyfourthousand/lib-search';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useEditorState } from '../editor/EditorProvider';
 import { useNavigation } from './NavigationProvider';
+import { SearchAlignmentEnglish } from './SearchAlignmentEnglish';
 import { SearchReplacePanel } from './SearchReplacePanel';
+import { createStaticPassageBatcher } from './static-passage-batcher';
 import { locationForPassageType, PanelName, PanelState } from './types';
 
 export const ReaderSearchButton = () => {
@@ -35,6 +44,19 @@ export const ReaderSearchButton = () => {
       active = false;
     };
   }, [canEdit]);
+
+  // Translation Passages show the English as the reader does, folio markers
+  // included, reading only the results scrolled into view.
+  const renderAlignmentEnglish = useMemo<
+    RenderAlignmentEnglish | undefined
+  >(() => {
+    if (!uuid) return undefined;
+    const batcher = createStaticPassageBatcher({ workUuid: uuid });
+    const render: RenderAlignmentEnglish = (props) => (
+      <SearchAlignmentEnglish {...props} batcher={batcher} />
+    );
+    return render;
+  }, [uuid]);
 
   const onResultSelected = useCallback(
     (result: SearchResult) => {
@@ -82,11 +104,14 @@ export const ReaderSearchButton = () => {
       workUuid={uuid}
       toh={toh}
       onResultSelected={onResultSelected}
+      renderAlignmentEnglish={renderAlignmentEnglish}
       renderActions={(searchContext) => (
         <SearchReplacePanel
           canReplace={canReplace}
           replaceDisabledReason={
-            isDirty ? 'Save changes before using search and replace.' : undefined
+            isDirty
+              ? 'Save changes before using search and replace.'
+              : undefined
           }
           onPassagesReplaced={applyReplacedPassages}
           searchContext={searchContext}
