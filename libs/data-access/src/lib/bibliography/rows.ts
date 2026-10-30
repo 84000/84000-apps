@@ -87,9 +87,8 @@ export const storedBibliographyHtml = (row: BibliographyRow): string | null => {
  * Writes one save of a work's bibliography in a single transaction: `rows`
  * are upserted whole, then `deleteUuids` are deleted. The database refuses a
  * save that would nest a row under anything but a heading of the same work,
- * nest a heading inside itself, delete a heading that still has rows, or
- * leave an entry without a heading in a work that has headings; nothing is
- * written then.
+ * nest a heading inside itself, or delete a heading that still has rows;
+ * nothing is written then. An entry with no heading sits at the top level.
  *
  * Placement is the caller's: `sort` and `headingUuid` are written as given.
  */

@@ -114,13 +114,31 @@ describe('newBibliographyHeading', () => {
     expect(work.spine.meta(uuid)).toBeNull();
   });
 
-  it('puts the first heading of a headingless work first', async () => {
+  it('starts the first heading after the top-level entries', async () => {
     const { work } = (await loadedBibliography([row('a', 1), row('b', 2)]))
       .bibliography;
-    const uuid = newBibliographyHeading(work, 'b') as string;
+    const uuid = newBibliographyHeading(work, 'a') as string;
 
-    expect(outline(work, [uuid])).toEqual(['new b.1', 'a b.1.1', 'b b.1.2']);
-    expect(parentOf(work, 'a')).toBe(uuid);
+    expect(outline(work, [uuid])).toEqual(['a b.1', 'b b.2', 'new b.3']);
+    expect(parentOf(work, 'a')).toBeUndefined();
+  });
+
+  it('starts a heading from a top-level entry before the first heading', async () => {
+    const { work } = (
+      await loadedBibliography([
+        row('a', 1),
+        heading('h1', 2),
+        row('e1', 3, { headingUuid: 'h1' }),
+      ])
+    ).bibliography;
+    const uuid = newBibliographyHeading(work, 'a') as string;
+
+    expect(outline(work, [uuid])).toEqual([
+      'a b.1',
+      'new b.2',
+      'h1 b.3',
+      'e1 b.3.1',
+    ]);
   });
 });
 
@@ -275,11 +293,31 @@ describe('moving a row', () => {
     expect(work.spine.meta('h3')?.label).toBe('b.3');
   });
 
+  it('moves an entry to the top level, before the first heading', async () => {
+    const work = await nested();
+    expect(moveBibliographyRow(work, 'e2', null)).toBe(true);
+    expect(outline(work)).toEqual([
+      'e2 b.1',
+      'h1 b.2',
+      'e1 b.2.1',
+      'h2 b.3',
+      'h3 b.3.1',
+      'e3 b.3.1.1',
+    ]);
+    expect(parentOf(work, 'e2')).toBeUndefined();
+
+    expect(moveBibliographyRow(work, 'e3', null)).toBe(true);
+    expect(work.spine.uuids().slice(0, 3)).toEqual(['e2', 'e3', 'h1']);
+    expect(moveBibliographyRow(work, 'e2', null)).toBe(false);
+
+    expect(moveBibliographyRow(work, 'e2', 'h1')).toBe(true);
+    expect(parentOf(work, 'e2')).toBe('h1');
+  });
+
   it('refuses a move into the row’s own rows, or under an entry', async () => {
     const work = await nested();
     expect(moveBibliographyRow(work, 'h2', 'h3')).toBe(false);
     expect(moveBibliographyRow(work, 'e1', 'e2')).toBe(false);
-    expect(moveBibliographyRow(work, 'e1', null)).toBe(false);
   });
 });
 

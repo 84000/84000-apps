@@ -17,7 +17,9 @@ const bySort = (a: BibliographyRow, b: BibliographyRow) => a.sort - b.sort;
  * - headings are numbered among their sibling headings by `sort`, under their
  *   parent's label, starting from the top-level headings;
  * - entries are numbered among the entries under the same heading by `sort`,
- *   under that heading's label, or on their own when it has none.
+ *   under that heading's label, or on their own when it has none;
+ * - top-level entries come first among the root's children, so top-level
+ *   headings are numbered after them.
  *
  * A heading the top level cannot reach (a cycle, or a parent that is not a
  * heading) gets no label, and neither do the entries under it, as no reader
@@ -58,10 +60,11 @@ export const outlineBibliography = (
     parentUuid: string | null,
     parent?: BibliographyRowPlace,
   ) => {
+    const offset = parentUuid ? 0 : (entryCount.get(null) ?? 0);
     headingsUnder.get(parentUuid)?.forEach((heading, at) => {
       // Guards against a uuid listed twice, which would otherwise recurse forever.
       if (places.has(heading.uuid)) return;
-      const place = under(parent, at + 1);
+      const place = under(parent, offset + at + 1);
       places.set(heading.uuid, place);
       placeHeadings(heading.uuid, place);
     });

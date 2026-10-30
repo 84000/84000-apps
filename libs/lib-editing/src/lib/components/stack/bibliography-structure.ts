@@ -4,13 +4,15 @@ import {
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
+import { topLevelEnd } from './bibliography-outline';
+
 /**
  * The structural edits a bibliography allows, over its work document.
  *
- * The order is the readers' order: each heading followed by its entries, then
- * the headings under it. An entry belongs to the heading before it, so these
- * keep every entry after a heading in a work that has one, and never leave a
- * heading's parent deleted.
+ * The order is the readers' order: the top-level entries, then each heading
+ * followed by its entries and the headings under it. An entry belongs to the
+ * heading before it, so a top-level entry sits before the first heading. These
+ * never leave a heading's parent deleted.
  */
 
 const isHeading = (entry: SpineEntry) => rowKindOf(entry.type) === 'heading';
@@ -89,8 +91,8 @@ export const newBibliographyEntry = (
 
 /**
  * Start a new heading after the row's heading: a sibling that follows it and
- * its rows, or with `nested` its last child. In a work with no heading yet it
- * goes first, so every entry has one.
+ * its rows, or with `nested` its last child. From a top-level entry it is the
+ * first heading, after the top-level entries, which stay where they are.
  */
 export const newBibliographyHeading = (
   work: WorkDocument,
@@ -103,7 +105,10 @@ export const newBibliographyHeading = (
   const heading = isHeading(row)
     ? row
     : entries.find((e) => e.uuid === row.parent);
-  if (!heading) return work.insert({ type: 'bibliographyHeader' }, 0).uuid;
+  if (!heading) {
+    return work.insert({ type: 'bibliographyHeader' }, topLevelEnd(entries))
+      .uuid;
+  }
 
   const parent = nested ? heading.uuid : heading.parent;
   return work.insert(
@@ -223,7 +228,8 @@ export const bibliographyMoveTargets = (
 /**
  * Move a row under a heading: an entry to the end of the heading's entries,
  * a heading, and what it holds, to the end of the heading's rows as its last
- * child. A heading moved under `null` goes to the end, at the top level.
+ * child. Under `null`, to the top level: an entry to the end of the top-level
+ * entries, a heading to the end.
  */
 export const moveBibliographyRow = (
   work: WorkDocument,
@@ -246,7 +252,11 @@ export const moveBibliographyRow = (
   const place = (at: number) => (at > index ? at - block.length : at);
 
   if (!isHeading(row)) {
-    if (!target) return false;
+    if (!target) {
+      return (
+        !!row.parent && work.nest(block, { to: place(topLevelEnd(entries)) })
+      );
+    }
     let end = targetIndex + 1;
     while (end < entries.length && !isHeading(entries[end])) end++;
     return work.nest(block, { to: place(end) });

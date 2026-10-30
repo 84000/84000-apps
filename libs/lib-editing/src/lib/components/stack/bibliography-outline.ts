@@ -10,6 +10,12 @@ export const BIBLIOGRAPHY_LABEL_PREFIX = 'b.';
 
 const isHeading = (entry: SpineEntry) => rowKindOf(entry.type) === 'heading';
 
+/** Where the top-level entries end: at the first heading. */
+export const topLevelEnd = (entries: SpineEntry[]): number => {
+  const first = entries.findIndex(isHeading);
+  return first < 0 ? entries.length : first;
+};
+
 type Place = { label: string | null; depth: number };
 
 /**
@@ -19,10 +25,13 @@ type Place = { label: string | null; depth: number };
  * - A heading nests under its own parent and is numbered among the headings
  *   under the same one.
  * - An entry nests under the heading before it and is numbered among the
- *   entries under that heading, or among the headingless ones.
+ *   entries under that heading. Entries before the first heading sit at the
+ *   top level, and top-level headings are numbered after them.
  *
  * A heading the top level cannot reach, and the entries under it, get no
- * label, as no reader shows them.
+ * label, as no reader shows them. An entry whose stored heading is not a
+ * heading of the work is read in its own place, so it takes the place the
+ * order gives it, as the next save stores it.
  */
 export const outlineBibliographyRows: RowOutline = (entries) => {
   const headings = new Map(
@@ -30,7 +39,7 @@ export const outlineBibliographyRows: RowOutline = (entries) => {
   );
 
   const position = new Map<string, number>();
-  const counts = new Map<string, number>();
+  const counts = new Map<string, number>([['under:', topLevelEnd(entries)]]);
   const count = (key: string) => {
     const next = (counts.get(key) ?? 0) + 1;
     counts.set(key, next);

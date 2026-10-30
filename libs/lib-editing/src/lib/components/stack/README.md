@@ -553,7 +553,8 @@ Formatting marks rank above links, so they wrap a link as stored entries do.
 `StackWorkProvider` reads a work's bibliography into a `WorkDocument` of its
 own (`bibliography-work`), not the passages' work: its rows are not passages,
 so they save, and undo, apart from them. All rows are read at once and seeded
-in the readers' order, each heading followed by its entries, so a deep link to
+in the readers' order, the top-level entries first and then each heading
+followed by its entries, so a deep link to
 any row is already in the spine and no feed is needed. Labels and nesting
 come from `outlineBibliography`, as the readers number them. The tab's own
 title, `b.` Bibliography, is not a row: the host draws it above the stack, as
@@ -562,10 +563,14 @@ the Glossary tab draws its own, so it is never saved, moved or deleted.
 The work document takes an `outline`, which derives every row's label, parent
 and depth from the order after each change, so they are never recorded in the
 history. `outlineBibliographyRows` numbers the order as `outlineBibliography`
-numbers the stored rows: an entry belongs to the heading before it, and a
-heading keeps the parent it is given. The edits in `bibliography-structure`
-keep that true: a new heading follows its heading's block (or goes first in a
-work with none), a heading is deleted only once nothing is under it, and
+numbers the stored rows: an entry belongs to the heading before it, so the
+entries before the first heading are top-level ones, numbered before the
+top-level headings, and a heading keeps the parent it is given. A top-level
+entry therefore always sorts before the first heading; validation fails a
+work where one is stored after it. The edits in `bibliography-structure`
+keep that true: a new heading follows its heading's block (or, from a
+top-level entry, the top-level entries), an entry moved to the top level
+goes to the end of them, a heading is deleted only once nothing is under it, and
 indent, outdent and move carry a heading's block with it, through
 `WorkDocument.nest`, as one undo step.
 
@@ -586,7 +591,7 @@ Undo and redo from outside an editor take the history of the work whose row
 was last focused or clicked. The one registered save writes both works and
 reports one outcome. A bibliography save writes new, edited and moved rows and
 deletes removed ones in one call. Sorts are placed per run the readers sort,
-the headings and each heading's entries, keeping as many stored sorts as fit
+the headings with the top-level entries, and each heading's entries, keeping as many stored sorts as fit
 and writing the fewest rows for their sort alone. A row with no text is held
 back, and so are the rows under a new heading until it has a name; the save
 then reports a failure, and those rows count as unsaved. When a save's

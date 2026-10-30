@@ -51,6 +51,26 @@ describe('outlineBibliography', () => {
     });
   });
 
+  it('numbers top-level headings after the top-level entries', () => {
+    expect(
+      placesOf([
+        row('e1', 1, null),
+        row('e2', 2, null),
+        row('h1', 3, null, true),
+        row('e3', 4, 'h1'),
+        row('h2', 5, 'h1', true),
+        row('h3', 6, null, true),
+      ]),
+    ).toEqual({
+      e1: { depth: 0, label: '1' },
+      e2: { depth: 0, label: '2' },
+      h1: { depth: 0, label: '3' },
+      e3: { depth: 1, label: '3.1' },
+      h2: { depth: 1, label: '3.1' },
+      h3: { depth: 0, label: '4' },
+    });
+  });
+
   it('gives no label to rows no reader shows', () => {
     expect(
       placesOf([

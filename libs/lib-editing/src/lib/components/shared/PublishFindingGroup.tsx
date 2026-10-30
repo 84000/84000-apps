@@ -33,7 +33,10 @@ const RULE_TITLES: Record<string, string> = {
     'References that exist only as an xmlId with no resolved uuid',
   'bibliography-heading-unresolved':
     'Bibliography headings that do not resolve',
-  'bibliography-entry-unheaded': 'Bibliography entries with no heading',
+  'bibliography-entry-misplaced':
+    'Top-level bibliography entries after a heading',
+  'bibliography-entry-unlinked':
+    'Top-level bibliography entries that name a heading',
   'glossary-index-unavailable': 'Glossary index unavailable',
   'work-not-found': 'Work not found',
   'xmlid-stripped': 'Deprecated xmlIds',
@@ -54,8 +57,10 @@ const RULE_NOTES: Record<string, string> = {
   'inline-marker-unresolved':
     'Only markers that are always local are checked: end notes, abbreviations, and mentions or internal links explicitly flagged as same-work. Cross-work links are valid and not reported here.',
   'xmlid-stripped': 'XML ID values are not retained when a work is published.',
-  'bibliography-entry-unheaded':
-    'An entry appears only inside a heading section, and a work with any headings has no headingless section to fall back to — so these entries would be published but shown nowhere. Give them a heading, or remove the work’s headings.',
+  'bibliography-entry-unlinked':
+    'These entries have no heading but still name one from the import, so they may have lost their section. They are shown at the top level. Move them under a heading, or save them where they are.',
+  'bibliography-entry-misplaced':
+    'Entries with no heading are listed at the top level, before the first heading. These are stored after a heading, so readers would show them out of place. Open the bibliography and save it to move them, or move them under a heading.',
 };
 
 /** Stable key for a finding; one per rule. */
