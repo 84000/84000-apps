@@ -23,5 +23,5 @@ component library.
 ## Key Components
 
 - `EditorProvider` — manages editor state, dirty tracking, Yjs sync, and save lifecycle
-- `TranslationBuilder` — orchestrates building translations from passages
-- `PaginationProvider` — manages pagination through content
+- `StackWorkProvider` / `PassageStack` (`components/stack/`) — the editor: one TipTap editor per passage, see its README
+- `PaginationProvider` — manages pagination through content for the reader

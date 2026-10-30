@@ -119,10 +119,7 @@ export const EndNoteLinkHoverContent = ({
         deleteEndnotePassageNode(endnotesEditor, endNote);
       }
 
-      // Remove the referencing links directly rather than relying solely on
-      // the debounced observer in TranslationBuilder, which can miss the
-      // deletion if it races a save/navigation. The observer still backstops
-      // other deletion paths (backspace, merge) and renumbers labels.
+      // Outside the stack: remove the referencing links directly.
       const frontEditor = getEditor('front');
       const translationEditor = getEditor('translation');
       if (frontEditor) {
