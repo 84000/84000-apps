@@ -1,20 +1,7 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
-import {
-  BODY_MATTER_FILTER,
-  createBrowserClient,
-  FRONT_MATTER_FILTER,
-} from '@eightyfourthousand/data-access';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createBrowserClient } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import {
@@ -32,10 +19,8 @@ import {
 } from '../shared/types';
 import { PassageStackController } from './PassageStackController';
 import {
-  loadBibliographyWork,
   saveBibliographyWork,
   unsavedBibliographyChanges,
-  type BibliographyWork,
 } from './bibliography-work';
 import {
   applyServerPassages,
@@ -46,28 +31,22 @@ import {
 } from './stack-save';
 import { removeStackCommentAnchors } from './stack-comments';
 import { deleteStackEndnote } from './stack-endnotes';
-import { SpineFeed, type SpineSection } from './spine-feed';
-import { createStackWork } from './stack-work';
-import type { PassageExtras } from './types';
+import {
+  StackWorkContextProvider,
+  useStackWorkLoad,
+  type LoadedStackWork,
+  type StackViewFactory,
+} from './stack-work-context';
 
-/**
- * The sections drawn as stacks, **in the order the work reads**.
- *
- * Order is load bearing: a section whose run is still empty is appended at the
- * end of the spine, so seeding them out of order would put the back matter
- * before the body.
- */
-const SECTIONS: SpineSection[] = [
-  // The filter matches each type's `*Header` too.
-  { tab: 'front', type: FRONT_MATTER_FILTER },
-  { tab: 'translation', type: BODY_MATTER_FILTER },
-  // Between the body and the notes, as every work that has them reads.
-  { tab: 'abbreviations', type: 'abbreviations' },
-  { tab: 'endnotes', type: 'endnotes' },
-];
+export {
+  useStackWork,
+  type StackWork,
+  type LoadedStackWork,
+} from './stack-work-context';
 
-/** The tab the bibliography is drawn in, from its own work. */
-const BIBLIOGRAPHY_TAB = 'bibliography';
+/** Views that can edit. */
+const createEditingView: StackViewFactory = (options) =>
+  new PassageStackController(options);
 
 /** Whether a panel is showing a tab's passages; Compare draws Translation's. */
 const showsTab = (
@@ -79,26 +58,6 @@ const showsTab = (
   const drawn = state.tab ?? DEFAULT_TAB_FOR_PANEL[panel];
   return (drawn === 'compare' ? 'translation' : drawn) === tab;
 };
-
-export type StackWork = {
-  work: WorkDocument;
-  /**
-   * The bibliography, as a work of its own: its rows are not passages, so it
-   * saves, and undoes, apart from them. Null when it could not be read.
-   */
-  bibliography: BibliographyWork | null;
-  /** The view for a tab, or null when this provider does not draw it. */
-  controllerFor: (tab: string) => PassageStackController | null;
-  /** Whether every view is read-only, as the provider was told. */
-  readOnly: boolean;
-};
-
-/** What the loader builds, before the provider adds its own state. */
-type LoadedStackWork = Omit<StackWork, 'readOnly'> & {
-  controllers: PassageStackController[];
-};
-
-const StackWorkContext = createContext<StackWork | null>(null);
 
 /**
  * One `WorkDocument` for a work, with a view per editor tab over it.
@@ -124,14 +83,6 @@ export const StackWorkProvider = ({
   children: ReactNode;
 }) => {
   const [stack, setStack] = useState<LoadedStackWork | null>(null);
-  // Read when the views are built, so they start in the current mode.
-  const readOnlyRef = useRef(readOnly);
-  useEffect(() => {
-    readOnlyRef.current = readOnly;
-    stack?.controllers.forEach((controller) =>
-      controller.setReadOnly(readOnly),
-    );
-  }, [stack, readOnly]);
   const { registerSaveHandler, dirtyStore } = useEditorState();
 
   // The editor's save button materializes rows from one TipTap editor per tab,
@@ -259,88 +210,17 @@ export const StackWorkProvider = ({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [stack, readOnly, panels, updatePanel]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const client = createGraphQLClient();
-    const extras = new Map<string, PassageExtras>();
-    const work = createStackWork({ workUuid, client, extras });
-    const controllers = new Map<string, PassageStackController>();
-    // Its own work, so it reads alongside the passages rather than after.
-    const readingBibliography = loadBibliographyWork({
-      workUuid,
-      client: createBrowserClient(),
-      graphql: client,
-    });
-
-    void (async () => {
-      // Sequentially, not in parallel: each run is placed relative to the ones
-      // already in the spine.
-      for (const section of SECTIONS) {
-        const feed = new SpineFeed(work, client, section);
-        await feed.seed();
-        if (cancelled) return;
-        controllers.set(
-          section.tab,
-          new PassageStackController({
-            work,
-            tab: section.tab,
-            spineFeed: feed,
-            extras,
-            readOnly: readOnlyRef.current,
-          }),
-        );
-      }
-
-      const bibliography = await readingBibliography;
-      if (cancelled) return;
-      if (bibliography) {
-        controllers.set(
-          BIBLIOGRAPHY_TAB,
-          new PassageStackController({
-            work: bibliography.work,
-            tab: BIBLIOGRAPHY_TAB,
-            rows: 'bibliography',
-            readOnly: readOnlyRef.current,
-          }),
-        );
-      }
-
-      setStack({
-        work,
-        bibliography,
-        controllerFor: (tab) => controllers.get(tab) ?? null,
-        controllers: [...controllers.values()],
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-      setStack(null);
-      controllers.forEach((controller) => controller.destroy());
-      work.destroy();
-      void readingBibliography.then((bibliography) =>
-        bibliography?.work.destroy(),
-      );
-    };
-  }, [workUuid]);
-
-  const value = useMemo<StackWork | null>(
-    () =>
-      stack && {
-        work: stack.work,
-        bibliography: stack.bibliography,
-        controllerFor: stack.controllerFor,
-        readOnly,
-      },
-    [stack, readOnly],
-  );
+  useStackWorkLoad({
+    workUuid,
+    readOnly,
+    stack,
+    setStack,
+    createView: createEditingView,
+  });
 
   return (
-    <StackWorkContext.Provider value={value}>
+    <StackWorkContextProvider stack={stack} readOnly={readOnly}>
       {children}
-    </StackWorkContext.Provider>
+    </StackWorkContextProvider>
   );
 };
-
-/** The shared work, or null while it is still being seeded. */
-export const useStackWork = () => useContext(StackWorkContext);

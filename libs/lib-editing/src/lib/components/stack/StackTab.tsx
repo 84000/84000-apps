@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { PassageStack } from './PassageStack';
-import { useStackWork } from './StackWorkProvider';
+import { useStackWork } from './stack-work-context';
 import { useStackOuterContent } from './useStackOuterContent';
 
 /**
