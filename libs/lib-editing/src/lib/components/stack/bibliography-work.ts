@@ -25,9 +25,9 @@ import {
 import { createStackWork } from './stack-work';
 
 /**
- * Rows in the order the readers show them: each heading by `sort`, followed by
- * the entries under it by `sort`. An entry with no heading row to sit under
- * keeps its own place.
+ * Rows in the order the readers show them: the top-level entries by `sort`,
+ * then each heading by `sort`, followed by the entries under it by `sort`. An
+ * entry whose heading is not among the rows keeps its own place.
  */
 export const bibliographyReadingOrder = (
   rows: readonly BibliographyRow[],
@@ -46,10 +46,16 @@ export const bibliographyReadingOrder = (
       row,
     ]);
   });
-  return sorted.flatMap((row) => {
-    if (row.isHeading) return [row, ...(entriesUnder.get(row.uuid) ?? [])];
-    return row.headingUuid && headings.has(row.headingUuid) ? [] : [row];
-  });
+  const isTopLevelEntry = (row: BibliographyRow) =>
+    !row.isHeading && !row.headingUuid;
+  return [
+    ...sorted.filter(isTopLevelEntry),
+    ...sorted.flatMap((row) => {
+      if (row.isHeading) return [row, ...(entriesUnder.get(row.uuid) ?? [])];
+      if (isTopLevelEntry(row)) return [];
+      return row.headingUuid && headings.has(row.headingUuid) ? [] : [row];
+    }),
+  ];
 };
 
 /** The spine seeds of a work's bibliography rows, in reading order. */

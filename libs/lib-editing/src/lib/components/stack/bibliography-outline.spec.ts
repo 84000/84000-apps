@@ -66,9 +66,17 @@ const NESTED: BibliographyRow[] = [
   { uuid: 'h4', sort: 7, isHeading: true, headingUuid: 'h2' },
 ].map((row) => ({ ...row, workUuid: 'w1', html: row.uuid }));
 
+/** NESTED with two top-level entries, one stored after a heading. */
+const TOP_LEVEL: BibliographyRow[] = [
+  ...NESTED,
+  { uuid: 'r1', sort: 0, isHeading: false, headingUuid: null },
+  { uuid: 'r2', sort: 8, isHeading: false, headingUuid: null },
+].map((row) => ({ ...row, workUuid: 'w1', html: row.uuid }));
+
 describe('outlineBibliographyRows', () => {
   it.each([
     ['nested headings', NESTED],
+    ['top-level entries', TOP_LEVEL],
     ['toh90001', seedRows('toh90001')],
     ['toh145', seedRows('toh145')],
     ['toh251', seedRows('toh251')],
@@ -91,6 +99,28 @@ describe('outlineBibliographyRows', () => {
     expect(outlined(spine([{ uuid: 'a' }, { uuid: 'b' }]))).toEqual([
       { uuid: 'a', label: 'b.1' },
       { uuid: 'b', label: 'b.2' },
+    ]);
+  });
+
+  it('keeps entries before the first heading at the top level', () => {
+    expect(
+      outlined(
+        spine([
+          { uuid: 'a' },
+          { uuid: 'b' },
+          { uuid: 'h1', heading: true },
+          { uuid: 'c' },
+          { uuid: 'h2', heading: true, parent: 'h1' },
+          { uuid: 'h3', heading: true },
+        ]),
+      ),
+    ).toEqual([
+      { uuid: 'a', label: 'b.1' },
+      { uuid: 'b', label: 'b.2' },
+      { uuid: 'h1', label: 'b.3' },
+      { uuid: 'c', label: 'b.3.1', parent: 'h1', depth: 1 },
+      { uuid: 'h2', label: 'b.3.1', parent: 'h1', depth: 1 },
+      { uuid: 'h3', label: 'b.4' },
     ]);
   });
 
