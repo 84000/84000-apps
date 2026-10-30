@@ -22,6 +22,6 @@ component library.
 
 ## Key Components
 
-- `EditorProvider` — manages editor state, dirty tracking, Yjs sync, and save lifecycle
+- `EditorProvider` — the editor's permissions, read-only state, dirty flag, and save lifecycle; the stack registers what a save writes
 - `StackWorkProvider` / `PassageStack` (`components/stack/`) — the editor: one TipTap editor per passage, see its README
 - `PaginationProvider` — manages pagination through content for the reader
