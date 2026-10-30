@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { toast } from '@eightyfourthousand/design-system';
 
-import { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 /** How far the pointer must travel before a press counts as a drag. */
 const DRAG_SLOP_PX = 4;
@@ -47,7 +47,7 @@ const passageUuidAt = (x: number, y: number): string | null =>
  * browser's own selection crosses rows freely.
  */
 export const useStackSelection = (
-  controller: PassageStackController,
+  controller: StackController,
   enabled = true,
 ) => {
   useEffect(() => {

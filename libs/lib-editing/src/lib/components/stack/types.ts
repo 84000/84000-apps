@@ -1,11 +1,17 @@
-import type { JSONContent } from '@tiptap/core';
+import type { Editor, Extensions, JSONContent } from '@tiptap/core';
+import type { ComponentType } from 'react';
+import type { UndoManager, XmlFragment } from 'yjs';
 import type { Passage } from '@eightyfourthousand/data-access';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import type { BeyondPage } from './spine-feed';
+import type { StackController } from './StackController';
+import type { StackPassageMenuTarget } from './StackPassageMenu';
 import {
   blockFromPassage,
   type FocusTarget,
+  type PassageMeta,
   type SpineSeed,
+  type StackRowKind,
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
 
@@ -162,6 +168,68 @@ export type PassageStackControllerOptions = {
    * never split, merged or deleted here. Defaults to passages.
    */
   rows?: StackRows;
+};
+
+/** What a live row's editor is bound to. */
+export type StackEditorBinding = {
+  uuid: string;
+  fragment: XmlFragment;
+  undoManager: UndoManager;
+  delegate: StackKeyboardDelegate;
+};
+
+/** A live row's editor, as `PassageStack` draws one. */
+export type StackPassageEditorProps = {
+  controller: StackController;
+  meta: PassageMeta;
+  focused: boolean;
+  selected?: boolean;
+  /** The Tibetan source, in Compare; undefined outside it. */
+  tibetan?: string;
+  /** The Compare column's top margin, from the passage's first block. */
+  tibetanLead?: string;
+};
+
+/** The editing controls `PassageStack` draws once for a whole stack. */
+export type StackEditingMenusProps = {
+  controller: StackController;
+  /** The focused row's editor, when this copy of the stack holds it. */
+  editor: Editor | null;
+  /** The row whose label menu is open. */
+  target: StackPassageMenuTarget | null;
+  onClose: () => void;
+};
+
+/**
+ * Everything a stack needs to edit, and a reader does not.
+ *
+ * A view is handed this rather than importing it so that a reader's module
+ * graph holds no editor: no live-editor component, no menus, and no
+ * collaboration or y-sync plugin. `PassageStackController` supplies it;
+ * `StackController` alone is read-only.
+ */
+export type StackEditing = {
+  /**
+   * The transaction origin a live editor writes under, which the passage
+   * undo managers track as the user's typing.
+   */
+  textOrigin: unknown;
+  passageExtensions: (binding: StackEditorBinding) => Extensions;
+  bibliographyExtensions: (
+    binding: StackEditorBinding & {
+      kind: StackRowKind;
+      /** Starts rows; without it, rows are edited in place. */
+      outline?: BibliographyOutlineDelegate;
+    },
+  ) => Extensions;
+  PassageEditor: ComponentType<StackPassageEditorProps>;
+  Menus: ComponentType<StackEditingMenusProps>;
+};
+
+/** A view with, or without, the means to edit. */
+export type StackControllerOptions = PassageStackControllerOptions & {
+  /** Without it, the view is read-only whatever `readOnly` says. */
+  editing?: StackEditing;
 };
 
 /** The entity a stack's rows are. */

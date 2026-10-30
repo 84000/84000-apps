@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import { isRendered } from '@eightyfourthousand/lib-utils';
 
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 
 /**
  * Frames of no movement before a settled scroll stops holding its target.
@@ -42,7 +42,7 @@ const revealMargin = (scroller: HTMLElement | null, uuid?: string) => {
  * it.
  */
 export const useStackScrollHandler = (
-  controller: PassageStackController,
+  controller: StackController,
   virtualizer: Virtualizer<HTMLElement, Element>,
   scroller: HTMLElement | null,
 ) => {

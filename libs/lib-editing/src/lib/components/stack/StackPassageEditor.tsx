@@ -4,7 +4,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import { PassageSkeleton } from './PassageSkeleton';
 import { rowContentClass } from './row-classes';
 import { StackRow } from './StackRow';
@@ -29,7 +29,7 @@ export const StackPassageEditor = memo(
     tibetan,
     tibetanLead,
   }: {
-    controller: PassageStackController;
+    controller: StackController;
     meta: PassageMeta;
     focused: boolean;
     selected?: boolean;

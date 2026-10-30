@@ -15,7 +15,7 @@ import { cn } from '@eightyfourthousand/lib-utils';
 import { ReaderOptions } from '../editor/extensions/Passage/ReaderOptions';
 import { useNavigation } from '../shared/NavigationContext';
 import { SuggestRevisionForm } from '../shared/SuggestRevisionForm';
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 
 /** Characters of a passage kept with its bookmark. */
@@ -30,7 +30,7 @@ export const StackReaderMenu = ({
   target,
   onClose,
 }: {
-  controller: PassageStackController;
+  controller: StackController;
   target: StackPassageMenuTarget | null;
   onClose: () => void;
 }) => {

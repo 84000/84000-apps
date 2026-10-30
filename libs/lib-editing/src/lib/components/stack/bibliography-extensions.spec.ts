@@ -3,7 +3,10 @@ import { Fragment, Slice } from '@tiptap/pm/model';
 import { Doc, UndoManager } from 'yjs';
 import type { StackRowKind } from '@eightyfourthousand/lib-doc-model';
 
-import { buildBibliographyEditorExtensions } from './bibliography-extensions';
+import { Mention } from '../editor/extensions/Mention/Mention';
+import { MentionSSR } from '../editor/extensions/Mention/Mention.ssr';
+import { buildBibliographyEditorExtensions } from './bibliography-editor-extensions';
+import { buildBibliographySchemaExtensions } from './bibliography-extensions';
 import type {
   BibliographyOutlineDelegate,
   StackKeyboardDelegate,
@@ -132,5 +135,18 @@ describe('bibliography row editors', () => {
     expect(names(editorFor('heading', { outline }))).not.toContain(
       'slashCommand',
     );
+  });
+
+  it('author mentions in an entry, while the reader schema stays schema-only', () => {
+    expect(buildBibliographySchemaExtensions()).toContain(MentionSSR);
+    expect(buildBibliographySchemaExtensions()).not.toContain(Mention);
+
+    const editor = editorFor('entry');
+    const mentions = editor.extensionManager.extensions.filter(
+      ({ name }) => name === 'mention',
+    );
+    editor.destroy();
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0].parent).toBe(MentionSSR);
   });
 });

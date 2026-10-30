@@ -36,11 +36,11 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 
-import type { PassageStackController } from './StackController';
+import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 
 /** A row as a menu names it: its label, and its text where it is held. */
-const rowName = (controller: PassageStackController, meta: PassageMeta) =>
+const rowName = (controller: StackController, meta: PassageMeta) =>
   [meta.label, controller.getRowText(meta.uuid)].filter(Boolean).join(' ');
 
 /**
@@ -52,7 +52,7 @@ export const BibliographyRowMenu = ({
   target,
   onClose,
 }: {
-  controller: PassageStackController;
+  controller: StackController;
   target: StackPassageMenuTarget | null;
   onClose: () => void;
 }) => {

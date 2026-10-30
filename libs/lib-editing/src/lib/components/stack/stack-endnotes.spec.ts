@@ -10,7 +10,7 @@ import type {
 import { createStackEndnote, deleteStackEndnote } from './stack-endnotes';
 import { buildStackSchemaExtensions } from './stack-extensions';
 import { createStackWorkDocument } from './stack-work';
-import type { PassageStackController } from './StackController';
+import type { PassageStackController } from './PassageStackController';
 import type { BeyondPage } from './spine-feed';
 import type { StackWork } from './StackWorkProvider';
 
