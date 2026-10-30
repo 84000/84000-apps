@@ -17,11 +17,14 @@ export const StackTab = ({
   tab,
   className,
   fallback,
+  title,
 }: {
   tab: string;
   className?: string;
   /** Drawn when the work is ready but has no view for this tab. */
   fallback?: ReactNode;
+  /** Drawn above the stack, never as one of its rows. */
+  title?: ReactNode;
 }) => {
   const stack = useStackWork();
   const controller = stack?.controllerFor(tab);
@@ -31,5 +34,10 @@ export const StackTab = ({
     return stack && fallback ? fallback : <TranslationSkeleton />;
   }
 
-  return <PassageStack controller={controller} className={className} />;
+  return (
+    <>
+      {title}
+      <PassageStack controller={controller} className={className} />
+    </>
+  );
 };
