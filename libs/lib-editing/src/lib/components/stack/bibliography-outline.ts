@@ -10,6 +10,12 @@ export const BIBLIOGRAPHY_LABEL_PREFIX = 'b.';
 
 const isHeading = (entry: SpineEntry) => rowKindOf(entry.type) === 'heading';
 
+/** Where the top-level entries end: at the first heading. */
+export const topLevelEnd = (entries: SpineEntry[]): number => {
+  const first = entries.findIndex(isHeading);
+  return first < 0 ? entries.length : first;
+};
+
 type Place = { label: string | null; depth: number };
 
 /**
@@ -23,18 +29,17 @@ type Place = { label: string | null; depth: number };
  *   top level, and top-level headings are numbered after them.
  *
  * A heading the top level cannot reach, and the entries under it, get no
- * label, as no reader shows them.
+ * label, as no reader shows them. An entry whose stored heading is not a
+ * heading of the work is read in its own place, so it takes the place the
+ * order gives it, as the next save stores it.
  */
 export const outlineBibliographyRows: RowOutline = (entries) => {
   const headings = new Map(
     entries.filter(isHeading).map((entry) => [entry.uuid, entry]),
   );
 
-  const firstHeading = entries.findIndex(isHeading);
-  const topLevelEntries = firstHeading < 0 ? entries.length : firstHeading;
-
   const position = new Map<string, number>();
-  const counts = new Map<string, number>([['under:', topLevelEntries]]);
+  const counts = new Map<string, number>([['under:', topLevelEnd(entries)]]);
   const count = (key: string) => {
     const next = (counts.get(key) ?? 0) + 1;
     counts.set(key, next);
