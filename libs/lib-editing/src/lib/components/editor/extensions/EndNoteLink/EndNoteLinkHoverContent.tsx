@@ -9,10 +9,11 @@ import {
   UnlinkIcon,
   Trash2Icon,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid } from '../../util';
 import { useEditorState } from '../../EditorProvider';
+import { useStackWork } from '../../../stack/StackWorkProvider';
 import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const EndNoteLinkHoverContent = ({
@@ -41,13 +42,27 @@ export const EndNoteLinkHoverContent = ({
   );
   const { deleteEndnote } = useEditorState();
   const { fetchEndNote } = useNavigation();
+  const spine = useStackWork()?.work.spine;
+
+  // The stack's label is current, unsaved and renumbered notes included; the
+  // server's is read only where the stack has none, as in the reader.
+  const subscribe = useCallback(
+    (listener: () => void) => spine?.observe(listener) ?? (() => undefined),
+    [spine],
+  );
+  const stackLabel = useSyncExternalStore(
+    subscribe,
+    () => (endNote ? spine?.meta(endNote)?.label : undefined) || undefined,
+    () => undefined,
+  );
+  const hasStackLabel = stackLabel !== undefined;
 
   // With no endnote to resolve there is nothing to load, so this is derived
   // rather than pushed into state from the effect below.
-  const labelState = !endNote ? 'error' : fetchState;
+  const labelState = !endNote ? 'error' : hasStackLabel ? 'loaded' : fetchState;
 
   useEffect(() => {
-    if (!endNote) {
+    if (!endNote || hasStackLabel) {
       return;
     }
 
@@ -63,7 +78,7 @@ export const EndNoteLinkHoverContent = ({
         setFetchState('error');
       }
     });
-  }, [endNote, fetchEndNote]);
+  }, [endNote, fetchEndNote, hasStackLabel]);
 
   const removeLink = useCallback(() => {
     setHoverCardEditing(false);
@@ -108,7 +123,7 @@ export const EndNoteLinkHoverContent = ({
       )}
       {labelState === 'loaded' && (
         <span className="truncate text-muted-foreground text-sm my-auto">
-          {label}
+          {stackLabel ?? label}
         </span>
       )}
       <span className="flex-grow" />
