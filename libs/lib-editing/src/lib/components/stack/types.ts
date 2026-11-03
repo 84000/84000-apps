@@ -62,6 +62,8 @@ export type StackKeyboardDelegate = {
    */
   splitAtSelection: (uuid: string, at?: number) => boolean;
   mergeWithPrevious: (uuid: string) => boolean;
+  /** Select whole passages from `uuid` to its neighbour, or one further. */
+  extendPassageSelection: (uuid: string, direction: -1 | 1) => boolean;
   undo: () => boolean;
   redo: () => boolean;
 };

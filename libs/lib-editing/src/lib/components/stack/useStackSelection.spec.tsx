@@ -23,10 +23,23 @@ const controller = () =>
   ({
     clearPassageSelection: jest.fn(),
     hasPassageSelection: jest.fn(() => false),
+    getPassageSelection: jest.fn(() => null),
+    getFocusedUuid: jest.fn(() => 'a'),
     setPassageSelection: jest.fn(),
   }) as unknown as PassageStackController & {
     setPassageSelection: jest.Mock;
   };
+
+/** Shift-click an element; returns whether the default was prevented. */
+const shiftClick = (id: string) =>
+  !(document.getElementById(id) as HTMLElement).dispatchEvent(
+    new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      shiftKey: true,
+    }),
+  );
 
 /** Press on an element and drag down onto the next row. */
 const drag = (id: string) => {
@@ -58,6 +71,72 @@ describe('useStackSelection', () => {
     drag('text');
 
     expect(stack.setPassageSelection).toHaveBeenCalledWith('a', 'b');
+  });
+
+  it('selects from the focused passage to a shift-clicked one', () => {
+    rows();
+    const stack = controller();
+    renderHook(() => useStackSelection(stack));
+
+    expect(shiftClick('next')).toBe(true);
+    expect(stack.setPassageSelection).toHaveBeenCalledWith('a', 'b');
+  });
+
+  it('leaves a shift-click inside the focused passage to the editor', () => {
+    rows();
+    const stack = controller();
+    renderHook(() => useStackSelection(stack));
+
+    expect(shiftClick('text')).toBe(false);
+    expect(stack.setPassageSelection).not.toHaveBeenCalled();
+  });
+
+  it('moves the focus of a passage selection with Shift and an arrow', () => {
+    const stack = {
+      ...controller(),
+      hasPassageSelection: jest.fn(() => true),
+      getPassageSelection: jest.fn(() => ({ anchorUuid: 'a', focusUuid: 'b' })),
+      extendPassageSelection: jest.fn(),
+    } as unknown as PassageStackController & {
+      extendPassageSelection: jest.Mock;
+    };
+    renderHook(() => useStackSelection(stack));
+
+    const key = (key: string, shiftKey = true) =>
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key, shiftKey, cancelable: true }),
+      );
+    expect(key('ArrowUp')).toBe(false);
+    key('ArrowRight');
+    key('ArrowDown', false);
+
+    expect(stack.extendPassageSelection.mock.calls).toEqual([
+      ['b', -1],
+      ['b', 1],
+    ]);
+  });
+
+  it('steps once when the stack is mounted twice on one controller', () => {
+    const stack = {
+      ...controller(),
+      hasPassageSelection: jest.fn(() => true),
+      getPassageSelection: jest.fn(() => ({ anchorUuid: 'a', focusUuid: 'b' })),
+      extendPassageSelection: jest.fn(),
+    } as unknown as PassageStackController & {
+      extendPassageSelection: jest.Mock;
+    };
+    renderHook(() => useStackSelection(stack));
+    renderHook(() => useStackSelection(stack));
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        shiftKey: true,
+        cancelable: true,
+      }),
+    );
+
+    expect(stack.extendPassageSelection.mock.calls).toEqual([['b', 1]]);
   });
 
   it('leaves a drag from the Tibetan column to the browser', () => {

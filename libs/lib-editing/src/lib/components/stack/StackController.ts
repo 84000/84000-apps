@@ -613,6 +613,15 @@ export class PassageStackController {
 
   hasPassageSelection = () => this.selection.hasPassageSelection();
 
+  getPassageSelection = () => this.selection.getPassageSelection();
+
+  /**
+   * Extend the passage selection one passage in `direction`, starting one at
+   * `uuid` when there is none.
+   */
+  extendPassageSelection = (uuid: string, direction: -1 | 1) =>
+    !this.readOnly && this.selection.extendPassageSelection(uuid, direction);
+
   isSelected = (uuid: string) => this.selection.isSelected(uuid);
 
   /** The selected passages, in spine order. */

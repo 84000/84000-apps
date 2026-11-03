@@ -39,6 +39,7 @@ const delegate = (): StackKeyboardDelegate => ({
   focusRelative: () => false,
   splitAtSelection: () => false,
   mergeWithPrevious: () => false,
+  extendPassageSelection: () => false,
   undo: () => false,
   redo: () => false,
 });
@@ -190,6 +191,7 @@ describe('BoundaryKeymap suggestion guard', () => {
       focusRelative: () => (calls.push('focusRelative'), true),
       splitAtSelection: () => (calls.push('split'), true),
       mergeWithPrevious: () => true,
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -209,6 +211,7 @@ describe('BoundaryKeymap suggestion guard', () => {
       focusRelative: () => true,
       splitAtSelection: () => (calls.push('split'), true),
       mergeWithPrevious: () => true,
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -263,6 +266,7 @@ describe('BoundaryKeymap Enter and Backspace', () => {
         return true;
       },
       mergeWithPrevious: () => (calls.push('merge'), true),
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -535,6 +539,72 @@ describe('BoundaryKeymap arrows at a passage edge', () => {
     expect(crossings(doc, (d) => Selection.atStart(d)).crossed).toEqual([
       'ArrowUp',
     ]);
+  });
+
+  /** Each Shift+Arrow the keymap turns into a passage selection. */
+  const extensions = (doc: PMNode, selection: (doc: PMNode) => Selection) => {
+    const calls: string[] = [];
+    const keys = shortcuts({
+      ...delegate(),
+      extendPassageSelection: (uuid, direction) => (
+        calls.push(`${uuid} ${direction}`),
+        true
+      ),
+    });
+    let state = EditorState.create({ doc });
+    state = state.apply(state.tr.setSelection(selection(state.doc)));
+    const editor = { state, view: { endOfTextblock: () => true } };
+    ['Left', 'Up', 'Right', 'Down'].forEach((key) =>
+      keys[`Shift-Arrow${key}`]({ editor }),
+    );
+    return calls;
+  };
+
+  it('extends a selection past the edge into whole passages', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    // A selection running back to the start, then one onto the trailing audio.
+    expect(extensions(doc, (d) => TextSelection.create(d, 4, 1))).toEqual([
+      'p0 -1',
+      'p0 -1',
+    ]);
+    expect(extensions(doc, (d) => Selection.atEnd(d))).toEqual([
+      'p0 1',
+      'p0 1',
+    ]);
+  });
+
+  // The audio has no line of its own: Shift+Down from the text's last line
+  // leaves, as a drag past the passage does.
+  it('extends down from the text before a trailing atom block', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    expect(extensions(doc, (d) => TextSelection.create(d, 2, 3))).toEqual([
+      'p0 1',
+    ]);
+  });
+
+  it('extends a selection within the passage as usual', () => {
+    const doc = schema.node('doc', null, [text(), text()]);
+
+    // Mid-way through the first of two blocks, at neither edge.
+    expect(extensions(doc, (d) => TextSelection.create(d, 2, 3))).toEqual([]);
+  });
+
+  it('extends down through a trailing line group line by line', () => {
+    const line = (value: string) =>
+      schema.node('line', null, [schema.text(value)]);
+    const doc = schema.node('doc', null, [
+      text(),
+      schema.node('lineGroup', null, [line('one'), line('two')]),
+    ]);
+    // In the group's first line: the passage's last top-level block, but not
+    // its last line.
+    const inFirstLine = text().nodeSize + 3;
+
+    expect(
+      extensions(doc, (d) => TextSelection.create(d, inFirstLine)),
+    ).toEqual([]);
   });
 
   it('keeps the arrows inside the passage away from its edges', () => {
