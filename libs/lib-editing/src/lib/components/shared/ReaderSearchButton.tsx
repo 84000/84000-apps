@@ -6,13 +6,7 @@ import {
   SearchButton,
   SearchResult,
 } from '@eightyfourthousand/lib-search';
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useEditorState } from '../editor/EditorProvider';
 import { useNavigation } from './NavigationProvider';
 import { SearchAlignmentEnglish } from './SearchAlignmentEnglish';
@@ -22,28 +16,15 @@ import { locationForPassageType, PanelName, PanelState } from './types';
 
 export const ReaderSearchButton = () => {
   const { uuid, toh, updatePanel } = useNavigation();
-  const { applyReplacedPassages, canEdit, dirtyStore } = useEditorState();
-  const [canReplace, setCanReplace] = useState(false);
+  const { applyReplacedPassages, readOnly, dirtyStore } = useEditorState();
+  // Read-only covers both a user without edit permission and an editor who
+  // chose to read, so replace follows it rather than permission alone.
+  const canReplace = !readOnly;
   const isDirty = useSyncExternalStore(
     dirtyStore.subscribe.bind(dirtyStore),
     dirtyStore.getSnapshot.bind(dirtyStore),
     () => false,
   );
-
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      const editable = await canEdit();
-      if (active) {
-        setCanReplace(editable);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [canEdit]);
 
   // Translation Passages show the English as the reader does, folio markers
   // included, reading only the results scrolled into view.

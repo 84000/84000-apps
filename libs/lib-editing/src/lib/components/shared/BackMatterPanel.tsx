@@ -22,12 +22,15 @@ import {
   useScrollPositionRestore,
 } from './hooks/useScrollPositionRestore';
 
+/** Content for a renderer that reads its own. */
+const NO_CONTENT: TranslationEditorContent = [];
+
 export const BackMatterPanel = ({
   workUuid,
-  endnotes,
+  endnotes = NO_CONTENT,
   glossary,
   bibliography,
-  abbreviations,
+  abbreviations = NO_CONTENT,
   endnotesHasMore,
   abbreviationsHasMore,
   hasEndnotes = endnotes.length > 0,
@@ -38,10 +41,12 @@ export const BackMatterPanel = ({
   renderBibliography,
 }: {
   workUuid: string;
-  endnotes: TranslationEditorContent;
+  /** Omitted when `renderTranslation` reads the endnotes itself. */
+  endnotes?: TranslationEditorContent;
   glossary: GlossaryTermsPage;
   bibliography: BibliographyEntries;
-  abbreviations: TranslationEditorContent;
+  /** Omitted when `renderTranslation` reads the abbreviations itself. */
+  abbreviations?: TranslationEditorContent;
   endnotesHasMore?: boolean;
   abbreviationsHasMore?: boolean;
   /** Whether to show Notes, when that is known without its content. */

@@ -27,9 +27,12 @@ import {
   useScrollPositionRestore,
 } from './hooks/useScrollPositionRestore';
 
+/** Front matter for a renderer that reads its own. */
+const NO_FRONT_MATTER: TranslationEditorContent = [];
+
 export const BodyPanel = ({
   titles,
-  frontMatter,
+  frontMatter = NO_FRONT_MATTER,
   body,
   frontMatterHasMore,
   bodyHasMore,
@@ -38,7 +41,8 @@ export const BodyPanel = ({
   translationState = 'content',
 }: {
   titles: Title[];
-  frontMatter: TranslationEditorContent;
+  /** Omitted when `renderTranslation` reads the front matter itself. */
+  frontMatter?: TranslationEditorContent;
   body: TranslationEditorContent;
   frontMatterHasMore?: boolean;
   bodyHasMore?: boolean;

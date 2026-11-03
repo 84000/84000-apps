@@ -20,8 +20,7 @@ export type FeatureFlag =
   | 'authority-pages'
   | 'translation-hover-cards'
   | 'studio-header-config'
-  | 'show-reader-header'
-  | 'per-passage-docs';
+  | 'show-reader-header';
 
 export type FeatureFlagPayload = {
   apps?: string[];
