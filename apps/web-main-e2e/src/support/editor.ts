@@ -157,7 +157,19 @@ export const selectText = async (
   occurrence = 0,
 ): Promise<void> => {
   const editor = await caretAtEnd(page, uuid);
-  await editor.evaluate(
+  // The click that placed the caret can still be setting the editor's
+  // selection, and replace this one after it is made: make it until it holds.
+  await expect(async () => {
+    await select(editor, text, occurrence);
+    await page.waitForTimeout(150);
+    // Lowercased: small caps renders the selected text in capitals.
+    const selected = await page.evaluate(() => getSelection()?.toString());
+    expect(selected?.toLowerCase()).toBe(text.toLowerCase());
+  }).toPass({ timeout: 10_000 });
+};
+
+const select = (editor: Locator, text: string, occurrence: number) =>
+  editor.evaluate(
     (el, { text, occurrence }) => {
       const walker = el.ownerDocument.createTreeWalker(
         el,
@@ -192,7 +204,6 @@ export const selectText = async (
     },
     { text, occurrence },
   );
-};
 
 /** Waits until a row stops moving, as a panel settles after a deep link. */
 export const settled = async (target: Locator): Promise<void> => {
