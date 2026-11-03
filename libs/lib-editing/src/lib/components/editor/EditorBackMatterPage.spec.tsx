@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
 
 import { EditorBackMatterPage } from './EditorBackMatterPage';
 
@@ -15,14 +16,15 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 jest.mock('@eightyfourthousand/lib-instr/static', () => ({
   isStaticFeatureEnabled: () => false,
 }));
+/** The props of each `StackTab` drawn, by tab. */
+const mockStackProps = new Map<string, Record<string, unknown>>();
 // Every dynamic import here is `StackTab`.
-jest.mock(
-  'next/dynamic',
-  () => () => (props: { tab: string }) =>
-    jest
-      .requireActual('react')
-      .createElement('div', { 'data-testid': `stack-${props.tab}` }),
-);
+jest.mock('next/dynamic', () => () => (props: { tab: string }) => {
+  mockStackProps.set(props.tab, props);
+  return jest
+    .requireActual('react')
+    .createElement('div', { 'data-testid': `stack-${props.tab}` });
+});
 jest.mock('.', () => ({ TranslationBuilder: () => null }));
 jest.mock('../shared/NavigationProvider', () => ({
   useNavigation: () => ({
@@ -218,6 +220,26 @@ describe('EditorBackMatterPage', () => {
     expect(await screen.findByRole('tab', { name: 'Biblio' })).toBeTruthy();
     expect(screen.getByTestId('stack-bibliography')).toBeTruthy();
     expect(screen.queryByTestId('bibliography-list')).toBeNull();
+  });
+
+  it('titles the stacked bibliography as the Glossary tab titles its own', async () => {
+    mockFlag.enabled = true;
+    mockFlag.ready = true;
+    withAbbreviations(0);
+    withBibliography();
+    render(<EditorBackMatterPage />);
+
+    await screen.findByTestId('stack-bibliography');
+    // Drawn by the stack only once it has rows; the read-only fallback list
+    // carries its own.
+    const { title } = mockStackProps.get('bibliography') as {
+      title: ReactElement;
+    };
+    render(title);
+    const heading = screen.getByRole('heading', { name: 'Bibliography' });
+    expect(heading.closest('#bibliography')?.textContent).toBe(
+      'b.Bibliography',
+    );
   });
 
   it('lists the bibliography read-only without the flag', async () => {
