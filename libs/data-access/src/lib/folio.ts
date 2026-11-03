@@ -67,58 +67,101 @@ type GetWorkFoliosAroundArgs = {
   after?: number;
 };
 
+type FolioPosition = {
+  volume_number: number;
+  folio_number: number;
+  side: string;
+};
+
+const FOLIO_POSITION_COLUMNS = `
+  volume_number::int4,
+  folio_number::int4,
+  side::text`;
+
+type FoliosAroundPositionArgs = Omit<GetWorkFoliosAroundArgs, 'folioUuid'> & {
+  position: FolioPosition;
+};
+
+/**
+ * Window the work's folios around a folio's position in reading order. The
+ * index is counted rather than found in a read of every folio, which PostgREST
+ * would truncate at its row limit.
+ */
+const getWorkFoliosAroundPosition = async ({
+  client,
+  uuid,
+  toh,
+  position,
+  before = 10,
+  after = 10,
+}: FoliosAroundPositionArgs): Promise<FoliosAround | null> => {
+  const { volume_number: volume, folio_number: folio, side } = position;
+  const { count: index, error } = await client
+    .from('tibetan_works_folios')
+    .select('folio_uuid', { count: 'exact', head: true })
+    .eq('work_uuid', uuid)
+    .eq('toh', toh)
+    .or(
+      [
+        `volume_number.lt.${volume}`,
+        `and(volume_number.eq.${volume},folio_number.lt.${folio})`,
+        `and(volume_number.eq.${volume},folio_number.eq.${folio},side.lt.${side})`,
+      ].join(','),
+    );
+
+  if (error || index === null) {
+    console.error('Error counting folios:', error);
+    return null;
+  }
+
+  const startIndex = Math.max(0, index - before);
+  const size = index + after - startIndex + 1;
+
+  // One folio past the window says whether more follow, without a total count.
+  const folios = await getWorkFolios({
+    client,
+    uuid,
+    toh,
+    offset: startIndex,
+    size: size + 1,
+  });
+
+  return {
+    folios: folios.slice(0, size),
+    startIndex,
+    hasMoreBefore: startIndex > 0,
+    hasMoreAfter: folios.length > size,
+  };
+};
+
 /**
  * Fetch a window of folios centered on a target folio, plus flags indicating
  * whether more folios exist before/after the window. Returns `null` when the
  * folio isn't part of the work/toh.
  */
 export const getWorkFoliosAround = async ({
-  client,
-  uuid,
-  toh,
   folioUuid,
-  before = 10,
-  after = 10,
+  ...args
 }: GetWorkFoliosAroundArgs): Promise<FoliosAround | null> => {
-  // Resolve the target folio's position within the ordered list. Selecting
-  // only the uuid keeps this cheap even for works with many folios.
-  const { data, error } = await client
+  const { data, error } = await args.client
     .from('tibetan_works_folios')
-    .select('folio_uuid')
-    .eq('work_uuid', uuid)
-    .eq('toh', toh)
-    .order('volume_number', { ascending: true })
-    .order('folio_number', { ascending: true })
-    .order('side', { ascending: true });
+    .select(FOLIO_POSITION_COLUMNS)
+    .eq('work_uuid', args.uuid)
+    .eq('toh', args.toh)
+    .eq('folio_uuid', folioUuid)
+    .limit(1);
 
   if (error) {
-    console.error('Error fetching folio index:', error);
+    console.error('Error resolving folio position:', error);
     return null;
   }
 
-  const total = data.length;
-  const index = data.findIndex((row) => row.folio_uuid === folioUuid);
-  if (index === -1) {
+  const position = data?.[0] as FolioPosition | undefined;
+  if (!position) {
     return null;
   }
 
-  const startIndex = Math.max(0, index - before);
-  const endIndex = Math.min(total - 1, index + after);
-
-  const folios = await getWorkFolios({
-    client,
-    uuid,
-    toh,
-    offset: startIndex,
-    size: endIndex - startIndex + 1,
-  });
-
-  return {
-    folios,
-    startIndex,
-    hasMoreBefore: startIndex > 0,
-    hasMoreAfter: endIndex < total - 1,
-  };
+  return getWorkFoliosAroundPosition({ ...args, position });
 };
 
 type GetWorkFoliosAtArgs = {
@@ -160,7 +203,7 @@ export const getWorkFoliosAt = async ({
 }: GetWorkFoliosAtArgs): Promise<FoliosAround | null> => {
   let query = client
     .from('tibetan_works_folios')
-    .select('folio_uuid')
+    .select(FOLIO_POSITION_COLUMNS)
     .eq('work_uuid', uuid)
     .eq('toh', toh)
     .eq('folio_number', folioNumber)
@@ -179,16 +222,16 @@ export const getWorkFoliosAt = async ({
     return null;
   }
 
-  const folioUuid = data?.[0]?.folio_uuid as string | undefined;
-  if (!folioUuid) {
+  const position = data?.[0] as FolioPosition | undefined;
+  if (!position) {
     return null;
   }
 
-  return getWorkFoliosAround({
+  return getWorkFoliosAroundPosition({
     client,
     uuid,
     toh,
-    folioUuid,
+    position,
     before,
     after,
   });
