@@ -102,16 +102,16 @@ describe('PublishChecksPanel', () => {
 
   // The rule id falls back to itself when unlabelled, so a new SQL rule that reaches the UI
   // without an entry here shows as raw kebab-case. This is the guard for that.
-  it('gives bibliography-entry-unheaded a readable title and an explanation', async () => {
+  it('gives bibliography-entry-misplaced a readable title and an explanation', async () => {
     seed(
       readiness({
         ok: false,
         errors: [
           {
-            rule: 'bibliography-entry-unheaded',
+            rule: 'bibliography-entry-misplaced',
             severity: 'error',
             message:
-              'Bibliography entries have no heading in a work that has headings, so they would appear in no section.',
+              'Bibliography entries with no heading sort after a top-level heading, so readers would show them out of place, before the first section.',
             // No subjects: this test is about the label and the note, and subjects would
             // pull in the finding-location lookup that other tests cover.
             subjects: [],
@@ -127,13 +127,13 @@ describe('PublishChecksPanel', () => {
     // once expanded.
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /Bibliography entries with no heading/i,
+        name: /Top-level bibliography entries after a heading/i,
       }),
     );
 
-    expect(screen.queryByText('bibliography-entry-unheaded')).toBeNull();
+    expect(screen.queryByText('bibliography-entry-misplaced')).toBeNull();
     expect(
-      screen.getByText(/would be published but shown nowhere/),
+      screen.getByText(/readers would show them out of place/),
     ).toBeTruthy();
   });
 

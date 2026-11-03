@@ -176,6 +176,7 @@ export const BibliographyRowMenu = ({
                 <Heading1Icon className="text-primary" /> New Heading
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={!isHeading && !meta.parent}
                 onSelect={() => controller.newBibliographyHeading(uuid, true)}
               >
                 <Heading2Icon className="text-primary" /> New Subheading
@@ -199,12 +200,12 @@ export const BibliographyRowMenu = ({
               )}
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger
-                  disabled={!targets.length && !(isHeading && meta.parent)}
+                  disabled={!targets.length && !meta.parent}
                 >
                   <FolderInputIcon className="text-primary" /> Move Under
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-80 w-72 overflow-y-auto">
-                  {isHeading && meta.parent && (
+                  {meta.parent && (
                     <DropdownMenuItem
                       onSelect={() =>
                         controller.moveBibliographyRow(uuid, null)
