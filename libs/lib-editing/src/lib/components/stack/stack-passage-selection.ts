@@ -86,6 +86,28 @@ export class StackPassageSelectionModel {
 
   hasPassageSelection = () => this.passageSelection !== null;
 
+  /** The passage selection's anchor and focus, or null when there is none. */
+  getPassageSelection = (): StackPassageSelection | null =>
+    this.passageSelection;
+
+  /**
+   * Move the passage selection's focus one passage in `direction`, or start
+   * one from `uuid` to its neighbour when there is none. False when there is
+   * no passage that way.
+   */
+  extendPassageSelection(uuid: string, direction: -1 | 1): boolean {
+    const { anchorUuid, focusUuid } = this.passageSelection ?? {
+      anchorUuid: uuid,
+      focusUuid: uuid,
+    };
+    const order = this.getOrder();
+    const index = order.indexOf(focusUuid);
+    const target = index < 0 ? undefined : order[index + direction];
+    if (!target) return false;
+    this.setPassageSelection(anchorUuid, target);
+    return true;
+  }
+
   isSelected = (uuid: string) => this.selectedUuids().includes(uuid);
 
   /** The selected passages, in spine order. */

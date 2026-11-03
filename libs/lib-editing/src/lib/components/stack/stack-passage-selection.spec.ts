@@ -73,6 +73,26 @@ describe('PassageStackController passage selection', () => {
     expect(controller.selectedUuids()).toEqual(['p1', 'p2']);
   });
 
+  it('extends a passage at a time from where a selection starts', async () => {
+    const { controller } = await withMarks();
+
+    expect(controller.extendPassageSelection('p1', 1)).toBe(true);
+    expect(controller.selectedUuids()).toEqual(['p1', 'p2']);
+    // Once there is a selection, it grows from its focus, whatever `uuid` is.
+    controller.extendPassageSelection('p0', 1);
+    expect(controller.selectedUuids()).toEqual(['p1', 'p2', 'p3']);
+    expect(controller.extendPassageSelection('p3', 1)).toBe(false);
+
+    controller.extendPassageSelection('p3', -1);
+    controller.extendPassageSelection('p3', -1);
+    controller.extendPassageSelection('p3', -1);
+    expect(controller.getPassageSelection()).toEqual({
+      anchorUuid: 'p1',
+      focusUuid: 'p0',
+    });
+    expect(controller.selectedUuids()).toEqual(['p0', 'p1']);
+  });
+
   it('serializes the selected passages as rich content', async () => {
     const { controller } = await withMarks();
     controller.setPassageSelection('p1', 'p2');

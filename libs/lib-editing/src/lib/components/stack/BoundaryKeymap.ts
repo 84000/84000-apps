@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Editor } from '@tiptap/react';
 import {
   type EditorState,
+  NodeSelection,
   Selection,
   TextSelection,
   type Transaction,
@@ -37,14 +38,71 @@ const suggestionOpen = (editor: Editor) =>
         ?.active === true,
   );
 
+/**
+ * Whether the caret is at the start of the passage. Before a leading atom
+ * block such as audio, that is a gap cursor at 0: the node selected is one
+ * step short, and ArrowLeft from it gives the gap cursor.
+ */
 const atDocStart = (editor: Editor) => {
   const { selection, doc } = editor.state;
-  return selection.empty && selection.$from.pos === Selection.atStart(doc).from;
+  return (
+    selection.empty &&
+    (selection.from === Selection.atStart(doc).from || selection.from === 0)
+  );
 };
 
+/** Whether the caret is at the end of the passage; see `atDocStart`. */
 const atDocEnd = (editor: Editor) => {
   const { selection, doc } = editor.state;
-  return selection.empty && selection.$from.pos === Selection.atEnd(doc).from;
+  return (
+    selection.empty &&
+    (selection.from === Selection.atEnd(doc).to ||
+      selection.from === doc.content.size)
+  );
+};
+
+/**
+ * Whether the selection is the atom block that opens (`back`) or closes the
+ * passage. Arriving from a neighbour can select it as a text range rather than
+ * as the node, so this compares the range.
+ */
+const onEdgeAtom = (editor: Editor, back: boolean) => {
+  const { selection, doc } = editor.state;
+  const edge = back ? Selection.atStart(doc) : Selection.atEnd(doc);
+  return (
+    edge instanceof NodeSelection &&
+    selection.from === edge.from &&
+    selection.to === edge.to
+  );
+};
+
+/**
+ * Whether Shift+Arrow in `direction` would take the selection's head past the
+ * passage's edge: the head is at the edge, or on the first or last line of the
+ * passage moving up or down.
+ */
+const headLeaves = (
+  editor: Editor,
+  direction: 'left' | 'right' | 'up' | 'down',
+) => {
+  const { selection, doc } = editor.state;
+  const back = direction === 'left' || direction === 'up';
+  const edge = back ? Selection.atStart(doc) : Selection.atEnd(doc);
+  if (selection.eq(edge)) return true;
+  if (back ? selection.head <= edge.from : selection.head >= edge.to) {
+    return true;
+  }
+  if (direction === 'left' || direction === 'right') return false;
+  // `endOfTextblock` measures from the selection's leading end, so only a
+  // head at that end can be on the line it measures.
+  if (selection.head !== (back ? selection.from : selection.to)) return false;
+  // The head's textblock must be the passage's first or last, not just one
+  // inside its first or last top-level block (a list, a line group).
+  const text = back
+    ? Selection.findFrom(doc.resolve(0), 1, true)
+    : Selection.findFrom(doc.resolve(doc.content.size), -1, true);
+  if (!text || !selection.$head.sameParent(text.$head)) return false;
+  return editor.view.endOfTextblock(direction);
 };
 
 const inFirstTopBlock = (editor: Editor) =>
@@ -145,6 +203,9 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
     return {
       ArrowUp: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
+        if (atDocStart(editor) || onEdgeAtom(editor, true)) {
+          return delegate.focusRelative(uuid, -1, 'end');
+        }
         if (!editor.state.selection.empty) return false;
         if (!inFirstTopBlock(editor)) return false;
         if (!editor.view.endOfTextblock('up')) return false;
@@ -152,6 +213,9 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
       },
       ArrowDown: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
+        if (atDocEnd(editor) || onEdgeAtom(editor, false)) {
+          return delegate.focusRelative(uuid, 1, 'start');
+        }
         if (!editor.state.selection.empty) return false;
         if (!inLastTopBlock(editor)) return false;
         if (!editor.view.endOfTextblock('down')) return false;
@@ -165,6 +229,19 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
         if (!atDocEnd(editor)) return false;
         return delegate.focusRelative(uuid, 1, 'start');
       },
+      // Past the edge, a selection takes in whole passages, as a drag does.
+      'Shift-ArrowLeft': ({ editor }) =>
+        headLeaves(editor, 'left') && delegate.extendPassageSelection(uuid, -1),
+      'Shift-ArrowUp': ({ editor }) =>
+        !suggestionOpen(editor) &&
+        headLeaves(editor, 'up') &&
+        delegate.extendPassageSelection(uuid, -1),
+      'Shift-ArrowRight': ({ editor }) =>
+        headLeaves(editor, 'right') && delegate.extendPassageSelection(uuid, 1),
+      'Shift-ArrowDown': ({ editor }) =>
+        !suggestionOpen(editor) &&
+        headLeaves(editor, 'down') &&
+        delegate.extendPassageSelection(uuid, 1),
       Enter: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
         // One line: Enter starts the row after it, if rows can be started.

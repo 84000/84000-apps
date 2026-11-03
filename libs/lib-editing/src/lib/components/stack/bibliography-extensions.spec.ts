@@ -21,6 +21,7 @@ const delegate: StackKeyboardDelegate = {
   focusRelative: () => false,
   splitAtSelection: () => false,
   mergeWithPrevious: () => false,
+  extendPassageSelection: () => false,
   undo: () => false,
   redo: () => false,
 };

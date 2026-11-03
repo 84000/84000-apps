@@ -8,6 +8,14 @@ import { PassageStackController } from './StackController';
 /** How far the pointer must travel before a press counts as a drag. */
 const DRAG_SLOP_PX = 4;
 
+/** Which way Shift and each arrow key move a passage selection's focus. */
+const ARROW_STEP: Partial<Record<string, -1 | 1>> = {
+  ArrowUp: -1,
+  ArrowLeft: -1,
+  ArrowDown: 1,
+  ArrowRight: 1,
+};
+
 const passageUuidFor = (node: Node | null): string | null => {
   const element =
     node instanceof Element ? node : (node?.parentElement ?? null);
@@ -57,13 +65,21 @@ export const useStackSelection = (
 
     const onMouseDown = (event: MouseEvent) => {
       if (event.button !== 0) return;
+      // The Tibetan beside a passage in Compare is text to select and copy.
+      const uuid = inCompareSource(event.target as Node)
+        ? null
+        : passageUuidFor(event.target as Node);
+      // Stopped too, so the row's own click-to-focus does not mount an editor
+      // under the selection.
+      if (event.shiftKey && extendTo(uuid)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       // A press anywhere begins a new selection; the old one goes whether or
       // not this one turns into a drag.
       controller.clearPassageSelection();
-      // The Tibetan beside a passage in Compare is text to select and copy.
-      anchorUuid = inCompareSource(event.target as Node)
-        ? null
-        : passageUuidFor(event.target as Node);
+      anchorUuid = uuid;
       origin = anchorUuid ? { x: event.clientX, y: event.clientY } : null;
     };
 
@@ -97,6 +113,21 @@ export const useStackSelection = (
     };
 
     /**
+     * Shift-click: select whole passages from the selection's anchor, or from
+     * the focused passage, to the one clicked. A click inside the focused
+     * passage is the editor's own.
+     */
+    const extendTo = (uuid: string | null) => {
+      const anchor =
+        controller.getPassageSelection()?.anchorUuid ??
+        controller.getFocusedUuid();
+      if (!uuid || !anchor) return false;
+      if (uuid === anchor && !controller.hasPassageSelection()) return false;
+      controller.setPassageSelection(anchor, uuid);
+      return true;
+    };
+
+    /**
      * Let go of the browser's own selection.
      *
      * A passage selection is drawn by the stack, so the blue one beneath it is
@@ -127,6 +158,17 @@ export const useStackSelection = (
 
       if (event.key === 'Escape') {
         controller.clearPassageSelection();
+        return;
+      }
+
+      const step = event.shiftKey ? ARROW_STEP[event.key] : undefined;
+      if (step) {
+        // The layout's hidden copy of the stack listens too, on the same
+        // controller: whichever copy goes first takes the step.
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        const focus = controller.getPassageSelection()?.focusUuid;
+        if (focus) controller.extendPassageSelection(focus, step);
         return;
       }
 

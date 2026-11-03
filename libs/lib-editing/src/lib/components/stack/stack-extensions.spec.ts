@@ -1,8 +1,12 @@
 import { getSchema } from '@tiptap/core';
+import { GapCursor } from '@tiptap/pm/gapcursor';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import {
   EditorState,
+  NodeSelection,
   PluginKey,
   Selection,
+  TextSelection,
   type Transaction,
 } from '@tiptap/pm/state';
 import { Doc } from 'yjs';
@@ -35,6 +39,7 @@ const delegate = (): StackKeyboardDelegate => ({
   focusRelative: () => false,
   splitAtSelection: () => false,
   mergeWithPrevious: () => false,
+  extendPassageSelection: () => false,
   undo: () => false,
   redo: () => false,
 });
@@ -186,6 +191,7 @@ describe('BoundaryKeymap suggestion guard', () => {
       focusRelative: () => (calls.push('focusRelative'), true),
       splitAtSelection: () => (calls.push('split'), true),
       mergeWithPrevious: () => true,
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -205,6 +211,7 @@ describe('BoundaryKeymap suggestion guard', () => {
       focusRelative: () => true,
       splitAtSelection: () => (calls.push('split'), true),
       mergeWithPrevious: () => true,
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -259,6 +266,7 @@ describe('BoundaryKeymap Enter and Backspace', () => {
         return true;
       },
       mergeWithPrevious: () => (calls.push('merge'), true),
+      extendPassageSelection: () => false,
       undo: () => true,
       redo: () => true,
     };
@@ -463,6 +471,151 @@ describe('BoundaryKeymap Enter and Backspace', () => {
       expect(fixed(delegate, true)['Mod-Enter']({ editor })).toBe(true);
       expect(calls).toEqual([]);
     });
+  });
+});
+
+describe('BoundaryKeymap arrows at a passage edge', () => {
+  const shortcuts = (delegate: StackKeyboardDelegate) =>
+    (
+      BoundaryKeymap.config.addKeyboardShortcuts as (this: {
+        options: { uuid: string; delegate: StackKeyboardDelegate };
+      }) => Record<string, (props: { editor: unknown }) => boolean>
+    ).call({ options: { uuid: 'p0', delegate } });
+
+  const schema = getSchema(buildStackSchemaExtensions());
+  const text = () => schema.node('paragraph', null, [schema.text('text')]);
+  const audio = () => schema.node('audio', { src: 'a.mp3' });
+
+  /** Each key the keymap sends to the next or previous passage. */
+  const crossings = (doc: PMNode, selection: (doc: PMNode) => Selection) => {
+    const calls: string[] = [];
+    const keys = shortcuts({
+      ...delegate(),
+      focusRelative: (_uuid, direction, where) => (
+        calls.push(`${direction} ${where}`),
+        true
+      ),
+    });
+    let state = EditorState.create({ doc });
+    state = state.apply(state.tr.setSelection(selection(state.doc)));
+    const editor = { state, view: { endOfTextblock: () => false } };
+    const crossed = ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].filter(
+      (key) => keys[key]({ editor }),
+    );
+    return { crossed, calls };
+  };
+
+  // Regression: a passage ending in audio trapped the caret. Its last caret
+  // position is the gap cursor after the audio, never a text caret. With the
+  // node selected, ArrowRight is one step short (ProseMirror moves to the gap)
+  // but ArrowDown leaves, as it does from a last line.
+  it('leaves a passage that ends with an atom block', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    expect(
+      crossings(doc, (d) => new GapCursor(d.resolve(d.content.size))),
+    ).toEqual({
+      crossed: ['ArrowRight', 'ArrowDown'],
+      calls: ['1 start', '1 start'],
+    });
+    expect(crossings(doc, (d) => Selection.atEnd(d)).crossed).toEqual([
+      'ArrowDown',
+    ]);
+    // Arriving from below with focus('end') spans the audio as text.
+    expect(
+      crossings(doc, (d) =>
+        TextSelection.create(d, text().nodeSize, d.content.size),
+      ).crossed,
+    ).toEqual(['ArrowDown']);
+  });
+
+  it('leaves a passage that starts with an atom block', () => {
+    const doc = schema.node('doc', null, [audio(), text()]);
+
+    expect(crossings(doc, (d) => new GapCursor(d.resolve(0)))).toEqual({
+      crossed: ['ArrowLeft', 'ArrowUp'],
+      calls: ['-1 end', '-1 end'],
+    });
+    expect(crossings(doc, (d) => Selection.atStart(d)).crossed).toEqual([
+      'ArrowUp',
+    ]);
+  });
+
+  /** Each Shift+Arrow the keymap turns into a passage selection. */
+  const extensions = (doc: PMNode, selection: (doc: PMNode) => Selection) => {
+    const calls: string[] = [];
+    const keys = shortcuts({
+      ...delegate(),
+      extendPassageSelection: (uuid, direction) => (
+        calls.push(`${uuid} ${direction}`),
+        true
+      ),
+    });
+    let state = EditorState.create({ doc });
+    state = state.apply(state.tr.setSelection(selection(state.doc)));
+    const editor = { state, view: { endOfTextblock: () => true } };
+    ['Left', 'Up', 'Right', 'Down'].forEach((key) =>
+      keys[`Shift-Arrow${key}`]({ editor }),
+    );
+    return calls;
+  };
+
+  it('extends a selection past the edge into whole passages', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    // A selection running back to the start, then one onto the trailing audio.
+    expect(extensions(doc, (d) => TextSelection.create(d, 4, 1))).toEqual([
+      'p0 -1',
+      'p0 -1',
+    ]);
+    expect(extensions(doc, (d) => Selection.atEnd(d))).toEqual([
+      'p0 1',
+      'p0 1',
+    ]);
+  });
+
+  // The audio has no line of its own: Shift+Down from the text's last line
+  // leaves, as a drag past the passage does.
+  it('extends down from the text before a trailing atom block', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    expect(extensions(doc, (d) => TextSelection.create(d, 2, 3))).toEqual([
+      'p0 1',
+    ]);
+  });
+
+  it('extends a selection within the passage as usual', () => {
+    const doc = schema.node('doc', null, [text(), text()]);
+
+    // Mid-way through the first of two blocks, at neither edge.
+    expect(extensions(doc, (d) => TextSelection.create(d, 2, 3))).toEqual([]);
+  });
+
+  it('extends down through a trailing line group line by line', () => {
+    const line = (value: string) =>
+      schema.node('line', null, [schema.text(value)]);
+    const doc = schema.node('doc', null, [
+      text(),
+      schema.node('lineGroup', null, [line('one'), line('two')]),
+    ]);
+    // In the group's first line: the passage's last top-level block, but not
+    // its last line.
+    const inFirstLine = text().nodeSize + 3;
+
+    expect(
+      extensions(doc, (d) => TextSelection.create(d, inFirstLine)),
+    ).toEqual([]);
+  });
+
+  it('keeps the arrows inside the passage away from its edges', () => {
+    const doc = schema.node('doc', null, [text(), audio(), text()]);
+
+    expect(
+      crossings(doc, (d) => NodeSelection.create(d, text().nodeSize)).crossed,
+    ).toEqual([]);
+    expect(crossings(doc, (d) => TextSelection.create(d, 3)).crossed).toEqual(
+      [],
+    );
   });
 });
 
