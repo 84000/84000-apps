@@ -1,3 +1,4 @@
+import { isMarkActive } from '@tiptap/core';
 import { Subscript as TipTapSubscript } from '@tiptap/extension-subscript';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -38,12 +39,12 @@ export const Subscript = TipTapSubscript.extend({
           return commands.setMark(name, { uuid: uuidv4(), lang, textStyle });
         };
       },
+      // Checked without attributes: each application mints its own uuid.
       toggleSubscript() {
-        return ({ commands, tr }) => {
-          const lang = tr.selection.$from.parent.attrs.lang;
-          const textStyle = tr.selection.$from.parent.attrs.textStyle;
-          return commands.toggleMark(name, { uuid: uuidv4(), lang, textStyle });
-        };
+        return ({ commands, state }) =>
+          isMarkActive(state, name)
+            ? commands.unsetMark(name)
+            : commands.setSubscript();
       },
     };
   },

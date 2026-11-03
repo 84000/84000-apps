@@ -1,4 +1,4 @@
-import { Mark, mergeAttributes } from '@tiptap/core';
+import { isMarkActive, Mark, mergeAttributes } from '@tiptap/core';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface SmallCapsOptions {
@@ -99,13 +99,13 @@ export const SmallCaps = Mark.create<SmallCapsOptions>({
           const textStyle = tr.selection.$from.parent.attrs.textStyle;
           return commands.setMark(name, { uuid: uuidv4(), lang, textStyle });
         },
+      // Checked without attributes: each application mints its own uuid.
       toggleSmallCaps:
         () =>
-        ({ commands, tr }) => {
-          const lang = tr.selection.$from.parent.attrs.lang;
-          const textStyle = tr.selection.$from.parent.attrs.textStyle;
-          return commands.toggleMark(name, { uuid: uuidv4(), lang, textStyle });
-        },
+        ({ commands, state }) =>
+          isMarkActive(state, name)
+            ? commands.unsetMark(name)
+            : commands.setSmallCaps(),
       unsetSmallCaps:
         () =>
         ({ commands }) => {

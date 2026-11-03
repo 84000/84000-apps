@@ -51,8 +51,8 @@ const contentOf = (a: StoredAnnotation) => JSON.stringify(a.content);
 
 test.describe('Inline marks', () => {
   test('ED-MRK-01 Text styles', async ({ page }) => {
-    // Twelve saves, two per style.
-    test.setTimeout(240_000);
+    // Eighteen saves: two per style button and two per shortcut.
+    test.setTimeout(360_000);
     const front = await openAt(page, 's.2', 'front');
     expect(await css(page, front, 'text-bold', 'font-weight')).toBe('700');
     const six = (await passageByLabel('i.6')).uuid;
@@ -105,6 +105,34 @@ test.describe('Inline marks', () => {
 
         await selectText(page, twelve.uuid, 'ordinary');
         await button.click();
+        await save(page);
+        expect(await spans()).toEqual(seeded);
+      });
+    }
+
+    // A second press of the same shortcut takes the style off again.
+    for (const [key, style] of [
+      ['b', 'text-bold'],
+      ['i', 'emphasis'],
+      ['u', 'underline'],
+    ]) {
+      // The bubble menu shows once the editor has read the selection, which
+      // a shortcut pressed sooner would miss.
+      const press = async () => {
+        await selectText(page, twelve.uuid, 'ordinary');
+        await expect(bubbleMenu(page)).toBeVisible();
+        await page.keyboard.press(`ControlOrMeta+${key}`);
+      };
+      await test.step(`ControlOrMeta+${key}`, async () => {
+        await press();
+        await save(page);
+        const added = (await spans()).filter(
+          (a) => !seeded.some((s) => s.uuid === a.uuid),
+        );
+        expect(added.map((a) => coveredText(twelve, a))).toEqual(['ordinary']);
+        expect(contentOf(added[0])).toContain(`"${style}"`);
+
+        await press();
         await save(page);
         expect(await spans()).toEqual(seeded);
       });
