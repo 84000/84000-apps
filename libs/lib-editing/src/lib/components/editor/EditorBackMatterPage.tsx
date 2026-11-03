@@ -16,7 +16,6 @@ import { useEditorState } from './EditorProvider';
 import dynamic from 'next/dynamic';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { TranslationEditorContent } from '../editor';
 import { TranslationSkeleton } from '../shared/TranslationSkeleton';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 
@@ -25,9 +24,6 @@ const StackTab = dynamic(
   () => import('../stack/StackTab').then((m) => m.StackTab),
   { ssr: false },
 );
-
-/** What a stacked tab is handed: the stack reads its own passages. */
-const NO_CONTENT: TranslationEditorContent = [];
 
 /** Whether a work has any passages of a type, without reading them. */
 const hasPassages = async (uuid: string, type: string) => {
@@ -120,10 +116,8 @@ export const EditorBackMatterPage = () => {
   return (
     <BackMatterPanel
       workUuid={work.uuid}
-      endnotes={NO_CONTENT}
       glossary={glossary}
       bibliography={bibliography}
-      abbreviations={NO_CONTENT}
       hasEndnotes={hasTabs.endnotes}
       hasAbbreviations={hasTabs.abbreviations}
       renderTranslation={renderTranslation}

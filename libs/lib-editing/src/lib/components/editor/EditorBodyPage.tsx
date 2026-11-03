@@ -24,9 +24,6 @@ const StackTab = dynamic(
 
 const INITIAL_PASSAGES = 100;
 
-/** What the front tab is handed: the stack reads its own passages. */
-const NO_CONTENT: TranslationEditorContent = [];
-
 export const EditorBodyPage = () => {
   const { work } = useEditorState();
   const [body, setBody] = useState<TranslationEditorContent>();
@@ -87,7 +84,6 @@ export const EditorBodyPage = () => {
   return (
     <BodyPanel
       titles={titles}
-      frontMatter={NO_CONTENT}
       body={body}
       bodyHasMore={bodyHasMore}
       renderTitles={renderTitles}
