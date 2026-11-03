@@ -3,34 +3,29 @@ import { act, render, screen } from '@testing-library/react';
 import { EndNoteLinkHoverContent } from './EndNoteLinkHoverContent';
 
 const mockFetchEndNote = jest.fn();
-let mockStack: unknown = null;
+let mockLabels: unknown = null;
 
 jest.mock('../../../shared/NavigationContext', () => ({
   useNavigation: () => ({ fetchEndNote: mockFetchEndNote }),
 }));
 jest.mock('../../EditorProvider', () => ({
-  useEditorState: () => ({ deleteEndnote: jest.fn() }),
+  useEditorState: () => ({
+    deleteEndnote: jest.fn(),
+    endnoteLabels: mockLabels,
+  }),
 }));
 jest.mock('../useHoverCardEditor', () => ({
   useHoverCardEditor: () => jest.fn(),
 }));
-jest.mock('../../../stack/StackWorkProvider', () => ({
-  useStackWork: () => mockStack,
-}));
 
-/** A stack whose spine holds `labels`, which `relabel` changes. */
+/** The stack's labels, as the editor offers them; `relabel` changes one. */
 const stackWith = (labels: Record<string, string>) => {
   const listeners = new Set<() => void>();
-  mockStack = {
-    work: {
-      spine: {
-        meta: (uuid: string) =>
-          labels[uuid] ? { uuid, label: labels[uuid] } : null,
-        observe: (listener: () => void) => {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
-      },
+  mockLabels = {
+    label: (uuid: string) => labels[uuid],
+    observe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
   return (uuid: string, label: string) => {
@@ -53,7 +48,7 @@ const renderCard = () =>
   );
 
 beforeEach(() => {
-  mockStack = null;
+  mockLabels = null;
   mockFetchEndNote.mockReset();
 });
 

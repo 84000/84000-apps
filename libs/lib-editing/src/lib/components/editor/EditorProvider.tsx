@@ -27,7 +27,11 @@ import {
   shouldRescanFragment,
   type FragmentBaseline,
 } from './observer-utils';
-import { EditorContext, type SaveHandler } from './editor-context';
+import {
+  EditorContext,
+  type EndnoteLabels,
+  type SaveHandler,
+} from './editor-context';
 import { useSaveLifecycle } from './useSaveLifecycle';
 import {
   readReadOnlyPreference,
@@ -486,6 +490,9 @@ const EditorSession = ({
   );
 
   const readOnly = editPermitted !== true || readOnlyChosen;
+  const [endnoteLabels, registerEndnoteLabels] = useState<EndnoteLabels | null>(
+    null,
+  );
 
   return (
     <EditorContext.Provider
@@ -502,6 +509,8 @@ const EditorSession = ({
         applyReplacedPassages,
         deleteEndnote,
         removeCommentAnchors,
+        endnoteLabels,
+        registerEndnoteLabels,
         getFragment,
         setDoc,
         getEditor,

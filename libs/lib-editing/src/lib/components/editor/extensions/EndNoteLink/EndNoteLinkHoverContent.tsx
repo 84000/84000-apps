@@ -13,7 +13,6 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigation } from '../../../shared/NavigationContext';
 import { findEndnoteMarkByUuid } from '../../util';
 import { useEditorState } from '../../EditorProvider';
-import { useStackWork } from '../../../stack/StackWorkProvider';
 import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const EndNoteLinkHoverContent = ({
@@ -40,19 +39,20 @@ export const EndNoteLinkHoverContent = ({
   const [fetchState, setFetchState] = useState<'loading' | 'loaded' | 'error'>(
     'loading',
   );
-  const { deleteEndnote } = useEditorState();
+  const { deleteEndnote, endnoteLabels } = useEditorState();
   const { fetchEndNote } = useNavigation();
-  const spine = useStackWork()?.work.spine;
 
   // The stack's label is current, unsaved and renumbered notes included; the
-  // server's is read only where the stack has none, as in the reader.
+  // server's is read only where the stack has none, as in the reader. The
+  // card is drawn outside the stack, so the labels come through the context.
   const subscribe = useCallback(
-    (listener: () => void) => spine?.observe(listener) ?? (() => undefined),
-    [spine],
+    (listener: () => void) =>
+      endnoteLabels?.observe(listener) ?? (() => undefined),
+    [endnoteLabels],
   );
   const stackLabel = useSyncExternalStore(
     subscribe,
-    () => (endNote ? spine?.meta(endNote)?.label : undefined) || undefined,
+    () => (endNote ? endnoteLabels?.label(endNote) : undefined),
     () => undefined,
   );
   const hasStackLabel = stackLabel !== undefined;
