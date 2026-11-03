@@ -11,14 +11,13 @@ export async function GET(
     nextUrl: { searchParams },
   } = request;
 
-  const isEditor = searchParams.get('edit') === 'true';
-  const prefix = isEditor ? '/translations/editor' : '/translations/reader';
-
+  // Everyone lands in the editor. `edit=true` from older links is carried
+  // through harmlessly.
   const { path } = await lookupEntity({
     type,
     entity,
     searchParams,
-    prefix,
+    prefix: '/translations/editor',
   });
 
   if (!path) {
