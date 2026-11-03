@@ -61,6 +61,14 @@ export type SaveHandler = {
   removeCommentAnchors?: (comment: string) => void;
 };
 
+/** Endnote labels as the editor holds them, unsaved and renumbered ones too. */
+export type EndnoteLabels = {
+  /** The label of an endnote, if the editor holds it. */
+  label: (uuid: string) => string | undefined;
+  /** Call `listener` whenever a label may have changed. */
+  observe: (listener: () => void) => () => void;
+};
+
 /** What the editor context offers its consumers. */
 export interface EditorContextState {
   doc?: Doc;
@@ -98,6 +106,13 @@ export interface EditorContextState {
    * including those not drawn.
    */
   removeCommentAnchors: (comment: string) => void;
+  /** The stack's endnote labels, or null when no stack holds them. */
+  endnoteLabels: EndnoteLabels | null;
+  /**
+   * Offer the stack's endnote labels, or withdraw them with null. Hover cards
+   * are drawn outside the stack, so they read its labels from here.
+   */
+  registerEndnoteLabels: (labels: EndnoteLabels | null) => void;
   getFragment: (builder: string) => XmlFragment;
   setDoc: (doc: Doc) => void;
   getEditor: (key: string) => Editor | undefined;
@@ -165,6 +180,10 @@ export const EditorContext = createContext<EditorContextState>({
   },
   deleteEndnote: async () => false,
   removeCommentAnchors: () => undefined,
+  endnoteLabels: null,
+  registerEndnoteLabels: () => {
+    // No-op when outside provider (reader mode)
+  },
   getFragment: () => {
     throw Error('Not implemented');
   },

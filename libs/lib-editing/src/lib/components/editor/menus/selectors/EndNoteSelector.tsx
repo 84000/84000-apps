@@ -19,20 +19,9 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
 import { gql } from 'graphql-request';
-import { useEditorState } from '../../EditorProvider';
 import { useNavigation } from '../../../shared';
-import {
-  findLastEndNoteLinkBefore,
-  findPassageNode,
-  getFirstEndnoteInEditor,
-  insertEndnotePassage,
-  syncEndnoteLinkLabelsAcrossEditors,
-  waitFor,
-} from '../../extensions/EndNoteLink/endnote-utils';
-import { incrementLabel } from '@eightyfourthousand/lib-doc-model';
 import { useStackWork } from '../../../stack/StackWorkProvider';
 import { createStackEndnote } from '../../../stack/stack-endnotes';
 
@@ -67,9 +56,8 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { getEditor, isNavigating } = useEditorState();
   const stack = useStackWork();
-  const { uuid: workUuid, updatePanel, fetchEndNote } = useNavigation();
+  const { uuid: workUuid, updatePanel } = useNavigation();
 
   const editorState = useTiptapEditorState({
     editor,
@@ -218,199 +206,13 @@ export const EndNoteSelector = ({ editor }: { editor: Editor }) => {
       return;
     }
 
-    const endnotesEditor = getEditor('endnotes');
-    const { from, to } = editor.state.selection;
-    const selectionIsRange = from !== to;
-
-    /**
-     * Give up rather than guess. The new note's position comes from a
-     * neighbouring note fetched by uuid; when we cannot establish that
-     * neighbour we have no way to know where the note belongs in the series,
-     * and guessing from the loaded window yields a label that duplicates a
-     * note further down — the DEV-720 failure.
-     */
-    const abort = (message: string) => {
-      toast(message, {
-        icon: <TriangleAlertIcon className="size-4 text-warning" />,
-      });
-      dismiss();
-    };
-
-    // Without an endnotes editor there is nothing to hold the new passage, so
-    // the link would be saved pointing at a passage that never gets created.
-    if (!endnotesEditor) {
-      abort('Open the Notes panel to add an endnote.');
-      return;
-    }
-
-    // Check for an existing endNoteLink mark at the end of the selection.
-    // Only the end matters — the endnote superscript renders there.
-    const nodeBeforeTo = selectionIsRange
-      ? editor.state.doc.nodeAt(to - 1)
-      : null;
-    const endMark = nodeBeforeTo?.marks.find(
-      (m) => m.type.name === 'endNoteLink',
-    );
-    const endNote =
-      endMark &&
-      (endMark.attrs.notes as { endNote: string }[] | undefined)?.find(
-        (n) => n.endNote,
-      );
-
-    // Determine whether `to` is exactly at the end of the mark or in the middle.
-    // nodeAt(to) returns the character after the selection — if it still carries
-    // the same mark, `to` is in the middle and a split is needed.
-    const markType = editor.state.schema.marks.endNoteLink;
-    const nodeAtTo = endNote ? editor.state.doc.nodeAt(to) : null;
-    const markContinues = nodeAtTo && markType.isInSet(nodeAtTo.marks);
-
-    // Find the previous endnote link before cursor to determine insertion point
-    const prevLink = findLastEndNoteLinkBefore(editor, from);
-
-    let newLabel: string;
-    let newSort: number;
-    let afterPassageUuid: string | undefined;
-    let beforePassageUuid: string | undefined;
-
-    if (endNote && !markContinues) {
-      // `to` is at the exact end of the mark — append a new note after
-      // the last existing note's passage.
-      const notes = endMark.attrs.notes as { endNote: string }[];
-      const lastNote = notes[notes.length - 1];
-      const passage = await fetchEndNote(lastNote.endNote);
-      if (!passage) {
-        abort('Could not read the neighbouring note. Try again.');
-        return;
-      }
-      newLabel = incrementLabel(passage.label || 'n.0');
-      newSort = passage.sort + 1;
-      afterPassageUuid = passage.uuid;
-    } else if (endNote && markContinues) {
-      // `to` is in the middle of the mark — split. The new endnote takes
-      // the existing passage's label and is inserted before it.
-      const passage = await fetchEndNote(endNote.endNote);
-      if (!passage) {
-        abort('Could not read the neighbouring note. Try again.');
-        return;
-      }
-      newLabel = passage.label || 'n.1';
-      newSort = passage.sort;
-      beforePassageUuid = passage.uuid;
-    } else if (prevLink) {
-      const passage = await fetchEndNote(prevLink.endNote);
-      if (!passage) {
-        abort('Could not read the preceding note. Try again.');
-        return;
-      }
-      newLabel = incrementLabel(passage.label || 'n.0');
-      newSort = passage.sort + 1;
-      afterPassageUuid = passage.uuid;
-    } else {
-      // No endnote link precedes the cursor in the loaded translation window,
-      // so this looks like the first note of the series. The translation editor
-      // is paginated too, and "no link above the cursor" is only trustworthy
-      // when the notes panel is showing the true start of the series — an
-      // endnote labelled n.1. Otherwise notes may well precede this position
-      // outside both windows, and inserting as n.1 would renumber the series
-      // from the wrong end.
-      const first = getFirstEndnoteInEditor(endnotesEditor);
-      if (first && first.label !== 'n.1') {
-        abort(
-          'Jump to the note just before this position, then add the new note.',
-        );
-        return;
-      }
-      newLabel = 'n.1';
-      newSort = first ? first.sort : 1;
-      beforePassageUuid = first?.uuid;
-    }
-
-    // The endnotes panel holds a paginated window, not the whole series, so the
-    // anchor may not be loaded — the case that made this fail on works with
-    // more than a page of notes. Navigating the panel to the anchor loads the
-    // window around it (and keeps the panel's pagination cursors coherent,
-    // which fetching the blocks here would not).
-    const anchorUuid = beforePassageUuid ?? afterPassageUuid;
-    if (anchorUuid && !findPassageNode(endnotesEditor, anchorUuid)) {
-      updatePanel({
-        name: 'right',
-        state: { open: true, tab: 'endnotes', hash: anchorUuid },
-      });
-
-      // Wait for the navigation to finish, not just for the anchor to appear.
-      // Dirty tracking is suppressed for the duration of a navigation, so
-      // editing inside that window would leave the new note unsaveable: the
-      // Save button only appears once the document is dirty.
-      const ready = await waitFor(
-        () =>
-          !isNavigating() &&
-          Boolean(findPassageNode(endnotesEditor, anchorUuid)),
-      );
-
-      if (!ready) {
-        abort('Could not load the notes around this position. Try again.');
-        return;
-      }
-    }
-
-    const newPassageUuid = uuidv4();
-
-    // Insert the passage before the link mark: if the insert is refused the
-    // document is left untouched instead of carrying a link to a note that
-    // does not exist.
-    const inserted = insertEndnotePassage(endnotesEditor, {
-      label: newLabel,
-      sort: newSort,
-      uuid: newPassageUuid,
-      afterPassageUuid,
-      beforePassageUuid,
+    // Only the passage stack holds the endnotes a new note goes into.
+    toast('Open the Notes panel to add an endnote.', {
+      icon: <TriangleAlertIcon className="size-4 text-warning" />,
     });
-
-    if (!inserted) {
-      abort('Could not place the new note in the series. Try again.');
-      return;
-    }
-
-    // Insert endNoteLink mark in main editor with the label for immediate
-    // display, then collapse the selection to dismiss the bubble menu. The
-    // selection is restored explicitly because the awaits above give the
-    // editor a chance to lose it.
-    editor
-      .chain()
-      .focus()
-      .setTextSelection(selectionIsRange ? { from, to } : to)
-      .setEndNoteLink(newPassageUuid, newLabel)
-      .setTextSelection(to)
-      .run();
-
-    // Sync updated labels into endNoteLink marks across front + translation
-    syncEndnoteLinkLabelsAcrossEditors(endnotesEditor, getEditor);
-
-    // Navigate to the new endnote
-    updatePanel({
-      name: 'right',
-      state: { open: true, tab: 'endnotes', hash: newPassageUuid },
-    });
-
-    // Focus the new endnote passage after navigation
-    setTimeout(() => {
-      const found = findPassageNode(endnotesEditor, newPassageUuid);
-      if (found) {
-        endnotesEditor.commands.focus(found.pos + 2);
-      }
-    }, 200);
-
     dismiss();
-  }, [
-    editor,
-    stack,
-    createStackNote,
-    getEditor,
-    fetchEndNote,
-    updatePanel,
-    dismiss,
-    isNavigating,
-  ]);
+  }, [editor, stack, createStackNote, dismiss]);
+
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

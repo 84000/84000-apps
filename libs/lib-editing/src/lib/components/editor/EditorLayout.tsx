@@ -30,6 +30,10 @@ const StackWorkProvider = dynamic(
   () => import('../stack/StackWorkProvider').then((m) => m.StackWorkProvider),
   { ssr: false },
 );
+const StackEndnoteLabels = dynamic(
+  () => import('./StackEndnoteLabels').then((m) => m.StackEndnoteLabels),
+  { ssr: false },
+);
 
 export const EditorLayout = ({
   left,
@@ -98,6 +102,7 @@ const EditorStack = ({
   const { readOnly } = useEditorState();
   return (
     <StackWorkProvider workUuid={workUuid} readOnly={readOnly}>
+      <StackEndnoteLabels />
       {children}
     </StackWorkProvider>
   );
