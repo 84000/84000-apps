@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import { Editor } from '@tiptap/react';
 import {
   type EditorState,
+  NodeSelection,
   Selection,
   TextSelection,
   type Transaction,
@@ -37,14 +38,42 @@ const suggestionOpen = (editor: Editor) =>
         ?.active === true,
   );
 
+/**
+ * Whether the caret is at the start of the passage. Before a leading atom
+ * block such as audio, that is a gap cursor at 0: the node selected is one
+ * step short, and ArrowLeft from it gives the gap cursor.
+ */
 const atDocStart = (editor: Editor) => {
   const { selection, doc } = editor.state;
-  return selection.empty && selection.$from.pos === Selection.atStart(doc).from;
+  return (
+    selection.empty &&
+    (selection.from === Selection.atStart(doc).from || selection.from === 0)
+  );
 };
 
+/** Whether the caret is at the end of the passage; see `atDocStart`. */
 const atDocEnd = (editor: Editor) => {
   const { selection, doc } = editor.state;
-  return selection.empty && selection.$from.pos === Selection.atEnd(doc).from;
+  return (
+    selection.empty &&
+    (selection.from === Selection.atEnd(doc).to ||
+      selection.from === doc.content.size)
+  );
+};
+
+/**
+ * Whether the selection is the atom block that opens (`back`) or closes the
+ * passage. Arriving from a neighbour can select it as a text range rather than
+ * as the node, so this compares the range.
+ */
+const onEdgeAtom = (editor: Editor, back: boolean) => {
+  const { selection, doc } = editor.state;
+  const edge = back ? Selection.atStart(doc) : Selection.atEnd(doc);
+  return (
+    edge instanceof NodeSelection &&
+    selection.from === edge.from &&
+    selection.to === edge.to
+  );
 };
 
 const inFirstTopBlock = (editor: Editor) =>
@@ -145,6 +174,9 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
     return {
       ArrowUp: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
+        if (atDocStart(editor) || onEdgeAtom(editor, true)) {
+          return delegate.focusRelative(uuid, -1, 'end');
+        }
         if (!editor.state.selection.empty) return false;
         if (!inFirstTopBlock(editor)) return false;
         if (!editor.view.endOfTextblock('up')) return false;
@@ -152,6 +184,9 @@ export const BoundaryKeymap = Extension.create<BoundaryKeymapOptions>({
       },
       ArrowDown: ({ editor }) => {
         if (suggestionOpen(editor)) return false;
+        if (atDocEnd(editor) || onEdgeAtom(editor, false)) {
+          return delegate.focusRelative(uuid, 1, 'start');
+        }
         if (!editor.state.selection.empty) return false;
         if (!inLastTopBlock(editor)) return false;
         if (!editor.view.endOfTextblock('down')) return false;

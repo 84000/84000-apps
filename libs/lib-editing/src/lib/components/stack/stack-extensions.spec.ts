@@ -1,8 +1,12 @@
 import { getSchema } from '@tiptap/core';
+import { GapCursor } from '@tiptap/pm/gapcursor';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import {
   EditorState,
+  NodeSelection,
   PluginKey,
   Selection,
+  TextSelection,
   type Transaction,
 } from '@tiptap/pm/state';
 import { Doc } from 'yjs';
@@ -463,6 +467,85 @@ describe('BoundaryKeymap Enter and Backspace', () => {
       expect(fixed(delegate, true)['Mod-Enter']({ editor })).toBe(true);
       expect(calls).toEqual([]);
     });
+  });
+});
+
+describe('BoundaryKeymap arrows at a passage edge', () => {
+  const shortcuts = (delegate: StackKeyboardDelegate) =>
+    (
+      BoundaryKeymap.config.addKeyboardShortcuts as (this: {
+        options: { uuid: string; delegate: StackKeyboardDelegate };
+      }) => Record<string, (props: { editor: unknown }) => boolean>
+    ).call({ options: { uuid: 'p0', delegate } });
+
+  const schema = getSchema(buildStackSchemaExtensions());
+  const text = () => schema.node('paragraph', null, [schema.text('text')]);
+  const audio = () => schema.node('audio', { src: 'a.mp3' });
+
+  /** Each key the keymap sends to the next or previous passage. */
+  const crossings = (doc: PMNode, selection: (doc: PMNode) => Selection) => {
+    const calls: string[] = [];
+    const keys = shortcuts({
+      ...delegate(),
+      focusRelative: (_uuid, direction, where) => (
+        calls.push(`${direction} ${where}`),
+        true
+      ),
+    });
+    let state = EditorState.create({ doc });
+    state = state.apply(state.tr.setSelection(selection(state.doc)));
+    const editor = { state, view: { endOfTextblock: () => false } };
+    const crossed = ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].filter(
+      (key) => keys[key]({ editor }),
+    );
+    return { crossed, calls };
+  };
+
+  // Regression: a passage ending in audio trapped the caret. Its last caret
+  // position is the gap cursor after the audio, never a text caret. With the
+  // node selected, ArrowRight is one step short (ProseMirror moves to the gap)
+  // but ArrowDown leaves, as it does from a last line.
+  it('leaves a passage that ends with an atom block', () => {
+    const doc = schema.node('doc', null, [text(), audio()]);
+
+    expect(
+      crossings(doc, (d) => new GapCursor(d.resolve(d.content.size))),
+    ).toEqual({
+      crossed: ['ArrowRight', 'ArrowDown'],
+      calls: ['1 start', '1 start'],
+    });
+    expect(crossings(doc, (d) => Selection.atEnd(d)).crossed).toEqual([
+      'ArrowDown',
+    ]);
+    // Arriving from below with focus('end') spans the audio as text.
+    expect(
+      crossings(doc, (d) =>
+        TextSelection.create(d, text().nodeSize, d.content.size),
+      ).crossed,
+    ).toEqual(['ArrowDown']);
+  });
+
+  it('leaves a passage that starts with an atom block', () => {
+    const doc = schema.node('doc', null, [audio(), text()]);
+
+    expect(crossings(doc, (d) => new GapCursor(d.resolve(0)))).toEqual({
+      crossed: ['ArrowLeft', 'ArrowUp'],
+      calls: ['-1 end', '-1 end'],
+    });
+    expect(crossings(doc, (d) => Selection.atStart(d)).crossed).toEqual([
+      'ArrowUp',
+    ]);
+  });
+
+  it('keeps the arrows inside the passage away from its edges', () => {
+    const doc = schema.node('doc', null, [text(), audio(), text()]);
+
+    expect(
+      crossings(doc, (d) => NodeSelection.create(d, text().nodeSize)).crossed,
+    ).toEqual([]);
+    expect(crossings(doc, (d) => TextSelection.create(d, 3)).crossed).toEqual(
+      [],
+    );
   });
 });
 
