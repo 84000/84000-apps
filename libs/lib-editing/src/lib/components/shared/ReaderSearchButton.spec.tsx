@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { act, render } from '@testing-library/react';
 import type { SearchResult } from '@eightyfourthousand/lib-search';
 
@@ -5,6 +6,7 @@ import { ReaderSearchButton } from './ReaderSearchButton';
 
 const mockUpdatePanel = jest.fn();
 const mockSearchButton = jest.fn<null, [unknown]>(() => null);
+let mockReadOnly = true;
 
 jest.mock('@eightyfourthousand/lib-search', () => ({
   SearchButton: (props: unknown) => mockSearchButton(props),
@@ -19,11 +21,14 @@ jest.mock('./NavigationProvider', () => ({
 jest.mock('../editor/EditorProvider', () => ({
   useEditorState: () => ({
     applyReplacedPassages: jest.fn(),
-    canEdit: async () => false,
+    readOnly: mockReadOnly,
     dirtyStore: { subscribe: () => () => undefined, getSnapshot: () => false },
   }),
 }));
-jest.mock('./SearchReplacePanel', () => ({ SearchReplacePanel: () => null }));
+const mockSearchReplacePanel = jest.fn<null, [unknown]>(() => null);
+jest.mock('./SearchReplacePanel', () => ({
+  SearchReplacePanel: (props: unknown) => mockSearchReplacePanel(props),
+}));
 
 /** Renders the button and hands back the result handler it gives search. */
 const renderOnResultSelected = async () => {
@@ -39,6 +44,36 @@ const renderOnResultSelected = async () => {
 beforeEach(() => {
   mockUpdatePanel.mockClear();
   mockSearchButton.mockClear();
+  mockSearchReplacePanel.mockClear();
+  mockReadOnly = true;
+});
+
+describe('ReaderSearchButton replace', () => {
+  const canReplace = async () => {
+    await act(async () => {
+      render(<ReaderSearchButton />);
+    });
+    const { renderActions } = mockSearchButton.mock.lastCall?.[0] as {
+      renderActions: (searchContext: unknown) => ReactElement;
+    };
+    render(renderActions({}));
+    return (
+      mockSearchReplacePanel.mock.lastCall?.[0] as { canReplace: boolean }
+    ).canReplace;
+  };
+
+  it('offers replace in an editable editor', async () => {
+    mockReadOnly = false;
+
+    expect(await canReplace()).toBe(true);
+  });
+
+  it('withholds replace while the editor is read-only', async () => {
+    // Read-only both without edit permission and when an editor chose it.
+    mockReadOnly = true;
+
+    expect(await canReplace()).toBe(false);
+  });
 });
 
 describe('ReaderSearchButton passage results', () => {
