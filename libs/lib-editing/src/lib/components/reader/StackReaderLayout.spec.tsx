@@ -7,6 +7,7 @@ import { StackReaderLayout } from './StackReaderLayout';
 
 jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   createBuildGraphQLClient: jest.fn(() => ({ client: 'build' })),
+  getTranslationMetadataByUuid: jest.fn(),
 }));
 jest.mock('../stack/stack-reader-seed', () => ({
   loadStackReaderSeed: jest.fn(),
@@ -19,6 +20,9 @@ jest.mock('./ReaderLayout', () => ({ ReaderLayout: () => null }));
 const { loadStackReaderSeed } = jest.requireMock(
   '../stack/stack-reader-seed',
 ) as { loadStackReaderSeed: jest.Mock };
+const { getTranslationMetadataByUuid } = jest.requireMock(
+  '@eightyfourthousand/client-graphql/ssr',
+) as { getTranslationMetadataByUuid: jest.Mock };
 
 const WORK = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
 const seed = { workUuid: WORK, sections: [] } as unknown as StackReaderSeed;
@@ -40,7 +44,12 @@ const layout = async (slug: string) => {
   return { element, params };
 };
 
-beforeEach(() => loadStackReaderSeed.mockReset().mockResolvedValue(seed));
+beforeEach(() => {
+  loadStackReaderSeed.mockReset().mockResolvedValue(seed);
+  getTranslationMetadataByUuid
+    .mockReset()
+    .mockResolvedValue({ uuid: WORK, publicationStatus: '1.0' });
+});
 
 describe('StackReaderLayout', () => {
   it('reads the work on the server and holds it over every panel', async () => {
@@ -69,6 +78,22 @@ describe('StackReaderLayout', () => {
       right: 'right',
       initialToh: 'toh8',
     });
+  });
+
+  it.each([
+    ['an unpublished work', { uuid: WORK, publicationStatus: '2.a' }],
+    ['a work whose metadata cannot be read', null],
+  ])('seeds and provides nothing for %s', async (_, metadata) => {
+    getTranslationMetadataByUuid.mockResolvedValue(metadata);
+    const { element, params } = await layout(WORK);
+
+    expect(getTranslationMetadataByUuid).toHaveBeenCalledWith({
+      client: { client: 'build' },
+      uuid: WORK,
+    });
+    expect(loadStackReaderSeed).not.toHaveBeenCalled();
+    expect(element.type).toBe(ReaderLayout);
+    expect(element.props.params).toBe(params);
   });
 
   it('reads nothing for a slug that is not a uuid', async () => {

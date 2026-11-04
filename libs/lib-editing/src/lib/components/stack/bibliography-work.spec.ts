@@ -7,6 +7,7 @@ import {
   loadBibliographyWork,
   placeBibliographyRows,
   planBibliographySave,
+  readerBibliographyWork,
   saveBibliographyWork,
 } from './bibliography-work';
 import {
@@ -450,5 +451,94 @@ describe('a bibliography work', () => {
     expect(await saveBibliographyWork(bibliography, client)).toBe(false);
     expect(hasUnsavedBibliographyChanges(bibliography)).toBe(true);
     expect(bibliography.rows.get('e1')?.html).toBe('<p>e1</p>');
+  });
+});
+
+describe('readerBibliographyWork', () => {
+  const read = (
+    entries: Parameters<typeof readerBibliographyWork>[0]['entries'],
+  ) =>
+    readerBibliographyWork({ workUuid: WORK, entries, graphql: {} as never });
+
+  it('is null for a work with no bibliography', () => {
+    expect(read([])).toBeNull();
+    expect(read([{ heading: null, entries: [] }] as never)).toBeNull();
+  });
+
+  it('keeps the read labels and nests each heading under its label prefix', () => {
+    const reader = read([
+      {
+        heading: 'Sources',
+        label: '1',
+        entries: [{ uuid: 'e1', label: '1.1', html: '<p>One</p>' }],
+      },
+      {
+        heading: 'Tibetan sources',
+        label: '1.2',
+        entries: [{ uuid: 'e2', label: '1.2.1', html: '<p>Two</p>' }],
+      },
+      {
+        heading: 'Studies',
+        label: '2',
+        entries: [{ uuid: 'e3', label: '', html: '<p>Three</p>' }],
+      },
+    ]);
+    const spine = reader?.work.spine;
+    const h = (i: number) => `${WORK}:heading:${i}`;
+
+    expect(spine?.uuids()).toEqual([h(0), 'e1', h(1), 'e2', h(2), 'e3']);
+    expect(
+      spine?.uuids().map((uuid) => {
+        const meta = spine.meta(uuid);
+        return [
+          meta?.label,
+          meta?.type,
+          meta?.parent ?? null,
+          meta?.depth ?? 0,
+        ];
+      }),
+    ).toEqual([
+      ['b.1', 'bibliographyHeader', null, 0],
+      ['b.1.1', 'bibliography', h(0), 1],
+      ['b.1.2', 'bibliographyHeader', h(0), 1],
+      ['b.1.2.1', 'bibliography', h(1), 2],
+      ['b.2', 'bibliographyHeader', null, 0],
+      // An entry with no label takes its position, as the paginated list does.
+      ['b.3.1', 'bibliography', h(2), 1],
+    ]);
+  });
+
+  it('draws each row from the read HTML, escaping the heading text', () => {
+    const reader = read([
+      {
+        heading: 'A & <b>',
+        label: '1',
+        entries: [{ uuid: 'e1', label: '1.1', html: '<p><i>Kept</i></p>' }],
+      },
+    ]);
+
+    expect(reader?.html.get(`${WORK}:heading:0`)).toBe(
+      '<p>A &amp; &lt;b&gt;</p>',
+    );
+    expect(reader?.html.get('e1')).toBe('<p><i>Kept</i></p>');
+  });
+
+  it('lays out entries with no heading at the top level', () => {
+    const reader = read([
+      {
+        heading: null,
+        entries: [
+          { uuid: 'e1', label: '', html: '<p>One</p>' },
+          { uuid: 'e2', label: '', html: '<p>Two</p>' },
+        ],
+      },
+    ] as never);
+    const spine = reader?.work.spine;
+
+    expect(spine?.uuids()).toEqual(['e1', 'e2']);
+    expect(spine?.meta('e2')).toEqual(
+      expect.objectContaining({ label: 'b.1.2', type: 'bibliography' }),
+    );
+    expect(spine?.meta('e2')?.parent).toBeUndefined();
   });
 });

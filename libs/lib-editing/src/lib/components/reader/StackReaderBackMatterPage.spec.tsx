@@ -9,7 +9,8 @@ jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
     terms: [{ uuid: 'g1' }],
     hasMoreAfter: false,
   })),
-  getWorkBibliography: jest.fn(async () => [{ heading: 'b', entries: [] }]),
+  getWorkBibliography: jest.fn(async () => []),
+  getTranslationMetadataByUuid: jest.fn(),
 }));
 jest.mock('@eightyfourthousand/lib-instr/static', () => ({
   isStaticFeatureEnabled: jest.fn(() => false),
@@ -25,6 +26,7 @@ const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getPassageMetaPage: jest.Mock;
   getWorkGlossaryTerms: jest.Mock;
   getWorkBibliography: jest.Mock;
+  getTranslationMetadataByUuid: jest.Mock;
 };
 
 const WORK = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
@@ -34,7 +36,7 @@ type PanelProps = {
   hasEndnotes: boolean;
   hasAbbreviations: boolean;
   glossary: unknown;
-  bibliography: unknown;
+  bibliography?: unknown;
   withAttestations: boolean;
 };
 
@@ -44,13 +46,14 @@ const page = async (slug: string) =>
   })) as ReactElement<PanelProps>;
 
 beforeEach(() => {
-  api.getPassageMetaPage
-    .mockReset()
-    .mockImplementation(async ({ type }) => ({
-      metas: type === 'endnotes' ? [{ uuid: 'n1' }] : [],
-    }));
+  api.getPassageMetaPage.mockReset().mockImplementation(async ({ type }) => ({
+    metas: type === 'endnotes' ? [{ uuid: 'n1' }] : [],
+  }));
   api.getWorkGlossaryTerms.mockClear();
   api.getWorkBibliography.mockClear();
+  api.getTranslationMetadataByUuid
+    .mockReset()
+    .mockResolvedValue({ uuid: WORK, publicationStatus: '1.0' });
 });
 
 describe('StackReaderBackMatterPage', () => {
@@ -66,20 +69,30 @@ describe('StackReaderBackMatterPage', () => {
     expect(props.hasAbbreviations).toBe(false);
   });
 
-  it('reads the glossary and bibliography as the paginated panel does', async () => {
+  it('reads the glossary, and leaves the bibliography to the seed', async () => {
     const { props } = await page(WORK);
 
     expect(api.getWorkGlossaryTerms).toHaveBeenCalledWith(
       expect.objectContaining({ uuid: WORK, withAttestations: false }),
     );
-    expect(api.getWorkBibliography).toHaveBeenCalledWith(
-      expect.objectContaining({ uuid: WORK }),
-    );
+    expect(api.getWorkBibliography).not.toHaveBeenCalled();
     expect(props.glossary).toEqual({
       terms: [{ uuid: 'g1' }],
       hasMoreAfter: false,
     });
-    expect(props.bibliography).toEqual([{ heading: 'b', entries: [] }]);
+    expect(props).not.toHaveProperty('bibliography');
+  });
+
+  it.each([
+    ['an unpublished work', { uuid: WORK, publicationStatus: '2.a' }],
+    ['a work whose metadata cannot be read', null],
+  ])('reads and draws nothing for %s', async (_, metadata) => {
+    api.getTranslationMetadataByUuid.mockResolvedValue(metadata);
+
+    expect(await page(WORK)).toBeNull();
+    expect(api.getPassageMetaPage).not.toHaveBeenCalled();
+    expect(api.getWorkGlossaryTerms).not.toHaveBeenCalled();
+    expect(api.getWorkBibliography).not.toHaveBeenCalled();
   });
 
   it('reads nothing for a slug that is not a uuid', async () => {

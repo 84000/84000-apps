@@ -175,6 +175,30 @@ describe('PassageStackController static rendering', () => {
     expect(html).toContain('class="end-note-link"');
     expect(html).toContain('endNote="en-1"');
   });
+
+  it('draws the HTML it is given for a row in place of the row document', async () => {
+    const all = [withEndNote()];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
+    });
+    work.seedSpine([
+      ...all.map((entry) => entry.meta),
+      { uuid: 'b1', label: 'b.1', type: 'bibliography' },
+    ]);
+    const controller = new PassageStackController({
+      work,
+      staticHTML: new Map([['b1', '<p><i>Given</i></p>']]),
+    });
+
+    // Given before any document is read, and kept once one is.
+    expect(controller.getStaticHTML('b1')).toBe('<p><i>Given</i></p>');
+    controller.setVisibleRange({ start: 0, end: 2 });
+    await flush();
+    expect(controller.getStaticHTML('b1')).toBe('<p><i>Given</i></p>');
+    // A row with no given HTML is drawn from its document, as before.
+    expect(controller.getStaticHTML('p0')).toContain('class="end-note-link"');
+  });
 });
 
 describe('abbreviation rows', () => {

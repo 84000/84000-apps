@@ -175,7 +175,10 @@ export const readerBibliographyWork = ({
   const headingsByLabel = new Map<string, { uuid: string; depth: number }>();
   const add = (row: BibliographyRow, label: string, depth: number) => {
     rows.push(row);
-    html.set(row.uuid, row.isHeading ? `<p>${escapeHtml(row.html)}</p>` : row.html);
+    html.set(
+      row.uuid,
+      row.isHeading ? `<p>${escapeHtml(row.html)}</p>` : row.html,
+    );
     seeds.push({
       uuid: row.uuid,
       label: `${BIBLIOGRAPHY_LABEL_PREFIX}${label}`,
@@ -191,7 +194,10 @@ export const readerBibliographyWork = ({
     if (section.heading) {
       const label = section.label || String(i + 1);
       const parent = headingsByLabel.get(label.replace(/\.?[^.]*$/, ''));
-      heading = { uuid: `${workUuid}:heading:${i}`, depth: parent ? parent.depth + 1 : 0 };
+      heading = {
+        uuid: `${workUuid}:heading:${i}`,
+        depth: parent ? parent.depth + 1 : 0,
+      };
       headingsByLabel.set(label, heading);
       add(
         {
