@@ -61,11 +61,22 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getWorkGlossaryTermsAround: jest.fn(),
   getWorkBibliography: jest.fn(),
 }));
+const mockSupabase = { from: jest.fn(), rpc: jest.fn() };
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
-  createBrowserClient: jest.fn(() => ({})),
+  createBrowserClient: jest.fn(() => mockSupabase),
   getBibliographyRows: jest.fn(async () => []),
 }));
+
+const browserApi = jest.requireMock('@eightyfourthousand/client-graphql') as {
+  createGraphQLClient: jest.Mock;
+  getPassageMetaPage: jest.Mock;
+  getTranslationBlocks: jest.Mock;
+  getTranslationBlocksAround: jest.Mock;
+  getWorkGlossaryTerms: jest.Mock;
+  getWorkGlossaryTermsAround: jest.Mock;
+  getWorkBibliography: jest.Mock;
+};
 
 const ssrApi = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getPassageMetaPage: jest.Mock;
@@ -353,7 +364,42 @@ describe('StackReaderBackMatterPanel (4b AC5)', () => {
     withAttestations: false,
   };
 
+  // jsdom lays nothing out, so the scroller a stack virtualizes against has a
+  // zero rect and draws no rows, in any tab. Give every element the size a
+  // browser would, as the stack specs do for their scrollers.
+  const proto = HTMLElement.prototype;
+  const restore: (() => void)[] = [];
+  const stub = (name: 'offsetWidth' | 'offsetHeight', value: number) => {
+    const original = Object.getOwnPropertyDescriptor(proto, name);
+    Object.defineProperty(proto, name, {
+      configurable: true,
+      get: () => value,
+    });
+    restore.push(() => {
+      if (original) Object.defineProperty(proto, name, original);
+      else delete (proto as unknown as Record<string, unknown>)[name];
+    });
+  };
+
   beforeAll(() => {
+    stub('offsetWidth', 800);
+    stub('offsetHeight', 1200);
+    const rect = proto.getBoundingClientRect;
+    proto.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: 800,
+        bottom: 1200,
+        width: 800,
+        height: 1200,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    restore.push(() => {
+      proto.getBoundingClientRect = rect;
+    });
     global.ResizeObserver = class {
       observe = jest.fn();
       unobserve = jest.fn();
@@ -372,16 +418,35 @@ describe('StackReaderBackMatterPanel (4b AC5)', () => {
     }) as unknown as typeof window.matchMedia;
   });
 
-  it('draws the Biblio tab’s rows from the provider’s seed when drawn in the browser', async () => {
-    const view = await act(async () =>
+  afterAll(() => restore.reverse().forEach((undo) => undo()));
+
+  const mount = (bibliography: Section[]) =>
+    act(async () =>
       render(
         <NavigationProvider uuid={WORK}>
-          <StackReaderProvider workUuid={WORK} seed={seedOf(SEEDED)}>
+          <StackReaderProvider workUuid={WORK} seed={seedOf(bibliography)}>
             <Panel {...panelProps} />
           </StackReaderProvider>
         </NavigationProvider>,
       ),
     );
+
+  const browserReads = () => [
+    browserApi.getPassageMetaPage,
+    browserApi.getTranslationBlocks,
+    browserApi.getTranslationBlocksAround,
+    browserApi.getWorkBibliography,
+    dataAccess.getBibliographyRows,
+    mockSupabase.from,
+    mockSupabase.rpc,
+  ];
+
+  beforeEach(() => {
+    browserReads().forEach((read) => read.mockClear());
+  });
+
+  it('draws the Biblio tab’s rows from the provider’s seed when drawn in the browser', async () => {
+    const view = await mount(SEEDED);
 
     const biblio = tabContent(view.container, 'Biblio');
     expect(biblio).not.toBeNull();
@@ -390,6 +455,30 @@ describe('StackReaderBackMatterPanel (4b AC5)', () => {
         readRow,
       ),
     ).toEqual(SEEDED_ROWS);
+  });
+
+  it('makes no bibliography read in the browser to draw it', async () => {
+    const view = await mount(SEEDED);
+
+    expect(
+      tabContent(view.container, 'Biblio')?.querySelectorAll(
+        '[data-stack-passage]',
+      ).length,
+    ).toBeGreaterThan(0);
+    browserReads().forEach((read) => expect(read).not.toHaveBeenCalled());
+  });
+
+  it('draws the Notes tab’s rows under the same harness, so the harness is not the limit', async () => {
+    const view = await mount(SEEDED);
+
+    const notes = tabContent(view.container, 'Notes');
+    expect(notes).not.toBeNull();
+    expect(
+      Array.from(notes?.querySelectorAll('[data-stack-passage]') ?? []).map(
+        (row) => row.id,
+      ),
+    ).toEqual(['endnotes-0', 'endnotes-1', 'endnotes-2']);
+    expect(notes?.textContent).toContain('endnote 2 text');
   });
 
   it('hides the Biblio tab when the seed has no bibliography', async () => {

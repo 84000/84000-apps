@@ -39,6 +39,10 @@ jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   createBuildGraphQLClient: jest.fn(() => BUILD_CLIENT),
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  getTranslationMetadataByUuid: jest.fn(async () => ({
+    publicationStatus: '1',
+  })),
+  getWorkBibliography: jest.fn(async () => []),
 }));
 
 const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
