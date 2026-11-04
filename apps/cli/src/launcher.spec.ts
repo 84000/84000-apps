@@ -20,6 +20,10 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+// pwsh takes several seconds to start on a CI runner, and a test that times
+// out leaves its launcher running into the next one.
+jest.setTimeout(30_000);
+
 const LAUNCHER = join(__dirname, '..', 'launcher');
 const VERSION = '2000.1.0';
 const PLATFORMS = [
