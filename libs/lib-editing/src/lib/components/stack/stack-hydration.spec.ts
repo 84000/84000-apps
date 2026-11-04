@@ -1,7 +1,7 @@
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
 import { PassageStackController } from './PassageStackController';
-import { build, flush, seeds } from './stack-controller.fixture';
+import { build, flush, seed, seeds, source } from './stack-controller.fixture';
 import { createStackWorkDocument } from './stack-work';
 
 // See PassageStackController.spec.ts — building the stack schema reaches
@@ -83,6 +83,42 @@ describe('PassageStackController hydration', () => {
 
     expect(work.store.has('p0')).toBe(false);
     expect(work.store.has('p4')).toBe(true);
+  });
+
+  it('keeps the tab in its window when the drawn range outruns the order', async () => {
+    const body = seeds(3);
+    const notes = ['n0', 'n1'].map((uuid) => ({
+      ...seed(uuid, uuid, `${uuid} text`),
+      meta: { uuid, label: uuid, type: 'endnotes' },
+    }));
+    const asked: string[] = [];
+    const all = [...body, ...notes];
+    const work = createStackWorkDocument({
+      workUuid: 'work-1',
+      loader: new PassageLoader({
+        sources: [
+          {
+            name: 'test',
+            loadPassages: async (_workUuid, uuids) => {
+              asked.push(...uuids);
+              return source(all).loadPassages('work-1', uuids);
+            },
+          },
+        ],
+        buffer: 0,
+      }),
+    });
+    work.seedSpine(all.map((entry) => entry.meta));
+    notes.forEach(({ meta, content }) => work.store.create(meta.uuid, content));
+    const controller = new PassageStackController({ work, tab: 'endnotes' });
+
+    // One row more than the tab holds: the order shrank after the render.
+    controller.setVisibleRange({ start: 0, end: 3 });
+    await flush();
+
+    expect(work.store.has('n0')).toBe(true);
+    expect(work.store.has('n1')).toBe(true);
+    expect(asked).toEqual([]);
   });
 
   it('keeps a focused passage hydrated after scrolling away from it', async () => {

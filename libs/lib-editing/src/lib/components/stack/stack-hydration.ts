@@ -125,8 +125,11 @@ export class StackHydration {
   private spineRange(range: SpineRange): SpineRange {
     if (!this.tab) return range;
     const order = this.getOrder();
+    // The range is what the last render drew, and the order can have shrunk
+    // since, as when a passage is hidden for the Toh.
+    const drawnEnd = Math.min(range.end, order.length);
     const first = order[range.start];
-    const last = order[Math.max(range.start, range.end - 1)];
+    const last = order[Math.max(range.start, drawnEnd - 1)];
     if (!first || !last) return { start: 0, end: 0 };
 
     const start = this.work.spine.indexOf(first);
