@@ -90,16 +90,19 @@ describe.each([
   it('keeps the seeded passages of a passage hidden for the selected Toh, and reads nothing', async () => {
     const { work, loaded } = seededWork();
     const endnotes = new Controller({ work, tab: 'endnotes' });
-    endnotes.setVisibleRange({ start: 0, end: 2 });
+    endnotes.setVisibleRange({ start: 0, end: 4 });
     await flush();
     expect(['n0', 'n1', 'n2', 'n3'].every((uuid) => work.store.has(uuid))).toBe(
       true,
     );
 
-    // The reader selects the Toh that hides n.2; the same rows are reported
-    // once more, one past what is now drawn.
+    // The reader selects the Toh that hides n.2: three rows are drawn. Then the
+    // rows are reported once more, one past what is drawn.
     endnotes.setActiveToh('toh1');
-    endnotes.setVisibleRange({ start: 0, end: endnotes.getOrder().length + 1 });
+    expect(endnotes.getOrder()).toHaveLength(3);
+    endnotes.setVisibleRange({ start: 0, end: 3 });
+    await flush();
+    endnotes.setVisibleRange({ start: 0, end: 4 });
     await flush();
     await flush();
 
