@@ -12,7 +12,10 @@ import {
 } from 'react';
 import { createGraphQLClient } from '@eightyfourthousand/client-graphql';
 import { createBrowserClient } from '@eightyfourthousand/data-access';
-import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
+import type {
+  PassageSource,
+  WorkDocument,
+} from '@eightyfourthousand/lib-doc-model';
 import type { GraphQLClient } from 'graphql-request';
 
 import type { StackController } from './StackController';
@@ -71,6 +74,28 @@ const loadedFrom = (
   controllers: [...controllers.values()],
 });
 
+/**
+ * The seed's passages, ahead of the network: a view whose window releases one
+ * reads it back from here rather than asking for it again.
+ */
+const seededPassageSource = (seed: StackReaderSeed): PassageSource => {
+  const contents = new Map(
+    seed.sections.flatMap(({ passages }) =>
+      passages.map(({ uuid, content }) => [uuid, content] as const),
+    ),
+  );
+  return {
+    name: 'seed',
+    loadPassages: async (workUuid, uuids) =>
+      workUuid === seed.workUuid
+        ? uuids.flatMap((uuid) => {
+            const content = contents.get(uuid);
+            return content ? [{ uuid, content }] : [];
+          })
+        : [],
+  };
+};
+
 /** A work's views, built from what a server read for it. */
 const viewsFromSeed = ({
   seed,
@@ -84,7 +109,12 @@ const viewsFromSeed = ({
   createView: StackViewFactory;
 }): StackViews => {
   const extras = new Map<string, PassageExtras>();
-  const work = createStackWork({ workUuid: seed.workUuid, client, extras });
+  const work = createStackWork({
+    workUuid: seed.workUuid,
+    client,
+    extras,
+    local: seededPassageSource(seed),
+  });
   const controllers = new Map<string, StackController>();
   for (const section of STACK_SECTIONS) {
     const seeded = seed.sections.find(({ tab }) => tab === section.tab);

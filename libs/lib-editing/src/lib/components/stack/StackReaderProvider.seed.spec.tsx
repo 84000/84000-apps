@@ -43,6 +43,7 @@ const clientGraphql = jest.requireMock(
 ) as {
   getPassageMetaPage: jest.Mock;
   getTranslationBlocks: jest.Mock;
+  getTranslationBlocksAround: jest.Mock;
 };
 const bibliographyWork = jest.requireMock('./bibliography-work') as {
   loadBibliographyWork: jest.Mock;
@@ -117,6 +118,7 @@ beforeAll(() => {
 beforeEach(() => {
   clientGraphql.getPassageMetaPage.mockReset();
   clientGraphql.getTranslationBlocks.mockReset();
+  clientGraphql.getTranslationBlocksAround.mockReset();
   bibliographyWork.loadBibliographyWork.mockReset().mockResolvedValue(null);
   localStorage.clear();
 });
@@ -306,6 +308,72 @@ describe('StackReaderProvider with a seed', () => {
     rows(host).forEach((row, i) => expect(row).toBe(served[i]));
     expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
     expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
+  });
+
+  it('reads a hidden tab back from the seed once another window released it', async () => {
+    clientGraphql.getPassageMetaPage.mockResolvedValue({
+      metas: [],
+      hasMoreAfter: false,
+      hasMoreBefore: false,
+    });
+    const seed = seedOf(100);
+    seed.sections[0].passages = seed.sections[0].passages.slice(0, 40);
+    const uuids = ['a0', 'a1', 'a2'];
+    seed.sections.push({
+      tab: 'abbreviations',
+      page: {
+        metas: uuids.map((uuid) => ({
+          uuid,
+          label: uuid,
+          type: 'abbreviations',
+        })),
+        hasMoreAfter: false,
+        hasMoreBefore: false,
+      },
+      passages: uuids.map((uuid) => ({
+        uuid,
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: `${uuid} text` }],
+          },
+        ],
+      })),
+    });
+    const seen: ReturnType<typeof useStackWork>[] = [];
+    const Probe = () => {
+      seen.push(useStackWork());
+      return null;
+    };
+    await act(async () => {
+      root = hydrateRoot(
+        scroller(),
+        <StackReaderProvider workUuid="w1" seed={seed}>
+          <Probe />
+        </StackReaderProvider>,
+      );
+    });
+
+    // The shown tab hydrates; the hidden one has reported no window yet.
+    await act(async () =>
+      seen
+        .at(-1)
+        ?.controllerFor('translation')
+        ?.setVisibleRange({ start: 0, end: 30 }),
+    );
+    await act(async () =>
+      seen
+        .at(-1)
+        ?.controllerFor('abbreviations')
+        ?.setVisibleRange({ start: 0, end: 3 }),
+    );
+
+    expect(seen.at(-1)?.work.store.has('a0')).toBe(true);
+    // Only the translation's unseeded tail, inside the hidden tab's buffer.
+    expect(clientGraphql.getTranslationBlocks.mock.calls).toEqual([
+      [expect.objectContaining({ cursor: 'p89', maxPassages: 10 })],
+    ]);
+    expect(clientGraphql.getTranslationBlocksAround).not.toHaveBeenCalled();
   });
 
   it('loads in the browser when the seed is for another work', async () => {
