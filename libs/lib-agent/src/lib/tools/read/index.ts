@@ -6,7 +6,10 @@ import { createGetPassageTool } from './get-passage';
 import { createGetPassageAlignmentsTool } from './get-passage-alignments';
 import { createGetTranslationPassagesTool } from './get-translation-passages';
 import { createGetTranslationFoliosTool } from './get-translation-folios';
-import { createSearchTranslationTool } from './search-translation';
+import {
+  createSearchTranslationTool,
+  type SearchTranslationToolOptions,
+} from './search-translation';
 import { createSearchEntitiesTool } from './search-entities';
 import { createGetGlossaryTermTool } from './get-glossary-term';
 import { createListGlossaryTermsTool } from './list-glossary-terms';
@@ -23,14 +26,22 @@ import { createSearchCanonSectionGlossaryTool } from './search-canon-section-glo
 import { createResolveTohTool } from './resolve-toh';
 import { createTransliterateTool } from '../transliterate';
 
-export function createReadTools(client: DataClient): McpToolDefinition[] {
+export type ReadToolsOptions = {
+  /** Which copy `search-translation` searches; published by default. */
+  searchTranslationSource?: SearchTranslationToolOptions['source'];
+};
+
+export function createReadTools(
+  client: DataClient,
+  { searchTranslationSource }: ReadToolsOptions = {},
+): McpToolDefinition[] {
   return [
     createGetTranslationTool(client),
     createGetPassageTool(client),
     createGetPassageAlignmentsTool(client),
     createGetTranslationPassagesTool(client),
     createGetTranslationFoliosTool(client),
-    createSearchTranslationTool(client),
+    createSearchTranslationTool(client, { source: searchTranslationSource }),
     createSearchEntitiesTool(client),
     createGetGlossaryTermTool(client),
     createListGlossaryTermsTool(client),
@@ -55,6 +66,7 @@ export { createGetPassageAlignmentsTool } from './get-passage-alignments';
 export { createGetTranslationPassagesTool } from './get-translation-passages';
 export { createGetTranslationFoliosTool } from './get-translation-folios';
 export { createSearchTranslationTool } from './search-translation';
+export type { SearchTranslationToolOptions } from './search-translation';
 export { createSearchEntitiesTool } from './search-entities';
 export { createGetGlossaryTermTool } from './get-glossary-term';
 export { createListGlossaryTermsTool } from './list-glossary-terms';

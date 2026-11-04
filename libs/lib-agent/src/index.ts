@@ -15,6 +15,7 @@ export {
 } from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
 export { createReadTools } from './lib/tools/read';
+export type { ReadToolsOptions } from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export {
   createTransliterateTool,
