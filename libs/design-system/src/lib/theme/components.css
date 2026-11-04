@@ -37,7 +37,9 @@
     @apply text-accent cursor-pointer text-xs;
   }
 
-  .end-note-link ~ .end-note-link {
+  /* Adjacent only: in the editor, markers are widgets that share their
+     paragraph as parent, so `~` would space every marker after the first. */
+  .end-note-link + .end-note-link {
     @apply ml-0.75;
   }
 
