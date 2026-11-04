@@ -44,6 +44,11 @@ outside `src/` and are not compiled:
   permissions); the generator renders it into the onboarding skill's
   `reference/plugins.md`
 
+Before adding an MCP tool, an `eft` command or a skill that reads or writes
+studio data, read [`docs/agent-tooling.md`](docs/agent-tooling.md): the MCP stays
+general, bulk work goes through snapshots and local processing, and nothing
+local holds database credentials.
+
 The **translation policies are not in this repo.** They live in the private
 `translation-harness` storage bucket and are read and edited through the studio
 MCP's `read-policies` and `write-policy` tools, so an editorial change reaches
