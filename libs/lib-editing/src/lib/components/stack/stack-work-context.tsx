@@ -84,6 +84,7 @@ export const useStackWorkLoad = ({
   stack,
   setStack,
   createView,
+  withBibliography = true,
 }: {
   workUuid: string;
   readOnly: boolean;
@@ -91,6 +92,11 @@ export const useStackWorkLoad = ({
   setStack: Dispatch<SetStateAction<LoadedStackWork | null>>;
   /** Keep it stable: a new one reloads the work. */
   createView: StackViewFactory;
+  /**
+   * Whether to read the bibliography. Its read is the editor's: the draft
+   * rows, comment marks and all. A reader must not make it.
+   */
+  withBibliography?: boolean;
 }) => {
   // Read when the views are built, so they start in the current mode.
   const readOnlyRef = useRef(readOnly);
@@ -108,11 +114,13 @@ export const useStackWorkLoad = ({
     const work = createStackWork({ workUuid, client, extras });
     const controllers = new Map<string, StackController>();
     // Its own work, so it reads alongside the passages rather than after.
-    const readingBibliography = loadBibliographyWork({
-      workUuid,
-      client: createBrowserClient(),
-      graphql: client,
-    });
+    const readingBibliography = withBibliography
+      ? loadBibliographyWork({
+          workUuid,
+          client: createBrowserClient(),
+          graphql: client,
+        })
+      : Promise.resolve(null);
 
     void (async () => {
       // Sequentially, not in parallel: each run is placed relative to the ones
@@ -164,7 +172,7 @@ export const useStackWorkLoad = ({
         bibliography?.work.destroy(),
       );
     };
-  }, [workUuid, setStack, createView]);
+  }, [workUuid, setStack, createView, withBibliography]);
 };
 
 /** Offer a loaded work to the stacks drawn under it. */
