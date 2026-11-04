@@ -13,6 +13,7 @@ export * from './lib/html/comment-marks';
 export * from './lib/harness';
 export * from './lib/imprint';
 export * from './lib/import-preview';
+export * from './lib/work-edits';
 export * from './lib/panel-url';
 export * from './lib/profile';
 export * from './lib/library';

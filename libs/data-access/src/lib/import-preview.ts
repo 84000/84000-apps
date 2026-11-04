@@ -10,6 +10,7 @@ import {
   ImportOperation,
   ImportOperationInput,
   ImportPreview,
+  Passage,
   PassageInsertOperation,
   previewDtoToPassage,
 } from './types';
@@ -32,195 +33,6 @@ export const titleSlotKey = (title: {
   title.language
     ? `${title.type}|${title.language}`
     : `${title.type}|${title.content}`;
-
-/**
- * Maps each existing title slot on the work to its row UUID, so import can
- * update the right row when a slot is already filled.
- */
-export const getExistingTitleSlots = async ({
-  client,
-  workUuid,
-}: {
-  client: DataClient;
-  workUuid: string;
-}): Promise<Map<string, string>> => {
-  const { data, error } = await client
-    .from('titles')
-    .select('uuid, type, language, content')
-    .eq('work_uuid', workUuid);
-
-  if (error) {
-    throw error;
-  }
-
-  const slots = new Map<string, string>();
-  for (const row of data ?? []) {
-    slots.set(
-      titleSlotKey({
-        type: row.type as string,
-        language: row.language as string | null,
-        content: row.content as string,
-      }),
-      row.uuid as string,
-    );
-  }
-  return slots;
-};
-
-export const updateWorkFromPreview = async ({
-  client,
-  workUuid,
-  preview,
-}: {
-  client: DataClient;
-  workUuid: string;
-  preview: ImportPreview;
-}) => {
-  const patch = preview.operations.reduce<Record<string, unknown>>(
-    (acc, operation) => {
-      if (operation.kind === 'update_work') {
-        Object.assign(acc, operation.patch);
-      }
-      return acc;
-    },
-    {},
-  );
-
-  if (Object.keys(patch).length === 0) {
-    return false;
-  }
-
-  const { error } = await client
-    .from('works')
-    .update(patch)
-    .eq('uuid', workUuid);
-
-  if (error) {
-    throw error;
-  }
-
-  return true;
-};
-
-export const upsertTitlesFromPreview = async ({
-  client,
-  preview,
-  existingSlots,
-}: {
-  client: DataClient;
-  preview: ImportPreview;
-  /** Existing title slots (slot key → row UUID); matching titles are updated. */
-  existingSlots?: Map<string, string>;
-}): Promise<{ inserted: number; updated: number }> => {
-  const titleOps = preview.operations.filter(
-    (operation) => operation.kind === 'upsert_title',
-  );
-
-  const slots = existingSlots ?? new Map<string, string>();
-  const toInsert: {
-    uuid: string;
-    work_uuid: string;
-    content: string;
-    type: string;
-    language: string | null;
-  }[] = [];
-  const toUpdate: { uuid: string; content: string }[] = [];
-
-  for (const operation of titleOps) {
-    const existingUuid = slots.get(titleSlotKey(operation.title));
-    if (existingUuid) {
-      toUpdate.push({ uuid: existingUuid, content: operation.title.content });
-    } else {
-      toInsert.push({
-        uuid: operation.title.uuid,
-        work_uuid: operation.title.workUuid,
-        content: operation.title.content,
-        type: operation.title.type,
-        language: operation.title.language ?? null,
-      });
-    }
-  }
-
-  if (toInsert.length > 0) {
-    const { error } = await client.from('titles').insert(toInsert);
-    if (error) {
-      throw error;
-    }
-  }
-
-  for (const update of toUpdate) {
-    const { error } = await client
-      .from('titles')
-      .update({ content: update.content })
-      .eq('uuid', update.uuid);
-    if (error) {
-      throw error;
-    }
-  }
-
-  return { inserted: toInsert.length, updated: toUpdate.length };
-};
-
-export const updateFolioAnnotationsFromPreview = async ({
-  client,
-  workUuid,
-  preview,
-}: {
-  client: DataClient;
-  workUuid: string;
-  preview: ImportPreview;
-}) => {
-  const sourceDescription = preview.operations.find(
-    (operation) =>
-      operation.kind === 'update_folio_annotation' &&
-      typeof operation.patch.source_description === 'string',
-  );
-
-  if (
-    !sourceDescription ||
-    sourceDescription.kind !== 'update_folio_annotation'
-  ) {
-    return {
-      updated: 0,
-      warning: null,
-    };
-  }
-
-  const { data: existingRows, error: selectError } = await client
-    .from('folio_annotations')
-    .select('uuid')
-    .eq('work_uuid', workUuid)
-    .eq('annotation_type', 'work');
-
-  if (selectError) {
-    throw selectError;
-  }
-
-  if (!existingRows || existingRows.length === 0) {
-    return {
-      updated: 0,
-      warning:
-        'No existing folio_annotations rows were found for this work, so source_description was not updated.',
-    };
-  }
-
-  const { error: updateError } = await client
-    .from('folio_annotations')
-    .update({
-      source_description: sourceDescription.patch.source_description,
-    })
-    .eq('work_uuid', workUuid)
-    .eq('annotation_type', 'work');
-
-  if (updateError) {
-    throw updateError;
-  }
-
-  return {
-    updated: existingRows.length,
-    warning: null,
-  };
-};
 
 const IMPORT_XML_ID_PREFIX = 'docx-';
 const PAGE_SIZE = 1000;
@@ -438,18 +250,11 @@ export const upsertPassagesFromPreview = async ({
   preview: ImportPreview;
   elsewhere?: Set<string>;
 }) => {
-  const heldElsewhere =
-    elsewhere ?? (await findDerivedAnnotationsElsewhere({ client, preview }));
-  const sent = sentAnnotationUuids(preview);
-  const passages = passageOperations(preview).map((operation) =>
-    previewDtoToPassage(operation, { elsewhere: heldElsewhere, sent }),
-  );
-  const warnings =
-    heldElsewhere.size > 0
-      ? [
-          `${heldElsewhere.size} annotation(s) matched rows an edit has moved to another passage, so they were saved under new uuids rather than take those rows from the passages they are on.`,
-        ]
-      : [];
+  const { passages, warnings } = buildImportPassages({
+    preview,
+    elsewhere:
+      elsewhere ?? (await findDerivedAnnotationsElsewhere({ client, preview })),
+  });
 
   const result = await savePassagesWithDeletions({
     client,
@@ -468,6 +273,126 @@ export const upsertPassagesFromPreview = async ({
       0,
     ),
     warnings,
+  };
+};
+
+/**
+ * An import's passages as domain passages, ready for the save. A derived
+ * annotation uuid in `elsewhere` is replaced by a random one; see
+ * `upsertPassagesFromPreview`.
+ */
+export const buildImportPassages = ({
+  preview,
+  elsewhere,
+}: {
+  preview: ImportPreview;
+  elsewhere: ReadonlySet<string>;
+}): { passages: Passage[]; warnings: string[] } => {
+  const sent = sentAnnotationUuids(preview);
+  return {
+    passages: passageOperations(preview).map((operation) =>
+      previewDtoToPassage(operation, { elsewhere, sent }),
+    ),
+    warnings:
+      elsewhere.size > 0
+        ? [
+            `${elsewhere.size} annotation(s) matched rows an edit has moved to another passage, so they were saved under new uuids rather than take those rows from the passages they are on.`,
+          ]
+        : [],
+  };
+};
+
+const sample = (rows: { xmlId: string }[]) =>
+  rows
+    .slice(0, 10)
+    .map((row) => row.xmlId)
+    .join(', ') + (rows.length > 10 ? ', …' : '');
+
+/**
+ * Plans an import's passages without writing anything: fills in derived
+ * uuids and sorts, refuses passages an edit has moved out of the import's
+ * order and stored passages it cannot match, and finds derived annotation
+ * uuids held by other passages. Throws, with a message starting "Nothing
+ * was saved", when it refuses or a read fails.
+ */
+export const planImportPassages = async ({
+  client,
+  workUuid,
+  operations,
+}: {
+  client: DataClient;
+  workUuid: string;
+  operations: ImportOperationInput[];
+}): Promise<{
+  operations: PassageInsertOperation[];
+  passages: Passage[];
+  warnings: string[];
+}> => {
+  const normalized = normalizeImportOperations(workUuid, operations);
+  const preview: ImportPreview = {
+    operations: normalized,
+    counts: summarizeImportOperations(normalized),
+  };
+  const warnings: string[] = [];
+
+  // Passages whose uuid this call derived rather than received.
+  const derived = normalized.flatMap((operation, at) => {
+    const input = operations[at];
+    return operation.kind === 'upsert_passage' &&
+      input.kind === 'upsert_passage' &&
+      !input.passage.uuid
+      ? [operation.passage]
+      : [];
+  });
+
+  const moved = await findMovedImportPassages({
+    client,
+    passages: derived.map(({ uuid, sort, xmlId }) => ({
+      uuid,
+      sort,
+      xmlId: xmlId ?? '',
+    })),
+  });
+  if (moved.length > 0) {
+    const rows = moved
+      .slice(0, 10)
+      .map(
+        (row) => `${row.xmlId} (sort ${row.sort}, stored at ${row.storedSort})`,
+      )
+      .join(', ');
+    throw new Error(
+      `Nothing was saved: ${moved.length} passage(s) would overwrite a stored passage an earlier import saved and an edit has since moved out of this import's order: ${rows}. Send the uuid of each passage you mean to rewrite.`,
+    );
+  }
+
+  const saved = new Set(
+    normalized.flatMap((operation) =>
+      operation.kind === 'upsert_passage' ? [operation.passage.uuid] : [],
+    ),
+  );
+  const leftover =
+    derived.length > 0
+      ? await findLeftoverImportPassages({ client, workUuid, saved })
+      : [];
+  const unmatched = leftover.filter((row) => !row.derived);
+  if (unmatched.length > 0) {
+    throw new Error(
+      `Nothing was saved: ${unmatched.length} passage(s) an earlier import saved under uuids this import cannot match (${sample(unmatched)}), so it would add a second copy of them. Send the stored uuid of each passage you mean to rewrite, and a new uuid for each passage you add.`,
+    );
+  }
+  const shorter = leftover.filter((row) => row.derived);
+  if (shorter.length > 0) {
+    warnings.push(
+      `${shorter.length} passage(s) saved by an earlier import are not in this one and were left in place (${sample(shorter)}).`,
+    );
+  }
+
+  const elsewhere = await findDerivedAnnotationsElsewhere({ client, preview });
+  const built = buildImportPassages({ preview, elsewhere });
+  return {
+    operations: passageOperations(preview),
+    passages: built.passages,
+    warnings: [...warnings, ...built.warnings],
   };
 };
 
@@ -557,129 +482,4 @@ export const summarizeImportOperations = (
     },
     { titles: 0, passages: 0, annotations: 0, workUpdates: 0, folioUpdates: 0 },
   );
-};
-
-/**
- * Applies a set of import or update operations to a target work in one pass:
- * work metadata, titles, folio source description, and passages (with their
- * annotations) via the shared passage save path.
- */
-export const applyImportPreview = async ({
-  client,
-  workUuid,
-  operations,
-}: {
-  client: DataClient;
-  workUuid: string;
-  operations: ImportOperationInput[];
-}) => {
-  const normalized = normalizeImportOperations(workUuid, operations);
-  const preview: ImportPreview = {
-    operations: normalized,
-    counts: summarizeImportOperations(normalized),
-  };
-
-  const warnings: string[] = [];
-
-  // Passages whose uuid this call derived rather than received.
-  const derived = normalized.flatMap((operation, at) => {
-    const input = operations[at];
-    return operation.kind === 'upsert_passage' &&
-      input.kind === 'upsert_passage' &&
-      !input.passage.uuid
-      ? [operation.passage]
-      : [];
-  });
-
-  const moved = await findMovedImportPassages({
-    client,
-    passages: derived.map(({ uuid, sort, xmlId }) => ({
-      uuid,
-      sort,
-      xmlId: xmlId ?? '',
-    })),
-  });
-  if (moved.length > 0) {
-    const sample = moved
-      .slice(0, 10)
-      .map(
-        (row) => `${row.xmlId} (sort ${row.sort}, stored at ${row.storedSort})`,
-      )
-      .join(', ');
-    throw new Error(
-      `Nothing was saved: ${moved.length} passage(s) would overwrite a stored passage an earlier import saved and an edit has since moved out of this import's order: ${sample}. Send the uuid of each passage you mean to rewrite.`,
-    );
-  }
-
-  const saved = new Set(
-    normalized.flatMap((operation) =>
-      operation.kind === 'upsert_passage' ? [operation.passage.uuid] : [],
-    ),
-  );
-  const leftover =
-    derived.length > 0
-      ? await findLeftoverImportPassages({ client, workUuid, saved })
-      : [];
-  const xmlIds = (rows: { xmlId: string }[]) =>
-    rows
-      .slice(0, 10)
-      .map((row) => row.xmlId)
-      .join(', ') + (rows.length > 10 ? ', …' : '');
-  const unmatched = leftover.filter((row) => !row.derived);
-  if (unmatched.length > 0) {
-    throw new Error(
-      `Nothing was saved: ${unmatched.length} passage(s) an earlier import saved under uuids this import cannot match (${xmlIds(unmatched)}), so it would add a second copy of them. Send the stored uuid of each passage you mean to rewrite, and a new uuid for each passage you add.`,
-    );
-  }
-  const shorter = leftover.filter((row) => row.derived);
-  if (shorter.length > 0) {
-    warnings.push(
-      `${shorter.length} passage(s) saved by an earlier import are not in this one and were left in place (${xmlIds(shorter)}).`,
-    );
-  }
-
-  const elsewhere = await findDerivedAnnotationsElsewhere({ client, preview });
-
-  const workUpdated = await updateWorkFromPreview({
-    client,
-    workUuid,
-    preview,
-  });
-
-  // The document is authoritative for titles. Upsert by slot: update the title
-  // already occupying a slot to the document's content, insert new slots.
-  const existingTitleSlots = await getExistingTitleSlots({ client, workUuid });
-  const titleResult = await upsertTitlesFromPreview({
-    client,
-    preview,
-    existingSlots: existingTitleSlots,
-  });
-
-  const folioResult = await updateFolioAnnotationsFromPreview({
-    client,
-    workUuid,
-    preview,
-  });
-  if (folioResult.warning) {
-    warnings.push(folioResult.warning);
-  }
-
-  const passageResult = await upsertPassagesFromPreview({
-    client,
-    preview,
-    elsewhere,
-  });
-  warnings.push(...passageResult.warnings);
-
-  return {
-    counts: {
-      workUpdates: workUpdated ? 1 : 0,
-      titles: titleResult.inserted,
-      titlesUpdated: titleResult.updated,
-      folioUpdates: folioResult.updated,
-      passages: passageResult.passages,
-      annotations: passageResult.annotations,
-    },
-    warnings,
-  };
 };

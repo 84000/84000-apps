@@ -405,32 +405,33 @@ export const applyEditsToPassages = ({
   return { passages: edited, rawAnnotations, warnings, anchors };
 };
 
+/** Edits worked out against stored state, ready to save. */
+export type PassageEditsPlan = {
+  passages: Passage[];
+  rawAnnotations: Record<string, AnnotationDTO[]>;
+  anchors: Record<string, NewPassageAnchor>;
+  warnings: PassageEditWarning[];
+};
+
 /**
- * Read the passages an edit set names, apply the edits, and persist the result
- * in one commit. `dryRun` returns what would be written without writing it.
- * Never retries: after `applied: 'unknown'`, the caller re-reads first.
+ * Read the passages an edit set names and apply the edits, without writing
+ * anything. Fails, with the reason, when a passage is not in the work, a
+ * guard does not match, or a read fails.
  */
-export const applyPassageEdits = async ({
+export const planPassageEdits = async ({
   client,
   workUuid,
   edits,
-  dryRun = false,
 }: {
   client: DataClient;
   workUuid: string;
   edits: PassageEdit[];
-  dryRun?: boolean;
-}): Promise<ApplyPassageEditsResult> => {
-  const failed = (
-    error: string,
-    warnings: PassageEditWarning[] = [],
-  ): ApplyPassageEditsResult => ({
-    success: false,
-    dryRun,
-    applied: false,
-    passages: [],
-    warnings,
+}): Promise<
+  PassageEditsPlan | { error: string; warnings: PassageEditWarning[] }
+> => {
+  const failed = (error: string, warnings: PassageEditWarning[] = []) => ({
     error,
+    warnings,
   });
   const targetUuids = [
     ...new Set(
@@ -526,17 +527,61 @@ export const applyPassageEdits = async ({
     }
   }
   const { passages, rawAnnotations, warnings, anchors } = applied;
+  return { passages, rawAnnotations, warnings, anchors };
+};
+
+/**
+ * Persist planned edits in one commit. Never retries: after an outcome that
+ * is unknown, the caller re-reads first.
+ */
+export const commitPassageEdits = async ({
+  client,
+  plan,
+}: {
+  client: DataClient;
+  plan: PassageEditsPlan;
+}) =>
+  savePassagesWithDeletions({
+    client,
+    passages: plan.passages.map((passage) => ({ ...passage, annotations: [] })),
+    anchors: plan.anchors,
+    rawAnnotations: plan.rawAnnotations,
+  });
+
+/**
+ * Read the passages an edit set names, apply the edits, and persist the result
+ * in one commit. `dryRun` returns what would be written without writing it.
+ * Never retries: after `applied: 'unknown'`, the caller re-reads first.
+ */
+export const applyPassageEdits = async ({
+  client,
+  workUuid,
+  edits,
+  dryRun = false,
+}: {
+  client: DataClient;
+  workUuid: string;
+  edits: PassageEdit[];
+  dryRun?: boolean;
+}): Promise<ApplyPassageEditsResult> => {
+  const plan = await planPassageEdits({ client, workUuid, edits });
+  if ('error' in plan) {
+    return {
+      success: false,
+      dryRun,
+      applied: false,
+      passages: [],
+      warnings: plan.warnings,
+      error: plan.error,
+    };
+  }
+  const { passages, warnings } = plan;
 
   if (dryRun) {
     return { success: true, dryRun, applied: false, passages, warnings };
   }
 
-  const result = await savePassagesWithDeletions({
-    client,
-    passages: passages.map((passage) => ({ ...passage, annotations: [] })),
-    anchors,
-    rawAnnotations,
-  });
+  const result = await commitPassageEdits({ client, plan });
   (result.warnings ?? []).forEach((message) => warnings.push({ message }));
 
   return {
