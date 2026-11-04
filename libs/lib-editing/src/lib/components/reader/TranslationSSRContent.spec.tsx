@@ -57,10 +57,15 @@ const unknownDoc: JSONContent = {
   ],
 };
 
+// Next's types make `NODE_ENV` read-only once a spec in the program loads them.
+const setNodeEnv = (value: string | undefined) => {
+  (process.env as Record<string, string | undefined>).NODE_ENV = value;
+};
+
 describe('TranslationSSRContent', () => {
   const originalEnv = process.env.NODE_ENV;
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    setNodeEnv(originalEnv);
   });
 
   it('renders TipTap JSON as HTML for the passage doc', () => {
@@ -328,14 +333,14 @@ describe('TranslationSSRContent', () => {
   });
 
   it('throws in non-production when SSR extension coverage is missing', () => {
-    process.env.NODE_ENV = 'test';
+    setNodeEnv('test');
     expect(() => TranslationSSRContent({ content: unknownDoc })).toThrow(
       /coverage is incomplete/,
     );
   });
 
   it('falls back to plain text in production when generation fails', () => {
-    process.env.NODE_ENV = 'production';
+    setNodeEnv('production');
     const errorSpy = jest
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
