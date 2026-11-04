@@ -5,6 +5,9 @@ How agent-facing features are built in this repo, so that the studio MCP
 (`libs/lib-agent/skills/`) grow the same way. Read this before adding a tool, a
 CLI command or a skill that reads or writes studio data.
 
+The tools that exist today are audited against these principles in
+[`agent-tool-budget.md`](./agent-tool-budget.md).
+
 The short version: the MCP stays small and general, task-specific logic lives in
 skills and `eft`, and nothing outside the server holds database credentials.
 
