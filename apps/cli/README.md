@@ -23,10 +23,16 @@ npx nx compile cli   # standalone binaries, dist/apps/cli/bin/eft-<platform> (ne
 node apps/cli/build.mjs compile --targets darwin-arm64
 ```
 
-Until the binaries are released, the plugin build bundles it into the
-`kangyur-tengyur-recensions` and `text-analysis-and-retrieval` skills as
-`scripts/eft.mjs` (see `bundles` in `libs/lib-agent/plugins.json`),
-so a change here is a plugin change and needs a lib-agent version bump.
+Skills run eft through the launchers in `launcher/`: `eft.sh` (POSIX sh, also
+Git Bash on Windows) and `eft.ps1` (PowerShell). The plugin build ships them
+into each skill `eft` names in `libs/lib-agent/plugins.json`, with
+`eft-release.txt`, which pins this version's release and each binary's
+SHA-256, read from the release's `SHA256SUMS`, and `eft.mjs`, the node bundle.
+A launcher downloads the binary for its machine into the 84000 cache
+(`84000/cache/bin/eft/<version>/`), checks it against the pin before every
+run and refuses one that does not match. Where no binary fits, or the download
+fails, it runs `eft.mjs` with node and says so. A change here is a plugin
+change and needs a lib-agent version bump.
 
 ## Releases
 
@@ -39,7 +45,9 @@ binaries without publishing; the binaries are attached to the run.
 
 A release is never replaced: skills pin its checksums, so a rebuilt binary
 under the same version would be refused. Bump the version for any change that
-should reach users.
+should reach users. The plugin build pins the release this file names and fails
+when it does not exist, so release eft before, or in the same push as, the
+lib-agent bump that ships it: `publish-plugins.yml` waits for the release.
 
 ## Structure patterns
 

@@ -54,7 +54,9 @@ place to reclaim space. Propose removing:
   `manifest.json` lists the same layers and options as a newer bundle, and
   every version of a tool but the one most recently put in place;
 - an entry **older than 30 days** by its key, or by `createdAt` in a bundle's
-  `manifest.json`. Use another age if the user gives one.
+  `manifest.json`. Use another age if the user gives one;
+- an **interrupted download**: a hidden file ending `.part` in a tool's version
+  folder, unchanged for a day.
 
 The newest, recent entries are kept unless the user asks for them to go too.
 

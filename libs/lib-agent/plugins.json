@@ -90,18 +90,12 @@
       ],
       "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
-      "bundles": {
-        "kangyur-tengyur-recensions": {
-          "scripts/eft.mjs": "apps/cli/src/main.ts"
-        },
-        "text-analysis-and-retrieval": {
-          "scripts/eft.mjs": "apps/cli/src/main.ts"
-        }
-      },
+      "eft": ["kangyur-tengyur-recensions", "text-analysis-and-retrieval"],
       "sharedReference": {
         "text-analysis-and-retrieval": [
           "libs/lib-agent/reference/session-documents",
-          "libs/lib-agent/reference/local-files"
+          "libs/lib-agent/reference/local-files",
+          "libs/lib-agent/reference/eft"
         ],
         "first-draft-translation": [
           "libs/lib-agent/reference/session-documents",
@@ -117,7 +111,10 @@
           "libs/lib-agent/reference/whole-work-analysis",
           "libs/lib-agent/reference/local-files"
         ],
-        "kangyur-tengyur-recensions": ["libs/lib-agent/reference/local-files"]
+        "kangyur-tengyur-recensions": [
+          "libs/lib-agent/reference/local-files",
+          "libs/lib-agent/reference/eft"
+        ]
       }
     },
     {
