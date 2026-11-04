@@ -4,3 +4,5 @@ export { ReaderBackMatterPage } from './ReaderBackMatterPage';
 export { TranslationSSRContent } from './TranslationSSRContent';
 export { hasBodyTranslationContent } from './has-body-translation-content';
 export { StackReaderBodyPage } from './StackReaderBodyPage';
+export { StackReaderBackMatterPage } from './StackReaderBackMatterPage';
+export { StackReaderLayout } from './StackReaderLayout';

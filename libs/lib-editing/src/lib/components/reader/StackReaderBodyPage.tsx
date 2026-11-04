@@ -11,8 +11,6 @@ import {
 } from '@eightyfourthousand/data-access';
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
-import { StackReaderProvider } from '../stack/StackReaderProvider';
-import { loadStackReaderSeed } from '../stack/stack-reader-seed';
 import { StackReaderBodyPanel } from './StackReaderBodyPanel';
 
 /**
@@ -34,8 +32,9 @@ const translationOf = (
   }));
 
 /**
- * The reader's main panel drawn as passage stacks, their first rows rendered
- * on the server. `ReaderBodyPage`'s counterpart: same route, same tabs.
+ * The reader's main panel drawn from the stacks of the `StackReaderLayout`
+ * above it, their first rows rendered on the server. `ReaderBodyPage`'s
+ * counterpart: same route, same tabs.
  */
 export const StackReaderBodyPage = async ({
   params,
@@ -49,8 +48,7 @@ export const StackReaderBodyPage = async ({
   }
 
   const client = createBuildGraphQLClient();
-  const [seed, translation, titles, work] = await Promise.all([
-    loadStackReaderSeed({ client, workUuid: slug }),
+  const [translation, titles, work] = await Promise.all([
     getTranslationBlocks({
       client,
       uuid: slug,
@@ -62,14 +60,10 @@ export const StackReaderBodyPage = async ({
   ]);
 
   return (
-    <StackReaderProvider workUuid={slug} seed={seed}>
-      <StackReaderBodyPanel
-        titles={titles}
-        body={translationOf(translation.blocks)}
-        isPublished={
-          work ? isPublishedStatus(work.publicationStatus) : undefined
-        }
-      />
-    </StackReaderProvider>
+    <StackReaderBodyPanel
+      titles={titles}
+      body={translationOf(translation.blocks)}
+      isPublished={work ? isPublishedStatus(work.publicationStatus) : undefined}
+    />
   );
 };

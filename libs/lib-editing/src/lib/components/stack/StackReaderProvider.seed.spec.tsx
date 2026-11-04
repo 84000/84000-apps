@@ -253,6 +253,61 @@ describe('StackReaderProvider with a seed', () => {
     );
   });
 
+  it("draws the right panel's first window on the server, and keeps it", async () => {
+    const seed = seedOf(2);
+    seed.sections.push({
+      tab: 'endnotes',
+      page: {
+        metas: [{ uuid: 'n0', label: 'n.1', type: 'endnotes' }],
+        nextCursor: 'n0',
+        hasMoreAfter: false,
+        hasMoreBefore: false,
+      },
+      passages: [
+        {
+          uuid: 'n0',
+          content: [
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'note 0 text' }],
+            },
+          ],
+        },
+      ],
+    });
+    const Notes = () => {
+      const view = useStackWork()?.controllerFor('endnotes');
+      return view ? <PassageStack controller={view} /> : null;
+    };
+    // One provider over both panels, as `StackReaderLayout` holds it.
+    const tree = (
+      <StackReaderProvider workUuid="w1" seed={seed}>
+        <Translation />
+        <Notes />
+      </StackReaderProvider>
+    );
+
+    const host = scroller();
+    host.innerHTML = renderToString(tree);
+    const served = rows(host);
+    expect(served.map((row) => row.id)).toEqual(['p0', 'p1', 'n0']);
+    expect(host.textContent).toContain('note 0 text');
+
+    const errors = jest.spyOn(console, 'error').mockImplementation(() => {
+      // Collected: a hydration mismatch is reported here.
+    });
+    await act(async () => {
+      root = hydrateRoot(host, tree);
+    });
+    const reported = errors.mock.calls.map((call) => String(call[0]));
+    errors.mockRestore();
+
+    expect(reported).toEqual([]);
+    rows(host).forEach((row, i) => expect(row).toBe(served[i]));
+    expect(clientGraphql.getPassageMetaPage).not.toHaveBeenCalled();
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
+  });
+
   it('loads in the browser when the seed is for another work', async () => {
     clientGraphql.getPassageMetaPage.mockResolvedValue({
       metas: [],

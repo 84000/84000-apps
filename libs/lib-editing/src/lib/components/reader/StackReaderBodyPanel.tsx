@@ -15,7 +15,7 @@ const NO_CONTENT: TranslationEditorContent = [];
 
 /**
  * The reader's main panel with its front matter and translation drawn as
- * passage stacks, under a `StackReaderProvider`.
+ * passage stacks, under a `StackReaderLayout`.
  */
 export const StackReaderBodyPanel = ({
   titles,

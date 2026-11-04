@@ -56,23 +56,31 @@ describe('loadStackReaderSeed', () => {
     expect(seed.sections[1].page).toEqual(page(BODY_MATTER_FILTER));
   });
 
-  it('reads content only for the tabs a first render draws', async () => {
+  it('reads content for every section, the right panel’s included', async () => {
     const seed = await loadStackReaderSeed({
       client: {} as never,
       workUuid: 'w1',
     });
 
     expect(
-      api.getTranslationBlocks.mock.calls.map(([args]) => args.type),
-    ).toEqual([FRONT_MATTER_FILTER, BODY_MATTER_FILTER]);
+      api.getTranslationBlocks.mock.calls.map(([args]) => [
+        args.type,
+        args.maxPassages,
+      ]),
+    ).toEqual([
+      [FRONT_MATTER_FILTER, 40],
+      [BODY_MATTER_FILTER, 40],
+      ['abbreviations', 40],
+      ['endnotes', 40],
+    ]);
     const passages = Object.fromEntries(
       seed.sections.map(({ tab, passages }) => [tab, passages.length]),
     );
     expect(passages).toEqual({
       front: 1,
       translation: 1,
-      abbreviations: 0,
-      endnotes: 0,
+      abbreviations: 1,
+      endnotes: 1,
     });
   });
 
