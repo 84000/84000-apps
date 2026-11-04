@@ -98,6 +98,7 @@ export class StackController {
       work: this.work,
       spineFeed: options.spineFeed,
       charCounts: options.charCounts,
+      staticHTML: options.staticHTML,
       bump: () => this.bump(),
     });
     this.live = new StackLiveEditors({

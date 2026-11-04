@@ -21,6 +21,7 @@ import type { GraphQLClient } from 'graphql-request';
 import type { StackController } from './StackController';
 import {
   loadBibliographyWork,
+  readerBibliographyWork,
   type BibliographyWork,
 } from './bibliography-work';
 import { SpineFeed } from './spine-feed';
@@ -62,6 +63,8 @@ type StackViews = {
   work: WorkDocument;
   extras: Map<string, PassageExtras>;
   controllers: Map<string, StackController>;
+  /** The bibliography, when the seed held it. */
+  bibliography?: BibliographyWork | null;
 };
 
 const loadedFrom = (
@@ -139,12 +142,32 @@ const viewsFromSeed = ({
       }),
     );
   }
-  return { work, extras, controllers };
+  const bibliography = seed.bibliography
+    ? readerBibliographyWork({
+        workUuid: seed.workUuid,
+        entries: seed.bibliography,
+        graphql: client,
+      })
+    : null;
+  if (bibliography) {
+    controllers.set(
+      BIBLIOGRAPHY_TAB,
+      createView({
+        work: bibliography.work,
+        tab: BIBLIOGRAPHY_TAB,
+        rows: 'bibliography',
+        staticHTML: bibliography.html,
+        readOnly,
+        serverRendered: true,
+      }),
+    );
+  }
+  return { work, extras, controllers, bibliography };
 };
 
 /**
  * A work loaded from what a server read for it, built in the first render so
- * the server can draw it. A bibliography, if read, follows from the browser.
+ * the server can draw it, its bibliography included when the seed holds it.
  */
 export const seedStackWork = ({
   seed,
@@ -155,15 +178,15 @@ export const seedStackWork = ({
   readOnly: boolean;
   createView: StackViewFactory;
 }): LoadedStackWork =>
-  loadedFrom(
-    viewsFromSeed({
+  (() => {
+    const views = viewsFromSeed({
       seed,
       client: createGraphQLClient(),
       readOnly,
       createView,
-    }),
-    null,
-  );
+    });
+    return loadedFrom(views, views.bibliography ?? null);
+  })();
 
 /**
  * Load a work's sections and bibliography into views, and keep the views in
@@ -225,11 +248,14 @@ export const useStackWorkLoad = ({
           work: adopted.work,
           extras: new Map(),
           controllers: new Map(
-            STACK_SECTIONS.flatMap(({ tab }) => {
-              const view = adopted.controllerFor(tab);
-              return view ? [[tab, view] as const] : [];
-            }),
+            [...STACK_SECTIONS.map(({ tab }) => tab), BIBLIOGRAPHY_TAB].flatMap(
+              (tab) => {
+                const view = adopted.controllerFor(tab);
+                return view ? [[tab, view] as const] : [];
+              },
+            ),
           ),
+          bibliography: adopted.bibliography,
         }
       : seeded
         ? viewsFromSeed({
@@ -255,7 +281,8 @@ export const useStackWorkLoad = ({
           graphql: client,
         })
       : Promise.resolve(null);
-    if (seeded && !adopted) setStack(loadedFrom(views, null));
+    const seededBibliography = views.bibliography ?? null;
+    if (seeded && !adopted) setStack(loadedFrom(views, seededBibliography));
 
     void (async () => {
       // Sequentially, not in parallel: each run is placed relative to the ones
@@ -276,21 +303,23 @@ export const useStackWorkLoad = ({
         );
       }
 
-      const bibliography = await readingBibliography;
+      const read = await readingBibliography;
       if (cancelled) return;
-      if (bibliography) {
+      if (read) {
+        // A bibliography read here replaces the seed's.
+        controllers.get(BIBLIOGRAPHY_TAB)?.destroy();
         controllers.set(
           BIBLIOGRAPHY_TAB,
           createView({
-            work: bibliography.work,
+            work: read.work,
             tab: BIBLIOGRAPHY_TAB,
             rows: 'bibliography',
             readOnly: readOnlyRef.current,
           }),
         );
       }
-      // A seeded work is already drawn; it only gains its bibliography.
-      if (!seeded || bibliography) setStack(loadedFrom(views, bibliography));
+      // A seeded work is already drawn; it only gains a bibliography it read.
+      if (!seeded || read) setStack(loadedFrom(views, read ?? seededBibliography));
     })();
 
     return () => {
@@ -298,6 +327,7 @@ export const useStackWorkLoad = ({
       setStack(null);
       controllers.forEach((controller) => controller.destroy());
       work.destroy();
+      seededBibliography?.work.destroy();
       void readingBibliography.then((bibliography) =>
         bibliography?.work.destroy(),
       );

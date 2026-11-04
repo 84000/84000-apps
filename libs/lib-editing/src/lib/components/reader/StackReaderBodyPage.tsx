@@ -2,15 +2,12 @@ import {
   BODY_MATTER_FILTER,
   createBuildGraphQLClient,
   getTranslationBlocks,
-  getTranslationMetadataByUuid,
   getTranslationTitles,
 } from '@eightyfourthousand/client-graphql/ssr';
-import {
-  isPublishedStatus,
-  type TranslationEditorContent,
-} from '@eightyfourthousand/data-access';
+import type { TranslationEditorContent } from '@eightyfourthousand/data-access';
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
+import { isReaderPublished } from './reader-publication';
 import { StackReaderBodyPanel } from './StackReaderBodyPanel';
 
 /**
@@ -35,6 +32,9 @@ const translationOf = (
  * The reader's main panel drawn from the stacks of the `StackReaderLayout`
  * above it, their first rows rendered on the server. `ReaderBodyPage`'s
  * counterpart: same route, same tabs.
+ *
+ * A work that is not published shows its titles and the unpublished state
+ * alone, for every visitor: none of its passages are read.
  */
 export const StackReaderBodyPage = async ({
   params,
@@ -48,22 +48,27 @@ export const StackReaderBodyPage = async ({
   }
 
   const client = createBuildGraphQLClient();
-  const [translation, titles, work] = await Promise.all([
-    getTranslationBlocks({
+  // Null for a work that is not published.
+  const readBody = async () => {
+    if (!(await isReaderPublished({ client, uuid: slug }))) return null;
+    const { blocks } = await getTranslationBlocks({
       client,
       uuid: slug,
       type: BODY_MATTER_FILTER,
       maxPassages: ALIGNMENT_WINDOW,
-    }),
+    });
+    return translationOf(blocks);
+  };
+  const [titles, body] = await Promise.all([
     getTranslationTitles({ client, uuid: slug }),
-    getTranslationMetadataByUuid({ client, uuid: slug }),
+    readBody(),
   ]);
 
   return (
     <StackReaderBodyPanel
       titles={titles}
-      body={translationOf(translation.blocks)}
-      isPublished={work ? isPublishedStatus(work.publicationStatus) : undefined}
+      body={body ?? []}
+      isPublished={body !== null}
     />
   );
 };

@@ -45,6 +45,8 @@ export class StackRowContent {
   private charCounts = new Map<string, number>();
   private staticHTML = new Map<string, string>();
   private compareLeads = new Map<string, string>();
+  /** HTML the host gave for rows, which wins over their documents. */
+  private readonly givenHTML?: ReadonlyMap<string, string>;
   /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
   private wiring = new Map<string, () => void>();
 
@@ -52,9 +54,11 @@ export class StackRowContent {
     work: WorkDocument;
     spineFeed?: PassageStackControllerOptions['spineFeed'];
     charCounts?: Iterable<readonly [string, number]>;
+    staticHTML?: ReadonlyMap<string, string>;
     bump: () => void;
   }) {
     this.work = host.work;
+    this.givenHTML = host.staticHTML;
     this.spineFeed = host.spineFeed;
     this.bump = host.bump;
     if (host.charCounts) {
@@ -113,6 +117,8 @@ export class StackRowContent {
    * every controller bump. Invalidated by `wire`'s content observer.
    */
   getStaticHTML = (uuid: string): string | null => {
+    const given = this.givenHTML?.get(uuid);
+    if (given !== undefined) return given;
     const cached = this.staticHTML.get(uuid);
     if (cached !== undefined) return cached;
 

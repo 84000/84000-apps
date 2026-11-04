@@ -2,35 +2,50 @@
 
 import { useCallback } from 'react';
 import type { GlossaryTermsPage } from '@eightyfourthousand/client-graphql';
-import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
+import { BibliographyTitle } from '../shared/bibliography/BibliographyTitle';
 import type { TranslationRenderer } from '../shared/types';
+import { BIBLIOGRAPHY_TAB } from '../stack/stack-seed';
 import { StackTab } from '../stack/StackTab';
+import { useStackWork } from '../stack/stack-work-context';
 
 /**
- * The reader's right panel with its notes and abbreviations drawn as passage
- * stacks, under a `StackReaderLayout`.
+ * The reader's right panel with its notes, abbreviations and bibliography
+ * drawn as passage stacks, under a `StackReaderLayout`.
  */
 export const StackReaderBackMatterPanel = ({
   workUuid,
   glossary,
-  bibliography,
   hasEndnotes,
   hasAbbreviations,
   withAttestations = false,
 }: {
   workUuid: string;
   glossary: GlossaryTermsPage;
-  bibliography: BibliographyEntries;
   /** Whether the work has notes; their stack reads them. */
   hasEndnotes: boolean;
   /** Whether the work has abbreviations; their stack reads them. */
   hasAbbreviations: boolean;
   withAttestations?: boolean;
 }) => {
+  // The layout's seed holds the bibliography, so its stack is the tab.
+  const hasBibliography = !!useStackWork()?.controllerFor(BIBLIOGRAPHY_TAB);
+
   const renderTranslation = useCallback(
     ({ name, className }: TranslationRenderer) => (
       <StackTab tab={name} className={className} />
+    ),
+    [],
+  );
+
+  // Its title is drawn, not a row, as the Glossary tab draws its own.
+  const renderBibliography = useCallback(
+    () => (
+      <StackTab
+        tab={BIBLIOGRAPHY_TAB}
+        className="block mt-3"
+        title={<BibliographyTitle className="mt-2" />}
+      />
     ),
     [],
   );
@@ -39,10 +54,11 @@ export const StackReaderBackMatterPanel = ({
     <BackMatterPanel
       workUuid={workUuid}
       glossary={glossary}
-      bibliography={bibliography}
       hasEndnotes={hasEndnotes}
       hasAbbreviations={hasAbbreviations}
+      hasBibliography={hasBibliography}
       renderTranslation={renderTranslation}
+      renderBibliography={renderBibliography}
       withAttestations={withAttestations}
     />
   );

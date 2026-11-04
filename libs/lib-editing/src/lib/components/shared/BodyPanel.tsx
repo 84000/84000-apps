@@ -39,6 +39,7 @@ export const BodyPanel = ({
   renderTitles,
   renderTranslation,
   translationState = 'content',
+  withImprint = true,
 }: {
   titles: Title[];
   /** Omitted when `renderTranslation` reads the front matter itself. */
@@ -51,6 +52,8 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
   translationState?: TranslationState;
+  /** Whether the front tab shows the imprint below the titles. */
+  withImprint?: boolean;
 }) => {
   const {
     panels,
@@ -158,7 +161,7 @@ export const BodyPanel = ({
         className={cn(safeTab !== 'front' && 'hidden')}
       >
         <div className="w-full max-w-readable mx-auto">
-          {showOuterContent ? (
+          {showOuterContent && withImprint ? (
             <div className="mb-12">
               {imprint && <TitleDetails imprint={imprint} />}
               <Imprint imprint={imprint} />

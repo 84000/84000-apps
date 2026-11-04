@@ -1,6 +1,7 @@
 import {
   getPassageMetaPage,
   getTranslationBlocks,
+  getWorkBibliography,
 } from '@eightyfourthousand/client-graphql/ssr';
 import type { GraphQLClient } from 'graphql-request';
 
@@ -25,7 +26,9 @@ const SEEDED_CONTENT = 40;
  * request: each section's first page, and content for its first passages.
  *
  * Every section's first window is drawn on the server, the right panel's
- * included while it is closed, so the page carries some of each.
+ * included while it is closed, so the page carries some of each. The
+ * bibliography is read whole, as readers see it, as the paginated reader reads
+ * it.
  *
  * For a server: the seed is plain data for the provider's `seed` prop. A
  * section that fails to read is seeded empty, as the browser would leave it.
@@ -37,6 +40,7 @@ export const loadStackReaderSeed = async ({
   client: GraphQLClient;
   workUuid: string;
 }): Promise<StackReaderSeed> => {
+  const reading = getWorkBibliography({ client, uuid: workUuid });
   const sections = await Promise.all(
     STACK_SECTIONS.map(async ({ tab, type }): Promise<StackSectionSeed> => {
       const [page, blocks] = await Promise.all([
@@ -57,5 +61,5 @@ export const loadStackReaderSeed = async ({
       return { tab, page, passages };
     }),
   );
-  return { workUuid, sections };
+  return { workUuid, sections, bibliography: await reading };
 };

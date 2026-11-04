@@ -4,11 +4,14 @@ import {
   outlineBibliography,
   saveBibliographyRows,
   storedBibliographyHtml,
+  type BibliographyEntries,
   type BibliographyRow,
   type DataClient,
 } from '@eightyfourthousand/data-access';
+import { escapeHtml } from '@eightyfourthousand/lib-utils';
 import {
   rowKindOf,
+  type RowOutline,
   type SpineSeed,
   type WorkDocument,
 } from '@eightyfourthousand/lib-doc-model';
@@ -106,7 +109,29 @@ export const loadBibliographyWork = async ({
   );
   if (!read) return null;
   const rows = new Map(read.map((row) => [row.uuid, row]));
-  const work = createStackWork({
+  const work = bibliographyStackWork({
+    workUuid,
+    graphql,
+    rows,
+    outline: outlineBibliographyRows,
+  });
+  work.seedSpine(bibliographySeeds(read));
+  return { work, rows };
+};
+
+/** A stack work whose documents are read from `rows`. */
+const bibliographyStackWork = ({
+  workUuid,
+  graphql,
+  rows,
+  outline,
+}: {
+  workUuid: string;
+  graphql: GraphQLClient;
+  rows: ReadonlyMap<string, BibliographyRow>;
+  outline?: RowOutline;
+}): WorkDocument =>
+  createStackWork({
     workUuid,
     client: graphql,
     source: bibliographyRowSource({
@@ -118,10 +143,91 @@ export const loadBibliographyWork = async ({
         }),
     }),
     extensions: buildBibliographySchemaExtensions(),
-    outline: outlineBibliographyRows,
+    outline,
   });
-  work.seedSpine(bibliographySeeds(read));
-  return { work, rows };
+
+/** A reader's bibliography as a stack work, and each row's HTML to draw. */
+export type ReaderBibliographyWork = BibliographyWork & {
+  html: Map<string, string>;
+};
+
+/**
+ * A work's bibliography as readers see it (`getWorkBibliography`), as a stack
+ * work seeded in full, with no request.
+ *
+ * Rows keep the read's order and labels. Headings come without a uuid, so each
+ * is keyed by its place. Each row's HTML is the read's, as the paginated list
+ * draws it: a server cannot parse it into a document. Null when there are no
+ * rows.
+ */
+export const readerBibliographyWork = ({
+  workUuid,
+  entries,
+  graphql,
+}: {
+  workUuid: string;
+  entries: BibliographyEntries;
+  graphql: GraphQLClient;
+}): ReaderBibliographyWork | null => {
+  const rows: BibliographyRow[] = [];
+  const seeds: SpineSeed[] = [];
+  const html = new Map<string, string>();
+  const headingsByLabel = new Map<string, { uuid: string; depth: number }>();
+  const add = (row: BibliographyRow, label: string, depth: number) => {
+    rows.push(row);
+    html.set(row.uuid, row.isHeading ? `<p>${escapeHtml(row.html)}</p>` : row.html);
+    seeds.push({
+      uuid: row.uuid,
+      label: `${BIBLIOGRAPHY_LABEL_PREFIX}${label}`,
+      type: row.isHeading ? 'bibliographyHeader' : 'bibliography',
+      sort: row.sort,
+      ...(row.headingUuid ? { parent: row.headingUuid } : {}),
+      ...(depth ? { depth } : {}),
+    });
+  };
+
+  entries.forEach((section, i) => {
+    let heading: { uuid: string; depth: number } | undefined;
+    if (section.heading) {
+      const label = section.label || String(i + 1);
+      const parent = headingsByLabel.get(label.replace(/\.?[^.]*$/, ''));
+      heading = { uuid: `${workUuid}:heading:${i}`, depth: parent ? parent.depth + 1 : 0 };
+      headingsByLabel.set(label, heading);
+      add(
+        {
+          uuid: heading.uuid,
+          workUuid,
+          html: section.heading,
+          sort: rows.length,
+          isHeading: true,
+          headingUuid: parent?.uuid ?? null,
+        },
+        label,
+        heading.depth,
+      );
+    }
+    section.entries.forEach((entry, j) =>
+      add(
+        {
+          uuid: entry.uuid,
+          workUuid,
+          html: entry.html,
+          sort: rows.length,
+          isHeading: false,
+          headingUuid: heading?.uuid ?? null,
+        },
+        entry.label || `${i + 1}.${j + 1}`,
+        heading ? heading.depth + 1 : 0,
+      ),
+    );
+  });
+  if (!rows.length) return null;
+
+  const byUuid = new Map(rows.map((row) => [row.uuid, row]));
+  // No outline: the read's labels are the published ones, and nothing edits.
+  const work = bibliographyStackWork({ workUuid, graphql, rows: byUuid });
+  work.seedSpine(seeds);
+  return { work, rows: byUuid, html };
 };
 
 /** A row to place: its run, its stored sort, and whether it is written anyway. */
