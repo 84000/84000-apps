@@ -1,4 +1,3 @@
-import { ReaderLayout } from '@eightyfourthousand/lib-editing';
 import { isPublishedStatus } from '@eightyfourthousand/data-access';
 import {
   createBuildGraphQLClient,
@@ -7,6 +6,7 @@ import {
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 import { ReactNode, Suspense } from 'react';
+import { Layout as ReaderLayout } from '../../../reader-renderer';
 
 const Layout = async ({
   left,

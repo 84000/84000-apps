@@ -182,12 +182,17 @@ Packages import it as `@eightyfourthousand/lib-editing/stack-reader`.
 #### Drawn on the server
 
 `loadStackReaderSeed` (from `/ssr`) reads, on the server, each section's first
-page of metadata and the content of the first passages of the main panel's
-sections. Handed to `StackReaderProvider` as `seed`, it builds the views in the
+page of metadata and the content of its first passages, the right panel's
+notes and abbreviations included while the panel is closed. Handed to `StackReaderProvider` as `seed`, it builds the views in the
 provider's first render, so the server draws their first window (see "Rows in
 flow") and the browser's first render matches it. The load effect then adopts
 those views rather than rebuilding them: the sections' feeds page on from the
 seeded cursors, and no section is read again in the browser.
+
+The reader's pages take it through `StackReaderLayout` (from `/ssr`), which
+reads the seed once and holds one provider over the main and right panels, so
+they share a spine as the editor's tabs do. A reader reads no bibliography
+through the stack: that read is the editor's, of the draft rows.
 
 What only the browser knows is read after mount, so it cannot differ between
 the two renders: a view built with `serverRendered` reads bookmarks in an

@@ -1,4 +1,4 @@
-import { ReaderBackMatterPage } from '@eightyfourthousand/lib-editing/ssr';
+import { RightPanelPage } from '../../../../reader-renderer';
 
 /**
  * Fallback for the `@right` slot when Next cannot match it to the current URL.
@@ -10,6 +10,6 @@ import { ReaderBackMatterPage } from '@eightyfourthousand/lib-editing/ssr';
  * that failure is silent enough to read as a blank page. Rendering what the
  * page renders keeps the slot behaving the same however the route is entered.
  */
-const Default = ReaderBackMatterPage;
+const Default = RightPanelPage;
 
 export default Default;
