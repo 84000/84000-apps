@@ -18,6 +18,9 @@ const createReaderView: StackViewFactory = (options) =>
  *
  * Every view is read-only and none can mount an editor, so nothing under it
  * loads the editing layer, `EditorProvider` included.
+ *
+ * It reads no bibliography: the stack's read is the editor's, of the draft
+ * rows, so its Biblio tab draws the host's fallback.
  */
 export const StackReaderProvider = ({
   workUuid,
@@ -33,6 +36,7 @@ export const StackReaderProvider = ({
     stack,
     setStack,
     createView: createReaderView,
+    withBibliography: false,
   });
   return (
     <StackWorkContextProvider stack={stack} readOnly>
