@@ -68,13 +68,15 @@ Confirm each of these at the start of the session:
 ## The structural sweep
 
 Find the closing formulas and speech formulas for the Structural Map with
-`scripts/eft.mjs structure` in this skill, never with code written
-in the session: the same text then always gives the same map, and a long text
-takes seconds. `shared-policies/analytics` decides what goes on the map; the
-script only finds the formulas. Run it with node:
+`eft structure`, 84000's command line, never with code written in the
+session: the same text then always gives the same map, and a long text takes
+seconds. `shared-policies/analytics` decides what goes on the map; eft only
+finds the formulas. Run it with the launcher in this skill, as
+`reference/eft/running.md` says (it also covers Windows and the launcher's
+messages):
 
 ```sh
-node "<this skill>/scripts/eft.mjs" structure <text> > "$S/structure.tsv"
+sh "<this skill>/scripts/eft.sh" structure <text> > "$S/structure.tsv"
 ```
 
 `<this skill>` is the directory this file is in, and `S` is

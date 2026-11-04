@@ -79,14 +79,11 @@ than one).
 
 ## The search tool
 
-`scripts/eft.mjs` in this skill is 84000's command line, `eft`. Run it with
-node: `node "<this skill>/scripts/eft.mjs" <command> …`, where
-`<this skill>` is the directory this file is in. It has no dependencies, and
-the same inputs always give the same output. (It will also come as a
-standalone program; a downloaded copy belongs in
-`84000/cache/bin/eft/<version>/`, as
-`reference/local-files/layout.md` says, but until this skill names a version
-to fetch, use the script.)
+The search tool is 84000's command line, `eft`. Run it with the launcher in
+this skill, `sh "<this skill>/scripts/eft.sh" <command> …`, where
+`<this skill>` is the directory this file is in; `reference/eft/running.md`
+says how, including on Windows and what the launcher's messages mean. The
+same inputs always give the same output.
 
 Every `search` command takes a corpus: a collection directory of a download
 (`84000/cache/etexts/<build id>/etexts/text/tengyur/D`), any directory of
@@ -136,7 +133,7 @@ whole root at once, never by grepping hundreds of phrases one at a time.
 2. Write the root text to a file. From its Degé eText witness:
 
    ```sh
-   node "<this skill>/scripts/eft.mjs" extract "$E/text/kangyur/D" toh464 --out "$S/toh464.txt"
+   sh "<this skill>/scripts/eft.sh" extract "$E/text/kangyur/D" toh464 --out "$S/toh464.txt"
    ```
 
    Any plain-text file of the root text works instead, Unicode or Wylie,
@@ -145,7 +142,7 @@ whole root at once, never by grepping hundreds of phrases one at a time.
 3. Search:
 
    ```sh
-   node "<this skill>/scripts/eft.mjs" search quotes "$E/text/tengyur/D" "$S/toh464.txt" --out "$S/tengyur-D"
+   sh "<this skill>/scripts/eft.sh" search quotes "$E/text/tengyur/D" "$S/toh464.txt" --out "$S/tengyur-D"
    ```
 
    It writes `hits.tsv` (to read), `hits.jsonl` (the same, plus the character

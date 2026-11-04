@@ -59,6 +59,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Skills pin the eft release apps/cli/package.json names. When the same
+      # push bumps it, release-eft.yml is still publishing it.
+      - name: Wait for the eft release
+        run: |
+          set -euo pipefail
+          version="$(jq -r .version apps/cli/package.json)"
+          sums="https://github.com/${GITHUB_REPOSITORY}/releases/download/eft-v${version}/SHA256SUMS"
+          for attempt in $(seq 1 30); do
+            if curl -fsSL -o /dev/null "$sums"; then exit 0; fi
+            echo "eft $version is not released yet ($attempt/30); waiting."
+            sleep 20
+          done
+          echo "::error::eft $version is not released: $sums is missing. Check release-eft.yml."
+          exit 1
+
       - name: Generate plugins
         id: generate
         run: node tools/build-plugins.mjs --target "$RUNNER_TEMP/claude-plugins" --github-output
