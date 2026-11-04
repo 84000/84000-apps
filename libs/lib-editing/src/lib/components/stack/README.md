@@ -187,7 +187,10 @@ notes and abbreviations included while the panel is closed. Handed to `StackRead
 provider's first render, so the server draws their first window (see "Rows in
 flow") and the browser's first render matches it. The load effect then adopts
 those views rather than rebuilding them: the sections' feeds page on from the
-seeded cursors, and no section is read again in the browser.
+seeded cursors, and no section is read again in the browser. The seed also
+stays behind the loader as a source of its own, so a seeded passage that a
+window releases, such as a hidden tab's before that tab reports its rows, is
+read back from it rather than asked for again.
 
 The reader's pages take it through `StackReaderLayout` (from `/ssr`), which
 reads the seed once and holds one provider over the main and right panels, so
