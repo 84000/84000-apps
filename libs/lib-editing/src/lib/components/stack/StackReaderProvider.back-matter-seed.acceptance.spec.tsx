@@ -44,6 +44,8 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
 jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  // The bibliography the seed also reads; these tests are about the sections.
+  getWorkBibliography: jest.fn(async () => []),
 }));
 
 jest.mock('@eightyfourthousand/data-access', () => ({
