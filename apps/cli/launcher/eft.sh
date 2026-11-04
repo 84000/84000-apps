@@ -53,6 +53,8 @@ platform() {
     x86_64 | amd64) arch=x64 ;;
     *) return 1 ;;
   esac
+  # Windows on Arm runs the x64 binary under emulation.
+  [ "$os" = windows ] && arch=x64
   echo "$os-$arch"
 }
 
