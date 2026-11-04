@@ -5,6 +5,7 @@ import {
   type Command,
   type Io,
 } from './command';
+import { version } from '../package.json';
 import { extract } from './commands/extract';
 import { search } from './commands/search';
 import { structure } from './commands/structure';
@@ -19,7 +20,7 @@ export const eft: Command = {
   summary: "84000's command-line tools.",
   usage: groupUsage(
     'eft',
-    "eft: 84000's command-line tools. The same inputs always give the same output.",
+    `eft ${version}: 84000's command-line tools. The same inputs always give the same output.`,
     commands,
   ),
   commands,
@@ -29,6 +30,10 @@ export const eft: Command = {
 export function run(argv: string[], io: Io): number {
   try {
     const { positional, flags } = parseArgs(argv);
+    if (flags.has('version') && positional.length === 0) {
+      io.stdout(`${version}\n`);
+      return 0;
+    }
     return dispatch(eft, positional, flags, io);
   } catch (e) {
     io.stderr(`${e instanceof Error ? e.message : String(e)}\n`);

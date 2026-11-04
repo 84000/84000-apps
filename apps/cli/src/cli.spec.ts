@@ -175,6 +175,12 @@ describe('eft', () => {
 
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
+  it('prints its version', () => {
+    const { code, stdout } = cli('--version');
+    expect(code).toBe(0);
+    expect(stdout).toMatch(/^\d{4}\.\d{1,2}\.\d+\n$/);
+  });
+
   describe('extract', () => {
     it('gives a witness trimmed at the neighbouring texts', () => {
       const out = at('scratch', 'toh1', 'root.txt');

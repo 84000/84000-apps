@@ -28,6 +28,19 @@ Until the binaries are released, the plugin build bundles it into the
 `scripts/eft.mjs` (see `bundles` in `libs/lib-agent/plugins.json`),
 so a change here is a plugin change and needs a lib-agent version bump.
 
+## Releases
+
+The version is in `package.json` (`eft --version` prints it). Bumping it on
+`main` runs `.github/workflows/release-eft.yml`, which compiles the binaries
+with a pinned bun for darwin-arm64, darwin-x64, linux-x64, linux-arm64 and
+windows-x64 and publishes them, with a `SHA256SUMS`, as the GitHub release
+`eft-v<version>`. Pull requests that touch the CLI build and smoke-test the
+binaries without publishing; the binaries are attached to the run.
+
+A release is never replaced: skills pin its checksums, so a rebuilt binary
+under the same version would be refused. Bump the version for any change that
+should reach users.
+
 ## Structure patterns
 
 `structure` finds closing formulas and speech formulas with the patterns in

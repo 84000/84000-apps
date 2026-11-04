@@ -27,6 +27,7 @@ const BOOLEAN_FLAGS = new Set([
   'json',
   'help',
   'print-patterns',
+  'version',
 ]);
 
 /** Split arguments into positionals and `--name value` flags. */

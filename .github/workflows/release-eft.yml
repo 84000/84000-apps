@@ -1,0 +1,146 @@
+name: Release eft
+
+# Compiles the eft CLI (apps/cli) into standalone binaries with bun, and
+# publishes them as the GitHub release `eft-v<version>` when the version in
+# apps/cli/package.json is bumped on main (or an `eft-v*` tag is pushed).
+# Pull requests that touch the CLI build and smoke-test the binaries without
+# publishing. Skills download these binaries and check them against the
+# SHA256SUMS the plugin generator pins, so a published release is never
+# replaced: bump the version instead.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/cli/**'
+      - 'libs/lib-tibetan/**'
+      - '.github/workflows/release-eft.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/cli/package.json'
+    tags:
+      - 'eft-v*'
+  # Retries a release from main, e.g. after a failed run.
+  workflow_dispatch:
+
+concurrency:
+  group: release-eft-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Pinned: a bun upgrade changes the runtime inside every binary.
+  BUN_VERSION: '1.4.3'
+
+jobs:
+  build:
+    name: Compile binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Read the version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(jq -r .version apps/cli/package.json)"
+          tag="eft-v$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          publish=false
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            echo "Pull request: building $tag without publishing."
+          elif [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match apps/cli/package.json ($tag)."
+            exit 1
+          elif [ "$GITHUB_REF_TYPE" = branch ] && [ "$GITHUB_REF_NAME" != main ]; then
+            echo "Not main: building $tag without publishing."
+          elif gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "$tag is already released; bump the version to release again."
+          else
+            publish=true
+            echo "Releasing $tag."
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+      - name: Compile
+        run: bun apps/cli/build.mjs compile
+
+      - name: Smoke test the linux-x64 binary
+        run: |
+          set -euo pipefail
+          bin=dist/apps/cli/bin/eft-linux-x64
+          test "$("$bin" --version)" = '${{ steps.version.outputs.version }}'
+          printf '[F.1.a] བཅོམ་ལྡན་འདས་ཀྱིས་བཀའ་སྩལ་པ། རིགས་ཀྱི་བུ།\n' > "$RUNNER_TEMP/smoke.txt"
+          "$bin" search grep "$RUNNER_TEMP/smoke.txt" "bka' stsal" | grep 'F.1.a' > /dev/null
+
+      - name: Checksums
+        working-directory: dist/apps/cli/bin
+        run: |
+          set -euo pipefail
+          sha256sum eft-* > SHA256SUMS
+          {
+            echo "### eft ${{ steps.version.outputs.version }} (bun $BUN_VERSION)"
+            echo
+            echo '| File | Size | SHA-256 |'
+            echo '| --- | --- | --- |'
+            while read -r sum file; do
+              echo "| $file | $(du -h "$file" | cut -f1) | \`$sum\` |"
+            done < SHA256SUMS
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: eft-${{ steps.version.outputs.version }}
+          path: dist/apps/cli/bin/
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: build
+    if: ${{ needs.build.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    # The only job that can write, and it runs no repo code.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: eft-${{ needs.build.outputs.version }}
+          path: bin
+
+      - name: Verify checksums
+        working-directory: bin
+        run: sha256sum --check --strict SHA256SUMS
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "eft-v$VERSION" bin/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "eft $VERSION" \
+            --latest=false \
+            --notes "Standalone binaries of eft, 84000's command line (apps/cli), compiled with bun $BUN_VERSION. The 84000 Claude plugins download these and check them against SHA256SUMS; you do not need to install them by hand."
