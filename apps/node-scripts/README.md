@@ -158,3 +158,31 @@ npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/rebuild-published-ve
 `--repoint` is required to rebuild a version that is not live, so a rollback is always
 deliberate. `--verify` exits non-zero only when a live version has no rows; non-live rows
 holding data are reported but are a recoverable state, not a failure.
+
+## QA scripts
+
+### qa-glossary-standard-definitions.ts
+
+Read-only publication check, sharing its code with the studio MCP tool of the same name.
+Lists glossary entries set to `overrideWithStandard` whose own definition is a "Use
+standard" / "Use 84000 standard…" placeholder while their authority has no standard
+definition (NULL or blank, or the authority row is missing), so the live glossary shows
+an empty definition.
+
+```bash
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/qa-glossary-standard-definitions.ts <work-uuid | toh>
+
+# machine-readable
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/qa-glossary-standard-definitions.ts <work-uuid | toh> --json
+```
+
+`--candidates` adds, for each gap, every other work's published definition for the same
+authority (`getAuthorityGlossaryEntries`); `--contexts` adds up to three passages from the
+work's draft where the term is used (`getGlossaryTermContexts`). Both are what the agent
+reads before proposing a definition.
+
+```bash
+npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/qa-glossary-standard-definitions.ts <work-uuid | toh> --candidates --contexts
+```
+
+Exits 1 when any gap is found, 2 on a usage or read error.

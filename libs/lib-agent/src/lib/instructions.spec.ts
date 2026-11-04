@@ -29,6 +29,14 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 jest.mock('@eightyfourthousand/data-access', () => ({
   FOLIO_SIDES: ['a', 'b'],
   CONTENT_SOURCES: ['draft', 'published'],
+  MAX_AUTHORITY_UUIDS: 50,
+  DEFINITION_RENDS: [
+    'incompatibleWithStandard',
+    'overrideWithStandard',
+    'appendWithStandard',
+    'prependWithStandard',
+    'bothWithStandard',
+  ],
   SESSION_STAGES: ['stage0', 'stage1'],
 }));
 jest.mock('@eightyfourthousand/data-access/ssr', () => ({}));

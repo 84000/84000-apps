@@ -8,6 +8,7 @@ import {
   createOpenPolicyEditorTool,
   createProfileTools,
   createPolicyEditorResource,
+  createQaGlossaryStandardDefinitionsTool,
   createReadTools,
   createSessionTools,
   createSnapshotTools,
@@ -109,6 +110,11 @@ export async function POST(req: Request) {
           etextsSnapshotSource(authorization, req.signal),
           snapshotBundleSource(authorization, req.signal),
         )
+      : []),
+    // Publication QA reads the draft tables, so it rides the same manager gate
+    // as the snapshot tools and stays off the public read server.
+    ...(hasRole(auth.role, 'manager')
+      ? [createQaGlossaryStandardDefinitionsTool(auth.client)]
       : []),
     ...(hasRole(auth.role, 'editor') ? createWriteTools(auth.client) : []),
   ];

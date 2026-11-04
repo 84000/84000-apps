@@ -14,7 +14,11 @@ export {
   studioInstructionsFor,
 } from './lib/instructions';
 export type { ReadToolInstructionsOptions } from './lib/instructions';
-export { createReadTools } from './lib/tools/read';
+export {
+  createReadTools,
+  createQaGlossaryStandardDefinitionsTool,
+  QA_GLOSSARY_STANDARD_DEFINITIONS_TOOL_NAME,
+} from './lib/tools/read';
 export { createWriteTools } from './lib/tools/write';
 export {
   createTransliterateTool,

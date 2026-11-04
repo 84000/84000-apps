@@ -21,6 +21,8 @@ import { createGetWorkTitlesTool } from './get-work-titles';
 import { createSearchCanonSectionsTool } from './search-canon-sections';
 import { createSearchCanonSectionGlossaryTool } from './search-canon-section-glossary';
 import { createResolveTohTool } from './resolve-toh';
+import { createGetAuthorityGlossaryEntriesTool } from './get-authority-glossary-entries';
+import { createGetGlossaryTermContextsTool } from './get-glossary-term-contexts';
 import { createTransliterateTool } from '../transliterate';
 
 export function createReadTools(client: DataClient): McpToolDefinition[] {
@@ -36,6 +38,8 @@ export function createReadTools(client: DataClient): McpToolDefinition[] {
     createListGlossaryTermsTool(client),
     createSearchGlossaryTermsTool(client),
     createGetGlossaryInstancesTool(client),
+    createGetGlossaryTermContextsTool(client),
+    createGetAuthorityGlossaryEntriesTool(client),
     createGetBibliographyEntryTool(client),
     createListWorkBibliographiesTool(client),
     createGetImprintTool(client),
@@ -69,3 +73,9 @@ export { createGetWorkTitlesTool } from './get-work-titles';
 export { createSearchCanonSectionsTool } from './search-canon-sections';
 export { createSearchCanonSectionGlossaryTool } from './search-canon-section-glossary';
 export { createResolveTohTool } from './resolve-toh';
+export { createGetAuthorityGlossaryEntriesTool } from './get-authority-glossary-entries';
+export { createGetGlossaryTermContextsTool } from './get-glossary-term-contexts';
+export {
+  createQaGlossaryStandardDefinitionsTool,
+  QA_GLOSSARY_STANDARD_DEFINITIONS_TOOL_NAME,
+} from './qa-glossary-standard-definitions';
