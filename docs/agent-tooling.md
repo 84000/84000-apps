@@ -28,18 +28,22 @@ bundled script, `scripts/glossary-instances.mjs`, and writes with the general
    reads the unpacked files and writes proposed edits to local files.
 3. **Write back** with a general write tool, a small batch at a time.
 
-Write tools take a dry run first (`dryRun: true`), and each write is guarded by
-the state the processing was based on, so a write fails rather than landing on
-data that has since changed.
+A write tool for this pattern offers a dry run, and guards each write with the
+state the processing was based on, so a write fails rather than landing on data
+that has since changed. `apply-passage-edits` does both, as below.
 
 Example: `resolve-glossary-instances` runs `glossary-instances.mjs find`, then
 `ops`, which writes `ops-001.json`, `ops-002.json` and so on, about 50 edits
 each. For each file it calls `apply-passage-edits` with `dryRun: true`, checks
 the result, then calls it again to write. It re-downloads the snapshot first
 to confirm the draft has not moved. The tool's guard is the `text` field of
-`delete-text` and `add-annotation` (`apply-passage-edits.ts`): the offsets came
+`delete-text` and `add-annotation`
+(`libs/lib-agent/src/lib/tools/write/apply-passage-edits.ts`): the offsets came
 from the snapshot, `text` is what they covered then, and an edit whose text is
-not there is refused, and the whole call with it.
+not there is refused, and the whole call with it. `text` is optional on
+`add-annotation`, so a script that reads offsets from a snapshot must always
+send it, as `glossary-instances.mjs` does. The guard catches most stale edits,
+not all, so the skill re-downloads the snapshot before it applies.
 
 ## 3. Nothing local needs database credentials
 
@@ -49,9 +53,10 @@ stays on the server. Local code gets data through the MCP, using the user's own
 login.
 
 Example: the snapshot layers are built on a `service_role` client inside
-`apps/api-graphql` (see `schema/snapshot/bundle.resolver.ts`), but only after
+`apps/api-graphql` (see `apps/api-graphql/src/graphql/schema/snapshot/bundle.resolver.ts`), but only after
 the caller's own permission for each layer was checked; the layer declares it
-as `permission` (`work-draft.ts` requires `editor.read`). The skill downloads
+as `permission` (`work-draft.ts` requires `editor.read`; a layer's
+`permissionFor` can lower that for a request, such as a published source). The skill downloads
 the result through `download-snapshot` and never sees the key.
 
 `apps/node-scripts` also holds a service-role key (see its README). It is
@@ -76,9 +81,9 @@ tool is another description an agent must read and choose between.
 Example: `apply-passage-edits` is one tool with four ops (`delete-text`,
 `add-annotation`, `remove-annotation`, `insert-passage`). Adding a
 glossary-instance, a mention or an end-note link needed no new tool: each is an
-`add-annotation` with a different `kind` and `data`. Likewise `work-draft`,
-`work-folios` and the other work layers are options on one `download-snapshot`
-tool, not tools of their own.
+`add-annotation` with a different `kind` and `data`. Likewise `work.draft`,
+`work.folios` and the other work layers are values of the `layer` field of one
+`download-snapshot` tool, not tools of their own.
 
 ## 5. Write scope follows ownership
 
@@ -99,25 +104,30 @@ If a change to a shared row is needed while editing a work, do not widen the
 work-scoped tool. Report it, so that someone with `editor.admin` can make it
 through the shared-scope tool.
 
-## 6. Database writes go through save functions that check permissions
+## 6. The database enforces write permissions, through save functions
 
 A tool's own permission check (`hasPermission` in the handler) is a courtesy
 that gives a clear error. The database is the authority. A write reaches
 Postgres through a save function that applies a whole planned change in one
-transaction, and the permission is enforced there. Do not open a table's write
-policy so that a user-token write will pass: that grants the permission to
-every client of the table, not to the tool.
+transaction, and the permission is enforced there or by the table policies the
+function runs under. Do not open a table's write policy so that a user-token
+write will pass: that grants the permission to every client of the table, not
+to the tool.
 
 Example: `commitSave` (`libs/data-access/src/lib/passage/save/commit.ts`) writes
 through `apply_passage_save`, which applies passage, label and annotation
-changes, then deletes, in one transaction, and raises, rolling everything back,
-if a statement touches fewer rows than planned. It runs as the caller
+changes, then deletes, in one transaction per call (a large import may be
+chunked), and raises, rolling everything back, if a statement touches fewer
+rows than planned. That count matters because RLS silently filters a blocked
+`UPDATE` or `DELETE` instead of raising. The function runs as the caller
 (`SECURITY INVOKER`), so the `authorize('editor.edit')` row policies on the
-tables decide. The bibliography save, `apply_bibliography_save`, is built the
-same way. A write that changes shared rows is the case where the policies are
-not enough: give it a function that calls `authorize` itself with the
-permission the scope needs (`editor.admin` for shared edits), and leave the
-table policies as they are.
+tables decide, and the function itself checks no permission. The bibliography save, `apply_bibliography_save`, is built the
+same way. A write that changes shared rows is the case where `editor.edit`
+policies are not enough. Either the shared tables' write policies already
+require `editor.admin` (the `titles` table does), or the write goes through a
+function that calls `authorize('editor.admin')` itself and is the only path to
+those rows. Check which holds before relying on it, and do not loosen the
+policies to make the write pass.
 
 Functions and policies live in the `infra` repo, as migrations.
 
@@ -131,6 +141,6 @@ Functions and policies live in the `infra` repo, as migrations.
 - Which rows does a write change, and who owns them? Choose the scope and its
   permission (principle 5), and make the database enforce it (principle 6).
 
-If a change to a skill or a skill's script is part of this, remember that skills
-ship in the plugins: a content change needs a `libs/lib-agent/package.json`
-version bump (see "Claude Code Plugins" in `CLAUDE.md`).
+Skills and their scripts ship in the plugins, with the next release bump of
+`libs/lib-agent/package.json`. Do not publish changed content under an
+already-published version (see "Claude Code Plugins" in `CLAUDE.md`).
