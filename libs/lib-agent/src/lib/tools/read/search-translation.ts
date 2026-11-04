@@ -31,11 +31,11 @@ export const SEARCH_TRANSLATION_SNIPPET_CHARS = 400;
 
 /**
  * Ceiling on the serialized results, in characters. A result with both
- * snippets full runs to about 1k characters, so 20 of them fit; the ceiling
- * catches the rest (long labels, glossary entries with definitions) and keeps
- * a call well under the 25k characters a client handles comfortably.
+ * snippets full runs to about 1k characters, so most of 20 fit; the ceiling
+ * catches the rest (long labels, glossary entries) and keeps a call well under
+ * the 25k characters a client handles comfortably.
  */
-export const SEARCH_TRANSLATION_MAX_CHARS = 20_000;
+export const SEARCH_TRANSLATION_MAX_CHARS = 18_000;
 
 const RESULT_KINDS = [
   'alignments',
@@ -62,21 +62,19 @@ export type CappedSearchResults = SearchResults & {
   };
 };
 
+/**
+ * Where the search text first occurs in folded text, or -1. A regex search is
+ * not located: the pattern is the caller's, and running it here (on a
+ * backtracking engine, unlike the database's) could stall the server, so its
+ * snippets start at the beginning of the text.
+ */
 const matcher = (
   text: string,
   useRegex: boolean | undefined,
-): ((value: string) => number) => {
-  if (useRegex) {
-    let pattern: RegExp | null = null;
-    try {
-      pattern = new RegExp(foldDiacritics(text), 'iu');
-    } catch {
-      pattern = null;
-    }
-    return (value) => (pattern ? value.search(pattern) : -1);
-  }
+): ((folded: string) => number) => {
   const needle = foldDiacritics(text).toLowerCase();
-  return (value) => (needle ? value.toLowerCase().indexOf(needle) : -1);
+  if (useRegex || !needle) return () => -1;
+  return (folded) => folded.toLowerCase().indexOf(needle);
 };
 
 /**
@@ -101,11 +99,17 @@ export const snippetAround = (
   }`;
 };
 
+/** Size of an item as it serializes inside the output, two levels deep. */
+const serializedSize = (item: unknown): number => {
+  const text = JSON.stringify(item, null, 2);
+  return text.length + 4 * text.split('\n').length;
+};
+
 /**
- * Cap search results to what one tool call can carry: each result's text cut
- * to a snippet around the match, then results taken in turn from each kind
- * (so a flood of alignments does not crowd out glossary hits) until the count
- * or character ceiling is reached. At least one result is always kept, so a
+ * Cap search results to what one tool call can carry: results taken in turn
+ * from each kind (so a flood of alignments does not crowd out glossary hits),
+ * each one's text cut to a snippet around the match, until the count or
+ * character ceiling is reached. At least one result is always kept, so a
  * search that matched is never returned empty.
  */
 export const capSearchResults = (
@@ -119,29 +123,28 @@ export const capSearchResults = (
     if (cut !== value) snippets = true;
     return cut;
   };
-
-  const trimmed: SearchResults = {
-    alignments: results.alignments.map((match) => ({
+  const trimmed = {
+    alignments: (match: SearchResults['alignments'][number]) => ({
       ...match,
       content: trim(match.content),
       source: trim(match.source),
-    })),
-    passages: results.passages.map((match) => ({
+    }),
+    passages: (match: SearchResults['passages'][number]) => ({
       ...match,
       content: trim(match.content),
-    })),
-    bibliographies: results.bibliographies.map((match) => ({
+    }),
+    bibliographies: (match: SearchResults['bibliographies'][number]) => ({
       ...match,
       content: trim(match.content),
-    })),
-    glossaries: results.glossaries.map((match) => ({
+    }),
+    glossaries: (match: SearchResults['glossaries'][number]) => ({
       ...match,
       content: trim(match.content),
-    })),
-  };
+    }),
+  } satisfies Record<ResultKind, (match: never) => unknown>;
 
   const totals = Object.fromEntries(
-    RESULT_KINDS.map((kind) => [kind, trimmed[kind].length]),
+    RESULT_KINDS.map((kind) => [kind, results[kind].length]),
   ) as SearchTranslationTotals;
   const total = RESULT_KINDS.reduce((sum, kind) => sum + totals[kind], 0);
 
@@ -151,9 +154,6 @@ export const capSearchResults = (
     bibliographies: [],
     glossaries: [],
   };
-  const next = Object.fromEntries(
-    RESULT_KINDS.map((kind) => [kind, 0]),
-  ) as Record<ResultKind, number>;
   let count = 0;
   let chars = 0;
   let full = false;
@@ -161,15 +161,17 @@ export const capSearchResults = (
     let progressed = false;
     for (const kind of RESULT_KINDS) {
       if (count >= SEARCH_TRANSLATION_MAX_RESULTS) break;
-      const item = trimmed[kind][next[kind]];
-      if (!item) continue;
-      const size = JSON.stringify(item, null, 2).length;
+      const match = results[kind][kept[kind].length];
+      if (!match) continue;
+      const before: boolean = snippets;
+      const item = (trimmed[kind] as (match: unknown) => unknown)(match);
+      const size = serializedSize(item);
       if (count > 0 && chars + size > SEARCH_TRANSLATION_MAX_CHARS) {
+        snippets = before;
         full = true;
         break;
       }
       (kept[kind] as unknown[]).push(item);
-      next[kind]++;
       count++;
       chars += size;
       progressed = true;
@@ -220,7 +222,7 @@ export function createSearchTranslationTool(
 ): McpToolDefinition {
   return {
     name: 'search-translation',
-    description: `Full-text search within one translation. Hits in the translation body come back under \`alignments\` (English with its aligned Tibetan and folio); \`passages\` holds hits in the other sections (introduction, notes and the like), so an empty \`passages\` does not mean the body has no match. Also returns matching bibliographies and glossary entries. Returns at most ${SEARCH_TRANSLATION_MAX_RESULTS} results, with long text cut to snippets around the match; when anything is left out, \`truncated\` gives the totals and a notice, and work-grep lists every occurrence. ${DESCRIPTIONS[source]}`,
+    description: `Full-text search within one translation. Hits in the translation body come back under \`alignments\` (English with its aligned Tibetan and folio); \`passages\` holds hits in the other sections (introduction, notes and the like), so an empty \`passages\` does not mean the body has no match. Also returns matching bibliographies and glossary entries. Returns at most ${SEARCH_TRANSLATION_MAX_RESULTS} results, with long text cut to snippets around the match; when anything is left out, \`truncated\` gives the totals and a notice, and work-grep, where available, lists every occurrence. ${DESCRIPTIONS[source]}`,
     inputSchema,
     annotations: {
       title: 'Search Translation',

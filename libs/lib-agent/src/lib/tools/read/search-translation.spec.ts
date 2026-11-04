@@ -210,6 +210,33 @@ describe('capSearchResults', () => {
     expect(capped.truncated?.snippets).toBe(true);
     expect(capped.truncated?.notice).toContain('get-passage');
   });
+  it('does not run a regex search in the tool: snippets start at the text', () => {
+    const value = `${'a'.repeat(1000)} om ${'b'.repeat(1000)}`;
+    const capped = capSearchResults(
+      { ...empty(), alignments: [alignment(1, value)] },
+      { text: '(a|a)+$', useRegex: true },
+    );
+    expect(capped.alignments[0].content).toBe(
+      `${'a'.repeat(SEARCH_TRANSLATION_SNIPPET_CHARS)}…`,
+    );
+  });
+
+  it('does not note snippets for results it leaves out', () => {
+    const capped = capSearchResults(
+      {
+        ...empty(),
+        alignments: [
+          ...Array.from({ length: SEARCH_TRANSLATION_MAX_RESULTS }, (_, i) =>
+            alignment(i, 'om'),
+          ),
+          alignment(99, `${'a'.repeat(1000)} om`),
+        ],
+      },
+      { text: 'om' },
+    );
+    expect(capped.truncated?.omitted).toBe(1);
+    expect(capped.truncated?.snippets).toBe(false);
+  });
 });
 
 describe('snippetAround', () => {
