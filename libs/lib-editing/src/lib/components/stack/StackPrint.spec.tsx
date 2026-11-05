@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { StackPrint, StackPrintButton } from './StackPrint';
+import { StackPrint } from './StackPrint';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
@@ -68,10 +68,16 @@ const glossaryPage = (english: string[], more = false) => ({
 const mount = () =>
   render(
     <StackPrint>
-      <StackPrintButton />
-      <StackPrintButton />
+      <span>reader</span>
     </StackPrint>,
   );
+
+/** Presses Cmd+P, and lets the reads it starts settle. */
+const pressPrint = () =>
+  act(async () => {
+    fireEvent.keyDown(window, { key: 'p', metaKey: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 
 let print: jest.SpyInstance;
 
@@ -92,7 +98,6 @@ describe('StackPrint', () => {
     render(
       <StackPrint>
         <span>child</span>
-        <StackPrintButton />
       </StackPrint>,
     );
 
@@ -107,11 +112,29 @@ describe('StackPrint', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it('draws nothing under an editing stack', () => {
+  it('leaves the print shortcut alone under an editing stack', () => {
     useStackWork.mockReturnValue({ ...reader({}), readOnly: false });
     mount();
 
+    const event = new KeyboardEvent('keydown', {
+      key: 'p',
+      metaKey: true,
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('draws no Print control in a stack reader', () => {
+    useStackWork.mockReturnValue(
+      reader({ translation: view('translation', 'body') }),
+    );
+    mount();
+
+    expect(screen.getByText('reader')).toBeTruthy();
     expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByText(/print/i)).toBeNull();
   });
 
   it('prints the main text, the back matter and the glossary, in order', async () => {
@@ -135,7 +158,7 @@ describe('StackPrint', () => {
     });
     mount();
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Print' })[1]);
+    await pressPrint();
 
     expect(print).toHaveBeenCalledTimes(1);
     expect(front.setActiveToh).toHaveBeenCalledWith('toh8');
@@ -176,11 +199,10 @@ describe('StackPrint', () => {
         new Promise((resolve) => pending.push(() => resolve(controller.rows))),
     );
     mount();
-    const button = () => screen.getAllByRole('button', { name: 'Print' })[0];
 
-    await userEvent.click(button());
+    await pressPrint();
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    await userEvent.click(button());
+    await pressPrint();
     // The first session's read ends after the second has started.
     await act(async () => pending[0]());
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -203,7 +225,7 @@ describe('StackPrint', () => {
     });
     mount();
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Print' })[0]);
+    await pressPrint();
 
     expect(getWorkGlossaryTerms).toHaveBeenLastCalledWith(
       expect.objectContaining({ cursor: 'next' }),
@@ -228,7 +250,7 @@ describe('StackPrint', () => {
     );
     mount();
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Print' })[0]);
+    await pressPrint();
 
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     const bar = screen.getByRole('progressbar');
@@ -250,7 +272,7 @@ describe('StackPrint', () => {
     readStackForPrint.mockResolvedValue(null);
     mount();
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Print' })[0]);
+    await pressPrint();
 
     expect(screen.getByRole('dialog').textContent).toMatch(/could not load/i);
     expect(print).not.toHaveBeenCalled();

@@ -9,7 +9,7 @@ import { ReaderSearchButton } from './ReaderSearchButton';
 import { FocusToggleButton } from './FocusToggleButton';
 import { EditorSettingsMenu } from '../editor/EditorSettingsMenu';
 import { GatedFeature } from '@eightyfourthousand/lib-instr';
-import { StackPrint, StackPrintButton } from '../stack/StackPrint';
+import { StackPrint } from '../stack/StackPrint';
 
 export const ThreeColumnRenderer = ({
   withHeader = false,
@@ -29,8 +29,6 @@ export const ThreeColumnRenderer = ({
       <>
         <ReaderSearchButton />
         {withFocusToggle && <FocusToggleButton />}
-        {/* Draws nothing outside a stack reader. */}
-        <StackPrintButton />
         {/* Draws nothing outside the editor. */}
         <EditorSettingsMenu />
       </>

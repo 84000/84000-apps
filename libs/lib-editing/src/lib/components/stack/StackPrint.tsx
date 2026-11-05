@@ -1,10 +1,7 @@
 'use client';
 
-import { Printer } from 'lucide-react';
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
@@ -65,8 +62,6 @@ type Session =
   | { phase: 'failed' }
   | { phase: 'printing'; document: PrintDocument };
 
-const StackPrintContext = createContext<(() => void) | null>(null);
-
 /**
  * The first of a view's rows on screen, when its run starts part way: growing
  * it upward moves the reader to its old first row, so this is where to return.
@@ -113,8 +108,8 @@ const readGlossary = async (
  * in full first with progress shown, since its stacks draw only the rows near
  * the viewport.
  *
- * Wraps a layout once; `StackPrintButton`s under it start the one session, as
- * does Cmd/Ctrl+P. Outside a reader's stacks it draws only its children.
+ * Wraps a layout once, and starts from Cmd/Ctrl+P. Outside a reader's stacks
+ * it draws only its children.
  */
 export const StackPrint = ({ children }: { children: ReactNode }) => {
   const stack = useStackWork();
@@ -181,8 +176,6 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
     setSession({ phase: 'idle' });
   }, []);
 
-  const print = useCallback(() => void start(), [start]);
-
   // A reader leaving mid-load stops the reads.
   useEffect(() => {
     mountedRef.current = true;
@@ -200,11 +193,11 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
       if (event.altKey || event.shiftKey) return;
       if (event.key.toLowerCase() !== 'p') return;
       event.preventDefault();
-      print();
+      void start();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [reader, print]);
+  }, [reader, start]);
 
   // Committed with the print document, so it is in the page when printed.
   const printing = session.phase === 'printing';
@@ -225,7 +218,7 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
     printing: 'Sent to the print dialog.',
   }[session.phase];
   return (
-    <StackPrintContext.Provider value={print}>
+    <>
       {children}
       <Dialog
         // Open until the print dialog closes, which some browsers don't wait for.
@@ -267,7 +260,7 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
           />,
           document.body,
         )}
-    </StackPrintContext.Provider>
+    </>
   );
 };
 
@@ -319,23 +312,3 @@ const PrintDocumentView = ({
     )}
   </div>
 );
-
-/**
- * Starts printing the whole text. Draws nothing outside a stack reader, and
- * is left out of the narrow header, which has no room for it.
- */
-export const StackPrintButton = () => {
-  const print = useContext(StackPrintContext);
-  if (!print) return null;
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="hidden md:inline-flex cursor-pointer [&_svg]:size-5 md:[&_svg]:size-7 size-6 md:size-9 [&_svg]:stroke-1 text-accent hover:text-accent hover:bg-muted"
-      onClick={print}
-    >
-      <Printer />
-      <span className="sr-only">Print</span>
-    </Button>
-  );
-};
