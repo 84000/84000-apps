@@ -378,3 +378,116 @@ describe('graphqlPassageSource extras', () => {
     expect(extras.get('p6')).toEqual({});
   });
 });
+
+describe('graphqlPassageSource prime', () => {
+  /** A read that resolves when told to. */
+  const held = <T>() => {
+    let resolve: (value: T) => void = () => undefined;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+  };
+
+  it('answers the primed passage from the read it started, without another', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loading = source.loadPassages('w1', ['p5']);
+    around.resolve(page(['p4', 'p5', 'p6']));
+
+    expect((await loading).map((s) => s.uuid)).toEqual(['p5']);
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
+      expect.objectContaining({ passageUuid: 'p5' }),
+    );
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
+  });
+
+  it('hands each primed passage out once', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      page(['p4', 'p5', 'p6']),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p5']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+    const again = await source.loadPassages('w1', ['p5']);
+
+    expect(again.map((s) => s.uuid)).toEqual(['p5']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p4', maxPassages: 1 }),
+    );
+  });
+
+  it('reads the rest of a load for itself', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      page(['p4', 'p5', 'p6']),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p7', 'p8']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loaded = await source.loadPassages('w1', ['p5', 'p6', 'p7', 'p8']);
+
+    expect(loaded.map((s) => s.uuid).sort()).toEqual(['p5', 'p6', 'p7', 'p8']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p6', maxPassages: 2 }),
+    );
+  });
+
+  it('does not hold up a load for other passages while the prime is in flight', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p1']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loaded = await source.loadPassages('w1', ['p1']);
+
+    expect(loaded.map((s) => s.uuid)).toEqual(['p1']);
+    around.resolve(page(['p5']));
+  });
+
+  it('falls back to its own read when the prime fails', async () => {
+    clientGraphql.getTranslationBlocksAround
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(page(['p0', 'p1']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p0');
+    const loaded = await source.loadPassages('w1', ['p0']);
+
+    expect(loaded.map((s) => s.uuid)).toEqual(['p0']);
+  });
+});
