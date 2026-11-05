@@ -27,6 +27,15 @@ import {
   useScrollPositionRestore,
 } from './hooks/useScrollPositionRestore';
 
+/**
+ * Below `sm` the tab strip shares the toolbar's row with the panel and action
+ * buttons, and the default tab size is wider than the room between them
+ * ("Source" ran under the action icons). Tighter gaps, padding and type fit
+ * all four tabs from 360px up; `sm` and wider keep the design-system sizes.
+ */
+const TAB_LIST_COMPACT = 'gap-0.5 sm:gap-3';
+const TAB_TRIGGER_COMPACT = 'px-0.5 text-xs sm:px-1 sm:text-sm';
+
 /** Front matter for a renderer that reads its own. */
 const NO_FRONT_MATTER: TranslationEditorContent = [];
 
@@ -150,11 +159,26 @@ export const BodyPanel = ({
       className="px-12 w-full"
     >
       <div className="sticky top-0.75 -mt-28 z-10 overflow-x-auto text-center pointer-events-none me-12 sm:me-0 md:w-full">
-        <TabsList className="w-fit inline-flex pointer-events-auto">
-          <TabsTrigger value="front">Front</TabsTrigger>
-          <TabsTrigger value="translation">Translation</TabsTrigger>
-          {hasAlignments && <TabsTrigger value="compare">Compare</TabsTrigger>}
-          <TabsTrigger value="source">Source</TabsTrigger>
+        <TabsList
+          className={cn(
+            'w-fit inline-flex pointer-events-auto',
+            TAB_LIST_COMPACT,
+          )}
+        >
+          <TabsTrigger value="front" className={TAB_TRIGGER_COMPACT}>
+            Front
+          </TabsTrigger>
+          <TabsTrigger value="translation" className={TAB_TRIGGER_COMPACT}>
+            Translation
+          </TabsTrigger>
+          {hasAlignments && (
+            <TabsTrigger value="compare" className={TAB_TRIGGER_COMPACT}>
+              Compare
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="source" className={TAB_TRIGGER_COMPACT}>
+            Source
+          </TabsTrigger>
         </TabsList>
       </div>
       {showOuterContent && safeTab === 'front' ? theTitles : null}
