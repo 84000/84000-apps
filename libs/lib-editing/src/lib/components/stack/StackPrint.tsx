@@ -49,6 +49,8 @@ const PRINT_TABS = [
  */
 const PRINT_CSS = `@media print {
   body > *:not([data-stack-print]) { display: none !important; }
+  [data-stack-print] button { display: none; }
+  [data-stack-print] :is(h1, h2) { break-after: avoid; }
 }
 @media screen {
   [data-stack-print] { display: none; }
@@ -64,6 +66,23 @@ type Session =
   | { phase: 'printing'; document: PrintDocument };
 
 const StackPrintContext = createContext<(() => void) | null>(null);
+
+/**
+ * The first of a view's rows on screen, when its run starts part way: growing
+ * it upward moves the reader to its old first row, so this is where to return.
+ */
+const firstRowOnScreen = (controller: StackController): string | null => {
+  if (!controller.hasEarlierPassages()) return null;
+  const order = new Set(controller.getOrder());
+  const rows = document.querySelectorAll<HTMLElement>('[data-stack-passage]');
+  for (const row of rows) {
+    const uuid = row.dataset['stackPassage'];
+    if (!uuid || !order.has(uuid)) continue;
+    const { height, top, bottom } = row.getBoundingClientRect();
+    if (height && bottom > 0 && top < window.innerHeight) return uuid;
+  }
+  return null;
+};
 
 /** Every glossary term of a work, or null when a page could not be read. */
 const readGlossary = async (
@@ -104,16 +123,20 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session>({ phase: 'idle' });
   const abortRef = useRef<AbortController | null>(null);
 
+  // Set from a session's start until it is closed, so one runs at a time and
+  // a closed one, still awaiting a read, changes nothing.
   const start = useCallback(async () => {
     if (!reader || !uuid || abortRef.current) return;
     const abort = new AbortController();
     abortRef.current = abort;
+    const live = () => abortRef.current === abort && !abort.signal.aborted;
     const controllers = PRINT_TABS.flatMap(
       (tab) => reader.controllerFor(tab) ?? [],
     );
     // Rows read and known per part, summed for one bar.
     const progress = controllers.map(() => ({ loaded: 0, total: 0 }));
     const show = () =>
+      live() &&
       setSession({
         phase: 'loading',
         loaded: progress.reduce((sum, part) => sum + part.loaded, 0),
@@ -126,26 +149,27 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
       for (const [i, controller] of controllers.entries()) {
         // As its stack would be, were it on screen.
         controller.setActiveToh(toh);
+        const anchor = firstRowOnScreen(controller);
         const rows = await readStackForPrint(controller, {
           signal: abort.signal,
           onProgress: (part) => {
             progress[i] = part;
             show();
           },
+        }).finally(() => {
+          if (anchor) void controller.revealPassage(anchor);
         });
-        if (abort.signal.aborted) return;
+        if (!live()) return;
         if (!rows) return setSession({ phase: 'failed' });
         parts.push({ controller, rows });
       }
       const glossary = await readGlossary(uuid, abort.signal);
-      if (abort.signal.aborted) return;
+      if (!live()) return;
       if (!glossary) return setSession({ phase: 'failed' });
       setSession({ phase: 'printing', document: { parts, glossary } });
     } catch (error) {
       console.error('could not read the work for printing', error);
-      if (!abort.signal.aborted) setSession({ phase: 'failed' });
-    } finally {
-      abortRef.current = null;
+      if (live()) setSession({ phase: 'failed' });
     }
   }, [reader, uuid, toh]);
 
@@ -157,11 +181,15 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
 
   const print = useCallback(() => void start(), [start]);
 
+  // A reader leaving mid-load stops the reads.
+  useEffect(() => () => abortRef.current?.abort(), []);
+
   // The browser's own shortcut would print the few rows on screen.
   useEffect(() => {
     if (!reader) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.altKey || event.shiftKey) return;
       if (event.key.toLowerCase() !== 'p') return;
       event.preventDefault();
       print();
@@ -182,20 +210,23 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
   if (!reader) return children;
 
   const loading = session.phase === 'loading' ? session : null;
+  const description = {
+    idle: '',
+    loading: `Loading the whole text: ${loading?.loaded.toLocaleString()} of ${loading?.total.toLocaleString()} passages.`,
+    failed: 'The whole text could not load, so it was not printed.',
+    printing: 'Sent to the print dialog.',
+  }[session.phase];
   return (
     <StackPrintContext.Provider value={print}>
       {children}
       <Dialog
-        open={session.phase === 'loading' || session.phase === 'failed'}
+        // Open until the print dialog closes, which some browsers don't wait for.
+        open={session.phase !== 'idle'}
         onOpenChange={(open) => !open && close()}
       >
         <DialogContent>
           <DialogTitle>Preparing to print</DialogTitle>
-          <DialogDescription>
-            {loading
-              ? `Loading the whole text: ${loading.loaded.toLocaleString()} of ${loading.total.toLocaleString()} passages.`
-              : 'The whole text could not load, so it was not printed.'}
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
           {loading && (
             <div
               role="progressbar"

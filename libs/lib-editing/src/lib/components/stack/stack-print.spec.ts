@@ -117,6 +117,18 @@ describe('readStackForPrint', () => {
     expect(progress[progress.length - 1]).toEqual({ loaded: 450, total: 450 });
   });
 
+  it('is null when cancelled part way', async () => {
+    const { controller } = await build(450);
+    const abort = new AbortController();
+
+    const rows = await readStackForPrint(controller, {
+      signal: abort.signal,
+      onProgress: ({ loaded }) => loaded > 0 && abort.abort(),
+    });
+
+    expect(rows).toBeNull();
+  });
+
   it('is null when cancelled', async () => {
     const { controller } = await build(450);
     const abort = new AbortController();

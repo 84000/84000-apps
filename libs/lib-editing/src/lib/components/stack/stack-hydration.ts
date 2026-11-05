@@ -144,11 +144,11 @@ export class StackHydration {
   hasMorePassages = () => this.spineFeed?.hasMore ?? false;
 
   /**
-   * Grow the run to its first and last passages, a page at a time.
+   * Grow the run to its first and last passages, a page at a time, extending
+   * it rather than replacing it.
    *
-   * Extended, never replaced, as a reader scrolling to both ends would: what
-   * is on screen stays where it is. A page that cannot be read ends the feed
-   * in that direction, as it does while scrolling, so this always finishes.
+   * A page that cannot be read ends the run in that direction, as it does
+   * while scrolling: the feed cannot tell it from an empty last page.
    */
   loadWholeRun = async ({
     stopped,

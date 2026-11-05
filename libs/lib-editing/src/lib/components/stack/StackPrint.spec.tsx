@@ -38,6 +38,7 @@ const { readStackForPrint } = jest.requireMock('./stack-print') as {
 const view = (tab: string, text: string) => ({
   getTab: () => tab,
   setActiveToh: jest.fn(),
+  hasEarlierPassages: () => false,
   rowStyle: () => ({}),
   rows: [
     {
@@ -116,10 +117,17 @@ describe('StackPrint', () => {
   it('prints the main text, the back matter and the glossary, in order', async () => {
     const front = view('front', 'front text');
     const notes = view('endnotes', 'note text');
+    const abbreviations = view('abbreviations', 'abbr text');
     const bibliography = view('bibliography', 'biblio text');
     const translation = view('translation', 'body text');
     useStackWork.mockReturnValue(
-      reader({ front, translation, endnotes: notes, bibliography }),
+      reader({
+        front,
+        translation,
+        abbreviations,
+        endnotes: notes,
+        bibliography,
+      }),
     );
     let printed = '';
     print.mockImplementation(() => {
@@ -131,10 +139,17 @@ describe('StackPrint', () => {
 
     expect(print).toHaveBeenCalledTimes(1);
     expect(front.setActiveToh).toHaveBeenCalledWith('toh8');
+    // Open until the print dialog closes, which some browsers don't wait for.
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'p', metaKey: true });
+    });
+    expect(print).toHaveBeenCalledTimes(1);
     const order = [
       'The Work',
       'front text',
       'body text',
+      'abbr text',
       'note text',
       'biblio text',
       'Glossary',
@@ -148,6 +163,31 @@ describe('StackPrint', () => {
       window.dispatchEvent(new Event('afterprint'));
     });
     expect(document.querySelector('[data-stack-print]')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps a session cancelled and started again cancellable', async () => {
+    useStackWork.mockReturnValue(
+      reader({ translation: view('translation', 'body') }),
+    );
+    const pending: ((rows: unknown) => void)[] = [];
+    readStackForPrint.mockImplementation(
+      (controller) =>
+        new Promise((resolve) => pending.push(() => resolve(controller.rows))),
+    );
+    mount();
+    const button = () => screen.getAllByRole('button', { name: 'Print' })[0];
+
+    await userEvent.click(button());
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(button());
+    // The first session's read ends after the second has started.
+    await act(async () => pending[0]());
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await act(async () => pending[1]());
+
+    expect(print).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('reads every glossary page', async () => {

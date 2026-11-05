@@ -5,6 +5,9 @@ import type { StackController } from './StackController';
 /** Rows read a batch at a time, released before the next. */
 const PRINT_BATCH = 200;
 
+/** Reads started, for their windows' keys. */
+let reads = 0;
+
 /** A row as printed: its metadata and its static HTML. */
 export type StackPrintRow = { meta: PassageMeta; html: string };
 
@@ -36,22 +39,38 @@ export const readStackForPrint = async (
   if (stopped()) return null;
 
   const { work } = controller;
+  const { spine } = work;
   const order = controller.getOrder();
-  const key = `print:${controller.getTab() ?? 'default'}`;
+  // Its own, per read: another read releasing its window must not take this
+  // one's documents with it.
+  const key = `print:${controller.getTab() ?? 'default'}:${++reads}`;
   const rows: StackPrintRow[] = [];
   report(0);
   try {
-    for (let start = 0; start < order.length; start += PRINT_BATCH) {
+    for (let start = 0; start < order.length; ) {
       if (stopped()) return null;
-      const batch = order.slice(start, start + PRINT_BATCH);
-      const unread = batch.filter(
-        (uuid) => controller.readStaticHTML(uuid) === null,
+      // Positions taken afresh each batch, as another section's run can grow
+      // meanwhile and move this one along the spine.
+      const position = new Map(spine.uuids().map((uuid, i) => [uuid, i]));
+      const at = (uuid: string) => position.get(uuid) ?? -1;
+      // A batch spans at most `PRINT_BATCH` spine entries, rows hidden for the
+      // Toh included, so it holds no more documents than that.
+      const first = at(order[start]);
+      let end = start + 1;
+      while (end < order.length && at(order[end]) - first < PRINT_BATCH) {
+        end++;
+      }
+      const batch = order.slice(start, end);
+      start = end;
+      // Rows drawn from given HTML have no document to read.
+      const unread = batch.some(
+        (uuid) =>
+          !work.store.has(uuid) && controller.readStaticHTML(uuid) === null,
       );
-      if (unread.length) {
-        // A window of its own, so the next batch releases this one while the
-        // reader's own windows keep what they show.
-        const first = work.spine.indexOf(unread[0]);
-        const last = work.spine.indexOf(unread[unread.length - 1]);
+      if (unread) {
+        // The whole batch, held ones included: the windows holding those can
+        // move before this reads them.
+        const last = at(batch[batch.length - 1]);
         await work.hydrateWindow(
           { start: Math.max(0, first), end: Math.max(first, last) + 1 },
           { key },
@@ -66,6 +85,7 @@ export const readStackForPrint = async (
       report(rows.length);
     }
   } finally {
+    // The last batch stays held until the reader's own windows next move.
     work.releaseWindow(key);
   }
   return stopped() ? null : rows;
