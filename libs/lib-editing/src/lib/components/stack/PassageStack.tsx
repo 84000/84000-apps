@@ -9,18 +9,10 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { rowKindOf } from '@eightyfourthousand/lib-doc-model';
 import { cn } from '@eightyfourthousand/lib-utils';
 
-import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
-import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
-import { PassageStackController } from './StackController';
-import { StackPassageEditor } from './StackPassageEditor';
-import { BibliographyRowMenu } from './BibliographyRowMenu';
-import {
-  StackPassageMenu,
-  type StackPassageMenuTarget,
-} from './StackPassageMenu';
+import type { StackController } from './StackController';
+import type { StackPassageMenuTarget } from './StackPassageMenu';
 import { StackEnd, StackStart, stackStartPx } from './StackEnd';
 import { StackReaderMenu } from './StackReaderMenu';
 import { StaticPassageRow } from './StaticPassageRow';
@@ -52,7 +44,7 @@ export const PassageStack = ({
   overscan = OVERSCAN,
   panel,
 }: {
-  controller: PassageStackController;
+  controller: StackController;
   className?: string;
   overscan?: number;
   /**
@@ -68,6 +60,9 @@ export const PassageStack = ({
   );
   const order = controller.getOrder();
   const readOnly = controller.isReadOnly();
+  // The editor's own components come with the view, so a reader's view, which
+  // has none, keeps them out of its module graph.
+  const editing = controller.getEditing();
   const parentRef = useRef<HTMLDivElement>(null);
   const { scroller, scrollMargin } = useStackScroller(parentRef);
   // The label menu differs by mode, so a menu opened in one is not shown in
@@ -151,8 +146,6 @@ export const PassageStack = ({
     focusedEditor && parentRef.current?.contains(focusedEditor.view.dom)
       ? focusedEditor
       : null;
-  const focusedMeta = controller.getMeta(controller.getFocusedUuid() ?? '');
-  const focusedKind = focusedMeta ? rowKindOf(focusedMeta.type) : null;
 
   // Room above the first row for the placeholders, inside the list's own
   // coordinates: a prepend that ends the earlier passages removes it in the
@@ -311,27 +304,10 @@ export const PassageStack = ({
       translate={readOnly ? 'yes' : 'no'}
       data-stack-read-only={readOnly ? '' : undefined}
     >
-      {/*
-        One of each for the whole stack, bound to the focused passage: only one
-        passage is editable at a time, so a copy per row would watch nothing.
-        Keyed so they rebind rather than hold a stale editor — and prefixed, or
-        the two keyed siblings would share a key.
-      */}
-      {readOnly ? null : controller.getRows() === 'bibliography' ? (
-        // A heading is plain text: there is nothing to format.
-        <BibliographyBubbleMenu
-          key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
-          editor={focusedKind === 'entry' ? menuEditor : null}
-        />
-      ) : (
-        <TranslationBubbleMenu
-          key={`bubble-${controller.getFocusedUuid() ?? 'none'}`}
-          editor={menuEditor}
-        />
-      )}
-      {controller.restructures() && (
-        <StackPassageMenu
+      {editing && !readOnly && (
+        <editing.Menus
           controller={controller}
+          editor={menuEditor}
           target={menuTarget}
           onClose={closeMenu}
         />
@@ -341,19 +317,6 @@ export const PassageStack = ({
           controller={controller}
           target={menuTarget}
           onClose={closeMenu}
-        />
-      )}
-      {controller.editsOutline() && (
-        <BibliographyRowMenu
-          controller={controller}
-          target={menuTarget}
-          onClose={closeMenu}
-        />
-      )}
-      {menuEditor && (
-        <MentionAdvancedOverlay
-          key={`mention-${controller.getFocusedUuid() ?? 'none'}`}
-          editor={menuEditor}
         />
       )}
       <div
@@ -385,8 +348,8 @@ export const PassageStack = ({
                 transform: `translateY(${item.start - scrollMargin}px)`,
               }}
             >
-              {asEditor ? (
-                <StackPassageEditor
+              {asEditor && editing ? (
+                <editing.PassageEditor
                   controller={controller}
                   meta={meta}
                   focused={controller.getFocusedUuid() === uuid}

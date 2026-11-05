@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 
 import { useStackOuterContent } from './useStackOuterContent';
-import type { PassageStackController } from './StackController';
+import type { PassageStackController } from './PassageStackController';
 
 const mockNavigation = { setShowOuterContent: jest.fn() };
 
