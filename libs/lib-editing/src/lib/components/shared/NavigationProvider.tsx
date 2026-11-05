@@ -70,6 +70,7 @@ export const NavigationProvider = ({
   editable = false,
   hoverCards = editable,
   commentsPanel = editable,
+  withImprint = true,
   children,
 }: {
   /** The studio rather than the reader. Defaults to the reader. */
@@ -84,6 +85,11 @@ export const NavigationProvider = ({
    * studio's. A read-only studio still has it. Defaults to `editable`.
    */
   commentsPanel?: boolean;
+  /**
+   * Whether the work's imprint is read. False for a work the reader does not
+   * serve, whose details are not shown. Defaults to true.
+   */
+  withImprint?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -279,7 +285,7 @@ export const NavigationProvider = ({
   }, [urlRead, graphqlClient, updatePanel]);
 
   useEffect(() => {
-    if (!uuid || !toh) {
+    if (!uuid || !toh || !withImprint) {
       return;
     }
 
@@ -295,7 +301,7 @@ export const NavigationProvider = ({
     return () => {
       cancelled = true;
     };
-  }, [uuid, toh, graphqlClient]);
+  }, [uuid, toh, withImprint, graphqlClient]);
 
   // The router's query arrives in a transition and can trail the URL, so it
   // only signals a change; the live URL says what it is. Equal state is kept,

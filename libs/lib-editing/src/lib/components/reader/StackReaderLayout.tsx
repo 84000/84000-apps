@@ -28,8 +28,9 @@ export const StackReaderLayout = async ({
   }
 
   const client = createBuildGraphQLClient();
+  // Nothing past the titles is shown for the work, so its imprint is not read.
   if (!(await isReaderPublished({ client, uuid: slug }))) {
-    return <ReaderLayout params={params} {...layout} />;
+    return <ReaderLayout params={params} {...layout} withImprint={false} />;
   }
 
   const seed = await loadStackReaderSeed({ client, workUuid: slug });

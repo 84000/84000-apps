@@ -52,7 +52,10 @@ export const BodyPanel = ({
     params: TranslationRenderer,
   ) => ReactElement<TranslationRenderer>;
   translationState?: TranslationState;
-  /** Whether the front tab shows the imprint below the titles. */
+  /**
+   * Whether the work's imprint is shown: below the titles in the front tab,
+   * and in the titles' details. False shows the titles alone.
+   */
   withImprint?: boolean;
 }) => {
   const {
@@ -113,13 +116,13 @@ export const BodyPanel = ({
       <div className="mt-16 mb-8">
         {renderTitles({
           titles,
-          imprint,
+          imprint: withImprint ? imprint : undefined,
           name: safeTab,
         })}
       </div>
     ),
 
-    [titles, imprint, renderTitles, safeTab],
+    [titles, imprint, withImprint, renderTitles, safeTab],
   );
 
   return (

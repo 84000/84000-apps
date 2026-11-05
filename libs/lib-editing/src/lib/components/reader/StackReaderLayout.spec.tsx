@@ -39,6 +39,7 @@ const layout = async (slug: string) => {
     workUuid?: string;
     seed?: StackReaderSeed;
     params?: Promise<{ slug: string }>;
+    withImprint?: boolean;
     children?: ReactElement<Record<string, unknown>>;
   }>;
   return { element, params };
@@ -94,6 +95,8 @@ describe('StackReaderLayout', () => {
     expect(loadStackReaderSeed).not.toHaveBeenCalled();
     expect(element.type).toBe(ReaderLayout);
     expect(element.props.params).toBe(params);
+    // Only the titles are shown, so not even the imprint is read.
+    expect(element.props).toHaveProperty('withImprint', false);
   });
 
   it('reads nothing for a slug that is not a uuid', async () => {
