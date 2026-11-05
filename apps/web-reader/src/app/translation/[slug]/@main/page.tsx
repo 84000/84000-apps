@@ -1,4 +1,4 @@
-import { MainPanelPage } from '../../../../main-panel';
+import { MainPanelPage } from '../../../../reader-renderer';
 
 // Rendered on demand rather than prerendered at build: this app is for local
 // testing, and a build should not fetch every work.
