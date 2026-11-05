@@ -1,8 +1,9 @@
 import type { GraphQLClient } from 'graphql-request';
-import { Spine } from '@eightyfourthousand/lib-doc-model';
+import { Spine, type PassageSnapshot } from '@eightyfourthousand/lib-doc-model';
 
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { graphqlPassageSource } from './passage-source';
+import type { PassageExtras } from './types';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetaPage: jest.fn(),
@@ -485,7 +486,7 @@ describe('graphqlPassageSource prime', () => {
     });
     return read;
   };
-  const versionOf = (snapshot: { content: unknown }) =>
+  const versionOf = (snapshot: PassageSnapshot) =>
     (snapshot.content as { attrs?: { version?: string } }[])[0]?.attrs?.version;
 
   it('never hands out a passage an ordinary read returned while the prime was out', async () => {
@@ -522,7 +523,7 @@ describe('graphqlPassageSource prime', () => {
       async ({ cursor }: { cursor?: string }) =>
         versioned(cursor === 'p7' ? ['p8', 'p9'] : ['p8'], 'new'),
     );
-    const extras = new Map();
+    const extras = new Map<string, PassageExtras>();
     const spine = spineOf(30);
     const source = graphqlPassageSource({
       client,
@@ -545,8 +546,8 @@ describe('graphqlPassageSource prime', () => {
     clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
       versioned(['p4', 'p5', 'p6'], 'primed'),
     );
-    const newer = { references: [] };
-    const extras = new Map([['p6', newer]]);
+    const newer: PassageExtras = { references: [] };
+    const extras = new Map<string, PassageExtras>([['p6', newer]]);
     const spine = spineOf(10);
     const source = graphqlPassageSource({
       client,
