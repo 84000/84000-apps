@@ -474,6 +474,12 @@ it to `revealPassage`, which moves the window rather than paging to the target
 — production has no spine and simply swaps the editor's content, so this is the
 equivalent. `?start`/`?end` paint the same range highlight.
 
+A reader's reveal also reads the target's content alongside the spine's
+`AROUND` read (`primeAround`), rather than after the spine has placed it. With
+100ms of simulated latency per request, Toh 8's passage 30.219 drew in a median
+326ms against 522ms. Editors don't: a primed passage can answer a load well
+after it was read, and an editor could have saved over it since.
+
 A hash is addressed to a **panel**, and only the stack drawn in that panel can
 answer it — so which panel a view watches follows its own tab, via
 `PANEL_FOR_TAB`. Defaulting every view to `main` left the endnotes stack
