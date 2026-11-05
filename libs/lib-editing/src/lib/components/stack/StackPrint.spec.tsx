@@ -170,7 +170,7 @@ describe('StackPrint', () => {
     useStackWork.mockReturnValue(
       reader({ translation: view('translation', 'body') }),
     );
-    const pending: ((rows: unknown) => void)[] = [];
+    const pending: (() => void)[] = [];
     readStackForPrint.mockImplementation(
       (controller) =>
         new Promise((resolve) => pending.push(() => resolve(controller.rows))),
