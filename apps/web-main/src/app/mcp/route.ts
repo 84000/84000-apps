@@ -93,7 +93,8 @@ export async function POST(req: Request) {
     ? workSnapshotSource(authorization, req.signal)
     : null;
   const tools = [
-    ...createReadTools(auth.client),
+    // The studio serves the draft, so its translation search does too.
+    ...createReadTools(auth.client, { searchTranslationSource: 'draft' }),
     ...createHarnessTools(auth.client),
     createOpenPolicyEditorTool(auth.client),
     ...createSessionTools(auth.client, auth.userId),
