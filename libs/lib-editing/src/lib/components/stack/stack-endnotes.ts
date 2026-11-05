@@ -9,7 +9,7 @@ import {
 
 import { endNoteLinkTransaction } from '../editor/extensions/EndNoteLink/EndNoteLinkMark';
 import type { StackController } from './StackController';
-import type { StackWork } from './StackWorkProvider';
+import type { StackWork } from './stack-work-context';
 
 /** The parts of a stack work the endnote edits use. */
 type StackViews = Pick<StackWork, 'work' | 'controllerFor'>;

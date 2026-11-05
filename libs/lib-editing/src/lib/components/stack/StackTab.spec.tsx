@@ -4,7 +4,7 @@ import { StackTab } from './StackTab';
 const mockStack: { controllerFor: (tab: string) => unknown } = {
   controllerFor: () => undefined,
 };
-jest.mock('./StackWorkProvider', () => ({ useStackWork: () => mockStack }));
+jest.mock('./stack-work-context', () => ({ useStackWork: () => mockStack }));
 jest.mock('./useStackOuterContent', () => ({
   useStackOuterContent: () => undefined,
 }));
