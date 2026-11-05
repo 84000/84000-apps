@@ -474,6 +474,116 @@ describe('graphqlPassageSource prime', () => {
     around.resolve(page(['p5']));
   });
 
+  /** A page whose passages carry `version`, to tell two reads apart. */
+  const versioned = (uuids: string[], version: string) => {
+    const read = page(uuids);
+    read.blocks.forEach((block) => {
+      block.content = [{ type: 'paragraph', attrs: { version } }] as never;
+      Object.assign(block.attrs, {
+        references: [{ uuid: 'x', label: version, type: 'translation' }],
+      });
+    });
+    return read;
+  };
+  const versionOf = (snapshot: { content: unknown }) =>
+    (snapshot.content as { attrs?: { version?: string } }[])[0]?.attrs?.version;
+
+  it('never hands out a passage an ordinary read returned while the prime was out', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      versioned(['p8'], 'new'),
+    );
+    const spine = spineOf(12);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p9');
+    await source.loadPassages('w1', ['p8']);
+    around.resolve(versioned(['p8', 'p9', 'p10'], 'old'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const again = await source.loadPassages('w1', ['p8']);
+
+    expect(again.map(versionOf)).toEqual(['new']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands nothing out from a prime a newer one replaced while it was out', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround
+      .mockReturnValueOnce(around.promise)
+      .mockResolvedValueOnce(versioned(['p19', 'p20', 'p21'], 'later'));
+    clientGraphql.getTranslationBlocks.mockImplementation(
+      async ({ cursor }: { cursor?: string }) =>
+        versioned(cursor === 'p7' ? ['p8', 'p9'] : ['p8'], 'new'),
+    );
+    const extras = new Map();
+    const spine = spineOf(30);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+      extras,
+    });
+
+    source.prime('p9');
+    const waiting = source.loadPassages('w1', ['p8', 'p9']);
+    source.prime('p20');
+    await source.loadPassages('w1', ['p8']);
+    around.resolve(versioned(['p8', 'p9', 'p10'], 'old'));
+
+    expect((await waiting).map(versionOf)).toEqual(['new', 'new']);
+    expect(extras.get('p8')?.references?.[0]?.label).toBe('new');
+  });
+
+  it('notes row data only for the primed passages it hands out', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      versioned(['p4', 'p5', 'p6'], 'primed'),
+    );
+    const newer = { references: [] };
+    const extras = new Map([['p6', newer]]);
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+      extras,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+
+    expect(extras.get('p5')?.references?.[0]?.label).toBe('primed');
+    expect(extras.get('p6')).toBe(newer);
+    expect(extras.has('p4')).toBe(false);
+  });
+
+  it('drops the rest of the prime once its target is taken', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      versioned(['p4', 'p5', 'p6'], 'primed'),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      versioned(['p6'], 'read'),
+    );
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+    const later = await source.loadPassages('w1', ['p6']);
+
+    expect(later.map(versionOf)).toEqual(['read']);
+  });
+
   it('falls back to its own read when the prime fails', async () => {
     clientGraphql.getTranslationBlocksAround
       .mockRejectedValueOnce(new Error('offline'))

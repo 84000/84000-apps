@@ -478,7 +478,10 @@ A reader's reveal also reads the target's content alongside the spine's
 `AROUND` read (`primeAround`), rather than after the spine has placed it. With
 100ms of simulated latency per request, Toh 8's passage 30.219 drew in a median
 326ms against 522ms. Editors don't: a primed passage can answer a load well
-after it was read, and an editor could have saved over it since.
+after it was read, and an editor could have saved over it since. Even for a
+reader the prime is short-lived: a passage an ordinary read returns while the
+prime is out is never handed out, row data is noted only for what is handed
+out, and the rest is dropped once the target's load takes it.
 
 A hash is addressed to a **panel**, and only the stack drawn in that panel can
 answer it — so which panel a view watches follows its own tab, via

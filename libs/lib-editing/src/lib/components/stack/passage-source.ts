@@ -96,15 +96,24 @@ export const graphqlPassageSource = ({
    */
   extras?: Map<string, PassageExtras>;
 }): PrimablePassageSource => {
-  /** A block's snapshot, noting its row data on the way. */
-  const snapshotOf = (block: {
-    attrs?: Record<string, unknown>;
-    content?: unknown[];
-  }): PassageSnapshot | null => {
+  type Block = { attrs?: Record<string, unknown>; content?: unknown[] };
+
+  /** A block's snapshot, with its row data kept apart. */
+  const readBlock = (block: Block) => {
     const passage = passageFromBlock(block);
     if (!passage) return null;
-    extras?.set(passage.uuid, passage.extras ?? {});
-    return { uuid: passage.uuid, content: passage.content };
+    return {
+      snapshot: { uuid: passage.uuid, content: passage.content },
+      extras: passage.extras ?? {},
+    };
+  };
+
+  /** A block's snapshot, noting its row data on the way. */
+  const snapshotOf = (block: Block): PassageSnapshot | null => {
+    const read = readBlock(block);
+    if (!read) return null;
+    extras?.set(read.snapshot.uuid, read.extras);
+    return read.snapshot;
   };
 
   const wrongWork = (requested: string) => {
@@ -219,18 +228,23 @@ export const graphqlPassageSource = ({
     return found;
   };
 
-  /** The passages around `uuid`, it included, in the work's order. */
-  const readAround = async (uuid: string, limit: number) => {
+  /** The `AROUND` page for `uuid`, its blocks as an array. */
+  const pageAround = async (uuid: string, limit: number) => {
     const page = await getTranslationBlocksAround({
       client,
       uuid: workUuid,
       passageUuid: uuid,
       maxPassages: limit,
     });
-    const blocks = Array.isArray(page.blocks)
+    const blocks: Block[] = Array.isArray(page.blocks)
       ? page.blocks
       : [page.blocks].filter(Boolean);
+    return { blocks, page };
+  };
 
+  /** The passages around `uuid`, it included, in the work's order. */
+  const readAround = async (uuid: string, limit: number) => {
+    const { blocks, page } = await pageAround(uuid, limit);
     const found: PassageSnapshot[] = [];
     blocks.forEach((block) => {
       const snapshot = snapshotOf(block);
@@ -239,36 +253,62 @@ export const graphqlPassageSource = ({
     return { found, page };
   };
 
-  /** What the last prime read, until each is taken or a new prime starts. */
+  type Primed = {
+    snapshot: PassageSnapshot;
+    extras: PassageExtras;
+  };
+
+  /**
+   * What the last prime read, until its target is taken or a new prime starts.
+   *
+   * A passage an ordinary read returns while the prime is out is `superseded`:
+   * the prime may have been answered before it, so it is never handed out.
+   */
   let primed: {
     target: string;
-    read: Promise<Map<string, PassageSnapshot>>;
-    held?: Map<string, PassageSnapshot>;
+    read: Promise<Map<string, Primed>>;
+    held?: Map<string, Primed>;
+    superseded: Set<string>;
   } | null = null;
 
   /**
-   * The primed snapshots among `uuids`, each handed out once.
+   * The primed snapshots among `uuids`, each handed out once, with their row
+   * data noted as they are.
    *
    * Only a load that wants the primed passage itself waits for the read; any
    * other takes what has arrived, rather than queueing behind a read it may
-   * have no part in.
+   * have no part in. Once the target is taken the rest is dropped: the
+   * target's own load is the one the prime is for, and anything left would
+   * only age.
    */
   const takePrimed = async (uuids: string[]) => {
     const current = primed;
     if (!current) return [];
-    const held =
-      current.held ??
-      (uuids.includes(current.target) ? await current.read : undefined);
-    if (!held) return [];
+    const wantsTarget = uuids.includes(current.target);
+    const held = current.held ?? (wantsTarget ? await current.read : undefined);
+    // A newer prime, or the target's own load, may have replaced this one
+    // while it was out; only the current one is told what reads superseded.
+    if (!held || primed !== current) return [];
     const taken: PassageSnapshot[] = [];
     uuids.forEach((uuid) => {
-      const snapshot = held.get(uuid);
-      if (!snapshot) return;
-      taken.push(snapshot);
+      const entry = held.get(uuid);
       held.delete(uuid);
+      if (!entry || current.superseded.has(uuid)) return;
+      extras?.set(uuid, entry.extras);
+      taken.push(entry.snapshot);
     });
-    if (!held.size && primed === current) primed = null;
+    if ((wantsTarget || !held.size) && primed === current) primed = null;
     return taken;
+  };
+
+  /** Marks what an ordinary read returned as newer than the prime's. */
+  const supersede = (snapshots: PassageSnapshot[]) => {
+    const current = primed;
+    if (!current) return;
+    snapshots.forEach(({ uuid }) => {
+      current.superseded.add(uuid);
+      current.held?.delete(uuid);
+    });
   };
 
   /**
@@ -342,6 +382,7 @@ export const graphqlPassageSource = ({
       const found = runs?.length
         ? (await Promise.all(runs.map((run) => readFrom(run)))).flat()
         : await readSpan(undefined, MAX_PAGE);
+      supersede(found);
 
       // Passages pulled in because they sat inside the run are dropped: the
       // loader treats anything returned as answered, and a passage the caller
@@ -355,12 +396,21 @@ export const graphqlPassageSource = ({
     prime(uuid: string) {
       const next: NonNullable<typeof primed> = {
         target: uuid,
-        read: readAround(uuid, PRIME_AROUND).then(
-          ({ found }) =>
-            new Map(found.map((snapshot) => [snapshot.uuid, snapshot])),
+        // Row data is held with each snapshot and noted only when it is taken,
+        // so a prime nobody takes never replaces what a newer read noted.
+        read: pageAround(uuid, PRIME_AROUND).then(
+          ({ blocks }) => {
+            const held = new Map<string, Primed>();
+            blocks.forEach((block) => {
+              const read = readBlock(block);
+              if (read) held.set(read.snapshot.uuid, read);
+            });
+            return held;
+          },
           // A failed prime answers nothing; the loads read for themselves.
           () => new Map(),
         ),
+        superseded: new Set(),
       };
       void next.read.then((held) => {
         next.held = held;
