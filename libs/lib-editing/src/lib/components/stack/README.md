@@ -561,8 +561,10 @@ the inactive ones, or every scope shows at once: two endnote markers numbered
 default so one toh is always active. The active toh itself comes from
 `NavigationProvider`, which already reads `?toh=` and falls back to its
 `initialToh`. Both panels offer their default through `setDefaultToh`, which
-only fills an empty toh: a panel that hydrates after the URL is read must not
-put the work's first toh back over the URL's.
+only fills an empty toh, or replaces one the work does not have: a panel that
+hydrates after the URL is read must not put the work's first toh back over the
+URL's. Only a catalogued toh (`canonicalToh`) gets into the rule, since a URL
+can carry anything.
 
 The rule is installed by an effect, so markup the server draws for another toh
 shows until scripts run. `ReaderLayout` also draws it with the page
