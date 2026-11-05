@@ -20,7 +20,7 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { NavigationProvider } from '../shared/NavigationProvider';
 import type { StackController } from './StackController';
@@ -367,8 +367,11 @@ let controllers: Record<string, StackController | null>;
 
 const Capture = () => {
   const stack = useStackWork();
-  PARTS.forEach((tab) => {
-    controllers[tab] = stack?.controllerFor(tab) ?? null;
+  // After each render, not during it, so render stays free of side effects.
+  useEffect(() => {
+    PARTS.forEach((tab) => {
+      controllers[tab] = stack?.controllerFor(tab) ?? null;
+    });
   });
   return null;
 };
