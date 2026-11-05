@@ -122,6 +122,7 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
   const { uuid, toh, imprint } = useNavigation();
   const [session, setSession] = useState<Session>({ phase: 'idle' });
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
 
   // Set from a session's start until it is closed, so one runs at a time and
   // a closed one, still awaiting a read, changes nothing.
@@ -157,7 +158,8 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
             show();
           },
         }).finally(() => {
-          if (anchor) void controller.revealPassage(anchor);
+          if (anchor && mountedRef.current)
+            void controller.revealPassage(anchor);
         });
         if (!live()) return;
         if (!rows) return setSession({ phase: 'failed' });
@@ -182,7 +184,13 @@ export const StackPrint = ({ children }: { children: ReactNode }) => {
   const print = useCallback(() => void start(), [start]);
 
   // A reader leaving mid-load stops the reads.
-  useEffect(() => () => abortRef.current?.abort(), []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      abortRef.current?.abort();
+    };
+  }, []);
 
   // The browser's own shortcut would print the few rows on screen.
   useEffect(() => {
